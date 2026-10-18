@@ -27,6 +27,10 @@ cargo install sloplint      # crates.io; binary name: sloplint
 npm install -g sloplint-cli # npm
 ```
 
+The release workflow builds binaries for Windows, macOS, and Linux on x86_64 and aarch64. Linux archives use the `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu` target names and link glibc dynamically. The supported baseline is glibc 2.39 or newer, matching the [Ubuntu 24.04 runners](https://packages.ubuntu.com/noble/libc6) used by CI and release builds. A binary may require older glibc symbols, but compatibility below 2.39 is not tested or promised. These Linux binaries do not run natively on Alpine or other musl-based systems.
+
+sloplint uses the platform default allocator on every target. It includes no custom allocator.
+
 From source, using the checked-in toolchain pin (Rust 1.99.1):
 
 ```bash
