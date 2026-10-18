@@ -34,9 +34,7 @@ CI builds and tests these targets; see [.github/workflows/ci.yml](.github/workfl
 From source, using the checked-in toolchain pin (Rust 1.99.1):
 
 ```bash
-git clone https://github.com/gosuda/sloplint
-cd sloplint
-cargo install --path crates/sloplint --locked
+cargo install --git https://github.com/gosuda/sloplint --locked
 ```
 
 This places the `sloplint` binary in `~/.cargo/bin`; make sure that directory is on your `PATH`.
