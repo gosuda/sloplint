@@ -166,18 +166,33 @@ mod tests {
         let line = "a".repeat(200);
         let (_, context) = source_site(&line, Pos { line: 1, byte: 0 });
         assert_eq!(context.chars().count(), MAX_CONTEXT_CHARS + 3);
-        assert!(context.ends_with("..."));
+        assert!(
+            context.ends_with("..."),
+            "long context {context:?} should be truncated with ..."
+        );
         let short = "a".repeat(MAX_CONTEXT_CHARS);
         let (_, context) = source_site(&short, Pos { line: 1, byte: 0 });
         assert_eq!(context.chars().count(), MAX_CONTEXT_CHARS);
-        assert!(!context.ends_with("..."));
+        assert!(
+            !context.ends_with("..."),
+            "short context {context:?} should not be truncated"
+        );
     }
 
     #[test]
     fn orders_and_serializes_levels() {
-        assert!(Severity::Warn < Severity::Deny);
-        assert!(Level::Off < Level::Warn && Level::Warn < Level::Deny);
-        assert!(FailOn::Warn < FailOn::Deny && FailOn::Deny < FailOn::Never);
+        assert!(
+            Severity::Warn < Severity::Deny,
+            "Warn should order before Deny"
+        );
+        assert!(
+            Level::Off < Level::Warn && Level::Warn < Level::Deny,
+            "levels should order Off < Warn < Deny"
+        );
+        assert!(
+            FailOn::Warn < FailOn::Deny && FailOn::Deny < FailOn::Never,
+            "fail-on thresholds should order Warn < Deny < Never"
+        );
         assert_eq!(serde_json::to_string(&Severity::Warn).unwrap(), "\"warn\"");
         assert_eq!(serde_json::to_string(&FailOn::Never).unwrap(), "\"never\"");
         let level: Level = serde_json::from_str("\"deny\"").unwrap();

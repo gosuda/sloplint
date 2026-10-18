@@ -419,7 +419,10 @@ mod tests {
     fn shares_config_keys() {
         assert_eq!(ALL_CONFIG_KEYS.len(), 23);
         for key in ALL_CONFIG_KEYS {
-            assert!(Lang::from_config_key(key).is_some());
+            assert!(
+                Lang::from_config_key(key).is_some(),
+                "config key {key:?} should resolve to a language"
+            );
             assert_eq!(Lang::from_config_key(key).unwrap().config_key(), *key);
         }
         assert_eq!(Lang::Tsx.config_key(), "typescript");
@@ -429,24 +432,81 @@ mod tests {
 
     #[test]
     fn flags_entry_files() {
-        assert!(Lang::Rust.is_entry_file("src/bin/serve.rs"));
-        assert!(Lang::Rust.is_entry_file("build.rs"));
-        assert!(!Lang::Rust.is_entry_file("src/util.rs"));
-        assert!(Lang::JavaScript.is_entry_file("vite.config.js"));
-        assert!(!Lang::TypeScript.is_entry_file("src/config.ts"));
-        assert!(Lang::TypeScript.is_entry_file("index.ts"));
-        assert!(Lang::JavaScript.is_entry_file("scripts/bin/run.js"));
-        assert!(Lang::Go.is_entry_file("cmd/api/main.go"));
-        assert!(Lang::Python.is_entry_file("pkg/__init__.py"));
-        assert!(Lang::Ocaml.is_entry_file("bin/tool.ml"));
-        assert!(!Lang::OcamlInterface.is_entry_file("main.mli"));
-        assert!(Lang::Swift.is_entry_file("Package.swift"));
-        assert!(Lang::Php.is_entry_file("routes/config/loader.php"));
-        assert!(Lang::Ruby.is_entry_file("exe/tool.rb"));
-        assert!(Lang::Bash.is_entry_file("scripts/setup.sh"));
-        assert!(Lang::PowerShell.is_entry_file("bin/profile.ps1"));
-        assert!(Lang::Starlark.is_entry_file("BUILD"));
-        assert!(Lang::Dart.is_entry_file("bin/app.dart"));
-        assert!(!Lang::Dart.is_entry_file("lib/app.dart"));
+        assert!(
+            Lang::Rust.is_entry_file("src/bin/serve.rs"),
+            "src/bin/serve.rs should be a Rust entry file"
+        );
+        assert!(
+            Lang::Rust.is_entry_file("build.rs"),
+            "build.rs should be a Rust entry file"
+        );
+        assert!(
+            !Lang::Rust.is_entry_file("src/util.rs"),
+            "src/util.rs should not be a Rust entry file"
+        );
+        assert!(
+            Lang::JavaScript.is_entry_file("vite.config.js"),
+            "vite.config.js should be a JavaScript entry file"
+        );
+        assert!(
+            !Lang::TypeScript.is_entry_file("src/config.ts"),
+            "src/config.ts should not be a TypeScript entry file"
+        );
+        assert!(
+            Lang::TypeScript.is_entry_file("index.ts"),
+            "index.ts should be a TypeScript entry file"
+        );
+        assert!(
+            Lang::JavaScript.is_entry_file("scripts/bin/run.js"),
+            "scripts/bin/run.js should be a JavaScript entry file"
+        );
+        assert!(
+            Lang::Go.is_entry_file("cmd/api/main.go"),
+            "cmd/api/main.go should be a Go entry file"
+        );
+        assert!(
+            Lang::Python.is_entry_file("pkg/__init__.py"),
+            "pkg/__init__.py should be a Python entry file"
+        );
+        assert!(
+            Lang::Ocaml.is_entry_file("bin/tool.ml"),
+            "bin/tool.ml should be an OCaml entry file"
+        );
+        assert!(
+            !Lang::OcamlInterface.is_entry_file("main.mli"),
+            "main.mli should not be an OCaml entry file"
+        );
+        assert!(
+            Lang::Swift.is_entry_file("Package.swift"),
+            "Package.swift should be a Swift entry file"
+        );
+        assert!(
+            Lang::Php.is_entry_file("routes/config/loader.php"),
+            "routes/config/loader.php should be a PHP entry file"
+        );
+        assert!(
+            Lang::Ruby.is_entry_file("exe/tool.rb"),
+            "exe/tool.rb should be a Ruby entry file"
+        );
+        assert!(
+            Lang::Bash.is_entry_file("scripts/setup.sh"),
+            "scripts/setup.sh should be a Bash entry file"
+        );
+        assert!(
+            Lang::PowerShell.is_entry_file("bin/profile.ps1"),
+            "bin/profile.ps1 should be a PowerShell entry file"
+        );
+        assert!(
+            Lang::Starlark.is_entry_file("BUILD"),
+            "BUILD should be a Starlark entry file"
+        );
+        assert!(
+            Lang::Dart.is_entry_file("bin/app.dart"),
+            "bin/app.dart should be a Dart entry file"
+        );
+        assert!(
+            !Lang::Dart.is_entry_file("lib/app.dart"),
+            "lib/app.dart should not be a Dart entry file"
+        );
     }
 }

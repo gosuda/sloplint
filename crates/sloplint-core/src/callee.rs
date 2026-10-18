@@ -160,51 +160,87 @@ mod tests {
         assert!(
             CalleePattern::parse("info!")
                 .unwrap()
-                .matches("tracing::info!", CallKind::Macro)
+                .matches("tracing::info!", CallKind::Macro),
+            "info! should match tracing::info! macro"
         );
         assert!(
             CalleePattern::parse("info!")
                 .unwrap()
-                .matches("tracing::info", CallKind::Macro)
+                .matches("tracing::info", CallKind::Macro),
+            "info! should match tracing::info without bang under Macro kind"
         );
-        assert!(plain("logger.info", "self.logger.info"));
-        assert!(plain("*Error", "ValueError"));
+        assert!(
+            plain("logger.info", "self.logger.info"),
+            "logger.info should match self.logger.info"
+        );
+        assert!(plain("*Error", "ValueError"), "*Error should match ValueError");
         assert!(
             CalleePattern::parse("*Error")
                 .unwrap()
-                .matches("TypeError", CallKind::New)
+                .matches("TypeError", CallKind::New),
+            "*Error should match TypeError under New kind"
         );
         assert!(
             CalleePattern::parse("new *Error")
                 .unwrap()
-                .matches("TypeError", CallKind::New)
+                .matches("TypeError", CallKind::New),
+            "new *Error should match TypeError under New kind"
         );
         assert!(
             !CalleePattern::parse("new *Error")
                 .unwrap()
-                .matches("ValueError", CallKind::Plain)
+                .matches("ValueError", CallKind::Plain),
+            "new *Error must not match ValueError under Plain kind"
         );
-        assert!(!plain("a.b", "a.bc"));
-        assert!(!plain("a.b", "b"));
-        assert!(plain("console.log", "console . log"));
-        assert!(plain("a.b", "x?.a.b"));
-        assert!(plain("std::env::var", "std::env::var"));
+        assert!(!plain("a.b", "a.bc"), "a.b must not match a.bc");
+        assert!(!plain("a.b", "b"), "a.b must not match b");
+        assert!(
+            plain("console.log", "console . log"),
+            "console.log should match whitespace-normalized callee"
+        );
+        assert!(plain("a.b", "x?.a.b"), "a.b should match x?.a.b");
+        assert!(
+            plain("std::env::var", "std::env::var"),
+            "std::env::var should match itself"
+        );
         assert!(
             !CalleePattern::parse("log")
                 .unwrap()
-                .matches("log", CallKind::Macro)
+                .matches("log", CallKind::Macro),
+            "plain log must not match log under Macro kind without bang"
         );
     }
 
     #[test]
     fn rejects_malformed_patterns() {
-        assert!(CalleePattern::parse("").is_err());
-        assert!(CalleePattern::parse("   ").is_err());
-        assert!(CalleePattern::parse("a..b").is_err());
-        assert!(CalleePattern::parse(".lead").is_err());
-        assert!(CalleePattern::parse("trail.").is_err());
-        assert!(CalleePattern::parse("*").is_err());
-        assert!(CalleePattern::parse("new ").is_err());
+        assert!(
+            CalleePattern::parse("").is_err(),
+            "empty pattern should be rejected"
+        );
+        assert!(
+            CalleePattern::parse("   ").is_err(),
+            "whitespace-only pattern should be rejected"
+        );
+        assert!(
+            CalleePattern::parse("a..b").is_err(),
+            "pattern a..b with empty segment should be rejected"
+        );
+        assert!(
+            CalleePattern::parse(".lead").is_err(),
+            "pattern .lead with leading dot should be rejected"
+        );
+        assert!(
+            CalleePattern::parse("trail.").is_err(),
+            "pattern trail. with trailing dot should be rejected"
+        );
+        assert!(
+            CalleePattern::parse("*").is_err(),
+            "lone star pattern should be rejected"
+        );
+        assert!(
+            CalleePattern::parse("new ").is_err(),
+            "dangling new prefix should be rejected"
+        );
     }
 
     fn segment_vec(min: usize, max: usize) -> impl Strategy<Value = Vec<String>> {
