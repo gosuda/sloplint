@@ -77,6 +77,9 @@ pub enum RunError {
     /// Ratchet mode found no baseline file.
     #[error("baseline file not found: {}; run 'sloplint baseline'", path.display())]
     BaselineMissing { path: PathBuf },
+    /// A baseline path resolves outside the project root.
+    #[error("baseline path is outside the project root: {}", path.display())]
+    BaselineOutsideRoot { path: PathBuf },
     /// The baseline file is not a valid version-1 baseline.
     #[error("baseline {}: {message}", path.display())]
     BaselineCorrupt { path: PathBuf, message: String },
@@ -226,7 +229,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         apply_gate(&pipe, &scopes, all)?
     };
     let baseline_written = if opts.write_baseline {
-        let path = root.join(&config.project.baseline);
+        let path = project::resolve_within_root(&root, &config.project.baseline)?;
         fs::write(&path, Baseline::from_findings(&reported).to_json())
             .map_err(|source| io_error(&path, source))?;
         Some(config.project.baseline.clone())
@@ -502,7 +505,7 @@ fn apply_gate(
 }
 
 fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunError> {
-    let path = root.join(name);
+    let path = project::resolve_within_root(root, name)?;
     let text = match fs::read_to_string(&path) {
         Ok(text) => text,
         Err(source) if source.kind() == io::ErrorKind::NotFound => {

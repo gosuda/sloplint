@@ -314,6 +314,348 @@ fn suppressions_drop_only_their_findings() {
 }
 
 #[test]
+fn audit_persistence_baseline_dotdot_is_refused() {
+    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = outer.path().join("proj");
+    std::fs::create_dir_all(&root).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    write(
+        &root,
+        "sloplint.toml",
+        "[project]\nbaseline = \"../outside-marker.txt\"\n",
+    );
+    let outside = outer.path().join("outside-marker.txt");
+    std::fs::write(&outside, "sentinel").unwrap_or_else(|e| panic!("sentinel: {e}"));
+    let written = run(&RunOptions {
+        cwd: root.clone(),
+        root: Some(root.clone()),
+        write_baseline: true,
+        use_cache: false,
+        ..RunOptions::default()
+    });
+    let Err(error) = written else {
+        panic!("dotdot baseline escaped root");
+    };
+    assert!(
+        error.to_string().contains("outside the project root"),
+        "unexpected baseline error: {error}"
+    );
+    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
+    assert_eq!(
+        std::fs::read_to_string(&outside).unwrap_or_else(|e| panic!("read: {e}")),
+        "sentinel",
+        "outside marker overwritten by baseline write"
+    );
+    let gated = run(&RunOptions {
+        cwd: root.clone(),
+        root: Some(root.clone()),
+        mode: Some(Mode::Ratchet),
+        use_cache: false,
+        ..RunOptions::default()
+    });
+    let Err(error) = gated else {
+        panic!("dotdot ratchet read escaped root");
+    };
+    assert!(
+        error.to_string().contains("outside the project root"),
+        "unexpected ratchet error: {error}"
+    );
+    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
+    assert_eq!(
+        std::fs::read_to_string(&outside).unwrap_or_else(|e| panic!("read: {e}")),
+        "sentinel",
+        "outside marker overwritten by ratchet read"
+    );
+}
+
+#[test]
+fn audit_persistence_baseline_absolute_is_refused() {
+    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = outer.path().join("proj");
+    std::fs::create_dir_all(&root).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    let outside = outer.path().join("outside-abs.txt");
+    std::fs::write(&outside, "sentinel").unwrap_or_else(|e| panic!("sentinel: {e}"));
+    let config = format!(
+        "[project]\nbaseline = {:?}\n",
+        outside.to_str().unwrap_or_else(|| panic!("non-utf8"))
+    );
+    write(&root, "sloplint.toml", &config);
+    let written = run(&RunOptions {
+        cwd: root.clone(),
+        root: Some(root.clone()),
+        write_baseline: true,
+        use_cache: false,
+        ..RunOptions::default()
+    });
+    let Err(error) = written else {
+        panic!("absolute baseline escaped root");
+    };
+    assert!(
+        error.to_string().contains("outside the project root"),
+        "unexpected baseline error: {error}"
+    );
+    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
+    assert_eq!(
+        std::fs::read_to_string(&outside).unwrap_or_else(|e| panic!("read: {e}")),
+        "sentinel",
+        "outside marker overwritten by absolute baseline"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn audit_persistence_baseline_parent_symlink_is_refused() {
+    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = outer.path().join("proj");
+    std::fs::create_dir_all(&root).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    let outside = outer.path().join("outside");
+    std::fs::create_dir_all(&outside).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    std::os::unix::fs::symlink(&outside, root.join("link"))
+        .unwrap_or_else(|e| panic!("symlink: {e}"));
+    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    write(
+        &root,
+        "sloplint.toml",
+        "[project]\nbaseline = \"link/baseline.json\"\n",
+    );
+    let written = run(&RunOptions {
+        cwd: root.clone(),
+        root: Some(root.clone()),
+        write_baseline: true,
+        use_cache: false,
+        ..RunOptions::default()
+    });
+    let Err(error) = written else {
+        panic!("parent symlink baseline escaped root");
+    };
+    assert!(
+        error.to_string().contains("outside the project root"),
+        "unexpected baseline error: {error}"
+    );
+    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
+    assert!(
+        !outside.join("baseline.json").exists(),
+        "baseline escaped through parent symlink"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn audit_persistence_baseline_leaf_symlink_is_refused() {
+    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = outer.path().join("proj");
+    std::fs::create_dir_all(&root).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    let marker = outer.path().join("marker.txt");
+    std::fs::write(&marker, "sentinel").unwrap_or_else(|e| panic!("sentinel: {e}"));
+    std::os::unix::fs::symlink(&marker, root.join("baseline-link.json"))
+        .unwrap_or_else(|e| panic!("symlink: {e}"));
+    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    write(
+        &root,
+        "sloplint.toml",
+        "[project]\nbaseline = \"baseline-link.json\"\n",
+    );
+    let written = run(&RunOptions {
+        cwd: root.clone(),
+        root: Some(root.clone()),
+        write_baseline: true,
+        use_cache: false,
+        ..RunOptions::default()
+    });
+    let Err(error) = written else {
+        panic!("leaf symlink baseline escaped root");
+    };
+    assert!(
+        error.to_string().contains("outside the project root"),
+        "unexpected baseline error: {error}"
+    );
+    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
+    assert_eq!(
+        std::fs::read_to_string(&marker).unwrap_or_else(|e| panic!("read: {e}")),
+        "sentinel",
+        "outside marker overwritten through leaf symlink"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn audit_persistence_baseline_dangling_link_is_refused() {
+    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = outer.path().join("proj");
+    std::fs::create_dir_all(&root).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    let outside = outer.path().join("outside");
+    std::fs::create_dir_all(&outside).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    std::os::unix::fs::symlink(&outside, root.join("link"))
+        .unwrap_or_else(|e| panic!("symlink: {e}"));
+    std::os::unix::fs::symlink("link/missing", root.join("cand"))
+        .unwrap_or_else(|e| panic!("symlink: {e}"));
+    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    write(&root, "sloplint.toml", "[project]\nbaseline = \"cand\"\n");
+    let written = run(&RunOptions {
+        cwd: root.clone(),
+        root: Some(root.clone()),
+        write_baseline: true,
+        use_cache: false,
+        ..RunOptions::default()
+    });
+    let Err(error) = written else {
+        panic!("dangling link baseline escaped root");
+    };
+    assert!(
+        error.to_string().contains("outside the project root"),
+        "unexpected baseline error: {error}"
+    );
+    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
+    assert!(
+        !outside.join("missing").exists(),
+        "baseline write escaped through dangling link"
+    );
+}
+
+#[test]
+fn audit_persistence_baseline_nested_in_root_round_trips() {
+    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = tmp.path();
+    write(root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    std::fs::create_dir_all(root.join("nested")).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    write(
+        root,
+        "sloplint.toml",
+        "[project]\nbaseline = \"nested/baseline.json\"\n",
+    );
+    run(&RunOptions {
+        cwd: root.to_path_buf(),
+        root: Some(root.to_path_buf()),
+        write_baseline: true,
+        use_cache: false,
+        ..RunOptions::default()
+    })
+    .unwrap_or_else(|e| panic!("baseline write: {e}"));
+    assert!(
+        root.join("nested/baseline.json").is_file(),
+        "nested in-root baseline was not written"
+    );
+    let gated = run(&RunOptions {
+        cwd: root.to_path_buf(),
+        root: Some(root.to_path_buf()),
+        mode: Some(Mode::Ratchet),
+        use_cache: false,
+        ..RunOptions::default()
+    })
+    .unwrap_or_else(|e| panic!("ratchet: {e}"));
+    assert_eq!(gated.findings.len(), 0, "in-root baseline hid nothing");
+    write(root, "extra.rs", "pub fn manage(flag: bool) {}\n");
+    let gated = run(&RunOptions {
+        cwd: root.to_path_buf(),
+        root: Some(root.to_path_buf()),
+        mode: Some(Mode::Ratchet),
+        use_cache: false,
+        ..RunOptions::default()
+    })
+    .unwrap_or_else(|e| panic!("ratchet: {e}"));
+    assert!(
+        gated.findings.iter().all(|f| f.path.as_ref() == "extra.rs"),
+        "ratchet reported stale or missing paths: {:?}",
+        gated.findings.iter().map(|f| &f.path).collect::<Vec<_>>()
+    );
+    assert!(
+        !gated.findings.is_empty(),
+        "new in-root violation was hidden by the baseline"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn audit_persistence_cache_dir_symlink_stays_outside() {
+    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = outer.path().join("proj");
+    std::fs::create_dir_all(&root).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    let outside = outer.path().join("outside");
+    std::fs::create_dir_all(&outside).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    std::os::unix::fs::symlink(&outside, root.join(".sloplint"))
+        .unwrap_or_else(|e| panic!("symlink: {e}"));
+    let report = run(&RunOptions {
+        cwd: root.clone(),
+        root: Some(root.clone()),
+        use_cache: true,
+        ..RunOptions::default()
+    });
+    assert!(
+        report.is_ok(),
+        "symlinked cache dir must warn, not fail: {report:?}"
+    );
+    assert!(
+        !outside.join("cache-v1.bin").exists(),
+        "cache escaped through symlinked directory"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn audit_persistence_cache_gitignore_symlink_is_preserved() {
+    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = outer.path().join("proj");
+    std::fs::create_dir_all(root.join(".sloplint")).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    let marker = outer.path().join("marker.txt");
+    std::os::unix::fs::symlink(&marker, root.join(".sloplint/.gitignore"))
+        .unwrap_or_else(|e| panic!("symlink: {e}"));
+    let report = run(&RunOptions {
+        cwd: root.clone(),
+        root: Some(root.clone()),
+        use_cache: true,
+        ..RunOptions::default()
+    });
+    assert!(
+        report.is_ok(),
+        "gitignore symlink must warn, not fail: {report:?}"
+    );
+    assert!(
+        !marker.exists(),
+        "outside file created through dangling gitignore symlink"
+    );
+    assert!(
+        std::fs::symlink_metadata(root.join(".sloplint/.gitignore"))
+            .unwrap_or_else(|e| panic!("metadata: {e}"))
+            .file_type()
+            .is_symlink(),
+        "gitignore symlink was replaced"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn audit_persistence_cache_temp_symlink_is_preserved() {
+    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = outer.path().join("proj");
+    std::fs::create_dir_all(root.join(".sloplint")).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    let marker = outer.path().join("target.txt");
+    std::fs::write(&marker, "sentinel").unwrap_or_else(|e| panic!("sentinel: {e}"));
+    let planted = root
+        .join(".sloplint")
+        .join(format!("cache-v1.bin.{}.tmp", std::process::id()));
+    std::os::unix::fs::symlink(&marker, &planted).unwrap_or_else(|e| panic!("symlink: {e}"));
+    let report = run(&RunOptions {
+        cwd: root.clone(),
+        root: Some(root.clone()),
+        use_cache: true,
+        ..RunOptions::default()
+    });
+    assert!(
+        report.is_ok(),
+        "planted temp symlink must warn, not fail: {report:?}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(&marker).unwrap_or_else(|e| panic!("read: {e}")),
+        "sentinel",
+        "outside marker overwritten through temp symlink"
+    );
+}
+
+#[test]
 fn invalid_and_unused_suppressions_report() {
     let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
     let root = tmp.path();

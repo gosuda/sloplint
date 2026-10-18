@@ -150,6 +150,70 @@ pub fn scopes(root: &Path, cwd: &Path, paths: &[PathBuf]) -> Result<Vec<String>,
     Ok(scopes)
 }
 
+/// Resolves a configured baseline name to an absolute path inside `root`.
+///
+/// `root` must already be canonical. Empty and absolute names are rejected.
+/// An existing candidate is canonicalized whole, so symlink chains to the
+/// outside are rejected by the prefix check. A missing candidate is allowed
+/// only as an absent regular leaf: a dangling symlink leaf is rejected
+/// without being followed, and the immediate parent is canonicalized, so a
+/// missing parent stays an I/O failure. Nothing is created or written.
+pub fn resolve_within_root(root: &Path, name: &str) -> Result<PathBuf, RunError> {
+    let rel = Path::new(name);
+    if name.is_empty() || rel.is_absolute() {
+        return Err(RunError::BaselineOutsideRoot {
+            path: PathBuf::from(name),
+        });
+    }
+    let candidate = root.join(rel);
+    match fs::canonicalize(&candidate) {
+        Ok(resolved) => {
+            if !resolved.starts_with(root) {
+                return Err(RunError::BaselineOutsideRoot {
+                    path: PathBuf::from(name),
+                });
+            }
+            Ok(resolved)
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            match fs::symlink_metadata(&candidate) {
+                Ok(meta) if meta.file_type().is_symlink() => Err(RunError::BaselineOutsideRoot {
+                    path: PathBuf::from(name),
+                }),
+                Ok(_) => Err(RunError::Io {
+                    path: candidate.clone(),
+                    source: error,
+                }),
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                    let parent = candidate.parent().unwrap_or(root);
+                    let canonical = fs::canonicalize(parent).map_err(|source| RunError::Io {
+                        path: parent.to_path_buf(),
+                        source,
+                    })?;
+                    let resolved = match candidate.file_name() {
+                        Some(file) => canonical.join(file),
+                        None => canonical,
+                    };
+                    if !resolved.starts_with(root) {
+                        return Err(RunError::BaselineOutsideRoot {
+                            path: PathBuf::from(name),
+                        });
+                    }
+                    Ok(resolved)
+                }
+                Err(source) => Err(RunError::Io {
+                    path: candidate.clone(),
+                    source,
+                }),
+            }
+        }
+        Err(source) => Err(RunError::Io {
+            path: candidate.clone(),
+            source,
+        }),
+    }
+}
+
 /// Whether `path` lies under one of the scopes; empty scopes cover everything.
 pub fn in_scope(scopes: &[String], path: &str) -> bool {
     scopes.is_empty()

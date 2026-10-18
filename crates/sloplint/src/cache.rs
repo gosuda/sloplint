@@ -78,12 +78,42 @@ pub fn load(root: &Path, key: &[u8; 32]) -> HashMap<Box<str>, FileOutput> {
 }
 
 /// Writes the cache atomically via a per-process temporary file and rename.
+///
+/// A symlinked `.sloplint` refuses the write so an ordinary check never
+/// stores outside the root. The directory is checked twice for distinct
+/// reasons: before creation, so `create_dir_all` cannot materialize a
+/// dangling link's outside target; after creation, so a link swapped in
+/// between cannot be used. `.gitignore` and the temporary file are created
+/// exclusively, so a pre-planted symlink at either path is left alone
+/// instead of being followed. Only the owned temporary file is renamed or
+/// removed, after its handle is closed.
 pub fn store(root: &Path, key: &[u8; 32], files: &[(&str, &FileOutput)]) -> io::Result<()> {
     let dir = root.join(DIR);
+    if fs::symlink_metadata(&dir).is_ok_and(|meta| meta.file_type().is_symlink()) {
+        return Err(io::Error::other(format!(
+            "refusing to write cache through symlink {}",
+            dir.display()
+        )));
+    }
     fs::create_dir_all(&dir)?;
+    if fs::symlink_metadata(&dir).is_ok_and(|meta| meta.file_type().is_symlink()) {
+        return Err(io::Error::other(format!(
+            "refusing to write cache through symlink {}",
+            dir.display()
+        )));
+    }
     let ignore = dir.join(".gitignore");
-    if !ignore.exists() {
-        fs::write(&ignore, "*\n")?;
+    match fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&ignore)
+    {
+        Ok(mut file) => {
+            use std::io::Write as _;
+            file.write_all(b"*\n")?;
+        }
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
+        Err(error) => return Err(error),
     }
     let bytes = postcard::to_allocvec(&CacheWrite {
         version: VERSION,
@@ -92,7 +122,18 @@ pub fn store(root: &Path, key: &[u8; 32], files: &[(&str, &FileOutput)]) -> io::
     })
     .map_err(io::Error::other)?;
     let tmp = dir.join(format!("{FILE}.{}.tmp", std::process::id()));
-    fs::write(&tmp, &bytes)?;
+    {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)?;
+        use std::io::Write as _;
+        if let Err(error) = file.write_all(&bytes) {
+            drop(file);
+            let _ = fs::remove_file(&tmp);
+            return Err(error);
+        }
+    }
     fs::rename(&tmp, dir.join(FILE)).inspect_err(|_| {
         let _ = fs::remove_file(&tmp);
     })
