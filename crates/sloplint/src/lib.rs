@@ -448,7 +448,13 @@ fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Vec<Finding> {
     });
     Baseline::assign_fingerprints(&mut findings);
     suppress::apply(&mut findings, &mut suppressions);
-    if pipe.filter.0.is_empty() {
+    if pipe.filter.0.is_empty()
+        || pipe
+            .filter
+            .0
+            .iter()
+            .any(|p| p.matches("meta/unused-suppression"))
+    {
         findings.extend(unused_findings(pipe, &file.rel, &suppressions));
     }
     findings
