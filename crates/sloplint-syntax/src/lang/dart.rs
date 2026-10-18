@@ -258,13 +258,19 @@ fn label_text<'s>(cx: &Cx<'_, 's>, lab: Node<'_>) -> &'s str {
 }
 
 fn arm_pattern_member(n: Node<'_>) -> bool {
+    fn memberish(m: Node<'_>) -> bool {
+        m.kind() == "member_expression"
+            || (m.kind() == "constant_pattern"
+                && m.named_child_count() == 2
+                && (0..m.child_count())
+                    .filter_map(|i| m.child(i))
+                    .any(|c| c.kind() == "."))
+    }
     named_children(n).into_iter().any(|c| {
-        c.kind() == "member_expression"
+        memberish(c)
             || (!c.kind().contains("statement")
                 && c.kind() != "block"
-                && named_children(c)
-                    .into_iter()
-                    .any(|g| g.kind() == "member_expression"))
+                && named_children(c).into_iter().any(memberish))
     })
 }
 
