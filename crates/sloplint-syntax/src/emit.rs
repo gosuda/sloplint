@@ -317,6 +317,14 @@ impl<'s, 'a> WalkState<'s, 'a> {
         if !text.contains("sloplint-allow") {
             return;
         }
+        // Doc comments document directives; they never issue one.
+        let head = text.trim_start();
+        if ["///", "//!", "/**", "/*!", "(**", "(*!"]
+            .iter()
+            .any(|p| head.starts_with(p))
+        {
+            return;
+        }
         self.comments.push(CommentText {
             start_line: pos_of(node).line,
             end_line: narrow(node.end_position().row) + 1,
