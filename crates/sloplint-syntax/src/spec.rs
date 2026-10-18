@@ -19,7 +19,7 @@ pub(crate) enum Role {
     ElseIf,
     Match,
     Loop,
-    /// A `with`-style block: nests and scores like a branch, but no match arms.
+    /// A `with`-style block: bumps nesting depth only, adds no cognitive score.
     With,
     Catch,
     Ternary,

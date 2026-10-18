@@ -216,7 +216,13 @@ impl<'s, 'a> WalkState<'s, 'a> {
             Role::If => self.enter_if(node),
             Role::ElseIf => self.score_top(1),
             Role::Loop => self.enter_loop(node),
-            Role::Match | Role::Ternary | Role::With => self.score_nested(node),
+            Role::Match | Role::Ternary => self.score_nested(node),
+            Role::With => {
+                if !self.fn_stack.is_empty() {
+                    let line = pos_of(node).line;
+                    self.bump_nest(node.id(), line);
+                }
+            }
             Role::Catch => self.enter_catch(node),
             _ => {}
         }
