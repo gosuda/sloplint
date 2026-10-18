@@ -50,14 +50,15 @@ pub fn interface_hash(text: &str) -> [u8; 32] {
     *hasher.finalize().as_bytes()
 }
 
-/// Hashes everything that shapes per-file output: the tool version, the effective config, and custom rule files.
+/// Hashes everything that shapes per-file output: the binary bytes, the effective config, and custom rule files.
 pub fn config_key(
     config: &Config,
     custom_sources: &[(String, String)],
-) -> Result<[u8; 32], sonic_rs::Error> {
+) -> io::Result<[u8; 32]> {
     let mut hasher = blake3::Hasher::new();
-    hasher.update(env!("CARGO_PKG_VERSION").as_bytes());
-    hasher.update(&sonic_rs::to_vec(config)?);
+    let exe = std::env::current_exe()?;
+    hasher.update(&fs::read(&exe)?);
+    hasher.update(&sonic_rs::to_vec(config).map_err(io::Error::other)?);
     for (rel, text) in custom_sources {
         hasher.update(rel.as_bytes());
         hasher.update(&[0u8]);

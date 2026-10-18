@@ -164,7 +164,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let scopes = project::scopes(&root, &opts.cwd, &opts.paths)?;
     let discovery = discover::discover(&root, &config)?;
     let key = cache::config_key(&config, &loaded.custom_sources)
-        .map_err(|source| io_error(&root, io::Error::other(source)))?;
+        .map_err(|source| io_error(&root, source))?;
     let cached = if opts.use_cache {
         cache::load(&root, &key)
     } else {
