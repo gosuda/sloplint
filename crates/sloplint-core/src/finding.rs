@@ -193,9 +193,9 @@ mod tests {
             FailOn::Warn < FailOn::Deny && FailOn::Deny < FailOn::Never,
             "fail-on thresholds should order Warn < Deny < Never"
         );
-        assert_eq!(serde_json::to_string(&Severity::Warn).unwrap(), "\"warn\"");
-        assert_eq!(serde_json::to_string(&FailOn::Never).unwrap(), "\"never\"");
-        let level: Level = serde_json::from_str("\"deny\"").unwrap();
+        assert_eq!(sonic_rs::to_string(&Severity::Warn).unwrap(), "\"warn\"");
+        assert_eq!(sonic_rs::to_string(&FailOn::Never).unwrap(), "\"never\"");
+        let level: Level = sonic_rs::from_str("\"deny\"").unwrap();
         assert_eq!(level, Level::Deny);
     }
 

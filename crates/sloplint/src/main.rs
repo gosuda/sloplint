@@ -142,11 +142,11 @@ fn write_json(report: &Report, out: &mut dyn Write) -> io::Result<()> {
     let findings = report
         .findings
         .iter()
-        .map(serde_json::to_string)
+        .map(sonic_rs::to_string)
         .collect::<Result<Vec<_>, _>>()
         .map_err(io::Error::other)?;
-    let rules = serde_json::to_string(&report.rules_fired).map_err(io::Error::other)?;
-    let summary = serde_json::to_string(&report.summary).map_err(io::Error::other)?;
+    let rules = sonic_rs::to_string(&report.rules_fired).map_err(io::Error::other)?;
+    let summary = sonic_rs::to_string(&report.summary).map_err(io::Error::other)?;
     writeln!(out, "{{\"version\":1,")?;
     writeln!(out, " \"findings\":[{}],", findings.join(","))?;
     writeln!(out, " \"rules\":{rules},")?;

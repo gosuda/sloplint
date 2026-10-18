@@ -204,7 +204,7 @@ fn custom_entries(config: &Config) -> Vec<Listed> {
         .collect()
 }
 
-fn json(strictness: Strictness, shown: &[&Listed]) -> Result<String, serde_json::Error> {
+fn json(strictness: Strictness, shown: &[&Listed]) -> Result<String, sonic_rs::Error> {
     let rules = shown
         .iter()
         .map(|entry| JsonRule {
@@ -217,7 +217,7 @@ fn json(strictness: Strictness, shown: &[&Listed]) -> Result<String, serde_json:
             presets: entry.presets.as_ref().map(json_presets),
         })
         .collect();
-    let mut text = serde_json::to_string(&JsonDoc { strictness, rules })?;
+    let mut text = sonic_rs::to_string(&JsonDoc { strictness, rules })?;
     text.push('\n');
     Ok(text)
 }

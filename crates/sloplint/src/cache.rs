@@ -54,10 +54,10 @@ pub fn interface_hash(text: &str) -> [u8; 32] {
 pub fn config_key(
     config: &Config,
     custom_sources: &[(String, String)],
-) -> Result<[u8; 32], serde_json::Error> {
+) -> Result<[u8; 32], sonic_rs::Error> {
     let mut hasher = blake3::Hasher::new();
     hasher.update(env!("CARGO_PKG_VERSION").as_bytes());
-    hasher.update(&serde_json::to_vec(config)?);
+    hasher.update(&sonic_rs::to_vec(config)?);
     for (rel, text) in custom_sources {
         hasher.update(rel.as_bytes());
         hasher.update(&[0u8]);

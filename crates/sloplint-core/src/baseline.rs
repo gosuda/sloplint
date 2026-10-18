@@ -34,7 +34,7 @@ impl Baseline {
     /// Parses a baseline document; only version 1 is accepted.
     pub fn from_json(s: &str) -> Result<Baseline, String> {
         let doc: BaselineFile =
-            serde_json::from_str(s).map_err(|error| format!("invalid baseline JSON: {error}"))?;
+            sonic_rs::from_str(s).map_err(|error| format!("invalid baseline JSON: {error}"))?;
         if doc.version != 1 {
             return Err(format!("unsupported baseline version {}", doc.version));
         }
@@ -50,7 +50,7 @@ impl Baseline {
             findings: self.entries.iter().cloned().collect(),
         };
         let mut json =
-            serde_json::to_string_pretty(&doc).expect("baseline serialization cannot fail");
+            sonic_rs::to_string_pretty(&doc).expect("baseline serialization cannot fail");
         json.push('\n');
         json
     }
