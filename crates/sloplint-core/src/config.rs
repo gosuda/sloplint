@@ -463,7 +463,7 @@ const DEFAULT_LOG_CALLEES: [(&str, &str); 23] = [
         "swift",
         "print,debugPrint,NSLog,os_log,logger.debug,logger.info,logger.notice,logger.warning,logger.error,logger.fault",
     ),
-    ("r", "message,warning,print,cat,flog.*"),
+    ("r", "message,warning,print,cat"),
     (
         "scala",
         "logger.trace,logger.debug,logger.info,logger.warn,logger.error,log.debug,log.info,log.warn,log.error,println,new *Exception,new *Error",

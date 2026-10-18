@@ -10,7 +10,7 @@ Install `rustup`. The workspace pins Rust `1.99.1` with `clippy` and `rustfmt` i
 
 - `crates/sloplint-core`: facts, configuration, suppressions, baselines, and the rule catalog (`FileRule` and `WorldRule`). No tree-sitter or I/O dependencies.
 - `crates/sloplint-syntax`: one iterative `TreeCursor` walk and 23 language adapters (`crates/sloplint-syntax/src/lang/*.rs`) that lower tree-sitter parse trees into `FileFacts`, plus `[[custom_rules]]` query execution.
-- `crates/sloplint`: CLI entry point, project discovery, `.sloplint/cache-v1.bin` cache, and `agent`, `human`, and `json` renderers.
+- `crates/sloplint`: CLI entry point, project discovery, `.sloplint/` cache, and `agent`, `human`, and `json` renderers.
 
 Rules read only `FileFacts` and `WorldFacts`. Keeping `sloplint-core` free of `tree-sitter` enforces that boundary in the dependency graph.
 
@@ -43,7 +43,7 @@ sloplint check crates
 cargo run --locked --release -p sloplint -- check crates --format agent
 ```
 
-Every file in `crates/` must pass `sloplint` under the default `standard` profile, including the 500-line file budget (`agent/file-token-budget`). Do not add implementation comments; place doc comments only on `pub` items in `sloplint-core` and `sloplint-syntax`.
+Every file in `crates/` must pass `sloplint` under the default `standard` profile (`agent/file-token-budget` warns at 600 lines and denies at 1000 lines under `standard`, and 500/800 under `strict`). Place doc comments on `pub` items in `sloplint-core` and `sloplint-syntax`.
 
 ## Adding a rule
 
