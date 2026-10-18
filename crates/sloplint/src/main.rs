@@ -1,7 +1,5 @@
 //! Entry point for the sloplint binary: parses arguments, runs the pipeline, renders, and maps exit codes.
 
-mod alloc;
-
 use std::collections::HashMap;
 use std::fs;
 use std::io::{self, Write};
