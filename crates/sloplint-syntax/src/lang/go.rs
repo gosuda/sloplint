@@ -293,11 +293,11 @@ fn go_handler_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, bound: &str) -> Stmt<'s> {
 }
 
 fn go_keyed<'s>(cx: &Cx<'_, 's>, el: Node<'_>) -> Option<&'s str> {
-    let key = child_by_field(el, "key")?;
+    let key = unwrap_literal_element(child_by_field(el, "key")?);
     if key.kind() != "identifier" {
         return None;
     }
-    let val = child_by_field(el, "value")?;
+    let val = unwrap_literal_element(child_by_field(el, "value")?);
     if val.kind() != "selector_expression" {
         return None;
     }
@@ -311,10 +311,22 @@ fn go_keyed<'s>(cx: &Cx<'_, 's>, el: Node<'_>) -> Option<&'s str> {
     Some(text(cx, obj))
 }
 
+fn unwrap_literal_element(n: Node<'_>) -> Node<'_> {
+    if n.kind() == "literal_element" && n.named_child_count() == 1 {
+        return n.named_child(0).unwrap_or(n);
+    }
+    n
+}
+
 fn is_sentinel(cx: &Cx<'_, '_>, spec: Node<'_>) -> bool {
     child_by_field(spec, "value").is_some_and(|v| {
-        v.kind() == "call_expression"
-            && child_by_field(v, "function").is_some_and(|f| {
+        let expr = if v.kind() == "expression_list" {
+            v.named_child(0).unwrap_or(v)
+        } else {
+            v
+        };
+        expr.kind() == "call_expression"
+            && child_by_field(expr, "function").is_some_and(|f| {
                 let t = text(cx, f);
                 t == "errors.New" || t == "fmt.Errorf"
             })
