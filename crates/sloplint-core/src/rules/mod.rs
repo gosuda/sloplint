@@ -261,60 +261,68 @@ impl RuleSet {
     /// Resolves every catalog rule: the preset of the active strictness with the user table over it.
     pub fn new(config: &Config, filter: &RuleFilter) -> Result<RuleSet, ConfigError> {
         let settings = Settings::from_config(config);
+        let resolved: Vec<ResolvedRule> = CATALOG
+            .iter()
+            .map(|info| {
+                let user = config.rules.get(info.id);
+                let preset = (info.preset)(config.project.strictness);
+                let level = user
+                    .and_then(|table| table.get("level"))
+                    .and_then(|value| value.as_str())
+                    .and_then(parse_level)
+                    .unwrap_or(preset.level);
+                let mut options = preset.options.clone();
+                if let Some(table) = user {
+                    for (key, value) in table {
+                        if key != "level" {
+                            options.insert(key.clone(), value.clone());
+                        }
+                    }
+                }
+                ResolvedRule {
+                    info,
+                    level,
+                    options,
+                }
+            })
+            .collect();
+        let levels: BTreeMap<String, Level> = resolved
+            .iter()
+            .map(|entry| (entry.info.id.to_string(), entry.level))
+            .collect();
+        let mut file_rules = Vec::new();
+        let mut world_rules = Vec::new();
+        let mut active = BTreeSet::new();
+        for entry in &resolved {
+            if entry.level == Level::Off || !filter.matches(entry.info.id) {
+                continue;
+            }
+            let option_err = |message: String| ConfigError::RuleOption {
+                rule: entry.info.id.to_string(),
+                message,
+            };
+            match entry.info.build {
+                Build::File(build) => file_rules.push((
+                    entry.info,
+                    build(entry.options.clone(), &settings).map_err(option_err)?,
+                )),
+                Build::World(build) => world_rules.push((
+                    entry.info,
+                    build(entry.options.clone()).map_err(option_err)?,
+                )),
+                Build::Meta => {}
+            }
+            active.insert(entry.info.id.to_string());
+        }
         let mut set = RuleSet {
-            file_rules: Vec::new(),
-            world_rules: Vec::new(),
-            resolved: Vec::new(),
-            levels: BTreeMap::new(),
-            active: BTreeSet::new(),
+            file_rules,
+            world_rules,
+            resolved,
+            levels,
+            active,
             filter: filter.clone(),
             custom: custom::entries(config)?,
         };
-        for info in CATALOG {
-            let user = config.rules.get(info.id);
-            let preset = (info.preset)(config.project.strictness);
-            let level = user
-                .and_then(|table| table.get("level"))
-                .and_then(|value| value.as_str())
-                .and_then(parse_level)
-                .unwrap_or(preset.level);
-            let mut options = preset.options.clone();
-            if let Some(table) = user {
-                for (key, value) in table {
-                    if key != "level" {
-                        options.insert(key.clone(), value.clone());
-                    }
-                }
-            }
-            set.resolved.push(ResolvedRule {
-                info,
-                level,
-                options: options.clone(),
-            });
-            set.levels.insert(info.id.to_string(), level);
-            if level == Level::Off || !filter.matches(info.id) {
-                continue;
-            }
-            match info.build {
-                Build::File(build) => {
-                    let rule =
-                        build(options, &settings).map_err(|message| ConfigError::RuleOption {
-                            rule: info.id.to_string(),
-                            message,
-                        })?;
-                    set.file_rules.push((info, rule));
-                }
-                Build::World(build) => {
-                    let rule = build(options).map_err(|message| ConfigError::RuleOption {
-                        rule: info.id.to_string(),
-                        message,
-                    })?;
-                    set.world_rules.push((info, rule));
-                }
-                Build::Meta => {}
-            }
-            set.active.insert(info.id.to_string());
-        }
         let custom_levels: Vec<(String, Level)> = set
             .custom
             .iter()
@@ -322,7 +330,7 @@ impl RuleSet {
             .collect();
         for (id, level) in custom_levels {
             set.levels.insert(id.clone(), level);
-            if level != Level::Off && filter.matches(&id) {
+            if level != Level::Off && set.filter.matches(&id) {
                 set.active.insert(id);
             }
         }
