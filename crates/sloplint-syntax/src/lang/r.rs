@@ -62,6 +62,10 @@ impl LangHooks for RHooks {
         })
     }
 
+    fn control_call(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+        child_by_field(n, "function").is_some_and(|f| trimmed(cx, f) == "switch")
+    }
+
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         let target = match operator_text(cx, n) {
             "<-" | "=" | ":=" => child_by_field(n, "lhs"),

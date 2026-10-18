@@ -19,6 +19,8 @@ pub(crate) enum Role {
     ElseIf,
     Match,
     Loop,
+    /// A `with`-style block: nests and scores like a branch, but no match arms.
+    With,
     Catch,
     Ternary,
     Call,

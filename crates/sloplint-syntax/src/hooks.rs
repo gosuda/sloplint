@@ -70,6 +70,12 @@ pub(crate) trait LangHooks: Sync {
     /// True when this `If`-role node is the else-if form of its parent.
     fn is_else_if(&self, n: Node<'_>) -> bool;
 
+    /// True when a `Call`-role node spells a control construct (R's `switch`).
+    fn control_call(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+        let _ = (n, cx);
+        false
+    }
+
     /// Names and positions bound by a `Decl` or `Bind` node.
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         let _ = (n, cx, out);

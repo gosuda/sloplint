@@ -22,6 +22,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("for_statement", Role::Loop),
     ("while_statement", Role::Loop),
     ("except_clause", Role::Catch),
+    ("with_statement", Role::With),
     ("conditional_expression", Role::Ternary),
     ("call", Role::Call),
     ("assignment", Role::Bind),

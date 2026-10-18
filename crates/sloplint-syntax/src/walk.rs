@@ -172,7 +172,13 @@ impl<'s, 'a> WalkState<'s, 'a> {
         }
         match role {
             Role::Function | Role::Closure => self.enter_function_like(role, node),
-            Role::If | Role::ElseIf | Role::Match | Role::Loop | Role::Catch | Role::Ternary => {
+            Role::If
+            | Role::ElseIf
+            | Role::Match
+            | Role::Loop
+            | Role::Catch
+            | Role::Ternary
+            | Role::With => {
                 self.enter_flow(role, node);
             }
             Role::Call | Role::MacroCall | Role::NewCall => self.enter_call_site(node),
@@ -210,7 +216,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
             Role::If => self.enter_if(node),
             Role::ElseIf => self.score_top(1),
             Role::Loop => self.enter_loop(node),
-            Role::Match | Role::Ternary => self.score_nested(node),
+            Role::Match | Role::Ternary | Role::With => self.score_nested(node),
             Role::Catch => self.enter_catch(node),
             _ => {}
         }
@@ -273,6 +279,12 @@ impl<'s, 'a> WalkState<'s, 'a> {
     }
 
     fn enter_call_site(&mut self, node: Node<'_>) {
+        {
+            let cx = self.make_cx();
+            if self.spec.hooks.control_call(node, &cx) {
+                self.score_nested(node);
+            }
+        }
         self.push_call(node);
         self.push_imports(node);
         self.push_assertion(node);
