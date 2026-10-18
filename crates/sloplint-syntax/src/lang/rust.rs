@@ -625,7 +625,7 @@ impl LangHooks for RustHooks {
                 return None;
             }
             let mut kids = named_children(pat).into_iter();
-            let only = kids.next()?;
+            let only = kids.next().unwrap_or(pat);
             if kids.next().is_some() {
                 return None;
             }
