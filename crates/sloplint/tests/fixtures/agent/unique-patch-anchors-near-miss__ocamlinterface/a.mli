@@ -1,0 +1,12 @@
+val anchor_alpha : int -> int
+val anchor_beta : string -> string
+val anchor_gamma : float -> float
+val anchor_delta : bool -> bool
+val anchor_epsilon : char -> char
+val anchor_zeta : int64 -> int64
+val anchor_alpha : int -> int
+val anchor_beta : string -> string
+val anchor_gamma : float -> float
+val anchor_delta : bool -> bool
+val anchor_epsilon : char -> char
+val anchor_zeta : int64 -> int64

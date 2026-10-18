@@ -1,0 +1,2 @@
+src/logs.py:7 deny grep/contiguous-log-literal
+src/logs.py:8 deny grep/contiguous-log-literal

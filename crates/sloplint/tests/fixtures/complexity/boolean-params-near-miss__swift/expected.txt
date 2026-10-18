@@ -1,0 +1,1 @@
+# private function plus protocol-conformance method (interface-bound).

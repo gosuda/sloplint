@@ -1,0 +1,1 @@
+calc.c:1 warn agent/colocated-tests

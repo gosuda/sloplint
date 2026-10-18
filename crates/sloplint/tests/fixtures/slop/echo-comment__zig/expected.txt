@@ -1,0 +1,2 @@
+# Positive: doc comment restates the name (similarity 1.00 >= strict 0.65).
+src/order.zig:1 warn slop/echo-comment

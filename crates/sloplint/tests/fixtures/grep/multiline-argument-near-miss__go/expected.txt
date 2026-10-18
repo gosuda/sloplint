@@ -1,0 +1,1 @@
+# Argument spans 5 lines, below strict warn_at=6.

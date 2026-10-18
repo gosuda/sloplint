@@ -1,0 +1,1 @@
+# every parameter and the return type are annotated.

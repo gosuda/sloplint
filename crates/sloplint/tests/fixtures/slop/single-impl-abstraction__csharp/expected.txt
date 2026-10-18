@@ -1,0 +1,1 @@
+src/Shape.cs:1 warn slop/single-impl-abstraction

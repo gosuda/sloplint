@@ -1,0 +1,1 @@
+src/convert.tsx:8 warn slop/field-copy

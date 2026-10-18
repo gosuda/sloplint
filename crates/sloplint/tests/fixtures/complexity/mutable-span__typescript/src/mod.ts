@@ -1,0 +1,34 @@
+export function spread(limit: number): number {
+  let total = 0;
+  total += 1;
+  const a = 1;
+  const b = 2;
+  const c = 3;
+  const d = 4;
+  const e = 5;
+  const f = 6;
+  const g = a + b;
+  const h = c + d;
+  const i = e + f;
+  const j = g + h;
+  const k = h + i;
+  const m = i + j;
+  const n = j + k;
+  const o = k + m;
+  const p = m + n;
+  const q = n + o;
+  const r = o + p;
+  const s = p + q;
+  const t = q + r;
+  const u = r + s;
+  const v = s + t;
+  const w = t + u;
+  const x = u + v;
+  const y = v + w;
+  const z = w + x;
+  const sum = x + y + z;
+  const fin = sum + a;
+  total += fin;
+  total += limit;
+  return total;
+}

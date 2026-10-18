@@ -1,0 +1,1 @@
+# Near-miss: static (private) function with bool params never fires.

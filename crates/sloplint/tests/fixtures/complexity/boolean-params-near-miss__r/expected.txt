@@ -1,0 +1,1 @@
+# near-miss: dot-prefixed function is private; untyped param is not boolean.

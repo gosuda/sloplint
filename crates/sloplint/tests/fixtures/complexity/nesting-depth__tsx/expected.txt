@@ -1,0 +1,1 @@
+src/deep.tsx:1 deny complexity/nesting-depth

@@ -1,0 +1,1 @@
+src/checks.php:3 deny agent/informative-assertions

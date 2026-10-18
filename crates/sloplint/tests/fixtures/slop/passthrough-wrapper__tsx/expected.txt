@@ -1,0 +1,1 @@
+src/greet.tsx:1 warn slop/passthrough-wrapper

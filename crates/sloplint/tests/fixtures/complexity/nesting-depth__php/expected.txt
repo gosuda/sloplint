@@ -1,0 +1,1 @@
+src/nested.php:2 deny complexity/nesting-depth

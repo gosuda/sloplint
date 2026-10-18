@@ -1,0 +1,1 @@
+src/spread.R:2 deny complexity/mutable-span

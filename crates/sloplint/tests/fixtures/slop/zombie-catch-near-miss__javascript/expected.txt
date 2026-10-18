@@ -1,0 +1,1 @@
+# Near-miss: wrapping with context is real handling, not a zombie.

@@ -1,0 +1,1 @@
+# Near-miss: non-Str argument spans 4 lines, below strict warn_at 6.

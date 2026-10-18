@@ -1,0 +1,1 @@
+src/Loader.java:3 warn grep/no-dynamic-symbol

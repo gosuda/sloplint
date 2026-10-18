@@ -1,0 +1,1 @@
+# near-miss: main.rb matches the ambient allow_files entry.

@@ -1,0 +1,1 @@
+# near-miss: `else` over integer literals, never enum-like.

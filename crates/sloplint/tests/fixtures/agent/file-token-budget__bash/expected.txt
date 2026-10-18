@@ -1,0 +1,2 @@
+# Positive: 43 lines (thresholds lowered to warn_at=20 deny_at=30 for a small fixture).
+big.sh:1 deny agent/file-token-budget

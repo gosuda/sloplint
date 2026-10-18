@@ -1,0 +1,1 @@
+# Near-miss: the only multi-line argument is a Str template, which is excluded.

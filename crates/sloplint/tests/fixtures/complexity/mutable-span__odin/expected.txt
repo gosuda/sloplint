@@ -1,0 +1,1 @@
+a.odin:4 warn complexity/mutable-span

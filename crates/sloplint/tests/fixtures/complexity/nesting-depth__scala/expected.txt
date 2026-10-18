@@ -1,0 +1,2 @@
+# Positive: nesting depth 5 >= strict deny_at 5.
+src/nested.scala:2 deny complexity/nesting-depth

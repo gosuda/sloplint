@@ -1,0 +1,2 @@
+src/lib.swift:1 warn grep/generic-name
+src/lib.swift:3 warn grep/generic-name

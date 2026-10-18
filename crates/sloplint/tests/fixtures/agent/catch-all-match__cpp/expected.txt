@@ -1,0 +1,1 @@
+src/a.cpp:5 warn agent/catch-all-match

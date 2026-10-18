@@ -1,0 +1,1 @@
+# near-miss: src/widget.test.tsx is the counterpart of src/widget.tsx.

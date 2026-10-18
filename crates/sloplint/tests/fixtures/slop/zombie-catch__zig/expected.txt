@@ -1,0 +1,2 @@
+# Positive: empty catch block swallows the error.
+src/handler.zig:6 deny slop/zombie-catch

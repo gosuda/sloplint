@@ -1,0 +1,1 @@
+# near-miss: Class.forName with a string literal is statically visible.

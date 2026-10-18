@@ -1,0 +1,1 @@
+# Near-miss: domain-specific name shares no entry with the generic-name list.

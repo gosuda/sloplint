@@ -1,0 +1,1 @@
+# Near-miss: distinct newtype plus one primitive.

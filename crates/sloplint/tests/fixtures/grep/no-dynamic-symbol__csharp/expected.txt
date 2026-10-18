@@ -1,0 +1,1 @@
+src/Loader.cs:5 warn grep/no-dynamic-symbol

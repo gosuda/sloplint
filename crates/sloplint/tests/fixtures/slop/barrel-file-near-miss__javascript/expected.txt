@@ -1,0 +1,1 @@
+# Near-miss: every re-export target is a defining module, not a barrel.

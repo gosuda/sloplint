@@ -1,0 +1,1 @@
+# near-miss: `helper` is private; the public function takes an enum, not a bool.

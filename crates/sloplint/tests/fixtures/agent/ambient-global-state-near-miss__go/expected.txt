@@ -1,0 +1,1 @@
+# main.go matches allow_files: globals and env reads exempt.

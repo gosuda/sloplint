@@ -1,0 +1,2 @@
+# Positive: handler rethrows the error unchanged.
+src/loader.scala:6 deny slop/zombie-catch

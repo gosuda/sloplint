@@ -1,0 +1,1 @@
+# Near-miss: src/service.test.js is the colocated counterpart.

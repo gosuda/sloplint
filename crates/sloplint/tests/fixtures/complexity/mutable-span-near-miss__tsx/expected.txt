@@ -1,0 +1,1 @@
+# near-miss: `base` is const and never rewritten (span 0).

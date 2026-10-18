@@ -1,0 +1,1 @@
+a.rb:2 warn complexity/mutable-span

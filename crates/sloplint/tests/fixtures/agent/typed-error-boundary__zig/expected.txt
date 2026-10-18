@@ -1,0 +1,2 @@
+# Positive: `anyerror!Config` is an untyped error set.
+src/loader.zig:5 warn agent/typed-error-boundary

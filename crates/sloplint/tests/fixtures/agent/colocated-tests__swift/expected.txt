@@ -1,0 +1,1 @@
+src/service.swift:1 warn agent/colocated-tests

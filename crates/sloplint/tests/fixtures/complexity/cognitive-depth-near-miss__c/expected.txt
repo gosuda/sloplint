@@ -1,0 +1,1 @@
+# Near-miss: else-if chain scores 9 (1 + 8), below strict warn_at=10.

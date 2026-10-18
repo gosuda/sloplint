@@ -1,0 +1,1 @@
+# Private function with a bool param is not public: no finding.

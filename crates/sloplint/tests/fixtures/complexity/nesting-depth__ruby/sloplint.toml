@@ -1,0 +1,3 @@
+[rules."complexity/nesting-depth"]
+warn_at = 2
+deny_at = 3

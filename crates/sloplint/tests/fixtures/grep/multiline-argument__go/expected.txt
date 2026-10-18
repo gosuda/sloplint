@@ -1,0 +1,1 @@
+a.go:10 warn grep/multiline-argument

@@ -1,0 +1,1 @@
+a.bzl:2 deny grep/contiguous-log-literal

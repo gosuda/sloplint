@@ -1,0 +1,1 @@
+src/Big.cs:1 deny agent/file-token-budget

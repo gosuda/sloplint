@@ -1,0 +1,1 @@
+# near-miss: delegation through `this` is a real method call shape, not a pure forward.

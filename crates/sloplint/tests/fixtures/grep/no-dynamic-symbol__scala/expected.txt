@@ -1,0 +1,2 @@
+# Positive: reflection by computed name (non-literal first arg).
+src/reflect.scala:3 warn grep/no-dynamic-symbol

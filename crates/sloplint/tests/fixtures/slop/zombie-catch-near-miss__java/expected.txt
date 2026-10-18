@@ -1,0 +1,1 @@
+# near-miss: the handler returns a fallback value instead of swallowing.

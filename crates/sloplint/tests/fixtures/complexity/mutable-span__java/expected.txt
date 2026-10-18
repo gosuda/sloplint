@@ -1,0 +1,1 @@
+src/Spread.java:3 deny complexity/mutable-span

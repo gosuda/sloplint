@@ -1,0 +1,1 @@
+src/Greeter.cs:2 warn slop/passthrough-wrapper

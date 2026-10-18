@@ -1,0 +1,1 @@
+# near-miss: private method with a boolean parameter is exempt.

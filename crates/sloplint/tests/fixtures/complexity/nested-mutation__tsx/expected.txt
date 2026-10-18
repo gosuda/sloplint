@@ -1,0 +1,1 @@
+src/grid.tsx:6 deny complexity/nested-mutation

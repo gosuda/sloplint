@@ -1,0 +1,1 @@
+# near-miss: `id` is a distinct newtype; only one consecutive primitive remains.

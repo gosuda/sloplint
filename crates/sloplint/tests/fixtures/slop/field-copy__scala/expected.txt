@@ -1,0 +1,2 @@
+# Positive: 4 fields copied one-to-one from p (>= strict min_fields=4).
+src/convert.scala:3 warn slop/field-copy

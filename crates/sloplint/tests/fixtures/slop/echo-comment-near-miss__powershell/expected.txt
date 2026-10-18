@@ -1,0 +1,1 @@
+# Near-miss: the doc adds an Errors section the name cannot say, so similarity stays below threshold.

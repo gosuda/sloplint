@@ -1,0 +1,1 @@
+src/greet.kt:2 deny grep/contiguous-log-literal

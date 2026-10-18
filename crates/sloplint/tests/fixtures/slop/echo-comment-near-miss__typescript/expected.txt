@@ -1,0 +1,1 @@
+# Near-miss: doc adds an Errors section.

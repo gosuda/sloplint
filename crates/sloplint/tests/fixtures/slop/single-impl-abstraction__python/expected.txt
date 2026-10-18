@@ -1,0 +1,1 @@
+src/shapes.py:4 warn slop/single-impl-abstraction

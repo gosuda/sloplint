@@ -1,0 +1,1 @@
+a.go:3 deny complexity/mutable-span

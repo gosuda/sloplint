@@ -1,0 +1,2 @@
+# Positive: trait Draw has exactly one implementation.
+src/Draw.scala:1 warn slop/single-impl-abstraction

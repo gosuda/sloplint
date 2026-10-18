@@ -1,0 +1,1 @@
+src/a.cpp:3 deny slop/zombie-catch

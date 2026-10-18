@@ -1,0 +1,1 @@
+a.odin:3 deny complexity/import-fan-out

@@ -1,0 +1,1 @@
+# Near-miss: trait decl has no body; impl method is interface_bound; helper is private.

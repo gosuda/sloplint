@@ -1,0 +1,2 @@
+# Positive: file-scope `var` is a mutable global.
+src/store.zig:1 deny agent/ambient-global-state

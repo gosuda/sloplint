@@ -1,0 +1,2 @@
+# Positive: public function with 2 Boolean params >= strict deny_at 2.
+src/render.scala:2 deny complexity/boolean-params

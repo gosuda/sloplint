@@ -1,0 +1,1 @@
+src/Modes.cs:6 warn agent/catch-all-match

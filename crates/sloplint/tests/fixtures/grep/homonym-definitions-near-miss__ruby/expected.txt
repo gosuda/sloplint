@@ -1,0 +1,1 @@
+# near-miss: same name in 4 files < strict min_files 5.

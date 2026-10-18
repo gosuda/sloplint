@@ -1,0 +1,1 @@
+# Near-miss: a wildcard over integer literals hides no enum variants.

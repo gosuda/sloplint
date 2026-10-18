@@ -1,0 +1,3 @@
+[rules."complexity/mutable-span"]
+warn_at = 5
+deny_at = 8

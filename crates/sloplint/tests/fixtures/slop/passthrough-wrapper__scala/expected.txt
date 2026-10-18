@@ -1,0 +1,2 @@
+# Positive: greet only forwards its parameters to renderGreeting.
+src/greet.scala:2 warn slop/passthrough-wrapper

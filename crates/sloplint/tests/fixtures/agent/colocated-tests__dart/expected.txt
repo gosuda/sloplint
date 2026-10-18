@@ -1,0 +1,1 @@
+lib/service.dart:1 warn agent/colocated-tests

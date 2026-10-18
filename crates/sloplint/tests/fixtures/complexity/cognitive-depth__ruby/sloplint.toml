@@ -1,0 +1,3 @@
+[rules."complexity/cognitive-depth"]
+warn_at = 2
+deny_at = 4

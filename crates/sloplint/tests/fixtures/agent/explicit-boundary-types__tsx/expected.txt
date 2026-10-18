@@ -1,0 +1,1 @@
+src/mod.tsx:1 warn agent/explicit-boundary-types

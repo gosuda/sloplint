@@ -1,0 +1,2 @@
+src/store.cpp:2 deny agent/ambient-global-state
+src/store.cpp:3 deny agent/ambient-global-state

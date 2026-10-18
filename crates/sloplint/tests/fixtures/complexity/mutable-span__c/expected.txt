@@ -1,0 +1,1 @@
+pos.c:2 deny complexity/mutable-span

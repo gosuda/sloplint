@@ -1,0 +1,1 @@
+# src/serviceTest.php is the counterpart of src/service.php: no finding.

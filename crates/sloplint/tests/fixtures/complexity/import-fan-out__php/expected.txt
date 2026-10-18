@@ -1,0 +1,1 @@
+src/loader.php:2 deny complexity/import-fan-out

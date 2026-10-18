@@ -1,0 +1,1 @@
+# near-miss: default over integer literals is not enum-like; nothing to exhaust.

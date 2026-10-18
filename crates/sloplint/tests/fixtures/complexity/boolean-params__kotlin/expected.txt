@@ -1,0 +1,1 @@
+src/flags.kt:1 deny complexity/boolean-params

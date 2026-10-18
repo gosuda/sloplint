@@ -1,0 +1,2 @@
+src/aliases.tsx:1 warn grep/no-rename-import
+src/aliases.tsx:2 warn grep/no-rename-import

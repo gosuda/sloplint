@@ -1,0 +1,1 @@
+src/a.m:6 warn grep/multiline-argument

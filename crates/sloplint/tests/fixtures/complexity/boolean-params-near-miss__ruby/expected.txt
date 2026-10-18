@@ -1,0 +1,1 @@
+# near-miss: private function with a bool default is out of scope.

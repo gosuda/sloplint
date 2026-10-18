@@ -1,0 +1,1 @@
+src/wrap.R:1 warn slop/passthrough-wrapper

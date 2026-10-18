@@ -1,0 +1,2 @@
+pos.c:1 warn grep/generic-name
+pos.c:4 warn grep/generic-name

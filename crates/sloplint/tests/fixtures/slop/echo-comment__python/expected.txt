@@ -1,0 +1,1 @@
+src/docs.py:1 warn slop/echo-comment

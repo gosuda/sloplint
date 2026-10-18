@@ -1,0 +1,1 @@
+src/accumulate.kt:5 warn complexity/nested-mutation

@@ -1,0 +1,3 @@
+# Positive: both names are in the fixed generic list.
+src/names.zig:1 warn grep/generic-name
+src/names.zig:3 warn grep/generic-name

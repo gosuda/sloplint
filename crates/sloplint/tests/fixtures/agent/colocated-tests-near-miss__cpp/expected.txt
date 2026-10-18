@@ -1,0 +1,1 @@
+# near-miss: src/widget_test.cpp is the counterpart of src/widget.cpp.

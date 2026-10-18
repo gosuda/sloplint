@@ -1,0 +1,2 @@
+# Positive: 3 identical 6-line blocks (strict window=6, min_repeats=3).
+src/repeat.zig:2 warn agent/unique-patch-anchors

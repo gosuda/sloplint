@@ -1,0 +1,1 @@
+src/wide.py:1 deny complexity/import-fan-out

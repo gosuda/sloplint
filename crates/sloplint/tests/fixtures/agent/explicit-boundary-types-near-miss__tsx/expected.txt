@@ -1,0 +1,1 @@
+# near-miss: private function is not a boundary; public function is fully annotated.

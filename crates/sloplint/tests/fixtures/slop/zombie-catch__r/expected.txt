@@ -1,0 +1,1 @@
+src/handler.R:4 deny slop/zombie-catch

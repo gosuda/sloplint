@@ -1,0 +1,1 @@
+# Near-miss: the handler wraps the error with context instead of swallowing or rethrowing it unchanged.

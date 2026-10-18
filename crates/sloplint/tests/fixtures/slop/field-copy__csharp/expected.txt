@@ -1,0 +1,1 @@
+src/Converter.cs:3 warn slop/field-copy

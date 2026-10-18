@@ -1,0 +1,1 @@
+src/convert.kt:5 warn slop/field-copy

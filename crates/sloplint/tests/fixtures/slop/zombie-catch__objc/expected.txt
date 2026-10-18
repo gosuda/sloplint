@@ -1,0 +1,1 @@
+src/a.m:15 deny slop/zombie-catch

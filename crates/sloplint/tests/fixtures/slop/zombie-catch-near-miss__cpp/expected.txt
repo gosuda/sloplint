@@ -1,0 +1,1 @@
+# near-miss: handler wraps the error in a new type.

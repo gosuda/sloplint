@@ -1,0 +1,3 @@
+# Positive: two aliased member imports, each fires once at its module string.
+src/aliases.zig:1 warn grep/no-rename-import
+src/aliases.zig:2 warn grep/no-rename-import

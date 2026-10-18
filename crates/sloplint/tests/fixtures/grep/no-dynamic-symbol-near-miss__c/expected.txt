@@ -1,0 +1,1 @@
+# Near-miss: plain object macro with no token pasting.

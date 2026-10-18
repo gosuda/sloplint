@@ -1,0 +1,1 @@
+# Near-miss: single-loop accumulator is written 1 level deep.

@@ -1,0 +1,2 @@
+# Positive: 15 distinct modules >= strict deny_at 15.
+src/fan.scala:1 deny complexity/import-fan-out

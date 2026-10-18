@@ -1,0 +1,1 @@
+src/lib.swift:1 deny complexity/cognitive-depth

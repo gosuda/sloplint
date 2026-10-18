@@ -1,0 +1,1 @@
+src/hub.tsx:1 deny complexity/import-fan-out

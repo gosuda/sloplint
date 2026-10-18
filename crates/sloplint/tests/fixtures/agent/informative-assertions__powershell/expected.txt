@@ -1,0 +1,1 @@
+a.ps1:2 deny agent/informative-assertions

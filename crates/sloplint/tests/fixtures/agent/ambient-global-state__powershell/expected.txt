@@ -1,0 +1,2 @@
+a.ps1:2 deny agent/ambient-global-state
+a.ps1:3 deny agent/ambient-global-state

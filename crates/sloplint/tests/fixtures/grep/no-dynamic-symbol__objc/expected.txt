@@ -1,0 +1,1 @@
+src/a.m:4 warn grep/no-dynamic-symbol

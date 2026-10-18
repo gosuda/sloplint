@@ -1,0 +1,1 @@
+# Near-miss: single-loop accumulator has depth 1.

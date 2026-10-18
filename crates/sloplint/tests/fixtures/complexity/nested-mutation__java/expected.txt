@@ -1,0 +1,1 @@
+src/Accumulate.java:7 deny complexity/nested-mutation

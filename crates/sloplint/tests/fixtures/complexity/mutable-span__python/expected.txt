@@ -1,0 +1,1 @@
+src/spread.py:2 deny complexity/mutable-span

@@ -1,0 +1,1 @@
+# Match on integer literals with `default` is not enum-like: no finding.

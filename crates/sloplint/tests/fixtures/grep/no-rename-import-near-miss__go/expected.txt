@@ -1,0 +1,1 @@
+# Collision aliases (crypto/rand vs math/rand), blank and plain imports never fire.

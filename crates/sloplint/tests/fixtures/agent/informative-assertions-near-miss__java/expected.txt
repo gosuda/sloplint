@@ -1,0 +1,1 @@
+# near-miss: `assert ready : "cache must be warm"` carries a failure message.

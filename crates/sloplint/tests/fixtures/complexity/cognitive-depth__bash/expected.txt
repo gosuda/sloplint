@@ -1,0 +1,2 @@
+# Positive: 16 sequential branches score cognitive 16 (strict deny at 15).
+a.sh:1 deny complexity/cognitive-depth

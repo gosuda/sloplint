@@ -1,0 +1,1 @@
+# near-miss: subscript with a string literal names a static symbol.

@@ -1,0 +1,1 @@
+# Near-miss: no assertion calls; the guard returns a named error instead.

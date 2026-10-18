@@ -1,0 +1,1 @@
+# Near-miss: the assertion names the violated invariant.

@@ -1,0 +1,1 @@
+# Assertion carries a failure message: no finding.

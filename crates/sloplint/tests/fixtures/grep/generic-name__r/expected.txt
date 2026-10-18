@@ -1,0 +1,2 @@
+src/names.R:1 warn grep/generic-name
+src/names.R:4 warn grep/generic-name

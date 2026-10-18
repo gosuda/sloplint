@@ -1,0 +1,1 @@
+# near-miss: handler wraps the failure in a new error instead of rethrowing it unchanged.

@@ -1,0 +1,4 @@
+public class Square : IShape {
+    public void Draw() {
+    }
+}

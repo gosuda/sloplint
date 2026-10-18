@@ -1,0 +1,2 @@
+src/app.js:2 deny grep/contiguous-log-literal
+src/app.js:3 deny grep/contiguous-log-literal

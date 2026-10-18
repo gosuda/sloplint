@@ -1,0 +1,1 @@
+src/Wild.java:1 warn grep/no-wildcard-import

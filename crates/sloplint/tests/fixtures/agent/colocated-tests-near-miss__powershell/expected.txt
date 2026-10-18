@@ -1,0 +1,1 @@
+# Near-miss: `Deploy.Tests.ps1` is the colocated Pester counterpart.

@@ -1,0 +1,1 @@
+# Near-miss: handler returns a fallback value instead of discarding the error.

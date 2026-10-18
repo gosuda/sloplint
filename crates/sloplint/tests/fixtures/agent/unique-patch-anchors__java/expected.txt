@@ -1,0 +1,2 @@
+# Positive: one 6-line block repeats 3 times (strict window=6, min_repeats=3).
+src/Steps.java:3 warn agent/unique-patch-anchors

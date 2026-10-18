@@ -1,0 +1,1 @@
+src/api.kt:1 warn slop/single-impl-abstraction

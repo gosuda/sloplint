@@ -1,0 +1,1 @@
+# wildcard over integer literals is not enum-like.

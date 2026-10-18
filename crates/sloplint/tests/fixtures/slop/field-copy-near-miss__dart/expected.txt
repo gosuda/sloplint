@@ -1,0 +1,1 @@
+# 3 fields below min_fields 4, plus one computed field: no finding.

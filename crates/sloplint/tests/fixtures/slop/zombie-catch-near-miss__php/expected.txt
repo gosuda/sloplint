@@ -1,0 +1,1 @@
+# Handler wraps the error in a new exception: no finding.

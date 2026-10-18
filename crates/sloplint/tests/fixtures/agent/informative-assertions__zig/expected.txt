@@ -1,0 +1,2 @@
+# Positive: `std.debug.assert` carries no failure message.
+src/checks.zig:4 deny agent/informative-assertions

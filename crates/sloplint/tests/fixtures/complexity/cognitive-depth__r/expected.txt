@@ -1,0 +1,1 @@
+src/deep.R:1 deny complexity/cognitive-depth

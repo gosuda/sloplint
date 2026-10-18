@@ -1,0 +1,1 @@
+# Near-miss: switch over integer literals is never enum-like.

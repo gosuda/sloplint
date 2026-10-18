@@ -1,0 +1,1 @@
+src/lib.ml:1 deny complexity/boolean-params

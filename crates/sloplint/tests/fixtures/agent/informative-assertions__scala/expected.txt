@@ -1,0 +1,2 @@
+# Positive: assertion without a failure message.
+src/checks.scala:3 deny agent/informative-assertions

@@ -1,0 +1,1 @@
+src/draw.tsx:1 warn slop/single-impl-abstraction

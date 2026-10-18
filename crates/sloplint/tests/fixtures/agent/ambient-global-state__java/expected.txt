@@ -1,0 +1,2 @@
+src/Store.java:2 deny agent/ambient-global-state
+src/Store.java:5 deny agent/ambient-global-state

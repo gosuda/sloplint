@@ -1,0 +1,1 @@
+# Near-miss: const file-scope binding is immutable, not ambient mutable state.

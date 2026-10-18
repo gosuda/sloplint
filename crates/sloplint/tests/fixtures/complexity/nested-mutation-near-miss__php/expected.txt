@@ -1,0 +1,1 @@
+# Single-loop accumulator has depth 1 (warn at 3): no finding.

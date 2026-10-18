@@ -1,0 +1,1 @@
+# Near-miss: two impls; zero impls; WidgetExt has one impl but the suffix is allowed.

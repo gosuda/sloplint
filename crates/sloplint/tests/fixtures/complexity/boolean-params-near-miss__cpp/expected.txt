@@ -1,0 +1,1 @@
+# near-miss: pure-virtual decl has no body; override is interface-bound; static helper is not public.

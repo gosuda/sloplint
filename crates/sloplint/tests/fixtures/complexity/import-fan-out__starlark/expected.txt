@@ -1,0 +1,1 @@
+a.bzl:1 warn complexity/import-fan-out

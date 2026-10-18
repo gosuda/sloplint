@@ -1,0 +1,1 @@
+src/service.cpp:1 warn agent/colocated-tests

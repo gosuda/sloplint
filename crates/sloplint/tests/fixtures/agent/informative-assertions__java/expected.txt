@@ -1,0 +1,1 @@
+src/Checks.java:3 deny agent/informative-assertions

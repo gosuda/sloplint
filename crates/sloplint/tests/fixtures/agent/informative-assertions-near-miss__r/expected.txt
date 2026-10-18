@@ -1,0 +1,1 @@
+# near-miss: named stopifnot argument carries the failure message.

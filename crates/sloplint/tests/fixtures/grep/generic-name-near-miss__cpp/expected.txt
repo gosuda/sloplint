@@ -1,0 +1,1 @@
+# near-miss: qualified name is not generic; static run is not public.

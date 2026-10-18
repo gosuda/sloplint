@@ -1,0 +1,1 @@
+# near-miss: collision alias is exempt; `import * as ns` is a namespace, not a rename.

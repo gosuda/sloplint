@@ -1,0 +1,2 @@
+src/a.cpp:1 warn grep/generic-name
+src/a.cpp:2 warn grep/generic-name

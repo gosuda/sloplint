@@ -1,0 +1,1 @@
+# near-miss: 19 lines < warn_at 20 from the fixture sloplint.toml.

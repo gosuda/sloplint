@@ -1,0 +1,2 @@
+# Positive: unquoted command substitution spans lines 2-9 (8 lines >= strict warn_at=6); finding at the call.
+a.sh:2 warn grep/multiline-argument

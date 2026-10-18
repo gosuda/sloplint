@@ -1,0 +1,2 @@
+# Positive: reconcileLedger defined in 5 files (strict min_files=5); one finding at first site.
+a.scala:2 warn grep/homonym-definitions

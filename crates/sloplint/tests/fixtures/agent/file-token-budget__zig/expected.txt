@@ -1,0 +1,2 @@
+# Positive: 43 lines >= fixture deny_at 30.
+src/big.zig:1 deny agent/file-token-budget

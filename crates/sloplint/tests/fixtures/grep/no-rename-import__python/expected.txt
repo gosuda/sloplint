@@ -1,0 +1,2 @@
+src/alias.py:1 warn grep/no-rename-import
+src/alias.py:2 warn grep/no-rename-import

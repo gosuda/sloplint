@@ -1,0 +1,1 @@
+# distinct newtype breaks the primitive run: no finding.

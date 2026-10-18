@@ -1,0 +1,1 @@
+src/nested.R:1 deny complexity/nesting-depth

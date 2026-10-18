@@ -1,0 +1,2 @@
+# Positive: `total` is written 3 loop levels deep (strict deny at 3).
+a.sh:6 deny complexity/nested-mutation

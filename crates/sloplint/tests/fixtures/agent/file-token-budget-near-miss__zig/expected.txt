@@ -1,0 +1,1 @@
+# Near-miss: 19 lines < fixture warn_at 20.

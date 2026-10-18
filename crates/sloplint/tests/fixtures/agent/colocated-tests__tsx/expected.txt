@@ -1,0 +1,1 @@
+src/service.tsx:1 warn agent/colocated-tests

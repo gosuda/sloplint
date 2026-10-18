@@ -1,0 +1,1 @@
+# Near-miss: process_settlement_batch names its domain object.

@@ -1,0 +1,2 @@
+# Positive: syntax error; other rules skipped for this file.
+src/broken.scala:2 warn meta/parse-error

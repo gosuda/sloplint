@@ -1,0 +1,1 @@
+src/draw.swift:1 warn slop/single-impl-abstraction

@@ -1,0 +1,1 @@
+# near-miss: single-block accumulator writes 1 level deep < strict warn_at 2.

@@ -1,0 +1,1 @@
+a.rb:7 warn agent/catch-all-match

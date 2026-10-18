@@ -1,0 +1,1 @@
+a.go:4 warn grep/no-dynamic-symbol

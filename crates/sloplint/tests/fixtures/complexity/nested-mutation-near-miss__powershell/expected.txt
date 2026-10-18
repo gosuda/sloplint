@@ -1,0 +1,1 @@
+# Near-miss: single-loop accumulator writes 1 level deep, below the strict warn threshold of 2.

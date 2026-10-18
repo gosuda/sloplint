@@ -1,0 +1,1 @@
+# Near-miss: private `run` is exempt; `process_settlement_batch` names its domain object.

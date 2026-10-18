@@ -1,0 +1,1 @@
+src/Tables.cs:2 deny complexity/boolean-params

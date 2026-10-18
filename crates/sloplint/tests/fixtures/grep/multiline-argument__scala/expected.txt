@@ -1,0 +1,2 @@
+# Positive: non-Str arg spans lines 4-9 (6 lines >= strict warn_at=6); finding at the call.
+src/calls.scala:3 warn grep/multiline-argument

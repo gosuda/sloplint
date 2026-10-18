@@ -1,0 +1,1 @@
+# 5-line closure below the 6-line span: no finding.

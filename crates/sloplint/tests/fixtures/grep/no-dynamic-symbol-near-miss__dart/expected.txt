@@ -1,0 +1,1 @@
+# Symbol with a string literal is a static name: no finding.

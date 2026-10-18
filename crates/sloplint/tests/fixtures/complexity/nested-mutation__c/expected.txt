@@ -1,0 +1,1 @@
+pos.c:6 deny complexity/nested-mutation

@@ -1,0 +1,1 @@
+# Near-miss: 6-line block repeats only twice, below min_repeats 3.

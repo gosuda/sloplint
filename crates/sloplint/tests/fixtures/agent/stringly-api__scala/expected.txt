@@ -1,0 +1,2 @@
+# Positive: 3 consecutive primitive params >= strict deny_at 3.
+src/api.scala:2 deny agent/stringly-api

@@ -1,0 +1,1 @@
+src/deep.py:1 deny complexity/cognitive-depth

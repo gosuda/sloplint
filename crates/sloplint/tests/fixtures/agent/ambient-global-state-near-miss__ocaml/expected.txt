@@ -1,0 +1,1 @@
+# Near-miss: environment read inside main, exempt from the rule.

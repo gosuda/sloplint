@@ -1,0 +1,1 @@
+# Near-miss: `!u64` is an inferred (typed) error set; `main` is exempt by name.

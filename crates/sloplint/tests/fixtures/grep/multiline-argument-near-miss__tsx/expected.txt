@@ -1,0 +1,1 @@
+# Near-miss: closure arg spans lines 2-6 (5 lines < strict warn_at=6).

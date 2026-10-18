@@ -1,0 +1,1 @@
+a.go:7 deny complexity/nested-mutation

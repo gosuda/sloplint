@@ -1,0 +1,2 @@
+# Positive: 33-line file >= deny_at 30 (fixture thresholds); leading blank line keeps the line-1 fingerprint stable across shifts.
+src/big.scala:1 deny agent/file-token-budget

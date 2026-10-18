@@ -1,0 +1,2 @@
+src/log.R:2 deny grep/contiguous-log-literal
+src/log.R:3 deny grep/contiguous-log-literal

@@ -1,0 +1,1 @@
+src/greet.php:2 warn slop/passthrough-wrapper

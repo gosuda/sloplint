@@ -1,0 +1,1 @@
+pos.c:3 deny complexity/boolean-params

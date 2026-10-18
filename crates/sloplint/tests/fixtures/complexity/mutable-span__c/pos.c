@@ -1,0 +1,35 @@
+int accumulate(int n) {
+    int total = 0;
+    int pad01 = 1;
+    int pad02 = 2;
+    int pad03 = 3;
+    int pad04 = 4;
+    int pad05 = 5;
+    int pad06 = 6;
+    int pad07 = 7;
+    int pad08 = 8;
+    int pad09 = 9;
+    int pad10 = 10;
+    int pad11 = 11;
+    int pad12 = 12;
+    int pad13 = 13;
+    int pad14 = 14;
+    int pad15 = 15;
+    int pad16 = 16;
+    int pad17 = 17;
+    int pad18 = 18;
+    int pad19 = 19;
+    int pad20 = 20;
+    int pad21 = 21;
+    int pad22 = 22;
+    int pad23 = 23;
+    int pad24 = 24;
+    int pad25 = 25;
+    int pad26 = 26;
+    int pad27 = 27;
+    int pad28 = 28;
+    int pad29 = 29;
+    int pad30 = 30;
+    total += n;
+    return total;
+}

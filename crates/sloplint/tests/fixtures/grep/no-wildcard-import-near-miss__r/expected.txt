@@ -1,0 +1,1 @@
+# near-miss: requireNamespace and source are side-effect imports, not wildcards.

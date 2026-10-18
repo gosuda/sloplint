@@ -1,0 +1,2 @@
+# Positive: write 3 loop levels deep >= strict deny_at 3.
+src/grid.scala:7 deny complexity/nested-mutation

@@ -1,0 +1,2 @@
+# Positive: 16 sequential ifs score cognitive 16 >= strict deny_at 15.
+src/tangled.zig:1 deny complexity/cognitive-depth

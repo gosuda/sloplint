@@ -1,0 +1,3 @@
+# Positive: two aliased imports, each fires once.
+src/renames.scala:2 warn grep/no-rename-import
+src/renames.scala:3 warn grep/no-rename-import

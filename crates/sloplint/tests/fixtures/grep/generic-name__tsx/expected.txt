@@ -1,0 +1,2 @@
+src/names.tsx:1 warn grep/generic-name
+src/names.tsx:3 warn grep/generic-name

@@ -1,0 +1,1 @@
+src/top.ts:1 warn slop/barrel-file

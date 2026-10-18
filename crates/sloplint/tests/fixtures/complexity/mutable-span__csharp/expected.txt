@@ -1,0 +1,1 @@
+src/Spreader.cs:3 deny complexity/mutable-span

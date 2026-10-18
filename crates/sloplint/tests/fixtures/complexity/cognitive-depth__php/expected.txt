@@ -1,0 +1,1 @@
+src/tangled.php:2 deny complexity/cognitive-depth

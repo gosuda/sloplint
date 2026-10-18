@@ -1,0 +1,2 @@
+src/load.php:3 deny grep/contiguous-log-literal
+src/load.php:4 deny grep/contiguous-log-literal

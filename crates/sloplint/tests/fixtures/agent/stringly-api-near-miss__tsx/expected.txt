@@ -1,0 +1,1 @@
+# near-miss: newtype breaks the run; longest primitive run is 1 < warn_at 2.

@@ -1,0 +1,1 @@
+src/spread.php:3 deny complexity/mutable-span

@@ -1,0 +1,1 @@
+# near-miss: `static final` is immutable; the env read is inside `main`, the entry point.

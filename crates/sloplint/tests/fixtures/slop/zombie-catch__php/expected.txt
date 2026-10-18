@@ -1,0 +1,1 @@
+src/load.php:5 deny slop/zombie-catch

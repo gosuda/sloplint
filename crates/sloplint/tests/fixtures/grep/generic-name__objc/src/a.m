@@ -1,0 +1,2 @@
+void handle(void) {
+}

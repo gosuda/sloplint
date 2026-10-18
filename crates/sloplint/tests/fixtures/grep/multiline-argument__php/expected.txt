@@ -1,0 +1,1 @@
+src/build.php:3 warn grep/multiline-argument

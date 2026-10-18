@@ -1,0 +1,1 @@
+# near-miss: argument spans 5 lines < strict warn_at 6.

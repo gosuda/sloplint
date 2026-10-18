@@ -1,0 +1,1 @@
+src/tangled.kt:1 deny complexity/cognitive-depth

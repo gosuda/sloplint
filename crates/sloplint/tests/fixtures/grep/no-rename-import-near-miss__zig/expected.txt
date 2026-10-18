@@ -1,0 +1,1 @@
+# Near-miss: same-name binding carries no alias; plain namespace import has no alias.

@@ -1,0 +1,2 @@
+# Positive: top-level `declare` is a mutable global (plain assignments are inert).
+a.sh:1 deny agent/ambient-global-state

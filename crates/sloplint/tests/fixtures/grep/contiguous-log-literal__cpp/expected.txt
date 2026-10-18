@@ -1,0 +1,2 @@
+src/a.cpp:3 deny grep/contiguous-log-literal
+src/a.cpp:4 deny grep/contiguous-log-literal

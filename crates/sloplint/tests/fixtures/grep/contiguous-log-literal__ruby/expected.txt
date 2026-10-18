@@ -1,0 +1,1 @@
+a.rb:2 deny grep/contiguous-log-literal

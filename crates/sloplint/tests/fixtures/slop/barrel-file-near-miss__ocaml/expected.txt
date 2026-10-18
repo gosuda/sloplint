@@ -1,0 +1,1 @@
+# Near-miss: barrel re-exports only from non-barrel modules.

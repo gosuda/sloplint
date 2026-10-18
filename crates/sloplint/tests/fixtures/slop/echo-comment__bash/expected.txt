@@ -1,0 +1,2 @@
+# Positive: the doc comment restates the name (similarity 1.00).
+a.sh:1 warn slop/echo-comment

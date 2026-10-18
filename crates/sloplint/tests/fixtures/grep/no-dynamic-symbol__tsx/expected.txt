@@ -1,0 +1,2 @@
+src/dynamic.tsx:2 warn grep/no-dynamic-symbol
+src/dynamic.tsx:3 warn grep/no-dynamic-symbol

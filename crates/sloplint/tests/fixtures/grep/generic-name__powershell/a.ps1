@@ -1,0 +1,3 @@
+function handle($x) {
+  $x
+}

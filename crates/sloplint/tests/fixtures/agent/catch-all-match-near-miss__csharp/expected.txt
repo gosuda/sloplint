@@ -1,0 +1,1 @@
+# switch over integer literals: not enum-like, no finding.

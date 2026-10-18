@@ -1,0 +1,1 @@
+# Near-miss: the script-block argument spans 5 lines, below the strict warn threshold of 6.

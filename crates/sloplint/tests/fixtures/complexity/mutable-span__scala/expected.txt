@@ -1,0 +1,2 @@
+# Positive: var declared line 3, last write line 33, span 30 >= strict deny_at 30.
+src/spread.scala:3 deny complexity/mutable-span

@@ -1,0 +1,1 @@
+src/Checks.cs:5 deny agent/informative-assertions

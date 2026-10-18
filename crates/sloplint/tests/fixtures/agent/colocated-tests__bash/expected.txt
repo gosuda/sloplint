@@ -1,0 +1,2 @@
+# Positive: one public function and no service_test.sh counterpart.
+service.sh:1 warn agent/colocated-tests

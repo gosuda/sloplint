@@ -1,0 +1,1 @@
+service.rb:1 warn agent/colocated-tests

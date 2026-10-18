@@ -1,0 +1,1 @@
+# near-miss: handler logs the error and returns a fallback value.

@@ -1,0 +1,1 @@
+# Near-miss: nesting depth 3 < strict warn_at 4.

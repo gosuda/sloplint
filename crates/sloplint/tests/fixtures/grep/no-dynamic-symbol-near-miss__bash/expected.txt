@@ -1,0 +1,1 @@
+# Near-miss: plain expansions name their variable statically.

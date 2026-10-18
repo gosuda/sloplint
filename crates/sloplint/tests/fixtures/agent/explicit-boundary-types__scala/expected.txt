@@ -1,0 +1,2 @@
+# Positive: public function missing the return annotation.
+src/api.scala:2 warn agent/explicit-boundary-types

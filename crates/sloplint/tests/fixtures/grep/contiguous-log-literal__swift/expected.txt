@@ -1,0 +1,2 @@
+src/lib.swift:2 deny grep/contiguous-log-literal
+src/lib.swift:3 deny grep/contiguous-log-literal
