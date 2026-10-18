@@ -215,6 +215,9 @@ fn label_of<'s>(cx: &Cx<'_, 's>, domain: Node<'_>) -> &'s str {
 }
 
 fn pattern_ident<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<(&'s str, Pos)> {
+    if matches!(pat.kind(), "identifier" | "value_name") {
+        return Some((text(cx, pat), pos_of(pat)));
+    }
     let target = if pat.kind() == "value_pattern" {
         pat
     } else {
@@ -222,8 +225,12 @@ fn pattern_ident<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<(&'s str, Pos)> {
     };
     let id = named_children(target)
         .into_iter()
-        .find(|c| c.kind() == "identifier")?;
-    Some((text(cx, id), pos_of(id)))
+        .find(|c| matches!(c.kind(), "identifier" | "value_name"));
+    match id {
+        Some(id) => Some((text(cx, id), pos_of(id))),
+        None if target.named_child_count() == 0 => Some((text(cx, target), pos_of(target))),
+        None => None,
+    }
 }
 
 fn is_ref_callee(cx: &Cx<'_, '_>, f: Node<'_>) -> bool {
@@ -388,7 +395,7 @@ fn field_source<'s>(cx: &Cx<'_, 's>, field: Node<'_>) -> Option<&'s str> {
         return None;
     }
     let record = child_by_field(body, "record")?;
-    if record.kind() != "identifier" {
+    if !matches!(record.kind(), "identifier" | "value_path" | "value_name") {
         return None;
     }
     let target = child_by_field(body, "field")
