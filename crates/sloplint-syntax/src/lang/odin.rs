@@ -333,7 +333,7 @@ impl LangHooks for OdinHooks {
             "procedure_declaration" | "const_declaration" | "variable_declaration" => {
                 named_children(parent)
                     .into_iter()
-                    .find(|c| c.kind() == "expression")?
+                    .find(|c| matches!(c.kind(), "expression" | "identifier"))?
             }
             "assignment_statement" => {
                 if !has_operator(parent, cx, ":=") {
