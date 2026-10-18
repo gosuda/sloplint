@@ -173,7 +173,10 @@ mod tests {
             plain("logger.info", "self.logger.info"),
             "logger.info should match self.logger.info"
         );
-        assert!(plain("*Error", "ValueError"), "*Error should match ValueError");
+        assert!(
+            plain("*Error", "ValueError"),
+            "*Error should match ValueError"
+        );
         assert!(
             CalleePattern::parse("*Error")
                 .unwrap()
