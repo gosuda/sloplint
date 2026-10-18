@@ -47,7 +47,9 @@ fn rule_filter_for(dir: &Path) -> String {
         .strip_prefix(fixtures_root())
         .unwrap_or(dir)
         .to_string_lossy();
-    rel.replace('\\', "/").replace("-near-miss", "")
+    let rel = rel.replace('\\', "/");
+    let rel = rel.split("__").next().unwrap_or(&rel);
+    rel.replace("-near-miss", "").to_string()
 }
 
 /// `(path, line, severity, rule)` tuples parsed from an `expected.txt`.
