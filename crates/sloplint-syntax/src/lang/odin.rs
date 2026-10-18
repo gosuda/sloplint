@@ -8,8 +8,8 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, first_of_kind,
-    named_children, narrow, pos_of, preceding_comments, string_arg_shape, strip_quotes, text,
-    trimmed,
+    named_children, narrow, pos_of, preceding_comments, slice, string_arg_shape, strip_quotes,
+    text, trimmed,
 };
 use crate::spec::Role;
 
@@ -100,7 +100,7 @@ fn odin_params<'s>(cx: &Cx<'_, 's>, holder: Option<Node<'_>>) -> (Vec<Param<'s>>
     };
     for child in named_children(holder) {
         if child.kind() == "parameter" {
-            let ty = child_by_field(child, "type").map(|t| text(cx, t));
+            let ty = first_of_kind(child, &["type"]).map(|t| text(cx, t));
             for name_node in names_before_sep(cx, child, &[":"]) {
                 let param = Param {
                     name: text(cx, name_node),
@@ -115,7 +115,9 @@ fn odin_params<'s>(cx: &Cx<'_, 's>, holder: Option<Node<'_>>) -> (Vec<Param<'s>>
                 .find(is_identifier)
                 .map(|c| text(cx, c))
                 .unwrap_or("");
-            let value = child_by_field(child, "expression")
+            let value = named_children(child)
+                .into_iter()
+                .find(|c| !is_identifier(c))
                 .map(|e| text(cx, e))
                 .unwrap_or("");
             let defaulted = value == "true" || value == "false";
@@ -222,6 +224,18 @@ fn positional_nodes<'a>(n: Node<'a>, func: Node<'a>) -> Vec<Node<'a>> {
     out
 }
 
+fn qualified_callee<'s>(cx: &Cx<'_, 's>, call: Node<'_>, func: Node<'_>) -> &'s str {
+    if let Some(parent) = call.parent()
+        && parent.kind() == "member_expression"
+        && parent
+            .child(parent.child_count().saturating_sub(1))
+            .is_some_and(|last| last.id() == call.id())
+    {
+        return slice(cx.src, parent.start_byte(), func.end_byte()).trim();
+    }
+    trimmed(cx, func)
+}
+
 fn odin_callee_root<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
     let mut current = func;
     loop {
@@ -301,7 +315,7 @@ fn is_env_callee(callee: &str) -> bool {
 }
 
 fn is_reflect_callee(callee: &str) -> bool {
-    callee.ends_with("reflect.struct_field_by_name") || callee.ends_with("reflect.enum_from_name")
+    callee.contains(".struct_field_by_name") || callee.ends_with("reflect.enum_from_name")
 }
 
 fn is_formatted_assert(callee: &str) -> bool {
@@ -347,14 +361,14 @@ impl LangHooks for OdinHooks {
             }
             _ => return None,
         };
-        let holder = child_by_field(n, "parameters");
+        let holder = first_of_kind(n, &["parameters"]);
         let (params, missing_annotations) = odin_params(cx, holder);
         let return_type = first_of_kind(n, &["type", "named_type"]).map(|t| text(cx, t));
         let (doc, doc_pos) = preceding_comments(cx, parent, &["comment", "block_comment"], &[]);
         let top = parent.parent().is_some_and(|g| g.kind() == "source_file");
         let public = top && !attr_has(cx, parent, "private");
         let tested = cx.is_test_file || attr_has(cx, parent, "test");
-        let body = child_by_field(n, "body");
+        let body = first_of_kind(n, &["block"]);
         Some(FunctionHead {
             name: text(cx, name_node),
             name_pos: pos_of(name_node),
@@ -395,13 +409,15 @@ impl LangHooks for OdinHooks {
         if n.kind() != "call_expression" {
             return None;
         }
-        let func = child_by_field(n, "function")?;
+        let func =
+            child_by_field(n, "function").or_else(|| named_children(n).into_iter().next())?;
         let args = positional_nodes(n, func)
             .into_iter()
             .map(|a| make_arg(cx, a))
             .collect();
+        let callee = qualified_callee(cx, n, func);
         Some(CallHead {
-            callee: trimmed(cx, func),
+            callee,
             kind: CallKind::Plain,
             callee_root: odin_callee_root(cx, func),
             args,
@@ -552,7 +568,8 @@ impl LangHooks for OdinHooks {
             return;
         }
         let callee = child_by_field(n, "function")
-            .map(|f| trimmed(cx, f))
+            .or_else(|| named_children(n).into_iter().next())
+            .map(|f| qualified_callee(cx, n, f))
             .unwrap_or("");
         if is_env_callee(callee) {
             let read = (AmbientKind::EnvRead, callee, pos_of(n));
@@ -564,8 +581,9 @@ impl LangHooks for OdinHooks {
         if n.kind() != "call_expression" {
             return None;
         }
-        let func = child_by_field(n, "function")?;
-        if !is_reflect_callee(trimmed(cx, func)) {
+        let func =
+            child_by_field(n, "function").or_else(|| named_children(n).into_iter().next())?;
+        if !is_reflect_callee(qualified_callee(cx, n, func)) {
             return None;
         }
         let args = positional_nodes(n, func);
@@ -579,8 +597,9 @@ impl LangHooks for OdinHooks {
         if n.kind() != "call_expression" {
             return None;
         }
-        let func = child_by_field(n, "function")?;
-        let callee = trimmed(cx, func);
+        let func =
+            child_by_field(n, "function").or_else(|| named_children(n).into_iter().next())?;
+        let callee = qualified_callee(cx, n, func);
         if is_formatted_assert(callee) {
             let messaged = Assertion {
                 pos: pos_of(n),
