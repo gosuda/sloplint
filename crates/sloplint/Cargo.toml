@@ -1,0 +1,38 @@
+[package]
+name = "sloplint"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Agent-first code quality linter for twenty-three languages: complexity, greppability, and AI slop"
+keywords = ["linter", "code-quality", "ai-slop", "complexity", "static-analysis"]
+categories = ["command-line-utilities", "development-tools"]
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "sloplint"
+path = "src/main.rs"
+
+[dependencies]
+sloplint-core = { workspace = true }
+sloplint-syntax = { workspace = true }
+annotate-snippets = { workspace = true }
+anstream = { workspace = true }
+blake3 = { workspace = true }
+clap = { workspace = true }
+globset = { workspace = true }
+ignore = { workspace = true }
+postcard = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+toml = { workspace = true }
+
+[target.'cfg(target_env = "musl")'.dependencies]
+mimalloc = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
