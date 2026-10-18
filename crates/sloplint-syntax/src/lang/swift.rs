@@ -392,8 +392,20 @@ fn params<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Vec<Param<'s>> {
 
 fn return_type<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
     let mut children = (0..func.child_count()).filter_map(|i| func.child(i));
-    children.find(|c| c.kind() == "->")?;
-    children.find(|c| c.is_named()).map(|ty| trimmed(cx, ty))
+    let arrow = children.find(|c| c.kind() == "->");
+    let throws = (0..func.child_count())
+        .filter_map(|i| func.child(i))
+        .find(|c| matches!(c.kind(), "throws" | "throws_clause"))
+        .filter(|throws| arrow.is_none_or(|arrow| throws.start_byte() < arrow.start_byte()));
+    match (arrow, children.next()) {
+        (Some(_), Some(ty)) if ty.is_named() => Some(slice(
+            cx.src,
+            throws.map_or(ty.start_byte(), |throws| throws.start_byte()),
+            ty.end_byte(),
+        )),
+        (None, _) => throws.map(|throws| trimmed(cx, throws)),
+        _ => None,
+    }
 }
 
 fn param_type<'s>(cx: &Cx<'_, 's>, parameter: Node<'_>) -> Option<&'s str> {
