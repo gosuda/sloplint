@@ -1,7 +1,11 @@
 //! The rule catalog: metadata, thresholds, filters, and the resolver.
 
+pub(crate) mod agent;
+pub(crate) mod complexity;
 pub mod custom;
+pub(crate) mod grep;
 pub mod meta;
+pub(crate) mod slop;
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -200,9 +204,37 @@ pub struct ResolvedRule {
 
 /// Every builtin and meta rule, listed by id in sorted order.
 pub static CATALOG: &[RuleInfo] = &[
+    agent::ambient_global_state::INFO,
+    agent::catch_all_match::INFO,
+    agent::colocated_tests::INFO,
+    agent::explicit_boundary_types::INFO,
+    agent::file_token_budget::INFO,
+    agent::informative_assertions::INFO,
+    agent::stringly_api::INFO,
+    agent::typed_error_boundary::INFO,
+    agent::unique_patch_anchors::INFO,
+    complexity::boolean_params::INFO,
+    complexity::cognitive_depth::INFO,
+    complexity::import_fan_out::INFO,
+    complexity::mutable_span::INFO,
+    complexity::nested_mutation::INFO,
+    complexity::nesting_depth::INFO,
+    grep::contiguous_log_literal::INFO,
+    grep::generic_name::INFO,
+    grep::homonym_definitions::INFO,
+    grep::multiline_argument::INFO,
+    grep::no_dynamic_symbol::INFO,
+    grep::no_rename_import::INFO,
+    grep::no_wildcard_import::INFO,
     meta::INVALID_SUPPRESSION,
     meta::PARSE_ERROR,
     meta::UNUSED_SUPPRESSION,
+    slop::barrel_file::INFO,
+    slop::echo_comment::INFO,
+    slop::field_copy::INFO,
+    slop::passthrough_wrapper::INFO,
+    slop::single_impl_abstraction::INFO,
+    slop::zombie_catch::INFO,
 ];
 
 pub(crate) fn parse_level(s: &str) -> Option<Level> {
