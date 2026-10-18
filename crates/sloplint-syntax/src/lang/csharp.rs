@@ -316,7 +316,10 @@ fn sib_member(parent: Node<'_>, self_id: usize) -> bool {
                     return true;
                 }
                 if cur.id() == sib.id()
-                    || matches!(cur.kind(), "expression" | "pattern" | "when_clause")
+                    || matches!(
+                        cur.kind(),
+                        "expression" | "pattern" | "constant_pattern" | "when_clause"
+                    )
                 {
                     stack.extend(named_children(cur));
                 }
