@@ -2,7 +2,6 @@
   <h1>sloplint</h1>
   <p><strong>An agent-first code quality linter for twenty-three languages.</strong></p>
 
-  <a href="https://crates.io/crates/sloplint"><img src="https://img.shields.io/crates/v/sloplint.svg?style=flat" alt="crates.io"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=flat" alt="License"></a>
 </div>
 
@@ -10,7 +9,7 @@
 
 ## What is this?
 
-sloplint lints code for the properties that decide whether a coding agent (or a tired human) can find, patch, and verify a change on its own. It parses with tree-sitter and reports measurable facts: how much state a function forces you to hold in memory, whether a name survives a text search, whether a comment says anything the code did not, and whether a patch anchor is unique enough to edit safely.
+sloplint finds code patterns that make changes harder to review and apply: deep nesting, names hidden from search, redundant wrappers, and repeated blocks that make edits ambiguous. It gives developers and coding agents a source location, an explanation, and a suggested fix for each finding, using one CLI across 23 languages.
 
 - **23 languages**: Rust, TypeScript/TSX, JavaScript/JSX, Python, Go, Java, Kotlin, C#, C, C++, Objective-C, PHP, Ruby, Bash, PowerShell, Swift, R, Scala, Dart, Zig, OCaml, Odin, Starlark.
 - **28 builtin rules** in four families (`complexity/`, `grep/`, `slop/`, `agent/`), plus custom tree-sitter queries under `custom/`.
@@ -18,18 +17,19 @@ sloplint lints code for the properties that decide whether a coding agent (or a 
 - **Ratchet mode** freezes today's findings into a baseline, so only new debt fails the build.
 - **Fix instructions** on every finding: not just what is wrong, but the shape of the change that resolves it.
 
+sloplint works from syntax alone: tree-sitter parses each file and per-language heuristics lower the tree into facts, so results are approximate by design. It is not a typechecker or a security analyzer, and it applies no patches itself; every finding carries a `fix:` line describing the change a human or agent should make.
+
 ## Install
 
-Registry install from the first tagged release (`0.0.0` today is a name-reservation placeholder with no binary):
+Install from source using the commands below. There is no GitHub release yet; registry installation is not the supported setup path.
 
-```bash
-cargo install sloplint      # crates.io; binary name: sloplint
-npm install -g sloplint-cli # npm
-```
+Prerequisites: Git, [rustup](https://rustup.rs/), and a C/C++ toolchain for the target platform (the tree-sitter parsers and scanners compile native sources). The checked-in `rust-toolchain.toml` pins Rust 1.99.1, which `cargo` selects automatically.
 
 The release workflow builds binaries for Windows, macOS, and Linux on x86_64 and aarch64. Linux archives use the `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu` target names and link glibc dynamically. The supported baseline is glibc 2.39 or newer, matching the [Ubuntu 24.04 runners](https://packages.ubuntu.com/noble/libc6) used by CI and release builds. A binary may require older glibc symbols, but compatibility below 2.39 is not tested or promised. These Linux binaries do not run natively on Alpine or other musl-based systems.
 
 sloplint uses the platform default allocator on every target. It includes no custom allocator.
+
+CI builds and tests these targets; see [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 From source, using the checked-in toolchain pin (Rust 1.99.1):
 
@@ -39,17 +39,22 @@ cd sloplint
 cargo install --path crates/sloplint --locked
 ```
 
+This places the `sloplint` binary in `~/.cargo/bin`; make sure that directory is on your `PATH`.
+
 ## Quick start
 
 ```bash
-cd your-project
-sloplint init               # writes sloplint.toml with every default spelled out
-sloplint                    # check with the standard profile
-sloplint --strictness strict
-# src/lib.rs:4:8: deny: `process_order` takes 3 consecutive primitive parameters [agent/stringly-api]
+mkdir sloplint-demo && cd sloplint-demo
+sloplint init
+mkdir src
+printf 'pub fn handle(flag: bool) {}\n' > src/lib.rs
+sloplint check --strictness standard
+# src/lib.rs:1:8: warn: `handle` is a generic name shared by unrelated code [grep/generic-name]
 ```
 
-Exit codes: `0` clean, `1` findings at or above `fail_on`, `2` usage or config error, `3` I/O error.
+This Bash example creates a new project. In an existing project, run `sloplint init` once to write the default configuration, then run `sloplint check`.
+
+Exit code `0` means the gate passed: the run can still list `warn` findings below `fail_on` (default `deny`). `1` means at least one reported finding is at or above `fail_on`; `2` means usage or config error; `3` means an I/O error stopped the run.
 
 ## Features
 
@@ -72,17 +77,19 @@ Exit codes: `0` clean, `1` findings at or above `fail_on`, `2` usage or config e
 
 `check` flags: `--format agent|human|json`, `--strictness`, `--mode threshold|ratchet`, `--fail-on warn|deny|never`, `--rule ID` (repeatable, `family/*` allowed), `--config FILE`, `--no-cache`, `--jobs N`.
 
+Every run analyzes the whole project root; `PATHS` only filters which findings are reported.
+
 ### Configuration
 
 ```toml
 [project]
-strictness = "strict"
+strictness = "standard"
 
 [rules."complexity/cognitive-depth"]
 deny_at = 18                          # warn_at still comes from the preset
 
 [rules."agent/colocated-tests"]
-level = "warn"                        # enables a rule the profile leaves off
+level = "warn"                        # enables a rule the standard profile leaves off
 ```
 
 ### Ratchet mode
@@ -134,7 +141,7 @@ sloplint check crates       # self-lint with the repo's own sloplint.toml
 
 ## Contributing
 
-Fork, branch, add or update fixtures for the rule you touch, run the three commands above, and open a pull request. Fixture cases live under `crates/sloplint/tests/fixtures/<family>/<rule>/` with an `expected.txt` per project.
+Fork, branch, add or update fixtures for the rule you touch, run the four commands above, and open a pull request. Fixture cases live under `crates/sloplint/tests/fixtures/<family>/<rule>/` with an `expected.txt` per project. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
 ## License
 
