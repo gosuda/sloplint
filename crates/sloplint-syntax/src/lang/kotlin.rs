@@ -621,7 +621,8 @@ fn dynamic_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
         return None;
     }
     let first = arg_value(value_args(n).into_iter().next()?)?;
-    (first.kind() != "string_literal").then_some("reflection by name")
+    (!matches!(first.kind(), "string_literal" | "multiline_string_literal"))
+        .then_some("reflection by name")
 }
 
 fn assertion_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<Assertion> {
