@@ -550,10 +550,20 @@ impl LangHooks for PythonHooks {
                 .into_iter()
                 .filter(|c| c.kind() == "case_clause" && c.id() != n.id())
                 .any(|arm| {
-                    named_children(arm).into_iter().next().is_some_and(|q| {
-                        (q.kind() == "dotted_name" && named_children(q).len() >= 2)
-                            || q.kind() == "class_pattern"
-                    })
+                    named_children(arm)
+                        .into_iter()
+                        .next()
+                        .and_then(|pat| {
+                            if pat.kind() == "case_pattern" {
+                                named_children(pat).into_iter().next()
+                            } else {
+                                Some(pat)
+                            }
+                        })
+                        .is_some_and(|q| {
+                            (q.kind() == "dotted_name" && named_children(q).len() >= 2)
+                                || q.kind() == "class_pattern"
+                        })
                 })
         });
         Some(WildcardArm {
