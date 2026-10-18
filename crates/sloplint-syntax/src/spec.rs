@@ -83,9 +83,8 @@ const ALL_LANGS: [Lang; 25] = [
 
 /// The process-wide spec of each language, built once on first use.
 pub fn spec(lang: Lang) -> &'static LangSpec {
-    static SPECS: LazyLock<Vec<LangSpec>> = LazyLock::new(|| {
-        ALL_LANGS.iter().map(|&lang| lang::spec_for(lang)).collect()
-    });
+    static SPECS: LazyLock<Vec<LangSpec>> =
+        LazyLock::new(|| ALL_LANGS.iter().map(|&lang| lang::spec_for(lang)).collect());
     &SPECS[lang as usize]
 }
 
@@ -94,7 +93,7 @@ impl LangSpec {
     ///
     /// A table name matching no kind id is a grammar/version mismatch, a
     /// programming error, so it panics at startup.
-    pub fn new(
+    pub(crate) fn new(
         lang: Lang,
         language: tree_sitter::Language,
         table: &[(&str, Role)],
@@ -102,7 +101,7 @@ impl LangSpec {
     ) -> LangSpec {
         LangSpec {
             lang,
-            language,
+            language: language.clone(),
             roles: Self::roles_from(lang, language, table),
             hooks,
         }
@@ -113,7 +112,7 @@ impl LangSpec {
     /// Table entries first match named kinds; an entry matching no named kind
     /// falls back to anonymous keyword kinds so keyword tokens like Ruby's
     /// `else` still map.
-    pub fn roles_from(
+    pub(crate) fn roles_from(
         lang: Lang,
         language: tree_sitter::Language,
         table: &[(&str, Role)],
@@ -121,14 +120,17 @@ impl LangSpec {
         let count = u16::try_from(language.node_kind_count()).unwrap_or(u16::MAX);
         let mut roles = vec![Role::None; count as usize];
         let mut matched = vec![false; table.len()];
-        apply_named(language, table, &mut roles, &mut matched);
+        apply_named(language.clone(), table, &mut roles, &mut matched);
         apply_fallback(lang, language, table, &mut roles, &mut matched);
         roles
     }
 
     /// The role of a node kind id; `None` when out of range.
-    pub fn role_for(&self, kind_id: u16) -> Role {
-        self.roles.get(kind_id as usize).copied().unwrap_or(Role::None)
+    pub(crate) fn role_for(&self, kind_id: u16) -> Role {
+        self.roles
+            .get(kind_id as usize)
+            .copied()
+            .unwrap_or(Role::None)
     }
 }
 

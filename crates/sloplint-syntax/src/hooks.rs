@@ -1,7 +1,7 @@
 //! The per-language adapter seam and the node helpers every adapter shares.
 
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, Barrel, CallKind, FieldCopy, Handler, Import, ImplRef,
+    AmbientKind, Arg, ArgShape, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import,
     Param, Pos, TypeDef, WildcardArm,
 };
 use sloplint_core::lang::Lang;
@@ -212,10 +212,10 @@ pub(crate) fn has_child_kind(n: Node<'_>, kind: &str) -> bool {
 pub(crate) fn last_segment<'a>(text: &'a str, seps: &[&str]) -> &'a str {
     let mut best: Option<(usize, usize)> = None;
     for sep in seps {
-        if let Some(at) = text.rfind(sep) {
-            if best.is_none_or(|(pos, _)| at > pos) {
-                best = Some((at, sep.len()));
-            }
+        if let Some(at) = text.rfind(sep)
+            && best.is_none_or(|(pos, _)| at > pos)
+        {
+            best = Some((at, sep.len()));
         }
     }
     match best {
@@ -255,38 +255,6 @@ pub(crate) fn ident_root<'s>(
             .find_map(|field| current.child_by_field_name(field))?;
         current = next;
     }
-}
-
-/// Splits on `sep` at bracket depth zero, skipping quoted spans and escapes.
-pub(crate) fn split_top_level<'a>(text: &'a str, sep: char) -> Vec<&'a str> {
-    let mut parts = Vec::new();
-    let mut start = 0usize;
-    let mut depth = 0usize;
-    let mut quote: Option<u8> = None;
-    let bytes = text.as_bytes();
-    let mut i = 0usize;
-    while i < bytes.len() {
-        let byte = bytes[i];
-        let quoted = quote.is_some();
-        match byte {
-            b'\\' if quoted => {
-                i += 2;
-                continue;
-            }
-            b'"' | b'\'' | b'`' if quote == Some(byte) => quote = None,
-            b'"' | b'\'' | b'`' if quote.is_none() => quote = Some(byte),
-            b'(' | b'[' | b'{' if !quoted => depth += 1,
-            b')' | b']' | b'}' if !quoted => depth = depth.saturating_sub(1),
-            _ if !quoted && depth == 0 && byte as char == sep => {
-                parts.push(&text[start..i]);
-                start = i + 1;
-            }
-            _ => {}
-        }
-        i += 1;
-    }
-    parts.push(&text[start..]);
-    parts
 }
 
 /// The `Str` shape built from the node's fragment-kind children.
@@ -341,7 +309,13 @@ pub(crate) fn preceding_comments<'s>(
     while let Some(sibling) = current {
         let kind = sibling.kind();
         if comment_kinds.contains(&kind) {
-            if sibling.end_position().row + 1 != header_row {
+            let end = sibling.end_position();
+            let last_row = if end.column == 0 {
+                end.row.saturating_sub(1)
+            } else {
+                end.row
+            };
+            if last_row + 1 != header_row {
                 break;
             }
             doc.push(text(cx, sibling));
@@ -359,7 +333,7 @@ pub(crate) fn preceding_comments<'s>(
 }
 
 /// Slices source text at a byte range; empty when the range is not a valid slice.
-pub(crate) fn slice<'s>(src: &'s str, start: usize, end: usize) -> &'s str {
+pub(crate) fn slice(src: &str, start: usize, end: usize) -> &str {
     let end = end.min(src.len());
     let start = start.min(end);
     if src.is_char_boundary(start) && src.is_char_boundary(end) {

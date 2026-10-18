@@ -46,7 +46,12 @@ struct Grammar {
 /// as do OCaml and its interface grammar.
 static GRAMMARS: LazyLock<Vec<Grammar>> = LazyLock::new(|| {
     vec![
-        grammar(Lang::Rust, tree_sitter_rust::LANGUAGE, rust::TABLE, &rust::HOOKS),
+        grammar(
+            Lang::Rust,
+            tree_sitter_rust::LANGUAGE,
+            rust::TABLE,
+            &rust::HOOKS,
+        ),
         grammar(
             Lang::TypeScript,
             tree_sitter_typescript::LANGUAGE_TYPESCRIPT,
@@ -91,7 +96,12 @@ static GRAMMARS: LazyLock<Vec<Grammar>> = LazyLock::new(|| {
             &csharp::HOOKS,
         ),
         grammar(Lang::C, tree_sitter_c::LANGUAGE, c::TABLE, &c::HOOKS),
-        grammar(Lang::Cpp, tree_sitter_cpp::LANGUAGE, cpp::TABLE, &cpp::HOOKS),
+        grammar(
+            Lang::Cpp,
+            tree_sitter_cpp::LANGUAGE,
+            cpp::TABLE,
+            &cpp::HOOKS,
+        ),
         grammar(
             Lang::ObjC,
             tree_sitter_objc::LANGUAGE,
@@ -197,5 +207,5 @@ pub(crate) fn spec_for(lang: Lang) -> LangSpec {
     let Some(entry) = GRAMMARS.iter().find(|grammar| grammar.lang == lang) else {
         panic!("no grammar wired for {lang:?}");
     };
-    LangSpec::new(lang, entry.language, entry.table, entry.hooks)
+    LangSpec::new(lang, entry.language.clone(), entry.table, entry.hooks)
 }

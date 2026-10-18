@@ -1,11 +1,11 @@
 //! The single iterative tree walk that turns node roles into file facts.
 
 use sloplint_core::facts::FileFacts;
-use sloplint_core::suppress::CommentText;
 use sloplint_core::lang::Lang;
+use sloplint_core::suppress::CommentText;
 use tree_sitter::Node;
 
-use crate::hooks::{narrow, pos_of, Cx, Container};
+use crate::hooks::{Container, Cx, narrow, pos_of};
 use crate::spec::{LangSpec, Role};
 
 /// What one full walk produced: facts plus the suppressible comments.
@@ -107,10 +107,10 @@ pub(crate) struct FrameDecl<'s> {
 /// Deferred state action for a node about to exit.
 #[derive(Clone, Copy)]
 pub(crate) enum Mark {
-    PopNest,
-    PopFrame,
-    PopFn,
-    PopContainer,
+    Nest,
+    Frame,
+    Fn,
+    Container,
 }
 
 /// All mutable walk state; the tree cursor lives only in [`WalkState::run`].
@@ -318,20 +318,20 @@ impl<'s, 'a> WalkState<'s, 'a> {
 
     fn apply_mark(&mut self, mark: Mark) {
         match mark {
-            Mark::PopNest => {
+            Mark::Nest => {
                 if let Some(frame) = self.fn_stack.last_mut() {
                     frame.nest -= 1;
                 }
             }
-            Mark::PopFrame => {
+            Mark::Frame => {
                 if let Some(frame) = self.fn_stack.last_mut() {
                     frame.frames -= 1;
                 }
             }
-            Mark::PopFn => {
+            Mark::Fn => {
                 self.fn_stack.pop();
             }
-            Mark::PopContainer => {
+            Mark::Container => {
                 self.containers.pop();
             }
         }
@@ -367,7 +367,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
         };
         frame.nest += 1;
         let (index, nest) = (frame.index, frame.nest);
-        self.marks.push((mark, Mark::PopNest));
+        self.marks.push((mark, Mark::Nest));
         let function = &mut self.facts.functions[index];
         if nest > function.max_depth {
             function.max_depth = nest;
@@ -380,6 +380,6 @@ impl<'s, 'a> WalkState<'s, 'a> {
             return;
         };
         frame.frames += 1;
-        self.marks.push((mark, Mark::PopFrame));
+        self.marks.push((mark, Mark::Frame));
     }
 }

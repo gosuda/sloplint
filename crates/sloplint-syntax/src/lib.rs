@@ -38,8 +38,8 @@ impl Parsers {
 
     /// Parses one file, or `None` when the grammar cannot be loaded.
     fn parse(&mut self, lang: Lang, source: &str) -> Option<tree_sitter::Tree> {
-        let language = spec(lang).language;
-        let parser = self.parsers.entry(lang).or_insert_with(Parser::new);
+        let language = spec(lang).language.clone();
+        let parser = self.parsers.entry(lang).or_default();
         parser.set_language(&language).ok()?;
         parser.parse(source, None)
     }

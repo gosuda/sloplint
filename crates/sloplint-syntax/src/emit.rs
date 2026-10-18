@@ -3,7 +3,7 @@
 use sloplint_core::facts::{Ambient, Call, DynamicSymbol, Function, MutBinding, Pos};
 use sloplint_core::suppress::CommentText;
 
-use crate::hooks::{narrow, pos_of, slice, Cx, Container, FunctionHead};
+use crate::hooks::{Container, FunctionHead, narrow, pos_of, slice};
 use crate::walk::{FnFrame, FrameDecl, Mark, WalkState};
 
 impl<'s, 'a> WalkState<'s, 'a> {
@@ -98,7 +98,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
             decls: Vec::new(),
             sole_call: head.sole_call,
         });
-        self.marks.push((node.id(), Mark::PopFn));
+        self.marks.push((node.id(), Mark::Fn));
     }
 
     pub(crate) fn push_call(&mut self, node: tree_sitter::Node<'_>) {
@@ -111,10 +111,10 @@ impl<'s, 'a> WalkState<'s, 'a> {
             return;
         };
         let index = self.facts.calls.len();
-        if let Some(frame) = self.fn_stack.last_mut() {
-            if frame.sole_call == Some(node.id()) {
-                self.facts.functions[frame.index].sole_call = Some(narrow(index));
-            }
+        if let Some(frame) = self.fn_stack.last_mut()
+            && frame.sole_call == Some(node.id())
+        {
+            self.facts.functions[frame.index].sole_call = Some(narrow(index));
         }
         self.facts.calls.push(Call {
             pos: pos_of(node),
@@ -208,7 +208,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
             hooks.write_roots(node, &cx, &mut roots);
         }
         for (name, pos) in roots {
-            self.apply_write(&name, pos);
+            self.apply_write(name, pos);
         }
     }
 
@@ -309,7 +309,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
             self.facts.has_inline_tests = true;
         }
         self.containers.push(container);
-        self.marks.push((mark, Mark::PopContainer));
+        self.marks.push((mark, Mark::Container));
     }
 
     pub(crate) fn on_comment(&mut self, node: tree_sitter::Node<'_>) {

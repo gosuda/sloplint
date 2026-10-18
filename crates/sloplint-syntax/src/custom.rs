@@ -102,7 +102,7 @@ fn langs_for_key(key: &str) -> Vec<Lang> {
 
 /// Compiles one spec against one grammar and validates its captures.
 fn compile_query(lang: Lang, rule: &CustomRuleSpec) -> Result<Query, ConfigError> {
-    let language = spec(lang).language;
+    let language = spec(lang).language.clone();
     let query = Query::new(&language, &rule.query).map_err(|error| {
         custom_error(
             rule,
@@ -146,7 +146,7 @@ fn custom_error(rule: &CustomRuleSpec, message: &str) -> ConfigError {
 
 /// Builds one hit from a match; `None` when the match lacks `@match`.
 fn hit_from_match<'s>(
-    names: &[&str],
+    names: &[&'s str],
     captures: &[tree_sitter::QueryCapture<'_>],
     rule: u32,
     source: &'s str,
