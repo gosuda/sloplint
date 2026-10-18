@@ -162,6 +162,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         },
     )?;
     let config = loaded.config;
+    RuleSet::validate_filter(&config, &opts.rule_filter)?;
     let rules = RuleSet::new(&config, &RuleFilter::default())?;
     let custom = CustomRules::compile(&config.custom_rules)?;
     let scopes = project::scopes(&root, &opts.cwd, &opts.paths)?;

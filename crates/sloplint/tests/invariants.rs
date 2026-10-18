@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use sloplint::{RunOptions, run};
 use sloplint_core::config::{Mode, Strictness};
 use sloplint_core::finding::Severity;
+use sloplint_core::{Config, ConfigError, RuleFilter, RulePattern, RuleSet};
 
 /// Copies a directory tree into a fresh temp dir and returns its root.
 fn copy_tree(src: &Path) -> (tempfile::TempDir, PathBuf) {
@@ -652,6 +653,160 @@ fn audit_persistence_cache_temp_symlink_is_preserved() {
         std::fs::read_to_string(&marker).unwrap_or_else(|e| panic!("read: {e}")),
         "sentinel",
         "outside marker overwritten through temp symlink"
+    );
+}
+
+fn audit_filter_of(selectors: &[&str]) -> RuleFilter {
+    RuleFilter(
+        selectors
+            .iter()
+            .map(|s| RulePattern::parse(s).unwrap_or_else(|e| panic!("parse: {e}")))
+            .collect(),
+    )
+}
+
+fn audit_filter_opts(root: &Path, filter: RuleFilter) -> RunOptions {
+    RunOptions {
+        cwd: root.to_path_buf(),
+        root: Some(root.to_path_buf()),
+        strictness: Some(Strictness::Standard),
+        mode: Some(Mode::Threshold),
+        rule_filter: filter,
+        use_cache: false,
+        ..RunOptions::default()
+    }
+}
+
+#[test]
+fn audit_filter_rejects_unknown_selectors() {
+    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = tmp.path();
+    write(root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    for (selectors, want) in [
+        (vec!["grep/generic-nam"], "grep/generic-nam"),
+        (vec!["typo/*"], "typo/*"),
+        (vec!["grep/generic-name", "typo/*"], "typo/*"),
+    ] {
+        let result = run(&audit_filter_opts(root, audit_filter_of(&selectors)));
+        let Err(error) = result else {
+            panic!("unknown selector {want} was accepted");
+        };
+        assert_eq!(error.exit_code(), 2, "unknown rule must exit 2");
+        let sloplint::RunError::Config(ConfigError::UnknownRule { id, .. }) = error else {
+            panic!("unexpected error for {want}");
+        };
+        assert_eq!(id, want, "rejected selector mismatch");
+    }
+}
+
+#[test]
+fn audit_filter_ruleset_new_rejects_unknown() {
+    let bad = audit_filter_of(&["grep/generic-nam"]);
+    let Err(ConfigError::UnknownRule { id, .. }) = RuleSet::new(&Config::default(), &bad) else {
+        panic!("RuleSet::new accepted an unknown filter");
+    };
+    assert_eq!(id, "grep/generic-nam", "rejected selector mismatch");
+}
+
+#[test]
+fn audit_filter_accepts_valid_selectors() {
+    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = tmp.path();
+    write(
+        root,
+        "sample.rs",
+        "pub fn handle(flag: bool, other: bool) { foo(); }\nfn foo() {}\n",
+    );
+    write(
+        root,
+        "sloplint.toml",
+        "[[custom_rules]]\nid = \"custom/no-call\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"call found\"\nwhy = \"test why\"\nfix = \"test fix\"\nquery = \"(call_expression) @match\"\n",
+    );
+    let check = |selector: &str| {
+        run(&audit_filter_opts(root, audit_filter_of(&[selector])))
+            .unwrap_or_else(|e| panic!("valid selector {selector}: {e}"))
+    };
+    let exact = check("grep/generic-name");
+    assert!(
+        exact
+            .findings
+            .iter()
+            .any(|f| &*f.rule == "grep/generic-name"),
+        "exact filter missed its rule"
+    );
+    let family = check("grep/*");
+    assert!(
+        family
+            .findings
+            .iter()
+            .any(|f| &*f.rule == "grep/generic-name"),
+        "family filter missed its rule"
+    );
+    let custom = check("custom/no-call");
+    assert!(
+        custom.findings.iter().any(|f| &*f.rule == "custom/no-call"),
+        "custom filter missed its rule"
+    );
+    let off = check("grep/multiline-argument");
+    assert!(
+        off.findings
+            .iter()
+            .all(|f| &*f.rule == "grep/multiline-argument"),
+        "off-rule filter leaked other rules"
+    );
+    write(
+        root,
+        "sloplint.toml",
+        "[[custom_rules]]\nid = \"custom/no-call\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"call found\"\nwhy = \"test why\"\nfix = \"test fix\"\nquery = \"(call_expression) @match\"\n[rules.\"custom/no-call\"]\nlevel = \"off\"\n",
+    );
+    let disabled = check("custom/no-call");
+    assert!(
+        disabled.findings.is_empty(),
+        "disabled custom rule should report nothing but still be accepted"
+    );
+}
+
+#[test]
+fn audit_filter_cache_stays_unfiltered() {
+    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = tmp.path();
+    write(
+        root,
+        "sample.rs",
+        "pub fn handle(flag: bool, other: bool) {}\n",
+    );
+    let filtered = run(&RunOptions {
+        use_cache: true,
+        ..audit_filter_opts(root, audit_filter_of(&["grep/generic-name"]))
+    })
+    .unwrap_or_else(|e| panic!("filtered run: {e}"));
+    assert!(
+        filtered
+            .findings
+            .iter()
+            .any(|f| &*f.rule == "grep/generic-name"),
+        "filtered run missed its rule"
+    );
+    assert!(
+        root.join(".sloplint/cache-v1.bin").exists(),
+        "filtered run did not populate the cache; the full run would pass cold"
+    );
+    let full = run(&RunOptions {
+        use_cache: true,
+        ..audit_filter_opts(root, RuleFilter(vec![]))
+    })
+    .unwrap_or_else(|e| panic!("full run: {e}"));
+    assert!(
+        full.findings
+            .iter()
+            .any(|f| &*f.rule == "grep/generic-name"),
+        "full run after filtered cache missed generic-name"
+    );
+    assert!(
+        full.findings
+            .iter()
+            .any(|f| &*f.rule == "complexity/boolean-params"),
+        "filtered cache poisoned the later full run"
     );
 }
 

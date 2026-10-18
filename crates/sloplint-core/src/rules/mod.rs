@@ -258,8 +258,33 @@ pub struct RuleSet {
 }
 
 impl RuleSet {
+    /// Rejects unknown `--rule` selectors before any rule is built.
+    pub fn validate_filter(config: &Config, filter: &RuleFilter) -> Result<(), ConfigError> {
+        for pattern in &filter.0 {
+            let known = CATALOG
+                .iter()
+                .map(|info| info.id)
+                .chain(config.custom_rules.iter().map(|spec| spec.id.as_str()))
+                .any(|id| pattern.matches(id));
+            if !known {
+                let id = match pattern {
+                    RulePattern::Exact(id) => id.to_string(),
+                    RulePattern::Family(family) => format!("{family}/*"),
+                };
+                let mut valid: Vec<String> =
+                    CATALOG.iter().map(|info| info.id.to_string()).collect();
+                valid.extend(config.custom_rules.iter().map(|spec| spec.id.clone()));
+                valid.sort();
+                valid.dedup();
+                return Err(ConfigError::UnknownRule { id, valid });
+            }
+        }
+        Ok(())
+    }
+
     /// Resolves every catalog rule: the preset of the active strictness with the user table over it.
     pub fn new(config: &Config, filter: &RuleFilter) -> Result<RuleSet, ConfigError> {
+        Self::validate_filter(config, filter)?;
         let settings = Settings::from_config(config);
         let resolved: Vec<ResolvedRule> = CATALOG
             .iter()

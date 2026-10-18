@@ -75,6 +75,8 @@ Exit code `0` means the gate passed: the run can still list `warn` findings belo
 
 `check` flags: `--format agent|human|json`, `--strictness`, `--mode threshold|ratchet`, `--fail-on warn|deny|never`, `--rule ID` (repeatable, `family/*` allowed), `--config FILE`, `--no-cache`, `--jobs N`.
 
+Unknown `--rule` selectors fail with exit 2 listing the valid rule ids.
+
 Every run analyzes the whole project root; `PATHS` only filters which findings are reported.
 
 ### Configuration
