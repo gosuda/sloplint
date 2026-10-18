@@ -1,0 +1,2 @@
+# Positive: `reconcile_ledger` defined in 5 files (strict min_files=5); one finding at first site.
+a.rs:1 warn grep/homonym-definitions

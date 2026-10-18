@@ -1,0 +1,1 @@
+# 3 fields (< min_fields=4) and one computed field (source=None): no finding

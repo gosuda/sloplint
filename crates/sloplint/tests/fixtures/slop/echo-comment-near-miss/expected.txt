@@ -1,0 +1,1 @@
+# doc adds an # Errors section: similarity ~0.33 < 0.65, no finding

@@ -1,0 +1,1 @@
+# Private function is not a boundary; annotated public function is complete.

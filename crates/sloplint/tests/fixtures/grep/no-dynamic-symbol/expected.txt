@@ -1,0 +1,2 @@
+# Positive: token-pasting macro builds a name at runtime (macro at line 2).
+src/lib.rs:2 warn grep/no-dynamic-symbol

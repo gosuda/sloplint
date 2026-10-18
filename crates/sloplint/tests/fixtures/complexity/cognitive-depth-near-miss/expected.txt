@@ -1,0 +1,1 @@
+# near-miss: 1 if + 8 else-if = cognitive 9 < strict warn_at 10; early returns add nothing.

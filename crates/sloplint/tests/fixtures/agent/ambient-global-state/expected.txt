@@ -1,0 +1,2 @@
+src/store.rs:1 deny agent/ambient-global-state
+src/store.rs:4 deny agent/ambient-global-state

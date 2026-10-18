@@ -1,0 +1,1 @@
+# near-miss: `fixed` is never rewritten after declaration (span 0); the second `let` is immutable shadowing, not a write.

@@ -1,0 +1,1 @@
+src/lib.rs:2 deny complexity/mutable-span

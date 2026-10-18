@@ -1,0 +1,1 @@
+# Near-miss: ordinary macro is not name-building; getattr with a literal name is static.

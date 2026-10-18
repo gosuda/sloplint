@@ -1,0 +1,2 @@
+src/lib.rs:1 deny meta/invalid-suppression
+src/lib.rs:4 deny meta/invalid-suppression

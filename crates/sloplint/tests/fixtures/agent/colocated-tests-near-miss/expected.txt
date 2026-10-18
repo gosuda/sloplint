@@ -1,0 +1,1 @@
+# tests/widget.rs is the counterpart of src/widget.rs: no finding.

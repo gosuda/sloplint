@@ -1,0 +1,1 @@
+# Immutable static is not ambient; env read inside `fn main` is entry code.

@@ -1,0 +1,2 @@
+src/handler.py:4 deny slop/zombie-catch
+src/handler.ts:4 deny slop/zombie-catch

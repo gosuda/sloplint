@@ -1,0 +1,1 @@
+# One primitive param after a newtype: longest run is 1, below warn_at = 2.

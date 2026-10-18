@@ -1,0 +1,1 @@
+src/checks.rs:2 deny agent/informative-assertions

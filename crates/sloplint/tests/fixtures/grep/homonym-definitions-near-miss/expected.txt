@@ -1,0 +1,1 @@
+# Near-miss: only 4 files define the name (strict min_files=5).
