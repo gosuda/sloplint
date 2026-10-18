@@ -51,10 +51,7 @@ pub fn interface_hash(text: &str) -> [u8; 32] {
 }
 
 /// Hashes everything that shapes per-file output: the binary bytes, the effective config, and custom rule files.
-pub fn config_key(
-    config: &Config,
-    custom_sources: &[(String, String)],
-) -> io::Result<[u8; 32]> {
+pub fn config_key(config: &Config, custom_sources: &[(String, String)]) -> io::Result<[u8; 32]> {
     let mut hasher = blake3::Hasher::new();
     let exe = std::env::current_exe()?;
     hasher.update(&fs::read(&exe)?);
