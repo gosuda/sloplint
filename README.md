@@ -122,6 +122,7 @@ Inline where you cannot fix yet; a reason is required, and unused suppressions a
 ## Development
 
 ```bash
+cargo fmt --all --check
 cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 sloplint check crates       # self-lint with the repo's own sloplint.toml
