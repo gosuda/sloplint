@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -142,21 +142,44 @@ pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunErro
     })
 }
 
-/// Resolves the PATH arguments to root-relative scopes; an empty result means the whole root.
-pub fn scopes(root: &Path, cwd: &Path, paths: &[PathBuf]) -> Result<Vec<String>, RunError> {
-    let mut scopes = Vec::new();
+/// Root-relative PATH scopes, indexed so a membership test costs one hash lookup per path component.
+#[derive(Debug, Default)]
+pub struct Scopes {
+    paths: HashSet<String>,
+}
+
+impl Scopes {
+    /// Whether `path` is one of the scopes or lies under one, matching whole path components; no scopes cover the whole root.
+    pub fn contains(&self, path: &str) -> bool {
+        self.paths.is_empty()
+            || self.paths.contains(path)
+            || path
+                .match_indices('/')
+                .any(|(index, _)| self.paths.contains(&path[..index]))
+    }
+}
+
+/// Resolves the PATH arguments to root-relative scopes; no scopes means the whole root.
+///
+/// Every PATH is validated, including those after one that names the root itself.
+pub fn scopes(root: &Path, cwd: &Path, paths: &[PathBuf]) -> Result<Scopes, RunError> {
+    let mut resolved = HashSet::new();
+    let mut whole_root = false;
     for path in paths {
         let absolute = if path.is_absolute() {
             path.clone()
         } else {
             cwd.join(path)
         };
-        if !absolute.exists() {
-            return Err(RunError::PathNotFound { path: path.clone() });
-        }
-        let canonical = fs::canonicalize(&absolute).map_err(|source| RunError::Io {
-            path: absolute.clone(),
-            source,
+        let canonical = fs::canonicalize(&absolute).map_err(|source| {
+            if source.kind() == io::ErrorKind::NotFound {
+                RunError::PathNotFound { path: path.clone() }
+            } else {
+                RunError::Io {
+                    path: absolute.clone(),
+                    source,
+                }
+            }
         })?;
         let relative = canonical
             .strip_prefix(root)
@@ -166,11 +189,15 @@ pub fn scopes(root: &Path, cwd: &Path, paths: &[PathBuf]) -> Result<Vec<String>,
             source: io::Error::new(io::ErrorKind::InvalidData, "path is not UTF-8"),
         })?;
         if rel.is_empty() {
-            return Ok(Vec::new());
+            whole_root = true;
+        } else {
+            resolved.insert(rel);
         }
-        scopes.push(rel);
     }
-    Ok(scopes)
+    if whole_root {
+        resolved.clear();
+    }
+    Ok(Scopes { paths: resolved })
 }
 
 /// Resolves a configured baseline name to an absolute path inside `root`.
@@ -235,16 +262,6 @@ pub fn resolve_within_root(root: &Path, name: &str) -> Result<PathBuf, RunError>
             source,
         }),
     }
-}
-
-/// Whether `path` lies under one of the scopes; empty scopes cover everything.
-pub fn in_scope(scopes: &[String], path: &str) -> bool {
-    scopes.is_empty()
-        || scopes.iter().any(|scope| {
-            path == scope
-                || (path.starts_with(scope.as_str())
-                    && path.as_bytes().get(scope.len()) == Some(&b'/'))
-        })
 }
 
 /// Compiles glob patterns into one set, naming `key` in any error.

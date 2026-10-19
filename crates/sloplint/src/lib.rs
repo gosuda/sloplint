@@ -197,7 +197,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     for outcome in outcomes {
         match outcome {
             Outcome::Skipped(rel) => {
-                if project::in_scope(&scopes, &rel) {
+                if scopes.contains(&rel) {
                     skipped += 1;
                 }
             }
@@ -207,7 +207,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let files = count(
         analyzed
             .iter()
-            .filter(|file| project::in_scope(&scopes, &file.rel))
+            .filter(|file| scopes.contains(&file.rel))
             .count(),
     );
     if opts.use_cache {
@@ -224,7 +224,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         }
     }
     let mut all = merge(&pipe, analyzed)?;
-    all.retain(|finding| project::in_scope(&scopes, &finding.path));
+    all.retain(|finding| scopes.contains(&finding.path));
     let (reported, baselined, stale) = if opts.write_baseline {
         (all, 0, 0)
     } else {
@@ -507,14 +507,14 @@ fn suppression_active(pipe: &Pipeline<'_>, suppression: &Suppression) -> bool {
 
 fn apply_gate(
     pipe: &Pipeline<'_>,
-    scopes: &[String],
+    scopes: &project::Scopes,
     all: Vec<Finding>,
 ) -> Result<(Vec<Finding>, u32, u32), RunError> {
     if pipe.config.project.mode != Mode::Ratchet {
         return Ok((all, 0, 0));
     }
     let baseline = load_baseline(pipe.root, &pipe.config.project.baseline)?;
-    Ok(baseline.filter(all, &|path: &str| project::in_scope(scopes, path)))
+    Ok(baseline.filter(all, &|path: &str| scopes.contains(path)))
 }
 
 fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunError> {
