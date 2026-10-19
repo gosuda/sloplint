@@ -1,0 +1,81 @@
+==================
+Lazy import
+==================
+
+lazy import foo
+lazy import a.b.c as d, e
+---
+
+(module
+  (import_statement
+    (dotted_name
+      (identifier)))
+  (import_statement
+    (aliased_import
+      (dotted_name
+        (identifier)
+        (identifier)
+        (identifier))
+      (identifier))
+    (dotted_name
+      (identifier))))
+
+==================
+Lazy from import
+==================
+
+lazy from foo import bar
+lazy from . import x
+lazy from ..a import (b, c)
+---
+
+(module
+  (import_from_statement
+    (dotted_name
+      (identifier))
+    (dotted_name
+      (identifier)))
+  (import_from_statement
+    (relative_import
+      (import_prefix))
+    (dotted_name
+      (identifier)))
+  (import_from_statement
+    (relative_import
+      (import_prefix)
+      (dotted_name
+        (identifier)))
+    (dotted_name
+      (identifier))
+    (dotted_name
+      (identifier))))
+
+==================
+Lazy as an identifier
+==================
+
+lazy = 1
+lazy(x)
+lazy.y = 2
+import lazy
+---
+
+(module
+  (expression_statement
+    (assignment
+      (identifier)
+      (integer)))
+  (expression_statement
+    (call
+      (identifier)
+      (argument_list
+        (identifier))))
+  (expression_statement
+    (assignment
+      (attribute
+        (identifier)
+        (identifier))
+      (integer)))
+  (import_statement
+    (dotted_name
+      (identifier))))

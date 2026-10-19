@@ -1,0 +1,88 @@
+==================
+Unary plus in case patterns
+==================
+
+match foo:
+  case +1: ...
+  case +1.5 | -1: ...
+  case [+1, -2]: ...
+  case {+1: a}: ...
+---
+
+(module
+  (match_statement
+    (identifier)
+    (block
+      (case_clause
+        (case_pattern
+          (integer))
+        (block
+          (expression_statement
+            (ellipsis))))
+      (case_clause
+        (case_pattern
+          (union_pattern
+            (float)
+            (integer)))
+        (block
+          (expression_statement
+            (ellipsis))))
+      (case_clause
+        (case_pattern
+          (list_pattern
+            (case_pattern
+              (integer))
+            (case_pattern
+              (integer))))
+        (block
+          (expression_statement
+            (ellipsis))))
+      (case_clause
+        (case_pattern
+          (dict_pattern
+            (integer)
+            (case_pattern
+              (dotted_name
+                (identifier)))))
+        (block
+          (expression_statement
+            (ellipsis)))))))
+
+==================
+Signed complex case patterns
+==================
+
+match foo:
+  case +1 + 2j: ...
+  case -1 - 2j: ...
+  case 1 + 2j: ...
+---
+
+(module
+  (match_statement
+    (identifier)
+    (block
+      (case_clause
+        (case_pattern
+          (complex_pattern
+            (integer)
+            (integer)))
+        (block
+          (expression_statement
+            (ellipsis))))
+      (case_clause
+        (case_pattern
+          (complex_pattern
+            (integer)
+            (integer)))
+        (block
+          (expression_statement
+            (ellipsis))))
+      (case_clause
+        (case_pattern
+          (complex_pattern
+            (integer)
+            (integer)))
+        (block
+          (expression_statement
+            (ellipsis)))))))

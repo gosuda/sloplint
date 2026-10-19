@@ -1,0 +1,444 @@
+diff --git a/grammar.js b/grammar.js
+index 2bbe35c..0ae2620 100644
+--- a/grammar.js
++++ b/grammar.js
+@@ -88,20 +88,21 @@ module.exports = grammar({
+     ')',
+     '}',
+     'except',
+   ],
+ 
+   inline: $ => [
+     $._simple_statement,
+     $._compound_statement,
+     $._suite,
+     $._expressions,
++    $._star_expression,
+     $._left_hand_side,
+     $.keyword_identifier,
+   ],
+ 
+   reserved: {
+     global: _ => [
+       // https://docs.python.org/3/reference/lexical_analysis.html#keywords
+       'False', 'await', 'else', 'import', 'pass',
+       'None', 'break', 'except', 'in', 'raise',
+       'True', 'class', 'finally', 'is', 'return',
+@@ -143,20 +144,21 @@ module.exports = grammar({
+       $.pass_statement,
+       $.break_statement,
+       $.continue_statement,
+       $.global_statement,
+       $.nonlocal_statement,
+       $.exec_statement,
+       $.type_alias_statement,
+     ),
+ 
+     import_statement: $ => seq(
++      optional('lazy'),
+       'import',
+       $._import_list,
+     ),
+ 
+     import_prefix: _ => repeat1('.'),
+ 
+     relative_import: $ => seq(
+       $.import_prefix,
+       optional($.dotted_name),
+     ),
+@@ -165,20 +167,21 @@ module.exports = grammar({
+       'from',
+       '__future__',
+       'import',
+       choice(
+         $._import_list,
+         seq('(', $._import_list, ')'),
+       ),
+     ),
+ 
+     import_from_statement: $ => seq(
++      optional('lazy'),
+       'from',
+       field('module_name', choice(
+         $.relative_import,
+         $.dotted_name,
+       )),
+       'import',
+       choice(
+         $.wildcard_import,
+         $._import_list,
+         seq('(', $._import_list, ')'),
+@@ -220,21 +223,21 @@ module.exports = grammar({
+       $.expression,
+     ),
+ 
+     assert_statement: $ => seq(
+       'assert',
+       commaSep1($.expression),
+     ),
+ 
+     expression_statement: $ => choice(
+       $.expression,
+-      seq(commaSep1($.expression), optional(',')),
++      seq($._star_expression, choice(',', seq(repeat1(seq(',', $._star_expression)), optional(',')))),
+       $.assignment,
+       $.augmented_assignment,
+       $.yield,
+     ),
+ 
+     named_expression: $ => seq(
+       field('name', $._named_expression_lhs),
+       ':=',
+       field('value', $.expression),
+     ),
+@@ -413,20 +416,51 @@ module.exports = grammar({
+     ),
+ 
+     parameters: $ => seq(
+       '(',
+       optional($._parameters),
+       ')',
+     ),
+ 
+     lambda_parameters: $ => $._parameters,
+ 
++    // Starred operand that `list_splat_pattern` cannot take: a bracketed
++    // display, a literal, `await` or a unary operator. `*name`, `*a.b` and
++    // `*a[0]` already parse as `list_splat_pattern`; giving this rule the same
++    // operands would turn assignment right-hand sides into `pattern_list`.
++    // `*f(x)` also stays on the old path. Only used in comma lists
++    // (`_star_expression`), so a bare `*(a + 1)` statement stays an error.
++    _star_primary_splat: $ => seq(
++      '*',
++      choice(
++        $.parenthesized_expression,
++        $.tuple,
++        $.generator_expression,
++        $.list,
++        $.list_comprehension,
++        $.set,
++        $.set_comprehension,
++        $.dictionary,
++        $.dictionary_comprehension,
++        $.await,
++        $.unary_operator,
++        $.string,
++        $.concatenated_string,
++        $.integer,
++        $.float,
++        $.true,
++        $.false,
++        $.none,
++        $.ellipsis,
++      ),
++    ),
++
+     list_splat: $ => seq(
+       '*',
+       $.expression,
+     ),
+ 
+     dictionary_splat: $ => seq(
+       '**',
+       $.expression,
+     ),
+ 
+@@ -461,25 +495,31 @@ module.exports = grammar({
+     class_definition: $ => seq(
+       'class',
+       field('name', $.identifier),
+       field('type_parameters', optional($.type_parameter)),
+       field('superclasses', optional($.argument_list)),
+       ':',
+       field('body', $._suite),
+     ),
+     type_parameter: $ => seq(
+       '[',
+-      commaSep1($.type),
++      commaSep1(choice($.type, $.default_type_parameter)),
+       optional(','),
+       ']',
+     ),
+ 
++    default_type_parameter: $ => seq(
++      field('parameter', $.type),
++      '=',
++      field('default', $.type),
++    ),
++
+     parenthesized_list_splat: $ => prec(PREC.parenthesized_list_splat, seq(
+       '(',
+       choice(
+         alias($.parenthesized_list_splat, $.parenthesized_expression),
+         $.list_splat,
+       ),
+       ')',
+     )),
+ 
+     argument_list: $ => seq(
+@@ -516,33 +556,38 @@ module.exports = grammar({
+       seq($._indent, $.block),
+       alias($._newline, $.block),
+     ),
+ 
+     block: $ => seq(
+       repeat($._statement),
+       $._dedent,
+     ),
+ 
+     expression_list: $ => prec.right(seq(
+-      $.expression,
++      $._star_expression,
+       choice(
+         ',',
+         seq(
+           repeat1(seq(
+             ',',
+-            $.expression,
++            $._star_expression,
+           )),
+           optional(','),
+         ),
+       ),
+     )),
+ 
++    _star_expression: $ => choice(
++      $.expression,
++      alias($._star_primary_splat, $.list_splat),
++    ),
++
+     dotted_name: $ => prec(1, sep1($.identifier, '.')),
+ 
+     // Match cases
+ 
+     case_pattern: $ => prec(1, choice(
+       alias($._as_pattern, $.as_pattern),
+       $.keyword_pattern,
+       $._simple_pattern,
+     )),
+ 
+@@ -551,21 +596,21 @@ module.exports = grammar({
+       $.splat_pattern,
+       $.union_pattern,
+       alias($._list_pattern, $.list_pattern),
+       alias($._tuple_pattern, $.tuple_pattern),
+       $.dict_pattern,
+       $.string,
+       $.concatenated_string,
+       $.true,
+       $.false,
+       $.none,
+-      seq(optional('-'), choice($.integer, $.float)),
++      seq(optional(choice('-', '+')), choice($.integer, $.float)),
+       $.complex_pattern,
+       $.dotted_name,
+       '_',
+     )),
+ 
+     _as_pattern: $ => seq($.case_pattern, 'as', $.identifier),
+ 
+     union_pattern: $ => prec.right(seq($._simple_pattern, repeat1(prec.left(seq('|', $._simple_pattern))))),
+ 
+     _list_pattern: $ => seq(
+@@ -609,21 +654,21 @@ module.exports = grammar({
+       $.dotted_name,
+       '(',
+       optional(seq(
+         commaSep1($.case_pattern),
+         optional(','),
+       )),
+       ')',
+     ),
+ 
+     complex_pattern: $ => prec(1, seq(
+-      optional('-'),
++      optional(choice('-', '+')),
+       choice($.integer, $.float),
+       choice('+', '-'),
+       choice($.integer, $.float),
+     )),
+ 
+     // Patterns
+ 
+     _parameters: $ => seq(
+       commaSep1($.parameter),
+       optional(','),
+@@ -894,21 +939,21 @@ module.exports = grammar({
+ 
+     attribute: $ => prec(PREC.call, seq(
+       field('object', $.primary_expression),
+       '.',
+       field('attribute', $.identifier),
+     )),
+ 
+     subscript: $ => prec(PREC.call, seq(
+       field('value', $.primary_expression),
+       '[',
+-      commaSep1(field('subscript', choice($.expression, $.slice))),
++      commaSep1(field('subscript', choice($.expression, $.slice, $.list_splat))),
+       optional(','),
+       ']',
+     )),
+ 
+     slice: $ => seq(
+       optional($.expression),
+       ':',
+       optional($.expression),
+       optional(seq(':', optional($.expression))),
+     ),
+@@ -934,21 +979,24 @@ module.exports = grammar({
+     )),
+ 
+     type: $ => choice(
+       prec(1, $.expression),
+       $.splat_type,
+       $.generic_type,
+       $.union_type,
+       $.constrained_type,
+       $.member_type,
+     ),
+-    splat_type: $ => prec(1, seq(choice('*', '**'), $.identifier)),
++    splat_type: $ => prec(1, choice(
++      seq(choice('*', '**'), $.identifier),
++      seq('*', $.parenthesized_expression),
++    )),
+     generic_type: $ => prec(1, seq(
+       choice(
+         $.identifier,
+         alias('type', $.identifier),
+       ),
+       $.type_parameter,
+     )),
+     union_type: $ => prec.left(seq($.type, '|', $.type)),
+     constrained_type: $ => prec.right(seq($.type, ':', $.type)),
+     member_type: $ => seq($.type, '.', $.identifier),
+@@ -994,21 +1042,21 @@ module.exports = grammar({
+ 
+     list_comprehension: $ => seq(
+       '[',
+       field('body', $.expression),
+       $._comprehension_clauses,
+       ']',
+     ),
+ 
+     dictionary_comprehension: $ => seq(
+       '{',
+-      field('body', $.pair),
++      field('body', choice($.pair, $.dictionary_splat)),
+       $._comprehension_clauses,
+       '}',
+     ),
+ 
+     set_comprehension: $ => seq(
+       '{',
+       field('body', $.expression),
+       $._comprehension_clauses,
+       '}',
+     ),
+@@ -1168,21 +1216,21 @@ module.exports = grammar({
+       prec(-3, alias(
+         choice(
+           'print',
+           'exec',
+           'async',
+           'await',
+         ),
+         $.identifier,
+       )),
+       alias(
+-        choice('type', 'match'),
++        choice('type', 'match', 'lazy'),
+         $.identifier,
+       ),
+     ),
+ 
+     true: _ => 'True',
+     false: _ => 'False',
+     none: _ => 'None',
+ 
+     await: $ => prec(PREC.unary, seq(
+       'await',
+diff --git a/src/scanner.c b/src/scanner.c
+index 1fc77cd..748a3c5 100644
+--- a/src/scanner.c
++++ b/src/scanner.c
+@@ -205,25 +205,30 @@ bool tree_sitter_python_external_scanner_scan(void *payload, TSLexer *lexer, con
+             }
+             advance(lexer);
+             has_content = true;
+         }
+     }
+ 
+     lexer->mark_end(lexer);
+ 
+     bool found_end_of_line = false;
+     uint16_t indent_length = 0;
++    // Indentation measured before the first backslash continuation on the current line, or 0 if
++    // that line has none. CPython takes the indentation of a line from the whitespace before its
++    // first backslash, not from the whitespace of the lines the backslash joins in.
++    uint16_t continuation_indent_length = 0;
+     int32_t first_comment_indent_length = -1;
+     for (;;) {
+         if (lexer->lookahead == '\n') {
+             found_end_of_line = true;
+             indent_length = 0;
++            continuation_indent_length = 0;
+             skip(lexer);
+         } else if (lexer->lookahead == ' ') {
+             indent_length++;
+             skip(lexer);
+         } else if (lexer->lookahead == '\r' || lexer->lookahead == '\f') {
+             indent_length = 0;
+             skip(lexer);
+         } else if (lexer->lookahead == '\t') {
+             indent_length += 8;
+             skip(lexer);
+@@ -238,39 +243,48 @@ bool tree_sitter_python_external_scanner_scan(void *payload, TSLexer *lexer, con
+                 return false;
+             }
+             if (first_comment_indent_length == -1) {
+                 first_comment_indent_length = (int32_t)indent_length;
+             }
+             while (lexer->lookahead && lexer->lookahead != '\n') {
+                 skip(lexer);
+             }
+             skip(lexer);
+             indent_length = 0;
++            continuation_indent_length = 0;
+         } else if (lexer->lookahead == '\\') {
++            if (found_end_of_line && continuation_indent_length == 0) {
++                continuation_indent_length = indent_length;
++            }
+             skip(lexer);
+             if (lexer->lookahead == '\r') {
+                 skip(lexer);
+             }
+             if (lexer->lookahead == '\n' || lexer->eof(lexer)) {
+                 skip(lexer);
+             } else {
+                 return false;
+             }
+         } else if (lexer->eof(lexer)) {
+             indent_length = 0;
++            continuation_indent_length = 0;
+             found_end_of_line = true;
+             break;
+         } else {
+             break;
+         }
+     }
+ 
++    if (found_end_of_line && continuation_indent_length > 0) {
++        indent_length = continuation_indent_length;
++    }
++
+     if (found_end_of_line) {
+         if (scanner->indents.size > 0) {
+             uint16_t current_indent_length = *array_back(&scanner->indents);
+ 
+             if (valid_symbols[INDENT] && indent_length > current_indent_length) {
+                 array_push(&scanner->indents, indent_length);
+                 lexer->result_symbol = INDENT;
+                 return true;
+             }
+ 

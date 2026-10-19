@@ -1,0 +1,56 @@
+==================
+Backslash continuation as the first line of an indented block
+==================
+
+if True:
+  \
+    1
+  \
+2
+else:
+  3
+---
+
+(module
+  (if_statement
+    (true)
+    (line_continuation)
+    (block
+      (expression_statement
+        (integer))
+      (line_continuation)
+      (expression_statement
+        (integer)))
+    (else_clause
+      (block
+        (expression_statement
+          (integer))))))
+
+==================
+Backslash continuations before blank and comment lines
+==================
+
+if x:
+  \
+
+  3
+if y:
+  \
+ # c
+  4
+---
+
+(module
+  (if_statement
+    (identifier)
+    (line_continuation)
+    (block
+      (expression_statement
+        (integer))))
+  (if_statement
+    (identifier)
+    (line_continuation)
+    (comment)
+    (block
+      (expression_statement
+        (integer)))))
