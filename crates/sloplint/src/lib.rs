@@ -407,6 +407,7 @@ fn analyze_file(
     findings.append(&mut meta);
     FileOutput {
         hash: probe.hash,
+        parsed: analysis.parse_error.is_none(),
         findings,
         suppressions,
         world,
@@ -454,6 +455,7 @@ fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Result<Vec<Finding>, RunErro
     let FileOutput {
         mut findings,
         mut suppressions,
+        parsed,
         ..
     } = file.output;
     findings.sort_by(|a, b| {
@@ -461,12 +463,13 @@ fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Result<Vec<Finding>, RunErro
     });
     Baseline::assign_fingerprints(&mut findings);
     suppress::apply(&mut findings, &mut suppressions);
-    if pipe.filter.0.is_empty()
-        || pipe
-            .filter
-            .0
-            .iter()
-            .any(|p| p.matches("meta/unused-suppression"))
+    if parsed
+        && (pipe.filter.0.is_empty()
+            || pipe
+                .filter
+                .0
+                .iter()
+                .any(|p| p.matches("meta/unused-suppression")))
     {
         let mut unused = unused_findings(pipe, &file.rel, &suppressions)?;
         unused.sort_by(|a, b| {

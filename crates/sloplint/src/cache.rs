@@ -15,6 +15,9 @@ const FILE: &str = "cache-v1.bin";
 pub struct FileOutput {
     /// Content hash the output was computed from.
     pub hash: [u8; 32],
+    /// Whether the file parsed. A file with a syntax error carries only its
+    /// `meta/parse-error` finding, so its suppressions cannot be judged unused.
+    pub parsed: bool,
     /// Findings before suppression and fingerprinting.
     pub findings: Vec<Finding>,
     /// Suppression directives found in the file.
