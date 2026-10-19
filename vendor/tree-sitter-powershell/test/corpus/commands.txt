@@ -141,6 +141,7 @@ New-DynamicParam -Name Plugins -type string[] -ValidateSet $(((gci .\plugins\*.p
               (unary_expression
                 (variable)))))))))
 
+
 ===
 Quoted CmdLet
 ===
@@ -219,6 +220,7 @@ net.exe
         (command
           (command_name))))))
 
+
 ===
 Unix-like native command
 ===
@@ -274,6 +276,7 @@ net use e: \\usrsvr002\smithmark Ue345Ii /user:pdc01\msmith2 /savecred /p:yes
             (generic_token)
             (command_argument_sep)
             (generic_token)))))))
+
 
 ===
 Foreach statement without token separator
@@ -474,6 +477,7 @@ download toto
           command_elements: (command_elements
             (command_argument_sep)
             (generic_token)))))))
+
 
 ===
 Cmdlet with parenthesized_expression as parameter without any white space

@@ -278,6 +278,10 @@
         {
           "type": "simple_name",
           "named": true
+        },
+        {
+          "type": "ternary_expression",
+          "named": true
         }
       ]
     }
@@ -537,6 +541,10 @@
           "named": true
         },
         {
+          "type": "ternary_expression",
+          "named": true
+        },
+        {
           "type": "type_literal",
           "named": true
         },
@@ -555,6 +563,10 @@
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "attribute_list",
+          "named": true
+        },
         {
           "type": "class_method_definition",
           "named": true
@@ -641,6 +653,10 @@
         },
         {
           "type": "generic_token",
+          "named": true
+        },
+        {
+          "type": "member_name",
           "named": true
         },
         {
@@ -995,6 +1011,10 @@
           "named": true
         },
         {
+          "type": "ternary_expression",
+          "named": true
+        },
+        {
           "type": "type_literal",
           "named": true
         },
@@ -1093,6 +1113,10 @@
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "attribute_list",
+          "named": true
+        },
         {
           "type": "enum_member",
           "named": true
@@ -1842,6 +1866,10 @@
           "named": true
         },
         {
+          "type": "simple_name",
+          "named": true
+        },
+        {
           "type": "unary_expression",
           "named": true
         }
@@ -1858,6 +1886,10 @@
       "types": [
         {
           "type": "logical_expression",
+          "named": true
+        },
+        {
+          "type": "ternary_expression",
           "named": true
         }
       ]
@@ -2239,6 +2271,10 @@
           "named": true
         },
         {
+          "type": "ternary_expression",
+          "named": true
+        },
+        {
           "type": "verbatim_command_argument",
           "named": true
         }
@@ -2505,6 +2541,10 @@
           "named": true
         },
         {
+          "type": "command_parameter",
+          "named": true
+        },
+        {
           "type": "element_access",
           "named": true
         },
@@ -2663,7 +2703,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "param_block",
@@ -2709,6 +2749,10 @@
       "types": [
         {
           "type": "logical_expression",
+          "named": true
+        },
+        {
+          "type": "ternary_expression",
           "named": true
         }
       ]
@@ -3123,6 +3167,25 @@
         },
         {
           "type": "switch_parameters",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "ternary_expression",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "logical_expression",
+          "named": true
+        },
+        {
+          "type": "ternary_expression",
           "named": true
         }
       ]
@@ -3548,6 +3611,10 @@
     "named": false
   },
   {
+    "type": "-cin",
+    "named": false
+  },
+  {
     "type": "-cle",
     "named": false
   },
@@ -3569,6 +3636,10 @@
   },
   {
     "type": "-cnotcontains",
+    "named": false
+  },
+  {
+    "type": "-cnotin",
     "named": false
   },
   {
@@ -3632,6 +3703,10 @@
     "named": false
   },
   {
+    "type": "-iin",
+    "named": false
+  },
+  {
     "type": "-ile",
     "named": false
   },
@@ -3657,6 +3732,10 @@
   },
   {
     "type": "-inotcontains",
+    "named": false
+  },
+  {
+    "type": "-inotin",
     "named": false
   },
   {
@@ -3889,6 +3968,10 @@
   },
   {
     "type": ">>",
+    "named": false
+  },
+  {
+    "type": "?",
     "named": false
   },
   {

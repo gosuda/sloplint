@@ -7,10 +7,31 @@ const PREC = {
   PARAM: 6,
 };
 
+// sloplint: a command-line word may hold quoted segments that contain spaces,
+// pipes or parentheses: -x="a b", --format='%H||%P'. The segments are matched as
+// a unit inside the word token. A double-quoted segment holds no nested quote,
+// so "$($a.Replace("x","y"))" is not covered. -p:V="$($m.x)" lexes as the
+// parameter -p, a colon, and then the word V="$($m.x)".
+const WORD_SQ = /'[^']*'/.source;
+const WORD_DQ = /"([^"`]|`.)*"/.source;
+const WORD_ESC = /`./.source;
+
+/**
+ * The repeated tail of a command-line word.
+ *
+ * @param {string} plain regex source of one plain character
+ */
+function wordTail(plain) {
+  return '(' + [plain, WORD_SQ, WORD_DQ, WORD_ESC].join('|') + ')*';
+}
+
 export default grammar({
   name: 'powershell',
 
-  externals: ($) => [$._statement_terminator],
+  externals: ($) => [
+    $._statement_terminator,
+    $._method_block_head,
+  ],
 
   extras: ($) => [
     $.comment,
@@ -112,7 +133,10 @@ export default grammar({
         /\"(\s*\#*)*/, // this is a trick to avoid tree-sitter allowing comment between tokens, as string should be tokenize but powershell allow subexpression inside it...
         repeat(
           choice(
-            token.immediate(/[^\$\"`]+/),
+            // sloplint: lexical precedence keeps a text run that starts at
+            // white space or `#` after a variable or an escape ("`n## x",
+            // "$a ## y") from being read as a comment extra.
+            token.immediate(prec(1, /[^\$\"`]+/)),
             $.variable,
             $.sub_expression,
             token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
@@ -133,7 +157,11 @@ export default grammar({
             token.immediate(/[^\$\r\n`]+/),
             $.variable,
             $.sub_expression,
-            token.immediate(/(\r?\n)+[^\"\r\n]/),
+            // sloplint: a line that starts with a backtick must not lose half
+            // of an escape pair to the line-break token: ``````PowerShell.
+            // The break takes the whole pair.
+            token.immediate(/(\r?\n)+[^\"\r\n`]/),
+            token.immediate(/(\r?\n)+(`.{1}|`\r?\n)/),
             token.immediate(/(\r?\n)+\"[^@]/),
             token.immediate('$'),
             token.immediate(/`.{1}|`\r?\n/),
@@ -158,7 +186,10 @@ export default grammar({
     simple_name: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
 
     // Type names
-    type_identifier: ($) => /[a-zA-Z0-9_]+/,
+    // sloplint: a type name may hold nested-type `+` and generic-arity
+    // backtick parts: System.Environment+SpecialFolder, System.Func`1,
+    // Dictionary`2+Enumerator.
+    type_identifier: ($) => /[a-zA-Z0-9_]+([`+][a-zA-Z0-9_]+)*/,
 
     type_name: ($) =>
       choice($.type_identifier, seq($.type_name, '.', $.type_identifier)),
@@ -234,6 +265,11 @@ export default grammar({
         reservedWord('-ilike'),
         reservedWord('-ilt'),
         reservedWord('-imatch'),
+        // sloplint: -cin, -iin, -cnotin and -inotin complete the -in family.
+        reservedWord('-cin'),
+        reservedWord('-cnotin'),
+        reservedWord('-iin'),
+        reservedWord('-inotin'),
         reservedWord('-in'),
         reservedWord('-ine'),
         reservedWord('-inotcontains'),
@@ -317,13 +353,19 @@ export default grammar({
     generic_token: ($) =>
       token(
         choice(
-          /[^\(\)\$\"\'\-\{\}@\|\[`\&\s][^\&\s\(\)\}\|;,]*/,
+          new RegExp(
+            /[^()$"'\-{}@|\[`&\s]/.source + wordTail(/[^&\s()}|;,"'`]/.source),
+          ),
           // sloplint: option with an attached value, as in -I=dir,
           // --go_out=$dir or -buildmode=c-shared. A bare -Name or -Name:
           // stays a command_parameter. Commas belong to the value, as in
           // --format=csv,noheader: native commands receive one string
           // (about_Parsing, argument mode).
-          /-+[a-zA-Z_?\-`]+[^a-zA-Z_?\-`\s:<>&\(\)\{\}\|;,\"\'\$@\[][^\&\s\(\)\}\|;]*/,
+          new RegExp(
+            /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/.source +
+              /[^a-zA-Z0-9_?\-`\s:<>&(){}|;,"'$@\[]/.source +
+              wordTail(/[^&\s()}|;"'`]/.source),
+          ),
           // sloplint: word that starts with a variable and continues as a
           // path, as in $env:TEMP\x.ps1 or ${root}/bin.
           /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/][^\&\s\(\)\}\|;,]*/,
@@ -344,7 +386,12 @@ export default grammar({
       ),
 
     // Parameters
-    command_parameter: ($) => token(choice(/-+[a-zA-Z_?\-`]+/, '--')),
+    // sloplint: a parameter name may hold digits after its first letter:
+    // -Count2, -m64, -O2, -p2.
+    command_parameter: ($) => token(/-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/),
+
+    // A lone `--` ends the options of a native command: dotnet run -- x.
+    // It is a command_parameter after a separator, see _command_argument.
 
     _verbatim_command_argument_chars: ($) =>
       repeat1(choice(/"[^"]*"/, /&[^&]*/, /[^\|\r\n]+/)),
@@ -597,9 +644,18 @@ export default grammar({
         $.function_name,
         optional($.function_parameter_declaration),
         '{',
-        optional($.script_block),
+        optional(
+          choice($.script_block, alias($._param_then_body, $.script_block)),
+        ),
         '}',
       ),
+
+    // sloplint: a function body may put its first statement right after the
+    // param block on the same line: function f { param($a) $a }. The hidden
+    // rule is aliased to script_block, the kind a body with a line break after
+    // the param block already has, and it keeps the param_block child.
+    _param_then_body: ($) =>
+      seq($.param_block, field('script_block_body', $.script_block_body)),
 
     function_name: ($) => $._command_token,
 
@@ -617,7 +673,9 @@ export default grammar({
 
     label: ($) => token(seq(':', /[a-zA-Z_][a-zA-Z0-9_]*/)),
 
-    label_expression: ($) => choice($.label, $.unary_expression),
+    // sloplint: a loop label may be a bare name: break outer, continue top.
+    label_expression: ($) =>
+      choice($.label, $.simple_name, $.unary_expression),
 
     trap_statement: ($) =>
       seq(reservedWord('trap'), optional($.type_literal), $.statement_block),
@@ -773,6 +831,18 @@ export default grammar({
           new RegExp(caseInsensitive('for-')),
           new RegExp(caseInsensitive('while-')),
           new RegExp(caseInsensitive('parallel-')),
+          // sloplint: the remaining statement keywords. ForEach-Object and
+          // Do-Something start with a keyword too.
+          new RegExp(caseInsensitive('foreach-')),
+          new RegExp(caseInsensitive('do-')),
+          new RegExp(caseInsensitive('data-')),
+          new RegExp(caseInsensitive('inlinescript-')),
+          new RegExp(caseInsensitive('sequence-')),
+          new RegExp(caseInsensitive('param-')),
+          new RegExp(caseInsensitive('begin-')),
+          new RegExp(caseInsensitive('process-')),
+          new RegExp(caseInsensitive('end-')),
+          new RegExp(caseInsensitive('dynamicparam-')),
         ),
         repeat(
           choice(
@@ -785,7 +855,8 @@ export default grammar({
         ),
       ),
 
-    path_command_name_token: ($) => /[0-9a-zA-Z_?\-\.\\]+/,
+    // sloplint: `/` is a path separator too: . $PSScriptRoot/x.ps1, ./build.ps1.
+    path_command_name_token: ($) => /[0-9a-zA-Z_?\-\.\\\/]+/,
 
     // Use to parse command path
     path_command_name: ($) =>
@@ -800,10 +871,21 @@ export default grammar({
       prec.right(
         choice(
           $.command_parameter,
-          seq($._command_argument, optional($.argument_list)),
+          seq(
+            $._command_argument,
+            optional(seq($.argument_list, repeat($._argument_member_tail))),
+          ),
           $.redirection,
           $.stop_parsing,
         ),
+      ),
+
+    // sloplint: a call in an argument may be followed by more member access
+    // and calls: foo $s.ToString().TrimEnd(). The pieces are siblings of the
+    // argument, like the first argument_list.
+    _argument_member_tail: ($) =>
+      prec.right(
+        seq(token.immediate('.'), $.member_name, optional($.argument_list)),
       ),
 
     // Stop parsing is a token that end the parsing of command line
@@ -820,6 +902,8 @@ export default grammar({
         PREC.PARAM,
         choice(
           seq($.command_argument_sep, optional($.generic_token)),
+          // sloplint: `--` ends the options of a native command: dotnet run -- x.
+          seq($.command_argument_sep, alias('--', $.command_parameter)),
           seq($.command_argument_sep, $._command_argument_list),
           $.parenthesized_expression,
           $.script_block_expression,
@@ -901,8 +985,13 @@ export default grammar({
         '}',
       ),
 
+    // sloplint: attributes may precede class and enum definitions:
+    // [DscResource()] class R {}, [Flags()] enum E {}. pwsh also reports
+    // CustomAttributeTypeNotFound for an unknown attribute type here, which
+    // is a semantic error and not a syntax error, so the tree keeps it.
     class_statement: ($) =>
       seq(
+        optional($.attribute_list),
         token(reservedWord('class')),
         $.simple_name,
         optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
@@ -923,6 +1012,7 @@ export default grammar({
     // Enums
     enum_statement: ($) =>
       seq(
+        optional($.attribute_list),
         token(reservedWord('enum')),
         $.simple_name,
         '{',
@@ -934,7 +1024,20 @@ export default grammar({
       seq($.simple_name, optional(seq('=', $.integer_literal))),
 
     // Expressions
-    _expression: ($) => $.logical_expression,
+    // sloplint: PowerShell 7 ternary: $a ? "x" : "y". The condition is a
+    // binary expression; the branches are expressions or nested ternaries.
+    _expression: ($) => choice($.logical_expression, $.ternary_expression),
+
+    ternary_expression: ($) =>
+      prec.right(
+        seq(
+          $.logical_expression,
+          '?',
+          choice($.logical_expression, $.ternary_expression),
+          ':',
+          choice($.logical_expression, $.ternary_expression),
+        ),
+      ),
 
     logical_expression: ($) =>
       prec.left(
@@ -1081,8 +1184,12 @@ export default grammar({
     array_expression: ($) =>
       seq('@(', field('statements', optional($.statement_list)), ')'),
 
+    // sloplint: an empty block is a valid script block expression: {} or { }.
     script_block_expression: ($) =>
-      seq('{', optional($.param_block), $.script_block, '}'),
+      choice(
+        seq('{', optional($.param_block), $.script_block, '}'),
+        seq('{', '}'),
+      ),
 
     hash_literal_expression: ($) =>
       seq('@{', optional($.hash_literal_body), '}'),
@@ -1140,11 +1247,17 @@ export default grammar({
         $.invokation_foreach_expression,
       ),
 
-    // adding this rule to handle .foreach synthax
+    // sloplint: a method name may take a script block with no parentheses
+    // when the brace follows the name at once: $a.Where{ $_ },
+    // $a.ForEach{ $_ }, $a::M{ $_ }. The external scanner lexes `.Name` or
+    // `::Name` as one token only when `{` follows at once, so
+    // `$a.ForEach({ $_ })` and `$a.Name` keep their usual shapes. The node
+    // keeps the kind invokation_foreach_expression and the block keeps the
+    // kind script_block_expression, as the upstream `.foreach` rule did.
     invokation_foreach_expression: ($) =>
       seq(
         $._primary_expression,
-        token.immediate(reservedWord('.foreach')),
+        $._method_block_head,
         $.script_block_expression,
       ),
 
@@ -1184,10 +1297,13 @@ export default grammar({
           $.comparison_argument_expression,
           seq(
             $.bitwise_argument_expression,
+            // sloplint: upstream repeated -and, -or and -xor here, so
+            // `-bor` failed inside method arguments:
+            // GetMethod('M', [A]::B -bor [A]::C).
             choice(
-              reservedWord('-and'),
-              reservedWord('-or'),
-              reservedWord('-xor'),
+              reservedWord('-band'),
+              reservedWord('-bor'),
+              reservedWord('-bxor'),
             ),
             $.comparison_argument_expression,
           ),
@@ -1252,17 +1368,33 @@ export default grammar({
 
     type_literal: ($) => seq('[', $.type_spec, ']'),
 
+    // sloplint: array ranks may repeat after an array or generic type
+    // (int[][], List[int][]), and a generic argument may be wrapped in its
+    // own brackets: Dictionary[[string], [int]].
     type_spec: ($) =>
       choice(
-        seq($.array_type_name, optional($.dimension), ']'),
-        seq($.generic_type_name, $.generic_type_arguments, ']'),
+        seq($.array_type_name, optional($.dimension), ']', repeat($._rank)),
+        seq(
+          $.generic_type_name,
+          $.generic_type_arguments,
+          ']',
+          repeat($._rank),
+        ),
         $.type_name,
       ),
+
+    _rank: ($) => seq('[', optional($.dimension), ']'),
 
     dimension: ($) => repeat1(','),
 
     generic_type_arguments: ($) =>
-      seq($.type_spec, repeat(seq(',', $.type_spec))),
+      seq(
+        $._generic_type_argument,
+        repeat(seq(',', $._generic_type_argument)),
+      ),
+
+    _generic_type_argument: ($) =>
+      choice($.type_spec, seq('[', $.type_spec, ']')),
 
     // Attributes
     attribute_list: ($) => repeat1($.attribute),

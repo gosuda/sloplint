@@ -281,6 +281,7 @@ Strings : expandle here string empty
                           (string_literal
                             (expandable_here_string_literal)))))))))))))))
 
+
 ===
 Strings : escape variable and print dollar
 ===
@@ -304,6 +305,7 @@ Strings : escape variable and print dollar
                         (unary_expression
                           (string_literal
                             (expandable_string_literal)))))))))))))))
+
 
 ===
 Strings : concat var content and dollar
@@ -524,6 +526,7 @@ Strings : Avoid comments
                         (unary_expression
                           (string_literal
                             (expandable_string_literal)))))))))))))))
+
 
 ===
 Strings : Avoid comments 2

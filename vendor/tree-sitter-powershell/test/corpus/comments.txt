@@ -48,6 +48,7 @@ Get-ChildItem .
             (command_argument_sep)
             (generic_token)))))))
 
+
 ===
 Single line block comment
 ===

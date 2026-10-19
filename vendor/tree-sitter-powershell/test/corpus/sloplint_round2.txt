@@ -1,0 +1,1706 @@
+===
+sloplint: comma list of bare words in a pipeline command
+===
+
+Get-Module Pester.Runtime, Pester | Remove-Module
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (array_literal_expression
+              (generic_token)
+              (generic_token))
+            (command_argument_sep)))
+        (command
+          (command_name))))))
+
+===
+sloplint: variable then slash in a command argument
+===
+
+Import-Module $PSScriptRoot/bin/Pester.psd1 -ErrorAction Stop
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+sloplint: dot-source a path with a slash
+===
+
+. $PSScriptRoot/doBuild.ps1
+. ./build.ps1
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_invokation_operator)
+          (command_name_expr
+            (path_command_name
+              (variable)
+              (path_command_name_token))))))
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_invokation_operator)
+          (command_name_expr
+            (path_command_name
+              (path_command_name_token))))))))
+
+===
+sloplint: native command with short options and a quoted value
+===
+
+$commit = git -C $profilerPath log --format="%h %B" -n 1
+& git -C $staging apply -p2 --whitespace=nowarn $patchFile
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (command
+              (command_name)
+              (command_elements
+                (command_argument_sep)
+                (command_parameter)
+                (command_argument_sep)
+                (array_literal_expression
+                  (unary_expression
+                    (variable)))
+                (command_argument_sep)
+                (generic_token)
+                (command_argument_sep)
+                (generic_token)
+                (command_argument_sep)
+                (command_parameter)
+                (command_argument_sep)
+                (array_literal_expression
+                  (unary_expression
+                    (integer_literal
+                      (decimal_integer_literal))))))))))
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_invokation_operator)
+          (command_name_expr
+            (command_name))
+          (command_elements
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))))))))
+
+===
+sloplint: native command with an option after double dash
+===
+
+dotnet run -- ../System.Management.Automation/CorePsTypeCatalog.cs $IncFileName
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))))))))
+
+===
+sloplint: native command with quoted property values
+===
+
+dotnet build "$PSScriptRoot/src/Pester.sln" --no-restore -p:VersionPrefix="$($manifest.ModuleVersion)" -p:VersionSuffix="$($manifest.PrivateData.PSData.Prerelease)"
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (string_literal
+                  (expandable_string_literal
+                    (variable)))))
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+sloplint: empty script block as a command argument
+===
+
+Mock Remove-Item {}
+It "b" -Tag "t", "c" { }
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (script_block_expression)))))))
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (string_literal
+                  (expandable_string_literal))))
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (string_literal
+                  (expandable_string_literal)))
+              (unary_expression
+                (string_literal
+                  (expandable_string_literal))))
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (script_block_expression)))))))))
+
+===
+sloplint: empty script block in a hashtable and a parameter default
+===
+
+$h = @{ K = { }; }
+function f {
+    param(
+        [ScriptBlock] $MockWith = { },
+        [Switch] $Verifiable
+    )
+}
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (hash_literal_expression
+                                (hash_literal_body
+                                  (hash_entry
+                                    (key_expression
+                                      (simple_name))
+                                    (pipeline
+                                      (pipeline_chain
+                                        (logical_expression
+                                          (bitwise_expression
+                                            (comparison_expression
+                                              (additive_expression
+                                                (multiplicative_expression
+                                                  (format_expression
+                                                    (range_expression
+                                                      (array_literal_expression
+                                                        (unary_expression
+                                                          (script_block_expression))))))))))))))))))))))))))))
+    (function_statement
+      (function_name)
+      (script_block
+        (param_block
+          (parameter_list
+            (script_parameter
+              (attribute_list
+                (attribute
+                  (type_literal
+                    (type_spec
+                      (type_name
+                        (type_identifier))))))
+              (variable)
+              (script_parameter_default
+                (logical_expression
+                  (bitwise_expression
+                    (comparison_expression
+                      (additive_expression
+                        (multiplicative_expression
+                          (format_expression
+                            (range_expression
+                              (array_literal_expression
+                                (unary_expression
+                                  (script_block_expression))))))))))))
+            (script_parameter
+              (attribute_list
+                (attribute
+                  (type_literal
+                    (type_spec
+                      (type_name
+                        (type_identifier))))))
+              (variable))))))))
+
+===
+sloplint: several typed switch parameters in one param block
+===
+
+param ([switch] $PassThru, [switch] $NoBuild)
+
+Get-Module Pester.Runtime, Pester.Utility, P, Pester | Remove-Module
+
+---
+
+(program
+  (param_block
+    (parameter_list
+      (script_parameter
+        (attribute_list
+          (attribute
+            (type_literal
+              (type_spec
+                (type_name
+                  (type_identifier))))))
+        (variable))
+      (script_parameter
+        (attribute_list
+          (attribute
+            (type_literal
+              (type_spec
+                (type_name
+                  (type_identifier))))))
+        (variable))))
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (array_literal_expression
+              (generic_token)
+              (generic_token)
+              (generic_token)
+              (generic_token))
+            (command_argument_sep)))
+        (command
+          (command_name))))))
+
+===
+sloplint: param block followed by a statement on the same line
+===
+
+function Get-Thing { [CmdletBinding()] param ([string] $Name) 'real' }
+function Read-Path { param($Path) Get-Content -Path $Path }
+
+---
+
+(program
+  (statement_list
+    (function_statement
+      (function_name)
+      (script_block
+        (param_block
+          (attribute_list
+            (attribute
+              (attribute_name
+                (type_spec
+                  (type_name
+                    (type_identifier))))))
+          (parameter_list
+            (script_parameter
+              (attribute_list
+                (attribute
+                  (type_literal
+                    (type_spec
+                      (type_name
+                        (type_identifier))))))
+              (variable))))
+        (script_block_body
+          (statement_list
+            (pipeline
+              (pipeline_chain
+                (logical_expression
+                  (bitwise_expression
+                    (comparison_expression
+                      (additive_expression
+                        (multiplicative_expression
+                          (format_expression
+                            (range_expression
+                              (array_literal_expression
+                                (unary_expression
+                                  (string_literal
+                                    (verbatim_string_characters)))))))))))))))))
+    (function_statement
+      (function_name)
+      (script_block
+        (param_block
+          (parameter_list
+            (script_parameter
+              (variable))))
+        (script_block_body
+          (statement_list
+            (pipeline
+              (pipeline_chain
+                (command
+                  (command_name)
+                  (command_elements
+                    (command_argument_sep)
+                    (command_parameter)
+                    (command_argument_sep)
+                    (array_literal_expression
+                      (unary_expression
+                        (variable)))))))))))))
+
+===
+sloplint: generic type with bracketed arguments
+===
+
+$d = [System.Collections.Generic.Dictionary[[string], [int]]]::new()
+$e = [System.Collections.Generic.Dictionary[[string], [PkgVer[]] ]]::new()
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (invokation_expression
+                                (type_literal
+                                  (type_spec
+                                    (generic_type_name
+                                      (type_name
+                                        (type_name
+                                          (type_name
+                                            (type_name
+                                              (type_identifier))
+                                            (type_identifier))
+                                          (type_identifier))
+                                        (type_identifier)))
+                                    (generic_type_arguments
+                                      (type_spec
+                                        (type_name
+                                          (type_identifier)))
+                                      (type_spec
+                                        (type_name
+                                          (type_identifier))))))
+                                (member_name
+                                  (simple_name))
+                                (argument_list)))))))))))))))
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (invokation_expression
+                                (type_literal
+                                  (type_spec
+                                    (generic_type_name
+                                      (type_name
+                                        (type_name
+                                          (type_name
+                                            (type_name
+                                              (type_identifier))
+                                            (type_identifier))
+                                          (type_identifier))
+                                        (type_identifier)))
+                                    (generic_type_arguments
+                                      (type_spec
+                                        (type_name
+                                          (type_identifier)))
+                                      (type_spec
+                                        (array_type_name
+                                          (type_name
+                                            (type_identifier)))))))
+                                (member_name
+                                  (simple_name))
+                                (argument_list)))))))))))))))))
+
+===
+sloplint: jagged array and nested type names
+===
+
+[tuple[ [tuple[string, string]], [tuple[string, string]] ] []] $Dependencies
+[System.Environment+SpecialFolder]::Personal
+[System.Func`1]
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (logical_expression
+          (bitwise_expression
+            (comparison_expression
+              (additive_expression
+                (multiplicative_expression
+                  (format_expression
+                    (range_expression
+                      (array_literal_expression
+                        (unary_expression
+                          (expression_with_unary_operator
+                            (cast_expression
+                              (type_literal
+                                (type_spec
+                                  (generic_type_name
+                                    (type_name
+                                      (type_identifier)))
+                                  (generic_type_arguments
+                                    (type_spec
+                                      (generic_type_name
+                                        (type_name
+                                          (type_identifier)))
+                                      (generic_type_arguments
+                                        (type_spec
+                                          (type_name
+                                            (type_identifier)))
+                                        (type_spec
+                                          (type_name
+                                            (type_identifier)))))
+                                    (type_spec
+                                      (generic_type_name
+                                        (type_name
+                                          (type_identifier)))
+                                      (generic_type_arguments
+                                        (type_spec
+                                          (type_name
+                                            (type_identifier)))
+                                        (type_spec
+                                          (type_name
+                                            (type_identifier))))))))
+                              (unary_expression
+                                (variable)))))))))))))))
+    (pipeline
+      (pipeline_chain
+        (logical_expression
+          (bitwise_expression
+            (comparison_expression
+              (additive_expression
+                (multiplicative_expression
+                  (format_expression
+                    (range_expression
+                      (array_literal_expression
+                        (unary_expression
+                          (member_access
+                            (type_literal
+                              (type_spec
+                                (type_name
+                                  (type_name
+                                    (type_identifier))
+                                  (type_identifier))))
+                            (member_name
+                              (simple_name))))))))))))))
+    (pipeline
+      (pipeline_chain
+        (logical_expression
+          (bitwise_expression
+            (comparison_expression
+              (additive_expression
+                (multiplicative_expression
+                  (format_expression
+                    (range_expression
+                      (array_literal_expression
+                        (unary_expression
+                          (type_literal
+                            (type_spec
+                              (type_name
+                                (type_name
+                                  (type_identifier))
+                                (type_identifier)))))))))))))))))
+
+===
+sloplint: attribute with arguments before an enum
+===
+
+[Flags()]
+enum ConsoleModeInputFlags
+{
+    ENABLE_PROCESSED_INPUT = 0x0001
+}
+
+---
+
+(program
+  (statement_list
+    (enum_statement
+      (attribute_list
+        (attribute
+          (attribute_name
+            (type_spec
+              (type_name
+                (type_identifier))))))
+      (simple_name)
+      (enum_member
+        (simple_name)
+        (integer_literal
+          (hexadecimal_integer_literal))))))
+
+===
+sloplint: attribute with arguments before a class
+===
+
+[DscResource()]
+class FileResource
+{
+    [DscProperty(Key)]
+    [string] $Path
+}
+
+---
+
+(program
+  (statement_list
+    (class_statement
+      (attribute_list
+        (attribute
+          (attribute_name
+            (type_spec
+              (type_name
+                (type_identifier))))))
+      (simple_name)
+      (class_property_definition
+        (attribute
+          (attribute_name
+            (type_spec
+              (type_name
+                (type_identifier))))
+          (attribute_arguments
+            (attribute_argument
+              (simple_name))))
+        (type_literal
+          (type_spec
+            (type_name
+              (type_identifier))))
+        (variable)))))
+
+===
+sloplint: method call with a script block and no parentheses
+===
+
+if ($line[0..$cursor].Where{$_ -eq $quote}.Count % 2 -eq 1) { 1 }
+$commands.ForEach{ $_.Name }
+$names.ForEach({ $_.Trim() })
+
+---
+
+(program
+  (statement_list
+    (if_statement
+      (pipeline
+        (pipeline_chain
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (member_access
+                                  (invokation_expression
+                                    (invokation_foreach_expression
+                                      (element_access
+                                        (variable)
+                                        (logical_expression
+                                          (bitwise_expression
+                                            (comparison_expression
+                                              (additive_expression
+                                                (multiplicative_expression
+                                                  (format_expression
+                                                    (range_expression
+                                                      (range_expression
+                                                        (array_literal_expression
+                                                          (unary_expression
+                                                            (integer_literal
+                                                              (decimal_integer_literal)))))
+                                                      (array_literal_expression
+                                                        (unary_expression
+                                                          (variable)))))))))))
+                                      (script_block_expression
+                                        (script_block
+                                          (script_block_body
+                                            (statement_list
+                                              (pipeline
+                                                (pipeline_chain
+                                                  (logical_expression
+                                                    (bitwise_expression
+                                                      (comparison_expression
+                                                        (comparison_expression
+                                                          (additive_expression
+                                                            (multiplicative_expression
+                                                              (format_expression
+                                                                (range_expression
+                                                                  (array_literal_expression
+                                                                    (unary_expression
+                                                                      (variable))))))))
+                                                        (comparison_operator)
+                                                        (additive_expression
+                                                          (multiplicative_expression
+                                                            (format_expression
+                                                              (range_expression
+                                                                (array_literal_expression
+                                                                  (unary_expression
+                                                                    (variable))))))))))))))))))
+                                  (member_name
+                                    (simple_name))))))))
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (integer_literal
+                                (decimal_integer_literal)))))))))
+                (comparison_operator)
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (integer_literal
+                              (decimal_integer_literal)))))))))))))
+      (statement_block
+        (statement_list
+          (pipeline
+            (pipeline_chain
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (integer_literal
+                                  (decimal_integer_literal))))))))))))))))
+    (pipeline
+      (pipeline_chain
+        (logical_expression
+          (bitwise_expression
+            (comparison_expression
+              (additive_expression
+                (multiplicative_expression
+                  (format_expression
+                    (range_expression
+                      (array_literal_expression
+                        (unary_expression
+                          (invokation_expression
+                            (invokation_foreach_expression
+                              (variable)
+                              (script_block_expression
+                                (script_block
+                                  (script_block_body
+                                    (statement_list
+                                      (pipeline
+                                        (pipeline_chain
+                                          (logical_expression
+                                            (bitwise_expression
+                                              (comparison_expression
+                                                (additive_expression
+                                                  (multiplicative_expression
+                                                    (format_expression
+                                                      (range_expression
+                                                        (array_literal_expression
+                                                          (unary_expression
+                                                            (member_access
+                                                              (variable)
+                                                              (member_name
+                                                                (simple_name)))))))))))))))))))))))))))))))
+    (pipeline
+      (pipeline_chain
+        (logical_expression
+          (bitwise_expression
+            (comparison_expression
+              (additive_expression
+                (multiplicative_expression
+                  (format_expression
+                    (range_expression
+                      (array_literal_expression
+                        (unary_expression
+                          (invokation_expression
+                            (variable)
+                            (member_name
+                              (simple_name))
+                            (argument_list
+                              (argument_expression_list
+                                (argument_expression
+                                  (logical_argument_expression
+                                    (bitwise_argument_expression
+                                      (comparison_argument_expression
+                                        (additive_argument_expression
+                                          (multiplicative_argument_expression
+                                            (format_argument_expression
+                                              (range_argument_expression
+                                                (unary_expression
+                                                  (script_block_expression
+                                                    (script_block
+                                                      (script_block_body
+                                                        (statement_list
+                                                          (pipeline
+                                                            (pipeline_chain
+                                                              (logical_expression
+                                                                (bitwise_expression
+                                                                  (comparison_expression
+                                                                    (additive_expression
+                                                                      (multiplicative_expression
+                                                                        (format_expression
+                                                                          (range_expression
+                                                                            (array_literal_expression
+                                                                              (unary_expression
+                                                                                (invokation_expression
+                                                                                  (variable)
+                                                                                  (member_name
+                                                                                    (simple_name))
+                                                                                  (argument_list))))))))))))))))))))))))))))))))))))))))))
+
+===
+sloplint: case-sensitive and negated membership operators
+===
+
+if ($v -cin @("a", "b")) { 1 }
+if ($v -cnotin @("a", "b")) { 1 }
+if ($v -iin @("a", "b")) { 1 }
+
+---
+
+(program
+  (statement_list
+    (if_statement
+      (pipeline
+        (pipeline_chain
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (variable))))))))
+                (comparison_operator)
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (array_expression
+                              (statement_list
+                                (pipeline
+                                  (pipeline_chain
+                                    (logical_expression
+                                      (bitwise_expression
+                                        (comparison_expression
+                                          (additive_expression
+                                            (multiplicative_expression
+                                              (format_expression
+                                                (range_expression
+                                                  (array_literal_expression
+                                                    (unary_expression
+                                                      (string_literal
+                                                        (expandable_string_literal)))
+                                                    (unary_expression
+                                                      (string_literal
+                                                        (expandable_string_literal))))))))))))))))))))))))))
+      (statement_block
+        (statement_list
+          (pipeline
+            (pipeline_chain
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (integer_literal
+                                  (decimal_integer_literal))))))))))))))))
+    (if_statement
+      (pipeline
+        (pipeline_chain
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (variable))))))))
+                (comparison_operator)
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (array_expression
+                              (statement_list
+                                (pipeline
+                                  (pipeline_chain
+                                    (logical_expression
+                                      (bitwise_expression
+                                        (comparison_expression
+                                          (additive_expression
+                                            (multiplicative_expression
+                                              (format_expression
+                                                (range_expression
+                                                  (array_literal_expression
+                                                    (unary_expression
+                                                      (string_literal
+                                                        (expandable_string_literal)))
+                                                    (unary_expression
+                                                      (string_literal
+                                                        (expandable_string_literal))))))))))))))))))))))))))
+      (statement_block
+        (statement_list
+          (pipeline
+            (pipeline_chain
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (integer_literal
+                                  (decimal_integer_literal))))))))))))))))
+    (if_statement
+      (pipeline
+        (pipeline_chain
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (variable))))))))
+                (comparison_operator)
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (array_expression
+                              (statement_list
+                                (pipeline
+                                  (pipeline_chain
+                                    (logical_expression
+                                      (bitwise_expression
+                                        (comparison_expression
+                                          (additive_expression
+                                            (multiplicative_expression
+                                              (format_expression
+                                                (range_expression
+                                                  (array_literal_expression
+                                                    (unary_expression
+                                                      (string_literal
+                                                        (expandable_string_literal)))
+                                                    (unary_expression
+                                                      (string_literal
+                                                        (expandable_string_literal))))))))))))))))))))))))))
+      (statement_block
+        (statement_list
+          (pipeline
+            (pipeline_chain
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (integer_literal
+                                  (decimal_integer_literal))))))))))))))))))
+
+===
+sloplint: ternary operator
+===
+
+$t = $arm64 ? "a" : "b"
+$u = $a ? 1 : $b ? 2 : 3
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (ternary_expression
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (variable))))))))))
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (string_literal
+                                  (expandable_string_literal)))))))))))
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (string_literal
+                                  (expandable_string_literal))))))))))))))))
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (ternary_expression
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (variable))))))))))
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (integer_literal
+                                  (decimal_integer_literal)))))))))))
+              (ternary_expression
+                (logical_expression
+                  (bitwise_expression
+                    (comparison_expression
+                      (additive_expression
+                        (multiplicative_expression
+                          (format_expression
+                            (range_expression
+                              (array_literal_expression
+                                (unary_expression
+                                  (variable))))))))))
+                (logical_expression
+                  (bitwise_expression
+                    (comparison_expression
+                      (additive_expression
+                        (multiplicative_expression
+                          (format_expression
+                            (range_expression
+                              (array_literal_expression
+                                (unary_expression
+                                  (integer_literal
+                                    (decimal_integer_literal)))))))))))
+                (logical_expression
+                  (bitwise_expression
+                    (comparison_expression
+                      (additive_expression
+                        (multiplicative_expression
+                          (format_expression
+                            (range_expression
+                              (array_literal_expression
+                                (unary_expression
+                                  (integer_literal
+                                    (decimal_integer_literal)))))))))))))))))))
+
+===
+sloplint: bitwise or inside method arguments
+===
+
+$m = $t.GetMethod('FindSettingsMode', [System.Reflection.BindingFlags]::NonPublic -bor [System.Reflection.BindingFlags]::Static)
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (invokation_expression
+                                (variable)
+                                (member_name
+                                  (simple_name))
+                                (argument_list
+                                  (argument_expression_list
+                                    (argument_expression
+                                      (logical_argument_expression
+                                        (bitwise_argument_expression
+                                          (comparison_argument_expression
+                                            (additive_argument_expression
+                                              (multiplicative_argument_expression
+                                                (format_argument_expression
+                                                  (range_argument_expression
+                                                    (unary_expression
+                                                      (string_literal
+                                                        (verbatim_string_characters)))))))))))
+                                    (argument_expression
+                                      (logical_argument_expression
+                                        (bitwise_argument_expression
+                                          (bitwise_argument_expression
+                                            (comparison_argument_expression
+                                              (additive_argument_expression
+                                                (multiplicative_argument_expression
+                                                  (format_argument_expression
+                                                    (range_argument_expression
+                                                      (unary_expression
+                                                        (member_access
+                                                          (type_literal
+                                                            (type_spec
+                                                              (type_name
+                                                                (type_name
+                                                                  (type_name
+                                                                    (type_identifier))
+                                                                  (type_identifier))
+                                                                (type_identifier))))
+                                                          (member_name
+                                                            (simple_name))))))))))
+                                          (comparison_argument_expression
+                                            (additive_argument_expression
+                                              (multiplicative_argument_expression
+                                                (format_argument_expression
+                                                  (range_argument_expression
+                                                    (unary_expression
+                                                      (member_access
+                                                        (type_literal
+                                                          (type_spec
+                                                            (type_name
+                                                              (type_name
+                                                                (type_name
+                                                                  (type_identifier))
+                                                                (type_identifier))
+                                                              (type_identifier))))
+                                                        (member_name
+                                                          (simple_name))))))))))))))))))))))))))))))
+
+===
+sloplint: loop label as a bare name
+===
+
+foreach ($i in 1..3) { if ($i -eq 2) { break outer } }
+foreach ($i in 1..3) { continue top }
+
+---
+
+(program
+  (statement_list
+    (foreach_statement
+      (variable)
+      (pipeline
+        (pipeline_chain
+          (command
+            (command_name))))
+      (statement_block
+        (statement_list
+          (if_statement
+            (pipeline
+              (pipeline_chain
+                (logical_expression
+                  (bitwise_expression
+                    (comparison_expression
+                      (comparison_expression
+                        (additive_expression
+                          (multiplicative_expression
+                            (format_expression
+                              (range_expression
+                                (array_literal_expression
+                                  (unary_expression
+                                    (variable))))))))
+                      (comparison_operator)
+                      (additive_expression
+                        (multiplicative_expression
+                          (format_expression
+                            (range_expression
+                              (array_literal_expression
+                                (unary_expression
+                                  (integer_literal
+                                    (decimal_integer_literal)))))))))))))
+            (statement_block
+              (statement_list
+                (flow_control_statement
+                  (label_expression
+                    (simple_name)))))))))
+    (foreach_statement
+      (variable)
+      (pipeline
+        (pipeline_chain
+          (command
+            (command_name))))
+      (statement_block
+        (statement_list
+          (flow_control_statement
+            (label_expression
+              (simple_name))))))))
+
+===
+sloplint: chained call as a command argument
+===
+
+Set-Content -Encoding $enc -Value $sbf.ToString().TrimEnd() -Path $helpPath
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (member_access
+                  (variable)
+                  (member_name
+                    (simple_name)))))
+            (argument_list)
+            (member_name
+              (simple_name))
+            (argument_list)
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))))))))
+
+===
+sloplint: else on the line after an if in an assignment
+===
+
+$h = @{
+    success = if ($ok) {
+        'True'
+    }
+    else {
+        'False'
+    }
+    total = 1
+}
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (hash_literal_expression
+                                (hash_literal_body
+                                  (hash_entry
+                                    (key_expression
+                                      (simple_name))
+                                    (if_statement
+                                      (pipeline
+                                        (pipeline_chain
+                                          (logical_expression
+                                            (bitwise_expression
+                                              (comparison_expression
+                                                (additive_expression
+                                                  (multiplicative_expression
+                                                    (format_expression
+                                                      (range_expression
+                                                        (array_literal_expression
+                                                          (unary_expression
+                                                            (variable))))))))))))
+                                      (statement_block
+                                        (statement_list
+                                          (pipeline
+                                            (pipeline_chain
+                                              (logical_expression
+                                                (bitwise_expression
+                                                  (comparison_expression
+                                                    (additive_expression
+                                                      (multiplicative_expression
+                                                        (format_expression
+                                                          (range_expression
+                                                            (array_literal_expression
+                                                              (unary_expression
+                                                                (string_literal
+                                                                  (verbatim_string_characters)))))))))))))))
+                                      (else_clause
+                                        (statement_block
+                                          (statement_list
+                                            (pipeline
+                                              (pipeline_chain
+                                                (logical_expression
+                                                  (bitwise_expression
+                                                    (comparison_expression
+                                                      (additive_expression
+                                                        (multiplicative_expression
+                                                          (format_expression
+                                                            (range_expression
+                                                              (array_literal_expression
+                                                                (unary_expression
+                                                                  (string_literal
+                                                                    (verbatim_string_characters))))))))))))))))))
+                                  (hash_entry
+                                    (key_expression
+                                      (simple_name))
+                                    (pipeline
+                                      (pipeline_chain
+                                        (logical_expression
+                                          (bitwise_expression
+                                            (comparison_expression
+                                              (additive_expression
+                                                (multiplicative_expression
+                                                  (format_expression
+                                                    (range_expression
+                                                      (array_literal_expression
+                                                        (unary_expression
+                                                          (integer_literal
+                                                            (decimal_integer_literal)))))))))))))))))))))))))))))))
+
+===
+sloplint: backtick line continuation before a closing brace
+===
+
+if ($null -ne $value) {
+    $type `
+        -replace "^System\." `
+        -replace "^Object\[\]$", "collection" `
+
+}
+
+---
+
+(program
+  (statement_list
+    (if_statement
+      (pipeline
+        (pipeline_chain
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (variable))))))))
+                (comparison_operator)
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable))))))))))))
+      (statement_block
+        (statement_list
+          (pipeline
+            (pipeline_chain
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (comparison_expression
+                      (comparison_expression
+                        (additive_expression
+                          (multiplicative_expression
+                            (format_expression
+                              (range_expression
+                                (array_literal_expression
+                                  (unary_expression
+                                    (variable))))))))
+                      (comparison_operator)
+                      (additive_expression
+                        (multiplicative_expression
+                          (format_expression
+                            (range_expression
+                              (array_literal_expression
+                                (unary_expression
+                                  (string_literal
+                                    (expandable_string_literal)))))))))
+                    (comparison_operator)
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (string_literal
+                                  (expandable_string_literal)))
+                              (unary_expression
+                                (string_literal
+                                  (expandable_string_literal))))))))))))))))))
+
+===
+sloplint: text after a variable or escape in a string keeps a hash sign
+===
+
+"x $a ## y"
+"`n## Conflicts"
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (logical_expression
+          (bitwise_expression
+            (comparison_expression
+              (additive_expression
+                (multiplicative_expression
+                  (format_expression
+                    (range_expression
+                      (array_literal_expression
+                        (unary_expression
+                          (string_literal
+                            (expandable_string_literal
+                              (variable))))))))))))))
+    (pipeline
+      (pipeline_chain
+        (logical_expression
+          (bitwise_expression
+            (comparison_expression
+              (additive_expression
+                (multiplicative_expression
+                  (format_expression
+                    (range_expression
+                      (array_literal_expression
+                        (unary_expression
+                          (string_literal
+                            (expandable_string_literal)))))))))))))))
+
+===
+sloplint: here-string line that starts with an escaped dollar or backtick pair
+===
+
+$def = @"
+`$calcCode = `@"
+``````PowerShell
+"@
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (string_literal
+                                (expandable_here_string_literal)))))))))))))))))
+
+===
+sloplint: parameter name with a digit
+===
+
+foo -Count2 3 -m64 -O2
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (integer_literal
+                  (decimal_integer_literal))))
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (command_parameter)))))))
+
+===
+sloplint: empty block after the param block of a script
+===
+
+[CmdletBinding()]
+param()
+
+---
+
+(program
+  (param_block
+    (attribute_list
+      (attribute
+        (attribute_name
+          (type_spec
+            (type_name
+              (type_identifier))))))))
