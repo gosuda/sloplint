@@ -17,44 +17,60 @@ pub struct CalleePattern {
 
 impl CalleePattern {
     /// Parses a pattern: segments split on `.` and `::`, a leading `*` on the last segment matches any suffix, and a `new ` prefix restricts the match to `CallKind::New`.
+    ///
+    /// Shapes that cannot match a normalized callee are errors that name the pattern: whitespace inside the pattern (callees lose all whitespace before matching), a `*` anywhere but the first character of the last segment, and `?.`, which callee normalization consumes as a segment separator (write `.` instead).
     pub fn parse(s: &str) -> Result<CalleePattern, String> {
         let trimmed = s.trim();
         if trimmed.is_empty() || trimmed == "new" {
             return Err(format!("empty callee pattern `{s}`"));
         }
-        let (new_only, body) = match trimmed.strip_prefix("new ") {
-            Some(rest) => (true, rest.trim()),
-            None => (false, trimmed),
+        let (new_only, body) = match trimmed.strip_prefix("new") {
+            Some(rest) if rest.chars().next().is_some_and(char::is_whitespace) => {
+                (true, rest.trim_start())
+            }
+            _ => (false, trimmed),
         };
         if body.is_empty() {
             return Err(format!("empty callee pattern `{s}`"));
         }
-        let mut heads: Vec<&str> = Vec::new();
-        for piece in split_pattern(body) {
+        if body.chars().any(char::is_whitespace) {
+            return Err(format!(
+                "whitespace inside callee pattern `{s}`: callees are matched with all whitespace removed, so write the pattern without it"
+            ));
+        }
+        if body.contains("?.") {
+            return Err(format!(
+                "`?.` in callee pattern `{s}` is a segment separator in callees and never appears inside a segment; write `.` instead"
+            ));
+        }
+        let pieces = split_pattern(body);
+        let last_index = pieces.len() - 1;
+        let mut segments: Vec<Segment> = Vec::with_capacity(pieces.len());
+        for (index, piece) in pieces.into_iter().enumerate() {
             if piece.is_empty() {
                 return Err(format!("empty segment in callee pattern `{s}`"));
             }
-            heads.push(piece);
+            let is_last = index == last_index;
+            let (text, suffix) = match piece.strip_prefix('*') {
+                Some("") => return Err(format!("`*` needs a suffix in callee pattern `{s}`")),
+                Some(rest) if is_last => (rest, true),
+                Some(_) => {
+                    return Err(format!(
+                        "`*` may only start the last segment of callee pattern `{s}`"
+                    ));
+                }
+                None => (piece, false),
+            };
+            if text.contains('*') {
+                return Err(format!(
+                    "`*` may only start the last segment of callee pattern `{s}`"
+                ));
+            }
+            segments.push(Segment {
+                text: text.into(),
+                suffix,
+            });
         }
-        let Some(last) = heads.pop() else {
-            return Err(format!("empty callee pattern `{s}`"));
-        };
-        let (text, suffix) = match last.strip_prefix('*') {
-            Some(rest) if !rest.is_empty() => (rest, true),
-            Some(_) => return Err(format!("`*` needs a suffix in callee pattern `{s}`")),
-            None => (last, false),
-        };
-        let mut segments: Vec<Segment> = heads
-            .into_iter()
-            .map(|head| Segment {
-                text: head.into(),
-                suffix: false,
-            })
-            .collect();
-        segments.push(Segment {
-            text: text.into(),
-            suffix,
-        });
         Ok(CalleePattern { new_only, segments })
     }
 
