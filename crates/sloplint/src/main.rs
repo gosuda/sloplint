@@ -1,7 +1,5 @@
 //! Entry point for the sloplint binary: parses arguments, runs the pipeline, renders, and maps exit codes.
 
-use std::collections::HashMap;
-use std::fs;
 use std::io::{self, Write};
 use std::ops::Range;
 use std::path::Path;
@@ -155,7 +153,8 @@ fn write_human(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
     let renderer = Renderer::styled().decor_style(DecorStyle::Unicode);
     let mut sources = Sources {
         root: execution.root.as_path(),
-        texts: HashMap::new(),
+        max_bytes: execution.max_file_bytes,
+        current: None,
     };
     for finding in &execution.report.findings {
         let rendered = render_finding(&renderer, &mut sources, &execution.report, finding);
@@ -165,20 +164,49 @@ fn write_human(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
     writeln!(out, "{}", summary_line(&execution.report.summary))
 }
 
+struct Source {
+    text: String,
+    starts: Vec<usize>,
+}
+
+impl Source {
+    fn new(text: String) -> Self {
+        let mut starts = Vec::new();
+        if !text.is_empty() {
+            starts.push(0);
+            starts.extend(
+                text.match_indices('\n')
+                    .map(|(at, _)| at + 1)
+                    .filter(|&start| start < text.len()),
+            );
+        }
+        Source { text, starts }
+    }
+
+    fn line(&self, line: u32) -> Option<&str> {
+        let index = usize::try_from(line.saturating_sub(1)).ok()?;
+        let rest = self.text.get(*self.starts.get(index)?..)?;
+        let row = rest.split('\n').next()?;
+        Some(row.strip_suffix('\r').unwrap_or(row))
+    }
+}
+
 struct Sources<'a> {
     root: &'a Path,
-    texts: HashMap<String, Option<String>>,
+    max_bytes: u64,
+    current: Option<(String, Option<Source>)>,
 }
 
 impl Sources<'_> {
-    fn line(&mut self, path: &str, line: u32) -> Option<String> {
-        let root = self.root;
-        let text = self
-            .texts
-            .entry(path.to_string())
-            .or_insert_with(|| fs::read_to_string(root.join(path)).ok());
-        let index = usize::try_from(line.saturating_sub(1)).ok()?;
-        text.as_deref()?.lines().nth(index).map(str::to_string)
+    fn line(&mut self, path: &str, line: u32) -> Option<&str> {
+        let cached = matches!(&self.current, Some((name, _)) if name == path);
+        if !cached {
+            let source = sloplint::read_source(&self.root.join(path), self.max_bytes)
+                .ok()
+                .map(Source::new);
+            self.current = Some((path.to_string(), source));
+        }
+        self.current.as_ref()?.1.as_ref()?.line(line)
     }
 }
 
@@ -188,11 +216,10 @@ fn render_finding(
     report: &Report,
     finding: &Finding,
 ) -> String {
-    let text = sources.line(&finding.path, finding.line).map_or_else(
-        || finding.context.to_string(),
-        |line| line.trim_end().to_string(),
-    );
-    let span = span_for(&text, finding.column);
+    let text = sources
+        .line(&finding.path, finding.line)
+        .map_or(&*finding.context, str::trim_end);
+    let span = span_for(text, finding.column);
     let level = match finding.severity {
         Severity::Deny => Level::ERROR,
         Severity::Warn => Level::WARNING,
