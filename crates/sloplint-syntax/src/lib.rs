@@ -130,3 +130,104 @@ fn first_error_pos(root: Node<'_>) -> Option<Pos> {
         }
     }
 }
+
+#[cfg(test)]
+mod audit_propagation_tests {
+    use super::{CustomRules, FileInput, Parsers, analyze};
+    use sloplint_core::lang::Lang;
+
+    fn audit_analyze<'s>(lang: Lang, path: &'s str, source: &'s str) -> super::Analysis<'s> {
+        let mut parsers = Parsers::new();
+        let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+        let input = FileInput {
+            lang,
+            path,
+            source,
+            is_test_file: false,
+            has_interface: false,
+        };
+        analyze(&mut parsers, &input, &custom)
+    }
+
+    #[test]
+    fn audit_propagation_error_bubble_emits_no_handler() {
+        let cases = [
+            (
+                Lang::Zig,
+                "propagate.zig",
+                "fn load() !void { try work(); }\n",
+            ),
+            (
+                Lang::Odin,
+                "propagate.odin",
+                "package sample\nload :: proc() -> (err: Error) { value := work() or_return; return; }\n",
+            ),
+        ];
+        for (lang, path, source) in cases {
+            let analysis = audit_analyze(lang, path, source);
+            assert!(analysis.parse_error.is_none(), "{path} parses");
+            assert!(
+                analysis.facts.handlers.is_empty(),
+                "{path} emits no handler"
+            );
+            let function = analysis
+                .facts
+                .functions
+                .iter()
+                .find(|f| f.name == "load")
+                .expect("load function");
+            assert_eq!(function.cognitive, 0, "{path} adds no cognitive");
+            assert!(
+                analysis
+                    .facts
+                    .calls
+                    .iter()
+                    .any(|c| c.callee.contains("work")),
+                "{path} still traverses the propagated call"
+            );
+        }
+    }
+
+    #[test]
+    fn audit_propagation_zig_catch_still_emits_handler() {
+        let source = "fn read_value() !u32 {\n    return 1;\n}\n\npub fn load() void {\n    read_value() catch {};\n}\n";
+        let analysis = audit_analyze(Lang::Zig, "handler.zig", source);
+        assert!(analysis.parse_error.is_none(), "empty catch source parses");
+        assert_eq!(analysis.facts.handlers.len(), 1, "empty catch is a handler");
+        assert!(
+            analysis.facts.handlers.iter().all(|h| h.stmts.is_empty()),
+            "empty catch block stays a swallow handler"
+        );
+        assert!(
+            analysis
+                .facts
+                .calls
+                .iter()
+                .any(|c| c.callee.contains("read_value")),
+            "catch scrutinee still traverses calls"
+        );
+    }
+
+    #[test]
+    fn audit_propagation_zig_catch_retains_body_calls() {
+        let body_call = "fn read_value() !u32 {\n    return 1;\n}\n\nfn log_fallback() void {}\n\npub fn load() void {\n    read_value() catch {\n        log_fallback();\n    };\n}\n";
+        let analysis = audit_analyze(Lang::Zig, "body_call.zig", body_call);
+        assert!(
+            analysis.parse_error.is_none(),
+            "catch with body call parses"
+        );
+        assert_eq!(
+            analysis.facts.handlers.len(),
+            1,
+            "catch with body call is a handler"
+        );
+        assert!(
+            analysis
+                .facts
+                .calls
+                .iter()
+                .any(|c| c.callee.contains("log_fallback")),
+            "catch body still traverses calls"
+        );
+    }
+}

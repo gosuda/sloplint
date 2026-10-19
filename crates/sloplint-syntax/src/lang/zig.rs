@@ -26,7 +26,6 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("while_statement", Role::Loop),
     ("while_expression", Role::Loop),
     ("catch_expression", Role::Catch),
-    ("try_expression", Role::Catch),
     ("call_expression", Role::Call),
     ("builtin_function", Role::MacroCall),
     ("variable_declaration", Role::Decl),
@@ -568,12 +567,6 @@ impl LangHooks for ZigHooks {
     }
 
     fn handler<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'s>> {
-        if n.kind() == "try_expression" {
-            return Some(Handler {
-                pos: pos_of(n),
-                stmts: vec![Stmt::Rethrow],
-            });
-        }
         if n.kind() != "catch_expression" {
             return None;
         }

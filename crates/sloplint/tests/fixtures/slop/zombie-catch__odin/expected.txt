@@ -1,1 +1,1 @@
-a.odin:8 deny slop/zombie-catch
+# Propagation is not a handler: `or_return` returns the error without handling it.

@@ -58,7 +58,7 @@ Exit code `0` means the gate passed: the run can still list `warn` findings belo
 
 - **complexity/**: cognitive depth, nesting depth, mutable-statement spans, nested mutation, boolean params, import fan-out.
 - **grep/**: generic names, homonym definitions across files, renamed and wildcard imports, runtime-built symbols, non-literal log messages, multiline arguments.
-- **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors, single-implementation abstractions, barrel files, field-copy literals.
+- **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors (error propagation such as Zig `try` and Odin `or_return` is not a handler), single-implementation abstractions, barrel files, field-copy literals.
 - **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
 - **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs.
 

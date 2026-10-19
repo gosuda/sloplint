@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, CallKind, FieldCopy, Handler, Import, ImportKind, Param,
-    Pos, Stmt, TypeDef, WildcardArm,
+    AmbientKind, Arg, ArgShape, Assertion, CallKind, FieldCopy, Import, ImportKind, Param, Pos,
+    TypeDef, WildcardArm,
 };
 use tree_sitter::Node;
 
@@ -23,7 +23,6 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("else_when_clause", Role::ElseIf),
     ("switch_statement", Role::Match),
     ("for_statement", Role::Loop),
-    ("or_return_expression", Role::Catch),
     ("ternary_expression", Role::Ternary),
     ("call_expression", Role::Call),
     ("var_declaration", Role::Decl),
@@ -501,17 +500,6 @@ impl LangHooks for OdinHooks {
             enum_like: sibling_enum(n),
         };
         Some(arm)
-    }
-
-    fn handler<'s>(&self, n: Node<'_>, _cx: &Cx<'_, 's>) -> Option<Handler<'s>> {
-        if n.kind() != "or_return_expression" {
-            return None;
-        }
-        let rethrow = Handler {
-            pos: pos_of(n),
-            stmts: vec![Stmt::Rethrow],
-        };
-        Some(rethrow)
     }
 
     fn struct_lit<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FieldCopy<'s>> {
