@@ -59,6 +59,18 @@ check_members() {
   [ "$got" = "$want" ] || fail "$archive holds [$(tr '\n' ' ' <<<"$got")] instead of [$(tr '\n' ' ' <<<"$want")]"
 }
 
+check_sbom() {
+  local dir="$1" sbom="$2" version="$3"
+  jq -e --arg version "$version" '
+    .bomFormat == "CycloneDX"
+    and .specVersion == "1.5"
+    and .metadata.component.name == "sloplint"
+    and .metadata.component.version == $version
+    and ((.components | type) == "array")
+    and ((.components | length) > 0)' "$dir/$sbom" >/dev/null 2>&1 \
+    || fail "$sbom is not a CycloneDX 1.5 SBOM for sloplint $version"
+}
+
 verify_dist() {
   local tag="$1" dir="$2" target ext archive want have
   shift 2
@@ -69,18 +81,23 @@ verify_dist() {
       *-windows-*) ext=zip ;;
       *) ext=tar.gz ;;
     esac
-    expected+=("sloplint-$tag-$target.$ext" "sloplint-$tag-$target.$ext.sha256")
+    expected+=("sloplint-$tag-$target.$ext" "sloplint-$tag-$target.$ext.sha256" "sloplint-$tag-$target.cdx.json")
   done
   want="$(printf '%s\n' "${expected[@]}" | LC_ALL=C sort)"
   have="$(find "$dir" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)"
   if [ "$want" != "$have" ]; then
     diff <(printf '%s\n' "$want") <(printf '%s\n' "$have") >&2 || true
-    fail "$dir does not hold exactly the expected archives and checksums"
+    fail "$dir does not hold exactly the expected archives, checksums, and SBOMs"
   fi
   for archive in "${expected[@]}"; do
-    [[ "$archive" == *.sha256 ]] && continue
-    check_checksum_file "$dir" "$archive"
-    check_members "$dir" "$archive"
+    case "$archive" in
+      *.sha256) continue ;;
+      *.cdx.json) check_sbom "$dir" "$archive" "${tag#v}" ;;
+      *)
+        check_checksum_file "$dir" "$archive"
+        check_members "$dir" "$archive"
+        ;;
+    esac
   done
   printf '%s\n' "verify-release: $dir holds ${#expected[@]} verified files for $tag"
 }

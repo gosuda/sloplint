@@ -87,8 +87,53 @@ jobs:
           overwrite: true
           retention-days: 14
 
+  sbom:
+    needs: verify-tag
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_CYCLONEDX_VERSION: 0.5.9
+      CARGO_CYCLONEDX_SHA256: fb8dbee9f182173e062a64a387b21a0badc6fab8b2abf9294973f012972bf6d8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install cargo-cyclonedx
+        run: |
+          dir="cargo-cyclonedx-x86_64-unknown-linux-gnu"
+          curl --fail --silent --show-error --location --retry 3 \
+            --output "$RUNNER_TEMP/$dir.tar.xz" \
+            "https://github.com/CycloneDX/cyclonedx-rust-cargo/releases/download/cargo-cyclonedx-$CARGO_CYCLONEDX_VERSION/$dir.tar.xz"
+          printf '%s\n' "$CARGO_CYCLONEDX_SHA256  $RUNNER_TEMP/$dir.tar.xz" | sha256sum --check --strict
+          tar -xJf "$RUNNER_TEMP/$dir.tar.xz" -C "$RUNNER_TEMP" "$dir/cargo-cyclonedx"
+          printf '%s\n' "$RUNNER_TEMP/$dir" >> "$GITHUB_PATH"
+      - name: Generate SBOMs
+        run: |
+          set -euo pipefail
+          read -ra targets <<<"$RELEASE_TARGETS"
+          cargo metadata --locked --format-version 1 > "$RUNNER_TEMP/metadata.json"
+          binary="$(jq -r '.packages[] | select(.name == "sloplint") | .targets[] | select(.kind | index("bin")) | .name' "$RUNNER_TEMP/metadata.json")"
+          [ "$(grep -c . <<<"$binary")" = 1 ] || { printf '%s\n' "expected exactly one sloplint binary target, got: $binary" >&2; exit 1; }
+          mkdir sbom
+          for target in "${targets[@]}"; do
+            cargo cyclonedx --manifest-path crates/sloplint/Cargo.toml --format json --spec-version 1.5 \
+              --describe binaries --target "$target" --target-in-filename
+            expected="crates/sloplint/${binary}_bin_${target}.cdx.json"
+            found="$(find . -name '*.cdx.json' -not -path './.git/*' -not -path './sbom/*')"
+            [ "$found" = "./$expected" ] || { printf '%s\n' "expected exactly $expected, found: $found" >&2; exit 1; }
+            mv -- "$expected" "sbom/sloplint-$GITHUB_REF_NAME-$target.cdx.json"
+          done
+          git diff --exit-code -- Cargo.lock
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist-sbom
+          path: sbom/*.cdx.json
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 14
+
   attest:
-    needs: [verify-tag, ci, build]
+    needs: [verify-tag, ci, build, sbom]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -113,9 +158,10 @@ jobs:
           subject-path: |
             dist/*.tar.gz
             dist/*.zip
+            dist/*.cdx.json
 
   publish:
-    needs: [verify-tag, ci, build, attest]
+    needs: [verify-tag, ci, build, sbom, attest]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -138,7 +184,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for archive in dist/*.tar.gz dist/*.zip; do
+          for archive in dist/*.tar.gz dist/*.zip dist/*.cdx.json; do
             gh attestation verify "$archive" \
               --repo "$GITHUB_REPOSITORY" \
               --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \

@@ -169,8 +169,16 @@ expect_fail "cargo metadata failure is not swallowed" verify_tag v0.1.0
 targets=(x86_64-unknown-linux-gnu x86_64-pc-windows-msvc)
 dist="$work/dist"
 
+sbom_json() {
+  jq -n --arg version "$1" '{
+    bomFormat: "CycloneDX",
+    specVersion: "1.5",
+    metadata: {component: {name: "sloplint", version: $version}},
+    components: [{name: "clap", version: "4.6.7"}]}'
+}
+
 build_dist() {
-  local tag="$1" stage="$work/stage"
+  local tag="$1" stage="$work/stage" target
   rm -rf -- "${dist:?}" "${stage:?}"
   mkdir -p "$dist" "$stage"
   printf '%s\n' binary >"$stage/sloplint"
@@ -186,6 +194,9 @@ with zipfile.ZipFile(sys.argv[1], "w") as z:
     z.write(sys.argv[2] + "/LICENSE", "LICENSE")
 PY
   printf '%s  %s' "$(sha256sum "$dist/$win" | cut -d' ' -f1)" "$win" >"$dist/$win.sha256"
+  for target in "${targets[@]}"; do
+    sbom_json "${tag#v}" >"$dist/sloplint-$tag-$target.cdx.json"
+  done
 }
 
 verify_dist() {
@@ -214,6 +225,32 @@ tar -czf "$dist/sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz" -C "$work/stage
 expect_fail "archive without LICENSE is rejected" verify_dist
 build_dist v0.9.0
 expect_fail "archives named for another tag are rejected" verify_dist
+
+sbom_path="$dist/sloplint-v1.0.0-x86_64-unknown-linux-gnu.cdx.json"
+break_sbom() {
+  build_dist v1.0.0
+  jq "$1" "$sbom_path" >"$work/sbom.tmp"
+  mv -- "$work/sbom.tmp" "$sbom_path"
+}
+
+build_dist v1.0.0
+rm "$sbom_path"
+expect_fail "missing SBOM is rejected" verify_dist
+build_dist v1.0.0
+printf '%s\n' 'not json' >"$sbom_path"
+expect_fail "SBOM that is not JSON is rejected" verify_dist
+break_sbom '.bomFormat = "SPDX"'
+expect_fail "SBOM with another format is rejected" verify_dist
+break_sbom '.specVersion = "1.3"'
+expect_fail "SBOM with another spec version is rejected" verify_dist
+break_sbom '.metadata.component.name = "other"'
+expect_fail "SBOM describing another package is rejected" verify_dist
+break_sbom '.metadata.component.version = "9.9.9"'
+expect_fail "SBOM describing another version is rejected" verify_dist
+break_sbom '.components = []'
+expect_fail "SBOM without components is rejected" verify_dist
+break_sbom 'del(.components)'
+expect_fail "SBOM without a components array is rejected" verify_dist
 
 sha="1111111111111111111111111111111111111111"
 export GITHUB_REPOSITORY=owner/repo GITHUB_SHA="$sha"

@@ -37,6 +37,8 @@ Build jobs run without release credentials and hand archives off through workflo
 
 Every archive is attested with GitHub artifact attestations, and attestations are verified before publication. Each `.sha256` file detects corrupted downloads; it sits next to the archive, so it is not a trust anchor. To verify provenance: `gh attestation verify <archive> --repo OWNER/REPO --signer-workflow OWNER/REPO/.github/workflows/release.yml`. Releases require a public repository (artifact attestations).
 
+The workflow generates one CycloneDX 1.5 SBOM per target (`sloplint-<tag>-<target>.cdx.json`), attests it alongside the archives, and verifies it before publication. Each release holds the archives, their `.sha256` files, and the SBOMs.
+
 From source, using the checked-in toolchain pin (Rust 1.99.1):
 
 ```bash
