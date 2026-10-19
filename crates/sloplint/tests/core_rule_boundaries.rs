@@ -6,3 +6,5 @@ mod colocation_rust_index;
 mod log_missing_message;
 #[path = "core_rule_boundaries/patch_anchor_windows.rs"]
 mod patch_anchor_windows;
+#[path = "core_rule_boundaries/single_impl_applicability.rs"]
+mod single_impl_applicability;

@@ -5,7 +5,27 @@ use std::collections::BTreeMap;
 use crate::config::Strictness;
 use crate::facts::NamedSite;
 use crate::finding::{Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
+
+/// Languages whose abstractions this rule judges. Adapters for other languages (Ruby mixins,
+/// PHP interfaces, Go interfaces) also emit abstraction or implementation facts, which this
+/// rule must not read.
+const APPLICABLE: &[Lang] = &[
+    Lang::Rust,
+    Lang::TypeScript,
+    Lang::Tsx,
+    Lang::JavaScript,
+    Lang::Python,
+    Lang::Kotlin,
+    Lang::Scala,
+    Lang::Swift,
+    Lang::Zig,
+    Lang::Cpp,
+    Lang::Java,
+    Lang::CSharp,
+    Lang::Dart,
+];
 
 /// `slop/single-impl-abstraction`: an interface whose only implementation is itself.
 pub(crate) const INFO: RuleInfo = RuleInfo {
@@ -90,9 +110,15 @@ impl WorldRule for SingleImplAbstraction {
 
 type Sites<'a> = BTreeMap<&'a str, Vec<(&'a str, &'a NamedSite)>>;
 
+fn applicable_files<'f, 'a>(files: &'f [WorldFile<'a>]) -> impl Iterator<Item = &'f WorldFile<'a>> {
+    files
+        .iter()
+        .filter(|file| APPLICABLE.contains(&file.facts.lang))
+}
+
 fn abstraction_sites<'a>(files: &[WorldFile<'a>]) -> Sites<'a> {
     let mut sites: Sites<'a> = BTreeMap::new();
-    for file in files {
+    for file in applicable_files(files) {
         for site in &file.facts.abstractions {
             sites
                 .entry(site.name.as_ref())
@@ -105,7 +131,7 @@ fn abstraction_sites<'a>(files: &[WorldFile<'a>]) -> Sites<'a> {
 
 fn sole_impl<'a>(files: &[WorldFile<'a>], name: &str) -> Option<(&'a str, &'a NamedSite)> {
     let mut found = None;
-    for file in files {
+    for file in applicable_files(files) {
         for site in &file.facts.impls {
             if site.name.as_ref() != name {
                 continue;
