@@ -448,9 +448,9 @@ int x = ;
     );
     assert!(
         header.facts.functions.is_empty() && header.custom_hits.is_empty(),
-        "failed header yields no facts: {:?} {:?}",
+        "failed header yields no facts: {:?} functions, {} custom hits",
         header.facts.functions,
-        header.custom_hits
+        header.custom_hits.len()
     );
 }
 
