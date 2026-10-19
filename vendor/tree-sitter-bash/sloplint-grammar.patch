@@ -1,0 +1,97 @@
+diff --git a/grammar.js b/grammar.js
+index 513f485..85d26bf 100644
+--- a/grammar.js
++++ b/grammar.js
+@@ -52,6 +52,7 @@ module.exports = grammar({
+     [$.redirected_statement, $.command_substitution],
+     [$.function_definition, $.command_name],
+     [$.pipeline],
++    [$.redirected_statement, $.list, $.command],
+   ],
+ 
+   inline: $ => [
+@@ -182,10 +183,15 @@ module.exports = grammar({
+     redirected_statement: $ => prec.dynamic(-1, prec.right(-1, choice(
+       seq(
+         field('body', $._statement),
+-        field('redirect', choice(
+-          repeat1(choice(
++        field('redirect', seq(
++          choice(
+             $.file_redirect,
+             $.heredoc_redirect,
++          ),
++          repeat(choice(
++            $.file_redirect,
++            $.heredoc_redirect,
++            $.herestring_redirect,
+           )),
+         )),
+       ),
+@@ -193,6 +199,17 @@ module.exports = grammar({
+         field('body', choice($.if_statement, $.while_statement)),
+         $.herestring_redirect,
+       ),
++      // A lone assignment followed by redirects, e.g. `x+=y 2>/dev/null`. The
++      // higher precedence makes this win over reducing the assignment into
++      // `command`, which would then lack its required name.
++      prec(1, seq(
++        field('body', $.variable_assignment),
++        field('redirect', repeat1(choice(
++          $.file_redirect,
++          $.heredoc_redirect,
++          $.herestring_redirect,
++        ))),
++      )),
+       field('redirect', repeat1($._redirect)),
+       $.herestring_redirect,
+     ))),
+@@ -529,7 +546,7 @@ module.exports = grammar({
+       field('descriptor', optional($.file_descriptor)),
+       choice(
+         seq(
+-          choice('<', '>', '>>', '&>', '&>>', '<&', '>&', '>|'),
++          choice('<', '>', '>>', '&>', '&>>', '<&', '>&', '>|', '<>'),
+           field('destination', repeat1($._literal)),
+         ),
+         seq(
+@@ -860,7 +877,7 @@ module.exports = grammar({
+     number: $ => choice(
+       /-?(0x)?[0-9]+(#[0-9A-Za-z@_]+)?/,
+       // the base can be an expansion or command substitution
+-      seq(/-?(0x)?[0-9]+#/, choice($.expansion, $.command_substitution)),
++      seq(/-?(0x)?[0-9]+#/, choice($.expansion, $.simple_expansion, $.command_substitution)),
+     ),
+ 
+     simple_expansion: $ => seq(
+@@ -1095,8 +1112,10 @@ module.exports = grammar({
+       $.extglob_pattern,
+       seq(
+         $.extglob_pattern,
+-        choice($.string, $.expansion, $.command_substitution),
+-        optional($.extglob_pattern),
++        repeat1(seq(
++          choice($.string, $.expansion, $.command_substitution),
++          optional($.extglob_pattern),
++        )),
+       ),
+     ),
+ 
+diff --git a/src/scanner.c b/src/scanner.c
+index 0c3430a..e45833c 100644
+--- a/src/scanner.c
++++ b/src/scanner.c
+@@ -725,6 +725,13 @@ regex:
+                         lexer->mark_end(lexer);
+                     }
+                 }
++                // Outside `${...}`, an unnested newline ends the command, so a plain regex
++                // (e.g. after a bare `==` argument) must not run on to a later closer.
++                if (lexer->lookahead == '\n' && valid_symbols[REGEX] && !valid_symbols[CLOSING_BRACE] &&
++                    !state.in_single_quote && state.paren_depth == 0 && state.bracket_depth == 0 &&
++                    state.brace_depth == 0) {
++                    return false;
++                }
+                 switch (lexer->lookahead) {
+                     case '\\':
+                         state.last_was_escape = true;

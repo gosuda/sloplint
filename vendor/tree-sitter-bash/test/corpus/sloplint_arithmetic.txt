@@ -1,0 +1,46 @@
+================================================================================
+Base-prefixed number with a variable
+================================================================================
+
+h=ff; x=$((16#$h))
+echo 16#$h
+
+--------------------------------------------------------------------------------
+
+(program
+  (variable_assignment
+    (variable_name)
+    (word))
+  (variable_assignment
+    (variable_name)
+    (arithmetic_expansion
+      (number
+        (simple_expansion
+          (variable_name)))))
+  (command
+    (command_name
+      (word))
+    (number
+      (simple_expansion
+        (variable_name)))))
+
+================================================================================
+Base-prefixed number with a literal or braced variable
+================================================================================
+
+x=$((16#ff))
+echo 16#${h}
+
+--------------------------------------------------------------------------------
+
+(program
+  (variable_assignment
+    (variable_name)
+    (arithmetic_expansion
+      (number)))
+  (command
+    (command_name
+      (word))
+    (number
+      (expansion
+        (variable_name)))))
