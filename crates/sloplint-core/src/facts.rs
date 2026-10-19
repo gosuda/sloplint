@@ -20,11 +20,11 @@ pub struct FileFacts<'s> {
     /// The language of the grammar that produced these facts, which every language-keyed
     /// rule and table reads.
     ///
-    /// A `.h` file routed to C that parses only as C++ carries `Cpp` here, so its log-callee
-    /// table, primitive types, and rule applicability are the C++ ones. A file that failed to
-    /// parse has no tree to read and carries its routed language. Selection by
-    /// `project.languages` and the path-only `is_entry_file` flag follow the routed
-    /// language, not this field.
+    /// A `.h` file routed to C that fails as C carries `Cpp` here when it parses as C++ and
+    /// `ObjC` when only the Objective-C grammar parses it, so its log-callee table, primitive
+    /// types, and rule applicability are those of that language. A file that failed to parse
+    /// has no tree to read and carries its routed language. Selection by `project.languages`
+    /// and the path-only `is_entry_file` flag follow the routed language, not this field.
     pub lang: Lang,
     pub path: &'s str,
     pub source: &'s str,

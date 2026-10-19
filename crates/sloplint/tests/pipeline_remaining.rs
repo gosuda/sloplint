@@ -9,6 +9,8 @@ mod baseline_replace;
 mod cache_location;
 #[path = "pipeline_remaining/header_cpp_fallback.rs"]
 mod header_cpp_fallback;
+#[path = "pipeline_remaining/header_fallbacks.rs"]
+mod header_fallbacks;
 #[path = "pipeline_remaining/implicit_scope.rs"]
 mod implicit_scope;
 #[path = "pipeline_remaining/init_failure.rs"]

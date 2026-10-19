@@ -13,6 +13,8 @@ mod else_if_chains;
 mod header_comment_chains;
 #[path = "syntax_kernel_contracts/header_cpp_fallback.rs"]
 mod header_cpp_fallback;
+#[path = "syntax_kernel_contracts/header_fallbacks.rs"]
+mod header_fallbacks;
 #[path = "syntax_kernel_contracts/parse_error_position.rs"]
 mod parse_error_position;
 #[path = "syntax_kernel_contracts/sole_call_forwarding.rs"]

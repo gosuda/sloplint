@@ -62,7 +62,7 @@ pub struct FileInput<'s> {
     /// The file's routed language, chosen from its name.
     ///
     /// It decides which grammar parses first and the path-only entry-file flag. The grammar
-    /// that produces the facts can differ; see [`Lang::parse_fallback`] and
+    /// that produces the facts can differ; see [`Lang::parse_fallbacks`] and
     /// [`FileFacts::lang`].
     pub lang: Lang,
     /// The path relative to the project root, `/`-separated.
@@ -91,24 +91,22 @@ pub struct Analysis<'s> {
 ///
 /// A source with syntax errors yields empty facts, the collected comments, and
 /// the first error position, so one file's findings never depend on other files.
-/// A failed parse always reports a position: when error recovery hides every
-/// error and missing node, the tree's end stands in for the fault.
 ///
-/// A file whose language has a [`Lang::parse_fallback`] (a `.h` file routed to C)
-/// is parsed a second time with that grammar when the first parse has errors. A
-/// clean second tree is walked with the fallback grammar's roles and hooks and
-/// queried with its custom rules, and the facts then carry the fallback language, so
-/// every language-keyed rule reads the grammar that produced them. When the
-/// second parse fails too, the result is the first parse's error and comments, and
-/// the empty facts keep `input.lang`.
+/// A file whose language has [`Lang::parse_fallbacks`] (a `.h` file routed to C
+/// has C++ and then Objective-C) is parsed again with each grammar in that order
+/// while every earlier parse has errors, and the first error-free tree wins. That
+/// tree is walked with its grammar's roles and hooks and queried with its custom
+/// rules, and the facts carry its language, so every language-keyed rule reads the
+/// grammar that produced them. When every parse fails, the result is the first
+/// parse's error and comments, and the empty facts keep `input.lang`.
 ///
 /// Custom hits borrow the rules table for capture names and the file source
 /// for capture text, so `custom` shares the `'s` lifetime of the input.
 ///
 /// # Panics
 ///
-/// Panics when the pinned grammar for `input.lang` or its fallback cannot be
-/// loaded or the parser returns no tree. Both are build faults (grammar or ABI
+/// Panics when the pinned grammar for `input.lang` or one of its fallbacks cannot
+/// be loaded or the parser returns no tree. Both are build faults (grammar or ABI
 /// drift) that never depend on the source, so they stop the run instead of
 /// passing as clean.
 pub fn analyze<'s>(
@@ -121,7 +119,7 @@ pub fn analyze<'s>(
     if !root.has_error() {
         return clean_analysis(input, input.lang, &tree, custom);
     }
-    if let Some(fallback) = input.lang.parse_fallback(input.path) {
+    for &fallback in input.lang.parse_fallbacks(input.path) {
         let retried = parsers.parse(fallback, input.source);
         if !retried.root_node().has_error() {
             return clean_analysis(input, fallback, &retried, custom);

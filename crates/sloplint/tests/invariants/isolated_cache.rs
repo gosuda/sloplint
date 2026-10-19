@@ -11,6 +11,7 @@ use super::{custom_rule, mkdir, tempdir, write};
 
 /// One generic-name finding, with a message that holds `GENERIC_TEXT` exactly once.
 const SAMPLE: &str = "pub fn handle(flag: bool) {}\n";
+
 const GENERIC_TEXT: &str = "shared by unrelated code";
 
 /// Temp dirs standing in for the user's cache and home directories.
@@ -94,6 +95,7 @@ private:
 
 }  // namespace ui
 ";
+
 /// Plain C that parses as C.
 const C_HEADER: &str = "#include <string.h>
 
@@ -101,13 +103,26 @@ unsigned long get_length(const char *s) {
     return strlen(s);
 }
 ";
+
+/// Objective-C: it fails as C and as C++, and `NSLog` is a log call in the `objc` table only.
+const OBJC_HEADER: &str = "@interface Counter : NSObject
+- (void)increment;
+@end
+
+static inline void LogCount(NSString *name) {
+    NSLog(name);
+}
+";
+
 /// Invalid in C (line 1) and in C++ (line 3).
 const BROKEN_HEADER: &str = "template <typename T>
 struct Box { T value; };
 int x = ;
 ";
+
 /// The stored text of the C++ header's finding, and a same-length stand-in for it.
 const CPP_FINDING: &str = "only forwards its parameters to `items_.push_back`";
+
 const CPP_PLANTED: &str = "only forwards its parameters to `items_.push_bacm`";
 
 /// Rewrites the one stored occurrence of `from` in the cache file with the same-length `to`.
@@ -428,6 +443,67 @@ fn cache_follows_a_header_across_the_cpp_fallback() {
     );
     assert_eq!(stored[3], stored[1], "the C++ outcome returns unchanged");
     assert_eq!(stored[4], stored[0], "the C outcome returns unchanged");
+}
+
+/// One `.h` path whose bytes move between plain C, C++, Objective-C, and invalid input. Every
+/// cached run must equal an uncached run of the same bytes, so an entry stored for one outcome
+/// is never served for another.
+#[test]
+fn cache_follows_a_header_across_the_header_fallbacks() {
+    let (_tmp, root) = tempdir();
+    write(&root, "sloplint.toml", "");
+    let home = CacheHome::new();
+    let mut stored = Vec::new();
+    for (label, text) in [
+        ("plain C", C_HEADER),
+        ("C++", CPP_HEADER),
+        ("invalid", BROKEN_HEADER),
+        ("C++ again", CPP_HEADER),
+        ("plain C again", C_HEADER),
+        ("Objective-C", OBJC_HEADER),
+        ("C++ after Objective-C", CPP_HEADER),
+        ("Objective-C again", OBJC_HEADER),
+    ] {
+        write(&root, "include/a.h", text);
+        let cold = home.check(&root, &["--no-cache"]);
+        let cached = home.check(&root, &[]);
+        let warm = home.check(&root, &[]);
+        assert_eq!(cached, cold, "{label}: the run that stores the entry");
+        assert_eq!(warm, cold, "{label}: the run that reads the entry");
+        stored.push(cold);
+    }
+    assert!(
+        stored[0].contains("get_length") && !stored[0].contains("[meta/parse-error]"),
+        "plain C parses as C: {}",
+        stored[0]
+    );
+    assert!(
+        stored[1].contains("`push`") && !stored[1].contains("[meta/parse-error]"),
+        "the header parses as C++ and reports the C++ method: {}",
+        stored[1]
+    );
+    assert!(
+        stored[2].contains("include/a.h:1:1") && stored[2].contains("[meta/parse-error]"),
+        "invalid input reports the C parse position: {}",
+        stored[2]
+    );
+    assert_eq!(stored[3], stored[1], "the C++ outcome returns unchanged");
+    assert_eq!(stored[4], stored[0], "the C outcome returns unchanged");
+    assert!(
+        stored[5].contains("include/a.h:6:5")
+            && stored[5].contains("[grep/contiguous-log-literal]")
+            && !stored[5].contains("[meta/parse-error]"),
+        "the header parses as Objective-C and reports the `NSLog` call: {}",
+        stored[5]
+    );
+    assert_eq!(
+        stored[6], stored[1],
+        "the C++ outcome returns after Objective-C"
+    );
+    assert_eq!(
+        stored[7], stored[5],
+        "the Objective-C outcome returns unchanged"
+    );
 }
 
 /// The cache key is the path plus the content hash, and a path fixes its routed language. The

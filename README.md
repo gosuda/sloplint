@@ -82,7 +82,7 @@ Zig pass-through checks read declared parameters and exclude bodies with multipl
 
 `meta/parse-error` is Warn in every profile, so a default `deny` gate still passes files with syntax errors reported as warnings; configure the rule as Deny or use `--fail-on warn` to fail on them. An empty `project.languages` list is valid and selects no languages, so no files are analyzed.
 
-A `.h` file can hold C or C++, so sloplint parses it as C first. If the C parse has a syntax error, sloplint parses the file again as C++ and uses that tree when it has no error. If both parses fail, the file reports the `meta/parse-error` position of the C parse. Only `.h` files get a second parse, and sloplint never tries Objective-C. A header that parsed as C++ gets the C++ rules, so `[languages.cpp]` log callees and the C++ type tables apply to it. The file stays a C file for `project.languages`, so `languages = ["cpp"]` does not select it.
+A `.h` file can hold C, C++, or Objective-C, so sloplint parses it as C first. If the C parse has a syntax error, sloplint parses the file again as C++ and then as Objective-C. The first tree with no error wins, so a header that both grammars accept is C++. If every parse fails, the file reports the `meta/parse-error` position of the C parse, and no other file type gets a second parse. A header that parsed as C++ or Objective-C gets the rules of that language, so its `[languages.cpp]` or `[languages.objc]` log callees apply. The file stays a C file for `project.languages`, so `languages = ["cpp"]` or `["objc"]` does not select it.
 
 ## Usage
 
