@@ -14,6 +14,8 @@ mod c;
 mod cpp;
 #[path = "grammar_gaps/csharp.rs"]
 mod csharp;
+#[path = "grammar_gaps/dart.rs"]
+mod dart;
 #[path = "grammar_gaps/go.rs"]
 mod go;
 #[path = "grammar_gaps/java.rs"]
