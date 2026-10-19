@@ -1,6 +1,6 @@
 //! `sloplint init`: writes a default `sloplint.toml` in the current directory.
 
-use std::fs::OpenOptions;
+use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::Path;
 
@@ -13,21 +13,51 @@ use crate::project::CONFIG_FILE;
 const HEADER: &str = "# sloplint configuration. Every value shown is the default. Run 'sloplint rules' for the effective rule settings; override one rule with [rules.\"<id>\"].";
 
 /// Writes `sloplint.toml` into `cwd`, refusing to overwrite an existing file.
+///
+/// The text is written to a sibling temporary file and published with a hard
+/// link, which fails if the name exists, so the configuration appears whole or
+/// not at all and an existing file or symlink (even a dangling one) is never
+/// touched. When the link cannot be made for any reason other than the name
+/// existing (for example a filesystem without hard links), it falls back to
+/// creating the final name exclusively; if writing then fails, the file this
+/// call created is removed. Either way a failure leaves no empty or partial
+/// configuration that later runs would load and later `init` calls would
+/// refuse to replace.
 pub fn write_default(cwd: &Path) -> Result<(), RunError> {
     let path = cwd.join(CONFIG_FILE);
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&path)
-        .map_err(|source| match source.kind() {
-            io::ErrorKind::AlreadyExists => RunError::ConfigExists { path: path.clone() },
+    let exists = || RunError::ConfigExists { path: path.clone() };
+    if fs::symlink_metadata(&path).is_ok() {
+        return Err(exists());
+    }
+    let text = default_text(&Config::default());
+    let tmp = cwd.join(format!(".{CONFIG_FILE}.{}.tmp", std::process::id()));
+    write_new(&tmp, text.as_bytes()).map_err(|source| RunError::Io {
+        path: path.clone(),
+        source,
+    })?;
+    let linked = fs::hard_link(&tmp, &path);
+    let _ = fs::remove_file(&tmp);
+    match linked {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => Err(exists()),
+        Err(_) => write_new(&path, text.as_bytes()).map_err(|source| match source.kind() {
+            io::ErrorKind::AlreadyExists => exists(),
             _ => RunError::Io {
                 path: path.clone(),
                 source,
             },
-        })?;
-    file.write_all(default_text(&Config::default()).as_bytes())
-        .map_err(|source| RunError::Io { path, source })
+        }),
+    }
+}
+
+/// Creates `path` exclusively and writes `bytes`; a failed write removes the file this call created.
+fn write_new(path: &Path, bytes: &[u8]) -> io::Result<()> {
+    let mut file = OpenOptions::new().write(true).create_new(true).open(path)?;
+    let written = file.write_all(bytes).and_then(|()| file.sync_all());
+    drop(file);
+    written.inspect_err(|_| {
+        let _ = fs::remove_file(path);
+    })
 }
 
 fn default_text(config: &Config) -> String {

@@ -5,6 +5,8 @@
 
 #[path = "pipeline_remaining/baseline_replace.rs"]
 mod baseline_replace;
+#[path = "pipeline_remaining/init_failure.rs"]
+mod init_failure;
 #[path = "pipeline_remaining/parse_failed_suppressions.rs"]
 mod parse_failed_suppressions;
 #[path = "pipeline_remaining/path_scope.rs"]
