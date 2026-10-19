@@ -7,6 +7,9 @@ pub mod rules_cmd;
 mod cache;
 mod discover;
 mod project;
+mod terminal;
+
+pub use terminal::TerminalText;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
@@ -229,8 +232,9 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         if let Err(error) = cache::store(&root, &key, &view) {
             let _ = writeln!(
                 io::stderr(),
-                "sloplint: warning: cache not written in {}: {error}",
-                root.display()
+                "sloplint: warning: cache not written in {}: {}",
+                TerminalText::line(&root.to_string_lossy()),
+                TerminalText::line(&error.to_string())
             );
         }
     }

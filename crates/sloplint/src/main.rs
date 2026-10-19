@@ -10,7 +10,7 @@ use annotate_snippets::{AnnotationKind, Group, Level, Renderer, Snippet};
 use clap::Parser;
 use sloplint::cli::{BaselineArgs, CheckArgs, Cli, Command, Format, RulesArgs};
 use sloplint::rules_cmd::{self, RulesRequest};
-use sloplint::{Execution, Report, RunError, RunOptions, Summary, init};
+use sloplint::{Execution, Report, RunError, RunOptions, Summary, TerminalText, init};
 use sloplint_core::{Finding, RuleFilter, Severity};
 
 fn main() -> ExitCode {
@@ -75,14 +75,24 @@ fn baseline(cwd: &Path, args: &BaselineArgs) -> ExitCode {
     };
     match sloplint::execute(&options) {
         Ok(execution) => match execution.baseline_written.as_deref() {
-            Some(path) => print_text(&format!(
-                "baseline: wrote {} entries to {path}\n",
-                execution.report.summary.findings
-            )),
+            Some(path) => print_text(
+                &format!(
+                    "baseline: wrote {} entries to {}\n",
+                    execution.report.summary.findings,
+                    TerminalText::line(path)
+                ),
+                TextKind::Plain,
+            ),
             None => ExitCode::SUCCESS,
         },
         Err(error) => report_error(&error),
     }
+}
+
+#[derive(Clone, Copy)]
+enum TextKind {
+    Plain,
+    Json,
 }
 
 fn rules(cwd: &Path, args: &RulesArgs) -> ExitCode {
@@ -93,8 +103,13 @@ fn rules(cwd: &Path, args: &RulesArgs) -> ExitCode {
         id: args.id.clone(),
         format: args.format,
     };
+    let kind = if matches!(args.format, Format::Json) {
+        TextKind::Json
+    } else {
+        TextKind::Plain
+    };
     match rules_cmd::render(&request) {
-        Ok(text) => print_text(&text),
+        Ok(text) => print_text(&text, kind),
         Err(error) => report_error(&error),
     }
 }
@@ -135,21 +150,26 @@ fn write_agent(report: &Report, out: &mut dyn Write) -> io::Result<()> {
         writeln!(
             out,
             "{}:{}:{}: {}: {} [{}]",
-            finding.path,
+            TerminalText::line(&finding.path),
             finding.line,
             finding.column,
             severity_name(finding.severity),
-            finding.message,
-            finding.rule
+            TerminalText::line(&finding.message),
+            TerminalText::line(&finding.rule)
         )?;
-        writeln!(out, "  context: {}", finding.context)?;
-        writeln!(out, "  fix: {}", finding.fix)?;
+        writeln!(out, "  context: {}", TerminalText::line(&finding.context))?;
+        writeln!(out, "  fix: {}", TerminalText::line(&finding.fix))?;
     }
     if !report.findings.is_empty() {
         writeln!(out)?;
         writeln!(out, "rules:")?;
         for (rule, why) in &report.rules_fired {
-            writeln!(out, "  {rule}: {why}")?;
+            writeln!(
+                out,
+                "  {}: {}",
+                TerminalText::line(rule),
+                TerminalText::line(why)
+            )?;
         }
     }
     writeln!(out, "{}", summary_line(&report.summary))
@@ -177,7 +197,31 @@ where
 {
     record.clear();
     sonic_rs::to_writer(&mut *record, value).map_err(io::Error::other)?;
-    out.write_all(record)
+    write_guarded(out, record)
+}
+
+fn write_guarded(out: &mut dyn Write, mut json: &[u8]) -> io::Result<()> {
+    while let Some((at, width, code)) = find_control(json) {
+        out.write_all(&json[..at])?;
+        write!(out, "\\u{code:04x}")?;
+        json = &json[at + width..];
+    }
+    out.write_all(json)
+}
+
+fn find_control(json: &[u8]) -> Option<(usize, usize, u8)> {
+    let mut at = 0;
+    while at < json.len() {
+        match json[at] {
+            0x7f => return Some((at, 1, 0x7f)),
+            0xc2 => match json.get(at + 1) {
+                Some(&next) if (0x80..=0x9f).contains(&next) => return Some((at, 2, next)),
+                _ => at += 2,
+            },
+            _ => at += 1,
+        }
+    }
+    None
 }
 
 fn write_human(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
@@ -247,10 +291,12 @@ fn render_finding(
     report: &Report,
     finding: &Finding,
 ) -> String {
-    let text = sources
+    let raw = sources
         .line(&finding.path, finding.line)
         .map_or(&*finding.context, str::trim_end);
-    let span = span_for(text, finding.column);
+    let text = TerminalText::line(raw).into_text();
+    let start = span_for(raw, finding.column).start;
+    let span = TerminalText::line(&raw[..start]).into_text().len()..text.len();
     let level = match finding.severity {
         Severity::Deny => Level::ERROR,
         Severity::Warn => Level::WARNING,
@@ -260,16 +306,18 @@ fn render_finding(
         .get(&*finding.rule)
         .map_or("", String::as_str);
     let title = level
-        .primary_title(finding.message.clone())
-        .id(finding.rule.to_string());
+        .primary_title(TerminalText::line(&finding.message).into_text())
+        .id(TerminalText::line(&finding.rule).into_text());
     let snippet = Snippet::source(text)
         .line_start(line_number(finding.line))
-        .path(finding.path.to_string())
+        .path(TerminalText::line(&finding.path).into_text())
         .annotation(AnnotationKind::Primary.span(span));
     let groups = [
         Group::with_title(title).element(snippet),
-        Group::with_title(Level::HELP.secondary_title(finding.fix.clone())),
-        Group::with_title(Level::NOTE.secondary_title(why.to_string())),
+        Group::with_title(
+            Level::HELP.secondary_title(TerminalText::line(&finding.fix).into_text()),
+        ),
+        Group::with_title(Level::NOTE.secondary_title(TerminalText::line(why).into_text())),
     ];
     renderer.render(&groups)
 }
@@ -312,8 +360,11 @@ fn severity_name(severity: Severity) -> &'static str {
     }
 }
 
-fn print_text(text: &str) -> ExitCode {
-    let written = with_buffered_stdout(|out| out.write_all(text.as_bytes()));
+fn print_text(text: &str, kind: TextKind) -> ExitCode {
+    let written = with_buffered_stdout(|out| match kind {
+        TextKind::Plain => write!(out, "{}", TerminalText::block(text)),
+        TextKind::Json => write_guarded(out, text.as_bytes()),
+    });
     match written {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => fail(&error.to_string(), 3),
@@ -321,7 +372,11 @@ fn print_text(text: &str) -> ExitCode {
 }
 
 fn fail(message: &str, code: u8) -> ExitCode {
-    let _ = writeln!(io::stderr(), "sloplint: error: {message}");
+    let _ = writeln!(
+        io::stderr(),
+        "sloplint: error: {}",
+        TerminalText::block(message)
+    );
     ExitCode::from(code)
 }
 

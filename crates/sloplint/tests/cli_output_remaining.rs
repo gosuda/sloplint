@@ -7,3 +7,5 @@
 mod human_source_lines;
 #[path = "cli_output_remaining/output_stream.rs"]
 mod output_stream;
+#[path = "cli_output_remaining/terminal_escapes.rs"]
+mod terminal_escapes;
