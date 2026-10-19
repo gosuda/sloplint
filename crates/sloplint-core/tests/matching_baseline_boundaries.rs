@@ -7,3 +7,5 @@
 mod matching_semantics;
 #[path = "matching_baseline_boundaries/pattern_validation.rs"]
 mod pattern_validation;
+#[path = "matching_baseline_boundaries/php_callee_shapes.rs"]
+mod php_callee_shapes;

@@ -27,7 +27,7 @@ pub struct CalleePattern {
 impl CalleePattern {
     /// Parses a pattern: segments split on `.` and `::`, a leading `*` on the last segment matches any suffix, and a `new ` prefix restricts the match to `CallKind::New`.
     ///
-    /// Shapes that cannot match a normalized callee are errors that name the pattern: whitespace inside the pattern (callees lose all whitespace before matching), a `*` anywhere but the first character of the last segment, and `?.`, which callee normalization consumes as a segment separator (write `.` instead).
+    /// Shapes that cannot match a normalized callee are errors that name the pattern: whitespace inside the pattern (callees lose all whitespace before matching), a `*` anywhere but the first character of the last segment, and `?.`, `\`, or `->`, which callee normalization consumes as segment separators (write `.` or `::` instead).
     pub fn parse(s: &str) -> Result<CalleePattern, String> {
         let trimmed = s.trim();
         if trimmed.is_empty() || trimmed == "new" {
@@ -50,6 +50,11 @@ impl CalleePattern {
         if body.contains("?.") {
             return Err(format!(
                 "`?.` in callee pattern `{s}` is a segment separator in callees and never appears inside a segment; write `.` instead"
+            ));
+        }
+        if body.contains('\\') || body.contains("->") {
+            return Err(format!(
+                "`\\` and `->` in callee pattern `{s}` are segment separators in callees and never appear inside a segment; separate segments with `.` or `::`"
             ));
         }
         let pieces = split_pattern(body);
@@ -76,7 +81,7 @@ impl CalleePattern {
                 ));
             }
             segments.push(Segment {
-                text: text.into(),
+                text: strip_sigil(text, suffix).into(),
                 suffix,
             });
         }
@@ -85,7 +90,7 @@ impl CalleePattern {
 
     /// Reports whether the pattern matches the callee under this call kind.
     ///
-    /// All whitespace is ignored, segments split on `::`, `?.`, and `.`, and a `Macro` callee gains a trailing `!` on its last segment. The callee is scanned in place and nothing is allocated.
+    /// All whitespace is ignored, segments split on `::`, `?.`, `->`, `?->`, `\`, and `.`, a `$` that starts a longer segment is ignored (`$this`, `$logger`), and a `Macro` callee gains a trailing `!` on its last segment. The callee is scanned in place and nothing is allocated.
     pub fn matches(&self, callee: &str, kind: CallKind) -> bool {
         if self.new_only && kind != CallKind::New {
             return false;
@@ -126,7 +131,12 @@ impl Segment {
     }
 
     fn candidate<'a>(&self, raw: &'a str) -> Visible<'a> {
-        raw.chars().filter(is_visible as fn(&char) -> bool)
+        let mut visible = raw.chars().filter(is_visible as fn(&char) -> bool);
+        let sigiled = visible.clone().next() == Some('$') && visible.clone().nth(1).is_some();
+        if sigiled && !self.suffix {
+            visible.next();
+        }
+        visible
     }
 
     fn accepts<I>(&self, candidate: I) -> bool
@@ -142,6 +152,13 @@ impl Segment {
                 .all(|expected| tail.next() == Some(expected));
         }
         candidate.eq(self.text.chars())
+    }
+}
+
+fn strip_sigil(text: &str, suffix: bool) -> &str {
+    match text.strip_prefix('$') {
+        Some(rest) if !suffix && !rest.is_empty() => rest,
+        _ => text,
     }
 }
 
@@ -209,10 +226,12 @@ fn eat(text: &str, from: usize, want: char) -> Option<usize> {
 fn separator_end(text: &str, index: usize, ch: char) -> Option<usize> {
     let after = index + ch.len_utf8();
     match ch {
-        '.' => Some(after),
+        '.' | '\\' => Some(after),
         ':' => eat(text, after, ':'),
+        '-' => eat(text, after, '>'),
         '?' => match next_visible(text, after) {
             Some((dot, '.')) => Some(dot + 1),
+            Some((dash, '-')) => eat(text, dash + 1, '>'),
             _ => None,
         },
         _ => None,

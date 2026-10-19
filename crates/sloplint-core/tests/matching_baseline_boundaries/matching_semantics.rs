@@ -3,7 +3,8 @@ use sloplint_core::CalleePattern;
 use sloplint_core::facts::CallKind;
 
 const SPACES: [&str; 6] = [" ", "\t", "\n", "\r\n", "\u{a0}", "\u{3000}"];
-const SEPARATORS: [&str; 3] = [".", "::", "?."];
+const SEPARATORS: [&str; 6] = [".", "::", "?.", "->", "?->", "\\"];
+const PUNCTUATION: [&str; 11] = [".", "::", "?.", "->", "?->", "\\", "-", ">", "?", "!", ":"];
 const NOISE_PERIOD: u8 = 5;
 
 #[derive(Debug, Clone)]
@@ -35,7 +36,7 @@ impl Shape {
         if self.new_only && kind != CallKind::New {
             return false;
         }
-        let flat: String = callee.chars().filter(|c| !c.is_whitespace()).collect();
+        let flat: Vec<char> = callee.chars().filter(|c| !c.is_whitespace()).collect();
         let mut parts = split_flat(&flat);
         if kind == CallKind::Macro {
             let last = parts.last_mut().expect("split always yields a segment");
@@ -52,44 +53,46 @@ impl Shape {
             .heads
             .iter()
             .zip(tail)
-            .all(|((head, _), part)| head == part);
+            .all(|((head, _), part)| unsigiled(head) == unsigiled(part));
         let Some(last) = tail.last() else {
             return false;
         };
         let last_matches = if self.suffix {
             last.ends_with(self.last.as_str())
         } else {
-            *last == self.last
+            unsigiled(last) == unsigiled(&self.last)
         };
         heads_match && last_matches
     }
 }
 
-fn split_flat(flat: &str) -> Vec<String> {
-    let bytes = flat.as_bytes();
+fn unsigiled(segment: &str) -> &str {
+    match segment.strip_prefix('$') {
+        Some(rest) if !rest.is_empty() => rest,
+        _ => segment,
+    }
+}
+
+fn split_flat(flat: &[char]) -> Vec<String> {
     let mut parts = Vec::new();
-    let mut start = 0;
+    let mut current = String::new();
     let mut i = 0;
-    while i < bytes.len() {
-        let width = if bytes[i] == b'.' {
-            1
-        } else if matches!(
-            (bytes[i], bytes.get(i + 1)),
-            (b':', Some(b':')) | (b'?', Some(b'.'))
-        ) {
-            2
-        } else {
-            0
+    while i < flat.len() {
+        let width = match (flat[i], flat.get(i + 1), flat.get(i + 2)) {
+            ('.' | '\\', _, _) => 1,
+            (':', Some(':'), _) | ('-', Some('>'), _) | ('?', Some('.'), _) => 2,
+            ('?', Some('-'), Some('>')) => 3,
+            _ => 0,
         };
         if width == 0 {
+            current.push(flat[i]);
             i += 1;
         } else {
-            parts.push(flat[start..i].to_string());
+            parts.push(std::mem::take(&mut current));
             i += width;
-            start = i;
         }
     }
-    parts.push(flat[start..].to_string());
+    parts.push(current);
     parts
 }
 
@@ -107,7 +110,7 @@ fn with_noise(text: &str, noise: &[u8]) -> String {
 }
 
 fn word() -> impl Strategy<Value = String> {
-    "[A-Za-z0-9_]{1,4}"
+    "\\$?[A-Za-z0-9_]{1,4}"
 }
 
 fn shape() -> impl Strategy<Value = Shape> {
@@ -174,7 +177,7 @@ fn case() -> impl Strategy<Value = (Shape, String)> {
         "[A-Za-z]{0,3}",
         proptest::option::of(0usize..6),
         any::<bool>(),
-        proptest::collection::vec(0usize..3, 0..8),
+        proptest::collection::vec(0usize..6, 0..8),
         proptest::collection::vec(any::<u8>(), 0..40),
     )
         .prop_map(
@@ -188,10 +191,7 @@ fn case() -> impl Strategy<Value = (Shape, String)> {
         proptest::collection::vec(
             prop_oneof![
                 word(),
-                Just(".".to_string()),
-                Just("::".to_string()),
-                Just("?.".to_string()),
-                Just("!".to_string()),
+                prop::sample::select(PUNCTUATION.to_vec()).prop_map(str::to_string),
                 prop::sample::select(SPACES.to_vec()).prop_map(str::to_string),
             ],
             0..12,
