@@ -324,6 +324,19 @@ fn sibling_enum(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
         })
 }
 fn err_bound<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<Option<&'s str>> {
+    let pat = if pat.kind() == "match_pattern" {
+        if child_by_field(pat, "condition").is_some() {
+            return None;
+        }
+        let mut kids = named_children(pat).into_iter();
+        let only = kids.next()?;
+        if kids.next().is_some() {
+            return None;
+        }
+        only
+    } else {
+        pat
+    };
     if pat.kind() != "tuple_struct_pattern" {
         return None;
     }
@@ -331,18 +344,70 @@ fn err_bound<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<Option<&'s str>> {
         return None;
     }
     let ty = child_by_field(pat, "type")?;
-    let mut rest = named_children(pat)
-        .into_iter()
-        .filter(|c| c.id() != ty.id());
+    let mut cursor = pat.walk();
+    let mut rest = pat
+        .children(&mut cursor)
+        .filter(|c| c.id() != ty.id() && (c.is_named() || c.kind() == "_"));
     let only = rest.next()?;
     if rest.next().is_some() {
         return None;
     }
     if only.kind() == "identifier" {
-        let t = text(cx, only);
-        return Some(if t == "_" { None } else { Some(t) });
+        return Some(Some(text(cx, only)));
     }
     (text(cx, only) == "_").then_some(None)
+}
+fn pattern_may_match_err(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
+    let inner = if pat.kind() == "match_pattern" {
+        let cond = child_by_field(pat, "condition").map(|c| c.id());
+        let mut cursor = pat.walk();
+        let mut kids = pat
+            .children(&mut cursor)
+            .filter(|c| Some(c.id()) != cond && (c.is_named() || c.kind() == "_"));
+        let Some(only) = kids.next() else {
+            return false;
+        };
+        if kids.next().is_some() {
+            return false;
+        }
+        only
+    } else {
+        pat
+    };
+    match inner.kind() {
+        "tuple_struct_pattern" => {
+            child_by_field(inner, "type").is_some_and(|t| text(cx, t) == "Err")
+        }
+        "or_pattern" => {
+            let mut cursor = inner.walk();
+            inner
+                .children(&mut cursor)
+                .filter(|c| c.is_named() || c.kind() == "_")
+                .any(|c| pattern_may_match_err(cx, c))
+        }
+        "_" | "identifier" => true,
+        _ => false,
+    }
+}
+fn has_err_selective_predecessor(cx: &Cx<'_, '_>, arm: Node<'_>) -> bool {
+    let Some(parent) = arm.parent() else {
+        return false;
+    };
+    let mut cursor = parent.walk();
+    for sib in parent.children(&mut cursor) {
+        if sib.id() == arm.id() {
+            break;
+        }
+        if sib.kind() != "match_arm" {
+            continue;
+        }
+        if let Some(pat) = child_by_field(sib, "pattern")
+            && pattern_may_match_err(cx, pat)
+        {
+            return true;
+        }
+    }
+    false
 }
 fn is_err_ctor(cx: &Cx<'_, '_>, call: Node<'_>, bound: Option<&str>, callee: &str) -> bool {
     let Some(b) = bound else {
@@ -647,6 +712,9 @@ impl LangHooks for RustHooks {
             let bound = err_bound(cx, child_by_field(n, "pattern")?)?;
             let value = child_by_field(n, "value")?;
             let stmts = body_stmts(cx, value, bound);
+            if matches!(&stmts[..], [Stmt::Rethrow]) && has_err_selective_predecessor(cx, n) {
+                return None;
+            }
             return Some(Handler {
                 pos: pos_of(n),
                 stmts,

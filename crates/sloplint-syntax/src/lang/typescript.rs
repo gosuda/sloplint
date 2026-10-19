@@ -725,6 +725,9 @@ impl LangHooks for TypeScriptHooks {
         let body = child_by_field(n, "body")?;
         let mut stmts = Vec::new();
         for s in named_children(body) {
+            if s.kind() == "comment" {
+                continue;
+            }
             stmts.push(catch_stmt(cx, s, binding));
         }
         Some(Handler {

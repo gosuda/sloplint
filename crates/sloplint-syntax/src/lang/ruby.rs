@@ -655,7 +655,12 @@ impl LangHooks for RubyHooks {
                 let binding = child_by_field(n, "variable")
                     .map(|v| strip_arrow(text(cx, v)))
                     .unwrap_or("");
-                let body = child_by_field(n, "body")?;
+                let Some(body) = child_by_field(n, "body") else {
+                    return Some(Handler {
+                        pos: pos_of(n),
+                        stmts: Vec::new(),
+                    });
+                };
                 let then_body = body.kind() == "then" || body.kind() == "body_statement";
                 let kids: Vec<Node<'_>> = if then_body {
                     named_children(body)

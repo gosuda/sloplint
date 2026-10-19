@@ -62,7 +62,7 @@ Exit code `0` means the gate passed: the run can still list `warn` findings belo
 - **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
 - **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs.
 
-For Zig catches, `slop/zombie-catch` distinguishes an empty or comment-only body from an unchanged rethrow. Returning a recovery value does not count as swallowing the error.
+For Zig catches, Go `if err != nil` blocks, Ruby `rescue` clauses, TypeScript `catch` clauses, and Rust `Err` match arms and `if let Err` guards, `slop/zombie-catch` treats an empty or comment-only body as a handler with no statements, distinct from an unchanged rethrow. Rust arms with a match or `if` guard are not handlers. An unguarded `Err` rethrow preceded by a guarded `Err` or wildcard arm that recovers a subset is not a redundant rethrow. Returning a recovery value does not count as swallowing the error.
 
 ## Usage
 

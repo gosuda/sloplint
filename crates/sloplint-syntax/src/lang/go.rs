@@ -520,12 +520,17 @@ impl LangHooks for GoHooks {
         }
         let bound = text(cx, left);
         let body = child_by_field(n, "consequence")?;
-        let list = named_children(body)
-            .into_iter()
-            .find(|c| c.kind() == "statement_list")?;
         let mut stmts = Vec::new();
-        for s in named_children(list) {
-            stmts.push(go_handler_stmt(cx, s, bound));
+        if let Some(list) = named_children(body)
+            .into_iter()
+            .find(|c| c.kind() == "statement_list")
+        {
+            for s in named_children(list) {
+                if s.kind() == "comment" {
+                    continue;
+                }
+                stmts.push(go_handler_stmt(cx, s, bound));
+            }
         }
         Some(Handler {
             pos: pos_of(n),
