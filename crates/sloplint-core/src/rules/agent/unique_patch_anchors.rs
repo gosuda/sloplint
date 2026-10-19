@@ -1,6 +1,7 @@
 //! `agent/unique-patch-anchors`: repeated identical line blocks.
 
-use std::collections::BTreeMap;
+use std::borrow::Cow;
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -77,32 +78,74 @@ impl FileRule for UniquePatchAnchors {
         if kept.len() < self.window {
             return;
         }
-        for starts in self.grouped_windows(&kept) {
+        for starts in self.repeated_windows(&kept) {
             self.report(facts, &kept, &starts, out);
         }
     }
 }
 
+/// Window starts of one block: a lone start stays inline until the block repeats.
+enum Starts {
+    One(usize),
+    Many(Vec<usize>),
+}
+
+impl Starts {
+    fn push(&mut self, start: usize) {
+        match self {
+            Starts::Many(starts) => starts.push(start),
+            Starts::One(first) => {
+                let first = *first;
+                *self = Starts::Many(vec![first, start]);
+            }
+        }
+    }
+}
+
 impl UniquePatchAnchors {
-    fn grouped_windows(&self, kept: &[(u32, String)]) -> Vec<Vec<usize>> {
-        let mut groups: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+    /// Start indices, ascending, of every strong window that occurs at least `min_repeats` times.
+    ///
+    /// Each distinct normalized line gets one id, and a window is keyed by its id slice. The map
+    /// compares those slices on equality, so equal hashes never merge different blocks.
+    fn repeated_windows(&self, kept: &[(u32, Cow<'_, str>)]) -> Vec<Vec<usize>> {
+        let mut interned: HashMap<&str, usize> = HashMap::new();
+        let mut line_ids: Vec<usize> = Vec::with_capacity(kept.len());
+        let mut strong: Vec<bool> = Vec::with_capacity(kept.len());
+        for (_, line) in kept {
+            let next = interned.len();
+            line_ids.push(*interned.entry(line).or_insert(next));
+            strong.push(is_strong_line(line));
+        }
+        let mut groups: HashMap<&[usize], Starts> = HashMap::new();
+        let mut strong_in_window = strong[..self.window].iter().filter(|&&flag| flag).count();
         for start in 0..=kept.len() - self.window {
-            let block: Vec<&str> = kept[start..start + self.window]
-                .iter()
-                .map(|(_, line)| line.as_str())
-                .collect();
-            if strong_lines(&block) < MIN_STRONG_LINES {
+            if start > 0 {
+                strong_in_window += usize::from(strong[start + self.window - 1]);
+                strong_in_window -= usize::from(strong[start - 1]);
+            }
+            if strong_in_window < MIN_STRONG_LINES {
                 continue;
             }
-            groups.entry(block.join("\n")).or_default().push(start);
+            groups
+                .entry(&line_ids[start..start + self.window])
+                .and_modify(|starts| starts.push(start))
+                .or_insert(Starts::One(start));
         }
-        groups.into_values().collect()
+        let mut repeated: Vec<Vec<usize>> = groups
+            .into_values()
+            .filter_map(|starts| match starts {
+                Starts::Many(starts) if starts.len() >= self.min_repeats => Some(starts),
+                _ => None,
+            })
+            .collect();
+        repeated.sort_unstable_by_key(|starts| starts[0]);
+        repeated
     }
 
     fn report(
         &self,
         facts: &FileFacts<'_>,
-        kept: &[(u32, String)],
+        kept: &[(u32, Cow<'_, str>)],
         starts: &[usize],
         out: &mut Vec<Finding>,
     ) {
@@ -142,7 +185,7 @@ impl UniquePatchAnchors {
     }
 }
 
-fn kept_lines(source: &str) -> Vec<(u32, String)> {
+fn kept_lines(source: &str) -> Vec<(u32, Cow<'_, str>)> {
     let mut kept = Vec::new();
     for (index, line) in source.lines().enumerate() {
         let normalized = normalize_line(line);
@@ -155,13 +198,25 @@ fn kept_lines(source: &str) -> Vec<(u32, String)> {
     kept
 }
 
-fn normalize_line(line: &str) -> String {
-    line.split_whitespace().collect::<Vec<_>>().join(" ")
+/// Trims the line and collapses whitespace runs to one space, borrowing when nothing changes.
+fn normalize_line(line: &str) -> Cow<'_, str> {
+    let trimmed = line.trim();
+    let mut after_space = false;
+    let already_normal = trimmed.chars().all(|c| {
+        let accepted = !c.is_whitespace() || (c == ' ' && !after_space);
+        after_space = c == ' ';
+        accepted
+    });
+    if already_normal {
+        Cow::Borrowed(trimmed)
+    } else {
+        Cow::Owned(trimmed.split_whitespace().collect::<Vec<_>>().join(" "))
+    }
 }
 
-fn strong_lines(block: &[&str]) -> usize {
-    block
-        .iter()
-        .filter(|line| line.chars().filter(|c| !c.is_whitespace()).count() >= STRONG_LINE_CHARS)
-        .count()
+fn is_strong_line(line: &str) -> bool {
+    line.chars()
+        .filter(|c| !c.is_whitespace())
+        .nth(STRONG_LINE_CHARS - 1)
+        .is_some()
 }
