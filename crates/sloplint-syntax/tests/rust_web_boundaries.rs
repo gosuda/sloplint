@@ -13,6 +13,8 @@ mod rust_self_barrel;
 mod rust_thread_local_name;
 #[path = "rust_web_boundaries/typescript_callee_root.rs"]
 mod typescript_callee_root;
+#[path = "rust_web_boundaries/typescript_import_require.rs"]
+mod typescript_import_require;
 #[path = "rust_web_boundaries/typescript_object_literal_methods.rs"]
 mod typescript_object_literal_methods;
 #[path = "rust_web_boundaries/typescript_tagged_template_args.rs"]

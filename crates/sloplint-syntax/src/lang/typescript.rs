@@ -8,8 +8,8 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    last_segment, named_children, narrow, pos_of, preceding_comments, string_arg_shape,
-    strip_quotes, text,
+    first_of_kind, last_segment, named_children, narrow, pos_of, preceding_comments,
+    string_arg_shape, strip_quotes, text,
 };
 use crate::spec::Role;
 
@@ -453,7 +453,25 @@ fn ts_targets(dir: &str, src: &str) -> Vec<String> {
     ]
 }
 
+fn require_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) -> bool {
+    let Some(clause) = first_of_kind(n, &["import_require_clause"]) else {
+        return false;
+    };
+    let module = child_by_field(clause, "source").map_or("", |s| strip_quotes(text(cx, s)));
+    out.push(Import {
+        pos: pos_of(n),
+        module: Cow::Borrowed(module),
+        name: clause.named_child(0).map_or("", |id| text(cx, id)),
+        alias: None,
+        kind: ImportKind::Namespace,
+        in_test: cx.is_test_file,
+    });
+    true
+}
 fn import_stmt<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
+    if require_import(cx, n, out) {
+        return;
+    }
     let module = child_by_field(n, "source").map_or("", |s| strip_quotes(text(cx, s)));
     let Some(clause) = named_children(n)
         .into_iter()
