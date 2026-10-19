@@ -81,7 +81,7 @@ impl LangHooks for CppHooks {
             name: text(cx, name_node),
             name_pos: pos_of(name_node),
             public: is_public(cx, n, member_list(n)),
-            interface_bound: name_node.kind() == "operator_name" || is_bound(cx, n, fd),
+            interface_bound: name_node.kind() == "operator_name" || is_bound(n, fd),
             in_test: cx.is_test_file,
             params: params(cx, fd),
             return_type: return_type(cx, n, fd),
@@ -406,12 +406,8 @@ fn in_function(n: Node<'_>) -> bool {
     }
     false
 }
-fn is_bound<'s>(cx: &Cx<'_, 's>, n: Node<'_>, fd: Node<'_>) -> bool {
-    if has_child_kind(fd, "virtual_specifier") {
-        return true;
-    }
-    word(cx, n, &["storage_class_specifier"], &["virtual"])
-        || word(cx, fd, &["storage_class_specifier"], &["virtual"])
+fn is_bound(n: Node<'_>, fd: Node<'_>) -> bool {
+    has_child_kind(fd, "virtual_specifier") || has_child_kind(n, "virtual")
 }
 fn span<'s>(cx: &Cx<'_, 's>, ty: Node<'_>, end: Node<'_>) -> &'s str {
     let shown = slice(cx.src, ty.start_byte(), end.start_byte()).trim();

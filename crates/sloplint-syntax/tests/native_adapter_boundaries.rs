@@ -9,5 +9,7 @@ mod c_family_const_pointer_bindings;
 mod c_family_param_declarators;
 #[path = "native_adapter_boundaries/cpp_operator_functions.rs"]
 mod cpp_operator_functions;
+#[path = "native_adapter_boundaries/cpp_virtual_interface_bound.rs"]
+mod cpp_virtual_interface_bound;
 #[path = "native_adapter_boundaries/support.rs"]
 mod support;
