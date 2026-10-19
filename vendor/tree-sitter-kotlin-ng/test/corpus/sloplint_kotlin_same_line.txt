@@ -1,0 +1,133 @@
+================================================================================
+enum entry body closed on the same line
+================================================================================
+
+enum class E { A { override fun toString(): String = "a" } }
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (modifiers
+      (class_modifier))
+    (identifier)
+    (enum_class_body
+      (enum_entry
+        (identifier)
+        (class_body
+          (function_declaration
+            (modifiers
+              (member_modifier))
+            (identifier)
+            (function_value_parameters)
+            (user_type
+              (identifier))
+            (function_body
+              (string_literal
+                (string_content)))))))))
+
+================================================================================
+class member closed by a brace on the same line
+================================================================================
+
+class A { fun f(): Int = 1 }
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (function_declaration
+        (identifier)
+        (function_value_parameters)
+        (user_type
+          (identifier))
+        (function_body
+          (number_literal))))))
+
+================================================================================
+local class with a semicolon before a class literal on one line
+================================================================================
+
+fun f() { class C { fun g(): Int = 1 }; val m = C::class.java }
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (class_declaration
+          (identifier)
+          (class_body
+            (function_declaration
+              (identifier)
+              (function_value_parameters)
+              (user_type
+                (identifier))
+              (function_body
+                (number_literal)))))
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (navigation_expression
+            (navigation_expression
+              (identifier)
+              (identifier))
+            (identifier)))))))
+
+================================================================================
+enum entries with same-line bodies and an abstract member
+================================================================================
+
+enum class E {
+    A { override fun toString(): String = "a" },
+    B { override fun toString(): String = "b" };
+
+    abstract fun h(): Int
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (modifiers
+      (class_modifier))
+    (identifier)
+    (enum_class_body
+      (enum_entry
+        (identifier)
+        (class_body
+          (function_declaration
+            (modifiers
+              (member_modifier))
+            (identifier)
+            (function_value_parameters)
+            (user_type
+              (identifier))
+            (function_body
+              (string_literal
+                (string_content))))))
+      (enum_entry
+        (identifier)
+        (class_body
+          (function_declaration
+            (modifiers
+              (member_modifier))
+            (identifier)
+            (function_value_parameters)
+            (user_type
+              (identifier))
+            (function_body
+              (string_literal
+                (string_content))))))
+      (function_declaration
+        (modifiers
+          (inheritance_modifier))
+        (identifier)
+        (function_value_parameters)
+        (user_type
+          (identifier))))))

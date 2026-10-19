@@ -1,7 +1,10 @@
 //! Valid Kotlin that the pinned tree-sitter-kotlin-ng 1.1.0 grammar rejected.
 //!
-//! Every clean case here is valid input for kotlinc 2.4.21. The invalid cases
-//! are inputs kotlinc rejects; they must keep reporting a parse error.
+//! Clean assertions check the raw tree (`has_error` on the root), not only
+//! `analyze`: a MISSING node inserted during error recovery is hidden from the
+//! cursor, so `analyze` can report no error for a tree that has one. Invalid
+//! controls are inputs kotlinc 2.4.21 rejects with a syntax error; they must
+//! keep producing an error on the raw tree.
 
 use std::sync::LazyLock;
 
@@ -22,7 +25,21 @@ fn run(source: &str) -> Analysis<'_> {
     analyze(&mut Parsers::new(), &input, &NO_CUSTOM)
 }
 
+fn raw_has_error(source: &str) -> bool {
+    let language: tree_sitter::Language = tree_sitter_kotlin_ng::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("kotlin language loads");
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    tree.root_node().has_error()
+}
+
 fn run_clean(source: &str) -> Analysis<'_> {
+    assert!(
+        !raw_has_error(source),
+        "valid Kotlin must parse cleanly on the raw tree:\n{source}"
+    );
     let analysis = run(source);
     assert!(
         analysis.parse_error.is_none(),
@@ -33,10 +50,9 @@ fn run_clean(source: &str) -> Analysis<'_> {
 }
 
 fn run_invalid(source: &str) {
-    let analysis = run(source);
     assert!(
-        analysis.parse_error.is_some(),
-        "invalid Kotlin must report a parse error:\n{source}"
+        raw_has_error(source),
+        "invalid Kotlin must leave an error on the raw tree:\n{source}"
     );
 }
 
@@ -120,6 +136,38 @@ fn set_call_with_nested_call_arguments_after_a_value_parses() {
 }
 
 #[test]
+fn enum_entries_with_bodies_closed_on_the_same_line_parse() {
+    run_clean(
+        "enum class E {\n    A { override fun toString(): String = \"a\" },\n    B { override fun toString(): String = \"b\" };\n\n    abstract fun h(): Int\n}\n",
+    );
+}
+
+#[test]
+fn class_member_closed_by_a_brace_on_the_same_line_parses() {
+    run_clean("class A { fun f(): Int = 1 }\n");
+}
+
+#[test]
+fn valid_single_entry_enum_body_still_parses() {
+    run_clean("enum class E {\n    A { override fun toString(): String = \"a\" }\n}\n");
+}
+
+#[test]
+fn valid_one_line_enum_entry_body_still_parses() {
+    run_clean("enum class E { A { override fun toString(): String = \"a\" } }\n");
+}
+
+#[test]
+fn valid_local_class_with_a_class_literal_still_parses() {
+    run_clean("fun f() {\n    class C { fun g(): Int = 1 }\n    val m = C::class.java\n}\n");
+}
+
+#[test]
+fn valid_one_line_local_class_separated_by_a_semicolon_parses() {
+    run_clean("fun f() { class C { fun g(): Int = 1 }; val m = C::class.java }\n");
+}
+
+#[test]
 fn invalid_empty_array_literal_still_reports_an_error() {
     run_invalid("fun f(): Int {\n    val x = []\n    return 1\n}\n");
 }
@@ -130,11 +178,11 @@ fn invalid_getter_without_a_body_still_reports_an_error() {
 }
 
 #[test]
-fn valid_single_entry_enum_body_still_parses() {
-    run_clean("enum class E {\n    A { override fun toString(): String = \"a\" }\n}\n");
+fn invalid_local_class_without_a_separator_still_reports_an_error() {
+    run_invalid("fun f() { class C { fun g(): Int = 1 } val m = C::class.java }\n");
 }
 
 #[test]
-fn valid_local_class_with_a_class_literal_still_parses() {
-    run_clean("fun f() {\n    class C { fun g(): Int = 1 }\n    val m = C::class.java\n}\n");
+fn invalid_enum_entry_body_without_a_separator_still_reports_an_error() {
+    run_invalid("enum class E { A { fun f() = 1 } B }\n");
 }

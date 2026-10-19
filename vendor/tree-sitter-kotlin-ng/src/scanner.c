@@ -177,6 +177,8 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                     return false;
                 case 'i':
                     return scan_word(lexer, "import");
+                case '}':
+                    return valid_symbols[CLASS_MEMBER_SEMI] && !valid_symbols[SEMI];
                 case ';':
                     advance(lexer);
                     lexer->mark_end(lexer);

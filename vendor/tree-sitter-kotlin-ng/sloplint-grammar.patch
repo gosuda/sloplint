@@ -158,7 +158,16 @@
  void *tree_sitter_kotlin_external_scanner_create() { return NULL; }
  
  void tree_sitter_kotlin_external_scanner_destroy(void *payload) {}
-@@ -178,9 +189,11 @@
+@@ -166,6 +177,8 @@
+                     return false;
+                 case 'i':
+                     return scan_word(lexer, "import");
++                case '}':
++                    return valid_symbols[CLASS_MEMBER_SEMI] && !valid_symbols[SEMI];
+                 case ';':
+                     advance(lexer);
+                     lexer->mark_end(lexer);
+@@ -178,9 +191,11 @@
          char scanned_word[16] = {0};
      _switch:
          switch (lexer->lookahead) {
@@ -171,7 +180,7 @@
              case '*':
              case '%':
              case '>':
-@@ -279,18 +292,22 @@
+@@ -279,18 +294,22 @@
                      }
                  }
                  // If `get` was found and the keyword is not valid, return a semi since it's being used as an identifier
