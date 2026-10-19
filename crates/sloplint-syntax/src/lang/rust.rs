@@ -506,6 +506,89 @@ fn use_first<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
         _ => Some(first_segment(text(cx, n))),
     }
 }
+fn is_cell_token(tok: &str) -> bool {
+    tok == "Mutex"
+        || tok == "RwLock"
+        || tok == "RefCell"
+        || tok == "Cell"
+        || tok.starts_with("Atomic")
+}
+fn is_cell_type(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    child_by_field(n, "type").is_some_and(|t| {
+        text(cx, t)
+            .split(|c: char| !c.is_alphanumeric())
+            .any(is_cell_token)
+    })
+}
+fn static_ambient<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    in_function: bool,
+    out: &mut Vec<(AmbientKind, &'s str, Pos)>,
+) {
+    if in_function {
+        return;
+    }
+    if has_child_kind(n, "mutable_specifier") || is_cell_type(cx, n) {
+        let name = child_by_field(n, "name").map_or("", |x| text(cx, x));
+        out.push((AmbientKind::GlobalMutable, name, pos_of(n)));
+    }
+}
+fn thread_local_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
+    let mut stack: Vec<Node<'_>> = named_children(n)
+        .into_iter()
+        .filter(|c| c.kind() == "token_tree")
+        .collect();
+    while let Some(cur) = stack.pop() {
+        if cur.kind() == "identifier" {
+            return text(cx, cur);
+        }
+        stack.extend(named_children(cur));
+    }
+    "thread_local"
+}
+fn macro_ambient<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    in_function: bool,
+    out: &mut Vec<(AmbientKind, &'s str, Pos)>,
+) {
+    if in_function {
+        return;
+    }
+    if last_segment(field_text(cx, n, "macro"), &["::"]) != "thread_local" {
+        return;
+    }
+    out.push((
+        AmbientKind::GlobalMutable,
+        thread_local_name(cx, n),
+        pos_of(n),
+    ));
+}
+fn is_env_callee(callee: &str) -> bool {
+    if ["env::var", "env::var_os", "env::vars", "env::vars_os"]
+        .iter()
+        .any(|s| callee.ends_with(*s))
+    {
+        return true;
+    }
+    if !callee.contains(char::is_whitespace) {
+        return false;
+    }
+    let joined: String = callee.split_whitespace().collect();
+    ["env::var", "env::var_os", "env::vars", "env::vars_os"]
+        .iter()
+        .any(|s| joined.ends_with(*s))
+}
+fn env_ambient<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
+    let Some(func) = child_by_field(n, "function") else {
+        return;
+    };
+    let callee = text(cx, func);
+    if is_env_callee(callee) {
+        out.push((AmbientKind::EnvRead, callee, pos_of(func)));
+    }
+}
 impl LangHooks for RustHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let body = child_by_field(n, "body")?;
@@ -793,60 +876,15 @@ impl LangHooks for RustHooks {
         out: &mut Vec<(AmbientKind, &'s str, Pos)>,
     ) {
         if n.kind() == "static_item" {
-            if in_function {
-                return;
-            }
-            let cell = child_by_field(n, "type").is_some_and(|t| {
-                text(cx, t)
-                    .split(|c: char| !c.is_alphanumeric())
-                    .any(|tok| {
-                        tok == "Mutex"
-                            || tok == "RwLock"
-                            || tok == "RefCell"
-                            || tok == "Cell"
-                            || tok.starts_with("Atomic")
-                    })
-            });
-            if has_child_kind(n, "mutable_specifier") || cell {
-                let name = child_by_field(n, "name").map_or("", |x| text(cx, x));
-                out.push((AmbientKind::GlobalMutable, name, pos_of(n)));
-            }
+            static_ambient(cx, n, in_function, out);
             return;
         }
         if n.kind() == "macro_invocation" {
-            if in_function {
-                return;
-            }
-            let mac = field_text(cx, n, "macro");
-            if last_segment(mac, &["::"]) == "thread_local" {
-                let mut stack: Vec<Node<'_>> = named_children(n)
-                    .into_iter()
-                    .filter(|c| c.kind() == "token_tree")
-                    .collect();
-                let mut found = "thread_local";
-                while let Some(cur) = stack.pop() {
-                    if cur.kind() == "identifier" {
-                        found = text(cx, cur);
-                        break;
-                    }
-                    stack.extend(named_children(cur));
-                }
-                out.push((AmbientKind::GlobalMutable, found, pos_of(n)));
-            }
+            macro_ambient(cx, n, in_function, out);
             return;
         }
-        if n.kind() == "call_expression"
-            && let Some(func) = child_by_field(n, "function")
-        {
-            let callee = text(cx, func);
-            let ends = ["env::var", "env::var_os", "env::vars", "env::vars_os"];
-            let hit = ends.iter().any(|s| callee.ends_with(*s));
-            let flat = callee.contains(char::is_whitespace);
-            let joined: String = callee.split_whitespace().collect();
-            let spaced = flat && ends.iter().any(|s| joined.ends_with(*s));
-            if hit || spaced {
-                out.push((AmbientKind::EnvRead, callee, pos_of(func)));
-            }
+        if n.kind() == "call_expression" {
+            env_ambient(cx, n, out);
         }
     }
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {

@@ -422,6 +422,112 @@ fn ts_targets(dir: &str, src: &str) -> Vec<String> {
     ]
 }
 
+fn import_stmt<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
+    let module = child_by_field(n, "source").map_or("", |s| strip_quotes(text(cx, s)));
+    let Some(clause) = named_children(n)
+        .into_iter()
+        .find(|c| c.kind() == "import_clause")
+    else {
+        out.push(Import {
+            pos: pos_of(n),
+            module: Cow::Borrowed(module),
+            name: "",
+            alias: None,
+            kind: ImportKind::SideEffect,
+            in_test: cx.is_test_file,
+        });
+        return;
+    };
+    clause_imports(cx, clause, module, out);
+}
+fn export_namespace<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    module: &'s str,
+    out: &mut Vec<Import<'s>>,
+) -> bool {
+    let Some(ns) = named_children(n)
+        .into_iter()
+        .find(|c| c.kind() == "namespace_export")
+    else {
+        return false;
+    };
+    let name = named_children(ns)
+        .into_iter()
+        .find(|g| g.kind() == "identifier")
+        .map_or("", |g| text(cx, g));
+    out.push(Import {
+        pos: pos_of(ns),
+        module: Cow::Borrowed(module),
+        name,
+        alias: None,
+        kind: ImportKind::Namespace,
+        in_test: cx.is_test_file,
+    });
+    true
+}
+fn has_export_star(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    for i in 0..n.child_count() {
+        if let Some(c) = n.child(i)
+            && !c.is_named()
+            && text(cx, c) == "*"
+        {
+            return true;
+        }
+    }
+    false
+}
+fn push_named_exports<'a, 's>(
+    cx: &Cx<'_, 's>,
+    specs: Vec<(Node<'a>, &'s str, &'s str)>,
+    module: &'s str,
+    out: &mut Vec<Import<'s>>,
+) {
+    for (spec, name, alias) in specs {
+        out.push(Import {
+            pos: pos_of(spec),
+            module: Cow::Borrowed(module),
+            name,
+            alias: if alias.is_empty() || alias == name {
+                None
+            } else {
+                Some(alias)
+            },
+            kind: ImportKind::Named,
+            in_test: cx.is_test_file,
+        });
+    }
+}
+fn export_stmt<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
+    let Some(src) = child_by_field(n, "source") else {
+        return;
+    };
+    let module = strip_quotes(text(cx, src));
+    if export_namespace(cx, n, module, out) {
+        return;
+    }
+    let mut specs = Vec::new();
+    if let Some(clause) = named_children(n)
+        .into_iter()
+        .find(|c| c.kind() == "export_clause")
+    {
+        specs = export_specs(cx, clause);
+    }
+    if specs.is_empty() {
+        if has_export_star(cx, n) {
+            out.push(Import {
+                pos: pos_of(n),
+                module: Cow::Borrowed(module),
+                name: "*",
+                alias: None,
+                kind: ImportKind::Wildcard,
+                in_test: cx.is_test_file,
+            });
+        }
+        return;
+    }
+    push_named_exports(cx, specs, module, out);
+}
 impl LangHooks for TypeScriptHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let body = child_by_field(n, "body")?;
@@ -578,89 +684,11 @@ impl LangHooks for TypeScriptHooks {
 
     fn imports<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
         if n.kind() == "import_statement" {
-            let module = child_by_field(n, "source").map_or("", |s| strip_quotes(text(cx, s)));
-            let clause = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "import_clause");
-            match clause {
-                Some(clause) => clause_imports(cx, clause, module, out),
-                None => out.push(Import {
-                    pos: pos_of(n),
-                    module: Cow::Borrowed(module),
-                    name: "",
-                    alias: None,
-                    kind: ImportKind::SideEffect,
-                    in_test: cx.is_test_file,
-                }),
-            }
+            import_stmt(cx, n, out);
             return;
         }
         if n.kind() == "export_statement" {
-            let Some(src) = child_by_field(n, "source") else {
-                return;
-            };
-            let module = strip_quotes(text(cx, src));
-            if let Some(ns) = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "namespace_export")
-            {
-                let name = named_children(ns)
-                    .into_iter()
-                    .find(|g| g.kind() == "identifier")
-                    .map_or("", |g| text(cx, g));
-                out.push(Import {
-                    pos: pos_of(ns),
-                    module: Cow::Borrowed(module),
-                    name,
-                    alias: None,
-                    kind: ImportKind::Namespace,
-                    in_test: cx.is_test_file,
-                });
-                return;
-            }
-            let mut specs = Vec::new();
-            if let Some(clause) = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "export_clause")
-            {
-                specs = export_specs(cx, clause);
-            }
-            if specs.is_empty() {
-                let mut star = false;
-                for i in 0..n.child_count() {
-                    if let Some(c) = n.child(i)
-                        && !c.is_named()
-                        && text(cx, c) == "*"
-                    {
-                        star = true;
-                    }
-                }
-                if star {
-                    out.push(Import {
-                        pos: pos_of(n),
-                        module: Cow::Borrowed(module),
-                        name: "*",
-                        alias: None,
-                        kind: ImportKind::Wildcard,
-                        in_test: cx.is_test_file,
-                    });
-                }
-                return;
-            }
-            for (spec, name, alias) in specs {
-                out.push(Import {
-                    pos: pos_of(spec),
-                    module: Cow::Borrowed(module),
-                    name,
-                    alias: if alias.is_empty() || alias == name {
-                        None
-                    } else {
-                        Some(alias)
-                    },
-                    kind: ImportKind::Named,
-                    in_test: cx.is_test_file,
-                });
-            }
+            export_stmt(cx, n, out);
         }
     }
 

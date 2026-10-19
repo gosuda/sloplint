@@ -331,6 +331,67 @@ fn py_targets(cx: &Cx<'_, '_>, dir: &str, n: Node<'_>) -> Vec<String> {
     ]
 }
 
+fn py_positional(n: Node<'_>) -> Vec<Node<'_>> {
+    child_by_field(n, "arguments")
+        .map_or(Vec::new(), named_children)
+        .into_iter()
+        .filter(|a| a.kind() != "keyword_argument")
+        .collect()
+}
+
+fn computed_attr_name(last: &str, second: Option<Node<'_>>) -> Option<&'static str> {
+    if second.is_some_and(|s| s.kind() != "string") {
+        return match last {
+            "getattr" => Some("getattr with computed name"),
+            "setattr" => Some("setattr with computed name"),
+            "hasattr" => Some("hasattr with computed name"),
+            _ => Some("delattr with computed name"),
+        };
+    }
+    None
+}
+
+fn py_call_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
+    let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
+    let last = last_segment(callee, &["."]);
+    if last == "getattr" || last == "setattr" || last == "hasattr" || last == "delattr" {
+        if let Some(hit) = computed_attr_name(last, py_positional(n).into_iter().nth(1)) {
+            return Some(hit);
+        }
+        return None;
+    }
+    if last == "eval" {
+        return Some("eval");
+    }
+    if last == "exec" {
+        return Some("exec");
+    }
+    if last == "__import__" {
+        return Some("__import__");
+    }
+    if callee != "importlib.import_module" {
+        return None;
+    }
+    py_positional(n)
+        .into_iter()
+        .next()
+        .is_some_and(|f| f.kind() != "string")
+        .then_some("dynamic import")
+}
+
+fn py_subscript_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
+    let v = child_by_field(n, "value")?;
+    if v.kind() != "call" {
+        return None;
+    }
+    let f = child_by_field(v, "function").map_or("", |x| text(cx, x));
+    let last = last_segment(f, &["."]);
+    if last != "globals" && last != "locals" {
+        return None;
+    }
+    Some("globals() lookup")
+}
+
 impl LangHooks for PythonHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let name_node = child_by_field(n, "name")?;
@@ -683,50 +744,12 @@ impl LangHooks for PythonHooks {
 
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
         if n.kind() == "call" {
-            let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
-            let last = last_segment(callee, &["."]);
-            let args = child_by_field(n, "arguments").map_or(Vec::new(), named_children);
-            let mut positional = args.into_iter().filter(|a| a.kind() != "keyword_argument");
-            if last == "getattr" || last == "setattr" || last == "hasattr" || last == "delattr" {
-                let second = positional.nth(1);
-                if second.is_some_and(|s| s.kind() != "string") {
-                    return match last {
-                        "getattr" => Some("getattr with computed name"),
-                        "setattr" => Some("setattr with computed name"),
-                        "hasattr" => Some("hasattr with computed name"),
-                        _ => Some("delattr with computed name"),
-                    };
-                }
-                return None;
-            }
-            if last == "eval" {
-                return Some("eval");
-            }
-            if last == "exec" {
-                return Some("exec");
-            }
-            if last == "__import__" {
-                return Some("__import__");
-            }
-            if callee == "importlib.import_module" {
-                return positional
-                    .next()
-                    .is_some_and(|f| f.kind() != "string")
-                    .then_some("dynamic import");
-            }
+            return py_call_dynamic(n, cx);
+        }
+        if n.kind() != "subscript" {
             return None;
         }
-        if n.kind() == "subscript"
-            && let Some(v) = child_by_field(n, "value")
-            && v.kind() == "call"
-        {
-            let f = child_by_field(v, "function").map_or("", |x| text(cx, x));
-            let last = last_segment(f, &["."]);
-            if last == "globals" || last == "locals" {
-                return Some("globals() lookup");
-            }
-        }
-        None
+        py_subscript_dynamic(n, cx)
     }
 
     fn assertion(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<Assertion> {

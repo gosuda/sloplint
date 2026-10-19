@@ -349,6 +349,48 @@ fn tail_two(callee: &str) -> &str {
     }
 }
 
+fn go_var_specs(n: Node<'_>) -> Vec<Node<'_>> {
+    let mut specs = Vec::new();
+    for child in named_children(n) {
+        if child.kind() == "var_spec" {
+            specs.push(child);
+            continue;
+        }
+        specs.extend(
+            named_children(child)
+                .into_iter()
+                .filter(|s| s.kind() == "var_spec"),
+        );
+    }
+    specs
+}
+
+fn push_go_global<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
+    if is_sentinel(cx, spec) {
+        return;
+    }
+    for c in named_children(spec) {
+        if c.kind() != "identifier" {
+            continue;
+        }
+        out.push((AmbientKind::GlobalMutable, text(cx, c), pos_of(c)));
+    }
+}
+
+fn report_go_globals<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
+    for spec in go_var_specs(n) {
+        push_go_global(cx, spec, out);
+    }
+}
+
+fn report_go_env<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
+    let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
+    if callee != "os.Getenv" && callee != "os.LookupEnv" && callee != "os.Environ" {
+        return;
+    }
+    out.push((AmbientKind::EnvRead, callee, pos_of(n)));
+}
+
 impl LangHooks for GoHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let name_node = child_by_field(n, "name")?;
@@ -576,39 +618,19 @@ impl LangHooks for GoHooks {
         out: &mut Vec<(AmbientKind, &'s str, Pos)>,
     ) {
         if n.kind() == "var_declaration" {
-            if in_function || n.parent().is_some_and(|p| p.kind() != "source_file") {
+            if in_function {
                 return;
             }
-            let mut specs = Vec::new();
-            for child in named_children(n) {
-                if child.kind() == "var_spec" {
-                    specs.push(child);
-                } else {
-                    specs.extend(
-                        named_children(child)
-                            .into_iter()
-                            .filter(|s| s.kind() == "var_spec"),
-                    );
-                }
+            if n.parent().is_some_and(|p| p.kind() != "source_file") {
+                return;
             }
-            for spec in specs {
-                if is_sentinel(cx, spec) {
-                    continue;
-                }
-                for c in named_children(spec) {
-                    if c.kind() == "identifier" {
-                        out.push((AmbientKind::GlobalMutable, text(cx, c), pos_of(c)));
-                    }
-                }
-            }
+            report_go_globals(cx, n, out);
             return;
         }
-        if n.kind() == "call_expression" {
-            let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
-            if callee == "os.Getenv" || callee == "os.LookupEnv" || callee == "os.Environ" {
-                out.push((AmbientKind::EnvRead, callee, pos_of(n)));
-            }
+        if n.kind() != "call_expression" {
+            return;
         }
+        report_go_env(cx, n, out);
     }
 
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
