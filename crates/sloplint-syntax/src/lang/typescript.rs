@@ -126,6 +126,13 @@ fn missing_of<'s>(params: &[Param<'s>], ret: Option<&'s str>, name: &str) -> Vec
     missing
 }
 
+fn top_level(n: Node<'_>) -> bool {
+    matches!(
+        n.parent().map(|parent| parent.kind()),
+        Some("program" | "export_statement")
+    )
+}
+
 fn doc_anchor(n: Node<'_>) -> Node<'_> {
     let mut anchor = n;
     while let Some(p) = anchor.parent() {
@@ -825,7 +832,7 @@ impl LangHooks for TypeScriptHooks {
             }
             return;
         }
-        if in_function {
+        if in_function || !top_level(n) {
             return;
         }
         if n.kind() == "lexical_declaration" || n.kind() == "variable_declaration" {
