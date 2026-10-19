@@ -283,34 +283,28 @@ impl RuleSet {
     }
 
     /// Resolves every catalog rule: the preset of the active strictness with the user table over it.
+    ///
+    /// User options are checked even when the rule is off or filtered out.
+    /// Only enabled rules that pass the filter remain active.
     pub fn new(config: &Config, filter: &RuleFilter) -> Result<RuleSet, ConfigError> {
         Self::validate_filter(config, filter)?;
         let settings = Settings::from_config(config);
-        let resolved: Vec<ResolvedRule> = CATALOG
-            .iter()
-            .map(|info| {
-                let user = config.rules.get(info.id);
-                let preset = (info.preset)(config.project.strictness);
-                let level = user
-                    .and_then(|table| table.get("level"))
-                    .and_then(|value| value.as_str())
-                    .and_then(parse_level)
-                    .unwrap_or(preset.level);
-                let mut options = preset.options.clone();
-                if let Some(table) = user {
-                    for (key, value) in table {
-                        if key != "level" {
-                            options.insert(key.clone(), value.clone());
-                        }
-                    }
-                }
-                ResolvedRule {
-                    info,
-                    level,
-                    options,
-                }
-            })
-            .collect();
+        let mut resolved = Vec::with_capacity(CATALOG.len());
+        for info in CATALOG {
+            let user = config.rules.get(info.id);
+            let preset = (info.preset)(config.project.strictness);
+            let level = user
+                .and_then(|table| table.get("level"))
+                .and_then(|value| value.as_str())
+                .and_then(parse_level)
+                .unwrap_or(preset.level);
+            let options = merge_options(info, &preset, user)?;
+            resolved.push(ResolvedRule {
+                info,
+                level,
+                options,
+            });
+        }
         let levels: BTreeMap<String, Level> = resolved
             .iter()
             .map(|entry| (entry.info.id.to_string(), entry.level))
@@ -319,7 +313,12 @@ impl RuleSet {
         let mut world_rules = Vec::new();
         let mut active = BTreeSet::new();
         for entry in &resolved {
-            if entry.level == Level::Off || !filter.matches(entry.info.id) {
+            let wanted = entry.level != Level::Off && filter.matches(entry.info.id);
+            let overridden = config
+                .rules
+                .get(entry.info.id)
+                .is_some_and(|table| table.keys().any(|key| key != "level"));
+            if !wanted && !overridden {
                 continue;
             }
             let option_err = |message: String| ConfigError::RuleOption {
@@ -327,17 +326,23 @@ impl RuleSet {
                 message,
             };
             match entry.info.build {
-                Build::File(build) => file_rules.push((
-                    entry.info,
-                    build(entry.options.clone(), &settings).map_err(option_err)?,
-                )),
-                Build::World(build) => world_rules.push((
-                    entry.info,
-                    build(entry.options.clone()).map_err(option_err)?,
-                )),
+                Build::File(build) => {
+                    let rule = build(entry.options.clone(), &settings).map_err(option_err)?;
+                    if wanted {
+                        file_rules.push((entry.info, rule));
+                    }
+                }
+                Build::World(build) => {
+                    let rule = build(entry.options.clone()).map_err(option_err)?;
+                    if wanted {
+                        world_rules.push((entry.info, rule));
+                    }
+                }
                 Build::Meta => {}
             }
-            active.insert(entry.info.id.to_string());
+            if wanted {
+                active.insert(entry.info.id.to_string());
+            }
         }
         let mut set = RuleSet {
             file_rules,
@@ -490,6 +495,37 @@ impl RuleSet {
     /// Effective level and options of every catalog rule, in catalog order.
     pub fn resolved(&self) -> &[ResolvedRule] {
         &self.resolved
+    }
+}
+
+fn merge_options(
+    info: &RuleInfo,
+    preset: &Preset,
+    user: Option<&toml::Table>,
+) -> Result<toml::Table, ConfigError> {
+    let mut options = preset.options.clone();
+    for (key, value) in user.into_iter().flatten() {
+        if key == "level" {
+            continue;
+        }
+        if !preset.options.contains_key(key) {
+            return Err(unknown_option(info.id, key, &preset.options));
+        }
+        options.insert(key.clone(), value.clone());
+    }
+    Ok(options)
+}
+
+fn unknown_option(rule: &str, key: &str, known: &toml::Table) -> ConfigError {
+    let names: Vec<String> = known.keys().map(|name| format!("`{name}`")).collect();
+    let hint = if names.is_empty() {
+        "there are no fields".to_string()
+    } else {
+        format!("expected one of {}", names.join(", "))
+    };
+    ConfigError::RuleOption {
+        rule: rule.to_string(),
+        message: format!("unknown field `{key}`, {hint}"),
     }
 }
 

@@ -162,7 +162,7 @@ pub enum ConfigError {
     /// The file is not valid TOML or violates a table's shape.
     #[error("{origin}: {message}")]
     Toml { origin: String, message: String },
-    /// A `[rules."<id>"]` key names no catalog or custom rule.
+    /// A rule-table key or report selector names no catalog or custom rule.
     #[error("unknown rule `{id}`; valid ids: {}", valid.join(", "))]
     UnknownRule { id: String, valid: Vec<String> },
     /// A rule option or language callee pattern is malformed.

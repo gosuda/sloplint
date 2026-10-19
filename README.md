@@ -87,6 +87,8 @@ Every run analyzes the whole project root; `PATHS` only filters which findings a
 
 `--config FILE` names a file that must exist; without `--config`, a missing `sloplint.toml` falls back to defaults.
 
+Rule option names and values are validated even when a rule is disabled or filtered out. An invalid threshold or unknown option fails with exit `2`; changing strictness cannot hide the error.
+
 ```toml
 [project]
 strictness = "standard"
