@@ -384,15 +384,34 @@ fn c_params<'s>(cx: &Cx<'_, 's>, fd: Node<'_>) -> Vec<Param<'s>> {
     }
     out
 }
+fn param_target(d: Node<'_>) -> (Option<Node<'_>>, bool) {
+    let mut current = d;
+    let mut callable = false;
+    loop {
+        if current.kind() == "function_declarator" {
+            callable = true;
+        } else if !WRAP.contains(&current.kind()) {
+            break;
+        }
+        let Some(found) = inner(current) else {
+            break;
+        };
+        current = found;
+    }
+    (
+        (current.kind() == "identifier").then_some(current),
+        callable,
+    )
+}
 fn c_param<'s>(cx: &Cx<'_, 's>, p: Node<'_>) -> Option<Param<'s>> {
     let ty_node = child_by_field(p, "type")?;
-    let named = child_by_field(p, "declarator")
-        .map(unwrap)
-        .filter(|l| l.kind() == "identifier");
+    let declarator = child_by_field(p, "declarator");
+    let (named, callable) = declarator.map_or((None, false), param_target);
     let name = named.map(|l| text(cx, l)).unwrap_or("");
-    let ty = match named {
-        Some(found) => span(cx, ty_node, found),
-        None => text(cx, ty_node),
+    let ty = match (named, declarator) {
+        (Some(found), _) if !callable => span(cx, ty_node, found),
+        (_, Some(d)) => slice(cx.src, p.start_byte(), d.end_byte()),
+        (_, None) => text(cx, ty_node),
     };
     if name.is_empty() && ty == "void" {
         return None;
