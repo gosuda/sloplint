@@ -43,7 +43,31 @@ fn run<'s>(lang: Lang, path: &'s str, source: &'s str) -> Analysis<'s> {
     analyze_with(&NO_CUSTOM, lang, path, source)
 }
 
+/// first_error_pos cannot see hidden MISSING recovery nodes, so a clean
+/// `parse_error` alone could false-green; the raw tree must be healthy too.
+fn assert_raw_clean(lang: Lang, source: &str) {
+    let language: tree_sitter::Language = match lang {
+        Lang::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT,
+        Lang::Tsx => tree_sitter_typescript::LANGUAGE_TSX,
+        Lang::JavaScript => tree_sitter_javascript::LANGUAGE,
+        other => panic!("assert_raw_clean: unexpected {other:?}"),
+    }
+    .into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("js/ts language loads");
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let root = tree.root_node();
+    assert!(
+        !root.has_error() && !root.to_sexp().contains("MISSING"),
+        "raw tree must be error-free, sexp: {}",
+        root.to_sexp()
+    );
+}
+
 fn run_clean<'s>(lang: Lang, path: &'s str, source: &'s str) -> Analysis<'s> {
+    assert_raw_clean(lang, source);
     let analysis = run(lang, path, source);
     assert!(
         analysis.parse_error.is_none(),

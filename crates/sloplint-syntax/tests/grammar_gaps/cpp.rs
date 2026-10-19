@@ -26,7 +26,23 @@ fn run(source: &str) -> Analysis<'_> {
     analyze(&mut Parsers::new(), &input, &NO_CUSTOM)
 }
 
+/// first_error_pos cannot see hidden MISSING recovery nodes, so a clean
+/// `parse_error` alone could false-green; the raw tree must be healthy too.
+fn assert_raw_clean(source: &str) {
+    let language: tree_sitter::Language = tree_sitter_cpp::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).expect("cpp language loads");
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let root = tree.root_node();
+    assert!(
+        !root.has_error() && !root.to_sexp().contains("MISSING"),
+        "raw tree must be error-free, sexp: {}",
+        root.to_sexp()
+    );
+}
+
 fn run_clean(source: &str) -> Analysis<'_> {
+    assert_raw_clean(source);
     let analysis = run(source);
     assert!(
         analysis.parse_error.is_none(),
