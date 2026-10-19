@@ -162,6 +162,34 @@ mod tests {
     }
 
     #[test]
+    fn source_positions_clamp_at_unicode_line_boundaries() {
+        let source = "head\néx\n";
+        for (byte, column) in [
+            (4, 1),
+            (5, 1),
+            (6, 2),
+            (7, 2),
+            (8, 3),
+            (9, 3),
+            (u32::MAX, 3),
+        ] {
+            let (actual, context) = source_site(source, Pos { line: 2, byte });
+            assert_eq!(actual, column, "column for absolute byte {byte}");
+            assert_eq!(context.as_ref(), "éx", "context for absolute byte {byte}");
+        }
+        assert_eq!(
+            source_site(
+                "",
+                Pos {
+                    line: 0,
+                    byte: u32::MAX
+                }
+            ),
+            (1, "".into())
+        );
+    }
+
+    #[test]
     fn truncates_long_context() {
         let line = "a".repeat(200);
         let (_, context) = source_site(&line, Pos { line: 1, byte: 0 });
