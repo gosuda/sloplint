@@ -529,9 +529,33 @@ fn dynamic_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
     (first.kind() != "string_literal").then_some("reflection by name")
 }
 
+fn string_valued(n: Node<'_>) -> bool {
+    let mut pending = vec![n];
+    while let Some(current) = pending.pop() {
+        match current.kind() {
+            "string_literal" => return true,
+            "parenthesized_expression" => pending.extend(named_children(current)),
+            "binary_expression"
+                if child_by_field(current, "operator").is_some_and(|op| op.kind() == "+") =>
+            {
+                pending.extend(
+                    [
+                        child_by_field(current, "left"),
+                        child_by_field(current, "right"),
+                    ]
+                    .into_iter()
+                    .flatten(),
+                );
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
 fn equality_has_message(args: &[Node<'_>]) -> bool {
     match args {
-        [_, _, third] => !numeric_literal(*third),
+        [first, _, third] => !numeric_literal(*third) || string_valued(*first),
         [_, _, _, _, ..] => true,
         _ => false,
     }

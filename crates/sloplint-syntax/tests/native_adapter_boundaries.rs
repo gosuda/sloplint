@@ -13,6 +13,8 @@ mod cpp_operator_functions;
 mod cpp_virtual_interface_bound;
 #[path = "native_adapter_boundaries/dart_namespace_import_names.rs"]
 mod dart_namespace_import_names;
+#[path = "native_adapter_boundaries/java_message_first_assertions.rs"]
+mod java_message_first_assertions;
 #[path = "native_adapter_boundaries/objc_message_arguments.rs"]
 mod objc_message_arguments;
 #[path = "native_adapter_boundaries/support.rs"]
