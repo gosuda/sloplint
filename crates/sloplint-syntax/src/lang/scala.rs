@@ -401,6 +401,24 @@ fn extend_info<'s>(cx: &Cx<'_, 's>, c: Node<'_>) -> (Vec<ImplRef<'s>>, bool) {
     (impls, testy)
 }
 
+fn is_nested_fn(n: Node<'_>) -> bool {
+    let mut current = n.parent();
+    while let Some(parent) = current {
+        if matches!(
+            parent.kind(),
+            "function_definition"
+                | "lambda_expression"
+                | "block"
+                | "indented_block"
+                | "case_clause"
+        ) {
+            return true;
+        }
+        current = parent.parent();
+    }
+    false
+}
+
 impl LangHooks for ScalaHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         if n.kind() != "function_definition" {
@@ -413,6 +431,7 @@ impl LangHooks for ScalaHooks {
             .into_iter()
             .find(|c| c.kind() == "modifiers");
         let mut public = !mods.is_some_and(|m| has_child_kind(m, "access_modifier"));
+        public = public && !is_nested_fn(n);
         match cx.containers.last() {
             None => {}
             Some(Container::Class { exported, .. }) => {

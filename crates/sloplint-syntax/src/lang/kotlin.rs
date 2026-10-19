@@ -241,6 +241,25 @@ fn container_public(cx: &Cx<'_, '_>) -> bool {
     }
 }
 
+fn is_nested_fn(n: Node<'_>) -> bool {
+    let mut current = n.parent();
+    while let Some(parent) = current {
+        if matches!(
+            parent.kind(),
+            "function_declaration"
+                | "secondary_constructor"
+                | "lambda_literal"
+                | "anonymous_function"
+                | "anonymous_initializer"
+                | "block"
+        ) {
+            return true;
+        }
+        current = parent.parent();
+    }
+    false
+}
+
 fn expression_body(n: Node<'_>) -> bool {
     first_of_kind(n, &["function_body"])
         .and_then(first_code)
@@ -273,7 +292,7 @@ fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     };
     let annotations = annotation_names(cx, n);
     let in_test = cx.is_test_file || annotations.iter().any(|a| TEST_ANNOTATIONS.contains(a));
-    let public = !is_restricted(cx, n) && container_public(cx);
+    let public = !is_restricted(cx, n) && container_public(cx) && !is_nested_fn(n);
     let (doc, doc_pos) = preceding_comments(cx, n, COMMENTS, &[]);
     Some(FunctionHead {
         name,
