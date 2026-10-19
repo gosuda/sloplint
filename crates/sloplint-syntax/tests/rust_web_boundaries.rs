@@ -19,3 +19,5 @@ mod typescript_import_require;
 mod typescript_object_literal_methods;
 #[path = "rust_web_boundaries/typescript_tagged_template_args.rs"]
 mod typescript_tagged_template_args;
+#[path = "rust_web_boundaries/web_object_destructuring_defaults.rs"]
+mod web_object_destructuring_defaults;

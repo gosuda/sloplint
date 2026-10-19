@@ -203,7 +203,7 @@ fn ts_pat<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
                     stack.push(v);
                 }
             }
-            "assignment_pattern" => {
+            "assignment_pattern" | "object_assignment_pattern" => {
                 if let Some(l) = child_by_field(cur, "left") {
                     stack.push(l);
                 }

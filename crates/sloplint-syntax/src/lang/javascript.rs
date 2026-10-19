@@ -352,7 +352,9 @@ fn declared_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)
 
 fn collect_pattern<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     match n.kind() {
-        "identifier" => out.push((text(cx, n), pos_of(n))),
+        "identifier" | "shorthand_property_identifier_pattern" => {
+            out.push((text(cx, n), pos_of(n)));
+        }
         "object_pattern" => {
             for child in named_children(n) {
                 collect_object_member(cx, child, out);
@@ -383,6 +385,11 @@ fn collect_object_member<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s st
         "pair_pattern" => {
             if let Some(value) = child_by_field(n, "value") {
                 collect_pattern(cx, value, out);
+            }
+        }
+        "object_assignment_pattern" => {
+            if let Some(left) = child_by_field(n, "left") {
+                collect_pattern(cx, left, out);
             }
         }
         "rest_pattern" => {
