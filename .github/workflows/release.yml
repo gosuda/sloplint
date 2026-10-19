@@ -2,7 +2,7 @@ name: release
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
 
 permissions:
   contents: write
@@ -12,12 +12,32 @@ defaults:
     shell: bash
 
 jobs:
+  verify-tag:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - run: bash scripts/verify-release.sh tag "$GITHUB_REF_NAME"
+
+  ci:
+    needs: verify-tag
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+
   create:
+    needs: [verify-tag, ci]
     runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
       - run: gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "$GITHUB_REF_NAME" --notes ""
 
   build:
@@ -37,9 +57,18 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       MACOSX_DEPLOYMENT_TARGET: "11.0"
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
       - run: rustup target add ${{ matrix.target }}
       - run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Smoke-test binary
+        run: |
+          bin="target/${{ matrix.target }}/release/sloplint"
+          if [ "$RUNNER_OS" = Windows ]; then bin="$bin.exe"; fi
+          reported="$("$bin" --version | tr -d '\r')"
+          test "$reported" = "sloplint ${GITHUB_REF_NAME#v}"
+          "$bin" check crates --format agent --strictness standard --mode threshold --fail-on deny
       - name: Archive Unix
         if: runner.os != 'Windows'
         run: |

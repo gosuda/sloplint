@@ -21,7 +21,7 @@ sloplint works from syntax alone: tree-sitter parses each file and per-language 
 
 ## Install
 
-Install from source using the commands below. There is no GitHub release yet; registry installation is not the supported setup path.
+Install from source using the commands below. Registry installation is not the supported setup path.
 
 Prerequisites: Git, [rustup](https://rustup.rs/), and a C/C++ toolchain for the target platform (the tree-sitter parsers and scanners compile native sources). The checked-in `rust-toolchain.toml` pins Rust 1.99.1, which `cargo` selects automatically.
 
@@ -30,6 +30,8 @@ The release workflow builds binaries for Windows, macOS, and Linux on x86_64 and
 sloplint uses the platform default allocator on every target. It includes no custom allocator.
 
 CI builds and tests these targets and runs `sloplint check crates --strictness standard --mode threshold --fail-on deny` on each; see [.github/workflows/ci.yml](.github/workflows/ci.yml).
+
+Releases are cut by pushing a `vMAJOR.MINOR.PATCH` tag equal to the `sloplint` package version; none has been published yet. The release workflow checks the tag against the package version, runs the full CI workflow on the tagged commit, smoke-tests each binary (`--version` equals the tag and `check crates --strictness standard --mode threshold --fail-on deny` passes), and uploads `sloplint-<tag>-<target>.tar.gz|zip` with its `.sha256` file.
 
 From source, using the checked-in toolchain pin (Rust 1.99.1):
 
