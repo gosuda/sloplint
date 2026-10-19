@@ -1,3 +1,7 @@
+use sloplint_core::facts::{
+    AmbientKind, Assertion, Barrel, CallKind, FieldCopy, Handler, Import, Param, Pos, TypeDef,
+    WildcardArm,
+};
 use tree_sitter::Node;
 
 use crate::hooks::{
