@@ -312,20 +312,29 @@ fn push_use<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &mut String, out: &mut Vec
         _ => leaf_import(cx, n, prefix, out),
     }
 }
+fn enum_pattern(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
+    let mut cursor = pat.walk();
+    loop {
+        match cursor.node().kind() {
+            "tuple_struct_pattern" | "struct_pattern" => return true,
+            "match_pattern" | "or_pattern" if cursor.goto_first_child() => continue,
+            _ if text(cx, cursor.node()).contains("::") => return true,
+            _ => {}
+        }
+        while !cursor.goto_next_sibling() || cursor.field_name() == Some("condition") {
+            if !cursor.goto_parent() {
+                return false;
+            }
+        }
+    }
+}
 fn sibling_enum(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    let Some(parent) = n.parent() else {
-        return false;
-    };
-    named_children(parent)
-        .into_iter()
-        .filter(|c| c.kind() == "match_arm" && c.id() != n.id())
-        .any(|arm| {
-            child_by_field(arm, "pattern").is_some_and(|p| {
-                p.kind() == "tuple_struct_pattern"
-                    || p.kind() == "struct_pattern"
-                    || text(cx, p).contains("::")
-            })
-        })
+    n.parent().is_some_and(|parent| {
+        named_children(parent)
+            .into_iter()
+            .filter(|c| c.kind() == "match_arm" && c.id() != n.id())
+            .any(|arm| child_by_field(arm, "pattern").is_some_and(|p| enum_pattern(cx, p)))
+    })
 }
 fn err_bound<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<Option<&'s str>> {
     let pat = if pat.kind() == "match_pattern" {
