@@ -34,5 +34,7 @@ mod rust;
 mod scala;
 #[path = "grammar_gaps/starlark.rs"]
 mod starlark;
+#[path = "grammar_gaps/swift.rs"]
+mod swift;
 #[path = "grammar_gaps/zig.rs"]
 mod zig;
