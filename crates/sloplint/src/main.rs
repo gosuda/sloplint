@@ -1,6 +1,6 @@
 //! Entry point for the sloplint binary: parses arguments, runs the pipeline, renders, and maps exit codes.
 
-use std::io::{self, Write};
+use std::io::{self, BufWriter, Write};
 use std::ops::Range;
 use std::path::Path;
 use std::process::ExitCode;
@@ -99,14 +99,35 @@ fn rules(cwd: &Path, args: &RulesArgs) -> ExitCode {
     }
 }
 
-fn emit(execution: &Execution, format: Format) -> io::Result<()> {
-    let mut out = anstream::stdout();
-    match format {
-        Format::Agent => write_agent(&execution.report, &mut out)?,
-        Format::Human => write_human(execution, &mut out)?,
-        Format::Json => write_json(&execution.report, &mut out)?,
+const OUTPUT_BUFFER_BYTES: usize = 64 * 1024;
+const RECORD_BUFFER_BYTES: usize = 1024;
+
+fn with_buffered_stdout(write: impl FnOnce(&mut dyn Write) -> io::Result<()>) -> io::Result<()> {
+    let raw = io::stdout();
+    match anstream::AutoStream::choice(&raw) {
+        anstream::ColorChoice::Never => {
+            let mut buffer = BufWriter::with_capacity(OUTPUT_BUFFER_BYTES, raw.lock());
+            let mut stripped = anstream::StripStream::new(&mut buffer as &mut dyn Write);
+            write(&mut stripped)?;
+            stripped.flush()
+        }
+        choice => {
+            let mut out = BufWriter::with_capacity(
+                OUTPUT_BUFFER_BYTES,
+                anstream::AutoStream::new(raw, choice).lock(),
+            );
+            write(&mut out)?;
+            out.flush()
+        }
     }
-    out.flush()
+}
+
+fn emit(execution: &Execution, format: Format) -> io::Result<()> {
+    with_buffered_stdout(|out| match format {
+        Format::Agent => write_agent(&execution.report, out),
+        Format::Human => write_human(execution, out),
+        Format::Json => write_json(&execution.report, out),
+    })
 }
 
 fn write_agent(report: &Report, out: &mut dyn Write) -> io::Result<()> {
@@ -135,18 +156,28 @@ fn write_agent(report: &Report, out: &mut dyn Write) -> io::Result<()> {
 }
 
 fn write_json(report: &Report, out: &mut dyn Write) -> io::Result<()> {
-    let findings = report
-        .findings
-        .iter()
-        .map(sonic_rs::to_string)
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(io::Error::other)?;
-    let rules = sonic_rs::to_string(&report.rules_fired).map_err(io::Error::other)?;
-    let summary = sonic_rs::to_string(&report.summary).map_err(io::Error::other)?;
-    writeln!(out, "{{\"version\":1,")?;
-    writeln!(out, " \"findings\":[{}],", findings.join(","))?;
-    writeln!(out, " \"rules\":{rules},")?;
-    writeln!(out, " \"summary\":{summary}}}")
+    let mut record = Vec::with_capacity(RECORD_BUFFER_BYTES);
+    out.write_all(b"{\"version\":1,\n \"findings\":[")?;
+    for (index, finding) in report.findings.iter().enumerate() {
+        if index > 0 {
+            out.write_all(b",")?;
+        }
+        write_record(out, &mut record, finding)?;
+    }
+    out.write_all(b"],\n \"rules\":")?;
+    write_record(out, &mut record, &report.rules_fired)?;
+    out.write_all(b",\n \"summary\":")?;
+    write_record(out, &mut record, &report.summary)?;
+    out.write_all(b"}\n")
+}
+
+fn write_record<T>(out: &mut dyn Write, record: &mut Vec<u8>, value: &T) -> io::Result<()>
+where
+    T: sonic_rs::Serialize + ?Sized,
+{
+    record.clear();
+    sonic_rs::to_writer(&mut *record, value).map_err(io::Error::other)?;
+    out.write_all(record)
 }
 
 fn write_human(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
@@ -282,8 +313,8 @@ fn severity_name(severity: Severity) -> &'static str {
 }
 
 fn print_text(text: &str) -> ExitCode {
-    let mut out = anstream::stdout();
-    match out.write_all(text.as_bytes()).and_then(|()| out.flush()) {
+    let written = with_buffered_stdout(|out| out.write_all(text.as_bytes()));
+    match written {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => fail(&error.to_string(), 3),
     }

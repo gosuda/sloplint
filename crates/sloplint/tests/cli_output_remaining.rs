@@ -5,3 +5,5 @@
 
 #[path = "cli_output_remaining/human_source_lines.rs"]
 mod human_source_lines;
+#[path = "cli_output_remaining/output_stream.rs"]
+mod output_stream;
