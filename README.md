@@ -56,7 +56,7 @@ Exit code `0` means the gate passed: the run can still list `warn` findings belo
 
 ## Features
 
-- **complexity/**: cognitive depth, nesting depth, mutable-statement spans, nested mutation, boolean params, import fan-out.
+- **complexity/**: nesting-weighted cognitive depth, nesting depth, mutable-statement spans, nested mutation, boolean params, import fan-out.
 - **grep/**: generic names, homonym definitions across files, renamed and wildcard imports, runtime-built symbols (Java reflection calls require a non-literal first argument), non-literal log messages, multiline arguments.
 - **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors (error propagation such as Zig `try` and Odin `or_return` is not a handler), single-implementation abstractions, barrel files, field-copy literals.
 - **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.

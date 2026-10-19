@@ -253,23 +253,27 @@ fn rule_option_override_merges_with_preset() {
         "sloplint.toml",
         "[rules.\"complexity/cognitive-depth\"]\ndeny_at = 13\n",
     );
-    write(
-        &root,
-        "src/deep.rs",
-        "fn deep(v: u8) {\n    if v > 0 {\n        if v > 1 {\n            if v > 2 {\n                if v > 3 {\n                    if v > 4 {\n                        if v > 5 {\n                            if v > 6 {\n                                if v > 7 {\n                                    if v > 8 {\n                                        if v > 9 {\n                                            if v > 10 {\n                                                if v > 11 {\n                                                    return;\n                                                }\n                                            }\n                                        }\n                                    }\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n}\n",
-    );
-    let report = run_ok(&standard(&root));
-    let cognitive: Vec<_> = report
-        .findings
-        .iter()
-        .filter(|f| &*f.rule == "complexity/cognitive-depth")
-        .collect();
-    assert_eq!(cognitive.len(), 1, "expected one cognitive-depth finding");
-    assert_eq!(
-        cognitive[0].severity,
-        Severity::Warn,
-        "preset warn_at survived the deny_at override"
-    );
+    for (count, expected) in [(12, Severity::Warn), (13, Severity::Deny)] {
+        let ifs: String = (0..count)
+            .map(|n| format!("    if v > {n} {{\n        return;\n    }}\n"))
+            .collect();
+        write(
+            &root,
+            "src/deep.rs",
+            &format!("fn deep(v: u8) {{\n{ifs}}}\n"),
+        );
+        let report = run_ok(&standard(&root));
+        let cognitive: Vec<_> = report
+            .findings
+            .iter()
+            .filter(|f| &*f.rule == "complexity/cognitive-depth")
+            .collect();
+        assert_eq!(cognitive.len(), 1, "{count} ifs must fire once");
+        assert_eq!(
+            cognitive[0].severity, expected,
+            "{count} ifs with deny_at 13 must be {expected:?}"
+        );
+    }
 }
 
 #[test]

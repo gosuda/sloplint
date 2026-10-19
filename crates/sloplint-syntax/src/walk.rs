@@ -371,11 +371,13 @@ impl<'s, 'a> WalkState<'s, 'a> {
             return;
         };
         let index = frame.index;
-        self.facts.functions[index].cognitive += delta;
+        let function = &mut self.facts.functions[index];
+        function.cognitive = function.cognitive.saturating_add(delta);
     }
 
     fn score_and_nest(&mut self, delta: u32, line: u32, mark: usize) {
-        self.score_top(delta);
+        let nest = self.fn_stack.last().map_or(0, |frame| frame.nest);
+        self.score_top(delta.saturating_add(nest));
         self.bump_nest(mark, line);
     }
 
