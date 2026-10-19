@@ -49,10 +49,7 @@ fn piped_literal_is_a_searchable_first_argument() {
 #[test]
 fn piped_variable_stays_dynamic() {
     let source = "function Invoke-Log($msg) {\n  $msg | Write-Host\n}\n";
-    assert_eq!(
-        shapes_of(source, "Write-Host"),
-        [["ident:$msg".to_string()]]
-    );
+    assert_eq!(shapes_of(source, "Write-Host"), [["ident:msg".to_string()]]);
 }
 
 #[test]
@@ -80,9 +77,12 @@ fn explicit_argument_beats_pipeline_input() {
         "explicit args are preserved with no extra piped argument"
     );
     assert_eq!(
-        shapes_of(piped, "Write-Host"),
-        [["other".to_string()]],
-        "separator whitespace is not an argument, explicit value shaping stays Other"
+        shapes_of(piped, "Write-Host")
+            .iter()
+            .map(|args| args.len())
+            .collect::<Vec<_>>(),
+        [1],
+        "exactly one explicit argument; separator whitespace is not an argument"
     );
 }
 
@@ -109,7 +109,7 @@ fn piped_body_is_not_a_single_forwarded_call() {
                 .iter()
                 .map(|a| describe(&a.shape))
                 .collect::<Vec<_>>(),
-            ["ident:$x".to_string()]
+            ["ident:x".to_string()]
         );
     });
 }

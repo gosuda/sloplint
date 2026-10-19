@@ -76,6 +76,8 @@ For Zig catches, Go `if err != nil` blocks, Ruby `rescue` clauses, TypeScript `c
 
 Dart mutation rules track assignments, member and index writes, and prefix and postfix increments.
 
+PowerShell pass-through checks match variable arguments to declared parameter names without the `$` sigil. A second call or an assignment prevents a wrapper finding.
+
 ## Usage
 
 ### Commands

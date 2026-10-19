@@ -1,0 +1,2 @@
+# Positive: `Greet` only forwards `$name` to `Render-Greeting`; the callee takes a message string, so only the wrapper fires.
+a.ps1:1 warn slop/passthrough-wrapper
