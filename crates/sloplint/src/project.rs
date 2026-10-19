@@ -1,8 +1,10 @@
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
+use ignore::WalkBuilder;
 use serde::{Deserialize, Serialize};
 use sloplint_core::config::{Config, ConfigError, Mode, Strictness, parse_config};
 use sloplint_core::text::normalize_rel_path;
@@ -316,8 +318,100 @@ fn read_custom_sources(
         return Ok(Vec::new());
     }
     let matcher = glob_set(patterns, "project.custom_rule_files")?;
-    let mut sources = Vec::new();
-    for result in discover::walk(root, GlobSet::empty()) {
+    let roots = custom_source_roots(root, patterns);
+    let mut sources: BTreeMap<String, String> = BTreeMap::new();
+    for base in &roots {
+        read_custom_root(root, base, &matcher, &mut sources)?;
+    }
+    Ok(sources.into_iter().collect())
+}
+
+enum CustomSelection<'a> {
+    Skip,
+    Literal(&'a str),
+    Prefix(&'a str),
+}
+
+fn custom_selection(pattern: &str) -> CustomSelection<'_> {
+    if Path::new(pattern).is_absolute() {
+        return CustomSelection::Skip;
+    }
+    if pattern.split('/').any(|part| part == "..") {
+        return CustomSelection::Skip;
+    }
+    let mut end = None;
+    for (index, c) in pattern.char_indices() {
+        if matches!(c, '*' | '?' | '[' | '{' | '\\') {
+            end = Some(index);
+            break;
+        }
+    }
+    match end {
+        None => CustomSelection::Literal(pattern),
+        Some(index) => match pattern[..index].rfind('/') {
+            Some(pos) => CustomSelection::Prefix(&pattern[..index][..pos]),
+            None => CustomSelection::Prefix(""),
+        },
+    }
+}
+
+fn custom_source_roots(root: &Path, patterns: &[String]) -> BTreeSet<PathBuf> {
+    let mut roots = BTreeSet::new();
+    for pattern in patterns {
+        match custom_selection(pattern) {
+            CustomSelection::Skip => {}
+            CustomSelection::Literal(rel) => {
+                roots.insert(root.join(rel));
+            }
+            CustomSelection::Prefix(dir) => {
+                if dir.is_empty() {
+                    roots.insert(root.to_path_buf());
+                } else {
+                    roots.insert(root.join(dir));
+                }
+            }
+        }
+    }
+    roots
+}
+
+fn read_custom_root(
+    root: &Path,
+    base: &Path,
+    matcher: &GlobSet,
+    sources: &mut BTreeMap<String, String>,
+) -> Result<(), RunError> {
+    let is_root = base == root;
+    if !is_root && has_dir_symlink(root, base) {
+        return Ok(());
+    }
+    match fs::symlink_metadata(base) {
+        Ok(meta) if meta.file_type().is_symlink() => {
+            if !is_root {
+                return Ok(());
+            }
+        }
+        Ok(meta) if meta.file_type().is_dir() || meta.file_type().is_file() => {}
+        Ok(_) => return Ok(()),
+        Err(source)
+            if source.kind() == io::ErrorKind::NotFound
+                || source.kind() == io::ErrorKind::NotADirectory =>
+        {
+            return Ok(());
+        }
+        Err(source) => {
+            return Err(RunError::Io {
+                path: base.to_path_buf(),
+                source,
+            });
+        }
+    }
+    let mut builder = WalkBuilder::new(base);
+    builder
+        .standard_filters(false)
+        .require_git(false)
+        .follow_links(false);
+    for result in builder.build() {
         let entry = result.map_err(|error| discover::walk_error(root, error))?;
         if !entry.file_type().is_some_and(|kind| kind.is_file()) {
             continue;
@@ -328,16 +422,35 @@ fn read_custom_sources(
         let Some(rel) = normalize_rel_path(relative) else {
             continue;
         };
-        if matcher.is_match(rel.as_str()) {
-            let text = fs::read_to_string(entry.path()).map_err(|source| RunError::Io {
-                path: entry.path().to_path_buf(),
-                source,
-            })?;
-            sources.push((rel, text));
+        if rel.is_empty() || !matcher.is_match(rel.as_str()) || sources.contains_key(&rel) {
+            continue;
         }
+        let text = fs::read_to_string(entry.path()).map_err(|source| RunError::Io {
+            path: entry.path().to_path_buf(),
+            source,
+        })?;
+        sources.insert(rel, text);
     }
-    sources.sort_by(|a, b| a.0.cmp(&b.0));
-    Ok(sources)
+    Ok(())
+}
+
+fn has_dir_symlink(root: &Path, candidate: &Path) -> bool {
+    let mut current = candidate.parent();
+    while let Some(dir) = current {
+        if dir == root {
+            break;
+        }
+        if !dir.starts_with(root) {
+            return true;
+        }
+        match fs::symlink_metadata(dir) {
+            Ok(meta) if meta.file_type().is_symlink() => return true,
+            Ok(_) => {}
+            Err(_) => return false,
+        }
+        current = dir.parent();
+    }
+    false
 }
 
 fn combine(main: String, specs: &[CustomRuleSpec], origin: &str) -> Result<String, ConfigError> {
