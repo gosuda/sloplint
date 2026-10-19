@@ -26,6 +26,8 @@ mod java;
 mod javascript_typescript;
 #[path = "grammar_gaps/kotlin.rs"]
 mod kotlin;
+#[path = "grammar_gaps/objc.rs"]
+mod objc;
 #[path = "grammar_gaps/php.rs"]
 mod php;
 #[path = "grammar_gaps/powershell.rs"]
