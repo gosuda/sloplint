@@ -192,7 +192,7 @@ fn ruby_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
                 ty: None,
                 bool_default: false,
             }),
-            "optional_parameter" => {
+            "optional_parameter" | "keyword_parameter" => {
                 let name = field_text(cx, child, "name").unwrap_or("");
                 let default = child_by_field(child, "value")
                     .map(|v| trimmed(cx, v))

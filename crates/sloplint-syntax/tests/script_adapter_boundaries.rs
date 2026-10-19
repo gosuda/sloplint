@@ -13,3 +13,5 @@ mod php_test_class;
 mod python_callee_root;
 #[path = "script_adapter_boundaries/python_nested_def.rs"]
 mod python_nested_def;
+#[path = "script_adapter_boundaries/ruby_keyword_booleans.rs"]
+mod ruby_keyword_booleans;
