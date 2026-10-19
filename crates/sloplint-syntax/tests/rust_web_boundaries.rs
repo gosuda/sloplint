@@ -9,3 +9,5 @@ mod rust_enum_like_match;
 mod rust_grouped_use_modules;
 #[path = "rust_web_boundaries/rust_self_barrel.rs"]
 mod rust_self_barrel;
+#[path = "rust_web_boundaries/rust_thread_local_name.rs"]
+mod rust_thread_local_name;

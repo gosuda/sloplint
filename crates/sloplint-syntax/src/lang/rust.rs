@@ -8,8 +8,8 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    has_child_kind, last_segment, named_children, narrow, pos_of, preceding_comments,
-    string_arg_shape, text,
+    first_of_kind, has_child_kind, last_segment, named_children, narrow, pos_of,
+    preceding_comments, string_arg_shape, text,
 };
 use crate::spec::Role;
 
@@ -544,17 +544,17 @@ fn static_ambient<'s>(
     }
 }
 fn thread_local_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
-    let mut stack: Vec<Node<'_>> = named_children(n)
-        .into_iter()
-        .filter(|c| c.kind() == "token_tree")
-        .collect();
-    while let Some(cur) = stack.pop() {
-        if cur.kind() == "identifier" {
-            return text(cx, cur);
-        }
-        stack.extend(named_children(cur));
-    }
-    "thread_local"
+    let Some(tree) = first_of_kind(n, &["token_tree"]) else {
+        return "thread_local";
+    };
+    let mut cursor = tree.walk();
+    let mut tokens = tree
+        .children(&mut cursor)
+        .skip_while(|t| t.kind() != "static");
+    tokens
+        .nth(1)
+        .filter(|t| t.kind() == "identifier")
+        .map_or("thread_local", |t| text(cx, t))
 }
 fn macro_ambient<'s>(
     cx: &Cx<'_, 's>,
