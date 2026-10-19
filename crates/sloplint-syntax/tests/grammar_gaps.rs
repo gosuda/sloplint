@@ -18,6 +18,8 @@ mod go;
 mod java;
 #[path = "grammar_gaps/javascript_typescript.rs"]
 mod javascript_typescript;
+#[path = "grammar_gaps/kotlin.rs"]
+mod kotlin;
 #[path = "grammar_gaps/php.rs"]
 mod php;
 #[path = "grammar_gaps/powershell.rs"]
@@ -28,6 +30,8 @@ mod python;
 mod ruby;
 #[path = "grammar_gaps/rust.rs"]
 mod rust;
+#[path = "grammar_gaps/scala.rs"]
+mod scala;
 #[path = "grammar_gaps/starlark.rs"]
 mod starlark;
 #[path = "grammar_gaps/zig.rs"]
