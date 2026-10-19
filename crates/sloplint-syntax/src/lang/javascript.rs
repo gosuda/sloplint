@@ -287,6 +287,7 @@ fn root_of_callee(n: Node<'_>) -> Option<Node<'_>> {
         "member_expression" | "subscript_expression" => {
             root_of_callee(child_by_field(n, "object")?)
         }
+        "parenthesized_expression" => root_of_callee(first_code(n)?),
         _ => None,
     }
 }

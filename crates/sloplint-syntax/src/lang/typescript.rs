@@ -239,6 +239,18 @@ fn ts_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     }
 }
 
+fn callee_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
+    let mut cur = n;
+    loop {
+        match cur.kind() {
+            "identifier" | "this" | "super" => return Some(text(cx, cur)),
+            "member_expression" | "subscript_expression" => cur = child_by_field(cur, "object")?,
+            "parenthesized_expression" => cur = cur.named_child(0)?,
+            _ => return None,
+        }
+    }
+}
+
 fn ts_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     match n.kind() {
         "string" => string_arg_shape(cx, n, &["string_fragment"]),
@@ -693,7 +705,7 @@ impl LangHooks for TypeScriptHooks {
         Some(CallHead {
             callee: text(cx, func),
             kind: CallKind::Plain,
-            callee_root: None,
+            callee_root: callee_root(cx, func),
             args,
         })
     }
