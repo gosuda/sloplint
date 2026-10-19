@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use sloplint_core::facts::FileFacts;
 use sloplint_core::lang::Lang;
 use sloplint_core::{CommentText, CustomHit, Pos};
-use tree_sitter::{Node, Parser};
+use tree_sitter::{Node, Parser, Tree};
 
 pub use custom::CustomRules;
 pub use spec::spec;
@@ -59,7 +59,11 @@ impl Parsers {
 
 /// One file to analyze, borrowed from the run's file table.
 pub struct FileInput<'s> {
-    /// The file's language.
+    /// The file's routed language, chosen from its name.
+    ///
+    /// It decides which grammar parses first and the path-only entry-file flag. The grammar
+    /// that produces the facts can differ; see [`Lang::parse_fallback`] and
+    /// [`FileFacts::lang`].
     pub lang: Lang,
     /// The path relative to the project root, `/`-separated.
     pub path: &'s str,
@@ -88,33 +92,60 @@ pub struct Analysis<'s> {
 /// A source with syntax errors yields empty facts, the collected comments, and
 /// the first error position, so one file's findings never depend on other files.
 ///
+/// A file whose language has a [`Lang::parse_fallback`] (a `.h` file routed to C)
+/// is parsed a second time with that grammar when the first parse has errors. A
+/// clean second tree is walked with the fallback grammar's roles and hooks and
+/// queried with its custom rules, and the facts then carry the fallback language, so
+/// every language-keyed rule reads the grammar that produced them. When the
+/// second parse fails too, the result is the first parse's error and comments, and
+/// the empty facts keep `input.lang`.
+///
 /// Custom hits borrow the rules table for capture names and the file source
 /// for capture text, so `custom` shares the `'s` lifetime of the input.
 ///
 /// # Panics
 ///
-/// Panics when the pinned grammar for `input.lang` cannot be loaded or the
-/// parser returns no tree. Both are build faults (grammar or ABI drift) that
-/// never depend on the source, so they stop the run instead of passing as clean.
+/// Panics when the pinned grammar for `input.lang` or its fallback cannot be
+/// loaded or the parser returns no tree. Both are build faults (grammar or ABI
+/// drift) that never depend on the source, so they stop the run instead of
+/// passing as clean.
 pub fn analyze<'s>(
     parsers: &mut Parsers,
     input: &FileInput<'s>,
     custom: &'s CustomRules,
 ) -> Analysis<'s> {
     let tree = parsers.parse(input.lang, input.source);
-    let language_spec = spec(input.lang);
     let root = tree.root_node();
-    if root.has_error() {
-        let comments = language_spec.walk_comments(input, root).comments;
-        return Analysis {
-            facts: walk::empty_facts(input),
-            comments,
-            parse_error: first_error_pos(root),
-            custom_hits: Vec::new(),
-        };
+    if !root.has_error() {
+        return clean_analysis(input, input.lang, &tree, custom);
     }
-    let walked = language_spec.walk(input, root);
-    let custom_hits = custom.run(&tree, input.source, input.lang);
+    if let Some(fallback) = input.lang.parse_fallback(input.path) {
+        let retried = parsers.parse(fallback, input.source);
+        if !retried.root_node().has_error() {
+            return clean_analysis(input, fallback, &retried, custom);
+        }
+    }
+    let comments = spec(input.lang).walk_comments(input, root).comments;
+    Analysis {
+        facts: walk::empty_facts(input, input.lang),
+        comments,
+        parse_error: first_error_pos(root),
+        custom_hits: Vec::new(),
+    }
+}
+
+/// Walks and queries an error-free `tree` that the `parsed_as` grammar produced.
+///
+/// The tree decides the role table, hooks, custom rules, and the language of the
+/// facts, so all four come from `parsed_as`.
+fn clean_analysis<'s>(
+    input: &FileInput<'s>,
+    parsed_as: Lang,
+    tree: &Tree,
+    custom: &'s CustomRules,
+) -> Analysis<'s> {
+    let walked = spec(parsed_as).walk(input, tree.root_node());
+    let custom_hits = custom.run(tree, input.source, parsed_as);
     Analysis {
         facts: walked.facts,
         comments: walked.comments,

@@ -42,11 +42,11 @@ impl LangSpec {
             spec: self,
             src: input.source,
             path: input.path,
-            lang: input.lang,
+            lang: self.lang,
             is_test_file: input.is_test_file,
             has_interface: input.has_interface,
             collect_facts,
-            facts: empty_facts(input),
+            facts: empty_facts(input, self.lang),
             comments: Vec::new(),
             fn_stack: Vec::new(),
             marks: Vec::new(),
@@ -64,9 +64,13 @@ impl LangSpec {
 }
 
 /// Empty facts for a file, carrying only its identity fields.
-pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>) -> FileFacts<'s> {
+///
+/// `lang` is the grammar the facts come from, which the hooks and every
+/// language-keyed rule read. The entry-file flag is the one identity field that
+/// follows the file's routed `input.lang`, because it depends on the path alone.
+pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>, lang: Lang) -> FileFacts<'s> {
     FileFacts {
-        lang: input.lang,
+        lang,
         path: input.path,
         source: input.source,
         line_starts: line_starts(input.source),

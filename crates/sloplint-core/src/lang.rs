@@ -32,6 +32,9 @@ pub enum Lang {
     Starlark,
 }
 
+/// The extension that C and C++ headers share; the table routes it to C.
+const HEADER_EXTENSION: &str = ".h";
+
 /// Every extension rule in priority order; the first matching entry wins and matching is case-sensitive.
 const EXTENSIONS: &[(&str, Lang)] = &[
     (".rs", Lang::Rust),
@@ -51,7 +54,7 @@ const EXTENSIONS: &[(&str, Lang)] = &[
     (".kts", Lang::Kotlin),
     (".cs", Lang::CSharp),
     (".c", Lang::C),
-    (".h", Lang::C),
+    (HEADER_EXTENSION, Lang::C),
     (".cc", Lang::Cpp),
     (".cpp", Lang::Cpp),
     (".cxx", Lang::Cpp),
@@ -269,6 +272,14 @@ impl Lang {
             })
     }
 
+    /// The grammar to parse a file with a second time when its parse as `self` has a syntax error; `None` when no second parse applies.
+    ///
+    /// A `.h` file routes to C, yet C++ headers share the extension, so a `.h` file that fails as C is tried as C++. No other path falls back, and the routed language stays the file's language for selection, budgets, and statistics.
+    pub fn parse_fallback(self, rel_path: &str) -> Option<Lang> {
+        let header = self == Lang::C && file_name_of(rel_path).ends_with(HEADER_EXTENSION);
+        header.then_some(Lang::Cpp)
+    }
+
     /// The `[languages.<key>]` config key for this variant.
     pub fn config_key(self) -> &'static str {
         match self {
@@ -413,6 +424,35 @@ mod tests {
         assert_eq!(Lang::from_path("BUILD"), Some(Lang::Starlark));
         assert_eq!(Lang::from_path("tools/Tiltfile"), Some(Lang::Starlark));
         assert_eq!(Lang::from_path("etc/profile.ps1"), Some(Lang::PowerShell));
+    }
+
+    #[test]
+    fn only_dot_h_files_routed_to_c_fall_back_to_cpp() {
+        assert_eq!(Lang::C.parse_fallback("a.h"), Some(Lang::Cpp));
+        assert_eq!(Lang::C.parse_fallback("include/sub/a.h"), Some(Lang::Cpp));
+        assert_eq!(Lang::C.parse_fallback("a.c"), None);
+        assert_eq!(Lang::C.parse_fallback("a.hh"), None);
+        assert_eq!(Lang::C.parse_fallback("a.H"), None);
+        assert_eq!(Lang::C.parse_fallback("dir.h/a.c"), None);
+        assert_eq!(Lang::Cpp.parse_fallback("a.h"), None);
+        assert_eq!(Lang::ObjC.parse_fallback("a.h"), None);
+        for lang in ALL_LANGS.iter().copied().filter(|lang| *lang != Lang::C) {
+            assert_eq!(
+                lang.parse_fallback("a.h"),
+                None,
+                "{lang:?} never falls back"
+            );
+        }
+    }
+
+    #[test]
+    fn the_fallback_applies_exactly_to_paths_the_table_routes_to_c_through_dot_h() {
+        for path in ["a.h", "x/y/a.h", "a.c", "a.hpp", "a.h++", "a.H", "a.ipp"] {
+            let falls_back = Lang::from_path(path)
+                .and_then(|lang| lang.parse_fallback(path))
+                .is_some();
+            assert_eq!(falls_back, path.ends_with(".h"), "{path}");
+        }
     }
 
     #[test]

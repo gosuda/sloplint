@@ -17,6 +17,14 @@ pub struct Pos {
 /// Everything one analyzed file contributes; all strings borrow the file source.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileFacts<'s> {
+    /// The language of the grammar that produced these facts, which every language-keyed
+    /// rule and table reads.
+    ///
+    /// A `.h` file routed to C that parses only as C++ carries `Cpp` here, so its log-callee
+    /// table, primitive types, and rule applicability are the C++ ones. A file that failed to
+    /// parse has no tree to read and carries its routed language. Selection by
+    /// `project.languages` and the path-only `is_entry_file` flag follow the routed
+    /// language, not this field.
     pub lang: Lang,
     pub path: &'s str,
     pub source: &'s str,
@@ -236,6 +244,7 @@ pub struct NamedSite {
 /// The owned, serializable projection of `FileFacts` that world rules and the cache consume.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorldFacts {
+    /// The language of the grammar that produced the facts, copied from [`FileFacts::lang`].
     pub lang: Lang,
     pub is_test_file: bool,
     pub is_entry_file: bool,

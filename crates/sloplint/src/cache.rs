@@ -182,6 +182,11 @@ impl Cache {
 }
 
 /// Hashes everything that shapes per-file output: the binary bytes, the effective config, and custom rule files.
+///
+/// The binary bytes hold every grammar, adapter, and parse choice, including the retry of a
+/// failed `.h` parse as C++, so a changed grammar or fallback changes the key and no entry
+/// stored by another binary is read. Within one binary a path fixes its routed language and
+/// the bytes fix the retry outcome, so the path and content hash alone identify an entry.
 fn config_key(config: &Config, custom_sources: &[(String, String)]) -> io::Result<[u8; 32]> {
     let mut hasher = blake3::Hasher::new();
     let exe = std::env::current_exe()?;
