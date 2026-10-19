@@ -238,8 +238,11 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     };
     let baseline_written = if opts.write_baseline {
         let path = project::resolve_within_root(&root, &config.project.baseline)?;
-        fs::write(&path, Baseline::from_findings(&reported).to_json())
-            .map_err(|source| io_error(&path, source))?;
+        write_replacing(
+            &path,
+            Baseline::from_findings(&reported).to_json().as_bytes(),
+        )
+        .map_err(|source| io_error(&path, source))?;
         Some(config.project.baseline.clone())
     } else {
         None
@@ -556,6 +559,56 @@ fn read_source(path: &Path) -> Result<String, RunError> {
                 .to_string()
         })
         .map_err(|source| io_error(path, source))
+}
+
+/// Replaces `path` with `bytes` so no reader or crash ever sees a partial file.
+///
+/// The bytes go to an exclusively created sibling file that is renamed over
+/// `path`; on any failure the sibling is removed and `path` is untouched. An
+/// existing target must be a regular file writable by this user (a FIFO or
+/// device is refused without being opened) and keeps its permissions. The
+/// name is replaced, not followed, so a symlink swapped in after
+/// `resolve_within_root` cannot redirect the write.
+fn write_replacing(path: &Path, bytes: &[u8]) -> io::Result<()> {
+    let existing = fs::metadata(path).map(Some).or_else(|error| {
+        if error.kind() == io::ErrorKind::NotFound {
+            Ok(None)
+        } else {
+            Err(error)
+        }
+    })?;
+    if let Some(meta) = &existing {
+        if !meta.is_file() && !meta.is_dir() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "not a regular file",
+            ));
+        }
+        fs::OpenOptions::new().write(true).open(path)?;
+    }
+    let permissions = existing.map(|meta| meta.permissions());
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.subsec_nanos());
+    let name = path.file_name().unwrap_or_default().to_string_lossy();
+    let tmp = path.with_file_name(format!(".{name}.{}.{stamp}.tmp", std::process::id()));
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&tmp)?;
+    let written = file
+        .write_all(bytes)
+        .and_then(|()| match permissions {
+            Some(permissions) => file.set_permissions(permissions),
+            None => Ok(()),
+        })
+        .and_then(|()| file.sync_all());
+    drop(file);
+    written
+        .and_then(|()| fs::rename(&tmp, path))
+        .inspect_err(|_| {
+            let _ = fs::remove_file(&tmp);
+        })
 }
 
 fn is_generated(bytes: &[u8]) -> bool {
