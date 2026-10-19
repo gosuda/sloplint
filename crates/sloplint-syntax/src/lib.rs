@@ -91,6 +91,8 @@ pub struct Analysis<'s> {
 ///
 /// A source with syntax errors yields empty facts, the collected comments, and
 /// the first error position, so one file's findings never depend on other files.
+/// A failed parse always reports a position: when error recovery hides every
+/// error and missing node, the tree's end stands in for the fault.
 ///
 /// A file whose language has a [`Lang::parse_fallback`] (a `.h` file routed to C)
 /// is parsed a second time with that grammar when the first parse has errors. A
@@ -129,7 +131,7 @@ pub fn analyze<'s>(
     Analysis {
         facts: walk::empty_facts(input, input.lang),
         comments,
-        parse_error: first_error_pos(root),
+        parse_error: Some(first_error_pos(root).unwrap_or_else(|| root_end_pos(root))),
         custom_hits: Vec::new(),
     }
 }
@@ -154,7 +156,8 @@ fn clean_analysis<'s>(
     }
 }
 
-/// The position of the first error or missing node, cursor DFS order.
+/// The position of the first error or missing node, cursor DFS order, or
+/// [`None`] when recovery hides every fault in the tree.
 fn first_error_pos(root: Node<'_>) -> Option<Pos> {
     let mut cursor = root.walk();
     loop {
@@ -173,6 +176,16 @@ fn first_error_pos(root: Node<'_>) -> Option<Pos> {
                 return None;
             }
         }
+    }
+}
+
+/// The 1-based line and byte offset where `root` ends. Recovery can hide every
+/// error and missing node yet still flag `has_error`; the tree's end then
+/// stands in for the fault so a failed parse always reports a position.
+fn root_end_pos(root: Node<'_>) -> Pos {
+    Pos {
+        line: hooks::narrow(root.end_position().row) + 1,
+        byte: hooks::narrow(root.end_byte()),
     }
 }
 
