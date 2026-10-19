@@ -18,7 +18,7 @@ tree-sitter-typescript = { path = "vendor/tree-sitter-typescript" }
 tree-sitter-go = { path = "vendor/tree-sitter-go" }
 tree-sitter-python = { path = "vendor/tree-sitter-python" }
 tree-sitter-javascript = { path = "vendor/tree-sitter-javascript" }
-tree-sitter-java = "0.23.5"
+tree-sitter-java = { path = "vendor/tree-sitter-java" }
 tree-sitter-kotlin-ng = "1.1.0"
 tree-sitter-c-sharp = "0.23.5"
 tree-sitter-c = { path = "vendor/tree-sitter-c" }

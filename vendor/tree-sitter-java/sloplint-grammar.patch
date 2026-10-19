@@ -1,0 +1,11 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -1240,6 +1240,8 @@
+     spread_parameter: $ => seq(
+       optional($.modifiers),
+       $._unannotated_type,
++      // JLS 8.4.1: annotations may appear between the type and `...`.
++      repeat($._annotation),
+       '...',
+       repeat($._annotation),
+       $.variable_declarator,
