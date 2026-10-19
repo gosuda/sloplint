@@ -92,7 +92,9 @@ fn compile_query(lang: Lang, rule: &CustomRuleSpec) -> Result<Query, ConfigError
     if !names.contains(&"match") {
         return Err(custom_error(rule, "query must define a @match capture"));
     }
-    for placeholder in message_placeholders(&rule.message) {
+    let placeholders = message_placeholders(&rule.message)
+        .map_err(|error| custom_error(rule, &error.to_string()))?;
+    for placeholder in placeholders {
         if !names.contains(&placeholder.as_str()) {
             return Err(custom_error(
                 rule,

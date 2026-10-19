@@ -4,6 +4,7 @@ use std::collections::BTreeSet;
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::config::{Config, ConfigError, LANGUAGE_KEYS};
 use crate::finding::{Level, Severity};
@@ -61,6 +62,7 @@ pub fn validate_custom_rule_spec(
             return Err(format!("{field} must not be empty"));
         }
     }
+    message_placeholders(&spec.message).map_err(|error| error.to_string())?;
     for pattern in spec.include.iter().chain(spec.exclude.iter()) {
         Glob::new(pattern).map_err(|error| format!("invalid glob `{pattern}`: {error}"))?;
     }
@@ -80,39 +82,58 @@ fn valid_id(id: &str) -> bool {
         })
 }
 
+/// A malformed `{name}` placeholder in a custom rule message; offsets are byte offsets of the `{`.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum PlaceholderError {
+    /// A `{` that no `}` closes.
+    #[error("message has an unclosed `{{` at byte {offset}; write `{{{{` for a literal brace")]
+    Unclosed { offset: usize },
+    /// A `{}` that names no capture.
+    #[error(
+        "message has an empty placeholder `{{}}` at byte {offset}; name a capture or write `{{{{}}}}` for literal braces"
+    )]
+    Empty { offset: usize },
+}
+
 /// Extracts `{name}` placeholders from a message; `{{` and `}}` are literal escapes.
-pub fn message_placeholders(message: &str) -> Vec<String> {
+///
+/// A `{` that opens neither an escape nor a closed, non-empty `{name}` is an error.
+pub fn message_placeholders(message: &str) -> Result<Vec<String>, PlaceholderError> {
     let mut names = Vec::new();
-    let mut chars = message.chars().peekable();
-    while let Some(c) = chars.next() {
+    let mut chars = message.char_indices().peekable();
+    while let Some((offset, c)) = chars.next() {
         match c {
             '{' => {
-                if chars.peek() == Some(&'{') {
-                    chars.next();
-                    continue;
-                }
-                let mut name = String::new();
-                let mut closed = false;
-                for next in chars.by_ref() {
-                    if next == '}' {
-                        closed = true;
-                        break;
-                    }
-                    name.push(next);
-                }
-                if closed {
-                    names.push(name);
-                } else {
-                    break;
+                if chars.next_if(|&(_, next)| next == '{').is_none() {
+                    names.push(read_placeholder(&mut chars, offset)?);
                 }
             }
-            '}' if chars.peek() == Some(&'}') => {
-                chars.next();
+            '}' => {
+                let _ = chars.next_if(|&(_, next)| next == '}');
             }
             _ => {}
         }
     }
-    names
+    Ok(names)
+}
+
+/// Reads the name after the `{` at `offset` up to its closing `}`.
+fn read_placeholder(
+    chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>,
+    offset: usize,
+) -> Result<String, PlaceholderError> {
+    let mut name = String::new();
+    for (_, next) in chars.by_ref() {
+        if next != '}' {
+            name.push(next);
+            continue;
+        }
+        if name.is_empty() {
+            return Err(PlaceholderError::Empty { offset });
+        }
+        return Ok(name);
+    }
+    Err(PlaceholderError::Unclosed { offset })
 }
 
 /// Renders a message; each placeholder becomes the first line of its capture, clipped to 60 chars.

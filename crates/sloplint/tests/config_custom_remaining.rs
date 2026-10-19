@@ -4,5 +4,7 @@
 mod language_tables;
 #[path = "config_custom_remaining/max_file_bytes.rs"]
 mod max_file_bytes;
+#[path = "config_custom_remaining/placeholders.rs"]
+mod placeholders;
 #[path = "config_custom_remaining/toml_location.rs"]
 mod toml_location;
