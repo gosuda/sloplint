@@ -27,6 +27,24 @@ fn run<'s>(path: &'s str, source: &'s str) -> Analysis<'s> {
 }
 
 fn run_clean<'s>(path: &'s str, source: &'s str) -> Analysis<'s> {
+    // Raw-tree verdict first: recovery can insert MISSING nodes that are invisible to
+    // cursor walks, so an `analyze`-only check would pass them as clean (false green).
+    // An error-to-hidden-MISSING swap is not a fix.
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&tree_sitter_swift::LANGUAGE.into())
+        .expect("swift language loads");
+    let tree = parser
+        .parse(source, None)
+        .expect("source parses to a tree");
+    assert!(
+        !tree.root_node().has_error(),
+        "{path} must parse cleanly on the raw tree"
+    );
+    assert!(
+        !tree.root_node().to_sexp().contains("MISSING"),
+        "{path} raw tree must not hide recovery nodes"
+    );
     let analysis = run(path, source);
     assert!(
         analysis.parse_error.is_none(),

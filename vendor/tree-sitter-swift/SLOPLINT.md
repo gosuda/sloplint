@@ -44,12 +44,14 @@ labeled closures) still error; see "still failing".
 - `test/corpus/sloplint_*.txt` holds 34 new guard cases (upstream corpus format).
   They were produced by `tree-sitter test --update` and read by hand: none contains
   an ERROR or MISSING node, and every source passes `swiftc -parse`.
-- A note on the toolchain: regenerating the *unpatched* tag grammar with CLI 0.27.1
-  already moves two shapes relative to the published `parser.c` (which the publisher
-  built from a dirty tree with an older CLI): `if unsafe a == b` starts parsing
-  (previously an error) while `unsafe s.p = q` stops parsing (previously clean).
-  Both are covered by cases below; the operand rules make the behavior deliberate
-  rather than accidental in either direction.
+- A note on harnesses: `tree-sitter` CLI runs share one cached `swift.so` across
+  grammar directories, so every CLI number above was measured after deleting the
+  cache. Cargo-harness numbers use clean `cargo clean -p` rebuilds instead.
+  Verdicts throughout are raw-tree `root.has_error()`, which also sees hidden
+  recovery MISSING nodes that cursor walks miss. Two files
+  (`NIOEchoClient/main.swift`, `NIOEchoServer/main.swift`) report hidden-only
+  recovery under the cargo runtime while parsing clean under the CLI runtime;
+  they are counted as residuals either way.
 
 ## Changes to grammar.js
 
@@ -185,12 +187,15 @@ adapter never reads that field (`unwrap_statement` returns unsafe nodes as-is).
 
 ## Corpus results with tree-sitter-cli 0.27.1 `tree-sitter test`
 
-- Upstream corpus at tag 0.7.4: the tag's own expectations pass 265 of 296 with
-  both the published `parser.c` and a pristine 0.27.1 regeneration (identical
-  failure lists: 31 stale expectations, pre-existing, not a CLI effect).
-- After (patched): 296 of 296 upstream cases pass, plus 34 of 34 new
-  `test/corpus/sloplint_*.txt` cases (void 4, lifetime 5, ownership 3, runtime 3,
-  unsafe 8, assocwhere 3, modifiers 3, ranges 2, sending 3).
+- Upstream corpus at tag 0.7.4 (296 cases): 296 of 296 pass on the published
+  `parser.c`, 296 of 296 on a pristine CLI 0.27.1 regeneration, and 296 of 296
+  on the patched grammar. Each run used a freshly built parser (the CLI shares
+  one cached `swift.so` across grammar directories, so every measurement here
+  cleared the cache first; an early 265/31 scare on all three configurations was
+  stale-cache fiction, not a CLI effect).
+- New guard cases: 34 of 34 `test/corpus/sloplint_*.txt` cases pass (void 4,
+  lifetime 5, ownership 3, runtime 3, unsafe 8, assocwhere 3, modifiers 3,
+  ranges 2, sending 3).
 - Total with the patch: 330 of 330.
 
 ## Sweep result
