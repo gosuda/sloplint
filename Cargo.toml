@@ -24,7 +24,7 @@ tree-sitter-c-sharp = "0.23.5"
 tree-sitter-c = { path = "vendor/tree-sitter-c" }
 tree-sitter-cpp = { path = "vendor/tree-sitter-cpp" }
 tree-sitter-objc = "3.0.2"
-tree-sitter-php = "0.25.1"
+tree-sitter-php = { path = "vendor/tree-sitter-php" }
 tree-sitter-ruby = { path = "vendor/tree-sitter-ruby" }
 tree-sitter-bash = { path = "vendor/tree-sitter-bash" }
 tree-sitter-powershell = { path = "vendor/tree-sitter-powershell" }

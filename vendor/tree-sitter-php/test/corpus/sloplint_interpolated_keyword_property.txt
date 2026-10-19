@@ -1,0 +1,35 @@
+==========================
+Keyword property name inside double-quoted interpolation
+==========================
+
+<?php
+$keys[] = "\0$item->class\0$key";
+$x = "$item->function";
+
+---
+
+(program
+  (php_tag)
+  (expression_statement
+    (assignment_expression
+      (subscript_expression
+        (variable_name
+          (name)))
+      (encapsed_string
+        (escape_sequence)
+        (member_access_expression
+          (variable_name
+            (name))
+          (name))
+        (escape_sequence)
+        (variable_name
+          (name)))))
+  (expression_statement
+    (assignment_expression
+      (variable_name
+        (name))
+      (encapsed_string
+        (member_access_expression
+          (variable_name
+            (name))
+          (name))))))

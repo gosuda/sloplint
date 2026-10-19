@@ -1,0 +1,171 @@
+--- a/common/define-grammar.js
++++ b/common/define-grammar.js
+@@ -99,7 +99,6 @@
+       [$.if_statement],
+ 
+       [$.namespace_name],
+-      [$.heredoc_body],
+       [$.parenthesized_expression, $.argument],
+     ],
+ 
+@@ -115,6 +114,13 @@
+       $.heredoc_start,
+       $.heredoc_end,
+       $.nowdoc_string,
++      // A raw NUL byte inside a single-quoted string. The generated lexer
++      // treats NUL as end of input, so the external scanner consumes it.
++      $._single_quoted_nul,
++      // The newline that ends a heredoc body's last line. Emitted only when
++      // the next non-blank line is the closing identifier, so a body line can
++      // never enter the "body ended" state by itself.
++      $._heredoc_final_newline,
+       $.sentinel_error, // Unused token used to indicate error recovery mode
+     ],
+ 
+@@ -306,7 +312,7 @@
+         field('body', $.namespace_use_group),
+       ),
+ 
+-      namespace_use_group: $ => seq('{', commaSep1($.namespace_use_clause), '}'),
++      namespace_use_group: $ => seq('{', commaSep1($.namespace_use_clause), optional(','), '}'),
+ 
+       trait_declaration: $ => seq(
+         optional(field('attributes', $.attribute_list)),
+@@ -998,6 +1004,11 @@
+         choice(
+           $.primary_expression,
+           field('arguments', $.arguments),
++          // `clone` takes a full expression in PHP, so `clone $a = $b` and
++          // `clone $a ??= $b` (and chains through further `clone`s) parse with
++          // the assignment as the clone operand.
++          $.assignment_expression,
++          $.augmented_assignment_expression,
+         ),
+       ),
+ 
+@@ -1256,6 +1267,17 @@
+         $.relative_scope,
+         $._name,
+         $._dereferencable_expression,
++        // Class names that coincide with cast keywords (e.g. `Binary::class`).
++        // `binary`, `boolean`, `double`, `integer` and `real` are valid class
++        // names in PHP; the remaining cast keywords are reserved words and
++        // stay rejected here.
++        alias(choice(
++          keyword('binary', false),
++          keyword('boolean', false),
++          keyword('double', false),
++          keyword('integer', false),
++          keyword('real', false),
++        ), $.name),
+       ),
+ 
+       relative_scope: _ => prec(PREC.SCOPE, choice(
+@@ -1379,7 +1401,10 @@
+       _simple_string_member_access_expression: $ => prec(PREC.MEMBER, seq(
+         field('object', $.variable_name),
+         '->',
+-        field('name', $.name),
++        // Mirror `_member_name`: semi-reserved words such as `class`,
++        // `function` or `new` are valid property names, including inside
++        // interpolation (e.g. `"$item->class"`).
++        field('name', reserved('nothing', $.name)),
+       )),
+ 
+       _simple_string_subscript_unary_expression: $ => prec.left(seq('-', $.integer)),
+@@ -1459,6 +1484,7 @@
+         repeat(choice(
+           alias(token(choice('\\\\', '\\\'')), $.escape_sequence),
+           $.string_content,
++          alias($._single_quoted_nul, $.string_content),
+         )),
+         '\'',
+       ),
+@@ -1478,13 +1504,10 @@
+         optional('"'),
+         field('identifier', $.heredoc_start),
+         optional(token.immediate('"')),
+-        choice(
+-          seq(
+-            field('value', $.heredoc_body),
+-            $._new_line,
+-          ),
+-          field('value', optional($.heredoc_body)),
+-        ),
++        optional(seq(
++          field('value', $.heredoc_body),
++          $._heredoc_final_newline,
++        )),
+         field('end_tag', $.heredoc_end),
+       ),
+ 
+--- a/common/scanner.h
++++ b/common/scanner.h
+@@ -17,6 +17,8 @@
+     HEREDOC_START,
+     HEREDOC_END,
+     NOWDOC_STRING,
++    SINGLE_QUOTED_NUL,
++    HEREDOC_FINAL_NEWLINE,
+     SENTINEL_ERROR, // Unused token used to indicate error recovery mode
+ };
+ 
+@@ -348,6 +350,34 @@
+     return false;
+ }
+ 
++// Consumes the newline that ends a heredoc body only when the next non-blank
++// line is the closing identifier. The lookahead past the newline is never
++// part of the token: `mark_end` is set right after the newline.
++static bool scan_heredoc_final_newline(Scanner *scanner, TSLexer *lexer) {
++    if (scanner->heredocs.size == 0) {
++        return false;
++    }
++    if (lexer->lookahead == '\r') {
++        advance(lexer);
++        if (lexer->lookahead == '\n') {
++            advance(lexer);
++        }
++    } else if (lexer->lookahead == '\n') {
++        advance(lexer);
++    } else {
++        return false;
++    }
++    lexer->mark_end(lexer);
++
++    while (iswspace(lexer->lookahead)) {
++        advance(lexer);
++    }
++    String word = scan_heredoc_word(lexer);
++    bool matches = string_eq(&word, &array_back(&scanner->heredocs)->word);
++    array_delete(&word);
++    return matches;
++}
++
+ static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
+     const bool is_error_recovery = valid_symbols[SENTINEL_ERROR];
+ 
+@@ -359,6 +389,23 @@
+ 
+     lexer->mark_end(lexer);
+ 
++    if (valid_symbols[SINGLE_QUOTED_NUL]) {
++        lexer->result_symbol = SINGLE_QUOTED_NUL;
++        if (!lexer->eof(lexer) && lexer->lookahead == 0) {
++            advance(lexer);
++            lexer->mark_end(lexer);
++            return true;
++        }
++        return false;
++    }
++
++    // HEREDOC_FINAL_NEWLINE is valid only after a heredoc body, where
++    // HEREDOC_END cannot also be valid, so answering here hides no token.
++    if (valid_symbols[HEREDOC_FINAL_NEWLINE] && (lexer->lookahead == '\n' || lexer->lookahead == '\r')) {
++        lexer->result_symbol = HEREDOC_FINAL_NEWLINE;
++        return scan_heredoc_final_newline(scanner, lexer);
++    }
++
+     if (valid_symbols[ENCAPSED_STRING_CHARS_AFTER_VARIABLE]) {
+         lexer->result_symbol = ENCAPSED_STRING_CHARS_AFTER_VARIABLE;
+         return scan_encapsed_part_string(scanner, lexer,
