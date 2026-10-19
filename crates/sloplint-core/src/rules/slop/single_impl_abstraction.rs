@@ -1,6 +1,6 @@
 //! `slop/single-impl-abstraction`: abstractions with exactly one implementation.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::config::Strictness;
 use crate::facts::NamedSite;
@@ -84,6 +84,7 @@ struct SingleImplAbstraction {
 impl WorldRule for SingleImplAbstraction {
     fn check(&self, files: &[WorldFile<'_>], out: &mut Vec<Finding>) {
         let abstractions = abstraction_sites(files);
+        let impls = impl_index(files);
         for (name, sites) in &abstractions {
             let Some((path, site)) = sites.first() else {
                 continue;
@@ -91,7 +92,7 @@ impl WorldRule for SingleImplAbstraction {
             if sites.len() > 1 || self.allowed(name) {
                 continue;
             }
-            let Some((impl_path, impl_site)) = sole_impl(files, name) else {
+            let Some((impl_path, impl_site)) = sole_impl(&impls, name) else {
                 continue;
             };
             out.push(Finding::at_site(
@@ -129,20 +130,35 @@ fn abstraction_sites<'a>(files: &[WorldFile<'a>]) -> Sites<'a> {
     sites
 }
 
-fn sole_impl<'a>(files: &[WorldFile<'a>], name: &str) -> Option<(&'a str, &'a NamedSite)> {
-    let mut found = None;
+/// First implementation site of a name, and whether any later site repeats it.
+struct ImplSites<'a> {
+    first: (&'a str, &'a NamedSite),
+    repeated: bool,
+}
+
+type Impls<'a> = HashMap<&'a str, ImplSites<'a>>;
+
+fn impl_index<'a>(files: &[WorldFile<'a>]) -> Impls<'a> {
+    let mut index: Impls<'a> = HashMap::new();
     for file in applicable_files(files) {
         for site in &file.facts.impls {
-            if site.name.as_ref() != name {
-                continue;
-            }
-            if found.is_some() {
-                return None;
-            }
-            found = Some((file.path, site));
+            index
+                .entry(site.name.as_ref())
+                .and_modify(|sites| sites.repeated = true)
+                .or_insert(ImplSites {
+                    first: (file.path, site),
+                    repeated: false,
+                });
         }
     }
-    found
+    index
+}
+
+fn sole_impl<'a>(impls: &Impls<'a>, name: &str) -> Option<(&'a str, &'a NamedSite)> {
+    impls
+        .get(name)
+        .filter(|sites| !sites.repeated)
+        .map(|sites| sites.first)
 }
 
 impl SingleImplAbstraction {
