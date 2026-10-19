@@ -546,6 +546,25 @@ fn sole_call(body: Node<'_>, kinds: &[&str]) -> Option<usize> {
     }
     kinds.contains(&expr.kind()).then_some(expr.id())
 }
+fn const_pointer(cx: &Cx<'_, '_>, d: Node<'_>) -> bool {
+    let mut current = match d.kind() {
+        "init_declarator" => child_by_field(d, "declarator").unwrap_or(d),
+        _ => d,
+    };
+    let mut innermost_const = false;
+    while WRAP.contains(&current.kind()) {
+        if current.kind() == "pointer_declarator" {
+            innermost_const = named_children(current)
+                .iter()
+                .any(|c| c.kind() == "type_qualifier" && text(cx, *c) == "const");
+        }
+        let Some(found) = inner(current) else {
+            break;
+        };
+        current = found;
+    }
+    innermost_const
+}
 fn decl_info<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> (Vec<(&'s str, Pos)>, bool) {
     let mut cursor = n.walk();
     let ds: Vec<Node<'_>> = n
@@ -557,7 +576,7 @@ fn decl_info<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> (Vec<(&'s str, Pos)>, bool) {
         let found = leaf(d);
         if found.kind() == "function_declarator" {
             func = true;
-        } else if found.kind() == "identifier" {
+        } else if found.kind() == "identifier" && !const_pointer(cx, d) {
             out.push((text(cx, found), pos_of(found)));
         }
     }
