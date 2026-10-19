@@ -615,7 +615,11 @@ impl LangHooks for DartHooks {
         } else if let Some(at) = module.rfind(':') {
             segs = &module[at + 1..];
         }
-        emit.namespace(segs, alias);
+        let stem = segs
+            .strip_suffix(".dart")
+            .filter(|stem| !stem.is_empty())
+            .unwrap_or(segs);
+        emit.namespace(stem, alias);
     }
 
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {
