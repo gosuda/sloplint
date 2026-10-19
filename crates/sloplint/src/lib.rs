@@ -115,7 +115,7 @@ pub struct Summary {
     pub baselined: u32,
     /// Baseline entries in scope that matched nothing.
     pub stale: u32,
-    /// Files in scope skipped by policy: over `max_file_bytes`, generated, or not UTF-8. Read errors fail the run instead.
+    /// Files in scope skipped by policy: over `max_file_bytes`, generated, not UTF-8 (content or name), or not regular files (symlinks are never followed, FIFOs and devices never opened). Read errors fail the run instead.
     pub skipped: u32,
 }
 
@@ -192,12 +192,18 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         interfaces: &interfaces,
     };
     let outcomes = analyze_all(&discovery.entries, &pipe, jobs(opts.jobs))?;
-    let mut skipped = discovery.unnamed;
+    let mut skipped = count(
+        discovery
+            .skipped
+            .iter()
+            .filter(|rel| scopes.contains(rel.as_path()))
+            .count(),
+    );
     let mut analyzed = Vec::new();
     for outcome in outcomes {
         match outcome {
             Outcome::Skipped(rel) => {
-                if scopes.contains(&rel) {
+                if scopes.contains(Path::new(&rel)) {
                     skipped += 1;
                 }
             }
@@ -207,7 +213,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let files = count(
         analyzed
             .iter()
-            .filter(|file| scopes.contains(&file.rel))
+            .filter(|file| scopes.contains(Path::new(&file.rel)))
             .count(),
     );
     if opts.use_cache {
@@ -224,7 +230,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         }
     }
     let mut all = merge(&pipe, analyzed)?;
-    all.retain(|finding| scopes.contains(&finding.path));
+    all.retain(|finding| scopes.contains(Path::new(&*finding.path)));
     let (reported, baselined, stale) = if opts.write_baseline {
         (all, 0, 0)
     } else {
@@ -514,7 +520,7 @@ fn apply_gate(
         return Ok((all, 0, 0));
     }
     let baseline = load_baseline(pipe.root, &pipe.config.project.baseline)?;
-    Ok(baseline.filter(all, &|path: &str| scopes.contains(path)))
+    Ok(baseline.filter(all, &|path: &str| scopes.contains(Path::new(path))))
 }
 
 fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunError> {

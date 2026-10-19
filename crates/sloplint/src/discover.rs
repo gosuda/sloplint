@@ -24,8 +24,8 @@ pub struct Entry {
 pub struct Discovery {
     /// Lintable files in relative-path order.
     pub entries: Vec<Entry>,
-    /// Lintable non-UTF-8 names, which cannot be analyzed.
-    pub unnamed: u32,
+    /// Lintable names that are never analyzed, as root-relative paths: non-UTF-8 names and entries that are not regular files (symlinks are never followed, FIFOs and devices never opened).
+    pub skipped: Vec<PathBuf>,
 }
 
 /// Lists lintable files under `root` that match an enabled language and no exclude glob.
@@ -39,10 +39,13 @@ pub fn discover(root: &Path, config: &Config) -> Result<Discovery, RunError> {
         .collect();
     let excludes = glob_set(&patterns, "project.exclude")?;
     let mut entries = Vec::new();
-    let mut unnamed = 0;
+    let mut skipped = Vec::new();
     for result in walk(root, excludes) {
         let entry = result.map_err(|error| walk_error(root, error))?;
-        if !entry.file_type().is_some_and(|kind| kind.is_file()) {
+        let Some(kind) = entry.file_type() else {
+            continue;
+        };
+        if kind.is_dir() {
             continue;
         }
         let Ok(relative) = entry.path().strip_prefix(root) else {
@@ -51,22 +54,35 @@ pub fn discover(root: &Path, config: &Config) -> Result<Discovery, RunError> {
         match normalize_rel_path(relative) {
             Some(rel) => {
                 if let Some(lang) = enabled_lang(&rel, config) {
-                    entries.push(Entry {
-                        rel,
-                        abs: entry.path().to_path_buf(),
-                        lang,
-                    });
+                    if kind.is_file() {
+                        entries.push(Entry {
+                            rel,
+                            abs: entry.path().to_path_buf(),
+                            lang,
+                        });
+                    } else {
+                        skipped.push(relative.to_path_buf());
+                    }
                 }
             }
             None => {
-                if enabled_lang(&relative.to_string_lossy(), config).is_some() {
-                    unnamed += 1;
+                let lossy = lossy_rel(relative);
+                if enabled_lang(&lossy, config).is_some() {
+                    skipped.push(relative.to_path_buf());
                 }
             }
         }
     }
     entries.sort_by(|a, b| a.rel.cmp(&b.rel));
-    Ok(Discovery { entries, unnamed })
+    Ok(Discovery { entries, skipped })
+}
+
+fn lossy_rel(relative: &Path) -> String {
+    relative
+        .components()
+        .map(|part| part.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 /// Walks `root` with gitignore and hidden-file filters, pruning every entry that matches `prune`.

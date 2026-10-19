@@ -5,3 +5,5 @@
 
 #[path = "pipeline_remaining/path_scope.rs"]
 mod path_scope;
+#[path = "pipeline_remaining/skipped_names.rs"]
+mod skipped_names;

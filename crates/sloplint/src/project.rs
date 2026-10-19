@@ -143,17 +143,16 @@ pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunErro
 /// Root-relative PATH scopes, indexed so a membership test costs one hash lookup per path component.
 #[derive(Debug, Default)]
 pub struct Scopes {
-    paths: HashSet<String>,
+    paths: HashSet<PathBuf>,
 }
 
 impl Scopes {
     /// Whether `path` is one of the scopes or lies under one, matching whole path components; no scopes cover the whole root.
-    pub fn contains(&self, path: &str) -> bool {
+    pub fn contains(&self, path: &Path) -> bool {
         self.paths.is_empty()
-            || self.paths.contains(path)
             || path
-                .match_indices('/')
-                .any(|(index, _)| self.paths.contains(&path[..index]))
+                .ancestors()
+                .any(|ancestor| self.paths.contains(ancestor))
     }
 }
 
@@ -161,7 +160,7 @@ impl Scopes {
 ///
 /// Every PATH is validated, including those after one that names the root itself.
 pub fn scopes(root: &Path, cwd: &Path, paths: &[PathBuf]) -> Result<Scopes, RunError> {
-    let mut resolved = HashSet::new();
+    let mut resolved: HashSet<PathBuf> = HashSet::new();
     let mut whole_root = false;
     for path in paths {
         let absolute = if path.is_absolute() {
@@ -189,7 +188,7 @@ pub fn scopes(root: &Path, cwd: &Path, paths: &[PathBuf]) -> Result<Scopes, RunE
         if rel.is_empty() {
             whole_root = true;
         } else {
-            resolved.insert(rel);
+            resolved.insert(relative.to_path_buf());
         }
     }
     if whole_root {
