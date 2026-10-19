@@ -4,6 +4,8 @@
 mod dispatch;
 #[path = "config_custom_remaining/language_tables.rs"]
 mod language_tables;
+#[path = "config_custom_remaining/load_errors.rs"]
+mod load_errors;
 #[path = "config_custom_remaining/max_file_bytes.rs"]
 mod max_file_bytes;
 #[path = "config_custom_remaining/placeholders.rs"]
