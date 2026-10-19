@@ -1,0 +1,157 @@
+==================================
+Tagged template with invalid hex escape
+==================================
+
+String.raw`[0]\x`;
+String.raw`\x4`;
+String.raw`\xZ`;
+
+---
+
+(program
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (identifier)
+        property: (property_identifier))
+      arguments: (template_string
+        (string_fragment)
+        (escape_sequence))))
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (identifier)
+        property: (property_identifier))
+      arguments: (template_string
+        (escape_sequence))))
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (identifier)
+        property: (property_identifier))
+      arguments: (template_string
+        (escape_sequence)
+        (string_fragment)))))
+
+==================================
+Tagged template with invalid unicode escapes
+==================================
+
+String.raw`.\undefined`;
+String.raw`\u`;
+String.raw`\u{`;
+String.raw`\u{12`;
+String.raw`\u12`;
+
+---
+
+(program
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (identifier)
+        property: (property_identifier))
+      arguments: (template_string
+        (string_fragment)
+        (escape_sequence)
+        (string_fragment))))
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (identifier)
+        property: (property_identifier))
+      arguments: (template_string
+        (escape_sequence))))
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (identifier)
+        property: (property_identifier))
+      arguments: (template_string
+        (escape_sequence))))
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (identifier)
+        property: (property_identifier))
+      arguments: (template_string
+        (escape_sequence)
+        (string_fragment))))
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (identifier)
+        property: (property_identifier))
+      arguments: (template_string
+        (escape_sequence)
+        (string_fragment)))))
+
+==================================
+Template with valid escapes keeps escape_sequence nodes
+==================================
+
+`a\x41\u0041\u{1F600}\101\n${x}\``;
+
+---
+
+(program
+  (expression_statement
+    (template_string
+      (string_fragment)
+      (escape_sequence)
+      (escape_sequence)
+      (escape_sequence)
+      (escape_sequence)
+      (escape_sequence)
+      (template_substitution
+        (identifier))
+      (escape_sequence))))
+
+==================================
+String keeps strict escape sequences
+:error
+==================================
+
+'\x';
+
+---
+
+==================================
+JSX attribute and member names may be reserved words
+==================================
+
+const a = <div class="x" for="y" default="z" />;
+const b = <Foo.default.return />;
+const c = <class />;
+
+---
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (jsx_self_closing_element
+        name: (identifier)
+        attribute: (jsx_attribute
+          (property_identifier)
+          (string (string_fragment)))
+        attribute: (jsx_attribute
+          (property_identifier)
+          (string (string_fragment)))
+        attribute: (jsx_attribute
+          (property_identifier)
+          (string (string_fragment))))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (jsx_self_closing_element
+        name: (member_expression
+          object: (member_expression
+            object: (identifier)
+            property: (property_identifier))
+          property: (property_identifier)))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (jsx_self_closing_element
+        name: (identifier)))))

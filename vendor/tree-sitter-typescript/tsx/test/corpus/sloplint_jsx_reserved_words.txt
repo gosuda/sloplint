@@ -1,0 +1,76 @@
+=======================================
+JSX attribute names that are reserved words
+=======================================
+
+const a = <div class="x" for="y" default="z" />;
+
+---
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (jsx_self_closing_element
+        name: (identifier)
+        attribute: (jsx_attribute
+          (property_identifier)
+          (string
+            (string_fragment)))
+        attribute: (jsx_attribute
+          (property_identifier)
+          (string
+            (string_fragment)))
+        attribute: (jsx_attribute
+          (property_identifier)
+          (string
+            (string_fragment)))))))
+
+=======================================
+JSX element and member names that are reserved words
+=======================================
+
+const b = <Foo.default.return />;
+const c = <class />;
+
+---
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (jsx_self_closing_element
+        name: (member_expression
+          object: (member_expression
+            object: (identifier)
+            property: (property_identifier))
+          property: (property_identifier)))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (jsx_self_closing_element
+        name: (identifier)))))
+
+=======================================
+Optional chaining with reserved words in TSX
+=======================================
+
+const d = a?.delete(b) ?? m?.class;
+
+---
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (binary_expression
+        left: (call_expression
+          function: (member_expression
+            object: (identifier)
+            optional_chain: (optional_chain)
+            property: (property_identifier))
+          arguments: (arguments
+            (identifier)))
+        right: (member_expression
+          object: (identifier)
+          optional_chain: (optional_chain)
+          property: (property_identifier))))))

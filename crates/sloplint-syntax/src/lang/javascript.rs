@@ -34,6 +34,8 @@ pub(crate) static TABLE: &[(&str, Role)] = &[
     ("new_expression", Role::NewCall),
     ("lexical_declaration", Role::Decl),
     ("variable_declaration", Role::Decl),
+    // sloplint: `using` bindings are immutable; decl_names already tracks only `let`/`var`.
+    ("using_declaration", Role::Decl),
     ("assignment_expression", Role::Write),
     ("augmented_assignment_expression", Role::Write),
     ("update_expression", Role::Write),

@@ -34,6 +34,9 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("new_expression", Role::NewCall),
     ("lexical_declaration", Role::Decl),
     ("variable_declaration", Role::Decl),
+    // sloplint: `using` bindings are immutable, so they declare a scope but never
+    // contribute mutable names; decl_names skips them like `const`.
+    ("using_declaration", Role::Decl),
     ("assignment_expression", Role::Write),
     ("augmented_assignment_expression", Role::Write),
     ("update_expression", Role::Write),
@@ -703,6 +706,9 @@ impl LangHooks for TypeScriptHooks {
         {
             return;
         }
+        if n.kind() == "using_declaration" {
+            return;
+        }
         out.extend(ts_declared(cx, n));
     }
 
@@ -761,7 +767,14 @@ impl LangHooks for TypeScriptHooks {
             for part in named_children(stmt) {
                 match part.kind() {
                     "identifier" => out.push(text(cx, part)),
-                    "export_clause" => out.extend(export_specs(cx, part).iter().map(|s| s.1)),
+                    // sloplint: the grammar gives the anonymous keyword `default` no named
+                    // node, so a bare `default` in an export list reads as an empty name.
+                    "export_clause" => out.extend(
+                        export_specs(cx, part)
+                            .iter()
+                            .map(|s| s.1)
+                            .filter(|name| !name.is_empty()),
+                    ),
                     _ => {}
                 }
             }

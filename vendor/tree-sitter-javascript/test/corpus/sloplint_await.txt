@@ -1,0 +1,41 @@
+=======================================
+Await applies to a parenthesized callee chain
+=======================================
+
+async function f() {
+  const a = await (x ?? y)(z);
+  const b = await (await fetch(u)).json();
+}
+
+---
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    body: (statement_block
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (await_expression
+            (call_expression
+              function: (parenthesized_expression
+                (binary_expression
+                  left: (identifier)
+                  right: (identifier)))
+              arguments: (arguments
+                (identifier))))))
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (await_expression
+            (call_expression
+              function: (member_expression
+                object: (parenthesized_expression
+                  (await_expression
+                    (call_expression
+                      function: (identifier)
+                      arguments: (arguments
+                        (identifier)))))
+                property: (property_identifier))
+              arguments: (arguments))))))))

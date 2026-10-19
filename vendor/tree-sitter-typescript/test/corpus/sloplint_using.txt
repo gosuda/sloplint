@@ -1,0 +1,151 @@
+=======================================
+Using declarations are declarations, not assignments
+=======================================
+
+using file = getFile();
+await using resource = getResource();
+using a = 1, b = 2;
+
+---
+
+(program
+  (using_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (call_expression
+        function: (identifier)
+        arguments: (arguments))))
+  (using_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (call_expression
+        function: (identifier)
+        arguments: (arguments))))
+  (using_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (number))
+    (variable_declarator
+      name: (identifier)
+      value: (number))))
+
+=======================================
+Using declarations with type annotations
+=======================================
+
+using file: Disposable = getFile();
+await using resource: AsyncDisposable = getResource();
+
+---
+
+(program
+  (using_declaration
+    (variable_declarator
+      name: (identifier)
+      type: (type_annotation
+        (type_identifier))
+      value: (call_expression
+        function: (identifier)
+        arguments: (arguments))))
+  (using_declaration
+    (variable_declarator
+      name: (identifier)
+      type: (type_annotation
+        (type_identifier))
+      value: (call_expression
+        function: (identifier)
+        arguments: (arguments)))))
+
+=======================================
+Using declarations in for-of heads
+=======================================
+
+for (using r of xs) {}
+for (await using r of xs) {}
+for await (await using r of xs) {}
+
+---
+
+(program
+  (for_in_statement
+    left: (identifier)
+    right: (identifier)
+    body: (statement_block))
+  (for_in_statement
+    left: (identifier)
+    right: (identifier)
+    body: (statement_block))
+  (for_in_statement
+    left: (identifier)
+    right: (identifier)
+    body: (statement_block)))
+
+=======================================
+Using declarations in classic for heads
+=======================================
+
+for (using d1 = open(), d2 = null;;) {}
+
+---
+
+(program
+  (for_statement
+    initializer: (using_declaration
+      (variable_declarator
+        name: (identifier)
+        value: (call_expression
+          function: (identifier)
+          arguments: (arguments)))
+      (variable_declarator
+        name: (identifier)
+        value: (null)))
+    condition: (empty_statement)
+    body: (statement_block)))
+
+=======================================
+Using declaration inside a function body
+=======================================
+
+function f() {
+  using h = open();
+  await using k = openAsync();
+  return h;
+}
+
+---
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    body: (statement_block
+      (using_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (call_expression
+            function: (identifier)
+            arguments: (arguments))))
+      (using_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (call_expression
+            function: (identifier)
+            arguments: (arguments))))
+      (return_statement
+        (identifier)))))
+
+=======================================
+Using is still an identifier in an ordinary binary expression
+=======================================
+
+const z = using + 1;
+
+---
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (binary_expression
+        left: (identifier)
+        right: (number)))))
