@@ -417,7 +417,7 @@ fn ruby_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, binding: &str) -> Stmt<'s> {
 }
 fn pair_key<'s>(cx: &Cx<'_, 's>, key: Node<'_>) -> Option<&'s str> {
     match key.kind() {
-        "hash_key_symbol" => text(cx, key).strip_suffix(':'),
+        "hash_key_symbol" => Some(text(cx, key)),
         "simple_symbol" => text(cx, key).strip_prefix(':'),
         "string" => Some(strip_quotes(text(cx, key))),
         _ => None,
