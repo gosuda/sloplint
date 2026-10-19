@@ -1,0 +1,180 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -29,7 +29,14 @@
+   ],
+ 
+   rules: {
+-    program: ($) => seq(optional($.param_block), $.statement_list),
++    // sloplint: a script file body may be a list of named blocks
++    // (begin/process/end/dynamicparam) after its param block, and an empty,
++    // comment-only or param-only file is a valid script.
++    program: ($) =>
++      seq(
++        optional($.param_block),
++        optional(choice($.statement_list, $.named_block_list)),
++      ),
+ 
+     // Comments
+     comment: ($) =>
+@@ -48,22 +55,24 @@
+     integer_literal: ($) =>
+       choice($.decimal_integer_literal, $.hexadecimal_integer_literal),
+ 
++    // sloplint: numeric prefixes, exponents and multiplier suffixes are
++    // case-insensitive in PowerShell (0XFF, 1E3, 1MB, 10Gb).
+     decimal_integer_literal: ($) =>
+       token(
+         seq(
+           /[0-9]+/,
+-          optional(choice('l', 'd')),
+-          optional(choice('kb', 'mb', 'gb', 'tb', 'pb')),
++          optional(/[lLdD]/),
++          optional(/[kmgtpKMGTP][bB]/),
+         ),
+       ),
+ 
+     hexadecimal_integer_literal: ($) =>
+       token(
+         seq(
+-          '0x',
++          /0[xX]/,
+           /[0-9a-fA-F]+/,
+-          optional('l'),
+-          optional(choice('kb', 'mb', 'gb', 'tb', 'pb')),
++          optional(/[lL]/),
++          optional(/[kmgtpKMGTP][bB]/),
+         ),
+       ),
+ 
+@@ -73,18 +82,18 @@
+         choice(
+           seq(
+             /[0-9]+\.[0-9]+/,
+-            optional(token(seq('e', optional(choice('+', '-')), /[0-9]+/))),
+-            optional(choice('kb', 'mb', 'gb', 'tb', 'pb')),
++            optional(token(seq(/[eE]/, optional(choice('+', '-')), /[0-9]+/))),
++            optional(/[kmgtpKMGTP][bB]/),
+           ),
+           seq(
+             /\.[0-9]+/,
+-            optional(token(seq('e', optional(choice('+', '-')), /[0-9]+/))),
+-            optional(choice('kb', 'mb', 'gb', 'tb', 'pb')),
++            optional(token(seq(/[eE]/, optional(choice('+', '-')), /[0-9]+/))),
++            optional(/[kmgtpKMGTP][bB]/),
+           ),
+           seq(
+             /[0-9]+/,
+-            token(seq('e', optional(choice('+', '-')), /[0-9]+/)),
+-            optional(choice('kb', 'mb', 'gb', 'tb', 'pb')),
++            token(seq(/[eE]/, optional(choice('+', '-')), /[0-9]+/)),
++            optional(/[kmgtpKMGTP][bB]/),
+           ),
+         ),
+       ),
+@@ -306,10 +315,34 @@
+ 
+     // Commands
+     generic_token: ($) =>
+-      token(/[^\(\)\$\"\'\-\{\}@\|\[`\&\s][^\&\s\(\)\}\|;,]*/),
++      token(
++        choice(
++          /[^\(\)\$\"\'\-\{\}@\|\[`\&\s][^\&\s\(\)\}\|;,]*/,
++          // sloplint: option with an attached value, as in -I=dir,
++          // --go_out=$dir or -buildmode=c-shared. A bare -Name or -Name:
++          // stays a command_parameter. Commas belong to the value, as in
++          // --format=csv,noheader: native commands receive one string
++          // (about_Parsing, argument mode).
++          /-+[a-zA-Z_?\-`]+[^a-zA-Z_?\-`\s:<>&\(\)\{\}\|;,\"\'\$@\[][^\&\s\(\)\}\|;]*/,
++          // sloplint: word that starts with a variable and continues as a
++          // path, as in $env:TEMP\x.ps1 or ${root}/bin.
++          /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/][^\&\s\(\)\}\|;,]*/,
++        ),
++      ),
+ 
+     _command_token: ($) => token(/[^\(\)\{\}\s;\&]+/),
+ 
++    // sloplint: a switch clause word may open with a double quote only when
++    // it is a complete quoted word. Otherwise "^(a)$" is cut at the first
++    // parenthesis, lexed as a word, and the clause fails to parse.
++    _switch_clause_token: ($) =>
++      token(
++        choice(
++          /[^\(\)\{\}\s;\&\"][^\(\)\{\}\s;\&]*/,
++          /\"[^\(\)\{\}\s;\&\"]*\"/,
++        ),
++      ),
++
+     // Parameters
+     command_parameter: ($) => token(choice(/-+[a-zA-Z_?\-`]+/, '--')),
+ 
+@@ -460,16 +493,18 @@
+ 
+     switch_clauses: ($) => repeat1($.switch_clause),
+ 
++    // sloplint: terminators between switch clauses are optional in
++    // PowerShell, so clauses may share a line: { 1 { "a" } default { "b" } }.
+     switch_clause: ($) =>
+       seq(
+         $.switch_clause_condition,
+         $.statement_block,
+-        $._statement_terminator,
++        optional($._statement_terminator),
+         repeat(';'),
+       ),
+ 
+     switch_clause_condition: ($) =>
+-      choice($._command_token, $._primary_expression),
++      choice($._switch_clause_token, $._primary_expression),
+ 
+     foreach_statement: ($) =>
+       seq(
+@@ -785,12 +820,33 @@
+         PREC.PARAM,
+         choice(
+           seq($.command_argument_sep, optional($.generic_token)),
+-          seq($.command_argument_sep, $.array_literal_expression),
++          seq($.command_argument_sep, $._command_argument_list),
+           $.parenthesized_expression,
+           $.script_block_expression,
+         ),
+       ),
+ 
++    // sloplint: in argument position a comma list may hold bare words as
++    // well as expressions: Select-Object Name,Length. The hidden rules are
++    // aliased so that the node keeps the array_literal_expression kind.
++    _command_argument_list: ($) =>
++      choice(
++        alias($._command_list_from_expression, $.array_literal_expression),
++        alias($._command_list_from_word, $.array_literal_expression),
++      ),
++
++    _command_list_from_expression: ($) =>
++      prec.left(
++        seq($.unary_expression, repeat(seq(',', $._command_list_element))),
++      ),
++
++    _command_list_from_word: ($) =>
++      prec.left(
++        seq($.generic_token, repeat1(seq(',', $._command_list_element))),
++      ),
++
++    _command_list_element: ($) => choice($.generic_token, $.unary_expression),
++
+     verbatim_command_argument: ($) =>
+       seq('--%', $._verbatim_command_argument_chars),
+ 
+@@ -832,6 +888,14 @@
+         '(',
+         optional($.class_method_parameter_list),
+         ')',
++        // sloplint: constructor chaining, as in Dog([string]$n) : base($n) {}
++        optional(
++          seq(
++            ':',
++            choice(reservedWord('base'), reservedWord('this')),
++            $.argument_list,
++          ),
++        ),
+         '{',
+         optional($.script_block),
+         '}',

@@ -1,0 +1,513 @@
+===
+sloplint: native option with an attached value
+===
+
+protoc -I=binary --go_out=binary/proto binary/proto/*.proto
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+sloplint: go build option with an attached value
+===
+
+go build -buildmode=c-shared -o .\build\bin\windows_amd64\libecp.dll .\cshared\main.go
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+sloplint: call operator with a variable command and a long option
+===
+
+$InvokeTestCase = {
+    param($exe, $test, $log);
+    &$exe --gtest_filter=$test > $log 2>&1
+}
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (script_block_expression
+                                (script_block
+                                  (param_block
+                                    (parameter_list
+                                      (script_parameter
+                                        (variable))
+                                      (script_parameter
+                                        (variable))
+                                      (script_parameter
+                                        (variable))))
+                                  (script_block_body
+                                    (statement_list
+                                      (empty_statement)
+                                      (pipeline
+                                        (pipeline_chain
+                                          (command
+                                            (command_invokation_operator)
+                                            (command_name_expr
+                                              (path_command_name
+                                                (variable)))
+                                            (command_elements
+                                              (command_argument_sep)
+                                              (generic_token)
+                                              (command_argument_sep)
+                                              (redirection
+                                                (file_redirection_operator)
+                                                (redirected_file_name
+                                                  (command_argument_sep)
+                                                  (array_literal_expression
+                                                    (unary_expression
+                                                      (variable)))))
+                                              (command_argument_sep)
+                                              (redirection
+                                                (merging_redirection_operator)))))))))))))))))))))))))
+
+===
+sloplint: call operator with a named command and a long option
+===
+
+& cmake -E tar cfv $ZipName --format=zip $extractDir
+& tar -xzf $headersTar -C $stage --strip-components=1
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_invokation_operator)
+          (command_name_expr
+            (command_name))
+          (command_elements
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))))))
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_invokation_operator)
+          (command_name_expr
+            (command_name))
+          (command_elements
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+sloplint: argument that starts with a variable and continues as a path
+===
+
+Invoke-WebRequest 'https://example.invalid/Setup-DevEnv.ps1' -OutFile $env:TEMP\Setup-DevEnv.ps1
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (string_literal
+                  (verbatim_string_characters))))
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+sloplint: path argument after a root variable
+===
+
+New-ItemProperty -Path $RegistryKey -Name "DisplayIcon" -Value $BunBin\bun.exe -PropertyType String -Force | Out-Null
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (string_literal
+                  (expandable_string_literal))))
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)))
+        (command
+          (command_name))))))
+
+===
+sloplint: path argument after a braced variable
+===
+
+Start-Process ${env:ProgramFiles(x86)}\Tool\tool.exe
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+sloplint: comma list of bare words without spaces
+===
+
+Select-Object Name,Length
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (array_literal_expression
+              (generic_token)
+              (generic_token))))))))
+
+===
+sloplint: comma list of bare words with spaces
+===
+
+Get-ChildItem -Path . -Recurse -Filter "*.ps1" | Select-Object Name, Length
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (command_parameter)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (string_literal
+                  (expandable_string_literal))))
+            (command_argument_sep)))
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (array_literal_expression
+              (generic_token)
+              (generic_token))))))))
+
+===
+sloplint: comma list that mixes bare words, strings and variables
+===
+
+foo a,"b",$c
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (array_literal_expression
+              (generic_token)
+              (unary_expression
+                (string_literal
+                  (expandable_string_literal)))
+              (unary_expression
+                (variable)))))))))
+
+===
+sloplint: option value that holds commas for a native command
+===
+
+$gpuLine = (nvidia-smi --query-gpu=utilization.gpu,utilization.memory --format=csv,noheader,nounits | Select-Object -First 1)
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (parenthesized_expression
+                                (pipeline
+                                  (pipeline_chain
+                                    (command
+                                      (command_name)
+                                      (command_elements
+                                        (command_argument_sep)
+                                        (generic_token)
+                                        (command_argument_sep)
+                                        (generic_token)
+                                        (command_argument_sep)))
+                                    (command
+                                      (command_name)
+                                      (command_elements
+                                        (command_argument_sep)
+                                        (command_parameter)
+                                        (command_argument_sep)
+                                        (array_literal_expression
+                                          (unary_expression
+                                            (integer_literal
+                                              (decimal_integer_literal))))))))))))))))))))))))
+
+===
+sloplint: switch clause with a quoted regex that ends in a group
+===
+
+switch -regex ($Command) {
+    "^(activate|deactivate)$" { 1 }
+    default { 2 }
+}
+
+---
+
+(program
+  (statement_list
+    (switch_statement
+      (switch_parameters
+        (switch_parameter))
+      (switch_condition
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (variable)))))))))))))
+      (switch_body
+        (switch_clauses
+          (switch_clause
+            (switch_clause_condition
+              (string_literal
+                (expandable_string_literal)))
+            (statement_block
+              (statement_list
+                (pipeline
+                  (pipeline_chain
+                    (logical_expression
+                      (bitwise_expression
+                        (comparison_expression
+                          (additive_expression
+                            (multiplicative_expression
+                              (format_expression
+                                (range_expression
+                                  (array_literal_expression
+                                    (unary_expression
+                                      (integer_literal
+                                        (decimal_integer_literal))))))))))))))))
+          (switch_clause
+            (switch_clause_condition)
+            (statement_block
+              (statement_list
+                (pipeline
+                  (pipeline_chain
+                    (logical_expression
+                      (bitwise_expression
+                        (comparison_expression
+                          (additive_expression
+                            (multiplicative_expression
+                              (format_expression
+                                (range_expression
+                                  (array_literal_expression
+                                    (unary_expression
+                                      (integer_literal
+                                        (decimal_integer_literal)))))))))))))))))))))
+
+===
+sloplint: switch clause with a quoted word that has a space
+===
+
+switch ($x) { "a b" { 1 } }
+
+---
+
+(program
+  (statement_list
+    (switch_statement
+      (switch_condition
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (variable)))))))))))))
+      (switch_body
+        (switch_clauses
+          (switch_clause
+            (switch_clause_condition
+              (string_literal
+                (expandable_string_literal)))
+            (statement_block
+              (statement_list
+                (pipeline
+                  (pipeline_chain
+                    (logical_expression
+                      (bitwise_expression
+                        (comparison_expression
+                          (additive_expression
+                            (multiplicative_expression
+                              (format_expression
+                                (range_expression
+                                  (array_literal_expression
+                                    (unary_expression
+                                      (integer_literal
+                                        (decimal_integer_literal)))))))))))))))))))))

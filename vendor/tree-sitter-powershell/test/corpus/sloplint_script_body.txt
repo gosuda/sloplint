@@ -1,0 +1,224 @@
+===
+sloplint: named blocks after a param block with the brace on the next line
+===
+
+[CmdletBinding(DefaultParameterSetName = "Path", HelpURI = "https://go.microsoft.com/fwlink/?LinkId=517145")]
+param(
+	[Parameter(ParameterSetName="Path", Position = 0)]
+	[System.String[]]
+	$Path
+
+
+)
+
+begin
+{
+	# Construct the strongly-typed crypto object
+}
+
+process
+{
+	Write-output elo
+}
+
+---
+
+(program
+  (param_block
+    (attribute_list
+      (attribute
+        (attribute_name
+          (type_spec
+            (type_name
+              (type_identifier))))
+        (attribute_arguments
+          (attribute_argument
+            (simple_name)
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (string_literal
+                                (expandable_string_literal))))))))))))
+          (attribute_argument
+            (simple_name)
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (string_literal
+                                (expandable_string_literal)))))))))))))))
+    (parameter_list
+      (script_parameter
+        (attribute_list
+          (attribute
+            (attribute_name
+              (type_spec
+                (type_name
+                  (type_identifier))))
+            (attribute_arguments
+              (attribute_argument
+                (simple_name)
+                (logical_expression
+                  (bitwise_expression
+                    (comparison_expression
+                      (additive_expression
+                        (multiplicative_expression
+                          (format_expression
+                            (range_expression
+                              (array_literal_expression
+                                (unary_expression
+                                  (string_literal
+                                    (expandable_string_literal))))))))))))
+              (attribute_argument
+                (simple_name)
+                (logical_expression
+                  (bitwise_expression
+                    (comparison_expression
+                      (additive_expression
+                        (multiplicative_expression
+                          (format_expression
+                            (range_expression
+                              (array_literal_expression
+                                (unary_expression
+                                  (integer_literal
+                                    (decimal_integer_literal))))))))))))))
+          (attribute
+            (type_literal
+              (type_spec
+                (array_type_name
+                  (type_name
+                    (type_name
+                      (type_identifier))
+                    (type_identifier)))))))
+        (variable))))
+  (named_block_list
+    (named_block
+      (block_name)
+      (statement_block
+        (comment)))
+    (named_block
+      (block_name)
+      (statement_block
+        (statement_list
+          (pipeline
+            (pipeline_chain
+              (command
+                (command_name)
+                (command_elements
+                  (command_argument_sep)
+                  (generic_token))))))))))
+
+===
+sloplint: named blocks with the brace on the same line
+===
+
+begin { $x = 1 }
+process { Write-Output $_ }
+end { $x }
+
+---
+
+(program
+  (named_block_list
+    (named_block
+      (block_name)
+      (statement_block
+        (statement_list
+          (pipeline
+            (assignment_expression
+              (left_assignment_expression
+                (logical_expression
+                  (bitwise_expression
+                    (comparison_expression
+                      (additive_expression
+                        (multiplicative_expression
+                          (format_expression
+                            (range_expression
+                              (array_literal_expression
+                                (unary_expression
+                                  (variable)))))))))))
+              (assignement_operator)
+              (pipeline
+                (pipeline_chain
+                  (logical_expression
+                    (bitwise_expression
+                      (comparison_expression
+                        (additive_expression
+                          (multiplicative_expression
+                            (format_expression
+                              (range_expression
+                                (array_literal_expression
+                                  (unary_expression
+                                    (integer_literal
+                                      (decimal_integer_literal))))))))))))))))))
+    (named_block
+      (block_name)
+      (statement_block
+        (statement_list
+          (pipeline
+            (pipeline_chain
+              (command
+                (command_name)
+                (command_elements
+                  (command_argument_sep)
+                  (array_literal_expression
+                    (unary_expression
+                      (variable))))))))))
+    (named_block
+      (block_name)
+      (statement_block
+        (statement_list
+          (pipeline
+            (pipeline_chain
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (variable)))))))))))))))))
+
+===
+sloplint: a script that holds only a param block
+===
+
+param([string] $Name)
+
+---
+
+(program
+  (param_block
+    (parameter_list
+      (script_parameter
+        (attribute_list
+          (attribute
+            (type_literal
+              (type_spec
+                (type_name
+                  (type_identifier))))))
+        (variable)))))
+
+===
+sloplint: a script that holds only a comment
+===
+
+# Nothing to do here.
+
+---
+
+(program
+  (comment))
