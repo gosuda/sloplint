@@ -1032,6 +1032,7 @@ module.exports = grammar({
 
     _method_name: $ => choice(
       $.identifier,
+      $._keyword_method_name,
       $._function_identifier,
       $.constant,
       $.setter,
@@ -1041,13 +1042,25 @@ module.exports = grammar({
       $._nonlocal_variable,
     ),
 
+    // `self` and `super` are keywords. After `def` the keyword wins over
+    // `identifier`, because `def self.name` is also valid, so a method
+    // named `self` or `super` needs its own alternative. Every other
+    // reserved word already lexes as `identifier` here.
+    _keyword_method_name: $ => choice(
+      alias($.self, $.identifier),
+      alias($.super, $.identifier),
+    ),
+
     _nonlocal_variable: $ => choice(
       $.instance_variable,
       $.class_variable,
       $.global_variable,
     ),
 
-    setter: $ => seq(field('name', $.identifier), token.immediate('=')),
+    setter: $ => seq(
+      field('name', choice($.identifier, $._keyword_method_name)),
+      token.immediate('='),
+    ),
 
     undef: $ => seq('undef', commaSep1($._method_name)),
     alias: $ => seq(

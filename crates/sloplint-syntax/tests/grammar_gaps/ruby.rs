@@ -5,11 +5,15 @@
 //! error for each one. The control tests read facts from the parsed tree, so a
 //! node-shape regression shows up as a changed fact and not only as a new error.
 //!
+//! Two gaps are fixed: a `=begin` block comment that ended too early, and a
+//! method named `self` or `super` (`def self`), which the grammar read as the
+//! start of `def self.name`.
+//!
 //! The context-dependent heredoc-in-interpolation forms (nested heredocs such
 //! as `#{<<A}` inside another heredoc body) still fail: the scanner reads
 //! pending heredoc bodies first-opened-first, while Ruby reads them
-//! depth-first. A queue redesign fixed those forms but regressed five upstream
-//! corpus cases, so it was reverted. Those forms are recorded in
+//! depth-first. A queue redesign was tried and regressed five upstream corpus
+//! cases, so it was reverted. Those forms are recorded in
 //! `vendor/tree-sitter-ruby/SLOPLINT.md`, not here.
 
 use std::sync::LazyLock;
@@ -127,6 +131,97 @@ fn an_end_word_with_a_letter_suffix_at_end_of_input_still_reports_a_parse_error(
     assert!(
         analysis.parse_error.is_some(),
         "`=endx` must not close the comment"
+    );
+}
+
+#[test]
+fn a_method_named_self_parses_as_a_method() {
+    let analysis = run_clean("class T\n  def self\n    1\n  end\nend\n");
+    assert_eq!(function_names(&analysis), ["self"]);
+    let types: Vec<_> = analysis.facts.types.iter().map(|t| t.name).collect();
+    assert_eq!(types, ["T"]);
+}
+
+#[test]
+fn a_method_named_self_with_parameters_or_on_one_line_parses() {
+    let source = concat!(
+        "def self(a)\n  a\nend\n",
+        "def self a, b\n  a\nend\n",
+        "def self() 1 end\n",
+        "def self; 1; end\n",
+        "def self; end\n",
+        "x = def self; 1; end\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["self"; 6]);
+}
+
+#[test]
+fn an_endless_method_named_self_parses() {
+    let analysis = run_clean("def self = 1\ndef self(a) = a\n");
+    assert_eq!(function_names(&analysis), ["self", "self"]);
+}
+
+#[test]
+fn a_setter_named_self_parses_as_one_method() {
+    let analysis = run_clean("def self=(v)\n  @v = v\nend\n");
+    assert_eq!(
+        function_names(&analysis),
+        ["self="],
+        "one method, not an endless `def self` followed by loose statements"
+    );
+}
+
+#[test]
+fn a_method_named_super_parses() {
+    let analysis = run_clean("def super\n  1\nend\ndef super(a)\n  a\nend\n");
+    assert_eq!(function_names(&analysis), ["super", "super"]);
+}
+
+#[test]
+fn a_method_named_self_beside_a_singleton_method_on_self_keeps_both() {
+    let source = "class T\n  def self\n    1\n  end\n\n  def self.build\n    new\n  end\nend\n";
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["self", "build"]);
+}
+
+#[test]
+fn singleton_methods_named_self_and_super_keep_their_names() {
+    let source = "def self.self\n  1\nend\ndef self.super\n  1\nend\ndef self::self\n  1\nend\n";
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["self", "super", "self"]);
+}
+
+#[test]
+fn alias_and_undef_with_self_still_parse() {
+    let analysis = run_clean("alias self foo\nalias foo self\nundef self, super\n");
+    assert!(analysis.facts.functions.is_empty());
+}
+
+#[test]
+fn an_unterminated_method_named_self_still_reports_a_parse_error() {
+    let analysis = run("def self\n  1\n");
+    assert!(
+        analysis.parse_error.is_some(),
+        "a missing `end` after `def self` must not parse"
+    );
+}
+
+#[test]
+fn an_unterminated_singleton_method_on_self_still_reports_a_parse_error() {
+    let analysis = run("def self.build\n  1\n");
+    assert!(
+        analysis.parse_error.is_some(),
+        "a missing `end` after `def self.build` must not parse"
+    );
+}
+
+#[test]
+fn a_method_named_self_with_a_rescue_modifier_and_no_equals_still_reports_a_parse_error() {
+    let analysis = run("def self rescue 1\n");
+    assert!(
+        analysis.parse_error.is_some(),
+        "`def self rescue 1` is not valid Ruby: an endless method needs `=`"
     );
 }
 

@@ -15,7 +15,10 @@ Date: 2026-10-20.
 ## Why
 
 The published grammar reports a parse error on valid Ruby. sloplint skips a whole file on
-any error node. This patch removes the `=begin` block comment error reproduced below.
+any error node. This patch removes two errors that were reproduced on real files:
+
+- a `=begin` block comment that ends too early;
+- a method named `self` or `super` (`def self`).
 
 ## Regenerating src/
 
@@ -28,16 +31,35 @@ any error node. This patch removes the `=begin` block comment error reproduced b
   (it is both a supertype and inlined; the CLI ignores the supertype) and marks some
   nodes as extras. It adds or removes no visible node kind and no field.
   `crates/sloplint-syntax/src/lang/ruby.rs` does not reference `_call_operator`.
+- The `def self` change leaves `node-types.json` byte for byte the same as the
+  output of the previous regeneration (checked with `cmp`).
 - Run `tree-sitter test` in an upstream clone with the patch applied and the
   `test/corpus/sloplint_*.txt` files copied in. Upstream does not ship them.
 
 ## Changes to grammar.js
+
+Block comment:
 
 - The `comment` rule now covers only `#` line comments. The `=begin ... =end`
   block comment moved to a new external token `$._block_comment`.
 - A hidden rule `_block_comment_extra` aliases that token to `$.comment`, so the
   tree still holds a `comment` node. An extra cannot be an alias directly, so the
   hidden rule is needed. The externals list order matches the scanner enum order.
+
+Method named `self` or `super`:
+
+- After `def`, the keyword `self` is valid as the object of `def self.name`. So the
+  lexer returned the `self` keyword and the parser had no rule for a method named
+  `self`. `super` is in the same state. Every other reserved word (`end`, `class`,
+  `nil`, `defined?`, `BEGIN` and the rest) already lexed as `identifier` there.
+- A new hidden rule `_keyword_method_name` is `alias($.self, $.identifier)` or
+  `alias($.super, $.identifier)`. `_method_name` takes it. The node kind is
+  `identifier`, the same kind as for `def end` and `def class`.
+- `setter` takes it too, so `def self=(v)` is one setter method named `self=`.
+  Without this, `def self=(v)` parsed as an endless `def self` with a loose `(v)`
+  body and the lines after it as top-level statements.
+- `alias self foo` and `undef self, super` are unchanged: they gave the same tree
+  before.
 
 ## Changes to src/scanner.c
 
@@ -48,11 +70,13 @@ any error node. This patch removes the `=begin` block comment error reproduced b
   or the end of the input. Trailing text on the `=end` line is part of the comment.
   A line with `=end` in the middle, an indented `=end`, or `=endx` does not end it.
 - An unterminated comment fails the scan, so the parser reports an error as before.
-- Callers pass no flag: the hook runs only at column zero, read from the lexer.
+- The hook runs only at column zero, read from the lexer. It takes no flag.
 
 ## Constructs verified fixed
 
-Each was a parse error with the published crate and is valid for `ruby -c`.
+Each was a parse error with the published crate and is valid for `ruby -c` (3.3.8).
+
+Block comment:
 
 - `=begin` newline `this has =end with spaces after it` newline `=end` newline `puts 1`
 - `=begin` with an indented `=end` line inside, closed by `=end`
@@ -60,6 +84,26 @@ Each was a parse error with the published crate and is valid for `ruby -c`.
 - `=begin some title` closed by `=end trailing text`
 - `=begin` closed by `=end` at end of input with no trailing newline
 - CRLF variants of the above
+
+Method named `self` or `super`. A matrix of 34 one-file forms was parsed with both
+parsers. The published crate failed 20 of them: 19 valid forms and the invalid
+`def self rescue 1`, which still fails. All 19 valid forms now parse. The forms:
+
+- `def self` newline body newline `end`, also inside a class
+- `def self; 1; end`, `def self; end`, `def self() 1 end`, `x = def self; 1; end`
+- `def self(a)`, `def self a, b`
+- `def self = 1`, `def self() = 1`, `def self(a) = a`
+- `def self=(v)` (setter)
+- `def self` with a `rescue` clause
+- `def super`, `def super(a)`, `def super; 1; end`
+- a class that holds both `def self` and `def self.build`
+- a method named `self` that follows `private`
+
+The other 14 forms of the matrix parsed with the published crate. They are
+`def self?`, `def self.self`, `def self.super`, `def self.foo`, `def self::foo`,
+`def (self).foo`, `def self.foo = 1`, `def self.foo(a)`, `def x.self`, `def self.self=(v)`,
+`alias self foo`, `alias foo self`, `undef self` and `undef self, super`. Their trees are
+identical with the vendored grammar (sexp compared for each).
 
 ## Constructs known still failing
 
@@ -69,44 +113,78 @@ Each was a parse error with the published crate and is valid for `ruby -c`.
   (missing `end` error), and `x = [1, <<XXX1,` with `foo #{<<XXX2} bar` and
   `222 #{<<XXX3} 444` body lines (missing `]` error). Single-line forms such as
   `n = [1, "#{<<NN1}", 3,` with the body on the following lines parse.
-- Cause: the scanner keeps pending heredoc bodies first-opened-first, but Ruby
-  reads nested bodies depth-first. A stack redesign (nested bodies preempt waiting
-  siblings, end word matched only at column zero) fixed these forms, but it changed
-  five upstream corpus trees for ordinary sibling heredocs (`basic heredocs`,
-  `heredocs in context starting with dot`, `heredocs with in args, pairs, and
-  arrays`, `heredocs with method calls and interpolation with method calls`,
-  `heredoc content that starts with a dot`). It was reverted. The scanner state
-  cannot support nesting without that redesign.
-- Evidence: mruby `test/t/literals.rb` (error at 137,2) and `test/t/codegen.rb`
-  (missing `end` at 610,0), both `ruby -c` clean.
+- Cause: `scanner.c` keeps pending heredoc bodies first-opened-first (it always reads
+  `open_heredocs[0]`). Ruby 3.3.8 reads nested bodies depth-first; this was checked by
+  running the nested forms and printing the strings.
+- One attempt was made and reverted. It let a heredoc opened inside an active body
+  preempt the bodies waiting behind it, and it matched the end word only at column
+  zero. With it, the upstream corpus fell from 298 of 298 to 293 of 298. The five
+  failing cases were `basic heredocs`, `heredocs in context starting with dot`,
+  `heredocs with in args, pairs, and arrays`, `heredocs with method calls and
+  interpolation with method calls` and `heredoc content that starts with a dot`.
+  The full mruby `literals.rb` (master copy) still had an error, at line 434, in that
+  run. In the same session `tree-sitter parse` and `tree-sitter test` disagreed on
+  inputs that both read, so what the attempt did to the small nested forms is not
+  verified. No claim is made that it fixed them, or that no other design could.
+- Evidence, mruby test files that `ruby -c` accepts. The cargo registry holds one copy:
+  `libnghttp2-sys-0.1.13+1.68.1/nghttp2/third-party/mruby/test/t/codegen.rb` (missing
+  `end` at line 196) and `literals.rb` (error at line 105). A second, newer copy of the
+  same two files was fetched from the mruby GitHub repository (branch master) for the
+  first minimization: `literals.rb` error at line 137, `codegen.rb` missing `end` at
+  line 610. The first searches covered the Go module cache and `~/compiler` (nothing),
+  `find / -xdev` (it did not enter `/home`, a separate ZFS mount), and a `find /home/alpha`
+  that timed out. The cargo registry was not searched, so the registry copy was found
+  only later by the corpus sweep.
+- Endless method whose body is a command call, valid since Ruby 3.3:
+  `def m3(x) = x + 1` newline `def cm1 = m3 42`. The parser puts an error node around the
+  command name `m3` and parses only `42` as the body. `ruby -c` 3.3.8 accepts these two
+  lines alone. Found by the sweep in mruby `test/t/syntax.rb` (error span line 868,
+  columns 14 to 16, which is `m3`). That file also holds a `circular argument reference`
+  at lines 587 and 600 that `ruby -c` 3.3.8 rejects, so the whole file stays an error
+  even if this gap is fixed. Not in the gap list, so not changed.
 
 Inputs that are not valid Ruby and so stay errors: `=begin` with no closing
-`=end`, `=begin` closed only by `=endx`, and `def f` with no `end`.
+`=end`, `=begin` closed only by `=endx`, `def f` with no `end`, `def self` with no `end`,
+`def self.build` with no `end`, and `def self rescue 1`.
 
 ## Corpus results
 
 - Upstream `tree-sitter test` at tag v0.23.1, before: 290 of 290 pass.
 - After the patch: 290 of 290 upstream cases pass.
-- New cases in `test/corpus/sloplint_block_comment.txt`: 8 cases (7 repros,
-  1 unterminated-comment control). The unpatched grammar fails 4 of the 8
-  (the midline, indented, suffixed and method-sandwich forms). The prefix,
-  trailing-text, empty and control forms pass unpatched too. The patched
-  grammar passes all 8.
-- Total with the patch: 298 of 298.
+- New cases: `test/corpus/sloplint_block_comment.txt` (8 cases) and
+  `test/corpus/sloplint_method_names.txt` (9 cases). Every valid source in them was
+  checked with `ruby -c`. The unterminated block comment case is invalid on purpose.
+- The unpatched grammar (regenerated tag v0.23.1, forced rebuild) fails 4 of the 8
+  block comment cases (midline, indented, suffixed, method sandwich) and 7 of the 9
+  method name cases (the singleton-only and alias/undef controls pass).
+  The patched grammar passes all 17.
+- Total with the patch: 307 of 307.
 
 ## Sweep result
 
-Tree comparison between the published parser and this one on 432 `.rb`, `.rake`,
-`.gemspec`, `Rakefile` and `Gemfile` files from the cargo registry, the Go module
-cache, the miniconda site-packages and `~/compiler`: files with an error node 0
-before, 0 after. No file changed from error to clean, none from clean to error,
-and all 432 trees are identical. Real-world files here hold no `=begin` blocks,
-so the fix shows only on the targeted repros above. A two-process harness compared
-both parsers per file (one crate per process: both crates export the same C symbol,
-so one process cannot load both). A positive control (`=begin` repro errors before
-and parses after; nested-heredoc repro errors in both) proves the harness detects
-differences.
+Tree comparison between the published parser and this one, one crate per process (both
+crates export the same C symbol, so one process cannot load both), on 3154 `.rb`,
+`.rake`, `.gemspec`, `.ru`, `Rakefile` and `Gemfile` files:
+
+| Corpus | Files | Error before | Error after | Trees changed |
+|---|---|---|---|---|
+| `.outline/corpora/ruby` | 648 | 1 | 0 | 0 |
+| `.outline/corpora/rails` | 2074 | 0 | 0 | 0 |
+| cargo registry, Go module cache, miniconda site-packages, `~/compiler` | 432 | 4 | 4 | 0 |
+
+- Error to clean: 1 (`corpora/ruby/trace_point.rb`, the `def self` file).
+- Clean to error: 0. Clean to clean with a different tree: 0.
+- The 4 files that stay errors: mruby `test/t/codegen.rb` and `test/t/literals.rb`
+  (nested heredocs, above), mruby `test/t/syntax.rb` (endless command body, above, and
+  a `ruby -c` error), and an `invalid.gemspec` test fixture (`ruby -c` error).
+- 7 of these files hold a `=begin` line (for example `lib/uri/common.rb`). All 7 have
+  the same tree before and after, so none of them hits the block comment bug. The
+  block comment fix shows only on the targeted repros.
+- Positive control: the `def self` repro and `def self=(v)` error with the published
+  parser and parse with this one; `def self rescue 1` errors with both.
+- An earlier version of this file said the 432-file set had no error before or after.
+  That was wrong: it was never counted. The count above is measured.
 
 ## Size
 
-`src/parser.c`: 15,777,992 bytes (published: 15,277,808).
+`src/parser.c`: 15,788,925 bytes (published: 15,277,808).
