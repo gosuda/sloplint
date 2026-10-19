@@ -16,6 +16,12 @@ pub(crate) struct Cx<'t, 's> {
     pub has_interface: bool,
     pub containers: &'t [Container],
     pub exports: &'t [&'s str],
+    /// The nodes entered so far under each open ancestor, outermost level first.
+    ///
+    /// The last entry of each level is the open ancestor itself, or the visited
+    /// node on the innermost level, and the entries before it are its earlier
+    /// siblings in tree order.
+    pub levels: &'t [Vec<Node<'t>>],
 }
 
 impl Cx<'_, '_> {
@@ -320,17 +326,31 @@ pub(crate) fn is_directive_comment(text: &str) -> bool {
 /// Collects the comment siblings that end on the line before the current
 /// header start; `skip_kinds` (attributes, decorators) and `sloplint-allow`
 /// directive comments extend the header without joining the doc.
+///
+/// `n` is the header anchor: the visited node or one of its open ancestors, such
+/// as the export statement or decorated definition that wraps a declaration.
+///
+/// # Panics
+///
+/// Panics when `n` is neither the visited node nor one of its ancestors, which
+/// is an adapter bug: only those nodes have recorded earlier siblings.
 pub(crate) fn preceding_comments<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
     comment_kinds: &[&str],
     skip_kinds: &[&str],
 ) -> (Vec<&'s str>, Option<Pos>) {
+    let (anchor, earlier) = cx
+        .levels
+        .iter()
+        .rev()
+        .filter_map(|level| level.split_last())
+        .find(|(last, _)| last.id() == n.id())
+        .expect("a header anchor is the visited node or one of its ancestors");
     let mut doc: Vec<&'s str> = Vec::new();
     let mut doc_pos = None;
-    let mut header_row = n.start_position().row;
-    let mut current = n.prev_sibling();
-    while let Some(sibling) = current {
+    let mut header_row = anchor.start_position().row;
+    for &sibling in earlier.iter().rev() {
         let kind = sibling.kind();
         if comment_kinds.contains(&kind) {
             let end = sibling.end_position();
@@ -353,7 +373,6 @@ pub(crate) fn preceding_comments<'s>(
         } else {
             break;
         }
-        current = sibling.prev_sibling();
     }
     doc.reverse();
     (doc, doc_pos)

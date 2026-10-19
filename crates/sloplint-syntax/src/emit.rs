@@ -8,7 +8,7 @@ use sloplint_core::suppress::CommentText;
 use crate::hooks::{Container, FunctionHead, is_directive_comment, narrow, pos_of, slice};
 use crate::walk::{FnFrame, FrameDecl, Mark, WalkState};
 
-impl<'s, 'a> WalkState<'s, 'a> {
+impl<'s, 'a> WalkState<'s, 'a, '_> {
     pub(crate) fn enter_typedef(&mut self, node: tree_sitter::Node<'_>) {
         let hooks = self.spec.hooks;
         let head = {

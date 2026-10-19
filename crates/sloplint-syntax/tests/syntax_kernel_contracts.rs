@@ -7,5 +7,7 @@
 mod declaration_scopes;
 #[path = "syntax_kernel_contracts/directive_docs.rs"]
 mod directive_docs;
+#[path = "syntax_kernel_contracts/header_comment_chains.rs"]
+mod header_comment_chains;
 #[path = "syntax_kernel_contracts/support.rs"]
 mod support;

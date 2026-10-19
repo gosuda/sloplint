@@ -51,6 +51,8 @@ impl LangSpec {
             marks: Vec::new(),
             containers: Vec::new(),
             exports: Vec::new(),
+            levels: Vec::new(),
+            depth: 0,
         };
         state.run(root);
         Walked {
@@ -116,7 +118,7 @@ pub(crate) enum Mark {
 }
 
 /// All mutable walk state; the tree cursor lives only in [`WalkState::run`].
-pub(crate) struct WalkState<'s, 'a> {
+pub(crate) struct WalkState<'s, 'a, 't> {
     pub spec: &'a LangSpec,
     pub src: &'s str,
     pub path: &'s str,
@@ -130,10 +132,14 @@ pub(crate) struct WalkState<'s, 'a> {
     pub marks: Vec<(usize, Mark)>,
     pub containers: Vec<Container>,
     pub exports: Vec<&'s str>,
+    /// The nodes entered so far under each open ancestor, indexed by tree depth.
+    pub levels: Vec<Vec<Node<'t>>>,
+    /// The tree depth of the node being entered or exited.
+    pub depth: usize,
 }
 
-impl<'s, 'a> WalkState<'s, 'a> {
-    pub(crate) fn run(&mut self, root: Node<'_>) {
+impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
+    pub(crate) fn run(&mut self, root: Node<'t>) {
         if self.collect_facts {
             let hooks = self.spec.hooks;
             let mut names = Vec::new();
@@ -149,6 +155,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
                 let node = cursor.node();
                 self.enter(node);
                 if cursor.goto_first_child() {
+                    self.depth += 1;
                     continue;
                 }
             }
@@ -161,6 +168,10 @@ impl<'s, 'a> WalkState<'s, 'a> {
             if !cursor.goto_parent() {
                 break;
             }
+            if let Some(level) = self.levels.get_mut(self.depth) {
+                level.clear();
+            }
+            self.depth -= 1;
             descending = false;
         }
         if self.collect_facts {
@@ -173,7 +184,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
         }
     }
 
-    fn enter(&mut self, node: Node<'_>) {
+    fn enter(&mut self, node: Node<'t>) {
         let role = self.spec.role_for(node.kind_id());
         if !self.collect_facts {
             if role == Role::Comment {
@@ -181,6 +192,10 @@ impl<'s, 'a> WalkState<'s, 'a> {
             }
             return;
         }
+        if self.levels.len() <= self.depth {
+            self.levels.resize_with(self.depth + 1, Vec::new);
+        }
+        self.levels[self.depth].push(node);
         match role {
             Role::Function | Role::Closure => self.enter_function_like(role, node),
             Role::If
@@ -375,6 +390,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
             has_interface: self.has_interface,
             containers: &self.containers,
             exports: &self.exports,
+            levels: &self.levels[..self.levels.len().min(self.depth + 1)],
         }
     }
 
