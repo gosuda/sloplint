@@ -367,15 +367,15 @@ impl RuleSet {
         Ok(set)
     }
 
-    /// Runs every active file rule over one file, then applies test exemptions and the level cap.
+    /// Runs every active file rule that applies to the file, then caps their levels.
     pub fn check_file(&self, facts: &FileFacts<'_>) -> Vec<Finding> {
         let mut out = Vec::new();
         for (info, rule) in &self.file_rules {
-            let mut found = Vec::new();
-            rule.check(facts, &mut found);
             if info.exempt_tests && facts.is_test_file {
                 continue;
             }
+            let mut found = Vec::new();
+            rule.check(facts, &mut found);
             cap_with_level(self.levels.get(info.id), &mut found);
             out.append(&mut found);
         }
