@@ -1,6 +1,15 @@
 //! Callee-pattern parsing and matching for log callees and allow lists.
 
+use std::iter::Filter;
+use std::str::Chars;
+
 use crate::facts::CallKind;
+
+type Visible<'a> = Filter<Chars<'a>, fn(&char) -> bool>;
+
+fn is_visible(ch: &char) -> bool {
+    !ch.is_whitespace()
+}
 
 #[derive(Debug, Clone)]
 struct Segment {
@@ -74,68 +83,140 @@ impl CalleePattern {
         Ok(CalleePattern { new_only, segments })
     }
 
-    /// Reports whether the pattern matches the normalized callee under this call kind: whitespace is deleted, segments split on `::`, `?.`, and `.`, and a `Macro` callee gains a trailing `!`.
+    /// Reports whether the pattern matches the callee under this call kind.
+    ///
+    /// All whitespace is ignored, segments split on `::`, `?.`, and `.`, and a `Macro` callee gains a trailing `!` on its last segment. The callee is scanned in place and nothing is allocated.
     pub fn matches(&self, callee: &str, kind: CallKind) -> bool {
         if self.new_only && kind != CallKind::New {
             return false;
         }
-        let segments = normalize(callee, kind);
-        if segments.len() < self.segments.len() {
+        let Some((tail, heads)) = self.segments.split_last() else {
+            return false;
+        };
+        let (count, last) = scan_segments(callee);
+        if count < self.segments.len() {
             return false;
         }
-        self.segments.iter().enumerate().all(|(index, pattern)| {
-            let candidate = &segments[segments.len() - self.segments.len() + index];
-            if pattern.suffix {
-                candidate.ends_with(pattern.text.as_ref())
-            } else {
-                candidate.as_str() == pattern.text.as_ref()
-            }
+        let tail_matches = if kind == CallKind::Macro {
+            tail.matches_macro_last(last)
+        } else {
+            tail.matches_plain(last)
+        };
+        if !tail_matches {
+            return false;
+        }
+        let mut remaining = Segments::new(callee).skip(count - self.segments.len());
+        heads.iter().all(|head| {
+            remaining
+                .next()
+                .is_some_and(|candidate| head.matches_plain(candidate))
         })
     }
 }
 
-fn normalize(callee: &str, kind: CallKind) -> Vec<String> {
-    let flat: String = callee.chars().filter(|c| !c.is_whitespace()).collect();
-    let mut segments: Vec<String> = split_callee(&flat).into_iter().map(str::to_owned).collect();
-    if kind == CallKind::Macro
-        && let Some(last) = segments.last_mut()
-        && !last.ends_with('!')
-    {
-        last.push('!');
+impl Segment {
+    fn matches_plain(&self, raw: &str) -> bool {
+        self.accepts(self.candidate(raw))
     }
-    segments
+
+    fn matches_macro_last(&self, raw: &str) -> bool {
+        let candidate = self.candidate(raw);
+        let bang = (candidate.clone().next_back() != Some('!')).then_some('!');
+        self.accepts(candidate.chain(bang))
+    }
+
+    fn candidate<'a>(&self, raw: &'a str) -> Visible<'a> {
+        raw.chars().filter(is_visible as fn(&char) -> bool)
+    }
+
+    fn accepts<I>(&self, candidate: I) -> bool
+    where
+        I: DoubleEndedIterator<Item = char>,
+    {
+        if self.suffix {
+            let mut tail = candidate.rev();
+            return self
+                .text
+                .chars()
+                .rev()
+                .all(|expected| tail.next() == Some(expected));
+        }
+        candidate.eq(self.text.chars())
+    }
 }
 
-fn split_callee(text: &str) -> Vec<&str> {
-    let bytes = text.as_bytes();
-    let mut parts: Vec<&str> = Vec::new();
-    let mut start = 0usize;
-    let mut i = 0usize;
-    while i < bytes.len() {
-        let (width, hit) = callee_separator_at(bytes, i);
-        if hit {
-            parts.push(&text[start..i]);
-            i += width;
-            start = i;
-        } else {
-            i += 1;
+fn scan_segments(callee: &str) -> (usize, &str) {
+    let mut count = 0usize;
+    let mut last = "";
+    for segment in Segments::new(callee) {
+        count += 1;
+        last = segment;
+    }
+    (count, last)
+}
+
+struct Segments<'a> {
+    text: &'a str,
+    pos: usize,
+    done: bool,
+}
+
+impl<'a> Segments<'a> {
+    fn new(text: &'a str) -> Segments<'a> {
+        Segments {
+            text,
+            pos: 0,
+            done: false,
         }
     }
-    parts.push(&text[start..]);
-    parts
 }
 
-fn callee_separator_at(bytes: &[u8], i: usize) -> (usize, bool) {
-    if bytes[i] == b'.' {
-        return (1, true);
+impl<'a> Iterator for Segments<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<&'a str> {
+        if self.done {
+            return None;
+        }
+        let start = self.pos;
+        let mut cursor = start;
+        while let Some((index, ch)) = next_visible(self.text, cursor) {
+            if let Some(end) = separator_end(self.text, index, ch) {
+                self.pos = end;
+                return Some(&self.text[start..index]);
+            }
+            cursor = index + ch.len_utf8();
+        }
+        self.done = true;
+        Some(&self.text[start..])
     }
-    if bytes[i] == b':' && i + 1 < bytes.len() && bytes[i + 1] == b':' {
-        return (2, true);
+}
+
+fn next_visible(text: &str, from: usize) -> Option<(usize, char)> {
+    text[from..]
+        .char_indices()
+        .find(|(_, ch)| !ch.is_whitespace())
+        .map(|(offset, ch)| (from + offset, ch))
+}
+
+fn eat(text: &str, from: usize, want: char) -> Option<usize> {
+    match next_visible(text, from) {
+        Some((index, ch)) if ch == want => Some(index + ch.len_utf8()),
+        _ => None,
     }
-    if bytes[i] == b'?' && i + 1 < bytes.len() && bytes[i + 1] == b'.' {
-        return (2, true);
+}
+
+fn separator_end(text: &str, index: usize, ch: char) -> Option<usize> {
+    let after = index + ch.len_utf8();
+    match ch {
+        '.' => Some(after),
+        ':' => eat(text, after, ':'),
+        '?' => match next_visible(text, after) {
+            Some((dot, '.')) => Some(dot + 1),
+            _ => None,
+        },
+        _ => None,
     }
-    (0, false)
 }
 
 fn split_pattern(text: &str) -> Vec<&str> {
