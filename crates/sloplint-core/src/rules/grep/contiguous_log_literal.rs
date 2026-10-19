@@ -94,7 +94,9 @@ impl FileRule for ContiguousLogLiteral {
 
 impl ContiguousLogLiteral {
     fn reason(&self, call: &Call<'_>) -> Option<String> {
-        let arg = call.args.first()?;
+        let Some(arg) = call.args.first() else {
+            return Some("no message".to_string());
+        };
         match &arg.shape {
             ArgShape::Str { longest_static } if *longest_static < self.min_len => {
                 Some(format!("longest literal run is {longest_static} chars"))
