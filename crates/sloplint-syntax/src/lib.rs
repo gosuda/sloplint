@@ -75,10 +75,13 @@ pub struct Analysis<'s> {
 ///
 /// A failed parse yields empty facts, the collected comments, and the first
 /// error position, so one file's findings never depend on other files.
+///
+/// Custom hits borrow the rules table for capture names and the file source
+/// for capture text, so `custom` shares the `'s` lifetime of the input.
 pub fn analyze<'s>(
     parsers: &mut Parsers,
     input: &FileInput<'s>,
-    custom: &CustomRules,
+    custom: &'s CustomRules,
 ) -> Analysis<'s> {
     let Some(tree) = parsers.parse(input.lang, input.source) else {
         return Analysis {
@@ -136,10 +139,13 @@ mod audit_propagation_tests {
     use super::{CustomRules, FileInput, Parsers, analyze};
     use sloplint_core::facts::Stmt;
     use sloplint_core::lang::Lang;
+    use std::sync::LazyLock;
+
+    static EMPTY_CUSTOM: LazyLock<CustomRules> =
+        LazyLock::new(|| CustomRules::compile(&[]).expect("empty custom rules compile"));
 
     fn audit_analyze<'s>(lang: Lang, path: &'s str, source: &'s str) -> super::Analysis<'s> {
         let mut parsers = Parsers::new();
-        let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
         let input = FileInput {
             lang,
             path,
@@ -147,7 +153,7 @@ mod audit_propagation_tests {
             is_test_file: false,
             has_interface: false,
         };
-        analyze(&mut parsers, &input, &custom)
+        analyze(&mut parsers, &input, &EMPTY_CUSTOM)
     }
 
     #[test]

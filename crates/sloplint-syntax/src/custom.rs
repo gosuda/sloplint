@@ -10,10 +10,11 @@ use crate::spec::spec;
 
 /// Every compiled custom rule, paired with each grammar it runs against.
 ///
-/// Each entry carries the query's capture names as `'static` strings so a
-/// hit can name its captures with the source lifetime the contract requires.
+/// The query owns its capture names; `run` borrows them from the query, so
+/// hits borrow the rules table for capture names and the file source for
+/// capture text.
 pub struct CustomRules {
-    entries: Vec<(Lang, u32, Query, Vec<&'static str>)>,
+    entries: Vec<(Lang, u32, Query)>,
 }
 
 impl CustomRules {
@@ -33,8 +34,7 @@ impl CustomRules {
             }
             for lang in langs {
                 let query = compile_query(lang, rule)?;
-                let names = static_names(&query);
-                entries.push((lang, narrow(index), query, names));
+                entries.push((lang, narrow(index), query));
             }
         }
         Ok(CustomRules { entries })
@@ -44,13 +44,18 @@ impl CustomRules {
     ///
     /// Each match yields one hit at its `@match` capture carrying every
     /// `(capture name, capture text)` pair for message interpolation.
-    pub fn run<'s>(&self, tree: &Tree, source: &'s str, lang: Lang) -> Vec<CustomHit<'s>> {
+    ///
+    /// The returned hits borrow the rules table (`&'s self`) for capture
+    /// names and the file source for capture text; the caller must keep
+    /// both alive while the hits are used.
+    pub fn run<'s>(&'s self, tree: &Tree, source: &'s str, lang: Lang) -> Vec<CustomHit<'s>> {
         let mut hits = Vec::new();
         let mut cursor = QueryCursor::new();
-        for (entry_lang, rule, query, names) in &self.entries {
+        for (entry_lang, rule, query) in &self.entries {
             if *entry_lang != lang {
                 continue;
             }
+            let names = query.capture_names();
             let mut matches = cursor.matches(query, tree.root_node(), source.as_bytes());
             while let Some(found) = matches.next() {
                 if let Some(hit) = hit_from_match(names, found.captures(), *rule, source) {
@@ -127,15 +132,6 @@ fn compile_query(lang: Lang, rule: &CustomRuleSpec) -> Result<Query, ConfigError
     Ok(query)
 }
 
-/// Copies the query's capture names into process-lifetime strings.
-fn static_names(query: &Query) -> Vec<&'static str> {
-    query
-        .capture_names()
-        .iter()
-        .map(|name| -> &'static str { name.to_string().leak() })
-        .collect()
-}
-
 /// Wraps a compile failure in the typed custom-rule error.
 fn custom_error(rule: &CustomRuleSpec, message: &str) -> ConfigError {
     ConfigError::CustomRule {
@@ -154,7 +150,7 @@ fn hit_from_match<'s>(
     let mut pos = None;
     let mut pairs = Vec::new();
     for capture in captures {
-        let name = names.get(capture.index as usize).copied().unwrap_or("");
+        let name = names[capture.index as usize];
         let text = slice(source, capture.node.start_byte(), capture.node.end_byte());
         if name == "match" {
             pos = Some(pos_of(capture.node));
