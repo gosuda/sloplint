@@ -19,8 +19,10 @@ pub const CONFIG_FILE: &str = "sloplint.toml";
 pub struct Location {
     /// Project root; every path is relative to it.
     pub root: PathBuf,
-    /// Configuration file, which may be missing.
-    pub config_path: PathBuf,
+    /// Explicit configuration file from `--config`. `None` means no explicit
+    /// file was given, so `<root>/sloplint.toml` applies when present and
+    /// defaults apply when absent.
+    pub config_path: Option<PathBuf>,
 }
 
 /// CLI overrides applied on top of the configuration file.
@@ -66,33 +68,52 @@ struct CustomFragment<'a> {
 }
 
 /// Resolves the project root and configuration path: explicit values first, then the nearest `sloplint.toml`, then the nearest `.git`.
+///
+/// An explicit `config` is kept as `Some`, even when the file does not exist,
+/// so `load` can fail on it. `None` means the configuration is implicit and
+/// `load` falls back to defaults when `<root>/sloplint.toml` is absent.
 pub fn locate(cwd: &Path, root: Option<&Path>, config: Option<&Path>) -> Location {
     let config_path = config.map(|path| cwd.join(path));
     match (root, config_path) {
         (Some(root), config_path) => Location {
-            config_path: config_path.unwrap_or_else(|| root.join(CONFIG_FILE)),
             root: root.to_path_buf(),
+            config_path,
         },
         (None, Some(config_path)) => Location {
             root: config_path
                 .parent()
                 .map_or_else(|| cwd.to_path_buf(), Path::to_path_buf),
-            config_path,
+            config_path: Some(config_path),
         },
-        (None, None) => {
-            let root = find_root(cwd);
-            Location {
-                config_path: root.join(CONFIG_FILE),
-                root,
-            }
-        }
+        (None, None) => Location {
+            root: find_root(cwd),
+            config_path: None,
+        },
     }
 }
 
 /// Reads and merges the configuration, including every `custom_rule_files` match, then applies overrides.
+///
+/// An explicit configuration file must exist: a missing file fails with the
+/// path, and any other read failure reports the path with its I/O error. An
+/// implicit configuration falls back to defaults when absent. Each candidate
+/// is read exactly once; no existence probe precedes the read.
 pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunError> {
-    let main = read_optional(&location.config_path)?;
-    let origin = origin_name(&location.config_path);
+    let (main, origin) = match &location.config_path {
+        Some(path) => (read_required(path)?, origin_name(path)),
+        None => {
+            let path = location.root.join(CONFIG_FILE);
+            match fs::read_to_string(&path) {
+                Ok(text) => (text, origin_name(&path)),
+                Err(source) if source.kind() == io::ErrorKind::NotFound => {
+                    (String::new(), origin_name(&path))
+                }
+                Err(source) => {
+                    return Err(RunError::Io { path, source });
+                }
+            }
+        }
+    };
     let custom_sources = read_custom_sources(&location.root, &custom_rule_patterns(&main))?;
     let mut specs = Vec::new();
     for (rel, text) in &custom_sources {
@@ -257,15 +278,19 @@ fn find_root(cwd: &Path) -> PathBuf {
         .map_or_else(|| cwd.to_path_buf(), Path::to_path_buf)
 }
 
-fn read_optional(path: &Path) -> Result<String, RunError> {
-    match fs::read_to_string(path) {
-        Ok(text) => Ok(text),
-        Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(String::new()),
-        Err(source) => Err(RunError::Io {
-            path: path.to_path_buf(),
-            source,
-        }),
-    }
+fn read_required(path: &Path) -> Result<String, RunError> {
+    fs::read_to_string(path).map_err(|source| {
+        if source.kind() == io::ErrorKind::NotFound {
+            RunError::PathNotFound {
+                path: path.to_path_buf(),
+            }
+        } else {
+            RunError::Io {
+                path: path.to_path_buf(),
+                source,
+            }
+        }
+    })
 }
 
 fn origin_name(path: &Path) -> String {

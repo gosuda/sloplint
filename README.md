@@ -81,6 +81,8 @@ Every run analyzes the whole project root; `PATHS` only filters which findings a
 
 ### Configuration
 
+`--config FILE` names a file that must exist; without `--config`, a missing `sloplint.toml` falls back to defaults.
+
 ```toml
 [project]
 strictness = "standard"

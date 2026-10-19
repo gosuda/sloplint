@@ -1,10 +1,10 @@
 //! Cross-cutting invariants: determinism, ratchet stability, path scope,
 //! strictness monotonicity, option-merge, and suppression behavior.
 
+use sloplint::{RunError, RunOptions, run};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use sloplint::{RunOptions, run};
 use sloplint_core::config::{Mode, Strictness};
 use sloplint_core::finding::Severity;
 use sloplint_core::{Config, ConfigError, RuleFilter, RulePattern, RuleSet};
@@ -836,5 +836,101 @@ fn invalid_and_unused_suppressions_report() {
     assert!(
         rules.contains("meta/unused-suppression"),
         "unused suppression not flagged"
+    );
+}
+
+#[test]
+fn audit_config_missing_explicit_fails() {
+    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = tmp.path();
+    write(root, "src/lib.rs", "pub fn handle(flag: bool) {}\n");
+    let missing = root.join("missing.toml");
+    let error = run(&RunOptions {
+        cwd: root.to_path_buf(),
+        root: Some(root.to_path_buf()),
+        config: Some(missing.clone()),
+        strictness: Some(Strictness::Standard),
+        mode: Some(Mode::Threshold),
+        use_cache: false,
+        ..RunOptions::default()
+    })
+    .expect_err("explicit missing config must fail");
+    match &error {
+        RunError::PathNotFound { path } => assert_eq!(
+            path, &missing,
+            "missing explicit config must carry its path"
+        ),
+        other => panic!("expected PathNotFound, got: {other}"),
+    }
+    assert_eq!(error.exit_code(), 2, "missing explicit config exits 2");
+}
+
+#[test]
+fn audit_config_missing_implicit_uses_defaults() {
+    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = tmp.path();
+    write(root, "src/lib.rs", "pub fn handle(flag: bool) {}\n");
+    let report = run(&RunOptions {
+        cwd: root.to_path_buf(),
+        root: Some(root.to_path_buf()),
+        strictness: Some(Strictness::Standard),
+        mode: Some(Mode::Threshold),
+        use_cache: false,
+        ..RunOptions::default()
+    })
+    .unwrap_or_else(|e| panic!("run: {e}"));
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|f| &*f.rule == "grep/generic-name"),
+        "default profile must flag the generic name without a config file: {:?}",
+        report.findings.iter().map(|f| &f.rule).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn audit_config_present_explicit_changes_level() {
+    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = tmp.path();
+    write(root, "src/lib.rs", "pub fn handle(flag: bool) {}\n");
+    write(
+        root,
+        "custom.toml",
+        "[rules.\"grep/generic-name\"]\nlevel = \"off\"\n",
+    );
+    let plain = run(&RunOptions {
+        cwd: root.to_path_buf(),
+        root: Some(root.to_path_buf()),
+        strictness: Some(Strictness::Standard),
+        mode: Some(Mode::Threshold),
+        use_cache: false,
+        ..RunOptions::default()
+    })
+    .unwrap_or_else(|e| panic!("run: {e}"));
+    let custom = run(&RunOptions {
+        cwd: root.to_path_buf(),
+        root: Some(root.to_path_buf()),
+        config: Some(root.join("custom.toml")),
+        strictness: Some(Strictness::Standard),
+        mode: Some(Mode::Threshold),
+        use_cache: false,
+        ..RunOptions::default()
+    })
+    .unwrap_or_else(|e| panic!("run: {e}"));
+    let plain_sev = plain
+        .findings
+        .iter()
+        .find(|f| &*f.rule == "grep/generic-name")
+        .map(|f| f.severity);
+    let custom_sev = custom
+        .findings
+        .iter()
+        .find(|f| &*f.rule == "grep/generic-name")
+        .map(|f| f.severity);
+    assert_eq!(plain_sev, Some(Severity::Warn), "default level is warn");
+    assert_eq!(
+        custom_sev, None,
+        "explicit config must disable the selected rule"
     );
 }
