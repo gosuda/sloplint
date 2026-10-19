@@ -24,6 +24,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("for_expression", Role::Loop),
     ("catch_clause", Role::Catch),
     ("call_expression", Role::Call),
+    ("split_call_condition", Role::Call),
     ("instance_expression", Role::NewCall),
     ("var_definition", Role::Decl),
     ("assignment_expression", Role::Write),
@@ -523,7 +524,7 @@ impl LangHooks for ScalaHooks {
     }
 
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
-        if n.kind() == "call_expression" {
+        if n.kind() == "call_expression" || n.kind() == "split_call_condition" {
             let func = child_by_field(n, "function")?;
             return Some(CallHead {
                 callee: text(cx, func_node(func).unwrap_or(func)),
