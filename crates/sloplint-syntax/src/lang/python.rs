@@ -55,6 +55,34 @@ fn enclosing_exported(cx: &Cx<'_, '_>) -> bool {
         .unwrap_or(true)
 }
 
+struct Placement {
+    class_member: bool,
+    local: bool,
+}
+
+fn placement(n: Node<'_>) -> Placement {
+    let mut class_member = None;
+    let mut local = false;
+    let mut cur = n.parent();
+    while let Some(parent) = cur {
+        match parent.kind() {
+            "function_definition" => {
+                local = true;
+                class_member.get_or_insert(false);
+            }
+            "class_definition" => {
+                class_member.get_or_insert(true);
+            }
+            _ => {}
+        }
+        cur = parent.parent();
+    }
+    Placement {
+        class_member: class_member.unwrap_or(false),
+        local,
+    }
+}
+
 fn py_one_param<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Param<'s>>) {
     match n.kind() {
         "identifier" => out.push(Param {
@@ -396,9 +424,11 @@ impl LangHooks for PythonHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let name_node = child_by_field(n, "name")?;
         let name = text(cx, name_node);
-        let method = matches!(cx.containers.last(), Some(Container::Class { .. }));
+        let place = placement(n);
+        let method = place.class_member;
         let dunder = name.len() > 4 && name.starts_with("__") && name.ends_with("__");
-        let public = dunder || (!name.starts_with('_') && (!method || enclosing_exported(cx)));
+        let public = !place.local
+            && (dunder || (!name.starts_with('_') && (!method || enclosing_exported(cx))));
         let mut params = Vec::new();
         if let Some(list) = child_by_field(n, "parameters") {
             py_params(cx, list, &mut params);
