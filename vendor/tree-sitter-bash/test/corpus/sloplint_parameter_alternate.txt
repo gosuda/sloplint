@@ -1,0 +1,82 @@
+================================================================================
+Alternate value with a closing paren after an expansion
+================================================================================
+
+echo "$1${2:+ (from $2)}"
+
+--------------------------------------------------------------------------------
+
+(program
+  (command
+    (command_name
+      (word))
+    (string
+      (simple_expansion
+        (variable_name))
+      (expansion
+        (variable_name)
+        (concatenation
+          (word)
+          (simple_expansion
+            (variable_name))
+          (word))))))
+
+================================================================================
+Alternate value opening with a paren and a nested expansion
+================================================================================
+
+label="$remote${push_repo:+(from $push_repo)}"
+
+--------------------------------------------------------------------------------
+
+(program
+  (variable_assignment
+    (variable_name)
+    (string
+      (simple_expansion
+        (variable_name))
+      (expansion
+        (variable_name)
+        (concatenation
+          (word)
+          (simple_expansion
+            (variable_name))
+          (word))))))
+
+================================================================================
+Alternate value with a grouped expansion and text
+================================================================================
+
+echo "${2:+(x $2 y)}"
+
+--------------------------------------------------------------------------------
+
+(program
+  (command
+    (command_name
+      (word))
+    (string
+      (expansion
+        (variable_name)
+        (concatenation
+          (word)
+          (simple_expansion
+            (variable_name))
+          (word))))))
+
+================================================================================
+Alternate value without parentheses stays one word
+================================================================================
+
+echo "${2:+x}"
+
+--------------------------------------------------------------------------------
+
+(program
+  (command
+    (command_name
+      (word))
+    (string
+      (expansion
+        (variable_name)
+        (word)))))

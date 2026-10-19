@@ -429,17 +429,26 @@
                       "name": "_literal"
                     }
                   }
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "_terminator"
                 }
               ]
             },
             {
-              "type": "BLANK"
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_terminator"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
             }
           ]
-        },
-        {
-          "type": "SYMBOL",
-          "name": "_terminator"
         },
         {
           "type": "FIELD",
@@ -2811,8 +2820,17 @@
                       "type": "CHOICE",
                       "members": [
                         {
-                          "type": "SYMBOL",
-                          "name": "_heredoc_expression"
+                          "type": "CHOICE",
+                          "members": [
+                            {
+                              "type": "SYMBOL",
+                              "name": "_heredoc_expression"
+                            },
+                            {
+                              "type": "SYMBOL",
+                              "name": "_heredoc_operator_eol"
+                            }
+                          ]
                         },
                         {
                           "type": "BLANK"
@@ -2828,6 +2846,10 @@
                 {
                   "type": "SYMBOL",
                   "name": "_heredoc_command"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "_heredoc_operator_eol"
                 }
               ]
             },
@@ -2854,6 +2876,23 @@
           ]
         }
       ]
+    },
+    "_heredoc_operator_eol": {
+      "type": "FIELD",
+      "name": "operator",
+      "content": {
+        "type": "CHOICE",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "&&"
+          },
+          {
+            "type": "STRING",
+            "value": "||"
+          }
+        ]
+      }
     },
     "_heredoc_pipeline": {
       "type": "SEQ",
@@ -6766,6 +6805,10 @@
                       {
                         "type": "SYMBOL",
                         "name": "string"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "raw_string"
                       },
                       {
                         "type": "SYMBOL",

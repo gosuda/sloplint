@@ -214,14 +214,18 @@ module.exports = grammar({
       $.herestring_redirect,
     ))),
 
+    // Without an `in` list, `do` may follow the variable directly: `for x do`.
     for_statement: $ => seq(
       choice('for', 'select'),
       field('variable', $._simple_variable_name),
-      optional(seq(
-        'in',
-        field('value', repeat1($._literal)),
-      )),
-      $._terminator,
+      choice(
+        seq(
+          'in',
+          field('value', repeat1($._literal)),
+          $._terminator,
+        ),
+        optional($._terminator),
+      ),
       field('body', $.do_group),
     ),
 
@@ -564,14 +568,20 @@ module.exports = grammar({
         alias($._heredoc_pipeline, $.pipeline),
         seq(
           field('redirect', repeat1($._redirect)),
-          optional($._heredoc_expression),
+          optional(choice($._heredoc_expression, $._heredoc_operator_eol)),
         ),
         $._heredoc_expression,
         $._heredoc_command,
+        // An operator that ends the opener line takes its right side after the
+        // heredoc body, as the next statement. A right side on the next line
+        // would otherwise be read from the body text.
+        $._heredoc_operator_eol,
       )),
       /\n/,
       choice($._heredoc_body, $._simple_heredoc_body),
     ),
+
+    _heredoc_operator_eol: $ => field('operator', choice('&&', '||')),
 
     _heredoc_pipeline: $ => seq(
       choice('|', '|&'),
@@ -1113,7 +1123,7 @@ module.exports = grammar({
       seq(
         $.extglob_pattern,
         repeat1(seq(
-          choice($.string, $.expansion, $.command_substitution),
+          choice($.string, $.raw_string, $.expansion, $.command_substitution),
           optional($.extglob_pattern),
         )),
       ),

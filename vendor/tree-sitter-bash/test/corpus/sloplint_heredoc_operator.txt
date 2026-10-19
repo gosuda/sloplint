@@ -1,0 +1,110 @@
+================================================================================
+Heredoc opener ending in and, right side after the body
+================================================================================
+
+cat >f <<\EOF &&
+x
+EOF
+echo z
+
+--------------------------------------------------------------------------------
+
+(program
+  (redirected_statement
+    (command
+      (command_name
+        (word)))
+    (file_redirect
+      (word))
+    (heredoc_redirect
+      (heredoc_start)
+      (heredoc_body)
+      (heredoc_end)))
+  (command
+    (command_name
+      (word))
+    (word)))
+
+================================================================================
+Heredoc opener ending in or, body starting with a brace
+================================================================================
+
+cat >f <<\EOF ||
+{
+}
+EOF
+die x
+
+--------------------------------------------------------------------------------
+
+(program
+  (redirected_statement
+    (command
+      (command_name
+        (word)))
+    (file_redirect
+      (word))
+    (heredoc_redirect
+      (heredoc_start)
+      (heredoc_body)
+      (heredoc_end)))
+  (command
+    (command_name
+      (word))
+    (word)))
+
+================================================================================
+Heredoc opener with a redirect before the operator
+================================================================================
+
+cat >g <<-EOF &&
+	x
+	EOF
+echo y
+
+--------------------------------------------------------------------------------
+
+(program
+  (redirected_statement
+    (command
+      (command_name
+        (word)))
+    (file_redirect
+      (word))
+    (heredoc_redirect
+      (heredoc_start)
+      (heredoc_body)
+      (heredoc_end)))
+  (command
+    (command_name
+      (word))
+    (word)))
+
+================================================================================
+Heredoc opener with a same-line right side and a chain
+================================================================================
+
+cat <<EOF && echo a && echo b
+x
+EOF
+
+--------------------------------------------------------------------------------
+
+(program
+  (redirected_statement
+    (command
+      (command_name
+        (word)))
+    (heredoc_redirect
+      (heredoc_start)
+      (list
+        (command
+          (command_name
+            (word))
+          (word))
+        (command
+          (command_name
+            (word))
+          (word)))
+      (heredoc_body)
+      (heredoc_end))))

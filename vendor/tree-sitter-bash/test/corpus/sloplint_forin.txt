@@ -1,0 +1,88 @@
+================================================================================
+For loop without an in-list, single line
+================================================================================
+
+for arg do echo "$arg"; done
+
+--------------------------------------------------------------------------------
+
+(program
+  (for_statement
+    (variable_name)
+    (do_group
+      (command
+        (command_name
+          (word))
+        (string
+          (simple_expansion
+            (variable_name)))))))
+
+================================================================================
+For loop without an in-list, do on the next line
+================================================================================
+
+for arg
+do
+  echo "$arg"
+done
+
+--------------------------------------------------------------------------------
+
+(program
+  (for_statement
+    (variable_name)
+    (do_group
+      (command
+        (command_name
+          (word))
+        (string
+          (simple_expansion
+            (variable_name)))))))
+
+================================================================================
+For loop without an in-list inside an if branch
+================================================================================
+
+if [ -n "$tty" ]; then
+  for arg do
+    shift
+  done
+fi
+
+--------------------------------------------------------------------------------
+
+(program
+  (if_statement
+    (test_command
+      (unary_expression
+        (test_operator)
+        (string
+          (simple_expansion
+            (variable_name)))))
+    (for_statement
+      (variable_name)
+      (do_group
+        (command
+          (command_name
+            (word)))))))
+
+================================================================================
+For loop with an in-list keeps its terminator
+================================================================================
+
+for x in a b; do echo "$x"; done
+
+--------------------------------------------------------------------------------
+
+(program
+  (for_statement
+    (variable_name)
+    (word)
+    (word)
+    (do_group
+      (command
+        (command_name
+          (word))
+        (string
+          (simple_expansion
+            (variable_name)))))))

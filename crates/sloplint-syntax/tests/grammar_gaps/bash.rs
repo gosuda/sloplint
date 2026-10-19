@@ -266,6 +266,67 @@ fn a_broken_arithmetic_expansion_with_a_base_prefix_still_reports_a_parse_error(
 }
 
 #[test]
+fn a_for_loop_without_an_in_list_parses_in_an_if_branch() {
+    let source =
+        "f() {\n  if [ -n \"$tty\" ]; then\n    for arg do\n      shift\n    done\n  fi\n}\n";
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["f"]);
+    assert_eq!(callees(&analysis), ["shift"], "the loop body is a call");
+}
+
+#[test]
+fn a_for_loop_without_an_in_list_with_do_on_the_next_line_parses() {
+    let analysis = run_clean("for arg\ndo\n  echo \"$arg\"\ndone\n");
+    assert_eq!(callees(&analysis), ["echo"]);
+}
+
+#[test]
+fn a_parameter_alternate_with_a_closing_paren_after_an_expansion_parses() {
+    let source = "f() {\n  echo \"$1${2:+ (from $2)}\"\n  return 1\n}\n";
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["f"]);
+    assert_eq!(callees(&analysis), ["echo", "return"]);
+}
+
+#[test]
+fn a_case_pattern_with_a_leading_glob_and_a_quoted_space_parses() {
+    let analysis = run_clean("case \"$remotes\" in\n?*' '?*)\n  echo y\n  ;;\nesac\n");
+    assert_eq!(callees(&analysis), ["echo"], "the arm body is a call");
+}
+
+#[test]
+fn a_case_pattern_with_an_escaped_single_quote_parses() {
+    let analysis = run_clean("case x in\n*\\'*) echo y ;;\nesac\n");
+    assert_eq!(callees(&analysis), ["echo"]);
+}
+
+#[test]
+fn a_heredoc_operator_right_side_after_the_body_is_not_read_from_the_body() {
+    let analysis = run_clean("cat >f <<\\EOF &&\nx\nEOF\necho z\n");
+    assert_eq!(
+        callees(&analysis),
+        ["cat", "echo"],
+        "`x` is heredoc text, not a command"
+    );
+}
+
+#[test]
+fn a_heredoc_operator_with_a_brace_body_is_not_a_group() {
+    let analysis = run_clean("cat >f <<\\EOF ||\n{\n}\nEOF\ndie x\n");
+    assert_eq!(
+        callees(&analysis),
+        ["cat", "die"],
+        "the brace line is heredoc text, not a group"
+    );
+}
+
+#[test]
+fn a_same_line_heredoc_operator_chain_keeps_its_right_side() {
+    let analysis = run_clean("cat <<EOF && echo a && echo b\nx\nEOF\n");
+    assert_eq!(callees(&analysis), ["cat", "echo", "echo"]);
+}
+
+#[test]
 fn a_here_string_without_a_word_still_reports_a_parse_error() {
     let analysis = run("cat >f <<<\n");
     assert!(

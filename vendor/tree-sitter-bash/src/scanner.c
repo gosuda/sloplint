@@ -348,6 +348,14 @@ static bool scan_heredoc_content(Scanner *scanner, TSLexer *lexer, enum TokenTyp
 
 static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     if (valid_symbols[CONCAT] && !in_error_recovery(valid_symbols)) {
+        // Inside `${...}` a `)` after an expansion is part of the word, as in
+        // "${2:+(from $2)}". CLOSING_BRACE is valid only while the expansion can
+        // end, the same signal the whitespace rule below uses. The closing paren
+        // is then read as an expansion word.
+        if (lexer->lookahead == ')' && valid_symbols[CLOSING_BRACE] && !valid_symbols[EXPANSION_WORD]) {
+            lexer->result_symbol = CONCAT;
+            return true;
+        }
         if (!(lexer->lookahead == 0 || iswspace(lexer->lookahead) || lexer->lookahead == '>' ||
               lexer->lookahead == '<' || lexer->lookahead == ')' || lexer->lookahead == '(' ||
               lexer->lookahead == ';' || lexer->lookahead == '&' || lexer->lookahead == '|' ||
@@ -1040,7 +1048,9 @@ extglob_pattern:
                         scanner->last_glob_paren_depth = 0;
                         return state.saw_non_alphadot;
                     }
-                    if (lexer->lookahead == '"') {
+                    if (lexer->lookahead == '"' || lexer->lookahead == '\'') {
+                        // A quote starts a quoted chunk. Its content may hold
+                        // whitespace, so end the pattern before the quote.
                         lexer->mark_end(lexer);
                         lexer->result_symbol = EXTGLOB_PATTERN;
                         scanner->last_glob_paren_depth = 0;
@@ -1053,6 +1063,11 @@ extglob_pattern:
                         advance(lexer);
                         if (iswspace(lexer->lookahead) || lexer->lookahead == '"') {
                             advance(lexer);
+                        } else if (lexer->lookahead == '\'') {
+                            // An escaped quote is an ordinary pattern character, not a
+                            // quoted chunk, so consume it here as before.
+                            advance(lexer);
+                            lexer->mark_end(lexer);
                         }
                     } else {
                         if (!iswalpha(lexer->lookahead) && lexer->lookahead != '.' && lexer->lookahead != '\\') {
