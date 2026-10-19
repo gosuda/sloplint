@@ -28,3 +28,5 @@ mod ruby;
 mod rust;
 #[path = "grammar_gaps/starlark.rs"]
 mod starlark;
+#[path = "grammar_gaps/zig.rs"]
+mod zig;
