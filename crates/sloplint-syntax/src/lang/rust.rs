@@ -239,10 +239,11 @@ fn macro_args<'s>(cx: &Cx<'_, 's>, tt: Node<'_>) -> Vec<Arg<'s>> {
 }
 fn with_prefix<'s>(prefix: &str, head: &'s str) -> Cow<'s, str> {
     if prefix.is_empty() {
-        Cow::Borrowed(head)
-    } else {
-        Cow::Owned(prefix.to_owned() + head)
+        return Cow::Borrowed(head.trim_end_matches(':'));
     }
+    let mut joined = prefix.to_owned() + head;
+    joined.truncate(joined.trim_end_matches(':').len());
+    Cow::Owned(joined)
 }
 fn leaf_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Import<'s>>) {
     let (path, alias) = if n.kind() == "use_as_clause" {
@@ -257,6 +258,16 @@ fn leaf_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Imp
     } else {
         (text(cx, n), None)
     };
+    let own = n
+        .parent()
+        .and_then(|list| list.parent())
+        .and_then(|outer| child_by_field(outer, "path"))
+        .map_or("", |scope| text(cx, scope));
+    let (path, prefix) = if path == "self" && !own.is_empty() {
+        (own, &prefix[..prefix.len().saturating_sub(own.len() + 2)])
+    } else {
+        (path, prefix)
+    };
     let name = last_segment(path, &["::"]);
     let head = path[..path.len() - name.len()].trim_end_matches(':');
     out.push(Import {
@@ -269,17 +280,10 @@ fn leaf_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Imp
     });
 }
 fn wild_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Import<'s>>) {
-    let path = named_children(n)
-        .into_iter()
-        .next()
-        .map_or("", |c| text(cx, c));
-    let module = match with_prefix(prefix, path) {
-        Cow::Borrowed(s) => Cow::Borrowed(s.trim_end_matches(':')),
-        Cow::Owned(s) => Cow::Owned(s.trim_end_matches(':').to_owned()),
-    };
+    let path = n.named_child(0).map_or("", |c| text(cx, c));
     out.push(Import {
         pos: pos_of(n),
-        module,
+        module: with_prefix(prefix, path),
         name: "*",
         alias: None,
         kind: ImportKind::Wildcard,
