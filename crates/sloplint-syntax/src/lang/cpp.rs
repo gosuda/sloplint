@@ -81,7 +81,7 @@ impl LangHooks for CppHooks {
             name: text(cx, name_node),
             name_pos: pos_of(name_node),
             public: is_public(cx, n, member_list(n)),
-            interface_bound: is_bound(cx, n, fd),
+            interface_bound: name_node.kind() == "operator_name" || is_bound(cx, n, fd),
             in_test: cx.is_test_file,
             params: params(cx, fd),
             return_type: return_type(cx, n, fd),
@@ -339,7 +339,7 @@ fn func_parts(n: Node<'_>) -> Option<(Node<'_>, Node<'_>)> {
     }
     let inner_node = child_by_field(fd, "declarator")?;
     let name = match inner_node.kind() {
-        "identifier" | "field_identifier" | "destructor_name" => inner_node,
+        "identifier" | "field_identifier" | "destructor_name" | "operator_name" => inner_node,
         "qualified_identifier" | "template_function" | "template_method" => {
             child_by_field(inner_node, "name")?
         }

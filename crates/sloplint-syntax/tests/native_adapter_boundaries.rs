@@ -7,5 +7,7 @@
 mod c_family_const_pointer_bindings;
 #[path = "native_adapter_boundaries/c_family_param_declarators.rs"]
 mod c_family_param_declarators;
+#[path = "native_adapter_boundaries/cpp_operator_functions.rs"]
+mod cpp_operator_functions;
 #[path = "native_adapter_boundaries/support.rs"]
 mod support;
