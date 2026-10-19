@@ -2,3 +2,5 @@
 
 #[path = "config_custom_remaining/language_tables.rs"]
 mod language_tables;
+#[path = "config_custom_remaining/toml_location.rs"]
+mod toml_location;

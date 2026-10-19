@@ -119,10 +119,8 @@ pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunErro
     let custom_sources = read_custom_sources(&location.root, &custom_rule_patterns(&main))?;
     let mut specs = Vec::new();
     for (rel, text) in &custom_sources {
-        let file: CustomRuleFile = toml::from_str(text).map_err(|error| ConfigError::Toml {
-            origin: rel.clone(),
-            message: error.message().to_string(),
-        })?;
+        let file: CustomRuleFile =
+            toml::from_str(text).map_err(|error| ConfigError::from_toml(rel, text, &error))?;
         specs.extend(file.custom_rules);
     }
     let combined = combine(main, &specs, &origin)?;

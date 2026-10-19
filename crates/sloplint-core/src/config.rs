@@ -190,6 +190,40 @@ pub enum ConfigError {
     UnknownLanguage { value: String },
 }
 
+impl ConfigError {
+    /// Builds [`ConfigError::Toml`] for a failed parse of `source`, read from `origin`.
+    ///
+    /// When the parser reports a span, the message starts with the 1-based line
+    /// and column (in Unicode scalar values) where the span begins.
+    pub fn from_toml(origin: &str, source: &str, error: &toml::de::Error) -> ConfigError {
+        let message = match error.span() {
+            Some(span) => {
+                let (line, column) = line_column(source, span.start);
+                format!("line {line}, column {column}: {}", error.message())
+            }
+            None => error.message().to_string(),
+        };
+        ConfigError::Toml {
+            origin: origin.to_string(),
+            message,
+        }
+    }
+}
+
+fn line_column(source: &str, offset: usize) -> (usize, usize) {
+    let before = &source.as_bytes()[..offset.min(source.len())];
+    let line = before.iter().filter(|&&byte| byte == b'\n').count() + 1;
+    let line_start = before
+        .iter()
+        .rposition(|&byte| byte == b'\n')
+        .map_or(0, |newline| newline + 1);
+    let column = String::from_utf8_lossy(&before[line_start..])
+        .chars()
+        .count()
+        + 1;
+    (line, column)
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawProject {
@@ -222,10 +256,8 @@ struct RawConfig {
 
 /// Parses `sloplint.toml` text into a fully defaulted, validated [`Config`].
 pub fn parse_config(toml_src: &str, origin: &str) -> Result<Config, ConfigError> {
-    let raw: RawConfig = toml::from_str(toml_src).map_err(|error| ConfigError::Toml {
-        origin: origin.to_string(),
-        message: error.message().to_string(),
-    })?;
+    let raw: RawConfig = toml::from_str(toml_src)
+        .map_err(|error| ConfigError::from_toml(origin, toml_src, &error))?;
     let mut config = Config::default();
     if let Some(project) = raw.project {
         merge_project(&mut config, project)?;
