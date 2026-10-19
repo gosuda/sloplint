@@ -223,6 +223,20 @@ fn py_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     }
 }
 
+fn py_callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
+    let mut cur = callee;
+    loop {
+        match cur.kind() {
+            "identifier" => return Some(text(cx, cur)),
+            "attribute" => cur = child_by_field(cur, "object")?,
+            "subscript" => cur = child_by_field(cur, "value")?,
+            "call" => cur = child_by_field(cur, "function")?,
+            "parenthesized_expression" => cur = named_children(cur).into_iter().next()?,
+            _ => return None,
+        }
+    }
+}
+
 fn py_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     match n.kind() {
         "string" => string_arg_shape(cx, n, &["string_content"]),
@@ -530,7 +544,7 @@ impl LangHooks for PythonHooks {
         Some(CallHead {
             callee: text(cx, func),
             kind: CallKind::Plain,
-            callee_root: None,
+            callee_root: py_callee_root(cx, func),
             args,
         })
     }

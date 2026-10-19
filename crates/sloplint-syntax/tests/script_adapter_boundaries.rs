@@ -9,5 +9,7 @@ mod php_callee_matching;
 mod php_field_copy;
 #[path = "script_adapter_boundaries/php_test_class.rs"]
 mod php_test_class;
+#[path = "script_adapter_boundaries/python_callee_root.rs"]
+mod python_callee_root;
 #[path = "script_adapter_boundaries/python_nested_def.rs"]
 mod python_nested_def;
