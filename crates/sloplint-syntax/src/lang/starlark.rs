@@ -173,7 +173,7 @@ impl LangHooks for StarlarkHooks {
         }
         let parts: Vec<Node<'_>> = named_children(n)
             .into_iter()
-            .filter(|c| !matches!(c.kind(), "assert_keyword" | "assert_builtin" | "comment"))
+            .filter(|c| !matches!(c.kind(), "assert_keyword" | "comment"))
             .collect();
         Some(Assertion {
             pos: pos_of(n),

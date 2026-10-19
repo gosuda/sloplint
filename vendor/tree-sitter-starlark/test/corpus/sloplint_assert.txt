@@ -1,0 +1,143 @@
+================================================================================
+Assert module calls
+================================================================================
+
+assert.true(True)
+assert.fail("x")
+assert.lt(a, b)
+
+--------------------------------------------------------------------------------
+
+(module
+  (expression_statement
+    (call
+      (attribute
+        (identifier)
+        (identifier))
+      (argument_list
+        (true))))
+  (expression_statement
+    (call
+      (attribute
+        (identifier)
+        (identifier))
+      (argument_list
+        (string
+          (string_start)
+          (string_content)
+          (string_end)))))
+  (expression_statement
+    (call
+      (attribute
+        (identifier)
+        (identifier))
+      (argument_list
+        (identifier)
+        (identifier)))))
+
+================================================================================
+Assert used as a name
+================================================================================
+
+assert = module("assert", eq = _eq)
+assert.eq(1, 1)
+
+--------------------------------------------------------------------------------
+
+(module
+  (expression_statement
+    (assignment
+      (identifier)
+      (call
+        (identifier)
+        (argument_list
+          (string
+            (string_start)
+            (string_content)
+            (string_end))
+          (keyword_argument
+            (identifier)
+            (identifier))))))
+  (expression_statement
+    (call
+      (attribute
+        (identifier)
+        (identifier))
+      (argument_list
+        (integer)
+        (integer)))))
+
+================================================================================
+Assert helpers are ordinary calls and names
+================================================================================
+
+assert_eq(a, b)
+assert_fails(f, "msg")
+assert_ = 1
+
+--------------------------------------------------------------------------------
+
+(module
+  (expression_statement
+    (call
+      (identifier)
+      (argument_list
+        (identifier)
+        (identifier))))
+  (expression_statement
+    (call
+      (identifier)
+      (argument_list
+        (identifier)
+        (string
+          (string_start)
+          (string_content)
+          (string_end)))))
+  (expression_statement
+    (assignment
+      (identifier)
+      (integer))))
+
+================================================================================
+Ambiguous forms prefer the ordinary reading
+================================================================================
+
+assert(x)
+assert[0]
+assert - x
+
+--------------------------------------------------------------------------------
+
+(module
+  (expression_statement
+    (call
+      (identifier)
+      (argument_list
+        (identifier))))
+  (expression_statement
+    (subscript
+      (identifier)
+      (integer)))
+  (expression_statement
+    (binary_operator
+      (identifier)
+      (identifier))))
+
+================================================================================
+Unambiguous assert statements still parse
+================================================================================
+
+assert x == y, "msg"
+
+--------------------------------------------------------------------------------
+
+(module
+  (assert_statement
+    (assert_keyword)
+    (comparison_operator
+      (identifier)
+      (identifier))
+    (string
+      (string_start)
+      (string_content)
+      (string_end))))

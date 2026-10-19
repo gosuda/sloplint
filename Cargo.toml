@@ -35,7 +35,7 @@ tree-sitter-dart = "0.2.0"
 tree-sitter-zig = "1.1.2"
 tree-sitter-ocaml = "0.26.0"
 tree-sitter-odin = "1.3.0"
-tree-sitter-starlark = "1.3.0"
+tree-sitter-starlark = { path = "vendor/tree-sitter-starlark" }
 rayon = "1.12.0"
 ignore = "0.4.33"
 globset = "0.4.20"

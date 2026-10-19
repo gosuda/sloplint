@@ -1,0 +1,99 @@
+diff --git a/grammar.js b/grammar.js
+index c32652f..4f5e781 100644
+--- a/grammar.js
++++ b/grammar.js
+@@ -16,30 +16,37 @@ const Python = require('tree-sitter-python/grammar');
+ module.exports = grammar(Python, {
+   name: 'starlark',
+ 
+-  conflicts: (_, original) => original.filter((e) =>
++  conflicts: ($, original) => original.filter((e) =>
+     !(e.length == 2 && e[0].name == 'match_statement' && e[1].name == 'primary_expression'),
+-  ),
++  ).concat([
++    [$.assert_statement, $.primary_expression],
++  ]),
+ 
+   rules: {
+-    assert_statement: $ => seq(
+-      choice(
+-        seq(
+-          alias('assert', $.assert_keyword),
+-          optional(seq('.', alias(choice('eq', 'ne', 'contains', 'fails'), $.assert_builtin))),
+-        ),
+-        alias(
+-          choice(
+-            'assert_',
+-            'assert_eq',
+-            'assert_ne',
+-            'assert_contains',
+-            'assert_fails',
+-          ),
+-          $.assert_keyword,
++    // Starlark has no assert statement. `assert` is an ordinary name: the Go
++    // implementation does not reserve it, and its tests use a predeclared
++    // `assert` module, as in `assert.eq(a, b)` and `assert = module(...)`. The
++    // names `assert_`, `assert_eq`, `assert_ne`, `assert_contains` and
++    // `assert_fails` are ordinary function names too (see `keyword_identifier`).
++    //
++    // The Python-style statement `assert cond, message` stays accepted, but only
++    // where the name cannot be read as an expression. When both readings fit
++    // (`assert (x)`, `assert [x]`, `assert - x`), the ordinary reading wins:
++    // same pattern as `print_statement` in the Python grammar.
++    assert_statement: $ => prec(-3, prec.dynamic(-1, seq(
++      alias(
++        choice(
++          'assert',
++          'assert_',
++          'assert_eq',
++          'assert_ne',
++          'assert_contains',
++          'assert_fails',
+         ),
++        $.assert_keyword,
+       ),
+       commaSep1($.expression),
+-    ),
++    ))),
+ 
+     // Starlark has no yield statements
+     expression_statement: $ => choice(
+@@ -171,7 +178,7 @@ module.exports = grammar(Python, {
+       $.pattern_list,
+     ),
+ 
+-    // Add struct to keyword identifiers
++    // Add struct and the assert names to keyword identifiers
+     keyword_identifier: $ => choice(
+       prec(-3, alias(
+         choice(
+@@ -181,6 +188,12 @@ module.exports = grammar(Python, {
+           'await',
+           'match',
+           'struct',
++          'assert',
++          'assert_',
++          'assert_eq',
++          'assert_ne',
++          'assert_contains',
++          'assert_fails',
+         ),
+         $.identifier,
+       )),
+diff --git a/queries/highlights.scm b/queries/highlights.scm
+index 94fe7cd..588fe51 100644
+--- a/queries/highlights.scm
++++ b/queries/highlights.scm
+@@ -252,11 +252,9 @@
+ 
+ ;; Starlark-specific
+ 
+-;; Assertion calls
++;; Assert statements
+ (assert_keyword) @keyword
+ 
+-(assert_builtin) @function.builtin
+-
+ ;; Struct definitions
+ ((call
+   function: (identifier) @_func
