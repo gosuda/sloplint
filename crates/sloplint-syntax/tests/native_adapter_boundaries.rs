@@ -11,6 +11,8 @@ mod c_family_param_declarators;
 mod cpp_operator_functions;
 #[path = "native_adapter_boundaries/cpp_virtual_interface_bound.rs"]
 mod cpp_virtual_interface_bound;
+#[path = "native_adapter_boundaries/dart_barrel_directives.rs"]
+mod dart_barrel_directives;
 #[path = "native_adapter_boundaries/dart_namespace_import_names.rs"]
 mod dart_namespace_import_names;
 #[path = "native_adapter_boundaries/java_message_first_assertions.rs"]

@@ -855,10 +855,18 @@ impl LangHooks for DartHooks {
         let mut exports = 0u32;
         let mut uris = Vec::new();
         for c in named_children(root) {
-            if c.kind() == "library_export" {
+            let directive = if c.kind() == "import_or_export" {
+                named_children(c)
+                    .into_iter()
+                    .find(|k| k.kind() == "library_export" || k.kind() == "library_import")
+                    .unwrap_or(c)
+            } else {
+                c
+            };
+            if directive.kind() == "library_export" {
                 exports += 1;
-                uris.extend(export_uri(cx, c));
-            } else if !is_barrel_edge(c.kind()) {
+                uris.extend(export_uri(cx, directive));
+            } else if !is_barrel_edge(directive.kind()) {
                 return None;
             }
         }
@@ -924,6 +932,7 @@ fn is_barrel_edge(kind: &str) -> bool {
         || kind == "library_name"
         || kind == "part_directive"
         || kind == "part_of_directive"
+        || kind == "script_tag"
         || kind == "comment"
         || kind == "block_comment"
         || kind == "documentation_block_comment"
