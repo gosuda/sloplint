@@ -205,13 +205,35 @@ fn conventions(lang: Lang) -> Candidates {
         .unwrap_or(Candidates::None)
 }
 
-fn has_counterpart(paths: &BTreeSet<&str>, names: &HashSet<&str>, path: &str, lang: Lang) -> bool {
+/// The analyzed path set, indexed once per run so each module answers in `O(log n)`.
+struct PathIndex<'a> {
+    paths: BTreeSet<&'a str>,
+    names: HashSet<&'a str>,
+    rust_tests: BTreeSet<&'a str>,
+}
+
+impl<'a> PathIndex<'a> {
+    fn new(files: &[WorldFile<'a>]) -> PathIndex<'a> {
+        PathIndex {
+            paths: files.iter().map(|file| file.path).collect(),
+            names: files.iter().map(|file| file_name(file.path)).collect(),
+            rust_tests: files
+                .iter()
+                .map(|file| file.path)
+                .filter(|path| under_tests(path))
+                .map(file_name)
+                .collect(),
+        }
+    }
+}
+
+fn has_counterpart(index: &PathIndex<'_>, path: &str, lang: Lang) -> bool {
     match conventions(lang) {
-        Candidates::Names(form) => names_match(names, path, &form),
-        Candidates::Dir(tail) => dir_match(paths, path, tail),
-        Candidates::Root(templates) => root_match(paths, templates, path),
-        Candidates::RustTests => rust_match(paths, path),
-        Candidates::Web => web_match(paths, path),
+        Candidates::Names(form) => names_match(&index.names, path, &form),
+        Candidates::Dir(tail) => dir_match(&index.paths, path, tail),
+        Candidates::Root(templates) => root_match(&index.paths, templates, path),
+        Candidates::RustTests => rust_match(&index.rust_tests, path),
+        Candidates::Web => web_match(&index.paths, path),
         Candidates::None => false,
     }
 }
@@ -241,14 +263,16 @@ fn root_match(paths: &BTreeSet<&str>, templates: &[&str], path: &str) -> bool {
         .any(|template| paths.contains(template.replace("{stem}", stem).as_str()))
 }
 
-fn rust_match(paths: &BTreeSet<&str>, path: &str) -> bool {
+fn rust_match(test_names: &BTreeSet<&str>, path: &str) -> bool {
     let stem = stem_ext(path).0;
-    let exact = format!("{stem}.rs");
+    if test_names.contains(format!("{stem}.rs").as_str()) {
+        return true;
+    }
     let prefix = format!("{stem}_");
-    paths.iter().any(|candidate| {
-        let name = file_name(candidate);
-        under_tests(candidate) && (name == exact.as_str() || name.starts_with(prefix.as_str()))
-    })
+    test_names
+        .range(prefix.as_str()..)
+        .next()
+        .is_some_and(|name| name.starts_with(prefix.as_str()))
 }
 
 fn under_tests(path: &str) -> bool {
@@ -365,13 +389,12 @@ fn file_name(path: &str) -> &str {
 
 impl WorldRule for ColocatedTests {
     fn check(&self, files: &[WorldFile<'_>], out: &mut Vec<Finding>) {
-        let paths: BTreeSet<&str> = files.iter().map(|file| file.path).collect();
-        let names: HashSet<&str> = files.iter().map(|file| file_name(file.path)).collect();
+        let index = PathIndex::new(files);
         for file in files {
             if self.skipped(file) || file.facts.has_inline_tests {
                 continue;
             }
-            if has_counterpart(&paths, &names, file.path, file.facts.lang) {
+            if has_counterpart(&index, file.path, file.facts.lang) {
                 continue;
             }
             out.push(self.finding(file));
