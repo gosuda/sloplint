@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use serde::{Deserialize, Serialize};
 
-use crate::finding::source_site;
+use crate::finding::source_site_indexed;
 use crate::lang::Lang;
 
 /// A source position: `line` is 1-based and `byte` is the offset in the BOM-stripped source.
@@ -20,6 +20,11 @@ pub struct FileFacts<'s> {
     pub lang: Lang,
     pub path: &'s str,
     pub source: &'s str,
+    /// The byte offset where each line of `source` starts, from [`crate::finding::line_starts`].
+    ///
+    /// The index belongs to `source`; [`crate::finding::Finding::at`] and the world sites read it
+    /// to find a line without rescanning the file.
+    pub line_starts: Vec<u32>,
     pub is_test_file: bool,
     pub is_entry_file: bool,
     pub line_count: u32,
@@ -251,14 +256,14 @@ impl WorldFacts {
             .functions
             .iter()
             .filter(|f| f.public && !f.interface_bound)
-            .map(|f| named_site(facts.source, f.pos, f.name))
+            .map(|f| named_site(facts, f.pos, f.name))
             .collect();
         definitions.extend(
             facts
                 .types
                 .iter()
                 .filter(|t| t.public)
-                .map(|t| named_site(facts.source, t.pos, t.name)),
+                .map(|t| named_site(facts, t.pos, t.name)),
         );
         WorldFacts {
             lang: facts.lang,
@@ -271,20 +276,20 @@ impl WorldFacts {
                 .types
                 .iter()
                 .filter(|t| t.abstraction)
-                .map(|t| named_site(facts.source, t.pos, t.name))
+                .map(|t| named_site(facts, t.pos, t.name))
                 .collect(),
             impls: facts
                 .impls
                 .iter()
-                .map(|i| named_site(facts.source, i.pos, i.name))
+                .map(|i| named_site(facts, i.pos, i.name))
                 .collect(),
             barrel: facts.barrel.as_ref().map(|b| b.targets.clone()),
         }
     }
 }
 
-fn named_site(source: &str, pos: Pos, name: &str) -> NamedSite {
-    let (column, context) = source_site(source, pos);
+fn named_site(facts: &FileFacts<'_>, pos: Pos, name: &str) -> NamedSite {
+    let (column, context) = source_site_indexed(&facts.line_starts, facts.source, pos);
     NamedSite {
         name: name.to_owned().into_boxed_str(),
         line: pos.line,
@@ -296,6 +301,7 @@ fn named_site(source: &str, pos: Pos, name: &str) -> NamedSite {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::finding::line_starts;
 
     #[test]
     fn projects_public_surface_and_barrel() {
@@ -304,6 +310,7 @@ mod tests {
             lang: Lang::Rust,
             path: "src/lib.rs",
             source,
+            line_starts: line_starts(source),
             is_test_file: false,
             is_entry_file: true,
             line_count: 2,

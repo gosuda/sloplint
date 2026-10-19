@@ -1,6 +1,7 @@
 //! Hand-built facts: the rules and the line index only read these public fields.
 
 use sloplint_core::facts::{FileFacts, Function, Pos};
+use sloplint_core::finding::line_starts;
 use sloplint_core::lang::Lang;
 
 /// Facts for `source` with no functions, calls, or other sites.
@@ -9,6 +10,7 @@ pub fn facts_for(lang: Lang, path: &'static str, source: &'static str) -> FileFa
         lang,
         path,
         source,
+        line_starts: line_starts(source),
         is_test_file: false,
         is_entry_file: false,
         line_count: 0,

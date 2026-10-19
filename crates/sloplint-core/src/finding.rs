@@ -49,6 +49,9 @@ const MAX_CONTEXT_CHARS: usize = 160;
 
 impl Finding {
     /// Builds a finding inside an analyzed file; column and context come from `facts.source`.
+    ///
+    /// The line is found through the file's line index, so the cost is the length of that line.
+    /// The result equals [`Finding::at_source`] for the same path, source, and position.
     pub fn at(
         facts: &FileFacts<'_>,
         pos: Pos,
@@ -57,7 +60,18 @@ impl Finding {
         message: String,
         fix: String,
     ) -> Finding {
-        Finding::at_source(facts.path, facts.source, pos, rule, severity, message, fix)
+        let (column, context) = source_site_indexed(&facts.line_starts, facts.source, pos);
+        Finding {
+            rule: rule.into(),
+            severity,
+            path: facts.path.into(),
+            line: pos.line,
+            column,
+            message,
+            fix,
+            context,
+            fingerprint: Box::from(""),
+        }
     }
 
     /// Builds a finding whose line, column, and context are copied from a `NamedSite`.
@@ -120,6 +134,48 @@ pub fn source_site(source: &str, pos: Pos) -> (u32, Box<str>) {
         column += 1;
     }
     (column, context_of(text))
+}
+
+/// The byte offset where each `\n`-separated part of `source` starts, in line order.
+///
+/// The index always has at least one entry, because the empty source is one empty line, and a
+/// trailing newline starts a last empty line. An index belongs to the source it was built from:
+/// pass it to [`source_site_indexed`] only with that same source. Offsets past `u32::MAX` clamp,
+/// like [`Pos::byte`].
+pub fn line_starts(source: &str) -> Vec<u32> {
+    let mut starts = vec![0];
+    for (at, _) in source.match_indices('\n') {
+        starts.push(u32::try_from(at + 1).unwrap_or(u32::MAX));
+    }
+    starts
+}
+
+/// [`source_site`] through a line index built by [`line_starts`] for the same `source`.
+///
+/// The line is taken from `pos.line` alone, independently of `pos.byte`, and invalid positions
+/// resolve exactly as in [`source_site`]: line 0 is the first line, a line past the last one is an
+/// empty line, and a byte outside the line clamps to its ends. The cost is the length of the line.
+pub fn source_site_indexed(starts: &[u32], source: &str, pos: Pos) -> (u32, Box<str>) {
+    let index = offset(pos.line.saturating_sub(1));
+    let Some(&start) = starts.get(index) else {
+        return (1, Box::from(""));
+    };
+    let end = match starts.get(index + 1) {
+        Some(&next) => offset(next).saturating_sub(1),
+        None => source.len(),
+    };
+    let text = source.get(offset(start)..end).unwrap_or("");
+    source_site(
+        text,
+        Pos {
+            line: 1,
+            byte: pos.byte.saturating_sub(start),
+        },
+    )
+}
+
+fn offset(value: u32) -> usize {
+    usize::try_from(value).unwrap_or(usize::MAX)
 }
 
 fn line_at(source: &str, line: u32) -> (usize, &str) {

@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use sloplint_core::facts::FileFacts;
+use sloplint_core::finding::line_starts;
 use sloplint_core::lang::Lang;
 use sloplint_core::suppress::CommentText;
 use tree_sitter::Node;
@@ -68,6 +69,7 @@ pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>) -> FileFacts<'s> {
         lang: input.lang,
         path: input.path,
         source: input.source,
+        line_starts: line_starts(input.source),
         is_test_file: input.is_test_file,
         is_entry_file: input.lang.is_entry_file(input.path),
         line_count: line_count(input.source),
