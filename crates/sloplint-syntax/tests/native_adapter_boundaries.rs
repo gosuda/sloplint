@@ -11,5 +11,7 @@ mod c_family_param_declarators;
 mod cpp_operator_functions;
 #[path = "native_adapter_boundaries/cpp_virtual_interface_bound.rs"]
 mod cpp_virtual_interface_bound;
+#[path = "native_adapter_boundaries/objc_message_arguments.rs"]
+mod objc_message_arguments;
 #[path = "native_adapter_boundaries/support.rs"]
 mod support;

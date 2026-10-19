@@ -105,9 +105,14 @@ impl LangHooks for ObjcHooks {
             "message_expression" => {
                 let callee = first_selector(cx, n)?;
                 let receiver = child_by_field(n, "receiver");
+                let mut cursor = n.walk();
+                let mut selectors = n.children_by_field_name("method", &mut cursor).peekable();
                 let mut args = Vec::new();
                 for c in named_children(n) {
-                    if Some(c) == receiver || c.kind() == "comment" {
+                    if Some(c) == receiver
+                        || c.kind() == "comment"
+                        || selectors.next_if_eq(&c).is_some()
+                    {
                         continue;
                     }
                     args.push(mk_arg(cx, c));
