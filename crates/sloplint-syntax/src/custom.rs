@@ -49,12 +49,17 @@ impl CustomRules {
     /// names and the file source for capture text; the caller must keep
     /// both alive while the hits are used.
     pub fn run<'s>(&'s self, tree: &Tree, source: &'s str, lang: Lang) -> Vec<CustomHit<'s>> {
+        let mut queries = self
+            .entries
+            .iter()
+            .filter(|(entry_lang, _, _)| *entry_lang == lang)
+            .peekable();
+        if queries.peek().is_none() {
+            return Vec::new();
+        }
         let mut hits = Vec::new();
         let mut cursor = QueryCursor::new();
-        for (entry_lang, rule, query) in &self.entries {
-            if *entry_lang != lang {
-                continue;
-            }
+        for (_, rule, query) in queries {
             let names = query.capture_names();
             let mut matches = cursor.matches(query, tree.root_node(), source.as_bytes());
             while let Some(found) = matches.next() {
