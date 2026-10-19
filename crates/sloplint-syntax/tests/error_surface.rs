@@ -5,8 +5,8 @@
 //! during recovery is hidden from both, and only `has_error` and `to_sexp` see
 //! it. `analyze` must still report a position then, falling back to the root's
 //! end. The tests here pin that fallback on one fixed input, the true position
-//! of a visible error, a deep nesting walk on a small stack, and the `.h`
-//! fallback route.
+//! of a visible error, and a deep nesting walk on a small stack. The `.h`
+//! fallback route lives in syntax_kernel_contracts/header_fallbacks.rs.
 //!
 //! Each test names the defect class it stops in its doc comment.
 
@@ -169,52 +169,5 @@ fn deep_nesting_does_not_overflow_a_small_stack() {
     assert!(
         bad.is_some(),
         "an unbalanced 2000-deep paren still reports a parse error"
-    );
-}
-
-/// Defect class: a `.h` file that C rejects but C++ or Objective-C accepts leaks
-/// a parse error, or its facts keep the wrong grammar. Each accepted header must
-/// report no error and carry the grammar that accepted it; a header no grammar
-/// accepts keeps its error and its routed language.
-#[test]
-fn fallback_accepted_header_leaks_no_parse_error() {
-    let cpp = "#pragma once\nnamespace util {\nclass Widget {\npublic:\n    int value() const;\n};\n}\n";
-    assert!(
-        raw_tree(Lang::C, cpp).root_node().has_error(),
-        "premise: C rejects the C++ header"
-    );
-    let a = run(Lang::C, "include/widget.h", cpp);
-    assert_eq!(
-        a.parse_error, None,
-        "a header that parses as C++ has no parse error"
-    );
-    assert_eq!(a.facts.lang, Lang::Cpp, "facts carry the C++ grammar");
-
-    let objc = "@interface Widget : NSObject\n- (int)value;\n@end\n";
-    assert!(
-        raw_tree(Lang::C, objc).root_node().has_error(),
-        "premise: C rejects the Objective-C header"
-    );
-    let a = run(Lang::C, "include/widget_objc.h", objc);
-    assert_eq!(
-        a.parse_error, None,
-        "an Objective-C header has no parse error"
-    );
-    assert_eq!(
-        a.facts.lang,
-        Lang::ObjC,
-        "facts carry the Objective-C grammar"
-    );
-
-    let broken = "int f( {\n";
-    let a = run(Lang::C, "include/broken.h", broken);
-    assert!(
-        a.parse_error.is_some(),
-        "a header no grammar accepts keeps its parse error"
-    );
-    assert_eq!(
-        a.facts.lang,
-        Lang::C,
-        "a failed header keeps its routed language"
     );
 }
