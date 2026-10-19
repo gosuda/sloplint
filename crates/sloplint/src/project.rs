@@ -69,7 +69,12 @@ struct CustomFragment<'a> {
     custom_rules: &'a [CustomRuleSpec],
 }
 
-/// Resolves the project root and configuration path: explicit values first, then the nearest `sloplint.toml`, then the nearest `.git`.
+/// Resolves the project root and configuration path: explicit values first, then the nearest ancestor of `cwd` that holds `sloplint.toml` or `.git`.
+///
+/// The ancestor walk stops at the first directory with either marker, so a
+/// `sloplint.toml` above the nearest `.git` belongs to some other project and
+/// is never used for this checkout; `--config` is the explicit override. With
+/// no marker anywhere the root is `cwd`.
 ///
 /// An explicit `config` is kept as `Some`, even when the file does not exist,
 /// so `load` can fail on it. `None` means the configuration is implicit and
@@ -366,18 +371,10 @@ pub fn glob_set(patterns: &[String], key: &str) -> Result<GlobSet, ConfigError> 
 }
 
 fn find_root(cwd: &Path) -> PathBuf {
-    let ancestors: Vec<&Path> = cwd.ancestors().collect();
-    ancestors
-        .iter()
-        .copied()
-        .find(|dir| dir.join(CONFIG_FILE).is_file())
-        .or_else(|| {
-            ancestors
-                .iter()
-                .copied()
-                .find(|dir| dir.join(".git").exists())
-        })
-        .map_or_else(|| cwd.to_path_buf(), Path::to_path_buf)
+    cwd.ancestors()
+        .find(|dir| dir.join(CONFIG_FILE).is_file() || dir.join(".git").exists())
+        .unwrap_or(cwd)
+        .to_path_buf()
 }
 
 fn read_required(path: &Path) -> Result<String, RunError> {
