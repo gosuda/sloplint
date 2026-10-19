@@ -62,7 +62,7 @@ Exit code `0` means the gate passed: the run can still list `warn` findings belo
 - **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
 - **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs.
 
-For Zig catches, Go `if err != nil` blocks, Ruby `rescue` clauses, TypeScript `catch` clauses, and Rust `Err` match arms and `if let Err` guards, `slop/zombie-catch` treats an empty or comment-only body as a handler with no statements, distinct from an unchanged rethrow. Rust arms with a match or `if` guard are not handlers. An unguarded `Err` rethrow preceded by a guarded `Err` or wildcard arm that recovers a subset is not a redundant rethrow. Returning a recovery value does not count as swallowing the error.
+For Zig catches, Go `if err != nil` blocks, Ruby `rescue` clauses, TypeScript `catch` clauses, and Rust `Err` match arms and `if let Err` guards, `slop/zombie-catch` treats an empty or comment-only body as a handler with no statements, distinct from an unchanged rethrow. Rust arms with a match or `if` guard are not handlers. An `Err` arm that only rethrows is excluded when an earlier arm's pattern may match `Err`. Returning a recovery value does not count as swallowing the error.
 
 Dart mutation rules track assignments, member and index writes, and prefix and postfix increments.
 
@@ -75,7 +75,7 @@ Dart mutation rules track assignments, member and index writes, and prefix and p
 | `sloplint check [PATHS]` | Lint files (bare `sloplint` is the same) |
 | `sloplint baseline` | Freeze current findings into the baseline file |
 | `sloplint rules [ID]` | Show effective rule settings for the active profile |
-| `sloplint init` | Write a `sloplint.toml` with every default spelled out |
+| `sloplint init` | Write a starter `sloplint.toml`; use `sloplint rules` for effective rule settings |
 
 `check` flags: `--format agent|human|json`, `--strictness`, `--mode threshold|ratchet`, `--fail-on warn|deny|never`, `--rule ID` (repeatable, `family/*` allowed), `--config FILE`, `--no-cache`, `--jobs N`.
 
