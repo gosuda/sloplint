@@ -48,6 +48,7 @@ impl LangSpec {
             fn_stack: Vec::new(),
             marks: Vec::new(),
             containers: Vec::new(),
+            exports: Vec::new(),
         };
         state.run(root);
         Walked {
@@ -127,10 +128,19 @@ pub(crate) struct WalkState<'s, 'a> {
     pub fn_stack: Vec<FnFrame<'s>>,
     pub marks: Vec<(usize, Mark)>,
     pub containers: Vec<Container>,
+    pub exports: Vec<&'s str>,
 }
 
 impl<'s, 'a> WalkState<'s, 'a> {
     pub(crate) fn run(&mut self, root: Node<'_>) {
+        if self.collect_facts {
+            let hooks = self.spec.hooks;
+            let mut names = Vec::new();
+            hooks.exported_names(root, &self.make_cx(), &mut names);
+            names.sort_unstable();
+            names.dedup();
+            self.exports = names;
+        }
         let mut cursor = root.walk();
         let mut descending = true;
         loop {
@@ -363,6 +373,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
             is_test_file: self.is_test_file,
             has_interface: self.has_interface,
             containers: &self.containers,
+            exports: &self.exports,
         }
     }
 

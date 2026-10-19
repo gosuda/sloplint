@@ -89,14 +89,20 @@ fn header_of(n: Node<'_>) -> Node<'_> {
     }
 }
 
-fn exported_class_member(member: Node<'_>) -> bool {
-    member
+fn declared_public(cx: &Cx<'_, '_>, decl: Node<'_>, name: Node<'_>) -> bool {
+    parent_kind_is(decl, "export_statement")
+        || (parent_kind_is(decl, "program") && cx.is_exported(text(cx, name)))
+}
+
+fn exported_class_member(cx: &Cx<'_, '_>, member: Node<'_>) -> bool {
+    let class = member
         .parent()
         .filter(|body| body.kind() == "class_body")
         .and_then(|body| body.parent())
-        .filter(|class| class.kind() == "class_declaration")
-        .and_then(|class| class.parent())
-        .is_some_and(|wrapper| wrapper.kind() == "export_statement")
+        .filter(|class| class.kind() == "class_declaration");
+    class.is_some_and(|class| {
+        child_by_field(class, "name").is_some_and(|name| declared_public(cx, class, name))
+    })
 }
 
 fn top_level(n: Node<'_>) -> bool {
@@ -155,16 +161,20 @@ struct ClosureSite<'a> {
     header: Node<'a>,
 }
 
-fn closure_site(n: Node<'_>) -> Option<ClosureSite<'_>> {
+fn closure_site<'a>(cx: &Cx<'_, '_>, n: Node<'a>) -> Option<ClosureSite<'a>> {
     let parent = n.parent()?;
     match parent.kind() {
-        "variable_declarator" => declarator_site(n, parent),
-        "field_definition" => field_site(n, parent),
+        "variable_declarator" => declarator_site(cx, n, parent),
+        "field_definition" => field_site(cx, n, parent),
         _ => None,
     }
 }
 
-fn declarator_site<'a>(n: Node<'a>, declarator: Node<'a>) -> Option<ClosureSite<'a>> {
+fn declarator_site<'a>(
+    cx: &Cx<'_, '_>,
+    n: Node<'a>,
+    declarator: Node<'a>,
+) -> Option<ClosureSite<'a>> {
     if child_by_field(declarator, "value")?.id() != n.id() {
         return None;
     }
@@ -177,12 +187,13 @@ fn declarator_site<'a>(n: Node<'a>, declarator: Node<'a>) -> Option<ClosureSite<
         return None;
     }
     let scope = declaration.parent()?;
-    let public = match scope.kind() {
+    let wrapped = match scope.kind() {
         "export_statement" => true,
         "program" => false,
         _ => return None,
     };
-    let header = if public { scope } else { declaration };
+    let public = wrapped || cx.is_exported(text(cx, name));
+    let header = if wrapped { scope } else { declaration };
     Some(ClosureSite {
         name,
         public,
@@ -190,12 +201,12 @@ fn declarator_site<'a>(n: Node<'a>, declarator: Node<'a>) -> Option<ClosureSite<
     })
 }
 
-fn field_site<'a>(n: Node<'a>, field: Node<'a>) -> Option<ClosureSite<'a>> {
+fn field_site<'a>(cx: &Cx<'_, '_>, n: Node<'a>, field: Node<'a>) -> Option<ClosureSite<'a>> {
     if child_by_field(field, "value")?.id() != n.id() {
         return None;
     }
     let name = child_by_field(field, "property")?;
-    let public = exported_class_member(field) && name.kind() != "private_property_identifier";
+    let public = exported_class_member(cx, field) && name.kind() != "private_property_identifier";
     Some(ClosureSite {
         name,
         public,
@@ -436,6 +447,20 @@ fn object_source<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
         found = Some(object);
     }
     found
+}
+
+fn local_export_names<'s>(cx: &Cx<'_, 's>, statement: Node<'_>, out: &mut Vec<&'s str>) {
+    for part in code_children(statement) {
+        match part.kind() {
+            "identifier" => out.push(text(cx, part)),
+            "export_clause" => {
+                for spec in code_children(part) {
+                    out.extend(child_by_field(spec, "name").map(|name| text(cx, name)));
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 fn import_module<'s>(cx: &Cx<'_, 's>, statement: Node<'_>) -> Option<&'s str> {
@@ -805,9 +830,9 @@ impl LangHooks for JavaScriptHooks {
         let body = child_by_field(n, "body")?;
         let name = child_by_field(n, "name")?;
         let public = if n.kind() == "method_definition" {
-            exported_class_member(n) && name.kind() != "private_property_identifier"
+            exported_class_member(cx, n) && name.kind() != "private_property_identifier"
         } else {
-            parent_kind_is(n, "export_statement")
+            declared_public(cx, n, name)
         };
         let params =
             child_by_field(n, "parameters").map_or_else(Vec::new, |list| formal_params(cx, list));
@@ -821,7 +846,7 @@ impl LangHooks for JavaScriptHooks {
     }
 
     fn closure_as_function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
-        let found = closure_site(n)?;
+        let found = closure_site(cx, n)?;
         let body = child_by_field(n, "body")?;
         let site = HeadSite {
             name: found.name,
@@ -913,6 +938,14 @@ impl LangHooks for JavaScriptHooks {
 
     fn assertion(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {
         assertion_site(cx, n)
+    }
+
+    fn exported_names<'s>(&self, root: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        for statement in code_children(root) {
+            if statement.kind() == "export_statement" && import_module(cx, statement).is_none() {
+                local_export_names(cx, statement, out);
+            }
+        }
     }
 
     fn barrel(&self, root: Node<'_>, cx: &Cx<'_, '_>) -> Option<Barrel> {

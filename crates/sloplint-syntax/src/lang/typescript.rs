@@ -8,8 +8,8 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    first_of_kind, last_segment, named_children, narrow, pos_of, preceding_comments,
-    string_arg_shape, strip_quotes, text,
+    first_of_kind, has_child_kind, last_segment, named_children, narrow, pos_of,
+    preceding_comments, string_arg_shape, strip_quotes, text,
 };
 use crate::spec::Role;
 
@@ -85,6 +85,14 @@ fn member_public(cx: &Cx<'_, '_>, n: Node<'_>, name_kind: &str) -> bool {
         return false;
     }
     enclosing_class(cx, n).is_some_and(|(exported, _)| exported)
+}
+
+fn exported(cx: &Cx<'_, '_>, decl: Node<'_>, name: &str) -> bool {
+    match decl.parent().map(|p| p.kind()) {
+        Some("export_statement") => true,
+        Some("program") => cx.is_exported(name),
+        _ => false,
+    }
 }
 
 fn strip_ty(ty: &str) -> &str {
@@ -584,7 +592,7 @@ impl LangHooks for TypeScriptHooks {
         let public = if n.kind() == "method_definition" {
             member_public(cx, n, name_node.kind())
         } else {
-            n.parent().is_some_and(|p| p.kind() == "export_statement")
+            exported(cx, n, text(cx, name_node))
         };
         let mut params = Vec::new();
         if let Some(list) = child_by_field(n, "parameters") {
@@ -624,7 +632,7 @@ impl LangHooks for TypeScriptHooks {
             if name_node.kind() != "identifier" {
                 return None;
             }
-            let public = grand.kind() == "export_statement";
+            let public = exported(cx, decl, text(cx, name_node));
             let mut params = Vec::new();
             closure_params(cx, n, &mut params);
             let body = child_by_field(n, "body")?;
@@ -742,6 +750,24 @@ impl LangHooks for TypeScriptHooks {
         }
     }
 
+    fn exported_names<'s>(&self, root: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        for stmt in named_children(root) {
+            if stmt.kind() != "export_statement"
+                || child_by_field(stmt, "source").is_some()
+                || has_child_kind(stmt, "as")
+            {
+                continue;
+            }
+            for part in named_children(stmt) {
+                match part.kind() {
+                    "identifier" => out.push(text(cx, part)),
+                    "export_clause" => out.extend(export_specs(cx, part).iter().map(|s| s.1)),
+                    _ => {}
+                }
+            }
+        }
+    }
+
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {
         let kind = n.kind();
         let public = n.parent().is_some_and(|p| p.kind() == "export_statement");
@@ -758,7 +784,7 @@ impl LangHooks for TypeScriptHooks {
                 has_impl = heritage_impls(cx, heritage, &mut impls);
             }
             container = Some(Container::Class {
-                exported: public,
+                exported: exported(cx, n, text(cx, name_node)),
                 implements: has_impl,
             });
         }

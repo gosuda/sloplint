@@ -15,6 +15,16 @@ pub(crate) struct Cx<'t, 's> {
     pub is_test_file: bool,
     pub has_interface: bool,
     pub containers: &'t [Container],
+    pub exports: &'t [&'s str],
+}
+
+impl Cx<'_, '_> {
+    /// True when the file's top level exports `name` through a local export statement.
+    pub(crate) fn is_exported(&self, name: &str) -> bool {
+        self.exports
+            .binary_search_by(|probe| (*probe).cmp(name))
+            .is_ok()
+    }
 }
 
 /// A scope that changes how nested names, visibility, and tests are judged.
@@ -145,6 +155,11 @@ pub(crate) trait LangHooks: Sync {
     fn assertion(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {
         let _ = (n, cx);
         None
+    }
+
+    /// Names the file's top level exports without a declaration, read once before the walk.
+    fn exported_names<'s>(&self, root: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        let _ = (root, cx, out);
     }
 
     /// Barrel-file fact for the whole file, read once after the walk.
