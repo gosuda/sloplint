@@ -102,8 +102,12 @@ fn php_in_test<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     }
     let mut current = n.parent();
     while let Some(parent) = current {
-        if parent.kind() == "base_clause" {
-            return last_segment(text(cx, parent), &["\\"]) == "TestCase";
+        if parent.kind() == "class_declaration" {
+            return named_children(parent)
+                .into_iter()
+                .filter(|c| c.kind() == "base_clause")
+                .flat_map(named_children)
+                .any(|base| last_segment(text(cx, base), &["\\"]) == "TestCase");
         }
         current = parent.parent();
     }
