@@ -1,0 +1,465 @@
+diff --git a/grammar.js b/grammar.js
+--- a/grammar.js
++++ b/grammar.js
+@@ -151,7 +151,18 @@
+       $.computed_modify,
+       $.computed_setter,
+     ],
+-    // The `class` modifier is legal in many of the same positions that a class declaration itself would be.
++    // Same computed-property ambiguity with a declaration-level modifier run competing, now
++    // that modifier runs may span directives.
++    [
++      $._local_property_declaration,
++      $._local_typealias_declaration,
++      $._local_function_declaration,
++      $._local_class_declaration,
++      $.computed_getter,
++      $.computed_modify,
++      $.computed_setter,
++      $.modifiers,
++    ],
+     [$._bodyless_function_declaration, $.property_modifier],
+     [$.init_declaration, $.property_modifier],
+     // Patterns, man
+@@ -168,6 +179,33 @@
+       $._local_function_declaration,
+       $._local_class_declaration,
+     ],
++    // The set above plus `modifiers`: a modifier run may span a directive, so a
++    // declaration-level modifiers list competes in `{ @attr` states too.
++    [
++      $._lambda_type_declaration,
++      $._local_property_declaration,
++      $._local_typealias_declaration,
++      $._local_function_declaration,
++      $._local_class_declaration,
++      $.modifiers,
++    ],
++    // `{ @attr package ...` after a switch subject: closure-type attributes compete with a
++    // declaration-level modifier run.
++    [$._lambda_type_declaration, $.modifiers],
++    // `{ @attr mutating ...` in a computed property: accessors compete with a
++    // declaration-level modifier run.
++    [$.computed_getter, $.computed_modify, $.computed_setter, $.modifiers],
++    // `{ @attr class ...` after a switch subject: local-declaration modifier runs compete
++    // with a declaration-level modifier run.
++    [
++      $._local_property_declaration,
++      $._local_typealias_declaration,
++      $._local_function_declaration,
++      $._local_class_declaration,
++      $.modifiers,
++    ],
++    // NOTE: `[enum_class_body, modifiers]` lived here briefly; the generator flags it
++    // unnecessary with `modifiers` in pinned-seq shape, so it is gone.
+ 
+     // We want `foo() { }` to be treated as one function call, but we _also_ want `if foo() { ... }` to be treated as a
+     // full if-statement. This means we have to treat it as a conflict rather than purely a left or right associative
+@@ -195,6 +233,19 @@
+     [$._contextual_simple_identifier, $._consume_operator],
+     // `unsafe` is a contextual keyword: identifier in most positions, operator in `unsafe x`.
+     [$._contextual_simple_identifier, $._unsafe_operator],
++    // NOTE: a `[@Foo(discard self)]`-shaped conflict declaration lived here while the
++    // ownership-pair branch above was unpinned. With the branch pinned to `borrow` the
++    // clash evaporates, so the declaration is gone (the generator flags it unnecessary).
++    // NOTE: `[unsafe_expression, lambda_literal]` / `[consume_expression, lambda_literal]`
++    // pairs were tried for bare-identifier `if unsafe x { ... }`; the generator flags them
++    // unnecessary (no such automaton conflict), so they stay absent. Binary operands are
++    // handled by the `prec.left(0, $._binary_expression)` operand alternatives instead.
++    // NOTE: `[$._locally_permitted_modifier, $.member_modifier]` lived here while
++    // `nonisolated` was defined in both; with a single definition the clash evaporates.
++    // A prefix expression reached directly competes with the same expression reached
++    // through `_expression` (e.g. the operand closes over `{` differently in each path).
++    [$._expression, $.unsafe_expression],
++    [$._expression, $.consume_expression],
+   ],
+   extras: ($) => [
+     $.comment,
+@@ -491,12 +542,15 @@
+           ":"
+         )
+       ),
++    // A function type result may carry `sending` (`() async throws -> sending R`), mirroring
++    // the function declaration rule which already allows parameter modifiers there.
+     function_type: ($) =>
+       seq(
+         field("params", choice($.tuple_type, $._unannotated_type)),
+         optional($._async_keyword),
+         optional(choice($.throws_clause, $.throws)),
+         $._arrow_operator,
++        optional($.parameter_modifiers),
+         field("return_type", $._type)
+       ),
+     array_type: ($) =>
+@@ -625,6 +679,10 @@
+           $.constructor_suffix
+         )
+       ),
++    // NOTE: adding `function_type` (or attribute modifiers) to this choice flips `~`
++    // resolution in expression parens (`(~x)` starts parsing as a type), regressing two
++    // clean files. Reverted to upstream; `(@convention(c) (A) -> B).self` stays an error
++    // (see still-fails). Only `some`/`any`/dictionary parens are parenthesized types here.
+     _parenthesized_type: ($) =>
+       seq(
+         "(",
+@@ -914,6 +972,9 @@
+             choice(
+               // Prefer direct calls over indirect (same as with `try`).
+               prec.right(-2, $._expression),
++              // Binary operands complete as a unit so `if await x == y { ... }` awards
++              // its braces to the `if`, mirroring `try` (same ambiguity, same fix).
++              prec.left(0, $._binary_expression),
+               prec.left(0, $.call_expression),
+               // Also special-case `await unsafe foo()`, for the same reason as `try await foo()` above.
+               prec.left(0, $.unsafe_expression),
+@@ -934,6 +995,9 @@
+             choice(
+               // Prefer direct calls over indirect (same as with `try`).
+               prec.right(-2, $._expression),
++              // Binary operands complete as a unit so `switch consume x { ... }` and
++              // `if consume x == y { ... }` award braces correctly, mirroring `try`.
++              prec.left(0, $._binary_expression),
+               prec.left(0, $.call_expression),
+               // Special case ternary to `consume` the whole thing (same as with `try`).
+               prec.dynamic(1, prec.left(-1, $.ternary_expression))
+@@ -956,6 +1020,9 @@
+             choice(
+               // Prefer direct calls over indirect (same as with `try`/`consume`).
+               prec.right(-2, $._expression),
++              // Binary operands complete as a unit so `if unsafe x == y { ... }` awards
++              // its braces to the `if`, mirroring `try` (same ambiguity, same fix).
++              prec.left(0, $._binary_expression),
+               prec.left(0, $.call_expression),
+               // Also special-case `unsafe try foo()` and `unsafe await foo()`, for the same reason `try` special-cases
+               // `await`: without this, `try_expression`/`await_expression` are only reachable through the
+@@ -1014,6 +1081,8 @@
+           )
+         )
+       ),
++    // `()` (Void value) parses as an empty `tuple_expression` (explicit empty choice
++    // below). A token("()") instead hijacks type-position parens (`() -> Void`).
+     _primary_expression: ($) =>
+       choice(
+         $.tuple_expression,
+@@ -1038,19 +1107,24 @@
+           alias($._three_dot_operator, $.fully_open_range)
+         )
+       ),
++    // `()` is a value of type Void (`let x = ()`, `return ()`, `f(())`). The empty case
++    // is an explicit choice so the non-empty path matches upstream exactly.
+     tuple_expression: ($) =>
+       prec.right(
+         PRECS.tuple,
+-        seq(
+-          "(",
+-          sep1Opt(
+-            seq(
+-              optional(seq(field("name", $.simple_identifier), ":")),
+-              field("value", $._expression)
++        choice(
++          seq("(", ")"),
++          seq(
++            "(",
++            sep1Opt(
++              seq(
++                optional(seq(field("name", $.simple_identifier), ":")),
++                field("value", $._expression)
++              ),
++              ","
+             ),
+-            ","
+-          ),
+-          ")"
++            ")"
++          )
+         )
+       ),
+     array_literal: ($) =>
+@@ -1165,6 +1239,9 @@
+           optional(seq($["else"], $._else_options))
+         )
+       ),
++    // NOTE: listing `unsafe`/`consume` directly here (even with precedence) defeats the
++    // `[_expression, unsafe_expression]` fork below: the extra derivation wins the merge
++    // wrongly. Reach them only through `_expression`, exactly like the working `try`.
+     _if_condition_sequence_item: ($) =>
+       choice($._if_let_binding, $._expression, $.availability_condition),
+     _if_let_binding: ($) =>
+@@ -1183,6 +1260,8 @@
+           $._block
+         )
+       ),
++    // NOTE: same as conditions — reach prefix subjects only through `_expression` so the
++    // `[_expression, ...]` forks below decide, mirroring `try`.
+     switch_statement: ($) =>
+       prec.right(
+         PRECS["switch"],
+@@ -1214,7 +1293,17 @@
+         $.statements,
+         optional("fallthrough")
+       ),
+-    switch_pattern: ($) => alias($._binding_pattern_with_expr, $.pattern),
++    // A range over a non-expression pattern (`case (a + 1)...b:`, `case .min..<0:`). The
++    // left-hand side shapes here never parse as expressions, so only this branch survives
++    // once the range operator appears; plain patterns and expression ranges are untouched.
++    switch_pattern: ($) =>
++      alias(choice($._binding_pattern_with_expr, $._pattern_range), $.pattern),
++    _pattern_range: ($) =>
++      seq(
++        field("start", choice($._tuple_pattern, $._case_pattern)),
++        field("op", $._range_operator),
++        field("end", $._expression)
++      ),
+     do_statement: ($) =>
+       prec.right(
+         PRECS["do"],
+@@ -1527,8 +1616,20 @@
+           $.protocol_property_requirements
+         )
+       ),
++    // Protocols may require ownership accessors (`subscript(i: Index) -> Element { borrow mutate }`).
+     protocol_property_requirements: ($) =>
+-      seq("{", repeat(choice($.getter_specifier, $.setter_specifier)), "}"),
++      seq(
++        "{",
++        repeat(
++          choice(
++            $.getter_specifier,
++            $.setter_specifier,
++            $.borrow_specifier,
++            $.mutate_specifier
++          )
++        ),
++        "}"
++      ),
+     property_declaration: ($) =>
+       seq(optional($.modifiers), $._modifierless_property_declaration),
+     _modifierless_property_declaration: ($) =>
+@@ -1592,7 +1693,9 @@
+         field("name", alias($.simple_identifier, $.type_identifier)),
+         optional($.type_parameters),
+         $._equal_sign,
+-        field("value", $._type)
++        field("value", $._type),
++        // `typealias RangeType<Bound> = Range<Bound> where Bound: Strideable, ...`
++        optional($.type_constraints)
+       ),
+     function_declaration: ($) =>
+       prec.right(
+@@ -1718,8 +1821,11 @@
+         $.type_parameter_pack
+       ),
+ 
++    // No trailing comma: swiftc rejects `where A == B,`. Besides matching the compiler, this
++    // keeps a newline after the comma from ending the constraint list early (the implicit
++    // semicolon would otherwise terminate the member before the next constraint).
+     type_constraints: ($) =>
+-      prec.right(seq($.where_keyword, sep1Opt($.type_constraint, ","))),
++      prec.right(seq($.where_keyword, sep1($.type_constraint, ","))),
+     type_constraint: ($) =>
+       choice($.inheritance_constraint, $.equality_constraint),
+     inheritance_constraint: ($) =>
+@@ -1944,14 +2050,26 @@
+         ),
+         "}"
+       ),
++    // Ownership and legacy addressor specifiers fold into the existing computed rules so the
++    // declared conflict set (computed_getter/computed_setter/computed_modify vs local
++    // declarations) keeps covering accessor-vs-statement ambiguity without new entries.
+     computed_getter: ($) =>
+-      seq(repeat($.attribute), $.getter_specifier, optional($._block)),
++      seq(
++        repeat($.attribute),
++        choice($.getter_specifier, $.borrow_specifier),
++        optional($._block)
++      ),
+     computed_modify: ($) =>
+       seq(repeat($.attribute), $.modify_specifier, optional($._block)),
+     computed_setter: ($) =>
+       seq(
+         repeat($.attribute),
+-        $.setter_specifier,
++        choice(
++          $.setter_specifier,
++          $.mutate_specifier,
++          $.unsafe_address_specifier,
++          $.unsafe_mutable_address_specifier
++        ),
+         optional(seq("(", $.simple_identifier, ")")),
+         optional($._block)
+       ),
+@@ -1959,6 +2077,12 @@
+       seq(optional($.mutation_modifier), "get", optional($._getter_effects)),
+     setter_specifier: ($) => seq(optional($.mutation_modifier), "set"),
+     modify_specifier: ($) => seq(optional($.mutation_modifier), "_modify"),
++    borrow_specifier: ($) => seq(optional($.mutation_modifier), "borrow"),
++    mutate_specifier: ($) => seq(optional($.mutation_modifier), "mutate"),
++    unsafe_address_specifier: ($) =>
++      seq(optional($.mutation_modifier), "unsafeAddress"),
++    unsafe_mutable_address_specifier: ($) =>
++      seq(optional($.mutation_modifier), "unsafeMutableAddress"),
+     _getter_effects: ($) =>
+       repeat1(choice($._async_keyword, $.throws_clause, $.throws)),
+     operator_declaration: ($) =>
+@@ -1992,7 +2116,8 @@
+         optional($.modifiers),
+         "associatedtype",
+         field("name", alias($.simple_identifier, $.type_identifier)),
+-        optional(seq(":", field("must_inherit", $._type))),
++        // `associatedtype Index: Equatable, Comparable, Hashable`
++        optional(seq(":", sep1(field("must_inherit", $._type), ","))),
+         optional($.type_constraints),
+         optional(seq($._equal_sign, field("default_value", $._type)))
+       ),
+@@ -2022,6 +2147,26 @@
+           ":",
+           repeat1($.simple_identifier),
+           sep1($.integer_literal, ".")
++        ),
++        // Ownership pairs (`@_lifetime(borrow self)`). The first word is pinned to
++        // `borrow`, a plain identifier with no operator or contextual-keyword role, so
++        // this branch creates no conflicts. (`copy X` keeps parsing through the
++        // `consume`-operator expression branch, as upstream.) Pinning `copy` as well was
++        // tried: it is genuinely ambiguous with the consume operator and was reverted.
++        // The second word may be `self`, which lexes as a keyword, not an identifier.
++        seq("borrow", choice($.simple_identifier, $.self_expression)),
++        // `self`-labeled arguments (`@_lifetime(self: copy self)`). `self` never lexes as
++        // a simple identifier, so this does not overlap the labeled branch above.
++        seq($.self_expression, ":", $._expression),
++        // Labeled ownership pairs (`@_lifetime(dependent: borrow source)`). The value's
++        // first word is pinned to `borrow`: `copy`-first values (`target: copy target`)
++        // already parse through the plain labeled branch (the value is a `consume`
++        // expression), and pinning `copy` here too is genuinely ambiguous with it.
++        seq(
++          $.simple_identifier,
++          ":",
++          "borrow",
++          choice($.simple_identifier, $.self_expression)
+         )
+       ),
+     ////////////////////////////////
+@@ -2112,10 +2257,30 @@
+     // ==========
+     // Modifiers
+     // ==========
++    // A conditional-compilation directive may interrupt a modifier run, and modifiers may
++    // follow it (`@a #if X @b func f`, `#if !DEBUG @exclusivity(unchecked) #endif ... var x`).
++    // The first element is pinned to a real modifier so a lone directive never parses as
++    // modifiers: `#if X` on its own stays a directive statement with unchanged trees.
++    // (An earlier `repeat1` encoding of the same idea re-resolved `class func` away from
++    // `property_modifier` and broke 58 files; the pinned `seq` holds the 51-error state.
++    // `class` reaches `property_modifier` because the anonymous `optional("class")` slot
++    // in `_bodyless_function_declaration` is removed below.)
+     modifiers: ($) =>
+-      repeat1(
+-        prec.left(
+-          choice($._non_local_scope_modifier, $._locally_permitted_modifiers)
++      prec.left(
++        seq(
++          choice(
++            $._non_local_scope_modifier,
++            $.attribute,
++            $._locally_permitted_modifier
++          ),
++          repeat(
++            choice(
++              $.directive,
++              $._non_local_scope_modifier,
++              $.attribute,
++              $._locally_permitted_modifier
++            )
++          )
+         )
+       ),
+     _locally_permitted_modifiers: ($) =>
+@@ -2132,26 +2297,31 @@
+         $.property_modifier,
+         $.parameter_modifier
+       ),
++    // NOTE: this must be a named rule, not an inline `alias(seq(...))`: an inline aliased
++    // seq distributes the alias over its tokens, yielding one `member_modifier` per token
++    // (`nonisolated`, `(`, `unsafe`, `)`) instead of one node. Aliasing the named rule
++    // reference keeps the match whole.
++    _nonisolated_modifier: ($) =>
++      seq(
++        "nonisolated",
++        optional(seq("(", choice("unsafe", "nonsending"), ")"))
++      ),
+     _locally_permitted_modifier: ($) =>
+       choice(
+         $.ownership_modifier,
+         $.inheritance_modifier,
+-        $.property_behavior_modifier
++        $.property_behavior_modifier,
++        // `nonisolated(unsafe) var x` is legal inside function bodies too. Aliased to
++        // member_modifier so local and top-level trees use the same node kind.
++        alias($._nonisolated_modifier, $.member_modifier)
+       ),
+     property_behavior_modifier: ($) => "lazy",
+     type_modifiers: ($) => repeat1($.attribute),
+-    member_modifier: ($) =>
+-      choice(
+-        "override",
+-        "convenience",
+-        "required",
+-        // `nonisolated` may optionally take a parenthesized argument: `nonisolated(unsafe)`
+-        // (SE-0414-style escape hatch) or `nonisolated(nonsending)` (SE-0461).
+-        seq(
+-          "nonisolated",
+-          optional(seq("(", choice("unsafe", "nonsending"), ")"))
+-        )
+-      ),
++    // `nonisolated` lives in `_locally_permitted_modifier` (aliased here) rather than here:
++    // defining it in both places makes the `modifiers` repeat match it twice, yielding
++    // duplicate `member_modifier` siblings for one keyword. The alias keeps the node kind
++    // the corpus and queries expect.
++    member_modifier: ($) => choice("override", "convenience", "required"),
+     visibility_modifier: ($) =>
+       seq(
+         choice(
+@@ -2179,8 +2349,18 @@
+       ),
+     ownership_modifier: ($) =>
+       choice("weak", "unowned", "unowned(safe)", "unowned(unsafe)"),
++    // `__consuming`, `__owned` and `__shared` are the legacy (double-underscore) spellings of
++    // the ownership modifiers, still used across swift-collections and NIO.
+     _parameter_ownership_modifier: ($) =>
+-      choice("borrowing", "consuming", "sending", "isolated"),
++      choice(
++        "borrowing",
++        "consuming",
++        "sending",
++        "isolated",
++        "__consuming",
++        "__owned",
++        "__shared"
++      ),
+     use_site_target: ($) =>
+       seq(
+         choice(
+@@ -2225,6 +2405,10 @@
+           ),
+           seq("canImport", "(", sep1($.simple_identifier, "."), ")"),
+           seq("targetEnvironment", "(", $.simple_identifier, ")"),
++          // Builtin configurations with a single identifier argument:
++          // `_runtime(_multithreaded)` and `objectFormat(MachO)`.
++          seq("_runtime", "(", $.simple_identifier, ")"),
++          seq("objectFormat", "(", $.simple_identifier, ")"),
+           $.boolean_literal,
+           $.simple_identifier,
+           seq("(", $._compilation_condition, ")"),
+diff --git a/src/scanner.c b/src/scanner.c
+--- a/src/scanner.c
++++ b/src/scanner.c
+@@ -780,6 +780,11 @@
+             if (semi_is_valid) {
+                 ws_directive = STOP_PARSING_TOKEN_FOUND;
+                 lexer->advance(lexer, false);
++                lexer->mark_end(lexer);
++                // A `;` preceded by whitespace (`f(); g()`, `{ 4 ; 5 }`) otherwise emits
++                // whatever happened to be on the stack: the result symbol was never assigned
++                // on this path, and the token end was left before the `;`.
++                *symbol_result = EXPLICIT_SEMI;
+             }
+ 
+             break;

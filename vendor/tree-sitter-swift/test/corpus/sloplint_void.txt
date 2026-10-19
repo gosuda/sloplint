@@ -1,0 +1,111 @@
+================================================================================
+Void value in a binding
+================================================================================
+
+let x = ()
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (property_declaration
+    (value_binding_pattern)
+    name: (pattern
+      bound_identifier: (simple_identifier))
+    value: (tuple_expression)))
+
+================================================================================
+Void value returned
+================================================================================
+
+func f() -> () {
+  return ()
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    name: (simple_identifier)
+    name: (tuple_type)
+    body: (function_body
+      (statements
+        (control_transfer_statement
+          result: (tuple_expression))))))
+
+================================================================================
+Void value as a call argument
+================================================================================
+
+func g(_ x: ()) {}
+
+func f() {
+  g(())
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    name: (simple_identifier)
+    (parameter
+      external_name: (simple_identifier)
+      name: (simple_identifier)
+      name: (tuple_type))
+    body: (function_body))
+  (function_declaration
+    name: (simple_identifier)
+    body: (function_body
+      (statements
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (value_arguments
+              (value_argument
+                value: (tuple_expression)))))))))
+
+================================================================================
+Void value in a case body
+================================================================================
+
+enum E {
+  case a
+}
+
+func f(_ e: E) {
+  switch e {
+  case .a:
+    ()
+  default:
+    break
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    name: (type_identifier)
+    body: (enum_class_body
+      (enum_entry
+        name: (simple_identifier))))
+  (function_declaration
+    name: (simple_identifier)
+    (parameter
+      external_name: (simple_identifier)
+      name: (simple_identifier)
+      name: (user_type
+        (type_identifier)))
+    body: (function_body
+      (statements
+        (switch_statement
+          expr: (simple_identifier)
+          (switch_entry
+            (switch_pattern
+              (pattern
+                (simple_identifier)))
+            (statements
+              (tuple_expression)))
+          (switch_entry
+            (default_keyword)
+            (statements
+              (control_transfer_statement))))))))

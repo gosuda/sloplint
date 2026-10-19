@@ -1,0 +1,80 @@
+================================================================================
+Closed range with a parenthesized lower bound in a case
+================================================================================
+
+func f(_ n: Int) {
+  switch n {
+  case (1 + 2)...10:
+    break
+  default:
+    break
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (parameter
+      (simple_identifier)
+      (simple_identifier)
+      (user_type
+        (type_identifier)))
+    (function_body
+      (statements
+        (switch_statement
+          (simple_identifier)
+          (switch_entry
+            (switch_pattern
+              (pattern
+                (pattern
+                  (additive_expression
+                    (integer_literal)
+                    (integer_literal)))
+                (integer_literal)))
+            (statements
+              (control_transfer_statement)))
+          (switch_entry
+            (default_keyword)
+            (statements
+              (control_transfer_statement))))))))
+
+================================================================================
+Half-open range from an implicit member in a case
+================================================================================
+
+func f(_ n: Int) {
+  switch n {
+  case .min..<0:
+    break
+  default:
+    break
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (parameter
+      (simple_identifier)
+      (simple_identifier)
+      (user_type
+        (type_identifier)))
+    (function_body
+      (statements
+        (switch_statement
+          (simple_identifier)
+          (switch_entry
+            (switch_pattern
+              (pattern
+                (simple_identifier)
+                (integer_literal)))
+            (statements
+              (control_transfer_statement)))
+          (switch_entry
+            (default_keyword)
+            (statements
+              (control_transfer_statement))))))))

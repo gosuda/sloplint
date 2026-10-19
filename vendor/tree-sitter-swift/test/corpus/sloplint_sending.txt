@@ -1,0 +1,68 @@
+================================================================================
+Sending result on a declaration
+================================================================================
+
+func f() async throws -> sending Int {
+  return 1
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (throws)
+    (parameter_modifiers
+      (parameter_modifier))
+    (user_type
+      (type_identifier))
+    (function_body
+      (statements
+        (control_transfer_statement
+          (integer_literal))))))
+
+================================================================================
+Sending result on a function type
+================================================================================
+
+func f(_ body: () async throws -> sending Int) {}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (parameter
+      (simple_identifier)
+      (simple_identifier)
+      (function_type
+        (tuple_type)
+        (throws)
+        (parameter_modifiers
+          (parameter_modifier))
+        (user_type
+          (type_identifier))))
+    (function_body)))
+
+================================================================================
+Sending ownership on a parameter
+================================================================================
+
+func f(_ x: sending @escaping () -> Void) {}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (parameter
+      (simple_identifier)
+      (simple_identifier)
+      (parameter_modifiers
+        (parameter_modifier)
+        (parameter_modifier))
+      (function_type
+        (tuple_type)
+        (user_type
+          (type_identifier))))
+    (function_body)))

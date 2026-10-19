@@ -1,0 +1,66 @@
+================================================================================
+Runtime configuration in a compound condition
+================================================================================
+
+#if (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
+let x = 1
+#endif
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (directive
+    (integer_literal)
+    (integer_literal)
+    (simple_identifier)
+    (integer_literal)
+    (integer_literal)
+    (simple_identifier))
+  (property_declaration
+    (value_binding_pattern)
+    (pattern
+      (simple_identifier))
+    (integer_literal))
+  (directive))
+
+================================================================================
+Object format configuration
+================================================================================
+
+#if objectFormat(MachO)
+let x = 1
+#endif
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (directive
+    (simple_identifier))
+  (property_declaration
+    (value_binding_pattern)
+    (pattern
+      (simple_identifier))
+    (integer_literal))
+  (directive))
+
+================================================================================
+Negated object format configuration
+================================================================================
+
+#if compiler(>=6.3) && !objectFormat(Wasm)
+let x = 1
+#endif
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (directive
+    (integer_literal)
+    (integer_literal)
+    (simple_identifier))
+  (property_declaration
+    (value_binding_pattern)
+    (pattern
+      (simple_identifier))
+    (integer_literal))
+  (directive))

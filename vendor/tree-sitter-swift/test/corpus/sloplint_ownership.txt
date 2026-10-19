@@ -1,0 +1,72 @@
+================================================================================
+Consuming function modifier
+================================================================================
+
+struct S {
+  __consuming func f() {}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (function_declaration
+        (modifiers
+          (parameter_modifier))
+        (simple_identifier)
+        (function_body)))))
+
+================================================================================
+Owned parameter modifier
+================================================================================
+
+struct S {
+  func f(_ x: __owned some Collection<Int>) {}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (function_declaration
+        (simple_identifier)
+        (parameter
+          (simple_identifier)
+          (simple_identifier)
+          (parameter_modifiers
+            (parameter_modifier))
+          (opaque_type
+            (user_type
+              (type_identifier)
+              (type_arguments
+                (user_type
+                  (type_identifier))))))
+        (function_body)))))
+
+================================================================================
+Shared parameter modifier
+================================================================================
+
+struct S {
+  init(_ r: __shared S) {}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (init_declaration
+        (parameter
+          (simple_identifier)
+          (simple_identifier)
+          (parameter_modifiers
+            (parameter_modifier))
+          (user_type
+            (type_identifier)))
+        (function_body)))))
