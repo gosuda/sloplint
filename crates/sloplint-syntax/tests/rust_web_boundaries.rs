@@ -5,3 +5,5 @@
 
 #[path = "rust_web_boundaries/rust_grouped_use_modules.rs"]
 mod rust_grouped_use_modules;
+#[path = "rust_web_boundaries/rust_self_barrel.rs"]
+mod rust_self_barrel;

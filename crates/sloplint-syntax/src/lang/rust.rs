@@ -489,24 +489,20 @@ fn join_path(base: &str, rest: String) -> String {
     }
 }
 fn first_segment(value: &str) -> &str {
-    value.split("::").next().map_or("", |s| s)
+    let path = value.strip_prefix("self::").unwrap_or(value);
+    path.split("::").next().map_or("", |s| s)
 }
 fn use_first<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     match n.kind() {
         "scoped_use_list" => {
             let path = child_by_field(n, "path")?;
             if text(cx, path) == "self" {
-                use_first(
-                    cx,
-                    named_children(child_by_field(n, "list")?)
-                        .into_iter()
-                        .next()?,
-                )
+                use_first(cx, child_by_field(n, "list")?.named_child(0)?)
             } else {
                 Some(first_segment(text(cx, path)))
             }
         }
-        "use_list" => use_first(cx, named_children(n).into_iter().next()?),
+        "use_list" => use_first(cx, n.named_child(0)?),
         _ => Some(first_segment(text(cx, n))),
     }
 }
