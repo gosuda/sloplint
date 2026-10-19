@@ -1,0 +1,68 @@
+================================================================================
+Asm clobbers as a struct literal
+================================================================================
+
+pub fn syscall0(number: u64) u64 {
+    return asm volatile ("syscall"
+        : [ret] "={rax}" (-> u64),
+        : [number] "{rax}" (number),
+        : .{ .rcx = true, .r11 = true, .memory = true });
+}
+
+pub fn flush() void {
+    asm volatile ("flushw" ::: .{ .memory = true });
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (identifier)
+    (parameters
+      (parameter
+        (identifier)
+        (builtin_type)))
+    (builtin_type)
+    (block
+      (expression_statement
+        (return_expression
+          (asm_expression
+            (string
+              (string_content))
+            (asm_output
+              (asm_output_item
+                (identifier)
+                (string
+                  (string_content))
+                (builtin_type))
+              (asm_input
+                (asm_input_item
+                  (identifier)
+                  (string
+                    (string_content))
+                  (identifier))
+                (asm_clobbers
+                  (field_initializer
+                    (identifier)
+                    (boolean))
+                  (field_initializer
+                    (identifier)
+                    (boolean))
+                  (field_initializer
+                    (identifier)
+                    (boolean))))))))))
+  (function_declaration
+    (identifier)
+    (parameters)
+    (builtin_type)
+    (block
+      (expression_statement
+        (asm_expression
+          (string
+            (string_content))
+          (asm_output
+            (asm_input
+              (asm_clobbers
+                (field_initializer
+                  (identifier)
+                  (boolean))))))))))

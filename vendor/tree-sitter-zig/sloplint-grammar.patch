@@ -1,0 +1,99 @@
+diff --git a/grammar.js b/grammar.js
+index 6d1e087..e83c591 100644
+--- a/grammar.js
++++ b/grammar.js
+@@ -56,20 +56,22 @@ module.exports = grammar({
+ 
+   conflicts: $ => [
+     [$.for_expression],
+     [$.while_expression],
+ 
+     [$.expression, $._function_prototype],
+     [$.expression, $.if_type_expression],
+ 
+     [$.comptime_type_expression, $.expression],
+     [$.comptime_type_expression, $.parameter],
++    [$.async_expression, $.identifier],
++    [$.await_expression, $.identifier],
+   ],
+ 
+   extras: $ => [
+     $.comment,
+     /\s/,
+   ],
+ 
+   inline: $ => [
+     $._reserved_identifier,
+   ],
+@@ -119,21 +121,21 @@ module.exports = grammar({
+     )),
+ 
+     container_field: $ => prec.right(prec.dynamic(1, seq(
+       optional('comptime'),
+       choice(
+         seq(
+           field('name', choice($.identifier, $._reserved_identifier, alias($.builtin_type, $.identifier))),
+           ':',
+           field('type', choice($.primary_type_expression, $.if_type_expression, $.comptime_type_expression)),
+         ),
+-        field('name', choice($.primary_type_expression, $.if_type_expression, $.comptime_type_expression)),
++        field('name', choice($.primary_type_expression, $.if_type_expression, $.comptime_type_expression, $.error_set_declaration)),
+       ),
+       optional($.byte_alignment),
+       optional(seq('=', $.expression)),
+     ))),
+ 
+     variable_declaration: $ => seq(
+       optional('pub'),
+       optional(choice(
+         'export',
+         seq('extern', optional($.string)),
+@@ -447,21 +449,24 @@ module.exports = grammar({
+     asm_input: $ => seq(':', optionalCommaSep($.asm_input_item), optional($.asm_clobbers)),
+     asm_input_item: $ => seq(
+       '[',
+       $.identifier,
+       ']',
+       choice($.string, $.multiline_string),
+       '(',
+       $.expression,
+       ')',
+     ),
+-    asm_clobbers: $ => seq(':', optionalCommaSep(choice($.string, $.multiline_string))),
++    asm_clobbers: $ => seq(':', choice(
++      optionalCommaSep(choice($.string, $.multiline_string)),
++      seq('.', '{', optionalCommaSep($.field_initializer), '}'),
++    )),
+ 
+     if_expression: $ => prec.right(seq(
+       $._if_prefix,
+       $.expression,
+       optional(seq('else', optional($.payload), $.expression)),
+     )),
+ 
+     for_expression: $ => prec.right(seq(
+       optional($.block_label),
+       optional('inline'),
+@@ -844,21 +849,21 @@ module.exports = grammar({
+     },
+ 
+     boolean: _ => choice('true', 'false'),
+ 
+     builtin_type: _ => choice(...builtinTypes),
+ 
+     error_type: $ => seq('error', '.', $.identifier),
+ 
+     builtin_identifier: _ => /@[A-Za-z_][A-Za-z0-9_]*/,
+ 
+-    identifier: $ => choice($._identifier, seq('@', $.string)),
++    identifier: $ => choice($._identifier, seq('@', $.string), 'async', 'await'),
+     _identifier: _ => /[A-Za-z_][A-Za-z0-9_]*/,
+     _reserved_identifier: _ => choice(
+       'undefined',
+       'null',
+       'true',
+       'false',
+     ),
+ 
+     comment: _ => token(seq('//', /.*/)),
+   },

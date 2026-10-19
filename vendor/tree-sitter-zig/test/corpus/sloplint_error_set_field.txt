@@ -1,0 +1,34 @@
+================================================================================
+Bare error set as a container field
+================================================================================
+
+const S = struct { error{foo} };
+
+fn f() void {
+    _ = struct { error{foo, bar}, x: u8 };
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (variable_declaration
+    (identifier)
+    (struct_declaration
+      (container_field
+        (error_set_declaration
+          (identifier)))))
+  (function_declaration
+    (identifier)
+    (parameters)
+    (builtin_type)
+    (block
+      (variable_declaration
+        (identifier)
+        (struct_declaration
+          (container_field
+            (error_set_declaration
+              (identifier)
+              (identifier)))
+          (container_field
+            (identifier)
+            (builtin_type)))))))
