@@ -1,0 +1,276 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -23,6 +23,8 @@
+     (e) => !(e.length == 2 && e[0].name == 'type_qualifier' && e[1].name == 'extension_expression'),
+   ).concat([
+     [$.enum_specifier],
++    [$.enumerator],
++    [$._preproc_expression, $.preproc_argument_list],
+     [$.expression, $.generic_specifier],
+     [$._declarator, $.type_specifier, $.generic_specifier],
+     [$._declarator, $.type_specifier, $.sized_type_specifier],
+@@ -57,6 +59,7 @@
+       $.protocol_forward_declaration,
+       $.module_import,
+       $.compatibility_alias_declaration,
++      $._standalone_annotation,
+       $.preproc_undef,
+       $.preproc_linemarker,
+     ),
+@@ -70,10 +73,46 @@
+       $.protocol_forward_declaration,
+       $.module_import,
+       $.compatibility_alias_declaration,
++      $._standalone_annotation,
+       $.preproc_undef,
+       $.preproc_linemarker,
+     ),
+ 
++    // A bare Apple annotation macro on its own line: `NS_ASSUME_NONNULL_BEGIN`
++    // and `NS_ASSUME_NONNULL_END` bracket whole regions, while
++    // `NS_SWIFT_NONISOLATED` and `NS_SWIFT_UI_ACTOR` prefix an `@interface`.
++    // None takes a semicolon, so they cannot be declarations. The rule is
++    // hidden and holds only anonymous tokens, so it adds no node kind.
++    _standalone_annotation: _ => choice(
++      'NS_ASSUME_NONNULL_BEGIN',
++      'NS_ASSUME_NONNULL_END',
++      'NS_SWIFT_NONISOLATED',
++      'NS_SWIFT_UI_ACTOR',
++    ),
++
++    // A preprocessor macro name: a plain identifier, or one of the annotation
++    // keywords this grammar introduces. The keywords beat `identifier` in the
++    // lexer, so without this the `#ifndef NS_ENUM` / `#define NS_ENUM(...)`
++    // fallback in SDWebImageCompat.h would stop parsing.
++    _preproc_macro_name: $ => choice(
++      $.identifier,
++      'NS_ENUM',
++      'NS_OPTIONS',
++      'NS_ERROR_ENUM',
++      'CF_ENUM',
++      'CF_OPTIONS',
++      'NS_CLOSED_ENUM',
++      'NS_STRING_ENUM',
++      'NS_EXTENSIBLE_STRING_ENUM',
++      'NS_TYPED_ENUM',
++      'NS_TYPED_EXTENSIBLE_ENUM',
++      'NS_ASSUME_NONNULL_BEGIN',
++      'NS_ASSUME_NONNULL_END',
++      'NS_SWIFT_NONISOLATED',
++      'NS_SWIFT_UI_ACTOR',
++      'API_DEPRECATED_WITH_REPLACEMENT',
++    ),
++
+     function_definition: $ => seq(
+       optional($.ms_call_modifier),
+       $._declaration_specifiers,
+@@ -88,21 +127,54 @@
+         $.init_declarator,
+         seq($.type_qualifier, $.identifier),
+       )))),
+-      optional($._declaration_modifiers),
++      // Several availability attributes may stack after one declaration, as in
++      // `... API_UNAVAILABLE(ios, tvos, watchos) API_DEPRECATED("...", ...)`.
++      repeat($._declaration_modifiers),
+       ';',
+     ),
+ 
+-    type_definition: $ => seq(
+-      optional('__extension__'),
+-      optional($.ms_declspec_modifier),
+-      'typedef',
+-      optional($.attribute_specifier),
+-      optional($.ms_declspec_modifier),
+-      $._type_definition_type,
+-      $._type_definition_declarators,
+-      ';',
++    type_definition: $ => choice(
++      seq(
++        optional('__extension__'),
++        optional($.ms_declspec_modifier),
++        'typedef',
++        optional($.attribute_specifier),
++        optional($.ms_declspec_modifier),
++        $._type_definition_type,
++        $._type_definition_declarators,
++        ';',
++      ),
++      // `typedef NS_ENUM(UIntegerType, Name) { ... };` and its siblings
++      // (`NS_OPTIONS`, `NS_ERROR_ENUM`, `CF_ENUM`, `CF_OPTIONS`,
++      // `NS_CLOSED_ENUM`). After preprocessing this is a fixed-underlying-type
++      // enum, so the macro call is parsed by a hidden rule aliased to
++      // `enum_specifier` with the same `name`, `underlying_type` and `body`
++      // fields, and adapters keep working. (The rule must be named: aliasing
++      // an inline `seq` renames each child instead of wrapping them.)
++      seq(
++        'typedef',
++        alias($._ns_enum_specifier, $.enum_specifier),
++        ';',
++      ),
+     ),
+ 
++    _ns_enum_specifier: $ => seq(
++      field('macro', choice(
++        'NS_ENUM',
++        'NS_OPTIONS',
++        'NS_ERROR_ENUM',
++        'CF_ENUM',
++        'CF_OPTIONS',
++        'NS_CLOSED_ENUM',
++      )),
++      '(',
++      field('underlying_type', choice($._type_identifier, $.primitive_type)),
++      ',',
++      field('name', $._type_identifier),
++      ')',
++      field('body', $.enumerator_list),
++    ),
++
+     _type_definition_type: $ => seq(
+       repeat($.type_qualifier),
+       optional($.attribute_specifier),
+@@ -114,6 +186,15 @@
+     _type_definition_declarators: $ => seq(
+       commaSep1(field('declarator', $._type_declarator)),
+       optional($._declaration_modifiers),
++      // One trailing Apple string-enum annotation: `typedef NSString * Name
++      // NS_STRING_ENUM;` (also `NS_EXTENSIBLE_STRING_ENUM`, `NS_TYPED_ENUM`,
++      // `NS_TYPED_EXTENSIBLE_ENUM`). Anonymous tokens add no node kind.
++      optional(choice(
++        'NS_STRING_ENUM',
++        'NS_EXTENSIBLE_STRING_ENUM',
++        'NS_TYPED_ENUM',
++        'NS_TYPED_EXTENSIBLE_ENUM',
++      )),
+     ),
+ 
+     _declaration_modifiers: ($, original) => choice(
+@@ -360,10 +441,54 @@
+ 
+     preproc_undef: $ => seq(
+       preprocessor('undef'),
+-      field('name', $.identifier),
++      field('name', $._preproc_macro_name),
++      token.immediate(/\r?\n/),
++    ),
++
++    preproc_def: $ => seq(
++      preprocessor('define'),
++      field('name', $._preproc_macro_name),
++      field('value', optional($.preproc_arg)),
+       token.immediate(/\r?\n/),
+     ),
+ 
++    preproc_function_def: $ => seq(
++      preprocessor('define'),
++      field('name', $._preproc_macro_name),
++      field('parameters', $.preproc_params),
++      field('value', optional($.preproc_arg)),
++      token.immediate(/\r?\n/),
++    ),
++
++    // The generic `#ifdef` / `#elifdef` with the macro-name rule above, so
++    // `#ifndef NS_ENUM` keeps parsing once `NS_ENUM` is a keyword.
++    preproc_ifdef: $ => seq(
++      choice(preprocessor('ifdef'), preprocessor('ifndef')),
++      field('name', $._preproc_macro_name),
++      repeat($._block_item),
++      field('alternative', optional(choice($.preproc_else, $.preproc_elif, $.preproc_elifdef))),
++      preprocessor('endif'),
++    ),
++
++    preproc_elifdef: $ => seq(
++      choice(preprocessor('elifdef'), preprocessor('elifndef')),
++      field('name', $._preproc_macro_name),
++      repeat($._block_item),
++      field('alternative', optional(choice($.preproc_else, $.preproc_elif, $.preproc_elifdef))),
++    ),
++
++    // `#if __has_warning("...")`, like the other `__has_*` checks with
++    // string or angle-bracket operands.
++    preproc_argument_list: $ => seq(
++      '(',
++      commaSep(choice(
++        $._preproc_expression,
++        $.string_literal,
++        $.system_lib_string,
++      )),
++      ')',
++    ),
++
+     preproc_linemarker: $ => seq(
+       '#',
+       $.number_literal,
+@@ -422,6 +547,7 @@
+           'NS_EXTENSION_UNAVAILABLE_IOS',
+           'NS_CLASS_AVAILABLE_IOS',
+           'NS_CLASS_DEPRECATED_IOS',
++          'API_DEPRECATED_WITH_REPLACEMENT',
+           '__OSX_AVAILABLE_STARTING',
+         ),
+         '(',
+@@ -481,6 +607,9 @@
+ 
+     enumerator: $ => seq(
+       field('name', $.identifier),
++      // An availability attribute may sit between the name and the value, as
++      // in `Foo API_DEPRECATED("...", ...) = 1 << 3,`.
++      repeat($._declaration_modifiers),
+       optional(seq('=', field('value', $.expression))),
+     ),
+ 
+@@ -625,8 +754,9 @@
+       $.function_definition,
+       $.type_definition,
+       alias($.preproc_if_in_interface_declaration, $.preproc_if),
++      alias($.preproc_ifdef_in_interface_declaration, $.preproc_ifdef),
++      $._standalone_annotation,
+       $.preproc_def,
+-      $.preproc_ifdef,
+       $.preproc_undef,
+       $.preproc_call,
+       seq($.struct_specifier, ';'),
+@@ -646,12 +776,12 @@
+       $.preproc_function_def,
+       $.macro_type_specifier,
+       $.type_definition,
+-      alias($.preproc_if_in_implementation_definition, $.preproc_if),
+-      $.preproc_ifdef,
++            alias($.preproc_if_in_implementation_definition, $.preproc_if),
++      alias($.preproc_ifdef_in_implementation_definition, $.preproc_ifdef),
+       $.preproc_undef,
+       $.preproc_def,
+       $.preproc_call,
+-    )),
++    ),),
+ 
+     property_implementation: $ => choice(
+       seq(
+@@ -768,7 +898,8 @@
+     struct_declaration: $ => seq(
+       repeat1($.specifier_qualifier),
+       commaSep1($.struct_declarator),
+-      optional($._declaration_modifiers),
++      // Stacked trailing availability attributes; see `declaration`.
++      repeat($._declaration_modifiers),
+       ';',
+     ),
+ 
+@@ -1197,7 +1328,7 @@
+ 
+     ['preproc_ifdef' + suffix]: $ => seq(
+       choice(preprocessor('ifdef'), preprocessor('ifndef')),
+-      field('name', $.identifier),
++      field('name', $._preproc_macro_name),
+       repeat(prec(2, content($))),
+       field('alternative', optional(choice(elseBlock($), $.preproc_elifdef))),
+       preprocessor('endif'),
+@@ -1218,7 +1349,7 @@
+ 
+     ['preproc_elifdef' + suffix]: $ => seq(
+       choice(preprocessor('elifdef'), preprocessor('elifndef')),
+-      field('name', $.identifier),
++      field('name', $._preproc_macro_name),
+       repeat(prec(2, content($))),
+       field('alternative', optional(elseBlock($))),
+     ),

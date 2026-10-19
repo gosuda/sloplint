@@ -1,0 +1,4 @@
+# Packaging pin, not from upstream: the CRLF fixture below must keep its
+# carriage returns through checkouts on machines with core.autocrlf=input,
+# or the CRLF corpus case stops testing CRLF handling.
+test/corpus/c/crlf.txt -text

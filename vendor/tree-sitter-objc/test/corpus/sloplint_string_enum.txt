@@ -1,0 +1,53 @@
+==================
+NS_STRING_ENUM on a pointer typedef
+==================
+
+typedef NSString * SDImageCoderOption NS_STRING_ENUM;
+
+---
+
+(translation_unit
+  (type_definition
+    (type_identifier)
+    (pointer_declarator
+      (type_identifier))))
+
+==================
+NS_EXTENSIBLE_STRING_ENUM on a pointer typedef
+==================
+
+typedef NSString * SDWebImageContextOption NS_EXTENSIBLE_STRING_ENUM;
+
+---
+
+(translation_unit
+  (type_definition
+    (type_identifier)
+    (pointer_declarator
+      (type_identifier))))
+
+==================
+NS_TYPED_EXTENSIBLE_ENUM on an integer typedef
+==================
+
+typedef NSInteger SDImageFormat NS_TYPED_EXTENSIBLE_ENUM;
+
+---
+
+(translation_unit
+  (type_definition
+    (type_identifier)
+    (type_identifier)))
+
+==================
+NS_TYPED_ENUM on an integer typedef
+==================
+
+typedef NSInteger SDImageScalePolicy NS_TYPED_ENUM;
+
+---
+
+(translation_unit
+  (type_definition
+    (type_identifier)
+    (type_identifier)))

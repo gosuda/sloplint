@@ -1,0 +1,163 @@
+==================
+__has_warning with a string operand
+==================
+
+#if __has_warning("-Wunguarded-availability-new")
+    #define AF_CAN_USE_AT_AVAILABLE 1
+#else
+    #define AF_CAN_USE_AT_AVAILABLE 0
+#endif
+
+---
+
+(translation_unit
+  (preproc_if
+    (call_expression
+      (identifier)
+      (argument_list
+        (string_literal
+          (string_content))))
+    (preproc_def
+      (identifier)
+      (preproc_arg))
+    (preproc_else
+      (preproc_def
+        (identifier)
+        (preproc_arg)))))
+
+==================
+__has_include with angle and quoted operands
+==================
+
+#if __has_include(<UIKit/UITraitCollection.h>) && !SD_WATCH
+#import <UIKit/UITraitCollection.h>
+#endif
+
+#if __has_include("SDWebImageCompat.h")
+#import "SDWebImageCompat.h"
+#endif
+
+---
+
+(translation_unit
+  (preproc_if
+    (binary_expression
+      (call_expression
+        (identifier)
+        (argument_list
+          (system_lib_string)))
+      (unary_expression
+        (identifier)))
+    (preproc_include
+      (system_lib_string)))
+  (preproc_if
+    (call_expression
+      (identifier)
+      (argument_list
+        (string_literal
+          (string_content))))
+    (preproc_include
+      (string_literal
+        (string_content)))))
+
+==================
+NS_ENUM fallback macro definitions
+==================
+
+#ifndef NS_ENUM
+#define NS_ENUM(_type, _name) enum _name : _type _name; enum _name : _type
+#endif
+
+#ifndef NS_OPTIONS
+#define NS_OPTIONS(_type, _name) enum _name : _type _name; enum _name : _type
+#endif
+
+---
+
+(translation_unit
+  (preproc_ifdef
+    (preproc_function_def
+      (preproc_params
+        (identifier)
+        (identifier))
+      (preproc_arg)))
+  (preproc_ifdef
+    (preproc_function_def
+      (preproc_params
+        (identifier)
+        (identifier))
+      (preproc_arg))))
+
+==================
+ifdef around a property inside an interface
+==================
+
+@interface User : NSObject
+
+@property (readonly, nonatomic, assign) NSUInteger userID;
+#ifdef __MAC_OS_X_VERSION_MIN_REQUIRED
+@property (nonatomic, strong) NSImage *profileImage;
+#endif
+
+@end
+
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    (identifier)
+    (property_declaration
+      (property_attributes_declaration
+        (property_attribute
+          (identifier))
+        (property_attribute
+          (identifier))
+        (property_attribute
+          (identifier)))
+      (struct_declaration
+        (type_identifier)
+        (struct_declarator
+          (identifier))))
+    (preproc_ifdef
+      (identifier)
+      (property_declaration
+        (property_attributes_declaration
+          (property_attribute
+            (identifier))
+          (property_attribute
+            (identifier)))
+        (struct_declaration
+          (type_identifier)
+          (struct_declarator
+            (pointer_declarator
+              (identifier))))))))
+
+==================
+ifdef around a method definition inside an implementation
+==================
+
+@implementation Foo
+
+#ifdef FOO
+- (void)bar {
+}
+#endif
+
+@end
+
+---
+
+(translation_unit
+  (class_implementation
+    (identifier)
+    (implementation_definition
+      (preproc_ifdef
+        (identifier)
+        (implementation_definition
+          (method_definition
+            (method_type
+              (type_name
+                (primitive_type)))
+            (identifier)
+            (compound_statement)))))))
