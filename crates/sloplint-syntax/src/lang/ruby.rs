@@ -498,7 +498,8 @@ fn minitest_arity(method: &str) -> Option<usize> {
     Some(match base {
         "operator" | "compare" => 3,
         "equal" | "not_equal" | "same" | "not_same" | "includes" | "not_includes" | "match"
-        | "no_match" | "in_delta" | "in_epsilon" => 2,
+        | "no_match" | "in_delta" | "in_epsilon" | "kind_of" | "not_kind_of" | "instance_of"
+        | "not_instance_of" | "respond_to" | "not_respond_to" | "predicate" | "not_predicate" => 2,
         _ => 1,
     })
 }
