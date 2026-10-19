@@ -122,8 +122,6 @@ query = '''
 '''
 ```
 
-Files named by `project.custom_rule_files` load even when hidden or gitignored; source discovery keeps its usual filters.
-
 ### Suppressions
 
 Inline where you cannot fix yet; a reason is required, and unused suppressions are lint findings too:
