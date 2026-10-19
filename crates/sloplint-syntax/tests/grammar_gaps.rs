@@ -18,6 +18,8 @@ mod go;
 mod javascript_typescript;
 #[path = "grammar_gaps/powershell.rs"]
 mod powershell;
+#[path = "grammar_gaps/python.rs"]
+mod python;
 #[path = "grammar_gaps/ruby.rs"]
 mod ruby;
 #[path = "grammar_gaps/rust.rs"]
