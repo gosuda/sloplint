@@ -8,9 +8,9 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, last_segment,
-    named_children, narrow, pos_of, preceding_comments, slice, string_arg_shape, strip_quotes,
-    text, trimmed,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, first_of_kind,
+    last_segment, named_children, narrow, pos_of, preceding_comments, slice, string_arg_shape,
+    strip_quotes, text, trimmed,
 };
 use crate::spec::Role;
 
@@ -209,7 +209,8 @@ fn php_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     }
 }
 fn arg_nodes(n: Node<'_>) -> Vec<Node<'_>> {
-    let Some(list) = child_by_field(n, "arguments") else {
+    let Some(list) = child_by_field(n, "arguments").or_else(|| first_of_kind(n, &["arguments"]))
+    else {
         return Vec::new();
     };
     named_children(list)
@@ -370,6 +371,17 @@ fn php_handler_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, binding: &str) -> Stmt<
     }
     Stmt::Other
 }
+fn member_source<'s>(cx: &Cx<'_, 's>, expr: Node<'_>, want: &str) -> Option<&'s str> {
+    if expr.kind() != "member_access_expression" {
+        return None;
+    }
+    let kids = named_children(expr);
+    let [obj_node, mem_node] = kids.as_slice() else {
+        return None;
+    };
+    (obj_node.kind() == "variable_name" && text(cx, *mem_node) == want)
+        .then(|| strip_dollar(text(cx, *obj_node)))
+}
 fn array_field_source<'s>(cx: &Cx<'_, 's>, elem: Node<'_>) -> Option<&'s str> {
     let kids = named_children(elem);
     let [key_node, val_node] = kids.as_slice() else {
@@ -378,19 +390,7 @@ fn array_field_source<'s>(cx: &Cx<'_, 's>, elem: Node<'_>) -> Option<&'s str> {
     if key_node.kind() != "string" {
         return None;
     }
-    let want = strip_quotes(text(cx, *key_node));
-    let val = *val_node;
-    if val.kind() != "member_access_expression" {
-        return None;
-    }
-    let vkids = named_children(val);
-    let [obj_node, mem_node] = vkids.as_slice() else {
-        return None;
-    };
-    if obj_node.kind() != "identifier" || text(cx, *mem_node) != want {
-        return None;
-    }
-    Some(text(cx, *obj_node))
+    member_source(cx, *val_node, strip_quotes(text(cx, *key_node)))
 }
 fn array_copy<'s>(cx: &Cx<'_, 's>, n: Node<'_>, elems: &[Node<'_>]) -> Option<FieldCopy<'s>> {
     if elems.is_empty() {
@@ -695,21 +695,11 @@ impl LangHooks for PhpHooks {
         if args.is_empty() {
             return None;
         }
+        let fields = narrow(args.len());
         let mut source: Option<&'s str> = None;
         for arg in args {
-            let expr = php_arg_expr(arg);
-            if expr.kind() != "member_access_expression" {
-                return None;
-            }
             let want = field_text(cx, arg, "name")?;
-            let vkids = named_children(expr);
-            let [obj_node, mem_node] = vkids.as_slice() else {
-                return None;
-            };
-            if obj_node.kind() != "identifier" || text(cx, *mem_node) != want {
-                return None;
-            }
-            let found = text(cx, *obj_node);
+            let found = member_source(cx, php_arg_expr(arg), want)?;
             if source.is_some_and(|s| s != found) {
                 return None;
             }
@@ -717,7 +707,7 @@ impl LangHooks for PhpHooks {
         }
         Some(FieldCopy {
             pos: pos_of(n),
-            fields: narrow(named_children(n).len()),
+            fields,
             source,
         })
     }

@@ -5,5 +5,7 @@
 #[path = "script_adapter_boundaries/php_callee_matching.rs"]
 mod php_callee_matching;
 
+#[path = "script_adapter_boundaries/php_field_copy.rs"]
+mod php_field_copy;
 #[path = "script_adapter_boundaries/php_test_class.rs"]
 mod php_test_class;
