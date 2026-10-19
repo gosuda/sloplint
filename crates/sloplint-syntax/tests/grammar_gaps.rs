@@ -12,6 +12,8 @@ mod bash;
 mod c;
 #[path = "grammar_gaps/cpp.rs"]
 mod cpp;
+#[path = "grammar_gaps/csharp.rs"]
+mod csharp;
 #[path = "grammar_gaps/go.rs"]
 mod go;
 #[path = "grammar_gaps/java.rs"]
