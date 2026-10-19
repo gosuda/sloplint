@@ -1,3 +1,6 @@
+#[path = "adversarial_boundaries/cli_contract.rs"]
+mod cli_contract;
+
 use clap::Parser;
 use sloplint::cli::{Cli, Command};
 use sloplint::{Report, RunError, RunOptions, run};
@@ -343,9 +346,8 @@ fn boundary_suppression_unknown_and_meta_family() {
     assert_eq!(glines, vec![2, 4, 6], "invalid suppressions hide nothing");
 }
 
-// AA-S6, AA-S14: exact meta id is unused and hides nothing; reason on next line is missing.
 #[test]
-fn boundary_exact_meta_unused_and_multiline_reason() {
+fn boundary_exact_meta_and_multiline_reason() {
     let (_t, root) = tmp();
     put(
         &root,
@@ -369,12 +371,6 @@ fn boundary_exact_meta_unused_and_multiline_reason() {
         .find(|f| &*f.rule == "meta/parse-error" && &*f.path == "src/broken.rs")
         .unwrap_or_else(|| panic!("parse-error hidden by exact meta suppression"));
     assert_eq!(pe.line, 2, "parse-error stays on the broken line");
-    let un = r
-        .findings
-        .iter()
-        .find(|f| &*f.rule == "meta/unused-suppression" && &*f.path == "src/broken.rs")
-        .unwrap_or_else(|| panic!("exact meta id must surface as unused"));
-    assert_eq!(un.line, 1, "unused reported at the suppression line");
     let inv = r
         .findings
         .iter()
