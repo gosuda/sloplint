@@ -90,7 +90,10 @@ fn sole_call_id(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
     }
     let mut node = live[0];
     if node.kind() == "expression_statement" {
-        node = child_by_field(node, "expression")?;
+        let mut cursor = node.walk();
+        node = node
+            .named_children(&mut cursor)
+            .find(|c| c.kind() != "comment")?;
     }
     if node.kind() == "return_expression" || node.kind() == "try_expression" {
         node = named_children(node).first().copied()?;
@@ -414,7 +417,7 @@ impl LangHooks for ZigHooks {
         let name_node = child_by_field(n, "name")?;
         let body = child_by_field(n, "body")?;
         let mut params = Vec::new();
-        if let Some(holder) = child_by_field(n, "parameters") {
+        if let Some(holder) = first_of_kind(n, &["parameters"]) {
             for child in named_children(holder) {
                 if child.kind() != "parameter" {
                     continue;

@@ -9,6 +9,8 @@ mod baseline_replace;
 mod init_failure;
 #[path = "pipeline_remaining/parse_failed_suppressions.rs"]
 mod parse_failed_suppressions;
+#[path = "pipeline_remaining/parse_failed_world_facts.rs"]
+mod parse_failed_world_facts;
 #[path = "pipeline_remaining/path_scope.rs"]
 mod path_scope;
 #[path = "pipeline_remaining/ratchet_rule_filter.rs"]

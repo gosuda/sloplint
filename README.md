@@ -78,6 +78,8 @@ Dart mutation rules track assignments, member and index writes, and prefix and p
 
 PowerShell pass-through checks match variable arguments to declared parameter names without the `$` sigil. A second call or an assignment prevents a wrapper finding.
 
+Zig pass-through checks read declared parameters and exclude bodies with multiple calls.
+
 ## Usage
 
 ### Commands
