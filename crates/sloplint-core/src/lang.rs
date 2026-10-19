@@ -117,7 +117,7 @@ const SPECIAL_NAMES: &[(&str, Lang)] = &[
     ("BUCK", Lang::Starlark),
 ];
 
-/// Every variant in declaration order.
+/// Every variant in declaration order; the one list consumers iterate instead of keeping a copy.
 pub const ALL_LANGS: &[Lang] = &[
     Lang::Rust,
     Lang::TypeScript,

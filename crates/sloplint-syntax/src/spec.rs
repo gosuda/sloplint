@@ -2,7 +2,7 @@
 
 use std::sync::LazyLock;
 
-use sloplint_core::lang::Lang;
+use sloplint_core::lang::{ALL_LANGS, Lang};
 
 use crate::hooks::LangHooks;
 use crate::lang;
@@ -54,39 +54,24 @@ pub struct LangSpec {
     pub(crate) hooks: &'static dyn LangHooks,
 }
 
-/// Every `Lang` variant, in declaration order.
-const ALL_LANGS: [Lang; 25] = [
-    Lang::Rust,
-    Lang::TypeScript,
-    Lang::Tsx,
-    Lang::JavaScript,
-    Lang::Python,
-    Lang::Go,
-    Lang::Java,
-    Lang::Kotlin,
-    Lang::CSharp,
-    Lang::C,
-    Lang::Cpp,
-    Lang::ObjC,
-    Lang::Php,
-    Lang::Ruby,
-    Lang::Bash,
-    Lang::PowerShell,
-    Lang::Swift,
-    Lang::R,
-    Lang::Scala,
-    Lang::Dart,
-    Lang::Zig,
-    Lang::Ocaml,
-    Lang::OcamlInterface,
-    Lang::Odin,
-    Lang::Starlark,
-];
-
 /// The process-wide spec of each language, built once on first use.
+///
+/// Specs are stored at their language's discriminant, so the order of
+/// `ALL_LANGS` never affects lookup; a language missing from or repeated in
+/// that list panics at first use instead of serving another language's spec.
 pub fn spec(lang: Lang) -> &'static LangSpec {
-    static SPECS: LazyLock<Vec<LangSpec>> =
-        LazyLock::new(|| ALL_LANGS.iter().map(|&lang| lang::spec_for(lang)).collect());
+    static SPECS: LazyLock<Vec<LangSpec>> = LazyLock::new(|| {
+        let mut specs: Vec<LangSpec> = ALL_LANGS.iter().map(|&lang| lang::spec_for(lang)).collect();
+        specs.sort_by_key(|spec| spec.lang as usize);
+        for (index, spec) in specs.iter().enumerate() {
+            assert!(
+                spec.lang as usize == index,
+                "ALL_LANGS must list every Lang exactly once; {:?} is at slot {index}",
+                spec.lang
+            );
+        }
+        specs
+    });
     &SPECS[lang as usize]
 }
 

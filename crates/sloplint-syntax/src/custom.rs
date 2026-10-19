@@ -1,6 +1,6 @@
 //! Declarative custom query rules: compilation per grammar and execution per file.
 
-use sloplint_core::lang::Lang;
+use sloplint_core::lang::{ALL_LANGS, Lang};
 use sloplint_core::rules::custom::message_placeholders;
 use sloplint_core::{ConfigError, CustomHit, CustomRuleSpec};
 use tree_sitter::{Query, QueryCursor, StreamingIterator, Tree};
@@ -66,35 +66,6 @@ impl CustomRules {
         hits
     }
 }
-
-/// Every `Lang` variant, in declaration order.
-const ALL_LANGS: [Lang; 25] = [
-    Lang::Rust,
-    Lang::TypeScript,
-    Lang::Tsx,
-    Lang::JavaScript,
-    Lang::Python,
-    Lang::Go,
-    Lang::Java,
-    Lang::Kotlin,
-    Lang::CSharp,
-    Lang::C,
-    Lang::Cpp,
-    Lang::ObjC,
-    Lang::Php,
-    Lang::Ruby,
-    Lang::Bash,
-    Lang::PowerShell,
-    Lang::Swift,
-    Lang::R,
-    Lang::Scala,
-    Lang::Dart,
-    Lang::Zig,
-    Lang::Ocaml,
-    Lang::OcamlInterface,
-    Lang::Odin,
-    Lang::Starlark,
-];
 
 /// The languages a config key names; empty for an unknown key.
 fn langs_for_key(key: &str) -> Vec<Lang> {
