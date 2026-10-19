@@ -5,5 +5,7 @@
 
 #[path = "syntax_kernel_contracts/declaration_scopes.rs"]
 mod declaration_scopes;
+#[path = "syntax_kernel_contracts/directive_docs.rs"]
+mod directive_docs;
 #[path = "syntax_kernel_contracts/support.rs"]
 mod support;

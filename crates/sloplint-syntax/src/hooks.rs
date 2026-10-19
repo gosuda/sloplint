@@ -303,8 +303,23 @@ pub(crate) fn binary_concat<'s>(
     string_kinds.contains(&left.kind()) || string_kinds.contains(&right.kind())
 }
 
+/// True for a plain comment that issues a `sloplint-allow` directive.
+///
+/// Doc comments (`///`, `//!`, `/**`, `/*!`, `(**`, `(*!`) only describe a
+/// directive and never issue one, so they stay documentation.
+pub(crate) fn is_directive_comment(text: &str) -> bool {
+    if !text.contains("sloplint-allow") {
+        return false;
+    }
+    let head = text.trim_start();
+    !["///", "//!", "/**", "/*!", "(**", "(*!"]
+        .iter()
+        .any(|prefix| head.starts_with(prefix))
+}
+
 /// Collects the comment siblings that end on the line before the current
-/// header start; `skip_kinds` (attributes, decorators) extend the header.
+/// header start; `skip_kinds` (attributes, decorators) and `sloplint-allow`
+/// directive comments extend the header without joining the doc.
 pub(crate) fn preceding_comments<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
@@ -327,8 +342,11 @@ pub(crate) fn preceding_comments<'s>(
             if last_row + 1 != header_row {
                 break;
             }
-            doc.push(text(cx, sibling));
-            doc_pos = Some(pos_of(sibling));
+            let comment = text(cx, sibling);
+            if !is_directive_comment(comment) {
+                doc.push(comment);
+                doc_pos = Some(pos_of(sibling));
+            }
             header_row = sibling.start_position().row;
         } else if skip_kinds.contains(&kind) {
             header_row = sibling.start_position().row;

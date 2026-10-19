@@ -1,5 +1,9 @@
 //! Cross-cutting invariants: determinism, ratchet stability, path scope,
-//! strictness monotonicity, option-merge, and suppression behavior.
+//! strictness monotonicity, option-merge, and persistence refusal. Suppression oracles
+//! live in a child module.
+
+#[path = "invariants/suppression_oracles.rs"]
+mod suppression_oracles;
 
 use sloplint::{Report, RunError, RunOptions, run};
 use std::collections::{BTreeMap, BTreeSet};
@@ -274,26 +278,6 @@ fn rule_option_override_merges_with_preset() {
             "{count} ifs with deny_at 13 must be {expected:?}"
         );
     }
-}
-
-#[test]
-fn suppressions_drop_only_their_findings() {
-    let (_tmp, root) = tempdir();
-    write(
-        &root,
-        "src/lib.rs",
-        "/// Process the order.\n// sloplint-allow(slop/echo-comment): name is the contract\npub fn process_order(id: &str, account: &str, qty: u64) -> Result<u64, Box<dyn std::error::Error>> {\n    Ok(0)\n}\n",
-    );
-    let report = run_ok(&standard(&root));
-    assert!(
-        !fired(&report, "slop/echo-comment"),
-        "suppressed finding reported: {:?}",
-        report.findings.iter().map(|f| &f.rule).collect::<Vec<_>>()
-    );
-    assert!(
-        fired(&report, "agent/stringly-api"),
-        "unsuppressed finding missing"
-    );
 }
 
 /// A `proj` root holding `sample.rs`, inside a temp dir whose other entries lie outside the root.
@@ -618,26 +602,6 @@ fn audit_filter_cache_stays_unfiltered() {
     assert!(
         fired(&full, "complexity/boolean-params"),
         "filtered cache poisoned the later full run"
-    );
-}
-
-#[test]
-fn invalid_and_unused_suppressions_report() {
-    let (_tmp, root) = tempdir();
-    write(
-        &root,
-        "src/lib.rs",
-        "// sloplint-allow(slop/echo-comment)\npub fn suppressed_reason() {}\n// sloplint-allow(grep/generic-name): placeholder\npub fn kept() {}\n",
-    );
-    let report = run_ok(&standard(&root));
-    let rules: BTreeSet<_> = report.findings.iter().map(|f| &*f.rule).collect();
-    assert!(
-        rules.contains("meta/invalid-suppression"),
-        "missing reason not flagged"
-    );
-    assert!(
-        rules.contains("meta/unused-suppression"),
-        "unused suppression not flagged"
     );
 }
 

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use sloplint_core::facts::{Ambient, Call, DynamicSymbol, Function, MutBinding, Pos};
 use sloplint_core::suppress::CommentText;
 
-use crate::hooks::{Container, FunctionHead, narrow, pos_of, slice};
+use crate::hooks::{Container, FunctionHead, is_directive_comment, narrow, pos_of, slice};
 use crate::walk::{FnFrame, FrameDecl, Mark, WalkState};
 
 impl<'s, 'a> WalkState<'s, 'a> {
@@ -322,15 +322,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
 
     pub(crate) fn on_comment(&mut self, node: tree_sitter::Node<'_>) {
         let text = slice(self.src, node.start_byte(), node.end_byte());
-        if !text.contains("sloplint-allow") {
-            return;
-        }
-        // Doc comments document directives; they never issue one.
-        let head = text.trim_start();
-        if ["///", "//!", "/**", "/*!", "(**", "(*!"]
-            .iter()
-            .any(|p| head.starts_with(p))
-        {
+        if !is_directive_comment(text) {
             return;
         }
         self.comments.push(CommentText {
