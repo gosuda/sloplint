@@ -1,6 +1,10 @@
 //! Baseline files for ratchet mode and the finding fingerprints they key on.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::borrow::Cow;
+use std::collections::BTreeSet;
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
+use std::fmt::{self, Write as _};
 
 use serde::{Deserialize, Serialize};
 
@@ -71,19 +75,31 @@ impl Baseline {
 
     /// Assigns `fingerprint` to every finding; input must be sorted by path then line.
     pub fn assign_fingerprints(findings: &mut [Finding]) {
-        let mut seen: BTreeMap<(String, String, String), u32> = BTreeMap::new();
-        for finding in findings.iter_mut() {
-            let normalized = normalized_context(&finding.context);
+        let mut assigned: Vec<Box<str>> = Vec::with_capacity(findings.len());
+        let mut seen: HashMap<(&str, &str, Cow<'_, str>), u32> =
+            HashMap::with_capacity(findings.len());
+        for finding in findings.iter() {
             let key = (
-                finding.rule.to_string(),
-                finding.path.to_string(),
-                normalized.clone(),
+                &*finding.rule,
+                &*finding.path,
+                normalized_context(&finding.context),
             );
-            let slot = seen.entry(key).or_insert(0);
-            let occurrence = *slot;
-            *slot += 1;
-            let hex = fingerprint(&finding.rule, &finding.path, &normalized, occurrence);
-            finding.fingerprint = hex.into_boxed_str();
+            assigned.push(match seen.entry(key) {
+                Entry::Occupied(mut slot) => {
+                    let occurrence = *slot.get();
+                    *slot.get_mut() += 1;
+                    fingerprint(&finding.rule, &finding.path, &slot.key().2, occurrence)
+                }
+                Entry::Vacant(slot) => {
+                    let hex = fingerprint(&finding.rule, &finding.path, &slot.key().2, 0);
+                    slot.insert(1);
+                    hex
+                }
+            });
+        }
+        drop(seen);
+        for (finding, hex) in findings.iter_mut().zip(assigned) {
+            finding.fingerprint = hex;
         }
     }
 
@@ -93,26 +109,28 @@ impl Baseline {
         findings: Vec<Finding>,
         in_scope: &dyn Fn(&str) -> bool,
     ) -> (Vec<Finding>, u32, u32) {
-        let mut matched: BTreeSet<&BaselineEntry> = BTreeSet::new();
+        let ordered: Vec<&BaselineEntry> = self.entries.iter().collect();
+        let mut matched = vec![false; ordered.len()];
         let mut kept = Vec::new();
         let mut baselined = 0u32;
         for finding in findings {
-            let probe = BaselineEntry {
-                path: finding.path.clone(),
-                rule: finding.rule.clone(),
-                fingerprint: finding.fingerprint.clone(),
-            };
-            if let Some(entry) = self.entries.get(&probe) {
-                baselined += 1;
-                matched.insert(entry);
-            } else {
-                kept.push(finding);
+            let identity = (&*finding.path, &*finding.rule, &*finding.fingerprint);
+            let position = ordered.binary_search_by(|entry| {
+                (&*entry.path, &*entry.rule, &*entry.fingerprint).cmp(&identity)
+            });
+            match position {
+                Ok(index) => {
+                    baselined += 1;
+                    matched[index] = true;
+                }
+                Err(_) => kept.push(finding),
             }
         }
         let stale = u32::try_from(
-            self.entries
+            ordered
                 .iter()
-                .filter(|entry| in_scope(&entry.path) && !matched.contains(entry))
+                .zip(&matched)
+                .filter(|(entry, hit)| !**hit && in_scope(&entry.path))
                 .count(),
         )
         .unwrap_or(u32::MAX);
@@ -120,11 +138,45 @@ impl Baseline {
     }
 }
 
-fn normalized_context(context: &str) -> String {
-    context.split_whitespace().collect::<Vec<_>>().join(" ")
+fn normalized_context(context: &str) -> Cow<'_, str> {
+    if is_whitespace_normalized(context) {
+        return Cow::Borrowed(context);
+    }
+    let mut joined = String::with_capacity(context.len());
+    for (index, word) in context.split_whitespace().enumerate() {
+        if index > 0 {
+            joined.push(' ');
+        }
+        joined.push_str(word);
+    }
+    Cow::Owned(joined)
 }
 
-fn fingerprint(rule: &str, path: &str, normalized: &str, occurrence: u32) -> String {
+fn is_whitespace_normalized(context: &str) -> bool {
+    let mut after_space = true;
+    for ch in context.chars() {
+        if ch.is_whitespace() {
+            if ch != ' ' || after_space {
+                return false;
+            }
+            after_space = true;
+        } else {
+            after_space = false;
+        }
+    }
+    context.is_empty() || !after_space
+}
+
+struct HashSink<'a>(&'a mut blake3::Hasher);
+
+impl fmt::Write for HashSink<'_> {
+    fn write_str(&mut self, text: &str) -> fmt::Result {
+        self.0.update(text.as_bytes());
+        Ok(())
+    }
+}
+
+fn fingerprint(rule: &str, path: &str, normalized: &str, occurrence: u32) -> Box<str> {
     let mut hasher = blake3::Hasher::new();
     hasher.update(rule.as_bytes());
     hasher.update(&[0]);
@@ -132,9 +184,9 @@ fn fingerprint(rule: &str, path: &str, normalized: &str, occurrence: u32) -> Str
     hasher.update(&[0]);
     hasher.update(normalized.as_bytes());
     hasher.update(&[0]);
-    hasher.update(occurrence.to_string().as_bytes());
+    let _ = write!(HashSink(&mut hasher), "{occurrence}");
     let hex = hasher.finalize().to_hex();
-    hex.as_str()[..32].to_string()
+    Box::from(&hex.as_str()[..32])
 }
 
 #[cfg(test)]
