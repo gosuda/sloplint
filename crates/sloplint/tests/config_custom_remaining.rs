@@ -2,6 +2,8 @@
 
 #[path = "config_custom_remaining/dispatch.rs"]
 mod dispatch;
+#[path = "config_custom_remaining/findings.rs"]
+mod findings;
 #[path = "config_custom_remaining/language_tables.rs"]
 mod language_tables;
 #[path = "config_custom_remaining/load_errors.rs"]
