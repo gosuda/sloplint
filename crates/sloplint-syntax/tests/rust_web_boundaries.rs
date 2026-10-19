@@ -15,3 +15,5 @@ mod rust_thread_local_name;
 mod typescript_callee_root;
 #[path = "rust_web_boundaries/typescript_object_literal_methods.rs"]
 mod typescript_object_literal_methods;
+#[path = "rust_web_boundaries/typescript_tagged_template_args.rs"]
+mod typescript_tagged_template_args;

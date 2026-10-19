@@ -262,7 +262,11 @@ fn ts_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
 }
 
 fn ts_args<'s>(cx: &Cx<'_, 's>, args: Node<'_>) -> Vec<Arg<'s>> {
-    named_children(args)
+    let items = match args.kind() {
+        "template_string" => vec![args],
+        _ => named_children(args),
+    };
+    items
         .into_iter()
         .map(|c| Arg {
             shape: ts_shape(cx, c),
