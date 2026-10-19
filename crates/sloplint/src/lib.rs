@@ -459,7 +459,12 @@ fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Vec<Finding> {
             .iter()
             .any(|p| p.matches("meta/unused-suppression"))
     {
-        findings.extend(unused_findings(pipe, &file.rel, &suppressions));
+        let mut unused = unused_findings(pipe, &file.rel, &suppressions);
+        unused.sort_by(|a, b| {
+            (a.line, a.column, &a.rule, &a.message).cmp(&(b.line, b.column, &b.rule, &b.message))
+        });
+        Baseline::assign_fingerprints(&mut unused);
+        findings.extend(unused);
     }
     findings
 }

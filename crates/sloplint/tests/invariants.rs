@@ -836,6 +836,99 @@ fn audit_custom_files_dir_symlink_is_not_followed() {
     );
 }
 
+#[test]
+fn audit_unused_ratchet_reports_only_new() {
+    let (_tmp, root) = tempdir();
+    write(
+        &root,
+        "src/lib.rs",
+        "// sloplint-allow(grep/generic-name): keep\npub fn foo() {}\n",
+    );
+    run_ok(&baseline_write(&root));
+    assert_eq!(
+        run_ok(&ratchet_gate(&root)).findings.len(),
+        0,
+        "baseline must hide its unused"
+    );
+    write(
+        &root,
+        "src/lib.rs",
+        "// sloplint-allow(grep/generic-name): keep\npub fn foo() {}\n// sloplint-allow(grep/generic-name): keep\npub fn bar() {}\n",
+    );
+    let gated = run_ok(&ratchet_gate(&root));
+    assert_eq!(
+        gated.findings.len(),
+        1,
+        "second identical suppression must surface"
+    );
+    assert_eq!(gated.summary.baselined, 1, "old unused must stay baselined");
+    assert_eq!(
+        &*gated.findings[0].rule, "meta/unused-suppression",
+        "new finding must be unused"
+    );
+    assert_eq!(
+        gated.findings[0].line, 3,
+        "new unused must be the appended one"
+    );
+    assert!(
+        !gated.findings[0].fingerprint.is_empty(),
+        "unused must carry a fingerprint"
+    );
+    let text =
+        std::fs::read_to_string(root.join("src/lib.rs")).unwrap_or_else(|e| panic!("read: {e}"));
+    write(&root, "src/lib.rs", &format!("\n{text}"));
+    let shifted = run_ok(&ratchet_gate(&root));
+    assert_eq!(
+        shifted.findings.len(),
+        1,
+        "blank line must not duplicate the unused"
+    );
+    assert_eq!(
+        shifted.findings[0].line, 4,
+        "shift must move the new unused"
+    );
+    assert_eq!(
+        shifted.findings[0].fingerprint, gated.findings[0].fingerprint,
+        "shift must preserve identity"
+    );
+}
+
+#[test]
+fn audit_unused_ordinary_ordinal_survives_suppression() {
+    let (_tmp, root) = tempdir();
+    write(
+        &root,
+        "src/lib.rs",
+        "pub fn handle() {}\npub fn handle() {}\n",
+    );
+    let before: Vec<_> = run_ok(&standard(&root))
+        .findings
+        .into_iter()
+        .filter(|f| &*f.rule == "grep/generic-name")
+        .collect();
+    assert_eq!(before.len(), 2, "need duplicate ordinals");
+    assert_ne!(
+        before[0].fingerprint, before[1].fingerprint,
+        "duplicates must differ by ordinal"
+    );
+    write(
+        &root,
+        "src/lib.rs",
+        "// sloplint-allow(grep/generic-name): dup\npub fn handle() {}\npub fn handle() {}\n",
+    );
+    let after = run_ok(&standard(&root));
+    let kept: Vec<_> = after
+        .findings
+        .iter()
+        .filter(|f| &*f.rule == "grep/generic-name")
+        .collect();
+    assert_eq!(kept.len(), 1, "suppression must drop only the first");
+    assert_eq!(
+        kept[0].fingerprint, before[1].fingerprint,
+        "second ordinal must survive suppression"
+    );
+}
+
 #[cfg(unix)]
 #[test]
 fn audit_custom_files_project_root_symlink_is_followed() {

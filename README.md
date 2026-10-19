@@ -102,6 +102,7 @@ sloplint check --mode ratchet   # reports only findings absent from the baseline
 ```
 
 Baselines key findings by a fingerprint of rule, path, and normalized line; blank-line shifts do not re-report them.
+Unused-suppression findings retain separate identities, so baselining one does not hide another added later.
 
 `project.baseline` is a path relative to the project root. Absolute paths, `..` escapes, and parent or leaf symlinks that resolve outside the root are rejected with an error and leave the outside target untouched; nested paths inside the root keep working. The `.sloplint` cache directory is never followed through a symlink: a symlinked directory refuses the cache write with a warning, and `.gitignore` plus the temporary cache file are created exclusively so a pre-planted symlink at either path is preserved.
 
