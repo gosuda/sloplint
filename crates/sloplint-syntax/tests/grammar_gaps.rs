@@ -18,5 +18,7 @@ mod javascript_typescript;
 mod powershell;
 #[path = "grammar_gaps/ruby.rs"]
 mod ruby;
+#[path = "grammar_gaps/rust.rs"]
+mod rust;
 #[path = "grammar_gaps/starlark.rs"]
 mod starlark;
