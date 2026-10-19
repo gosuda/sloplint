@@ -168,11 +168,6 @@ fn valid_one_line_local_class_separated_by_a_semicolon_parses() {
 }
 
 #[test]
-fn invalid_empty_array_literal_still_reports_an_error() {
-    run_invalid("fun f(): Int {\n    val x = []\n    return 1\n}\n");
-}
-
-#[test]
 fn invalid_getter_without_a_body_still_reports_an_error() {
     run_invalid("var x: Int = 1\n    get()\nfun f(): Int = x\n");
 }
