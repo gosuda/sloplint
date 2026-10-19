@@ -20,7 +20,7 @@ tree-sitter-python = { path = "vendor/tree-sitter-python" }
 tree-sitter-javascript = { path = "vendor/tree-sitter-javascript" }
 tree-sitter-java = { path = "vendor/tree-sitter-java" }
 tree-sitter-kotlin-ng = { path = "vendor/tree-sitter-kotlin-ng" }
-tree-sitter-c-sharp = "0.23.5"
+tree-sitter-c-sharp = { path = "vendor/tree-sitter-c-sharp" }
 tree-sitter-c = { path = "vendor/tree-sitter-c" }
 tree-sitter-cpp = { path = "vendor/tree-sitter-cpp" }
 tree-sitter-objc = "3.0.2"
