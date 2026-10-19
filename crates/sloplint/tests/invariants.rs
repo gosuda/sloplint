@@ -1,19 +1,60 @@
 //! Cross-cutting invariants: determinism, ratchet stability, path scope,
 //! strictness monotonicity, option-merge, and suppression behavior.
 
-use sloplint::{RunError, RunOptions, run};
+use sloplint::{Report, RunError, RunOptions, run};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use sloplint_core::config::{Mode, Strictness};
-use sloplint_core::finding::Severity;
+use sloplint_core::finding::{Finding, Severity};
 use sloplint_core::{Config, ConfigError, RuleFilter, RulePattern, RuleSet};
+
+type Keys = BTreeSet<(String, u32, String, String)>;
+
+const SAMPLE: &str = "pub fn handle(flag: bool) {}\n";
+
+/// A fresh temp dir and its path.
+fn tempdir() -> (tempfile::TempDir, PathBuf) {
+    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let root = tmp.path().to_path_buf();
+    (tmp, root)
+}
+
+fn mkdir(path: &Path) {
+    std::fs::create_dir_all(path).unwrap_or_else(|e| panic!("mkdir: {e}"));
+}
+
+/// Whole-root run options for `root` with the cache off; callers add only their overrides.
+fn opts(root: &Path) -> RunOptions {
+    RunOptions {
+        cwd: root.to_path_buf(),
+        root: Some(root.to_path_buf()),
+        use_cache: false,
+        ..RunOptions::default()
+    }
+}
+
+/// [`opts`] with the default profile and threshold gate named explicitly.
+fn standard(root: &Path) -> RunOptions {
+    RunOptions {
+        strictness: Some(Strictness::Standard),
+        mode: Some(Mode::Threshold),
+        ..opts(root)
+    }
+}
+
+fn run_ok(options: &RunOptions) -> Report {
+    run(options).unwrap_or_else(|e| panic!("run {options:?}: {e}"))
+}
+
+fn fired(report: &Report, rule: &str) -> bool {
+    report.findings.iter().any(|f| &*f.rule == rule)
+}
 
 /// Copies a directory tree into a fresh temp dir and returns its root.
 fn copy_tree(src: &Path) -> (tempfile::TempDir, PathBuf) {
-    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    copy_into(src, tmp.path());
-    let root = tmp.path().to_path_buf();
+    let (tmp, root) = tempdir();
+    copy_into(src, &root);
     (tmp, root)
 }
 
@@ -37,22 +78,12 @@ fn copy_into(src: &Path, dst: &Path) {
 }
 
 /// Runs sloplint on `root` without a cache and returns `(path, line, rule, severity)` tuples.
-fn findings(
-    root: &Path,
-    strictness: Strictness,
-    mode: Mode,
-    jobs: usize,
-) -> BTreeSet<(String, u32, String, String)> {
+fn findings(root: &Path, strictness: Strictness, mode: Mode, jobs: usize) -> Keys {
     findings_run(root, strictness, mode, jobs, false)
 }
 
 /// Runs sloplint on `root` with the cache on and returns `(path, line, rule, severity)` tuples.
-fn findings_cached(
-    root: &Path,
-    strictness: Strictness,
-    mode: Mode,
-    jobs: usize,
-) -> BTreeSet<(String, u32, String, String)> {
+fn findings_cached(root: &Path, strictness: Strictness, mode: Mode, jobs: usize) -> Keys {
     findings_run(root, strictness, mode, jobs, true)
 }
 
@@ -62,30 +93,25 @@ fn findings_run(
     strictness: Strictness,
     mode: Mode,
     jobs: usize,
-    cache: bool,
-) -> BTreeSet<(String, u32, String, String)> {
-    let report = run(&RunOptions {
-        cwd: root.to_path_buf(),
-        root: Some(root.to_path_buf()),
+    cached: bool,
+) -> Keys {
+    let report = run_ok(&RunOptions {
         strictness: Some(strictness),
         mode: Some(mode),
-        use_cache: cache,
+        use_cache: cached,
         jobs,
-        ..RunOptions::default()
-    })
-    .unwrap_or_else(|e| panic!("run {}: {e}", root.display()));
-    report
-        .findings
-        .into_iter()
-        .map(|f| {
-            (
-                f.path.to_string(),
-                f.line,
-                f.rule.to_string(),
-                sev(f.severity),
-            )
-        })
-        .collect()
+        ..opts(root)
+    });
+    report.findings.iter().map(key).collect()
+}
+
+fn key(f: &Finding) -> (String, u32, String, String) {
+    (
+        f.path.to_string(),
+        f.line,
+        f.rule.to_string(),
+        sev(f.severity),
+    )
 }
 
 fn sev(s: Severity) -> String {
@@ -124,27 +150,20 @@ fn ratchet_is_stable_across_line_shifts() {
     let before = findings(&root, Strictness::Strict, Mode::Threshold, 2);
     let count = before.len() as u64;
     let report = run(&RunOptions {
-        cwd: root.clone(),
-        root: Some(root.clone()),
         strictness: Some(Strictness::Strict),
         write_baseline: true,
-        use_cache: false,
-        ..RunOptions::default()
+        ..opts(&root)
     });
     assert!(report.is_ok(), "baseline write failed: {:?}", report.err());
     for entry in walk_source_files(&root) {
         let text = std::fs::read_to_string(&entry).unwrap_or_else(|e| panic!("read: {e}"));
         std::fs::write(&entry, format!("\n{text}")).unwrap_or_else(|e| panic!("shift: {e}"));
     }
-    let report = run(&RunOptions {
-        cwd: root.clone(),
-        root: Some(root.clone()),
+    let report = run_ok(&RunOptions {
         strictness: Some(Strictness::Strict),
         mode: Some(Mode::Ratchet),
-        use_cache: false,
-        ..RunOptions::default()
-    })
-    .unwrap_or_else(|e| panic!("ratchet: {e}"));
+        ..opts(&root)
+    });
     assert_eq!(report.findings.len(), 0, "shifted lines re-reported");
     assert_eq!(
         u64::from(report.summary.baselined),
@@ -179,32 +198,15 @@ fn scope_limits_findings_without_changing_them() {
     let Some((path, ..)) = all.iter().next() else {
         return;
     };
-    let scoped = {
-        let report = run(&RunOptions {
-            cwd: root.clone(),
-            root: Some(root.clone()),
-            paths: vec![root.join(path)],
-            strictness: Some(Strictness::Strict),
-            mode: Some(Mode::Threshold),
-            use_cache: false,
-            jobs: 2,
-            ..RunOptions::default()
-        })
-        .unwrap_or_else(|e| panic!("scoped run: {e}"));
-        report
-            .findings
-            .into_iter()
-            .map(|f| {
-                (
-                    f.path.to_string(),
-                    f.line,
-                    f.rule.to_string(),
-                    sev(f.severity),
-                )
-            })
-            .collect::<BTreeSet<_>>()
-    };
-    let expected: BTreeSet<_> = all.iter().filter(|(p, ..)| p == path).cloned().collect();
+    let report = run_ok(&RunOptions {
+        paths: vec![root.join(path)],
+        strictness: Some(Strictness::Strict),
+        mode: Some(Mode::Threshold),
+        jobs: 2,
+        ..opts(&root)
+    });
+    let scoped: Keys = report.findings.iter().map(key).collect();
+    let expected: Keys = all.iter().filter(|(p, ..)| p == path).cloned().collect();
     assert_eq!(scoped, expected, "scoped run changed findings for {path}");
 }
 
@@ -245,27 +247,18 @@ fn strictness_profiles_are_monotone() {
 
 #[test]
 fn rule_option_override_merges_with_preset() {
-    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = tmp.path();
+    let (_tmp, root) = tempdir();
     write(
-        root,
+        &root,
         "sloplint.toml",
         "[rules.\"complexity/cognitive-depth\"]\ndeny_at = 13\n",
     );
     write(
-        root,
+        &root,
         "src/deep.rs",
         "fn deep(v: u8) {\n    if v > 0 {\n        if v > 1 {\n            if v > 2 {\n                if v > 3 {\n                    if v > 4 {\n                        if v > 5 {\n                            if v > 6 {\n                                if v > 7 {\n                                    if v > 8 {\n                                        if v > 9 {\n                                            if v > 10 {\n                                                if v > 11 {\n                                                    return;\n                                                }\n                                            }\n                                        }\n                                    }\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n    }\n}\n",
     );
-    let report = run(&RunOptions {
-        cwd: root.to_path_buf(),
-        root: Some(root.to_path_buf()),
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        use_cache: false,
-        ..RunOptions::default()
-    })
-    .unwrap_or_else(|e| panic!("run: {e}"));
+    let report = run_ok(&standard(&root));
     let cognitive: Vec<_> = report
         .findings
         .iter()
@@ -281,160 +274,120 @@ fn rule_option_override_merges_with_preset() {
 
 #[test]
 fn suppressions_drop_only_their_findings() {
-    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = tmp.path();
+    let (_tmp, root) = tempdir();
     write(
-        root,
+        &root,
         "src/lib.rs",
         "/// Process the order.\n// sloplint-allow(slop/echo-comment): name is the contract\npub fn process_order(id: &str, account: &str, qty: u64) -> Result<u64, Box<dyn std::error::Error>> {\n    Ok(0)\n}\n",
     );
-    let report = run(&RunOptions {
-        cwd: root.to_path_buf(),
-        root: Some(root.to_path_buf()),
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        use_cache: false,
-        ..RunOptions::default()
-    })
-    .unwrap_or_else(|e| panic!("run: {e}"));
+    let report = run_ok(&standard(&root));
     assert!(
-        report
-            .findings
-            .iter()
-            .all(|f| &*f.rule != "slop/echo-comment"),
+        !fired(&report, "slop/echo-comment"),
         "suppressed finding reported: {:?}",
         report.findings.iter().map(|f| &f.rule).collect::<Vec<_>>()
     );
     assert!(
-        report
-            .findings
-            .iter()
-            .any(|f| &*f.rule == "agent/stringly-api"),
+        fired(&report, "agent/stringly-api"),
         "unsuppressed finding missing"
     );
 }
 
+/// A `proj` root holding `sample.rs`, inside a temp dir whose other entries lie outside the root.
+fn outer_project() -> (tempfile::TempDir, PathBuf) {
+    let (outer, base) = tempdir();
+    let root = base.join("proj");
+    mkdir(&root);
+    write(&root, "sample.rs", SAMPLE);
+    (outer, root)
+}
+
+fn set_baseline(root: &Path, baseline: &str) {
+    let config = format!("[project]\nbaseline = {baseline:?}\n");
+    write(root, "sloplint.toml", &config);
+}
+
+fn baseline_write(root: &Path) -> RunOptions {
+    RunOptions {
+        write_baseline: true,
+        ..opts(root)
+    }
+}
+
+fn ratchet_gate(root: &Path) -> RunOptions {
+    RunOptions {
+        mode: Some(Mode::Ratchet),
+        ..opts(root)
+    }
+}
+
+fn plant(path: &Path) {
+    std::fs::write(path, "sentinel").unwrap_or_else(|e| panic!("sentinel: {e}"));
+}
+
+fn assert_sentinel(path: &Path, message: &str) {
+    let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("read: {e}"));
+    assert_eq!(text, "sentinel", "{message}");
+}
+
+/// `options` must fail as a usage error because a persisted path leaves the project root.
+fn assert_refused(options: &RunOptions, what: &str) {
+    let Err(error) = run(options) else {
+        panic!("{what} escaped root");
+    };
+    assert!(
+        error.to_string().contains("outside the project root"),
+        "unexpected error for {what}: {error}"
+    );
+    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
+}
+
+#[cfg(unix)]
+fn symlink(target: impl AsRef<Path>, link: impl AsRef<Path>) {
+    std::os::unix::fs::symlink(target, link).unwrap_or_else(|e| panic!("symlink: {e}"));
+}
+
+/// A cached run must succeed: a persistence failure warns instead of failing the run.
+#[cfg(unix)]
+fn assert_cache_warns(root: &Path, what: &str) {
+    let report = run(&RunOptions {
+        use_cache: true,
+        ..opts(root)
+    });
+    assert!(report.is_ok(), "{what} must warn, not fail: {report:?}");
+}
+
 #[test]
 fn audit_persistence_baseline_dotdot_is_refused() {
-    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = outer.path().join("proj");
-    std::fs::create_dir_all(&root).unwrap_or_else(|e| panic!("mkdir: {e}"));
-    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
-    write(
-        &root,
-        "sloplint.toml",
-        "[project]\nbaseline = \"../outside-marker.txt\"\n",
-    );
+    let (outer, root) = outer_project();
+    set_baseline(&root, "../outside-marker.txt");
     let outside = outer.path().join("outside-marker.txt");
-    std::fs::write(&outside, "sentinel").unwrap_or_else(|e| panic!("sentinel: {e}"));
-    let written = run(&RunOptions {
-        cwd: root.clone(),
-        root: Some(root.clone()),
-        write_baseline: true,
-        use_cache: false,
-        ..RunOptions::default()
-    });
-    let Err(error) = written else {
-        panic!("dotdot baseline escaped root");
-    };
-    assert!(
-        error.to_string().contains("outside the project root"),
-        "unexpected baseline error: {error}"
-    );
-    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
-    assert_eq!(
-        std::fs::read_to_string(&outside).unwrap_or_else(|e| panic!("read: {e}")),
-        "sentinel",
-        "outside marker overwritten by baseline write"
-    );
-    let gated = run(&RunOptions {
-        cwd: root.clone(),
-        root: Some(root.clone()),
-        mode: Some(Mode::Ratchet),
-        use_cache: false,
-        ..RunOptions::default()
-    });
-    let Err(error) = gated else {
-        panic!("dotdot ratchet read escaped root");
-    };
-    assert!(
-        error.to_string().contains("outside the project root"),
-        "unexpected ratchet error: {error}"
-    );
-    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
-    assert_eq!(
-        std::fs::read_to_string(&outside).unwrap_or_else(|e| panic!("read: {e}")),
-        "sentinel",
-        "outside marker overwritten by ratchet read"
-    );
+    plant(&outside);
+    assert_refused(&baseline_write(&root), "dotdot baseline write");
+    assert_sentinel(&outside, "outside marker overwritten by baseline write");
+    assert_refused(&ratchet_gate(&root), "dotdot ratchet read");
+    assert_sentinel(&outside, "outside marker overwritten by ratchet read");
 }
 
 #[test]
 fn audit_persistence_baseline_absolute_is_refused() {
-    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = outer.path().join("proj");
-    std::fs::create_dir_all(&root).unwrap_or_else(|e| panic!("mkdir: {e}"));
-    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    let (outer, root) = outer_project();
     let outside = outer.path().join("outside-abs.txt");
-    std::fs::write(&outside, "sentinel").unwrap_or_else(|e| panic!("sentinel: {e}"));
-    let config = format!(
-        "[project]\nbaseline = {:?}\n",
-        outside.to_str().unwrap_or_else(|| panic!("non-utf8"))
-    );
-    write(&root, "sloplint.toml", &config);
-    let written = run(&RunOptions {
-        cwd: root.clone(),
-        root: Some(root.clone()),
-        write_baseline: true,
-        use_cache: false,
-        ..RunOptions::default()
-    });
-    let Err(error) = written else {
-        panic!("absolute baseline escaped root");
-    };
-    assert!(
-        error.to_string().contains("outside the project root"),
-        "unexpected baseline error: {error}"
-    );
-    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
-    assert_eq!(
-        std::fs::read_to_string(&outside).unwrap_or_else(|e| panic!("read: {e}")),
-        "sentinel",
-        "outside marker overwritten by absolute baseline"
-    );
+    plant(&outside);
+    let target = outside.to_str().unwrap_or_else(|| panic!("non-utf8"));
+    set_baseline(&root, target);
+    assert_refused(&baseline_write(&root), "absolute baseline write");
+    assert_sentinel(&outside, "outside marker overwritten by absolute baseline");
 }
 
 #[cfg(unix)]
 #[test]
 fn audit_persistence_baseline_parent_symlink_is_refused() {
-    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = outer.path().join("proj");
-    std::fs::create_dir_all(&root).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    let (outer, root) = outer_project();
     let outside = outer.path().join("outside");
-    std::fs::create_dir_all(&outside).unwrap_or_else(|e| panic!("mkdir: {e}"));
-    std::os::unix::fs::symlink(&outside, root.join("link"))
-        .unwrap_or_else(|e| panic!("symlink: {e}"));
-    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
-    write(
-        &root,
-        "sloplint.toml",
-        "[project]\nbaseline = \"link/baseline.json\"\n",
-    );
-    let written = run(&RunOptions {
-        cwd: root.clone(),
-        root: Some(root.clone()),
-        write_baseline: true,
-        use_cache: false,
-        ..RunOptions::default()
-    });
-    let Err(error) = written else {
-        panic!("parent symlink baseline escaped root");
-    };
-    assert!(
-        error.to_string().contains("outside the project root"),
-        "unexpected baseline error: {error}"
-    );
-    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
+    mkdir(&outside);
+    symlink(&outside, root.join("link"));
+    set_baseline(&root, "link/baseline.json");
+    assert_refused(&baseline_write(&root), "parent symlink baseline write");
     assert!(
         !outside.join("baseline.json").exists(),
         "baseline escaped through parent symlink"
@@ -444,70 +397,25 @@ fn audit_persistence_baseline_parent_symlink_is_refused() {
 #[cfg(unix)]
 #[test]
 fn audit_persistence_baseline_leaf_symlink_is_refused() {
-    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = outer.path().join("proj");
-    std::fs::create_dir_all(&root).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    let (outer, root) = outer_project();
     let marker = outer.path().join("marker.txt");
-    std::fs::write(&marker, "sentinel").unwrap_or_else(|e| panic!("sentinel: {e}"));
-    std::os::unix::fs::symlink(&marker, root.join("baseline-link.json"))
-        .unwrap_or_else(|e| panic!("symlink: {e}"));
-    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
-    write(
-        &root,
-        "sloplint.toml",
-        "[project]\nbaseline = \"baseline-link.json\"\n",
-    );
-    let written = run(&RunOptions {
-        cwd: root.clone(),
-        root: Some(root.clone()),
-        write_baseline: true,
-        use_cache: false,
-        ..RunOptions::default()
-    });
-    let Err(error) = written else {
-        panic!("leaf symlink baseline escaped root");
-    };
-    assert!(
-        error.to_string().contains("outside the project root"),
-        "unexpected baseline error: {error}"
-    );
-    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
-    assert_eq!(
-        std::fs::read_to_string(&marker).unwrap_or_else(|e| panic!("read: {e}")),
-        "sentinel",
-        "outside marker overwritten through leaf symlink"
-    );
+    plant(&marker);
+    symlink(&marker, root.join("baseline-link.json"));
+    set_baseline(&root, "baseline-link.json");
+    assert_refused(&baseline_write(&root), "leaf symlink baseline write");
+    assert_sentinel(&marker, "outside marker overwritten through leaf symlink");
 }
 
 #[cfg(unix)]
 #[test]
 fn audit_persistence_baseline_dangling_link_is_refused() {
-    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = outer.path().join("proj");
-    std::fs::create_dir_all(&root).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    let (outer, root) = outer_project();
     let outside = outer.path().join("outside");
-    std::fs::create_dir_all(&outside).unwrap_or_else(|e| panic!("mkdir: {e}"));
-    std::os::unix::fs::symlink(&outside, root.join("link"))
-        .unwrap_or_else(|e| panic!("symlink: {e}"));
-    std::os::unix::fs::symlink("link/missing", root.join("cand"))
-        .unwrap_or_else(|e| panic!("symlink: {e}"));
-    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
-    write(&root, "sloplint.toml", "[project]\nbaseline = \"cand\"\n");
-    let written = run(&RunOptions {
-        cwd: root.clone(),
-        root: Some(root.clone()),
-        write_baseline: true,
-        use_cache: false,
-        ..RunOptions::default()
-    });
-    let Err(error) = written else {
-        panic!("dangling link baseline escaped root");
-    };
-    assert!(
-        error.to_string().contains("outside the project root"),
-        "unexpected baseline error: {error}"
-    );
-    assert_eq!(error.exit_code(), 2, "refusal must be a usage error");
+    mkdir(&outside);
+    symlink(&outside, root.join("link"));
+    symlink("link/missing", root.join("cand"));
+    set_baseline(&root, "cand");
+    assert_refused(&baseline_write(&root), "dangling link baseline write");
     assert!(
         !outside.join("missing").exists(),
         "baseline write escaped through dangling link"
@@ -516,45 +424,19 @@ fn audit_persistence_baseline_dangling_link_is_refused() {
 
 #[test]
 fn audit_persistence_baseline_nested_in_root_round_trips() {
-    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = tmp.path();
-    write(root, "sample.rs", "pub fn handle(flag: bool) {}\n");
-    std::fs::create_dir_all(root.join("nested")).unwrap_or_else(|e| panic!("mkdir: {e}"));
-    write(
-        root,
-        "sloplint.toml",
-        "[project]\nbaseline = \"nested/baseline.json\"\n",
-    );
-    run(&RunOptions {
-        cwd: root.to_path_buf(),
-        root: Some(root.to_path_buf()),
-        write_baseline: true,
-        use_cache: false,
-        ..RunOptions::default()
-    })
-    .unwrap_or_else(|e| panic!("baseline write: {e}"));
+    let (_tmp, root) = tempdir();
+    write(&root, "sample.rs", SAMPLE);
+    mkdir(&root.join("nested"));
+    set_baseline(&root, "nested/baseline.json");
+    run_ok(&baseline_write(&root));
     assert!(
         root.join("nested/baseline.json").is_file(),
         "nested in-root baseline was not written"
     );
-    let gated = run(&RunOptions {
-        cwd: root.to_path_buf(),
-        root: Some(root.to_path_buf()),
-        mode: Some(Mode::Ratchet),
-        use_cache: false,
-        ..RunOptions::default()
-    })
-    .unwrap_or_else(|e| panic!("ratchet: {e}"));
+    let gated = run_ok(&ratchet_gate(&root));
     assert_eq!(gated.findings.len(), 0, "in-root baseline hid nothing");
-    write(root, "extra.rs", "pub fn manage(flag: bool) {}\n");
-    let gated = run(&RunOptions {
-        cwd: root.to_path_buf(),
-        root: Some(root.to_path_buf()),
-        mode: Some(Mode::Ratchet),
-        use_cache: false,
-        ..RunOptions::default()
-    })
-    .unwrap_or_else(|e| panic!("ratchet: {e}"));
+    write(&root, "extra.rs", "pub fn manage(flag: bool) {}\n");
+    let gated = run_ok(&ratchet_gate(&root));
     assert!(
         gated.findings.iter().all(|f| f.path.as_ref() == "extra.rs"),
         "ratchet reported stale or missing paths: {:?}",
@@ -569,24 +451,11 @@ fn audit_persistence_baseline_nested_in_root_round_trips() {
 #[cfg(unix)]
 #[test]
 fn audit_persistence_cache_dir_symlink_stays_outside() {
-    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = outer.path().join("proj");
-    std::fs::create_dir_all(&root).unwrap_or_else(|e| panic!("mkdir: {e}"));
-    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    let (outer, root) = outer_project();
     let outside = outer.path().join("outside");
-    std::fs::create_dir_all(&outside).unwrap_or_else(|e| panic!("mkdir: {e}"));
-    std::os::unix::fs::symlink(&outside, root.join(".sloplint"))
-        .unwrap_or_else(|e| panic!("symlink: {e}"));
-    let report = run(&RunOptions {
-        cwd: root.clone(),
-        root: Some(root.clone()),
-        use_cache: true,
-        ..RunOptions::default()
-    });
-    assert!(
-        report.is_ok(),
-        "symlinked cache dir must warn, not fail: {report:?}"
-    );
+    mkdir(&outside);
+    symlink(&outside, root.join(".sloplint"));
+    assert_cache_warns(&root, "symlinked cache dir");
     assert!(
         !outside.join("cache-v1.bin").exists(),
         "cache escaped through symlinked directory"
@@ -596,23 +465,11 @@ fn audit_persistence_cache_dir_symlink_stays_outside() {
 #[cfg(unix)]
 #[test]
 fn audit_persistence_cache_gitignore_symlink_is_preserved() {
-    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = outer.path().join("proj");
-    std::fs::create_dir_all(root.join(".sloplint")).unwrap_or_else(|e| panic!("mkdir: {e}"));
-    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    let (outer, root) = outer_project();
+    mkdir(&root.join(".sloplint"));
     let marker = outer.path().join("marker.txt");
-    std::os::unix::fs::symlink(&marker, root.join(".sloplint/.gitignore"))
-        .unwrap_or_else(|e| panic!("symlink: {e}"));
-    let report = run(&RunOptions {
-        cwd: root.clone(),
-        root: Some(root.clone()),
-        use_cache: true,
-        ..RunOptions::default()
-    });
-    assert!(
-        report.is_ok(),
-        "gitignore symlink must warn, not fail: {report:?}"
-    );
+    symlink(&marker, root.join(".sloplint/.gitignore"));
+    assert_cache_warns(&root, "gitignore symlink");
     assert!(
         !marker.exists(),
         "outside file created through dangling gitignore symlink"
@@ -629,31 +486,16 @@ fn audit_persistence_cache_gitignore_symlink_is_preserved() {
 #[cfg(unix)]
 #[test]
 fn audit_persistence_cache_temp_symlink_is_preserved() {
-    let outer = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = outer.path().join("proj");
-    std::fs::create_dir_all(root.join(".sloplint")).unwrap_or_else(|e| panic!("mkdir: {e}"));
-    write(&root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    let (outer, root) = outer_project();
+    mkdir(&root.join(".sloplint"));
     let marker = outer.path().join("target.txt");
-    std::fs::write(&marker, "sentinel").unwrap_or_else(|e| panic!("sentinel: {e}"));
+    plant(&marker);
     let planted = root
         .join(".sloplint")
         .join(format!("cache-v1.bin.{}.tmp", std::process::id()));
-    std::os::unix::fs::symlink(&marker, &planted).unwrap_or_else(|e| panic!("symlink: {e}"));
-    let report = run(&RunOptions {
-        cwd: root.clone(),
-        root: Some(root.clone()),
-        use_cache: true,
-        ..RunOptions::default()
-    });
-    assert!(
-        report.is_ok(),
-        "planted temp symlink must warn, not fail: {report:?}"
-    );
-    assert_eq!(
-        std::fs::read_to_string(&marker).unwrap_or_else(|e| panic!("read: {e}")),
-        "sentinel",
-        "outside marker overwritten through temp symlink"
-    );
+    symlink(&marker, planted);
+    assert_cache_warns(&root, "planted temp symlink");
+    assert_sentinel(&marker, "outside marker overwritten through temp symlink");
 }
 
 fn audit_filter_of(selectors: &[&str]) -> RuleFilter {
@@ -665,34 +507,27 @@ fn audit_filter_of(selectors: &[&str]) -> RuleFilter {
     )
 }
 
-fn audit_filter_opts(root: &Path, filter: RuleFilter) -> RunOptions {
+fn audit_filter_opts(root: &Path, selectors: &[&str]) -> RunOptions {
     RunOptions {
-        cwd: root.to_path_buf(),
-        root: Some(root.to_path_buf()),
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        rule_filter: filter,
-        use_cache: false,
-        ..RunOptions::default()
+        rule_filter: audit_filter_of(selectors),
+        ..standard(root)
     }
 }
 
 #[test]
 fn audit_filter_rejects_unknown_selectors() {
-    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = tmp.path();
-    write(root, "sample.rs", "pub fn handle(flag: bool) {}\n");
+    let (_tmp, root) = tempdir();
+    write(&root, "sample.rs", SAMPLE);
     for (selectors, want) in [
         (vec!["grep/generic-nam"], "grep/generic-nam"),
         (vec!["typo/*"], "typo/*"),
         (vec!["grep/generic-name", "typo/*"], "typo/*"),
     ] {
-        let result = run(&audit_filter_opts(root, audit_filter_of(&selectors)));
-        let Err(error) = result else {
+        let Err(error) = run(&audit_filter_opts(&root, &selectors)) else {
             panic!("unknown selector {want} was accepted");
         };
         assert_eq!(error.exit_code(), 2, "unknown rule must exit 2");
-        let sloplint::RunError::Config(ConfigError::UnknownRule { id, .. }) = error else {
+        let RunError::Config(ConfigError::UnknownRule { id, .. }) = error else {
             panic!("unexpected error for {want}");
         };
         assert_eq!(id, want, "rejected selector mismatch");
@@ -710,43 +545,25 @@ fn audit_filter_ruleset_new_rejects_unknown() {
 
 #[test]
 fn audit_filter_accepts_valid_selectors() {
-    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = tmp.path();
+    let (_tmp, root) = tempdir();
     write(
-        root,
+        &root,
         "sample.rs",
         "pub fn handle(flag: bool, other: bool) { foo(); }\nfn foo() {}\n",
     );
-    write(
-        root,
-        "sloplint.toml",
-        "[[custom_rules]]\nid = \"custom/no-call\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"call found\"\nwhy = \"test why\"\nfix = \"test fix\"\nquery = \"(call_expression) @match\"\n",
-    );
-    let check = |selector: &str| {
-        run(&audit_filter_opts(root, audit_filter_of(&[selector])))
-            .unwrap_or_else(|e| panic!("valid selector {selector}: {e}"))
-    };
-    let exact = check("grep/generic-name");
-    assert!(
-        exact
-            .findings
-            .iter()
-            .any(|f| &*f.rule == "grep/generic-name"),
-        "exact filter missed its rule"
-    );
-    let family = check("grep/*");
-    assert!(
-        family
-            .findings
-            .iter()
-            .any(|f| &*f.rule == "grep/generic-name"),
-        "family filter missed its rule"
-    );
-    let custom = check("custom/no-call");
-    assert!(
-        custom.findings.iter().any(|f| &*f.rule == "custom/no-call"),
-        "custom filter missed its rule"
-    );
+    let call_rule = "[[custom_rules]]\nid = \"custom/no-call\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"call found\"\nwhy = \"test why\"\nfix = \"test fix\"\nquery = \"(call_expression) @match\"\n";
+    write(&root, "sloplint.toml", call_rule);
+    let check = |selector: &str| run_ok(&audit_filter_opts(&root, &[selector]));
+    for (selector, rule, kind) in [
+        ("grep/generic-name", "grep/generic-name", "exact"),
+        ("grep/*", "grep/generic-name", "family"),
+        ("custom/no-call", "custom/no-call", "custom"),
+    ] {
+        assert!(
+            fired(&check(selector), rule),
+            "{kind} filter missed its rule"
+        );
+    }
     let off = check("grep/multiline-argument");
     assert!(
         off.findings
@@ -755,9 +572,9 @@ fn audit_filter_accepts_valid_selectors() {
         "off-rule filter leaked other rules"
     );
     write(
-        root,
+        &root,
         "sloplint.toml",
-        "[[custom_rules]]\nid = \"custom/no-call\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"call found\"\nwhy = \"test why\"\nfix = \"test fix\"\nquery = \"(call_expression) @match\"\n[rules.\"custom/no-call\"]\nlevel = \"off\"\n",
+        &format!("{call_rule}[rules.\"custom/no-call\"]\nlevel = \"off\"\n"),
     );
     let disabled = check("custom/no-call");
     assert!(
@@ -768,66 +585,47 @@ fn audit_filter_accepts_valid_selectors() {
 
 #[test]
 fn audit_filter_cache_stays_unfiltered() {
-    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = tmp.path();
+    let (_tmp, root) = tempdir();
     write(
-        root,
+        &root,
         "sample.rs",
         "pub fn handle(flag: bool, other: bool) {}\n",
     );
-    let filtered = run(&RunOptions {
+    let filtered = run_ok(&RunOptions {
         use_cache: true,
-        ..audit_filter_opts(root, audit_filter_of(&["grep/generic-name"]))
-    })
-    .unwrap_or_else(|e| panic!("filtered run: {e}"));
+        ..audit_filter_opts(&root, &["grep/generic-name"])
+    });
     assert!(
-        filtered
-            .findings
-            .iter()
-            .any(|f| &*f.rule == "grep/generic-name"),
+        fired(&filtered, "grep/generic-name"),
         "filtered run missed its rule"
     );
     assert!(
         root.join(".sloplint/cache-v1.bin").exists(),
         "filtered run did not populate the cache; the full run would pass cold"
     );
-    let full = run(&RunOptions {
+    let full = run_ok(&RunOptions {
         use_cache: true,
-        ..audit_filter_opts(root, RuleFilter(vec![]))
-    })
-    .unwrap_or_else(|e| panic!("full run: {e}"));
+        ..audit_filter_opts(&root, &[])
+    });
     assert!(
-        full.findings
-            .iter()
-            .any(|f| &*f.rule == "grep/generic-name"),
+        fired(&full, "grep/generic-name"),
         "full run after filtered cache missed generic-name"
     );
     assert!(
-        full.findings
-            .iter()
-            .any(|f| &*f.rule == "complexity/boolean-params"),
+        fired(&full, "complexity/boolean-params"),
         "filtered cache poisoned the later full run"
     );
 }
 
 #[test]
 fn invalid_and_unused_suppressions_report() {
-    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = tmp.path();
+    let (_tmp, root) = tempdir();
     write(
-        root,
+        &root,
         "src/lib.rs",
         "// sloplint-allow(slop/echo-comment)\npub fn suppressed_reason() {}\n// sloplint-allow(grep/generic-name): placeholder\npub fn kept() {}\n",
     );
-    let report = run(&RunOptions {
-        cwd: root.to_path_buf(),
-        root: Some(root.to_path_buf()),
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        use_cache: false,
-        ..RunOptions::default()
-    })
-    .unwrap_or_else(|e| panic!("run: {e}"));
+    let report = run_ok(&standard(&root));
     let rules: BTreeSet<_> = report.findings.iter().map(|f| &*f.rule).collect();
     assert!(
         rules.contains("meta/invalid-suppression"),
@@ -841,18 +639,12 @@ fn invalid_and_unused_suppressions_report() {
 
 #[test]
 fn audit_config_missing_explicit_fails() {
-    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = tmp.path();
-    write(root, "src/lib.rs", "pub fn handle(flag: bool) {}\n");
+    let (_tmp, root) = tempdir();
+    write(&root, "src/lib.rs", SAMPLE);
     let missing = root.join("missing.toml");
     let error = run(&RunOptions {
-        cwd: root.to_path_buf(),
-        root: Some(root.to_path_buf()),
         config: Some(missing.clone()),
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        use_cache: false,
-        ..RunOptions::default()
+        ..standard(&root)
     })
     .expect_err("explicit missing config must fail");
     match &error {
@@ -867,23 +659,11 @@ fn audit_config_missing_explicit_fails() {
 
 #[test]
 fn audit_config_missing_implicit_uses_defaults() {
-    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = tmp.path();
-    write(root, "src/lib.rs", "pub fn handle(flag: bool) {}\n");
-    let report = run(&RunOptions {
-        cwd: root.to_path_buf(),
-        root: Some(root.to_path_buf()),
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        use_cache: false,
-        ..RunOptions::default()
-    })
-    .unwrap_or_else(|e| panic!("run: {e}"));
+    let (_tmp, root) = tempdir();
+    write(&root, "src/lib.rs", SAMPLE);
+    let report = run_ok(&standard(&root));
     assert!(
-        report
-            .findings
-            .iter()
-            .any(|f| &*f.rule == "grep/generic-name"),
+        fired(&report, "grep/generic-name"),
         "default profile must flag the generic name without a config file: {:?}",
         report.findings.iter().map(|f| &f.rule).collect::<Vec<_>>()
     );
@@ -891,46 +671,26 @@ fn audit_config_missing_implicit_uses_defaults() {
 
 #[test]
 fn audit_config_present_explicit_changes_level() {
-    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
-    let root = tmp.path();
-    write(root, "src/lib.rs", "pub fn handle(flag: bool) {}\n");
+    let (_tmp, root) = tempdir();
+    write(&root, "src/lib.rs", SAMPLE);
     write(
-        root,
+        &root,
         "custom.toml",
         "[rules.\"grep/generic-name\"]\nlevel = \"off\"\n",
     );
-    let plain = run(&RunOptions {
-        cwd: root.to_path_buf(),
-        root: Some(root.to_path_buf()),
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        use_cache: false,
-        ..RunOptions::default()
-    })
-    .unwrap_or_else(|e| panic!("run: {e}"));
-    let custom = run(&RunOptions {
-        cwd: root.to_path_buf(),
-        root: Some(root.to_path_buf()),
+    let plain = run_ok(&standard(&root));
+    let custom = run_ok(&RunOptions {
         config: Some(root.join("custom.toml")),
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        use_cache: false,
-        ..RunOptions::default()
-    })
-    .unwrap_or_else(|e| panic!("run: {e}"));
+        ..standard(&root)
+    });
     let plain_sev = plain
         .findings
         .iter()
         .find(|f| &*f.rule == "grep/generic-name")
         .map(|f| f.severity);
-    let custom_sev = custom
-        .findings
-        .iter()
-        .find(|f| &*f.rule == "grep/generic-name")
-        .map(|f| f.severity);
     assert_eq!(plain_sev, Some(Severity::Warn), "default level is warn");
-    assert_eq!(
-        custom_sev, None,
+    assert!(
+        !fired(&custom, "grep/generic-name"),
         "explicit config must disable the selected rule"
     );
 }
