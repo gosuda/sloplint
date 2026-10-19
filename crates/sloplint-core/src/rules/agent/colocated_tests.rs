@@ -1,6 +1,6 @@
 //! `agent/colocated-tests`: modules with public functions and no nearby tests.
 
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::{Deserialize, Serialize};
@@ -205,7 +205,7 @@ fn conventions(lang: Lang) -> Candidates {
         .unwrap_or(Candidates::None)
 }
 
-fn has_counterpart(paths: &HashSet<&str>, names: &HashSet<&str>, path: &str, lang: Lang) -> bool {
+fn has_counterpart(paths: &BTreeSet<&str>, names: &HashSet<&str>, path: &str, lang: Lang) -> bool {
     match conventions(lang) {
         Candidates::Names(form) => names_match(names, path, &form),
         Candidates::Dir(tail) => dir_match(paths, path, tail),
@@ -228,20 +228,20 @@ fn names_match(names: &HashSet<&str>, path: &str, form: &NameForm) -> bool {
             .any(|infix| names.contains(format!("{stem}{infix}.{ext}").as_str()))
 }
 
-fn dir_match(paths: &HashSet<&str>, path: &str, tail: &str) -> bool {
+fn dir_match(paths: &BTreeSet<&str>, path: &str, tail: &str) -> bool {
     let dir = dir_prefix(path);
     let stem = stem_ext(path).0;
     paths.contains(format!("{dir}{stem}{tail}").as_str())
 }
 
-fn root_match(paths: &HashSet<&str>, templates: &[&str], path: &str) -> bool {
+fn root_match(paths: &BTreeSet<&str>, templates: &[&str], path: &str) -> bool {
     let stem = stem_ext(path).0;
     templates
         .iter()
         .any(|template| paths.contains(template.replace("{stem}", stem).as_str()))
 }
 
-fn rust_match(paths: &HashSet<&str>, path: &str) -> bool {
+fn rust_match(paths: &BTreeSet<&str>, path: &str) -> bool {
     let stem = stem_ext(path).0;
     let exact = format!("{stem}.rs");
     let prefix = format!("{stem}_");
@@ -270,15 +270,20 @@ const WEB_TAILS: &[&str] = &[
     ".spec.cjs",
 ];
 
-fn web_match(paths: &HashSet<&str>, path: &str) -> bool {
+fn web_match(paths: &BTreeSet<&str>, path: &str) -> bool {
     let dir = dir_prefix(path);
     let stem = stem_ext(path).0;
-    WEB_TAILS
+    if WEB_TAILS
         .iter()
         .any(|tail| paths.contains(format!("{dir}{stem}{tail}").as_str()))
-        || paths
-            .iter()
-            .any(|candidate| candidate.starts_with(&format!("{dir}__tests__/{stem}.test.")))
+    {
+        return true;
+    }
+    let prefix = format!("{dir}__tests__/{stem}.test.");
+    paths
+        .range(prefix.as_str()..)
+        .next()
+        .is_some_and(|candidate| candidate.starts_with(prefix.as_str()))
 }
 
 /// The fix text names the canonical counterpart a module should gain.
@@ -360,7 +365,7 @@ fn file_name(path: &str) -> &str {
 
 impl WorldRule for ColocatedTests {
     fn check(&self, files: &[WorldFile<'_>], out: &mut Vec<Finding>) {
-        let paths: HashSet<&str> = files.iter().map(|file| file.path).collect();
+        let paths: BTreeSet<&str> = files.iter().map(|file| file.path).collect();
         let names: HashSet<&str> = files.iter().map(|file| file_name(file.path)).collect();
         for file in files {
             if self.skipped(file) || file.facts.has_inline_tests {
