@@ -197,13 +197,8 @@ pub(crate) fn trimmed<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
 
 /// The node's named children in order.
 pub(crate) fn named_children(n: Node<'_>) -> Vec<Node<'_>> {
-    let mut out = Vec::with_capacity(n.named_child_count());
-    for i in 0..narrow(n.named_child_count()) {
-        if let Some(child) = n.named_child(i) {
-            out.push(child);
-        }
-    }
-    out
+    let mut cursor = n.walk();
+    n.named_children(&mut cursor).collect()
 }
 
 /// The node's child reached through a named field.
@@ -213,20 +208,15 @@ pub(crate) fn child_by_field<'a>(n: Node<'a>, field: &str) -> Option<Node<'a>> {
 
 /// The first child, named or anonymous, whose kind is in `kinds`.
 pub(crate) fn first_of_kind<'a>(n: Node<'a>, kinds: &[&str]) -> Option<Node<'a>> {
-    for i in 0..n.child_count() {
-        let Some(child) = n.child(i) else {
-            continue;
-        };
-        if kinds.contains(&child.kind()) {
-            return Some(child);
-        }
-    }
-    None
+    let mut cursor = n.walk();
+    n.children(&mut cursor)
+        .find(|child| kinds.contains(&child.kind()))
 }
 
 /// True when any child, named or anonymous, has the given kind.
 pub(crate) fn has_child_kind(n: Node<'_>, kind: &str) -> bool {
-    (0..n.child_count()).any(|i| n.child(i).is_some_and(|child| child.kind() == kind))
+    let mut cursor = n.walk();
+    n.children(&mut cursor).any(|child| child.kind() == kind)
 }
 
 /// The text after the last occurrence of any separator (`::`, `.`, `/`, `#`, `\`).
@@ -285,10 +275,8 @@ pub(crate) fn string_arg_shape<'s>(
     fragment_kinds: &[&str],
 ) -> ArgShape<'s> {
     let mut segments: Vec<&'s str> = Vec::new();
-    for i in 0..n.child_count() {
-        let Some(child) = n.child(i) else {
-            continue;
-        };
+    let mut cursor = n.walk();
+    for child in n.children(&mut cursor) {
         if fragment_kinds.contains(&child.kind()) {
             segments.push(text(cx, child));
         }
