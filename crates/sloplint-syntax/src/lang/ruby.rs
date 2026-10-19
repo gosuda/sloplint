@@ -156,14 +156,20 @@ fn is_protocol_method(name: &str) -> bool {
             | "respond_to_missing?"
     )
 }
+fn superclass_name<'s>(cx: &Cx<'_, 's>, class: Node<'_>) -> Option<(&'s str, Pos)> {
+    let sup = child_by_field(class, "superclass")?;
+    let base = named_children(sup).into_iter().next()?;
+    Some((last_segment(text(cx, base), &["::"]), pos_of(sup)))
+}
 fn ruby_in_test<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     if cx.is_test_file {
         return true;
     }
     let mut current = n.parent();
     while let Some(parent) = current {
-        if parent.kind() == "superclass" {
-            return matches!(last_segment(text(cx, parent), &["::"]), "Test" | "TestCase");
+        if parent.kind() == "class" {
+            return superclass_name(cx, parent)
+                .is_some_and(|(name, _)| matches!(name, "Test" | "TestCase"));
         }
         current = parent.parent();
     }
@@ -600,11 +606,8 @@ impl LangHooks for RubyHooks {
         }
         let name_node = child_by_field(n, "name")?;
         let mut impls = Vec::new();
-        if let Some(sup) = child_by_field(n, "superclass") {
-            impls.push(ImplRef {
-                name: last_segment(text(cx, sup), &["::"]),
-                pos: pos_of(sup),
-            });
+        if let Some((name, pos)) = superclass_name(cx, n) {
+            impls.push(ImplRef { name, pos });
         }
         collect_mixins(cx, n, &mut impls);
         Some(TypeHead {

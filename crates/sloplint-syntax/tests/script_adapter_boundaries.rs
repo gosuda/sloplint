@@ -17,3 +17,5 @@ mod python_nested_def;
 mod ruby_hash_keys;
 #[path = "script_adapter_boundaries/ruby_keyword_booleans.rs"]
 mod ruby_keyword_booleans;
+#[path = "script_adapter_boundaries/ruby_superclass.rs"]
+mod ruby_superclass;
