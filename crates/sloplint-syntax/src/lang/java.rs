@@ -512,20 +512,21 @@ fn switch_label_arm(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<WildcardArm> {
     })
 }
 
-fn first_arg_is_literal(n: Node<'_>) -> bool {
-    arguments_of(n)
-        .first()
-        .is_some_and(|first| first.kind() == "string_literal")
-}
-
 fn dynamic_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
     if n.kind() != "method_invocation" {
         return None;
     }
     let name = text(cx, child_by_field(n, "name")?);
     let on_class = child_by_field(n, "object").is_some_and(|object| text(cx, object) == "Class");
-    let reflective = (name == "forName" && on_class) || REFLECTION.contains(&name);
-    (reflective && !first_arg_is_literal(n)).then_some("reflection by name")
+    if !((name == "forName" && on_class) || REFLECTION.contains(&name)) {
+        return None;
+    }
+    let args = child_by_field(n, "arguments")?;
+    let mut cursor = args.walk();
+    let first = args
+        .named_children(&mut cursor)
+        .find(|child| !COMMENTS.contains(&child.kind()))?;
+    (first.kind() != "string_literal").then_some("reflection by name")
 }
 
 fn equality_has_message(args: &[Node<'_>]) -> bool {

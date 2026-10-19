@@ -771,4 +771,47 @@ mod audit_propagation_tests {
         );
         assert_eq!(b.max_nested_depth, 0, "read-only call keeps depth 0");
     }
+
+    #[test]
+    fn audit_java_reflection_arity() {
+        let cases = [
+            ("noarg", "Object r = request.getMethod();", 0, ""),
+            (
+                "comments",
+                "Object r = request.getMethod(/* name */);",
+                0,
+                "",
+            ),
+            ("constructor", "Object r = cls.getConstructor();", 0, ""),
+            (
+                "commented literal",
+                "Object r = Class.forName(/* type */ \"java.lang.String\");",
+                0,
+                "",
+            ),
+            (
+                "literal",
+                "Object r = Class.forName(\"java.lang.String\");",
+                0,
+                "",
+            ),
+            (
+                "dynamic",
+                "Object a = Class.forName(/* type */ name); Object b = request.getMethod(name);",
+                2,
+                "reflection by name",
+            ),
+        ];
+        for (label, statement, count, kind) in cases {
+            let source = format!("void probe(String name) {{ {statement} }}\n");
+            let analysis = audit_analyze(Lang::Java, "reflect.java", &source);
+            assert!(analysis.parse_error.is_none(), "{label} source parses");
+            let sites = &analysis.facts.dynamic_symbols;
+            assert_eq!(sites.len(), count, "{label} dynamic symbol count");
+            assert!(
+                sites.iter().all(|site| site.what == kind),
+                "{label} reports {kind}"
+            );
+        }
+    }
 }
