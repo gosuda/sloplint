@@ -51,6 +51,10 @@ pub struct Function<'s> {
     pub in_test: bool,
     pub params: Vec<Param<'s>>,
     pub return_type: Option<&'s str>,
+    /// True when the signature declares plain `throws` with no error type.
+    ///
+    /// Typed `throws(E)`, `rethrows`, and languages without the clause are false.
+    pub untyped_throws: bool,
     pub missing_annotations: Vec<&'s str>,
     pub cognitive: u32,
     pub max_depth: u32,
@@ -314,6 +318,7 @@ mod tests {
                     in_test: false,
                     params: vec![],
                     return_type: None,
+                    untyped_throws: false,
                     missing_annotations: vec![],
                     cognitive: 0,
                     max_depth: 0,
@@ -330,6 +335,7 @@ mod tests {
                     in_test: false,
                     params: vec![],
                     return_type: None,
+                    untyped_throws: false,
                     missing_annotations: vec![],
                     cognitive: 0,
                     max_depth: 0,
@@ -346,6 +352,7 @@ mod tests {
                     in_test: false,
                     params: vec![],
                     return_type: None,
+                    untyped_throws: false,
                     missing_annotations: vec![],
                     cognitive: 0,
                     max_depth: 0,

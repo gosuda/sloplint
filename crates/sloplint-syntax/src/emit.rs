@@ -76,6 +76,10 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn push_function(&mut self, node: tree_sitter::Node<'_>, head: FunctionHead<'s>) {
+        let untyped_throws = {
+            let cx = self.make_cx();
+            self.spec.hooks.untyped_throws(node, &cx)
+        };
         let index = self.facts.functions.len();
         self.facts.functions.push(Function {
             name: head.name,
@@ -87,6 +91,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             in_test: head.in_test,
             params: head.params,
             return_type: head.return_type,
+            untyped_throws,
             missing_annotations: head.missing_annotations,
             cognitive: 0,
             max_depth: 0,

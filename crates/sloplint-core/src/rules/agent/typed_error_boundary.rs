@@ -1,12 +1,16 @@
 //! `agent/typed-error-boundary`: public functions returning untyped errors.
 
 use crate::config::Strictness;
-use crate::facts::FileFacts;
+use crate::facts::{FileFacts, Function};
 use crate::finding::{Finding, Level, Severity};
 use crate::lang::Lang;
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 
 use super::EmptyOptions;
+
+const RUST_FIX: &str = "return a crate error enum (thiserror) that names each failure case";
+const ZIG_FIX: &str = "declare the failure cases as an explicit error set on the return type";
+const SWIFT_FIX: &str = "throw a typed error enum and declare it in the throws clause";
 
 const RUST_MARKERS: &[&str] = &[
     "Box<dynError",
@@ -56,14 +60,9 @@ impl FileRule for TypedErrorBoundary {
             if !function.public || function.in_test || function.name == "main" {
                 continue;
             }
-            let Some(return_type) = function.return_type else {
+            let Some((message, fix)) = untyped_boundary(facts, function) else {
                 continue;
             };
-            let Some(fix) = untyped_fix(facts, return_type) else {
-                continue;
-            };
-            let name = function.name;
-            let message = format!("public `{name}` returns an untyped error (`{return_type}`)");
             out.push(Finding::at(
                 facts,
                 function.pos,
@@ -76,18 +75,30 @@ impl FileRule for TypedErrorBoundary {
     }
 }
 
+fn untyped_boundary(
+    facts: &FileFacts<'_>,
+    function: &Function<'_>,
+) -> Option<(String, &'static str)> {
+    let name = function.name;
+    if facts.lang == Lang::Swift {
+        if !function.untyped_throws {
+            return None;
+        }
+        let message = format!("public `{name}` throws an untyped error");
+        return Some((message, SWIFT_FIX));
+    }
+    let return_type = function.return_type?;
+    let fix = untyped_fix(facts, return_type)?;
+    let message = format!("public `{name}` returns an untyped error (`{return_type}`)");
+    Some((message, fix))
+}
+
 fn untyped_fix(facts: &FileFacts<'_>, return_type: &str) -> Option<&'static str> {
-    let flagged = match facts.lang {
-        Lang::Rust => rust_untyped(facts, return_type),
-        Lang::Zig => zig_untyped(return_type),
-        _ => swift_untyped(return_type),
-    };
-    let fix = match facts.lang {
-        Lang::Rust => "return a crate error enum (thiserror) that names each failure case",
-        Lang::Zig => "declare the failure cases as an explicit error set on the return type",
-        _ => "throw a typed error enum and declare it in the throws clause",
-    };
-    flagged.then_some(fix)
+    match facts.lang {
+        Lang::Rust => rust_untyped(facts, return_type).then_some(RUST_FIX),
+        Lang::Zig => zig_untyped(return_type).then_some(ZIG_FIX),
+        _ => None,
+    }
 }
 
 fn rust_untyped(facts: &FileFacts<'_>, return_type: &str) -> bool {
@@ -105,10 +116,4 @@ fn imports_result(facts: &FileFacts<'_>) -> bool {
 
 fn zig_untyped(return_type: &str) -> bool {
     return_type.starts_with("anyerror!") || return_type == "anyerror"
-}
-
-fn swift_untyped(return_type: &str) -> bool {
-    return_type == "throws"
-        || return_type.starts_with("throws ")
-        || return_type.ends_with(" throws")
 }

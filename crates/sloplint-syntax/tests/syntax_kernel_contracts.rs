@@ -11,3 +11,5 @@ mod directive_docs;
 mod header_comment_chains;
 #[path = "syntax_kernel_contracts/support.rs"]
 mod support;
+#[path = "syntax_kernel_contracts/swift_throws.rs"]
+mod swift_throws;

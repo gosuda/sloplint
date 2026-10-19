@@ -83,6 +83,12 @@ pub(crate) trait LangHooks: Sync {
         None
     }
 
+    /// True when a function-like node declares plain `throws` with no error type.
+    fn untyped_throws(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+        let _ = (n, cx);
+        false
+    }
+
     /// True when this `If`-role node is the else-if form of its parent.
     fn is_else_if(&self, n: Node<'_>) -> bool;
 
