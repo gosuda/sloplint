@@ -103,6 +103,7 @@ pub struct ProjectConfig {
     /// Globs marking test files, which exempt rules skip.
     pub test_globs: Vec<String>,
     /// Files larger than this many bytes are skipped.
+    /// TOML values must be in `0..=u32::MAX` to fit parser byte positions.
     pub max_file_bytes: u64,
     /// Globs naming extra files that hold `[[custom_rules]]` tables.
     pub custom_rule_files: Vec<String>,

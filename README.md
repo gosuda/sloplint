@@ -68,7 +68,7 @@ An unreadable source file stops the run with exit `3` and reports its path and c
 
 - **complexity/**: nesting-weighted cognitive depth, nesting depth, mutable-statement spans, nested mutation, boolean params, import fan-out.
 - **grep/**: generic names, homonym definitions across files, renamed and wildcard imports, runtime-built symbols (Java reflection calls require a non-literal first argument), non-literal log messages, multiline arguments.
-- **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors (error propagation such as Zig `try` and Odin `or_return` is not a handler), single-implementation abstractions, barrel files, field-copy literals.
+- **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors (error propagation such as Zig `try` and Odin `or_return` is not a handler), single-implementation abstractions (Rust, TypeScript including TSX, JavaScript, Python, Kotlin, Scala, Swift, Zig, C++, Java, C#, Dart; Ruby, PHP, and Go excluded), barrel files (wherever adapters emit barrel facts, including Dart and OCaml; PHP emits none), field-copy literals.
 - **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
 - **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs.
 
@@ -79,6 +79,8 @@ Dart mutation rules track assignments, member and index writes, and prefix and p
 PowerShell pass-through checks match variable arguments to declared parameter names without the `$` sigil. A second call or an assignment prevents a wrapper finding.
 
 Zig pass-through checks read declared parameters and exclude bodies with multiple calls.
+
+`meta/parse-error` is Warn in every profile, so a default `deny` gate still passes files with syntax errors reported as warnings; configure the rule as Deny or use `--fail-on warn` to fail on them. An empty `project.languages` list is valid and selects no languages, so no files are analyzed.
 
 ## Usage
 
