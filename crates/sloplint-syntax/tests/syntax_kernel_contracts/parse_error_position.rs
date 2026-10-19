@@ -20,6 +20,7 @@ fn a_valid_declaration_before_the_error_contributes_no_facts() {
     let pos = analysis.parse_error.expect("broken.rs must fail to parse");
     assert_eq!(pos.line, 3, "the `@` line is the third line");
     let want = u32::try_from(SOURCE.find('@').expect("source holds `@`")).expect("offset fits");
+    assert_eq!(pos.byte, want, "byte offset points at `@`");
     assert_eq!(
         pos.byte, 20,
         "byte 20: 11 for the declaration line plus newline, 9 for the comment line plus its two byte e-acute plus newline"
@@ -77,10 +78,9 @@ fn a_recovery_that_hides_every_error_still_reports_a_position() {
     let pos = analysis
         .parse_error
         .expect("a failed parse reports a position even when recovery hides every error node");
-    let want = usize::try_from(GO_HIDDEN_RECOVERY.len()).expect("length fits");
     assert_eq!(
         usize::try_from(pos.byte).expect("byte offset fits"),
-        want,
+        GO_HIDDEN_RECOVERY.len(),
         "recovery hides every fault, so the reported position falls back to the end of the tree"
     );
     assert_eq!(
