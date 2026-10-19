@@ -7,5 +7,7 @@
 mod parse_failed_suppressions;
 #[path = "pipeline_remaining/path_scope.rs"]
 mod path_scope;
+#[path = "pipeline_remaining/ratchet_rule_filter.rs"]
+mod ratchet_rule_filter;
 #[path = "pipeline_remaining/skipped_names.rs"]
 mod skipped_names;

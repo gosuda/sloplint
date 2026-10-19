@@ -522,7 +522,10 @@ fn apply_gate(
     if pipe.config.project.mode != Mode::Ratchet {
         return Ok((all, 0, 0));
     }
-    let baseline = load_baseline(pipe.root, &pipe.config.project.baseline)?;
+    let mut baseline = load_baseline(pipe.root, &pipe.config.project.baseline)?;
+    baseline
+        .entries
+        .retain(|entry| pipe.filter.matches(&entry.rule));
     Ok(baseline.filter(all, &|path: &str| scopes.contains(Path::new(path))))
 }
 
