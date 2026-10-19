@@ -134,6 +134,7 @@ fn first_error_pos(root: Node<'_>) -> Option<Pos> {
 #[cfg(test)]
 mod audit_propagation_tests {
     use super::{CustomRules, FileInput, Parsers, analyze};
+    use sloplint_core::facts::Stmt;
     use sloplint_core::lang::Lang;
 
     fn audit_analyze<'s>(lang: Lang, path: &'s str, source: &'s str) -> super::Analysis<'s> {
@@ -228,6 +229,120 @@ mod audit_propagation_tests {
                 .iter()
                 .any(|c| c.callee.contains("log_fallback")),
             "catch body still traverses calls"
+        );
+    }
+
+    #[test]
+    fn audit_zig_handler_rethrow_returns_bound_identifier() {
+        let source = "fn read_value() !u32 {\n    return 1;\n}\n\npub fn load() !u32 {\n    return read_value() catch |e| {\n        return e;\n    };\n}\n";
+        let analysis = audit_analyze(Lang::Zig, "rethrow.zig", source);
+        assert!(
+            analysis.parse_error.is_none(),
+            "rethrow catch source parses without error"
+        );
+        assert_eq!(
+            analysis.facts.handlers.len(),
+            1,
+            "rethrow catch emits exactly one handler"
+        );
+        let stmts = &analysis.facts.handlers[0].stmts;
+        assert_eq!(
+            stmts.len(),
+            1,
+            "rethrow catch body keeps its single return statement"
+        );
+        assert!(
+            matches!(&stmts[0], Stmt::Rethrow),
+            "return of the captured identifier classifies as Rethrow, got {:?}",
+            stmts[0]
+        );
+    }
+
+    #[test]
+    fn audit_zig_handler_recovery_value_is_other() {
+        let source = "fn read_value() !u32 {\n    return 1;\n}\n\nfn recover_value() u32 {\n    return 0;\n}\n\npub fn load() u32 {\n    return read_value() catch {\n        return recover_value();\n    };\n}\n";
+        let analysis = audit_analyze(Lang::Zig, "handle.zig", source);
+        assert!(
+            analysis.parse_error.is_none(),
+            "recovery catch source parses without error"
+        );
+        assert_eq!(
+            analysis.facts.handlers.len(),
+            1,
+            "recovery catch emits exactly one handler"
+        );
+        let stmts = &analysis.facts.handlers[0].stmts;
+        assert_eq!(
+            stmts.len(),
+            1,
+            "recovery catch body keeps its single return statement"
+        );
+        assert!(
+            matches!(&stmts[0], Stmt::Other),
+            "return of a recovery value classifies as Other, got {:?}",
+            stmts[0]
+        );
+    }
+
+    #[test]
+    fn audit_zig_handler_body_call_is_call() {
+        let source = "fn read_value() !u32 {\n    return 1;\n}\n\nfn log_fallback() void {}\n\npub fn load() void {\n    read_value() catch {\n        log_fallback();\n    };\n}\n";
+        let analysis = audit_analyze(Lang::Zig, "handler_call.zig", source);
+        assert!(
+            analysis.parse_error.is_none(),
+            "catch with body call parses without error"
+        );
+        assert_eq!(
+            analysis.facts.handlers.len(),
+            1,
+            "catch with body call emits exactly one handler"
+        );
+        let stmts = &analysis.facts.handlers[0].stmts;
+        assert_eq!(
+            stmts.len(),
+            1,
+            "catch body call keeps its single call statement"
+        );
+        assert!(
+            matches!(&stmts[0], Stmt::Call { callee, .. } if callee.contains("log_fallback")),
+            "catch body call retains its callee, got {:?}",
+            stmts[0]
+        );
+    }
+
+    #[test]
+    fn audit_zig_handler_empty_and_comment_only_stay_empty() {
+        let empty = "fn read_value() !u32 {\n    return 1;\n}\n\npub fn load() void {\n    read_value() catch {};\n}\n";
+        let analysis = audit_analyze(Lang::Zig, "empty.zig", empty);
+        assert!(
+            analysis.parse_error.is_none(),
+            "empty catch source parses without error"
+        );
+        assert_eq!(
+            analysis.facts.handlers.len(),
+            1,
+            "empty catch emits exactly one handler"
+        );
+        assert!(
+            analysis.facts.handlers[0].stmts.is_empty(),
+            "empty catch block stays empty, got {:?}",
+            analysis.facts.handlers[0].stmts
+        );
+        let commented = "fn read_value() !u32 {\n    return 1;\n}\n\npub fn load() void {\n    read_value() catch {\n        // nothing to do\n    };\n}\n";
+        let analysis = audit_analyze(Lang::Zig, "comment_only.zig", commented);
+        assert!(
+            analysis.parse_error.is_none(),
+            "comment-only catch source parses without error"
+        );
+        assert_eq!(
+            analysis.facts.handlers.len(),
+            1,
+            "comment-only catch emits exactly one handler"
+        );
+        assert!(
+            analysis.facts.handlers[0].stmts.is_empty(),
+            "comment-only catch block stays empty, got {:?}",
+            analysis.facts.handlers[0].stmts
         );
     }
 }

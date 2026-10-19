@@ -62,6 +62,8 @@ Exit code `0` means the gate passed: the run can still list `warn` findings belo
 - **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
 - **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs.
 
+For Zig catches, `slop/zombie-catch` distinguishes an empty or comment-only body from an unchanged rethrow. Returning a recovery value does not count as swallowing the error.
+
 ## Usage
 
 ### Commands

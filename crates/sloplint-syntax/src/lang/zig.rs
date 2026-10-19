@@ -183,7 +183,7 @@ fn stmt_for<'s>(cx: &Cx<'_, 's>, n: Node<'_>, bound: &str) -> Stmt<'s> {
         }
     }
     if current.kind() == "expression_statement" {
-        match child_by_field(current, "expression") {
+        match named_children(current).first().copied() {
             Some(next) => current = next,
             None => return Stmt::Other,
         }
@@ -576,7 +576,7 @@ impl LangHooks for ZigHooks {
         let stmts = if body.kind() == "block" {
             named_children(body)
                 .into_iter()
-                .filter(|c| c.kind() == "statement")
+                .filter(|c| c.kind() != "comment")
                 .map(|s| stmt_for(cx, s, bound))
                 .collect()
         } else {
