@@ -29,6 +29,8 @@ pub(crate) mod scala;
 pub(crate) mod starlark;
 pub(crate) mod swift;
 pub(crate) mod typescript;
+pub(crate) mod typescript_calls;
+pub(crate) mod typescript_imports;
 pub(crate) mod zig;
 
 /// A role table exported by one adapter module.
