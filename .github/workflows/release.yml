@@ -5,17 +5,24 @@ on:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
 
 defaults:
   run:
     shell: bash
 
+env:
+  RELEASE_TARGETS: >-
+    x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-apple-darwin
+    aarch64-apple-darwin x86_64-pc-windows-msvc aarch64-pc-windows-msvc
+
 jobs:
   verify-tag:
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -29,19 +36,8 @@ jobs:
       contents: read
     uses: ./.github/workflows/ci.yml
 
-  create:
-    needs: [verify-tag, ci]
-    runs-on: ubuntu-24.04
-    env:
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.sha }}
-      - run: gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "$GITHUB_REF_NAME" --notes ""
-
   build:
-    needs: create
+    needs: verify-tag
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -54,12 +50,12 @@ jobs:
           - { os: windows-2025, target: x86_64-pc-windows-msvc }
           - { os: windows-11-arm, target: aarch64-pc-windows-msvc }
     env:
-      GH_TOKEN: ${{ github.token }}
       MACOSX_DEPLOYMENT_TARGET: "11.0"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
+          persist-credentials: false
       - run: rustup target add ${{ matrix.target }}
       - run: cargo build --release --locked --target ${{ matrix.target }}
       - name: Smoke-test binary
@@ -75,7 +71,6 @@ jobs:
           name="sloplint-$GITHUB_REF_NAME-${{ matrix.target }}"
           tar -czf "$name.tar.gz" -C "target/${{ matrix.target }}/release" sloplint -C "$GITHUB_WORKSPACE" LICENSE
           shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
-          gh release upload "$GITHUB_REF_NAME" "$name.tar.gz" "$name.tar.gz.sha256"
       - name: Archive Windows
         if: runner.os == 'Windows'
         shell: pwsh
@@ -84,12 +79,147 @@ jobs:
           Compress-Archive -Path "target/${{ matrix.target }}/release/sloplint.exe", "LICENSE" -DestinationPath "$name.zip"
           $hash = (Get-FileHash "$name.zip").Hash.ToLower()
           "$hash  $name.zip" | Out-File -FilePath "$name.zip.sha256" -Encoding ascii -NoNewline
-          gh release upload "$env:GITHUB_REF_NAME" "$name.zip" "$name.zip.sha256"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist-${{ matrix.target }}
+          path: sloplint-${{ github.ref_name }}-${{ matrix.target }}.*
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 14
 
   publish:
-    needs: build
+    needs: [verify-tag, ci, build]
     runs-on: ubuntu-24.04
-    env:
-      GH_TOKEN: ${{ github.token }}
+    permissions:
+      contents: write
     steps:
-      - run: gh release edit "$GITHUB_REF_NAME" --draft=false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: dist
+      - name: Verify packaging
+        run: |
+          read -ra targets <<<"$RELEASE_TARGETS"
+          bash scripts/verify-release.sh dist "$GITHUB_REF_NAME" dist "${targets[@]}"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_DIST_DIR: dist
+        run: |
+          set -euo pipefail
+          shopt -s inherit_errexit nullglob
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
+          trap 'status=$?; [ "$status" -eq 0 ] || printf "%s\n" "publish: exiting with status $status" >&2' EXIT
+
+          tag="$GITHUB_REF_NAME"
+          dir="$RELEASE_DIST_DIR"
+          die() { printf '%s\n' "publish: $*" >&2; exit 1; }
+
+          files=("$dir"/*)
+          [ "${#files[@]}" -gt 0 ] || die "$dir holds no files"
+
+          require_tag_at_sha() {
+            local ref type sha
+            ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object.type + " " + .object.sha')"
+            type="${ref%% *}"
+            sha="${ref##* }"
+            if [ "$type" = tag ]; then
+              ref="$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$sha" --jq '.object.type + " " + .object.sha')"
+              type="${ref%% *}"
+              sha="${ref##* }"
+            fi
+            [ "$type" = commit ] || die "tag $tag does not resolve to a commit"
+            [ "$sha" = "$GITHUB_SHA" ] || die "tag $tag points at $sha but this run built $GITHUB_SHA"
+          }
+
+          release=""
+          load_release() {
+            local all matches
+            all="$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100")"
+            matches="$(jq -c --arg tag "$tag" '[.[][] | select(.tag_name == $tag)]' <<<"$all")"
+            case "$(jq 'length' <<<"$matches")" in
+              0) release="" ;;
+              1) release="$(jq -c '.[0]' <<<"$matches")" ;;
+              *) die "more than one release uses tag $tag; delete the duplicates by hand" ;;
+            esac
+          }
+
+          asset_state=""
+          classify_asset() {
+            local name="$1" file="$2" asset id remote local_digest
+            asset="$(jq -c --arg name "$name" '[.assets[] | select(.name == $name)] | .[0] // empty' <<<"$release")"
+            if [ -z "$asset" ]; then
+              asset_state=missing
+              return
+            fi
+            if [ "$(jq -r '.state' <<<"$asset")" != uploaded ]; then
+              asset_state=incomplete
+              return
+            fi
+            local_digest="sha256:$(sha256sum "$file" | cut -d' ' -f1)"
+            remote="$(jq -r '.digest // empty' <<<"$asset")"
+            if [ -z "$remote" ]; then
+              id="$(jq -r '.id' <<<"$asset")"
+              remote="sha256:$(gh api -H 'Accept: application/octet-stream' "repos/$GITHUB_REPOSITORY/releases/assets/$id" | sha256sum | cut -d' ' -f1)"
+            fi
+            if [ "$remote" = "$local_digest" ]; then
+              asset_state=identical
+            else
+              asset_state=different
+            fi
+          }
+
+          require_tag_at_sha
+          load_release
+          if [ -z "$release" ]; then
+            gh release create "$tag" --draft --verify-tag --title "$tag" --notes ""
+            load_release
+            [ -n "$release" ] || die "release $tag not found after creating it"
+          fi
+          is_draft="$(jq -r '.draft' <<<"$release")"
+
+          names_json="$(for file in "${files[@]}"; do printf '%s\n' "${file##*/}"; done | jq -R . | jq -sc .)"
+          unexpected="$(jq -r --argjson names "$names_json" '.assets[].name | select(. as $n | $names | index($n) | not)' <<<"$release")"
+          [ -z "$unexpected" ] || die "release $tag holds assets this run did not build: $(tr '\n' ' ' <<<"$unexpected")"
+
+          for file in "${files[@]}"; do
+            name="${file##*/}"
+            classify_asset "$name" "$file"
+            case "$asset_state" in
+              identical)
+                printf '%s\n' "publish: $name already present and identical"
+                ;;
+              different)
+                die "$name exists on release $tag with different content; delete that asset by hand if this build is the intended one"
+                ;;
+              incomplete)
+                [ "$is_draft" = true ] || die "published release $tag holds an incomplete $name"
+                gh release delete-asset "$tag" "$name" --yes
+                gh release upload "$tag" "$file"
+                ;;
+              missing)
+                [ "$is_draft" = true ] || die "published release $tag lacks $name; refusing to modify a published release"
+                gh release upload "$tag" "$file"
+                ;;
+            esac
+          done
+
+          load_release
+          for file in "${files[@]}"; do
+            classify_asset "${file##*/}" "$file"
+            [ "$asset_state" = identical ] || die "${file##*/} is $asset_state on release $tag after upload"
+          done
+
+          if [ "$is_draft" = true ]; then
+            require_tag_at_sha
+            gh release edit "$tag" --draft=false
+            printf '%s\n' "publish: published $tag"
+          else
+            printf '%s\n' "publish: $tag was already published with identical assets"
+          fi

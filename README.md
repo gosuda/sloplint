@@ -33,6 +33,8 @@ CI builds and tests these targets and runs `sloplint check crates --strictness s
 
 Releases are cut by pushing a `vMAJOR.MINOR.PATCH` tag equal to the `sloplint` package version; none has been published yet. The release workflow checks the tag against the package version, runs the full CI workflow on the tagged commit, smoke-tests each binary (`--version` equals the tag and `check crates --strictness standard --mode threshold --fail-on deny` passes), and uploads `sloplint-<tag>-<target>.tar.gz|zip` with its `.sha256` file.
 
+Build jobs run without release credentials and hand archives off through workflow artifacts. Publication verifies that the artifact set holds exactly the expected archives and checksums with valid digests and member lists, re-resolves the tag to the built commit before creating or updating the release, and is rerunnable: identical assets are left alone, differing assets fail, and incomplete or missing assets are only repaired on draft releases; published releases are never modified.
+
 From source, using the checked-in toolchain pin (Rust 1.99.1):
 
 ```bash
