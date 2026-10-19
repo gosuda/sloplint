@@ -10,7 +10,7 @@ mod project;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
 
@@ -141,6 +141,11 @@ pub struct Execution {
     pub baseline_written: Option<String>,
     /// Whether a reported finding reached `fail_on`.
     pub failed: bool,
+    /// Effective `max_file_bytes` limit for re-reading source lines during rendering.
+    ///
+    /// Carried from the active configuration so the human renderer reuses the
+    /// same bound without reloading configuration or using a default.
+    pub max_file_bytes: u64,
 }
 
 /// Lints the project root and returns the reported findings.
@@ -288,6 +293,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         root,
         baseline_written,
         failed,
+        max_file_bytes: config.project.max_file_bytes,
     })
 }
 
@@ -496,7 +502,7 @@ fn unused_findings(
     if unused.is_empty() {
         return Ok(Vec::new());
     }
-    let source = read_source(&pipe.root.join(rel))?;
+    let source = read_source(&pipe.root.join(rel), pipe.config.project.max_file_bytes)?;
     Ok(unused
         .into_iter()
         .filter_map(|suppression| {
@@ -534,7 +540,7 @@ fn apply_gate(
 
 fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunError> {
     let path = project::resolve_within_root(root, name)?;
-    let text = match fs::read_to_string(&path) {
+    let text = match project::read_regular_string(&path) {
         Ok(text) => text,
         Err(source) if source.kind() == io::ErrorKind::NotFound => {
             return Err(RunError::BaselineMissing { path });
@@ -545,20 +551,33 @@ fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunError> {
 }
 
 fn read_within_limit(path: &Path, max_bytes: u64) -> io::Result<Option<Vec<u8>>> {
-    if fs::metadata(path)?.len() > max_bytes {
+    let (file, len) = project::open_regular(path)?;
+    if len > max_bytes {
         return Ok(None);
     }
-    fs::read(path).map(Some)
+    let mut bytes = Vec::new();
+    file.take(max_bytes.saturating_add(1))
+        .read_to_end(&mut bytes)?;
+    Ok((u64::try_from(bytes.len()).unwrap_or(u64::MAX) <= max_bytes).then_some(bytes))
 }
 
-fn read_source(path: &Path) -> Result<String, RunError> {
-    fs::read_to_string(path)
-        .map(|text| {
-            text.strip_prefix('\u{feff}')
-                .unwrap_or(text.as_str())
-                .to_string()
-        })
-        .map_err(|source| io_error(path, source))
+/// Reads a whole regular file as UTF-8 text, bounded by `max_bytes`.
+///
+/// Opens the path without blocking and refuses FIFOs and devices;
+/// returns an error when the file grows past the bound or is not valid UTF-8.
+/// A leading byte-order mark is removed in place when present.
+pub fn read_source(path: &Path, max_bytes: u64) -> Result<String, RunError> {
+    let invalid =
+        |message: &'static str| io_error(path, io::Error::new(io::ErrorKind::InvalidData, message));
+    let bytes = read_within_limit(path, max_bytes)
+        .map_err(|source| io_error(path, source))?
+        .ok_or_else(|| invalid("file grew past max_file_bytes while being linted"))?;
+    let mut text =
+        String::from_utf8(bytes).map_err(|_| invalid("stream did not contain valid UTF-8"))?;
+    if text.starts_with('\u{feff}') {
+        text.drain(..'\u{feff}'.len_utf8());
+    }
+    Ok(text)
 }
 
 /// Replaces `path` with `bytes` so no reader or crash ever sees a partial file.
@@ -566,7 +585,7 @@ fn read_source(path: &Path) -> Result<String, RunError> {
 /// The bytes go to an exclusively created sibling file that is renamed over
 /// `path`; on any failure the sibling is removed and `path` is untouched. An
 /// existing target must be a regular file writable by this user (a FIFO or
-/// device is refused without being opened) and keeps its permissions. The
+/// device is refused without blocking) and keeps its permissions. The
 /// name is replaced, not followed, so a symlink swapped in after
 /// `resolve_within_root` cannot redirect the write.
 fn write_replacing(path: &Path, bytes: &[u8]) -> io::Result<()> {
@@ -584,7 +603,7 @@ fn write_replacing(path: &Path, bytes: &[u8]) -> io::Result<()> {
                 "not a regular file",
             ));
         }
-        fs::OpenOptions::new().write(true).open(path)?;
+        probe_writable(path)?;
     }
     let permissions = existing.map(|meta| meta.permissions());
     let stamp = std::time::SystemTime::now()
@@ -609,6 +628,34 @@ fn write_replacing(path: &Path, bytes: &[u8]) -> io::Result<()> {
         .inspect_err(|_| {
             let _ = fs::remove_file(&tmp);
         })
+}
+
+/// Probes that an existing baseline target is writable without blocking on a FIFO.
+///
+/// Unix opens the path nonblocking with no controlling terminal, so a FIFO swapped in
+/// after the metadata check fails at once instead of waiting for a reader; the opened
+/// handle is then refused unless it is a regular file. A read-only regular file still
+/// fails here, preserving the read-only rejection before any temporary file is made.
+#[cfg(unix)]
+fn probe_writable(path: &Path) -> io::Result<()> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let file = fs::OpenOptions::new()
+        .write(true)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
+        .open(path)?;
+    let meta = file.metadata()?;
+    if !meta.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "not a regular file",
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn probe_writable(path: &Path) -> io::Result<()> {
+    fs::OpenOptions::new().write(true).open(path).map(|_| ())
 }
 
 fn is_generated(bytes: &[u8]) -> bool {

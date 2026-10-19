@@ -13,5 +13,7 @@ mod parse_failed_suppressions;
 mod path_scope;
 #[path = "pipeline_remaining/ratchet_rule_filter.rs"]
 mod ratchet_rule_filter;
+#[path = "pipeline_remaining/regular_inputs.rs"]
+mod regular_inputs;
 #[path = "pipeline_remaining/skipped_names.rs"]
 mod skipped_names;

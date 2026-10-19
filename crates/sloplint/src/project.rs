@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fs;
-use std::io;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
@@ -105,7 +105,7 @@ pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunErro
         Some(path) => (read_required(path)?, origin_name(path)),
         None => {
             let path = location.root.join(CONFIG_FILE);
-            match fs::read_to_string(&path) {
+            match read_regular_string(&path) {
                 Ok(text) => (text, origin_name(&path)),
                 Err(source) if source.kind() == io::ErrorKind::NotFound => {
                     (String::new(), origin_name(&path))
@@ -261,6 +261,92 @@ pub fn resolve_within_root(root: &Path, name: &str) -> Result<PathBuf, RunError>
     }
 }
 
+/// Opens `path` only when it is a regular file, returning the handle and its size.
+///
+/// On unix the open itself is non-blocking and never adopts a terminal as the
+/// controlling one, so a FIFO planted at the path
+/// (even one swapped in after a directory listing) returns at once instead of
+/// waiting for a writer; the opened handle is then inspected and anything but
+/// a regular file is refused before a byte is read. Symlinks to regular files
+/// are followed. A directory keeps the platform's own directory error.
+pub fn open_regular(path: &Path) -> io::Result<(fs::File, u64)> {
+    let file = open_for_read(path)?;
+    let meta = file.metadata()?;
+    require_regular(&file, &meta)?;
+    Ok((file, meta.len()))
+}
+
+#[cfg(unix)]
+fn open_for_read(path: &Path) -> io::Result<fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+    fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
+        .open(path)
+}
+
+#[cfg(not(unix))]
+fn open_for_read(path: &Path) -> io::Result<fs::File> {
+    fs::File::open(path)
+}
+
+fn require_regular(file: &fs::File, meta: &fs::Metadata) -> io::Result<()> {
+    if meta.is_file() {
+        return Ok(());
+    }
+    if meta.is_dir() {
+        let mut probe = file;
+        let mut byte = [0u8; 1];
+        let _ = probe.read(&mut byte)?;
+    }
+    Err(io::Error::new(
+        io::ErrorKind::InvalidInput,
+        "not a regular file",
+    ))
+}
+
+/// Reads a whole regular file, never more than the size it had when opened.
+///
+/// There is deliberately no fixed ceiling: a baseline or cache grows with the
+/// project, so any constant would reject legitimate inputs. Streams such as
+/// `/dev/zero` are refused as non-regular instead, and the read is bounded by
+/// the opened file's own size, so a file that keeps growing fails with an
+/// error rather than being read without end.
+pub fn read_regular(path: &Path) -> io::Result<Vec<u8>> {
+    let (file, len) = open_regular(path)?;
+    read_bounded(file, len)
+}
+
+fn read_bounded(file: fs::File, len: u64) -> io::Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    bytes
+        .try_reserve_exact(usize::try_from(len).unwrap_or(usize::MAX))
+        .map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::OutOfMemory,
+                format!("file of {len} bytes does not fit in memory"),
+            )
+        })?;
+    file.take(len.saturating_add(1)).read_to_end(&mut bytes)?;
+    if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > len {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "file grew while being read",
+        ));
+    }
+    Ok(bytes)
+}
+
+/// Reads a whole regular file as UTF-8 text; see [`read_regular`].
+pub fn read_regular_string(path: &Path) -> io::Result<String> {
+    String::from_utf8(read_regular(path)?).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "stream did not contain valid UTF-8",
+        )
+    })
+}
+
 /// Compiles glob patterns into one set, naming `key` in any error.
 pub fn glob_set(patterns: &[String], key: &str) -> Result<GlobSet, ConfigError> {
     let mut builder = GlobSetBuilder::new();
@@ -295,7 +381,7 @@ fn find_root(cwd: &Path) -> PathBuf {
 }
 
 fn read_required(path: &Path) -> Result<String, RunError> {
-    fs::read_to_string(path).map_err(|source| {
+    read_regular_string(path).map_err(|source| {
         if source.kind() == io::ErrorKind::NotFound {
             RunError::PathNotFound {
                 path: path.to_path_buf(),
@@ -405,8 +491,7 @@ fn read_custom_root(
                 return Ok(());
             }
         }
-        Ok(meta) if meta.file_type().is_dir() || meta.file_type().is_file() => {}
-        Ok(_) => return Ok(()),
+        Ok(_) => {}
         Err(source)
             if source.kind() == io::ErrorKind::NotFound
                 || source.kind() == io::ErrorKind::NotADirectory =>
@@ -427,7 +512,10 @@ fn read_custom_root(
         .follow_links(false);
     for result in builder.build() {
         let entry = result.map_err(|error| discover::walk_error(root, error))?;
-        if !entry.file_type().is_some_and(|kind| kind.is_file()) {
+        let Some(kind) = entry.file_type() else {
+            continue;
+        };
+        if kind.is_dir() || kind.is_symlink() {
             continue;
         }
         let Ok(relative) = entry.path().strip_prefix(root) else {
@@ -439,7 +527,7 @@ fn read_custom_root(
         if rel.is_empty() || !matcher.is_match(rel.as_str()) || sources.contains_key(&rel) {
             continue;
         }
-        let text = fs::read_to_string(entry.path()).map_err(|source| RunError::Io {
+        let text = read_regular_string(entry.path()).map_err(|source| RunError::Io {
             path: entry.path().to_path_buf(),
             source,
         })?;
