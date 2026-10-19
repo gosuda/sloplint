@@ -1,1 +1,2 @@
-# Near-miss: the rule fires nothing here.
+# Near-miss: the rule fires nothing here. a.odin checks the result and handles it; propagation/a.odin
+# is a separate package: propagation is not a handler, `or_return` returns the error without handling it.
