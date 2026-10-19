@@ -21,7 +21,7 @@ tree-sitter-javascript = { path = "vendor/tree-sitter-javascript" }
 tree-sitter-java = "0.23.5"
 tree-sitter-kotlin-ng = "1.1.0"
 tree-sitter-c-sharp = "0.23.5"
-tree-sitter-c = "0.24.2"
+tree-sitter-c = { path = "vendor/tree-sitter-c" }
 tree-sitter-cpp = { path = "vendor/tree-sitter-cpp" }
 tree-sitter-objc = "3.0.2"
 tree-sitter-php = "0.25.1"

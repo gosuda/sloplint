@@ -1,0 +1,60 @@
+========================================
+#embed as the only initializer element
+========================================
+
+char d[]={
+#embed "x" limit(5)
+};
+
+---
+
+(translation_unit
+  (declaration
+    type: (primitive_type)
+    declarator: (init_declarator
+      declarator: (array_declarator declarator: (identifier))
+      value: (initializer_list
+        (preproc_call directive: (preproc_directive) argument: (preproc_arg))))))
+
+========================================
+#embed between other initializer elements
+========================================
+
+char d[]={1,
+#embed <x>
+, 2};
+
+---
+
+(translation_unit
+  (declaration
+    type: (primitive_type)
+    declarator: (init_declarator
+      declarator: (array_declarator declarator: (identifier))
+      value: (initializer_list
+        (number_literal)
+        (preproc_call directive: (preproc_directive) argument: (preproc_arg))
+        (number_literal)))))
+
+========================================
+Plain initializer lists still parse
+========================================
+
+int a[] = {1, 2, 3};
+struct P p = {.x = 1, .y = 2};
+
+---
+
+(translation_unit
+  (declaration
+    type: (primitive_type)
+    declarator: (init_declarator
+      declarator: (array_declarator declarator: (identifier))
+      value: (initializer_list (number_literal) (number_literal) (number_literal))))
+  (declaration
+    type: (struct_specifier name: (type_identifier))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (initializer_list
+        (initializer_pair designator: (field_designator (field_identifier)) value: (number_literal))
+        (initializer_pair designator: (field_designator (field_identifier)) value: (number_literal))))))

@@ -1,0 +1,82 @@
+========================================
+Unscoped enum with an underlying type
+========================================
+
+enum : unsigned short {A=2};
+
+---
+
+(translation_unit
+  (enum_specifier
+    underlying_type: (sized_type_specifier)
+    body: (enumerator_list
+      (enumerator name: (identifier) value: (number_literal)))))
+
+========================================
+Named enum with a sized underlying type
+========================================
+
+enum E : unsigned short {B=2};
+
+---
+
+(translation_unit
+  (enum_specifier
+    name: (type_identifier)
+    underlying_type: (sized_type_specifier)
+    body: (enumerator_list
+      (enumerator name: (identifier) value: (number_literal)))))
+
+========================================
+Named enum with a primitive underlying type still parses
+========================================
+
+enum E : int {C=1};
+
+---
+
+(translation_unit
+  (enum_specifier
+    name: (type_identifier)
+    underlying_type: (primitive_type)
+    body: (enumerator_list
+      (enumerator name: (identifier) value: (number_literal)))))
+
+========================================
+Unnamed bitfields
+========================================
+
+struct S{unsigned:0; int x;};
+
+---
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        type: (sized_type_specifier)
+        (bitfield_clause (number_literal)))
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier)))))
+
+========================================
+Mixed named and unnamed bitfields in one declaration
+========================================
+
+struct T{int a:3, :4, b:2;};
+
+---
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier)
+        (bitfield_clause (number_literal))
+        (bitfield_clause (number_literal))
+        declarator: (field_identifier)
+        (bitfield_clause (number_literal))))))
