@@ -14,6 +14,8 @@ mod c;
 mod cpp;
 #[path = "grammar_gaps/go.rs"]
 mod go;
+#[path = "grammar_gaps/java.rs"]
+mod java;
 #[path = "grammar_gaps/javascript_typescript.rs"]
 mod javascript_typescript;
 #[path = "grammar_gaps/powershell.rs"]
