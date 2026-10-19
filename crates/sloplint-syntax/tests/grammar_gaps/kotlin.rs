@@ -32,7 +32,8 @@ fn raw_has_error(source: &str) -> bool {
         .set_language(&language)
         .expect("kotlin language loads");
     let tree = parser.parse(source, None).expect("parser returns a tree");
-    tree.root_node().has_error()
+    let root = tree.root_node();
+    root.has_error() || root.to_sexp().contains("MISSING")
 }
 
 fn run_clean(source: &str) -> Analysis<'_> {

@@ -1,5 +1,7 @@
 //! Grammar-gap regression tests: valid source the published grammar rejects,
-//! observed through `analyze` only.
+//! observed through `analyze` plus a raw-tree check in each module's
+//! `run_clean`, because a hidden MISSING recovery node sets `has_error`
+//! without producing a cursor-visible error position.
 //!
 //! One child module per vendored grammar, so each fix lands with its own case
 //! module and one declaration here, while the crate links a single

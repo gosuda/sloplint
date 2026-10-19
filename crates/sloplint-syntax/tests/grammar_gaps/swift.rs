@@ -34,9 +34,7 @@ fn run_clean<'s>(path: &'s str, source: &'s str) -> Analysis<'s> {
     parser
         .set_language(&tree_sitter_swift::LANGUAGE.into())
         .expect("swift language loads");
-    let tree = parser
-        .parse(source, None)
-        .expect("source parses to a tree");
+    let tree = parser.parse(source, None).expect("source parses to a tree");
     assert!(
         !tree.root_node().has_error(),
         "{path} must parse cleanly on the raw tree"
