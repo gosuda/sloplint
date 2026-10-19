@@ -235,7 +235,7 @@ struct RawProject {
     exclude: Option<Vec<String>>,
     extend_exclude: Option<Vec<String>>,
     test_globs: Option<Vec<String>>,
-    max_file_bytes: Option<u64>,
+    max_file_bytes: Option<u32>,
     custom_rule_files: Option<Vec<String>>,
 }
 
@@ -307,7 +307,7 @@ fn merge_project(config: &mut Config, project: RawProject) -> Result<(), ConfigE
         target.test_globs = test_globs;
     }
     if let Some(max_file_bytes) = project.max_file_bytes {
-        target.max_file_bytes = max_file_bytes;
+        target.max_file_bytes = u64::from(max_file_bytes);
     }
     if let Some(custom_rule_files) = project.custom_rule_files {
         target.custom_rule_files = custom_rule_files;
