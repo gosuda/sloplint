@@ -35,12 +35,12 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 ```
 
-Run the self-lint check against this repository (using the root `sloplint.toml`, which excludes test fixtures):
+CI runs `sloplint check crates --strictness standard --mode threshold --fail-on deny` (using the root `sloplint.toml`, which excludes test fixtures). Deny-level findings fail CI. Warn-level findings are reported without failing, so treat them as defects unless a reviewer accepts them. The self-lint gate is a contributor check, not a protected boundary. A pull request can change `sloplint.toml` (`exclude`, rule levels, custom rules) and the workflow itself, so reviewers must read those diffs. Maintainers should require review of `.github/` and `sloplint.toml` (for example with CODEOWNERS and branch protection):
 
 ```bash
-sloplint check crates
+sloplint check crates --strictness standard --mode threshold --fail-on deny
 # or, without installing the binary in PATH:
-cargo run --locked --release -p sloplint -- check crates --format agent
+cargo run --locked -p sloplint -- check crates --format agent --strictness standard --mode threshold --fail-on deny
 ```
 
 Every file in `crates/` must pass `sloplint` under the default `standard` profile (`agent/file-token-budget` warns at 600 lines and denies at 1000 lines under `standard`, and 500/800 under `strict`). Place doc comments on `pub` items in `sloplint-core` and `sloplint-syntax`.

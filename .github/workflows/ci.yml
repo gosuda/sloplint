@@ -4,9 +4,14 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
@@ -16,15 +21,30 @@ jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
   deny:
     runs-on: ubuntu-24.04
+    env:
+      CARGO_DENY_VERSION: 0.20.2
+      CARGO_DENY_SHA256: 9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: cargo install cargo-deny@0.20.2 --locked
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install cargo-deny
+        run: |
+          dir="cargo-deny-$CARGO_DENY_VERSION-x86_64-unknown-linux-musl"
+          curl --fail --silent --show-error --location --retry 3 \
+            --output "$RUNNER_TEMP/$dir.tar.gz" \
+            "https://github.com/EmbarkStudios/cargo-deny/releases/download/$CARGO_DENY_VERSION/$dir.tar.gz"
+          printf '%s\n' "$CARGO_DENY_SHA256  $RUNNER_TEMP/$dir.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$dir.tar.gz" -C "$RUNNER_TEMP" "$dir/cargo-deny"
+          printf '%s\n' "$RUNNER_TEMP/$dir" >> "$GITHUB_PATH"
       - run: cargo deny check
 
   test:
@@ -42,8 +62,10 @@ jobs:
     env:
       MACOSX_DEPLOYMENT_TARGET: "11.0"
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - run: rustup target add ${{ matrix.target }}
       - run: cargo test --workspace --locked --target ${{ matrix.target }}
       - name: Self-lint
-        run: cargo run --locked --release --target ${{ matrix.target }} -p sloplint -- check crates --format agent
+        run: cargo run --locked --target ${{ matrix.target }} -p sloplint -- check crates --format agent --strictness standard --mode threshold --fail-on deny

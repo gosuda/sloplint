@@ -29,7 +29,7 @@ The release workflow builds binaries for Windows, macOS, and Linux on x86_64 and
 
 sloplint uses the platform default allocator on every target. It includes no custom allocator.
 
-CI builds and tests these targets; see [.github/workflows/ci.yml](.github/workflows/ci.yml).
+CI builds and tests these targets and runs `sloplint check crates --strictness standard --mode threshold --fail-on deny` on each; see [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 From source, using the checked-in toolchain pin (Rust 1.99.1):
 
