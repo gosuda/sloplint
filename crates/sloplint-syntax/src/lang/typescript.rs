@@ -56,7 +56,15 @@ pub(crate) struct TypeScriptHooks;
 /// Shared hook table for the TypeScript and TSX grammars.
 pub(crate) static HOOKS: TypeScriptHooks = TypeScriptHooks;
 
-fn enclosing_class(cx: &Cx<'_, '_>) -> Option<(bool, bool)> {
+fn enclosing_class(cx: &Cx<'_, '_>, member: Node<'_>) -> Option<(bool, bool)> {
+    let body = member.parent().filter(|b| b.kind() == "class_body")?;
+    let class = body.parent()?;
+    if !matches!(
+        class.kind(),
+        "class_declaration" | "abstract_class_declaration"
+    ) {
+        return None;
+    }
     cx.containers.iter().rev().find_map(|c| match c {
         Container::Class {
             exported,
@@ -76,7 +84,7 @@ fn member_public(cx: &Cx<'_, '_>, n: Node<'_>, name_kind: &str) -> bool {
     }) {
         return false;
     }
-    enclosing_class(cx).is_some_and(|(exported, _)| exported)
+    enclosing_class(cx, n).is_some_and(|(exported, _)| exported)
 }
 
 fn strip_ty(ty: &str) -> &str {
@@ -556,7 +564,7 @@ impl LangHooks for TypeScriptHooks {
             name,
             name_pos: pos_of(name_node),
             public,
-            interface_bound: enclosing_class(cx).is_some_and(|(_, implements)| implements),
+            interface_bound: enclosing_class(cx, n).is_some_and(|(_, implements)| implements),
             in_test: cx.is_test_file,
             params,
             return_type: ret,
@@ -629,7 +637,8 @@ impl LangHooks for TypeScriptHooks {
                 name,
                 name_pos: pos_of(name_node),
                 public: member_public(cx, parent, name_node.kind()),
-                interface_bound: enclosing_class(cx).is_some_and(|(_, implements)| implements),
+                interface_bound: enclosing_class(cx, parent)
+                    .is_some_and(|(_, implements)| implements),
                 in_test: cx.is_test_file,
                 params,
                 return_type: ret,

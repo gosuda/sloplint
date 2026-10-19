@@ -11,3 +11,5 @@ mod rust_grouped_use_modules;
 mod rust_self_barrel;
 #[path = "rust_web_boundaries/rust_thread_local_name.rs"]
 mod rust_thread_local_name;
+#[path = "rust_web_boundaries/typescript_object_literal_methods.rs"]
+mod typescript_object_literal_methods;
