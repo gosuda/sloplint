@@ -36,12 +36,24 @@ impl Parsers {
         }
     }
 
-    /// Parses one file, or `None` when the grammar cannot be loaded.
-    fn parse(&mut self, lang: Lang, source: &str) -> Option<tree_sitter::Tree> {
+    /// Parses one file.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the pinned grammar cannot be loaded into the parser or the parser
+    /// returns no tree. Both are build faults, like the grammar-drift panic in
+    /// [`spec`], and never depend on the file: a quiet empty analysis would look
+    /// exactly like a clean file. Syntax errors in the source are not faults; they
+    /// yield a tree with error nodes.
+    fn parse(&mut self, lang: Lang, source: &str) -> tree_sitter::Tree {
         let language = spec(lang).language.clone();
         let parser = self.parsers.entry(lang).or_default();
-        parser.set_language(&language).ok()?;
-        parser.parse(source, None)
+        parser
+            .set_language(&language)
+            .unwrap_or_else(|error| panic!("grammar for {lang:?} failed to load: {error}"));
+        parser
+            .parse(source, None)
+            .unwrap_or_else(|| panic!("tree-sitter returned no tree for {lang:?}"))
     }
 }
 
@@ -73,24 +85,23 @@ pub struct Analysis<'s> {
 
 /// Parses and walks one file into facts, comments, and custom-rule hits.
 ///
-/// A failed parse yields empty facts, the collected comments, and the first
-/// error position, so one file's findings never depend on other files.
+/// A source with syntax errors yields empty facts, the collected comments, and
+/// the first error position, so one file's findings never depend on other files.
 ///
 /// Custom hits borrow the rules table for capture names and the file source
 /// for capture text, so `custom` shares the `'s` lifetime of the input.
+///
+/// # Panics
+///
+/// Panics when the pinned grammar for `input.lang` cannot be loaded or the
+/// parser returns no tree. Both are build faults (grammar or ABI drift) that
+/// never depend on the source, so they stop the run instead of passing as clean.
 pub fn analyze<'s>(
     parsers: &mut Parsers,
     input: &FileInput<'s>,
     custom: &'s CustomRules,
 ) -> Analysis<'s> {
-    let Some(tree) = parsers.parse(input.lang, input.source) else {
-        return Analysis {
-            facts: walk::empty_facts(input),
-            comments: Vec::new(),
-            parse_error: None,
-            custom_hits: Vec::new(),
-        };
-    };
+    let tree = parsers.parse(input.lang, input.source);
     let language_spec = spec(input.lang);
     let root = tree.root_node();
     if root.has_error() {
