@@ -704,4 +704,71 @@ mod audit_propagation_tests {
             analysis.facts.handlers[0].stmts
         );
     }
+
+    #[test]
+    fn audit_dart_write_assignment_advances_span() {
+        for write in ["total = 1", "total += 2", "total.value = 1", "total[0] = 1"] {
+            let src = format!("void f() {{\n var total = value();\n {write};\n}}\n");
+            let a = audit_analyze(Lang::Dart, "w.dart", &src);
+            assert!(a.parse_error.is_none(), "{write} parses");
+            let b = a
+                .facts
+                .bindings
+                .iter()
+                .find(|b| b.name == "total")
+                .expect("total binding exists");
+            assert_eq!(b.last_write_line, 3, "{write} updates its root binding");
+            assert_eq!(b.max_nested_depth, 0, "{write} stays at depth 0");
+        }
+    }
+
+    #[test]
+    fn audit_dart_write_increments_advance_span() {
+        for write in ["total++", "++total"] {
+            let src = format!("void f() {{\n var total = 0;\n {write};\n}}\n");
+            let a = audit_analyze(Lang::Dart, "w.dart", &src);
+            assert!(a.parse_error.is_none(), "{write} parses");
+            let b = a
+                .facts
+                .bindings
+                .iter()
+                .find(|b| b.name == "total")
+                .expect("total binding exists");
+            assert_eq!(b.last_write_line, 3, "{write} updates its root binding");
+            assert_eq!(b.max_nested_depth, 0, "{write} stays at depth 0");
+        }
+    }
+
+    #[test]
+    fn audit_dart_write_nested_loop_and_read_control() {
+        let src = "void f() {\n var total = 0;\n for (var i = 0; i < 2; i++) {\n for (var j = 0; j < 2; j++) {\n total += j;\n }\n }\n}\n";
+        let a = audit_analyze(Lang::Dart, "w.dart", src);
+        assert!(a.parse_error.is_none(), "dart nested source parses");
+        let b = a
+            .facts
+            .bindings
+            .iter()
+            .find(|b| b.name == "total")
+            .expect("total binding exists");
+        assert_eq!(b.last_write_line, 5, "nested += advances span to line 5");
+        assert_eq!(b.max_nested_depth, 2, "doubly nested write has depth 2");
+        assert!(
+            b.nested_write_pos.is_some_and(|p| p.line == 5),
+            "nested write pos is line 5"
+        );
+        let src = "void f() {\n var total = 0;\n print(total);\n}\n";
+        let a = audit_analyze(Lang::Dart, "r.dart", src);
+        assert!(a.parse_error.is_none(), "dart read-only source parses");
+        let b = a
+            .facts
+            .bindings
+            .iter()
+            .find(|b| b.name == "total")
+            .expect("total binding exists");
+        assert_eq!(
+            b.last_write_line, 2,
+            "read-only call leaves span at decl line 2"
+        );
+        assert_eq!(b.max_nested_depth, 0, "read-only call keeps depth 0");
+    }
 }

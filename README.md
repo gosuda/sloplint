@@ -64,6 +64,8 @@ Exit code `0` means the gate passed: the run can still list `warn` findings belo
 
 For Zig catches, Go `if err != nil` blocks, Ruby `rescue` clauses, TypeScript `catch` clauses, and Rust `Err` match arms and `if let Err` guards, `slop/zombie-catch` treats an empty or comment-only body as a handler with no statements, distinct from an unchanged rethrow. Rust arms with a match or `if` guard are not handlers. An unguarded `Err` rethrow preceded by a guarded `Err` or wildcard arm that recovers a subset is not a redundant rethrow. Returning a recovery value does not count as swallowing the error.
 
+Dart mutation rules track assignments, member and index writes, and prefix and postfix increments.
+
 ## Usage
 
 ### Commands

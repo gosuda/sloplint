@@ -177,6 +177,13 @@ fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     match n.kind() {
         "identifier" | "this" | "super" => Some((text(cx, n), pos_of(n))),
         "member_expression" | "index_expression" => write_root(cx, child_by_field(n, "object")?),
+        "assignable_expression" => {
+            if let Some(o) = child_by_field(n, "object") {
+                write_root(cx, o)
+            } else {
+                write_root(cx, named_children(n).into_iter().next()?)
+            }
+        }
         "parenthesized_expression" => write_root(cx, named_children(n).into_iter().next()?),
         _ => None,
     }
