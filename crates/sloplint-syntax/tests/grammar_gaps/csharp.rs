@@ -83,18 +83,30 @@ fn allows_ref_struct_parses() {
         "allows.cs",
         "public interface I<T> where T : allows ref struct {}\n",
     );
-    assert!(type_names(&a).contains(&"I"));
+    assert!(
+        type_names(&a).contains(&"I"),
+        "interface I recorded: {:?}",
+        type_names(&a)
+    );
     let b = run_clean(
         "allows_notnull.cs",
         "public interface J<T> where T : notnull, allows ref struct {}\n",
     );
-    assert!(type_names(&b).contains(&"J"));
+    assert!(
+        type_names(&b).contains(&"J"),
+        "interface J recorded: {:?}",
+        type_names(&b)
+    );
     // Existing behavior: ordinary constraints still parse.
     let c = run_clean(
         "where_plain.cs",
         "public interface K<T> where T : struct {}\n",
     );
-    assert!(type_names(&c).contains(&"K"));
+    assert!(
+        type_names(&c).contains(&"K"),
+        "interface K recorded: {:?}",
+        type_names(&c)
+    );
 }
 
 // CS-REFPARTIAL: `ref` before `partial` on struct declarations.
@@ -116,7 +128,11 @@ fn ref_partial_struct_parses() {
     }
     // Existing behavior: `partial` without `ref` still parses.
     let b = run_clean("partial_plain.cs", "public partial struct P {}\n");
-    assert!(type_names(&b).contains(&"P"));
+    assert!(
+        type_names(&b).contains(&"P"),
+        "struct P recorded: {:?}",
+        type_names(&b)
+    );
 }
 
 // CS-PTRDEREF: pointer indirection over casts, arithmetic, and calls in
@@ -135,7 +151,11 @@ fn pointer_deref_reads_parse() {
         \t}\n\
         }\n";
     let analysis = run_clean("deref_read.cs", source);
-    assert!(function_names(&analysis).contains(&"M"));
+    assert!(
+        function_names(&analysis).contains(&"M"),
+        "function M recorded: {:?}",
+        function_names(&analysis)
+    );
 }
 
 #[test]
@@ -150,7 +170,11 @@ fn pointer_deref_call_and_ref_parse() {
         \tunsafe static int* GetP() => null;\n\
         }\n";
     let analysis = run_clean("deref_call.cs", source);
-    assert!(function_names(&analysis).contains(&"GetP"));
+    assert!(
+        function_names(&analysis).contains(&"GetP"),
+        "function GetP recorded: {:?}",
+        function_names(&analysis)
+    );
 }
 
 // Ref-returning calls and null-conditional/ref-conditional assignment
@@ -165,7 +189,11 @@ fn ref_return_assign_parses() {
         \tvoid M() { GetRef() = 1; }\n\
         }\n";
     let analysis = run_clean("assign_call.cs", source);
-    assert!(function_names(&analysis).contains(&"GetRef"));
+    assert!(
+        function_names(&analysis).contains(&"GetRef"),
+        "function GetRef recorded: {:?}",
+        function_names(&analysis)
+    );
 }
 
 #[test]
@@ -180,7 +208,11 @@ fn conditional_assign_parses() {
         \t}\n\
         }\n";
     let analysis = run_clean("cond_assign.cs", source);
-    assert!(function_names(&analysis).contains(&"M"));
+    assert!(
+        function_names(&analysis).contains(&"M"),
+        "function M recorded: {:?}",
+        function_names(&analysis)
+    );
     // Existing behavior: null-conditional reads still parse.
     run_clean(
         "qindex_read.cs",
@@ -200,7 +232,11 @@ fn contextual_keyword_elements_parse() {
         \t}\n\
         }\n";
     let analysis = run_clean("methodelem.cs", source);
-    assert!(function_names(&analysis).contains(&"M"));
+    assert!(
+        function_names(&analysis).contains(&"M"),
+        "function M recorded: {:?}",
+        function_names(&analysis)
+    );
 }
 
 // CS-EXTBLOCK: C# 14 extension blocks.
@@ -219,8 +255,16 @@ fn extension_blocks_parse() {
         \t}\n\
         }\n";
     let analysis = run_clean("extblock.cs", source);
-    assert!(function_names(&analysis).contains(&"IsF"));
-    assert!(function_names(&analysis).contains(&"N"));
+    assert!(
+        function_names(&analysis).contains(&"IsF"),
+        "extension method IsF recorded: {:?}",
+        function_names(&analysis)
+    );
+    assert!(
+        function_names(&analysis).contains(&"N"),
+        "extension method N recorded: {:?}",
+        function_names(&analysis)
+    );
 }
 
 // CS-U202F: narrow no-break space is trivia.
@@ -242,7 +286,11 @@ fn unsafe_destructor_parses() {
         "unsafe_dtor.cs",
         "using System;\nclass C { unsafe ~C() {} }\n",
     );
-    assert!(type_names(&analysis).contains(&"C"));
+    assert!(
+        type_names(&analysis).contains(&"C"),
+        "type C recorded: {:?}",
+        type_names(&analysis)
+    );
     // Existing behavior: plain and extern destructors still parse.
     run_clean("plain_dtor.cs", "class D { ~D() {} }\n");
 }

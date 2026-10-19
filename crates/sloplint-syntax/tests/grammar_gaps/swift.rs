@@ -65,13 +65,25 @@ fn callees<'a>(analysis: &Analysis<'a>) -> Vec<&'a str> {
 fn void_unit_values_parse() {
     run_clean("void_let.swift", "let x = ()\n");
     let a = run_clean("void_ret.swift", "func f() -> () {\n  return ()\n}\n");
-    assert!(function_names(&a).contains(&"f"));
+    assert!(
+        function_names(&a).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&a)
+    );
     let b = run_clean(
         "void_call.swift",
         "func g(_ x: ()) {}\nfunc f() {\n  g(())\n}\n",
     );
-    assert!(function_names(&b).contains(&"f"));
-    assert!(callees(&b).contains(&"g"));
+    assert!(
+        function_names(&b).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&b)
+    );
+    assert!(
+        callees(&b).contains(&"g"),
+        "void call records callee g: {:?}",
+        callees(&b)
+    );
     run_clean(
         "void_case.swift",
         "enum E {\n  case a\n}\nfunc f(_ e: E) {\n  switch e {\n  case .a:\n    ()\n  default:\n    break\n  }\n}\n",
@@ -86,7 +98,11 @@ fn lifetime_attributes_parse() {
         "life_borrow.swift",
         "struct S {\n  @_lifetime(borrow self)\n  func f() {}\n}\n",
     );
-    assert!(function_names(&a).contains(&"f"));
+    assert!(
+        function_names(&a).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&a)
+    );
     run_clean(
         "life_copy.swift",
         "struct S {\n  @_lifetime(self: copy self)\n  func f() {}\n}\n",
@@ -130,7 +146,11 @@ fn unsafe_binary_condition_parses() {
         "unsafe_if.swift",
         "func f(_ a: Int, _ b: Int) -> Bool {\n  if unsafe a == b {\n    return true\n  }\n  return false\n}\n",
     );
-    assert!(function_names(&a).contains(&"f"));
+    assert!(
+        function_names(&a).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&a)
+    );
 }
 
 // SW-ASSOCWHERE: `where` on typealiases, multi-bound associatedtypes, multiline
@@ -162,7 +182,11 @@ fn attributes_around_directives_parse() {
         "attr_wrap.swift",
         "@available(macOS 10.15, *)\n#if compiler(>=6.2)\n@available(*, deprecated)\n#endif\n@inlinable\nfunc f() {}\n",
     );
-    assert!(function_names(&a).contains(&"f"));
+    assert!(
+        function_names(&a).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&a)
+    );
 }
 
 // SW-ATTRCLASS: `nonisolated(unsafe)` in function bodies.
@@ -172,7 +196,11 @@ fn local_nonisolated_parses() {
         "noniso_local.swift",
         "func testF() {\n  nonisolated(unsafe) var x = 1\n  print(x)\n}\n",
     );
-    assert!(function_names(&a).contains(&"testF"));
+    assert!(
+        function_names(&a).contains(&"testF"),
+        "function testF recorded: {:?}",
+        function_names(&a)
+    );
 }
 
 // Case ranges over parenthesized and implicit-member bounds.
@@ -195,7 +223,11 @@ fn sending_results_parse() {
         "send_ret.swift",
         "func f() async throws -> sending Int {\n  return 1\n}\n",
     );
-    assert!(function_names(&a).contains(&"f"));
+    assert!(
+        function_names(&a).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&a)
+    );
     run_clean(
         "send_type.swift",
         "func f(_ body: () async throws -> sending Int) {}\n",

@@ -96,7 +96,11 @@ fn trailing_text_on_the_end_line_stays_inside_the_comment() {
 #[test]
 fn an_end_word_at_end_of_input_without_a_newline_closes_the_comment() {
     let analysis = run_clean("=begin\nx\n=end");
-    assert!(analysis.facts.calls.is_empty());
+    assert!(
+        analysis.facts.calls.is_empty(),
+        "end word without newline records no calls: {:?}",
+        analysis.facts.calls
+    );
 }
 
 #[test]
@@ -211,7 +215,11 @@ fn singleton_methods_named_self_and_super_keep_their_names() {
 #[test]
 fn alias_and_undef_with_self_still_parse() {
     let analysis = run_clean("alias self foo\nalias foo self\nundef self, super\n");
-    assert!(analysis.facts.functions.is_empty());
+    assert!(
+        analysis.facts.functions.is_empty(),
+        "alias/undef with self records no functions: {:?}",
+        analysis.facts.functions
+    );
 }
 
 #[test]
@@ -247,5 +255,5 @@ fn a_missing_end_still_reports_a_parse_error() {
     let pos = analysis
         .parse_error
         .expect("a missing `end` must not parse");
-    assert!(pos.line >= 1);
+    assert!(pos.line >= 1, "missing end reports a line: {pos:?}");
 }

@@ -446,7 +446,12 @@ int x = ;
         Lang::C,
         "a failed parse keeps the routed language"
     );
-    assert!(header.facts.functions.is_empty() && header.custom_hits.is_empty());
+    assert!(
+        header.facts.functions.is_empty() && header.custom_hits.is_empty(),
+        "failed header yields no facts: {:?} {:?}",
+        header.facts.functions,
+        header.custom_hits
+    );
 }
 
 #[test]

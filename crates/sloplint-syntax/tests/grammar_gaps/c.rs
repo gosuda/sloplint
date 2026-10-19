@@ -136,13 +136,21 @@ fn embed_as_initializer_element_parses() {
 #[test]
 fn embed_between_elements_parses() {
     let analysis = run_clean("char d[]={1,\n#embed <x>\n, 2};\n");
-    assert!(analysis.facts.functions.is_empty());
+    assert!(
+        analysis.facts.functions.is_empty(),
+        "embed between elements records no functions: {:?}",
+        analysis.facts.functions
+    );
 }
 
 #[test]
 fn plain_initializer_lists_still_parse() {
     let analysis = run_clean("int a[] = {1, 2, 3};\nstruct P p = {.x = 1, .y = 2};\n");
-    assert!(analysis.facts.functions.is_empty());
+    assert!(
+        analysis.facts.functions.is_empty(),
+        "plain initializer lists record no functions: {:?}",
+        analysis.facts.functions
+    );
 }
 
 #[test]
@@ -156,7 +164,11 @@ fn has_include_in_if_parses() {
         "#endif\n",
     );
     let analysis = run_clean(source);
-    assert!(analysis.facts.functions.is_empty());
+    assert!(
+        analysis.facts.functions.is_empty(),
+        "has_include in if records no functions: {:?}",
+        analysis.facts.functions
+    );
 }
 
 #[test]
@@ -206,7 +218,11 @@ fn unnamed_bitfields_parse() {
 #[test]
 fn named_bitfields_still_parse() {
     let analysis = run_clean("struct S{unsigned a:0; int x;};\n");
-    assert!(type_names(&analysis).contains(&"S"));
+    assert!(
+        type_names(&analysis).contains(&"S"),
+        "named bitfield struct S recorded: {:?}",
+        type_names(&analysis)
+    );
 }
 
 #[test]
@@ -224,7 +240,11 @@ fn register_asm_initializer_parses() {
 #[test]
 fn signed_spellings_parse() {
     let analysis = run_clean("typedef __signed char i8;\n__signed int x;\n__signed__ int y;\n");
-    assert!(type_names(&analysis).contains(&"i8"));
+    assert!(
+        type_names(&analysis).contains(&"i8"),
+        "signed spelling typedef i8 recorded: {:?}",
+        type_names(&analysis)
+    );
 }
 
 #[test]

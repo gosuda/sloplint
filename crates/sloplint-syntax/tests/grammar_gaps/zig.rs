@@ -69,7 +69,11 @@ fn function_names<'a>(analysis: &Analysis<'a>) -> Vec<&'a str> {
 #[test]
 fn bare_error_set_container_field_parses() {
     let analysis = run_clean("const S = struct { error{foo} };\n");
-    assert!(analysis.facts.functions.is_empty());
+    assert!(
+        analysis.facts.functions.is_empty(),
+        "bare error set field records no functions: {:?}",
+        analysis.facts.functions
+    );
 }
 
 #[test]

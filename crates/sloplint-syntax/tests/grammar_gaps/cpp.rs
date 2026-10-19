@@ -63,7 +63,11 @@ fn callees<'a>(analysis: &Analysis<'a>) -> Vec<&'a str> {
 #[test]
 fn has_include_with_angle_brackets_parses() {
     let analysis = run_clean("#if __has_include(<endian.h>)\nint a;\n#endif\n");
-    assert!(analysis.facts.functions.is_empty());
+    assert!(
+        analysis.facts.functions.is_empty(),
+        "has_include with angle brackets records no functions: {:?}",
+        analysis.facts.functions
+    );
     assert_eq!(callees(&analysis), ["__has_include"]);
 }
 
@@ -77,7 +81,11 @@ fn has_include_with_quotes_and_attribute_checks_parse() {
         "int b;\n",
         "#endif\n",
     ));
-    assert!(analysis.facts.functions.is_empty());
+    assert!(
+        analysis.facts.functions.is_empty(),
+        "has_include with quotes records no functions: {:?}",
+        analysis.facts.functions
+    );
     assert_eq!(
         callees(&analysis),
         ["__has_include", "__has_cpp_attribute", "__has_attribute"]
@@ -95,7 +103,11 @@ fn has_embed_and_has_warning_with_strings_parse() {
     let analysis = run_clean(
         "#if __has_embed(\"data.bin\")\nint e;\n#endif\n#if __has_warning(\"-Wdeprecated\")\nint f;\n#endif\n",
     );
-    assert!(analysis.facts.functions.is_empty());
+    assert!(
+        analysis.facts.functions.is_empty(),
+        "has_embed and has_warning record no functions: {:?}",
+        analysis.facts.functions
+    );
     assert_eq!(callees(&analysis), ["__has_embed", "__has_warning"]);
 }
 
@@ -247,7 +259,11 @@ fn a_deleted_free_operator_parses_like_a_deleted_member() {
     // `= delete;` member. What matters is that `delete` is not misread as a
     // delete-expression call and the file parses.
     let analysis = run_clean("struct A{}; struct B{};\nbool operator==(A a,B b)=delete;\n");
-    assert!(analysis.facts.functions.is_empty());
+    assert!(
+        analysis.facts.functions.is_empty(),
+        "deleted free operator records no functions: {:?}",
+        analysis.facts.functions
+    );
     assert!(
         analysis.facts.calls.is_empty(),
         "`= delete` is not a call: {:?}",
@@ -258,7 +274,11 @@ fn a_deleted_free_operator_parses_like_a_deleted_member() {
 #[test]
 fn a_defaulted_friend_operator_still_parses() {
     let analysis = run_clean("struct S { friend bool operator==(S,S) = default; };\n");
-    assert!(analysis.facts.functions.is_empty());
+    assert!(
+        analysis.facts.functions.is_empty(),
+        "defaulted friend operator records no functions: {:?}",
+        analysis.facts.functions
+    );
 }
 
 #[test]

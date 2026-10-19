@@ -65,7 +65,11 @@ fn function_names<'a>(analysis: &Analysis<'a>) -> Vec<&'a str> {
 #[test]
 fn typed_term_parameter_polymorphic_function_still_parses() {
     let analysis = run_clean("object O:\n  val c: [T] => T => T = [T] => (x: T) => x\n");
-    assert!(analysis.facts.calls.is_empty());
+    assert!(
+        analysis.facts.calls.is_empty(),
+        "polymorphic function value records no calls: {:?}",
+        analysis.facts.calls
+    );
 }
 
 #[test]
@@ -89,7 +93,11 @@ fn split_applied_if_condition_parses() {
         "      println(\"No\")\n",
     );
     let analysis = run_clean(source);
-    assert!(callees(&analysis).contains(&"x.exists"));
+    assert!(
+        callees(&analysis).contains(&"x.exists"),
+        "applied if condition calls x.exists: {:?}",
+        callees(&analysis)
+    );
     assert_eq!(function_names(&analysis), ["f"]);
 }
 
@@ -104,7 +112,11 @@ fn single_line_applied_if_condition_still_parses() {
         "      println(\"No\")\n",
     );
     let analysis = run_clean(source);
-    assert!(callees(&analysis).contains(&"x.exists"));
+    assert!(
+        callees(&analysis).contains(&"x.exists"),
+        "applied if condition calls x.exists: {:?}",
+        callees(&analysis)
+    );
     assert_eq!(function_names(&analysis), ["f"]);
 }
 
@@ -132,7 +144,9 @@ fn comment_only_new_template_with_end_marker_parses() {
             .facts
             .calls
             .iter()
-            .any(|c| c.callee == "Foo" && c.kind == CallKind::New)
+            .any(|c| c.callee == "Foo" && c.kind == CallKind::New),
+        "the `new Foo` instance call must surface, callees: {:?}",
+        callees(&analysis)
     );
 }
 
@@ -170,7 +184,11 @@ fn infix_star_extractor_patterns_parse() {
     );
     let analysis = run_clean(source);
     assert_eq!(function_names(&analysis), ["m"]);
-    assert!(callees(&analysis).contains(&"println"));
+    assert!(
+        callees(&analysis).contains(&"println"),
+        "infix star extractor calls println: {:?}",
+        callees(&analysis)
+    );
 }
 
 #[test]

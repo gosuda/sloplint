@@ -79,7 +79,11 @@ fn extern_block_pub_type_parses() {
     );
     // Existing behavior: a top-level type alias still yields a typedef fact.
     let a = run_clean("top_type_alias.rs", "pub type A = u8;\n");
-    assert!(a.facts.types.iter().any(|t| t.name == "A" && t.public));
+    assert!(
+        a.facts.types.iter().any(|t| t.name == "A" && t.public),
+        "public type alias A recorded: {:?}",
+        a.facts.types
+    );
 }
 
 // Row 2: primitive-named macros and paths.
@@ -100,7 +104,9 @@ fn primitive_named_macro_parses() {
         b.facts
             .calls
             .iter()
-            .any(|c| c.callee == "foo" && c.kind == CallKind::Macro)
+            .any(|c| c.callee == "foo" && c.kind == CallKind::Macro),
+        "foo!(..) must surface as a macro call: {:?}",
+        b.facts.calls
     );
 }
 
@@ -121,12 +127,20 @@ fn legacy_try_macro_parses() {
 #[test]
 fn where_predicate_shapes_parse() {
     let a = run_clean("where_unit.rs", "fn f() where (): Tr<T, U> {}\n");
-    assert!(function_names(&a).contains(&"f"));
+    assert!(
+        function_names(&a).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&a)
+    );
     run_clean("where_fn.rs", "fn f() where fn(u8): Send {}\n");
     run_clean("where_macro.rs", "fn f<T>() where mac!(T): Send {}\n");
     // Existing behavior: an ordinary where clause still parses.
     let b = run_clean("where_plain.rs", "fn f<T>() where T: Clone {}\n");
-    assert!(function_names(&b).contains(&"f"));
+    assert!(
+        function_names(&b).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&b)
+    );
 }
 
 // Rows 5 and 6: `~` and lone `$` inside macro token trees.
@@ -171,10 +185,18 @@ fn attributes_on_later_items_parse() {
 #[test]
 fn fieldless_struct_where_parses() {
     let a = run_clean("unit_where.rs", "struct S<T> where T: Send;\n");
-    assert!(a.facts.types.iter().any(|t| t.name == "S"));
+    assert!(
+        a.facts.types.iter().any(|t| t.name == "S"),
+        "unit struct S recorded: {:?}",
+        a.facts.types
+    );
     // Existing behavior: a tuple struct with a where clause still parses.
     let b = run_clean("tuple_where.rs", "struct S<T>(T) where T: Send;\n");
-    assert!(b.facts.types.iter().any(|t| t.name == "S"));
+    assert!(
+        b.facts.types.iter().any(|t| t.name == "S"),
+        "tuple struct S recorded: {:?}",
+        b.facts.types
+    );
 }
 
 // Row 9: several attributes on one function parameter.
@@ -193,7 +215,11 @@ fn repeated_param_attributes_parse() {
     assert_eq!(f.params.iter().map(|p| p.name).collect::<Vec<_>>(), ["x"]);
     // Existing behavior: a single attribute still parses.
     let b = run_clean("single_attr_param.rs", "fn f(#[allow(unused)] x: u8) {}\n");
-    assert!(function_names(&b).contains(&"f"));
+    assert!(
+        function_names(&b).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&b)
+    );
 }
 
 // Row 10: negative literals as const generic arguments.
@@ -262,20 +288,32 @@ fn reserved_word_paths_parse() {
     );
     // Existing behavior: an ordinary turbofish call still surfaces.
     let c = run_clean("plain_turbofish.rs", "fn f() {\n    foo::<u8>();\n}\n");
-    assert!(c.facts.calls.iter().any(|c| c.callee == "foo::<u8>"));
+    assert!(
+        c.facts.calls.iter().any(|c| c.callee == "foo::<u8>"),
+        "foo::<u8>() must surface as a call: {:?}",
+        c.facts.calls
+    );
 }
 
 // Row 16: comparison after an `as` cast on a scoped type.
 #[test]
 fn cast_then_compare_parses() {
     let a = run_clean("cast_le.rs", "fn f() {\n    x as libc::c_int <= 3;\n}\n");
-    assert!(function_names(&a).contains(&"f"));
+    assert!(
+        function_names(&a).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&a)
+    );
     // Existing behavior: the same comparison on a primitive type parses.
     let b = run_clean(
         "cast_le_prim.rs",
         "fn f() {\n    let _ = x as i32 <= 3;\n}\n",
     );
-    assert!(function_names(&b).contains(&"f"));
+    assert!(
+        function_names(&b).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&b)
+    );
 }
 
 // Row 17: `where` on a function type and a leading lifetime under `dyn`.
@@ -305,7 +343,11 @@ fn prefix_inclusive_range_parses() {
 #[test]
 fn empty_where_bounds_parse() {
     let a = run_clean("empty_bounds.rs", "fn f<C>() where C: {}\n");
-    assert!(function_names(&a).contains(&"f"));
+    assert!(
+        function_names(&a).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&a)
+    );
     run_clean(
         "empty_bounds_struct.rs",
         "struct S<C> where C: {\n    x: C,\n}\n",
@@ -315,7 +357,11 @@ fn empty_where_bounds_parse() {
         "empty_bounds_comma.rs",
         "fn f<C, D>() where C: , D: Send {}\n",
     );
-    assert!(function_names(&b).contains(&"f"));
+    assert!(
+        function_names(&b).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&b)
+    );
     run_clean("empty_bounds_self.rs", "trait T where Self:,\n{\n}\n");
 }
 
@@ -340,7 +386,11 @@ fn unsafe_extern_safe_items_parse() {
         "safe_ident.rs",
         "fn f(safe: u8) {\n    let _ = safe + 1;\n}\n",
     );
-    assert!(function_names(&a).contains(&"f"));
+    assert!(
+        function_names(&a).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&a)
+    );
 }
 
 // Row 21: turbofish in struct patterns.
@@ -350,10 +400,18 @@ fn turbofish_struct_pattern_parses() {
         "turbofish_pattern.rs",
         "fn f() {\n    let R::<u8> { s, e } = r;\n}\n",
     );
-    assert!(function_names(&a).contains(&"f"));
+    assert!(
+        function_names(&a).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&a)
+    );
     // Existing behavior: a plain struct pattern still parses.
     let b = run_clean("plain_pattern.rs", "fn f() {\n    let R { s } = r;\n}\n");
-    assert!(function_names(&b).contains(&"f"));
+    assert!(
+        function_names(&b).contains(&"f"),
+        "function f recorded: {:?}",
+        function_names(&b)
+    );
 }
 
 // Constructs rustc rejects must stay parse errors here too.

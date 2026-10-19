@@ -113,7 +113,11 @@ fn a_case_pattern_with_quoted_parentheses_and_several_chunks_parses() {
 #[test]
 fn a_case_pattern_with_one_quoted_chunk_still_parses() {
     let analysis = run_clean("case x in *\"a b\"*) ;; esac\ncase x in *\"(c)\") ;; esac\n");
-    assert!(analysis.facts.calls.is_empty());
+    assert!(
+        analysis.facts.calls.is_empty(),
+        "quoted case pattern records no calls: {:?}",
+        analysis.facts.calls
+    );
 }
 
 #[test]
@@ -260,7 +264,7 @@ fn a_double_equals_test_argument_keeps_its_shape() {
 fn an_unterminated_if_still_reports_a_parse_error() {
     let analysis = run("if true; then\n  echo x\n");
     let pos = analysis.parse_error.expect("a missing `fi` must not parse");
-    assert!(pos.line >= 1);
+    assert!(pos.line >= 1, "unterminated if reports a line: {pos:?}");
 }
 
 #[test]

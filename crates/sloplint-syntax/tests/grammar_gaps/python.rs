@@ -81,7 +81,11 @@ fn type_alias_with_a_defaulted_type_parameter_parses() {
     let analysis = run_clean(source);
     // The whole alias is one expression statement; the tree shape must not
     // swallow it.
-    assert!(analysis.facts.calls.is_empty());
+    assert!(
+        analysis.facts.calls.is_empty(),
+        "defaulted type alias records no calls: {:?}",
+        analysis.facts.calls
+    );
 }
 
 #[test]
