@@ -87,11 +87,13 @@ jobs:
           overwrite: true
           retention-days: 14
 
-  publish:
+  attest:
     needs: [verify-tag, ci, build]
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -106,6 +108,44 @@ jobs:
         run: |
           read -ra targets <<<"$RELEASE_TARGETS"
           bash scripts/verify-release.sh dist "$GITHUB_REF_NAME" dist "${targets[@]}"
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+
+  publish:
+    needs: [verify-tag, ci, build, attest]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      attestations: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: dist
+      - name: Verify packaging
+        run: |
+          read -ra targets <<<"$RELEASE_TARGETS"
+          bash scripts/verify-release.sh dist "$GITHUB_REF_NAME" dist "${targets[@]}"
+      - name: Verify attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for archive in dist/*.tar.gz dist/*.zip; do
+            gh attestation verify "$archive" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+              --source-ref "$GITHUB_REF" \
+              --source-digest "$GITHUB_SHA" \
+              --deny-self-hosted-runners
+          done
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

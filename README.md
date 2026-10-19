@@ -35,6 +35,8 @@ Releases are cut by pushing a `vMAJOR.MINOR.PATCH` tag equal to the `sloplint` p
 
 Build jobs run without release credentials and hand archives off through workflow artifacts. Publication verifies that the artifact set holds exactly the expected archives and checksums with valid digests and member lists, re-resolves the tag to the built commit before creating or updating the release, and is rerunnable: identical assets are left alone, differing assets fail, and incomplete or missing assets are only repaired on draft releases; published releases are never modified.
 
+Every archive is attested with GitHub artifact attestations, and attestations are verified before publication. Each `.sha256` file detects corrupted downloads; it sits next to the archive, so it is not a trust anchor. To verify provenance: `gh attestation verify <archive> --repo OWNER/REPO --signer-workflow OWNER/REPO/.github/workflows/release.yml`. Releases require a public repository (artifact attestations).
+
 From source, using the checked-in toolchain pin (Rust 1.99.1):
 
 ```bash
