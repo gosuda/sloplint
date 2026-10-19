@@ -1,5 +1,7 @@
 //! The single iterative tree walk that turns node roles into file facts.
 
+use std::collections::HashMap;
+
 use sloplint_core::facts::FileFacts;
 use sloplint_core::lang::Lang;
 use sloplint_core::suppress::CommentText;
@@ -94,13 +96,12 @@ pub(crate) struct FnFrame<'s> {
     pub index: usize,
     pub nest: u32,
     pub frames: u32,
-    pub decls: Vec<FrameDecl<'s>>,
+    pub decls: HashMap<&'s str, FrameDecl>,
     pub sole_call: Option<usize>,
 }
 
-/// A binding declared inside one function frame.
-pub(crate) struct FrameDecl<'s> {
-    pub name: &'s str,
+/// The latest binding declared under one name inside a function frame.
+pub(crate) struct FrameDecl {
     pub binding: usize,
     pub frames_at_decl: u32,
 }
