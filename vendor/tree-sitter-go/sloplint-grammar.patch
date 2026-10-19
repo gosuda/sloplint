@@ -1,0 +1,165 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -93,6 +93,12 @@
+     [$.type_parameter_declaration, $._simple_type, $._expression],
+     [$.type_parameter_declaration, $._expression],
+     [$.type_parameter_declaration, $._simple_type, $.generic_type, $._expression],
++    // `func (T) m[P any]()` is a generic method; `func (T) m[A, B]` is a func
++    // literal whose result is a generic type.
++    [$.type_parameter_declaration, $._simple_type],
++    // `(*struct{ J })(x)` is a conversion; `(*struct{ J }).M` is a method
++    // expression.
++    [$._simple_type, $._type_literal],
+   ],
+ 
+   reserved: {
+@@ -177,8 +183,9 @@
+       choice(
+         $.const_spec,
+         seq(
++          // The last spec may be followed directly by `)`: `const ( F = 1 )`.
+           '(',
+-          repeat(seq($.const_spec, terminator)),
++          optionalTrailingSep($.const_spec, terminator),
+           ')',
+         ),
+       ),
+@@ -231,6 +238,7 @@
+       'func',
+       field('receiver', $.parameter_list),
+       field('name', $._field_identifier),
++      field('type_parameters', optional($.type_parameter_list)),
+       field('parameters', $.parameter_list),
+       field('result', optional(choice($.parameter_list, $._simple_type))),
+       field('body', optional($.block)),
+@@ -442,19 +450,30 @@
+       '}',
+     ),
+ 
++    // An empty statement is its own terminator: it needs no further
++    // terminator before the next statement (`{ ; f() }`, `f();; g()`).
+     statement_list: $ => choice(
+       seq(
+-        $._statement,
+-        repeat(seq(terminator, $._statement)),
+-        optional(seq(
+-          terminator,
+-          optional(alias($.empty_labeled_statement, $.labeled_statement)),
++        repeat1(choice(
++          seq($._non_empty_statement, terminator),
++          $.empty_statement,
+         )),
++        optional($._last_statement),
+       ),
++      $._last_statement,
++    ),
++
++    _last_statement: $ => choice(
++      $._non_empty_statement,
+       alias($.empty_labeled_statement, $.labeled_statement),
+     ),
+ 
+     _statement: $ => choice(
++      $._non_empty_statement,
++      $.empty_statement,
++    ),
++
++    _non_empty_statement: $ => choice(
+       $._declaration,
+       $._simple_statement,
+       $.return_statement,
+@@ -471,7 +490,6 @@
+       $.continue_statement,
+       $.goto_statement,
+       $.block,
+-      $.empty_statement,
+     ),
+ 
+     empty_statement: _ => ';',
+@@ -531,9 +549,11 @@
+       $._statement,
+     ),
+ 
++    // Labels at the end of a block nest: `L:` newline `L1:` newline `}`.
+     empty_labeled_statement: $ => seq(
+       field('label', alias($.identifier, $.label_name)),
+       ':',
++      optional(alias($.empty_labeled_statement, $.labeled_statement)),
+     ),
+ 
+     // This is a hack to prevent `fallthrough_statement` from being parsed as
+@@ -553,10 +573,11 @@
+ 
+     defer_statement: $ => seq('defer', $._expression),
+ 
++    // The initializer may be empty: `if ; x {}`, `switch ; {}`.
+     if_statement: $ => seq(
+       'if',
+       optional(seq(
+-        field('initializer', $._simple_statement),
++        field('initializer', optional($._simple_statement)),
+         ';',
+       )),
+       field('condition', $._expression),
+@@ -593,7 +614,7 @@
+     expression_switch_statement: $ => seq(
+       'switch',
+       optional(seq(
+-        field('initializer', $._simple_statement),
++        field('initializer', optional($._simple_statement)),
+         ';',
+       )),
+       field('value', optional($._expression)),
+@@ -625,7 +646,7 @@
+ 
+     _type_switch_header: $ => seq(
+       optional(seq(
+-        field('initializer', $._simple_statement),
++        field('initializer', optional($._simple_statement)),
+         ';',
+       )),
+       optional(seq(field('alias', $.expression_list), ':=')),
+@@ -709,7 +730,9 @@
+     special_argument_list: $ => seq(
+       '(',
+       optional(seq(
+-        $._type,
++        // Go 1.26 accepts a value: `new(42)`, `new(int64(-64))`. A type still
++        // wins when both readings fit (`new(int)`, `new(a.B)`).
++        choice(prec.dynamic(2, $._type), $._expression),
+         repeat(seq(',', $._expression)),
+         optional(','),
+       )),
+@@ -727,11 +750,31 @@
+     ),
+ 
+     selector_expression: $ => prec(PREC.primary, seq(
+-      field('operand', $._expression),
++      field('operand', choice(
++        $._expression,
++        // Method expressions on type literals: `interface{ M() }.M`,
++        // `(*struct{ I }).M`. Named types stay expressions: `(*T).M`.
++        $.struct_type,
++        $.interface_type,
++        alias($._parenthesized_type_literal, $.parenthesized_type),
++      )),
+       '.',
+       field('field', $._field_identifier),
+     )),
+ 
++    // Only types that cannot also be expressions, so `(*T).M` keeps parsing as
++    // a parenthesized expression.
++    _parenthesized_type_literal: $ => seq('(', $._type_literal, ')'),
++
++    _type_literal: $ => choice(
++      $.struct_type,
++      $.interface_type,
++      alias($._pointer_type_literal, $.pointer_type),
++      alias($._parenthesized_type_literal, $.parenthesized_type),
++    ),
++
++    _pointer_type_literal: $ => seq('*', $._type_literal),
++
+     index_expression: $ => prec(PREC.primary, prec.dynamic(1, seq(
+       field('operand', $._expression),
+       '[',

@@ -1,0 +1,230 @@
+================================================================================
+empty initializers in if and switch
+================================================================================
+
+package main
+
+func f(x bool, v interface{}) {
+	if ; x {
+	}
+	switch ; {
+	}
+	switch ; x {
+	}
+	switch ; v.(type) {
+	}
+	switch ; y := v.(type) {
+	}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list
+      (parameter_declaration
+        name: (identifier)
+        type: (type_identifier))
+      (parameter_declaration
+        name: (identifier)
+        type: (interface_type)))
+    body: (block
+      (statement_list
+        (if_statement
+          condition: (identifier)
+          consequence: (block))
+        (expression_switch_statement)
+        (expression_switch_statement
+          value: (identifier))
+        (type_switch_statement
+          value: (identifier))
+        (type_switch_statement
+          alias: (expression_list
+            (identifier))
+          value: (identifier))))))
+
+================================================================================
+empty statement before a statement on the same line
+================================================================================
+
+package main
+
+func f() { ; println("x") }
+
+func g() { a(); ; b() }
+
+func h() { a();; b() }
+
+func i() {
+	;;
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (statement_list
+        (empty_statement)
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (interpreted_string_literal
+                (interpreted_string_literal_content))))))))
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (statement_list
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list)))
+        (empty_statement)
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list))))))
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (statement_list
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list)))
+        (empty_statement)
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list))))))
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (statement_list
+        (empty_statement)
+        (empty_statement)))))
+
+================================================================================
+labels at the end of a block nest
+================================================================================
+
+package main
+
+func f() {
+L:
+L1:
+L2:
+}
+
+func g() {
+	a()
+L:
+L1:
+}
+
+func h(x int) {
+	switch x {
+	case 1:
+	L:
+	L1:
+	case 2:
+	}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (statement_list
+        (labeled_statement
+          label: (label_name)
+          (labeled_statement
+            label: (label_name)
+            (labeled_statement
+              label: (label_name)))))))
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (statement_list
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list)))
+        (labeled_statement
+          label: (label_name)
+          (labeled_statement
+            label: (label_name))))))
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list
+      (parameter_declaration
+        name: (identifier)
+        type: (type_identifier)))
+    body: (block
+      (statement_list
+        (expression_switch_statement
+          value: (identifier)
+          (expression_case
+            value: (expression_list
+              (int_literal))
+            (statement_list
+              (labeled_statement
+                label: (label_name)
+                (labeled_statement
+                  label: (label_name)))))
+          (expression_case
+            value: (expression_list
+              (int_literal))))))))
+
+================================================================================
+a label before a statement still labels that statement
+================================================================================
+
+package main
+
+func f() {
+L:
+L1:
+	a()
+	b()
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (statement_list
+        (labeled_statement
+          label: (label_name)
+          (labeled_statement
+            label: (label_name)
+            (expression_statement
+              (call_expression
+                function: (identifier)
+                arguments: (argument_list)))))
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list)))))))

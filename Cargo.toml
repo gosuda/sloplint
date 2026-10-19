@@ -15,7 +15,7 @@ sloplint-syntax = { path = "crates/sloplint-syntax" }
 tree-sitter = "0.27.1"
 tree-sitter-rust = "0.24.2"
 tree-sitter-typescript = { path = "vendor/tree-sitter-typescript" }
-tree-sitter-go = "0.25.0"
+tree-sitter-go = { path = "vendor/tree-sitter-go" }
 tree-sitter-python = "0.25.0"
 tree-sitter-javascript = { path = "vendor/tree-sitter-javascript" }
 tree-sitter-java = "0.23.5"
