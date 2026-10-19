@@ -54,6 +54,8 @@ This Bash example creates a new project. In an existing project, run `sloplint i
 
 Exit code `0` means the gate passed: the run can still list `warn` findings below `fail_on` (default `deny`). `1` means at least one reported finding is at or above `fail_on`; `2` means usage or config error; `3` means an I/O error stopped the run.
 
+An unreadable source file stops the run with exit `3` and reports its path and cause. Oversized, generated, and non-UTF-8 source files remain counted skips.
+
 ## Features
 
 - **complexity/**: nesting-weighted cognitive depth, nesting depth, mutable-statement spans, nested mutation, boolean params, import fan-out.
@@ -110,7 +112,7 @@ sloplint check --mode ratchet   # reports only findings absent from the baseline
 Baselines key findings by a fingerprint of rule, path, and normalized line; blank-line shifts do not re-report them. Line-local findings normalize the finding's source line, while whole-file findings carry a stable empty context, so a changed first line does not change their identity.
 Unused-suppression findings retain separate identities, so baselining one does not hide another added later.
 
-`project.baseline` is a path relative to the project root. Absolute paths, `..` escapes, and parent or leaf symlinks that resolve outside the root are rejected with an error and leave the outside target untouched; nested paths inside the root keep working. The `.sloplint` cache directory is never followed through a symlink: a symlinked directory refuses the cache write with a warning, and `.gitignore` plus the temporary cache file are created exclusively so a pre-planted symlink at either path is preserved.
+`project.baseline` is a path relative to the project root. Absolute paths, `..` escapes, and parent or leaf symlinks that resolve outside the root are rejected with an error and leave the outside target untouched; nested paths inside the root keep working. Cache writes refuse a symlinked `.sloplint` directory with a warning. `.gitignore` and the temporary cache file are created exclusively, so a pre-planted symlink at either path is preserved. Cache reads can follow a directory symlink; invalid or mismatched cache contents fall back to fresh analysis.
 
 ### Custom rules
 

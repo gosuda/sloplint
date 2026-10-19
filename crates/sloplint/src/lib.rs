@@ -115,7 +115,7 @@ pub struct Summary {
     pub baselined: u32,
     /// Baseline entries in scope that matched nothing.
     pub stale: u32,
-    /// Files in scope that were not analyzed.
+    /// Files in scope skipped by policy: over `max_file_bytes`, generated, or not UTF-8. Read errors fail the run instead.
     pub skipped: u32,
 }
 
@@ -218,11 +218,12 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         if let Err(error) = cache::store(&root, &key, &view) {
             let _ = writeln!(
                 io::stderr(),
-                "sloplint: warning: cache not written: {error}"
+                "sloplint: warning: cache not written in {}: {error}",
+                root.display()
             );
         }
     }
-    let mut all = merge(&pipe, analyzed);
+    let mut all = merge(&pipe, analyzed)?;
     all.retain(|finding| project::in_scope(&scopes, &finding.path));
     let (reported, baselined, stale) = if opts.write_baseline {
         (all, 0, 0)
@@ -317,17 +318,19 @@ fn analyze_all(
         .num_threads(jobs)
         .build()
         .map_err(|error| io_error(pipe.root, io::Error::other(error)))?;
-    Ok(pool.install(|| {
+    let results: Vec<Result<Outcome, RunError>> = pool.install(|| {
         entries
             .par_iter()
             .map_init(Parsers::new, |parsers, entry| process(parsers, entry, pipe))
             .collect()
-    }))
+    });
+    results.into_iter().collect()
 }
 
-fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Outcome {
-    let skipped = || Outcome::Skipped(entry.rel.clone());
-    let Some(bytes) = read_within_limit(&entry.abs, pipe.config.project.max_file_bytes) else {
+fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<Outcome, RunError> {
+    let skipped = || Ok(Outcome::Skipped(entry.rel.clone()));
+    let read = read_within_limit(&entry.abs, pipe.config.project.max_file_bytes);
+    let Some(bytes) = read.map_err(|source| io_error(&entry.abs, source))? else {
         return skipped();
     };
     let Ok(raw) = std::str::from_utf8(&bytes) else {
@@ -353,10 +356,10 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Outcome
         Some(cached) if cached.hash == probe.hash => cached.clone(),
         _ => analyze_file(parsers, entry, &probe, pipe),
     };
-    Outcome::Analyzed(Analyzed {
+    Ok(Outcome::Analyzed(Analyzed {
         rel: entry.rel.clone(),
         output,
-    })
+    }))
 }
 
 fn analyze_file(
@@ -404,7 +407,7 @@ fn analyze_file(
     }
 }
 
-fn merge(pipe: &Pipeline<'_>, mut analyzed: Vec<Analyzed>) -> Vec<Finding> {
+fn merge(pipe: &Pipeline<'_>, mut analyzed: Vec<Analyzed>) -> Result<Vec<Finding>, RunError> {
     let world = world_findings(pipe, &analyzed);
     let mut orphans = Vec::new();
     for finding in world {
@@ -413,10 +416,10 @@ fn merge(pipe: &Pipeline<'_>, mut analyzed: Vec<Analyzed>) -> Vec<Finding> {
             Err(_) => orphans.push(finding),
         }
     }
-    let mut all: Vec<Finding> = analyzed
-        .into_iter()
-        .flat_map(|file| finalize(pipe, file))
-        .collect();
+    let mut all = Vec::new();
+    for file in analyzed {
+        all.extend(finalize(pipe, file)?);
+    }
     all.extend(orphans);
     all.retain(|finding| pipe.filter.matches(&finding.rule));
     all.sort_by(|a, b| {
@@ -427,7 +430,7 @@ fn merge(pipe: &Pipeline<'_>, mut analyzed: Vec<Analyzed>) -> Vec<Finding> {
             .then_with(|| a.rule.cmp(&b.rule))
             .then_with(|| a.message.cmp(&b.message))
     });
-    all
+    Ok(all)
 }
 
 fn world_findings(pipe: &Pipeline<'_>, analyzed: &[Analyzed]) -> Vec<Finding> {
@@ -441,7 +444,7 @@ fn world_findings(pipe: &Pipeline<'_>, analyzed: &[Analyzed]) -> Vec<Finding> {
     pipe.rules.check_world(&files)
 }
 
-fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Vec<Finding> {
+fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Result<Vec<Finding>, RunError> {
     let FileOutput {
         mut findings,
         mut suppressions,
@@ -459,33 +462,37 @@ fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Vec<Finding> {
             .iter()
             .any(|p| p.matches("meta/unused-suppression"))
     {
-        let mut unused = unused_findings(pipe, &file.rel, &suppressions);
+        let mut unused = unused_findings(pipe, &file.rel, &suppressions)?;
         unused.sort_by(|a, b| {
             (a.line, a.column, &a.rule, &a.message).cmp(&(b.line, b.column, &b.rule, &b.message))
         });
         Baseline::assign_fingerprints(&mut unused);
         findings.extend(unused);
     }
-    findings
+    Ok(findings)
 }
 
-fn unused_findings(pipe: &Pipeline<'_>, rel: &str, suppressions: &[Suppression]) -> Vec<Finding> {
+fn unused_findings(
+    pipe: &Pipeline<'_>,
+    rel: &str,
+    suppressions: &[Suppression],
+) -> Result<Vec<Finding>, RunError> {
     let unused: Vec<&Suppression> = suppressions
         .iter()
         .filter(|suppression| !suppression.used && suppression_active(pipe, suppression))
         .collect();
     if unused.is_empty() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
-    let source = read_source(&pipe.root.join(rel));
-    unused
+    let source = read_source(&pipe.root.join(rel))?;
+    Ok(unused
         .into_iter()
         .filter_map(|suppression| {
             let patterns = describe(&suppression.rules);
             pipe.rules
                 .unused_suppression(rel, &source, suppression.start_line, &patterns)
         })
-        .collect()
+        .collect())
 }
 
 fn suppression_active(pipe: &Pipeline<'_>, suppression: &Suppression) -> bool {
@@ -522,22 +529,21 @@ fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunError> {
     Baseline::from_json(&text).map_err(|message| RunError::BaselineCorrupt { path, message })
 }
 
-fn read_within_limit(path: &Path, max_bytes: u64) -> Option<Vec<u8>> {
-    let metadata = fs::metadata(path).ok()?;
-    if metadata.len() > max_bytes {
-        return None;
+fn read_within_limit(path: &Path, max_bytes: u64) -> io::Result<Option<Vec<u8>>> {
+    if fs::metadata(path)?.len() > max_bytes {
+        return Ok(None);
     }
-    fs::read(path).ok()
+    fs::read(path).map(Some)
 }
 
-fn read_source(path: &Path) -> String {
+fn read_source(path: &Path) -> Result<String, RunError> {
     fs::read_to_string(path)
         .map(|text| {
             text.strip_prefix('\u{feff}')
                 .unwrap_or(text.as_str())
                 .to_string()
         })
-        .unwrap_or_default()
+        .map_err(|source| io_error(path, source))
 }
 
 fn is_generated(bytes: &[u8]) -> bool {
