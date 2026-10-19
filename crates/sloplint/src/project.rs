@@ -295,6 +295,51 @@ fn open_for_read(path: &Path) -> io::Result<fs::File> {
     fs::File::open(path)
 }
 
+/// Opens `path` without following a trailing symlink, returning the handle and its size.
+///
+/// Unix uses `O_NOFOLLOW`, so a symlink at the final component fails with a loop error
+/// instead of being followed. Windows refuses a trailing symlink or reparse point before
+/// opening. Configuration and baseline inputs keep using [`open_regular`], which follows
+/// symlinks to regular files; only the cache uses this opener.
+pub fn open_regular_nofollow(path: &Path) -> io::Result<(fs::File, u64)> {
+    let file = open_for_read_nofollow(path)?;
+    let meta = file.metadata()?;
+    require_regular(&file, &meta)?;
+    Ok((file, meta.len()))
+}
+
+#[cfg(unix)]
+fn open_for_read_nofollow(path: &Path) -> io::Result<fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+    fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY | libc::O_NOFOLLOW)
+        .open(path)
+}
+
+#[cfg(not(unix))]
+fn open_for_read_nofollow(path: &Path) -> io::Result<fs::File> {
+    let meta = fs::symlink_metadata(path)?;
+    if meta.file_type().is_symlink() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "not a regular file",
+        ));
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        const REPARSE_POINT: u32 = 0x400;
+        if meta.file_attributes() & REPARSE_POINT != 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "not a regular file",
+            ));
+        }
+    }
+    fs::File::open(path)
+}
+
 fn require_regular(file: &fs::File, meta: &fs::Metadata) -> io::Result<()> {
     if meta.is_file() {
         return Ok(());
@@ -319,6 +364,15 @@ fn require_regular(file: &fs::File, meta: &fs::Metadata) -> io::Result<()> {
 /// error rather than being read without end.
 pub fn read_regular(path: &Path) -> io::Result<Vec<u8>> {
     let (file, len) = open_regular(path)?;
+    read_bounded(file, len)
+}
+
+/// Reads a whole regular file without following a trailing symlink; see [`read_regular`].
+///
+/// The cache uses this so a link planted at `cache-v1.bin` is refused instead of being
+/// followed. Configuration and baseline inputs keep using [`read_regular`].
+pub fn read_regular_nofollow(path: &Path) -> io::Result<Vec<u8>> {
+    let (file, len) = open_regular_nofollow(path)?;
     read_bounded(file, len)
 }
 

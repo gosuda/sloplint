@@ -3,6 +3,8 @@
 
 #[path = "invariants/corpus_invariants.rs"]
 mod corpus_invariants;
+#[path = "invariants/isolated_cache.rs"]
+mod isolated_cache;
 #[path = "invariants/suppression_oracles.rs"]
 mod suppression_oracles;
 
@@ -145,16 +147,6 @@ fn symlink(target: impl AsRef<Path>, link: impl AsRef<Path>) {
     std::os::unix::fs::symlink(target, link).unwrap_or_else(|e| panic!("symlink: {e}"));
 }
 
-/// A cached run must succeed: a persistence failure warns instead of failing the run.
-#[cfg(unix)]
-fn assert_cache_warns(root: &Path, what: &str) {
-    let report = run(&RunOptions {
-        use_cache: true,
-        ..opts(root)
-    });
-    assert!(report.is_ok(), "{what} must warn, not fail: {report:?}");
-}
-
 #[test]
 fn audit_persistence_baseline_dotdot_is_refused() {
     let (outer, root) = outer_project();
@@ -247,56 +239,6 @@ fn audit_persistence_baseline_nested_in_root_round_trips() {
     );
 }
 
-#[cfg(unix)]
-#[test]
-fn audit_persistence_cache_dir_symlink_stays_outside() {
-    let (outer, root) = outer_project();
-    let outside = outer.path().join("outside");
-    mkdir(&outside);
-    symlink(&outside, root.join(".sloplint"));
-    assert_cache_warns(&root, "symlinked cache dir");
-    assert!(
-        !outside.join("cache-v1.bin").exists(),
-        "cache escaped through symlinked directory"
-    );
-}
-
-#[cfg(unix)]
-#[test]
-fn audit_persistence_cache_gitignore_symlink_is_preserved() {
-    let (outer, root) = outer_project();
-    mkdir(&root.join(".sloplint"));
-    let marker = outer.path().join("marker.txt");
-    symlink(&marker, root.join(".sloplint/.gitignore"));
-    assert_cache_warns(&root, "gitignore symlink");
-    assert!(
-        !marker.exists(),
-        "outside file created through dangling gitignore symlink"
-    );
-    assert!(
-        std::fs::symlink_metadata(root.join(".sloplint/.gitignore"))
-            .unwrap_or_else(|e| panic!("metadata: {e}"))
-            .file_type()
-            .is_symlink(),
-        "gitignore symlink was replaced"
-    );
-}
-
-#[cfg(unix)]
-#[test]
-fn audit_persistence_cache_temp_symlink_is_preserved() {
-    let (outer, root) = outer_project();
-    mkdir(&root.join(".sloplint"));
-    let marker = outer.path().join("target.txt");
-    plant(&marker);
-    let planted = root
-        .join(".sloplint")
-        .join(format!("cache-v1.bin.{}.tmp", std::process::id()));
-    symlink(&marker, planted);
-    assert_cache_warns(&root, "planted temp symlink");
-    assert_sentinel(&marker, "outside marker overwritten through temp symlink");
-}
-
 fn audit_filter_of(selectors: &[&str]) -> RuleFilter {
     RuleFilter(
         selectors
@@ -379,40 +321,6 @@ fn audit_filter_accepts_valid_selectors() {
     assert!(
         disabled.findings.is_empty(),
         "disabled custom rule should report nothing but still be accepted"
-    );
-}
-
-#[test]
-fn audit_filter_cache_stays_unfiltered() {
-    let (_tmp, root) = tempdir();
-    write(
-        &root,
-        "sample.rs",
-        "pub fn handle(flag: bool, other: bool) {}\n",
-    );
-    let filtered = run_ok(&RunOptions {
-        use_cache: true,
-        ..audit_filter_opts(&root, &["grep/generic-name"])
-    });
-    assert!(
-        fired(&filtered, "grep/generic-name"),
-        "filtered run missed its rule"
-    );
-    assert!(
-        root.join(".sloplint/cache-v1.bin").exists(),
-        "filtered run did not populate the cache; the full run would pass cold"
-    );
-    let full = run_ok(&RunOptions {
-        use_cache: true,
-        ..audit_filter_opts(&root, &[])
-    });
-    assert!(
-        fired(&full, "grep/generic-name"),
-        "full run after filtered cache missed generic-name"
-    );
-    assert!(
-        fired(&full, "complexity/boolean-params"),
-        "filtered cache poisoned the later full run"
     );
 }
 

@@ -7,6 +7,7 @@ pub mod rules_cmd;
 mod cache;
 mod discover;
 mod project;
+mod settings;
 mod terminal;
 
 pub use terminal::TerminalText;
@@ -54,7 +55,13 @@ pub struct RunOptions {
     pub fail_on: Option<FailOn>,
     /// Report only matching rules; an empty filter matches all.
     pub rule_filter: RuleFilter,
-    /// Read and write `.sloplint/cache-v1.bin`.
+    /// Read and write the per-user cache for this project root: under
+    /// `XDG_CACHE_HOME` (when absolute), else `~/.cache` (unix),
+    /// `~/Library/Caches` (macOS), or `%LOCALAPPDATA%` (Windows), in
+    /// `sloplint/<hash of the root path>/cache-v1.bin`. The checkout's own
+    /// `.sloplint` is neither read nor written, because a repository can
+    /// ship a forged cache. An unusable cache location disables the cache
+    /// with a warning instead of failing the run; `false` does no cache work.
     pub use_cache: bool,
     /// Worker threads; zero means the available parallelism.
     pub jobs: usize,
@@ -197,13 +204,17 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let custom = CustomRules::compile(&config.custom_rules)?;
     let scopes = project::scopes(&root, &opts.cwd, &opts.paths)?;
     let discovery = discover::discover(&root, &config)?;
-    let key = cache::config_key(&config, &loaded.custom_sources)
-        .map_err(|source| io_error(&root, source))?;
-    let cached = if opts.use_cache {
-        cache::load(&root, &key)
+    let cache = if opts.use_cache {
+        cache::open(
+            settings::cache_base(),
+            &root,
+            &config,
+            &loaded.custom_sources,
+        )
     } else {
-        HashMap::new()
+        None
     };
+    let cached = cache.as_ref().map_or_else(HashMap::new, cache::Cache::load);
     let test_globs = project::glob_set(&config.project.test_globs, "project.test_globs")?;
     let interfaces: HashSet<String> = discovery
         .entries
@@ -246,19 +257,12 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
             .filter(|file| scopes.contains(Path::new(&file.rel)))
             .count(),
     );
-    if opts.use_cache {
+    if let Some(cache) = &cache {
         let view: Vec<(&str, &FileOutput)> = analyzed
             .iter()
             .map(|file| (file.rel.as_str(), &file.output))
             .collect();
-        if let Err(error) = cache::store(&root, &key, &view) {
-            let _ = writeln!(
-                io::stderr(),
-                "sloplint: warning: cache not written in {}: {}",
-                TerminalText::line(&root.to_string_lossy()),
-                TerminalText::line(&error.to_string())
-            );
-        }
+        cache.store(&view);
     }
     let mut all = merge(&pipe, analyzed)?;
     all.retain(|finding| scopes.contains(Path::new(&*finding.path)));

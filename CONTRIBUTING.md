@@ -10,7 +10,7 @@ Install `rustup`. The workspace pins Rust `1.99.1` with `clippy` and `rustfmt` i
 
 - `crates/sloplint-core`: facts, configuration, suppressions, baselines, and the rule catalog (`FileRule` and `WorldRule`). No tree-sitter or I/O dependencies.
 - `crates/sloplint-syntax`: one iterative `TreeCursor` walk and 23 language adapters (`crates/sloplint-syntax/src/lang/*.rs`) that lower tree-sitter parse trees into `FileFacts`, plus `[[custom_rules]]` query execution.
-- `crates/sloplint`: CLI entry point, project discovery, `.sloplint/` cache, and `agent`, `human`, and `json` renderers.
+- `crates/sloplint`: CLI entry point, project discovery, per-user cache (never in the checkout; `--no-cache` does no cache work; see Ratchet mode in README.md), and `agent`, `human`, and `json` renderers.
 
 Rules read only `FileFacts` and `WorldFacts`. Keeping `sloplint-core` free of `tree-sitter` enforces that boundary in the dependency graph.
 

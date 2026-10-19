@@ -124,7 +124,9 @@ sloplint check --mode ratchet   # reports only findings absent from the baseline
 Baselines key findings by a fingerprint of rule, path, and normalized line; blank-line shifts do not re-report them. Line-local findings normalize the finding's source line, while whole-file findings carry a stable empty context, so a changed first line does not change their identity.
 Unused-suppression findings retain separate identities, so baselining one does not hide another added later.
 
-`project.baseline` is a path relative to the project root. Absolute paths, `..` escapes, and parent or leaf symlinks that resolve outside the root are rejected with an error and leave the outside target untouched; nested paths inside the root keep working. Cache writes refuse a symlinked `.sloplint` directory with a warning. `.gitignore` and the temporary cache file are created exclusively, so a pre-planted symlink at either path is preserved. Cache reads can follow a directory symlink; invalid or mismatched cache contents fall back to fresh analysis.
+`project.baseline` is a path relative to the project root. Absolute paths, `..` escapes, and parent or leaf symlinks that resolve outside the root are rejected with an error and leave the outside target untouched; nested paths inside the root keep working.
+
+The cache lives in the per-user cache directory (`$XDG_CACHE_HOME` when absolute, else `~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`) under `sloplint/<hash of the project root>/cache-v1.bin`, never in the checkout: a repository could ship a forged cache, so the project's `.sloplint` is never read, migrated, or deleted. An old `.sloplint` directory in the checkout is ignored. Directories are created private (`0700` on unix); a symlinked, non-directory, or group/other-writable cache directory, a cache directory inside the project root, a missing home, or an unreadable executable disables the cache with a warning instead of failing the run. `--no-cache` does no cache work. Invalid or mismatched cache contents fall back to fresh analysis.
 
 ### Custom rules
 

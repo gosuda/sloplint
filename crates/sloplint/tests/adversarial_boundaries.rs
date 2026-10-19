@@ -40,28 +40,31 @@ fn filt(ids: &[&str]) -> RuleFilter {
     )
 }
 
-fn bin_cold(root: &Path, format: &str, jobs: usize) -> Vec<u8> {
-    bin_impl(root, format, jobs, true)
-}
-
-fn bin_warm(root: &Path, format: &str, jobs: usize) -> Vec<u8> {
-    bin_impl(root, format, jobs, false)
-}
-
-fn bin_impl(root: &Path, format: &str, jobs: usize, cold: bool) -> Vec<u8> {
-    let exe = env!("CARGO_BIN_EXE_sloplint");
+fn bin_cold(root: &Path, home: &Path, format: &str, jobs: usize) -> Vec<u8> {
     let js = jobs.to_string();
-    let mut cmd = std::process::Command::new(exe);
-    cmd.current_dir(root);
-    cmd.arg("check");
-    cmd.args(["--format", format]);
-    cmd.args(["--strictness", "standard"]);
-    cmd.args(["--fail-on", "never"]);
-    cmd.args(["-j", &js]);
-    if cold {
-        cmd.arg("--no-cache");
+    bin_in(root, home, &["--format", format, "-j", &js, "--no-cache"])
+}
+
+fn bin_warm(root: &Path, home: &Path, format: &str, jobs: usize) -> Vec<u8> {
+    let js = jobs.to_string();
+    bin_in(root, home, &["--format", format, "-j", &js])
+}
+
+/// Runs the shipped binary in `root` with its per-user cache and home directories inside
+/// `home`, so concurrent tests never share a cache and none touches the runner's real one.
+fn bin_in(root: &Path, home: &Path, args: &[&str]) -> Vec<u8> {
+    for name in ["xdg", "home", "local"] {
+        std::fs::create_dir_all(home.join(name)).unwrap_or_else(|e| panic!("mkdir: {e}"));
     }
-    let out = cmd.output().unwrap_or_else(|e| panic!("bin: {e}"));
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_sloplint"))
+        .current_dir(root)
+        .args(["check", "--strictness", "standard", "--fail-on", "never"])
+        .args(args)
+        .env("XDG_CACHE_HOME", home.join("xdg"))
+        .env("HOME", home.join("home"))
+        .env("LOCALAPPDATA", home.join("local"))
+        .output()
+        .unwrap_or_else(|e| panic!("bin: {e}"));
     assert!(
         out.status.success(),
         "bin failed: {:?}\nstderr:\n{}",
@@ -414,12 +417,13 @@ fn boundary_output_bytes_stable() {
         "src/c.rs",
         "pub fn handle() { foo(); }\nfn foo() {}\n",
     );
-    let a1 = bin_cold(&root, "agent", 1);
-    let a2 = bin_cold(&root, "agent", 2);
-    let a8 = bin_cold(&root, "agent", 8);
-    let j1 = bin_cold(&root, "json", 1);
-    let j2 = bin_cold(&root, "json", 2);
-    let j8 = bin_cold(&root, "json", 8);
+    let (_home_dir, home) = tmp();
+    let a1 = bin_cold(&root, &home, "agent", 1);
+    let a2 = bin_cold(&root, &home, "agent", 2);
+    let a8 = bin_cold(&root, &home, "agent", 8);
+    let j1 = bin_cold(&root, &home, "json", 1);
+    let j2 = bin_cold(&root, &home, "json", 2);
+    let j8 = bin_cold(&root, &home, "json", 8);
     for (bytes, what) in [(&a1, "agent"), (&j1, "json")] {
         let text = String::from_utf8(bytes.clone()).unwrap_or_else(|e| panic!("utf8: {e}"));
         assert!(
@@ -432,11 +436,11 @@ fn boundary_output_bytes_stable() {
     assert_eq!(a1, a8, "shipped agent bytes jobs 1 vs 8");
     assert_eq!(j1, j2, "shipped json bytes jobs 1 vs 2");
     assert_eq!(j1, j8, "shipped json bytes jobs 1 vs 8");
-    let wa1 = bin_warm(&root, "agent", 1);
-    let wa8 = bin_warm(&root, "agent", 8);
-    let wj1 = bin_warm(&root, "json", 1);
-    let wj8 = bin_warm(&root, "json", 8);
-    let wa1b = bin_warm(&root, "agent", 1);
+    let wa1 = bin_warm(&root, &home, "agent", 1);
+    let wa8 = bin_warm(&root, &home, "agent", 8);
+    let wj1 = bin_warm(&root, &home, "json", 1);
+    let wj8 = bin_warm(&root, &home, "json", 8);
+    let wa1b = bin_warm(&root, &home, "agent", 1);
     assert_eq!(a1, wa1, "cold vs warm shipped agent bytes");
     assert_eq!(j1, wj8, "cold vs warm shipped json bytes");
     assert_eq!(wa1, wa8, "warm jobs 1 vs 8 shipped agent bytes");
@@ -609,45 +613,29 @@ fn boundary_cli_jobs_parsing() {
 fn boundary_concurrent_cache_runs_match_cold() {
     use std::sync::{Arc, Barrier};
     let (_t, root) = tmp();
+    let (_home_dir, home) = tmp();
     put(
         &root,
         "src/a.rs",
         "pub fn handle() {}\npub fn run_task() {}\n",
     );
     put(&root, "src/b.rs", "pub fn handle() {}\nfn foo() {}\n");
-    let control = run_ok(&RunOptions {
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        jobs: 2,
-        ..base(&root)
-    });
+    let control = bin_cold(&root, &home, "agent", 2);
     let barrier = Arc::new(Barrier::new(2));
     std::thread::scope(|s| {
         let outs: Vec<_> = (0..2)
             .map(|_| {
                 s.spawn(|| {
                     barrier.wait();
-                    run_ok(&RunOptions {
-                        strictness: Some(Strictness::Standard),
-                        mode: Some(Mode::Threshold),
-                        use_cache: true,
-                        jobs: 2,
-                        ..base(&root)
-                    })
+                    bin_warm(&root, &home, "agent", 2)
                 })
             })
             .collect();
         for h in outs {
-            let r = h.join().unwrap_or_else(|_| panic!("worker panicked"));
-            assert_eq!(r.findings, control.findings, "concurrent findings");
+            let bytes = h.join().unwrap_or_else(|_| panic!("worker panicked"));
+            assert_eq!(bytes, control, "concurrent shipped agent bytes");
         }
     });
-    let warm = run_ok(&RunOptions {
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        use_cache: true,
-        jobs: 2,
-        ..base(&root)
-    });
-    assert_eq!(warm.findings, control.findings, "post-race warm findings");
+    let warm = bin_warm(&root, &home, "agent", 2);
+    assert_eq!(warm, control, "post-race warm shipped agent bytes");
 }

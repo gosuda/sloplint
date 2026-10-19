@@ -2,7 +2,9 @@
 //!
 //! Comments above each test name the audit assumption ids it pins. Permission cases are
 //! unix-only and require an unprivileged runner: they assert the denial is actually observed
-//! and fail on root instead of passing silently as not applicable.
+//! and fail on root instead of passing silently as not applicable. Every cached run goes
+//! through the CLI with an isolated per-user cache home (`XDG_CACHE_HOME`, `HOME`, and
+//! `LOCALAPPDATA` set on the child only), so no test touches the real cache or the project tree.
 
 use sloplint::{Report, RunError, RunOptions, execute, run};
 use sloplint_core::config::{Mode, Strictness};
@@ -16,7 +18,8 @@ use std::process::{Command, Output};
 const SAMPLE: &str = "pub fn handle(flag: bool) {}\n";
 const GENERIC: &str = "grep/generic-name";
 const BASELINE: &str = "sloplint-baseline.json";
-const JSON_CHECK: &str = "check --format json --strictness standard --fail-on never";
+const NAMESPACE: &str = "sloplint";
+const CACHE: &str = "cache-v1.bin";
 const RATCHET: [&str; 4] = ["check", "--no-cache", "--mode", "ratchet"];
 #[cfg(unix)]
 const DENIED: ErrorKind = ErrorKind::PermissionDenied;
@@ -75,10 +78,6 @@ fn tweak(root: &Path, change: impl FnOnce(&mut RunOptions)) -> RunOptions {
     let mut options = opts(root);
     change(&mut options);
     options
-}
-
-fn cached(root: &Path) -> RunOptions {
-    tweak(root, |o| o.use_cache = true)
 }
 
 fn ratchet(root: &Path) -> RunOptions {
@@ -148,11 +147,84 @@ fn assert_io(result: Result<Report, RunError>, what: &str, path: &Path, kind: Er
     assert_eq!(found, (path.to_path_buf(), kind), "{what}");
 }
 
-fn cli(root: &Path, args: &[&str]) -> Output {
+fn sloplint(root: &Path, args: &[&str]) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_sloplint"));
     command.current_dir(root).args(args);
+    command
+}
+
+fn spawn(command: &mut Command, args: &[&str]) -> Output {
     let spawned = command.output();
     spawned.unwrap_or_else(|e| panic!("spawn {args:?}: {e}"))
+}
+
+/// A CLI run that does no cache work: every caller passes `--no-cache`.
+fn cli(root: &Path, args: &[&str]) -> Output {
+    let mut command = sloplint(root, args);
+    spawn(&mut command, args)
+}
+
+/// A CLI run in an isolated per-user cache home: the variables are set on the child only, so
+/// the process environment is never mutated and concurrent tests cannot see each other.
+fn cli_in(root: &Path, cache_home: &Path, args: &[&str]) -> Output {
+    let mut command = sloplint(root, args);
+    command.env("XDG_CACHE_HOME", xdg(cache_home));
+    command.env("HOME", cache_home.join("home"));
+    command.env("LOCALAPPDATA", cache_home.join("local"));
+    spawn(&mut command, args)
+}
+
+/// An isolated per-user cache home: a fresh directory holding the `xdg` directory used as
+/// `XDG_CACHE_HOME`, plus empty `home` and `local` directories for `HOME` and `LOCALAPPDATA`.
+/// The guard must outlive every run that uses the path.
+fn cache_home() -> (tempfile::TempDir, PathBuf) {
+    let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+    let base = std::fs::canonicalize(tmp.path()).unwrap_or_else(|e| panic!("canonicalize: {e}"));
+    for name in ["xdg", "home", "local"] {
+        mkdir(&base.join(name));
+    }
+    (tmp, base)
+}
+
+/// The `XDG_CACHE_HOME` directory of an isolated cache home.
+fn xdg(cache_home: &Path) -> PathBuf {
+    cache_home.join("xdg")
+}
+
+/// The per-user `sloplint` directory that holds one subdirectory per analyzed project.
+fn namespace(cache_home: &Path) -> PathBuf {
+    xdg(cache_home).join(NAMESPACE)
+}
+
+/// Every cache file stored under `<xdg>/sloplint/<key>/`.
+fn cache_files(home: &Path) -> Vec<PathBuf> {
+    let Ok(keys) = std::fs::read_dir(namespace(home)) else {
+        return Vec::new();
+    };
+    let files = keys
+        .filter_map(Result::ok)
+        .map(|key| key.path().join(CACHE));
+    files.filter(|file| file.is_file()).collect()
+}
+
+/// The one cache file a run for a single project leaves in `home`.
+fn cache_file(home: &Path) -> PathBuf {
+    let mut found = cache_files(home);
+    assert_eq!(
+        found.len(),
+        1,
+        "expected exactly one cache file under {}: {found:?}",
+        home.display()
+    );
+    found.swap_remove(0)
+}
+
+/// The per-project directory that holds `cache_file(home)`.
+#[cfg(unix)]
+fn key_dir(home: &Path) -> PathBuf {
+    let file = cache_file(home);
+    let parent = file.parent().map(Path::to_path_buf);
+    parent.unwrap_or_else(|| panic!("cache file {} has no directory", file.display()))
 }
 
 fn text(bytes: &[u8]) -> String {
@@ -161,7 +233,11 @@ fn text(bytes: &[u8]) -> String {
 
 /// The CLI must exit `code`, keep stdout empty, and put every needle in its error line.
 fn assert_cli_failure(root: &Path, args: &[&str], code: i32, needles: &[&str]) {
-    let out = cli(root, args);
+    assert_failed(&cli(root, args), args, code, needles);
+}
+
+/// `out`, produced by `args`, must be a failure with the given exit code and error needles.
+fn assert_failed(out: &Output, args: &[&str], code: i32, needles: &[&str]) {
     let (stdout, stderr) = (text(&out.stdout), text(&out.stderr));
     assert_eq!(out.status.code(), Some(code), "{args:?}: {stderr}");
     assert!(stdout.is_empty(), "{args:?}: stdout {stdout}");
@@ -171,12 +247,34 @@ fn assert_cli_failure(root: &Path, args: &[&str], code: i32, needles: &[&str]) {
     }
 }
 
-/// Arguments of a JSON `check`: with the cache, and without it.
+/// Arguments of a JSON `check` at `strictness`: with the cache, and without it.
+fn profile_args(strictness: &'static str) -> (Vec<&'static str>, Vec<&'static str>) {
+    let fixed = [
+        "check",
+        "--format",
+        "json",
+        "--strictness",
+        strictness,
+        "--fail-on",
+        "never",
+    ];
+    (fixed.to_vec(), [&fixed[..], &["--no-cache"]].concat())
+}
+
+/// Arguments of a JSON `check` at the standard profile: with the cache, and without it.
 fn json_args() -> (Vec<&'static str>, Vec<&'static str>) {
-    let warm: Vec<&str> = JSON_CHECK.split(' ').collect();
-    let mut cold = warm.clone();
-    cold.push("--no-cache");
-    (warm, cold)
+    profile_args("standard")
+}
+
+/// The stdout of a CLI run that must succeed without a word on stderr.
+fn quiet_stdout(root: &Path, cache_home: &Path, args: &[&str]) -> Vec<u8> {
+    let out = cli_in(root, cache_home, args);
+    let stderr = text(&out.stderr);
+    assert!(
+        out.status.success() && stderr.is_empty(),
+        "{args:?}: {stderr}"
+    );
+    out.stdout
 }
 
 /// Puts `0o644` back on drop, so cleanup works even after a failed assertion.
@@ -223,32 +321,48 @@ fn oversize_and_generated_sources_stay_counted_skips() {
     assert!(fired(&report, "sample.rs", GENERIC), "sample.rs lost");
 }
 
-// AA-S4: an unreadable source is a typed I/O failure with a stable first error, never a skip.
+// AA-S4: an unreadable source is a typed I/O failure with a stable first error, never a skip,
+// and a failed cached CLI run stores no partial cache.
 #[cfg(unix)]
 #[test]
 fn unreadable_source_fails_the_run_with_typed_io() {
     let (_tmp, root) = project();
+    let (_cache_tmp, home) = cache_home();
     put(&root, "b_denied.rs", SAMPLE);
     put(&root, "a_denied.rs", SAMPLE);
     let (first, second) = (root.join("a_denied.rs"), root.join("b_denied.rs"));
     let guards = [lock(&second, 0), lock(&first, 0)];
     assert_denied(std::fs::File::open(&first), "a_denied.rs");
     for jobs in [1, 2, 8] {
-        let options = tweak(&root, |o| (o.jobs, o.use_cache) = (jobs, true));
+        let options = tweak(&root, |o| o.jobs = jobs);
         let (path, kind) = io_failure(run(&options), "unreadable source");
         assert_eq!(path, first, "jobs={jobs}: first path-ordered error");
         assert_eq!(kind, DENIED, "jobs={jobs}");
     }
+    let cause = cause_of(std::fs::read(&first));
+    for jobs in ["1", "2", "8"] {
+        let mut args = json_args().0;
+        args.extend(["--jobs", jobs]);
+        let out = cli_in(&root, &home, &args);
+        assert_failed(&out, &args, 3, &[str_of(&first), &cause]);
+        let stderr = text(&out.stderr);
+        let named = stderr.contains(str_of(&second));
+        assert!(!named, "jobs={jobs}: reported the later path: {stderr}");
+    }
+    let stored = cache_files(&home);
+    assert!(stored.is_empty(), "failed runs stored a cache: {stored:?}");
     let scoped = tweak(&root, |o| o.paths = vec![root.join("sample.rs")]);
     assert_io(run(&scoped), "outside PATH scope", &first, DENIED);
-    assert!(!root.join(".sloplint").exists(), "run wrote a cache");
-    put(&root, "sloplint.toml", "[project]\nmax_file_bytes = 8\n");
-    let summary = run_ok(&opts(&root)).summary;
-    assert_eq!((summary.files, summary.skipped), (0, 3), "never opened");
-    put(&root, "sloplint.toml", "");
     drop(guards);
     let summary = run_ok(&opts(&root)).summary;
     assert_eq!((summary.files, summary.skipped), (3, 0), "readable again");
+    quiet_stdout(&root, &home, &json_args().0);
+    let stored = cache_files(&home);
+    assert_eq!(
+        stored.len(),
+        1,
+        "a readable cached run must store its cache: {stored:?}"
+    );
 }
 
 // AA-S4 at the CLI: exit 3 names the path and cause; `baseline` must not record a partial run.
@@ -428,10 +542,6 @@ fn baseline_duplicates_unknown_rules_and_extra_fields() {
     assert_eq!(tally(&extra), (0, n, 0), "extra fields are ignored");
 }
 
-fn cache_path(root: &Path) -> PathBuf {
-    root.join(".sloplint").join("cache-v1.bin")
-}
-
 /// Malformed caches derived from a valid one: a version byte, 32 key bytes, then a
 /// varint-prefixed entry sequence.
 fn corrupt_caches(valid: &[u8]) -> Vec<(&'static str, Vec<u8>)> {
@@ -458,36 +568,33 @@ fn corrupt_caches(valid: &[u8]) -> Vec<(&'static str, Vec<u8>)> {
     ]
 }
 
-// AA-S1: corrupt, truncated, and wrong-version caches fall back to the cold result and heal,
-// through the API and through the CLI (where stderr must stay empty).
+// AA-S1: corrupt, truncated, and wrong-version caches fall back to the cold result and heal
+// (rewritten to the valid bytes), with nothing on stderr. The CLI is the only cached path, in
+// an isolated cache home; `--no-cache` runs are the cold truth and store nothing.
 #[test]
 fn corrupt_cache_files_fall_back_to_the_cold_result() {
     let (_tmp, root) = project();
-    let cold = shown(&run_ok(&opts(&root)));
-    assert!(cold.contains(GENERIC), "no finding");
-    assert_eq!(shown(&run_ok(&cached(&root))), cold, "populating run");
-    let valid = read(&cache_path(&root));
-    for (what, bytes) in corrupt_caches(&valid) {
-        std::fs::write(cache_path(&root), bytes).unwrap_or_else(|e| panic!("{what}: {e}"));
-        let warm = shown(&run_ok(&cached(&root)));
-        assert_eq!(warm, cold, "{what}: must equal a cold run");
-        let rewritten = read(&cache_path(&root));
-        assert!(rewritten == valid, "{what}: not rewritten whole");
-    }
+    let (_cache_tmp, home) = cache_home();
     let (warm_args, cold_args) = json_args();
-    let cold = cli(&root, &cold_args);
-    let ok = cold.status.success() && !cold.stdout.is_empty();
+    let cold = cli_in(&root, &home, &cold_args);
+    let ok = cold.status.success() && text(&cold.stdout).contains(GENERIC);
     assert!(ok, "cold CLI run: {}", text(&cold.stderr));
-    let first = cli(&root, &warm_args);
-    assert!(first.stdout == cold.stdout, "populating CLI run");
-    let valid = read(&cache_path(&root));
+    assert!(
+        text(&cold.stderr).is_empty(),
+        "--no-cache printed a warning"
+    );
+    assert!(cache_files(&home).is_empty(), "--no-cache stored a cache");
+    let first = quiet_stdout(&root, &home, &warm_args);
+    assert!(first == cold.stdout, "populating CLI run");
+    let path = cache_file(&home);
+    let valid = read(&path);
     for (what, bytes) in corrupt_caches(&valid) {
-        std::fs::write(cache_path(&root), bytes).unwrap_or_else(|e| panic!("{what}: {e}"));
-        let out = cli(&root, &warm_args);
-        let err = text(&out.stderr);
-        assert!(out.status.success(), "{what}: {err}");
-        assert!(out.stdout == cold.stdout, "{what}: stdout");
-        assert!(err.is_empty(), "{what}: stderr {err}");
+        std::fs::write(&path, bytes).unwrap_or_else(|e| panic!("{what}: {e}"));
+        assert!(
+            quiet_stdout(&root, &home, &warm_args) == cold.stdout,
+            "{what}: stdout"
+        );
+        assert!(read(&path) == valid, "{what}: not rewritten whole");
     }
 }
 
@@ -495,104 +602,157 @@ fn corrupt_cache_files_fall_back_to_the_cold_result() {
 #[test]
 fn cached_runs_track_source_edits() {
     let (_tmp, root) = project();
+    let (_cache_tmp, home) = cache_home();
+    let (warm_args, cold_args) = json_args();
     let same_as_cold = |what: &str| {
-        let warm = run_ok(&cached(&root));
-        assert_eq!(shown(&warm), shown(&run_ok(&opts(&root))), "{what}");
-        warm
+        let warm = quiet_stdout(&root, &home, &warm_args);
+        assert!(warm == quiet_stdout(&root, &home, &cold_args), "{what}");
+        text(&warm)
     };
     let first = same_as_cold("first");
-    assert!(fired(&first, "sample.rs", GENERIC), "no finding");
+    assert!(first.contains(GENERIC), "no finding");
+    assert!(cache_file(&home).is_file(), "first run stored no cache");
     same_as_cold("warm");
     put(&root, "sample.rs", &SAMPLE.replace("handle", "settle"));
     let edited = same_as_cold("same-length edit");
-    assert!(!fired(&edited, "sample.rs", GENERIC), "edit missed");
+    assert!(!edited.contains(GENERIC), "edit missed");
     put(&root, "sample.rs", SAMPLE);
     let reverted = same_as_cold("revert");
-    assert!(fired(&reverted, "sample.rs", GENERIC), "revert missed");
+    assert!(reverted.contains(GENERIC), "revert missed");
 }
 
 // AA-S1 wrong key: a cache written under another effective config is not reused.
 #[test]
 fn cache_written_under_another_profile_is_not_reused() {
     let (_tmp, root) = project();
-    let (strict_cold, standard_cold) = (run_ok(&strict(&root)), run_ok(&opts(&root)));
-    let (a, b) = (tally(&strict_cold).0, tally(&standard_cold).0);
+    let (_cache_tmp, home) = cache_home();
+    let (a, b) = (
+        tally(&run_ok(&strict(&root))).0,
+        tally(&run_ok(&opts(&root))).0,
+    );
     assert_ne!(a, b, "profiles must differ on the sample");
-    let (strict_text, standard_text) = (shown(&strict_cold), shown(&standard_cold));
-    let mut warm_strict = strict(&root);
-    warm_strict.use_cache = true;
-    let populated = shown(&run_ok(&warm_strict));
-    assert_eq!(populated, strict_text, "populating run");
-    let standard = shown(&run_ok(&cached(&root)));
-    assert_eq!(standard, standard_text, "stale strict cache used");
-    let again = shown(&run_ok(&warm_strict));
-    assert_eq!(again, strict_text, "and back again");
+    let (strict_warm, strict_cold) = profile_args("strict");
+    let (standard_warm, standard_cold) = json_args();
+    let strict_text = quiet_stdout(&root, &home, &strict_cold);
+    let standard_text = quiet_stdout(&root, &home, &standard_cold);
+    let populated = quiet_stdout(&root, &home, &strict_warm);
+    assert!(populated == strict_text, "populating run");
+    let standard = quiet_stdout(&root, &home, &standard_warm);
+    assert!(standard == standard_text, "stale strict cache used");
+    let again = quiet_stdout(&root, &home, &strict_warm);
+    assert!(again == strict_text, "and back again");
 }
 
-// AA-S16: a symlinked cache directory holding a foreign-key cache falls back to the cold
-// result; the load follows the symlink but the key mismatch yields nothing reusable, the
-// store refuses the symlink so the outside cache is unchanged, and the CLI names the link.
+/// Moves the real directory at `link` (somewhere under `home`) to the same relative place
+/// under `outside` and leaves a symlink to it behind.
 #[cfg(unix)]
-#[test]
-fn symlinked_cache_directory_with_foreign_key_falls_back_and_leaves_outside_unchanged() {
-    let (_tmp, base) = project();
-    let root = base.join("proj");
-    seed(&root);
-    let mut warm_strict = strict(&root);
-    warm_strict.use_cache = true;
-    run_ok(&warm_strict);
-    let (outside, link) = (base.join("outside"), root.join(".sloplint"));
-    std::fs::rename(&link, &outside).unwrap_or_else(|e| panic!("move: {e}"));
-    std::os::unix::fs::symlink(&outside, &link).unwrap_or_else(|e| panic!("symlink: {e}"));
-    let cache = outside.join("cache-v1.bin");
-    let count = || std::fs::read_dir(&outside).map(|d| d.count()).ok();
-    let (held, before) = (read(&cache), count());
-    let (cold, strict_cold) = (run_ok(&opts(&root)), run_ok(&strict(&root)));
-    let (a, b) = (tally(&cold).0, tally(&strict_cold).0);
-    assert_ne!(a, b, "profiles must differ on the sample");
-    let warm = shown(&run_ok(&cached(&root)));
-    assert_eq!(
-        warm,
-        shown(&cold),
-        "foreign-key cache was reused through the symlink"
-    );
-    assert!(read(&cache) == held, "run rewrote the outside cache");
-    assert_eq!(count(), before, "run added files outside");
+fn relocate_behind_link(home: &Path, outside: &Path, link: &Path) {
+    let relative = link
+        .strip_prefix(home)
+        .unwrap_or_else(|e| panic!("{} not in {}: {e}", link.display(), home.display()));
+    let moved = outside.join(relative);
+    mkdir(moved.parent().unwrap_or(outside));
+    std::fs::rename(link, &moved).unwrap_or_else(|e| panic!("move: {e}"));
+    std::os::unix::fs::symlink(&moved, link).unwrap_or_else(|e| panic!("symlink: {e}"));
+}
+
+/// Every file under `dir` with its bytes, sorted: what a refused cache write must leave alone.
+#[cfg(unix)]
+fn snapshot(dir: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+    let (mut pending, mut files) = (vec![dir.to_path_buf()], Vec::new());
+    while let Some(next) = pending.pop() {
+        if next.is_dir() {
+            let listing = std::fs::read_dir(&next);
+            let entries = listing.unwrap_or_else(|e| panic!("read_dir {}: {e}", next.display()));
+            pending.extend(entries.filter_map(Result::ok).map(|entry| entry.path()));
+        } else {
+            let bytes = read(&next);
+            files.push((next, bytes));
+        }
+    }
+    files.sort();
+    files
+}
+
+/// A cached CLI run whose cache directory is the symlink `link` into `outside` must refuse it:
+/// exit 0 with the uncached run's stdout, a stderr warning that the cache is disabled by a
+/// symlink and names the link, the link kept, and every file under `outside` untouched.
+#[cfg(unix)]
+fn assert_symlink_refused(root: &Path, home: &Path, link: &Path, outside: &Path) {
     let (warm_args, cold_args) = json_args();
-    let expected = cli(&root, &cold_args);
-    let out = cli(&root, &warm_args);
+    let expected = cli_in(root, home, &cold_args);
+    let before = snapshot(outside);
+    assert!(!before.is_empty(), "no foreign cache planted outside");
+    let out = cli_in(root, home, &warm_args);
     let (same, stderr) = (out.stdout == expected.stdout, text(&out.stderr));
     assert!(out.status.success() && same, "{stderr}");
     assert!(
-        stderr.contains("sloplint: warning: cache not written in "),
-        "{stderr}"
+        text(&out.stdout).contains(GENERIC),
+        "findings lost: {stderr}"
     );
-    assert!(stderr.contains(str_of(&root)), "no root in {stderr}");
-    assert!(stderr.contains(str_of(&link)), "no link name in {stderr}");
-    assert!(read(&cache) == held, "CLI rewrote the outside cache");
-    assert_eq!(count(), before, "CLI added files outside");
+    let warning = "sloplint: warning: cache disabled: cache directory ";
+    assert!(
+        stderr.contains(warning),
+        "no disabled-cache warning in {stderr}"
+    );
+    assert!(stderr.contains(str_of(link)), "no link name in {stderr}");
+    assert!(stderr.contains("symlink"), "no symlink reason in {stderr}");
+    assert!(snapshot(outside) == before, "run changed files outside");
     let meta = std::fs::symlink_metadata(link).unwrap_or_else(|e| panic!("lstat: {e}"));
     assert!(meta.file_type().is_symlink(), "link was replaced");
 }
 
-// AA-S16 (store): a file blocking `.sloplint` fails the cache write but not the run. The
-// command still succeeds with the cold findings while stderr carries the warning, the root,
-// and the filesystem cause.
+// AA-S16: a symlinked per-user namespace directory holding a foreign-profile cache is refused:
+// the findings are the cold ones, the outside cache is neither reused nor rewritten, and the
+// CLI warns that the cache is disabled because of the symlink.
+#[cfg(unix)]
+#[test]
+fn symlinked_cache_namespace_is_refused_and_leaves_outside_unchanged() {
+    let (_tmp, root) = project();
+    let (_cache_tmp, home) = cache_home();
+    let (_outside_tmp, outside) = cache_home();
+    let (strict_warm, _) = profile_args("strict");
+    quiet_stdout(&root, &home, &strict_warm);
+    let link = namespace(&home);
+    relocate_behind_link(&home, &outside, &link);
+    assert_symlink_refused(&root, &home, &link, &outside);
+}
+
+// AA-S16: a symlinked per-project cache directory holding a foreign-profile cache is refused
+// the same way, even though the namespace directory above it is a real directory.
+#[cfg(unix)]
+#[test]
+fn symlinked_cache_key_directory_is_refused_and_leaves_outside_unchanged() {
+    let (_tmp, root) = project();
+    let (_cache_tmp, home) = cache_home();
+    let (_outside_tmp, outside) = cache_home();
+    let (strict_warm, _) = profile_args("strict");
+    quiet_stdout(&root, &home, &strict_warm);
+    let link = key_dir(&home);
+    relocate_behind_link(&home, &outside, &link);
+    assert_symlink_refused(&root, &home, &link, &outside);
+}
+
+// AA-S16 (store): a regular file blocking the per-user namespace directory costs the cache but
+// not the run. The command still succeeds with the cold findings while stderr carries a cache
+// warning naming the blocked directory, and the blocker is left in place.
 #[test]
 fn cache_directory_blocked_by_file_warns_but_still_reports() {
     let (_tmp, root) = project();
-    assert!(
-        !root.join(".sloplint").exists(),
-        "fresh project has a cache"
-    );
-    put(&root, ".sloplint", "blocker");
-    let cause = cause_of(std::fs::create_dir_all(root.join(".sloplint")));
+    let (_cache_tmp, home) = cache_home();
+    let blocker = namespace(&home);
+    std::fs::write(&blocker, "blocker").unwrap_or_else(|e| panic!("write blocker: {e}"));
     let (warm_args, cold_args) = json_args();
-    let cold = cli(&root, &cold_args);
+    let cold = cli_in(&root, &home, &cold_args);
     assert!(cold.status.success(), "cold: {}", text(&cold.stderr));
+    assert!(
+        cold.stderr.is_empty(),
+        "--no-cache warned: {}",
+        text(&cold.stderr)
+    );
     let cold_stdout = text(&cold.stdout);
     assert!(cold_stdout.contains(GENERIC), "cold lost the finding");
-    let out = cli(&root, &warm_args);
+    let out = cli_in(&root, &home, &warm_args);
     let (stdout, stderr) = (text(&out.stdout), text(&out.stderr));
     assert!(
         out.status.success(),
@@ -602,12 +762,33 @@ fn cache_directory_blocked_by_file_warns_but_still_reports() {
         stdout, cold_stdout,
         "finding lost when the cache is unwritable"
     );
-    assert!(stdout.contains(GENERIC), "no finding");
+    let not_written = stderr.contains("sloplint: warning: cache not written in ");
+    let disabled = stderr.contains("sloplint: warning: cache disabled: ");
+    assert!(not_written || disabled, "no cache warning in {stderr}");
     assert!(
-        stderr.contains("sloplint: warning: cache not written in "),
-        "{stderr}"
+        stderr.contains(str_of(&blocker)),
+        "no blocked directory in {stderr}"
     );
-    assert!(stderr.contains(str_of(&root)), "no root in {stderr}");
-    assert!(stderr.contains(&cause), "no cause in {stderr}");
-    assert!(root.join(".sloplint").is_file(), "blocker was replaced");
+    assert_eq!(read(&blocker), b"blocker", "blocker was replaced");
+}
+
+// A cached CLI run keeps its cache in the per-user home and never creates the legacy in-repo
+// cache directory in the analyzed project.
+#[test]
+fn cached_cli_never_creates_repo_sloplint_dir() {
+    let (_tmp, root) = project();
+    let (_cache_tmp, home) = cache_home();
+    let (warm_args, _) = json_args();
+    let first = quiet_stdout(&root, &home, &warm_args);
+    let second = quiet_stdout(&root, &home, &warm_args);
+    assert!(first == second, "warm run differs from the populating run");
+    let created = root.join(".sloplint").exists();
+    assert!(
+        !created,
+        "cached run created a cache directory in the project"
+    );
+    assert!(
+        cache_file(&home).is_file(),
+        "no cache file under the isolated home"
+    );
 }
