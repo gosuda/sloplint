@@ -17,5 +17,7 @@ mod dart_namespace_import_names;
 mod java_message_first_assertions;
 #[path = "native_adapter_boundaries/objc_message_arguments.rs"]
 mod objc_message_arguments;
+#[path = "native_adapter_boundaries/scala_brace_call_arguments.rs"]
+mod scala_brace_call_arguments;
 #[path = "native_adapter_boundaries/support.rs"]
 mod support;

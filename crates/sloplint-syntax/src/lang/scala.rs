@@ -163,11 +163,19 @@ fn infix_concat(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
         .any(|o| o.kind() == "string" || o.kind() == "interpolated_string_expression")
 }
 
-fn call_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
+fn arg_nodes(n: Node<'_>) -> Vec<Node<'_>> {
     let Some(list) = child_by_field(n, "arguments") else {
         return Vec::new();
     };
-    named_children(list)
+    if list.kind() == "arguments" {
+        named_children(list)
+    } else {
+        vec![list]
+    }
+}
+
+fn call_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
+    arg_nodes(n)
         .into_iter()
         .map(|a| Arg {
             shape: arg_shape(cx, a),
@@ -178,7 +186,7 @@ fn call_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
 }
 
 fn first_arg(n: Node<'_>) -> Option<Node<'_>> {
-    child_by_field(n, "arguments").and_then(|l| named_children(l).into_iter().next())
+    arg_nodes(n).into_iter().next()
 }
 
 fn sole_call_of(body: Node<'_>) -> Option<usize> {
@@ -708,8 +716,7 @@ impl LangHooks for ScalaHooks {
         if n.kind() != "call_expression" {
             return None;
         }
-        let args_node = child_by_field(n, "arguments")?;
-        let kids = named_children(args_node);
+        let kids = arg_nodes(n);
         if kids.is_empty() {
             return None;
         }
@@ -824,9 +831,7 @@ impl LangHooks for ScalaHooks {
 }
 
 fn first_arg_count(n: Node<'_>) -> usize {
-    child_by_field(n, "arguments")
-        .map(|l| named_children(l).len())
-        .unwrap_or(0)
+    arg_nodes(n).len()
 }
 
 fn struct_field<'s>(cx: &Cx<'_, 's>, a: Node<'_>) -> Option<&'s str> {
