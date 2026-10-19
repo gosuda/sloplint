@@ -5,6 +5,8 @@
 
 #[path = "pipeline_remaining/baseline_replace.rs"]
 mod baseline_replace;
+#[path = "pipeline_remaining/implicit_scope.rs"]
+mod implicit_scope;
 #[path = "pipeline_remaining/init_failure.rs"]
 mod init_failure;
 #[path = "pipeline_remaining/parse_failed_suppressions.rs"]

@@ -156,6 +156,28 @@ pub fn run(opts: &RunOptions) -> Result<Report, RunError> {
     execute(opts).map(|execution| execution.report)
 }
 
+/// The PATH scope for a run given no PATHS: `cwd` when it lies strictly inside the project root, else empty (the whole root).
+///
+/// Resolves the root exactly as [`execute`] does (same `root` and `config`
+/// handling) but loads no configuration and discovers no files, so a command
+/// line without PATHS can scope to the working directory without failing when
+/// `--config` places the root elsewhere.
+pub fn implicit_scope(
+    cwd: &Path,
+    root: Option<&Path>,
+    config: Option<&Path>,
+) -> Result<Vec<PathBuf>, RunError> {
+    let location = project::locate(cwd, root, config);
+    let root =
+        fs::canonicalize(&location.root).map_err(|source| io_error(&location.root, source))?;
+    let here = fs::canonicalize(cwd).map_err(|source| io_error(cwd, source))?;
+    Ok(if here != root && here.starts_with(&root) {
+        vec![cwd.to_path_buf()]
+    } else {
+        Vec::new()
+    })
+}
+
 /// Lints the project root and returns the report with its render and exit state.
 pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let location = project::locate(&opts.cwd, opts.root.as_deref(), opts.config.as_deref());

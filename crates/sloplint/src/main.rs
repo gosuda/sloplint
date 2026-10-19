@@ -32,15 +32,20 @@ fn main() -> ExitCode {
 }
 
 fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
+    let config = args.run.select.config.as_deref();
+    let paths = if args.paths.is_empty() {
+        match sloplint::implicit_scope(cwd, None, config) {
+            Ok(scope) => scope,
+            Err(error) => return report_error(&error),
+        }
+    } else {
+        args.paths.clone()
+    };
     let options = RunOptions {
         cwd: cwd.to_path_buf(),
         root: None,
         config: args.run.select.config.clone(),
-        paths: if args.paths.is_empty() {
-            vec![cwd.to_path_buf()]
-        } else {
-            args.paths.clone()
-        },
+        paths,
         strictness: args.run.select.strictness.map(Into::into),
         mode: args.mode.map(Into::into),
         fail_on: args.fail_on.map(Into::into),
