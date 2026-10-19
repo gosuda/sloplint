@@ -61,8 +61,9 @@ impl FileRule for FileTokenBudget {
             "split the file by concern into modules under {} lines",
             self.thresholds.warn_at
         );
-        out.push(Finding::at(
-            facts,
+        out.push(Finding::at_source(
+            facts.path,
+            "",
             Pos { line: 1, byte: 0 },
             INFO.id,
             severity,

@@ -953,3 +953,39 @@ fn audit_custom_files_project_root_symlink_is_followed() {
         "project root symlink must still load its selections"
     );
 }
+
+#[test]
+fn audit_file_budget_whole_file_ratchet_identity() {
+    let (_tmp, root) = tempdir();
+    let src = "fn anchor() {}\n".to_owned() + &"fn f() {}\n".repeat(809);
+    write(&root, "src/big.rs", &src);
+    let threshold = || {
+        run_ok(&RunOptions {
+            strictness: Some(Strictness::Strict),
+            ..audit_filter_opts(&root, &["agent/file-token-budget"])
+        })
+    };
+    let before = threshold();
+    assert_eq!(before.findings.len(), 1, "need one file-budget finding");
+    run_ok(&RunOptions {
+        write_baseline: true,
+        strictness: Some(Strictness::Strict),
+        ..audit_filter_opts(&root, &["agent/file-token-budget"])
+    });
+    let text =
+        std::fs::read_to_string(root.join("src/big.rs")).unwrap_or_else(|e| panic!("read: {e}"));
+    write(&root, "src/big.rs", &format!("\n{text}"));
+    let gated = run_ok(&RunOptions {
+        mode: Some(Mode::Ratchet),
+        strictness: Some(Strictness::Strict),
+        ..audit_filter_opts(&root, &["agent/file-token-budget"])
+    });
+    assert!(
+        gated.findings.is_empty(),
+        "leading blank line must not re-report"
+    );
+    assert_eq!(gated.summary.baselined, 1, "baselined count must hold");
+    let after = threshold();
+    assert_eq!(after.findings[0].line, 1, "shifted finding stays on line 1");
+    assert_eq!(after.findings[0].message, "file has 811 lines");
+}
