@@ -204,7 +204,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let rules = RuleSet::new(&config, &RuleFilter::default())?;
     let custom = CustomRules::compile(&config.custom_rules)?;
     let scopes = project::scopes(&root, &opts.cwd, &opts.paths)?;
-    let discovery = discover::discover(&root, &config)?;
+    let discovery = discover::discover(&root, &config, jobs(opts.jobs))?;
     let cache = if opts.use_cache {
         cache::open(
             settings::cache_base(),

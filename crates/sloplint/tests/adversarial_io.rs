@@ -303,22 +303,34 @@ fn quiet_stdout(root: &Path, cache_home: &Path, args: &[&str]) -> Vec<u8> {
     out.stdout
 }
 
-/// Puts `0o644` back on drop, so cleanup works even after a failed assertion.
+/// Puts the given mode back on drop, so cleanup works even after a failed assertion.
 #[cfg(unix)]
-struct Restore(PathBuf);
+struct Restore(PathBuf, u32);
 
 #[cfg(unix)]
 impl Drop for Restore {
     fn drop(&mut self) {
-        let _ = std::fs::set_permissions(&self.0, std::fs::Permissions::from_mode(0o644));
+        let _ = std::fs::set_permissions(&self.0, std::fs::Permissions::from_mode(self.1));
     }
 }
 
+/// Sets `mode` on a file; the guard restores `0o644`.
 #[cfg(unix)]
 fn lock(path: &Path, mode: u32) -> Restore {
+    chmod_guarded(path, mode, 0o644)
+}
+
+/// Makes a directory unreadable; the guard restores `0o755`.
+#[cfg(unix)]
+fn lock_dir(path: &Path) -> Restore {
+    chmod_guarded(path, 0, 0o755)
+}
+
+#[cfg(unix)]
+fn chmod_guarded(path: &Path, mode: u32, restore: u32) -> Restore {
     let permissions = std::fs::Permissions::from_mode(mode);
     std::fs::set_permissions(path, permissions).unwrap_or_else(|e| panic!("chmod: {e}"));
-    Restore(path.to_path_buf())
+    Restore(path.to_path_buf(), restore)
 }
 
 /// Assert the open was denied. Permission bits are bypassed for privileged users, so a
@@ -333,6 +345,47 @@ fn assert_denied(opened: std::io::Result<std::fs::File>, what: &str) {
             "{what}: permission bits were bypassed; run these tests as an unprivileged user, not root"
         ),
     }
+}
+
+// The tree walk runs on every worker thread, so which walk error it reports must not
+// depend on scheduling: every thread count names the same directory, and no cache is stored.
+#[cfg(unix)]
+#[test]
+fn unreadable_directories_fail_the_run_with_the_same_error_at_any_job_count() {
+    let (_tmp, root) = project();
+    let (_cache_tmp, home) = cache_home();
+    put(&root, "a_dir/x.rs", SAMPLE);
+    put(&root, "b_dir/y.rs", SAMPLE);
+    let (first, second) = (root.join("a_dir"), root.join("b_dir"));
+    let guards = [lock_dir(&second), lock_dir(&first)];
+    assert!(
+        std::fs::read_dir(&first).is_err(),
+        "permission bits were bypassed; run these tests as an unprivileged user, not root"
+    );
+    let mut reported = Vec::new();
+    for jobs in ["1", "2", "8", "1", "8"] {
+        let mut args = json_args().0;
+        args.extend(["--jobs", jobs]);
+        let out = cli_in(&root, &home, &args);
+        assert_failed(&out, &args, 3, &[str_of(&first)]);
+        let stderr = text(&out.stderr);
+        assert!(
+            !stderr.contains(str_of(&second)),
+            "jobs={jobs}: reported the later directory: {stderr}"
+        );
+        reported.push(stderr);
+    }
+    reported.dedup();
+    assert_eq!(
+        reported.len(),
+        1,
+        "the walk error changed with jobs: {reported:?}"
+    );
+    let stored = cache_files(&home);
+    assert!(stored.is_empty(), "failed runs stored a cache: {stored:?}");
+    drop(guards);
+    let summary = run_ok(&opts(&root)).summary;
+    assert_eq!((summary.files, summary.skipped), (3, 0), "readable again");
 }
 
 // Policy skips stay counted, non-failing skips next to the read-error change.
