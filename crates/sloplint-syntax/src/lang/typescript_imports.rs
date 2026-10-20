@@ -69,7 +69,10 @@ pub(crate) fn import_specifiers<'s>(
         });
     }
 }
-pub(crate) fn export_specs<'a, 's>(cx: &Cx<'_, 's>, clause: Node<'a>) -> Vec<(Node<'a>, &'s str, &'s str)> {
+pub(crate) fn export_specs<'a, 's>(
+    cx: &Cx<'_, 's>,
+    clause: Node<'a>,
+) -> Vec<(Node<'a>, &'s str, &'s str)> {
     let mut specs = Vec::new();
     for spec in named_children(clause) {
         if spec.kind() != "export_specifier" {
@@ -81,7 +84,11 @@ pub(crate) fn export_specs<'a, 's>(cx: &Cx<'_, 's>, clause: Node<'a>) -> Vec<(No
     }
     specs
 }
-pub(crate) fn heritage_impls<'s>(cx: &Cx<'_, 's>, heritage: Node<'_>, out: &mut Vec<ImplRef<'s>>) -> bool {
+pub(crate) fn heritage_impls<'s>(
+    cx: &Cx<'_, 's>,
+    heritage: Node<'_>,
+    out: &mut Vec<ImplRef<'s>>,
+) -> bool {
     let mut found = false;
     for c in named_children(heritage) {
         if c.kind() == "implements_clause" {

@@ -159,7 +159,8 @@ fn string_enum_annotations_parse() {
 
 #[test]
 fn plain_typedefs_still_parse() {
-    let analysis = run_clean("typedef NSString * SDPlainOption;\ntypedef NSInteger SDPlainCount;\n");
+    let analysis =
+        run_clean("typedef NSString * SDPlainOption;\ntypedef NSInteger SDPlainCount;\n");
     for name in ["SDPlainOption", "SDPlainCount"] {
         assert!(
             type_names(&analysis).contains(&name),
