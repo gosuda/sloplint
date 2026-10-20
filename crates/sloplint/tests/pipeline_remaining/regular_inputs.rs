@@ -177,9 +177,14 @@ fn a_character_device_config_is_refused_without_reading_it() {
     let (_tmp, root) = project();
     // Sanitizer-instrumented children reject a lowered RLIMIT_AS at setrlimit,
     // so the address-space cap only applies on a plain build.
-    let sanitized = ["ASAN_OPTIONS", "TSAN_OPTIONS", "LSAN_OPTIONS", "UBSAN_OPTIONS"]
-        .iter()
-        .any(|name| std::env::var_os(name).is_some());
+    let sanitized = [
+        "ASAN_OPTIONS",
+        "TSAN_OPTIONS",
+        "LSAN_OPTIONS",
+        "UBSAN_OPTIONS",
+    ]
+    .iter()
+    .any(|name| std::env::var_os(name).is_some());
     let outcome = if sanitized {
         cli(&root, &["check", "--no-cache", "-c", "/dev/zero"])
     } else {
