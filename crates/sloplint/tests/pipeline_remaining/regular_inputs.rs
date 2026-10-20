@@ -175,13 +175,21 @@ fn a_fifo_that_no_input_names_is_simply_ignored() {
 #[test]
 fn a_character_device_config_is_refused_without_reading_it() {
     let (_tmp, root) = project();
-    let mut capped = Command::new("sh");
-    capped
-        .arg("-c")
-        .arg("ulimit -v 4000000; exec \"$0\" \"$@\"")
-        .arg(env!("CARGO_BIN_EXE_sloplint"));
-
-    let outcome = cli_through(&root, capped, &["check", "--no-cache", "-c", "/dev/zero"]);
+    // Sanitizer-instrumented children reject a lowered RLIMIT_AS at setrlimit,
+    // so the address-space cap only applies on a plain build.
+    let sanitized = ["ASAN_OPTIONS", "TSAN_OPTIONS", "LSAN_OPTIONS", "UBSAN_OPTIONS"]
+        .iter()
+        .any(|name| std::env::var_os(name).is_some());
+    let outcome = if sanitized {
+        cli(&root, &["check", "--no-cache", "-c", "/dev/zero"])
+    } else {
+        let mut capped = Command::new("sh");
+        capped
+            .arg("-c")
+            .arg("ulimit -v 4000000; exec \"$0\" \"$@\"")
+            .arg(env!("CARGO_BIN_EXE_sloplint"));
+        cli_through(&root, capped, &["check", "--no-cache", "-c", "/dev/zero"])
+    };
     assert_refused(&outcome, Path::new("/dev/zero"), "explicit config");
 }
 
