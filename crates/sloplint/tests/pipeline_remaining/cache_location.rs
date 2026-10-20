@@ -9,6 +9,7 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::time::Duration;
 
 const SAMPLE: &str = "pub fn handle(flag: bool) {}\n";
 const GENERIC: &str = "grep/generic-name";
@@ -52,6 +53,24 @@ fn spawn(mut command: Command) -> Output {
     command
         .output()
         .unwrap_or_else(|e| panic!("spawn {command:?}: {e}"))
+}
+
+/// Spawns like `spawn` but tolerates ETXTBSY on a freshly written copy:
+/// exec'ing a path the kernel still holds open for write fails with os error
+/// 26 under parallel load and under ASan's slower interceptors. The retry is
+/// bounded, so a genuinely busy binary still fails the test.
+fn spawn_forgiving(mut command: Command) -> Output {
+    for attempt in 0..100 {
+        match command.output() {
+            Ok(out) => return out,
+            Err(e) if e.raw_os_error() == Some(26) => {
+                assert!(attempt < 99, "spawn stayed ETXTBSY for 5 s: {e}");
+                std::thread::sleep(Duration::from_millis(50));
+            }
+            Err(e) => panic!("spawn {command:?}: {e}"),
+        }
+    }
+    unreachable!()
 }
 
 /// Runs the binary with every cache location variable pointing at `home`.
@@ -335,7 +354,7 @@ fn the_no_cache_flag_does_no_cache_work() {
 #[cfg(unix)]
 mod unix_only {
     use super::{
-        CHECK, UNCACHED, cache_files, command, isolated, names, project, spawn,
+        CHECK, UNCACHED, cache_files, command, isolated, names, project, spawn, spawn_forgiving,
         succeeded_with_finding, temp, text,
     };
     use std::os::unix::fs::PermissionsExt;
@@ -467,19 +486,25 @@ mod unix_only {
         let (_home_guard, home) = temp();
         let copy = home.join("sloplint-copy");
         let staging = home.join("sloplint-copy.tmp");
-        std::fs::copy(env!("CARGO_BIN_EXE_sloplint"), &staging)
-            .unwrap_or_else(|e| panic!("copy: {e}"));
+        {
+            let mut source = std::fs::File::open(env!("CARGO_BIN_EXE_sloplint"))
+                .unwrap_or_else(|e| panic!("open source: {e}"));
+            let mut dest =
+                std::fs::File::create(&staging).unwrap_or_else(|e| panic!("create staging: {e}"));
+            std::io::copy(&mut source, &mut dest).unwrap_or_else(|e| panic!("copy: {e}"));
+            dest.sync_all().unwrap_or_else(|e| panic!("fsync: {e}"));
+        }
         chmod(&staging, 0o111);
-        // Rename lands the complete file atomically: exec'ing a path the
-        // kernel still holds open for write fails with ETXTBSY (os error 26)
-        // under parallel load.
+        // fsync then rename lands the complete file atomically: exec'ing a
+        // path the kernel still holds open for write fails with ETXTBSY
+        // (os error 26) under parallel load, so spawn sites retry it briefly.
         std::fs::rename(&staging, &copy).unwrap_or_else(|e| panic!("rename: {e}"));
         assert!(
             std::fs::File::open(&copy).is_err(),
             "permission bits were bypassed; run these tests as an unprivileged user, not root"
         );
 
-        let uncached = spawn(command(copy.as_os_str(), &root, &UNCACHED));
+        let uncached = spawn_forgiving(command(copy.as_os_str(), &root, &UNCACHED));
         succeeded_with_finding(&uncached);
         assert!(
             uncached.stderr.is_empty(),
@@ -489,7 +514,7 @@ mod unix_only {
 
         let mut cached = command(copy.as_os_str(), &root, &CHECK);
         cached.env("XDG_CACHE_HOME", home.join("cache"));
-        let cached = spawn(cached);
+        let cached = spawn_forgiving(cached);
         succeeded_with_finding(&cached);
         assert!(
             text(&cached.stderr).contains("cannot read the running executable"),
