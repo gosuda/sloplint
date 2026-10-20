@@ -1,5 +1,7 @@
 //! `sloplint-allow` suppression comments: parsing, matching, and application.
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::finding::Finding;
@@ -110,22 +112,68 @@ pub fn parse_suppressions(
 
 /// Drops suppressed findings and marks every matching suppression used; `meta/*` is never suppressible.
 pub fn apply(findings: &mut Vec<Finding>, suppressions: &mut [Suppression]) {
-    findings.retain(|finding| {
+    let index = Index::of(suppressions);
+    let mut used = vec![false; suppressions.len()];
+    let mut dropped = vec![false; findings.len()];
+    for (finding, drop) in findings.iter().zip(dropped.iter_mut()) {
         if finding.rule.starts_with("meta/") {
-            return true;
+            continue;
         }
-        let mut matched = false;
-        for suppression in suppressions.iter_mut() {
-            let covers = suppression.file_level
-                || (finding.line >= suppression.start_line
-                    && finding.line <= suppression.end_line + 1);
-            if covers && suppression.rules.iter().any(|p| p.matches(&finding.rule)) {
-                suppression.used = true;
-                matched = true;
+        *drop = index.suppresses(&finding.rule, finding.line, &mut used);
+    }
+    let mut drops = dropped.into_iter();
+    findings.retain(|_| !drops.next().unwrap_or(false));
+    for (suppression, hit) in suppressions.iter_mut().zip(used) {
+        suppression.used |= hit;
+    }
+}
+
+struct Index<'s> {
+    exact: HashMap<&'s str, Vec<usize>>,
+    families: HashMap<&'s str, Vec<usize>>,
+    suppressions: &'s [Suppression],
+}
+
+impl<'s> Index<'s> {
+    fn of(suppressions: &'s [Suppression]) -> Self {
+        let mut exact: HashMap<&'s str, Vec<usize>> = HashMap::new();
+        let mut families: HashMap<&'s str, Vec<usize>> = HashMap::new();
+        for (id, suppression) in suppressions.iter().enumerate() {
+            for pattern in &suppression.rules {
+                match pattern {
+                    RulePattern::Exact(rule) => exact.entry(&**rule).or_default().push(id),
+                    RulePattern::Family(family) => families.entry(&**family).or_default().push(id),
+                }
             }
         }
-        !matched
-    });
+        Index {
+            exact,
+            families,
+            suppressions,
+        }
+    }
+
+    fn suppresses(&self, rule: &str, line: u32, used: &mut [bool]) -> bool {
+        let exact = self.exact.get(rule).into_iter().flatten();
+        let families = rule
+            .match_indices('/')
+            .filter_map(|(at, _)| self.families.get(&rule[..at]))
+            .flatten();
+        let mut hit = false;
+        for &id in exact.chain(families) {
+            if self.covers(id, line) {
+                used[id] = true;
+                hit = true;
+            }
+        }
+        hit
+    }
+
+    fn covers(&self, id: usize, line: u32) -> bool {
+        let suppression = &self.suppressions[id];
+        suppression.file_level
+            || (line >= suppression.start_line && line <= suppression.end_line.saturating_add(1))
+    }
 }
 
 fn scan_comment(
