@@ -967,6 +967,9 @@ mod tests {
 
     #[test]
     fn leading_comment_before_the_returned_call_is_skipped() {
-        assert!(sole_call_in_js("function f() { return /* c */ g(); }").is_some());
+        assert!(
+            sole_call_in_js("function f() { return /* c */ g(); }").is_some(),
+            "a leading comment before the returned call must not hide it"
+        );
     }
 }

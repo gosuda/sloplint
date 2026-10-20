@@ -143,7 +143,10 @@ mod tests {
 
     #[test]
     fn returned_call_is_the_sole_call() {
-        assert!(sole_call_in_ts("function f() { return g(); }").is_some());
+        assert!(
+            sole_call_in_ts("function f() { return g(); }").is_some(),
+            "the returned call must be detected as the sole call"
+        );
     }
 
     // Adapter drift, pinned: the JavaScript adapter skips a leading comment before

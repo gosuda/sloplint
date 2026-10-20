@@ -334,8 +334,14 @@ mod tests {
 
     #[test]
     fn parent_segment_past_the_root_resolves_to_nothing() {
-        assert!(ts_targets("", "../x").is_empty());
-        assert!(ts_targets("a", "../../x").is_empty());
+        assert!(
+            ts_targets("", "../x").is_empty(),
+            "an import escaping the root must resolve to nothing"
+        );
+        assert!(
+            ts_targets("a", "../../x").is_empty(),
+            "an import escaping the root must resolve to nothing"
+        );
         assert_eq!(
             ts_targets("a", "../x"),
             ["x.ts", "x.tsx", "x/index.ts", "x/index.tsx"]
