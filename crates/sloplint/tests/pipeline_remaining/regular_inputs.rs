@@ -176,7 +176,9 @@ fn a_fifo_that_no_input_names_is_simply_ignored() {
 fn a_character_device_config_is_refused_without_reading_it() {
     let (_tmp, root) = project();
     // Sanitizer-instrumented children reject a lowered RLIMIT_AS at setrlimit,
-    // so the address-space cap only applies on a plain build.
+    // so the address-space cap only applies on a plain build. Detection covers
+    // both invocation styles: a recipe that exports *SAN_OPTIONS and a plain
+    // `RUSTFLAGS=-Zsanitizer=...` build.
     let sanitized = [
         "ASAN_OPTIONS",
         "TSAN_OPTIONS",
@@ -184,7 +186,10 @@ fn a_character_device_config_is_refused_without_reading_it() {
         "UBSAN_OPTIONS",
     ]
     .iter()
-    .any(|name| std::env::var_os(name).is_some());
+    .any(|name| std::env::var_os(name).is_some())
+        || ["RUSTFLAGS", "RUSTDOCFLAGS"]
+            .iter()
+            .any(|name| std::env::var(name).is_ok_and(|value| value.contains("sanitizer")));
     let outcome = if sanitized {
         cli(&root, &["check", "--no-cache", "-c", "/dev/zero"])
     } else {
