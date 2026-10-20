@@ -261,11 +261,15 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     // just loaded, byte-identical: on a large tree that is hundreds of
     // megabytes of postcard serialization spent to change nothing. Store only
     // when some output differs from its cached entry or is missing from it.
-    let touched = analyzed.iter().any(|file| {
-        cached
-            .get(file.rel.as_str())
-            .is_none_or(|c| c.hash != file.output.hash)
-    });
+    // The store is also the only prune: it writes exactly the files this run
+    // analyzed, so a size mismatch means the cache holds entries for deleted
+    // files and must be rewritten.
+    let touched = analyzed.len() != cached.len()
+        || analyzed.iter().any(|file| {
+            cached
+                .get(file.rel.as_str())
+                .is_none_or(|c| c.hash != file.output.hash)
+        });
     if touched && let Some(cache) = &cache {
         let view: Vec<(&str, &FileOutput)> = analyzed
             .iter()

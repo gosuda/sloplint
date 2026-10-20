@@ -466,9 +466,14 @@ mod unix_only {
         let (_tmp, root) = project();
         let (_home_guard, home) = temp();
         let copy = home.join("sloplint-copy");
-        std::fs::copy(env!("CARGO_BIN_EXE_sloplint"), &copy)
+        let staging = home.join("sloplint-copy.tmp");
+        std::fs::copy(env!("CARGO_BIN_EXE_sloplint"), &staging)
             .unwrap_or_else(|e| panic!("copy: {e}"));
-        chmod(&copy, 0o111);
+        chmod(&staging, 0o111);
+        // Rename lands the complete file atomically: exec'ing a path the
+        // kernel still holds open for write fails with ETXTBSY (os error 26)
+        // under parallel load.
+        std::fs::rename(&staging, &copy).unwrap_or_else(|e| panic!("rename: {e}"));
         assert!(
             std::fs::File::open(&copy).is_err(),
             "permission bits were bypassed; run these tests as an unprivileged user, not root"
