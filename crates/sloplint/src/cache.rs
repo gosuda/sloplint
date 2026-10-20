@@ -3,6 +3,7 @@ use std::fs;
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use sloplint_core::{Config, Finding, Suppression, WorldFacts};
 
@@ -120,6 +121,7 @@ pub fn open(
 impl Cache {
     /// Loads the cached outputs keyed by relative path from every shard present.
     ///
+    /// Shards are read and decoded in parallel on the current rayon pool.
     /// A shard that cannot be read, fails to parse, or carries the wrong
     /// version or key contributes zero entries and never aborts the load. A
     /// symlinked shard directory yields an empty cache. No cache file is ever
@@ -127,23 +129,19 @@ impl Cache {
     /// directories are trusted. Configuration and baseline inputs keep
     /// following symlinks to regular files.
     pub fn load(&self) -> HashMap<Box<str>, FileOutput> {
-        let mut loaded = HashMap::new();
         let shards = self.dir.join(SHARD_DIR);
         if !fs::symlink_metadata(&shards).is_ok_and(|meta| meta.is_dir()) {
-            return loaded;
+            return HashMap::new();
         }
-        for byte in 0..=255u8 {
-            let Ok(bytes) = read_regular_nofollow(&shards.join(shard_file(byte))) else {
-                continue;
-            };
-            if let Ok(shard) = postcard::from_bytes::<Shard>(&bytes)
-                && shard.version == VERSION
-                && shard.config_key == self.key
-            {
-                loaded.extend(shard.files);
-            }
-        }
-        loaded
+        (0..=255u8)
+            .into_par_iter()
+            .filter_map(|byte| {
+                let bytes = read_regular_nofollow(&shards.join(shard_file(byte))).ok()?;
+                let shard = postcard::from_bytes::<Shard>(&bytes).ok()?;
+                (shard.version == VERSION && shard.config_key == self.key).then_some(shard.files)
+            })
+            .flatten_iter()
+            .collect()
     }
 
     /// Writes the cache atomically; a failure warns on stderr and never fails the run.

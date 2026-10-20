@@ -204,7 +204,12 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let rules = RuleSet::new(&config, &RuleFilter::default())?;
     let custom = CustomRules::compile(&config.custom_rules)?;
     let scopes = project::scopes(&root, &opts.cwd, &opts.paths)?;
-    let discovery = discover::discover(&root, &config, jobs(opts.jobs))?;
+    let workers = jobs(opts.jobs);
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(workers)
+        .build()
+        .map_err(|error| io_error(&root, io::Error::other(error)))?;
+    let discovery = discover::discover(&root, &config, workers)?;
     let cache = if opts.use_cache {
         cache::open(
             settings::cache_base(),
@@ -215,7 +220,9 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     } else {
         None
     };
-    let loaded = cache.as_ref().map_or_else(HashMap::new, cache::Cache::load);
+    let loaded = cache
+        .as_ref()
+        .map_or_else(HashMap::new, |cache| pool.install(|| cache.load()));
     let cached_hashes: HashMap<Box<str>, [u8; 32]> = loaded
         .iter()
         .map(|(rel, output)| (rel.clone(), output.hash))
@@ -238,7 +245,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         cache: &cached,
         interfaces: &interfaces,
     };
-    let outcomes = analyze_all(&discovery.entries, &pipe, jobs(opts.jobs))?;
+    let outcomes = analyze_all(&discovery.entries, &pipe, &pool)?;
     let (analyzed, skipped_outcomes) = split_outcomes(outcomes, &scopes);
     let skipped = count(
         discovery
@@ -350,12 +357,8 @@ struct Probe<'a> {
 fn analyze_all(
     entries: &[Entry],
     pipe: &Pipeline<'_>,
-    jobs: usize,
+    pool: &rayon::ThreadPool,
 ) -> Result<Vec<Outcome>, RunError> {
-    let pool = rayon::ThreadPoolBuilder::new()
-        .num_threads(jobs)
-        .build()
-        .map_err(|error| io_error(pipe.root, io::Error::other(error)))?;
     let results: Vec<Result<Outcome, RunError>> = pool.install(|| {
         entries
             .par_iter()
