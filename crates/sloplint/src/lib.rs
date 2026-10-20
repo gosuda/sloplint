@@ -439,10 +439,16 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
         Some(output) => output,
         None => analyze_file(parsers, entry, &probe, pipe),
     };
-    let source = if output.suppressions.is_empty() {
-        None
-    } else {
+    let reports_unused = pipe.filter.0.is_empty()
+        || pipe
+            .filter
+            .0
+            .iter()
+            .any(|p| p.matches("meta/unused-suppression"));
+    let source = if reports_unused && !output.suppressions.is_empty() {
         Some(Box::<str>::from(probe.text))
+    } else {
+        None
     };
     Ok(Outcome::Analyzed(Box::new(Analyzed {
         rel: entry.rel.clone(),
