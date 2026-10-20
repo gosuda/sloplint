@@ -49,7 +49,7 @@ pub struct LangSpec {
     /// The language this spec serves.
     pub lang: Lang,
     /// The grammar the roles and hooks were built against.
-    pub language: tree_sitter::Language,
+    pub(crate) language: tree_sitter::Language,
     pub(crate) roles: Vec<Role>,
     pub(crate) hooks: &'static dyn LangHooks,
 }
@@ -59,7 +59,7 @@ pub struct LangSpec {
 /// Specs are stored at their language's discriminant, so the order of
 /// `ALL_LANGS` never affects lookup; a language missing from or repeated in
 /// that list panics at first use instead of serving another language's spec.
-pub fn spec(lang: Lang) -> &'static LangSpec {
+pub(crate) fn spec(lang: Lang) -> &'static LangSpec {
     static SPECS: LazyLock<Vec<LangSpec>> = LazyLock::new(|| {
         let mut specs: Vec<LangSpec> = ALL_LANGS.iter().map(|&lang| lang::spec_for(lang)).collect();
         specs.sort_by_key(|spec| spec.lang as usize);

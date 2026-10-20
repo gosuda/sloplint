@@ -13,7 +13,7 @@
 use std::sync::LazyLock;
 
 use sloplint_core::lang::Lang;
-use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze, spec};
+use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 use tree_sitter::Node;
 
 static NO_CUSTOM: LazyLock<CustomRules> =
@@ -32,10 +32,13 @@ fn run<'s>(lang: Lang, path: &'s str, source: &'s str) -> Analysis<'s> {
 
 /// The raw tree the routed grammar produces, without `analyze`'s fallbacks.
 fn raw_tree(lang: Lang, source: &str) -> tree_sitter::Tree {
+    let language: tree_sitter::Language = match lang {
+        Lang::Go => tree_sitter_go::LANGUAGE.into(),
+        Lang::Rust => tree_sitter_rust::LANGUAGE.into(),
+        _ => panic!("raw_tree supports only Go and Rust, got {lang:?}"),
+    };
     let mut parser = tree_sitter::Parser::new();
-    parser
-        .set_language(&spec(lang).language)
-        .expect("grammar loads");
+    parser.set_language(&language).expect("grammar loads");
     parser.parse(source, None).expect("parser returns a tree")
 }
 

@@ -15,7 +15,7 @@ use sloplint_core::{CommentText, CustomHit, Pos};
 use tree_sitter::{Node, Parser, Tree};
 
 pub use custom::CustomRules;
-pub use spec::spec;
+use spec::spec;
 
 /// Lazily configured parsers, one per language actually analyzed.
 pub struct Parsers {
