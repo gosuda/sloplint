@@ -17,6 +17,7 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use globset::GlobSet;
 use rayon::prelude::*;
@@ -214,7 +215,12 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     } else {
         None
     };
-    let cached = cache.as_ref().map_or_else(HashMap::new, cache::Cache::load);
+    let loaded = cache.as_ref().map_or_else(HashMap::new, cache::Cache::load);
+    let cached_hashes: HashMap<Box<str>, [u8; 32]> = loaded
+        .iter()
+        .map(|(rel, output)| (rel.clone(), output.hash))
+        .collect();
+    let cached = Mutex::new(loaded);
     let test_globs = project::glob_set(&config.project.test_globs, "project.test_globs")?;
     let interfaces: HashSet<String> = discovery
         .entries
@@ -230,6 +236,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         filter: &opts.rule_filter,
         test_globs: &test_globs,
         cache: &cached,
+        cached_hashes: &cached_hashes,
         interfaces: &interfaces,
     };
     let outcomes = analyze_all(&discovery.entries, &pipe, jobs(opts.jobs))?;
@@ -240,7 +247,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
             .filter(|rel| scopes.contains(rel.as_path()))
             .count(),
     );
-    let mut analyzed = Vec::new();
+    let mut analyzed = Vec::with_capacity(outcomes.len());
     for outcome in outcomes {
         match outcome {
             Outcome::Skipped(rel) => {
@@ -248,7 +255,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
                     skipped += 1;
                 }
             }
-            Outcome::Analyzed(file) => analyzed.push(file),
+            Outcome::Analyzed(file) => analyzed.push(*file),
         }
     }
     let files = count(
@@ -264,11 +271,11 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     // The store is also the only prune: it writes exactly the files this run
     // analyzed, so a size mismatch means the cache holds entries for deleted
     // files and must be rewritten.
-    let touched = analyzed.len() != cached.len()
+    let touched = analyzed.len() != pipe.cached_hashes.len()
         || analyzed.iter().any(|file| {
-            cached
+            pipe.cached_hashes
                 .get(file.rel.as_str())
-                .is_none_or(|c| c.hash != file.output.hash)
+                .is_none_or(|hash| *hash != file.output.hash)
         });
     if touched && let Some(cache) = &cache {
         let view: Vec<(&str, &FileOutput)> = analyzed
@@ -307,13 +314,13 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
             .filter(|finding| finding.severity == Severity::Warn)
             .count(),
     );
-    let rules_fired: BTreeMap<String, String> = reported
-        .iter()
-        .map(|finding| {
+    let mut rules_fired: BTreeMap<String, String> = BTreeMap::new();
+    for finding in &reported {
+        if !rules_fired.contains_key(&*finding.rule) {
             let why = rules.why(&finding.rule).unwrap_or_default();
-            (finding.rule.to_string(), why.to_string())
-        })
-        .collect();
+            rules_fired.insert(finding.rule.to_string(), why.to_string());
+        }
+    }
     let failed = !opts.write_baseline
         && threshold(config.project.fail_on)
             .is_some_and(|minimum| reported.iter().any(|finding| finding.severity >= minimum));
@@ -347,18 +354,20 @@ struct Pipeline<'a> {
     root: &'a Path,
     filter: &'a RuleFilter,
     test_globs: &'a GlobSet,
-    cache: &'a HashMap<Box<str>, FileOutput>,
+    cache: &'a Mutex<HashMap<Box<str>, FileOutput>>,
+    cached_hashes: &'a HashMap<Box<str>, [u8; 32]>,
     interfaces: &'a HashSet<String>,
 }
 
 enum Outcome {
     Skipped(String),
-    Analyzed(Analyzed),
+    Analyzed(Box<Analyzed>),
 }
 
 struct Analyzed {
     rel: String,
     output: FileOutput,
+    source: Option<Box<str>>,
 }
 
 struct Probe<'a> {
@@ -387,9 +396,11 @@ fn analyze_all(
 
 fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<Outcome, RunError> {
     let skipped = || Ok(Outcome::Skipped(entry.rel.clone()));
-    let read = read_within_limit(&entry.abs, pipe.config.project.max_file_bytes);
-    let Some(bytes) = read.map_err(|source| io_error(&entry.abs, source))? else {
-        return skipped();
+    let bytes = match read_within_limit(&entry.abs, pipe.config.project.max_file_bytes) {
+        Err(source) if source.kind() == io::ErrorKind::NotFound => return skipped(),
+        Err(source) => return Err(io_error(&entry.abs, source)),
+        Ok(None) => return skipped(),
+        Ok(Some(bytes)) => bytes,
     };
     let Ok(raw) = std::str::from_utf8(&bytes) else {
         return skipped();
@@ -410,14 +421,34 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
         hash,
         interface,
     };
-    let output = match pipe.cache.get(entry.rel.as_str()) {
-        Some(cached) if cached.hash == probe.hash => cached.clone(),
-        _ => analyze_file(parsers, entry, &probe, pipe),
+    let hit = {
+        let mut guard = pipe
+            .cache
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
+        if guard
+            .get(entry.rel.as_str())
+            .is_some_and(|cached| cached.hash == probe.hash)
+        {
+            guard.remove(entry.rel.as_str())
+        } else {
+            None
+        }
     };
-    Ok(Outcome::Analyzed(Analyzed {
+    let output = match hit {
+        Some(output) => output,
+        None => analyze_file(parsers, entry, &probe, pipe),
+    };
+    let source = if output.suppressions.is_empty() {
+        None
+    } else {
+        Some(Box::<str>::from(probe.text))
+    };
+    Ok(Outcome::Analyzed(Box::new(Analyzed {
         rel: entry.rel.clone(),
         output,
-    }))
+        source,
+    })))
 }
 
 fn analyze_file(
@@ -475,10 +506,24 @@ fn merge(pipe: &Pipeline<'_>, mut analyzed: Vec<Analyzed>) -> Result<Vec<Finding
             Err(_) => orphans.push(finding),
         }
     }
-    let mut all = Vec::new();
+    let capacity: usize = analyzed
+        .iter()
+        .map(|file| file.output.findings.len() + file.output.suppressions.len())
+        .sum::<usize>()
+        + orphans.len();
+    let mut all = Vec::with_capacity(capacity);
     for file in analyzed {
         all.extend(finalize(pipe, file)?);
     }
+    orphans.sort_by(|a, b| {
+        a.path
+            .cmp(&b.path)
+            .then_with(|| a.line.cmp(&b.line))
+            .then_with(|| a.column.cmp(&b.column))
+            .then_with(|| a.rule.cmp(&b.rule))
+            .then_with(|| a.message.cmp(&b.message))
+    });
+    Baseline::assign_fingerprints(&mut orphans);
     all.extend(orphans);
     all.retain(|finding| pipe.filter.matches(&finding.rule));
     all.sort_by(|a, b| {
@@ -523,7 +568,7 @@ fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Result<Vec<Finding>, RunErro
                 .iter()
                 .any(|p| p.matches("meta/unused-suppression")))
     {
-        let mut unused = unused_findings(pipe, &file.rel, &suppressions)?;
+        let mut unused = unused_findings(pipe, &file.rel, &suppressions, file.source.as_deref())?;
         unused.sort_by(|a, b| {
             (a.line, a.column, &a.rule, &a.message).cmp(&(b.line, b.column, &b.rule, &b.message))
         });
@@ -537,6 +582,7 @@ fn unused_findings(
     pipe: &Pipeline<'_>,
     rel: &str,
     suppressions: &[Suppression],
+    source: Option<&str>,
 ) -> Result<Vec<Finding>, RunError> {
     let unused: Vec<&Suppression> = suppressions
         .iter()
@@ -545,13 +591,20 @@ fn unused_findings(
     if unused.is_empty() {
         return Ok(Vec::new());
     }
-    let source = read_source(&pipe.root.join(rel), pipe.config.project.max_file_bytes)?;
+    let fallback;
+    let text = match source {
+        Some(text) => text,
+        None => {
+            fallback = read_source(&pipe.root.join(rel), pipe.config.project.max_file_bytes)?;
+            &fallback
+        }
+    };
     Ok(unused
         .into_iter()
         .filter_map(|suppression| {
             let patterns = describe(&suppression.rules);
             pipe.rules
-                .unused_suppression(rel, &source, suppression.start_line, &patterns)
+                .unused_suppression(rel, text, suppression.start_line, &patterns)
         })
         .collect())
 }
@@ -598,7 +651,8 @@ fn read_within_limit(path: &Path, max_bytes: u64) -> io::Result<Option<Vec<u8>>>
     if len > max_bytes {
         return Ok(None);
     }
-    let mut bytes = Vec::new();
+    let cap = usize::try_from(len.min(max_bytes.saturating_add(1))).unwrap_or(0);
+    let mut bytes = Vec::with_capacity(cap);
     file.take(max_bytes.saturating_add(1))
         .read_to_end(&mut bytes)?;
     Ok((u64::try_from(bytes.len()).unwrap_or(u64::MAX) <= max_bytes).then_some(bytes))
