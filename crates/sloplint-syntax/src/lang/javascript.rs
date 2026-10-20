@@ -710,25 +710,25 @@ fn assertion_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<Assertion> {
     })
 }
 
-fn join_normalized(dir: &str, rel: &str) -> String {
+fn join_normalized(dir: &str, rel: &str) -> Option<String> {
     let mut parts: Vec<&str> = Vec::new();
     for segment in dir.split('/').chain(rel.split('/')) {
         match segment {
             "" | "." => {}
-            ".." => {
-                parts.pop();
-            }
+            ".." => parts.pop().map(|_| ())?,
             other => parts.push(other),
         }
     }
-    parts.join("/")
+    Some(parts.join("/"))
 }
 
 fn re_export_candidates(dir: &str, source: &str) -> Vec<String> {
     if !(source.starts_with("./") || source.starts_with("../")) {
         return Vec::new();
     }
-    let path = join_normalized(dir, source);
+    let Some(path) = join_normalized(dir, source) else {
+        return Vec::new();
+    };
     if JS_EXTENSIONS.iter().any(|ext| path.ends_with(ext)) {
         return vec![path];
     }

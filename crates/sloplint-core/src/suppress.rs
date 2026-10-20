@@ -233,7 +233,7 @@ fn directive(rest: &str, known: &dyn Fn(&str) -> bool) -> Result<Vec<RulePattern
             RulePattern::Family(family) if !SUPPRESSIBLE_FAMILIES.contains(&&**family) => {
                 return Err(Problem::UnknownRule(token.to_string()));
             }
-            RulePattern::Exact(id) if !known(id) => {
+            RulePattern::Exact(id) if !known(id) || id.starts_with("meta/") => {
                 return Err(Problem::UnknownRule(token.to_string()));
             }
             _ => {}
