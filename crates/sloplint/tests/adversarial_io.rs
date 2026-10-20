@@ -19,7 +19,6 @@ const SAMPLE: &str = "pub fn handle(flag: bool) {}\n";
 const GENERIC: &str = "grep/generic-name";
 const BASELINE: &str = "sloplint-baseline.json";
 const NAMESPACE: &str = "sloplint";
-const CACHE: &str = "cache-v1.bin";
 const RATCHET: [&str; 4] = ["check", "--no-cache", "--mode", "ratchet"];
 #[cfg(unix)]
 const DENIED: ErrorKind = ErrorKind::PermissionDenied;
@@ -196,15 +195,39 @@ fn namespace(cache_home: &Path) -> PathBuf {
     xdg(cache_home).join(NAMESPACE)
 }
 
-/// Every cache file stored under `<xdg>/sloplint/<key>/`.
+/// Whether a cache directory entry is a sharded `cache-v2/shard-<NN>.bin` file.
+fn is_cache_file_name(name: &str) -> bool {
+    name.len() == "shard-00.bin".len()
+        && name.starts_with("shard-")
+        && name.ends_with(".bin")
+        && name[6..8]
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+}
+
+/// Every shard file stored under `<xdg>/sloplint/<key>/cache-v2/`.
 fn cache_files(home: &Path) -> Vec<PathBuf> {
     let Ok(keys) = std::fs::read_dir(namespace(home)) else {
         return Vec::new();
     };
-    let files = keys
-        .filter_map(Result::ok)
-        .map(|key| key.path().join(CACHE));
-    files.filter(|file| file.is_file()).collect()
+    let mut files = Vec::new();
+    for key in keys.filter_map(Result::ok) {
+        let Ok(entries) = std::fs::read_dir(key.path().join("cache-v2")) else {
+            continue;
+        };
+        files.extend(
+            entries
+                .filter_map(Result::ok)
+                .map(|entry| entry.path())
+                .filter(|path| {
+                    path.file_name()
+                        .and_then(|name| name.to_str())
+                        .is_some_and(is_cache_file_name)
+                        && path.is_file()
+                }),
+        );
+    }
+    files
 }
 
 /// The one cache file a run for a single project leaves in `home`.
@@ -219,12 +242,15 @@ fn cache_file(home: &Path) -> PathBuf {
     found.swap_remove(0)
 }
 
-/// The per-project directory that holds `cache_file(home)`.
+/// The per-project directory that holds `cache_file(home)`: the grandparent of
+/// its shard (`<key>/cache-v2/shard-NN.bin`).
 #[cfg(unix)]
 fn key_dir(home: &Path) -> PathBuf {
     let file = cache_file(home);
-    let parent = file.parent().map(Path::to_path_buf);
-    parent.unwrap_or_else(|| panic!("cache file {} has no directory", file.display()))
+    file.parent()
+        .and_then(Path::parent)
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| panic!("{} has no project directory", file.display()))
 }
 
 fn text(bytes: &[u8]) -> String {
@@ -360,8 +386,8 @@ fn unreadable_source_fails_the_run_with_typed_io() {
     let stored = cache_files(&home);
     assert_eq!(
         stored.len(),
-        1,
-        "a readable cached run must store its cache: {stored:?}"
+        3,
+        "a readable cached run must store one shard per file: {stored:?}"
     );
 }
 
@@ -545,7 +571,7 @@ fn baseline_duplicates_unknown_rules_and_extra_fields() {
 /// Malformed caches derived from a valid one: a version byte, 32 key bytes, then a
 /// varint-prefixed entry sequence.
 fn corrupt_caches(valid: &[u8]) -> Vec<(&'static str, Vec<u8>)> {
-    assert!(valid.len() > 33 && valid[0] == 1, "layout changed");
+    assert!(valid.len() > 33 && valid[0] == 2, "layout changed");
     let after_header = |tail: &[u8]| [&valid[..33], tail].concat();
     let mut max_len = vec![0xff; 9];
     max_len.push(1);
@@ -563,7 +589,7 @@ fn corrupt_caches(valid: &[u8]) -> Vec<(&'static str, Vec<u8>)> {
         ("entry count u64::MAX", after_header(&max_len)),
         ("path length u64::MAX", after_header(&entry)),
         ("version 0", with(0, 0)),
-        ("version 2", with(0, 2)),
+        ("version 1", with(0, 1)),
         ("flipped key byte", with(1, !valid[1])),
     ]
 }

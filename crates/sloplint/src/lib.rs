@@ -59,7 +59,7 @@ pub struct RunOptions {
     /// Read and write the per-user cache for this project root: under
     /// `XDG_CACHE_HOME` (when absolute), else `~/.cache` (unix),
     /// `~/Library/Caches` (macOS), or `%LOCALAPPDATA%` (Windows), in
-    /// `sloplint/<hash of the root path>/cache-v1.bin`. The checkout's own
+    /// `sloplint/<hash of the root path>/cache-v2/shard-<NN>.bin`. The checkout's own
     /// `.sloplint` is neither read nor written, because a repository can
     /// ship a forged cache. An unusable cache location disables the cache
     /// with a warning instead of failing the run; `false` does no cache work.
@@ -282,7 +282,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
             .iter()
             .map(|file| (file.rel.as_str(), &file.output))
             .collect();
-        cache.store(&view);
+        cache.store(&view, &cached_hashes);
     }
     let mut all = merge(&pipe, analyzed)?;
     all.retain(|finding| scopes.contains(Path::new(&*finding.path)));

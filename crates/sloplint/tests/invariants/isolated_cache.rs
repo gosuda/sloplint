@@ -66,18 +66,35 @@ impl CacheHome {
         String::from_utf8_lossy(&out.stdout).into_owned()
     }
 
-    /// Every stored cache file, `<xdg>/sloplint/<key>/cache-v1.bin`.
+    /// Every stored cache file, `<xdg>/sloplint/<key>/cache-v2/shard-<NN>.bin`.
     fn cache_files(&self) -> Vec<PathBuf> {
         let namespace = self.base.join("xdg").join("sloplint");
         let Ok(keys) = std::fs::read_dir(&namespace) else {
             return Vec::new();
         };
-        keys.map(|key| {
+        let mut files = Vec::new();
+        for key in keys {
             let key = key.unwrap_or_else(|e| panic!("{}: {e}", namespace.display()));
-            key.path().join("cache-v1.bin")
-        })
-        .filter(|file| file.is_file())
-        .collect()
+            let Ok(shards) = std::fs::read_dir(key.path().join("cache-v2")) else {
+                continue;
+            };
+            files.extend(
+                shards
+                    .filter_map(Result::ok)
+                    .map(|entry| entry.path())
+                    .filter(|path| {
+                        path.file_name()
+                            .and_then(|name| name.to_str())
+                            .is_some_and(|name| {
+                                name.len() == "shard-00.bin".len()
+                                    && name.starts_with("shard-")
+                                    && name.ends_with(".bin")
+                            })
+                            && path.is_file()
+                    }),
+            );
+        }
+        files
     }
 }
 
@@ -351,7 +368,7 @@ fn planted_temp_symlink_is_preserved_and_never_written_through() {
         1,
         "one project stores one cache file: {files:?}"
     );
-    let key_dir = files[0]
+    let shard_dir = files[0]
         .parent()
         .unwrap_or_else(|| panic!("{} has no directory", files[0].display()))
         .to_path_buf();
@@ -359,13 +376,19 @@ fn planted_temp_symlink_is_preserved_and_never_written_through() {
     let (_outside, base) = tempdir();
     write(&base, "sentinel.txt", "sentinel");
     let marker = base.join("sentinel.txt");
-    let script = r#"ln -s "$1" "$2/cache-v1.bin.$$.tmp" && shift 2 && exec "$@""#;
+    let shard = files[0]
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_else(|| panic!("{} has no file name", files[0].display()))
+        .to_string();
+    let script = r#"ln -s "$1" "$2/$3.$$.tmp" && shift 3 && exec "$@""#;
     let mut command = Command::new("sh");
     command
         .current_dir(&root)
         .args(["-c", script, "sh"])
         .arg(&marker)
-        .arg(&key_dir)
+        .arg(&shard_dir)
+        .arg(&shard)
         .arg(env!("CARGO_BIN_EXE_sloplint"))
         .args(["check", "--strictness", "standard", "--fail-on", "never"]);
     let out = home
@@ -382,15 +405,15 @@ fn planted_temp_symlink_is_preserved_and_never_written_through() {
         cold,
         "a planted temp link changed the findings"
     );
-    let planted: Vec<PathBuf> = std::fs::read_dir(&key_dir)
-        .unwrap_or_else(|e| panic!("{}: {e}", key_dir.display()))
+    let planted: Vec<PathBuf> = std::fs::read_dir(&shard_dir)
+        .unwrap_or_else(|e| panic!("{}: {e}", shard_dir.display()))
         .map(|entry| entry.unwrap_or_else(|e| panic!("entry: {e}")).path())
         .filter(|path| {
             let name = path
                 .file_name()
                 .and_then(|name| name.to_str())
                 .unwrap_or("");
-            name.starts_with("cache-v1.bin.") && name.ends_with(".tmp")
+            name.starts_with("shard-") && name.ends_with(".tmp")
         })
         .collect();
     assert_eq!(
@@ -542,12 +565,18 @@ fn cache_keeps_the_same_bytes_apart_by_routed_path() {
         "the run that reads the entries"
     );
     let files = home.cache_files();
-    assert_eq!(
-        files.len(),
-        1,
-        "one project stores one cache file: {files:?}"
-    );
-    plant(&files[0], CPP_FINDING, CPP_PLANTED);
+    assert_eq!(files.len(), 2, "one shard per file: {files:?}");
+    let header = files
+        .iter()
+        .find(|path| {
+            std::fs::read(path).is_ok_and(|bytes| {
+                bytes
+                    .windows(CPP_FINDING.len())
+                    .any(|window| window == CPP_FINDING.as_bytes())
+            })
+        })
+        .unwrap_or_else(|| panic!("no shard holds the header outcome: {files:?}"));
+    plant(header, CPP_FINDING, CPP_PLANTED);
     let warm = home.check(&root, &[]);
     assert!(
         warm.contains(CPP_PLANTED) && warm.contains("src/stack.c:3:1"),

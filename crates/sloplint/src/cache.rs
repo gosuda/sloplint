@@ -9,9 +9,10 @@ use sloplint_core::{Config, Finding, Suppression, WorldFacts};
 use crate::project::{read_regular, read_regular_nofollow};
 use crate::terminal::TerminalText;
 
-const VERSION: u32 = 1;
+const VERSION: u32 = 2;
 const NAMESPACE: &str = "sloplint";
-const FILE: &str = "cache-v1.bin";
+/// Directory holding the per-shard cache files `shard-<NN>.bin`.
+const SHARD_DIR: &str = "cache-v2";
 
 /// Everything one analyzed file contributes, reproduced verbatim on a cache hit.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,14 +31,14 @@ pub struct FileOutput {
 }
 
 #[derive(Deserialize)]
-struct CacheFile {
+struct Shard {
     version: u32,
     config_key: [u8; 32],
     files: Vec<(Box<str>, FileOutput)>,
 }
 
 #[derive(Serialize)]
-struct CacheWrite<'a> {
+struct ShardWrite<'a> {
     version: u32,
     config_key: &'a [u8; 32],
     files: &'a [(&'a str, &'a FileOutput)],
@@ -117,26 +118,37 @@ pub fn open(
 }
 
 impl Cache {
-    /// Loads the cached outputs keyed by relative path; any mismatch or read error yields an empty cache.
+    /// Loads the cached outputs keyed by relative path from every shard present.
     ///
-    /// The cache file itself is never followed through a symlink or reparse point; only its
-    /// vetted directories are trusted. Configuration and baseline inputs keep following
-    /// symlinks to regular files.
+    /// A shard that cannot be read, fails to parse, or carries the wrong
+    /// version or key contributes zero entries and never aborts the load. A
+    /// symlinked shard directory yields an empty cache. No cache file is ever
+    /// followed through a symlink or reparse point; only its vetted
+    /// directories are trusted. Configuration and baseline inputs keep
+    /// following symlinks to regular files.
     pub fn load(&self) -> HashMap<Box<str>, FileOutput> {
-        let Ok(bytes) = read_regular_nofollow(&self.dir.join(FILE)) else {
-            return HashMap::new();
-        };
-        match postcard::from_bytes::<CacheFile>(&bytes) {
-            Ok(file) if file.version == VERSION && file.config_key == self.key => {
-                file.files.into_iter().collect()
-            }
-            _ => HashMap::new(),
+        let mut loaded = HashMap::new();
+        let shards = self.dir.join(SHARD_DIR);
+        if !fs::symlink_metadata(&shards).is_ok_and(|meta| meta.is_dir()) {
+            return loaded;
         }
+        for byte in 0..=255u8 {
+            let Ok(bytes) = read_regular_nofollow(&shards.join(shard_file(byte))) else {
+                continue;
+            };
+            if let Ok(shard) = postcard::from_bytes::<Shard>(&bytes)
+                && shard.version == VERSION
+                && shard.config_key == self.key
+            {
+                loaded.extend(shard.files);
+            }
+        }
+        loaded
     }
 
     /// Writes the cache atomically; a failure warns on stderr and never fails the run.
-    pub fn store(&self, files: &[(&str, &FileOutput)]) {
-        if let Err(error) = self.write(files) {
+    pub fn store(&self, files: &[(&str, &FileOutput)], old_hashes: &HashMap<Box<str>, [u8; 32]>) {
+        if let Err(error) = self.write_shards(files, old_hashes) {
             warn(format!(
                 "cache not written in {}: {error}",
                 self.dir.display()
@@ -144,26 +156,109 @@ impl Cache {
         }
     }
 
-    /// Creates the private directories, then writes through a per-process temporary file and rename.
+    /// Rewrites or removes every shard whose file disagrees with this run's entries.
     ///
-    /// Directories are created `0700` on unix. They are vetted again after
-    /// creation so a link swapped in between cannot be used, and the
-    /// temporary file is created exclusively, so a pre-planted symlink at its
-    /// path is left alone instead of being followed. Only the owned temporary
-    /// file is renamed or removed, after its handle is closed.
-    fn write(&self, files: &[(&str, &FileOutput)]) -> io::Result<()> {
+    /// A shard is settled when its file is present exactly when it has
+    /// entries and its rel set and content hashes equal the loaded ones, so a
+    /// warm run rewrites nothing. Every other shard is dirty: one with entries
+    /// is rewritten, one without has its file removed. That covers deleted
+    /// files and also stale-key or corrupt shards that loaded no entries: the
+    /// store is the only prune.
+    fn write_shards(
+        &self,
+        files: &[(&str, &FileOutput)],
+        old_hashes: &HashMap<Box<str>, [u8; 32]>,
+    ) -> io::Result<()> {
+        let mut fresh: HashMap<u8, Vec<(&str, &FileOutput)>> = HashMap::new();
+        for &(rel, output) in files {
+            fresh
+                .entry(shard_byte(rel))
+                .or_default()
+                .push((rel, output));
+        }
+        let mut stale: HashMap<u8, Vec<&str>> = HashMap::new();
+        for rel in old_hashes.keys() {
+            let rel: &str = rel;
+            stale.entry(shard_byte(rel)).or_default().push(rel);
+        }
+        let shards = self.dir.join(SHARD_DIR);
+        let dirty: Vec<u8> = (0..=255u8)
+            .filter(|&byte| {
+                let entries = fresh.get(&byte);
+                let present = fs::symlink_metadata(shards.join(shard_file(byte)))
+                    .is_ok_and(|meta| meta.is_file());
+                present != entries.is_some()
+                    || !same_set(
+                        entries.map(Vec::as_slice),
+                        stale.get(&byte).map(Vec::as_slice),
+                        old_hashes,
+                    )
+            })
+            .collect();
+        if dirty.is_empty() {
+            return Ok(());
+        }
+        self.write_dirty(&shards, &fresh, &dirty)
+    }
+
+    /// Creates the private directories and rewrites or removes each dirty shard.
+    ///
+    /// Every dirty shard is attempted even after one fails; the first error is returned.
+    fn write_dirty(
+        &self,
+        shards: &Path,
+        fresh: &HashMap<u8, Vec<(&str, &FileOutput)>>,
+        dirty: &[u8],
+    ) -> io::Result<()> {
         create_private(&self.dir)?;
         if let Some(namespace) = self.dir.parent() {
             vet_existing(namespace).map_err(unsafe_dir)?;
         }
         vet_existing(&self.dir).map_err(unsafe_dir)?;
-        let bytes = postcard::to_allocvec(&CacheWrite {
+        create_private(shards)?;
+        vet_existing(shards).map_err(unsafe_dir)?;
+        let mut first_error: Option<io::Error> = None;
+        for &byte in dirty {
+            let path = shards.join(shard_file(byte));
+            let result = match fresh.get(&byte) {
+                Some(entries) => self.write_shard(&path, entries),
+                None => fs::remove_file(&path).or_else(|error| {
+                    if error.kind() == io::ErrorKind::NotFound {
+                        Ok(())
+                    } else {
+                        Err(error)
+                    }
+                }),
+            };
+            if let Err(error) = result
+                && first_error.is_none()
+            {
+                first_error = Some(error);
+            }
+        }
+        first_error.map_or(Ok(()), Err)
+    }
+
+    /// Writes one shard through a per-process temporary file and rename.
+    ///
+    /// Directories are created `0700` on unix (see [`Cache::write_shards`]).
+    /// They are vetted again after creation so a link swapped in between
+    /// cannot be used, and the temporary file is created exclusively, so a
+    /// pre-planted symlink at its path is left alone instead of being
+    /// followed. Only the owned temporary file is renamed or removed, after
+    /// its handle is closed.
+    fn write_shard(&self, path: &Path, entries: &[(&str, &FileOutput)]) -> io::Result<()> {
+        let bytes = postcard::to_allocvec(&ShardWrite {
             version: VERSION,
             config_key: &self.key,
-            files,
+            files: entries,
         })
         .map_err(io::Error::other)?;
-        let tmp = self.dir.join(format!("{FILE}.{}.tmp", std::process::id()));
+        let name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("shard.bin");
+        let tmp = path.with_file_name(format!("{name}.{}.tmp", std::process::id()));
         {
             let mut file = match fs::OpenOptions::new()
                 .write(true)
@@ -188,9 +283,39 @@ impl Cache {
                 return Err(error);
             }
         }
-        fs::rename(&tmp, self.dir.join(FILE)).inspect_err(|_| {
+        fs::rename(&tmp, path).inspect_err(|_| {
             let _ = fs::remove_file(&tmp);
         })
+    }
+}
+
+/// The shard holding `rel`: the first BLAKE3 byte of the relative path.
+fn shard_byte(rel: &str) -> u8 {
+    blake3::hash(rel.as_bytes()).as_bytes()[0]
+}
+
+/// File name of shard `byte`, e.g. `shard-3f.bin`: two lowercase hex chars.
+fn shard_file(byte: u8) -> String {
+    format!("shard-{byte:02x}.bin")
+}
+
+/// Whether a shard's new entries name exactly the loaded rels with the same content hashes.
+fn same_set(
+    entries: Option<&[(&str, &FileOutput)]>,
+    rels: Option<&[&str]>,
+    old_hashes: &HashMap<Box<str>, [u8; 32]>,
+) -> bool {
+    match (entries, rels) {
+        (None, None) => true,
+        (Some(entries), Some(rels)) => {
+            entries.len() == rels.len()
+                && entries.iter().all(|(rel, output)| {
+                    old_hashes
+                        .get(*rel)
+                        .is_some_and(|hash| *hash == output.hash)
+                })
+        }
+        _ => false,
     }
 }
 

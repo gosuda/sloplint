@@ -105,11 +105,25 @@ fn cache_files(dir: &Path) -> Vec<PathBuf> {
         let path = entry.path();
         if path.is_dir() {
             found.extend(cache_files(&path));
-        } else if path.file_name() == Some(OsStr::new("cache-v1.bin")) {
+        } else if path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(is_cache_file_name)
+        {
             found.push(path);
         }
     }
     found
+}
+
+/// Whether a cache directory entry is a sharded `cache-v2/shard-<NN>.bin` file.
+fn is_cache_file_name(name: &str) -> bool {
+    name.len() == "shard-00.bin".len()
+        && name.starts_with("shard-")
+        && name.ends_with(".bin")
+        && name[6..8]
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
 }
 
 fn names(dir: &Path) -> Vec<String> {
@@ -165,8 +179,8 @@ fn the_cache_lives_in_the_user_directory_and_never_in_the_checkout() {
         .collect();
     assert_eq!(
         relative.len(),
-        3,
-        "the cache path is <namespace>/<project key>/<file>: {relative:?}"
+        4,
+        "the cache path is <namespace>/<project key>/<shard dir>/<file>: {relative:?}"
     );
     assert_eq!(
         relative[0], "sloplint",
@@ -180,8 +194,12 @@ fn the_cache_lives_in_the_user_directory_and_never_in_the_checkout() {
         "the project directory is 32 lowercase hex characters: {relative:?}"
     );
     assert_eq!(
-        relative[2], "cache-v1.bin",
-        "the cache file keeps its framing name: {relative:?}"
+        relative[2], "cache-v2",
+        "the shards live in a cache-v2 directory: {relative:?}"
+    );
+    assert_eq!(
+        relative[3], "shard-cb.bin",
+        "sample.rs hashes to shard 0xcb: {relative:?}"
     );
     assert!(
         !root.join(".sloplint").exists(),
@@ -202,15 +220,19 @@ fn the_cache_directories_are_private() {
     let (_home_guard, home) = temp();
     isolated(&root, &CHECK, &home);
 
-    let project_dir = cache_files(&home)[0]
+    let shards = cache_files(&home)[0]
         .parent()
         .unwrap_or_else(|| panic!("cache file without a directory"))
+        .to_path_buf();
+    let project_dir = shards
+        .parent()
+        .unwrap_or_else(|| panic!("shard directory without a project directory"))
         .to_path_buf();
     let namespace = project_dir
         .parent()
         .unwrap_or_else(|| panic!("project directory without a namespace"))
         .to_path_buf();
-    for dir in [&project_dir, &namespace] {
+    for dir in [&shards, &project_dir, &namespace] {
         let mode = std::fs::metadata(dir)
             .unwrap_or_else(|e| panic!("stat {}: {e}", dir.display()))
             .permissions()
@@ -365,17 +387,23 @@ fn a_stale_temp_file_at_this_pid_does_not_block_the_store() {
     succeeded_with_finding(&cold);
     let files = cache_files(&home);
     assert_eq!(files.len(), 1, "one cache for one project root: {files:?}");
-    let key_dir = files[0]
+    let shard_dir = files[0]
         .parent()
         .unwrap_or_else(|| panic!("{} has no directory", files[0].display()))
         .to_path_buf();
+    let shard = files[0]
+        .file_name()
+        .unwrap_or_else(|| panic!("{} has no file name", files[0].display()))
+        .to_string_lossy()
+        .into_owned();
     std::fs::remove_file(&files[0]).unwrap_or_else(|e| panic!("remove cache: {e}"));
 
-    let script = r#"printf stale > "$1/cache-v1.bin.$$.tmp" && shift && exec "$@""#;
+    let script = r#"printf stale > "$1/$2.$$.tmp" && shift 2 && exec "$@""#;
     let mut run = Command::new("sh");
     run.current_dir(&root)
         .args(["-c", script, "sh"])
-        .arg(&key_dir)
+        .arg(&shard_dir)
+        .arg(&shard)
         .arg(env!("CARGO_BIN_EXE_sloplint"))
         .args(CHECK);
     for name in CACHE_ENV {
@@ -395,8 +423,8 @@ fn a_stale_temp_file_at_this_pid_does_not_block_the_store() {
         "a recovered store must not change the findings"
     );
     assert_eq!(
-        names(&key_dir),
-        ["cache-v1.bin"],
+        names(&shard_dir),
+        [shard],
         "the stale temp file must be removed and the cache written"
     );
 }
@@ -404,7 +432,7 @@ fn a_stale_temp_file_at_this_pid_does_not_block_the_store() {
 #[cfg(unix)]
 mod unix_only {
     use super::{
-        CHECK, UNCACHED, cache_files, command, isolated, names, project, spawn, spawn_forgiving,
+        CHECK, UNCACHED, cache_files, command, isolated, names, project, spawn_forgiving,
         succeeded_with_finding, temp, text,
     };
     use std::os::unix::fs::PermissionsExt;
@@ -574,4 +602,217 @@ mod unix_only {
             text(&cached.stderr)
         );
     }
+}
+
+fn file_bytes(path: &Path) -> Vec<u8> {
+    std::fs::read(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
+}
+
+/// The one shard file whose bytes name `rel`; entries are keyed by rel path.
+fn shard_holding(files: &[PathBuf], rel: &str) -> PathBuf {
+    let mut found = files.iter().filter(|path| {
+        file_bytes(path)
+            .windows(rel.len())
+            .any(|w| w == rel.as_bytes())
+    });
+    let shard = found
+        .next()
+        .unwrap_or_else(|| panic!("no shard names {rel}"))
+        .clone();
+    assert!(found.next().is_none(), "two shards name {rel}");
+    shard
+}
+
+/// Rewrites every stored occurrence of `from` in `file` with the same-length `to`.
+fn plant_same_length(file: &Path, from: &str, to: &str) {
+    assert_eq!(from.len(), to.len(), "a plant must keep the stored length");
+    let mut bytes = file_bytes(file);
+    let mut count = 0;
+    for at in 0..=bytes.len().saturating_sub(from.len()) {
+        if bytes[at..at + from.len()] == *from.as_bytes() {
+            bytes[at..at + from.len()].copy_from_slice(to.as_bytes());
+            count += 1;
+        }
+    }
+    assert!(count > 0, "the cache must hold {from:?}");
+    std::fs::write(file, &bytes).unwrap_or_else(|e| panic!("plant: {e}"));
+}
+
+#[test]
+fn a_partial_store_rewrites_only_the_touched_shards() {
+    let (_tmp, root) = project();
+    put(&root, "a.rs", SAMPLE);
+    put(&root, "b.rs", SAMPLE);
+    let (_home_guard, home) = temp();
+
+    let cold = isolated(&root, &CHECK, &home);
+    succeeded_with_finding(&cold);
+    let second = isolated(&root, &CHECK, &home);
+    assert_eq!(second.stdout, cold.stdout, "the second run must be warm");
+    assert!(second.stderr.is_empty(), "stderr: {}", text(&second.stderr));
+    let before = cache_files(&home);
+    assert_eq!(before.len(), 3, "one shard per file: {before:?}");
+    let bytes_before: std::collections::HashMap<PathBuf, Vec<u8>> = before
+        .iter()
+        .map(|path| (path.clone(), file_bytes(path)))
+        .collect();
+
+    put(&root, "b.rs", &SAMPLE.replace("handle", "settle"));
+    let edited = isolated(&root, &CHECK, &home);
+    assert!(edited.status.success(), "stderr: {}", text(&edited.stderr));
+    let uncached = isolated(&root, &UNCACHED, &home);
+    assert_eq!(
+        edited.stdout, uncached.stdout,
+        "the edited run must equal a cold run"
+    );
+
+    let after = cache_files(&home);
+    assert_eq!(after.len(), 3, "no shard gained or lost: {after:?}");
+    let changed: Vec<PathBuf> = after
+        .iter()
+        .filter(|path| {
+            let old = bytes_before
+                .get(*path)
+                .unwrap_or_else(|| panic!("{} is a new shard", path.display()));
+            &file_bytes(path.as_path()) != old
+        })
+        .cloned()
+        .collect();
+    assert_eq!(changed.len(), 1, "exactly one shard rewrites: {after:?}");
+    assert_eq!(
+        changed[0].file_name().and_then(|name| name.to_str()),
+        Some("shard-81.bin"),
+        "only the b.rs shard rewrites"
+    );
+
+    let warm = isolated(&root, &CHECK, &home);
+    assert_eq!(
+        warm.stdout, edited.stdout,
+        "the mixed old and new shards must all load"
+    );
+    assert!(warm.stderr.is_empty(), "stderr: {}", text(&warm.stderr));
+}
+
+#[test]
+fn a_corrupt_shard_is_ignored_while_siblings_load() {
+    let (_tmp, root) = project();
+    put(&root, "a.rs", SAMPLE);
+    put(&root, "b.rs", SAMPLE);
+    let (_home_guard, home) = temp();
+
+    let cold = isolated(&root, &CHECK, &home);
+    succeeded_with_finding(&cold);
+    let files = cache_files(&home);
+    assert_eq!(files.len(), 3, "one shard per file: {files:?}");
+    let corrupt = shard_holding(&files, "a.rs");
+    let sibling = shard_holding(&files, "b.rs");
+    assert_ne!(corrupt, sibling, "a.rs and b.rs must shard apart");
+
+    std::fs::write(&corrupt, b"not a cache").unwrap_or_else(|e| panic!("corrupt: {e}"));
+    plant_same_length(&sibling, "unrelated code", "UNRELATED CODE");
+    let sibling_bytes = file_bytes(&sibling);
+
+    let out = isolated(&root, &CHECK, &home);
+    assert!(out.status.success(), "stderr: {}", text(&out.stderr));
+    let stdout = text(&out.stdout);
+    assert!(
+        stdout.contains("UNRELATED CODE"),
+        "the sibling shard was not reused: {stdout}"
+    );
+    assert!(
+        stdout.contains("unrelated code"),
+        "the corrupt shard was not recomputed: {stdout}"
+    );
+    assert_eq!(
+        file_bytes(&sibling),
+        sibling_bytes,
+        "the sibling shard must not rewrite"
+    );
+    assert!(out.stderr.is_empty(), "stderr: {}", text(&out.stderr));
+
+    let warm = isolated(&root, &CHECK, &home);
+    assert_eq!(
+        warm.stdout, out.stdout,
+        "the healed shard must serve the same findings"
+    );
+    assert!(warm.stderr.is_empty(), "stderr: {}", text(&warm.stderr));
+}
+
+#[test]
+fn an_orphan_shard_that_loads_nothing_is_pruned_by_the_next_store() {
+    let (_tmp, root) = project();
+    put(&root, "a.rs", SAMPLE);
+    let (_home_guard, home) = temp();
+
+    let cold = isolated(&root, &CHECK, &home);
+    succeeded_with_finding(&cold);
+    let files = cache_files(&home);
+    assert_eq!(files.len(), 2, "one shard per file: {files:?}");
+    let shards = files[0]
+        .parent()
+        .unwrap_or_else(|| panic!("{} has no directory", files[0].display()))
+        .to_path_buf();
+    let orphan = (0..=255u8)
+        .map(|byte| shards.join(format!("shard-{byte:02x}.bin")))
+        .find(|path| !files.contains(path))
+        .unwrap_or_else(|| panic!("every shard name is taken"));
+    std::fs::write(&orphan, b"not a cache").unwrap_or_else(|e| panic!("plant orphan: {e}"));
+
+    put(&root, "a.rs", &SAMPLE.replace("handle", "settle"));
+    let edited = isolated(&root, &CHECK, &home);
+    assert!(edited.status.success(), "stderr: {}", text(&edited.stderr));
+    assert!(edited.stderr.is_empty(), "stderr: {}", text(&edited.stderr));
+    assert!(
+        !orphan.exists(),
+        "a shard with no entries must be removed by the store: {}",
+        orphan.display()
+    );
+    assert_eq!(cache_files(&home).len(), 2, "only the live shards remain");
+}
+
+#[test]
+fn a_shard_left_with_only_deleted_files_is_pruned() {
+    let (_tmp, root) = project();
+    put(&root, "victim.rs", SAMPLE);
+    put(&root, "keep1.rs", SAMPLE);
+    put(&root, "keep2.rs", SAMPLE);
+    let (_home_guard, home) = temp();
+
+    let cold = isolated(&root, &CHECK, &home);
+    succeeded_with_finding(&cold);
+    let files = cache_files(&home);
+    assert_eq!(files.len(), 4, "one shard per file: {files:?}");
+    let pruned = shard_holding(&files, "victim.rs");
+    let bytes_before: std::collections::HashMap<PathBuf, Vec<u8>> = files
+        .iter()
+        .map(|path| (path.clone(), file_bytes(path)))
+        .collect();
+    std::fs::remove_file(root.join("victim.rs")).unwrap_or_else(|e| panic!("remove victim: {e}"));
+
+    let out = isolated(&root, &CHECK, &home);
+    assert!(out.status.success(), "stderr: {}", text(&out.stderr));
+    let uncached = isolated(&root, &UNCACHED, &home);
+    assert_eq!(
+        out.stdout, uncached.stdout,
+        "the pruned run must equal a cold run"
+    );
+    let after = cache_files(&home);
+    assert_eq!(after.len(), 3, "the emptied shard is gone: {after:?}");
+    assert!(
+        !after.contains(&pruned),
+        "the victim shard must be pruned: {after:?}"
+    );
+    for path in &after {
+        assert_eq!(
+            &file_bytes(path.as_path()),
+            bytes_before
+                .get(path)
+                .unwrap_or_else(|| panic!("{} is a new shard", path.display())),
+            "{path:?} must not rewrite"
+        );
+    }
+
+    let warm = isolated(&root, &CHECK, &home);
+    assert_eq!(warm.stdout, out.stdout, "the pruned cache must stay warm");
+    assert!(warm.stderr.is_empty(), "stderr: {}", text(&warm.stderr));
 }

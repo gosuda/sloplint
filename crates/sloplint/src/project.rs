@@ -369,7 +369,7 @@ pub fn read_regular(path: &Path) -> io::Result<Vec<u8>> {
 
 /// Reads a whole regular file without following a trailing symlink; see [`read_regular`].
 ///
-/// The cache uses this so a link planted at `cache-v1.bin` is refused instead of being
+/// The cache uses this so a link planted at a shard file is refused instead of being
 /// followed. Configuration and baseline inputs keep using [`read_regular`].
 pub fn read_regular_nofollow(path: &Path) -> io::Result<Vec<u8>> {
     let (file, len) = open_regular_nofollow(path)?;
