@@ -55,13 +55,14 @@ fn spawn(mut command: Command) -> Output {
         .unwrap_or_else(|e| panic!("spawn {command:?}: {e}"))
 }
 
-/// Spawns like `spawn` but tolerates ETXTBSY on a freshly written copy:
-/// exec'ing a path the kernel still holds open for write fails with os error
-/// 26 under parallel load and under ASan's slower interceptors. The retry is
-/// bounded, so a genuinely busy binary still fails the test.
+/// Spawns like `spawn` but tolerates ETXTBSY (os error 26) on a freshly written copy. A
+/// sibling test's fork can hold the copy's write descriptor until its own exec, so exec of the
+/// copy fails until that descriptor closes. The retry is bounded to 5 s on a monotonic clock,
+/// so a genuinely busy binary still fails the test.
 fn spawn_forgiving(mut command: Command) -> Output {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     let mut last_busy = None;
-    for _ in 0..100 {
+    while std::time::Instant::now() < deadline {
         match command.output() {
             Ok(out) => return out,
             Err(e) if e.raw_os_error() == Some(26) => {
@@ -352,6 +353,51 @@ fn the_no_cache_flag_does_no_cache_work() {
         homeless_run.stderr.is_empty(),
         "a missing home is irrelevant without a cache: {}",
         text(&homeless_run.stderr)
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_stale_temp_file_at_this_pid_does_not_block_the_store() {
+    let (_tmp, root) = project();
+    let (_home_guard, home) = temp();
+    let cold = isolated(&root, &CHECK, &home);
+    succeeded_with_finding(&cold);
+    let files = cache_files(&home);
+    assert_eq!(files.len(), 1, "one cache for one project root: {files:?}");
+    let key_dir = files[0]
+        .parent()
+        .unwrap_or_else(|| panic!("{} has no directory", files[0].display()))
+        .to_path_buf();
+    std::fs::remove_file(&files[0]).unwrap_or_else(|e| panic!("remove cache: {e}"));
+
+    let script = r#"printf stale > "$1/cache-v1.bin.$$.tmp" && shift && exec "$@""#;
+    let mut run = Command::new("sh");
+    run.current_dir(&root)
+        .args(["-c", script, "sh"])
+        .arg(&key_dir)
+        .arg(env!("CARGO_BIN_EXE_sloplint"))
+        .args(CHECK);
+    for name in CACHE_ENV {
+        run.env(name, &home);
+    }
+    let out = spawn(run);
+
+    succeeded_with_finding(&out);
+    assert!(
+        out.stderr.is_empty(),
+        "a stale temp file must not block the store: {}",
+        text(&out.stderr)
+    );
+    assert_eq!(
+        text(&out.stdout),
+        text(&cold.stdout),
+        "a recovered store must not change the findings"
+    );
+    assert_eq!(
+        names(&key_dir),
+        ["cache-v1.bin"],
+        "the stale temp file must be removed and the cache written"
     );
 }
 

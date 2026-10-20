@@ -140,24 +140,28 @@ fn plant(file: &Path, from: &str, to: &str) {
     std::fs::write(file, &bytes).unwrap_or_else(|e| panic!("plant: {e}"));
 }
 
-/// Runs `spawn`, retrying a bounded number of times while the freshly written executable is
-/// busy. Another test thread that forks while this test holds the file open for writing keeps
-/// a copy of that descriptor until its own `exec`, and `exec` of a file open for writing fails
-/// with `ETXTBSY`. Any other error, or a busy file after the budget, fails the test.
+/// Runs `spawn`, retrying while the freshly written executable is busy. Another test thread
+/// that forks while this test holds the file open for writing keeps a copy of that descriptor
+/// until its own `exec`, and `exec` of a file open for writing fails with `ETXTBSY` (os error
+/// 26). The retry is bounded to 5 s, so a genuinely busy binary still fails the test; any other
+/// error fails it at once.
 fn spawn_when_not_busy(spawn: impl Fn() -> io::Result<Output>) -> Output {
-    const ATTEMPTS: u32 = 40;
-    for attempt in 1..=ATTEMPTS {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    let mut last_busy = None;
+    while std::time::Instant::now() < deadline {
         match spawn() {
             Ok(out) => return out,
-            Err(error)
-                if error.kind() == io::ErrorKind::ExecutableFileBusy && attempt < ATTEMPTS =>
-            {
-                std::thread::sleep(std::time::Duration::from_millis(25));
+            Err(e) if e.raw_os_error() == Some(26) => {
+                last_busy = Some(e);
+                std::thread::sleep(std::time::Duration::from_millis(50));
             }
-            Err(error) => panic!("spawn altered executable (attempt {attempt}): {error}"),
+            Err(e) => panic!("spawn altered executable: {e}"),
         }
     }
-    unreachable!("the last attempt returns or panics")
+    panic!(
+        "spawn stayed ETXTBSY for 5 s: {}",
+        last_busy.map_or("unknown".to_string(), |e| e.to_string())
+    )
 }
 
 /// A project holding [`SAMPLE`] and an empty configuration.
@@ -333,7 +337,8 @@ fn planted_cache_symlink_is_never_written_through() {
 
 /// A symlink planted at the temporary file's name must be left alone and never written through.
 /// The temporary name carries the child's pid, so a shell plants the link and then `exec`s the
-/// binary: the shell's `$$` is the pid the binary keeps.
+/// binary: the shell's `$$` is the pid the binary keeps. The stored cache is removed first: a
+/// warm hit stores nothing, so only a run that stores reaches the temporary file.
 #[cfg(unix)]
 #[test]
 fn planted_temp_symlink_is_preserved_and_never_written_through() {
@@ -350,6 +355,7 @@ fn planted_temp_symlink_is_preserved_and_never_written_through() {
         .parent()
         .unwrap_or_else(|| panic!("{} has no directory", files[0].display()))
         .to_path_buf();
+    std::fs::remove_file(&files[0]).unwrap_or_else(|e| panic!("remove cache: {e}"));
     let (_outside, base) = tempdir();
     write(&base, "sentinel.txt", "sentinel");
     let marker = base.join("sentinel.txt");
