@@ -31,6 +31,13 @@ fn main() -> ExitCode {
     }
 }
 
+/// Runs `check`: executes the pipeline, emits the report, and exits with its status.
+///
+/// Ends the process directly with [`std::process::exit`] while `execution` is still in
+/// scope instead of returning: tearing down the run would free every finding's heap
+/// strings object by object just before the process ends, while the OS reclaims the
+/// whole heap at exit. Values on the live stack stay reachable for LeakSanitizer, and
+/// output is flushed before exiting, so bytes and statuses match a normal return.
 fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
     let config = args.run.select.config.as_deref();
     let paths = if args.paths.is_empty() {
@@ -55,11 +62,17 @@ fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
         write_baseline: false,
     };
     match sloplint::execute(&options) {
-        Ok(execution) => match emit(&execution, args.format) {
-            Ok(()) if execution.failed => ExitCode::from(1),
-            Ok(()) => ExitCode::SUCCESS,
-            Err(error) => fail(&error.to_string(), 3),
-        },
+        Ok(execution) => {
+            let status: u8 = match emit(&execution, args.format) {
+                Ok(()) if execution.failed => 1,
+                Ok(()) => 0,
+                Err(error) => {
+                    emit_error(&error.to_string());
+                    3
+                }
+            };
+            std::process::exit(i32::from(status));
+        }
         Err(error) => report_error(&error),
     }
 }
@@ -79,17 +92,20 @@ fn baseline(cwd: &Path, args: &BaselineArgs) -> ExitCode {
         write_baseline: true,
     };
     match sloplint::execute(&options) {
-        Ok(execution) => match execution.baseline_written.as_deref() {
-            Some(path) => print_text(
-                &format!(
-                    "baseline: wrote {} entries to {}\n",
-                    execution.report.summary.findings,
-                    TerminalText::line(path)
-                ),
-                TextKind::Plain,
-            ),
-            None => ExitCode::SUCCESS,
-        },
+        Ok(execution) => {
+            let status: u8 = match execution.baseline_written.as_deref() {
+                Some(path) => {
+                    let text = format!(
+                        "baseline: wrote {} entries to {}\n",
+                        execution.report.summary.findings,
+                        TerminalText::line(path)
+                    );
+                    print_text_status(&text, TextKind::Plain)
+                }
+                None => 0,
+            };
+            std::process::exit(i32::from(status));
+        }
         Err(error) => report_error(&error),
     }
 }
@@ -382,23 +398,36 @@ fn severity_name(severity: Severity) -> &'static str {
 }
 
 fn print_text(text: &str, kind: TextKind) -> ExitCode {
+    ExitCode::from(print_text_status(text, kind))
+}
+
+/// Writes `text` to stdout and returns the process status: 0 on success, 3 on error.
+fn print_text_status(text: &str, kind: TextKind) -> u8 {
     let written = with_buffered_stdout(|out| match kind {
         TextKind::Plain => write!(out, "{}", TerminalText::block(text)),
         TextKind::Json => write_guarded(out, text.as_bytes()),
     });
     match written {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(error) => fail(&error.to_string(), 3),
+        Ok(()) => 0,
+        Err(error) => {
+            emit_error(&error.to_string());
+            3
+        }
     }
 }
 
 fn fail(message: &str, code: u8) -> ExitCode {
+    emit_error(message);
+    ExitCode::from(code)
+}
+
+/// Prints one `sloplint: error: ...` line to stderr, escaping terminal controls.
+fn emit_error(message: &str) {
     let _ = writeln!(
         io::stderr(),
         "sloplint: error: {}",
         TerminalText::block(message)
     );
-    ExitCode::from(code)
 }
 
 fn report_error(error: &RunError) -> ExitCode {
