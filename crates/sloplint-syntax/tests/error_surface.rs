@@ -30,13 +30,8 @@ fn run<'s>(lang: Lang, path: &'s str, source: &'s str) -> Analysis<'s> {
     analyze(&mut Parsers::new(), &input, &NO_CUSTOM)
 }
 
-/// The raw tree the routed grammar produces, without `analyze`'s fallbacks.
-fn raw_tree(lang: Lang, source: &str) -> tree_sitter::Tree {
-    let language: tree_sitter::Language = match lang {
-        Lang::Go => tree_sitter_go::LANGUAGE.into(),
-        Lang::Rust => tree_sitter_rust::LANGUAGE.into(),
-        _ => panic!("raw_tree supports only Go and Rust, got {lang:?}"),
-    };
+/// The raw tree `language` produces, without `analyze`'s fallbacks.
+fn raw_tree(language: tree_sitter::Language, source: &str) -> tree_sitter::Tree {
     let mut parser = tree_sitter::Parser::new();
     parser.set_language(&language).expect("grammar loads");
     parser.parse(source, None).expect("parser returns a tree")
@@ -75,7 +70,7 @@ fn on_small_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> 
 #[test]
 fn hidden_missing_only_tree_reports_root_end_not_none() {
     const SOURCE: &str = "func f() { go f()L1: }\n";
-    let tree = raw_tree(Lang::Go, SOURCE);
+    let tree = raw_tree(tree_sitter_go::LANGUAGE.into(), SOURCE);
     let root = tree.root_node();
     assert!(root.has_error(), "premise: recovery flags the tree");
     assert!(
@@ -118,7 +113,7 @@ fn hidden_missing_only_tree_reports_root_end_not_none() {
 #[test]
 fn visible_error_reports_its_own_position_not_the_root_end() {
     const SOURCE: &str = "fn ok_one() {}\nfn ok_two() {}\n@\nfn ok_three() {}\nfn ok_four() {}\n";
-    let tree = raw_tree(Lang::Rust, SOURCE);
+    let tree = raw_tree(tree_sitter_rust::LANGUAGE.into(), SOURCE);
     assert!(
         visible_error_in(tree.root_node()),
         "premise: an ERROR node is reachable through children()"
