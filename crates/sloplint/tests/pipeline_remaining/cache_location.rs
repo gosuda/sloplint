@@ -9,7 +9,6 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
-use std::time::Duration;
 
 const SAMPLE: &str = "pub fn handle(flag: bool) {}\n";
 const GENERIC: &str = "grep/generic-name";
@@ -53,29 +52,6 @@ fn spawn(mut command: Command) -> Output {
     command
         .output()
         .unwrap_or_else(|e| panic!("spawn {command:?}: {e}"))
-}
-
-/// Spawns like `spawn` but tolerates ETXTBSY (os error 26) on a freshly written copy. A
-/// sibling test's fork can hold the copy's write descriptor until its own exec, so exec of the
-/// copy fails until that descriptor closes. The retry is bounded to 5 s on a monotonic clock,
-/// so a genuinely busy binary still fails the test.
-fn spawn_forgiving(mut command: Command) -> Output {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-    let mut last_busy = None;
-    while std::time::Instant::now() < deadline {
-        match command.output() {
-            Ok(out) => return out,
-            Err(e) if e.raw_os_error() == Some(26) => {
-                last_busy = Some(e);
-                std::thread::sleep(Duration::from_millis(50));
-            }
-            Err(e) => panic!("spawn {command:?}: {e}"),
-        }
-    }
-    panic!(
-        "spawn stayed ETXTBSY for 5 s: {}",
-        last_busy.map_or("unknown".to_string(), |e| e.to_string())
-    )
 }
 
 /// Runs the binary with every cache location variable pointing at `home`.

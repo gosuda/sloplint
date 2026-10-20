@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use sloplint::{Report, RunOptions, run};
 use sloplint_core::config::{Mode, Strictness};
 
+#[cfg(unix)]
 const BASELINE: &str = "sloplint-baseline.json";
 const SAMPLE: &str = "pub fn handle(flag: bool) {}\n";
 
@@ -23,6 +24,7 @@ fn put(root: &Path, rel: &str, body: &str) {
     std::fs::write(root.join(rel), body).unwrap_or_else(|e| panic!("write {rel}: {e}"));
 }
 
+#[cfg(unix)]
 fn read(path: &Path) -> Vec<u8> {
     std::fs::read(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
 }

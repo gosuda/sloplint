@@ -157,6 +157,7 @@ fn plant(file: &Path, from: &str, to: &str) {
     std::fs::write(file, &bytes).unwrap_or_else(|e| panic!("plant: {e}"));
 }
 
+#[cfg(target_os = "linux")]
 /// Runs `spawn`, retrying while the freshly written executable is busy. Another test thread
 /// that forks while this test holds the file open for writing keeps a copy of that descriptor
 /// until its own `exec`, and `exec` of a file open for writing fails with `ETXTBSY` (os error
