@@ -60,17 +60,21 @@ fn spawn(mut command: Command) -> Output {
 /// 26 under parallel load and under ASan's slower interceptors. The retry is
 /// bounded, so a genuinely busy binary still fails the test.
 fn spawn_forgiving(mut command: Command) -> Output {
-    for attempt in 0..100 {
+    let mut last_busy = None;
+    for _ in 0..100 {
         match command.output() {
             Ok(out) => return out,
             Err(e) if e.raw_os_error() == Some(26) => {
-                assert!(attempt < 99, "spawn stayed ETXTBSY for 5 s: {e}");
+                last_busy = Some(e);
                 std::thread::sleep(Duration::from_millis(50));
             }
             Err(e) => panic!("spawn {command:?}: {e}"),
         }
     }
-    unreachable!()
+    panic!(
+        "spawn stayed ETXTBSY for 5 s: {}",
+        last_busy.map_or("unknown".to_string(), |e| e.to_string())
+    )
 }
 
 /// Runs the binary with every cache location variable pointing at `home`.
