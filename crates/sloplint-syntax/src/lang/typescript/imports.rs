@@ -159,14 +159,12 @@ pub(crate) fn ts_targets(dir: &str, src: &str) -> Vec<String> {
         return Vec::new();
     }
     let mut parts: Vec<&str> = dir.split('/').filter(|s| !s.is_empty()).collect();
-    let mut rest = src;
-    while let Some(next) = rest.strip_prefix("../") {
-        if parts.pop().is_none() {
-            return Vec::new();
-        }
-        rest = next;
-    }
-    rest = rest.strip_prefix("./").map_or(rest, |s| s);
+    let climbed = src.trim_start_matches("../");
+    let Some(kept) = parts.len().checked_sub((src.len() - climbed.len()) / 3) else {
+        return Vec::new();
+    };
+    parts.truncate(kept);
+    let rest = climbed.strip_prefix("./").unwrap_or(climbed);
     let prefix = parts.join("/");
     let join = |base: String| {
         if prefix.is_empty() {
