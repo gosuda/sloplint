@@ -64,7 +64,7 @@ pub struct RunOptions {
     /// ship a forged cache. An unusable cache location disables the cache
     /// with a warning instead of failing the run; `false` does no cache work.
     pub use_cache: bool,
-    /// Worker threads; zero means the available parallelism.
+    /// Worker threads for the tree walk, cache load, analysis, and finalization; zero means the available parallelism.
     pub jobs: usize,
     /// Record the findings as the baseline instead of gating on them.
     pub write_baseline: bool,
@@ -263,7 +263,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     if let Some(cache) = &cache {
         store_if_touched(cache, &analyzed, &cached_hashes);
     }
-    let mut all = merge(&pipe, analyzed)?;
+    let mut all = merge(&pipe, analyzed, &pool)?;
     all.retain(|finding| scopes.contains(Path::new(&*finding.path)));
     let (reported, baselined, stale) = if opts.write_baseline {
         (all, 0, 0)
@@ -477,7 +477,14 @@ fn analyze_file(
     }
 }
 
-fn merge(pipe: &Pipeline<'_>, mut analyzed: Vec<Analyzed>) -> Result<Vec<Finding>, RunError> {
+/// Attaches world findings to their files, finalizes every file on `pool`, and sorts the report.
+///
+/// The first error in path order wins, as in [`analyze_all`].
+fn merge(
+    pipe: &Pipeline<'_>,
+    mut analyzed: Vec<Analyzed>,
+    pool: &rayon::ThreadPool,
+) -> Result<Vec<Finding>, RunError> {
     let mut orphans = Vec::new();
     for finding in world_findings(pipe, &analyzed) {
         match analyzed.binary_search_by(|file| file.rel.as_str().cmp(&*finding.path)) {
@@ -491,13 +498,19 @@ fn merge(pipe: &Pipeline<'_>, mut analyzed: Vec<Analyzed>) -> Result<Vec<Finding
         .map(|file| file.output.findings.len() + file.output.suppressions.len())
         .sum::<usize>()
         + orphans.len();
+    let finalized: Vec<Result<Vec<Finding>, RunError>> = pool.install(|| {
+        analyzed
+            .into_par_iter()
+            .map(|file| finalize(pipe, file))
+            .collect()
+    });
     let mut all = Vec::with_capacity(capacity);
-    for file in analyzed {
-        all.extend(finalize(pipe, file)?);
+    for findings in finalized {
+        all.extend(findings?);
     }
     all.extend(orphans);
     all.retain(|finding| pipe.filter.matches(&finding.rule));
-    all.sort_by(report_order);
+    pool.install(|| all.par_sort_by(report_order));
     Ok(all)
 }
 
