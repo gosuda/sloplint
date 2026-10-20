@@ -82,7 +82,11 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist-${{ matrix.target }}
-          path: sloplint-${{ github.ref_name }}-${{ matrix.target }}.*
+          path: |
+            sloplint-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+            sloplint-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
+            sloplint-${{ github.ref_name }}-${{ matrix.target }}.zip
+            sloplint-${{ github.ref_name }}-${{ matrix.target }}.zip.sha256
           if-no-files-found: error
           overwrite: true
           retention-days: 14
