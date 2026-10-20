@@ -165,11 +165,24 @@ impl Cache {
         .map_err(io::Error::other)?;
         let tmp = self.dir.join(format!("{FILE}.{}.tmp", std::process::id()));
         {
-            let mut file = fs::OpenOptions::new()
+            let mut file = match fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
-                .open(&tmp)?;
-            if let Err(error) = file.write_all(&bytes) {
+                .open(&tmp)
+            {
+                Err(error)
+                    if error.kind() == io::ErrorKind::AlreadyExists
+                        && fs::symlink_metadata(&tmp).is_ok_and(|meta| meta.is_file()) =>
+                {
+                    let _ = fs::remove_file(&tmp);
+                    fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(&tmp)?
+                }
+                other => other?,
+            };
+            if let Err(error) = file.write_all(&bytes).and_then(|()| file.sync_all()) {
                 drop(file);
                 let _ = fs::remove_file(&tmp);
                 return Err(error);
