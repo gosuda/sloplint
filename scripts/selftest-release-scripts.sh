@@ -81,9 +81,12 @@ case "$1" in
     shift
     path=""
     expr="."
+    paginate=0
+    slurp=0
     while [ "$#" -gt 0 ]; do
       case "$1" in
-        --paginate | --slurp) shift ;;
+        --paginate) paginate=1; shift ;;
+        --slurp) slurp=1; shift ;;
         --jq) expr="$2"; shift 2 ;;
         -H) shift 2 ;;
         *) path="$1"; shift ;;
@@ -96,9 +99,34 @@ case "$1" in
       fi
     }
     case "$path" in
-      repos/*/git/ref/tags/*) fail_if ref-fail; jq -r "$expr" "$state/ref.json" ;;
+      repos/*/git/ref/tags/*)
+        fail_if ref-fail
+        if [ -e "$state/ref-moving" ]; then
+          n="$(cat "$state/ref-moving-count" 2>/dev/null || echo 0)"
+          n=$((n + 1))
+          printf '%s\n' "$n" >"$state/ref-moving-count"
+          if [ "$n" -gt 1 ]; then
+            printf '{"object":{"type":"commit","sha":"2222222222222222222222222222222222222222"}}\n' | jq -r "$expr"
+          else
+            jq -r "$expr" "$state/ref.json"
+          fi
+        else
+          jq -r "$expr" "$state/ref.json"
+        fi
+        ;;
       repos/*/git/tags/*) jq -r "$expr" "$state/tagobj.json" ;;
-      repos/*/releases\?*) fail_if list-fail; jq -c '[.]' "$state/releases.json" ;;
+      repos/*/releases\?*)
+        fail_if list-fail
+        if [ "$paginate" != 1 ] || [ "$slurp" != 1 ]; then
+          printf '%s\n' "gh: releases list requires --paginate --slurp" >&2
+          exit 1
+        fi
+        if [ -e "$state/two-pages" ]; then
+          jq -c '[[] , .]' "$state/releases.json"
+        else
+          jq -c '[.]' "$state/releases.json"
+        fi
+        ;;
       repos/*/releases/assets/*) cat "$state/blobs/${path##*/}" ;;
       *) exit 1 ;;
     esac
@@ -223,6 +251,30 @@ printf '%s\n' binary >"$work/stage2/sloplint"
 tar -czf "$dist/sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz" -C "$work/stage2" sloplint
 (cd "$dist" && shasum -a 256 sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz >sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz.sha256)
 expect_fail "archive without LICENSE is rejected" verify_dist
+build_dist v1.0.0
+python3 - "$dist/sloplint-v1.0.0-x86_64-pc-windows-msvc.zip" "$work/stage" <<'PY'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1], "w") as z:
+    z.write(sys.argv[2] + "/sloplint.exe", "sloplint.exe")
+PY
+(cd "$dist" && shasum -a 256 sloplint-v1.0.0-x86_64-pc-windows-msvc.zip >sloplint-v1.0.0-x86_64-pc-windows-msvc.zip.sha256)
+expect_fail "msvc zip without LICENSE is rejected" verify_dist
+build_dist v1.0.0
+printf '%s\n' extra >"$work/stage/extra.txt"
+python3 - "$dist/sloplint-v1.0.0-x86_64-pc-windows-msvc.zip" "$work/stage" <<'PY'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1], "w") as z:
+    z.write(sys.argv[2] + "/sloplint.exe", "sloplint.exe")
+    z.write(sys.argv[2] + "/LICENSE", "LICENSE")
+    z.write(sys.argv[2] + "/extra.txt", "extra.txt")
+PY
+(cd "$dist" && shasum -a 256 sloplint-v1.0.0-x86_64-pc-windows-msvc.zip >sloplint-v1.0.0-x86_64-pc-windows-msvc.zip.sha256)
+expect_fail "msvc zip with an extra entry is rejected" verify_dist
+build_dist v1.0.0
+printf '%s\n' extra >"$work/stage/zzz"
+tar -czf "$dist/sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz" -C "$work/stage" sloplint LICENSE zzz
+(cd "$dist" && shasum -a 256 sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz >sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz.sha256)
+expect_fail "linux tar with an extra member is rejected" verify_dist
 build_dist v0.9.0
 expect_fail "archives named for another tag are rejected" verify_dist
 
@@ -390,6 +442,49 @@ if ! called "release upload v1.0.0 $work/pub/a.txt"; then
   record ok "downloaded identical asset is skipped"
 else
   record bad "re-uploaded identical asset"
+fi
+if called "releases/assets/11"; then
+  record ok "identical blob without digest is compared via asset download"
+else
+  record bad "identical blob without digest skipped the asset download"
+fi
+scenario "[{\"id\":7,\"tag_name\":\"v1.0.0\",\"draft\":true,\"assets\":[$(asset 11 a.txt uploaded null),$(asset 12 b.txt uploaded "\"$sum_b\"")]}]"
+printf '%s\n' stale >"$state/blobs/11"
+expect_fail "draft asset without digest but different content fails" publish
+if ! called "release upload" && ! called "delete-asset" && ! called "release edit"; then
+  record ok "mismatched download changes nothing"
+else
+  record bad "mismatched download mutated the release"
+fi
+scenario "[{\"id\":7,\"tag_name\":\"v1.0.0\",\"draft\":false,\"assets\":[$(asset 11 a.txt starter null),$(asset 12 b.txt uploaded "\"$sum_b\"")]}]"
+expect_fail "published release with an incomplete asset fails" publish
+if ! called "delete-asset" && ! called "release upload"; then
+  record ok "incomplete published asset changes nothing"
+else
+  record bad "incomplete published asset mutated the release"
+fi
+scenario "[{\"id\":7,\"tag_name\":\"v1.0.0\",\"draft\":false,\"assets\":[$(asset 11 a.txt uploaded '"sha256:deadbeef"'),$(asset 12 b.txt uploaded "\"$sum_b\"")]}]"
+expect_fail "published release with different content fails" publish
+if ! called "release upload" && ! called "delete-asset" && ! called "release edit" && ! called --clobber; then
+  record ok "different content on a published release changes nothing"
+else
+  record bad "different content on a published release mutated it"
+fi
+scenario "[{\"id\":7,\"tag_name\":\"v1.0.0\",\"draft\":false,\"assets\":[$(asset 11 a.txt uploaded "\"$sum_a\""),$(asset 12 b.txt uploaded "\"$sum_b\"")]}]"
+touch "$state/two-pages"
+expect_ok "release on the second page is found without creating a duplicate" publish
+if ! called "release create"; then
+  record ok "paginated release lookup needs no creation"
+else
+  record bad "created a duplicate despite paginated match"
+fi
+scenario '[]'
+touch "$state/ref-moving"
+expect_fail "tag that moves mid-run fails before publication" publish
+if ! called "release edit"; then
+  record ok "moved tag blocks publication"
+else
+  record bad "published after the tag moved"
 fi
 
 fresh_state
