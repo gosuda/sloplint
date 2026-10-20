@@ -1,7 +1,5 @@
 //! `slop/barrel-file`: barrel files re-exporting from other barrel files.
 
-use std::collections::BTreeSet;
-
 use crate::config::Strictness;
 use crate::facts::NamedSite;
 use crate::finding::{Finding, Level, Severity};
@@ -37,12 +35,17 @@ struct BarrelFile;
 
 impl WorldRule for BarrelFile {
     fn check(&self, files: &[WorldFile<'_>], out: &mut Vec<Finding>) {
-        let paths: BTreeSet<&str> = files.iter().map(|file| file.path).collect();
-        let barrels: BTreeSet<&str> = files
+        if !files.iter().any(|file| file.facts.barrel.is_some()) {
+            return;
+        }
+        let mut paths: Vec<&str> = files.iter().map(|file| file.path).collect();
+        paths.sort_unstable();
+        let mut barrels: Vec<&str> = files
             .iter()
             .filter(|file| file.facts.barrel.is_some())
             .map(|file| file.path)
             .collect();
+        barrels.sort_unstable();
         for file in files {
             let Some(targets) = &file.facts.barrel else {
                 continue;
@@ -70,21 +73,105 @@ impl WorldRule for BarrelFile {
 }
 
 fn chain_target<'a>(
-    paths: &BTreeSet<&str>,
-    barrels: &BTreeSet<&str>,
+    paths: &[&str],
+    barrels: &[&str],
     targets: &'a [Vec<String>],
 ) -> Option<&'a str> {
     for candidates in targets {
         for candidate in candidates {
             let path = candidate.as_str();
-            if !paths.contains(path) {
+            if paths.binary_search(&path).is_err() {
                 continue;
             }
-            if barrels.contains(path) {
+            if barrels.binary_search(&path).is_ok() {
                 return Some(path);
             }
             break;
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::facts::WorldFacts;
+    use crate::lang::Lang;
+
+    fn facts(barrel: Option<Vec<Vec<String>>>) -> WorldFacts {
+        WorldFacts {
+            lang: Lang::TypeScript,
+            is_test_file: false,
+            is_entry_file: false,
+            has_inline_tests: false,
+            public_functions: 0,
+            definitions: Vec::new(),
+            abstractions: Vec::new(),
+            impls: Vec::new(),
+            barrel,
+        }
+    }
+
+    #[test]
+    fn findings_follow_file_order_and_name_the_first_barrel_target() {
+        let rule = BarrelFile;
+        let zed = facts(Some(vec![vec![
+            "missing.ts".to_string(),
+            "b.ts".to_string(),
+        ]]));
+        let ay = facts(Some(vec![
+            vec!["leaf.ts".to_string()],
+            vec!["b.ts".to_string()],
+        ]));
+        let bee = facts(Some(Vec::new()));
+        let leaf = facts(None);
+        let files = [
+            WorldFile {
+                path: "z.ts",
+                facts: &zed,
+            },
+            WorldFile {
+                path: "a.ts",
+                facts: &ay,
+            },
+            WorldFile {
+                path: "b.ts",
+                facts: &bee,
+            },
+            WorldFile {
+                path: "leaf.ts",
+                facts: &leaf,
+            },
+        ];
+        let mut out = Vec::new();
+        rule.check(&files, &mut out);
+        let order: Vec<String> = out.iter().map(|finding| finding.path.to_string()).collect();
+        assert_eq!(order, ["z.ts".to_string(), "a.ts".to_string()]);
+        assert!(
+            out[0].message.contains("`b.ts`"),
+            "z.ts must name its barrel target: {}",
+            out[0].message
+        );
+        assert!(
+            out[1].message.contains("`b.ts`"),
+            "a.ts must name its barrel target: {}",
+            out[1].message
+        );
+    }
+
+    #[test]
+    fn no_barrel_file_reports_nothing() {
+        let rule = BarrelFile;
+        let plain = facts(None);
+        let files = [WorldFile {
+            path: "a.ts",
+            facts: &plain,
+        }];
+        let mut out = Vec::new();
+        rule.check(&files, &mut out);
+        assert!(
+            out.is_empty(),
+            "a tree without barrels must report nothing: {out:?}"
+        );
+    }
 }
