@@ -499,9 +499,11 @@ mod unix_only {
             dest.sync_all().unwrap_or_else(|e| panic!("fsync: {e}"));
         }
         chmod(&staging, 0o111);
-        // fsync then rename lands the complete file atomically: exec'ing a
-        // path the kernel still holds open for write fails with ETXTBSY
-        // (os error 26) under parallel load, so spawn sites retry it briefly.
+        // A sibling test's fork can inherit the destination fd and hold it
+        // open for write past our own close, so exec'ing the copy fails with
+        // ETXTBSY (os error 26) until that sibling's exec drops it. fsync and
+        // rename land bytes and name atomically but do not close the forked
+        // fd; spawn sites retry the exec for a bounded window.
         std::fs::rename(&staging, &copy).unwrap_or_else(|e| panic!("rename: {e}"));
         assert!(
             std::fs::File::open(&copy).is_err(),
