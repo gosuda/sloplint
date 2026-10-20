@@ -361,6 +361,50 @@ fn terminal_text_escapes_exactly_the_documented_controls() {
     );
 }
 
+// The scanner skips 16-byte blocks that hold no control byte, so every control kind must be
+// found at every offset around a block edge, in both renderings, with the same escapes as a
+// character-by-character reference.
+#[test]
+fn terminal_text_finds_controls_at_every_offset_around_block_edges() {
+    fn reference(text: &str, keep_newlines: bool) -> String {
+        let mut shown = String::new();
+        for c in text.chars() {
+            match c {
+                '\t' => shown.push(c),
+                '\n' if keep_newlines => shown.push(c),
+                '\0'..='\u{1f}' | '\u{7f}' => shown.push_str(&format!("\\x{:02x}", u32::from(c))),
+                '\u{80}'..='\u{9f}' => shown.push_str(&format!("\\u{{{:x}}}", u32::from(c))),
+                _ => shown.push(c),
+            }
+        }
+        shown
+    }
+    let controls = [
+        '\u{0}', '\n', '\u{1b}', '\u{1f}', '\u{7f}', '\u{80}', '\u{9b}', '\u{9f}', '\u{a0}',
+    ];
+    let texts = controls.iter().flat_map(|control| {
+        ["a", "\u{e9}", "\t"].into_iter().flat_map(move |filler| {
+            (0..40)
+                .map(move |pad| format!("{}{control}{}", filler.repeat(pad), "z".repeat(pad % 17)))
+        })
+    });
+    for text in texts {
+        for (shown, keep_newlines) in [
+            (TerminalText::line(&text), false),
+            (TerminalText::block(&text), true),
+        ] {
+            let expected = reference(&text, keep_newlines);
+            let mut written = Vec::new();
+            shown
+                .write_escaped(&mut written)
+                .unwrap_or_else(|e| panic!("write to a Vec: {e}"));
+            assert_eq!(shown.to_string(), expected, "Display of {text:?}");
+            assert_eq!(written, expected.as_bytes(), "write_escaped of {text:?}");
+            assert_eq!(shown.into_text(), expected, "into_text of {text:?}");
+        }
+    }
+}
+
 // A027: a field stays on one output line, while block text keeps its line feeds.
 #[test]
 fn terminal_text_line_escapes_line_breaks_and_block_keeps_line_feeds() {

@@ -2,6 +2,7 @@
 
 use std::borrow::Cow;
 use std::fmt;
+use std::io;
 
 /// Untrusted text that displays with terminal control characters made visible.
 ///
@@ -74,37 +75,132 @@ impl<'a> TerminalText<'a> {
     /// assert_eq!(TerminalText::block("a\nb").into_text(), "a\nb");
     /// ```
     pub fn into_text(self) -> Cow<'a, str> {
-        if self.text.chars().any(|c| self.is_control(c)) {
+        if next_control(self.text.as_bytes(), self.keep_newlines, 0).is_some() {
             Cow::Owned(self.to_string())
         } else {
             Cow::Borrowed(self.text)
         }
     }
 
-    fn is_control(&self, c: char) -> bool {
-        match c {
-            '\t' => false,
-            '\n' => !self.keep_newlines,
-            '\0'..='\u{1f}' | '\u{7f}'..='\u{9f}' => true,
-            _ => false,
+    /// Writes the escaped text directly to `out` without [`fmt`] machinery.
+    ///
+    /// Clean byte runs go out with [`io::Write::write_all`] and each control is replaced
+    /// by its escape bytes, so the emitted bytes equal the [`Display`](fmt::Display)
+    /// rendering exactly while skipping the formatter.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use sloplint::TerminalText;
+    ///
+    /// # fn main() -> std::io::Result<()> {
+    /// let mut out = Vec::new();
+    /// TerminalText::line("a\x1b[2J\u{9b}").write_escaped(&mut out)?;
+    /// assert_eq!(out.as_slice(), b"a\\x1b[2J\\u{9b}".as_slice());
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn write_escaped<W: io::Write + ?Sized>(&self, out: &mut W) -> io::Result<()> {
+        let bytes = self.text.as_bytes();
+        let mut run = 0;
+        let mut at = 0;
+        while let Some((off, len, code)) = next_control(bytes, self.keep_newlines, at) {
+            out.write_all(&bytes[run..off])?;
+            write_escape(out, len, code)?;
+            run = off + len;
+            at = run;
         }
+        out.write_all(&bytes[run..])
     }
 }
 
+/// Scans `bytes` from `from` for the next escaped control.
+///
+/// Returns the control's byte offset, byte length, and code point value. ASCII controls
+/// and DEL have length 1 with the byte as the value; C1 controls have length 2 with the
+/// trailing byte's value as the code point. Tab is never a control, and the line feed is
+/// skipped when `keep_newlines` holds.
+fn next_control(bytes: &[u8], keep_newlines: bool, from: usize) -> Option<(usize, usize, u8)> {
+    let mut at = from;
+    while at < bytes.len() {
+        if bytes[at..].first_chunk::<16>().is_some_and(plain_block) {
+            at += 16;
+        } else if let Some((len, code)) = control_at(bytes, at, keep_newlines) {
+            return Some((at, len, code));
+        } else {
+            at += 1;
+        }
+    }
+    None
+}
+
+/// The byte length and code point value of the control starting at `at`, if one does.
+fn control_at(bytes: &[u8], at: usize, keep_newlines: bool) -> Option<(usize, u8)> {
+    match bytes[at] {
+        b'\t' => None,
+        b'\n' if keep_newlines => None,
+        byte @ (0x00..=0x1f | 0x7f) => Some((1, byte)),
+        0xC2 => bytes
+            .get(at + 1)
+            .copied()
+            .filter(|next| (0x80..=0x9f).contains(next))
+            .map(|next| (2, next)),
+        0x20..=0x7e | 0x80..=0xC1 | 0xC3..=0xff => None,
+    }
+}
+
+/// Whether a 16-byte block holds no byte that can start a control.
+///
+/// Every control starts with a byte below `0x20`, the DEL byte, or the `0xC2` lead byte of
+/// a C1 character, so a block without them is skipped whole. The fold has no early exit,
+/// so it compiles to one vector compare.
+fn plain_block(block: &[u8; 16]) -> bool {
+    !block.iter().fold(false, |hit, &byte| {
+        hit | (byte < 0x20) | (byte == 0x7f) | (byte == 0xC2)
+    })
+}
+
+/// Writes the escape bytes for one control found by [`next_control`].
+///
+/// Length 1 writes `\x` plus two lowercase hex digits; length 2 writes `\u{..}` with
+/// lowercase hex digits, matching the [`Display`](fmt::Display) rendering exactly.
+fn write_escape<W: io::Write + ?Sized>(out: &mut W, len: usize, code: u8) -> io::Result<()> {
+    if len == 1 {
+        out.write_all(&[
+            b'\\',
+            b'x',
+            HEX[(code >> 4) as usize],
+            HEX[(code & 0x0f) as usize],
+        ])
+    } else {
+        out.write_all(&[
+            b'\\',
+            b'u',
+            b'{',
+            HEX[((code >> 4) & 0x0f) as usize],
+            HEX[(code & 0x0f) as usize],
+            b'}',
+        ])
+    }
+}
+
+/// Lowercase hex digits used by [`write_escape`].
+const HEX: &[u8; 16] = b"0123456789abcdef";
+
 impl fmt::Display for TerminalText<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let bytes = self.text.as_bytes();
         let mut run = 0;
-        for (at, c) in self.text.char_indices() {
-            if !self.is_control(c) {
-                continue;
-            }
-            f.write_str(&self.text[run..at])?;
-            if c.is_ascii() {
-                write!(f, "\\x{:02x}", u32::from(c))?;
+        let mut at = 0;
+        while let Some((off, len, code)) = next_control(bytes, self.keep_newlines, at) {
+            f.write_str(&self.text[run..off])?;
+            if len == 1 {
+                write!(f, "\\x{:02x}", code)?;
             } else {
-                write!(f, "\\u{{{:x}}}", u32::from(c))?;
+                write!(f, "\\u{{{:x}}}", code)?;
             }
-            run = at + c.len_utf8();
+            run = off + len;
+            at = run;
         }
         f.write_str(&self.text[run..])
     }

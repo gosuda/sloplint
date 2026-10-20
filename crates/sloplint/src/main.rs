@@ -162,19 +162,24 @@ fn with_plain_stdout(write: impl FnOnce(&mut dyn Write) -> io::Result<()>) -> io
 }
 
 fn write_agent(report: &Report, out: &mut dyn Write) -> io::Result<()> {
+    let mut digits = itoa::Buffer::new();
     for finding in &report.findings {
-        writeln!(
-            out,
-            "{}:{}:{}: {}: {} [{}]",
-            TerminalText::line(&finding.path),
-            finding.line,
-            finding.column,
-            severity_name(finding.severity),
-            TerminalText::line(&finding.message),
-            TerminalText::line(&finding.rule)
-        )?;
-        writeln!(out, "  context: {}", TerminalText::line(&finding.context))?;
-        writeln!(out, "  fix: {}", TerminalText::line(&finding.fix))?;
+        TerminalText::line(&finding.path).write_escaped(out)?;
+        out.write_all(b":")?;
+        out.write_all(digits.format(finding.line).as_bytes())?;
+        out.write_all(b":")?;
+        out.write_all(digits.format(finding.column).as_bytes())?;
+        out.write_all(b": ")?;
+        out.write_all(severity_name(finding.severity).as_bytes())?;
+        out.write_all(b": ")?;
+        TerminalText::line(&finding.message).write_escaped(out)?;
+        out.write_all(b" [")?;
+        TerminalText::line(&finding.rule).write_escaped(out)?;
+        out.write_all(b"]\n  context: ")?;
+        TerminalText::line(&finding.context).write_escaped(out)?;
+        out.write_all(b"\n  fix: ")?;
+        TerminalText::line(&finding.fix).write_escaped(out)?;
+        out.write_all(b"\n")?;
     }
     if !report.findings.is_empty() {
         writeln!(out)?;
