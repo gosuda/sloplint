@@ -25,7 +25,14 @@ jobs:
         with:
           persist-credentials: false
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  release-scripts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/selftest-release-scripts.sh
 
   deny:
     runs-on: ubuntu-24.04
@@ -66,6 +73,11 @@ jobs:
         with:
           persist-credentials: false
       - run: rustup target add ${{ matrix.target }}
+      - run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
       - run: cargo test --workspace --locked --target ${{ matrix.target }}
-      - name: Self-lint
-        run: cargo run --locked --target ${{ matrix.target }} -p sloplint -- check crates --format agent --strictness standard --mode threshold --fail-on deny
+      - run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Self-lint with the release binary
+        run: |
+          bin="target/${{ matrix.target }}/release/sloplint"
+          if [ "$RUNNER_OS" = Windows ]; then bin="$bin.exe"; fi
+          "$bin" check crates --format agent --strictness standard --mode threshold --fail-on deny
