@@ -236,53 +236,25 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         filter: &opts.rule_filter,
         test_globs: &test_globs,
         cache: &cached,
-        cached_hashes: &cached_hashes,
         interfaces: &interfaces,
     };
     let outcomes = analyze_all(&discovery.entries, &pipe, jobs(opts.jobs))?;
-    let mut skipped = count(
+    let (analyzed, skipped_outcomes) = split_outcomes(outcomes, &scopes);
+    let skipped = count(
         discovery
             .skipped
             .iter()
             .filter(|rel| scopes.contains(rel.as_path()))
             .count(),
-    );
-    let mut analyzed = Vec::with_capacity(outcomes.len());
-    for outcome in outcomes {
-        match outcome {
-            Outcome::Skipped(rel) => {
-                if scopes.contains(Path::new(&rel)) {
-                    skipped += 1;
-                }
-            }
-            Outcome::Analyzed(file) => analyzed.push(*file),
-        }
-    }
+    ) + skipped_outcomes;
     let files = count(
         analyzed
             .iter()
             .filter(|file| scopes.contains(Path::new(&file.rel)))
             .count(),
     );
-    // A warm run whose every file hit the cache would write back the entries it
-    // just loaded, byte-identical: on a large tree that is hundreds of
-    // megabytes of postcard serialization spent to change nothing. Store only
-    // when some output differs from its cached entry or is missing from it.
-    // The store is also the only prune: it writes exactly the files this run
-    // analyzed, so a size mismatch means the cache holds entries for deleted
-    // files and must be rewritten.
-    let touched = analyzed.len() != pipe.cached_hashes.len()
-        || analyzed.iter().any(|file| {
-            pipe.cached_hashes
-                .get(file.rel.as_str())
-                .is_none_or(|hash| *hash != file.output.hash)
-        });
-    if touched && let Some(cache) = &cache {
-        let view: Vec<(&str, &FileOutput)> = analyzed
-            .iter()
-            .map(|file| (file.rel.as_str(), &file.output))
-            .collect();
-        cache.store(&view, &cached_hashes);
+    if let Some(cache) = &cache {
+        store_if_touched(cache, &analyzed, &cached_hashes);
     }
     let mut all = merge(&pipe, analyzed)?;
     all.retain(|finding| scopes.contains(Path::new(&*finding.path)));
@@ -355,7 +327,6 @@ struct Pipeline<'a> {
     filter: &'a RuleFilter,
     test_globs: &'a GlobSet,
     cache: &'a Mutex<HashMap<Box<str>, FileOutput>>,
-    cached_hashes: &'a HashMap<Box<str>, [u8; 32]>,
     interfaces: &'a HashSet<String>,
 }
 
@@ -504,14 +475,14 @@ fn analyze_file(
 }
 
 fn merge(pipe: &Pipeline<'_>, mut analyzed: Vec<Analyzed>) -> Result<Vec<Finding>, RunError> {
-    let world = world_findings(pipe, &analyzed);
     let mut orphans = Vec::new();
-    for finding in world {
+    for finding in world_findings(pipe, &analyzed) {
         match analyzed.binary_search_by(|file| file.rel.as_str().cmp(&*finding.path)) {
             Ok(index) => analyzed[index].output.findings.push(finding),
             Err(_) => orphans.push(finding),
         }
     }
+    let orphans = fingerprinted(orphans);
     let capacity: usize = analyzed
         .iter()
         .map(|file| file.output.findings.len() + file.output.suppressions.len())
@@ -521,26 +492,63 @@ fn merge(pipe: &Pipeline<'_>, mut analyzed: Vec<Analyzed>) -> Result<Vec<Finding
     for file in analyzed {
         all.extend(finalize(pipe, file)?);
     }
-    orphans.sort_by(|a, b| {
-        a.path
-            .cmp(&b.path)
-            .then_with(|| a.line.cmp(&b.line))
-            .then_with(|| a.column.cmp(&b.column))
-            .then_with(|| a.rule.cmp(&b.rule))
-            .then_with(|| a.message.cmp(&b.message))
-    });
-    Baseline::assign_fingerprints(&mut orphans);
     all.extend(orphans);
     all.retain(|finding| pipe.filter.matches(&finding.rule));
-    all.sort_by(|a, b| {
-        a.path
-            .cmp(&b.path)
-            .then_with(|| a.line.cmp(&b.line))
-            .then_with(|| a.column.cmp(&b.column))
-            .then_with(|| a.rule.cmp(&b.rule))
-            .then_with(|| a.message.cmp(&b.message))
-    });
+    all.sort_by(report_order);
     Ok(all)
+}
+
+/// Report order: path, line, column, rule, then message.
+fn report_order(a: &Finding, b: &Finding) -> std::cmp::Ordering {
+    (&a.path, a.line, a.column, &a.rule, &a.message)
+        .cmp(&(&b.path, b.line, b.column, &b.rule, &b.message))
+}
+
+/// Sorts findings into report order and assigns their baseline fingerprints.
+///
+/// Fingerprints number equal findings in order, so the sort must come first.
+fn fingerprinted(mut findings: Vec<Finding>) -> Vec<Finding> {
+    findings.sort_by(report_order);
+    Baseline::assign_fingerprints(&mut findings);
+    findings
+}
+
+/// Separates analyzed files from skipped ones and counts the skipped files in scope.
+fn split_outcomes(outcomes: Vec<Outcome>, scopes: &project::Scopes) -> (Vec<Analyzed>, u32) {
+    let mut analyzed = Vec::with_capacity(outcomes.len());
+    let mut skipped = 0;
+    for outcome in outcomes {
+        match outcome {
+            Outcome::Skipped(rel) => skipped += u32::from(scopes.contains(Path::new(&rel))),
+            Outcome::Analyzed(file) => analyzed.push(*file),
+        }
+    }
+    (analyzed, skipped)
+}
+
+/// Stores this run's outputs unless every one matches its loaded cache entry.
+///
+/// A warm run whose every file hit the cache would write back the entries it
+/// just loaded. The store is also the only prune: a count mismatch means the
+/// cache holds entries for deleted files and must be rewritten.
+fn store_if_touched(
+    cache: &cache::Cache,
+    analyzed: &[Analyzed],
+    cached_hashes: &HashMap<Box<str>, [u8; 32]>,
+) {
+    let touched = analyzed.len() != cached_hashes.len()
+        || analyzed.iter().any(|file| {
+            cached_hashes
+                .get(file.rel.as_str())
+                .is_none_or(|hash| *hash != file.output.hash)
+        });
+    if touched {
+        let view: Vec<(&str, &FileOutput)> = analyzed
+            .iter()
+            .map(|file| (file.rel.as_str(), &file.output))
+            .collect();
+        cache.store(&view, cached_hashes);
+    }
 }
 
 fn world_findings(pipe: &Pipeline<'_>, analyzed: &[Analyzed]) -> Vec<Finding> {
@@ -556,15 +564,12 @@ fn world_findings(pipe: &Pipeline<'_>, analyzed: &[Analyzed]) -> Vec<Finding> {
 
 fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Result<Vec<Finding>, RunError> {
     let FileOutput {
-        mut findings,
+        findings,
         mut suppressions,
         parsed,
         ..
     } = file.output;
-    findings.sort_by(|a, b| {
-        (a.line, a.column, &a.rule, &a.message).cmp(&(b.line, b.column, &b.rule, &b.message))
-    });
-    Baseline::assign_fingerprints(&mut findings);
+    let mut findings = fingerprinted(findings);
     suppress::apply(&mut findings, &mut suppressions);
     if parsed
         && (pipe.filter.0.is_empty()
@@ -574,12 +579,12 @@ fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Result<Vec<Finding>, RunErro
                 .iter()
                 .any(|p| p.matches("meta/unused-suppression")))
     {
-        let mut unused = unused_findings(pipe, &file.rel, &suppressions, file.source.as_deref())?;
-        unused.sort_by(|a, b| {
-            (a.line, a.column, &a.rule, &a.message).cmp(&(b.line, b.column, &b.rule, &b.message))
-        });
-        Baseline::assign_fingerprints(&mut unused);
-        findings.extend(unused);
+        findings.extend(fingerprinted(unused_findings(
+            pipe,
+            &file.rel,
+            &suppressions,
+            file.source.as_deref(),
+        )?));
     }
     Ok(findings)
 }
