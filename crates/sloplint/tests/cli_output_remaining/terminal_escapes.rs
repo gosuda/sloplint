@@ -87,7 +87,7 @@ fn hostile_project() -> tempfile::TempDir {
     #[cfg(unix)]
     write(
         tmp.path(),
-        "dir/\u{1b}[2Jevil\u{7}.rs",
+        "dir/\u{1b}[2J\u{9b}evil\u{7}.rs",
         "pub fn handle() {}\n",
     );
     tmp
@@ -181,7 +181,7 @@ fn agent_output_shows_controls_as_visible_escapes() {
     #[cfg(unix)]
     assert_contains(
         stdout,
-        "dir/\\x1b[2Jevil\\x07.rs:1:8: warn:",
+        "dir/\\x1b[2J\\u{9b}evil\\x07.rs:1:8: warn:",
         "path with controls",
     );
 }
@@ -200,7 +200,11 @@ fn human_output_shows_controls_as_visible_escapes() {
     assert_contains(stdout, &format!("help: {FIX_VISIBLE}\n"), "help line");
     assert_contains(stdout, &format!("note: {WHY_VISIBLE}\n"), "note line");
     #[cfg(unix)]
-    assert_contains(stdout, "dir/\\x1b[2Jevil\\x07.rs:1:8", "snippet path");
+    assert_contains(
+        stdout,
+        "dir/\\x1b[2J\\u{9b}evil\\x07.rs:1:8",
+        "snippet path",
+    );
 }
 
 // A027: escapes are longer than the control they replace, so the underline must be remapped.
@@ -273,7 +277,7 @@ fn json_output_round_trips_every_character_without_raw_controls() {
     assert!(
         doc.findings
             .iter()
-            .any(|row| row.path == "dir/\u{1b}[2Jevil\u{7}.rs"),
+            .any(|row| row.path == "dir/\u{1b}[2J\u{9b}evil\u{7}.rs"),
         "path with controls did not round-trip"
     );
 }

@@ -143,11 +143,22 @@ fn with_buffered_stdout(write: impl FnOnce(&mut dyn Write) -> io::Result<()>) ->
 }
 
 fn emit(execution: &Execution, format: Format) -> io::Result<()> {
-    with_buffered_stdout(|out| match format {
-        Format::Agent => write_agent(&execution.report, out),
-        Format::Human => write_human(execution, out),
-        Format::Json => write_json(&execution.report, out),
-    })
+    match format {
+        Format::Agent => with_plain_stdout(|out| write_agent(&execution.report, out)),
+        Format::Human => with_buffered_stdout(|out| write_human(execution, out)),
+        Format::Json => with_plain_stdout(|out| write_json(&execution.report, out)),
+    }
+}
+
+/// Buffers output that writes no styling of its own, with no escape-stripping pass.
+///
+/// Agent lines escape every C0, DEL, and C1 control through [`TerminalText`],
+/// and JSON escapes them in strings, so no terminal control byte from
+/// scanned files reaches stdout.
+fn with_plain_stdout(write: impl FnOnce(&mut dyn Write) -> io::Result<()>) -> io::Result<()> {
+    let mut out = BufWriter::with_capacity(OUTPUT_BUFFER_BYTES, io::stdout().lock());
+    write(&mut out)?;
+    out.flush()
 }
 
 fn write_agent(report: &Report, out: &mut dyn Write) -> io::Result<()> {
