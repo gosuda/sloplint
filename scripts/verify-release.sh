@@ -84,7 +84,12 @@ verify_dist() {
     expected+=("sloplint-$tag-$target.$ext" "sloplint-$tag-$target.$ext.sha256" "sloplint-$tag-$target.cdx.json")
   done
   want="$(printf '%s\n' "${expected[@]}" | LC_ALL=C sort)"
-  have="$(find "$dir" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)"
+  have="$(
+    shopt -s nullglob
+    for f in "$dir"/* "$dir"/.[!.]* "$dir"/..?*; do
+      basename "$f"
+    done | LC_ALL=C sort
+  )"
   if [ "$want" != "$have" ]; then
     diff <(printf '%s\n' "$want") <(printf '%s\n' "$have") >&2 || true
     fail "$dir does not hold exactly the expected archives, checksums, and SBOMs"
