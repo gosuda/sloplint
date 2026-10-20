@@ -2,7 +2,8 @@ use sloplint_core::facts::{Arg, ArgShape, Pos};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, binary_concat, child_by_field, named_children, narrow, pos_of, string_arg_shape, text,
+    Cx, binary_concat, child_by_field, named_children, narrow, pos_of, sole_call_id,
+    string_arg_shape, text,
 };
 
 pub(crate) fn ts_call_stmt(n: Node<'_>) -> Option<usize> {
@@ -24,20 +25,16 @@ pub(crate) fn ts_call_stmt(n: Node<'_>) -> Option<usize> {
 }
 
 pub(crate) fn ts_sole_call(body: Node<'_>) -> Option<usize> {
-    if body.kind() == "call_expression" {
-        return Some(body.id());
-    }
-    if body.kind() != "statement_block" {
-        return None;
-    }
-    let mut stmts = named_children(body)
-        .into_iter()
-        .filter(|c| c.kind() != "comment");
-    let only = stmts.next()?;
-    if stmts.next().is_some() {
-        return None;
-    }
-    ts_call_stmt(only)
+    sole_call_id(
+        body,
+        |block| {
+            named_children(block)
+                .into_iter()
+                .filter(|c| c.kind() != "comment")
+                .collect()
+        },
+        ts_call_stmt,
+    )
 }
 
 pub(crate) fn ts_pat<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
@@ -126,4 +123,36 @@ pub(crate) fn ts_args<'s>(cx: &Cx<'_, 's>, args: Node<'_>) -> Vec<Arg<'s>> {
             end_line: narrow(c.end_position().row) + 1,
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ts_sole_call;
+
+    fn sole_call_in_ts(source: &str) -> Option<usize> {
+        let mut parser = tree_sitter::Parser::new();
+        let language: tree_sitter::Language = tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into();
+        parser
+            .set_language(&language)
+            .expect("typescript grammar loads");
+        let tree = parser.parse(source, None).expect("parser returns a tree");
+        let function = tree.root_node().child(0).expect("one top-level function");
+        let body = function.child_by_field_name("body").expect("function body");
+        ts_sole_call(body)
+    }
+
+    #[test]
+    fn returned_call_is_the_sole_call() {
+        assert!(sole_call_in_ts("function f() { return g(); }").is_some());
+    }
+
+    // Adapter drift, pinned: the JavaScript adapter skips a leading comment before
+    // the returned expression; the TypeScript adapter does not.
+    #[test]
+    fn leading_comment_hides_the_sole_call_in_typescript() {
+        assert_eq!(
+            sole_call_in_ts("function f() { return /* c */ g(); }"),
+            None
+        );
+    }
 }

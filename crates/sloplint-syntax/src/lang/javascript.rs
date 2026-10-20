@@ -9,7 +9,7 @@ use tree_sitter::Node;
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
     first_of_kind, has_child_kind, named_children, narrow, pos_of, preceding_comments,
-    string_arg_shape, strip_quotes, text,
+    sole_call_id, string_arg_shape, strip_quotes, text,
 };
 use crate::spec::Role;
 
@@ -247,13 +247,7 @@ fn closure_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
 }
 
 fn sole_call_of(body: Node<'_>) -> Option<usize> {
-    if body.kind() != "statement_block" {
-        return (body.kind() == "call_expression").then(|| body.id());
-    }
-    match code_children(body).as_slice() {
-        [only] => statement_call(*only),
-        _ => None,
-    }
+    sole_call_id(body, code_children, statement_call)
 }
 
 fn statement_call(statement: Node<'_>) -> Option<usize> {
@@ -952,5 +946,27 @@ impl LangHooks for JavaScriptHooks {
 
     fn barrel(&self, root: Node<'_>, cx: &Cx<'_, '_>) -> Option<Barrel> {
         barrel_of(root, cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sole_call_of;
+
+    fn sole_call_in_js(source: &str) -> Option<usize> {
+        let mut parser = tree_sitter::Parser::new();
+        let language: tree_sitter::Language = tree_sitter_javascript::LANGUAGE.into();
+        parser
+            .set_language(&language)
+            .expect("javascript grammar loads");
+        let tree = parser.parse(source, None).expect("parser returns a tree");
+        let function = tree.root_node().child(0).expect("one top-level function");
+        let body = function.child_by_field_name("body").expect("function body");
+        sole_call_of(body)
+    }
+
+    #[test]
+    fn leading_comment_before_the_returned_call_is_skipped() {
+        assert!(sole_call_in_js("function f() { return /* c */ g(); }").is_some());
     }
 }

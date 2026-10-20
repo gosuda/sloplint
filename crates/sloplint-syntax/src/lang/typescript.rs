@@ -8,8 +8,11 @@ use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, has_child_kind,
     named_children, pos_of, preceding_comments, strip_quotes, text,
 };
-use crate::lang::typescript_calls::{callee_root, ts_args, ts_declared, ts_root, ts_sole_call};
-use crate::lang::typescript_imports::{
+pub(crate) mod calls;
+pub(crate) mod imports;
+
+use self::calls::{callee_root, ts_args, ts_declared, ts_root, ts_sole_call};
+use self::imports::{
     catch_stmt, export_specs, export_stmt, heritage_impls, import_stmt, parent_dir, ts_targets,
 };
 use crate::spec::Role;

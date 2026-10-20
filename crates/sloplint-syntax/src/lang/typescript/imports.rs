@@ -161,7 +161,9 @@ pub(crate) fn ts_targets(dir: &str, src: &str) -> Vec<String> {
     let mut parts: Vec<&str> = dir.split('/').filter(|s| !s.is_empty()).collect();
     let mut rest = src;
     while let Some(next) = rest.strip_prefix("../") {
-        let _ = parts.pop();
+        if parts.pop().is_none() {
+            return Vec::new();
+        }
         rest = next;
     }
     rest = rest.strip_prefix("./").map_or(rest, |s| s);
@@ -176,7 +178,10 @@ pub(crate) fn ts_targets(dir: &str, src: &str) -> Vec<String> {
     let stem = rest
         .strip_suffix(".jsx")
         .or_else(|| rest.strip_suffix(".mjs"))
-        .or_else(|| rest.strip_suffix(".js"));
+        .or_else(|| rest.strip_suffix(".js"))
+        .or_else(|| rest.strip_suffix(".cjs"))
+        .or_else(|| rest.strip_suffix(".mts"))
+        .or_else(|| rest.strip_suffix(".cts"));
     if let Some(stripped) = stem {
         return vec![
             join(stripped.to_owned() + ".ts"),
@@ -314,4 +319,26 @@ pub(crate) fn export_stmt<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import
         return;
     }
     push_named_exports(cx, specs, module, out);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ts_targets;
+
+    #[test]
+    fn module_suffixes_resolve_to_their_typescript_stem() {
+        assert_eq!(ts_targets("src", "./x.cjs"), ["src/x.ts", "src/x.tsx"]);
+        assert_eq!(ts_targets("src", "../lib/y.mts"), ["lib/y.ts", "lib/y.tsx"]);
+        assert_eq!(ts_targets("src", "./z.cts"), ["src/z.ts", "src/z.tsx"]);
+    }
+
+    #[test]
+    fn parent_segment_past_the_root_resolves_to_nothing() {
+        assert!(ts_targets("", "../x").is_empty());
+        assert!(ts_targets("a", "../../x").is_empty());
+        assert_eq!(
+            ts_targets("a", "../x"),
+            ["x.ts", "x.tsx", "x/index.ts", "x/index.tsx"]
+        );
+    }
 }

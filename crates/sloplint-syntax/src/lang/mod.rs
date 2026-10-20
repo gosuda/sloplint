@@ -9,6 +9,7 @@ use crate::spec::{LangSpec, Role};
 
 pub(crate) mod bash;
 pub(crate) mod c;
+pub(crate) mod c_family;
 pub(crate) mod cpp;
 pub(crate) mod csharp;
 pub(crate) mod dart;
@@ -29,8 +30,6 @@ pub(crate) mod scala;
 pub(crate) mod starlark;
 pub(crate) mod swift;
 pub(crate) mod typescript;
-pub(crate) mod typescript_calls;
-pub(crate) mod typescript_imports;
 pub(crate) mod zig;
 
 /// A role table exported by one adapter module.

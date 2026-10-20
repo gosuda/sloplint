@@ -384,6 +384,31 @@ pub(crate) fn preceding_comments<'s>(
     (doc, doc_pos)
 }
 
+/// Shared skeleton behind JavaScript `sole_call_of` and TypeScript
+/// `ts_sole_call`: a body that is itself a call, or a block holding exactly
+/// one statement that resolves to a call.
+///
+/// `block_stmts` lists a `statement_block`'s meaningful children and `stmt_call`
+/// resolves one statement, so each grammar keeps its own child filtering where
+/// the grammars genuinely differ. Both grammars name the block `statement_block`.
+pub(crate) fn sole_call_id(
+    body: Node<'_>,
+    block_stmts: impl FnOnce(Node<'_>) -> Vec<Node<'_>>,
+    stmt_call: impl FnOnce(Node<'_>) -> Option<usize>,
+) -> Option<usize> {
+    if body.kind() == "call_expression" {
+        return Some(body.id());
+    }
+    if body.kind() != "statement_block" {
+        return None;
+    }
+    let stmts = block_stmts(body);
+    let [only] = stmts.as_slice() else {
+        return None;
+    };
+    stmt_call(*only)
+}
+
 /// Slices source text at a byte range; empty when the range is not a valid slice.
 pub(crate) fn slice(src: &str, start: usize, end: usize) -> &str {
     let end = end.min(src.len());
