@@ -177,12 +177,10 @@ fn placeholder(
     let captured = captures.iter().find(|(n, _)| *n == name).map(|(_, t)| *t);
     match (closed, captured) {
         (true, Some(text)) => out.push_str(&clip(text)),
-        _ => {
+        (true, None) => {}
+        (false, _) => {
             out.push('{');
             out.push_str(&name);
-            if closed {
-                out.push('}');
-            }
         }
     }
 }
@@ -270,4 +268,24 @@ pub fn custom_level(config: &Config, spec: &CustomRuleSpec) -> Level {
             Severity::Warn => Level::Warn,
             Severity::Deny => Level::Deny,
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::interpolate;
+
+    #[test]
+    fn absent_optional_capture_renders_as_empty_string() {
+        assert_eq!(interpolate("a {x} b", &[]), "a  b");
+    }
+
+    #[test]
+    fn unclosed_placeholder_keeps_its_brace() {
+        assert_eq!(interpolate("a {x", &[]), "a {x");
+    }
+
+    #[test]
+    fn present_capture_substitutes_its_first_line() {
+        assert_eq!(interpolate("[{x}]", &[("x", "first\nsecond")]), "[first]");
+    }
 }
