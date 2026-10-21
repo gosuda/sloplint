@@ -231,6 +231,22 @@ fn boundary_non_utf8_skip_decision_is_hermetic() {
             "lossy-equal names share no explicit file scope"
         );
     }
+    #[cfg(not(unix))]
+    {
+        let second = Path::new("src/other\u{FFFD}.rs");
+        assert!(
+            matches!(
+                decide_file_name(second, &config),
+                NameDecision::Analyze { .. }
+            ),
+            "replacement-character names analyze where raw bytes are unrepresentable"
+        );
+        let explicit = Scopes::from_relative([valid.to_path_buf()]);
+        assert!(
+            !explicit.contains(second),
+            "distinct replacement-character names share no explicit file scope"
+        );
+    }
 }
 
 // AA-I14, AA-X9: component boundary, root scope, nonexistent and symlink-escape errors.

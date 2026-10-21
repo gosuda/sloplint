@@ -714,15 +714,28 @@ fn planted_junction_shard_dir_yields_empty_cache() {
         1,
         "one project stores one cache file: {files:?}"
     );
+    let genuine = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read cache: {e}"));
+    let planted_marker = GENERIC_TEXT.replace("code", "mode");
+    let at = genuine
+        .windows(GENERIC_TEXT.len())
+        .position(|window| window == GENERIC_TEXT.as_bytes())
+        .unwrap_or_else(|| panic!("the finding message is not in the cache bytes"));
+    let mut forged = genuine.clone();
+    forged[at..at + planted_marker.len()].copy_from_slice(planted_marker.as_bytes());
     let shard_dir = files[0]
         .parent()
         .unwrap_or_else(|| panic!("{} has no directory", files[0].display()))
         .to_path_buf();
+    let shard_name = files[0]
+        .file_name()
+        .unwrap_or_else(|| panic!("{} has no file name", files[0].display()))
+        .to_os_string();
     let (_outside, base) = tempdir();
     let target = base.join("attacker");
     mkdir(&target);
-    let moved = base.join("cache-v2");
-    std::fs::rename(&shard_dir, &moved).unwrap_or_else(|e| panic!("move shards: {e}"));
+    std::fs::write(target.join(&shard_name), &forged)
+        .unwrap_or_else(|e| panic!("plant forged shard: {e}"));
+    std::fs::remove_dir_all(&shard_dir).unwrap_or_else(|e| panic!("remove shards: {e}"));
     let link = std::process::Command::new("cmd")
         .args(["/c", "mklink", "/J"])
         .arg(&shard_dir)
@@ -745,12 +758,12 @@ fn planted_junction_shard_dir_yields_empty_cache() {
         cold,
         "the cache load followed a junctioned shard directory"
     );
-    let written: Vec<PathBuf> = std::fs::read_dir(&target)
-        .unwrap_or_else(|e| panic!("{}: {e}", target.display()))
-        .map(|entry| entry.unwrap_or_else(|e| panic!("entry: {e}")).path())
-        .collect();
     assert!(
-        written.is_empty(),
-        "the cache store wrote through the junction: {written:?}"
+        !String::from_utf8_lossy(&out.stdout).contains(&planted_marker),
+        "a forged cache behind a junction was reused: {}",
+        String::from_utf8_lossy(&out.stdout)
     );
+    let after =
+        std::fs::read(target.join(&shard_name)).unwrap_or_else(|e| panic!("read planted: {e}"));
+    assert_eq!(after, forged, "the cache store wrote through the junction");
 }

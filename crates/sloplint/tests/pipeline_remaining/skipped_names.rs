@@ -308,6 +308,9 @@ fn lossy_equal_dir_scope_is_hermetic() {
     assert!(explicit.contains(pipe));
     assert!(!explicit.contains(Path::new("parent/unrelated/b.rs")));
     assert!(parent.contains(pipe));
+    assert!(whole.contains(child));
+    assert!(explicit.contains(child));
+    assert!(parent.contains(child));
     #[cfg(unix)]
     {
         use std::os::unix::ffi::OsStrExt;
