@@ -360,7 +360,7 @@ struct Analyzed {
     rel: String,
     output: FileOutput,
     from_cache: bool,
-    source: Option<Box<str>>,
+    source: Option<String>,
 }
 
 struct Probe<'a> {
@@ -391,28 +391,32 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
         Ok(None) => return skipped(),
         Ok(Some(bytes)) => bytes,
     };
-    let Ok(raw) = std::str::from_utf8(&bytes) else {
+    let Ok(mut owned) = String::from_utf8(bytes) else {
         return skipped();
     };
-    if is_generated(&bytes) {
+    if is_generated(owned.as_bytes()) {
         return skipped();
     }
-    let text = raw.strip_prefix('\u{feff}').unwrap_or(raw);
+    if owned.starts_with('\u{feff}') {
+        owned.drain(..'\u{feff}'.len_utf8());
+    }
     let interface =
         entry.lang == Lang::Ocaml && pipe.interfaces.contains(&format!("{}i", entry.rel));
     let hash = if interface {
-        cache::interface_hash(text)
+        cache::interface_hash(owned.as_str())
     } else {
-        cache::source_hash(text)
+        cache::source_hash(owned.as_str())
     };
-    let probe = Probe {
-        text,
-        hash,
-        interface,
-    };
-    let (output, from_cache) = match pipe.cache.take(entry.rel.as_str(), &probe.hash) {
-        Some(output) => (output, true),
-        None => (analyze_file(parsers, entry, &probe, pipe), false),
+    let (output, from_cache) = {
+        let probe = Probe {
+            text: owned.as_str(),
+            hash,
+            interface,
+        };
+        match pipe.cache.take(entry.rel.as_str(), &probe.hash) {
+            Some(output) => (output, true),
+            None => (analyze_file(parsers, entry, &probe, pipe), false),
+        }
     };
     let reports_unused = pipe.filter.0.is_empty()
         || pipe
@@ -420,11 +424,7 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
             .0
             .iter()
             .any(|p| p.matches("meta/unused-suppression"));
-    let source = if reports_unused && !output.suppressions.is_empty() {
-        Some(Box::<str>::from(probe.text))
-    } else {
-        None
-    };
+    let source = (reports_unused && !output.suppressions.is_empty()).then_some(owned);
     Ok(Outcome::Analyzed(Box::new(Analyzed {
         rel: entry.rel.clone(),
         output,
