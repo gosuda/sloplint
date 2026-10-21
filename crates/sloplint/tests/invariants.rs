@@ -5,6 +5,8 @@
 mod corpus_invariants;
 #[path = "invariants/isolated_cache.rs"]
 mod isolated_cache;
+#[path = "invariants/ocaml_interface.rs"]
+mod ocaml_interface;
 #[path = "invariants/suppression_oracles.rs"]
 mod suppression_oracles;
 
