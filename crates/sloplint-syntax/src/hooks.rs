@@ -285,6 +285,167 @@ pub(crate) fn named_children(n: Node<'_>) -> Vec<Node<'_>> {
     n.named_children(&mut cursor).collect()
 }
 
+/// The node's first named child.
+pub(crate) fn first_named_child<'a>(n: Node<'a>) -> Option<Node<'a>> {
+    let mut cursor = n.walk();
+    if !cursor.goto_first_child() {
+        return None;
+    }
+    loop {
+        let child = cursor.node();
+        if child.is_named() {
+            return Some(child);
+        }
+        if !cursor.goto_next_sibling() {
+            return None;
+        }
+    }
+}
+
+/// The node's last named child.
+pub(crate) fn last_named_child<'a>(n: Node<'a>) -> Option<Node<'a>> {
+    let mut cursor = n.walk();
+    if !cursor.goto_last_child() {
+        return None;
+    }
+    loop {
+        let child = cursor.node();
+        if child.is_named() {
+            return Some(child);
+        }
+        if !cursor.goto_previous_sibling() {
+            return None;
+        }
+    }
+}
+
+/// The first named child satisfying `pred`, in order.
+pub(crate) fn find_named_child<'a>(
+    n: Node<'a>,
+    mut pred: impl FnMut(Node<'a>) -> bool,
+) -> Option<Node<'a>> {
+    let mut cursor = n.walk();
+    if !cursor.goto_first_child() {
+        return None;
+    }
+    loop {
+        let child = cursor.node();
+        if child.is_named() && pred(child) {
+            return Some(child);
+        }
+        if !cursor.goto_next_sibling() {
+            return None;
+        }
+    }
+}
+
+/// The last named child satisfying `pred`, in order.
+pub(crate) fn rfind_named_child<'a>(
+    n: Node<'a>,
+    mut pred: impl FnMut(Node<'a>) -> bool,
+) -> Option<Node<'a>> {
+    let mut cursor = n.walk();
+    if !cursor.goto_last_child() {
+        return None;
+    }
+    loop {
+        let child = cursor.node();
+        if child.is_named() && pred(child) {
+            return Some(child);
+        }
+        if !cursor.goto_previous_sibling() {
+            return None;
+        }
+    }
+}
+
+/// True when any named child satisfies `pred`.
+pub(crate) fn any_named_child(n: Node<'_>, mut pred: impl FnMut(Node<'_>) -> bool) -> bool {
+    let mut cursor = n.walk();
+    if !cursor.goto_first_child() {
+        return false;
+    }
+    loop {
+        let child = cursor.node();
+        if child.is_named() && pred(child) {
+            return true;
+        }
+        if !cursor.goto_next_sibling() {
+            return false;
+        }
+    }
+}
+
+/// The first named child whose kind is in `kinds`.
+pub(crate) fn first_named_child_matching<'a>(n: Node<'a>, kinds: &[&str]) -> Option<Node<'a>> {
+    find_named_child(n, |child| kinds.contains(&child.kind()))
+}
+
+/// The number of named children satisfying `pred`.
+pub(crate) fn count_named_child(n: Node<'_>, mut pred: impl FnMut(Node<'_>) -> bool) -> usize {
+    let mut cursor = n.walk();
+    if !cursor.goto_first_child() {
+        return 0;
+    }
+    let mut count = 0;
+    loop {
+        let child = cursor.node();
+        if child.is_named() && pred(child) {
+            count += 1;
+        }
+        if !cursor.goto_next_sibling() {
+            return count;
+        }
+    }
+}
+
+/// The first mapped value from the named children, in order; `None` when
+/// every child maps to `None`.
+pub(crate) fn find_map_named_child<'a, T>(
+    n: Node<'a>,
+    mut f: impl FnMut(Node<'a>) -> Option<T>,
+) -> Option<T> {
+    let mut cursor = n.walk();
+    if !cursor.goto_first_child() {
+        return None;
+    }
+    loop {
+        let child = cursor.node();
+        if child.is_named()
+            && let Some(value) = f(child)
+        {
+            return Some(value);
+        }
+        if !cursor.goto_next_sibling() {
+            return None;
+        }
+    }
+}
+
+/// The single named child satisfying `pred`; `None` for zero or two or more.
+pub(crate) fn only_named_child_matching<'a>(
+    n: Node<'a>,
+    mut pred: impl FnMut(Node<'a>) -> bool,
+) -> Option<Node<'a>> {
+    let mut cursor = n.walk();
+    if !cursor.goto_first_child() {
+        return None;
+    }
+    let mut found = None;
+    loop {
+        let child = cursor.node();
+        if child.is_named() && pred(child) {
+            if found.is_some() {
+                return None;
+            }
+            found = Some(child);
+        }
+        if !cursor.goto_next_sibling() {
+            return found;
+        }
+    }
+}
+
 /// The node's child reached through a named field.
 pub(crate) fn child_by_field<'a>(n: Node<'a>, field: &str) -> Option<Node<'a>> {
     n.child_by_field_name(field)
@@ -460,12 +621,13 @@ pub(crate) fn preceding_comments<'s>(
 /// `ts_sole_call`: a body that is itself a call, or a block holding exactly
 /// one statement that resolves to a call.
 ///
-/// `block_stmts` lists a `statement_block`'s meaningful children and `stmt_call`
-/// resolves one statement, so each grammar keeps its own child filtering where
-/// the grammars genuinely differ. Both grammars name the block `statement_block`.
+/// `block_stmt` resolves a `statement_block` to its single meaningful child
+/// and `stmt_call` resolves one statement, so each grammar keeps its own
+/// child filtering where the grammars genuinely differ. Both grammars name
+/// the block `statement_block`.
 pub(crate) fn sole_call_id(
     body: Node<'_>,
-    block_stmts: impl FnOnce(Node<'_>) -> Vec<Node<'_>>,
+    block_stmt: impl FnOnce(Node<'_>) -> Option<Node<'_>>,
     stmt_call: impl FnOnce(Node<'_>) -> Option<usize>,
 ) -> Option<usize> {
     if body.kind() == "call_expression" {
@@ -474,11 +636,7 @@ pub(crate) fn sole_call_id(
     if body.kind() != "statement_block" {
         return None;
     }
-    let stmts = block_stmts(body);
-    let [only] = stmts.as_slice() else {
-        return None;
-    };
-    stmt_call(*only)
+    stmt_call(block_stmt(body)?)
 }
 
 /// Slices source text at a byte range; empty when the range is not a valid slice.

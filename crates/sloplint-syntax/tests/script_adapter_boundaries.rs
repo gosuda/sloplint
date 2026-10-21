@@ -13,6 +13,8 @@ mod php_test_class;
 mod powershell_forwarding;
 #[path = "script_adapter_boundaries/powershell_pipeline_input.rs"]
 mod powershell_pipeline_input;
+#[path = "script_adapter_boundaries/python_boolean_defaults.rs"]
+mod python_boolean_defaults;
 #[path = "script_adapter_boundaries/python_callee_root.rs"]
 mod python_callee_root;
 #[path = "script_adapter_boundaries/python_nested_def.rs"]

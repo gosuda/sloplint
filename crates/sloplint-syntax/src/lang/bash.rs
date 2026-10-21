@@ -3,8 +3,9 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, child_by_field, named_children, narrow, pos_of,
-    preceding_comments, string_arg_shape, text, trimmed,
+    CallHead, Cx, FunctionHead, LangHooks, child_by_field, first_named_child,
+    first_named_child_matching, named_children, narrow, pos_of, preceding_comments,
+    string_arg_shape, text, trimmed,
 };
 use crate::spec::Role;
 
@@ -74,7 +75,7 @@ fn bash_arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         "ansi_c_string" => ArgShape::Str {
             longest_static: narrow(text(cx, n).chars().count().saturating_sub(3)),
         },
-        "translated_string" => match named_children(n).into_iter().find(|c| c.kind() == "string") {
+        "translated_string" => match first_named_child_matching(n, &["string"]) {
             Some(inner) => string_arg_shape(cx, inner, &["string_content"]),
             None => ArgShape::Other,
         },
@@ -160,7 +161,7 @@ impl LangHooks for BashHooks {
         if !own.contains("++") && !own.contains("--") {
             return;
         }
-        let mut current = match named_children(n).into_iter().next() {
+        let mut current = match first_named_child(n) {
             Some(first) => first,
             None => return,
         };

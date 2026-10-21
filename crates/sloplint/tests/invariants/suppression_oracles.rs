@@ -108,3 +108,48 @@ fn invalid_and_unused_suppressions_report() {
         "each directive problem is reported once, at its own line"
     );
 }
+
+#[test]
+fn suppressions_for_inactive_rules_stay_silent() {
+    let rule = "[[custom_rules]]\nid = \"custom/no-call\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"call found\"\nwhy = \"test why\"\nfix = \"test fix\"\nquery = \"(call_expression) @match\"\n";
+    for (directive, kind) in [
+        ("// sloplint-allow(custom/no-call): reviewed\n", "exact"),
+        ("// sloplint-allow(custom/*): reviewed\n", "family"),
+    ] {
+        let (_tmp, root) = tempdir();
+        write(&root, "sloplint.toml", rule);
+        write(
+            &root,
+            "src/lib.rs",
+            &format!("{directive}pub fn handle() {{}}\n"),
+        );
+        let active = run_ok(&standard(&root));
+        assert!(
+            active
+                .findings
+                .iter()
+                .any(|f| &*f.rule == "meta/unused-suppression"),
+            "{kind}: active but unmatched suppression must be reported unused"
+        );
+        write(
+            &root,
+            "sloplint.toml",
+            &format!("{rule}[rules.\"custom/no-call\"]\nlevel = \"off\"\n"),
+        );
+        let silent = run_ok(&standard(&root));
+        assert!(
+            !silent
+                .findings
+                .iter()
+                .any(|f| &*f.rule == "meta/unused-suppression"),
+            "{kind}: suppression for an inactive rule must stay silent"
+        );
+        assert!(
+            !silent
+                .findings
+                .iter()
+                .any(|f| &*f.rule == "meta/invalid-suppression"),
+            "{kind}: suppression for a known inactive rule must stay valid"
+        );
+    }
+}

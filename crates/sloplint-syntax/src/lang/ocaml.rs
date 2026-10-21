@@ -8,8 +8,9 @@ use sloplint_core::lang::Lang;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, first_of_kind,
-    has_child_kind, last_segment, named_children, narrow, pos_of, preceding_comments,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field,
+    find_named_child, first_named_child, first_named_child_matching, first_of_kind, has_child_kind,
+    last_named_child, last_segment, named_children, narrow, pos_of, preceding_comments,
     string_arg_shape, text, trimmed,
 };
 use crate::spec::Role;
@@ -115,7 +116,7 @@ fn ocaml_header<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> (Vec<&'s str>, Option<Pos>)
     if let Some(parent) = n.parent()
         && parent.kind() == "value_definition"
     {
-        let first = named_children(parent).into_iter().find(is_let_binding);
+        let first = find_named_child(parent, |c| is_let_binding(&c));
         if first.is_some_and(|f| f.id() != n.id()) {
             return (Vec::new(), None);
         }
@@ -127,7 +128,7 @@ fn ocaml_header<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> (Vec<&'s str>, Option<Pos>)
 fn ocaml_sole(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
     let mut inner = body;
     if inner.kind() == "parenthesized_expression" {
-        inner = named_children(inner).first().copied()?;
+        inner = first_named_child(inner)?;
     }
     (inner.kind() == "application_expression").then_some(inner.id())
 }
@@ -216,9 +217,7 @@ fn pattern_ident<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<(&'s str, Pos)> {
     } else {
         first_of_kind(pat, &["value_pattern"])?
     };
-    let id = named_children(target)
-        .into_iter()
-        .find(|c| matches!(c.kind(), "identifier" | "value_name"));
+    let id = find_named_child(target, |c| matches!(c.kind(), "identifier" | "value_name"));
     match id {
         Some(id) => Some((text(cx, id), pos_of(id))),
         None if target.named_child_count() == 0 => Some((text(cx, target), pos_of(target))),
@@ -234,7 +233,7 @@ fn is_ref_callee(cx: &Cx<'_, '_>, f: Node<'_>) -> bool {
 }
 
 fn is_ref_binding(cx: &Cx<'_, '_>, lb: Node<'_>) -> bool {
-    if named_children(lb).iter().any(is_parameter) {
+    if any_named_child(lb, |c| is_parameter(&c)) {
         return false;
     }
     let body = child_by_field(lb, "body");
@@ -308,9 +307,7 @@ fn concat_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     if !caret {
         return ArgShape::Other;
     }
-    let quoted = named_children(n)
-        .iter()
-        .any(|c| c.kind() == "string" || c.kind() == "quoted_string");
+    let quoted = any_named_child(n, |c| c.kind() == "string" || c.kind() == "quoted_string");
     if quoted {
         ArgShape::Concat
     } else {
@@ -350,8 +347,7 @@ fn is_raise(cx: &Cx<'_, '_>, func: Option<Node<'_>>) -> bool {
 }
 
 fn case_stmt<'s>(cx: &Cx<'_, 's>, case: Node<'_>) -> Stmt<'s> {
-    let kids = named_children(case);
-    let Some(body) = kids.last().copied() else {
+    let Some(body) = last_named_child(case) else {
         return Stmt::Other;
     };
     if body.kind() != "application_expression" {
@@ -404,13 +400,13 @@ fn sibling_enum(n: Node<'_>) -> bool {
     let Some(parent) = n.parent() else {
         return false;
     };
-    named_children(parent)
-        .into_iter()
-        .filter(|s| s.kind() == "match_case" && s.id() != n.id())
-        .any(|s| {
-            child_by_field(s, "pattern")
-                .is_some_and(|q| q.kind() == "constructor_pattern" || q.kind() == "tag_pattern")
-        })
+    any_named_child(parent, |s| {
+        if s.kind() != "match_case" || s.id() == n.id() {
+            return false;
+        }
+        child_by_field(s, "pattern")
+            .is_some_and(|q| q.kind() == "constructor_pattern" || q.kind() == "tag_pattern")
+    })
 }
 
 fn typedef_at(name: &str, pos: Pos, public: bool, abstraction: bool) -> TypeDef<'_> {
@@ -436,7 +432,7 @@ impl LangHooks for OcamlHooks {
                 let body = child_by_field(n, "body")?;
                 let closure =
                     body.kind() == "fun_expression" || body.kind() == "function_expression";
-                let typed = named_children(n).iter().any(is_parameter);
+                let typed = any_named_child(n, |c| is_parameter(&c));
                 if closure || !typed {
                     return None;
                 }
@@ -526,13 +522,10 @@ impl LangHooks for OcamlHooks {
         if !is_incr(cx, n) {
             return;
         }
-        let Some(arg) = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "argument")
-        else {
+        let Some(arg) = first_named_child_matching(n, &["argument"]) else {
             return;
         };
-        let target = named_children(arg).first().copied().unwrap_or(arg);
+        let target = first_named_child(arg).unwrap_or(arg);
         if let Some(root) = write_root(cx, target) {
             out.push(root);
         }
@@ -746,10 +739,7 @@ impl LangHooks for OcamlHooks {
                 return;
             }
             let mutable = has_child_kind(n, "mutable");
-            let stored = named_children(n)
-                .into_iter()
-                .filter(is_let_binding)
-                .any(|lb| is_ref_binding(cx, lb));
+            let stored = any_named_child(n, |lb| is_let_binding(&lb) && is_ref_binding(cx, lb));
             if mutable || stored {
                 push_first_binding(cx, n, out);
             }
@@ -790,7 +780,7 @@ impl LangHooks for OcamlHooks {
         if callee != "Alcotest.check" && !callee.starts_with("Alcotest.(check") {
             return None;
         }
-        let has_message = named_children(n).iter().any(|c| is_string_arg(cx, *c));
+        let has_message = any_named_child(n, |c| is_string_arg(cx, c));
         Some(Assertion {
             pos: pos_of(n),
             has_message,

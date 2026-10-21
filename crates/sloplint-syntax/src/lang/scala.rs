@@ -8,8 +8,9 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, has_child_kind,
-    named_children, narrow, pos_of, preceding_comments, slice, text, trimmed,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field,
+    first_named_child, first_named_child_matching, has_child_kind, named_children, narrow, pos_of,
+    preceding_comments, slice, text, trimmed,
 };
 use crate::spec::Role;
 
@@ -100,7 +101,7 @@ fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     match n.kind() {
         "identifier" => Some((text(cx, n), pos_of(n))),
         "field_expression" => write_root(cx, child_by_field(n, "value")?),
-        "parenthesized_expression" => write_root(cx, named_children(n).into_iter().next()?),
+        "parenthesized_expression" => write_root(cx, first_named_child(n)?),
         _ => None,
     }
 }
@@ -133,10 +134,7 @@ fn arg_shape<'s>(cx: &Cx<'_, 's>, a: Node<'_>) -> ArgShape<'s> {
         };
     }
     if a.kind() == "interpolated_string_expression" {
-        let inner = named_children(a)
-            .into_iter()
-            .find(|c| c.kind() == "interpolated_string")
-            .unwrap_or(a);
+        let inner = first_named_child_matching(a, &["interpolated_string"]).unwrap_or(a);
         return ArgShape::Str {
             longest_static: longest_static_chunk(&gaps(cx, inner, "interpolation")),
         };
@@ -209,7 +207,7 @@ fn sole_call_of(body: Node<'_>) -> Option<usize> {
     let s = sole.filter(|_| count == 1)?;
     let mut target = s;
     if target.kind() == "return_expression" {
-        target = named_children(target).into_iter().next()?;
+        target = first_named_child(target)?;
     }
     (target.kind() == "call_expression").then_some(target.id())
 }
@@ -261,9 +259,9 @@ fn binding_of<'s>(cx: &Cx<'_, 's>, pat: Option<Node<'_>>) -> Option<&'s str> {
 
 fn stmt_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: Option<&'s str>) -> Stmt<'s> {
     if s.kind() == "throw_expression" {
-        let hit = named_children(s)
-            .into_iter()
-            .any(|c| c.kind() == "identifier" && Some(text(cx, c)) == binding);
+        let hit = any_named_child(s, |c| {
+            c.kind() == "identifier" && Some(text(cx, c)) == binding
+        });
         return if hit { Stmt::Rethrow } else { Stmt::Other };
     }
     if s.kind() != "call_expression" {
@@ -436,9 +434,7 @@ impl LangHooks for ScalaHooks {
         let body = child_by_field(n, "body")?;
         let name_node = child_by_field(n, "name")?;
         let name = text(cx, name_node);
-        let mods = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "modifiers");
+        let mods = first_named_child_matching(n, &["modifiers"]);
         let mut public = !mods.is_some_and(|m| has_child_kind(m, "access_modifier"));
         public = public && !is_nested_fn(n);
         match cx.innermost_container() {
@@ -536,11 +532,10 @@ impl LangHooks for ScalaHooks {
         if n.kind() != "instance_expression" {
             return None;
         }
-        let ty = named_children(n).into_iter().find(|c| {
-            c.kind() == "type_identifier"
-                || c.kind() == "stable_type_identifier"
-                || c.kind() == "generic_type"
-        })?;
+        let ty = first_named_child_matching(
+            n,
+            &["type_identifier", "stable_type_identifier", "generic_type"],
+        )?;
         Some(CallHead {
             callee: cut_at(text(cx, ty), '['),
             kind: CallKind::New,
@@ -608,7 +603,7 @@ impl LangHooks for ScalaHooks {
         }
         let name_node = child_by_field(n, "name")?;
         let name = text(cx, name_node);
-        let restricted = named_children(n).into_iter().any(|c| {
+        let restricted = any_named_child(n, |c| {
             c.kind() == "access_modifier"
                 || (c.kind() == "modifiers" && has_child_kind(c, "access_modifier"))
         });
@@ -623,9 +618,9 @@ impl LangHooks for ScalaHooks {
             }
             Some(_) => {}
         }
-        let abstract_mod = named_children(n)
-            .into_iter()
-            .any(|c| c.kind() == "modifiers" && has_child_kind(c, "abstract"));
+        let abstract_mod = any_named_child(n, |c| {
+            c.kind() == "modifiers" && has_child_kind(c, "abstract")
+        });
         let abstraction = kind == "trait_definition" || abstract_mod;
         let mut impls = Vec::new();
         let mut testy = false;
@@ -672,11 +667,13 @@ impl LangHooks for ScalaHooks {
                 enum_like: false,
             });
         };
-        let enum_like = named_children(parent)
-            .into_iter()
-            .filter(|s| s.id() != n.id() && s.kind() == "case_clause")
-            .filter_map(|s| child_by_field(s, "pattern"))
-            .any(|p| p.kind() == "stable_identifier" || p.kind() == "case_class_pattern");
+        let enum_like = any_named_child(parent, |s| {
+            s.id() != n.id()
+                && s.kind() == "case_clause"
+                && child_by_field(s, "pattern").is_some_and(|p| {
+                    p.kind() == "stable_identifier" || p.kind() == "case_class_pattern"
+                })
+        });
         Some(WildcardArm { pos, enum_like })
     }
 

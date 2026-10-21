@@ -165,6 +165,9 @@ fn boundary_non_utf8_filename_is_skipped() {
     if let Err(e) = std::fs::write(root.join(raw), b"pub fn handle() {}\n") {
         const EILSEQ: i32 = 92;
         assert_eq!(e.raw_os_error(), Some(EILSEQ), "write non-UTF-8 name: {e}");
+        eprintln!(
+            "SKIP boundary_non_utf8_filename_is_skipped: filesystem cannot represent the 0xFF name: {e}"
+        );
         return;
     }
     let r = run_ok(&RunOptions {

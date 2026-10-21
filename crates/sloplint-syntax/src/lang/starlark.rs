@@ -6,8 +6,9 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, binary_concat, child_by_field, ident_root,
-    named_children, narrow, pos_of, preceding_comments, string_arg_shape, text, trimmed,
+    CallHead, Cx, FunctionHead, LangHooks, binary_concat, child_by_field, count_named_child,
+    find_named_child, first_named_child_matching, ident_root, named_children, narrow, pos_of,
+    preceding_comments, string_arg_shape, text, trimmed,
 };
 use crate::spec::Role;
 
@@ -171,15 +172,12 @@ impl LangHooks for StarlarkHooks {
         if n.kind() != "assert_statement" {
             return None;
         }
-        let parts: Vec<Node<'_>> = named_children(n)
-            .into_iter()
-            .filter(|c| !matches!(c.kind(), "assert_keyword" | "comment"))
-            .collect();
         Some(Assertion {
             pos: pos_of(n),
-            has_message: parts.len() >= 2,
-            comparison: parts
-                .first()
+            has_message: count_named_child(n, |c| {
+                !matches!(c.kind(), "assert_keyword" | "comment")
+            }) >= 2,
+            comparison: find_named_child(n, |c| !matches!(c.kind(), "assert_keyword" | "comment"))
                 .is_some_and(|first| first.kind() == "comparison_operator"),
         })
     }
@@ -198,26 +196,24 @@ fn is_docstring_statement(statement: Node<'_>) -> bool {
 }
 
 fn docstring_statement(body: Node<'_>) -> Option<Node<'_>> {
-    named_children(body)
-        .into_iter()
-        .find(|c| !is_comment(c.kind()))
-        .filter(|c| is_docstring_statement(*c))
+    find_named_child(body, |c| !is_comment(c.kind())).filter(|c| is_docstring_statement(*c))
 }
 
 fn sole_call(body: Option<Node<'_>>) -> Option<usize> {
-    let mut statements: Vec<Node<'_>> = named_children(body?)
-        .into_iter()
-        .filter(|c| !is_comment(c.kind()))
-        .collect();
-    if statements
-        .first()
-        .is_some_and(|statement| is_docstring_statement(*statement))
-    {
-        statements.remove(0);
-    }
-    let [only] = statements.as_slice() else {
-        return None;
+    let body = body?;
+    let count = u32::try_from(body.named_child_count()).unwrap_or(u32::MAX);
+    let mut statements = (0..count)
+        .filter_map(|i| body.named_child(i))
+        .filter(|c| !is_comment(c.kind()));
+    let first = statements.next()?;
+    let only = if is_docstring_statement(first) {
+        statements.next()?
+    } else {
+        first
     };
+    if statements.next().is_some() {
+        return None;
+    }
     let call = match only.kind() {
         "return_statement" | "expression_statement" => only.named_child(0)?,
         _ => return None,
@@ -279,10 +275,7 @@ fn type_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
 }
 
 fn first_identifier<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
-    named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "identifier")
-        .map(|identifier| text(cx, identifier))
+    first_named_child_matching(n, &["identifier"]).map(|identifier| text(cx, identifier))
 }
 
 fn collect_identifiers<'s>(cx: &Cx<'_, 's>, target: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
@@ -355,10 +348,7 @@ fn shape_of<'s>(cx: &Cx<'_, 's>, value: Node<'_>) -> ArgShape<'s> {
 }
 
 fn string_content<'s>(cx: &Cx<'_, 's>, string: Node<'_>) -> Option<&'s str> {
-    named_children(string)
-        .into_iter()
-        .find(|c| c.kind() == "string_content")
-        .map(|content| text(cx, content))
+    first_named_child_matching(string, &["string_content"]).map(|content| text(cx, content))
 }
 
 fn is_top_level_load(cx: &Cx<'_, '_>, call: Node<'_>) -> bool {

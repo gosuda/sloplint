@@ -6,8 +6,10 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    first_of_kind, has_child_kind, last_segment, named_children, narrow, pos_of,
-    preceding_comments, slice, string_arg_shape, strip_quotes, text, trimmed,
+    count_named_child, find_named_child, first_named_child, first_named_child_matching,
+    first_of_kind, has_child_kind, last_segment, named_children, narrow, only_named_child_matching,
+    pos_of, preceding_comments, rfind_named_child, slice, string_arg_shape, strip_quotes, text,
+    trimmed,
 };
 use crate::spec::Role;
 
@@ -65,7 +67,7 @@ fn bare_marker_call<'s>(cx: &Cx<'_, 's>, sib: Node<'_>) -> Option<bool> {
         return None;
     }
     if let Some(list) = first_of_kind(sib, &["argument_list"])
-        && !named_children(list).is_empty()
+        && list.named_child_count() != 0
     {
         return None;
     }
@@ -158,7 +160,7 @@ fn is_protocol_method(name: &str) -> bool {
 }
 fn superclass_name<'s>(cx: &Cx<'_, 's>, class: Node<'_>) -> Option<(&'s str, Pos)> {
     let sup = child_by_field(class, "superclass")?;
-    let base = named_children(sup).into_iter().next()?;
+    let base = first_named_child(sup)?;
     Some((last_segment(text(cx, base), &["::"]), pos_of(sup)))
 }
 fn ruby_in_test<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
@@ -185,9 +187,7 @@ fn push_plain_param<'s>(cx: &Cx<'_, 's>, child: Node<'_>, out: &mut Vec<Param<'s
 }
 fn ruby_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
     let mut out = Vec::new();
-    let params = named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "method_parameters");
+    let params = first_named_child_matching(n, &["method_parameters"]);
     let Some(params) = params else {
         return out;
     };
@@ -226,23 +226,13 @@ fn ruby_sole_call(n: Node<'_>) -> Option<usize> {
     if body.kind() == "rescue_modifier" {
         return None;
     }
-    let stmts: Vec<Node<'_>> = if body.kind() == "body_statement" {
-        named_children(body)
-            .into_iter()
-            .filter(|c| c.kind() != "comment")
-            .collect()
+    let mut stmt = if body.kind() == "body_statement" {
+        only_named_child_matching(body, |c| c.kind() != "comment")?
     } else {
-        vec![body]
+        body
     };
-    if stmts.len() != 1 {
-        return None;
-    }
-    let mut stmt = *stmts.first()?;
     if stmt.kind() == "return" {
-        stmt = match named_children(stmt).as_slice() {
-            [one] => *one,
-            _ => return None,
-        };
+        stmt = only_named_child_matching(stmt, |_| true)?;
     }
     if stmt.kind() != "call" {
         return None;
@@ -405,18 +395,22 @@ fn ruby_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, binding: &str) -> Stmt<'s> {
             kind: ruby_call_kind(cx, stmt),
         };
     }
-    match first_of_kind(stmt, &["argument_list"]).map(call_args) {
+    match first_of_kind(stmt, &["argument_list"]) {
         None => Stmt::Rethrow,
-        Some(args) if args.is_empty() => Stmt::Rethrow,
-        Some(args) => {
-            let single = matches!(args.as_slice(), [one] if text(cx, *one) == binding);
-            if !binding.is_empty() && single {
-                Stmt::Rethrow
-            } else {
-                Stmt::Call {
-                    callee: ruby_callee(cx, stmt),
-                    kind: CallKind::Plain,
-                }
+        Some(list) => {
+            let count = u32::try_from(list.named_child_count()).unwrap_or(u32::MAX);
+            let mut rest = (0..count)
+                .filter_map(|i| list.named_child(i))
+                .filter(|c| c.kind() != "comment");
+            let Some(one) = rest.next() else {
+                return Stmt::Rethrow;
+            };
+            if rest.next().is_none() && !binding.is_empty() && text(cx, one) == binding {
+                return Stmt::Rethrow;
+            }
+            Stmt::Call {
+                callee: ruby_callee(cx, stmt),
+                kind: CallKind::Plain,
             }
         }
     }
@@ -438,7 +432,7 @@ fn pair_source<'s>(cx: &Cx<'_, 's>, value: Node<'_>, key: &str) -> Option<&'s st
         return None;
     }
     if let Some(list) = first_of_kind(value, &["argument_list"])
-        && !named_children(list).is_empty()
+        && list.named_child_count() != 0
     {
         return None;
     }
@@ -453,11 +447,13 @@ fn hash_copy<'s>(cx: &Cx<'_, 's>, scope: Node<'_>, pairs: &[Node<'_>]) -> Option
     }
     let mut source: Option<&'s str> = None;
     for pair in pairs {
-        let kids = named_children(*pair);
-        let [key_node, val_node] = kids.as_slice() else {
+        if pair.named_child_count() != 2 {
+            return None;
+        }
+        let (Some(key_node), Some(val_node)) = (pair.named_child(0), pair.named_child(1)) else {
             return None;
         };
-        let found = pair_source(cx, *val_node, pair_key(cx, *key_node)?)?;
+        let found = pair_source(cx, val_node, pair_key(cx, key_node)?)?;
         if source.is_some_and(|s| s != found) {
             return None;
         }
@@ -508,19 +504,18 @@ fn rspec_assertion<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Assertion> {
     if recv.kind() != "call" || field_text(cx, recv, "method") != Some("expect") {
         return None;
     }
-    let args = call_args(n);
-    let first = args.first()?;
+    let list = first_of_kind(n, &["argument_list"])?;
+    let first = find_named_child(list, |c| c.kind() != "comment")?;
     let matcher = if first.kind() == "call" {
-        field_text(cx, *first, "method").unwrap_or("")
+        field_text(cx, first, "method").unwrap_or("")
     } else {
         ""
     };
-    let last_str = args
-        .last()
+    let last_str = rfind_named_child(list, |c| c.kind() != "comment")
         .is_some_and(|a| a.kind() == "string" || a.kind() == "heredoc_body");
     Some(Assertion {
         pos: pos_of(n),
-        has_message: args.len() >= 2 && last_str,
+        has_message: count_named_child(list, |c| c.kind() != "comment") >= 2 && last_str,
         comparison: matches!(
             matcher,
             "eq" | "eql"
@@ -819,13 +814,14 @@ impl LangHooks for RubyHooks {
             return rspec_assertion(cx, n);
         }
         let arity = minitest_arity(method)?;
-        let args = call_args(n);
-        let last_str = args
-            .last()
-            .is_some_and(|a| a.kind() == "string" || a.kind() == "heredoc_body");
+        let has_message = first_of_kind(n, &["argument_list"]).is_some_and(|list| {
+            let last_str = rfind_named_child(list, |c| c.kind() != "comment")
+                .is_some_and(|a| a.kind() == "string" || a.kind() == "heredoc_body");
+            count_named_child(list, |c| c.kind() != "comment") > arity && last_str
+        });
         Some(Assertion {
             pos: pos_of(n),
-            has_message: args.len() > arity && last_str,
+            has_message,
             comparison: arity > 1,
         })
     }

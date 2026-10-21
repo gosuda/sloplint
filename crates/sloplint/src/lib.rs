@@ -229,6 +229,20 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         .filter(|entry| entry.lang == Lang::OcamlInterface)
         .map(|entry| entry.rel.clone())
         .collect();
+    let mut active_ids = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
+    let mut active_families = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
+    for id in CATALOG
+        .iter()
+        .map(|info| info.id)
+        .chain(config.custom_rules.iter().map(|spec| spec.id.as_str()))
+    {
+        if rules.is_active(id) {
+            for (at, _) in id.match_indices('/') {
+                active_families.insert(id[..at].to_string());
+            }
+            active_ids.insert(id.to_string());
+        }
+    }
     let pipe = Pipeline {
         rules: &rules,
         custom: &custom,
@@ -238,6 +252,8 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         test_globs: &test_globs,
         cache: &loaded,
         interfaces: &interfaces,
+        active_ids,
+        active_families,
     };
     let outcomes = analyze_all(&discovery.entries, &pipe, &pool)?;
     let (analyzed, skipped_outcomes) = split_outcomes(outcomes, &scopes);
@@ -329,6 +345,8 @@ struct Pipeline<'a> {
     test_globs: &'a GlobSet,
     cache: &'a Loaded,
     interfaces: &'a HashSet<String>,
+    active_ids: HashSet<String>,
+    active_families: HashSet<String>,
 }
 
 enum Outcome {
@@ -340,7 +358,7 @@ struct Analyzed {
     rel: String,
     output: FileOutput,
     from_cache: bool,
-    source: Option<Box<str>>,
+    source: Option<String>,
 }
 
 struct Probe<'a> {
@@ -371,28 +389,32 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
         Ok(None) => return skipped(),
         Ok(Some(bytes)) => bytes,
     };
-    let Ok(raw) = std::str::from_utf8(&bytes) else {
+    let Ok(mut owned) = String::from_utf8(bytes) else {
         return skipped();
     };
-    if is_generated(&bytes) {
+    if is_generated(owned.as_bytes()) {
         return skipped();
     }
-    let text = raw.strip_prefix('\u{feff}').unwrap_or(raw);
+    if owned.starts_with('\u{feff}') {
+        owned.drain(..'\u{feff}'.len_utf8());
+    }
     let interface =
         entry.lang == Lang::Ocaml && pipe.interfaces.contains(&format!("{}i", entry.rel));
     let hash = if interface {
-        cache::interface_hash(text)
+        cache::interface_hash(owned.as_str())
     } else {
-        cache::source_hash(text)
+        cache::source_hash(owned.as_str())
     };
-    let probe = Probe {
-        text,
-        hash,
-        interface,
-    };
-    let (output, from_cache) = match pipe.cache.take(entry.rel.as_str(), &probe.hash) {
-        Some(output) => (output, true),
-        None => (analyze_file(parsers, entry, &probe, pipe), false),
+    let (output, from_cache) = {
+        let probe = Probe {
+            text: owned.as_str(),
+            hash,
+            interface,
+        };
+        match pipe.cache.take(entry.rel.as_str(), &probe.hash) {
+            Some(output) => (output, true),
+            None => (analyze_file(parsers, entry, &probe, pipe), false),
+        }
     };
     let reports_unused = pipe.filter.0.is_empty()
         || pipe
@@ -400,11 +422,7 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
             .0
             .iter()
             .any(|p| p.matches("meta/unused-suppression"));
-    let source = if reports_unused && !output.suppressions.is_empty() {
-        Some(Box::<str>::from(probe.text))
-    } else {
-        None
-    };
+    let source = (reports_unused && !output.suppressions.is_empty()).then_some(owned);
     Ok(Outcome::Analyzed(Box::new(Analyzed {
         rel: entry.rel.clone(),
         output,
@@ -611,12 +629,9 @@ fn unused_findings(
 }
 
 fn suppression_active(pipe: &Pipeline<'_>, suppression: &Suppression) -> bool {
-    suppression.rules.iter().all(|pattern| {
-        CATALOG
-            .iter()
-            .map(|info| info.id)
-            .chain(pipe.config.custom_rules.iter().map(|spec| spec.id.as_str()))
-            .any(|id| pattern.matches(id) && pipe.rules.is_active(id))
+    suppression.rules.iter().all(|pattern| match pattern {
+        RulePattern::Exact(id) => pipe.active_ids.contains(&**id),
+        RulePattern::Family(family) => pipe.active_families.contains(&**family),
     })
 }
 

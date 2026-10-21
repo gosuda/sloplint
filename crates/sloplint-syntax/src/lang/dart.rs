@@ -8,9 +8,10 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    has_child_kind, named_children, narrow, pos_of, preceding_comments, strip_quotes, text,
-    trimmed,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    child_by_field, find_map_named_child, first_named_child, first_named_child_matching,
+    has_child_kind, last_named_child, named_children, narrow, only_named_child_matching, pos_of,
+    preceding_comments, strip_quotes, text, trimmed,
 };
 use crate::spec::Role;
 
@@ -107,13 +108,9 @@ fn signature_of(n: Node<'_>) -> Option<Node<'_>> {
         if ms.kind() != "method_signature" {
             return None;
         }
-        return named_children(ms)
-            .into_iter()
-            .find(|c| c.kind() == "function_signature");
+        return first_named_child_matching(ms, &["function_signature"]);
     }
-    named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "function_signature")
+    first_named_child_matching(n, &["function_signature"])
 }
 
 fn param_from<'s>(cx: &Cx<'_, 's>, p: Node<'_>, next: Option<Node<'_>>, out: &mut Vec<Param<'s>>) {
@@ -122,55 +119,44 @@ fn param_from<'s>(cx: &Cx<'_, 's>, p: Node<'_>, next: Option<Node<'_>>, out: &mu
     };
     out.push(Param {
         name: text(cx, nm),
-        ty: named_children(p)
-            .into_iter()
-            .find(|c| c.kind() == "type")
-            .map(|t| text(cx, t)),
+        ty: first_named_child_matching(p, &["type"]).map(|t| text(cx, t)),
         bool_default: next.is_some_and(|nx| nx.kind() == "true" || nx.kind() == "false"),
     });
 }
 
 fn params_from_list<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>>) {
-    let kids = named_children(list);
-    let mut i = 0;
-    while i < kids.len() {
-        if kids[i].kind() == "formal_parameter" {
-            param_from(cx, kids[i], kids.get(i + 1).copied(), out);
-        } else if kids[i].kind() == "optional_formal_parameters" {
-            params_from_list(cx, kids[i], out);
+    let mut i: u32 = 0;
+    let count = u32::try_from(list.named_child_count()).unwrap_or(u32::MAX);
+    while i < count {
+        let Some(kid) = list.named_child(i) else {
+            break;
+        };
+        if kid.kind() == "formal_parameter" {
+            param_from(cx, kid, list.named_child(i.saturating_add(1)), out);
+        } else if kid.kind() == "optional_formal_parameters" {
+            params_from_list(cx, kid, out);
         }
         i += 1;
     }
 }
 
 fn sole_call_of(body: Node<'_>) -> Option<usize> {
-    let kids: Vec<Node> = named_children(body)
-        .into_iter()
-        .filter(|c| c.kind() != "comment" && c.kind() != "block_comment")
-        .collect();
-    if kids.len() != 1 {
+    let only = only_named_child_matching(body, |c| {
+        c.kind() != "comment" && c.kind() != "block_comment"
+    })?;
+    if only.kind() == "call_expression" {
+        return Some(only.id());
+    }
+    if only.kind() != "block" {
         return None;
     }
-    if kids[0].kind() == "call_expression" {
-        return Some(kids[0].id());
-    }
-    if kids[0].kind() != "block" {
+    let stmt = only_named_child_matching(only, |c| {
+        c.kind() != "comment" && c.kind() != "block_comment"
+    })?;
+    if stmt.kind() != "return_statement" && stmt.kind() != "expression_statement" {
         return None;
     }
-    let stmts: Vec<Node> = named_children(kids[0])
-        .into_iter()
-        .filter(|c| c.kind() != "comment" && c.kind() != "block_comment")
-        .collect();
-    if stmts.len() != 1 {
-        return None;
-    }
-    if stmts[0].kind() != "return_statement" && stmts[0].kind() != "expression_statement" {
-        return None;
-    }
-    named_children(stmts[0])
-        .into_iter()
-        .find(|c| c.kind() == "call_expression")
-        .map(|c| c.id())
+    first_named_child_matching(stmt, &["call_expression"]).map(|c| c.id())
 }
 
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
@@ -181,10 +167,10 @@ fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
             if let Some(o) = child_by_field(n, "object") {
                 write_root(cx, o)
             } else {
-                write_root(cx, named_children(n).into_iter().next()?)
+                write_root(cx, first_named_child(n)?)
             }
         }
-        "parenthesized_expression" => write_root(cx, named_children(n).into_iter().next()?),
+        "parenthesized_expression" => write_root(cx, first_named_child(n)?),
         _ => None,
     }
 }
@@ -220,7 +206,7 @@ fn arg_shape<'s>(cx: &Cx<'_, 's>, e: Node<'_>) -> ArgShape<'s> {
 
 fn arg_value(arg: Node<'_>) -> Node<'_> {
     if arg.kind() == "named_argument" {
-        named_children(arg).into_iter().last().unwrap_or(arg)
+        last_named_child(arg).unwrap_or(arg)
     } else {
         arg
     }
@@ -246,20 +232,16 @@ fn call_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
 fn export_uri<'s>(cx: &Cx<'_, 's>, c: Node<'_>) -> Option<&'s str> {
     let u = child_by_field(c, "uri")?;
     let inner = if u.kind() == "configurable_uri" {
-        named_children(u).into_iter().find(|x| x.kind() == "uri")?
+        first_named_child_matching(u, &["uri"])?
     } else {
         u
     };
-    let lit = named_children(inner)
-        .into_iter()
-        .find(|x| x.kind() == "string_literal")?;
+    let lit = first_named_child_matching(inner, &["string_literal"])?;
     Some(strip_quotes(text(cx, lit)))
 }
 
 fn label_text<'s>(cx: &Cx<'_, 's>, lab: Node<'_>) -> &'s str {
-    named_children(lab)
-        .into_iter()
-        .next()
+    first_named_child(lab)
         .map(|id| text(cx, id))
         .unwrap_or_else(|| text(cx, lab))
 }
@@ -273,11 +255,11 @@ fn arm_pattern_member(n: Node<'_>) -> bool {
                     .filter_map(|i| m.child(i))
                     .any(|c| c.kind() == "."))
     }
-    named_children(n).into_iter().any(|c| {
+    any_named_child(n, |c| {
         memberish(c)
             || (!c.kind().contains("statement")
                 && c.kind() != "block"
-                && named_children(c).into_iter().any(memberish))
+                && any_named_child(c, memberish))
     })
 }
 
@@ -288,10 +270,7 @@ fn stmt_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: Option<&'s str>) -> Stmt<'
     if s.kind() != "expression_statement" {
         return Stmt::Other;
     }
-    named_children(s)
-        .into_iter()
-        .find_map(|c| stmt_call(cx, c, binding))
-        .unwrap_or(Stmt::Other)
+    find_map_named_child(s, |c| stmt_call(cx, c, binding)).unwrap_or(Stmt::Other)
 }
 
 fn stmt_call<'s>(cx: &Cx<'_, 's>, c: Node<'_>, binding: Option<&'s str>) -> Option<Stmt<'s>> {
@@ -302,9 +281,9 @@ fn stmt_call<'s>(cx: &Cx<'_, 's>, c: Node<'_>, binding: Option<&'s str>) -> Opti
         });
     }
     if c.kind() == "throw_expression" {
-        let hit = named_children(c)
-            .into_iter()
-            .any(|v| v.kind() == "identifier" && Some(text(cx, v)) == binding);
+        let hit = any_named_child(c, |v| {
+            v.kind() == "identifier" && Some(text(cx, v)) == binding
+        });
         if hit {
             return Some(Stmt::Rethrow);
         }
@@ -313,16 +292,19 @@ fn stmt_call<'s>(cx: &Cx<'_, 's>, c: Node<'_>, binding: Option<&'s str>) -> Opti
 }
 
 fn top_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    named_children(n)
-        .into_iter()
-        .filter(|c| {
-            c.kind() == "initialized_identifier_list" || c.kind() == "static_final_declaration_list"
+    find_map_named_child(n, |c| {
+        if c.kind() != "initialized_identifier_list" && c.kind() != "static_final_declaration_list"
+        {
+            return None;
+        }
+        find_map_named_child(c, |e| {
+            if e.kind() != "initialized_identifier" && e.kind() != "static_final_declaration" {
+                return None;
+            }
+            child_by_field(e, "name")
         })
-        .flat_map(named_children)
-        .filter(|e| e.kind() == "initialized_identifier" || e.kind() == "static_final_declaration")
-        .filter_map(|e| child_by_field(e, "name"))
-        .next()
-        .map(|nm| (text(cx, nm), pos_of(nm)))
+    })
+    .map(|nm| (text(cx, nm), pos_of(nm)))
 }
 
 fn iface_impls<'s>(cx: &Cx<'_, 's>, c: Node<'_>, impls: &mut Vec<ImplRef<'s>>) {
@@ -350,10 +332,7 @@ fn super_impls<'s>(cx: &Cx<'_, 's>, c: Node<'_>, impls: &mut Vec<ImplRef<'s>>) {
 }
 
 fn is_reason_arg(cx: &Cx<'_, '_>, k: Node<'_>) -> bool {
-    named_children(k)
-        .into_iter()
-        .next()
-        .is_some_and(|l| l.kind() == "label" && label_text(cx, l) == "reason")
+    first_named_child(k).is_some_and(|l| l.kind() == "label" && label_text(cx, l) == "reason")
 }
 
 fn join_rel(dir: &str, uri: &str) -> String {
@@ -419,9 +398,9 @@ impl<'a, 's> ImportEmit<'a, 's> {
 }
 
 fn has_show(spec: Node<'_>) -> bool {
-    named_children(spec)
-        .into_iter()
-        .any(|c| c.kind() == "combinator" && has_child_kind(c, "show"))
+    any_named_child(spec, |c| {
+        c.kind() == "combinator" && has_child_kind(c, "show")
+    })
 }
 
 impl LangHooks for DartHooks {
@@ -452,9 +431,9 @@ impl LangHooks for DartHooks {
             Some(_) => {}
         }
         let overridden = kind == "method_declaration"
-            && named_children(n)
-                .into_iter()
-                .any(|c| c.kind() == "annotation" && annotation_name(cx, c) == "override");
+            && any_named_child(n, |c| {
+                c.kind() == "annotation" && annotation_name(cx, c) == "override"
+            });
         let interface_bound = matches!(
             cx.innermost_container(),
             Some(Container::Class {
@@ -585,10 +564,7 @@ impl LangHooks for DartHooks {
             return;
         }
         let spec = if kind == "library_import" {
-            match named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "import_specification")
-            {
+            match first_named_child_matching(n, &["import_specification"]) {
                 Some(s) => s,
                 None => return,
             }
@@ -684,7 +660,7 @@ impl LangHooks for DartHooks {
                 enum_like: sibling_member(n),
             });
         }
-        let first = named_children(n).into_iter().next()?;
+        let first = first_named_child(n)?;
         if trimmed(cx, first) != "_" {
             return None;
         }
@@ -792,7 +768,7 @@ impl LangHooks for DartHooks {
             return None;
         }
         let args = child_by_field(n, "arguments")?;
-        let first = named_children(args).into_iter().next()?;
+        let first = first_named_child(args)?;
         if arg_value(first).kind() == "string_literal" {
             return None;
         }
@@ -801,16 +777,11 @@ impl LangHooks for DartHooks {
 
     fn assertion(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {
         if n.kind() == "assert_statement" {
-            let a = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "assertion")?;
-            let kids = named_children(a);
+            let a = first_named_child_matching(n, &["assertion"])?;
             return Some(Assertion {
                 pos: pos_of(n),
-                has_message: kids.len() >= 2,
-                comparison: kids
-                    .first()
-                    .is_some_and(|k| k.kind() == "equality_expression"),
+                has_message: a.named_child_count() >= 2,
+                comparison: first_named_child(a).is_some_and(|k| k.kind() == "equality_expression"),
             });
         }
         if n.kind() != "call_expression" {
@@ -856,10 +827,7 @@ impl LangHooks for DartHooks {
         let mut uris = Vec::new();
         for c in named_children(root) {
             let directive = if c.kind() == "import_or_export" {
-                named_children(c)
-                    .into_iter()
-                    .find(|k| k.kind() == "library_export" || k.kind() == "library_import")
-                    .unwrap_or(c)
+                first_named_child_matching(c, &["library_export", "library_import"]).unwrap_or(c)
             } else {
                 c
             };
@@ -896,22 +864,23 @@ fn sibling_member(n: Node<'_>) -> bool {
     let Some(parent) = n.parent() else {
         return false;
     };
-    named_children(parent)
-        .into_iter()
-        .filter(|s| s.id() != n.id())
-        .any(arm_pattern_member)
+    any_named_child(parent, |s| s.id() != n.id() && arm_pattern_member(s))
 }
 
 fn struct_arg<'s>(cx: &Cx<'_, 's>, a: Node<'_>) -> Option<&'s str> {
     if a.kind() != "named_argument" {
         return None;
     }
-    let parts = named_children(a);
-    if parts.len() != 2 || parts[0].kind() != "label" {
+    if a.named_child_count() != 2 {
         return None;
     }
-    let label = label_text(cx, parts[0]);
-    let val = parts[1];
+    let (Some(first), Some(val)) = (a.named_child(0), a.named_child(1)) else {
+        return None;
+    };
+    if first.kind() != "label" {
+        return None;
+    }
+    let label = label_text(cx, first);
     if val.kind() != "member_expression" {
         return None;
     }

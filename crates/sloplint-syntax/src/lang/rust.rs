@@ -7,9 +7,10 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    first_of_kind, has_child_kind, last_segment, named_children, narrow, pos_of,
-    preceding_comments, string_arg_shape, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    child_by_field, first_named_child, first_named_child_matching, first_of_kind, has_child_kind,
+    last_segment, named_children, narrow, only_named_child_matching, pos_of, preceding_comments,
+    string_arg_shape, text,
 };
 use crate::spec::Role;
 
@@ -127,20 +128,16 @@ fn unwrap_call(n: Node<'_>) -> Option<Node<'_>> {
             | "return_expression"
             | "try_expression"
             | "await_expression" => {
-                cur = named_children(cur).into_iter().next()?;
+                cur = first_named_child(cur)?;
             }
             _ => return None,
         }
     }
 }
 fn sole_call_id(body: Node<'_>) -> Option<usize> {
-    let mut stmts = named_children(body)
-        .into_iter()
-        .filter(|c| c.kind() != "line_comment" && c.kind() != "block_comment");
-    let only = stmts.next()?;
-    if stmts.next().is_some() {
-        return None;
-    }
+    let only = only_named_child_matching(body, |c| {
+        c.kind() != "line_comment" && c.kind() != "block_comment"
+    })?;
     unwrap_call(only).map(|c| c.id())
 }
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
@@ -149,7 +146,7 @@ fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
         match cur.kind() {
             "identifier" => return Some((text(cx, cur), pos_of(cur))),
             "field_expression" => cur = child_by_field(cur, "value")?,
-            "index_expression" => cur = named_children(cur).into_iter().next()?,
+            "index_expression" => cur = first_named_child(cur)?,
             _ => return None,
         }
     }
@@ -325,10 +322,11 @@ fn enum_pattern(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
 }
 fn sibling_enum(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     n.parent().is_some_and(|parent| {
-        named_children(parent)
-            .into_iter()
-            .filter(|c| c.kind() == "match_arm" && c.id() != n.id())
-            .any(|arm| child_by_field(arm, "pattern").is_some_and(|p| enum_pattern(cx, p)))
+        any_named_child(parent, |arm| {
+            arm.kind() == "match_arm"
+                && arm.id() != n.id()
+                && child_by_field(arm, "pattern").is_some_and(|p| enum_pattern(cx, p))
+        })
     })
 }
 fn err_bound<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<Option<&'s str>> {
@@ -336,9 +334,8 @@ fn err_bound<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<Option<&'s str>> {
         if child_by_field(pat, "condition").is_some() {
             return None;
         }
-        let mut kids = named_children(pat).into_iter();
-        let only = kids.next()?;
-        if kids.next().is_some() {
+        let only = pat.named_child(0)?;
+        if pat.named_child(1).is_some() {
             return None;
         }
         only
@@ -425,12 +422,12 @@ fn is_err_ctor(cx: &Cx<'_, '_>, call: Node<'_>, bound: Option<&str>, callee: &st
         return false;
     }
     child_by_field(call, "arguments")
-        .and_then(|a| named_children(a).into_iter().next())
+        .and_then(first_named_child)
         .is_some_and(|f| f.kind() == "identifier" && text(cx, f) == b)
 }
 fn handler_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, bound: Option<&str>) -> Stmt<'s> {
     let expr = if s.kind() == "expression_statement" {
-        named_children(s).into_iter().next().unwrap_or(s)
+        first_named_child(s).unwrap_or(s)
     } else {
         s
     };
@@ -453,7 +450,7 @@ fn handler_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, bound: Option<&str>) -> Stmt<'
                 kind: CallKind::Macro,
             }
         }
-        "return_expression" => match named_children(expr).into_iter().next() {
+        "return_expression" => match first_named_child(expr) {
             Some(v) if v.kind() == "call_expression" => {
                 let callee = child_by_field(v, "function").map_or("", |f| text(cx, f));
                 if is_err_ctor(cx, v, bound, callee) {
@@ -674,9 +671,7 @@ impl LangHooks for RustHooks {
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
         if n.kind() == "macro_invocation" {
             let mac = child_by_field(n, "macro")?;
-            let tree = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "token_tree");
+            let tree = first_named_child_matching(n, &["token_tree"]);
             let args = tree.map_or(Vec::new(), |tt| macro_args(cx, tt));
             let head = CallHead {
                 callee: text(cx, mac),
@@ -776,9 +771,8 @@ impl LangHooks for RustHooks {
             if child_by_field(pat, "condition").is_some() {
                 return None;
             }
-            let mut kids = named_children(pat).into_iter();
-            let only = kids.next().unwrap_or(pat);
-            if kids.next().is_some() {
+            let only = pat.named_child(0).unwrap_or(pat);
+            if pat.named_child(1).is_some() {
                 return None;
             }
             only
@@ -908,9 +902,7 @@ impl LangHooks for RustHooks {
         if last != "assert" && last != "debug_assert" && !unreach {
             return None;
         }
-        let tt = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "token_tree")?;
+        let tt = first_named_child_matching(n, &["token_tree"])?;
         let mut tops = Vec::new();
         for i in 0..tt.child_count() {
             if let Some(c) = tt.child(i)

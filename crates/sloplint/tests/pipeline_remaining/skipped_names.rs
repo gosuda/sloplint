@@ -83,6 +83,9 @@ fn a_non_utf8_name_outside_the_scope_is_not_counted() {
         .join(std::ffi::OsStr::from_bytes(b"bad\xff.rs"));
     if let Err(e) = std::fs::write(&bad, SAMPLE) {
         assert!(name_is_unrepresentable(&e), "write non-UTF-8 name: {e}");
+        eprintln!(
+            "SKIP a_non_utf8_name_outside_the_scope_is_not_counted: filesystem cannot represent the 0xFF name: {e}"
+        );
         return;
     }
 
@@ -115,6 +118,9 @@ fn lossy_equal_file_names_do_not_share_an_explicit_scope() {
         .join(std::ffi::OsStr::from_bytes(b"bad\xff.rs"));
     if let Err(e) = std::fs::write(&invalid, SAMPLE) {
         assert!(name_is_unrepresentable(&e), "write non-UTF-8 name: {e}");
+        eprintln!(
+            "SKIP lossy_equal_file_names_do_not_share_an_explicit_scope: filesystem cannot represent the 0xFF name: {e}"
+        );
         return;
     }
     symlink("bad\u{FFFD}.rs", root.join("other/link.rs")).unwrap_or_else(|e| panic!("link: {e}"));
@@ -160,6 +166,9 @@ fn lossy_equal_dir_names_do_not_share_an_explicit_scope() {
         .join(std::ffi::OsStr::from_bytes(b"scope\xff"));
     if let Err(e) = std::fs::create_dir_all(&invalid_dir) {
         assert!(name_is_unrepresentable(&e), "mkdir: {e}");
+        eprintln!(
+            "SKIP lossy_equal_dir_names_do_not_share_an_explicit_scope: filesystem cannot represent the 0xFF name: {e}"
+        );
         return;
     }
     std::fs::write(invalid_dir.join("b.rs"), SAMPLE)

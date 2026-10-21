@@ -7,9 +7,10 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    first_of_kind, has_child_kind, last_segment, named_children, narrow, pos_of,
-    preceding_comments, slice, string_arg_shape, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    child_by_field, count_named_child, find_named_child, first_named_child_matching, first_of_kind,
+    has_child_kind, last_segment, named_children, narrow, only_named_child_matching, pos_of,
+    preceding_comments, rfind_named_child, slice, string_arg_shape, text,
 };
 use crate::spec::Role;
 
@@ -82,7 +83,7 @@ fn code_children(n: Node<'_>) -> Vec<Node<'_>> {
 }
 
 fn first_code(n: Node<'_>) -> Option<Node<'_>> {
-    code_children(n).into_iter().next()
+    find_named_child(n, |child| child.kind() != "comment")
 }
 
 fn modifiers_of(n: Node<'_>) -> Option<Node<'_>> {
@@ -133,7 +134,7 @@ fn span_arg<'s>(n: Node<'_>, shape: ArgShape<'s>) -> Arg<'s> {
 }
 
 fn spread_param<'s>(cx: &Cx<'_, 's>, p: Node<'_>) -> Option<Param<'s>> {
-    let ty_node = named_children(p).into_iter().find(|child| {
+    let ty_node = find_named_child(p, |child| {
         !matches!(
             child.kind(),
             "modifiers" | "annotation" | "marker_annotation" | "variable_declarator"
@@ -194,10 +195,8 @@ fn sole_call_of(n: Node<'_>, body: Node<'_>) -> Option<usize> {
     if n.kind() != "method_declaration" {
         return None;
     }
-    match code_children(body).as_slice() {
-        [only] => statement_call(*only),
-        _ => None,
-    }
+    let only = only_named_child_matching(body, |c| c.kind() != "comment")?;
+    statement_call(only)
 }
 
 fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
@@ -230,13 +229,11 @@ fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
 fn type_name(n: Node<'_>) -> Option<Node<'_>> {
     match n.kind() {
         "type_identifier" => Some(n),
-        "generic_type" => named_children(n)
-            .into_iter()
-            .find(|child| matches!(child.kind(), "type_identifier" | "scoped_type_identifier"))
-            .and_then(type_name),
-        "scoped_type_identifier" => named_children(n)
-            .into_iter()
-            .rfind(|child| child.kind() == "type_identifier"),
+        "generic_type" => {
+            first_named_child_matching(n, &["type_identifier", "scoped_type_identifier"])
+                .and_then(type_name)
+        }
+        "scoped_type_identifier" => rfind_named_child(n, |child| child.kind() == "type_identifier"),
         _ => None,
     }
 }
@@ -474,18 +471,18 @@ fn sibling_labels(n: Node<'_>) -> Vec<Node<'_>> {
         if child.kind() == "switch_label" {
             labels.push(child);
         } else {
-            labels.extend(
-                named_children(child)
-                    .into_iter()
-                    .filter(|c| c.kind() == "switch_label"),
-            );
+            for label in named_children(child) {
+                if label.kind() == "switch_label" {
+                    labels.push(label);
+                }
+            }
         }
     }
     labels
 }
 
 fn label_is_enum(label: Node<'_>) -> bool {
-    named_children(label).iter().any(|child| {
+    any_named_child(label, |child| {
         matches!(
             child.kind(),
             "pattern"
@@ -499,10 +496,7 @@ fn label_is_enum(label: Node<'_>) -> bool {
 }
 
 fn switch_label_arm(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<WildcardArm> {
-    if n.kind() != "switch_label"
-        || !named_children(n).is_empty()
-        || text(cx, n).trim() != "default"
-    {
+    if n.kind() != "switch_label" || n.named_child_count() != 0 || text(cx, n).trim() != "default" {
         return None;
     }
     let enum_like = sibling_labels(n).into_iter().any(label_is_enum);
@@ -585,15 +579,14 @@ fn method_assertion(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<Assertion> {
 }
 
 fn assert_statement(cx: &Cx<'_, '_>, n: Node<'_>) -> Assertion {
-    let expressions = code_children(n);
-    let comparison = expressions.first().is_some_and(|first| {
+    let comparison = find_named_child(n, |child| child.kind() != "comment").is_some_and(|first| {
         first.kind() == "binary_expression"
-            && child_by_field(*first, "operator")
+            && child_by_field(first, "operator")
                 .is_some_and(|op| matches!(text(cx, op), "==" | "!="))
     });
     Assertion {
         pos: pos_of(n),
-        has_message: expressions.len() >= 2,
+        has_message: count_named_child(n, |child| child.kind() != "comment") >= 2,
         comparison,
     }
 }

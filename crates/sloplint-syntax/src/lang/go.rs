@@ -7,8 +7,9 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field, last_segment,
-    named_children, narrow, pos_of, preceding_comments, string_arg_shape, strip_quotes, text,
+    CallHead, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
+    first_named_child, first_named_child_matching, last_named_child, last_segment, named_children,
+    narrow, pos_of, preceding_comments, string_arg_shape, strip_quotes, text,
 };
 use crate::spec::Role;
 
@@ -79,15 +80,13 @@ fn go_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>>) {
 }
 
 fn go_return_expr(n: Node<'_>) -> Option<Node<'_>> {
-    let mut kids = named_children(n).into_iter();
-    let only = kids.next()?;
-    if kids.next().is_some() {
+    let only = n.named_child(0)?;
+    if n.named_child(1).is_some() {
         return None;
     }
     if only.kind() == "expression_list" {
-        let mut inner = named_children(only).into_iter();
-        let one = inner.next()?;
-        if inner.next().is_some() {
+        let one = only.named_child(0)?;
+        if only.named_child(1).is_some() {
             return None;
         }
         Some(one)
@@ -99,7 +98,7 @@ fn go_return_expr(n: Node<'_>) -> Option<Node<'_>> {
 fn go_single_call(n: Node<'_>) -> Option<usize> {
     match n.kind() {
         "expression_statement" => {
-            let inner = named_children(n).into_iter().next()?;
+            let inner = first_named_child(n)?;
             (inner.kind() == "call_expression").then_some(inner.id())
         }
         "return_statement" => {
@@ -111,12 +110,9 @@ fn go_single_call(n: Node<'_>) -> Option<usize> {
 }
 
 fn go_sole(body: Node<'_>) -> Option<usize> {
-    let list = named_children(body)
-        .into_iter()
-        .find(|c| c.kind() == "statement_list")?;
-    let mut stmts = named_children(list).into_iter();
-    let only = stmts.next()?;
-    if stmts.next().is_some() {
+    let list = first_named_child_matching(body, &["statement_list"])?;
+    let only = list.named_child(0)?;
+    if list.named_child(1).is_some() {
         return None;
     }
     go_single_call(only)
@@ -144,7 +140,7 @@ fn go_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
             "selector_expression" => cur = child_by_field(cur, "operand")?,
             "index_expression" => cur = child_by_field(cur, "operand")?,
             "unary_expression" => cur = child_by_field(cur, "operand")?,
-            "parenthesized_expression" => cur = named_children(cur).into_iter().next()?,
+            "parenthesized_expression" => cur = first_named_child(cur)?,
             _ => return None,
         }
     }
@@ -261,10 +257,10 @@ fn go_enum(_cx: &Cx<'_, '_>, sw: Node<'_>) -> bool {
 }
 
 fn go_last_expr(n: Node<'_>) -> Option<Node<'_>> {
-    let mut cur = named_children(n).into_iter().last()?;
+    let mut cur = last_named_child(n)?;
     loop {
         if cur.kind() == "expression_list" {
-            cur = named_children(cur).into_iter().last()?;
+            cur = last_named_child(cur)?;
         } else {
             return Some(cur);
         }
@@ -273,7 +269,7 @@ fn go_last_expr(n: Node<'_>) -> Option<Node<'_>> {
 
 fn go_handler_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, bound: &str) -> Stmt<'s> {
     if s.kind() == "expression_statement" {
-        if let Some(v) = named_children(s).into_iter().next()
+        if let Some(v) = first_named_child(s)
             && v.kind() == "call_expression"
         {
             let callee = child_by_field(v, "function").map_or("", |f| text(cx, f));
@@ -471,7 +467,7 @@ impl LangHooks for GoHooks {
             }
             return;
         }
-        if let Some(child) = named_children(n).into_iter().next()
+        if let Some(child) = first_named_child(n)
             && let Some(root) = go_root(cx, child)
         {
             out.push(root);
@@ -563,10 +559,7 @@ impl LangHooks for GoHooks {
         let bound = text(cx, left);
         let body = child_by_field(n, "consequence")?;
         let mut stmts = Vec::new();
-        if let Some(list) = named_children(body)
-            .into_iter()
-            .find(|c| c.kind() == "statement_list")
-        {
+        if let Some(list) = first_named_child_matching(body, &["statement_list"]) {
             for s in named_children(list) {
                 if s.kind() == "comment" {
                     continue;
@@ -642,8 +635,7 @@ impl LangHooks for GoHooks {
         if last != "MethodByName" && last != "FieldByName" {
             return None;
         }
-        let first =
-            child_by_field(n, "arguments").and_then(|a| named_children(a).into_iter().next());
+        let first = child_by_field(n, "arguments").and_then(first_named_child);
         if first.is_some_and(|f| {
             f.kind() == "interpreted_string_literal" || f.kind() == "raw_string_literal"
         }) {
@@ -665,7 +657,7 @@ impl LangHooks for GoHooks {
         {
             return None;
         }
-        let count = child_by_field(n, "arguments").map_or(0, |a| named_children(a).len());
+        let count = child_by_field(n, "arguments").map_or(0, |a| a.named_child_count());
         Some(Assertion {
             pos: pos_of(n),
             has_message: count >= 3,

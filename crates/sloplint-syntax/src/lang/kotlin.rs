@@ -7,9 +7,10 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    first_of_kind, has_child_kind, last_segment, named_children, narrow, pos_of,
-    preceding_comments, string_arg_shape, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    child_by_field, find_named_child, first_of_kind, has_child_kind, last_named_child,
+    last_segment, named_children, narrow, only_named_child_matching, pos_of, preceding_comments,
+    rfind_named_child, string_arg_shape, text,
 };
 use crate::spec::Role;
 
@@ -82,7 +83,9 @@ fn code_children(n: Node<'_>) -> Vec<Node<'_>> {
 }
 
 fn first_code(n: Node<'_>) -> Option<Node<'_>> {
-    code_children(n).into_iter().next()
+    find_named_child(n, |child| {
+        child.kind() != "line_comment" && child.kind() != "block_comment"
+    })
 }
 
 fn modifiers_of(n: Node<'_>) -> Option<Node<'_>> {
@@ -91,7 +94,7 @@ fn modifiers_of(n: Node<'_>) -> Option<Node<'_>> {
 
 fn is_restricted(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     modifiers_of(n).is_some_and(|modifiers| {
-        named_children(modifiers).into_iter().any(|child| {
+        any_named_child(modifiers, |child| {
             child.kind() == "visibility_modifier" && RESTRICTED.contains(&text(cx, child))
         })
     })
@@ -99,8 +102,8 @@ fn is_restricted(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
 
 fn has_modifier_word(cx: &Cx<'_, '_>, n: Node<'_>, word: &str) -> bool {
     modifiers_of(n).is_some_and(|modifiers| {
-        children_of(modifiers)
-            .into_iter()
+        (0..modifiers.child_count())
+            .filter_map(|i| modifiers.child(i))
             .any(|child| text(cx, child) == word)
     })
 }
@@ -145,15 +148,17 @@ fn is_named_arg(arg: Node<'_>) -> bool {
 }
 
 fn arg_value(arg: Node<'_>) -> Option<Node<'_>> {
-    named_children(arg).into_iter().last()
+    last_named_child(arg)
 }
 
 fn callee_node(n: Node<'_>) -> Option<Node<'_>> {
-    code_children(n).into_iter().find(|child| {
-        !matches!(
-            child.kind(),
-            "value_arguments" | "annotated_lambda" | "type_arguments"
-        )
+    find_named_child(n, |child| {
+        child.kind() != "line_comment"
+            && child.kind() != "block_comment"
+            && !matches!(
+                child.kind(),
+                "value_arguments" | "annotated_lambda" | "type_arguments"
+            )
     })
 }
 
@@ -204,19 +209,20 @@ fn function_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
 fn statement_call(statement: Node<'_>) -> Option<usize> {
     match statement.kind() {
         "call_expression" => Some(statement.id()),
-        "return_expression" => code_children(statement)
-            .last()
-            .filter(|inner| inner.kind() == "call_expression")
-            .map(|inner| inner.id()),
+        "return_expression" => rfind_named_child(statement, |child| {
+            child.kind() != "line_comment" && child.kind() != "block_comment"
+        })
+        .filter(|inner| inner.kind() == "call_expression")
+        .map(|inner| inner.id()),
         _ => None,
     }
 }
 
 fn block_call(block: Node<'_>) -> Option<usize> {
-    match code_children(block).as_slice() {
-        [only] => statement_call(*only),
-        _ => None,
-    }
+    let only = only_named_child_matching(block, |c| {
+        c.kind() != "line_comment" && c.kind() != "block_comment"
+    })?;
+    statement_call(only)
 }
 
 fn sole_call_of(n: Node<'_>) -> Option<usize> {
@@ -313,9 +319,7 @@ fn delegate_ref<'s>(cx: &Cx<'_, 's>, spec: Node<'_>) -> Option<ImplRef<'s>> {
     let user = first_of_kind(spec, &["constructor_invocation"])
         .and_then(|invocation| first_of_kind(invocation, &["user_type"]))
         .or_else(|| first_of_kind(spec, &["user_type"]))?;
-    let last = named_children(user)
-        .into_iter()
-        .rfind(|child| child.kind() == "identifier")?;
+    let last = rfind_named_child(user, |child| child.kind() == "identifier")?;
     Some(ImplRef {
         name: text(cx, last),
         pos: pos_of(last),
@@ -364,18 +368,18 @@ fn import_fact<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Import<'s>> {
     let pos = pos_of(n);
     let in_test = cx.is_test_file;
     let qualified = first_of_kind(n, &["qualified_identifier"]);
-    let identifiers: Vec<Node<'_>> = named_children(n)
-        .into_iter()
-        .filter(|child| child.kind() == "identifier")
-        .collect();
+    let count = u32::try_from(n.named_child_count()).unwrap_or(u32::MAX);
+    let mut identifiers = (0..count)
+        .filter_map(|i| n.named_child(i))
+        .filter(|child| child.kind() == "identifier");
     let (path, alias) = match qualified {
         Some(qualified) => (
             text(cx, qualified),
-            identifiers.first().map(|id| text(cx, *id)),
+            identifiers.next().map(|id| text(cx, id)),
         ),
         None => {
-            let first = identifiers.first()?;
-            (text(cx, *first), identifiers.get(1).map(|id| text(cx, *id)))
+            let first = identifiers.next()?;
+            (text(cx, first), identifiers.next().map(|id| text(cx, id)))
         }
     };
     if has_child_kind(n, "*") {
@@ -399,19 +403,21 @@ fn import_fact<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Import<'s>> {
     })
 }
 
+fn push_variable_name<'s>(cx: &Cx<'_, 's>, variable: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    if let Some(id) = first_of_kind(variable, &["identifier"]) {
+        out.push((text(cx, id), pos_of(id)));
+    }
+}
+
 fn variable_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     for child in named_children(n) {
-        let variables = match child.kind() {
-            "variable_declaration" => vec![child],
-            "multi_variable_declaration" => named_children(child)
-                .into_iter()
-                .filter(|inner| inner.kind() == "variable_declaration")
-                .collect(),
-            _ => continue,
-        };
-        for variable in variables {
-            if let Some(id) = first_of_kind(variable, &["identifier"]) {
-                out.push((text(cx, id), pos_of(id)));
+        if child.kind() == "variable_declaration" {
+            push_variable_name(cx, child, out);
+        } else if child.kind() == "multi_variable_declaration" {
+            for inner in named_children(child) {
+                if inner.kind() == "variable_declaration" {
+                    push_variable_name(cx, inner, out);
+                }
             }
         }
     }
@@ -479,9 +485,7 @@ fn copy_source<'s>(cx: &Cx<'_, 's>, args: &[Node<'_>]) -> Option<&'s str> {
             return None;
         }
         let object = text(cx, first_code(value).filter(|o| o.kind() == "identifier")?);
-        let member = named_children(value)
-            .into_iter()
-            .rfind(|child| child.kind() == "identifier")?;
+        let member = rfind_named_child(value, |child| child.kind() == "identifier")?;
         if text(cx, member) != label || found.is_some_and(|known| known != object) {
             return None;
         }
@@ -565,12 +569,10 @@ fn when_arm(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<WildcardArm> {
     let parent = n.parent()?;
     let has_subject = first_of_kind(parent, &["when_subject"]).is_some();
     let enum_like = has_subject
-        && named_children(parent)
-            .into_iter()
-            .filter(|entry| entry.kind() == "when_entry")
-            .any(|entry| {
-                child_by_field(entry, "condition").is_some_and(|cond| enum_condition(cx, cond))
-            });
+        && any_named_child(parent, |entry| {
+            entry.kind() == "when_entry"
+                && child_by_field(entry, "condition").is_some_and(|cond| enum_condition(cx, cond))
+        });
     Some(WildcardArm {
         pos: pos_of(n),
         enum_like,
