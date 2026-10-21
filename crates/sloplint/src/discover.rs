@@ -112,19 +112,19 @@ impl Found {
 }
 
 /// Whether a walked name is analyzed, counted as a skip, or ignored outright.
-pub enum NameDecision {
+pub(crate) enum NameDecision {
     Analyze { rel: String, lang: Lang },
     Skipped,
     Ignored,
 }
 
 /// Classifies a regular file's root-relative name without touching the filesystem.
-pub fn decide_file_name(relative: &Path, config: &Config) -> NameDecision {
+pub(crate) fn decide_file_name(relative: &Path, config: &Config) -> NameDecision {
     decide_name(relative, true, config)
 }
 
 /// Classifies a non-regular walked name without touching the filesystem.
-pub fn decide_non_file_name(relative: &Path, config: &Config) -> NameDecision {
+pub(crate) fn decide_non_file_name(relative: &Path, config: &Config) -> NameDecision {
     decide_name(relative, false, config)
 }
 
@@ -234,4 +234,131 @@ fn enabled_lang(rel: &str, config: &Config) -> Option<Lang> {
             .iter()
             .any(|key| key == lang.config_key())
     })
+}
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use sloplint_core::config::Config;
+    use sloplint_core::lang::Lang;
+
+    use super::{NameDecision, decide_file_name, decide_non_file_name};
+
+    #[test]
+    fn non_utf8_skip_decision_is_hermetic() {
+        let config = Config::default();
+        let valid = Path::new("src/lib.rs");
+        assert!(
+            matches!(
+                decide_file_name(valid, &config),
+                NameDecision::Analyze { .. }
+            ),
+            "the valid sibling analyzes"
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStrExt;
+            let bad = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
+            assert!(
+                matches!(decide_file_name(bad, &config), NameDecision::Skipped),
+                "the invalid-byte name is a counted skip"
+            );
+        }
+        #[cfg(not(unix))]
+        {
+            let standin = Path::new("other/bad\u{FFFD}.rs");
+            assert!(matches!(
+                decide_file_name(standin, &config),
+                NameDecision::Analyze { .. }
+            ));
+        }
+    }
+
+    #[test]
+    fn lossy_equal_file_decision_is_hermetic() {
+        let config = Config::default();
+        let valid = Path::new("other/bad\u{FFFD}.rs");
+        let link = Path::new("other/link.rs");
+        assert!(
+            matches!(
+                decide_file_name(valid, &config),
+                NameDecision::Analyze { .. }
+            ),
+            "the valid name analyzes"
+        );
+        assert!(
+            matches!(decide_non_file_name(link, &config), NameDecision::Skipped),
+            "the link is a counted skip"
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStrExt;
+            let invalid = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
+            assert!(
+                matches!(decide_file_name(invalid, &config), NameDecision::Skipped),
+                "the invalid-byte name is a counted skip"
+            );
+        }
+    }
+
+    #[test]
+    fn lossy_equal_dir_decision_is_hermetic() {
+        let config = Config::default();
+        let pipe = Path::new("parent/scope\u{FFFD}/pipe.rs");
+        let child = Path::new("parent/scope\u{FFFD}/b.rs");
+        assert!(
+            matches!(decide_non_file_name(pipe, &config), NameDecision::Skipped),
+            "the FIFO is a counted skip"
+        );
+        assert!(
+            matches!(
+                decide_file_name(child, &config),
+                NameDecision::Analyze { .. }
+            ),
+            "the valid child analyzes"
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStrExt;
+            let invalid_child = Path::new(std::ffi::OsStr::from_bytes(b"parent/scope\xff/b.rs"));
+            assert!(
+                matches!(
+                    decide_file_name(invalid_child, &config),
+                    NameDecision::Skipped
+                ),
+                "the invalid-byte child is a counted skip"
+            );
+        }
+    }
+
+    #[test]
+    fn boundary_non_utf8_skip_decision_is_hermetic() {
+        let config = Config::default();
+        let valid = Path::new("src/bad\u{FFFD}.rs");
+        let NameDecision::Analyze { rel, lang } = decide_file_name(valid, &config) else {
+            panic!("valid U+FFFD name must analyze");
+        };
+        assert_eq!(rel, "src/bad\u{FFFD}.rs");
+        assert_eq!(lang, Lang::Rust);
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStrExt;
+            let bad = Path::new(std::ffi::OsStr::from_bytes(b"src/bad\xff.rs"));
+            assert!(
+                matches!(decide_file_name(bad, &config), NameDecision::Skipped),
+                "invalid-byte name is a counted skip"
+            );
+        }
+        #[cfg(not(unix))]
+        {
+            let second = Path::new("src/other\u{FFFD}.rs");
+            assert!(
+                matches!(
+                    decide_file_name(second, &config),
+                    NameDecision::Analyze { .. }
+                ),
+                "replacement-character names analyze where raw bytes are unrepresentable"
+            );
+        }
+    }
 }

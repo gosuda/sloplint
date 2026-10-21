@@ -10,8 +10,6 @@ mod project;
 mod settings;
 mod terminal;
 
-pub use discover::{NameDecision, decide_file_name, decide_non_file_name};
-pub use project::Scopes;
 pub use terminal::TerminalText;
 
 use std::collections::{BTreeMap, HashSet};

@@ -153,7 +153,8 @@ pub struct Scopes {
 
 impl Scopes {
     /// Builds scopes directly from root-relative paths, without resolving anything on disk.
-    pub fn from_relative(paths: impl IntoIterator<Item = PathBuf>) -> Self {
+    #[cfg(test)]
+    pub(crate) fn from_relative(paths: impl IntoIterator<Item = PathBuf>) -> Self {
         Self {
             paths: paths.into_iter().collect(),
         }
@@ -625,4 +626,134 @@ fn combine(main: String, specs: &[CustomRuleSpec], origin: &str) -> Result<Strin
         message: error.to_string(),
     })?;
     Ok(format!("{main}\n{fragment}"))
+}
+#[cfg(test)]
+mod tests {
+    use std::path::{Path, PathBuf};
+
+    use super::Scopes;
+
+    #[test]
+    fn non_utf8_skip_scope_membership_is_hermetic() {
+        let valid = Path::new("src/lib.rs");
+        let whole = Scopes::default();
+        let src = Scopes::from_relative([PathBuf::from("src")]);
+        let other = Scopes::from_relative([PathBuf::from("other")]);
+        assert!(whole.contains(valid));
+        assert!(src.contains(valid));
+        assert!(!other.contains(valid));
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStrExt;
+            let bad = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
+            assert!(whole.contains(bad));
+            assert!(!src.contains(bad));
+            assert!(other.contains(bad));
+        }
+        #[cfg(not(unix))]
+        {
+            let standin = Path::new("other/bad\u{FFFD}.rs");
+            assert!(whole.contains(standin));
+            assert!(!src.contains(standin));
+            assert!(other.contains(standin));
+        }
+    }
+
+    #[test]
+    fn lossy_equal_file_scope_is_hermetic() {
+        let valid = Path::new("other/bad\u{FFFD}.rs");
+        let link = Path::new("other/link.rs");
+        let whole = Scopes::default();
+        let explicit = Scopes::from_relative([valid.to_path_buf()]);
+        let parent = Scopes::from_relative([PathBuf::from("other")]);
+        assert!(whole.contains(valid));
+        assert!(whole.contains(link));
+        assert!(explicit.contains(valid));
+        assert!(!explicit.contains(link));
+        assert!(parent.contains(valid));
+        assert!(parent.contains(link));
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStrExt;
+            let invalid = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
+            assert_eq!(
+                invalid.to_string_lossy(),
+                valid.to_string_lossy(),
+                "the names are lossy-equal"
+            );
+            assert!(whole.contains(invalid));
+            assert!(
+                !explicit.contains(invalid),
+                "lossy-equal names share no explicit file scope"
+            );
+            assert!(parent.contains(invalid));
+        }
+    }
+
+    #[test]
+    fn lossy_equal_dir_scope_is_hermetic() {
+        let pipe = Path::new("parent/scope\u{FFFD}/pipe.rs");
+        let child = Path::new("parent/scope\u{FFFD}/b.rs");
+        let whole = Scopes::default();
+        let explicit = Scopes::from_relative([PathBuf::from("parent/scope\u{FFFD}")]);
+        let parent = Scopes::from_relative([PathBuf::from("parent")]);
+        assert!(whole.contains(pipe));
+        assert!(explicit.contains(pipe));
+        assert!(!explicit.contains(Path::new("parent/unrelated/b.rs")));
+        assert!(parent.contains(pipe));
+        assert!(whole.contains(child));
+        assert!(explicit.contains(child));
+        assert!(parent.contains(child));
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStrExt;
+            let invalid_dir = Path::new(std::ffi::OsStr::from_bytes(b"parent/scope\xff"));
+            assert_eq!(
+                invalid_dir.to_string_lossy(),
+                "parent/scope\u{FFFD}",
+                "the directories are lossy-equal"
+            );
+            let invalid_child = Path::new(std::ffi::OsStr::from_bytes(b"parent/scope\xff/b.rs"));
+            assert!(whole.contains(invalid_child));
+            assert!(
+                !explicit.contains(invalid_child),
+                "lossy-equal directories share no explicit scope"
+            );
+            assert!(parent.contains(invalid_child));
+        }
+    }
+
+    #[test]
+    fn boundary_non_utf8_skip_scope_membership_is_hermetic() {
+        let valid = Path::new("src/bad\u{FFFD}.rs");
+        let whole = Scopes::default();
+        assert!(whole.contains(valid));
+        let src = Scopes::from_relative([PathBuf::from("src")]);
+        assert!(src.contains(valid));
+        let other = Scopes::from_relative([PathBuf::from("other")]);
+        assert!(!other.contains(valid));
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStrExt;
+            let bad = Path::new(std::ffi::OsStr::from_bytes(b"src/bad\xff.rs"));
+            assert!(whole.contains(bad));
+            assert!(src.contains(bad));
+            assert!(!other.contains(bad));
+            let explicit = Scopes::from_relative([valid.to_path_buf()]);
+            assert!(explicit.contains(valid));
+            assert!(
+                !explicit.contains(bad),
+                "lossy-equal names share no explicit file scope"
+            );
+        }
+        #[cfg(not(unix))]
+        {
+            let second = Path::new("src/other\u{FFFD}.rs");
+            let explicit = Scopes::from_relative([valid.to_path_buf()]);
+            assert!(
+                !explicit.contains(second),
+                "distinct replacement-character names share no explicit file scope"
+            );
+        }
+    }
 }
