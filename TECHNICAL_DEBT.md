@@ -1,10 +1,20 @@
 # Technical debt
 
-Low-severity findings deferred from the audit of `bf96ca8..8789bd9`. None affects correctness today; each lists the concrete fix when it becomes worthwhile.
+Low-severity findings deferred from the audit of `bf96ca8..8789bd9`. Resolved items were fixed in this branch; each remaining item lists its concrete trigger.
 
-- [ ] vendor/tree-sitter-cpp/src/scanner.c:141 [low][memory-safety hardening][medium-confidence] `tree_sitter_cpp_external_scanner_deserialize` memcpy's `length` bytes into `delimiter[16]` with no runtime length validation. Not reachable from hostile source today (the core only replays serialize's output). Suggested fix: check `length` is a multiple of `sizeof(wchar_t)` and `<= sizeof(scanner->delimiter)`; on mismatch reset `delimiter_length` and return. Costs upstream divergence via `sloplint-grammar.patch`.
-- [ ] vendor/tree-sitter-bash/src/scanner.c:126 [low][memory-safety hardening][medium-confidence] `deserialize` reads heredoc flags/sizes with no remaining-length check. Same reachability caveat and same fix shape: validate before each read; on shortfall call `reset(scanner)` and return. Costs upstream divergence via `sloplint-grammar.patch`.
-- [ ] crates/sloplint-syntax/src/hooks.rs:24 [low][boundary-sprawl][medium-confidence] `Cx` hands adapters raw node tables (`levels`, `containers`); anchor validity for `preceding_comments` is enforced by a runtime panic, not a type. Suggested fix: narrow `Cx` to query methods and keep the tables `pub(crate)` to `walk.rs`. Deferred: 28 call sites across 23 adapters for no behavior gain.
-- [ ] crates/sloplint-core/src/rules/grep/homonym_definitions.rs `reported_names` [low][performance][high-confidence] On a 100k-file Go corpus (502k findings) the one hash pass over every definition takes about 0.39 s of a 2.3 s warm run, on the main thread: SipHash plus key comparisons that miss cache across the per-file definition vectors. Suggested fix: run the world rules on the worker pool, or carry a precomputed name hash in `NamedSite`, which changes the cache format.
-- [ ] crates/sloplint/src/main.rs `write_agent` [low][performance][high-confidence] Rendering the 159 MB agent report takes about 0.28 s on one thread (byte scan 0.16 s, buffer copies 0.07 s). Threading would save at most about 0.25 s, and it needs either the whole report buffered or a windowed pipeline with its own `--jobs`-sized pool. Suggested fix: only if a consumer needs it, format windows of findings in parallel and write them in order.
-- [ ] crates/sloplint/src/cache.rs `Cache::load` [low][performance][high-confidence] Cache open and load take 0.4-0.5 s of the same 3.2 s warm run (open includes hashing the 64 MB binary, about 0.1 s). Every entry must be decoded, because merge consumes every cached output, but the keys are not free: each entry allocates a `Box<str>` path key on decode, and `execute` clones every key again into `cached_hashes`. Downgraded from high: the original finding assumed load dominated the warm run; the phase profile measured 7% before the serial-stage fix and about 14% after it. Suggested fix: record in `process` whether each file hit its cached entry, so the touched check needs no key set, and give `store` the old rel set per shard from the decoded shards instead of a cloned map. Borrowing from the loaded map does not work: `process` drains it.
+Resolved in this branch:
+
+- [x] vendor/tree-sitter-cpp/src/scanner.c `deserialize` now validates `length` against `sizeof(wchar_t)` and the delimiter array before any read, and resets on mismatch.
+- [x] vendor/tree-sitter-bash/src/scanner.c `deserialize` now checks remaining length before every field and payload read, stages header scalars in locals, and resets on any malformed input.
+- [x] crates/sloplint-syntax/src/hooks.rs `Cx` exposes query methods only; the node tables are private to the crate and attached by `walk.rs`.
+- [x] crates/sloplint/src/cache.rs `Loaded` carries per-shard keys and hashes, `process` records `from_cache` at take time, and `store` compares shard rel sets without a cloned key map.
+
+Remaining:
+
+- [ ] crates/sloplint-core/src/rules/grep/homonym_definitions.rs `reported_names` [low][performance][high-confidence] On a 100k-file Go corpus (502k findings) the one hash pass over every definition takes about 0.39 s of a 2.3 s warm run, on the main thread. Trigger: unresolved because the corpus that measured it is not present on the current machine, so a hashing or scheduling change cannot be validated against its profile here. Suggested fix when it is: run the world rules on the worker pool, or carry a precomputed name hash in `NamedSite`, which changes the cache format.
+- [ ] crates/sloplint/src/main.rs `write_agent` [low][performance][high-confidence] Rendering the 159 MB agent report takes about 0.28 s on one thread. Trigger: no consumer has asked for faster report rendering. Suggested fix when one does: format windows of findings in parallel and write them in order.
+
+Deferred verification:
+
+- The c4-go performance corpus is not present on the current machine, so no c4 measurements run here; the homonym finding above keeps its original measurement.
+- LeakSanitizer is unestablished: the pinned stable toolchain has no `-Zsanitizer`, and a full-suite valgrind run costs hours. Establish one before relying on leak claims.
