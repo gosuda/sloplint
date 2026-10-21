@@ -177,6 +177,13 @@ fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     match n.kind() {
         "identifier" | "this" | "super" => Some((text(cx, n), pos_of(n))),
         "member_expression" | "index_expression" => write_root(cx, child_by_field(n, "object")?),
+        "assignable_expression" => {
+            if let Some(o) = child_by_field(n, "object") {
+                write_root(cx, o)
+            } else {
+                write_root(cx, named_children(n).into_iter().next()?)
+            }
+        }
         "parenthesized_expression" => write_root(cx, named_children(n).into_iter().next()?),
         _ => None,
     }
@@ -434,13 +441,13 @@ impl LangHooks for DartHooks {
         let name_node = child_by_field(sig, "name")?;
         let name = text(cx, name_node);
         let mut public = !name.starts_with('_');
-        match cx.containers.last() {
+        match cx.innermost_container() {
             None => {}
             Some(Container::Class { exported, .. }) => {
-                public = public && *exported;
+                public = public && exported;
             }
             Some(Container::Trait { public: tp }) => {
-                public = public && *tp;
+                public = public && tp;
             }
             Some(_) => {}
         }
@@ -449,7 +456,7 @@ impl LangHooks for DartHooks {
                 .into_iter()
                 .any(|c| c.kind() == "annotation" && annotation_name(cx, c) == "override");
         let interface_bound = matches!(
-            cx.containers.last(),
+            cx.innermost_container(),
             Some(Container::Class {
                 implements: true,
                 ..
@@ -608,7 +615,11 @@ impl LangHooks for DartHooks {
         } else if let Some(at) = module.rfind(':') {
             segs = &module[at + 1..];
         }
-        emit.namespace(segs, alias);
+        let stem = segs
+            .strip_suffix(".dart")
+            .filter(|stem| !stem.is_empty())
+            .unwrap_or(segs);
+        emit.namespace(stem, alias);
     }
 
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {
@@ -623,13 +634,13 @@ impl LangHooks for DartHooks {
         let name_node = child_by_field(n, "name")?;
         let name = text(cx, name_node);
         let mut public = !name.starts_with('_');
-        match cx.containers.last() {
+        match cx.innermost_container() {
             None => {}
             Some(Container::Class { exported, .. }) => {
-                public = public && *exported;
+                public = public && exported;
             }
             Some(Container::Trait { public: tp }) => {
-                public = public && *tp;
+                public = public && tp;
             }
             Some(_) => {}
         }
@@ -844,10 +855,18 @@ impl LangHooks for DartHooks {
         let mut exports = 0u32;
         let mut uris = Vec::new();
         for c in named_children(root) {
-            if c.kind() == "library_export" {
+            let directive = if c.kind() == "import_or_export" {
+                named_children(c)
+                    .into_iter()
+                    .find(|k| k.kind() == "library_export" || k.kind() == "library_import")
+                    .unwrap_or(c)
+            } else {
+                c
+            };
+            if directive.kind() == "library_export" {
                 exports += 1;
-                uris.extend(export_uri(cx, c));
-            } else if !is_barrel_edge(c.kind()) {
+                uris.extend(export_uri(cx, directive));
+            } else if !is_barrel_edge(directive.kind()) {
                 return None;
             }
         }
@@ -913,6 +932,7 @@ fn is_barrel_edge(kind: &str) -> bool {
         || kind == "library_name"
         || kind == "part_directive"
         || kind == "part_of_directive"
+        || kind == "script_tag"
         || kind == "comment"
         || kind == "block_comment"
         || kind == "documentation_block_comment"

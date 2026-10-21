@@ -1,6 +1,15 @@
 //! Callee-pattern parsing and matching for log callees and allow lists.
 
+use std::iter::Filter;
+use std::str::Chars;
+
 use crate::facts::CallKind;
+
+type Visible<'a> = Filter<Chars<'a>, fn(&char) -> bool>;
+
+fn is_visible(ch: &char) -> bool {
+    !ch.is_whitespace()
+}
 
 #[derive(Debug, Clone)]
 struct Segment {
@@ -17,109 +26,216 @@ pub struct CalleePattern {
 
 impl CalleePattern {
     /// Parses a pattern: segments split on `.` and `::`, a leading `*` on the last segment matches any suffix, and a `new ` prefix restricts the match to `CallKind::New`.
+    ///
+    /// Shapes that cannot match a normalized callee are errors that name the pattern: whitespace inside the pattern (callees lose all whitespace before matching), a `*` anywhere but the first character of the last segment, and `?.`, `\`, or `->`, which callee normalization consumes as segment separators (write `.` or `::` instead).
     pub fn parse(s: &str) -> Result<CalleePattern, String> {
         let trimmed = s.trim();
         if trimmed.is_empty() || trimmed == "new" {
             return Err(format!("empty callee pattern `{s}`"));
         }
-        let (new_only, body) = match trimmed.strip_prefix("new ") {
-            Some(rest) => (true, rest.trim()),
-            None => (false, trimmed),
+        let (new_only, body) = match trimmed.strip_prefix("new") {
+            Some(rest) if rest.chars().next().is_some_and(char::is_whitespace) => {
+                (true, rest.trim_start())
+            }
+            _ => (false, trimmed),
         };
         if body.is_empty() {
             return Err(format!("empty callee pattern `{s}`"));
         }
-        let mut heads: Vec<&str> = Vec::new();
-        for piece in split_pattern(body) {
+        if body.chars().any(char::is_whitespace) {
+            return Err(format!(
+                "whitespace inside callee pattern `{s}`: callees are matched with all whitespace removed, so write the pattern without it"
+            ));
+        }
+        if body.contains("?.") {
+            return Err(format!(
+                "`?.` in callee pattern `{s}` is a segment separator in callees and never appears inside a segment; write `.` instead"
+            ));
+        }
+        if body.contains('\\') || body.contains("->") {
+            return Err(format!(
+                "`\\` and `->` in callee pattern `{s}` are segment separators in callees and never appear inside a segment; separate segments with `.` or `::`"
+            ));
+        }
+        let pieces = split_pattern(body);
+        let last_index = pieces.len() - 1;
+        let mut segments: Vec<Segment> = Vec::with_capacity(pieces.len());
+        for (index, piece) in pieces.into_iter().enumerate() {
             if piece.is_empty() {
                 return Err(format!("empty segment in callee pattern `{s}`"));
             }
-            heads.push(piece);
+            let is_last = index == last_index;
+            let (text, suffix) = match piece.strip_prefix('*') {
+                Some("") => return Err(format!("`*` needs a suffix in callee pattern `{s}`")),
+                Some(rest) if is_last => (rest, true),
+                Some(_) => {
+                    return Err(format!(
+                        "`*` may only start the last segment of callee pattern `{s}`"
+                    ));
+                }
+                None => (piece, false),
+            };
+            if text.contains('*') {
+                return Err(format!(
+                    "`*` may only start the last segment of callee pattern `{s}`"
+                ));
+            }
+            segments.push(Segment {
+                text: strip_sigil(text, suffix).into(),
+                suffix,
+            });
         }
-        let Some(last) = heads.pop() else {
-            return Err(format!("empty callee pattern `{s}`"));
-        };
-        let (text, suffix) = match last.strip_prefix('*') {
-            Some(rest) if !rest.is_empty() => (rest, true),
-            Some(_) => return Err(format!("`*` needs a suffix in callee pattern `{s}`")),
-            None => (last, false),
-        };
-        let mut segments: Vec<Segment> = heads
-            .into_iter()
-            .map(|head| Segment {
-                text: head.into(),
-                suffix: false,
-            })
-            .collect();
-        segments.push(Segment {
-            text: text.into(),
-            suffix,
-        });
         Ok(CalleePattern { new_only, segments })
     }
 
-    /// Reports whether the pattern matches the normalized callee under this call kind: whitespace is deleted, segments split on `::`, `?.`, and `.`, and a `Macro` callee gains a trailing `!`.
+    /// Reports whether the pattern matches the callee under this call kind.
+    ///
+    /// All whitespace is ignored, segments split on `::`, `?.`, `->`, `?->`, `\`, and `.`, a `$` that starts a longer segment is ignored (`$this`, `$logger`), and a `Macro` callee gains a trailing `!` on its last segment. The callee is scanned in place and nothing is allocated.
     pub fn matches(&self, callee: &str, kind: CallKind) -> bool {
         if self.new_only && kind != CallKind::New {
             return false;
         }
-        let segments = normalize(callee, kind);
-        if segments.len() < self.segments.len() {
+        let Some((tail, heads)) = self.segments.split_last() else {
+            return false;
+        };
+        let (count, last) = scan_segments(callee);
+        if count < self.segments.len() {
             return false;
         }
-        self.segments.iter().enumerate().all(|(index, pattern)| {
-            let candidate = &segments[segments.len() - self.segments.len() + index];
-            if pattern.suffix {
-                candidate.ends_with(pattern.text.as_ref())
-            } else {
-                candidate.as_str() == pattern.text.as_ref()
-            }
+        let tail_matches = if kind == CallKind::Macro {
+            tail.matches_macro_last(last)
+        } else {
+            tail.matches_plain(last)
+        };
+        if !tail_matches {
+            return false;
+        }
+        let mut remaining = Segments::new(callee).skip(count - self.segments.len());
+        heads.iter().all(|head| {
+            remaining
+                .next()
+                .is_some_and(|candidate| head.matches_plain(candidate))
         })
     }
 }
 
-fn normalize(callee: &str, kind: CallKind) -> Vec<String> {
-    let flat: String = callee.chars().filter(|c| !c.is_whitespace()).collect();
-    let mut segments: Vec<String> = split_callee(&flat).into_iter().map(str::to_owned).collect();
-    if kind == CallKind::Macro
-        && let Some(last) = segments.last_mut()
-        && !last.ends_with('!')
-    {
-        last.push('!');
+impl Segment {
+    fn matches_plain(&self, raw: &str) -> bool {
+        self.accepts(self.candidate(raw))
     }
-    segments
+
+    fn matches_macro_last(&self, raw: &str) -> bool {
+        let candidate = self.candidate(raw);
+        let bang = (candidate.clone().next_back() != Some('!')).then_some('!');
+        self.accepts(candidate.chain(bang))
+    }
+
+    fn candidate<'a>(&self, raw: &'a str) -> Visible<'a> {
+        let mut visible = raw.chars().filter(is_visible as fn(&char) -> bool);
+        let sigiled = visible.clone().next() == Some('$') && visible.clone().nth(1).is_some();
+        if sigiled && !self.suffix {
+            visible.next();
+        }
+        visible
+    }
+
+    fn accepts<I>(&self, candidate: I) -> bool
+    where
+        I: DoubleEndedIterator<Item = char>,
+    {
+        if self.suffix {
+            let mut tail = candidate.rev();
+            return self
+                .text
+                .chars()
+                .rev()
+                .all(|expected| tail.next() == Some(expected));
+        }
+        candidate.eq(self.text.chars())
+    }
 }
 
-fn split_callee(text: &str) -> Vec<&str> {
-    let bytes = text.as_bytes();
-    let mut parts: Vec<&str> = Vec::new();
-    let mut start = 0usize;
-    let mut i = 0usize;
-    while i < bytes.len() {
-        let (width, hit) = callee_separator_at(bytes, i);
-        if hit {
-            parts.push(&text[start..i]);
-            i += width;
-            start = i;
-        } else {
-            i += 1;
+fn strip_sigil(text: &str, suffix: bool) -> &str {
+    match text.strip_prefix('$') {
+        Some(rest) if !suffix && !rest.is_empty() => rest,
+        _ => text,
+    }
+}
+
+fn scan_segments(callee: &str) -> (usize, &str) {
+    let mut count = 0usize;
+    let mut last = "";
+    for segment in Segments::new(callee) {
+        count += 1;
+        last = segment;
+    }
+    (count, last)
+}
+
+struct Segments<'a> {
+    text: &'a str,
+    pos: usize,
+    done: bool,
+}
+
+impl<'a> Segments<'a> {
+    fn new(text: &'a str) -> Segments<'a> {
+        Segments {
+            text,
+            pos: 0,
+            done: false,
         }
     }
-    parts.push(&text[start..]);
-    parts
 }
 
-fn callee_separator_at(bytes: &[u8], i: usize) -> (usize, bool) {
-    if bytes[i] == b'.' {
-        return (1, true);
+impl<'a> Iterator for Segments<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<&'a str> {
+        if self.done {
+            return None;
+        }
+        let start = self.pos;
+        let mut cursor = start;
+        while let Some((index, ch)) = next_visible(self.text, cursor) {
+            if let Some(end) = separator_end(self.text, index, ch) {
+                self.pos = end;
+                return Some(&self.text[start..index]);
+            }
+            cursor = index + ch.len_utf8();
+        }
+        self.done = true;
+        Some(&self.text[start..])
     }
-    if bytes[i] == b':' && i + 1 < bytes.len() && bytes[i + 1] == b':' {
-        return (2, true);
+}
+
+fn next_visible(text: &str, from: usize) -> Option<(usize, char)> {
+    text[from..]
+        .char_indices()
+        .find(|(_, ch)| !ch.is_whitespace())
+        .map(|(offset, ch)| (from + offset, ch))
+}
+
+fn eat(text: &str, from: usize, want: char) -> Option<usize> {
+    match next_visible(text, from) {
+        Some((index, ch)) if ch == want => Some(index + ch.len_utf8()),
+        _ => None,
     }
-    if bytes[i] == b'?' && i + 1 < bytes.len() && bytes[i + 1] == b'.' {
-        return (2, true);
+}
+
+fn separator_end(text: &str, index: usize, ch: char) -> Option<usize> {
+    let after = index + ch.len_utf8();
+    match ch {
+        '.' | '\\' => Some(after),
+        ':' => eat(text, after, ':'),
+        '-' => eat(text, after, '>'),
+        '?' => match next_visible(text, after) {
+            Some((dot, '.')) => Some(dot + 1),
+            Some((dash, '-')) => eat(text, dash + 1, '>'),
+            _ => None,
+        },
+        _ => None,
     }
-    (0, false)
 }
 
 fn split_pattern(text: &str) -> Vec<&str> {

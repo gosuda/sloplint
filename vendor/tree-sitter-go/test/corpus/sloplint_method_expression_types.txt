@@ -1,0 +1,191 @@
+================================================================================
+type literal as method expression base
+================================================================================
+
+package main
+
+var a = (*struct{ J }).M
+var b = interface{ m1(string) }.m1
+var c = struct{ J }.M
+var d = (*interface{ M() }).M
+var e = (**struct{ J }).M
+var f = ((*struct{ J })).M(nil, 1)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (var_declaration
+    (var_spec
+      name: (identifier)
+      value: (expression_list
+        (selector_expression
+          operand: (parenthesized_type
+            (pointer_type
+              (struct_type
+                (field_declaration_list
+                  (field_declaration
+                    type: (type_identifier))))))
+          field: (field_identifier)))))
+  (var_declaration
+    (var_spec
+      name: (identifier)
+      value: (expression_list
+        (selector_expression
+          operand: (interface_type
+            (method_elem
+              name: (field_identifier)
+              parameters: (parameter_list
+                (parameter_declaration
+                  type: (type_identifier)))))
+          field: (field_identifier)))))
+  (var_declaration
+    (var_spec
+      name: (identifier)
+      value: (expression_list
+        (selector_expression
+          operand: (struct_type
+            (field_declaration_list
+              (field_declaration
+                type: (type_identifier))))
+          field: (field_identifier)))))
+  (var_declaration
+    (var_spec
+      name: (identifier)
+      value: (expression_list
+        (selector_expression
+          operand: (parenthesized_type
+            (pointer_type
+              (interface_type
+                (method_elem
+                  name: (field_identifier)
+                  parameters: (parameter_list)))))
+          field: (field_identifier)))))
+  (var_declaration
+    (var_spec
+      name: (identifier)
+      value: (expression_list
+        (selector_expression
+          operand: (parenthesized_type
+            (pointer_type
+              (pointer_type
+                (struct_type
+                  (field_declaration_list
+                    (field_declaration
+                      type: (type_identifier)))))))
+          field: (field_identifier)))))
+  (var_declaration
+    (var_spec
+      name: (identifier)
+      value: (expression_list
+        (call_expression
+          function: (selector_expression
+            operand: (parenthesized_type
+              (parenthesized_type
+                (pointer_type
+                  (struct_type
+                    (field_declaration_list
+                      (field_declaration
+                        type: (type_identifier)))))))
+            field: (field_identifier))
+          arguments: (argument_list
+            (nil)
+            (int_literal)))))))
+
+================================================================================
+named method expressions keep the expression shape
+================================================================================
+
+package main
+
+var a = (*T).M
+var b = (T).M
+var c = (*pkg.T[int]).M
+var d = (struct{}{}).x
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (var_declaration
+    (var_spec
+      name: (identifier)
+      value: (expression_list
+        (selector_expression
+          operand: (parenthesized_expression
+            (unary_expression
+              operand: (identifier)))
+          field: (field_identifier)))))
+  (var_declaration
+    (var_spec
+      name: (identifier)
+      value: (expression_list
+        (selector_expression
+          operand: (parenthesized_expression
+            (identifier))
+          field: (field_identifier)))))
+  (var_declaration
+    (var_spec
+      name: (identifier)
+      value: (expression_list
+        (selector_expression
+          operand: (parenthesized_expression
+            (unary_expression
+              operand: (index_expression
+                operand: (selector_expression
+                  operand: (identifier)
+                  field: (field_identifier))
+                index: (identifier))))
+          field: (field_identifier)))))
+  (var_declaration
+    (var_spec
+      name: (identifier)
+      value: (expression_list
+        (selector_expression
+          operand: (parenthesized_expression
+            (composite_literal
+              type: (struct_type
+                (field_declaration_list))
+              body: (literal_value)))
+          field: (field_identifier))))))
+
+================================================================================
+parenthesized type literals stay conversions
+================================================================================
+
+package main
+
+var a = (*interface{ M() })(nil)
+var b = (*struct{ J })(nil)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (var_declaration
+    (var_spec
+      name: (identifier)
+      value: (expression_list
+        (type_conversion_expression
+          type: (parenthesized_type
+            (pointer_type
+              (interface_type
+                (method_elem
+                  name: (field_identifier)
+                  parameters: (parameter_list)))))
+          operand: (nil)))))
+  (var_declaration
+    (var_spec
+      name: (identifier)
+      value: (expression_list
+        (type_conversion_expression
+          type: (parenthesized_type
+            (pointer_type
+              (struct_type
+                (field_declaration_list
+                  (field_declaration
+                    type: (type_identifier))))))
+          operand: (nil))))))

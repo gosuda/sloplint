@@ -1,0 +1,1743 @@
+================================================================================
+Stable type identifiers
+================================================================================
+
+object Main {
+  type A = B.C
+  type D = E.F.G
+  type H = __root__.scala.Int
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (type_definition
+        (type_identifier)
+        (stable_type_identifier
+          (identifier)
+          (type_identifier)))
+      (type_definition
+        (type_identifier)
+        (stable_type_identifier
+          (stable_identifier
+            (identifier)
+            (identifier))
+          (type_identifier)))
+      (type_definition
+        (type_identifier)
+        (stable_type_identifier
+          (stable_identifier
+            (identifier)
+            (identifier))
+          (type_identifier))))))
+
+================================================================================
+Generic types
+================================================================================
+
+object Main {
+  type A = B[
+    C,
+    D,
+  ]
+  type E = F.G[H]
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (type_definition
+        (type_identifier)
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (type_identifier)
+            (type_identifier))))
+      (type_definition
+        (type_identifier)
+        (generic_type
+          (stable_type_identifier
+            (identifier)
+            (type_identifier))
+          (type_arguments
+            (type_identifier)))))))
+
+================================================================================
+Tuple types
+================================================================================
+
+object Main {
+  type A = (B, C)
+  type A = (
+    B,
+    C,
+  )
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (type_definition
+        (type_identifier)
+        (tuple_type
+          (type_identifier)
+          (type_identifier)))
+      (type_definition
+        (type_identifier)
+        (tuple_type
+          (type_identifier)
+          (type_identifier))))))
+
+================================================================================
+Named tuple types (Scala 3 syntax)
+================================================================================
+
+object O:
+  type A = (name: String, age: Int)
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (type_definition
+        (type_identifier)
+        (named_tuple_type
+          (name_and_type
+            (identifier)
+            (type_identifier))
+          (name_and_type
+            (identifier)
+            (type_identifier)))))))
+
+================================================================================
+Function types
+================================================================================
+
+object Main {
+  type A = (B, C) => D
+
+  type A = (B, C) => (D, E)
+
+  type A = B => (D, E)
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (type_definition
+        (type_identifier)
+        (function_type
+          (parameter_types
+            (type_identifier)
+            (type_identifier))
+          (type_identifier)))
+      (type_definition
+        (type_identifier)
+        (function_type
+          (parameter_types
+            (type_identifier)
+            (type_identifier))
+          (tuple_type
+            (type_identifier)
+            (type_identifier))))
+      (type_definition
+        (type_identifier)
+        (function_type
+          (parameter_types
+            (type_identifier))
+          (tuple_type
+            (type_identifier)
+            (type_identifier)))))))
+
+================================================================================
+Polymorphic function types (Scala 3 syntax)
+================================================================================
+
+class A:
+  type Comparer = [X: Ord] => (X, X) => Boolean
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (template_body
+      (type_definition
+        (type_identifier)
+        (function_type
+          (type_parameters
+            (identifier)
+            (context_bound
+              (type_identifier)))
+          (function_type
+            (parameter_types
+              (type_identifier)
+              (type_identifier))
+            (type_identifier)))))))
+
+================================================================================
+Context function types (Scala 3 syntax)
+================================================================================
+
+type Executable[A] = ExecutionContext ?=> A
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (type_parameters
+      (identifier))
+    (function_type
+      (parameter_types
+        (type_identifier))
+      (type_identifier))))
+
+================================================================================
+Match types (Scala 3 syntax)
+================================================================================
+
+type Elem[A] = A match
+  case String   => Char
+  case Array[a] => a
+  case t *: rest => t
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (type_parameters
+      (identifier))
+    (match_type
+      (type_identifier)
+      (type_case_clause
+        (type_identifier)
+        (type_identifier))
+      (type_case_clause
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (type_identifier)))
+        (type_identifier))
+      (type_case_clause
+        (infix_type
+          (type_identifier)
+          (operator_identifier)
+          (type_identifier))
+        (type_identifier)))))
+
+================================================================================
+Match types with braced syntax (Scala 3 syntax)
+================================================================================
+
+type Elem[A] = A match {
+  case String => Char
+  case Array[a] => a
+  case t *: rest => t
+}
+
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (type_parameters
+      (identifier))
+    (match_type
+      (type_identifier)
+      (type_case_clause
+        (type_identifier)
+        (type_identifier))
+      (type_case_clause
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (type_identifier)))
+        (type_identifier))
+      (type_case_clause
+        (infix_type
+          (type_identifier)
+          (operator_identifier)
+          (type_identifier))
+        (type_identifier)))))
+
+================================================================================
+Match type cases separated by a semicolon (Scala 3 syntax)
+================================================================================
+
+type Choice[A] = A match { case Int => Long ; case Long => Int }
+
+type Trailing = X match { case Int => String; }
+
+type Indented = X match
+  case Int => String;
+  case String => Int
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (type_parameters
+      (identifier))
+    (match_type
+      (type_identifier)
+      (type_case_clause
+        (type_identifier)
+        (type_identifier))
+      (type_case_clause
+        (type_identifier)
+        (type_identifier))))
+  (type_definition
+    (type_identifier)
+    (match_type
+      (type_identifier)
+      (type_case_clause
+        (type_identifier)
+        (type_identifier))))
+  (type_definition
+    (type_identifier)
+    (match_type
+      (type_identifier)
+      (type_case_clause
+        (type_identifier)
+        (type_identifier))
+      (type_case_clause
+        (type_identifier)
+        (type_identifier)))))
+
+================================================================================
+Refinement as an intersection operand (Scala 3 syntax)
+================================================================================
+
+val c: Cont[Int] & { type A = Int } = ???
+
+val x: this.type & { type UX = Int } = ???
+
+type M = { type T[+A] } & { type T[-A] }
+
+type Q = A & { type X = Int } & C
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (val_definition
+    (identifier)
+    (infix_type
+      (generic_type
+        (type_identifier)
+        (type_arguments
+          (type_identifier)))
+      (operator_identifier)
+      (structural_type
+        (type_definition
+          (type_identifier)
+          (type_identifier))))
+    (operator_identifier))
+  (val_definition
+    (identifier)
+    (infix_type
+      (singleton_type
+        (identifier))
+      (operator_identifier)
+      (structural_type
+        (type_definition
+          (type_identifier)
+          (type_identifier))))
+    (operator_identifier))
+  (type_definition
+    (type_identifier)
+    (infix_type
+      (structural_type
+        (type_definition
+          (type_identifier)
+          (type_parameters
+            (covariant_type_parameter
+              (identifier)))))
+      (operator_identifier)
+      (structural_type
+        (type_definition
+          (type_identifier)
+          (type_parameters
+            (contravariant_type_parameter
+              (identifier)))))))
+  (type_definition
+    (type_identifier)
+    (infix_type
+      (infix_type
+        (type_identifier)
+        (operator_identifier)
+        (structural_type
+          (type_definition
+            (type_identifier)
+            (type_identifier))))
+      (operator_identifier)
+      (type_identifier))))
+
+================================================================================
+Named type arguments (Scala 3 syntax)
+================================================================================
+
+def g(x: Int) = f[T = Any](x)
+
+type A = Foo[K = Int, V = String]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (parameters
+      (parameter
+        (identifier)
+        (type_identifier)))
+    (call_expression
+      (generic_function
+        (identifier)
+        (type_arguments
+          (named_type_argument
+            (identifier)
+            (type_identifier))))
+      (arguments
+        (identifier))))
+  (type_definition
+    (type_identifier)
+    (generic_type
+      (type_identifier)
+      (type_arguments
+        (named_type_argument
+          (identifier)
+          (type_identifier))
+        (named_type_argument
+          (identifier)
+          (type_identifier))))))
+
+================================================================================
+Capturing types (Scala 3 capture checking)
+================================================================================
+
+def f(it: IterableOnce[A]^): Unit = ()
+
+type Cap = C^{cap}
+
+type Two = C^{x, y}
+
+type Narrow = Object^{any.only[Shared].rd}
+
+type Pure = A -> B
+
+type PureCtx = A ?-> B
+
+type Captured = A ->{x} B
+
+trait T:
+  update def put(x: Int): Unit
+
+def drop(consume r: Res): Unit = ()
+
+def h(x: ->{any} I) = x
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (parameters
+      (parameter
+        (identifier)
+        (capturing_type
+          (generic_type
+            (type_identifier)
+            (type_arguments
+              (type_identifier))))))
+    (type_identifier)
+    (unit))
+  (type_definition
+    (type_identifier)
+    (capturing_type
+      (type_identifier)
+      (capture_set
+        (capture_ref))))
+  (type_definition
+    (type_identifier)
+    (capturing_type
+      (type_identifier)
+      (capture_set
+        (capture_ref
+          (identifier))
+        (capture_ref
+          (identifier)))))
+  (type_definition
+    (type_identifier)
+    (capturing_type
+      (type_identifier)
+      (capture_set
+        (capture_ref
+          (identifier)
+          (type_arguments
+            (type_identifier))))))
+  (type_definition
+    (type_identifier)
+    (function_type
+      (parameter_types
+        (type_identifier))
+      (type_identifier)))
+  (type_definition
+    (type_identifier)
+    (function_type
+      (parameter_types
+        (type_identifier))
+      (type_identifier)))
+  (type_definition
+    (type_identifier)
+    (function_type
+      (parameter_types
+        (type_identifier))
+      (capture_set
+        (capture_ref
+          (identifier)))
+      (type_identifier)))
+  (trait_definition
+    (identifier)
+    (template_body
+      (function_declaration
+        (modifiers
+          (update_modifier))
+        (identifier)
+        (parameters
+          (parameter
+            (identifier)
+            (type_identifier)))
+        (type_identifier))))
+  (function_definition
+    (identifier)
+    (parameters
+      (parameter
+        (consume_modifier)
+        (identifier)
+        (type_identifier)))
+    (type_identifier)
+    (unit))
+  (function_definition
+    (identifier)
+    (parameters
+      (parameter
+        (identifier)
+        (lazy_parameter_type
+          (capture_set
+            (capture_ref
+              (identifier)))
+          (type_identifier))))
+    (identifier)))
+
+================================================================================
+Reach capability in a capture set (Scala 3 capture checking)
+================================================================================
+
+def add(fut: Future[T]^{futs*}) = ???
+
+type F = () ->{c.procs*} Unit
+
+type G = List[() ->{xs*} Unit]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (parameters
+      (parameter
+        (identifier)
+        (capturing_type
+          (generic_type
+            (type_identifier)
+            (type_arguments
+              (type_identifier)))
+          (capture_set
+            (capture_ref
+              (identifier))))))
+    (operator_identifier))
+  (type_definition
+    (type_identifier)
+    (function_type
+      (parameter_types)
+      (capture_set
+        (capture_ref
+          (stable_identifier
+            (identifier)
+            (identifier))))
+      (type_identifier)))
+  (type_definition
+    (type_identifier)
+    (generic_type
+      (type_identifier)
+      (type_arguments
+        (function_type
+          (parameter_types)
+          (capture_set
+            (capture_ref
+              (identifier)))
+          (type_identifier))))))
+
+================================================================================
+Compound types
+================================================================================
+
+def cloneAndReset(obj: Cloneable with Resetable): Cloneable = {
+}
+
+class F extends Cloneable with Resetable with Serializable {}
+
+type G = H[A1] {
+  def foo[A2 <: Stepper[_]]: A2
+}
+
+type I = F1[A1:
+  def foo: A2]
+
+def a: F { val x: Int } = ???
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (parameters
+      (parameter
+        (identifier)
+        (compound_type
+          (type_identifier)
+          (type_identifier))))
+    (type_identifier)
+    (block))
+  (class_definition
+    (identifier)
+    (extends_clause
+      (type_identifier)
+      (type_identifier)
+      (type_identifier))
+    (template_body))
+  (type_definition
+    (type_identifier)
+    (compound_type
+      (generic_type
+        (type_identifier)
+        (type_arguments
+          (type_identifier)))
+      (refinement
+        (function_declaration
+          (identifier)
+          (type_parameters
+            (identifier)
+            (upper_bound
+              (generic_type
+                (type_identifier)
+                (type_arguments
+                  (wildcard)))))
+          (type_identifier)))))
+  (type_definition
+    (type_identifier)
+    (generic_type
+      (type_identifier)
+      (type_arguments
+        (compound_type
+          (type_identifier)
+          (refinement
+            (function_declaration
+              (identifier)
+              (type_identifier)))))))
+  (function_definition
+    (identifier)
+    (compound_type
+      (type_identifier)
+      (refinement
+        (val_declaration
+          (identifier)
+          (type_identifier))))
+    (operator_identifier)))
+
+================================================================================
+Infix types
+================================================================================
+
+type A = B Foo C
+
+type A = B ! C or D
+
+type A = (B, C) ~ D
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (infix_type
+      (type_identifier)
+      (identifier)
+      (type_identifier)))
+  (type_definition
+    (type_identifier)
+    (infix_type
+      (infix_type
+        (type_identifier)
+        (operator_identifier)
+        (type_identifier))
+      (identifier)
+      (type_identifier)))
+  (type_definition
+    (type_identifier)
+    (infix_type
+      (tuple_type
+        (type_identifier)
+        (type_identifier))
+      (operator_identifier)
+      (type_identifier))))
+
+================================================================================
+Variant Types
+================================================================================
+
+class Function1[-T1, +R]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (type_parameters
+      (contravariant_type_parameter
+        (identifier))
+      (covariant_type_parameter
+        (identifier)))))
+
+================================================================================
+Upper bound
+================================================================================
+
+class A[B <: C]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (type_parameters
+      (identifier)
+      (upper_bound
+        (type_identifier)))))
+
+================================================================================
+Lower bound
+================================================================================
+
+class A[B >: C]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (type_parameters
+      (identifier)
+      (lower_bound
+        (type_identifier)))))
+
+================================================================================
+Lower and upper bounds
+================================================================================
+
+class A[B >: C <: D]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (type_parameters
+      (identifier)
+      (lower_bound
+        (type_identifier))
+      (upper_bound
+        (type_identifier)))))
+
+================================================================================
+View bound
+================================================================================
+
+
+class A[B <% C <% D]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (type_parameters
+      (identifier)
+      (view_bound
+        (type_identifier))
+      (view_bound
+        (type_identifier)))))
+
+================================================================================
+Context bound
+================================================================================
+
+class A[B : C : D]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (type_parameters
+      (identifier)
+      (context_bound
+        (type_identifier))
+      (context_bound
+        (type_identifier)))))
+
+================================================================================
+Context bound (Scala 3 syntax)
+================================================================================
+
+def reduce[A : Monoid as m](xs: List[A]): A = ()
+
+def showMax[X : {Ordering, Show}](x: X, y: X): String = ()
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (type_parameters
+      (identifier)
+      (context_bound
+        (type_identifier)
+        (identifier)))
+    (parameters
+      (parameter
+        (identifier)
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (type_identifier)))))
+    (type_identifier)
+    (unit))
+  (function_definition
+    (identifier)
+    (type_parameters
+      (identifier)
+      (context_bound
+        (type_identifier))
+      (context_bound
+        (type_identifier)))
+    (parameters
+      (parameter
+        (identifier)
+        (type_identifier))
+      (parameter
+        (identifier)
+        (type_identifier)))
+    (type_identifier)
+    (unit)))
+
+================================================================================
+Projections
+================================================================================
+
+type A = B[C]#D
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (projected_type
+      (generic_type
+        (type_identifier)
+        (type_arguments
+          (type_identifier)))
+      (type_identifier))))
+
+================================================================================
+Complex types
+================================================================================
+
+type A = B with B1 with B2 ! C with C1
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (infix_type
+      (compound_type
+        (type_identifier)
+        (type_identifier)
+        (type_identifier))
+      (operator_identifier)
+      (compound_type
+        (type_identifier)
+        (type_identifier)))))
+
+================================================================================
+Literal type aliases (Scala 2.13+)
+================================================================================
+
+type A = "hello"
+type B = 25
+type C = false
+type D = 0.5f
+
+class Test(d: "hello", b: 25)
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (literal_type
+      (string)))
+  (type_definition
+    (type_identifier)
+    (literal_type
+      (integer_literal)))
+  (type_definition
+    (type_identifier)
+    (literal_type
+      (boolean_literal)))
+  (type_definition
+    (type_identifier)
+    (literal_type
+      (floating_point_literal)))
+  (class_definition
+    (identifier)
+    (class_parameters
+      (class_parameter
+        (identifier)
+        (literal_type
+          (string)))
+      (class_parameter
+        (identifier)
+        (literal_type
+          (integer_literal))))))
+
+================================================================================
+Singleton Types
+================================================================================
+
+class A:
+  def foobar: this.type = this
+  type X = A.B.type
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (template_body
+      (function_definition
+        (identifier)
+        (singleton_type
+          (identifier))
+        (identifier))
+      (type_definition
+        (type_identifier)
+        (singleton_type
+          (stable_identifier
+            (identifier)
+            (identifier)))))))
+
+================================================================================
+Opaque type aliases (Scala 3)
+================================================================================
+
+opaque type A = Int
+private opaque type B = String
+opaque type B >: Test <: Help = String
+
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (opaque_modifier)
+    (type_identifier)
+    (type_identifier))
+  (type_definition
+    (modifiers
+      (access_modifier))
+    (opaque_modifier)
+    (type_identifier)
+    (type_identifier))
+  (type_definition
+    (opaque_modifier)
+    (type_identifier)
+    (lower_bound
+      (type_identifier))
+    (upper_bound
+      (type_identifier))
+    (type_identifier)))
+
+================================================================================
+Structural type
+================================================================================
+
+type A = { def fly(): Unit }
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (structural_type
+      (function_declaration
+        (identifier)
+        (parameters)
+        (type_identifier)))))
+
+================================================================================
+Anonymous structural type with projection
+================================================================================
+
+type A = B[({ type f[x] = M[S, x] })#f]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (generic_type
+      (type_identifier)
+      (type_arguments
+        (projected_type
+          (tuple_type
+            (structural_type
+              (type_definition
+                (type_identifier)
+                (type_parameters
+                  (identifier))
+                (generic_type
+                  (type_identifier)
+                  (type_arguments
+                    (type_identifier)
+                    (type_identifier))))))
+          (type_identifier))))))
+
+================================================================================
+Type Lambdas (Scala 3)
+================================================================================
+
+type A = [B <: C] =>> D
+type Z = [X, Y] =>> Map[Y, X]
+class A[
+  [B <: C] =>> D
+]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (type_lambda
+      (identifier)
+      (upper_bound
+        (type_identifier))
+      (type_identifier)))
+  (type_definition
+    (type_identifier)
+    (type_lambda
+      (identifier)
+      (identifier)
+      (generic_type
+        (type_identifier)
+        (type_arguments
+          (type_identifier)
+          (type_identifier)))))
+  (class_definition
+    (identifier)
+    (type_parameters
+      (type_lambda
+        (identifier)
+        (upper_bound
+          (type_identifier))
+        (type_identifier)))))
+
+================================================================================
+Kind projector placeholder with a variance
+================================================================================
+
+type A = Foo[Either[Int, +_]]
+type B = Foo[Int => -_]
+type C = Foo[(Int, - _, Int)]
+type D = Foo[+[L, R]]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (generic_type
+      (type_identifier)
+      (type_arguments
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (type_identifier)
+            (type_identifier))))))
+  (type_definition
+    (type_identifier)
+    (generic_type
+      (type_identifier)
+      (type_arguments
+        (function_type
+          (parameter_types
+            (type_identifier))
+          (type_identifier)))))
+  (type_definition
+    (type_identifier)
+    (generic_type
+      (type_identifier)
+      (type_arguments
+        (tuple_type
+          (type_identifier)
+          (type_identifier)
+          (type_identifier)))))
+  (type_definition
+    (type_identifier)
+    (generic_type
+      (type_identifier)
+      (type_arguments
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (type_identifier)
+            (type_identifier)))))))
+
+================================================================================
+Wildcard bounded by a type lambda (Scala 3)
+================================================================================
+
+type W = Map[?, ? <: [X, Y] =>> Map[X, Y], ?]
+type V = Map[? >: [X] =>> List[X]]
+type U = Map[? <: List[Int]]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (generic_type
+      (type_identifier)
+      (type_arguments
+        (type_identifier)
+        (infix_type
+          (type_identifier)
+          (operator_identifier)
+          (type_lambda
+            (identifier)
+            (identifier)
+            (generic_type
+              (type_identifier)
+              (type_arguments
+                (type_identifier)
+                (type_identifier)))))
+        (type_identifier))))
+  (type_definition
+    (type_identifier)
+    (generic_type
+      (type_identifier)
+      (type_arguments
+        (infix_type
+          (type_identifier)
+          (operator_identifier)
+          (type_lambda
+            (identifier)
+            (generic_type
+              (type_identifier)
+              (type_arguments
+                (type_identifier))))))))
+  (type_definition
+    (type_identifier)
+    (generic_type
+      (type_identifier)
+      (type_arguments
+        (infix_type
+          (type_identifier)
+          (operator_identifier)
+          (generic_type
+            (type_identifier)
+            (type_arguments
+              (type_identifier))))))))
+
+================================================================================
+Union and Intersection Types (Scala 3)
+================================================================================
+
+type A = Foo | Bar & Buz
+type B = "foo" | "bar" & "buz"
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (infix_type
+      (infix_type
+        (type_identifier)
+        (operator_identifier)
+        (type_identifier))
+      (operator_identifier)
+      (type_identifier)))
+  (type_definition
+    (type_identifier)
+    (infix_type
+      (infix_type
+        (literal_type
+          (string))
+        (operator_identifier)
+        (literal_type
+          (string)))
+      (operator_identifier)
+      (literal_type
+        (string)))))
+
+================================================================================
+Applied Constructor Types (Scala 3)
+================================================================================
+
+val c: C(42)
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (val_declaration
+    (identifier)
+    (applied_constructor_type
+      (type_identifier)
+      (arguments
+        (integer_literal)))))
+
+================================================================================
+Unicode math symbols as type operators
+================================================================================
+
+object P {
+  type ¬[T] = T => Nothing
+  type ∨[T, U] = ¬[¬[T] ∧ ¬[U]]
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (type_definition
+        (type_identifier)
+        (type_parameters
+          (identifier))
+        (function_type
+          (parameter_types
+            (type_identifier))
+          (type_identifier)))
+      (type_definition
+        (type_identifier)
+        (type_parameters
+          (identifier)
+          (identifier))
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (infix_type
+              (generic_type
+                (type_identifier)
+                (type_arguments
+                  (type_identifier)))
+              (operator_identifier)
+              (generic_type
+                (type_identifier)
+                (type_arguments
+                  (type_identifier))))))))))
+
+================================================================================
+Common math symbols as operator identifiers
+================================================================================
+
+object Q {
+  type ∃[P[_]] = P[Int]
+  def ∅ : Set[Int] = Set.empty
+  def ∈(x: Int): Boolean = false
+  val u = a ∪ b
+  val i = a ∩ b
+  val c = f ∘ g
+  val e = x ≡ y
+  val q = x ≟ y
+  val s = m ⊕ n
+  val t = m ⊗ n
+  val l = m ⊸ n
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (type_definition
+        (type_identifier)
+        (type_parameters
+          (identifier)
+          (type_parameters
+            (wildcard)))
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (type_identifier))))
+      (function_definition
+        (operator_identifier)
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (type_identifier)))
+        (field_expression
+          (identifier)
+          (identifier)))
+      (function_definition
+        (operator_identifier)
+        (parameters
+          (parameter
+            (identifier)
+            (type_identifier)))
+        (type_identifier)
+        (boolean_literal))
+      (val_definition
+        (identifier)
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (identifier)))
+      (val_definition
+        (identifier)
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (identifier)))
+      (val_definition
+        (identifier)
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (identifier)))
+      (val_definition
+        (identifier)
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (identifier)))
+      (val_definition
+        (identifier)
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (identifier)))
+      (val_definition
+        (identifier)
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (identifier)))
+      (val_definition
+        (identifier)
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (identifier)))
+      (val_definition
+        (identifier)
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (identifier))))))
+
+================================================================================
+Existential types (Scala 2)
+================================================================================
+
+object O {
+  type E = P[T] forSome { type T }
+  def f(x: Map[K, V] forSome { type K; type V <: K }): Int = 1
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (type_definition
+        (type_identifier)
+        (existential_type
+          (generic_type
+            (type_identifier)
+            (type_arguments
+              (type_identifier)))
+          (refinement
+            (type_definition
+              (type_identifier)))))
+      (function_definition
+        (identifier)
+        (parameters
+          (parameter
+            (identifier)
+            (existential_type
+              (generic_type
+                (type_identifier)
+                (type_arguments
+                  (type_identifier)
+                  (type_identifier)))
+              (refinement
+                (type_definition
+                  (type_identifier))
+                (type_definition
+                  (type_identifier)
+                  (upper_bound
+                    (type_identifier)))))))
+        (type_identifier)
+        (integer_literal)))))
+
+================================================================================
+Subclass with multiline params and unnamed after named param
+================================================================================
+
+// https://github.com/tree-sitter/tree-sitter-scala/issues/465
+// https://github.com/scala/scala3/blob/main/tests/run/i14164.scala#L5-L9
+class Child extends Base(
+  param =
+    for x <- Seq("a") yield x
+    "param"
+)
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (comment)
+  (comment)
+  (class_definition
+    (identifier)
+    (extends_clause
+      (type_identifier)
+      (arguments
+        (assignment_expression
+          (identifier)
+          (indented_block
+            (for_expression
+              (enumerators
+                (enumerator
+                  (identifier)
+                  (call_expression
+                    (identifier)
+                    (arguments
+                      (string)))))
+              (identifier))
+            (string)))))))
+
+================================================================================
+case class nested in an object definition
+================================================================================
+
+// https://github.com/tree-sitter/tree-sitter-scala/issues/329
+object Merge:
+
+  case class Location(runIndex: Int, locationInRun: String):
+  end Location
+
+end Merge
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (comment)
+  (object_definition
+    (identifier)
+    (template_body
+      (class_definition
+        (identifier)
+        (class_parameters
+          (class_parameter
+            (identifier)
+            (type_identifier))
+          (class_parameter
+            (identifier)
+            (type_identifier)))
+        (template_body
+          (postfix_expression
+            (identifier)
+            (identifier)))))
+    (end_marker)))
+
+================================================================================
+Chained refinements
+================================================================================
+
+type X = C { type U = T; def u: U } { type T = String }
+
+type T1 = C { type T <: A } { type T <: B }
+
+var xx: (Lambda { type Apply = Arg } { type Arg = Int }) # Apply = uninitialized
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (compound_type
+      (compound_type
+        (type_identifier)
+        (refinement
+          (type_definition
+            (type_identifier)
+            (type_identifier))
+          (function_declaration
+            (identifier)
+            (type_identifier))))
+      (refinement
+        (type_definition
+          (type_identifier)
+          (type_identifier)))))
+  (type_definition
+    (type_identifier)
+    (compound_type
+      (compound_type
+        (type_identifier)
+        (refinement
+          (type_definition
+            (type_identifier)
+            (upper_bound
+              (type_identifier)))))
+      (refinement
+        (type_definition
+          (type_identifier)
+          (upper_bound
+            (type_identifier))))))
+  (var_definition
+    (identifier)
+    (projected_type
+      (tuple_type
+        (compound_type
+          (compound_type
+            (type_identifier)
+            (refinement
+              (type_definition
+                (type_identifier)
+                (type_identifier))))
+          (refinement
+            (type_definition
+              (type_identifier)
+              (type_identifier)))))
+      (type_identifier))
+    (identifier)))
+
+================================================================================
+Capture set variables (Scala 3 capture checking)
+================================================================================
+
+trait Bar:
+  type C^
+
+def foo[C^](x: List[() ->{C} Unit]): Unit = ()
+
+class K[Cap^ <: Any]:
+  type T[Cap^]
+
+type E >: {V, W} <: {U}
+
+type C = {D}
+
+val a = f[{io, async}]
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (trait_definition
+    (identifier)
+    (template_body
+      (type_definition
+        (type_identifier)
+        (capture_variable))))
+  (function_definition
+    (identifier)
+    (type_parameters
+      (identifier)
+      (capture_variable))
+    (parameters
+      (parameter
+        (identifier)
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (function_type
+              (parameter_types)
+              (capture_set
+                (capture_ref
+                  (identifier)))
+              (type_identifier))))))
+    (type_identifier)
+    (unit))
+  (class_definition
+    (identifier)
+    (type_parameters
+      (identifier)
+      (capture_variable)
+      (upper_bound
+        (type_identifier)))
+    (template_body
+      (type_definition
+        (type_identifier)
+        (type_parameters
+          (identifier)
+          (capture_variable)))))
+  (type_definition
+    (type_identifier)
+    (lower_bound
+      (capture_set
+        (capture_ref
+          (identifier))
+        (capture_ref
+          (identifier))))
+    (upper_bound
+      (capture_set
+        (capture_ref
+          (identifier)))))
+  (type_definition
+    (type_identifier)
+    (capture_set
+      (capture_ref
+        (identifier))))
+  (val_definition
+    (identifier)
+    (generic_function
+      (identifier)
+      (type_arguments
+        (capture_set
+          (capture_ref
+            (identifier))
+          (capture_ref
+            (identifier)))))))
+
+================================================================================
+An operator name starting with a pure arrow (Scala 3 capture checking)
+================================================================================
+
+type ->>[K, V] = V
+
+def f[K](k: K): K ->> V = ???
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (type_definition
+    (type_identifier)
+    (type_parameters
+      (identifier)
+      (identifier))
+    (type_identifier))
+  (function_definition
+    (identifier)
+    (type_parameters
+      (identifier))
+    (parameters
+      (parameter
+        (identifier)
+        (type_identifier)))
+    (infix_type
+      (type_identifier)
+      (operator_identifier)
+      (type_identifier))
+    (operator_identifier)))
+
+================================================================================
+An infix type whose operator is a lone asterisk
+================================================================================
+
+val t: (2 * 7 + 1) % 10 = 5
+
+def f(a: Int, b: Int)(using ev: (a.type * b.type) =:= (b.type * a.type)) = true
+
+def g(x: Int*) = x
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (val_definition
+    (identifier)
+    (infix_type
+      (tuple_type
+        (infix_type
+          (infix_type
+            (literal_type
+              (integer_literal))
+            (operator_identifier)
+            (literal_type
+              (integer_literal)))
+          (operator_identifier)
+          (literal_type
+            (integer_literal))))
+      (operator_identifier)
+      (literal_type
+        (integer_literal)))
+    (integer_literal))
+  (function_definition
+    (identifier)
+    (parameters
+      (parameter
+        (identifier)
+        (type_identifier))
+      (parameter
+        (identifier)
+        (type_identifier)))
+    (parameters
+      (parameter
+        (identifier)
+        (infix_type
+          (tuple_type
+            (infix_type
+              (singleton_type
+                (identifier))
+              (operator_identifier)
+              (singleton_type
+                (identifier))))
+          (operator_identifier)
+          (tuple_type
+            (infix_type
+              (singleton_type
+                (identifier))
+              (operator_identifier)
+              (singleton_type
+                (identifier)))))))
+    (boolean_literal))
+  (function_definition
+    (identifier)
+    (parameters
+      (parameter
+        (identifier)
+        (repeated_parameter_type
+          (type_identifier))))
+    (identifier)))

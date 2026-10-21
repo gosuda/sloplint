@@ -26,7 +26,6 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("while_statement", Role::Loop),
     ("while_expression", Role::Loop),
     ("catch_expression", Role::Catch),
-    ("try_expression", Role::Catch),
     ("call_expression", Role::Call),
     ("builtin_function", Role::MacroCall),
     ("variable_declaration", Role::Decl),
@@ -58,24 +57,8 @@ fn has_pub(n: Node<'_>) -> bool {
     (0..n.child_count()).any(|i| n.child(i).is_some_and(is_pub_token))
 }
 
-fn inner_exported(cx: &Cx<'_, '_>) -> Option<bool> {
-    for c in cx.containers.iter().rev() {
-        if let Container::Class { exported, .. } = c {
-            return Some(*exported);
-        }
-    }
-    None
-}
-
 fn in_test(cx: &Cx<'_, '_>) -> bool {
-    if cx.is_test_file {
-        return true;
-    }
-    cx.containers.iter().any(is_test_module)
-}
-
-fn is_test_module(c: &Container) -> bool {
-    matches!(c, Container::TestModule)
+    cx.is_test_file || cx.in_test_module()
 }
 
 fn sole_call_id(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
@@ -91,7 +74,10 @@ fn sole_call_id(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
     }
     let mut node = live[0];
     if node.kind() == "expression_statement" {
-        node = child_by_field(node, "expression")?;
+        let mut cursor = node.walk();
+        node = node
+            .named_children(&mut cursor)
+            .find(|c| c.kind() != "comment")?;
     }
     if node.kind() == "return_expression" || node.kind() == "try_expression" {
         node = named_children(node).first().copied()?;
@@ -184,7 +170,7 @@ fn stmt_for<'s>(cx: &Cx<'_, 's>, n: Node<'_>, bound: &str) -> Stmt<'s> {
         }
     }
     if current.kind() == "expression_statement" {
-        match child_by_field(current, "expression") {
+        match named_children(current).first().copied() {
             Some(next) => current = next,
             None => return Stmt::Other,
         }
@@ -271,7 +257,7 @@ fn push_import_string<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>
     let shape = import_names(cx, builtin);
     let (name, alias, kind) = shape.unwrap_or(("", None, ImportKind::SideEffect));
     let pos = pos_of(n);
-    let flagged = cx.containers.iter().any(is_test_module);
+    let flagged = cx.in_test_module();
     out.push(Import {
         pos,
         module,
@@ -301,7 +287,7 @@ fn push_using<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
     }
     let module = Cow::Borrowed(import_module(cx, literal));
     let pos = pos_of(n);
-    let flagged = cx.containers.iter().any(is_test_module);
+    let flagged = cx.in_test_module();
     let wild = ImportKind::Wildcard;
     out.push(Import {
         pos,
@@ -380,7 +366,7 @@ fn zig_param<'s>(cx: &Cx<'_, 's>, child: Node<'_>) -> Option<Param<'s>> {
 }
 
 fn is_method_receiver(cx: &Cx<'_, '_>, params: &[Param<'_>]) -> bool {
-    let last = cx.containers.last();
+    let last = cx.innermost_container();
     let method = matches!(last, Some(Container::Class { .. }));
     method && params.first().is_some_and(|p| p.name == "self")
 }
@@ -415,7 +401,7 @@ impl LangHooks for ZigHooks {
         let name_node = child_by_field(n, "name")?;
         let body = child_by_field(n, "body")?;
         let mut params = Vec::new();
-        if let Some(holder) = child_by_field(n, "parameters") {
+        if let Some(holder) = first_of_kind(n, &["parameters"]) {
             for child in named_children(holder) {
                 if child.kind() != "parameter" {
                     continue;
@@ -428,7 +414,7 @@ impl LangHooks for ZigHooks {
         if is_method_receiver(cx, &params) {
             params.remove(0);
         }
-        let exported = inner_exported(cx).unwrap_or(true);
+        let exported = cx.nearest_class_exported().unwrap_or(true);
         let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
         let return_type = child_by_field(n, "type").map(|t| text(cx, t));
         Some(FunctionHead {
@@ -568,12 +554,6 @@ impl LangHooks for ZigHooks {
     }
 
     fn handler<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'s>> {
-        if n.kind() == "try_expression" {
-            return Some(Handler {
-                pos: pos_of(n),
-                stmts: vec![Stmt::Rethrow],
-            });
-        }
         if n.kind() != "catch_expression" {
             return None;
         }
@@ -583,7 +563,7 @@ impl LangHooks for ZigHooks {
         let stmts = if body.kind() == "block" {
             named_children(body)
                 .into_iter()
-                .filter(|c| c.kind() == "statement")
+                .filter(|c| c.kind() != "comment")
                 .map(|s| stmt_for(cx, s, bound))
                 .collect()
         } else {

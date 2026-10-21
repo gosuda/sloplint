@@ -110,6 +110,11 @@ fn ps_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
                     }
                 }
             }
+            "function_parameter_declaration" => {
+                if let Some(list) = first_of_kind(child, &["parameter_list"]) {
+                    collect_script_params(cx, list, &mut out);
+                }
+            }
             "function_name" | "simple_name" | "comment" | "class_attribute" => {}
             _ => {
                 if !matches!(
@@ -185,7 +190,7 @@ fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         "generic_token" => ArgShape::Str {
             longest_static: narrow(text(cx, n).chars().count()),
         },
-        "variable" => ArgShape::Ident(text(cx, n)),
+        "variable" => ArgShape::Ident(ps_var_name(text(cx, n))),
         "command_parameter" => ArgShape::Other,
         "additive_expression" => {
             if binary_concat(cx, n, "+", &["string_literal"]) {
@@ -197,12 +202,62 @@ fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         _ => ArgShape::Other,
     }
 }
-fn ps_arg<'s>(cx: &Cx<'_, 's>, arg: Node<'_>) -> Arg<'s> {
+fn ps_span_arg<'s>(cx: &Cx<'_, 's>, shape_node: Node<'_>, span_node: Node<'_>) -> Arg<'s> {
     Arg {
-        shape: ps_shape(cx, arg),
-        start_line: narrow(arg.start_position().row) + 1,
-        end_line: narrow(arg.end_position().row) + 1,
+        shape: ps_shape(cx, shape_node),
+        start_line: narrow(span_node.start_position().row) + 1,
+        end_line: narrow(span_node.end_position().row) + 1,
     }
+}
+fn ps_arg<'s>(cx: &Cx<'_, 's>, arg: Node<'_>) -> Arg<'s> {
+    let value = unwrap_operand(arg);
+    let shaped = if value.kind() == "variable" {
+        value
+    } else {
+        arg
+    };
+    ps_span_arg(cx, shaped, arg)
+}
+fn pipeline_operand(n: Node<'_>) -> Option<Node<'_>> {
+    let parent = n.parent()?;
+    if parent.kind() != "pipeline_chain" {
+        return None;
+    }
+    let mut prev = n.prev_named_sibling()?;
+    while matches!(prev.kind(), "comment" | "redirections") {
+        prev = prev.prev_named_sibling()?;
+    }
+    Some(prev)
+}
+fn unwrap_operand(mut n: Node<'_>) -> Node<'_> {
+    loop {
+        let transparent = matches!(
+            n.kind(),
+            "logical_expression"
+                | "bitwise_expression"
+                | "comparison_expression"
+                | "additive_expression"
+                | "multiplicative_expression"
+                | "format_expression"
+                | "range_expression"
+                | "array_literal_expression"
+                | "unary_expression"
+                | "parenthesized_expression"
+                | "pipeline"
+                | "pipeline_chain"
+        );
+        if !transparent || n.named_child_count() != 1 {
+            break;
+        }
+        let Some(one) = n.named_child(0) else {
+            break;
+        };
+        if one.kind() == "comment" {
+            break;
+        }
+        n = one;
+    }
+    n
 }
 fn ps_command_call<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     let name = named_children(n)
@@ -212,7 +267,7 @@ fn ps_command_call<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     match first_of_kind(n, &["command_elements"]) {
         Some(list) => {
             for arg in named_children(list) {
-                if arg.kind() != "comment" {
+                if arg.kind() != "comment" && arg.kind() != "command_argument_sep" {
                     args.push(ps_arg(cx, arg));
                 }
             }
@@ -224,6 +279,11 @@ fn ps_command_call<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
                 }
             }
         }
+    }
+    if args.is_empty()
+        && let Some(operand) = pipeline_operand(n)
+    {
+        args.push(ps_span_arg(cx, unwrap_operand(operand), operand));
     }
     Some(CallHead {
         callee: text(cx, name),

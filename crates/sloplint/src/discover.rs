@@ -1,8 +1,9 @@
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, PoisonError};
 
 use globset::GlobSet;
-use ignore::WalkBuilder;
+use ignore::{DirEntry, ParallelVisitor, ParallelVisitorBuilder, WalkBuilder, WalkState};
 use sloplint_core::Config;
 use sloplint_core::lang::Lang;
 use sloplint_core::text::normalize_rel_path;
@@ -24,12 +25,17 @@ pub struct Entry {
 pub struct Discovery {
     /// Lintable files in relative-path order.
     pub entries: Vec<Entry>,
-    /// Lintable non-UTF-8 names, which cannot be analyzed.
-    pub unnamed: u32,
+    /// Lintable names that are never analyzed, as root-relative paths: non-UTF-8 names and entries that are not regular files (symlinks are never followed, FIFOs and devices never opened).
+    pub skipped: Vec<PathBuf>,
 }
 
 /// Lists lintable files under `root` that match an enabled language and no exclude glob.
-pub fn discover(root: &Path, config: &Config) -> Result<Discovery, RunError> {
+///
+/// The tree is walked on `threads` threads. The result does not depend on
+/// the thread count: entries and skipped names are sorted, and when the walk
+/// fails the reported error is the least error message, chosen after every
+/// entry is visited.
+pub fn discover(root: &Path, config: &Config, threads: usize) -> Result<Discovery, RunError> {
     let patterns: Vec<String> = config
         .project
         .exclude
@@ -38,39 +44,130 @@ pub fn discover(root: &Path, config: &Config) -> Result<Discovery, RunError> {
         .cloned()
         .collect();
     let excludes = glob_set(&patterns, "project.exclude")?;
-    let mut entries = Vec::new();
-    let mut unnamed = 0;
-    for result in walk(root, excludes) {
-        let entry = result.map_err(|error| walk_error(root, error))?;
-        if !entry.file_type().is_some_and(|kind| kind.is_file()) {
-            continue;
+    let shared = Mutex::new(Found::default());
+    walker(root, excludes)
+        .threads(threads)
+        .build_parallel()
+        .visit(&mut Collect {
+            root,
+            config,
+            shared: &shared,
+        });
+    let Found {
+        mut entries,
+        mut skipped,
+        errors,
+    } = shared.into_inner().unwrap_or_else(PoisonError::into_inner);
+    if let Some(message) = errors.into_iter().min() {
+        return Err(RunError::Io {
+            path: root.to_path_buf(),
+            source: io::Error::other(message),
+        });
+    }
+    entries.sort_by(|a, b| a.rel.cmp(&b.rel));
+    skipped.sort();
+    Ok(Discovery { entries, skipped })
+}
+
+/// What the walker threads found: entries, skipped names, and walk error messages.
+#[derive(Default)]
+struct Found {
+    entries: Vec<Entry>,
+    skipped: Vec<PathBuf>,
+    errors: Vec<String>,
+}
+
+impl Found {
+    fn absorb(&mut self, other: &mut Found) {
+        self.entries.append(&mut other.entries);
+        self.skipped.append(&mut other.skipped);
+        self.errors.append(&mut other.errors);
+    }
+
+    fn record(&mut self, root: &Path, config: &Config, entry: &DirEntry) {
+        let Some(kind) = entry.file_type() else {
+            return;
+        };
+        if kind.is_dir() {
+            return;
         }
         let Ok(relative) = entry.path().strip_prefix(root) else {
-            continue;
+            return;
         };
         match normalize_rel_path(relative) {
-            Some(rel) => {
-                if let Some(lang) = enabled_lang(&rel, config) {
-                    entries.push(Entry {
-                        rel,
-                        abs: entry.path().to_path_buf(),
-                        lang,
-                    });
-                }
-            }
+            Some(rel) => match enabled_lang(&rel, config) {
+                Some(lang) if kind.is_file() => self.entries.push(Entry {
+                    rel,
+                    abs: entry.path().to_path_buf(),
+                    lang,
+                }),
+                Some(_) => self.skipped.push(relative.to_path_buf()),
+                None => {}
+            },
             None => {
-                if enabled_lang(&relative.to_string_lossy(), config).is_some() {
-                    unnamed += 1;
+                if enabled_lang(&lossy_rel(relative), config).is_some() {
+                    self.skipped.push(relative.to_path_buf());
                 }
             }
         }
     }
-    entries.sort_by(|a, b| a.rel.cmp(&b.rel));
-    Ok(Discovery { entries, unnamed })
 }
 
-/// Walks `root` with gitignore and hidden-file filters, pruning every entry that matches `prune`.
-pub fn walk(root: &Path, prune: GlobSet) -> ignore::Walk {
+/// Builds one [`Visitor`] per walker thread over a shared [`Found`].
+struct Collect<'a> {
+    root: &'a Path,
+    config: &'a Config,
+    shared: &'a Mutex<Found>,
+}
+
+impl<'a> ParallelVisitorBuilder<'a> for Collect<'a> {
+    fn build(&mut self) -> Box<dyn ParallelVisitor + 'a> {
+        Box::new(Visitor {
+            root: self.root,
+            config: self.config,
+            local: Found::default(),
+            shared: self.shared,
+        })
+    }
+}
+
+/// One walker thread's findings, merged into the shared [`Found`] when the thread finishes.
+struct Visitor<'a> {
+    root: &'a Path,
+    config: &'a Config,
+    local: Found,
+    shared: &'a Mutex<Found>,
+}
+
+impl ParallelVisitor for Visitor<'_> {
+    fn visit(&mut self, result: Result<DirEntry, ignore::Error>) -> WalkState {
+        match result {
+            Ok(entry) => self.local.record(self.root, self.config, &entry),
+            Err(error) => self.local.errors.push(error.to_string()),
+        }
+        WalkState::Continue
+    }
+}
+
+impl Drop for Visitor<'_> {
+    fn drop(&mut self) {
+        self.shared
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .absorb(&mut self.local);
+    }
+}
+
+fn lossy_rel(relative: &Path) -> String {
+    relative
+        .components()
+        .map(|part| part.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+/// Configures a walk of `root` with gitignore and hidden-file filters, pruning every entry that matches `prune`.
+fn walker(root: &Path, prune: GlobSet) -> WalkBuilder {
     let base = root.to_path_buf();
     let mut builder = WalkBuilder::new(root);
     builder
@@ -79,7 +176,7 @@ pub fn walk(root: &Path, prune: GlobSet) -> ignore::Walk {
         .follow_links(false);
     builder
         .filter_entry(move |entry| entry.depth() == 0 || !is_pruned(&base, entry.path(), &prune));
-    builder.build()
+    builder
 }
 
 /// Converts a walker failure into the run's I/O error.

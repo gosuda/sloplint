@@ -1,1 +1,1 @@
-# Near-miss: the log call takes its message from the pipeline, so it carries no inline argument for the rule to grade.
+# Near-miss: the log call takes its message from the pipeline, which the adapter exposes as its first argument for the rule to grade.

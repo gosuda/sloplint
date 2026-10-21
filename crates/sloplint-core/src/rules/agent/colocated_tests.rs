@@ -205,13 +205,41 @@ fn conventions(lang: Lang) -> Candidates {
         .unwrap_or(Candidates::None)
 }
 
-fn has_counterpart(paths: &HashSet<&str>, names: &HashSet<&str>, path: &str, lang: Lang) -> bool {
+/// The analyzed path set, indexed once per run so each module answers in `O(log n)`.
+struct PathIndex<'a> {
+    paths: Vec<&'a str>,
+    names: HashSet<&'a str>,
+    rust_tests: Vec<&'a str>,
+}
+
+impl<'a> PathIndex<'a> {
+    fn new(files: &[WorldFile<'a>]) -> PathIndex<'a> {
+        let mut paths: Vec<&'a str> = files.iter().map(|file| file.path).collect();
+        paths.sort_unstable();
+        paths.dedup();
+        let mut rust_tests: Vec<&'a str> = files
+            .iter()
+            .map(|file| file.path)
+            .filter(|path| under_tests(path))
+            .map(file_name)
+            .collect();
+        rust_tests.sort_unstable();
+        rust_tests.dedup();
+        PathIndex {
+            paths,
+            names: files.iter().map(|file| file_name(file.path)).collect(),
+            rust_tests,
+        }
+    }
+}
+
+fn has_counterpart(index: &PathIndex<'_>, path: &str, lang: Lang) -> bool {
     match conventions(lang) {
-        Candidates::Names(form) => names_match(names, path, &form),
-        Candidates::Dir(tail) => dir_match(paths, path, tail),
-        Candidates::Root(templates) => root_match(paths, templates, path),
-        Candidates::RustTests => rust_match(paths, path),
-        Candidates::Web => web_match(paths, path),
+        Candidates::Names(form) => names_match(&index.names, path, &form),
+        Candidates::Dir(tail) => dir_match(&index.paths, path, tail),
+        Candidates::Root(templates) => root_match(&index.paths, templates, path),
+        Candidates::RustTests => rust_match(&index.rust_tests, path),
+        Candidates::Web => web_match(&index.paths, path),
         Candidates::None => false,
     }
 }
@@ -228,27 +256,32 @@ fn names_match(names: &HashSet<&str>, path: &str, form: &NameForm) -> bool {
             .any(|infix| names.contains(format!("{stem}{infix}.{ext}").as_str()))
 }
 
-fn dir_match(paths: &HashSet<&str>, path: &str, tail: &str) -> bool {
+fn dir_match(paths: &[&str], path: &str, tail: &str) -> bool {
     let dir = dir_prefix(path);
     let stem = stem_ext(path).0;
-    paths.contains(format!("{dir}{stem}{tail}").as_str())
+    let candidate = format!("{dir}{stem}{tail}");
+    paths.binary_search(&candidate.as_str()).is_ok()
 }
 
-fn root_match(paths: &HashSet<&str>, templates: &[&str], path: &str) -> bool {
+fn root_match(paths: &[&str], templates: &[&str], path: &str) -> bool {
     let stem = stem_ext(path).0;
-    templates
-        .iter()
-        .any(|template| paths.contains(template.replace("{stem}", stem).as_str()))
+    templates.iter().any(|template| {
+        let candidate = template.replace("{stem}", stem);
+        paths.binary_search(&candidate.as_str()).is_ok()
+    })
 }
 
-fn rust_match(paths: &HashSet<&str>, path: &str) -> bool {
+fn rust_match(test_names: &[&str], path: &str) -> bool {
     let stem = stem_ext(path).0;
     let exact = format!("{stem}.rs");
+    if test_names.binary_search(&exact.as_str()).is_ok() {
+        return true;
+    }
     let prefix = format!("{stem}_");
-    paths.iter().any(|candidate| {
-        let name = file_name(candidate);
-        under_tests(candidate) && (name == exact.as_str() || name.starts_with(prefix.as_str()))
-    })
+    let start = test_names.partition_point(|name| *name < prefix.as_str());
+    test_names[start..]
+        .first()
+        .is_some_and(|name| name.starts_with(prefix.as_str()))
 }
 
 fn under_tests(path: &str) -> bool {
@@ -270,15 +303,20 @@ const WEB_TAILS: &[&str] = &[
     ".spec.cjs",
 ];
 
-fn web_match(paths: &HashSet<&str>, path: &str) -> bool {
+fn web_match(paths: &[&str], path: &str) -> bool {
     let dir = dir_prefix(path);
     let stem = stem_ext(path).0;
-    WEB_TAILS
-        .iter()
-        .any(|tail| paths.contains(format!("{dir}{stem}{tail}").as_str()))
-        || paths
-            .iter()
-            .any(|candidate| candidate.starts_with(&format!("{dir}__tests__/{stem}.test.")))
+    if WEB_TAILS.iter().any(|tail| {
+        let candidate = format!("{dir}{stem}{tail}");
+        paths.binary_search(&candidate.as_str()).is_ok()
+    }) {
+        return true;
+    }
+    let prefix = format!("{dir}__tests__/{stem}.test.");
+    let start = paths.partition_point(|candidate| *candidate < prefix.as_str());
+    paths[start..]
+        .first()
+        .is_some_and(|candidate| candidate.starts_with(prefix.as_str()))
 }
 
 /// The fix text names the canonical counterpart a module should gain.
@@ -360,13 +398,12 @@ fn file_name(path: &str) -> &str {
 
 impl WorldRule for ColocatedTests {
     fn check(&self, files: &[WorldFile<'_>], out: &mut Vec<Finding>) {
-        let paths: HashSet<&str> = files.iter().map(|file| file.path).collect();
-        let names: HashSet<&str> = files.iter().map(|file| file_name(file.path)).collect();
+        let index = PathIndex::new(files);
         for file in files {
             if self.skipped(file) || file.facts.has_inline_tests {
                 continue;
             }
-            if has_counterpart(&paths, &names, file.path, file.facts.lang) {
+            if has_counterpart(&index, file.path, file.facts.lang) {
                 continue;
             }
             out.push(self.finding(file));
@@ -398,5 +435,59 @@ impl ColocatedTests {
             ),
             format!("add {expected_path}"),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::facts::WorldFacts;
+    use globset::GlobSetBuilder;
+
+    fn module(public_functions: u32, has_inline_tests: bool) -> WorldFacts {
+        WorldFacts {
+            lang: Lang::Rust,
+            is_test_file: false,
+            is_entry_file: false,
+            has_inline_tests,
+            public_functions,
+            definitions: Vec::new(),
+            abstractions: Vec::new(),
+            impls: Vec::new(),
+            barrel: None,
+        }
+    }
+
+    #[test]
+    fn findings_follow_file_order_and_prefix_counterparts_suppress() {
+        let rule = ColocatedTests {
+            exclude: GlobSetBuilder::new().build().unwrap(),
+        };
+        let zed = module(1, false);
+        let ay = module(1, false);
+        let widget = module(1, false);
+        let counterpart = module(0, false);
+        let files = [
+            WorldFile {
+                path: "z.rs",
+                facts: &zed,
+            },
+            WorldFile {
+                path: "a.rs",
+                facts: &ay,
+            },
+            WorldFile {
+                path: "w.rs",
+                facts: &widget,
+            },
+            WorldFile {
+                path: "tests/w_extra.rs",
+                facts: &counterpart,
+            },
+        ];
+        let mut out = Vec::new();
+        rule.check(&files, &mut out);
+        let order: Vec<String> = out.iter().map(|finding| finding.path.to_string()).collect();
+        assert_eq!(order, ["z.rs".to_string(), "a.rs".to_string()]);
     }
 }

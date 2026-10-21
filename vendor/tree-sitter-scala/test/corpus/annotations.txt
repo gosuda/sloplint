@@ -1,0 +1,222 @@
+================================
+Classes
+================================
+
+@deprecated("Use D", "1.0") class C {}
+
+---
+
+(compilation_unit
+  (class_definition
+    (annotation
+      (type_identifier)
+      (arguments
+        (string)
+        (string)))
+    (identifier)
+    (template_body)))
+
+================================
+Declarations and definitions
+================================
+
+class A(x: String) {
+  @transient @volatile var y: Int
+  @transient @volatile val z = x
+
+  @throws(Error)
+  @deprecated(message = "Don't use this", since = "1.0")
+  def foo() {}
+}
+
+---
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (class_parameters
+      (class_parameter
+        (identifier)
+        (type_identifier)))
+    (template_body
+      (var_declaration
+        (annotation
+          (type_identifier))
+        (annotation
+          (type_identifier))
+        (identifier)
+        (type_identifier))
+      (val_definition
+        (annotation
+          (type_identifier))
+        (annotation
+          (type_identifier))
+        (identifier)
+        (identifier))
+      (function_definition
+        (annotation
+          (type_identifier)
+          (arguments
+            (identifier)))
+        (annotation
+          (type_identifier)
+          (arguments
+            (assignment_expression
+              (identifier)
+              (string))
+            (assignment_expression
+              (identifier)
+              (string))))
+        (identifier)
+        (parameters)
+        (block)))))
+
+================================
+Parameters
+================================
+
+class A(@one x: String) {
+  def foo(@another x: Int) {}
+}
+
+---
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (class_parameters
+      (class_parameter
+        (annotation
+          (type_identifier))
+        (identifier)
+        (type_identifier)))
+    (template_body
+      (function_definition
+        (identifier)
+        (parameters
+          (parameter
+            (annotation
+              (type_identifier))
+            (identifier)
+            (type_identifier)))
+        (block)))))
+
+================================
+Types
+================================
+
+trait Function0[@specialized(Unit, Int, Double) T] {
+  def apply: T
+}
+
+---
+
+(compilation_unit
+  (trait_definition
+    (identifier)
+    (type_parameters
+      (annotation
+        (type_identifier)
+        (arguments
+          (identifier)
+          (identifier)
+          (identifier)))
+      (identifier))
+    (template_body
+      (function_declaration
+        (identifier)
+        (type_identifier)))))
+
+================================================================================
+Annotated parent type with annotation arguments
+================================================================================
+
+case class B2(s: String) extends Base @Second(3, "e") @Third(4)
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (class_parameters
+      (class_parameter
+        (identifier)
+        (type_identifier)))
+    (extends_clause
+      (annotated_type
+        (type_identifier)
+        (annotation
+          (type_identifier)
+          (arguments
+            (integer_literal)
+            (string)))
+        (annotation
+          (type_identifier)
+          (arguments
+            (integer_literal)))))))
+
+================================================================================
+Ascription with several annotations
+================================================================================
+
+object A:
+  val a = (1: @unchecked @switch)
+  val b = c: @nowarn @unchecked
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (val_definition
+        (identifier)
+        (parenthesized_expression
+          (ascription_expression
+            (integer_literal)
+            (annotation
+              (type_identifier))
+            (annotation
+              (type_identifier)))))
+      (val_definition
+        (identifier)
+        (ascription_expression
+          (identifier)
+          (annotation
+            (type_identifier))
+          (annotation
+            (type_identifier)))))))
+
+================================================================================
+Annotated literal type
+================================================================================
+
+object A:
+  val a: "abc" @deprecated = "abc"
+  val b: List[7 @Ann] = ???
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (val_definition
+        (identifier)
+        (annotated_type
+          (literal_type
+            (string))
+          (annotation
+            (type_identifier)))
+        (string))
+      (val_definition
+        (identifier)
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (annotated_type
+              (literal_type
+                (integer_literal))
+              (annotation
+                (type_identifier)))))
+        (operator_identifier)))))

@@ -45,14 +45,35 @@ pub(crate) struct PythonHooks;
 pub(crate) static HOOKS: PythonHooks = PythonHooks;
 
 fn enclosing_exported(cx: &Cx<'_, '_>) -> bool {
-    cx.containers
-        .iter()
-        .rev()
-        .find_map(|c| match c {
-            Container::Class { exported, .. } => Some(*exported),
-            _ => None,
-        })
-        .unwrap_or(true)
+    cx.nearest_class_exported().unwrap_or(true)
+}
+
+struct Placement {
+    class_member: bool,
+    local: bool,
+}
+
+fn placement(n: Node<'_>) -> Placement {
+    let mut class_member = None;
+    let mut local = false;
+    let mut cur = n.parent();
+    while let Some(parent) = cur {
+        match parent.kind() {
+            "function_definition" => {
+                local = true;
+                class_member.get_or_insert(false);
+            }
+            "class_definition" => {
+                class_member.get_or_insert(true);
+            }
+            _ => {}
+        }
+        cur = parent.parent();
+    }
+    Placement {
+        class_member: class_member.unwrap_or(false),
+        local,
+    }
 }
 
 fn py_one_param<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Param<'s>>) {
@@ -195,6 +216,20 @@ fn py_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     }
 }
 
+fn py_callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
+    let mut cur = callee;
+    loop {
+        match cur.kind() {
+            "identifier" => return Some(text(cx, cur)),
+            "attribute" => cur = child_by_field(cur, "object")?,
+            "subscript" => cur = child_by_field(cur, "value")?,
+            "call" => cur = child_by_field(cur, "function")?,
+            "parenthesized_expression" => cur = named_children(cur).into_iter().next()?,
+            _ => return None,
+        }
+    }
+}
+
 fn py_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     match n.kind() {
         "string" => string_arg_shape(cx, n, &["string_content"]),
@@ -331,13 +366,76 @@ fn py_targets(cx: &Cx<'_, '_>, dir: &str, n: Node<'_>) -> Vec<String> {
     ]
 }
 
+fn py_positional(n: Node<'_>) -> Vec<Node<'_>> {
+    child_by_field(n, "arguments")
+        .map_or(Vec::new(), named_children)
+        .into_iter()
+        .filter(|a| a.kind() != "keyword_argument")
+        .collect()
+}
+
+fn computed_attr_name(last: &str, second: Option<Node<'_>>) -> Option<&'static str> {
+    if second.is_some_and(|s| s.kind() != "string") {
+        return match last {
+            "getattr" => Some("getattr with computed name"),
+            "setattr" => Some("setattr with computed name"),
+            "hasattr" => Some("hasattr with computed name"),
+            _ => Some("delattr with computed name"),
+        };
+    }
+    None
+}
+
+fn py_call_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
+    let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
+    let last = last_segment(callee, &["."]);
+    if last == "getattr" || last == "setattr" || last == "hasattr" || last == "delattr" {
+        if let Some(hit) = computed_attr_name(last, py_positional(n).into_iter().nth(1)) {
+            return Some(hit);
+        }
+        return None;
+    }
+    if last == "eval" {
+        return Some("eval");
+    }
+    if last == "exec" {
+        return Some("exec");
+    }
+    if last == "__import__" {
+        return Some("__import__");
+    }
+    if callee != "importlib.import_module" {
+        return None;
+    }
+    py_positional(n)
+        .into_iter()
+        .next()
+        .is_some_and(|f| f.kind() != "string")
+        .then_some("dynamic import")
+}
+
+fn py_subscript_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
+    let v = child_by_field(n, "value")?;
+    if v.kind() != "call" {
+        return None;
+    }
+    let f = child_by_field(v, "function").map_or("", |x| text(cx, x));
+    let last = last_segment(f, &["."]);
+    if last != "globals" && last != "locals" {
+        return None;
+    }
+    Some("globals() lookup")
+}
+
 impl LangHooks for PythonHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let name_node = child_by_field(n, "name")?;
         let name = text(cx, name_node);
-        let method = matches!(cx.containers.last(), Some(Container::Class { .. }));
+        let place = placement(n);
+        let method = place.class_member;
         let dunder = name.len() > 4 && name.starts_with("__") && name.ends_with("__");
-        let public = dunder || (!name.starts_with('_') && (!method || enclosing_exported(cx)));
+        let public = !place.local
+            && (dunder || (!name.starts_with('_') && (!method || enclosing_exported(cx))));
         let mut params = Vec::new();
         if let Some(list) = child_by_field(n, "parameters") {
             py_params(cx, list, &mut params);
@@ -439,7 +537,7 @@ impl LangHooks for PythonHooks {
         Some(CallHead {
             callee: text(cx, func),
             kind: CallKind::Plain,
-            callee_root: None,
+            callee_root: py_callee_root(cx, func),
             args,
         })
     }
@@ -683,50 +781,12 @@ impl LangHooks for PythonHooks {
 
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
         if n.kind() == "call" {
-            let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
-            let last = last_segment(callee, &["."]);
-            let args = child_by_field(n, "arguments").map_or(Vec::new(), named_children);
-            let mut positional = args.into_iter().filter(|a| a.kind() != "keyword_argument");
-            if last == "getattr" || last == "setattr" || last == "hasattr" || last == "delattr" {
-                let second = positional.nth(1);
-                if second.is_some_and(|s| s.kind() != "string") {
-                    return match last {
-                        "getattr" => Some("getattr with computed name"),
-                        "setattr" => Some("setattr with computed name"),
-                        "hasattr" => Some("hasattr with computed name"),
-                        _ => Some("delattr with computed name"),
-                    };
-                }
-                return None;
-            }
-            if last == "eval" {
-                return Some("eval");
-            }
-            if last == "exec" {
-                return Some("exec");
-            }
-            if last == "__import__" {
-                return Some("__import__");
-            }
-            if callee == "importlib.import_module" {
-                return positional
-                    .next()
-                    .is_some_and(|f| f.kind() != "string")
-                    .then_some("dynamic import");
-            }
+            return py_call_dynamic(n, cx);
+        }
+        if n.kind() != "subscript" {
             return None;
         }
-        if n.kind() == "subscript"
-            && let Some(v) = child_by_field(n, "value")
-            && v.kind() == "call"
-        {
-            let f = child_by_field(v, "function").map_or("", |x| text(cx, x));
-            let last = last_segment(f, &["."]);
-            if last == "globals" || last == "locals" {
-                return Some("globals() lookup");
-            }
-        }
-        None
+        py_subscript_dynamic(n, cx)
     }
 
     fn assertion(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<Assertion> {

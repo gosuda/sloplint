@@ -1,6 +1,9 @@
 //! The single iterative tree walk that turns node roles into file facts.
 
+use std::collections::HashMap;
+
 use sloplint_core::facts::FileFacts;
+use sloplint_core::finding::line_starts;
 use sloplint_core::lang::Lang;
 use sloplint_core::suppress::CommentText;
 use tree_sitter::Node;
@@ -39,15 +42,18 @@ impl LangSpec {
             spec: self,
             src: input.source,
             path: input.path,
-            lang: input.lang,
+            lang: self.lang,
             is_test_file: input.is_test_file,
             has_interface: input.has_interface,
             collect_facts,
-            facts: empty_facts(input),
+            facts: empty_facts(input, self.lang),
             comments: Vec::new(),
             fn_stack: Vec::new(),
             marks: Vec::new(),
             containers: Vec::new(),
+            exports: Vec::new(),
+            levels: Vec::new(),
+            depth: 0,
         };
         state.run(root);
         Walked {
@@ -58,11 +64,16 @@ impl LangSpec {
 }
 
 /// Empty facts for a file, carrying only its identity fields.
-pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>) -> FileFacts<'s> {
+///
+/// `lang` is the grammar the facts come from, which the hooks and every
+/// language-keyed rule read. The entry-file flag is the one identity field that
+/// follows the file's routed `input.lang`, because it depends on the path alone.
+pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>, lang: Lang) -> FileFacts<'s> {
     FileFacts {
-        lang: input.lang,
+        lang,
         path: input.path,
         source: input.source,
+        line_starts: line_starts(input.source),
         is_test_file: input.is_test_file,
         is_entry_file: input.lang.is_entry_file(input.path),
         line_count: line_count(input.source),
@@ -93,13 +104,12 @@ pub(crate) struct FnFrame<'s> {
     pub index: usize,
     pub nest: u32,
     pub frames: u32,
-    pub decls: Vec<FrameDecl<'s>>,
+    pub decls: HashMap<&'s str, FrameDecl>,
     pub sole_call: Option<usize>,
 }
 
-/// A binding declared inside one function frame.
-pub(crate) struct FrameDecl<'s> {
-    pub name: &'s str,
+/// The latest binding declared under one name inside a function frame.
+pub(crate) struct FrameDecl {
     pub binding: usize,
     pub frames_at_decl: u32,
 }
@@ -114,7 +124,7 @@ pub(crate) enum Mark {
 }
 
 /// All mutable walk state; the tree cursor lives only in [`WalkState::run`].
-pub(crate) struct WalkState<'s, 'a> {
+pub(crate) struct WalkState<'s, 'a, 't> {
     pub spec: &'a LangSpec,
     pub src: &'s str,
     pub path: &'s str,
@@ -127,10 +137,23 @@ pub(crate) struct WalkState<'s, 'a> {
     pub fn_stack: Vec<FnFrame<'s>>,
     pub marks: Vec<(usize, Mark)>,
     pub containers: Vec<Container>,
+    pub exports: Vec<&'s str>,
+    /// The nodes entered so far under each open ancestor, indexed by tree depth.
+    pub levels: Vec<Vec<Node<'t>>>,
+    /// The tree depth of the node being entered or exited.
+    pub depth: usize,
 }
 
-impl<'s, 'a> WalkState<'s, 'a> {
-    pub(crate) fn run(&mut self, root: Node<'_>) {
+impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
+    pub(crate) fn run(&mut self, root: Node<'t>) {
+        if self.collect_facts {
+            let hooks = self.spec.hooks;
+            let mut names = Vec::new();
+            hooks.exported_names(root, &self.make_cx(), &mut names);
+            names.sort_unstable();
+            names.dedup();
+            self.exports = names;
+        }
         let mut cursor = root.walk();
         let mut descending = true;
         loop {
@@ -138,6 +161,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
                 let node = cursor.node();
                 self.enter(node);
                 if cursor.goto_first_child() {
+                    self.depth += 1;
                     continue;
                 }
             }
@@ -150,6 +174,10 @@ impl<'s, 'a> WalkState<'s, 'a> {
             if !cursor.goto_parent() {
                 break;
             }
+            if let Some(level) = self.levels.get_mut(self.depth) {
+                level.clear();
+            }
+            self.depth -= 1;
             descending = false;
         }
         if self.collect_facts {
@@ -162,7 +190,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
         }
     }
 
-    fn enter(&mut self, node: Node<'_>) {
+    fn enter(&mut self, node: Node<'t>) {
         let role = self.spec.role_for(node.kind_id());
         if !self.collect_facts {
             if role == Role::Comment {
@@ -170,6 +198,10 @@ impl<'s, 'a> WalkState<'s, 'a> {
             }
             return;
         }
+        if self.levels.len() <= self.depth {
+            self.levels.resize_with(self.depth + 1, Vec::new);
+        }
+        self.levels[self.depth].push(node);
         match role {
             Role::Function | Role::Closure => self.enter_function_like(role, node),
             Role::If
@@ -356,14 +388,18 @@ impl<'s, 'a> WalkState<'s, 'a> {
     }
 
     pub(crate) fn make_cx(&self) -> Cx<'_, 's> {
-        Cx {
-            src: self.src,
-            path: self.path,
-            lang: self.lang,
-            is_test_file: self.is_test_file,
-            has_interface: self.has_interface,
-            containers: &self.containers,
-        }
+        Cx::file(
+            self.src,
+            self.path,
+            self.lang,
+            self.is_test_file,
+            self.has_interface,
+        )
+        .scoped(
+            &self.containers,
+            &self.exports,
+            &self.levels[..self.levels.len().min(self.depth + 1)],
+        )
     }
 
     fn score_top(&mut self, delta: u32) {
@@ -371,11 +407,13 @@ impl<'s, 'a> WalkState<'s, 'a> {
             return;
         };
         let index = frame.index;
-        self.facts.functions[index].cognitive += delta;
+        let function = &mut self.facts.functions[index];
+        function.cognitive = function.cognitive.saturating_add(delta);
     }
 
     fn score_and_nest(&mut self, delta: u32, line: u32, mark: usize) {
-        self.score_top(delta);
+        let nest = self.fn_stack.last().map_or(0, |frame| frame.nest);
+        self.score_top(delta.saturating_add(nest));
         self.bump_nest(mark, line);
     }
 

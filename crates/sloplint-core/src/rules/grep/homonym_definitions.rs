@@ -1,6 +1,6 @@
 //! `grep/homonym-definitions`: one name defined in many files.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -34,6 +34,7 @@ struct Options {
 }
 
 struct SiteRef<'a> {
+    name: &'a str,
     path: &'a str,
     site: &'a NamedSite,
 }
@@ -81,48 +82,75 @@ fn build(options: toml::Table) -> Result<Box<dyn WorldRule>, String> {
 
 impl WorldRule for HomonymDefinitions {
     fn check(&self, files: &[WorldFile<'_>], out: &mut Vec<Finding>) {
-        let mut groups: BTreeMap<&str, Vec<SiteRef<'_>>> = BTreeMap::new();
-        for file in files {
-            self.add_definitions(file, &mut groups);
+        let reported = self.reported_names(files);
+        if reported.is_empty() {
+            return;
         }
-        for (name, mut sites) in groups {
-            sites.sort_by_key(|entry| (entry.path, entry.site.line));
-            self.report(name, &sites, out);
+        let mut flat: Vec<SiteRef<'_>> = Vec::new();
+        for file in files {
+            add_definitions(file, &reported, &mut flat);
+        }
+        flat.sort_by(|a, b| (a.name, a.path, a.site.line).cmp(&(b.name, b.path, b.site.line)));
+        for sites in flat.chunk_by(|a, b| a.name == b.name) {
+            self.report(sites, out);
+        }
+    }
+}
+
+/// Collects the sites of every name in `reported`, in file then definition order.
+fn add_definitions<'a>(
+    file: &WorldFile<'a>,
+    reported: &HashSet<&'a str>,
+    flat: &mut Vec<SiteRef<'a>>,
+) {
+    for site in &file.facts.definitions {
+        if reported.contains(site.name.as_ref()) {
+            flat.push(SiteRef {
+                name: &site.name,
+                path: file.path,
+                site,
+            });
         }
     }
 }
 
 impl HomonymDefinitions {
-    fn add_definitions<'a>(
-        &self,
-        file: &WorldFile<'a>,
-        groups: &mut BTreeMap<&'a str, Vec<SiteRef<'a>>>,
-    ) {
-        for site in &file.facts.definitions {
-            if self.allow.contains(site.name.as_ref()) {
-                continue;
+    /// Names outside `allow` that are defined in at least `min_files` distinct files.
+    ///
+    /// Counting comes first so that only reported names are sorted: on a large tree almost
+    /// every name falls below the threshold.
+    fn reported_names<'a>(&self, files: &[WorldFile<'a>]) -> HashSet<&'a str> {
+        let mut counts: HashMap<&'a str, (usize, usize)> = HashMap::new();
+        for (index, file) in files.iter().enumerate() {
+            for site in &file.facts.definitions {
+                if self.allow.contains(site.name.as_ref()) {
+                    continue;
+                }
+                let (count, last) = counts.entry(&site.name).or_insert((0, usize::MAX));
+                if *last != index {
+                    *count += 1;
+                    *last = index;
+                }
             }
-            let path = file.path;
-            let sites = groups.entry(&site.name).or_default();
-            sites.push(SiteRef { path, site });
         }
+        counts
+            .into_iter()
+            .filter(|(_, (count, _))| *count >= self.min_files)
+            .map(|(name, _)| name)
+            .collect()
     }
 
-    fn report(&self, name: &str, sites: &[SiteRef<'_>], out: &mut Vec<Finding>) {
-        let mut files = HashSet::new();
-        for entry in sites {
-            files.insert(entry.path);
-        }
-        if files.len() < self.min_files {
+    fn report(&self, sites: &[SiteRef<'_>], out: &mut Vec<Finding>) {
+        let Some(first) = sites.first() else {
             return;
-        }
-        let first = &sites[0];
+        };
+        let name = first.name;
+        let file_count = sites.chunk_by(|a, b| a.path == b.path).count();
         let mut others = Vec::new();
         for entry in sites.iter().skip(1).take(5) {
             others.push(format!("{}:{}", entry.path, entry.site.line));
         }
         let joined = others.join(", ");
-        let file_count = files.len();
         out.push(Finding::at_site(
             first.path,
             first.site,
@@ -131,5 +159,114 @@ impl HomonymDefinitions {
             format!("`{name}` is defined in {file_count} files"),
             format!("give each definition a domain-specific name; other definitions: {joined}"),
         ));
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::facts::WorldFacts;
+    use crate::lang::Lang;
+
+    fn site(name: &str, line: u32) -> NamedSite {
+        NamedSite {
+            name: name.into(),
+            line,
+            column: 1,
+            context: "".into(),
+        }
+    }
+
+    fn facts(defs: Vec<NamedSite>) -> WorldFacts {
+        WorldFacts {
+            lang: Lang::Rust,
+            is_test_file: false,
+            is_entry_file: false,
+            has_inline_tests: false,
+            public_functions: 0,
+            definitions: defs,
+            abstractions: Vec::new(),
+            impls: Vec::new(),
+            barrel: None,
+        }
+    }
+
+    #[test]
+    fn groups_emit_in_name_order_with_first_site_at_smallest_path() {
+        let rule = HomonymDefinitions {
+            allow: HashSet::new(),
+            min_files: 2,
+        };
+        let later = facts(vec![site("zeta", 2), site("alpha", 9)]);
+        let earlier = facts(vec![site("zeta", 1), site("alpha", 3)]);
+        let files = [
+            WorldFile {
+                path: "b.rs",
+                facts: &later,
+            },
+            WorldFile {
+                path: "a.rs",
+                facts: &earlier,
+            },
+        ];
+        let mut out = Vec::new();
+        rule.check(&files, &mut out);
+        let order: Vec<(String, u32)> = out
+            .iter()
+            .map(|finding| (finding.path.to_string(), finding.line))
+            .collect();
+        assert_eq!(order, [("a.rs".to_string(), 3), ("a.rs".to_string(), 1)]);
+        assert!(
+            out[0].message.contains("`alpha`"),
+            "the first group must be `alpha`: {}",
+            out[0].message
+        );
+        assert!(
+            out[1].message.contains("`zeta`"),
+            "the second group must be `zeta`: {}",
+            out[1].message
+        );
+    }
+
+    #[test]
+    fn repeats_inside_one_file_count_as_one_file() {
+        let rule = HomonymDefinitions {
+            allow: HashSet::new(),
+            min_files: 3,
+        };
+        let crowded = facts(vec![site("run", 1), site("run", 5), site("run", 9)]);
+        let other = facts(vec![site("run", 2)]);
+        let third = facts(vec![site("run", 4)]);
+        let files = |extra: bool| {
+            let mut files = vec![
+                WorldFile {
+                    path: "a.rs",
+                    facts: &crowded,
+                },
+                WorldFile {
+                    path: "b.rs",
+                    facts: &other,
+                },
+            ];
+            if extra {
+                files.push(WorldFile {
+                    path: "c.rs",
+                    facts: &third,
+                });
+            }
+            files
+        };
+        let mut out = Vec::new();
+        rule.check(&files(false), &mut out);
+        assert!(
+            out.is_empty(),
+            "four definitions in two files must stay below three files: {out:?}"
+        );
+        rule.check(&files(true), &mut out);
+        assert_eq!(out.len(), 1, "three files must report once: {out:?}");
+        assert!(
+            out[0].message.contains("defined in 3 files"),
+            "the message must count files, not definitions: {}",
+            out[0].message
+        );
     }
 }

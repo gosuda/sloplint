@@ -1,0 +1,105 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -438,7 +438,6 @@
+ 
+   conflicts: $ => [
+     [$._if_rest],
+-    [$.repeat_pattern, $._simple_expression],
+     [$.tuple_pattern, $._simple_expression],
+     [$.tuple_pattern, $._simple_expression, $.binding],
+     // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
+@@ -493,6 +492,7 @@
+     // we treat `operator_identifier` as `simple_expression`
+     [$._simple_expression, $.lambda_expression],
+     [$._simple_expression, $._single_lambda_param],
++    [$.block, $.capture_set],
+     // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
+     // identifier `export` beginning an expression statement. Each reading
+     // dies on the next token ('.' vs a name), so forking settles it. The
+@@ -532,8 +532,6 @@
+     [$._constructor_annotation],
+     [$._constructor_annotation_arguments, $.arguments],
+     [$._constructor_annotation, $.applied_constructor_type],
+-    // type_parameters  '=>'  '{'  '}'  •  '['  …
+-    [$.block, $.capture_set],
+     // '{'  identifier  •  ':' starts the braced typed lambda, the block
+     // lambda param, and a statement alike.
+     [$._simple_expression, $._braced_typed_lambda],
+@@ -2019,7 +2017,10 @@
+         PREC.infix,
+         seq(
+           field("left", $._definition_pattern),
+-          field("operator", wordOrOpName($)),
++          field(
++            "operator",
++            choice(wordOrOpName($), alias($._asterisk, $.operator_identifier)),
++          ),
+           field("right", $._definition_pattern),
+         ),
+       ),
+@@ -2283,19 +2284,37 @@
+     _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
+ 
+     _if_condition_then: $ =>
+-      // A marker slot of a construct inside the condition may emit a
+-      // semicolon before the `then`. The weight beats the paren form, so
+-      // `if (a)` + newline + `then x` keeps `then` as the keyword.
+-      prec.dynamic(
+-        5,
+-        seq(
+-          $._indentable_expression,
+-          optional($._automatic_semicolon),
+-          $._control_tail_gate,
+-          "then",
++      choice(
++        // A marker slot of a construct inside the condition may emit a
++        // semicolon before the `then`. The weight beats the paren form, so
++        // `if (a)` + newline + `then x` keeps `then` as the keyword.
++        prec.dynamic(
++          5,
++          seq(
++            $._indentable_expression,
++            optional($._automatic_semicolon),
++            $._control_tail_gate,
++            "then",
++          ),
++        ),
++        prec.dynamic(
++          5,
++          seq(
++            $.split_call_condition,
++            optional($._automatic_semicolon),
++            $._control_tail_gate,
++            "then",
++          ),
+         ),
+       ),
+ 
++    split_call_condition: $ =>
++      seq(
++        field("function", $._indentable_expression),
++        $._automatic_semicolon,
++        field("arguments", $.arguments),
++      ),
++
+     /*
+      *   MatchClause       ::=  'match' <<< CaseClauses >>>
+      *
+@@ -2529,6 +2548,17 @@
+             optional($._end_marker_kw_tail),
+           ),
+         ),
++        prec.dynamic(
++          1,
++          seq(
++            "new",
++            $._constructor_application,
++            colonEol($),
++            $._indent,
++            prec.dynamic(2, alias($._end_marker_kw, $.end_marker)),
++            choice($._outdent, $._comma_outdent),
++          ),
++        ),
+         prec(
+           "new",
+           seq("new", $.template_body, optional($._end_marker_kw_tail)),

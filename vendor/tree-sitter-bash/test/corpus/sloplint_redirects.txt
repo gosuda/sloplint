@@ -1,0 +1,199 @@
+================================================================================
+Here-string after a file redirect
+================================================================================
+
+tee -a $c >/dev/null <<<"x $y"
+
+--------------------------------------------------------------------------------
+
+(program
+  (redirected_statement
+    (command
+      (command_name
+        (word))
+      (word)
+      (simple_expansion
+        (variable_name)))
+    (file_redirect
+      (word))
+    (herestring_redirect
+      (string
+        (string_content)
+        (simple_expansion
+          (variable_name))))))
+
+================================================================================
+Here-string after several redirects
+================================================================================
+
+cat 2>&1 <<<x
+cat >f <<<x >g
+
+--------------------------------------------------------------------------------
+
+(program
+  (redirected_statement
+    (command
+      (command_name
+        (word)))
+    (file_redirect
+      (file_descriptor)
+      (number))
+    (herestring_redirect
+      (word)))
+  (redirected_statement
+    (command
+      (command_name
+        (word)))
+    (file_redirect
+      (word))
+    (herestring_redirect
+      (word))
+    (file_redirect
+      (word))))
+
+================================================================================
+Read-write redirect
+================================================================================
+
+exec 0<> "${o}/fake-stdin"
+exec 3<>file
+
+--------------------------------------------------------------------------------
+
+(program
+  (redirected_statement
+    (command
+      (command_name
+        (word))
+      (number))
+    (file_redirect
+      (string
+        (expansion
+          (variable_name))
+        (string_content))))
+  (redirected_statement
+    (command
+      (command_name
+        (word)))
+    (file_redirect
+      (file_descriptor)
+      (word))))
+
+================================================================================
+Assignment followed by a redirect
+================================================================================
+
+Y+=" b" 2>/dev/null
+Y=a >f
+
+--------------------------------------------------------------------------------
+
+(program
+  (redirected_statement
+    (variable_assignment
+      (variable_name)
+      (string
+        (string_content)))
+    (file_redirect
+      (file_descriptor)
+      (word)))
+  (redirected_statement
+    (variable_assignment
+      (variable_name)
+      (word))
+    (file_redirect
+      (word))))
+
+================================================================================
+Assignment with a redirect in a list
+================================================================================
+
+Y="a" && Y+=" b" 2>/dev/null
+
+--------------------------------------------------------------------------------
+
+(program
+  (list
+    (variable_assignment
+      (variable_name)
+      (string
+        (string_content)))
+    (redirected_statement
+      (variable_assignment
+        (variable_name)
+        (string
+          (string_content)))
+      (file_redirect
+        (file_descriptor)
+        (word)))))
+
+================================================================================
+Assignment with a here-string
+================================================================================
+
+Y=a <<<x
+
+--------------------------------------------------------------------------------
+
+(program
+  (redirected_statement
+    (variable_assignment
+      (variable_name)
+      (word))
+    (herestring_redirect
+      (word))))
+
+================================================================================
+Assignment with redirect before a command name
+================================================================================
+
+A=1 >f cmd
+
+--------------------------------------------------------------------------------
+
+(program
+  (command
+    (variable_assignment
+      (variable_name)
+      (number))
+    (file_redirect
+      (word))
+    (command_name
+      (word))))
+
+================================================================================
+Several assignments with a redirect
+================================================================================
+
+x=1 y=2 2>/dev/null
+
+--------------------------------------------------------------------------------
+
+(program
+  (redirected_statement
+    (variable_assignments
+      (variable_assignment
+        (variable_name)
+        (number))
+      (variable_assignment
+        (variable_name)
+        (number)))
+    (file_redirect
+      (file_descriptor)
+      (word))))
+
+================================================================================
+Standalone here-string
+================================================================================
+
+cat <<<x
+
+--------------------------------------------------------------------------------
+
+(program
+  (command
+    (command_name
+      (word))
+    (herestring_redirect
+      (word))))

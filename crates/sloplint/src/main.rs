@@ -1,8 +1,6 @@
 //! Entry point for the sloplint binary: parses arguments, runs the pipeline, renders, and maps exit codes.
 
-use std::collections::HashMap;
-use std::fs;
-use std::io::{self, Write};
+use std::io::{self, BufWriter, Write};
 use std::ops::Range;
 use std::path::Path;
 use std::process::ExitCode;
@@ -12,7 +10,7 @@ use annotate_snippets::{AnnotationKind, Group, Level, Renderer, Snippet};
 use clap::Parser;
 use sloplint::cli::{BaselineArgs, CheckArgs, Cli, Command, Format, RulesArgs};
 use sloplint::rules_cmd::{self, RulesRequest};
-use sloplint::{Execution, Report, RunError, RunOptions, Summary, init};
+use sloplint::{Execution, Report, RunError, RunOptions, Summary, TerminalText, init};
 use sloplint_core::{Finding, RuleFilter, Severity};
 
 fn main() -> ExitCode {
@@ -33,16 +31,28 @@ fn main() -> ExitCode {
     }
 }
 
+/// Runs `check`: executes the pipeline, emits the report, and exits with its status.
+///
+/// Ends the process directly with [`std::process::exit`] while `execution` is still in
+/// scope instead of returning: tearing down the run would free every finding's heap
+/// strings object by object just before the process ends, while the OS reclaims the
+/// whole heap at exit. Values on the live stack stay reachable for LeakSanitizer, and
+/// output is flushed before exiting, so bytes and statuses match a normal return.
 fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
+    let config = args.run.select.config.as_deref();
+    let paths = if args.paths.is_empty() {
+        match sloplint::implicit_scope(cwd, None, config) {
+            Ok(scope) => scope,
+            Err(error) => return report_error(&error),
+        }
+    } else {
+        args.paths.clone()
+    };
     let options = RunOptions {
         cwd: cwd.to_path_buf(),
         root: None,
         config: args.run.select.config.clone(),
-        paths: if args.paths.is_empty() {
-            vec![cwd.to_path_buf()]
-        } else {
-            args.paths.clone()
-        },
+        paths,
         strictness: args.run.select.strictness.map(Into::into),
         mode: args.mode.map(Into::into),
         fail_on: args.fail_on.map(Into::into),
@@ -52,11 +62,17 @@ fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
         write_baseline: false,
     };
     match sloplint::execute(&options) {
-        Ok(execution) => match emit(&execution, args.format) {
-            Ok(()) if execution.failed => ExitCode::from(1),
-            Ok(()) => ExitCode::SUCCESS,
-            Err(error) => fail(&error.to_string(), 3),
-        },
+        Ok(execution) => {
+            let status: u8 = match emit(&execution, args.format) {
+                Ok(()) if execution.failed => 1,
+                Ok(()) => 0,
+                Err(error) => {
+                    emit_error(&error.to_string());
+                    3
+                }
+            };
+            std::process::exit(i32::from(status));
+        }
         Err(error) => report_error(&error),
     }
 }
@@ -76,15 +92,28 @@ fn baseline(cwd: &Path, args: &BaselineArgs) -> ExitCode {
         write_baseline: true,
     };
     match sloplint::execute(&options) {
-        Ok(execution) => match execution.baseline_written.as_deref() {
-            Some(path) => print_text(&format!(
-                "baseline: wrote {} entries to {path}\n",
-                execution.report.summary.findings
-            )),
-            None => ExitCode::SUCCESS,
-        },
+        Ok(execution) => {
+            let status: u8 = match execution.baseline_written.as_deref() {
+                Some(path) => {
+                    let text = format!(
+                        "baseline: wrote {} entries to {}\n",
+                        execution.report.summary.findings,
+                        TerminalText::line(path)
+                    );
+                    print_text_status(&text, TextKind::Plain)
+                }
+                None => 0,
+            };
+            std::process::exit(i32::from(status));
+        }
         Err(error) => report_error(&error),
     }
+}
+
+#[derive(Clone, Copy)]
+enum TextKind {
+    Plain,
+    Json,
 }
 
 fn rules(cwd: &Path, args: &RulesArgs) -> ExitCode {
@@ -95,67 +124,149 @@ fn rules(cwd: &Path, args: &RulesArgs) -> ExitCode {
         id: args.id.clone(),
         format: args.format,
     };
+    let kind = if matches!(args.format, Format::Json) {
+        TextKind::Json
+    } else {
+        TextKind::Plain
+    };
     match rules_cmd::render(&request) {
-        Ok(text) => print_text(&text),
+        Ok(text) => print_text(&text, kind),
         Err(error) => report_error(&error),
     }
 }
 
-fn emit(execution: &Execution, format: Format) -> io::Result<()> {
-    let mut out = anstream::stdout();
-    match format {
-        Format::Agent => write_agent(&execution.report, &mut out)?,
-        Format::Human => write_human(execution, &mut out)?,
-        Format::Json => write_json(&execution.report, &mut out)?,
+const OUTPUT_BUFFER_BYTES: usize = 64 * 1024;
+const RECORD_BUFFER_BYTES: usize = 1024;
+
+fn with_buffered_stdout(write: impl FnOnce(&mut dyn Write) -> io::Result<()>) -> io::Result<()> {
+    let raw = io::stdout();
+    match anstream::AutoStream::choice(&raw) {
+        anstream::ColorChoice::Never => {
+            let mut buffer = BufWriter::with_capacity(OUTPUT_BUFFER_BYTES, raw.lock());
+            let mut stripped = anstream::StripStream::new(&mut buffer as &mut dyn Write);
+            write(&mut stripped)?;
+            stripped.flush()
+        }
+        choice => {
+            let mut out = BufWriter::with_capacity(
+                OUTPUT_BUFFER_BYTES,
+                anstream::AutoStream::new(raw, choice).lock(),
+            );
+            write(&mut out)?;
+            out.flush()
+        }
     }
+}
+
+fn emit(execution: &Execution, format: Format) -> io::Result<()> {
+    match format {
+        Format::Agent => with_plain_stdout(|out| write_agent(&execution.report, out)),
+        Format::Human => with_buffered_stdout(|out| write_human(execution, out)),
+        Format::Json => with_plain_stdout(|out| write_json(&execution.report, out)),
+    }
+}
+
+/// Buffers output that writes no styling of its own, with no escape-stripping pass.
+///
+/// Agent lines escape every C0, DEL, and C1 control through [`TerminalText`],
+/// and JSON escapes them in strings, so no terminal control byte from
+/// scanned files reaches stdout.
+fn with_plain_stdout(write: impl FnOnce(&mut dyn Write) -> io::Result<()>) -> io::Result<()> {
+    let mut out = BufWriter::with_capacity(OUTPUT_BUFFER_BYTES, io::stdout().lock());
+    write(&mut out)?;
     out.flush()
 }
 
 fn write_agent(report: &Report, out: &mut dyn Write) -> io::Result<()> {
+    let mut digits = itoa::Buffer::new();
     for finding in &report.findings {
-        writeln!(
-            out,
-            "{}:{}:{}: {}: {} [{}]",
-            finding.path,
-            finding.line,
-            finding.column,
-            severity_name(finding.severity),
-            finding.message,
-            finding.rule
-        )?;
-        writeln!(out, "  context: {}", finding.context)?;
-        writeln!(out, "  fix: {}", finding.fix)?;
+        TerminalText::line(&finding.path).write_escaped(out)?;
+        out.write_all(b":")?;
+        out.write_all(digits.format(finding.line).as_bytes())?;
+        out.write_all(b":")?;
+        out.write_all(digits.format(finding.column).as_bytes())?;
+        out.write_all(b": ")?;
+        out.write_all(severity_name(finding.severity).as_bytes())?;
+        out.write_all(b": ")?;
+        TerminalText::line(&finding.message).write_escaped(out)?;
+        out.write_all(b" [")?;
+        TerminalText::line(&finding.rule).write_escaped(out)?;
+        out.write_all(b"]\n  context: ")?;
+        TerminalText::line(&finding.context).write_escaped(out)?;
+        out.write_all(b"\n  fix: ")?;
+        TerminalText::line(&finding.fix).write_escaped(out)?;
+        out.write_all(b"\n")?;
     }
     if !report.findings.is_empty() {
         writeln!(out)?;
         writeln!(out, "rules:")?;
         for (rule, why) in &report.rules_fired {
-            writeln!(out, "  {rule}: {why}")?;
+            writeln!(
+                out,
+                "  {}: {}",
+                TerminalText::line(rule),
+                TerminalText::line(why)
+            )?;
         }
     }
     writeln!(out, "{}", summary_line(&report.summary))
 }
 
 fn write_json(report: &Report, out: &mut dyn Write) -> io::Result<()> {
-    let findings = report
-        .findings
-        .iter()
-        .map(sonic_rs::to_string)
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(io::Error::other)?;
-    let rules = sonic_rs::to_string(&report.rules_fired).map_err(io::Error::other)?;
-    let summary = sonic_rs::to_string(&report.summary).map_err(io::Error::other)?;
-    writeln!(out, "{{\"version\":1,")?;
-    writeln!(out, " \"findings\":[{}],", findings.join(","))?;
-    writeln!(out, " \"rules\":{rules},")?;
-    writeln!(out, " \"summary\":{summary}}}")
+    let mut record = Vec::with_capacity(RECORD_BUFFER_BYTES);
+    out.write_all(b"{\"version\":1,\n \"findings\":[")?;
+    for (index, finding) in report.findings.iter().enumerate() {
+        if index > 0 {
+            out.write_all(b",")?;
+        }
+        write_record(out, &mut record, finding)?;
+    }
+    out.write_all(b"],\n \"rules\":")?;
+    write_record(out, &mut record, &report.rules_fired)?;
+    out.write_all(b",\n \"summary\":")?;
+    write_record(out, &mut record, &report.summary)?;
+    out.write_all(b"}\n")
+}
+
+fn write_record<T>(out: &mut dyn Write, record: &mut Vec<u8>, value: &T) -> io::Result<()>
+where
+    T: sonic_rs::Serialize + ?Sized,
+{
+    record.clear();
+    sonic_rs::to_writer(&mut *record, value).map_err(io::Error::other)?;
+    write_guarded(out, record)
+}
+
+fn write_guarded(out: &mut dyn Write, mut json: &[u8]) -> io::Result<()> {
+    while let Some((at, width, code)) = find_control(json) {
+        out.write_all(&json[..at])?;
+        write!(out, "\\u{code:04x}")?;
+        json = &json[at + width..];
+    }
+    out.write_all(json)
+}
+
+fn find_control(json: &[u8]) -> Option<(usize, usize, u8)> {
+    let mut at = 0;
+    while at < json.len() {
+        match json[at] {
+            0x7f => return Some((at, 1, 0x7f)),
+            0xc2 => match json.get(at + 1) {
+                Some(&next) if (0x80..=0x9f).contains(&next) => return Some((at, 2, next)),
+                _ => at += 2,
+            },
+            _ => at += 1,
+        }
+    }
+    None
 }
 
 fn write_human(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
     let renderer = Renderer::styled().decor_style(DecorStyle::Unicode);
     let mut sources = Sources {
         root: execution.root.as_path(),
-        texts: HashMap::new(),
+        max_bytes: execution.max_file_bytes,
+        current: None,
     };
     for finding in &execution.report.findings {
         let rendered = render_finding(&renderer, &mut sources, &execution.report, finding);
@@ -165,20 +276,49 @@ fn write_human(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
     writeln!(out, "{}", summary_line(&execution.report.summary))
 }
 
+struct Source {
+    text: String,
+    starts: Vec<usize>,
+}
+
+impl Source {
+    fn new(text: String) -> Self {
+        let mut starts = Vec::new();
+        if !text.is_empty() {
+            starts.push(0);
+            starts.extend(
+                text.match_indices('\n')
+                    .map(|(at, _)| at + 1)
+                    .filter(|&start| start < text.len()),
+            );
+        }
+        Source { text, starts }
+    }
+
+    fn line(&self, line: u32) -> Option<&str> {
+        let index = usize::try_from(line.saturating_sub(1)).ok()?;
+        let rest = self.text.get(*self.starts.get(index)?..)?;
+        let row = rest.split('\n').next()?;
+        Some(row.strip_suffix('\r').unwrap_or(row))
+    }
+}
+
 struct Sources<'a> {
     root: &'a Path,
-    texts: HashMap<String, Option<String>>,
+    max_bytes: u64,
+    current: Option<(String, Option<Source>)>,
 }
 
 impl Sources<'_> {
-    fn line(&mut self, path: &str, line: u32) -> Option<String> {
-        let root = self.root;
-        let text = self
-            .texts
-            .entry(path.to_string())
-            .or_insert_with(|| fs::read_to_string(root.join(path)).ok());
-        let index = usize::try_from(line.saturating_sub(1)).ok()?;
-        text.as_deref()?.lines().nth(index).map(str::to_string)
+    fn line(&mut self, path: &str, line: u32) -> Option<&str> {
+        let cached = matches!(&self.current, Some((name, _)) if name == path);
+        if !cached {
+            let source = sloplint::read_source(&self.root.join(path), self.max_bytes)
+                .ok()
+                .map(Source::new);
+            self.current = Some((path.to_string(), source));
+        }
+        self.current.as_ref()?.1.as_ref()?.line(line)
     }
 }
 
@@ -188,11 +328,12 @@ fn render_finding(
     report: &Report,
     finding: &Finding,
 ) -> String {
-    let text = sources.line(&finding.path, finding.line).map_or_else(
-        || finding.context.to_string(),
-        |line| line.trim_end().to_string(),
-    );
-    let span = span_for(&text, finding.column);
+    let raw = sources
+        .line(&finding.path, finding.line)
+        .map_or(&*finding.context, str::trim_end);
+    let text = TerminalText::line(raw).into_text();
+    let start = span_for(raw, finding.column).start;
+    let span = TerminalText::line(&raw[..start]).into_text().len()..text.len();
     let level = match finding.severity {
         Severity::Deny => Level::ERROR,
         Severity::Warn => Level::WARNING,
@@ -202,16 +343,18 @@ fn render_finding(
         .get(&*finding.rule)
         .map_or("", String::as_str);
     let title = level
-        .primary_title(finding.message.clone())
-        .id(finding.rule.to_string());
+        .primary_title(TerminalText::line(&finding.message).into_text())
+        .id(TerminalText::line(&finding.rule).into_text());
     let snippet = Snippet::source(text)
         .line_start(line_number(finding.line))
-        .path(finding.path.to_string())
+        .path(TerminalText::line(&finding.path).into_text())
         .annotation(AnnotationKind::Primary.span(span));
     let groups = [
         Group::with_title(title).element(snippet),
-        Group::with_title(Level::HELP.secondary_title(finding.fix.clone())),
-        Group::with_title(Level::NOTE.secondary_title(why.to_string())),
+        Group::with_title(
+            Level::HELP.secondary_title(TerminalText::line(&finding.fix).into_text()),
+        ),
+        Group::with_title(Level::NOTE.secondary_title(TerminalText::line(why).into_text())),
     ];
     renderer.render(&groups)
 }
@@ -254,17 +397,37 @@ fn severity_name(severity: Severity) -> &'static str {
     }
 }
 
-fn print_text(text: &str) -> ExitCode {
-    let mut out = anstream::stdout();
-    match out.write_all(text.as_bytes()).and_then(|()| out.flush()) {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(error) => fail(&error.to_string(), 3),
+fn print_text(text: &str, kind: TextKind) -> ExitCode {
+    ExitCode::from(print_text_status(text, kind))
+}
+
+/// Writes `text` to stdout and returns the process status: 0 on success, 3 on error.
+fn print_text_status(text: &str, kind: TextKind) -> u8 {
+    let written = with_buffered_stdout(|out| match kind {
+        TextKind::Plain => write!(out, "{}", TerminalText::block(text)),
+        TextKind::Json => write_guarded(out, text.as_bytes()),
+    });
+    match written {
+        Ok(()) => 0,
+        Err(error) => {
+            emit_error(&error.to_string());
+            3
+        }
     }
 }
 
 fn fail(message: &str, code: u8) -> ExitCode {
-    let _ = writeln!(io::stderr(), "sloplint: error: {message}");
+    emit_error(message);
     ExitCode::from(code)
+}
+
+/// Prints one `sloplint: error: ...` line to stderr, escaping terminal controls.
+fn emit_error(message: &str) {
+    let _ = writeln!(
+        io::stderr(),
+        "sloplint: error: {}",
+        TerminalText::block(message)
+    );
 }
 
 fn report_error(error: &RunError) -> ExitCode {

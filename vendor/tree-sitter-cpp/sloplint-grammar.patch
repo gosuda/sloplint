@@ -1,0 +1,242 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -94,6 +94,13 @@
+     [$.init_statement, $._for_statement_body],
+     [$.field_expression, $.template_method, $.template_type],
+     [$.qualified_field_identifier, $.template_method, $.template_type],
++    [$.storage_class_specifier, $.template_instantiation],
++    [$.field_expression, $.template_method],
++    [$.qualified_field_identifier, $.template_method],
++    [$.type_specifier, $._class_name],
++    [$._class_name, $.expression],
++    [$._declarator, $._init_reference_declarator],
++    [$._declarator, $._init_pointer_declarator],
+   ],
+ 
+   inline: ($, original) => original.concat([
+@@ -226,12 +233,16 @@
+       alias($.qualified_type_identifier, $.qualified_identifier),
+     )),
+ 
++    // `T f(int) = delete;` outside a class is a function definition, as inside one.
+     function_definition: ($, original) => ({
+       ...original,
+       members: original.members.map(
+         (e) => e.name !== 'body' ?
+           e :
+-          field('body', choice(e.content, $.try_statement))),
++          choice(
++            field('body', choice(e.content, $.try_statement)),
++            $.delete_method_clause,
++          )),
+     }),
+ 
+     declaration: $ => seq(
+@@ -284,14 +295,23 @@
+ 
+     enum_specifier: $ => prec.right(seq(
+       'enum',
+-      optional(choice('class', 'struct')),
+       choice(
+         seq(
+-          field('name', $._class_name),
+-          optional($._enum_base_clause),
+-          optional(field('body', $.enumerator_list)),
++          optional(choice('class', 'struct')),
++          choice(
++            seq(
++              field('name', $._class_name),
++              optional($._enum_base_clause),
++              optional(field('body', $.enumerator_list)),
++            ),
++            field('body', $.enumerator_list),
++          ),
++        ),
++        // An unnamed unscoped enum may still fix its underlying type: `enum : T { A };`.
++        seq(
++          $._enum_base_clause,
++          field('body', $.enumerator_list),
+         ),
+-        field('body', $.enumerator_list),
+       ),
+       optional($.attribute_specifier),
+     )),
+@@ -339,9 +359,16 @@
+     ),
+ 
+     template_instantiation: $ => seq(
++      optional('extern'),
+       'template',
+-      optional($._declaration_specifiers),
+-      field('declarator', $._declarator),
++      choice(
++        seq(
++          optional($._declaration_specifiers),
++          field('declarator', $._declarator),
++        ),
++        // Explicit instantiation of a class: `template class C<int>;`.
++        $._declaration_specifiers,
++      ),
+       ';',
+     ),
+ 
+@@ -402,7 +429,7 @@
+       $._declaration_specifiers,
+       field('declarator', optional(choice($._declarator, $.abstract_reference_declarator))),
+       '=',
+-      field('default_value', $.expression),
++      field('default_value', choice($.expression, $.initializer_list)),
+     ),
+ 
+     variadic_parameter_declaration: $ => seq(
+@@ -432,6 +459,23 @@
+           $.initializer_list,
+         )),
+       ),
++      // `T& r(v.get());` and `T* p(v.get());`: the declarator must be complete before the
++      // parenthesis, or `r(v.get())` is read as a function declarator with parameters.
++      seq(
++        field('declarator', choice(
++          alias($._init_reference_declarator, $.reference_declarator),
++          alias($._init_pointer_declarator, $.pointer_declarator),
++        )),
++        field('value', $.argument_list),
++      ),
++    ),
++
++    _init_reference_declarator: $ => seq(choice('&', '&&'), $.identifier),
++
++    _init_pointer_declarator: $ => seq(
++      '*',
++      repeat($.type_qualifier),
++      field('declarator', $.identifier),
+     ),
+ 
+     operator_cast: $ => prec.right(1, seq(
+@@ -478,13 +522,17 @@
+ 
+     field_declaration: $ => seq(
+       $._declaration_specifiers,
+-      commaSep(seq(
+-        field('declarator', $._field_declarator),
+-        optional(choice(
+-          $.bitfield_clause,
+-          field('default_value', $.initializer_list),
+-          seq('=', field('default_value', choice($.expression, $.initializer_list))),
+-        )),
++      commaSep(choice(
++        seq(
++          field('declarator', $._field_declarator),
++          optional($.bitfield_clause),
++          optional(choice(
++            field('default_value', $.initializer_list),
++            seq('=', field('default_value', choice($.expression, $.initializer_list))),
++          )),
++        ),
++        // An unnamed bit-field: `unsigned : 0;`.
++        $.bitfield_clause,
+       )),
+       optional($.attribute_specifier),
+       ';',
+@@ -968,10 +1016,18 @@
+       ']',
+     ),
+ 
+-    call_expression: ($, original) => choice(original, seq(
+-      field('function', $.primitive_type),
+-      field('arguments', $.argument_list),
+-    )),
++    call_expression: ($, original) => choice(
++      original,
++      seq(
++        field('function', $.primitive_type),
++        field('arguments', $.argument_list),
++      ),
++      // A functional cast to a dependent type: `typename S::First()`.
++      seq(
++        field('function', $.dependent_type),
++        field('arguments', $.argument_list),
++      ),
++    ),
+ 
+     co_await_expression: $ => prec.left(PREC.UNARY, seq(
+       field('operator', 'co_await'),
+@@ -991,9 +1047,15 @@
+     )),
+ 
+     new_declarator: $ => prec.right(seq(
+-      '[',
+-      field('length', $.expression),
+-      ']',
++      choice(
++        seq(
++          '[',
++          field('length', $.expression),
++          ']',
++        ),
++        // A pointer in the allocated type: `new int*[n]`.
++        seq('*', repeat($.type_qualifier)),
++      ),
+       optional($.new_declarator),
+     )),
+ 
+@@ -1007,7 +1069,7 @@
+     field_expression: $ => seq(
+       prec(PREC.FIELD, seq(
+         field('argument', $.expression),
+-        field('operator', choice('.', '.*', '->')),
++        field('operator', choice('.', '.*', '->', '->*')),
+       )),
+       field('field', choice(
+         prec.dynamic(1, $._field_identifier),
+@@ -1015,6 +1077,7 @@
+         $.destructor_name,
+         $.template_method,
+         alias($.dependent_field_identifier, $.dependent_name),
++        $.operator_name,
+       )),
+     ),
+ 
+@@ -1230,7 +1293,7 @@
+     compound_literal_expression: ($, original) => choice(
+       original,
+       seq(
+-        field('type', choice($._class_name, $.primitive_type)),
++        field('type', choice($._class_name, $.primitive_type, $.dependent_type)),
+         field('value', $.initializer_list),
+       ),
+     ),
+@@ -1256,6 +1319,7 @@
+         alias($.qualified_field_identifier, $.qualified_identifier),
+         $.template_method,
+         prec.dynamic(1, $._field_identifier),
++        $.operator_name,
+       )),
+     ),
+ 
+@@ -1342,6 +1406,25 @@
+ 
+     this: _ => 'this',
+ 
++    // Preprocessor operands that are not expressions: `__has_include(<x.h>)`,
++    // `__has_embed("x")`, `__has_warning("-Wx")` and `__has_cpp_attribute(ns::name)`.
++    preproc_argument_list: $ => seq(
++      '(',
++      commaSep(choice(
++        $._preproc_expression,
++        $.string_literal,
++        $.system_lib_string,
++        alias($._preproc_qualified_name, $.qualified_identifier),
++      )),
++      ')',
++    ),
++
++    _preproc_qualified_name: $ => seq(
++      field('scope', $._namespace_identifier),
++      '::',
++      field('name', $.identifier),
++    ),
++
+     concatenated_string: $ => prec.right(seq(
+       choice($.identifier, $.string_literal, $.raw_string_literal),
+       choice($.string_literal, $.raw_string_literal),

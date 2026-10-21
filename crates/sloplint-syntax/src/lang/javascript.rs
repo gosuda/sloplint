@@ -9,7 +9,7 @@ use tree_sitter::Node;
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
     first_of_kind, has_child_kind, named_children, narrow, pos_of, preceding_comments,
-    string_arg_shape, strip_quotes, text,
+    sole_call_id, string_arg_shape, strip_quotes, text,
 };
 use crate::spec::Role;
 
@@ -34,6 +34,8 @@ pub(crate) static TABLE: &[(&str, Role)] = &[
     ("new_expression", Role::NewCall),
     ("lexical_declaration", Role::Decl),
     ("variable_declaration", Role::Decl),
+    // sloplint: `using` bindings are immutable; decl_names already tracks only `let`/`var`.
+    ("using_declaration", Role::Decl),
     ("assignment_expression", Role::Write),
     ("augmented_assignment_expression", Role::Write),
     ("update_expression", Role::Write),
@@ -89,14 +91,20 @@ fn header_of(n: Node<'_>) -> Node<'_> {
     }
 }
 
-fn exported_class_member(member: Node<'_>) -> bool {
-    member
+fn declared_public(cx: &Cx<'_, '_>, decl: Node<'_>, name: Node<'_>) -> bool {
+    parent_kind_is(decl, "export_statement")
+        || (parent_kind_is(decl, "program") && cx.is_exported(text(cx, name)))
+}
+
+fn exported_class_member(cx: &Cx<'_, '_>, member: Node<'_>) -> bool {
+    let class = member
         .parent()
         .filter(|body| body.kind() == "class_body")
         .and_then(|body| body.parent())
-        .filter(|class| class.kind() == "class_declaration")
-        .and_then(|class| class.parent())
-        .is_some_and(|wrapper| wrapper.kind() == "export_statement")
+        .filter(|class| class.kind() == "class_declaration");
+    class.is_some_and(|class| {
+        child_by_field(class, "name").is_some_and(|name| declared_public(cx, class, name))
+    })
 }
 
 fn top_level(n: Node<'_>) -> bool {
@@ -155,16 +163,20 @@ struct ClosureSite<'a> {
     header: Node<'a>,
 }
 
-fn closure_site(n: Node<'_>) -> Option<ClosureSite<'_>> {
+fn closure_site<'a>(cx: &Cx<'_, '_>, n: Node<'a>) -> Option<ClosureSite<'a>> {
     let parent = n.parent()?;
     match parent.kind() {
-        "variable_declarator" => declarator_site(n, parent),
-        "field_definition" => field_site(n, parent),
+        "variable_declarator" => declarator_site(cx, n, parent),
+        "field_definition" => field_site(cx, n, parent),
         _ => None,
     }
 }
 
-fn declarator_site<'a>(n: Node<'a>, declarator: Node<'a>) -> Option<ClosureSite<'a>> {
+fn declarator_site<'a>(
+    cx: &Cx<'_, '_>,
+    n: Node<'a>,
+    declarator: Node<'a>,
+) -> Option<ClosureSite<'a>> {
     if child_by_field(declarator, "value")?.id() != n.id() {
         return None;
     }
@@ -177,12 +189,13 @@ fn declarator_site<'a>(n: Node<'a>, declarator: Node<'a>) -> Option<ClosureSite<
         return None;
     }
     let scope = declaration.parent()?;
-    let public = match scope.kind() {
+    let wrapped = match scope.kind() {
         "export_statement" => true,
         "program" => false,
         _ => return None,
     };
-    let header = if public { scope } else { declaration };
+    let public = wrapped || cx.is_exported(text(cx, name));
+    let header = if wrapped { scope } else { declaration };
     Some(ClosureSite {
         name,
         public,
@@ -190,12 +203,12 @@ fn declarator_site<'a>(n: Node<'a>, declarator: Node<'a>) -> Option<ClosureSite<
     })
 }
 
-fn field_site<'a>(n: Node<'a>, field: Node<'a>) -> Option<ClosureSite<'a>> {
+fn field_site<'a>(cx: &Cx<'_, '_>, n: Node<'a>, field: Node<'a>) -> Option<ClosureSite<'a>> {
     if child_by_field(field, "value")?.id() != n.id() {
         return None;
     }
     let name = child_by_field(field, "property")?;
-    let public = exported_class_member(field) && name.kind() != "private_property_identifier";
+    let public = exported_class_member(cx, field) && name.kind() != "private_property_identifier";
     Some(ClosureSite {
         name,
         public,
@@ -234,13 +247,7 @@ fn closure_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
 }
 
 fn sole_call_of(body: Node<'_>) -> Option<usize> {
-    if body.kind() != "statement_block" {
-        return (body.kind() == "call_expression").then(|| body.id());
-    }
-    match code_children(body).as_slice() {
-        [only] => statement_call(*only),
-        _ => None,
-    }
+    sole_call_id(body, code_children, statement_call)
 }
 
 fn statement_call(statement: Node<'_>) -> Option<usize> {
@@ -287,6 +294,7 @@ fn root_of_callee(n: Node<'_>) -> Option<Node<'_>> {
         "member_expression" | "subscript_expression" => {
             root_of_callee(child_by_field(n, "object")?)
         }
+        "parenthesized_expression" => root_of_callee(first_code(n)?),
         _ => None,
     }
 }
@@ -351,7 +359,9 @@ fn declared_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)
 
 fn collect_pattern<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     match n.kind() {
-        "identifier" => out.push((text(cx, n), pos_of(n))),
+        "identifier" | "shorthand_property_identifier_pattern" => {
+            out.push((text(cx, n), pos_of(n)));
+        }
         "object_pattern" => {
             for child in named_children(n) {
                 collect_object_member(cx, child, out);
@@ -382,6 +392,11 @@ fn collect_object_member<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s st
         "pair_pattern" => {
             if let Some(value) = child_by_field(n, "value") {
                 collect_pattern(cx, value, out);
+            }
+        }
+        "object_assignment_pattern" => {
+            if let Some(left) = child_by_field(n, "left") {
+                collect_pattern(cx, left, out);
             }
         }
         "rest_pattern" => {
@@ -428,6 +443,20 @@ fn object_source<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
         found = Some(object);
     }
     found
+}
+
+fn local_export_names<'s>(cx: &Cx<'_, 's>, statement: Node<'_>, out: &mut Vec<&'s str>) {
+    for part in code_children(statement) {
+        match part.kind() {
+            "identifier" => out.push(text(cx, part)),
+            "export_clause" => {
+                for spec in code_children(part) {
+                    out.extend(child_by_field(spec, "name").map(|name| text(cx, name)));
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 fn import_module<'s>(cx: &Cx<'_, 's>, statement: Node<'_>) -> Option<&'s str> {
@@ -681,25 +710,25 @@ fn assertion_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<Assertion> {
     })
 }
 
-fn join_normalized(dir: &str, rel: &str) -> String {
+fn join_normalized(dir: &str, rel: &str) -> Option<String> {
     let mut parts: Vec<&str> = Vec::new();
     for segment in dir.split('/').chain(rel.split('/')) {
         match segment {
             "" | "." => {}
-            ".." => {
-                parts.pop();
-            }
+            ".." => parts.pop().map(|_| ())?,
             other => parts.push(other),
         }
     }
-    parts.join("/")
+    Some(parts.join("/"))
 }
 
 fn re_export_candidates(dir: &str, source: &str) -> Vec<String> {
     if !(source.starts_with("./") || source.starts_with("../")) {
         return Vec::new();
     }
-    let path = join_normalized(dir, source);
+    let Some(path) = join_normalized(dir, source) else {
+        return Vec::new();
+    };
     if JS_EXTENSIONS.iter().any(|ext| path.ends_with(ext)) {
         return vec![path];
     }
@@ -797,9 +826,9 @@ impl LangHooks for JavaScriptHooks {
         let body = child_by_field(n, "body")?;
         let name = child_by_field(n, "name")?;
         let public = if n.kind() == "method_definition" {
-            exported_class_member(n) && name.kind() != "private_property_identifier"
+            exported_class_member(cx, n) && name.kind() != "private_property_identifier"
         } else {
-            parent_kind_is(n, "export_statement")
+            declared_public(cx, n, name)
         };
         let params =
             child_by_field(n, "parameters").map_or_else(Vec::new, |list| formal_params(cx, list));
@@ -813,7 +842,7 @@ impl LangHooks for JavaScriptHooks {
     }
 
     fn closure_as_function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
-        let found = closure_site(n)?;
+        let found = closure_site(cx, n)?;
         let body = child_by_field(n, "body")?;
         let site = HeadSite {
             name: found.name,
@@ -907,7 +936,40 @@ impl LangHooks for JavaScriptHooks {
         assertion_site(cx, n)
     }
 
+    fn exported_names<'s>(&self, root: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        for statement in code_children(root) {
+            if statement.kind() == "export_statement" && import_module(cx, statement).is_none() {
+                local_export_names(cx, statement, out);
+            }
+        }
+    }
+
     fn barrel(&self, root: Node<'_>, cx: &Cx<'_, '_>) -> Option<Barrel> {
         barrel_of(root, cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sole_call_of;
+
+    fn sole_call_in_js(source: &str) -> Option<usize> {
+        let mut parser = tree_sitter::Parser::new();
+        let language: tree_sitter::Language = tree_sitter_javascript::LANGUAGE.into();
+        parser
+            .set_language(&language)
+            .expect("javascript grammar loads");
+        let tree = parser.parse(source, None).expect("parser returns a tree");
+        let function = tree.root_node().child(0).expect("one top-level function");
+        let body = function.child_by_field_name("body").expect("function body");
+        sole_call_of(body)
+    }
+
+    #[test]
+    fn leading_comment_before_the_returned_call_is_skipped() {
+        assert!(
+            sole_call_in_js("function f() { return /* c */ g(); }").is_some(),
+            "a leading comment before the returned call must not hide it"
+        );
     }
 }

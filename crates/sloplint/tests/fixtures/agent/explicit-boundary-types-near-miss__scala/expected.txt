@@ -1,1 +1,1 @@
-# Near-miss: private untyped function; fully typed public function.
+# Near-miss: private function without a return annotation; fully typed public function.

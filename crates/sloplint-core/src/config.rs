@@ -103,6 +103,7 @@ pub struct ProjectConfig {
     /// Globs marking test files, which exempt rules skip.
     pub test_globs: Vec<String>,
     /// Files larger than this many bytes are skipped.
+    /// TOML values must be in `0..=u32::MAX` to fit parser byte positions.
     pub max_file_bytes: u64,
     /// Globs naming extra files that hold `[[custom_rules]]` tables.
     pub custom_rule_files: Vec<String>,
@@ -162,7 +163,7 @@ pub enum ConfigError {
     /// The file is not valid TOML or violates a table's shape.
     #[error("{origin}: {message}")]
     Toml { origin: String, message: String },
-    /// A `[rules."<id>"]` key names no catalog or custom rule.
+    /// A rule-table key or report selector names no catalog or custom rule.
     #[error("unknown rule `{id}`; valid ids: {}", valid.join(", "))]
     UnknownRule { id: String, valid: Vec<String> },
     /// A rule option or language callee pattern is malformed.
@@ -190,6 +191,40 @@ pub enum ConfigError {
     UnknownLanguage { value: String },
 }
 
+impl ConfigError {
+    /// Builds [`ConfigError::Toml`] for a failed parse of `source`, read from `origin`.
+    ///
+    /// When the parser reports a span, the message starts with the 1-based line
+    /// and column (in Unicode scalar values) where the span begins.
+    pub fn from_toml(origin: &str, source: &str, error: &toml::de::Error) -> ConfigError {
+        let message = match error.span() {
+            Some(span) => {
+                let (line, column) = line_column(source, span.start);
+                format!("line {line}, column {column}: {}", error.message())
+            }
+            None => error.message().to_string(),
+        };
+        ConfigError::Toml {
+            origin: origin.to_string(),
+            message,
+        }
+    }
+}
+
+fn line_column(source: &str, offset: usize) -> (usize, usize) {
+    let before = &source.as_bytes()[..offset.min(source.len())];
+    let line = before.iter().filter(|&&byte| byte == b'\n').count() + 1;
+    let line_start = before
+        .iter()
+        .rposition(|&byte| byte == b'\n')
+        .map_or(0, |newline| newline + 1);
+    let column = String::from_utf8_lossy(&before[line_start..])
+        .chars()
+        .count()
+        + 1;
+    (line, column)
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawProject {
@@ -201,7 +236,7 @@ struct RawProject {
     exclude: Option<Vec<String>>,
     extend_exclude: Option<Vec<String>>,
     test_globs: Option<Vec<String>>,
-    max_file_bytes: Option<u64>,
+    max_file_bytes: Option<u32>,
     custom_rule_files: Option<Vec<String>>,
 }
 
@@ -222,10 +257,8 @@ struct RawConfig {
 
 /// Parses `sloplint.toml` text into a fully defaulted, validated [`Config`].
 pub fn parse_config(toml_src: &str, origin: &str) -> Result<Config, ConfigError> {
-    let raw: RawConfig = toml::from_str(toml_src).map_err(|error| ConfigError::Toml {
-        origin: origin.to_string(),
-        message: error.message().to_string(),
-    })?;
+    let raw: RawConfig = toml::from_str(toml_src)
+        .map_err(|error| ConfigError::from_toml(origin, toml_src, &error))?;
     let mut config = Config::default();
     if let Some(project) = raw.project {
         merge_project(&mut config, project)?;
@@ -275,7 +308,7 @@ fn merge_project(config: &mut Config, project: RawProject) -> Result<(), ConfigE
         target.test_globs = test_globs;
     }
     if let Some(max_file_bytes) = project.max_file_bytes {
-        target.max_file_bytes = max_file_bytes;
+        target.max_file_bytes = u64::from(max_file_bytes);
     }
     if let Some(custom_rule_files) = project.custom_rule_files {
         target.custom_rule_files = custom_rule_files;

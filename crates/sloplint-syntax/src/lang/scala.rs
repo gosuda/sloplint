@@ -24,6 +24,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("for_expression", Role::Loop),
     ("catch_clause", Role::Catch),
     ("call_expression", Role::Call),
+    ("split_call_condition", Role::Call),
     ("instance_expression", Role::NewCall),
     ("var_definition", Role::Decl),
     ("assignment_expression", Role::Write),
@@ -163,11 +164,19 @@ fn infix_concat(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
         .any(|o| o.kind() == "string" || o.kind() == "interpolated_string_expression")
 }
 
-fn call_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
+fn arg_nodes(n: Node<'_>) -> Vec<Node<'_>> {
     let Some(list) = child_by_field(n, "arguments") else {
         return Vec::new();
     };
-    named_children(list)
+    if list.kind() == "arguments" {
+        named_children(list)
+    } else {
+        vec![list]
+    }
+}
+
+fn call_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
+    arg_nodes(n)
         .into_iter()
         .map(|a| Arg {
             shape: arg_shape(cx, a),
@@ -178,7 +187,7 @@ fn call_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
 }
 
 fn first_arg(n: Node<'_>) -> Option<Node<'_>> {
-    child_by_field(n, "arguments").and_then(|l| named_children(l).into_iter().next())
+    arg_nodes(n).into_iter().next()
 }
 
 fn sole_call_of(body: Node<'_>) -> Option<usize> {
@@ -401,6 +410,24 @@ fn extend_info<'s>(cx: &Cx<'_, 's>, c: Node<'_>) -> (Vec<ImplRef<'s>>, bool) {
     (impls, testy)
 }
 
+fn is_nested_fn(n: Node<'_>) -> bool {
+    let mut current = n.parent();
+    while let Some(parent) = current {
+        if matches!(
+            parent.kind(),
+            "function_definition"
+                | "lambda_expression"
+                | "block"
+                | "indented_block"
+                | "case_clause"
+        ) {
+            return true;
+        }
+        current = parent.parent();
+    }
+    false
+}
+
 impl LangHooks for ScalaHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         if n.kind() != "function_definition" {
@@ -413,24 +440,25 @@ impl LangHooks for ScalaHooks {
             .into_iter()
             .find(|c| c.kind() == "modifiers");
         let mut public = !mods.is_some_and(|m| has_child_kind(m, "access_modifier"));
-        match cx.containers.last() {
+        public = public && !is_nested_fn(n);
+        match cx.innermost_container() {
             None => {}
             Some(Container::Class { exported, .. }) => {
-                public = public && *exported;
+                public = public && exported;
             }
             Some(Container::Trait { public: tp }) => {
-                public = public && *tp;
+                public = public && tp;
             }
             Some(_) => {}
         }
         let interface_bound = matches!(
-            cx.containers.last(),
+            cx.innermost_container(),
             Some(Container::Class {
                 implements: true,
                 ..
             })
         ) && mods.is_some_and(|m| has_child_kind(m, "override"));
-        let in_test = cx.is_test_file || cx.containers.contains(&Container::TestModule);
+        let in_test = cx.is_test_file || cx.in_test_module();
         let mut params = Vec::new();
         for c in named_children(n) {
             if c.kind() == "parameters" {
@@ -496,7 +524,7 @@ impl LangHooks for ScalaHooks {
     }
 
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
-        if n.kind() == "call_expression" {
+        if n.kind() == "call_expression" || n.kind() == "split_call_condition" {
             let func = child_by_field(n, "function")?;
             return Some(CallHead {
                 callee: text(cx, func_node(func).unwrap_or(func)),
@@ -585,13 +613,13 @@ impl LangHooks for ScalaHooks {
                 || (c.kind() == "modifiers" && has_child_kind(c, "access_modifier"))
         });
         let mut public = !restricted;
-        match cx.containers.last() {
+        match cx.innermost_container() {
             None => {}
             Some(Container::Class { exported, .. }) => {
-                public = public && *exported;
+                public = public && exported;
             }
             Some(Container::Trait { public: tp }) => {
-                public = public && *tp;
+                public = public && tp;
             }
             Some(_) => {}
         }
@@ -689,8 +717,7 @@ impl LangHooks for ScalaHooks {
         if n.kind() != "call_expression" {
             return None;
         }
-        let args_node = child_by_field(n, "arguments")?;
-        let kids = named_children(args_node);
+        let kids = arg_nodes(n);
         if kids.is_empty() {
             return None;
         }
@@ -805,9 +832,7 @@ impl LangHooks for ScalaHooks {
 }
 
 fn first_arg_count(n: Node<'_>) -> usize {
-    child_by_field(n, "arguments")
-        .map(|l| named_children(l).len())
-        .unwrap_or(0)
+    arg_nodes(n).len()
 }
 
 fn struct_field<'s>(cx: &Cx<'_, 's>, a: Node<'_>) -> Option<&'s str> {

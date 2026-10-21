@@ -1,0 +1,96 @@
+================================================================================
+Attributes around a conditional block on a declaration
+================================================================================
+
+@available(macOS 10.15, *)
+#if compiler(>=6.2)
+@available(*, deprecated)
+#endif
+@inlinable
+func f() {}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (modifiers
+      (attribute
+        (user_type
+          (type_identifier))
+        (simple_identifier)
+        (integer_literal)
+        (integer_literal))
+      (directive
+        (integer_literal)
+        (integer_literal))
+      (attribute
+        (user_type
+          (type_identifier))
+        (simple_identifier))
+      (directive)
+      (attribute
+        (user_type
+          (type_identifier))))
+    (simple_identifier)
+    (function_body)))
+
+================================================================================
+Attribute inside a conditional block
+================================================================================
+
+#if !DEBUG
+@exclusivity(unchecked)
+#endif
+@usableFromInline var _capacity: Int = 0
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (directive
+    (simple_identifier))
+  (property_declaration
+    (modifiers
+      (attribute
+        (user_type
+          (type_identifier))
+        (simple_identifier))
+      (directive)
+      (attribute
+        (user_type
+          (type_identifier))))
+    (value_binding_pattern)
+    (pattern
+      (simple_identifier))
+    (type_annotation
+      (user_type
+        (type_identifier)))
+    (integer_literal)))
+
+================================================================================
+Nonisolated unsafe in a function body
+================================================================================
+
+func testF() {
+  nonisolated(unsafe) var x = 1
+  print(x)
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (function_body
+      (statements
+        (property_declaration
+          (member_modifier)
+          (value_binding_pattern)
+          (pattern
+            (simple_identifier))
+          (integer_literal))
+        (call_expression
+          (simple_identifier)
+          (call_suffix
+            (value_arguments
+              (value_argument
+                (simple_identifier)))))))))

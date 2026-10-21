@@ -1,0 +1,145 @@
+==========================================
+__has_include with angle brackets
+==========================================
+
+#if __has_include(<endian.h>)
+int a;
+#endif
+
+---
+
+(translation_unit
+  (preproc_if
+    (call_expression
+      (identifier)
+      (argument_list
+        (system_lib_string)))
+    (declaration
+      (primitive_type)
+      (identifier))))
+
+==========================================
+__has_include with quotes
+==========================================
+
+#if __has_include("missing.h") || __has_cpp_attribute(nodiscard) >= 201603
+int c;
+#endif
+
+---
+
+(translation_unit
+  (preproc_if
+    (binary_expression
+      (call_expression
+        (identifier)
+        (argument_list
+          (string_literal
+            (string_content))))
+      (binary_expression
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier)))
+        (number_literal)))
+    (declaration
+      (primitive_type)
+      (identifier))))
+
+==========================================
+__has_attribute with an identifier
+==========================================
+
+#if __has_attribute(noreturn)
+int b;
+#endif
+
+---
+
+(translation_unit
+  (preproc_if
+    (call_expression
+      (identifier)
+      (argument_list
+        (identifier)))
+    (declaration
+      (primitive_type)
+      (identifier))))
+
+==========================================
+__has_cpp_attribute with a scoped name
+==========================================
+
+#if __has_cpp_attribute(clang::fallthrough)
+int d;
+#endif
+
+---
+
+(translation_unit
+  (preproc_if
+    (call_expression
+      (identifier)
+      (argument_list
+        (qualified_identifier
+          (namespace_identifier)
+          (identifier))))
+    (declaration
+      (primitive_type)
+      (identifier))))
+
+==========================================
+__has_embed and __has_warning with strings
+==========================================
+
+#if __has_embed("data.bin")
+int e;
+#endif
+#if __has_warning("-Wdeprecated")
+int f;
+#endif
+
+---
+
+(translation_unit
+  (preproc_if
+    (call_expression
+      (identifier)
+      (argument_list
+        (string_literal
+          (string_content))))
+    (declaration
+      (primitive_type)
+      (identifier)))
+  (preproc_if
+    (call_expression
+      (identifier)
+      (argument_list
+        (string_literal
+          (string_content))))
+    (declaration
+      (primitive_type)
+      (identifier))))
+
+==========================================
+__has_include combined with defined
+==========================================
+
+#if defined(__has_include) && __has_include(<a.h>)
+int g;
+#endif
+
+---
+
+(translation_unit
+  (preproc_if
+    (binary_expression
+      (preproc_defined
+        (identifier))
+      (call_expression
+        (identifier)
+        (argument_list
+          (system_lib_string))))
+    (declaration
+      (primitive_type)
+      (identifier))))

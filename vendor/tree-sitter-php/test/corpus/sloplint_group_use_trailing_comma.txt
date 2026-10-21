@@ -1,0 +1,21 @@
+==========================
+Group use with a trailing comma
+==========================
+
+<?php
+use Foo\Bar\{ Baz, Qux as Q, };
+
+---
+
+(program
+  (php_tag)
+  (namespace_use_declaration
+    (namespace_name
+      (name)
+      (name))
+    (namespace_use_group
+      (namespace_use_clause
+        (name))
+      (namespace_use_clause
+        (name)
+        (name)))))

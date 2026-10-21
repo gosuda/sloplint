@@ -1,0 +1,186 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -72,10 +72,12 @@
+     $._binary_star_star,
+     $._element_reference_bracket,
+     $._short_interpolation,
++    $._block_comment,
+   ],
+ 
+   extras: $ => [
+     $.comment,
++    $._block_comment_extra,
+     $.heredoc_body,
+     /\s/,
+     /\\\r?\n/,
+@@ -1030,6 +1032,7 @@
+ 
+     _method_name: $ => choice(
+       $.identifier,
++      $._keyword_method_name,
+       $._function_identifier,
+       $.constant,
+       $.setter,
+@@ -1039,13 +1042,25 @@
+       $._nonlocal_variable,
+     ),
+ 
++    // `self` and `super` are keywords. After `def` the keyword wins over
++    // `identifier`, because `def self.name` is also valid, so a method
++    // named `self` or `super` needs its own alternative. Every other
++    // reserved word already lexes as `identifier` here.
++    _keyword_method_name: $ => choice(
++      alias($.self, $.identifier),
++      alias($.super, $.identifier),
++    ),
++
+     _nonlocal_variable: $ => choice(
+       $.instance_variable,
+       $.class_variable,
+       $.global_variable,
+     ),
+ 
+-    setter: $ => seq(field('name', $.identifier), token.immediate('=')),
++    setter: $ => seq(
++      field('name', choice($.identifier, $._keyword_method_name)),
++      token.immediate('='),
++    ),
+ 
+     undef: $ => seq('undef', commaSep1($._method_name)),
+     alias: $ => seq(
+@@ -1054,19 +1069,13 @@
+       field('alias', $._method_name),
+     ),
+ 
+-    comment: _ => token(prec(PREC.COMMENT, choice(
+-      seq('#', /.*/),
+-      seq(
+-        /=begin.*\r?\n/,
+-        repeat(choice(
+-          /[^=]/,
+-          /=[^e]/,
+-          /=e[^n]/,
+-          /=en[^d]/,
+-        )),
+-        /[\s*]*=end.*/,
+-      ),
+-    ))),
++    comment: _ => token(prec(PREC.COMMENT, seq('#', /.*/))),
++
++    // A `=begin ... =end` comment. The external scanner reads it: both
++    // markers must start a line, and each must be followed by whitespace or
++    // the end of the input. An extra rule cannot be an alias, so a hidden
++    // rule gives the external token the node name `comment`.
++    _block_comment_extra: $ => alias($._block_comment, $.comment),
+ 
+     integer: _ => /0[bB][01](_?[01])*|0[oO]?[0-7](_?[0-7])*|(0[dD])?\d(_?\d)*|0[xX][0-9a-fA-F](_?[0-9a-fA-F])*/,
+     _int_or_float: $ => choice($.integer, $.float),
+--- a/src/scanner.c
++++ b/src/scanner.c
+@@ -40,6 +40,7 @@
+     BINARY_STAR_STAR,
+     ELEMENT_REFERENCE_BRACKET,
+     SHORT_INTERPOLATION,
++    BLOCK_COMMENT,
+ 
+     NONE
+ } TokenType;
+@@ -834,6 +835,83 @@
+     }
+ }
+ 
++
++// A `=begin ... =end` comment. It starts only when `=begin` is the first
++// text of a line. It ends at the first later line that starts with `=end`
++// followed by whitespace or the end of the input; trailing text on the
++// `=end` line is part of the comment. Any other line, including one that
++// starts with `=endx`, is ordinary content.
++static inline bool is_block_word_char(int32_t c) {
++    return c != 0 && (c == '_' || iswalnum(c));
++}
++
++static inline bool scan_block_marker_word(TSLexer *lexer, const char *word) {
++    for (const char *p = word; *p != '\0'; p++) {
++        if (lexer->lookahead != *p) {
++            return false;
++        }
++        advance(lexer);
++    }
++    return !is_block_word_char(lexer->lookahead);
++}
++
++// Consume up to and including the next line break. Returns false at the end
++// of the input.
++static inline bool skip_block_comment_line(TSLexer *lexer) {
++    for (;;) {
++        if (lexer->eof(lexer)) {
++            return false;
++        }
++        if (lexer->lookahead == '\n') {
++            advance(lexer);
++            return true;
++        }
++        if (lexer->lookahead == '\r') {
++            advance(lexer);
++            if (lexer->lookahead == '\n') {
++                advance(lexer);
++            }
++            return true;
++        }
++        advance(lexer);
++    }
++}
++
++// Read a `=begin ... =end` comment starting at `=`. The caller checks that
++// the scan position holds the first text of a line.
++static inline bool scan_block_comment(TSLexer *lexer) {
++    if (!scan_block_marker_word(lexer, "=begin")) {
++        return false;
++    }
++    // Rest of the `=begin` line.
++    if (!skip_block_comment_line(lexer)) {
++        return false;
++    }
++    // Later lines.
++    for (;;) {
++        if (lexer->eof(lexer)) {
++            return false;
++        }
++        if (scan_block_marker_word(lexer, "=end")) {
++            if (lexer->eof(lexer) || lexer->lookahead == '\n' || lexer->lookahead == '\r' ||
++                lexer->lookahead == ' ' || lexer->lookahead == '\t' || lexer->lookahead == '\f' ||
++                lexer->lookahead == '\v') {
++                // Trailing text on the `=end` line is part of the comment.
++                while (!lexer->eof(lexer) && lexer->lookahead != '\n' && lexer->lookahead != '\r') {
++                    advance(lexer);
++                }
++                lexer->mark_end(lexer);
++                lexer->result_symbol = BLOCK_COMMENT;
++                return true;
++            }
++        }
++        // Finish this line. A failed `=end` match above already consumed the
++        // line's first characters; continue after them.
++        if (!skip_block_comment_line(lexer)) {
++            return false;
++        }
++    }
++}
+ static inline bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
+     scanner->has_leading_whitespace = false;
+ 
+@@ -856,6 +934,14 @@
+         return true;
+     }
+ 
++    // A `=begin ... =end` comment starts only at the first text of a line.
++    if (valid_symbols[BLOCK_COMMENT] && lexer->lookahead == '=' && lexer->get_column(lexer) == 0) {
++        if (scan_block_comment(lexer)) {
++            return true;
++        }
++        return false;
++    }
++
+     switch (lexer->lookahead) {
+         case '&':
+             if (valid_symbols[BLOCK_AMPERSAND]) {

@@ -205,7 +205,7 @@ fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     let name = child_by_field(n, "name")?;
     let annotations = annotation_names(cx, n);
     let in_trait = matches!(
-        cx.containers.last(),
+        cx.innermost_container(),
         Some(Container::Trait { public: true })
     );
     let public = has_keyword(n, "public") || (in_trait && !has_keyword(n, "private"));
@@ -512,25 +512,50 @@ fn switch_label_arm(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<WildcardArm> {
     })
 }
 
-fn first_arg_is_literal(n: Node<'_>) -> bool {
-    arguments_of(n)
-        .first()
-        .is_some_and(|first| first.kind() == "string_literal")
-}
-
 fn dynamic_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
     if n.kind() != "method_invocation" {
         return None;
     }
     let name = text(cx, child_by_field(n, "name")?);
     let on_class = child_by_field(n, "object").is_some_and(|object| text(cx, object) == "Class");
-    let reflective = (name == "forName" && on_class) || REFLECTION.contains(&name);
-    (reflective && !first_arg_is_literal(n)).then_some("reflection by name")
+    if !((name == "forName" && on_class) || REFLECTION.contains(&name)) {
+        return None;
+    }
+    let args = child_by_field(n, "arguments")?;
+    let mut cursor = args.walk();
+    let first = args
+        .named_children(&mut cursor)
+        .find(|child| !COMMENTS.contains(&child.kind()))?;
+    (first.kind() != "string_literal").then_some("reflection by name")
+}
+
+fn string_valued(n: Node<'_>) -> bool {
+    let mut pending = vec![n];
+    while let Some(current) = pending.pop() {
+        match current.kind() {
+            "string_literal" => return true,
+            "parenthesized_expression" => pending.extend(named_children(current)),
+            "binary_expression"
+                if child_by_field(current, "operator").is_some_and(|op| op.kind() == "+") =>
+            {
+                pending.extend(
+                    [
+                        child_by_field(current, "left"),
+                        child_by_field(current, "right"),
+                    ]
+                    .into_iter()
+                    .flatten(),
+                );
+            }
+            _ => {}
+        }
+    }
+    false
 }
 
 fn equality_has_message(args: &[Node<'_>]) -> bool {
     match args {
-        [_, _, third] => !numeric_literal(*third),
+        [first, _, third] => !numeric_literal(*third) || string_valued(*first),
         [_, _, _, _, ..] => true,
         _ => false,
     }

@@ -1,0 +1,179 @@
+diff --git a/grammar.js b/grammar.js
+index 513f485..03b910e 100644
+--- a/grammar.js
++++ b/grammar.js
+@@ -52,6 +52,7 @@ module.exports = grammar({
+     [$.redirected_statement, $.command_substitution],
+     [$.function_definition, $.command_name],
+     [$.pipeline],
++    [$.redirected_statement, $.list, $.command],
+   ],
+ 
+   inline: $ => [
+@@ -182,10 +183,15 @@ module.exports = grammar({
+     redirected_statement: $ => prec.dynamic(-1, prec.right(-1, choice(
+       seq(
+         field('body', $._statement),
+-        field('redirect', choice(
+-          repeat1(choice(
++        field('redirect', seq(
++          choice(
+             $.file_redirect,
+             $.heredoc_redirect,
++          ),
++          repeat(choice(
++            $.file_redirect,
++            $.heredoc_redirect,
++            $.herestring_redirect,
+           )),
+         )),
+       ),
+@@ -193,18 +199,33 @@ module.exports = grammar({
+         field('body', choice($.if_statement, $.while_statement)),
+         $.herestring_redirect,
+       ),
++      // A lone assignment followed by redirects, e.g. `x+=y 2>/dev/null`. The
++      // higher precedence makes this win over reducing the assignment into
++      // `command`, which would then lack its required name.
++      prec(1, seq(
++        field('body', $.variable_assignment),
++        field('redirect', repeat1(choice(
++          $.file_redirect,
++          $.heredoc_redirect,
++          $.herestring_redirect,
++        ))),
++      )),
+       field('redirect', repeat1($._redirect)),
+       $.herestring_redirect,
+     ))),
+ 
++    // Without an `in` list, `do` may follow the variable directly: `for x do`.
+     for_statement: $ => seq(
+       choice('for', 'select'),
+       field('variable', $._simple_variable_name),
+-      optional(seq(
+-        'in',
+-        field('value', repeat1($._literal)),
+-      )),
+-      $._terminator,
++      choice(
++        seq(
++          'in',
++          field('value', repeat1($._literal)),
++          $._terminator,
++        ),
++        optional($._terminator),
++      ),
+       field('body', $.do_group),
+     ),
+ 
+@@ -529,7 +550,7 @@ module.exports = grammar({
+       field('descriptor', optional($.file_descriptor)),
+       choice(
+         seq(
+-          choice('<', '>', '>>', '&>', '&>>', '<&', '>&', '>|'),
++          choice('<', '>', '>>', '&>', '&>>', '<&', '>&', '>|', '<>'),
+           field('destination', repeat1($._literal)),
+         ),
+         seq(
+@@ -547,15 +568,21 @@ module.exports = grammar({
+         alias($._heredoc_pipeline, $.pipeline),
+         seq(
+           field('redirect', repeat1($._redirect)),
+-          optional($._heredoc_expression),
++          optional(choice($._heredoc_expression, $._heredoc_operator_eol)),
+         ),
+         $._heredoc_expression,
+         $._heredoc_command,
++        // An operator that ends the opener line takes its right side after the
++        // heredoc body, as the next statement. A right side on the next line
++        // would otherwise be read from the body text.
++        $._heredoc_operator_eol,
+       )),
+       /\n/,
+       choice($._heredoc_body, $._simple_heredoc_body),
+     ),
+ 
++    _heredoc_operator_eol: $ => field('operator', choice('&&', '||')),
++
+     _heredoc_pipeline: $ => seq(
+       choice('|', '|&'),
+       $._statement,
+@@ -860,7 +887,7 @@ module.exports = grammar({
+     number: $ => choice(
+       /-?(0x)?[0-9]+(#[0-9A-Za-z@_]+)?/,
+       // the base can be an expansion or command substitution
+-      seq(/-?(0x)?[0-9]+#/, choice($.expansion, $.command_substitution)),
++      seq(/-?(0x)?[0-9]+#/, choice($.expansion, $.simple_expansion, $.command_substitution)),
+     ),
+ 
+     simple_expansion: $ => seq(
+@@ -1095,8 +1122,10 @@ module.exports = grammar({
+       $.extglob_pattern,
+       seq(
+         $.extglob_pattern,
+-        choice($.string, $.expansion, $.command_substitution),
+-        optional($.extglob_pattern),
++        repeat1(seq(
++          choice($.string, $.raw_string, $.expansion, $.command_substitution),
++          optional($.extglob_pattern),
++        )),
+       ),
+     ),
+ 
+diff --git a/src/scanner.c b/src/scanner.c
+index 0c3430a..b46ceb6 100644
+--- a/src/scanner.c
++++ b/src/scanner.c
+@@ -348,6 +348,14 @@ static bool scan_heredoc_content(Scanner *scanner, TSLexer *lexer, enum TokenTyp
+ 
+ static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
+     if (valid_symbols[CONCAT] && !in_error_recovery(valid_symbols)) {
++        // Inside `${...}` a `)` after an expansion is part of the word, as in
++        // "${2:+(from $2)}". CLOSING_BRACE is valid only while the expansion can
++        // end, the same signal the whitespace rule below uses. The closing paren
++        // is then read as an expansion word.
++        if (lexer->lookahead == ')' && valid_symbols[CLOSING_BRACE] && !valid_symbols[EXPANSION_WORD]) {
++            lexer->result_symbol = CONCAT;
++            return true;
++        }
+         if (!(lexer->lookahead == 0 || iswspace(lexer->lookahead) || lexer->lookahead == '>' ||
+               lexer->lookahead == '<' || lexer->lookahead == ')' || lexer->lookahead == '(' ||
+               lexer->lookahead == ';' || lexer->lookahead == '&' || lexer->lookahead == '|' ||
+@@ -725,6 +733,13 @@ regex:
+                         lexer->mark_end(lexer);
+                     }
+                 }
++                // Outside `${...}`, an unnested newline ends the command, so a plain regex
++                // (e.g. after a bare `==` argument) must not run on to a later closer.
++                if (lexer->lookahead == '\n' && valid_symbols[REGEX] && !valid_symbols[CLOSING_BRACE] &&
++                    !state.in_single_quote && state.paren_depth == 0 && state.bracket_depth == 0 &&
++                    state.brace_depth == 0) {
++                    return false;
++                }
+                 switch (lexer->lookahead) {
+                     case '\\':
+                         state.last_was_escape = true;
+@@ -1033,7 +1048,9 @@ extglob_pattern:
+                         scanner->last_glob_paren_depth = 0;
+                         return state.saw_non_alphadot;
+                     }
+-                    if (lexer->lookahead == '"') {
++                    if (lexer->lookahead == '"' || lexer->lookahead == '\'') {
++                        // A quote starts a quoted chunk. Its content may hold
++                        // whitespace, so end the pattern before the quote.
+                         lexer->mark_end(lexer);
+                         lexer->result_symbol = EXTGLOB_PATTERN;
+                         scanner->last_glob_paren_depth = 0;
+@@ -1046,6 +1063,11 @@ extglob_pattern:
+                         advance(lexer);
+                         if (iswspace(lexer->lookahead) || lexer->lookahead == '"') {
+                             advance(lexer);
++                        } else if (lexer->lookahead == '\'') {
++                            // An escaped quote is an ordinary pattern character, not a
++                            // quoted chunk, so consume it here as before.
++                            advance(lexer);
++                            lexer->mark_end(lexer);
+                         }
+                     } else {
+                         if (!iswalpha(lexer->lookahead) && lexer->lookahead != '.' && lexer->lookahead != '\\') {

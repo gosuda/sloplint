@@ -1,0 +1,194 @@
+==================
+NS_ASSUME_NONNULL around an interface
+==================
+
+NS_ASSUME_NONNULL_BEGIN
+
+@interface WindowController : NSWindowController
+
+@end
+
+NS_ASSUME_NONNULL_END
+
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    (identifier)))
+
+==================
+NS_ASSUME_NONNULL_END inside an interface
+==================
+
+@interface SDImageFramePool : NSObject
+
+- (void)removeAllFrames;
+
+NS_ASSUME_NONNULL_END
+
+@end
+
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    (identifier)
+    (method_declaration
+      (method_type
+        (type_name
+          (primitive_type)))
+      (identifier))))
+
+==================
+Swift actor annotations before an interface
+==================
+
+NS_SWIFT_NONISOLATED
+@interface SDAnimatedImage : UIImage
+
+@end
+
+NS_SWIFT_UI_ACTOR
+@interface SDAnimatedImageView : UIImageView
+
+@end
+
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    (identifier))
+  (class_interface
+    (identifier)
+    (identifier)))
+
+==================
+Stacked trailing availability attributes on a property
+==================
+
+@interface SDWebImageTransition : NSObject
+
+@property (nonatomic, strong, nullable) CAMediaTimingFunction *timingFunction API_UNAVAILABLE(ios, tvos, watchos) API_DEPRECATED("Use SDWebImageAnimationOptions instead", macos(10.10, 10.10));
+
+@end
+
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    (identifier)
+    (property_declaration
+      (property_attributes_declaration
+        (property_attribute
+          (identifier))
+        (property_attribute
+          (identifier))
+        (property_attribute
+          (identifier)))
+      (struct_declaration
+        (type_identifier)
+        (struct_declarator
+          (pointer_declarator
+            (identifier)))
+        (availability_attribute_specifier
+          (version
+            (platform))
+          (version
+            (platform))
+          (version
+            (platform)))
+        (availability_attribute_specifier
+          (string_literal
+            (string_content))
+          (version
+            (platform)
+            (number_literal)
+            (number_literal)))))))
+
+==================
+API_DEPRECATED_WITH_REPLACEMENT on a method
+==================
+
+@interface UIView_WebCache : NSObject
+
+- (void)sd_cancelCurrentImageLoad API_DEPRECATED_WITH_REPLACEMENT("sd_cancelLatestImageLoad", macos(10.10, 10.10), ios(8.0, 8.0), tvos(9.0, 9.0), watchos(2.0, 2.0));
+
+@end
+
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    (identifier)
+    (method_declaration
+      (method_type
+        (type_name
+          (primitive_type)))
+      (identifier)
+      (availability_attribute_specifier
+        (string_literal
+          (string_content))
+        (version
+          (platform)
+          (number_literal)
+          (number_literal))
+        (version
+          (platform)
+          (number_literal)
+          (number_literal))
+        (version
+          (platform)
+          (number_literal)
+          (number_literal))
+        (version
+          (platform)
+          (number_literal)
+          (number_literal))))))
+
+==================
+API_AVAILABLE with version groups on a property
+==================
+
+@interface SDWebImageDownloader : NSObject
+
+@property (nonatomic, strong, nullable) NSURLSessionTaskMetrics *metrics API_AVAILABLE(macos(10.12), ios(10.0), watchos(3.0), tvos(10.0));
+
+@end
+
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    (identifier)
+    (property_declaration
+      (property_attributes_declaration
+        (property_attribute
+          (identifier))
+        (property_attribute
+          (identifier))
+        (property_attribute
+          (identifier)))
+      (struct_declaration
+        (type_identifier)
+        (struct_declarator
+          (pointer_declarator
+            (identifier)))
+        (availability_attribute_specifier
+          (version
+            (platform)
+            (number_literal))
+          (version
+            (platform)
+            (number_literal))
+          (version
+            (platform)
+            (number_literal))
+          (version
+            (platform)
+            (number_literal)))))))

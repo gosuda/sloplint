@@ -1,0 +1,51 @@
+========================================
+Complex types with the complex macro spelling
+========================================
+
+double complex z;
+float complex w;
+
+---
+
+(translation_unit
+  (declaration type: (primitive_type) (type_qualifier) declarator: (identifier))
+  (declaration type: (primitive_type) (type_qualifier) declarator: (identifier)))
+
+========================================
+Complex types with _Complex
+========================================
+
+float _Complex w;
+long double _Complex q;
+_Complex double v;
+complex double u;
+
+---
+
+(translation_unit
+  (declaration type: (primitive_type) (type_qualifier) declarator: (identifier))
+  (declaration type: (sized_type_specifier type: (primitive_type)) (type_qualifier) declarator: (identifier))
+  (declaration (type_qualifier) type: (primitive_type) declarator: (identifier))
+  (declaration (type_qualifier) type: (primitive_type) declarator: (identifier)))
+
+========================================
+Complex type in a typedef and a function parameter
+========================================
+
+typedef double complex c;
+double complex f(double complex x);
+
+---
+
+(translation_unit
+  (type_definition type: (primitive_type) (type_qualifier) declarator: (type_identifier))
+  (declaration
+    type: (primitive_type)
+    (type_qualifier)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          (type_qualifier)
+          declarator: (identifier))))))

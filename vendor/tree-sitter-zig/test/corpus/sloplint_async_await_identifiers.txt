@@ -1,0 +1,76 @@
+================================================================================
+async and await as field, tag and value identifiers
+================================================================================
+
+const UwTable = enum(u32) {
+    none,
+    sync,
+    async,
+    pub const default = UwTable.async;
+};
+
+const Io = struct {
+    async: *const fn (userdata: ?*anyopaque) void,
+    await: *const fn (userdata: ?*anyopaque) void,
+};
+
+const vtable = .{
+    .async = async,
+    .await = await,
+};
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (variable_declaration
+    (identifier)
+    (enum_declaration
+      (builtin_type)
+      (container_field
+        (identifier))
+      (container_field
+        (identifier))
+      (container_field
+        (identifier))
+      (variable_declaration
+        (identifier)
+        (field_expression
+          (identifier)
+          (identifier)))))
+  (variable_declaration
+    (identifier)
+    (struct_declaration
+      (container_field
+        (identifier)
+        (pointer_type
+          (function_signature
+            (parameters
+              (parameter
+                (identifier)
+                (nullable_type
+                  (pointer_type
+                    (builtin_type)))))
+            (builtin_type))))
+      (container_field
+        (identifier)
+        (pointer_type
+          (function_signature
+            (parameters
+              (parameter
+                (identifier)
+                (nullable_type
+                  (pointer_type
+                    (builtin_type)))))
+            (builtin_type))))))
+  (variable_declaration
+    (identifier)
+    (anonymous_struct_initializer
+      (initializer_list
+        (assignment_expression
+          (field_expression
+            (identifier))
+          (identifier))
+        (assignment_expression
+          (field_expression
+            (identifier))
+          (identifier))))))

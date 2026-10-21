@@ -1,0 +1,654 @@
+================================================================================
+Allows ref struct constraints
+================================================================================
+
+public interface I<T> where T : allows ref struct {}
+public interface J<T> where T : notnull, allows ref struct {}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (interface_declaration
+    (modifier)
+    (identifier)
+    (type_parameter_list
+      (type_parameter
+        (identifier)))
+    (type_parameter_constraints_clause
+      (identifier)
+      (type_parameter_constraint))
+    (declaration_list))
+  (interface_declaration
+    (modifier)
+    (identifier)
+    (type_parameter_list
+      (type_parameter
+        (identifier)))
+    (type_parameter_constraints_clause
+      (identifier)
+      (type_parameter_constraint)
+      (type_parameter_constraint))
+    (declaration_list)))
+
+================================================================================
+Ref partial struct declarations
+================================================================================
+
+public ref partial struct S1 {}
+public unsafe ref partial struct S2 {}
+internal ref partial struct S3 {}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (struct_declaration
+    (modifier)
+    (modifier)
+    (identifier)
+    (declaration_list))
+  (struct_declaration
+    (modifier)
+    (modifier)
+    (modifier)
+    (identifier)
+    (declaration_list))
+  (struct_declaration
+    (modifier)
+    (modifier)
+    (identifier)
+    (declaration_list)))
+
+================================================================================
+Pointer indirection over casts and arithmetic
+================================================================================
+
+using System;
+class C {
+  unsafe int M(IntPtr p, char* a, int i, byte* q, int* e0) {
+    int z = *(int*)p;
+    char c = *(a + i);
+    uint u = *(uint*)q;
+    int w = *q++;
+    return z + w + *(int*)&e0;
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (using_directive
+    (identifier))
+  (class_declaration
+    (identifier)
+    (declaration_list
+      (method_declaration
+        (modifier)
+        (predefined_type)
+        (identifier)
+        (parameter_list
+          (parameter
+            (identifier)
+            (identifier))
+          (parameter
+            (pointer_type
+              (predefined_type))
+            (identifier))
+          (parameter
+            (predefined_type)
+            (identifier))
+          (parameter
+            (pointer_type
+              (predefined_type))
+            (identifier))
+          (parameter
+            (pointer_type
+              (predefined_type))
+            (identifier)))
+        (block
+          (local_declaration_statement
+            (variable_declaration
+              (predefined_type)
+              (variable_declarator
+                (identifier)
+                (prefix_unary_expression
+                  (cast_expression
+                    (pointer_type
+                      (predefined_type))
+                    (identifier))))))
+          (local_declaration_statement
+            (variable_declaration
+              (predefined_type)
+              (variable_declarator
+                (identifier)
+                (prefix_unary_expression
+                  (parenthesized_expression
+                    (binary_expression
+                      (identifier)
+                      (identifier)))))))
+          (local_declaration_statement
+            (variable_declaration
+              (predefined_type)
+              (variable_declarator
+                (identifier)
+                (prefix_unary_expression
+                  (cast_expression
+                    (pointer_type
+                      (predefined_type))
+                    (identifier))))))
+          (local_declaration_statement
+            (variable_declaration
+              (predefined_type)
+              (variable_declarator
+                (identifier)
+                (postfix_unary_expression
+                  (prefix_unary_expression
+                    (identifier))))))
+          (return_statement
+            (binary_expression
+              (binary_expression
+                (identifier)
+                (identifier))
+              (prefix_unary_expression
+                (cast_expression
+                  (pointer_type
+                    (predefined_type))
+                  (prefix_unary_expression
+                    (identifier)))))))))))
+
+================================================================================
+Pointer indirection over calls and ref operands
+================================================================================
+
+using System;
+class C {
+  unsafe void M(byte* ptr, int pos, int off) {
+    ref byte r = ref *(ptr + pos + off);
+    int* q = GetP();
+    *q = 1;
+  }
+  unsafe static int* GetP() => null;
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (using_directive
+    (identifier))
+  (class_declaration
+    (identifier)
+    (declaration_list
+      (method_declaration
+        (modifier)
+        (predefined_type)
+        (identifier)
+        (parameter_list
+          (parameter
+            (pointer_type
+              (predefined_type))
+            (identifier))
+          (parameter
+            (predefined_type)
+            (identifier))
+          (parameter
+            (predefined_type)
+            (identifier)))
+        (block
+          (local_declaration_statement
+            (variable_declaration
+              (ref_type
+                (predefined_type))
+              (variable_declarator
+                (identifier)
+                (ref_expression
+                  (prefix_unary_expression
+                    (parenthesized_expression
+                      (binary_expression
+                        (binary_expression
+                          (identifier)
+                          (identifier))
+                        (identifier))))))))
+          (local_declaration_statement
+            (variable_declaration
+              (pointer_type
+                (predefined_type))
+              (variable_declarator
+                (identifier)
+                (invocation_expression
+                  (identifier)
+                  (argument_list)))))
+          (expression_statement
+            (assignment_expression
+              (prefix_unary_expression
+                (identifier))
+              (integer_literal)))))
+      (method_declaration
+        (modifier)
+        (modifier)
+        (pointer_type
+          (predefined_type))
+        (identifier)
+        (parameter_list)
+        (arrow_expression_clause
+          (null_literal))))))
+
+================================================================================
+Assignment to ref-returning calls
+================================================================================
+
+using System;
+class C {
+  static int _x;
+  static ref int GetRef() => ref _x;
+  void M() { GetRef() = 1; }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (using_directive
+    (identifier))
+  (class_declaration
+    (identifier)
+    (declaration_list
+      (field_declaration
+        (modifier)
+        (variable_declaration
+          (predefined_type)
+          (variable_declarator
+            (identifier))))
+      (method_declaration
+        (modifier)
+        (ref_type
+          (predefined_type))
+        (identifier)
+        (parameter_list)
+        (arrow_expression_clause
+          (ref_expression
+            (identifier))))
+      (method_declaration
+        (predefined_type)
+        (identifier)
+        (parameter_list)
+        (block
+          (expression_statement
+            (assignment_expression
+              (invocation_expression
+                (identifier)
+                (argument_list))
+              (integer_literal))))))))
+
+================================================================================
+Null-conditional and ref-conditional assignment
+================================================================================
+
+using System;
+class C {
+  public int X;
+  void M(C? c, int[]? a, int v, bool b, ref int x, ref int y) {
+    c?.X = v;
+    a?[0] = v;
+    (b ? ref x : ref y) = v;
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (using_directive
+    (identifier))
+  (class_declaration
+    (identifier)
+    (declaration_list
+      (field_declaration
+        (modifier)
+        (variable_declaration
+          (predefined_type)
+          (variable_declarator
+            (identifier))))
+      (method_declaration
+        (predefined_type)
+        (identifier)
+        (parameter_list
+          (parameter
+            (nullable_type
+              (identifier))
+            (identifier))
+          (parameter
+            (nullable_type
+              (array_type
+                (predefined_type)
+                (array_rank_specifier)))
+            (identifier))
+          (parameter
+            (predefined_type)
+            (identifier))
+          (parameter
+            (predefined_type)
+            (identifier))
+          (parameter
+            (modifier)
+            (predefined_type)
+            (identifier))
+          (parameter
+            (modifier)
+            (predefined_type)
+            (identifier)))
+        (block
+          (expression_statement
+            (assignment_expression
+              (conditional_access_expression
+                (identifier)
+                (member_binding_expression
+                  (identifier)))
+              (identifier)))
+          (expression_statement
+            (assignment_expression
+              (conditional_access_expression
+                (identifier)
+                (element_binding_expression
+                  (argument
+                    (integer_literal))))
+              (identifier)))
+          (expression_statement
+            (assignment_expression
+              (parenthesized_expression
+                (conditional_expression
+                  (identifier)
+                  (ref_expression
+                    (identifier))
+                  (ref_expression
+                    (identifier))))
+              (identifier))))))))
+
+================================================================================
+Contextual keywords as collection elements
+================================================================================
+
+using System;
+class C {
+  void M(object o, object method, Type type, string name) {
+    o.Invoke(null, [method]);
+    object[] arr = [type, name];
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (using_directive
+    (identifier))
+  (class_declaration
+    (identifier)
+    (declaration_list
+      (method_declaration
+        (predefined_type)
+        (identifier)
+        (parameter_list
+          (parameter
+            (predefined_type)
+            (identifier))
+          (parameter
+            (predefined_type)
+            (identifier))
+          (parameter
+            (identifier)
+            (identifier))
+          (parameter
+            (predefined_type)
+            (identifier)))
+        (block
+          (expression_statement
+            (invocation_expression
+              (member_access_expression
+                (identifier)
+                (identifier))
+              (argument_list
+                (argument
+                  (null_literal))
+                (argument
+                  (collection_expression
+                    (collection_element
+                      (expression_element
+                        (identifier))))))))
+          (local_declaration_statement
+            (variable_declaration
+              (array_type
+                (predefined_type)
+                (array_rank_specifier))
+              (variable_declarator
+                (identifier)
+                (collection_expression
+                  (collection_element
+                    (expression_element
+                      (identifier)))
+                  (collection_element
+                    (expression_element
+                      (identifier))))))))))))
+
+================================================================================
+Extension blocks
+================================================================================
+
+using System;
+static class P {
+  extension(float) {
+    public static bool IsF(float x) => x > 0;
+  }
+}
+struct V<T> {
+  extension<T>(V<T>) where T : struct {
+    public static int N() => 0;
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (using_directive
+    (identifier))
+  (class_declaration
+    (modifier)
+    (identifier)
+    (declaration_list
+      (extension_block
+        (predefined_type)
+        (declaration_list
+          (method_declaration
+            (modifier)
+            (modifier)
+            (predefined_type)
+            (identifier)
+            (parameter_list
+              (parameter
+                (predefined_type)
+                (identifier)))
+            (arrow_expression_clause
+              (binary_expression
+                (identifier)
+                (integer_literal))))))))
+  (struct_declaration
+    (identifier)
+    (type_parameter_list
+      (type_parameter
+        (identifier)))
+    (declaration_list
+      (extension_block
+        (type_parameter_list
+          (type_parameter
+            (identifier)))
+        (generic_name
+          (identifier)
+          (type_argument_list
+            (identifier)))
+        (type_parameter_constraints_clause
+          (identifier)
+          (type_parameter_constraint))
+        (declaration_list
+          (method_declaration
+            (modifier)
+            (modifier)
+            (predefined_type)
+            (identifier)
+            (parameter_list)
+            (arrow_expression_clause
+              (integer_literal))))))))
+
+================================================================================
+U+202F narrow no-break space as trivia
+================================================================================
+
+using System;
+class C {}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (using_directive
+    (identifier))
+  (class_declaration
+    (identifier)
+    (declaration_list)))
+
+================================================================================
+Unsafe destructors
+================================================================================
+
+using System;
+class C { unsafe ~C() {} }
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (using_directive
+    (identifier))
+  (class_declaration
+    (identifier)
+    (declaration_list
+      (destructor_declaration
+        (modifier)
+        (identifier)
+        (parameter_list)
+        (block)))))
+
+================================================================================
+Method bodies split across preproc branches
+================================================================================
+
+using System;
+class C {
+  void M()
+#if X
+  => A();
+#else
+  { B(); }
+#endif
+  void A() {}
+  void B() {}
+  public static bool P
+#if F
+  => true;
+#else
+  => false;
+#endif
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (using_directive
+    (identifier))
+  (class_declaration
+    (identifier)
+    (declaration_list
+      (method_declaration
+        (predefined_type)
+        (identifier)
+        (parameter_list)
+        (preproc_if
+          (identifier)
+          (arrow_expression_clause
+            (invocation_expression
+              (identifier)
+              (argument_list)))
+          (preproc_else
+            (block
+              (expression_statement
+                (invocation_expression
+                  (identifier)
+                  (argument_list)))))))
+      (method_declaration
+        (predefined_type)
+        (identifier)
+        (parameter_list)
+        (block))
+      (method_declaration
+        (predefined_type)
+        (identifier)
+        (parameter_list)
+        (block))
+      (property_declaration
+        (modifier)
+        (modifier)
+        (predefined_type)
+        (identifier)
+        (preproc_if
+          (identifier)
+          (arrow_expression_clause
+            (boolean_literal))
+          (preproc_else
+            (arrow_expression_clause
+              (boolean_literal))))))))
+
+================================================================================
+Const initializers and accessors split across preproc branches
+================================================================================
+
+using System;
+class C {
+  private const int N =
+#if M
+  10;
+#else
+  300;
+#endif
+  public ulong Q {
+#if B
+  get => 1;
+  set { }
+#else
+  get => 2;
+#endif
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (using_directive
+    (identifier))
+  (class_declaration
+    (identifier)
+    (declaration_list
+      (field_declaration
+        (modifier)
+        (modifier)
+        (predefined_type)
+        (identifier)
+        (preproc_if
+          (identifier)
+          (integer_literal)
+          (preproc_else
+            (integer_literal))))
+      (property_declaration
+        (modifier)
+        (predefined_type)
+        (identifier)
+        (accessor_list
+          (preproc_if
+            (identifier)
+            (arrow_expression_clause
+              (integer_literal))
+            (block)
+            (preproc_else
+              (arrow_expression_clause
+                (integer_literal)))))))))

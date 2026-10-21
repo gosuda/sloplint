@@ -65,14 +65,7 @@ fn ocaml_public(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
 }
 
 fn impl_bound(cx: &Cx<'_, '_>) -> bool {
-    cx.containers
-        .iter()
-        .rev()
-        .find_map(|c| match c {
-            Container::Impl { interface_bound } => Some(*interface_bound),
-            _ => None,
-        })
-        .unwrap_or(false)
+    cx.nearest_impl_interface_bound().unwrap_or(false)
 }
 
 fn is_parameter(c: &Node<'_>) -> bool {

@@ -1,0 +1,133 @@
+================================================================================
+Lifetime borrow self
+================================================================================
+
+struct S {
+  @_lifetime(borrow self)
+  func f() {}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (function_declaration
+        (modifiers
+          (attribute
+            (user_type
+              (type_identifier))
+            (self_expression)))
+        (simple_identifier)
+        (function_body)))))
+
+================================================================================
+Lifetime copy self
+================================================================================
+
+struct S {
+  @_lifetime(self: copy self)
+  func f() {}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (function_declaration
+        (modifiers
+          (attribute
+            (user_type
+              (type_identifier))
+            (self_expression)
+            (consume_expression
+              (self_expression))))
+        (simple_identifier)
+        (function_body)))))
+
+================================================================================
+Lifetime borrow other
+================================================================================
+
+struct S {
+  @_lifetime(borrow table)
+  func f(_ table: Int) {}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (function_declaration
+        (modifiers
+          (attribute
+            (user_type
+              (type_identifier))
+            (simple_identifier)))
+        (simple_identifier)
+        (parameter
+          (simple_identifier)
+          (simple_identifier)
+          (user_type
+            (type_identifier)))
+        (function_body)))))
+
+================================================================================
+Lifetime dependent borrow source
+================================================================================
+
+struct S {
+  @_lifetime(dependent: borrow source)
+  func f(_ source: Int) {}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (function_declaration
+        (modifiers
+          (attribute
+            (user_type
+              (type_identifier))
+            (simple_identifier)
+            (simple_identifier)))
+        (simple_identifier)
+        (parameter
+          (simple_identifier)
+          (simple_identifier)
+          (user_type
+            (type_identifier)))
+        (function_body)))))
+
+================================================================================
+Lifetime borrow address
+================================================================================
+
+struct S {
+  @_lifetime(&self)
+  func f() {}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (function_declaration
+        (modifiers
+          (attribute
+            (user_type
+              (type_identifier))
+            (prefix_expression
+              (self_expression))))
+        (simple_identifier)
+        (function_body)))))

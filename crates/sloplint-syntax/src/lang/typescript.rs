@@ -1,15 +1,19 @@
-use std::borrow::Cow;
-
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import,
-    ImportKind, Param, Pos, Stmt, TypeDef, WildcardArm,
+    AmbientKind, Assertion, Barrel, CallKind, FieldCopy, Handler, Import, Param, Pos, TypeDef,
+    WildcardArm,
 };
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    last_segment, named_children, narrow, pos_of, preceding_comments, string_arg_shape,
-    strip_quotes, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, has_child_kind,
+    named_children, pos_of, preceding_comments, strip_quotes, text,
+};
+pub(crate) mod calls;
+pub(crate) mod imports;
+
+use self::calls::{callee_root, ts_args, ts_declared, ts_root, ts_sole_call};
+use self::imports::{
+    catch_stmt, export_specs, export_stmt, heritage_impls, import_stmt, parent_dir, ts_targets,
 };
 use crate::spec::Role;
 
@@ -34,6 +38,9 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("new_expression", Role::NewCall),
     ("lexical_declaration", Role::Decl),
     ("variable_declaration", Role::Decl),
+    // sloplint: `using` bindings are immutable, so they declare a scope but never
+    // contribute mutable names; decl_names skips them like `const`.
+    ("using_declaration", Role::Decl),
     ("assignment_expression", Role::Write),
     ("augmented_assignment_expression", Role::Write),
     ("update_expression", Role::Write),
@@ -56,13 +63,15 @@ pub(crate) struct TypeScriptHooks;
 /// Shared hook table for the TypeScript and TSX grammars.
 pub(crate) static HOOKS: TypeScriptHooks = TypeScriptHooks;
 
-fn enclosing_class(cx: &Cx<'_, '_>) -> Option<(bool, bool)> {
-    cx.containers.iter().rev().find_map(|c| match c {
-        Container::Class {
-            exported,
-            implements,
-        } => Some((*exported, *implements)),
-        _ => None,
+fn class_member(member: Node<'_>) -> bool {
+    let Some(body) = member.parent().filter(|b| b.kind() == "class_body") else {
+        return false;
+    };
+    body.parent().is_some_and(|class| {
+        matches!(
+            class.kind(),
+            "class_declaration" | "abstract_class_declaration"
+        )
     })
 }
 
@@ -76,7 +85,15 @@ fn member_public(cx: &Cx<'_, '_>, n: Node<'_>, name_kind: &str) -> bool {
     }) {
         return false;
     }
-    enclosing_class(cx).is_some_and(|(exported, _)| exported)
+    class_member(n) && cx.nearest_class_exported().unwrap_or(false)
+}
+
+fn exported(cx: &Cx<'_, '_>, decl: Node<'_>, name: &str) -> bool {
+    match decl.parent().map(|p| p.kind()) {
+        Some("export_statement") => true,
+        Some("program") => cx.is_exported(name),
+        _ => false,
+    }
 }
 
 fn strip_ty(ty: &str) -> &str {
@@ -126,6 +143,13 @@ fn missing_of<'s>(params: &[Param<'s>], ret: Option<&'s str>, name: &str) -> Vec
     missing
 }
 
+fn top_level(n: Node<'_>) -> bool {
+    matches!(
+        n.parent().map(|parent| parent.kind()),
+        Some("program" | "export_statement")
+    )
+}
+
 fn doc_anchor(n: Node<'_>) -> Node<'_> {
     let mut anchor = n;
     while let Some(p) = anchor.parent() {
@@ -138,290 +162,6 @@ fn doc_anchor(n: Node<'_>) -> Node<'_> {
     anchor
 }
 
-fn ts_call_stmt(n: Node<'_>) -> Option<usize> {
-    let inner = match n.kind() {
-        "return_statement" | "expression_statement" => named_children(n).into_iter().next()?,
-        _ => return None,
-    };
-    let mut cur = inner;
-    loop {
-        if cur.kind() == "call_expression" {
-            return Some(cur.id());
-        }
-        if cur.kind() == "await_expression" {
-            cur = named_children(cur).into_iter().next()?;
-        } else {
-            return None;
-        }
-    }
-}
-
-fn ts_sole_call(body: Node<'_>) -> Option<usize> {
-    if body.kind() == "call_expression" {
-        return Some(body.id());
-    }
-    if body.kind() != "statement_block" {
-        return None;
-    }
-    let mut stmts = named_children(body)
-        .into_iter()
-        .filter(|c| c.kind() != "comment");
-    let only = stmts.next()?;
-    if stmts.next().is_some() {
-        return None;
-    }
-    ts_call_stmt(only)
-}
-
-fn ts_pat<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    let mut stack = vec![n];
-    while let Some(cur) = stack.pop() {
-        match cur.kind() {
-            "identifier" | "shorthand_property_identifier_pattern" => {
-                out.push((text(cx, cur), pos_of(cur)));
-            }
-            "object_pattern" | "array_pattern" | "rest_pattern" => {
-                stack.extend(named_children(cur));
-            }
-            "pair_pattern" => {
-                if let Some(v) = child_by_field(cur, "value") {
-                    stack.push(v);
-                }
-            }
-            "assignment_pattern" => {
-                if let Some(l) = child_by_field(cur, "left") {
-                    stack.push(l);
-                }
-            }
-            _ => {}
-        }
-    }
-}
-
-fn ts_declared<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<(&'s str, Pos)> {
-    let mut out = Vec::new();
-    for d in named_children(n) {
-        if d.kind() != "variable_declarator" {
-            continue;
-        }
-        if let Some(name) = child_by_field(d, "name") {
-            ts_pat(cx, name, &mut out);
-        }
-    }
-    out
-}
-
-fn ts_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    let mut cur = n;
-    loop {
-        match cur.kind() {
-            "identifier" | "this" => return Some((text(cx, cur), pos_of(cur))),
-            "member_expression" => cur = child_by_field(cur, "object")?,
-            "subscript_expression" => cur = child_by_field(cur, "object")?,
-            "parenthesized_expression" => cur = named_children(cur).into_iter().next()?,
-            _ => return None,
-        }
-    }
-}
-
-fn ts_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    match n.kind() {
-        "string" => string_arg_shape(cx, n, &["string_fragment"]),
-        "template_string" => string_arg_shape(cx, n, &["string_fragment"]),
-        "identifier" => ArgShape::Ident(text(cx, n)),
-        _ if binary_concat(cx, n, "+", &["string", "template_string"]) => ArgShape::Concat,
-        _ => ArgShape::Other,
-    }
-}
-
-fn ts_args<'s>(cx: &Cx<'_, 's>, args: Node<'_>) -> Vec<Arg<'s>> {
-    named_children(args)
-        .into_iter()
-        .map(|c| Arg {
-            shape: ts_shape(cx, c),
-            start_line: pos_of(c).line,
-            end_line: narrow(c.end_position().row) + 1,
-        })
-        .collect()
-}
-
-fn clause_imports<'s>(
-    cx: &Cx<'_, 's>,
-    clause: Node<'_>,
-    module: &'s str,
-    out: &mut Vec<Import<'s>>,
-) {
-    for c in named_children(clause) {
-        match c.kind() {
-            "identifier" => out.push(Import {
-                pos: pos_of(c),
-                module: Cow::Borrowed(module),
-                name: text(cx, c),
-                alias: None,
-                kind: ImportKind::Named,
-                in_test: cx.is_test_file,
-            }),
-            "named_imports" => import_specifiers(cx, c, module, out),
-            "namespace_import" => {
-                let name = named_children(c)
-                    .into_iter()
-                    .find(|g| g.kind() == "identifier")
-                    .map_or("", |g| text(cx, g));
-                out.push(Import {
-                    pos: pos_of(c),
-                    module: Cow::Borrowed(module),
-                    name,
-                    alias: None,
-                    kind: ImportKind::Namespace,
-                    in_test: cx.is_test_file,
-                });
-            }
-            _ => {}
-        }
-    }
-}
-
-fn import_specifiers<'s>(
-    cx: &Cx<'_, 's>,
-    list: Node<'_>,
-    module: &'s str,
-    out: &mut Vec<Import<'s>>,
-) {
-    for spec in named_children(list) {
-        if spec.kind() != "import_specifier" {
-            continue;
-        }
-        let name = child_by_field(spec, "name").map_or("", |v| text(cx, v));
-        let alias = child_by_field(spec, "alias").map_or("", |v| text(cx, v));
-        out.push(Import {
-            pos: pos_of(spec),
-            module: Cow::Borrowed(module),
-            name,
-            alias: if alias.is_empty() || alias == name {
-                None
-            } else {
-                Some(alias)
-            },
-            kind: ImportKind::Named,
-            in_test: cx.is_test_file,
-        });
-    }
-}
-fn export_specs<'a, 's>(cx: &Cx<'_, 's>, clause: Node<'a>) -> Vec<(Node<'a>, &'s str, &'s str)> {
-    let mut specs = Vec::new();
-    for spec in named_children(clause) {
-        if spec.kind() != "export_specifier" {
-            continue;
-        }
-        let name = child_by_field(spec, "name").map_or("", |v| text(cx, v));
-        let alias = child_by_field(spec, "alias").map_or("", |v| text(cx, v));
-        specs.push((spec, name, alias));
-    }
-    specs
-}
-fn heritage_impls<'s>(cx: &Cx<'_, 's>, heritage: Node<'_>, out: &mut Vec<ImplRef<'s>>) -> bool {
-    let mut found = false;
-    for c in named_children(heritage) {
-        if c.kind() == "implements_clause" {
-            found = true;
-            for t in named_children(c) {
-                out.push(ts_impl(cx, t));
-            }
-        } else if c.kind() == "extends_clause" {
-            for v in named_children(c) {
-                if v.kind() == "type_arguments" {
-                    continue;
-                }
-                out.push(ts_impl(cx, v));
-            }
-        }
-    }
-    found
-}
-fn ts_impl<'s>(cx: &Cx<'_, 's>, t: Node<'_>) -> ImplRef<'s> {
-    let base = if t.kind() == "generic_type" {
-        child_by_field(t, "name").map_or("", |m| text(cx, m))
-    } else {
-        text(cx, t)
-    };
-    ImplRef {
-        name: last_segment(base, &[".", "::"]),
-        pos: pos_of(t),
-    }
-}
-
-fn catch_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: &str) -> Stmt<'s> {
-    if s.kind() == "throw_statement" {
-        return throw_of(cx, s, binding);
-    }
-    if s.kind() != "expression_statement" {
-        return Stmt::Other;
-    }
-    let Some(inner) = named_children(s).into_iter().next() else {
-        return Stmt::Other;
-    };
-    if inner.kind() == "call_expression" {
-        let callee = child_by_field(inner, "function").map_or("", |f| text(cx, f));
-        return Stmt::Call {
-            callee,
-            kind: CallKind::Plain,
-        };
-    }
-    if inner.kind() == "throw_statement" {
-        return throw_of(cx, inner, binding);
-    }
-    Stmt::Other
-}
-
-fn throw_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: &str) -> Stmt<'s> {
-    let hit = named_children(s)
-        .into_iter()
-        .next()
-        .is_some_and(|e| e.kind() == "identifier" && text(cx, e) == binding);
-    if hit { Stmt::Rethrow } else { Stmt::Other }
-}
-
-fn parent_dir(path: &str) -> &str {
-    path.rfind('/').map_or("", |i| &path[..i])
-}
-
-fn ts_targets(dir: &str, src: &str) -> Vec<String> {
-    if !src.starts_with("./") && !src.starts_with("../") {
-        return Vec::new();
-    }
-    let mut parts: Vec<&str> = dir.split('/').filter(|s| !s.is_empty()).collect();
-    let mut rest = src;
-    while let Some(next) = rest.strip_prefix("../") {
-        let _ = parts.pop();
-        rest = next;
-    }
-    rest = rest.strip_prefix("./").map_or(rest, |s| s);
-    let prefix = parts.join("/");
-    let join = |base: String| {
-        if prefix.is_empty() {
-            base
-        } else {
-            prefix.clone() + "/" + base.as_str()
-        }
-    };
-    let stem = rest
-        .strip_suffix(".jsx")
-        .or_else(|| rest.strip_suffix(".mjs"))
-        .or_else(|| rest.strip_suffix(".js"));
-    if let Some(stripped) = stem {
-        return vec![
-            join(stripped.to_owned() + ".ts"),
-            join(stripped.to_owned() + ".tsx"),
-        ];
-    }
-    vec![
-        join(rest.to_owned() + ".ts"),
-        join(rest.to_owned() + ".tsx"),
-        join(rest.to_owned() + "/index.ts"),
-        join(rest.to_owned() + "/index.tsx"),
-    ]
-}
-
 impl LangHooks for TypeScriptHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let body = child_by_field(n, "body")?;
@@ -429,7 +169,7 @@ impl LangHooks for TypeScriptHooks {
         let public = if n.kind() == "method_definition" {
             member_public(cx, n, name_node.kind())
         } else {
-            n.parent().is_some_and(|p| p.kind() == "export_statement")
+            exported(cx, n, text(cx, name_node))
         };
         let mut params = Vec::new();
         if let Some(list) = child_by_field(n, "parameters") {
@@ -443,7 +183,7 @@ impl LangHooks for TypeScriptHooks {
             name,
             name_pos: pos_of(name_node),
             public,
-            interface_bound: enclosing_class(cx).is_some_and(|(_, implements)| implements),
+            interface_bound: class_member(n) && cx.nearest_class_implements().unwrap_or(false),
             in_test: cx.is_test_file,
             params,
             return_type: ret,
@@ -469,7 +209,7 @@ impl LangHooks for TypeScriptHooks {
             if name_node.kind() != "identifier" {
                 return None;
             }
-            let public = grand.kind() == "export_statement";
+            let public = exported(cx, decl, text(cx, name_node));
             let mut params = Vec::new();
             closure_params(cx, n, &mut params);
             let body = child_by_field(n, "body")?;
@@ -516,7 +256,8 @@ impl LangHooks for TypeScriptHooks {
                 name,
                 name_pos: pos_of(name_node),
                 public: member_public(cx, parent, name_node.kind()),
-                interface_bound: enclosing_class(cx).is_some_and(|(_, implements)| implements),
+                interface_bound: class_member(parent)
+                    && cx.nearest_class_implements().unwrap_or(false),
                 in_test: cx.is_test_file,
                 params,
                 return_type: ret,
@@ -537,6 +278,9 @@ impl LangHooks for TypeScriptHooks {
         if n.kind() == "lexical_declaration"
             && !child_by_field(n, "kind").is_some_and(|k| text(cx, k) == "let")
         {
+            return;
+        }
+        if n.kind() == "using_declaration" {
             return;
         }
         out.extend(ts_declared(cx, n));
@@ -571,95 +315,42 @@ impl LangHooks for TypeScriptHooks {
         Some(CallHead {
             callee: text(cx, func),
             kind: CallKind::Plain,
-            callee_root: None,
+            callee_root: callee_root(cx, func),
             args,
         })
     }
 
     fn imports<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
         if n.kind() == "import_statement" {
-            let module = child_by_field(n, "source").map_or("", |s| strip_quotes(text(cx, s)));
-            let clause = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "import_clause");
-            match clause {
-                Some(clause) => clause_imports(cx, clause, module, out),
-                None => out.push(Import {
-                    pos: pos_of(n),
-                    module: Cow::Borrowed(module),
-                    name: "",
-                    alias: None,
-                    kind: ImportKind::SideEffect,
-                    in_test: cx.is_test_file,
-                }),
-            }
+            import_stmt(cx, n, out);
             return;
         }
         if n.kind() == "export_statement" {
-            let Some(src) = child_by_field(n, "source") else {
-                return;
-            };
-            let module = strip_quotes(text(cx, src));
-            if let Some(ns) = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "namespace_export")
+            export_stmt(cx, n, out);
+        }
+    }
+
+    fn exported_names<'s>(&self, root: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        for stmt in named_children(root) {
+            if stmt.kind() != "export_statement"
+                || child_by_field(stmt, "source").is_some()
+                || has_child_kind(stmt, "as")
             {
-                let name = named_children(ns)
-                    .into_iter()
-                    .find(|g| g.kind() == "identifier")
-                    .map_or("", |g| text(cx, g));
-                out.push(Import {
-                    pos: pos_of(ns),
-                    module: Cow::Borrowed(module),
-                    name,
-                    alias: None,
-                    kind: ImportKind::Namespace,
-                    in_test: cx.is_test_file,
-                });
-                return;
+                continue;
             }
-            let mut specs = Vec::new();
-            if let Some(clause) = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "export_clause")
-            {
-                specs = export_specs(cx, clause);
-            }
-            if specs.is_empty() {
-                let mut star = false;
-                for i in 0..n.child_count() {
-                    if let Some(c) = n.child(i)
-                        && !c.is_named()
-                        && text(cx, c) == "*"
-                    {
-                        star = true;
-                    }
+            for part in named_children(stmt) {
+                match part.kind() {
+                    "identifier" => out.push(text(cx, part)),
+                    // sloplint: the grammar gives the anonymous keyword `default` no named
+                    // node, so a bare `default` in an export list reads as an empty name.
+                    "export_clause" => out.extend(
+                        export_specs(cx, part)
+                            .iter()
+                            .map(|s| s.1)
+                            .filter(|name| !name.is_empty()),
+                    ),
+                    _ => {}
                 }
-                if star {
-                    out.push(Import {
-                        pos: pos_of(n),
-                        module: Cow::Borrowed(module),
-                        name: "*",
-                        alias: None,
-                        kind: ImportKind::Wildcard,
-                        in_test: cx.is_test_file,
-                    });
-                }
-                return;
-            }
-            for (spec, name, alias) in specs {
-                out.push(Import {
-                    pos: pos_of(spec),
-                    module: Cow::Borrowed(module),
-                    name,
-                    alias: if alias.is_empty() || alias == name {
-                        None
-                    } else {
-                        Some(alias)
-                    },
-                    kind: ImportKind::Named,
-                    in_test: cx.is_test_file,
-                });
             }
         }
     }
@@ -680,7 +371,7 @@ impl LangHooks for TypeScriptHooks {
                 has_impl = heritage_impls(cx, heritage, &mut impls);
             }
             container = Some(Container::Class {
-                exported: public,
+                exported: exported(cx, n, text(cx, name_node)),
                 implements: has_impl,
             });
         }
@@ -725,6 +416,9 @@ impl LangHooks for TypeScriptHooks {
         let body = child_by_field(n, "body")?;
         let mut stmts = Vec::new();
         for s in named_children(body) {
+            if s.kind() == "comment" {
+                continue;
+            }
             stmts.push(catch_stmt(cx, s, binding));
         }
         Some(Handler {
@@ -794,7 +488,7 @@ impl LangHooks for TypeScriptHooks {
             }
             return;
         }
-        if in_function {
+        if in_function || !top_level(n) {
             return;
         }
         if n.kind() == "lexical_declaration" || n.kind() == "variable_declaration" {

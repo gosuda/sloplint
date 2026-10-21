@@ -68,6 +68,10 @@ impl LangHooks for SwiftHooks {
         })
     }
 
+    fn untyped_throws(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+        first_of_kind(n, &["throws"]).is_some_and(|clause| trimmed(cx, clause) == "throws")
+    }
+
     fn is_else_if(&self, n: Node<'_>) -> bool {
         n.parent().is_some_and(|p| p.kind() == "if_statement")
     }
@@ -391,21 +395,33 @@ fn params<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Vec<Param<'s>> {
 }
 
 fn return_type<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
-    let mut children = (0..func.child_count()).filter_map(|i| func.child(i));
-    let arrow = children.find(|c| c.kind() == "->");
-    let throws = (0..func.child_count())
-        .filter_map(|i| func.child(i))
-        .find(|c| matches!(c.kind(), "throws" | "throws_clause"))
-        .filter(|throws| arrow.is_none_or(|arrow| throws.start_byte() < arrow.start_byte()));
-    match (arrow, children.next()) {
-        (Some(_), Some(ty)) if ty.is_named() => Some(slice(
-            cx.src,
-            throws.map_or(ty.start_byte(), |throws| throws.start_byte()),
-            ty.end_byte(),
-        )),
-        (None, _) => throws.map(|throws| trimmed(cx, throws)),
-        _ => None,
+    let count = func.child_count();
+    let mut arrow = None;
+    for index in 0..count {
+        if func.child(index).is_some_and(|child| child.kind() == "->") {
+            arrow = Some(index);
+            break;
+        }
     }
+    let arrow = arrow?;
+    let mut start = None;
+    let mut end = None;
+    for index in arrow + 1..count {
+        if !matches!(
+            func.field_name_for_child(index),
+            Some("return_type") | Some("name")
+        ) {
+            continue;
+        }
+        let Some(child) = func.child(index) else {
+            continue;
+        };
+        if start.is_none() {
+            start = Some(child.start_byte());
+        }
+        end = Some(child.end_byte());
+    }
+    Some(slice(cx.src, start?, end?))
 }
 
 fn param_type<'s>(cx: &Cx<'_, 's>, parameter: Node<'_>) -> Option<&'s str> {

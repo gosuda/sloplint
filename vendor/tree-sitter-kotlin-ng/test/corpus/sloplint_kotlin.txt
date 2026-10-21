@@ -1,0 +1,476 @@
+================================================================================
+context parameters on a declaration
+================================================================================
+
+context(x: String)
+fun f(): Int = 1
+
+---
+
+(source_file
+  (function_declaration
+    (context_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier))))
+    (identifier)
+    (function_value_parameters)
+    (user_type
+      (identifier))
+    (function_body
+      (number_literal))))
+
+================================================================================
+context parameters in a function type
+================================================================================
+
+fun g(block: context(String, Int) () -> Unit) {}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (function_type
+          (context_parameters
+            (user_type
+              (identifier))
+            (user_type
+              (identifier)))
+          (function_type_parameters)
+          (user_type
+            (identifier)))))
+    (function_body
+      (block))))
+
+================================================================================
+context receiver in a parenthesized function type
+================================================================================
+
+class S
+fun <R> g(b: (context(S) () -> R)): R = null as R
+
+---
+
+(source_file
+  (class_declaration
+    (identifier))
+  (function_declaration
+    (type_parameters
+      (type_parameter
+        (identifier)))
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (parenthesized_type
+          (function_type
+            (context_parameters
+              (user_type
+                (identifier)))
+            (function_type_parameters)
+            (user_type
+              (identifier))))))
+    (user_type
+      (identifier))
+    (function_body
+      (as_expression
+        (identifier)
+        (user_type
+          (identifier))))))
+
+================================================================================
+suspend lambda bound to a value
+================================================================================
+
+fun f() {
+    val l = suspend { 1 }
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (lambda_literal
+            (number_literal)))))))
+
+================================================================================
+nullable callable reference
+================================================================================
+
+fun <A, B, R> m(a: A, b: B, t: (A, B) -> R): R = null as R
+fun g(a: String?, b: Int): String = m(a, b, String?::plus)
+
+---
+
+(source_file
+  (function_declaration
+    (type_parameters
+      (type_parameter
+        (identifier))
+      (type_parameter
+        (identifier))
+      (type_parameter
+        (identifier)))
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier)))
+      (parameter
+        (identifier)
+        (user_type
+          (identifier)))
+      (parameter
+        (identifier)
+        (function_type
+          (function_type_parameters
+            (user_type
+              (identifier))
+            (user_type
+              (identifier)))
+          (user_type
+            (identifier)))))
+    (user_type
+      (identifier))
+    (function_body
+      (as_expression
+        (identifier)
+        (user_type
+          (identifier)))))
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (nullable_type
+          (user_type
+            (identifier))))
+      (parameter
+        (identifier)
+        (user_type
+          (identifier))))
+    (user_type
+      (identifier))
+    (function_body
+      (call_expression
+        (identifier)
+        (value_arguments
+          (value_argument
+            (identifier))
+          (value_argument
+            (identifier))
+          (value_argument
+            (navigation_expression
+              (identifier)
+              (identifier))))))))
+
+================================================================================
+callable reference statement after a local function
+================================================================================
+
+fun h() {}
+fun f() {
+    fun g() {}
+    ::h.toString()
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block)))
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (function_declaration
+          (identifier)
+          (function_value_parameters)
+          (function_body
+            (block)))
+        (call_expression
+          (navigation_expression
+            (callable_reference
+              (identifier))
+            (identifier))
+          (value_arguments))))))
+
+================================================================================
+five-quote raw string closer
+================================================================================
+
+fun f(): String {
+    val s = """ab"""""
+    return s
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (user_type
+      (identifier))
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (multiline_string_literal
+            (string_content)))
+        (return_expression
+          (identifier))))))
+
+================================================================================
+escaped quote before a five-quote closer
+================================================================================
+
+fun f(): String {
+    val s = """a"\"""""
+    return s
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (user_type
+      (identifier))
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (multiline_string_literal
+            (string_content)))
+        (return_expression
+          (identifier))))))
+
+================================================================================
+double-dollar string
+================================================================================
+
+fun f(): String = $$"hello"
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (user_type
+      (identifier))
+    (function_body
+      (string_literal
+        (string_content)))))
+
+================================================================================
+double-dollar multiline string
+================================================================================
+
+fun f(): String = $$"""
+content
+"""
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (user_type
+      (identifier))
+    (function_body
+      (multiline_string_literal
+        (string_content)))))
+
+================================================================================
+enum entry named enum
+================================================================================
+
+enum class E {
+    exclusiveMinimum,
+    enum,
+    id
+}
+
+---
+
+(source_file
+  (class_declaration
+    (modifiers
+      (class_modifier))
+    (identifier)
+    (enum_class_body
+      (enum_entry
+        (identifier))
+      (enum_entry
+        (identifier))
+      (enum_entry
+        (identifier)))))
+
+================================================================================
+when entry with an is guard
+================================================================================
+
+fun f(e: Exception): Int = when (e) {
+    is RuntimeException if e.message != null -> 1
+    else -> 2
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier))))
+    (user_type
+      (identifier))
+    (function_body
+      (when_expression
+        (when_subject
+          (identifier))
+        (when_entry
+          (type_test
+            (user_type
+              (identifier)))
+          (binary_expression
+            (navigation_expression
+              (identifier)
+              (identifier))
+            (identifier))
+          (number_literal))
+        (when_entry
+          (number_literal))))))
+
+================================================================================
+get call with a trailing lambda after a value
+================================================================================
+
+fun get(s: String, h: () -> Unit) {}
+fun f() {
+    val m = 1
+    get("/x") {
+    }
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier)))
+      (parameter
+        (identifier)
+        (function_type
+          (function_type_parameters)
+          (user_type
+            (identifier)))))
+    (function_body
+      (block)))
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (number_literal))
+        (call_expression
+          (call_expression
+            (identifier)
+            (value_arguments
+              (value_argument
+                (string_literal
+                  (string_content)))))
+          (annotated_lambda
+            (lambda_literal)))))))
+
+================================================================================
+set call with nested call arguments after a value
+================================================================================
+
+fun set(a: String, b: Int) {}
+fun g(s: String): Int = 1
+fun f() {
+    val s = "d"
+    set(s, g(s))
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier)))
+      (parameter
+        (identifier)
+        (user_type
+          (identifier))))
+    (function_body
+      (block)))
+  (function_declaration
+    (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (user_type
+          (identifier))))
+    (user_type
+      (identifier))
+    (function_body
+      (number_literal)))
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (string_literal
+            (string_content)))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier))
+            (value_argument
+              (call_expression
+                (identifier)
+                (value_arguments
+                  (value_argument
+                    (identifier)))))))))))

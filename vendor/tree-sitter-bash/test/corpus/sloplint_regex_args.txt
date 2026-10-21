@@ -1,0 +1,62 @@
+================================================================================
+Bare double-equals word before a later closer
+================================================================================
+
+echo == Loading $f
+echo "[$k, $e) from"
+
+--------------------------------------------------------------------------------
+
+(program
+  (command
+    (command_name
+      (word))
+    (word)
+    (simple_expansion
+      (variable_name)))
+  (command
+    (command_name
+      (word))
+    (string
+      (string_content)
+      (simple_expansion
+        (variable_name))
+      (string_content)
+      (simple_expansion
+        (variable_name))
+      (string_content))))
+
+================================================================================
+Double-equals test argument
+================================================================================
+
+test $a == b* && x
+
+--------------------------------------------------------------------------------
+
+(program
+  (list
+    (command
+      (command_name
+        (word))
+      (simple_expansion
+        (variable_name))
+      (word))
+    (command
+      (command_name
+        (word)))))
+
+================================================================================
+Regex test with grouping
+================================================================================
+
+[[ $x =~ a(b c) ]]
+
+--------------------------------------------------------------------------------
+
+(program
+  (test_command
+    (binary_expression
+      (simple_expansion
+        (variable_name))
+      (regex))))

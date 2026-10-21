@@ -1,0 +1,255 @@
+================================================================================
+Single line comments
+================================================================================
+
+// comment 1
+// comment 2
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (comment)
+  (comment))
+
+================================================================================
+Block comments
+================================================================================
+/**/
+/** comment 1
+ * /* comment 2
+ *  /* / * * /comment 3 */
+ // comment 4
+ * @param
+ *  */
+*/
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (block_comment)
+  (block_comment))
+
+================================================================================
+Single line comments with block comment
+================================================================================
+
+// /*
+//  * This is awesome comment
+// */
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (comment)
+  (comment)
+  (comment))
+
+================================================================================
+Block comment with single-line comment inside
+================================================================================
+
+/* // */
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (block_comment))
+
+================================================================================
+Using directives
+================================================================================
+
+//> using jvm graalvm:21
+//> using scala 3.3.0
+//> using dep foo:bar:1,2,3,url=https://github.com
+//> using exclude "examples/*" "*/resources/*"
+// > just a comment
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (comment
+    (using_directive
+      (using_directive_key)
+      (using_directive_value)))
+  (comment
+    (using_directive
+      (using_directive_key)
+      (using_directive_value)))
+  (comment
+    (using_directive
+      (using_directive_key)
+      (using_directive_value)))
+  (comment
+    (using_directive
+      (using_directive_key)
+      (using_directive_value)))
+  (comment))
+
+================================================================================
+A `//>` comment that is not a using directive
+================================================================================
+
+//> res0: Int = 1
+//>usingScala 3
+// > using foo bar
+class A
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (comment)
+  (comment)
+  (comment)
+  (class_definition
+    name: (identifier)))
+
+================================================================================
+Shebang
+================================================================================
+
+#!/usr/bin/env -S scala-cli shebang -S 3
+
+"shebang"
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (comment)
+  (string))
+
+================================================================================
+Shebang: Scala 2 script header ending in !#
+================================================================================
+
+#!/bin/sh
+exec scala "$0" "$@"
+!#
+
+"script body"
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (comment)
+  (string))
+
+================================================================================
+An operator ends where a comment begins
+================================================================================
+
+object Test:
+  val a = 1 +/*c*/ 2
+  def m = ???//c
+  val b = x \/ y
+  val Int_/ : Int = 1
+  def setter_=/*c*/(v: Int): Unit = ()
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    name: (identifier)
+    body: (template_body
+      (val_definition
+        pattern: (identifier)
+        value: (infix_expression
+          left: (integer_literal)
+          operator: (operator_identifier)
+          (block_comment)
+          right: (integer_literal)))
+      (function_definition
+        name: (identifier)
+        body: (operator_identifier))
+      (comment)
+      (val_definition
+        pattern: (identifier)
+        value: (infix_expression
+          left: (identifier)
+          operator: (operator_identifier)
+          right: (identifier)))
+      (val_definition
+        pattern: (identifier)
+        type: (type_identifier)
+        value: (integer_literal))
+      (function_definition
+        name: (identifier)
+        (block_comment)
+        parameters: (parameters
+          (parameter
+            name: (identifier)
+            type: (type_identifier)))
+        return_type: (type_identifier)
+        body: (unit)))))
+
+================================================================================
+An operator ending in a slash, one per precedence class
+================================================================================
+
+object Test:
+  val v0 = x |/ y
+  val v1 = x ^/ y
+  val v2 = x &/ y
+  val v3 = x !/ y
+  val v4 = x </ y
+  val v5 = x :/ y
+  val v6 = x +/ y
+  val v7 = x %/ y
+  val v8 = x \/ y
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    name: (identifier)
+    body: (template_body
+      (val_definition
+        pattern: (identifier)
+        value: (infix_expression
+          left: (identifier)
+          operator: (operator_identifier)
+          right: (identifier)))
+      (val_definition
+        pattern: (identifier)
+        value: (infix_expression
+          left: (identifier)
+          operator: (operator_identifier)
+          right: (identifier)))
+      (val_definition
+        pattern: (identifier)
+        value: (infix_expression
+          left: (identifier)
+          operator: (operator_identifier)
+          right: (identifier)))
+      (val_definition
+        pattern: (identifier)
+        value: (infix_expression
+          left: (identifier)
+          operator: (operator_identifier)
+          right: (identifier)))
+      (val_definition
+        pattern: (identifier)
+        value: (infix_expression
+          left: (identifier)
+          operator: (operator_identifier)
+          right: (identifier)))
+      (val_definition
+        pattern: (identifier)
+        value: (infix_expression
+          left: (identifier)
+          operator: (operator_identifier)
+          right: (identifier)))
+      (val_definition
+        pattern: (identifier)
+        value: (infix_expression
+          left: (identifier)
+          operator: (operator_identifier)
+          right: (identifier)))
+      (val_definition
+        pattern: (identifier)
+        value: (infix_expression
+          left: (identifier)
+          operator: (operator_identifier)
+          right: (identifier)))
+      (val_definition
+        pattern: (identifier)
+        value: (infix_expression
+          left: (identifier)
+          operator: (operator_identifier)
+          right: (identifier))))))

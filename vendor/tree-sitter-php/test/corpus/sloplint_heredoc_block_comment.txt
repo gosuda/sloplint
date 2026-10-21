@@ -1,0 +1,48 @@
+==========================
+Heredoc body with an opening tag and a multi-line block comment
+==========================
+
+<?php
+$x = <<<EOF
+<?php
+/*
+line1
+line2
+line3
+line4
+line5
+line6
+line7
+line8
+line9
+line10
+*/
+trailing
+EOF;
+
+---
+
+(program
+  (php_tag)
+  (expression_statement
+    (assignment_expression
+      (variable_name
+        (name))
+      (heredoc
+        (heredoc_start)
+        (heredoc_body
+          (string_content)
+          (string_content)
+          (string_content)
+          (string_content)
+          (string_content)
+          (string_content)
+          (string_content)
+          (string_content)
+          (string_content)
+          (string_content)
+          (string_content)
+          (string_content)
+          (string_content)
+          (string_content))
+        (heredoc_end)))))

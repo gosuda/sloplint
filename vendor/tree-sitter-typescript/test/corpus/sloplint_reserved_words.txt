@@ -1,0 +1,174 @@
+=======================================
+Reserved words after optional chaining
+=======================================
+
+a?.delete(b);
+m?.class;
+m?.a.delete(1);
+m?.[0];
+m?.(x);
+A?.<B>();
+
+---
+
+(program
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (identifier)
+        optional_chain: (optional_chain)
+        property: (property_identifier))
+      arguments: (arguments
+        (identifier))))
+  (expression_statement
+    (member_expression
+      object: (identifier)
+      optional_chain: (optional_chain)
+      property: (property_identifier)))
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (member_expression
+          object: (identifier)
+          optional_chain: (optional_chain)
+          property: (property_identifier))
+        property: (property_identifier))
+      arguments: (arguments
+        (number))))
+  (expression_statement
+    (subscript_expression
+      object: (identifier)
+      optional_chain: (optional_chain)
+      index: (number)))
+  (expression_statement
+    (call_expression
+      function: (identifier)
+      arguments: (arguments
+        (identifier))))
+  (expression_statement
+    (call_expression
+      function: (identifier)
+      type_arguments: (type_arguments
+        (type_identifier))
+      arguments: (arguments))))
+
+=======================================
+Reserved words as property names in type queries
+=======================================
+
+type A = import('x').default;
+type B = typeof Map.prototype.delete;
+let c: typeof Promise.prototype.finally;
+
+---
+
+(program
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (member_expression
+      object: (call_expression
+        function: (import)
+        arguments: (arguments
+          (string
+            (string_fragment))))
+      property: (property_identifier)))
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (type_query
+      (member_expression
+        object: (member_expression
+          object: (identifier)
+          property: (property_identifier))
+        property: (property_identifier))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      type: (type_annotation
+        (type_query
+          (member_expression
+            object: (member_expression
+              object: (identifier)
+              property: (property_identifier))
+            property: (property_identifier)))))))
+
+=======================================
+Reserved words as export and import names
+=======================================
+
+export { a as null, b as function, c as instanceof };
+export { function, default } from "./x";
+import { instanceof as x } from "./y";
+
+---
+
+(program
+  (export_statement
+    (export_clause
+      (export_specifier
+        name: (identifier)
+        alias: (identifier))
+      (export_specifier
+        name: (identifier)
+        alias: (identifier))
+      (export_specifier
+        name: (identifier)
+        alias: (identifier))))
+  (export_statement
+    (export_clause
+      (export_specifier
+        name: (identifier))
+      (export_specifier))
+    source: (string
+      (string_fragment)))
+  (import_statement
+    (import_clause
+      (named_imports
+        (import_specifier
+          name: (identifier)
+          alias: (identifier))))
+    source: (string
+      (string_fragment))))
+
+=======================================
+Of as a variable name
+=======================================
+
+for (var of;;) {}
+var of = 1;
+
+---
+
+(program
+  (for_statement
+    initializer: (variable_declaration
+      (variable_declarator
+        name: (identifier)))
+    condition: (empty_statement)
+    body: (statement_block))
+  (variable_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (number))))
+
+=======================================
+Super as an object in type queries
+=======================================
+
+interface M {
+  [keys: typeof super.foo]: string;
+}
+
+---
+
+(program
+  (interface_declaration
+    name: (type_identifier)
+    body: (interface_body
+      (index_signature
+        name: (identifier)
+        index_type: (type_query
+          (member_expression
+            object: (super)
+            property: (property_identifier)))
+        type: (type_annotation
+          (predefined_type))))))

@@ -1,0 +1,41 @@
+==================
+Dictionary unpacking in a dictionary comprehension
+==================
+
+{**x for x in y if z}
+---
+
+(module
+  (expression_statement
+    (dictionary_comprehension
+      (dictionary_splat
+        (identifier))
+      (for_in_clause
+        (identifier)
+        (identifier))
+      (if_clause
+        (identifier)))))
+
+==================
+Starred set and list comprehension bodies
+==================
+
+{*x for x in y}
+[*x for x in y]
+---
+
+(module
+  (expression_statement
+    (set_comprehension
+      (list_splat
+        (identifier))
+      (for_in_clause
+        (identifier)
+        (identifier))))
+  (expression_statement
+    (list_comprehension
+      (list_splat
+        (identifier))
+      (for_in_clause
+        (identifier)
+        (identifier)))))

@@ -1,0 +1,155 @@
+==================
+block comment with =end in the middle of a line
+==================
+
+=begin
+this has =end with spaces after it
+=end
+puts 1
+
+---
+
+(program
+  (comment)
+  (call
+    method: (identifier)
+    arguments: (argument_list
+      (integer))))
+
+==================
+block comment with an indented =end line
+==================
+
+=begin
+  =end
+=end
+puts 1
+
+---
+
+(program
+  (comment)
+  (call
+    method: (identifier)
+    arguments: (argument_list
+      (integer))))
+
+==================
+block comment with a line that starts with =end and a letter
+==================
+
+=begin
+=endpoint
+=ends here
+=end
+puts 1
+
+---
+
+(program
+  (comment)
+  (call
+    method: (identifier)
+    arguments: (argument_list
+      (integer))))
+
+==================
+block comment with lines that start with a prefix of =end
+==================
+
+=begin
+=
+=e
+=en
+==end
+=x
+=end
+puts 1
+
+---
+
+(program
+  (comment)
+  (call
+    method: (identifier)
+    arguments: (argument_list
+      (integer))))
+
+==================
+block comment closed by =end and text
+==================
+
+=begin some title
+body
+=end trailing text
+puts 1
+
+---
+
+(program
+  (comment)
+  (call
+    method: (identifier)
+    arguments: (argument_list
+      (integer))))
+
+==================
+block comment with nothing inside
+==================
+
+=begin
+=end
+puts 1
+
+---
+
+(program
+  (comment)
+  (call
+    method: (identifier)
+    arguments: (argument_list
+      (integer))))
+
+==================
+block comment before a method keeps its place
+==================
+
+def a
+  1
+end
+=begin
+doc with =end in the text
+=end
+def b
+  2
+end
+
+---
+
+(program
+  (method
+    name: (identifier)
+    body: (body_statement
+      (integer)))
+  (comment)
+  (method
+    name: (identifier)
+    body: (body_statement
+      (integer))))
+
+==================
+block comment without a closing =end
+:error
+==================
+
+=begin
+foo
+puts 1
+
+---
+
+(program
+  (ERROR
+    (identifier)
+    (identifier)
+    (integer)))

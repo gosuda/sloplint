@@ -12,6 +12,10 @@ use crate::hooks::{
     named_children, narrow, pos_of, preceding_comments, slice, string_arg_shape, strip_quotes,
     text,
 };
+use crate::lang::c_family::{
+    self, angles, collect_fragments, flat, in_function, inner, pair_source, plain_assert, root_of,
+    span, word,
+};
 use crate::spec::Role;
 
 /// Role table for Objective-C.
@@ -105,9 +109,14 @@ impl LangHooks for ObjcHooks {
             "message_expression" => {
                 let callee = first_selector(cx, n)?;
                 let receiver = child_by_field(n, "receiver");
+                let mut cursor = n.walk();
+                let mut selectors = n.children_by_field_name("method", &mut cursor).peekable();
                 let mut args = Vec::new();
                 for c in named_children(n) {
-                    if Some(c) == receiver || c.kind() == "comment" {
+                    if Some(c) == receiver
+                        || c.kind() == "comment"
+                        || selectors.next_if_eq(&c).is_some()
+                    {
                         continue;
                     }
                     args.push(mk_arg(cx, c));
@@ -299,41 +308,8 @@ impl LangHooks for ObjcHooks {
         })
     }
 }
-fn flat(t: &str) -> String {
-    t.chars().filter(|c| !c.is_whitespace()).collect()
-}
-fn angles(t: &str) -> &str {
-    t.strip_prefix('<')
-        .unwrap_or(t)
-        .strip_suffix('>')
-        .unwrap_or(t)
-}
-fn word<'s>(cx: &Cx<'_, 's>, n: Node<'_>, kinds: &[&str], words: &[&str]) -> bool {
-    named_children(n)
-        .iter()
-        .any(|c| kinds.contains(&c.kind()) && words.contains(&text(cx, *c)))
-}
-fn inner(n: Node<'_>) -> Option<Node<'_>> {
-    child_by_field(n, "declarator").or_else(|| named_children(n).into_iter().next())
-}
 fn unwrap(n: Node<'_>) -> Node<'_> {
-    let mut current = n;
-    loop {
-        if !WRAP.contains(&current.kind()) {
-            break;
-        }
-        let Some(found) = inner(current) else {
-            break;
-        };
-        current = found;
-    }
-    current
-}
-fn leaf(n: Node<'_>) -> Node<'_> {
-    unwrap(match n.kind() {
-        "init_declarator" => child_by_field(n, "declarator").unwrap_or(n),
-        _ => n,
-    })
+    c_family::unwrap(n, WRAP)
 }
 fn c_function<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     let body = child_by_field(n, "body")?;
@@ -361,14 +337,6 @@ fn func_parts(n: Node<'_>) -> Option<(Node<'_>, Node<'_>)> {
     let name = unwrap(child_by_field(fd, "declarator")?);
     (name.kind() == "identifier").then_some((fd, name))
 }
-fn span<'s>(cx: &Cx<'_, 's>, ty: Node<'_>, end: Node<'_>) -> &'s str {
-    let shown = slice(cx.src, ty.start_byte(), end.start_byte()).trim();
-    if !shown.is_empty() {
-        shown
-    } else {
-        text(cx, ty)
-    }
-}
 fn c_params<'s>(cx: &Cx<'_, 's>, fd: Node<'_>) -> Vec<Param<'s>> {
     let mut out = Vec::new();
     let Some(list) = child_by_field(fd, "parameters") else {
@@ -384,15 +352,18 @@ fn c_params<'s>(cx: &Cx<'_, 's>, fd: Node<'_>) -> Vec<Param<'s>> {
     }
     out
 }
+fn param_target(d: Node<'_>) -> (Option<Node<'_>>, bool) {
+    c_family::param_target(d, WRAP)
+}
 fn c_param<'s>(cx: &Cx<'_, 's>, p: Node<'_>) -> Option<Param<'s>> {
     let ty_node = child_by_field(p, "type")?;
-    let named = child_by_field(p, "declarator")
-        .map(unwrap)
-        .filter(|l| l.kind() == "identifier");
+    let declarator = child_by_field(p, "declarator");
+    let (named, callable) = declarator.map_or((None, false), param_target);
     let name = named.map(|l| text(cx, l)).unwrap_or("");
-    let ty = match named {
-        Some(found) => span(cx, ty_node, found),
-        None => text(cx, ty_node),
+    let ty = match (named, declarator) {
+        (Some(found), _) if !callable => span(cx, ty_node, found),
+        (_, Some(d)) => slice(cx.src, p.start_byte(), d.end_byte()),
+        (_, None) => text(cx, ty_node),
     };
     if name.is_empty() && ty == "void" {
         return None;
@@ -528,38 +499,7 @@ fn sole_call(body: Node<'_>, kinds: &[&str]) -> Option<usize> {
     kinds.contains(&expr.kind()).then_some(expr.id())
 }
 fn decl_info<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> (Vec<(&'s str, Pos)>, bool) {
-    let mut cursor = n.walk();
-    let ds: Vec<Node<'_>> = n
-        .children_by_field_name("declarator", &mut cursor)
-        .collect();
-    let mut out = Vec::new();
-    let mut func = false;
-    for d in ds {
-        let found = leaf(d);
-        if found.kind() == "function_declarator" {
-            func = true;
-        } else if found.kind() == "identifier" {
-            out.push((text(cx, found), pos_of(found)));
-        }
-    }
-    (out, func)
-}
-fn root_of<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    let mut current = n;
-    loop {
-        match current.kind() {
-            "identifier" => return Some((text(cx, current), pos_of(current))),
-            "field_expression" | "subscript_expression" | "pointer_expression" => {
-                let next = child_by_field(current, "argument")?;
-                current = next
-            }
-            "parenthesized_expression" => {
-                let next = named_children(current).into_iter().next()?;
-                current = next
-            }
-            _ => return None,
-        }
-    }
+    c_family::decl_info(cx, n, WRAP)
 }
 fn msg_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     let mut current = n;
@@ -635,15 +575,6 @@ fn concat_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         longest_static: longest_static_chunk(&segments),
     }
 }
-fn collect_fragments<'s>(cx: &Cx<'_, 's>, n: Node<'_>, kinds: &[&str], out: &mut Vec<&'s str>) {
-    for i in 0..n.child_count() {
-        if let Some(found) = n.child(i)
-            && kinds.contains(&found.kind())
-        {
-            out.push(text(cx, found));
-        }
-    }
-}
 fn push_include<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
     let Some(path) = child_by_field(n, "path") else {
         return;
@@ -674,16 +605,6 @@ fn push_module<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
         kind: ImportKind::SideEffect,
         in_test: cx.is_test_file,
     });
-}
-fn in_function(n: Node<'_>) -> bool {
-    let mut parent = n.parent();
-    while let Some(found) = parent {
-        if found.kind() == "function_definition" {
-            return true;
-        }
-        parent = found.parent();
-    }
-    false
 }
 fn tag_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     child_by_field(n, "body")?;
@@ -823,39 +744,6 @@ fn call_stmt<'s>(cx: &Cx<'_, 's>, expr: Option<Node<'_>>) -> Stmt<'s> {
         kind: CallKind::Plain,
     }
 }
-fn pair_source<'s>(cx: &Cx<'_, 's>, pair: Node<'_>) -> Option<&'s str> {
-    if pair.kind() != "initializer_pair" {
-        return None;
-    }
-    let value = child_by_field(pair, "value")?;
-    if value.kind() != "field_expression" {
-        return None;
-    }
-    let designator = designator_of(cx, pair)?;
-    let field = child_by_field(value, "field")?;
-    if designator != text(cx, field) {
-        return None;
-    }
-    let arg = child_by_field(value, "argument")?;
-    if arg.kind() != "identifier" {
-        return None;
-    }
-    Some(text(cx, arg))
-}
-fn designator_of<'s>(cx: &Cx<'_, 's>, pair: Node<'_>) -> Option<&'s str> {
-    for c in named_children(pair) {
-        if c.kind() == "field_designator" {
-            let found = named_children(c)
-                .into_iter()
-                .find(|d| d.kind() == "field_identifier")?;
-            return Some(text(cx, found));
-        }
-        if c.kind() == "field_identifier" {
-            return Some(text(cx, c));
-        }
-    }
-    None
-}
 fn global_ambient<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
     if word(cx, n, &["type_qualifier"], &["const"]) {
         return;
@@ -872,13 +760,7 @@ fn global_ambient<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, 
     }
 }
 fn env_ambient<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
-    let Some(func) = child_by_field(n, "function") else {
-        return;
-    };
-    let raw = text(cx, func);
-    if ENVS.contains(&flat(raw).as_str()) {
-        out.push((AmbientKind::EnvRead, raw, pos_of(n)));
-    }
+    c_family::env_ambient(cx, n, out, ENVS)
 }
 fn dot_env<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     let field = child_by_field(n, "field")?;
@@ -901,35 +783,4 @@ fn msg_env<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     let receiver = child_by_field(n, "receiver")?;
     let raw = flat(text(cx, receiver));
     (raw == "[NSProcessInfoprocessInfo]").then_some((text(cx, n), pos_of(n)))
-}
-fn bin_op<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
-    if n.child_count() != 3 {
-        return None;
-    }
-    n.child(1).map(|op| text(cx, op))
-}
-fn first_arg(n: Node<'_>) -> Option<Node<'_>> {
-    child_by_field(n, "arguments").and_then(|a| {
-        named_children(a)
-            .into_iter()
-            .find(|c| c.kind() != "comment")
-    })
-}
-fn plain_assert(cx: &Cx<'_, '_>, n: Node<'_>) -> Assertion {
-    let arg = first_arg(n).filter(|a| a.kind() == "binary_expression");
-    let mut has_message = false;
-    let mut comparison = false;
-    if let Some(found) = arg {
-        let op = bin_op(cx, found).unwrap_or("");
-        if op == "&&" {
-            has_message =
-                child_by_field(found, "right").is_some_and(|r| r.kind() == "string_literal");
-        }
-        comparison = op == "==" || op == "!=";
-    }
-    Assertion {
-        pos: pos_of(n),
-        has_message,
-        comparison,
-    }
 }

@@ -156,14 +156,20 @@ fn is_protocol_method(name: &str) -> bool {
             | "respond_to_missing?"
     )
 }
+fn superclass_name<'s>(cx: &Cx<'_, 's>, class: Node<'_>) -> Option<(&'s str, Pos)> {
+    let sup = child_by_field(class, "superclass")?;
+    let base = named_children(sup).into_iter().next()?;
+    Some((last_segment(text(cx, base), &["::"]), pos_of(sup)))
+}
 fn ruby_in_test<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     if cx.is_test_file {
         return true;
     }
     let mut current = n.parent();
     while let Some(parent) = current {
-        if parent.kind() == "superclass" {
-            return matches!(last_segment(text(cx, parent), &["::"]), "Test" | "TestCase");
+        if parent.kind() == "class" {
+            return superclass_name(cx, parent)
+                .is_some_and(|(name, _)| matches!(name, "Test" | "TestCase"));
         }
         current = parent.parent();
     }
@@ -192,7 +198,7 @@ fn ruby_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
                 ty: None,
                 bool_default: false,
             }),
-            "optional_parameter" => {
+            "optional_parameter" | "keyword_parameter" => {
                 let name = field_text(cx, child, "name").unwrap_or("");
                 let default = child_by_field(child, "value")
                     .map(|v| trimmed(cx, v))
@@ -417,7 +423,7 @@ fn ruby_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, binding: &str) -> Stmt<'s> {
 }
 fn pair_key<'s>(cx: &Cx<'_, 's>, key: Node<'_>) -> Option<&'s str> {
     match key.kind() {
-        "hash_key_symbol" => text(cx, key).strip_suffix(':'),
+        "hash_key_symbol" => Some(text(cx, key)),
         "simple_symbol" => text(cx, key).strip_prefix(':'),
         "string" => Some(strip_quotes(text(cx, key))),
         _ => None,
@@ -492,7 +498,8 @@ fn minitest_arity(method: &str) -> Option<usize> {
     Some(match base {
         "operator" | "compare" => 3,
         "equal" | "not_equal" | "same" | "not_same" | "includes" | "not_includes" | "match"
-        | "no_match" | "in_delta" | "in_epsilon" => 2,
+        | "no_match" | "in_delta" | "in_epsilon" | "kind_of" | "not_kind_of" | "instance_of"
+        | "not_instance_of" | "respond_to" | "not_respond_to" | "predicate" | "not_predicate" => 2,
         _ => 1,
     })
 }
@@ -600,11 +607,8 @@ impl LangHooks for RubyHooks {
         }
         let name_node = child_by_field(n, "name")?;
         let mut impls = Vec::new();
-        if let Some(sup) = child_by_field(n, "superclass") {
-            impls.push(ImplRef {
-                name: last_segment(text(cx, sup), &["::"]),
-                pos: pos_of(sup),
-            });
+        if let Some((name, pos)) = superclass_name(cx, n) {
+            impls.push(ImplRef { name, pos });
         }
         collect_mixins(cx, n, &mut impls);
         Some(TypeHead {
@@ -655,7 +659,12 @@ impl LangHooks for RubyHooks {
                 let binding = child_by_field(n, "variable")
                     .map(|v| strip_arrow(text(cx, v)))
                     .unwrap_or("");
-                let body = child_by_field(n, "body")?;
+                let Some(body) = child_by_field(n, "body") else {
+                    return Some(Handler {
+                        pos: pos_of(n),
+                        stmts: Vec::new(),
+                    });
+                };
                 let then_body = body.kind() == "then" || body.kind() == "body_statement";
                 let kids: Vec<Node<'_>> = if then_body {
                     named_children(body)

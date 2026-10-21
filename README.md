@@ -21,7 +21,7 @@ sloplint works from syntax alone: tree-sitter parses each file and per-language 
 
 ## Install
 
-Install from source using the commands below. There is no GitHub release yet; registry installation is not the supported setup path.
+Install from source using the commands below. Registry installation is not the supported setup path.
 
 Prerequisites: Git, [rustup](https://rustup.rs/), and a C/C++ toolchain for the target platform (the tree-sitter parsers and scanners compile native sources). The checked-in `rust-toolchain.toml` pins Rust 1.99.1, which `cargo` selects automatically.
 
@@ -29,7 +29,15 @@ The release workflow builds binaries for Windows, macOS, and Linux on x86_64 and
 
 sloplint uses the platform default allocator on every target. It includes no custom allocator.
 
-CI builds and tests these targets; see [.github/workflows/ci.yml](.github/workflows/ci.yml).
+CI builds and tests these targets and runs `sloplint check crates --strictness standard --mode threshold --fail-on deny` on each; see [.github/workflows/ci.yml](.github/workflows/ci.yml).
+
+Releases are cut by pushing a `vMAJOR.MINOR.PATCH` tag equal to the `sloplint` package version; none has been published yet. The release workflow checks the tag against the package version, runs the full CI workflow on the tagged commit, smoke-tests each binary (`--version` equals the tag and `check crates --strictness standard --mode threshold --fail-on deny` passes), and uploads `sloplint-<tag>-<target>.tar.gz|zip` with its `.sha256` file.
+
+Build jobs run without release credentials and hand archives off through workflow artifacts. Publication verifies that the artifact set holds exactly the expected archives and checksums with valid digests and member lists, re-resolves the tag to the built commit before creating or updating the release, and is rerunnable: identical assets are left alone, differing assets fail, and incomplete or missing assets are only repaired on draft releases; published releases are never modified.
+
+Every archive is attested with GitHub artifact attestations, and attestations are verified before publication. Each `.sha256` file detects corrupted downloads; it sits next to the archive, so it is not a trust anchor. To verify provenance: `gh attestation verify <archive> --repo OWNER/REPO --signer-workflow OWNER/REPO/.github/workflows/release.yml`. Releases require a public repository (artifact attestations).
+
+The workflow generates one CycloneDX 1.5 SBOM per target (`sloplint-<tag>-<target>.cdx.json`), attests it alongside the archives, and verifies it before publication. Each release holds the archives, their `.sha256` files, and the SBOMs.
 
 From source, using the checked-in toolchain pin (Rust 1.99.1):
 
@@ -54,13 +62,27 @@ This Bash example creates a new project. In an existing project, run `sloplint i
 
 Exit code `0` means the gate passed: the run can still list `warn` findings below `fail_on` (default `deny`). `1` means at least one reported finding is at or above `fail_on`; `2` means usage or config error; `3` means an I/O error stopped the run.
 
+An unreadable source file stops the run with exit `3` and reports its path and cause. Oversized, generated, and non-UTF-8 source files remain counted skips.
+
 ## Features
 
-- **complexity/**: cognitive depth, nesting depth, mutable-statement spans, nested mutation, boolean params, import fan-out.
-- **grep/**: generic names, homonym definitions across files, renamed and wildcard imports, runtime-built symbols, non-literal log messages, multiline arguments.
-- **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors, single-implementation abstractions, barrel files, field-copy literals.
+- **complexity/**: nesting-weighted cognitive depth, nesting depth, mutable-statement spans, nested mutation, boolean params, import fan-out.
+- **grep/**: generic names, homonym definitions across files, renamed and wildcard imports, runtime-built symbols (Java reflection calls require a non-literal first argument), non-literal log messages, multiline arguments.
+- **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors (error propagation such as Zig `try` and Odin `or_return` is not a handler), single-implementation abstractions (Rust, TypeScript including TSX, JavaScript, Python, Kotlin, Scala, Swift, Zig, C++, Java, C#, Dart; Ruby, PHP, and Go excluded), barrel files (wherever adapters emit barrel facts, including Dart and OCaml; PHP emits none), field-copy literals.
 - **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
 - **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs.
+
+For Zig catches, Go `if err != nil` blocks, Ruby `rescue` clauses, TypeScript `catch` clauses, and Rust `Err` match arms and `if let Err` guards, `slop/zombie-catch` treats an empty or comment-only body as a handler with no statements, distinct from an unchanged rethrow. Rust arms with a match or `if` guard are not handlers. An `Err` arm that only rethrows is excluded when an earlier arm's pattern may match `Err`. Returning a recovery value does not count as swallowing the error.
+
+Dart mutation rules track assignments, member and index writes, and prefix and postfix increments.
+
+PowerShell pass-through checks match variable arguments to declared parameter names without the `$` sigil. A second call or an assignment prevents a wrapper finding.
+
+Zig pass-through checks read declared parameters and exclude bodies with multiple calls.
+
+`meta/parse-error` is Warn in every profile, so a default `deny` gate still passes files with syntax errors reported as warnings; configure the rule as Deny or use `--fail-on warn` to fail on them. An empty `project.languages` list is valid and selects no languages, so no files are analyzed.
+
+A `.h` file can hold C, C++, or Objective-C, so sloplint parses it as C first. If the C parse has a syntax error, sloplint parses the file again as C++ and then as Objective-C. The first tree with no error wins, so a header that both grammars accept is C++. If every parse fails, the file reports the `meta/parse-error` position of the C parse, and no other file type gets a second parse. A header that parsed as C++ or Objective-C gets the rules of that language, so its `[languages.cpp]` or `[languages.objc]` log callees apply. The file stays a C file for `project.languages`, so `languages = ["cpp"]` or `["objc"]` does not select it.
 
 ## Usage
 
@@ -71,13 +93,19 @@ Exit code `0` means the gate passed: the run can still list `warn` findings belo
 | `sloplint check [PATHS]` | Lint files (bare `sloplint` is the same) |
 | `sloplint baseline` | Freeze current findings into the baseline file |
 | `sloplint rules [ID]` | Show effective rule settings for the active profile |
-| `sloplint init` | Write a `sloplint.toml` with every default spelled out |
+| `sloplint init` | Write a starter `sloplint.toml`; use `sloplint rules` for effective rule settings |
 
 `check` flags: `--format agent|human|json`, `--strictness`, `--mode threshold|ratchet`, `--fail-on warn|deny|never`, `--rule ID` (repeatable, `family/*` allowed), `--config FILE`, `--no-cache`, `--jobs N`.
+
+Unknown `--rule` selectors fail with exit 2 listing the valid rule ids.
 
 Every run analyzes the whole project root; `PATHS` only filters which findings are reported.
 
 ### Configuration
+
+`--config FILE` names a file that must exist; without `--config`, a missing `sloplint.toml` falls back to defaults.
+
+Rule option names and values are validated even when a rule is disabled or filtered out. An invalid threshold or unknown option fails with exit `2`; changing strictness cannot hide the error.
 
 ```toml
 [project]
@@ -97,7 +125,12 @@ sloplint baseline               # writes sloplint-baseline.json
 sloplint check --mode ratchet   # reports only findings absent from the baseline
 ```
 
-Baselines key findings by a fingerprint of rule, path, and normalized line; blank-line shifts do not re-report them.
+Baselines key findings by a fingerprint of rule, path, and normalized line; blank-line shifts do not re-report them. Line-local findings normalize the finding's source line, while whole-file findings carry a stable empty context, so a changed first line does not change their identity.
+Unused-suppression findings retain separate identities, so baselining one does not hide another added later.
+
+`project.baseline` is a path relative to the project root. Absolute paths, `..` escapes, and parent or leaf symlinks that resolve outside the root are rejected with an error and leave the outside target untouched; nested paths inside the root keep working.
+
+The cache lives in the per-user cache directory (`$XDG_CACHE_HOME` when absolute, else `~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`) under `sloplint/<hash of the project root>/cache-v2/shard-<NN>.bin` (files sharded by the first BLAKE3 byte of their path), never in the checkout: a repository could ship a forged cache, so the project's `.sloplint` is never read, migrated, or deleted. A run rewrites only the shards whose files changed. A `cache-v1.bin` left by an older release is neither read nor removed; delete it by hand to reclaim the space. An old `.sloplint` directory in the checkout is ignored. Directories are created private (`0700` on unix); a symlinked, non-directory, or group/other-writable cache directory, a cache directory inside the project root, a missing home, or an unreadable executable disables the cache with a warning instead of failing the run. `--no-cache` does no cache work. Invalid or mismatched cache contents fall back to fresh analysis.
 
 ### Custom rules
 
@@ -115,6 +148,10 @@ query = '''
   (#eq? @method "unwrap")) @match
 '''
 ```
+
+Files named by `project.custom_rule_files` load even when hidden or gitignored; source discovery keeps its usual filters.
+
+A custom rule runs on the tree that parsed. A `language = "cpp"` rule therefore applies to a `.h` file that parsed as C++ after a failed C parse.
 
 ### Suppressions
 

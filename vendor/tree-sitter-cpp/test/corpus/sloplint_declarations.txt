@@ -1,0 +1,333 @@
+==========================================
+Unnamed unscoped enum with a fixed underlying type
+==========================================
+
+enum : unsigned short { A = 2 };
+
+---
+
+(translation_unit
+  (enum_specifier
+    (sized_type_specifier)
+    (enumerator_list
+      (enumerator
+        (identifier)
+        (number_literal)))))
+
+==========================================
+Unnamed unscoped enum with an int base
+==========================================
+
+enum : int { B };
+
+---
+
+(translation_unit
+  (enum_specifier
+    (primitive_type)
+    (enumerator_list
+      (enumerator
+        (identifier)))))
+
+==========================================
+Named scoped enum with a base (control)
+==========================================
+
+enum class E : int { A };
+
+---
+
+(translation_unit
+  (enum_specifier
+    (type_identifier)
+    (primitive_type)
+    (enumerator_list
+      (enumerator
+        (identifier)))))
+
+==========================================
+Unnamed bit-fields
+==========================================
+
+struct S { unsigned : 0; int x; };
+struct T { int a : 3; int : 5; int b : 2; };
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (sized_type_specifier)
+        (bitfield_clause
+          (number_literal)))
+      (field_declaration
+        (primitive_type)
+        (field_identifier))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier)
+        (bitfield_clause
+          (number_literal)))
+      (field_declaration
+        (primitive_type)
+        (bitfield_clause
+          (number_literal)))
+      (field_declaration
+        (primitive_type)
+        (field_identifier)
+        (bitfield_clause
+          (number_literal))))))
+
+==========================================
+Bit-field with a braced default member initializer
+==========================================
+
+struct S { int m : 3 { 0 }; };
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier)
+        (bitfield_clause
+          (number_literal))
+        (initializer_list
+          (number_literal))))))
+
+==========================================
+Initializer with a call on member access
+==========================================
+
+struct V { const char *get_str() const; };
+void f(V v) {
+  const char *s(v.get_str());
+  const char &r(v.x);
+}
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (type_qualifier)
+        (primitive_type)
+        (pointer_declarator
+          (function_declarator
+            (field_identifier)
+            (parameter_list)
+            (type_qualifier))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (identifier))))
+    (compound_statement
+      (declaration
+        (type_qualifier)
+        (primitive_type)
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (argument_list
+            (call_expression
+              (field_expression
+                (identifier)
+                (field_identifier))
+              (argument_list)))))
+      (declaration
+        (type_qualifier)
+        (primitive_type)
+        (init_declarator
+          (reference_declarator
+            (identifier))
+          (argument_list
+            (field_expression
+              (identifier)
+              (field_identifier))))))))
+
+==========================================
+Explicit instantiation of a class template
+==========================================
+
+template <class T> struct C { T t; };
+template class C<int>;
+extern template class C<long>;
+template struct C<char>;
+
+---
+
+(translation_unit
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      (type_identifier)
+      (field_declaration_list
+        (field_declaration
+          (type_identifier)
+          (field_identifier)))))
+  (template_instantiation
+    (class_specifier
+      (template_type
+        (type_identifier)
+        (template_argument_list
+          (type_descriptor
+            (primitive_type))))))
+  (template_instantiation
+    (class_specifier
+      (template_type
+        (type_identifier)
+        (template_argument_list
+          (type_descriptor
+            (sized_type_specifier))))))
+  (template_instantiation
+    (struct_specifier
+      (template_type
+        (type_identifier)
+        (template_argument_list
+          (type_descriptor
+            (primitive_type)))))))
+
+==========================================
+Braced default argument
+==========================================
+
+void f(int x = {}) {}
+struct P { int a; int b; };
+void h(P p = {1, 2}, int y = {3}) {}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (primitive_type)
+          (identifier)
+          (initializer_list))))
+    (compound_statement))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier))
+      (field_declaration
+        (primitive_type)
+        (field_identifier))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (optional_parameter_declaration
+          (type_identifier)
+          (identifier)
+          (initializer_list
+            (number_literal)
+            (number_literal)))
+        (optional_parameter_declaration
+          (primitive_type)
+          (identifier)
+          (initializer_list
+            (number_literal)))))
+    (compound_statement)))
+
+==========================================
+Deleted free operator
+==========================================
+
+struct A {};
+struct B {};
+bool operator==(A a, B b) = delete;
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (operator_name)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (identifier))
+        (parameter_declaration
+          (type_identifier)
+          (identifier))))
+    (delete_method_clause)))
+
+==========================================
+Deleted and defaulted members and friends (control)
+==========================================
+
+struct D {
+  bool operator!=(const D &) const = delete;
+  D &operator=(const D &) = delete;
+  friend bool operator<(D, D) = default;
+};
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (function_definition
+        (primitive_type)
+        (function_declarator
+          (operator_name)
+          (parameter_list
+            (parameter_declaration
+              (type_qualifier)
+              (type_identifier)
+              (abstract_reference_declarator)))
+          (type_qualifier))
+        (delete_method_clause))
+      (function_definition
+        (type_identifier)
+        (reference_declarator
+          (function_declarator
+            (operator_name)
+            (parameter_list
+              (parameter_declaration
+                (type_qualifier)
+                (type_identifier)
+                (abstract_reference_declarator)))))
+        (delete_method_clause))
+      (friend_declaration
+        (declaration
+          (primitive_type)
+          (init_declarator
+            (function_declarator
+              (operator_name)
+              (parameter_list
+                (parameter_declaration
+                  (type_identifier))
+                (parameter_declaration
+                  (type_identifier))))
+            (identifier)))))))

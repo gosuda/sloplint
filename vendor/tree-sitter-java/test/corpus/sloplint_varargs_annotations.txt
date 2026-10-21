@@ -1,0 +1,219 @@
+================================================================================
+Annotations between the type and the ellipsis
+================================================================================
+
+void m1(String @N ... xs) {
+}
+
+void m2(@N Object @N ... a) {
+}
+
+void m5(int @N ... ns) {
+}
+
+void m6(String @A @B ... xs) {
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (method_declaration
+    (void_type)
+    (identifier)
+    (formal_parameters
+      (spread_parameter
+        (type_identifier)
+        (marker_annotation
+          (identifier))
+        (variable_declarator
+          (identifier))))
+    (block))
+  (method_declaration
+    (void_type)
+    (identifier)
+    (formal_parameters
+      (spread_parameter
+        (modifiers
+          (marker_annotation
+            (identifier)))
+        (type_identifier)
+        (marker_annotation
+          (identifier))
+        (variable_declarator
+          (identifier))))
+    (block))
+  (method_declaration
+    (void_type)
+    (identifier)
+    (formal_parameters
+      (spread_parameter
+        (integral_type)
+        (marker_annotation
+          (identifier))
+        (variable_declarator
+          (identifier))))
+    (block))
+  (method_declaration
+    (void_type)
+    (identifier)
+    (formal_parameters
+      (spread_parameter
+        (type_identifier)
+        (marker_annotation
+          (identifier))
+        (marker_annotation
+          (identifier))
+        (variable_declarator
+          (identifier))))
+    (block)))
+
+================================================================================
+Scoped and argument annotations before the ellipsis
+================================================================================
+
+void m3(String @Valid ... v) {
+}
+
+void m4(String @lib.Valid ... w) {
+}
+
+void m4b(String @V2("x") ... v) {
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (method_declaration
+    (void_type)
+    (identifier)
+    (formal_parameters
+      (spread_parameter
+        (type_identifier)
+        (marker_annotation
+          (identifier))
+        (variable_declarator
+          (identifier))))
+    (block))
+  (method_declaration
+    (void_type)
+    (identifier)
+    (formal_parameters
+      (spread_parameter
+        (type_identifier)
+        (marker_annotation
+          (scoped_identifier
+            (identifier)
+            (identifier)))
+        (variable_declarator
+          (identifier))))
+    (block))
+  (method_declaration
+    (void_type)
+    (identifier)
+    (formal_parameters
+      (spread_parameter
+        (type_identifier)
+        (annotation
+          (identifier)
+          (annotation_argument_list
+            (string_literal
+              (string_fragment))))
+        (variable_declarator
+          (identifier))))
+    (block)))
+
+================================================================================
+Annotations before the ellipsis in constructors and records
+================================================================================
+
+class C {
+  C(String @N ... xs) {
+  }
+}
+
+record R(String @N ... xs) {
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (class_declaration
+    (identifier)
+    (class_body
+      (constructor_declaration
+        (identifier)
+        (formal_parameters
+          (spread_parameter
+            (type_identifier)
+            (marker_annotation
+              (identifier))
+            (variable_declarator
+              (identifier))))
+        (constructor_body))))
+  (record_declaration
+    (identifier)
+    (formal_parameters
+      (spread_parameter
+        (type_identifier)
+        (marker_annotation
+          (identifier))
+        (variable_declarator
+          (identifier))))
+    (class_body)))
+
+================================================================================
+Varargs controls without pre-ellipsis annotations
+================================================================================
+
+void plain(String ... xs) {
+}
+
+void dims(String @N [] f) {
+}
+
+<T extends @N Object> T id(T x) {
+  return x;
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (method_declaration
+    (void_type)
+    (identifier)
+    (formal_parameters
+      (spread_parameter
+        (type_identifier)
+        (variable_declarator
+          (identifier))))
+    (block))
+  (method_declaration
+    (void_type)
+    (identifier)
+    (formal_parameters
+      (formal_parameter
+        (array_type
+          (type_identifier)
+          (dimensions
+            (marker_annotation
+              (identifier))))
+        (identifier)))
+    (block))
+  (method_declaration
+    (type_parameters
+      (type_parameter
+        (type_identifier)
+        (type_bound
+          (annotated_type
+            (marker_annotation
+              (identifier))
+            (type_identifier)))))
+    (type_identifier)
+    (identifier)
+    (formal_parameters
+      (formal_parameter
+        (type_identifier)
+        (identifier)))
+    (block
+      (return_statement
+        (identifier)))))

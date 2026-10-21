@@ -1,0 +1,603 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -7,10 +7,31 @@
+   PARAM: 6,
+ };
+ 
++// sloplint: a command-line word may hold quoted segments that contain spaces,
++// pipes or parentheses: -x="a b", --format='%H||%P'. The segments are matched as
++// a unit inside the word token. A double-quoted segment holds no nested quote,
++// so "$($a.Replace("x","y"))" is not covered. -p:V="$($m.x)" lexes as the
++// parameter -p, a colon, and then the word V="$($m.x)".
++const WORD_SQ = /'[^']*'/.source;
++const WORD_DQ = /"([^"`]|`.)*"/.source;
++const WORD_ESC = /`./.source;
++
++/**
++ * The repeated tail of a command-line word.
++ *
++ * @param {string} plain regex source of one plain character
++ */
++function wordTail(plain) {
++  return '(' + [plain, WORD_SQ, WORD_DQ, WORD_ESC].join('|') + ')*';
++}
++
+ export default grammar({
+   name: 'powershell',
+ 
+-  externals: ($) => [$._statement_terminator],
++  externals: ($) => [
++    $._statement_terminator,
++    $._method_block_head,
++  ],
+ 
+   extras: ($) => [
+     $.comment,
+@@ -29,7 +50,14 @@
+   ],
+ 
+   rules: {
+-    program: ($) => seq(optional($.param_block), $.statement_list),
++    // sloplint: a script file body may be a list of named blocks
++    // (begin/process/end/dynamicparam) after its param block, and an empty,
++    // comment-only or param-only file is a valid script.
++    program: ($) =>
++      seq(
++        optional($.param_block),
++        optional(choice($.statement_list, $.named_block_list)),
++      ),
+ 
+     // Comments
+     comment: ($) =>
+@@ -48,22 +76,24 @@
+     integer_literal: ($) =>
+       choice($.decimal_integer_literal, $.hexadecimal_integer_literal),
+ 
++    // sloplint: numeric prefixes, exponents and multiplier suffixes are
++    // case-insensitive in PowerShell (0XFF, 1E3, 1MB, 10Gb).
+     decimal_integer_literal: ($) =>
+       token(
+         seq(
+           /[0-9]+/,
+-          optional(choice('l', 'd')),
+-          optional(choice('kb', 'mb', 'gb', 'tb', 'pb')),
++          optional(/[lLdD]/),
++          optional(/[kmgtpKMGTP][bB]/),
+         ),
+       ),
+ 
+     hexadecimal_integer_literal: ($) =>
+       token(
+         seq(
+-          '0x',
++          /0[xX]/,
+           /[0-9a-fA-F]+/,
+-          optional('l'),
+-          optional(choice('kb', 'mb', 'gb', 'tb', 'pb')),
++          optional(/[lL]/),
++          optional(/[kmgtpKMGTP][bB]/),
+         ),
+       ),
+ 
+@@ -73,18 +103,18 @@
+         choice(
+           seq(
+             /[0-9]+\.[0-9]+/,
+-            optional(token(seq('e', optional(choice('+', '-')), /[0-9]+/))),
+-            optional(choice('kb', 'mb', 'gb', 'tb', 'pb')),
++            optional(token(seq(/[eE]/, optional(choice('+', '-')), /[0-9]+/))),
++            optional(/[kmgtpKMGTP][bB]/),
+           ),
+           seq(
+             /\.[0-9]+/,
+-            optional(token(seq('e', optional(choice('+', '-')), /[0-9]+/))),
+-            optional(choice('kb', 'mb', 'gb', 'tb', 'pb')),
++            optional(token(seq(/[eE]/, optional(choice('+', '-')), /[0-9]+/))),
++            optional(/[kmgtpKMGTP][bB]/),
+           ),
+           seq(
+             /[0-9]+/,
+-            token(seq('e', optional(choice('+', '-')), /[0-9]+/)),
+-            optional(choice('kb', 'mb', 'gb', 'tb', 'pb')),
++            token(seq(/[eE]/, optional(choice('+', '-')), /[0-9]+/)),
++            optional(/[kmgtpKMGTP][bB]/),
+           ),
+         ),
+       ),
+@@ -103,7 +133,10 @@
+         /\"(\s*\#*)*/, // this is a trick to avoid tree-sitter allowing comment between tokens, as string should be tokenize but powershell allow subexpression inside it...
+         repeat(
+           choice(
+-            token.immediate(/[^\$\"`]+/),
++            // sloplint: lexical precedence keeps a text run that starts at
++            // white space or `#` after a variable or an escape ("`n## x",
++            // "$a ## y") from being read as a comment extra.
++            token.immediate(prec(1, /[^\$\"`]+/)),
+             $.variable,
+             $.sub_expression,
+             token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
+@@ -124,7 +157,11 @@
+             token.immediate(/[^\$\r\n`]+/),
+             $.variable,
+             $.sub_expression,
+-            token.immediate(/(\r?\n)+[^\"\r\n]/),
++            // sloplint: a line that starts with a backtick must not lose half
++            // of an escape pair to the line-break token: ``````PowerShell.
++            // The break takes the whole pair.
++            token.immediate(/(\r?\n)+[^\"\r\n`]/),
++            token.immediate(/(\r?\n)+(`.{1}|`\r?\n)/),
+             token.immediate(/(\r?\n)+\"[^@]/),
+             token.immediate('$'),
+             token.immediate(/`.{1}|`\r?\n/),
+@@ -149,7 +186,10 @@
+     simple_name: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
+ 
+     // Type names
+-    type_identifier: ($) => /[a-zA-Z0-9_]+/,
++    // sloplint: a type name may hold nested-type `+` and generic-arity
++    // backtick parts: System.Environment+SpecialFolder, System.Func`1,
++    // Dictionary`2+Enumerator.
++    type_identifier: ($) => /[a-zA-Z0-9_]+([`+][a-zA-Z0-9_]+)*/,
+ 
+     type_name: ($) =>
+       choice($.type_identifier, seq($.type_name, '.', $.type_identifier)),
+@@ -225,6 +265,11 @@
+         reservedWord('-ilike'),
+         reservedWord('-ilt'),
+         reservedWord('-imatch'),
++        // sloplint: -cin, -iin, -cnotin and -inotin complete the -in family.
++        reservedWord('-cin'),
++        reservedWord('-cnotin'),
++        reservedWord('-iin'),
++        reservedWord('-inotin'),
+         reservedWord('-in'),
+         reservedWord('-ine'),
+         reservedWord('-inotcontains'),
+@@ -306,12 +351,47 @@
+ 
+     // Commands
+     generic_token: ($) =>
+-      token(/[^\(\)\$\"\'\-\{\}@\|\[`\&\s][^\&\s\(\)\}\|;,]*/),
++      token(
++        choice(
++          new RegExp(
++            /[^()$"'\-{}@|\[`&\s]/.source + wordTail(/[^&\s()}|;,"'`]/.source),
++          ),
++          // sloplint: option with an attached value, as in -I=dir,
++          // --go_out=$dir or -buildmode=c-shared. A bare -Name or -Name:
++          // stays a command_parameter. Commas belong to the value, as in
++          // --format=csv,noheader: native commands receive one string
++          // (about_Parsing, argument mode).
++          new RegExp(
++            /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/.source +
++              /[^a-zA-Z0-9_?\-`\s:<>&(){}|;,"'$@\[]/.source +
++              wordTail(/[^&\s()}|;"'`]/.source),
++          ),
++          // sloplint: word that starts with a variable and continues as a
++          // path, as in $env:TEMP\x.ps1 or ${root}/bin.
++          /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/][^\&\s\(\)\}\|;,]*/,
++        ),
++      ),
+ 
+     _command_token: ($) => token(/[^\(\)\{\}\s;\&]+/),
+ 
++    // sloplint: a switch clause word may open with a double quote only when
++    // it is a complete quoted word. Otherwise "^(a)$" is cut at the first
++    // parenthesis, lexed as a word, and the clause fails to parse.
++    _switch_clause_token: ($) =>
++      token(
++        choice(
++          /[^\(\)\{\}\s;\&\"][^\(\)\{\}\s;\&]*/,
++          /\"[^\(\)\{\}\s;\&\"]*\"/,
++        ),
++      ),
++
+     // Parameters
+-    command_parameter: ($) => token(choice(/-+[a-zA-Z_?\-`]+/, '--')),
++    // sloplint: a parameter name may hold digits after its first letter:
++    // -Count2, -m64, -O2, -p2.
++    command_parameter: ($) => token(/-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/),
++
++    // A lone `--` ends the options of a native command: dotnet run -- x.
++    // It is a command_parameter after a separator, see _command_argument.
+ 
+     _verbatim_command_argument_chars: ($) =>
+       repeat1(choice(/"[^"]*"/, /&[^&]*/, /[^\|\r\n]+/)),
+@@ -460,16 +540,18 @@
+ 
+     switch_clauses: ($) => repeat1($.switch_clause),
+ 
++    // sloplint: terminators between switch clauses are optional in
++    // PowerShell, so clauses may share a line: { 1 { "a" } default { "b" } }.
+     switch_clause: ($) =>
+       seq(
+         $.switch_clause_condition,
+         $.statement_block,
+-        $._statement_terminator,
++        optional($._statement_terminator),
+         repeat(';'),
+       ),
+ 
+     switch_clause_condition: ($) =>
+-      choice($._command_token, $._primary_expression),
++      choice($._switch_clause_token, $._primary_expression),
+ 
+     foreach_statement: ($) =>
+       seq(
+@@ -562,10 +644,19 @@
+         $.function_name,
+         optional($.function_parameter_declaration),
+         '{',
+-        optional($.script_block),
++        optional(
++          choice($.script_block, alias($._param_then_body, $.script_block)),
++        ),
+         '}',
+       ),
+ 
++    // sloplint: a function body may put its first statement right after the
++    // param block on the same line: function f { param($a) $a }. The hidden
++    // rule is aliased to script_block, the kind a body with a line break after
++    // the param block already has, and it keeps the param_block child.
++    _param_then_body: ($) =>
++      seq($.param_block, field('script_block_body', $.script_block_body)),
++
+     function_name: ($) => $._command_token,
+ 
+     function_parameter_declaration: ($) =>
+@@ -582,7 +673,9 @@
+ 
+     label: ($) => token(seq(':', /[a-zA-Z_][a-zA-Z0-9_]*/)),
+ 
+-    label_expression: ($) => choice($.label, $.unary_expression),
++    // sloplint: a loop label may be a bare name: break outer, continue top.
++    label_expression: ($) =>
++      choice($.label, $.simple_name, $.unary_expression),
+ 
+     trap_statement: ($) =>
+       seq(reservedWord('trap'), optional($.type_literal), $.statement_block),
+@@ -738,6 +831,18 @@
+           new RegExp(caseInsensitive('for-')),
+           new RegExp(caseInsensitive('while-')),
+           new RegExp(caseInsensitive('parallel-')),
++          // sloplint: the remaining statement keywords. ForEach-Object and
++          // Do-Something start with a keyword too.
++          new RegExp(caseInsensitive('foreach-')),
++          new RegExp(caseInsensitive('do-')),
++          new RegExp(caseInsensitive('data-')),
++          new RegExp(caseInsensitive('inlinescript-')),
++          new RegExp(caseInsensitive('sequence-')),
++          new RegExp(caseInsensitive('param-')),
++          new RegExp(caseInsensitive('begin-')),
++          new RegExp(caseInsensitive('process-')),
++          new RegExp(caseInsensitive('end-')),
++          new RegExp(caseInsensitive('dynamicparam-')),
+         ),
+         repeat(
+           choice(
+@@ -750,7 +855,8 @@
+         ),
+       ),
+ 
+-    path_command_name_token: ($) => /[0-9a-zA-Z_?\-\.\\]+/,
++    // sloplint: `/` is a path separator too: . $PSScriptRoot/x.ps1, ./build.ps1.
++    path_command_name_token: ($) => /[0-9a-zA-Z_?\-\.\\\/]+/,
+ 
+     // Use to parse command path
+     path_command_name: ($) =>
+@@ -765,12 +871,23 @@
+       prec.right(
+         choice(
+           $.command_parameter,
+-          seq($._command_argument, optional($.argument_list)),
++          seq(
++            $._command_argument,
++            optional(seq($.argument_list, repeat($._argument_member_tail))),
++          ),
+           $.redirection,
+           $.stop_parsing,
+         ),
+       ),
+ 
++    // sloplint: a call in an argument may be followed by more member access
++    // and calls: foo $s.ToString().TrimEnd(). The pieces are siblings of the
++    // argument, like the first argument_list.
++    _argument_member_tail: ($) =>
++      prec.right(
++        seq(token.immediate('.'), $.member_name, optional($.argument_list)),
++      ),
++
+     // Stop parsing is a token that end the parsing of command line
+     stop_parsing: ($) => /--%[^\r\n]*/,
+ 
+@@ -785,12 +902,35 @@
+         PREC.PARAM,
+         choice(
+           seq($.command_argument_sep, optional($.generic_token)),
+-          seq($.command_argument_sep, $.array_literal_expression),
++          // sloplint: `--` ends the options of a native command: dotnet run -- x.
++          seq($.command_argument_sep, alias('--', $.command_parameter)),
++          seq($.command_argument_sep, $._command_argument_list),
+           $.parenthesized_expression,
+           $.script_block_expression,
+         ),
+       ),
+ 
++    // sloplint: in argument position a comma list may hold bare words as
++    // well as expressions: Select-Object Name,Length. The hidden rules are
++    // aliased so that the node keeps the array_literal_expression kind.
++    _command_argument_list: ($) =>
++      choice(
++        alias($._command_list_from_expression, $.array_literal_expression),
++        alias($._command_list_from_word, $.array_literal_expression),
++      ),
++
++    _command_list_from_expression: ($) =>
++      prec.left(
++        seq($.unary_expression, repeat(seq(',', $._command_list_element))),
++      ),
++
++    _command_list_from_word: ($) =>
++      prec.left(
++        seq($.generic_token, repeat1(seq(',', $._command_list_element))),
++      ),
++
++    _command_list_element: ($) => choice($.generic_token, $.unary_expression),
++
+     verbatim_command_argument: ($) =>
+       seq('--%', $._verbatim_command_argument_chars),
+ 
+@@ -832,13 +972,26 @@
+         '(',
+         optional($.class_method_parameter_list),
+         ')',
++        // sloplint: constructor chaining, as in Dog([string]$n) : base($n) {}
++        optional(
++          seq(
++            ':',
++            choice(reservedWord('base'), reservedWord('this')),
++            $.argument_list,
++          ),
++        ),
+         '{',
+         optional($.script_block),
+         '}',
+       ),
+ 
++    // sloplint: attributes may precede class and enum definitions:
++    // [DscResource()] class R {}, [Flags()] enum E {}. pwsh also reports
++    // CustomAttributeTypeNotFound for an unknown attribute type here, which
++    // is a semantic error and not a syntax error, so the tree keeps it.
+     class_statement: ($) =>
+       seq(
++        optional($.attribute_list),
+         token(reservedWord('class')),
+         $.simple_name,
+         optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
+@@ -859,6 +1012,7 @@
+     // Enums
+     enum_statement: ($) =>
+       seq(
++        optional($.attribute_list),
+         token(reservedWord('enum')),
+         $.simple_name,
+         '{',
+@@ -870,7 +1024,20 @@
+       seq($.simple_name, optional(seq('=', $.integer_literal))),
+ 
+     // Expressions
+-    _expression: ($) => $.logical_expression,
++    // sloplint: PowerShell 7 ternary: $a ? "x" : "y". The condition is a
++    // binary expression; the branches are expressions or nested ternaries.
++    _expression: ($) => choice($.logical_expression, $.ternary_expression),
++
++    ternary_expression: ($) =>
++      prec.right(
++        seq(
++          $.logical_expression,
++          '?',
++          choice($.logical_expression, $.ternary_expression),
++          ':',
++          choice($.logical_expression, $.ternary_expression),
++        ),
++      ),
+ 
+     logical_expression: ($) =>
+       prec.left(
+@@ -1017,8 +1184,12 @@
+     array_expression: ($) =>
+       seq('@(', field('statements', optional($.statement_list)), ')'),
+ 
++    // sloplint: an empty block is a valid script block expression: {} or { }.
+     script_block_expression: ($) =>
+-      seq('{', optional($.param_block), $.script_block, '}'),
++      choice(
++        seq('{', optional($.param_block), $.script_block, '}'),
++        seq('{', '}'),
++      ),
+ 
+     hash_literal_expression: ($) =>
+       seq('@{', optional($.hash_literal_body), '}'),
+@@ -1076,11 +1247,17 @@
+         $.invokation_foreach_expression,
+       ),
+ 
+-    // adding this rule to handle .foreach synthax
++    // sloplint: a method name may take a script block with no parentheses
++    // when the brace follows the name at once: $a.Where{ $_ },
++    // $a.ForEach{ $_ }, $a::M{ $_ }. The external scanner lexes `.Name` or
++    // `::Name` as one token only when `{` follows at once, so
++    // `$a.ForEach({ $_ })` and `$a.Name` keep their usual shapes. The node
++    // keeps the kind invokation_foreach_expression and the block keeps the
++    // kind script_block_expression, as the upstream `.foreach` rule did.
+     invokation_foreach_expression: ($) =>
+       seq(
+         $._primary_expression,
+-        token.immediate(reservedWord('.foreach')),
++        $._method_block_head,
+         $.script_block_expression,
+       ),
+ 
+@@ -1120,10 +1297,13 @@
+           $.comparison_argument_expression,
+           seq(
+             $.bitwise_argument_expression,
++            // sloplint: upstream repeated -and, -or and -xor here, so
++            // `-bor` failed inside method arguments:
++            // GetMethod('M', [A]::B -bor [A]::C).
+             choice(
+-              reservedWord('-and'),
+-              reservedWord('-or'),
+-              reservedWord('-xor'),
++              reservedWord('-band'),
++              reservedWord('-bor'),
++              reservedWord('-bxor'),
+             ),
+             $.comparison_argument_expression,
+           ),
+@@ -1188,17 +1368,33 @@
+ 
+     type_literal: ($) => seq('[', $.type_spec, ']'),
+ 
++    // sloplint: array ranks may repeat after an array or generic type
++    // (int[][], List[int][]), and a generic argument may be wrapped in its
++    // own brackets: Dictionary[[string], [int]].
+     type_spec: ($) =>
+       choice(
+-        seq($.array_type_name, optional($.dimension), ']'),
+-        seq($.generic_type_name, $.generic_type_arguments, ']'),
++        seq($.array_type_name, optional($.dimension), ']', repeat($._rank)),
++        seq(
++          $.generic_type_name,
++          $.generic_type_arguments,
++          ']',
++          repeat($._rank),
++        ),
+         $.type_name,
+       ),
+ 
++    _rank: ($) => seq('[', optional($.dimension), ']'),
++
+     dimension: ($) => repeat1(','),
+ 
+     generic_type_arguments: ($) =>
+-      seq($.type_spec, repeat(seq(',', $.type_spec))),
++      seq(
++        $._generic_type_argument,
++        repeat(seq(',', $._generic_type_argument)),
++      ),
++
++    _generic_type_argument: ($) =>
++      choice($.type_spec, seq('[', $.type_spec, ']')),
+ 
+     // Attributes
+     attribute_list: ($) => repeat1($.attribute),
+--- a/src/scanner.c
++++ b/src/scanner.c
+@@ -5,7 +5,8 @@
+ #include <wctype.h>
+ 
+ enum TOKEN_TYPE {
+-    STATEMENT_TERMINATOR
++    STATEMENT_TERMINATOR,
++    METHOD_BLOCK_HEAD
+ };
+ 
+ /* --- API --- */
+@@ -24,6 +25,25 @@
+ 
+ static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
+ 
++// sloplint: true when the lookahead starts the keyword `else` or `elseif`,
++// as a whole word. The lookahead is consumed; the caller has already marked
++// the end of the zero-width terminator token.
++static bool at_else_keyword(TSLexer *lexer)
++{
++    static const char word[] = "else";
++    for (int i = 0; word[i] != 0; i++) {
++        if (towlower(lexer->lookahead) != (wint_t)word[i]) return false;
++        skip(lexer);
++    }
++    if (towlower(lexer->lookahead) == 'i') {
++        skip(lexer);
++        if (towlower(lexer->lookahead) != 'f') return false;
++        skip(lexer);
++    }
++    wint_t c = lexer->lookahead;
++    return !(iswalnum(c) || c == '_' || c == '-');
++}
++
+ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
+ {
+     if (valid_symbols[STATEMENT_TERMINATOR]) {
+@@ -31,13 +51,26 @@
+         // This token has no characters -- everything is lookahead to determine its existence
+         lexer->mark_end(lexer);
+ 
++        bool saw_newline = false;
+         for (;;) {
+             if (lexer->lookahead == 0) return true;
+             if (lexer->lookahead == '}') return true;
+             if (lexer->lookahead == ';') return true;
+             if (lexer->lookahead == ')') return true;
+-            if (lexer->lookahead == '\n') return true;
+-            if (!iswspace(lexer->lookahead)) return false;
++            if (lexer->lookahead == '\n') saw_newline = true;
++            else if (lexer->lookahead == '`') {
++                // A backtick before a line break joins the lines, so it is
++                // white space here: `$x -replace "a", "b" `` newline newline `}`.
++                skip(lexer);
++                if (lexer->lookahead == '\r') skip(lexer);
++                if (lexer->lookahead != '\n') return false;
++            }
++            else if (!iswspace(lexer->lookahead)) {
++                // A line break ends the statement, except when the next
++                // line continues an if statement: `}` newline `else {`.
++                if (saw_newline) return !at_else_keyword(lexer);
++                return false;
++            }
+             skip(lexer);
+         }
+     }
+@@ -47,9 +80,40 @@
+ 
+ /* --- API Implementation --- */
+ 
++// sloplint: `.Name` or `::Name` when `{` follows the name at once, as in
++// $a.Where{ $_ }. The token ends before the brace. Anything else is left to
++// the internal lexer, which re-reads the input from the start.
++static bool scan_method_block_head(TSLexer *lexer)
++{
++    if (lexer->lookahead == ':') {
++        lexer->advance(lexer, false);
++        if (lexer->lookahead != ':') return false;
++        lexer->advance(lexer, false);
++    } else if (lexer->lookahead == '.') {
++        lexer->advance(lexer, false);
++    } else {
++        return false;
++    }
++    if (!(iswalpha(lexer->lookahead) || lexer->lookahead == '_')) return false;
++    while (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
++        lexer->advance(lexer, false);
++    }
++    if (lexer->lookahead != '{') return false;
++    lexer->mark_end(lexer);
++    lexer->result_symbol = METHOD_BLOCK_HEAD;
++    return true;
++}
++
+ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
+ {
+-    return scan_statement_terminator(payload, lexer, valid_symbols);
++    if (valid_symbols[METHOD_BLOCK_HEAD] &&
++        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
++        return scan_method_block_head(lexer);
++    }
++    if (valid_symbols[STATEMENT_TERMINATOR]) {
++        return scan_statement_terminator(payload, lexer, valid_symbols);
++    }
++    return false;
+ }
+ 
+ void *tree_sitter_powershell_external_scanner_create()

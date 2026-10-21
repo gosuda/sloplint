@@ -1,0 +1,52 @@
+========================================
+__has_include with angle and quoted headers
+========================================
+
+#if __has_include(<endian.h>)
+#endif
+#if __has_include("x.h")
+#endif
+
+---
+
+(translation_unit
+  (preproc_if
+    condition: (call_expression
+      function: (identifier)
+      arguments: (argument_list (system_lib_string))))
+  (preproc_if
+    condition: (call_expression
+      function: (identifier)
+      arguments: (argument_list (string_literal (string_content))))))
+
+========================================
+__has_include combined with defined
+========================================
+
+#if defined(__has_include) && __has_include(<x.h>)
+#endif
+
+---
+
+(translation_unit
+  (preproc_if
+    condition: (binary_expression
+      left: (preproc_defined (identifier))
+      right: (call_expression
+        function: (identifier)
+        arguments: (argument_list (system_lib_string))))))
+
+========================================
+defined without parentheses still parses
+========================================
+
+#if defined X
+#endif
+#ifdef X
+#endif
+
+---
+
+(translation_unit
+  (preproc_if condition: (preproc_defined (identifier)))
+  (preproc_ifdef name: (identifier)))

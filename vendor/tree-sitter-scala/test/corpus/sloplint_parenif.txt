@@ -1,0 +1,94 @@
+================================================================================
+Paren-less if with a single-line applied condition (control)
+================================================================================
+
+val x = Some(10)
+
+def f =
+   if x.exists(x => x == 10) then
+      println("Yes")
+   else
+      println("No")
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (val_definition
+    (identifier)
+    (call_expression
+      (identifier)
+      (arguments
+        (integer_literal))))
+  (function_definition
+    (identifier)
+    (indented_block
+      (if_expression
+        (call_expression
+          (field_expression
+            (identifier)
+            (identifier))
+          (arguments
+            (lambda_expression
+              (identifier)
+              (infix_expression
+                (identifier)
+                (operator_identifier)
+                (integer_literal)))))
+        (indented_block
+          (call_expression
+            (identifier)
+            (arguments
+              (string))))
+        (indented_block
+          (call_expression
+            (identifier)
+            (arguments
+              (string))))))))
+
+================================================================================
+Paren-less if with an applied condition split across lines (sloplint SC-PARENIF)
+================================================================================
+
+val x = Some(10)
+
+def f =
+   if x.exists
+         (x => x == 10) then
+      println("Yes")
+   else
+      println("No")
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (val_definition
+    (identifier)
+    (call_expression
+      (identifier)
+      (arguments
+        (integer_literal))))
+  (function_definition
+    (identifier)
+    (indented_block
+      (if_expression
+        (split_call_condition
+          (field_expression
+            (identifier)
+            (identifier))
+          (arguments
+            (lambda_expression
+              (identifier)
+              (infix_expression
+                (identifier)
+                (operator_identifier)
+                (integer_literal)))))
+        (indented_block
+          (call_expression
+            (identifier)
+            (arguments
+              (string))))
+        (indented_block
+          (call_expression
+            (identifier)
+            (arguments
+              (string))))))))

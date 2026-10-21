@@ -32,6 +32,12 @@ pub enum Lang {
     Starlark,
 }
 
+/// The extension that C, C++, and Objective-C headers share; the table routes it to C.
+const HEADER_EXTENSION: &str = ".h";
+
+/// The grammars a `.h` file that fails as C is parsed with, in order; see [`Lang::parse_fallbacks`].
+const HEADER_FALLBACKS: &[Lang] = &[Lang::Cpp, Lang::ObjC];
+
 /// Every extension rule in priority order; the first matching entry wins and matching is case-sensitive.
 const EXTENSIONS: &[(&str, Lang)] = &[
     (".rs", Lang::Rust),
@@ -51,7 +57,7 @@ const EXTENSIONS: &[(&str, Lang)] = &[
     (".kts", Lang::Kotlin),
     (".cs", Lang::CSharp),
     (".c", Lang::C),
-    (".h", Lang::C),
+    (HEADER_EXTENSION, Lang::C),
     (".cc", Lang::Cpp),
     (".cpp", Lang::Cpp),
     (".cxx", Lang::Cpp),
@@ -117,7 +123,7 @@ const SPECIAL_NAMES: &[(&str, Lang)] = &[
     ("BUCK", Lang::Starlark),
 ];
 
-/// Every variant in declaration order.
+/// Every variant in declaration order; the one list consumers iterate instead of keeping a copy.
 pub const ALL_LANGS: &[Lang] = &[
     Lang::Rust,
     Lang::TypeScript,
@@ -269,6 +275,14 @@ impl Lang {
             })
     }
 
+    /// The grammars to parse a file with, in order, after its parse as `self` has a syntax error; empty when no second parse applies.
+    ///
+    /// A `.h` file routes to C, yet C++ and Objective-C headers share the extension, so a `.h` file that fails as C is tried as C++ and then as Objective-C. The first grammar that parses it without error wins, so the order decides a header that both accept. C++ comes first because the Objective-C grammar also accepts some C++ headers, such as a `namespace` holding a template-typed member, so trying it first would claim them, while no sampled header that uses `@interface`, `@protocol`, `@class`, or blocks parses as C++. C++ first also keeps the earlier C++ fallback unchanged. No other path falls back, and the routed language stays the file's language for selection, budgets, and statistics.
+    pub fn parse_fallbacks(self, rel_path: &str) -> &'static [Lang] {
+        let header = self == Lang::C && file_name_of(rel_path).ends_with(HEADER_EXTENSION);
+        if header { HEADER_FALLBACKS } else { &[] }
+    }
+
     /// The `[languages.<key>]` config key for this variant.
     pub fn config_key(self) -> &'static str {
         match self {
@@ -413,6 +427,31 @@ mod tests {
         assert_eq!(Lang::from_path("BUILD"), Some(Lang::Starlark));
         assert_eq!(Lang::from_path("tools/Tiltfile"), Some(Lang::Starlark));
         assert_eq!(Lang::from_path("etc/profile.ps1"), Some(Lang::PowerShell));
+    }
+
+    #[test]
+    fn only_dot_h_files_routed_to_c_fall_back_to_cpp_then_objc() {
+        let order = [Lang::Cpp, Lang::ObjC];
+        assert_eq!(Lang::C.parse_fallbacks("a.h"), order);
+        assert_eq!(Lang::C.parse_fallbacks("include/sub/a.h"), order);
+        assert_eq!(Lang::C.parse_fallbacks("a.c"), []);
+        assert_eq!(Lang::C.parse_fallbacks("a.hh"), []);
+        assert_eq!(Lang::C.parse_fallbacks("a.H"), []);
+        assert_eq!(Lang::C.parse_fallbacks("dir.h/a.c"), []);
+        assert_eq!(Lang::Cpp.parse_fallbacks("a.h"), []);
+        assert_eq!(Lang::ObjC.parse_fallbacks("a.h"), []);
+        for lang in ALL_LANGS.iter().copied().filter(|lang| *lang != Lang::C) {
+            assert_eq!(lang.parse_fallbacks("a.h"), [], "{lang:?} never falls back");
+        }
+    }
+
+    #[test]
+    fn the_fallback_applies_exactly_to_paths_the_table_routes_to_c_through_dot_h() {
+        for path in ["a.h", "x/y/a.h", "a.c", "a.hpp", "a.h++", "a.H", "a.ipp"] {
+            let falls_back =
+                Lang::from_path(path).is_some_and(|lang| !lang.parse_fallbacks(path).is_empty());
+            assert_eq!(falls_back, path.ends_with(".h"), "{path}");
+        }
     }
 
     #[test]

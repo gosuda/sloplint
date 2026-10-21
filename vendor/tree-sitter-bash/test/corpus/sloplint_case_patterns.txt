@@ -1,0 +1,67 @@
+================================================================================
+Case pattern with several quoted chunks
+================================================================================
+
+case "$(echo x)" in *"Copyright (c) "*"Uber"*) ;; esac
+
+--------------------------------------------------------------------------------
+
+(program
+  (case_statement
+    (string
+      (command_substitution
+        (command
+          (command_name
+            (word))
+          (word))))
+    (case_item
+      (extglob_pattern)
+      (string
+        (string_content))
+      (extglob_pattern)
+      (string
+        (string_content))
+      (extglob_pattern))))
+
+================================================================================
+Case pattern ending in a quoted chunk
+================================================================================
+
+case x in *"a b"*"c d") ;; esac
+
+--------------------------------------------------------------------------------
+
+(program
+  (case_statement
+    (word)
+    (case_item
+      (extglob_pattern)
+      (string
+        (string_content))
+      (extglob_pattern)
+      (string
+        (string_content)))))
+
+================================================================================
+Case pattern with one quoted chunk
+================================================================================
+
+case x in *"a b"*) ;; esac
+case x in *"(c)") ;; esac
+
+--------------------------------------------------------------------------------
+
+(program
+  (case_statement
+    (word)
+    (case_item
+      (extglob_pattern)
+      (string
+        (string_content))
+      (extglob_pattern)))
+  (case_statement
+    (word)
+    (case_item
+      (extglob_pattern)
+      (string
+        (string_content)))))

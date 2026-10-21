@@ -14,7 +14,95 @@ pub(crate) struct Cx<'t, 's> {
     pub lang: Lang,
     pub is_test_file: bool,
     pub has_interface: bool,
-    pub containers: &'t [Container],
+    containers: &'t [Container],
+    exports: &'t [&'s str],
+    /// The nodes entered so far under each open ancestor, outermost level first.
+    ///
+    /// The last entry of each level is the open ancestor itself, or the visited
+    /// node on the innermost level, and the entries before it are its earlier
+    /// siblings in tree order.
+    levels: &'t [Vec<Node<'t>>],
+}
+
+impl<'t, 's> Cx<'t, 's> {
+    /// A view of one file with no container open, nothing exported, and no node entered.
+    pub(crate) fn file(
+        src: &'s str,
+        path: &'s str,
+        lang: Lang,
+        is_test_file: bool,
+        has_interface: bool,
+    ) -> Self {
+        Self {
+            src,
+            path,
+            lang,
+            is_test_file,
+            has_interface,
+            containers: &[],
+            exports: &[],
+            levels: &[],
+        }
+    }
+
+    /// The same view of the file with the walker's open containers, top level
+    /// exports, and entered nodes attached.
+    pub(crate) fn scoped(
+        self,
+        containers: &'t [Container],
+        exports: &'t [&'s str],
+        levels: &'t [Vec<Node<'t>>],
+    ) -> Self {
+        Self {
+            containers,
+            exports,
+            levels,
+            ..self
+        }
+    }
+}
+
+impl Cx<'_, '_> {
+    /// True when the file's top level exports `name` through a local export statement.
+    pub(crate) fn is_exported(&self, name: &str) -> bool {
+        self.exports
+            .binary_search_by(|probe| (*probe).cmp(name))
+            .is_ok()
+    }
+
+    /// The innermost open container; `None` at the file's top level.
+    pub(crate) fn innermost_container(&self) -> Option<Container> {
+        self.containers.last().copied()
+    }
+
+    /// True when any open container is a test module.
+    pub(crate) fn in_test_module(&self) -> bool {
+        self.containers.contains(&Container::TestModule)
+    }
+
+    /// Whether the nearest open class is exported; `None` when none is open.
+    pub(crate) fn nearest_class_exported(&self) -> Option<bool> {
+        self.containers.iter().rev().find_map(|c| match *c {
+            Container::Class { exported, .. } => Some(exported),
+            _ => None,
+        })
+    }
+
+    /// Whether the nearest open class implements an interface; `None` when none is open.
+    pub(crate) fn nearest_class_implements(&self) -> Option<bool> {
+        self.containers.iter().rev().find_map(|c| match *c {
+            Container::Class { implements, .. } => Some(implements),
+            _ => None,
+        })
+    }
+
+    /// Whether the nearest open implementation is interface-bound; `None` when none is open.
+    pub(crate) fn nearest_impl_interface_bound(&self) -> Option<bool> {
+        self.containers.iter().rev().find_map(|c| match *c {
+            Container::Impl { interface_bound } => Some(interface_bound),
+            _ => None,
+        })
+    }
 }
 
 /// A scope that changes how nested names, visibility, and tests are judged.
@@ -65,6 +153,12 @@ pub(crate) trait LangHooks: Sync {
     fn closure_as_function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let _ = (n, cx);
         None
+    }
+
+    /// True when a function-like node declares plain `throws` with no error type.
+    fn untyped_throws(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+        let _ = (n, cx);
+        false
     }
 
     /// True when this `If`-role node is the else-if form of its parent.
@@ -147,6 +241,11 @@ pub(crate) trait LangHooks: Sync {
         None
     }
 
+    /// Names the file's top level exports without a declaration, read once before the walk.
+    fn exported_names<'s>(&self, root: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        let _ = (root, cx, out);
+    }
+
     /// Barrel-file fact for the whole file, read once after the walk.
     fn barrel(&self, root: Node<'_>, cx: &Cx<'_, '_>) -> Option<Barrel> {
         let _ = (root, cx);
@@ -182,13 +281,8 @@ pub(crate) fn trimmed<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
 
 /// The node's named children in order.
 pub(crate) fn named_children(n: Node<'_>) -> Vec<Node<'_>> {
-    let mut out = Vec::with_capacity(n.named_child_count());
-    for i in 0..narrow(n.named_child_count()) {
-        if let Some(child) = n.named_child(i) {
-            out.push(child);
-        }
-    }
-    out
+    let mut cursor = n.walk();
+    n.named_children(&mut cursor).collect()
 }
 
 /// The node's child reached through a named field.
@@ -198,20 +292,15 @@ pub(crate) fn child_by_field<'a>(n: Node<'a>, field: &str) -> Option<Node<'a>> {
 
 /// The first child, named or anonymous, whose kind is in `kinds`.
 pub(crate) fn first_of_kind<'a>(n: Node<'a>, kinds: &[&str]) -> Option<Node<'a>> {
-    for i in 0..n.child_count() {
-        let Some(child) = n.child(i) else {
-            continue;
-        };
-        if kinds.contains(&child.kind()) {
-            return Some(child);
-        }
-    }
-    None
+    let mut cursor = n.walk();
+    n.children(&mut cursor)
+        .find(|child| kinds.contains(&child.kind()))
 }
 
 /// True when any child, named or anonymous, has the given kind.
 pub(crate) fn has_child_kind(n: Node<'_>, kind: &str) -> bool {
-    (0..n.child_count()).any(|i| n.child(i).is_some_and(|child| child.kind() == kind))
+    let mut cursor = n.walk();
+    n.children(&mut cursor).any(|child| child.kind() == kind)
 }
 
 /// The text after the last occurrence of any separator (`::`, `.`, `/`, `#`, `\`).
@@ -270,10 +359,8 @@ pub(crate) fn string_arg_shape<'s>(
     fragment_kinds: &[&str],
 ) -> ArgShape<'s> {
     let mut segments: Vec<&'s str> = Vec::new();
-    for i in 0..n.child_count() {
-        let Some(child) = n.child(i) else {
-            continue;
-        };
+    let mut cursor = n.walk();
+    for child in n.children(&mut cursor) {
         if fragment_kinds.contains(&child.kind()) {
             segments.push(text(cx, child));
         }
@@ -300,19 +387,48 @@ pub(crate) fn binary_concat<'s>(
     string_kinds.contains(&left.kind()) || string_kinds.contains(&right.kind())
 }
 
+/// True for a plain comment that issues a `sloplint-allow` directive.
+///
+/// Doc comments (`///`, `//!`, `/**`, `/*!`, `(**`, `(*!`) only describe a
+/// directive and never issue one, so they stay documentation.
+pub(crate) fn is_directive_comment(text: &str) -> bool {
+    if !text.contains("sloplint-allow") {
+        return false;
+    }
+    let head = text.trim_start();
+    !["///", "//!", "/**", "/*!", "(**", "(*!"]
+        .iter()
+        .any(|prefix| head.starts_with(prefix))
+}
+
 /// Collects the comment siblings that end on the line before the current
-/// header start; `skip_kinds` (attributes, decorators) extend the header.
+/// header start; `skip_kinds` (attributes, decorators) and `sloplint-allow`
+/// directive comments extend the header without joining the doc.
+///
+/// `n` is the header anchor: the visited node or one of its open ancestors, such
+/// as the export statement or decorated definition that wraps a declaration.
+///
+/// # Panics
+///
+/// Panics when `n` is neither the visited node nor one of its ancestors, which
+/// is an adapter bug: only those nodes have recorded earlier siblings.
 pub(crate) fn preceding_comments<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
     comment_kinds: &[&str],
     skip_kinds: &[&str],
 ) -> (Vec<&'s str>, Option<Pos>) {
+    let (anchor, earlier) = cx
+        .levels
+        .iter()
+        .rev()
+        .filter_map(|level| level.split_last())
+        .find(|(last, _)| last.id() == n.id())
+        .expect("a header anchor is the visited node or one of its ancestors");
     let mut doc: Vec<&'s str> = Vec::new();
     let mut doc_pos = None;
-    let mut header_row = n.start_position().row;
-    let mut current = n.prev_sibling();
-    while let Some(sibling) = current {
+    let mut header_row = anchor.start_position().row;
+    for &sibling in earlier.iter().rev() {
         let kind = sibling.kind();
         if comment_kinds.contains(&kind) {
             let end = sibling.end_position();
@@ -324,18 +440,45 @@ pub(crate) fn preceding_comments<'s>(
             if last_row + 1 != header_row {
                 break;
             }
-            doc.push(text(cx, sibling));
-            doc_pos = Some(pos_of(sibling));
+            let comment = text(cx, sibling);
+            if !is_directive_comment(comment) {
+                doc.push(comment);
+                doc_pos = Some(pos_of(sibling));
+            }
             header_row = sibling.start_position().row;
         } else if skip_kinds.contains(&kind) {
             header_row = sibling.start_position().row;
         } else {
             break;
         }
-        current = sibling.prev_sibling();
     }
     doc.reverse();
     (doc, doc_pos)
+}
+
+/// Shared skeleton behind JavaScript `sole_call_of` and TypeScript
+/// `ts_sole_call`: a body that is itself a call, or a block holding exactly
+/// one statement that resolves to a call.
+///
+/// `block_stmts` lists a `statement_block`'s meaningful children and `stmt_call`
+/// resolves one statement, so each grammar keeps its own child filtering where
+/// the grammars genuinely differ. Both grammars name the block `statement_block`.
+pub(crate) fn sole_call_id(
+    body: Node<'_>,
+    block_stmts: impl FnOnce(Node<'_>) -> Vec<Node<'_>>,
+    stmt_call: impl FnOnce(Node<'_>) -> Option<usize>,
+) -> Option<usize> {
+    if body.kind() == "call_expression" {
+        return Some(body.id());
+    }
+    if body.kind() != "statement_block" {
+        return None;
+    }
+    let stmts = block_stmts(body);
+    let [only] = stmts.as_slice() else {
+        return None;
+    };
+    stmt_call(*only)
 }
 
 /// Slices source text at a byte range; empty when the range is not a valid slice.

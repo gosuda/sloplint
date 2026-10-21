@@ -1,12 +1,14 @@
 //! Fact emission for the walk state: every method that appends one fact.
 
+use std::collections::HashMap;
+
 use sloplint_core::facts::{Ambient, Call, DynamicSymbol, Function, MutBinding, Pos};
 use sloplint_core::suppress::CommentText;
 
-use crate::hooks::{Container, FunctionHead, narrow, pos_of, slice};
+use crate::hooks::{Container, FunctionHead, is_directive_comment, narrow, pos_of, slice};
 use crate::walk::{FnFrame, FrameDecl, Mark, WalkState};
 
-impl<'s, 'a> WalkState<'s, 'a> {
+impl<'s, 'a> WalkState<'s, 'a, '_> {
     pub(crate) fn enter_typedef(&mut self, node: tree_sitter::Node<'_>) {
         let hooks = self.spec.hooks;
         let head = {
@@ -74,6 +76,10 @@ impl<'s, 'a> WalkState<'s, 'a> {
     }
 
     pub(crate) fn push_function(&mut self, node: tree_sitter::Node<'_>, head: FunctionHead<'s>) {
+        let untyped_throws = {
+            let cx = self.make_cx();
+            self.spec.hooks.untyped_throws(node, &cx)
+        };
         let index = self.facts.functions.len();
         self.facts.functions.push(Function {
             name: head.name,
@@ -85,6 +91,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
             in_test: head.in_test,
             params: head.params,
             return_type: head.return_type,
+            untyped_throws,
             missing_annotations: head.missing_annotations,
             cognitive: 0,
             max_depth: 0,
@@ -95,7 +102,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
             index,
             nest: 0,
             frames: 0,
-            decls: Vec::new(),
+            decls: HashMap::new(),
             sole_call: head.sole_call,
         });
         self.marks.push((node.id(), Mark::Fn));
@@ -230,11 +237,13 @@ impl<'s, 'a> WalkState<'s, 'a> {
                 nested_write_pos: None,
             });
             if let Some(frame) = self.fn_stack.last_mut() {
-                frame.decls.push(FrameDecl {
+                frame.decls.insert(
                     name,
-                    binding: index,
-                    frames_at_decl: at_frames,
-                });
+                    FrameDecl {
+                        binding: index,
+                        frames_at_decl: at_frames,
+                    },
+                );
             }
         }
     }
@@ -256,7 +265,11 @@ impl<'s, 'a> WalkState<'s, 'a> {
         let Some(frame) = self.fn_stack.last_mut() else {
             return;
         };
-        let Some(slot) = frame.decls.iter().rposition(|decl| decl.name == name) else {
+        let found = frame
+            .decls
+            .get(name)
+            .map(|decl| (decl.binding, decl.frames_at_decl));
+        let Some((binding, frames_at_decl)) = found else {
             let index = self.facts.bindings.len();
             self.facts.bindings.push(MutBinding {
                 name,
@@ -266,16 +279,14 @@ impl<'s, 'a> WalkState<'s, 'a> {
                 nested_write_pos: None,
             });
             let at_frames = frame.frames;
-            frame.decls.push(FrameDecl {
+            frame.decls.insert(
                 name,
-                binding: index,
-                frames_at_decl: at_frames,
-            });
+                FrameDecl {
+                    binding: index,
+                    frames_at_decl: at_frames,
+                },
+            );
             return;
-        };
-        let (binding, frames_at_decl) = {
-            let decl = &frame.decls[slot];
-            (decl.binding, decl.frames_at_decl)
         };
         let depth = frame.frames.saturating_sub(frames_at_decl);
         self.record_write(binding, depth, pos);
@@ -283,10 +294,12 @@ impl<'s, 'a> WalkState<'s, 'a> {
 
     fn apply_write(&mut self, name: &str, pos: Pos) {
         let mut target = None;
-        for frame in self.fn_stack.iter_mut().rev() {
-            if let Some(decl) = frame.decls.iter().rev().find(|decl| decl.name == name) {
-                let (binding, frames_at_decl) = (decl.binding, decl.frames_at_decl);
-                target = Some((binding, frame.frames.saturating_sub(frames_at_decl)));
+        for frame in self.fn_stack.iter().rev() {
+            if let Some(decl) = frame.decls.get(name) {
+                target = Some((
+                    decl.binding,
+                    frame.frames.saturating_sub(decl.frames_at_decl),
+                ));
                 break;
             }
         }
@@ -314,15 +327,7 @@ impl<'s, 'a> WalkState<'s, 'a> {
 
     pub(crate) fn on_comment(&mut self, node: tree_sitter::Node<'_>) {
         let text = slice(self.src, node.start_byte(), node.end_byte());
-        if !text.contains("sloplint-allow") {
-            return;
-        }
-        // Doc comments document directives; they never issue one.
-        let head = text.trim_start();
-        if ["///", "//!", "/**", "/*!", "(**", "(*!"]
-            .iter()
-            .any(|p| head.starts_with(p))
-        {
+        if !is_directive_comment(text) {
             return;
         }
         self.comments.push(CommentText {

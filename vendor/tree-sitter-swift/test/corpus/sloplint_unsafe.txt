@@ -1,0 +1,377 @@
+================================================================================
+Unsafe binary comparison in an if condition
+================================================================================
+
+func f(_ a: Int, _ b: Int) -> Bool {
+  if unsafe a == b {
+    return true
+  }
+  return false
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (parameter
+      (simple_identifier)
+      (simple_identifier)
+      (user_type
+        (type_identifier)))
+    (parameter
+      (simple_identifier)
+      (simple_identifier)
+      (user_type
+        (type_identifier)))
+    (user_type
+      (type_identifier))
+    (function_body
+      (statements
+        (if_statement
+          (unsafe_expression
+            (equality_expression
+              (simple_identifier)
+              (simple_identifier)))
+          (statements
+            (control_transfer_statement
+              (boolean_literal))))
+        (control_transfer_statement
+          (boolean_literal))))))
+
+================================================================================
+Unsafe call in an if condition
+================================================================================
+
+func f(_ a: Bool) -> Bool {
+  if unsafe g(a) {
+    return true
+  }
+  return false
+}
+
+func g(_ x: Bool) -> Bool {
+  return x
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (parameter
+      (simple_identifier)
+      (simple_identifier)
+      (user_type
+        (type_identifier)))
+    (user_type
+      (type_identifier))
+    (function_body
+      (statements
+        (if_statement
+          (unsafe_expression
+            (call_expression
+              (simple_identifier)
+              (call_suffix
+                (value_arguments
+                  (value_argument
+                    (simple_identifier))))))
+          (statements
+            (control_transfer_statement
+              (boolean_literal))))
+        (control_transfer_statement
+          (boolean_literal)))))
+  (function_declaration
+    (simple_identifier)
+    (parameter
+      (simple_identifier)
+      (simple_identifier)
+      (user_type
+        (type_identifier)))
+    (user_type
+      (type_identifier))
+    (function_body
+      (statements
+        (control_transfer_statement
+          (simple_identifier))))))
+
+================================================================================
+Unsafe binary comparison in a while condition
+================================================================================
+
+func f(_ a: Int, _ b: Int) -> Bool {
+  while unsafe a == b {
+    break
+  }
+  return false
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (parameter
+      (simple_identifier)
+      (simple_identifier)
+      (user_type
+        (type_identifier)))
+    (parameter
+      (simple_identifier)
+      (simple_identifier)
+      (user_type
+        (type_identifier)))
+    (user_type
+      (type_identifier))
+    (function_body
+      (statements
+        (while_statement
+          (unsafe_expression
+            (equality_expression
+              (simple_identifier)
+              (simple_identifier)))
+          (statements
+            (control_transfer_statement)))
+        (control_transfer_statement
+          (boolean_literal))))))
+
+================================================================================
+Unsafe in a guard condition
+================================================================================
+
+func f(_ a: Bool) -> Bool {
+  guard unsafe a else {
+    return false
+  }
+  return true
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (simple_identifier)
+    (parameter
+      (simple_identifier)
+      (simple_identifier)
+      (user_type
+        (type_identifier)))
+    (user_type
+      (type_identifier))
+    (function_body
+      (statements
+        (guard_statement
+          (unsafe_expression
+            (simple_identifier))
+          (else)
+          (statements
+            (control_transfer_statement
+              (boolean_literal))))
+        (control_transfer_statement
+          (boolean_literal))))))
+
+================================================================================
+Unsafe call with a trailing closure in return position
+================================================================================
+
+struct N {
+  func read(_ b: () -> Int) -> Int {
+    return b()
+  }
+}
+
+func f(_ r: N) -> Int {
+  return unsafe r.read {
+    return $0
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (function_declaration
+        (simple_identifier)
+        (parameter
+          (simple_identifier)
+          (simple_identifier)
+          (function_type
+            (tuple_type)
+            (user_type
+              (type_identifier))))
+        (user_type
+          (type_identifier))
+        (function_body
+          (statements
+            (control_transfer_statement
+              (call_expression
+                (simple_identifier)
+                (call_suffix
+                  (value_arguments)))))))))
+  (function_declaration
+    (simple_identifier)
+    (parameter
+      (simple_identifier)
+      (simple_identifier)
+      (user_type
+        (type_identifier)))
+    (user_type
+      (type_identifier))
+    (function_body
+      (statements
+        (control_transfer_statement
+          (unsafe_expression
+            (call_expression
+              (navigation_expression
+                (simple_identifier)
+                (navigation_suffix
+                  (simple_identifier)))
+              (call_suffix
+                (lambda_literal
+                  (statements
+                    (control_transfer_statement
+                      (simple_identifier))))))))))))
+
+================================================================================
+Borrow accessor
+================================================================================
+
+struct S {
+  var p: Int = 0
+  var x: Int {
+    borrow {
+      return p
+    }
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (property_declaration
+        (value_binding_pattern)
+        (pattern
+          (simple_identifier))
+        (type_annotation
+          (user_type
+            (type_identifier)))
+        (integer_literal))
+      (property_declaration
+        (value_binding_pattern)
+        (pattern
+          (simple_identifier))
+        (type_annotation
+          (user_type
+            (type_identifier)))
+        (computed_property
+          (computed_getter
+            (borrow_specifier)
+            (statements
+              (control_transfer_statement
+                (simple_identifier)))))))))
+
+================================================================================
+Borrow and mutate accessors
+================================================================================
+
+struct S {
+  var p: Int = 0
+  var x: Int {
+    borrow {
+      return p
+    }
+    mutate {
+      p = 1
+    }
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (property_declaration
+        (value_binding_pattern)
+        (pattern
+          (simple_identifier))
+        (type_annotation
+          (user_type
+            (type_identifier)))
+        (integer_literal))
+      (property_declaration
+        (value_binding_pattern)
+        (pattern
+          (simple_identifier))
+        (type_annotation
+          (user_type
+            (type_identifier)))
+        (computed_property
+          (computed_getter
+            (borrow_specifier)
+            (statements
+              (control_transfer_statement
+                (simple_identifier))))
+          (computed_setter
+            (mutate_specifier)
+            (statements
+              (assignment
+                (directly_assignable_expression
+                  (simple_identifier))
+                (integer_literal)))))))))
+
+================================================================================
+Legacy addressors
+================================================================================
+
+struct S {
+  var p: Int = 0
+  var x: Int {
+    unsafeAddress {
+      return p
+    }
+    nonmutating unsafeMutableAddress {
+      return p
+    }
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (type_identifier)
+    (class_body
+      (property_declaration
+        (value_binding_pattern)
+        (pattern
+          (simple_identifier))
+        (type_annotation
+          (user_type
+            (type_identifier)))
+        (integer_literal))
+      (property_declaration
+        (value_binding_pattern)
+        (pattern
+          (simple_identifier))
+        (type_annotation
+          (user_type
+            (type_identifier)))
+        (computed_property
+          (computed_setter
+            (unsafe_address_specifier)
+            (statements
+              (control_transfer_statement
+                (simple_identifier))))
+          (computed_setter
+            (unsafe_mutable_address_specifier
+              (mutation_modifier))
+            (statements
+              (control_transfer_statement
+                (simple_identifier)))))))))

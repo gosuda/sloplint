@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use serde::{Deserialize, Serialize};
 
-use crate::finding::source_site;
+use crate::finding::source_site_indexed;
 use crate::lang::Lang;
 
 /// A source position: `line` is 1-based and `byte` is the offset in the BOM-stripped source.
@@ -17,9 +17,22 @@ pub struct Pos {
 /// Everything one analyzed file contributes; all strings borrow the file source.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileFacts<'s> {
+    /// The language of the grammar that produced these facts, which every language-keyed
+    /// rule and table reads.
+    ///
+    /// A `.h` file routed to C that fails as C carries `Cpp` here when it parses as C++ and
+    /// `ObjC` when only the Objective-C grammar parses it, so its log-callee table, primitive
+    /// types, and rule applicability are those of that language. A file that failed to parse
+    /// has no tree to read and carries its routed language. Selection by `project.languages`
+    /// and the path-only `is_entry_file` flag follow the routed language, not this field.
     pub lang: Lang,
     pub path: &'s str,
     pub source: &'s str,
+    /// The byte offset where each line of `source` starts, from [`crate::finding::line_starts`].
+    ///
+    /// The index belongs to `source`; [`crate::finding::Finding::at`] and the world sites read it
+    /// to find a line without rescanning the file.
+    pub line_starts: Vec<u32>,
     pub is_test_file: bool,
     pub is_entry_file: bool,
     pub line_count: u32,
@@ -51,6 +64,10 @@ pub struct Function<'s> {
     pub in_test: bool,
     pub params: Vec<Param<'s>>,
     pub return_type: Option<&'s str>,
+    /// True when the signature declares plain `throws` with no error type.
+    ///
+    /// Typed `throws(E)`, `rethrows`, and languages without the clause are false.
+    pub untyped_throws: bool,
     pub missing_annotations: Vec<&'s str>,
     pub cognitive: u32,
     pub max_depth: u32,
@@ -227,6 +244,7 @@ pub struct NamedSite {
 /// The owned, serializable projection of `FileFacts` that world rules and the cache consume.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorldFacts {
+    /// The language of the grammar that produced the facts, copied from [`FileFacts::lang`].
     pub lang: Lang,
     pub is_test_file: bool,
     pub is_entry_file: bool,
@@ -247,14 +265,14 @@ impl WorldFacts {
             .functions
             .iter()
             .filter(|f| f.public && !f.interface_bound)
-            .map(|f| named_site(facts.source, f.pos, f.name))
+            .map(|f| named_site(facts, f.pos, f.name))
             .collect();
         definitions.extend(
             facts
                 .types
                 .iter()
                 .filter(|t| t.public)
-                .map(|t| named_site(facts.source, t.pos, t.name)),
+                .map(|t| named_site(facts, t.pos, t.name)),
         );
         WorldFacts {
             lang: facts.lang,
@@ -267,20 +285,20 @@ impl WorldFacts {
                 .types
                 .iter()
                 .filter(|t| t.abstraction)
-                .map(|t| named_site(facts.source, t.pos, t.name))
+                .map(|t| named_site(facts, t.pos, t.name))
                 .collect(),
             impls: facts
                 .impls
                 .iter()
-                .map(|i| named_site(facts.source, i.pos, i.name))
+                .map(|i| named_site(facts, i.pos, i.name))
                 .collect(),
             barrel: facts.barrel.as_ref().map(|b| b.targets.clone()),
         }
     }
 }
 
-fn named_site(source: &str, pos: Pos, name: &str) -> NamedSite {
-    let (column, context) = source_site(source, pos);
+fn named_site(facts: &FileFacts<'_>, pos: Pos, name: &str) -> NamedSite {
+    let (column, context) = source_site_indexed(&facts.line_starts, facts.source, pos);
     NamedSite {
         name: name.to_owned().into_boxed_str(),
         line: pos.line,
@@ -292,6 +310,7 @@ fn named_site(source: &str, pos: Pos, name: &str) -> NamedSite {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::finding::line_starts;
 
     #[test]
     fn projects_public_surface_and_barrel() {
@@ -300,6 +319,7 @@ mod tests {
             lang: Lang::Rust,
             path: "src/lib.rs",
             source,
+            line_starts: line_starts(source),
             is_test_file: false,
             is_entry_file: true,
             line_count: 2,
@@ -314,6 +334,7 @@ mod tests {
                     in_test: false,
                     params: vec![],
                     return_type: None,
+                    untyped_throws: false,
                     missing_annotations: vec![],
                     cognitive: 0,
                     max_depth: 0,
@@ -330,6 +351,7 @@ mod tests {
                     in_test: false,
                     params: vec![],
                     return_type: None,
+                    untyped_throws: false,
                     missing_annotations: vec![],
                     cognitive: 0,
                     max_depth: 0,
@@ -346,6 +368,7 @@ mod tests {
                     in_test: false,
                     params: vec![],
                     return_type: None,
+                    untyped_throws: false,
                     missing_annotations: vec![],
                     cognitive: 0,
                     max_depth: 0,

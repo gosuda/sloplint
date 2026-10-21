@@ -1,0 +1,232 @@
+==================
+method named self
+==================
+
+class T
+  def self
+    1
+  end
+end
+
+---
+
+(program
+  (class
+    name: (constant)
+    body: (body_statement
+      (method
+        name: (identifier)
+        body: (body_statement
+          (integer))))))
+
+==================
+method named self with parameters
+==================
+
+def self(a)
+  a
+end
+
+def self a, b
+  a
+end
+
+def self() 1 end
+
+---
+
+(program
+  (method
+    name: (identifier)
+    parameters: (method_parameters
+      (identifier))
+    body: (body_statement
+      (identifier)))
+  (method
+    name: (identifier)
+    parameters: (method_parameters
+      (identifier)
+      (identifier))
+    body: (body_statement
+      (identifier)))
+  (method
+    name: (identifier)
+    parameters: (method_parameters)
+    body: (body_statement
+      (integer))))
+
+==================
+method named self on one line and without a body
+==================
+
+def self; 1; end
+def self; end
+x = def self; 1; end
+
+---
+
+(program
+  (method
+    name: (identifier)
+    body: (body_statement
+      (integer)))
+  (method
+    name: (identifier))
+  (assignment
+    left: (identifier)
+    right: (method
+      name: (identifier)
+      body: (body_statement
+        (integer)))))
+
+==================
+endless method named self
+==================
+
+def self = 1
+def self(a) = a
+
+---
+
+(program
+  (method
+    name: (identifier)
+    body: (integer))
+  (method
+    name: (identifier)
+    parameters: (method_parameters
+      (identifier))
+    body: (identifier)))
+
+==================
+setter named self
+==================
+
+def self=(v)
+  @v = v
+end
+
+---
+
+(program
+  (method
+    name: (setter
+      name: (identifier))
+    parameters: (method_parameters
+      (identifier))
+    body: (body_statement
+      (assignment
+        left: (instance_variable)
+        right: (identifier)))))
+
+==================
+method named super
+==================
+
+def super
+  1
+end
+
+def super(a)
+  a
+end
+
+---
+
+(program
+  (method
+    name: (identifier)
+    body: (body_statement
+      (integer)))
+  (method
+    name: (identifier)
+    parameters: (method_parameters
+      (identifier))
+    body: (body_statement
+      (identifier))))
+
+==================
+method named self beside a singleton method on self
+==================
+
+class T
+  def self
+    1
+  end
+
+  def self.build
+    new
+  end
+end
+
+---
+
+(program
+  (class
+    name: (constant)
+    body: (body_statement
+      (method
+        name: (identifier)
+        body: (body_statement
+          (integer)))
+      (singleton_method
+        object: (self)
+        name: (identifier)
+        body: (body_statement
+          (identifier))))))
+
+==================
+singleton methods named self and super
+==================
+
+def self.self
+  1
+end
+
+def self.super
+  1
+end
+
+def self::self
+  1
+end
+
+---
+
+(program
+  (singleton_method
+    object: (self)
+    name: (identifier)
+    body: (body_statement
+      (integer)))
+  (singleton_method
+    object: (self)
+    name: (identifier)
+    body: (body_statement
+      (integer)))
+  (singleton_method
+    object: (self)
+    name: (identifier)
+    body: (body_statement
+      (integer))))
+
+==================
+alias and undef with self
+==================
+
+alias self foo
+alias foo self
+undef self, super
+
+---
+
+(program
+  (alias
+    name: (identifier)
+    alias: (identifier))
+  (alias
+    name: (identifier)
+    alias: (identifier))
+  (undef
+    (identifier)
+    (identifier)))

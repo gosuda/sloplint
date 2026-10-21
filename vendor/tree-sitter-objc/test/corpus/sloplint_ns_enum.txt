@@ -1,0 +1,160 @@
+==================
+NS_ENUM with identifier underlying type
+==================
+
+typedef NS_ENUM(NSUInteger, SDCallbackPolicy) {
+    SDCallbackPolicyFireAndForget = 0,
+    SDCallbackPolicyEnsureExecute = 1,
+};
+
+---
+
+(translation_unit
+  (type_definition
+    (enum_specifier
+      (type_identifier)
+      (type_identifier)
+      (enumerator_list
+        (enumerator
+          (identifier)
+          (number_literal))
+        (enumerator
+          (identifier)
+          (number_literal))))))
+
+==================
+NS_OPTIONS with shift values
+==================
+
+typedef NS_OPTIONS(NSUInteger, SDImageCacheOptions) {
+    SDImageCacheRetryFailed = 1 << 0,
+    SDImageCacheLowPriority = 1 << 1,
+};
+
+---
+
+(translation_unit
+  (type_definition
+    (enum_specifier
+      (type_identifier)
+      (type_identifier)
+      (enumerator_list
+        (enumerator
+          (identifier)
+          (binary_expression
+            (number_literal)
+            (number_literal)))
+        (enumerator
+          (identifier)
+          (binary_expression
+            (number_literal)
+            (number_literal)))))))
+
+==================
+NS_ERROR_ENUM with domain identifier
+==================
+
+typedef NS_ERROR_ENUM(SDWebImageErrorDomain, SDWebImageError) {
+    SDWebImageErrorBadImageData = 0,
+    SDWebImageErrorCancelled = 1,
+};
+
+---
+
+(translation_unit
+  (type_definition
+    (enum_specifier
+      (type_identifier)
+      (type_identifier)
+      (enumerator_list
+        (enumerator
+          (identifier)
+          (number_literal))
+        (enumerator
+          (identifier)
+          (number_literal))))))
+
+==================
+CF_ENUM and CF_OPTIONS siblings
+==================
+
+typedef CF_ENUM(uint32_t, MyCFEnum) {
+    MyCFEnumA = 0,
+};
+
+typedef CF_OPTIONS(uint32_t, MyCFOptions) {
+    MyCFOptionsA = 1 << 0,
+};
+
+typedef NS_CLOSED_ENUM(NSInteger, MyClosed) {
+    MyClosedA = 0,
+};
+
+---
+
+(translation_unit
+  (type_definition
+    (enum_specifier
+      (primitive_type)
+      (type_identifier)
+      (enumerator_list
+        (enumerator
+          (identifier)
+          (number_literal)))))
+  (type_definition
+    (enum_specifier
+      (primitive_type)
+      (type_identifier)
+      (enumerator_list
+        (enumerator
+          (identifier)
+          (binary_expression
+            (number_literal)
+            (number_literal))))))
+  (type_definition
+    (enum_specifier
+      (type_identifier)
+      (type_identifier)
+      (enumerator_list
+        (enumerator
+          (identifier)
+          (number_literal))))))
+
+==================
+Enumerator with availability between name and value
+==================
+
+typedef NS_OPTIONS(NSUInteger, SDWebImageOptions) {
+    SDWebImageAvoidDecodeImage API_DEPRECATED("Use SDWebImageContextImageForceDecodePolicy instead", macos(10.10, 10.10), ios(8.0, 8.0)) = 1 << 18,
+    SDWebImageScaleDownLargeImages = 1 << 20,
+};
+
+---
+
+(translation_unit
+  (type_definition
+    (enum_specifier
+      (type_identifier)
+      (type_identifier)
+      (enumerator_list
+        (enumerator
+          (identifier)
+          (availability_attribute_specifier
+            (string_literal
+              (string_content))
+            (version
+              (platform)
+              (number_literal)
+              (number_literal))
+            (version
+              (platform)
+              (number_literal)
+              (number_literal)))
+          (binary_expression
+            (number_literal)
+            (number_literal)))
+        (enumerator
+          (identifier)
+          (binary_expression
+            (number_literal)
+            (number_literal)))))))

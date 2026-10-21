@@ -1,0 +1,228 @@
+==========================================
+Operator names after member access
+==========================================
+
+struct X { bool operator==(const X &) const; int operator()(int) const; };
+void f(X x, X *px) {
+  x.operator==(x);
+  px->operator()(1);
+}
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (function_declarator
+          (operator_name)
+          (parameter_list
+            (parameter_declaration
+              (type_qualifier)
+              (type_identifier)
+              (abstract_reference_declarator)))
+          (type_qualifier)))
+      (field_declaration
+        (primitive_type)
+        (function_declarator
+          (operator_name)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)))
+          (type_qualifier)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (identifier))
+        (parameter_declaration
+          (type_identifier)
+          (pointer_declarator
+            (identifier)))))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (field_expression
+            (identifier)
+            (operator_name))
+          (argument_list
+            (identifier))))
+      (expression_statement
+        (call_expression
+          (field_expression
+            (identifier)
+            (operator_name))
+          (argument_list
+            (number_literal)))))))
+
+==========================================
+Pointer-to-member access
+==========================================
+
+struct F { int field; };
+void f(F *config, int F::*fieldp) {
+  config->*fieldp;
+}
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (pointer_declarator
+            (identifier)))
+        (parameter_declaration
+          (primitive_type)
+          (qualified_identifier
+            (namespace_identifier)
+            (pointer_type_declarator
+              (type_identifier))))))
+    (compound_statement
+      (expression_statement
+        (field_expression
+          (identifier)
+          (field_identifier))))))
+
+==========================================
+Array of pointers with new
+==========================================
+
+void f(int n) {
+  int **p = new int*[n];
+  delete[] p;
+}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (pointer_declarator
+            (pointer_declarator
+              (identifier)))
+          (new_expression
+            (primitive_type)
+            (new_declarator
+              (new_declarator
+                (identifier))))))
+      (expression_statement
+        (delete_expression
+          (identifier))))))
+
+==========================================
+Simple array new still works (control)
+==========================================
+
+void f(int n) {
+  int *p = new int[n];
+  delete[] p;
+}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (pointer_declarator
+            (identifier))
+          (new_expression
+            (primitive_type)
+            (new_declarator
+              (identifier)))))
+      (expression_statement
+        (delete_expression
+          (identifier))))))
+
+==========================================
+Functional cast to a dependent type as a call argument
+==========================================
+
+void g(...);
+template <class S> void f() { g(typename S::First()); }
+template <class S> void h() { auto x = typename S::First{}; }
+
+---
+
+(translation_unit
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list)))
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (primitive_type)
+      (function_declarator
+        (identifier)
+        (parameter_list))
+      (compound_statement
+        (expression_statement
+          (call_expression
+            (identifier)
+            (argument_list
+              (call_expression
+                (dependent_type
+                  (qualified_identifier
+                    (namespace_identifier)
+                    (type_identifier)))
+                (argument_list))))))))
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (primitive_type)
+      (function_declarator
+        (identifier)
+        (parameter_list))
+      (compound_statement
+        (declaration
+          (placeholder_type_specifier
+            (auto))
+          (init_declarator
+            (identifier)
+            (compound_literal_expression
+              (dependent_type
+                (qualified_identifier
+                  (namespace_identifier)
+                  (type_identifier)))
+              (initializer_list))))))))

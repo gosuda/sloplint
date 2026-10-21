@@ -1,6 +1,6 @@
 //! Declarative custom query rules: compilation per grammar and execution per file.
 
-use sloplint_core::lang::Lang;
+use sloplint_core::lang::{ALL_LANGS, Lang};
 use sloplint_core::rules::custom::message_placeholders;
 use sloplint_core::{ConfigError, CustomHit, CustomRuleSpec};
 use tree_sitter::{Query, QueryCursor, StreamingIterator, Tree};
@@ -10,10 +10,11 @@ use crate::spec::spec;
 
 /// Every compiled custom rule, paired with each grammar it runs against.
 ///
-/// Each entry carries the query's capture names as `'static` strings so a
-/// hit can name its captures with the source lifetime the contract requires.
+/// The query owns its capture names; `run` borrows them from the query, so
+/// hits borrow the rules table for capture names and the file source for
+/// capture text.
 pub struct CustomRules {
-    entries: Vec<(Lang, u32, Query, Vec<&'static str>)>,
+    entries: Vec<(Lang, u32, Query)>,
 }
 
 impl CustomRules {
@@ -33,8 +34,7 @@ impl CustomRules {
             }
             for lang in langs {
                 let query = compile_query(lang, rule)?;
-                let names = static_names(&query);
-                entries.push((lang, narrow(index), query, names));
+                entries.push((lang, narrow(index), query));
             }
         }
         Ok(CustomRules { entries })
@@ -44,13 +44,23 @@ impl CustomRules {
     ///
     /// Each match yields one hit at its `@match` capture carrying every
     /// `(capture name, capture text)` pair for message interpolation.
-    pub fn run<'s>(&self, tree: &Tree, source: &'s str, lang: Lang) -> Vec<CustomHit<'s>> {
+    ///
+    /// The returned hits borrow the rules table (`&'s self`) for capture
+    /// names and the file source for capture text; the caller must keep
+    /// both alive while the hits are used.
+    pub fn run<'s>(&'s self, tree: &Tree, source: &'s str, lang: Lang) -> Vec<CustomHit<'s>> {
+        let mut queries = self
+            .entries
+            .iter()
+            .filter(|(entry_lang, _, _)| *entry_lang == lang)
+            .peekable();
+        if queries.peek().is_none() {
+            return Vec::new();
+        }
         let mut hits = Vec::new();
         let mut cursor = QueryCursor::new();
-        for (entry_lang, rule, query, names) in &self.entries {
-            if *entry_lang != lang {
-                continue;
-            }
+        for (_, rule, query) in queries {
+            let names = query.capture_names();
             let mut matches = cursor.matches(query, tree.root_node(), source.as_bytes());
             while let Some(found) = matches.next() {
                 if let Some(hit) = hit_from_match(names, found.captures(), *rule, source) {
@@ -61,35 +71,6 @@ impl CustomRules {
         hits
     }
 }
-
-/// Every `Lang` variant, in declaration order.
-const ALL_LANGS: [Lang; 25] = [
-    Lang::Rust,
-    Lang::TypeScript,
-    Lang::Tsx,
-    Lang::JavaScript,
-    Lang::Python,
-    Lang::Go,
-    Lang::Java,
-    Lang::Kotlin,
-    Lang::CSharp,
-    Lang::C,
-    Lang::Cpp,
-    Lang::ObjC,
-    Lang::Php,
-    Lang::Ruby,
-    Lang::Bash,
-    Lang::PowerShell,
-    Lang::Swift,
-    Lang::R,
-    Lang::Scala,
-    Lang::Dart,
-    Lang::Zig,
-    Lang::Ocaml,
-    Lang::OcamlInterface,
-    Lang::Odin,
-    Lang::Starlark,
-];
 
 /// The languages a config key names; empty for an unknown key.
 fn langs_for_key(key: &str) -> Vec<Lang> {
@@ -116,7 +97,9 @@ fn compile_query(lang: Lang, rule: &CustomRuleSpec) -> Result<Query, ConfigError
     if !names.contains(&"match") {
         return Err(custom_error(rule, "query must define a @match capture"));
     }
-    for placeholder in message_placeholders(&rule.message) {
+    let placeholders = message_placeholders(&rule.message)
+        .map_err(|error| custom_error(rule, &error.to_string()))?;
+    for placeholder in placeholders {
         if !names.contains(&placeholder.as_str()) {
             return Err(custom_error(
                 rule,
@@ -125,15 +108,6 @@ fn compile_query(lang: Lang, rule: &CustomRuleSpec) -> Result<Query, ConfigError
         }
     }
     Ok(query)
-}
-
-/// Copies the query's capture names into process-lifetime strings.
-fn static_names(query: &Query) -> Vec<&'static str> {
-    query
-        .capture_names()
-        .iter()
-        .map(|name| -> &'static str { name.to_string().leak() })
-        .collect()
 }
 
 /// Wraps a compile failure in the typed custom-rule error.
@@ -154,7 +128,7 @@ fn hit_from_match<'s>(
     let mut pos = None;
     let mut pairs = Vec::new();
     for capture in captures {
-        let name = names.get(capture.index as usize).copied().unwrap_or("");
+        let name = names[capture.index as usize];
         let text = slice(source, capture.node.start_byte(), capture.node.end_byte());
         if name == "match" {
             pos = Some(pos_of(capture.node));

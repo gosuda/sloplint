@@ -1,0 +1,229 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -48,7 +48,6 @@
+     [$._simple_name, $.type_parameter],
+     [$._simple_name, $.subpattern],
+ 
+-    [$.tuple_element, $.type_pattern],
+     [$.tuple_element, $.using_variable_declarator],
+     [$.tuple_element, $.declaration_expression],
+ 
+@@ -59,6 +58,8 @@
+     [$.parameter, $.lvalue_expression],
+ 
+     [$.type, $.attribute],
++    [$.attribute_target_specifier, $._reserved_identifier],
++    [$.extension_block, $._reserved_identifier],
+     [$.type, $.nullable_type],
+     [$.type, $.nullable_type, $.array_creation_expression],
+     [$.type, $._array_base_type],
+@@ -123,7 +124,7 @@
+   ],
+ 
+   extras: $ => [
+-    /[\s\u00A0\uFEFF\u3000]+/,
++    /[\s\u00A0\uFEFF\u3000\u202F]+/,
+     $.comment,
+     $.preproc_region,
+     $.preproc_endregion,
+@@ -294,7 +295,7 @@
+     _struct_declaration_initializer: $ => seq(
+       repeat($._attribute_list),
+       repeat($.modifier),
+-      optional('ref'),
++      optional(seq('ref', repeat(alias('partial', $.modifier)))),
+       'struct',
+       field('name', $.identifier),
+       repeat(choice($.type_parameter_list, $.parameter_list, $.base_list)),
+@@ -443,6 +444,7 @@
+       'struct',
+       'notnull',
+       'unmanaged',
++      seq('allows', 'ref', 'struct'),
+       $.constructor_constraint,
+       field('type', $.type),
+     ),
+@@ -511,6 +513,7 @@
+       $.record_declaration,
+       $.constructor_declaration,
+       $.destructor_declaration,
++      $.extension_block,
+       $.indexer_declaration,
+       $.interface_declaration,
+       $.namespace_declaration,
+@@ -521,11 +524,21 @@
+       $.preproc_if,
+     ),
+ 
+-    field_declaration: $ => seq(
+-      repeat($._attribute_list),
+-      repeat($.modifier),
+-      $.variable_declaration,
+-      ';',
++    field_declaration: $ => choice(
++      seq(
++        repeat($._attribute_list),
++        repeat($.modifier),
++        $.variable_declaration,
++        ';',
++      ),
++      seq(
++        repeat($._attribute_list),
++        repeat($.modifier),
++        field('type', $.type),
++        field('name', $.identifier),
++        '=',
++        alias($.preproc_if_in_field_value, $.preproc_if),
++      ),
+     ),
+ 
+     constructor_declaration: $ => seq(
+@@ -541,8 +554,20 @@
+       optional($.constructor_initializer),
+     ),
+ 
++    extension_block: $ => seq(
++      'extension',
++      optional($.type_parameter_list),
++      '(',
++      field('type', $.type),
++      optional(field('name', $.identifier)),
++      ')',
++      repeat($.type_parameter_constraints_clause),
++      field('body', $.declaration_list),
++    ),
++
+     destructor_declaration: $ => seq(
+       repeat($._attribute_list),
++      repeat($.modifier),
+       optional('extern'),
+       '~',
+       field('name', $.identifier),
+@@ -585,7 +610,10 @@
+ 
+     accessor_list: $ => seq(
+       '{',
+-      repeat($.accessor_declaration),
++      repeat(choice(
++        $.accessor_declaration,
++        alias($.preproc_if_in_accessor, $.preproc_if),
++      )),
+       '}',
+     ),
+ 
+@@ -630,6 +658,7 @@
+           field('value', $.arrow_expression_clause),
+           ';',
+         ),
++        alias($.preproc_if_in_function_body, $.preproc_if),
+       ),
+     ),
+ 
+@@ -701,6 +730,8 @@
+       field('body', $.block),
+       seq(field('body', $.arrow_expression_clause), ';'),
+       ';',
++      alias($.preproc_if_in_function_body, $.preproc_if),
++      seq('=>', alias($.preproc_if_in_function_body, $.preproc_if)),
+     ),
+ 
+     variable_declaration: $ => seq(
+@@ -1211,7 +1242,7 @@
+ 
+     var_pattern: $ => seq('var', $._variable_designation),
+ 
+-    type_pattern: $ => prec.right(field('type', $.type)),
++    type_pattern: $ => prec.right(1, field('type', $.type)),
+ 
+     list_pattern: $ => prec.right(seq(
+       '[',
+@@ -1395,8 +1426,13 @@
+       $.parenthesized_expression,
+     ),
+ 
+-    assignment_expression: $ => seq(
+-      field('left', $.lvalue_expression),
++    assignment_expression: $ => prec.right(PREC.ASSIGN, seq(
++      field('left', choice(
++        $.lvalue_expression,
++        $.invocation_expression,
++        $.conditional_access_expression,
++        $.parenthesized_expression,
++      )),
+       field('operator',
+         choice(
+           '=',
+@@ -1415,7 +1451,7 @@
+         ),
+       ),
+       field('right', $.expression),
+-    ),
++    )),
+ 
+     binary_expression: $ => choice(
+       ...[
+@@ -1465,7 +1501,13 @@
+ 
+     _pointer_indirection_expression: $ => prec.right(PREC.UNARY, seq(
+       '*',
+-      $.lvalue_expression,
++      choice(
++        $.lvalue_expression,
++        $.cast_expression,
++        $.postfix_unary_expression,
++        $.parenthesized_expression,
++        $.invocation_expression,
++      ),
+     )),
+ 
+     query_expression: $ => seq($.from_clause, $._query_body),
+@@ -1988,10 +2030,13 @@
+ 
+     _reserved_identifier: _ => choice(
+       'alias',
++      'allows',
+       'ascending',
+       'by',
+       'descending',
+       'equals',
++      'extension',
++      'field',
+       'file',
+       'from',
+       'global',
+@@ -1999,11 +2044,16 @@
+       'into',
+       'join',
+       'let',
++      'method',
+       'notnull',
+       'on',
+       'orderby',
++      'param',
++      'property',
+       'scoped',
+       'select',
++      'type',
++      'typevar',
+       'unmanaged',
+       'var',
+       'when',
+@@ -2018,6 +2068,18 @@
+     ...preprocIf('_in_expression', $ => $.expression, -2, false),
+     ...preprocIf('_in_enum_member_declaration', $ => $.enum_member_declaration, 0, false),
+     ...preprocIf('_in_attribute_list', $ => $.attribute_list, -1, false),
++    ...preprocIf('_in_function_body', $ => choice(
++      field('body', $.block),
++      seq(field('body', $.arrow_expression_clause), ';'),
++      ';',
++      seq($.expression, ';'),
++    )),
++    ...preprocIf('_in_field_value', $ => seq($.expression, ';')),
++    ...preprocIf('_in_accessor', $ => seq(
++      repeat($.modifier),
++      field('name', choice('get', 'set', 'add', 'remove', 'init', $.identifier)),
++      $._function_body,
++    )),
+ 
+     preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
+     preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,

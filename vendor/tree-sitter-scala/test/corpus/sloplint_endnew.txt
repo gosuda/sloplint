@@ -1,0 +1,99 @@
+================================================================================
+Empty new template with a comment closed by end new (sloplint SC-ENDNEW)
+================================================================================
+
+trait Foo
+val foo =
+  new Foo:
+    // comment
+  end new
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (trait_definition
+    (identifier))
+  (val_definition
+    (identifier)
+    (indented_block
+      (instance_expression
+        (type_identifier)
+        (comment)
+        (end_marker)))))
+
+================================================================================
+Non-empty new template closed by end new (control)
+================================================================================
+
+trait Foo
+val foo =
+  new Foo:
+    val x = 1
+  end new
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (trait_definition
+    (identifier))
+  (val_definition
+    (identifier)
+    (indented_block
+      (instance_expression
+        (type_identifier)
+        (template_body
+          (val_definition
+            (identifier)
+            (integer_literal)))
+        (end_marker)))))
+
+================================================================================
+Empty new template without end new stays an error (control)
+================================================================================
+
+object T:
+  trait A:
+    val x = new Foo:
+  val y = 2
+  trait Foo
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (trait_definition
+        (identifier)
+        (template_body
+          (val_definition
+            (identifier)
+            (instance_expression
+              (type_identifier)))
+          (ERROR)))
+      (val_definition
+        (identifier)
+        (integer_literal))
+      (trait_definition
+        (identifier)))))
+
+================================================================================
+Empty new template closed by end new (sloplint SC-ENDNEW)
+================================================================================
+
+trait Foo
+val foo =
+  new Foo:
+  end new
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (trait_definition
+    (identifier))
+  (val_definition
+    (identifier)
+    (indented_block
+      (instance_expression
+        (type_identifier)
+        (end_marker)))))

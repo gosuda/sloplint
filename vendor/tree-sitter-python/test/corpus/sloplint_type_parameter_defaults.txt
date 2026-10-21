@@ -1,0 +1,189 @@
+==================
+Type alias with a defaulted type parameter
+==================
+
+type X[T = int] = list[T]
+---
+
+(module
+  (type_alias_statement
+    (type
+      (generic_type
+        (identifier)
+        (type_parameter
+          (default_type_parameter
+            (type
+              (identifier))
+            (type
+              (identifier))))))
+    (type
+      (generic_type
+        (identifier)
+        (type_parameter
+          (type
+            (identifier)))))))
+
+==================
+Generic function with a defaulted type parameter
+==================
+
+def f[T = int](x: T) -> T:
+  return x
+---
+
+(module
+  (function_definition
+    (identifier)
+    (type_parameter
+      (default_type_parameter
+        (type
+          (identifier))
+        (type
+          (identifier))))
+    (parameters
+      (typed_parameter
+        (identifier)
+        (type
+          (identifier))))
+    (type
+      (identifier))
+    (block
+      (return_statement
+        (identifier)))))
+
+==================
+Generic class with a defaulted type parameter
+==================
+
+class C[T = int]:
+  x: T
+---
+
+(module
+  (class_definition
+    (identifier)
+    (type_parameter
+      (default_type_parameter
+        (type
+          (identifier))
+        (type
+          (identifier))))
+    (block
+      (expression_statement
+        (assignment
+          (identifier)
+          (type
+            (identifier)))))))
+
+==================
+Defaults on TypeVarTuple and ParamSpec parameters
+==================
+
+def f[T = int, *Ts = *tuple[int, ...], **P = [int, str]](): ...
+---
+
+(module
+  (function_definition
+    (identifier)
+    (type_parameter
+      (default_type_parameter
+        (type
+          (identifier))
+        (type
+          (identifier)))
+      (default_type_parameter
+        (type
+          (splat_type
+            (identifier)))
+        (type
+          (subscript
+            (list_splat
+              (identifier))
+            (identifier)
+            (ellipsis))))
+      (default_type_parameter
+        (type
+          (splat_type
+            (identifier)))
+        (type
+          (list
+            (identifier)
+            (identifier)))))
+    (parameters)
+    (block
+      (expression_statement
+        (ellipsis)))))
+
+==================
+Bounded and constrained type parameters with defaults
+==================
+
+def f[T: int = str, U: (int, str) = int](): ...
+---
+
+(module
+  (function_definition
+    (identifier)
+    (type_parameter
+      (default_type_parameter
+        (type
+          (constrained_type
+            (type
+              (identifier))
+            (type
+              (identifier))))
+        (type
+          (identifier)))
+      (default_type_parameter
+        (type
+          (constrained_type
+            (type
+              (identifier))
+            (type
+              (tuple
+                (identifier)
+                (identifier)))))
+        (type
+          (identifier))))
+    (parameters)
+    (block
+      (expression_statement
+        (ellipsis)))))
+
+==================
+Type parameters without defaults still parse
+==================
+
+def f[T, *Ts, **P, U: int, V: (int, str)](): ...
+---
+
+(module
+  (function_definition
+    (identifier)
+    (type_parameter
+      (type
+        (identifier))
+      (type
+        (splat_type
+          (identifier)))
+      (type
+        (splat_type
+          (identifier)))
+      (type
+        (constrained_type
+          (type
+            (identifier))
+          (type
+            (identifier))))
+      (type
+        (constrained_type
+          (type
+            (identifier))
+          (type
+            (tuple
+              (identifier)
+              (identifier))))))
+    (parameters)
+    (block
+      (expression_statement
+        (ellipsis)))))

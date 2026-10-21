@@ -341,7 +341,7 @@ impl LangHooks for CSharpHooks {
             return None;
         }
         let name_node = child_by_field(n, "name")?;
-        let inner = cx.containers.last().copied();
+        let inner = cx.innermost_container();
         let mut public = kind != "local_function_statement"
             && (has_mod(cx, n, "public") || inner == Some(Container::Trait { public: true }));
         if let Some(Container::Class { exported, .. }) = inner {
@@ -358,9 +358,7 @@ impl LangHooks for CSharpHooks {
                 ..
             })
         ) && overrides;
-        let in_test = cx.is_test_file
-            || cx.containers.contains(&Container::TestModule)
-            || attr_hit(cx, n, TEST_ATTRS);
+        let in_test = cx.is_test_file || cx.in_test_module() || attr_hit(cx, n, TEST_ATTRS);
         let mut params = Vec::new();
         if let Some(pl) = child_by_field(n, "parameters") {
             params_from_list(cx, pl, &mut params);
@@ -518,7 +516,7 @@ impl LangHooks for CSharpHooks {
             return None;
         }
         let name_node = child_by_field(n, "name")?;
-        let inner = cx.containers.last().copied();
+        let inner = cx.innermost_container();
         let enclosed = match inner {
             None => true,
             Some(Container::Class { exported, .. }) => exported,

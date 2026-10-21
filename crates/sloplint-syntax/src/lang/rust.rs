@@ -8,8 +8,8 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    has_child_kind, last_segment, named_children, narrow, pos_of, preceding_comments,
-    string_arg_shape, text,
+    first_of_kind, has_child_kind, last_segment, named_children, narrow, pos_of,
+    preceding_comments, string_arg_shape, text,
 };
 use crate::spec::Role;
 
@@ -52,11 +52,6 @@ pub(crate) static HOOKS: RustHooks = RustHooks;
 const STR_KINDS: [&str; 2] = ["string_literal", "raw_string_literal"];
 fn field_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>, field: &str) -> &'s str {
     child_by_field(n, field).map_or("", |v| text(cx, v))
-}
-fn test_mod(cx: &Cx<'_, '_>) -> bool {
-    cx.containers
-        .iter()
-        .any(|c| matches!(c, Container::TestModule))
 }
 fn has_test_attr(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     let mut row = n.start_position().row;
@@ -239,10 +234,11 @@ fn macro_args<'s>(cx: &Cx<'_, 's>, tt: Node<'_>) -> Vec<Arg<'s>> {
 }
 fn with_prefix<'s>(prefix: &str, head: &'s str) -> Cow<'s, str> {
     if prefix.is_empty() {
-        Cow::Borrowed(head)
-    } else {
-        Cow::Owned(prefix.to_owned() + head)
+        return Cow::Borrowed(head.trim_end_matches(':'));
     }
+    let mut joined = prefix.to_owned() + head;
+    joined.truncate(joined.trim_end_matches(':').len());
+    Cow::Owned(joined)
 }
 fn leaf_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Import<'s>>) {
     let (path, alias) = if n.kind() == "use_as_clause" {
@@ -257,6 +253,16 @@ fn leaf_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Imp
     } else {
         (text(cx, n), None)
     };
+    let own = n
+        .parent()
+        .and_then(|list| list.parent())
+        .and_then(|outer| child_by_field(outer, "path"))
+        .map_or("", |scope| text(cx, scope));
+    let (path, prefix) = if path == "self" && !own.is_empty() {
+        (own, &prefix[..prefix.len().saturating_sub(own.len() + 2)])
+    } else {
+        (path, prefix)
+    };
     let name = last_segment(path, &["::"]);
     let head = path[..path.len() - name.len()].trim_end_matches(':');
     out.push(Import {
@@ -265,25 +271,18 @@ fn leaf_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Imp
         name,
         alias,
         kind: ImportKind::Named,
-        in_test: test_mod(cx),
+        in_test: cx.in_test_module(),
     });
 }
 fn wild_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Import<'s>>) {
-    let path = named_children(n)
-        .into_iter()
-        .next()
-        .map_or("", |c| text(cx, c));
-    let module = match with_prefix(prefix, path) {
-        Cow::Borrowed(s) => Cow::Borrowed(s.trim_end_matches(':')),
-        Cow::Owned(s) => Cow::Owned(s.trim_end_matches(':').to_owned()),
-    };
+    let path = n.named_child(0).map_or("", |c| text(cx, c));
     out.push(Import {
         pos: pos_of(n),
-        module,
+        module: with_prefix(prefix, path),
         name: "*",
         alias: None,
         kind: ImportKind::Wildcard,
-        in_test: test_mod(cx),
+        in_test: cx.in_test_module(),
     });
 }
 fn push_use<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &mut String, out: &mut Vec<Import<'s>>) {
@@ -308,22 +307,44 @@ fn push_use<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &mut String, out: &mut Vec
         _ => leaf_import(cx, n, prefix, out),
     }
 }
+fn enum_pattern(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
+    let mut cursor = pat.walk();
+    loop {
+        match cursor.node().kind() {
+            "tuple_struct_pattern" | "struct_pattern" => return true,
+            "match_pattern" | "or_pattern" if cursor.goto_first_child() => continue,
+            _ if text(cx, cursor.node()).contains("::") => return true,
+            _ => {}
+        }
+        while !cursor.goto_next_sibling() || cursor.field_name() == Some("condition") {
+            if !cursor.goto_parent() {
+                return false;
+            }
+        }
+    }
+}
 fn sibling_enum(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    let Some(parent) = n.parent() else {
-        return false;
-    };
-    named_children(parent)
-        .into_iter()
-        .filter(|c| c.kind() == "match_arm" && c.id() != n.id())
-        .any(|arm| {
-            child_by_field(arm, "pattern").is_some_and(|p| {
-                p.kind() == "tuple_struct_pattern"
-                    || p.kind() == "struct_pattern"
-                    || text(cx, p).contains("::")
-            })
-        })
+    n.parent().is_some_and(|parent| {
+        named_children(parent)
+            .into_iter()
+            .filter(|c| c.kind() == "match_arm" && c.id() != n.id())
+            .any(|arm| child_by_field(arm, "pattern").is_some_and(|p| enum_pattern(cx, p)))
+    })
 }
 fn err_bound<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<Option<&'s str>> {
+    let pat = if pat.kind() == "match_pattern" {
+        if child_by_field(pat, "condition").is_some() {
+            return None;
+        }
+        let mut kids = named_children(pat).into_iter();
+        let only = kids.next()?;
+        if kids.next().is_some() {
+            return None;
+        }
+        only
+    } else {
+        pat
+    };
     if pat.kind() != "tuple_struct_pattern" {
         return None;
     }
@@ -331,18 +352,70 @@ fn err_bound<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<Option<&'s str>> {
         return None;
     }
     let ty = child_by_field(pat, "type")?;
-    let mut rest = named_children(pat)
-        .into_iter()
-        .filter(|c| c.id() != ty.id());
+    let mut cursor = pat.walk();
+    let mut rest = pat
+        .children(&mut cursor)
+        .filter(|c| c.id() != ty.id() && (c.is_named() || c.kind() == "_"));
     let only = rest.next()?;
     if rest.next().is_some() {
         return None;
     }
     if only.kind() == "identifier" {
-        let t = text(cx, only);
-        return Some(if t == "_" { None } else { Some(t) });
+        return Some(Some(text(cx, only)));
     }
     (text(cx, only) == "_").then_some(None)
+}
+fn pattern_may_match_err(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
+    let inner = if pat.kind() == "match_pattern" {
+        let cond = child_by_field(pat, "condition").map(|c| c.id());
+        let mut cursor = pat.walk();
+        let mut kids = pat
+            .children(&mut cursor)
+            .filter(|c| Some(c.id()) != cond && (c.is_named() || c.kind() == "_"));
+        let Some(only) = kids.next() else {
+            return false;
+        };
+        if kids.next().is_some() {
+            return false;
+        }
+        only
+    } else {
+        pat
+    };
+    match inner.kind() {
+        "tuple_struct_pattern" => {
+            child_by_field(inner, "type").is_some_and(|t| text(cx, t) == "Err")
+        }
+        "or_pattern" => {
+            let mut cursor = inner.walk();
+            inner
+                .children(&mut cursor)
+                .filter(|c| c.is_named() || c.kind() == "_")
+                .any(|c| pattern_may_match_err(cx, c))
+        }
+        "_" | "identifier" => true,
+        _ => false,
+    }
+}
+fn has_err_selective_predecessor(cx: &Cx<'_, '_>, arm: Node<'_>) -> bool {
+    let Some(parent) = arm.parent() else {
+        return false;
+    };
+    let mut cursor = parent.walk();
+    for sib in parent.children(&mut cursor) {
+        if sib.id() == arm.id() {
+            break;
+        }
+        if sib.kind() != "match_arm" {
+            continue;
+        }
+        if let Some(pat) = child_by_field(sib, "pattern")
+            && pattern_may_match_err(cx, pat)
+        {
+            return true;
+        }
+    }
+    false
 }
 fn is_err_ctor(cx: &Cx<'_, '_>, call: Node<'_>, bound: Option<&str>, callee: &str) -> bool {
     let Some(b) = bound else {
@@ -420,25 +493,104 @@ fn join_path(base: &str, rest: String) -> String {
     }
 }
 fn first_segment(value: &str) -> &str {
-    value.split("::").next().map_or("", |s| s)
+    let path = value.strip_prefix("self::").unwrap_or(value);
+    path.split("::").next().map_or("", |s| s)
 }
 fn use_first<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     match n.kind() {
         "scoped_use_list" => {
             let path = child_by_field(n, "path")?;
             if text(cx, path) == "self" {
-                use_first(
-                    cx,
-                    named_children(child_by_field(n, "list")?)
-                        .into_iter()
-                        .next()?,
-                )
+                use_first(cx, child_by_field(n, "list")?.named_child(0)?)
             } else {
                 Some(first_segment(text(cx, path)))
             }
         }
-        "use_list" => use_first(cx, named_children(n).into_iter().next()?),
+        "use_list" => use_first(cx, n.named_child(0)?),
         _ => Some(first_segment(text(cx, n))),
+    }
+}
+fn is_cell_token(tok: &str) -> bool {
+    tok == "Mutex"
+        || tok == "RwLock"
+        || tok == "RefCell"
+        || tok == "Cell"
+        || tok.starts_with("Atomic")
+}
+fn is_cell_type(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    child_by_field(n, "type").is_some_and(|t| {
+        text(cx, t)
+            .split(|c: char| !c.is_alphanumeric())
+            .any(is_cell_token)
+    })
+}
+fn static_ambient<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    in_function: bool,
+    out: &mut Vec<(AmbientKind, &'s str, Pos)>,
+) {
+    if in_function {
+        return;
+    }
+    if has_child_kind(n, "mutable_specifier") || is_cell_type(cx, n) {
+        let name = child_by_field(n, "name").map_or("", |x| text(cx, x));
+        out.push((AmbientKind::GlobalMutable, name, pos_of(n)));
+    }
+}
+fn thread_local_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
+    let Some(tree) = first_of_kind(n, &["token_tree"]) else {
+        return "thread_local";
+    };
+    let mut cursor = tree.walk();
+    let mut tokens = tree
+        .children(&mut cursor)
+        .skip_while(|t| t.kind() != "static");
+    tokens
+        .nth(1)
+        .filter(|t| t.kind() == "identifier")
+        .map_or("thread_local", |t| text(cx, t))
+}
+fn macro_ambient<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    in_function: bool,
+    out: &mut Vec<(AmbientKind, &'s str, Pos)>,
+) {
+    if in_function {
+        return;
+    }
+    if last_segment(field_text(cx, n, "macro"), &["::"]) != "thread_local" {
+        return;
+    }
+    out.push((
+        AmbientKind::GlobalMutable,
+        thread_local_name(cx, n),
+        pos_of(n),
+    ));
+}
+fn is_env_callee(callee: &str) -> bool {
+    if ["env::var", "env::var_os", "env::vars", "env::vars_os"]
+        .iter()
+        .any(|s| callee.ends_with(*s))
+    {
+        return true;
+    }
+    if !callee.contains(char::is_whitespace) {
+        return false;
+    }
+    let joined: String = callee.split_whitespace().collect();
+    ["env::var", "env::var_os", "env::vars", "env::vars_os"]
+        .iter()
+        .any(|s| joined.ends_with(*s))
+}
+fn env_ambient<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
+    let Some(func) = child_by_field(n, "function") else {
+        return;
+    };
+    let callee = text(cx, func);
+    if is_env_callee(callee) {
+        out.push((AmbientKind::EnvRead, callee, pos_of(func)));
     }
 }
 impl LangHooks for RustHooks {
@@ -454,11 +606,11 @@ impl LangHooks for RustHooks {
             &["attribute_item"],
         );
         let member = matches!(
-            cx.containers.last(),
+            cx.innermost_container(),
             Some(Container::Trait { public: true })
         );
         let bound = matches!(
-            cx.containers.last(),
+            cx.innermost_container(),
             Some(Container::Impl {
                 interface_bound: true
             })
@@ -468,7 +620,7 @@ impl LangHooks for RustHooks {
             name_pos: pos_of(name_node),
             public: has_child_kind(n, "visibility_modifier") || member,
             interface_bound: bound,
-            in_test: cx.is_test_file || test_mod(cx) || has_test_attr(cx, n),
+            in_test: cx.is_test_file || cx.in_test_module() || has_test_attr(cx, n),
             params,
             return_type: child_by_field(n, "return_type").map(|t| text(cx, t)),
             missing_annotations: Vec::new(),
@@ -647,6 +799,9 @@ impl LangHooks for RustHooks {
             let bound = err_bound(cx, child_by_field(n, "pattern")?)?;
             let value = child_by_field(n, "value")?;
             let stmts = body_stmts(cx, value, bound);
+            if matches!(&stmts[..], [Stmt::Rethrow]) && has_err_selective_predecessor(cx, n) {
+                return None;
+            }
             return Some(Handler {
                 pos: pos_of(n),
                 stmts,
@@ -725,60 +880,15 @@ impl LangHooks for RustHooks {
         out: &mut Vec<(AmbientKind, &'s str, Pos)>,
     ) {
         if n.kind() == "static_item" {
-            if in_function {
-                return;
-            }
-            let cell = child_by_field(n, "type").is_some_and(|t| {
-                text(cx, t)
-                    .split(|c: char| !c.is_alphanumeric())
-                    .any(|tok| {
-                        tok == "Mutex"
-                            || tok == "RwLock"
-                            || tok == "RefCell"
-                            || tok == "Cell"
-                            || tok.starts_with("Atomic")
-                    })
-            });
-            if has_child_kind(n, "mutable_specifier") || cell {
-                let name = child_by_field(n, "name").map_or("", |x| text(cx, x));
-                out.push((AmbientKind::GlobalMutable, name, pos_of(n)));
-            }
+            static_ambient(cx, n, in_function, out);
             return;
         }
         if n.kind() == "macro_invocation" {
-            if in_function {
-                return;
-            }
-            let mac = field_text(cx, n, "macro");
-            if last_segment(mac, &["::"]) == "thread_local" {
-                let mut stack: Vec<Node<'_>> = named_children(n)
-                    .into_iter()
-                    .filter(|c| c.kind() == "token_tree")
-                    .collect();
-                let mut found = "thread_local";
-                while let Some(cur) = stack.pop() {
-                    if cur.kind() == "identifier" {
-                        found = text(cx, cur);
-                        break;
-                    }
-                    stack.extend(named_children(cur));
-                }
-                out.push((AmbientKind::GlobalMutable, found, pos_of(n)));
-            }
+            macro_ambient(cx, n, in_function, out);
             return;
         }
-        if n.kind() == "call_expression"
-            && let Some(func) = child_by_field(n, "function")
-        {
-            let callee = text(cx, func);
-            let ends = ["env::var", "env::var_os", "env::vars", "env::vars_os"];
-            let hit = ends.iter().any(|s| callee.ends_with(*s));
-            let flat = callee.contains(char::is_whitespace);
-            let joined: String = callee.split_whitespace().collect();
-            let spaced = flat && ends.iter().any(|s| joined.ends_with(*s));
-            if hit || spaced {
-                out.push((AmbientKind::EnvRead, callee, pos_of(func)));
-            }
+        if n.kind() == "call_expression" {
+            env_ambient(cx, n, out);
         }
     }
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {

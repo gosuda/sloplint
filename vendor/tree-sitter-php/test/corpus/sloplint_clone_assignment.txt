@@ -1,0 +1,52 @@
+==========================
+Coalescing assignment with a clone left side
+==========================
+
+<?php
+$this->t ??= clone $u ??= Foo::create();
+
+---
+
+(program
+  (php_tag)
+  (expression_statement
+    (augmented_assignment_expression
+      (member_access_expression
+        (variable_name
+          (name))
+        (name))
+      (clone_expression
+        (augmented_assignment_expression
+          (variable_name
+            (name))
+          (scoped_call_expression
+            (name)
+            (name)
+            (arguments)))))))
+
+==========================
+Assignment chained through clone
+==========================
+
+<?php
+$a = clone $b = clone $c = make();
+
+---
+
+(program
+  (php_tag)
+  (expression_statement
+    (assignment_expression
+      (variable_name
+        (name))
+      (clone_expression
+        (assignment_expression
+          (variable_name
+            (name))
+          (clone_expression
+            (assignment_expression
+              (variable_name
+                (name))
+              (function_call_expression
+                (name)
+                (arguments)))))))))

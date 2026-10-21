@@ -1,8 +1,10 @@
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fs;
-use std::io;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
+use ignore::WalkBuilder;
 use serde::{Deserialize, Serialize};
 use sloplint_core::config::{Config, ConfigError, Mode, Strictness, parse_config};
 use sloplint_core::text::normalize_rel_path;
@@ -19,8 +21,10 @@ pub const CONFIG_FILE: &str = "sloplint.toml";
 pub struct Location {
     /// Project root; every path is relative to it.
     pub root: PathBuf,
-    /// Configuration file, which may be missing.
-    pub config_path: PathBuf,
+    /// Explicit configuration file from `--config`. `None` means no explicit
+    /// file was given, so `<root>/sloplint.toml` applies when present and
+    /// defaults apply when absent.
+    pub config_path: Option<PathBuf>,
 }
 
 /// CLI overrides applied on top of the configuration file.
@@ -65,41 +69,63 @@ struct CustomFragment<'a> {
     custom_rules: &'a [CustomRuleSpec],
 }
 
-/// Resolves the project root and configuration path: explicit values first, then the nearest `sloplint.toml`, then the nearest `.git`.
+/// Resolves the project root and configuration path: explicit values first, then the nearest ancestor of `cwd` that holds `sloplint.toml` or `.git`.
+///
+/// The ancestor walk stops at the first directory with either marker, so a
+/// `sloplint.toml` above the nearest `.git` belongs to some other project and
+/// is never used for this checkout; `--config` is the explicit override. With
+/// no marker anywhere the root is `cwd`.
+///
+/// An explicit `config` is kept as `Some`, even when the file does not exist,
+/// so `load` can fail on it. `None` means the configuration is implicit and
+/// `load` falls back to defaults when `<root>/sloplint.toml` is absent.
 pub fn locate(cwd: &Path, root: Option<&Path>, config: Option<&Path>) -> Location {
     let config_path = config.map(|path| cwd.join(path));
     match (root, config_path) {
         (Some(root), config_path) => Location {
-            config_path: config_path.unwrap_or_else(|| root.join(CONFIG_FILE)),
             root: root.to_path_buf(),
+            config_path,
         },
         (None, Some(config_path)) => Location {
             root: config_path
                 .parent()
                 .map_or_else(|| cwd.to_path_buf(), Path::to_path_buf),
-            config_path,
+            config_path: Some(config_path),
         },
-        (None, None) => {
-            let root = find_root(cwd);
-            Location {
-                config_path: root.join(CONFIG_FILE),
-                root,
-            }
-        }
+        (None, None) => Location {
+            root: find_root(cwd),
+            config_path: None,
+        },
     }
 }
 
 /// Reads and merges the configuration, including every `custom_rule_files` match, then applies overrides.
+///
+/// An explicit configuration file must exist: a missing file fails with the
+/// path, and any other read failure reports the path with its I/O error. An
+/// implicit configuration falls back to defaults when absent. Each candidate
+/// is read exactly once; no existence probe precedes the read.
 pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunError> {
-    let main = read_optional(&location.config_path)?;
-    let origin = origin_name(&location.config_path);
+    let (main, origin) = match &location.config_path {
+        Some(path) => (read_required(path)?, origin_name(path)),
+        None => {
+            let path = location.root.join(CONFIG_FILE);
+            match read_regular_string(&path) {
+                Ok(text) => (text, origin_name(&path)),
+                Err(source) if source.kind() == io::ErrorKind::NotFound => {
+                    (String::new(), origin_name(&path))
+                }
+                Err(source) => {
+                    return Err(RunError::Io { path, source });
+                }
+            }
+        }
+    };
     let custom_sources = read_custom_sources(&location.root, &custom_rule_patterns(&main))?;
     let mut specs = Vec::new();
     for (rel, text) in &custom_sources {
-        let file: CustomRuleFile = toml::from_str(text).map_err(|error| ConfigError::Toml {
-            origin: rel.clone(),
-            message: error.message().to_string(),
-        })?;
+        let file: CustomRuleFile =
+            toml::from_str(text).map_err(|error| ConfigError::from_toml(rel, text, &error))?;
         specs.extend(file.custom_rules);
     }
     let combined = combine(main, &specs, &origin)?;
@@ -119,21 +145,43 @@ pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunErro
     })
 }
 
-/// Resolves the PATH arguments to root-relative scopes; an empty result means the whole root.
-pub fn scopes(root: &Path, cwd: &Path, paths: &[PathBuf]) -> Result<Vec<String>, RunError> {
-    let mut scopes = Vec::new();
+/// Root-relative PATH scopes, indexed so a membership test costs one hash lookup per path component.
+#[derive(Debug, Default)]
+pub struct Scopes {
+    paths: HashSet<PathBuf>,
+}
+
+impl Scopes {
+    /// Whether `path` is one of the scopes or lies under one, matching whole path components; no scopes cover the whole root.
+    pub fn contains(&self, path: &Path) -> bool {
+        self.paths.is_empty()
+            || path
+                .ancestors()
+                .any(|ancestor| self.paths.contains(ancestor))
+    }
+}
+
+/// Resolves the PATH arguments to root-relative scopes; no scopes means the whole root.
+///
+/// Every PATH is validated, including those after one that names the root itself.
+pub fn scopes(root: &Path, cwd: &Path, paths: &[PathBuf]) -> Result<Scopes, RunError> {
+    let mut resolved: HashSet<PathBuf> = HashSet::new();
+    let mut whole_root = false;
     for path in paths {
         let absolute = if path.is_absolute() {
             path.clone()
         } else {
             cwd.join(path)
         };
-        if !absolute.exists() {
-            return Err(RunError::PathNotFound { path: path.clone() });
-        }
-        let canonical = fs::canonicalize(&absolute).map_err(|source| RunError::Io {
-            path: absolute.clone(),
-            source,
+        let canonical = fs::canonicalize(&absolute).map_err(|source| {
+            if source.kind() == io::ErrorKind::NotFound {
+                RunError::PathNotFound { path: path.clone() }
+            } else {
+                RunError::Io {
+                    path: absolute.clone(),
+                    source,
+                }
+            }
         })?;
         let relative = canonical
             .strip_prefix(root)
@@ -143,21 +191,219 @@ pub fn scopes(root: &Path, cwd: &Path, paths: &[PathBuf]) -> Result<Vec<String>,
             source: io::Error::new(io::ErrorKind::InvalidData, "path is not UTF-8"),
         })?;
         if rel.is_empty() {
-            return Ok(Vec::new());
+            whole_root = true;
+        } else {
+            resolved.insert(relative.to_path_buf());
         }
-        scopes.push(rel);
     }
-    Ok(scopes)
+    if whole_root {
+        resolved.clear();
+    }
+    Ok(Scopes { paths: resolved })
 }
 
-/// Whether `path` lies under one of the scopes; empty scopes cover everything.
-pub fn in_scope(scopes: &[String], path: &str) -> bool {
-    scopes.is_empty()
-        || scopes.iter().any(|scope| {
-            path == scope
-                || (path.starts_with(scope.as_str())
-                    && path.as_bytes().get(scope.len()) == Some(&b'/'))
-        })
+/// Resolves a configured baseline name to an absolute path inside `root`.
+///
+/// `root` must already be canonical. Empty and absolute names are rejected.
+/// An existing candidate is canonicalized whole, so symlink chains to the
+/// outside are rejected by the prefix check. A missing candidate is allowed
+/// only as an absent regular leaf: a dangling symlink leaf is rejected
+/// without being followed, and the immediate parent is canonicalized, so a
+/// missing parent stays an I/O failure. Nothing is created or written.
+pub fn resolve_within_root(root: &Path, name: &str) -> Result<PathBuf, RunError> {
+    let rel = Path::new(name);
+    if name.is_empty() || rel.is_absolute() {
+        return Err(RunError::BaselineOutsideRoot {
+            path: PathBuf::from(name),
+        });
+    }
+    let candidate = root.join(rel);
+    match fs::canonicalize(&candidate) {
+        Ok(resolved) => {
+            if !resolved.starts_with(root) {
+                return Err(RunError::BaselineOutsideRoot {
+                    path: PathBuf::from(name),
+                });
+            }
+            Ok(resolved)
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            match fs::symlink_metadata(&candidate) {
+                Ok(meta) if meta.file_type().is_symlink() => Err(RunError::BaselineOutsideRoot {
+                    path: PathBuf::from(name),
+                }),
+                Ok(_) => Err(RunError::Io {
+                    path: candidate.clone(),
+                    source: error,
+                }),
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                    let parent = candidate.parent().unwrap_or(root);
+                    let canonical = fs::canonicalize(parent).map_err(|source| RunError::Io {
+                        path: parent.to_path_buf(),
+                        source,
+                    })?;
+                    let resolved = match candidate.file_name() {
+                        Some(file) => canonical.join(file),
+                        None => canonical,
+                    };
+                    if !resolved.starts_with(root) {
+                        return Err(RunError::BaselineOutsideRoot {
+                            path: PathBuf::from(name),
+                        });
+                    }
+                    Ok(resolved)
+                }
+                Err(source) => Err(RunError::Io {
+                    path: candidate.clone(),
+                    source,
+                }),
+            }
+        }
+        Err(source) => Err(RunError::Io {
+            path: candidate.clone(),
+            source,
+        }),
+    }
+}
+
+/// Opens `path` only when it is a regular file, returning the handle and its size.
+///
+/// On unix the open itself is non-blocking and never adopts a terminal as the
+/// controlling one, so a FIFO planted at the path
+/// (even one swapped in after a directory listing) returns at once instead of
+/// waiting for a writer; the opened handle is then inspected and anything but
+/// a regular file is refused before a byte is read. Symlinks to regular files
+/// are followed. A directory keeps the platform's own directory error.
+pub fn open_regular(path: &Path) -> io::Result<(fs::File, u64)> {
+    let file = open_for_read(path)?;
+    let meta = file.metadata()?;
+    require_regular(&file, &meta)?;
+    Ok((file, meta.len()))
+}
+
+#[cfg(unix)]
+fn open_for_read(path: &Path) -> io::Result<fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+    fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
+        .open(path)
+}
+
+#[cfg(not(unix))]
+fn open_for_read(path: &Path) -> io::Result<fs::File> {
+    fs::File::open(path)
+}
+
+/// Opens `path` without following a trailing symlink, returning the handle and its size.
+///
+/// Unix uses `O_NOFOLLOW`, so a symlink at the final component fails with a loop error
+/// instead of being followed. Windows refuses a trailing symlink or reparse point before
+/// opening. Configuration and baseline inputs keep using [`open_regular`], which follows
+/// symlinks to regular files; only the cache uses this opener.
+pub fn open_regular_nofollow(path: &Path) -> io::Result<(fs::File, u64)> {
+    let file = open_for_read_nofollow(path)?;
+    let meta = file.metadata()?;
+    require_regular(&file, &meta)?;
+    Ok((file, meta.len()))
+}
+
+#[cfg(unix)]
+fn open_for_read_nofollow(path: &Path) -> io::Result<fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+    fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY | libc::O_NOFOLLOW)
+        .open(path)
+}
+
+#[cfg(not(unix))]
+fn open_for_read_nofollow(path: &Path) -> io::Result<fs::File> {
+    let meta = fs::symlink_metadata(path)?;
+    if meta.file_type().is_symlink() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "not a regular file",
+        ));
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        const REPARSE_POINT: u32 = 0x400;
+        if meta.file_attributes() & REPARSE_POINT != 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "not a regular file",
+            ));
+        }
+    }
+    fs::File::open(path)
+}
+
+fn require_regular(file: &fs::File, meta: &fs::Metadata) -> io::Result<()> {
+    if meta.is_file() {
+        return Ok(());
+    }
+    if meta.is_dir() {
+        let mut probe = file;
+        let mut byte = [0u8; 1];
+        let _ = probe.read(&mut byte)?;
+    }
+    Err(io::Error::new(
+        io::ErrorKind::InvalidInput,
+        "not a regular file",
+    ))
+}
+
+/// Reads a whole regular file, never more than the size it had when opened.
+///
+/// There is deliberately no fixed ceiling: a baseline or cache grows with the
+/// project, so any constant would reject legitimate inputs. Streams such as
+/// `/dev/zero` are refused as non-regular instead, and the read is bounded by
+/// the opened file's own size, so a file that keeps growing fails with an
+/// error rather than being read without end.
+pub fn read_regular(path: &Path) -> io::Result<Vec<u8>> {
+    let (file, len) = open_regular(path)?;
+    read_bounded(file, len)
+}
+
+/// Reads a whole regular file without following a trailing symlink; see [`read_regular`].
+///
+/// The cache uses this so a link planted at a shard file is refused instead of being
+/// followed. Configuration and baseline inputs keep using [`read_regular`].
+pub fn read_regular_nofollow(path: &Path) -> io::Result<Vec<u8>> {
+    let (file, len) = open_regular_nofollow(path)?;
+    read_bounded(file, len)
+}
+
+fn read_bounded(file: fs::File, len: u64) -> io::Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    bytes
+        .try_reserve_exact(usize::try_from(len).unwrap_or(usize::MAX))
+        .map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::OutOfMemory,
+                format!("file of {len} bytes does not fit in memory"),
+            )
+        })?;
+    file.take(len.saturating_add(1)).read_to_end(&mut bytes)?;
+    if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > len {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "file grew while being read",
+        ));
+    }
+    Ok(bytes)
+}
+
+/// Reads a whole regular file as UTF-8 text; see [`read_regular`].
+pub fn read_regular_string(path: &Path) -> io::Result<String> {
+    String::from_utf8(read_regular(path)?).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "stream did not contain valid UTF-8",
+        )
+    })
 }
 
 /// Compiles glob patterns into one set, naming `key` in any error.
@@ -179,29 +425,25 @@ pub fn glob_set(patterns: &[String], key: &str) -> Result<GlobSet, ConfigError> 
 }
 
 fn find_root(cwd: &Path) -> PathBuf {
-    let ancestors: Vec<&Path> = cwd.ancestors().collect();
-    ancestors
-        .iter()
-        .copied()
-        .find(|dir| dir.join(CONFIG_FILE).is_file())
-        .or_else(|| {
-            ancestors
-                .iter()
-                .copied()
-                .find(|dir| dir.join(".git").exists())
-        })
-        .map_or_else(|| cwd.to_path_buf(), Path::to_path_buf)
+    cwd.ancestors()
+        .find(|dir| dir.join(CONFIG_FILE).is_file() || dir.join(".git").exists())
+        .unwrap_or(cwd)
+        .to_path_buf()
 }
 
-fn read_optional(path: &Path) -> Result<String, RunError> {
-    match fs::read_to_string(path) {
-        Ok(text) => Ok(text),
-        Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(String::new()),
-        Err(source) => Err(RunError::Io {
-            path: path.to_path_buf(),
-            source,
-        }),
-    }
+fn read_required(path: &Path) -> Result<String, RunError> {
+    read_regular_string(path).map_err(|source| {
+        if source.kind() == io::ErrorKind::NotFound {
+            RunError::PathNotFound {
+                path: path.to_path_buf(),
+            }
+        } else {
+            RunError::Io {
+                path: path.to_path_buf(),
+                source,
+            }
+        }
+    })
 }
 
 fn origin_name(path: &Path) -> String {
@@ -227,10 +469,104 @@ fn read_custom_sources(
         return Ok(Vec::new());
     }
     let matcher = glob_set(patterns, "project.custom_rule_files")?;
-    let mut sources = Vec::new();
-    for result in discover::walk(root, GlobSet::empty()) {
+    let roots = custom_source_roots(root, patterns);
+    let mut sources: BTreeMap<String, String> = BTreeMap::new();
+    for base in &roots {
+        read_custom_root(root, base, &matcher, &mut sources)?;
+    }
+    Ok(sources.into_iter().collect())
+}
+
+enum CustomSelection<'a> {
+    Skip,
+    Literal(&'a str),
+    Prefix(&'a str),
+}
+
+fn custom_selection(pattern: &str) -> CustomSelection<'_> {
+    if Path::new(pattern).is_absolute() {
+        return CustomSelection::Skip;
+    }
+    if pattern.split('/').any(|part| part == "..") {
+        return CustomSelection::Skip;
+    }
+    let mut end = None;
+    for (index, c) in pattern.char_indices() {
+        if matches!(c, '*' | '?' | '[' | '{' | '\\') {
+            end = Some(index);
+            break;
+        }
+    }
+    match end {
+        None => CustomSelection::Literal(pattern),
+        Some(index) => match pattern[..index].rfind('/') {
+            Some(pos) => CustomSelection::Prefix(&pattern[..index][..pos]),
+            None => CustomSelection::Prefix(""),
+        },
+    }
+}
+
+fn custom_source_roots(root: &Path, patterns: &[String]) -> BTreeSet<PathBuf> {
+    let mut roots = BTreeSet::new();
+    for pattern in patterns {
+        match custom_selection(pattern) {
+            CustomSelection::Skip => {}
+            CustomSelection::Literal(rel) => {
+                roots.insert(root.join(rel));
+            }
+            CustomSelection::Prefix(dir) => {
+                if dir.is_empty() {
+                    roots.insert(root.to_path_buf());
+                } else {
+                    roots.insert(root.join(dir));
+                }
+            }
+        }
+    }
+    roots
+}
+
+fn read_custom_root(
+    root: &Path,
+    base: &Path,
+    matcher: &GlobSet,
+    sources: &mut BTreeMap<String, String>,
+) -> Result<(), RunError> {
+    let is_root = base == root;
+    if !is_root && has_dir_symlink(root, base) {
+        return Ok(());
+    }
+    match fs::symlink_metadata(base) {
+        Ok(meta) if meta.file_type().is_symlink() => {
+            if !is_root {
+                return Ok(());
+            }
+        }
+        Ok(_) => {}
+        Err(source)
+            if source.kind() == io::ErrorKind::NotFound
+                || source.kind() == io::ErrorKind::NotADirectory =>
+        {
+            return Ok(());
+        }
+        Err(source) => {
+            return Err(RunError::Io {
+                path: base.to_path_buf(),
+                source,
+            });
+        }
+    }
+    let mut builder = WalkBuilder::new(base);
+    builder
+        .standard_filters(false)
+        .require_git(false)
+        .follow_links(false);
+    for result in builder.build() {
         let entry = result.map_err(|error| discover::walk_error(root, error))?;
-        if !entry.file_type().is_some_and(|kind| kind.is_file()) {
+        let Some(kind) = entry.file_type() else {
+            continue;
+        };
+        if kind.is_dir() || kind.is_symlink() {
             continue;
         }
         let Ok(relative) = entry.path().strip_prefix(root) else {
@@ -239,16 +575,35 @@ fn read_custom_sources(
         let Some(rel) = normalize_rel_path(relative) else {
             continue;
         };
-        if matcher.is_match(rel.as_str()) {
-            let text = fs::read_to_string(entry.path()).map_err(|source| RunError::Io {
-                path: entry.path().to_path_buf(),
-                source,
-            })?;
-            sources.push((rel, text));
+        if rel.is_empty() || !matcher.is_match(rel.as_str()) || sources.contains_key(&rel) {
+            continue;
         }
+        let text = read_regular_string(entry.path()).map_err(|source| RunError::Io {
+            path: entry.path().to_path_buf(),
+            source,
+        })?;
+        sources.insert(rel, text);
     }
-    sources.sort_by(|a, b| a.0.cmp(&b.0));
-    Ok(sources)
+    Ok(())
+}
+
+fn has_dir_symlink(root: &Path, candidate: &Path) -> bool {
+    let mut current = candidate.parent();
+    while let Some(dir) = current {
+        if dir == root {
+            break;
+        }
+        if !dir.starts_with(root) {
+            return true;
+        }
+        match fs::symlink_metadata(dir) {
+            Ok(meta) if meta.file_type().is_symlink() => return true,
+            Ok(_) => {}
+            Err(_) => return false,
+        }
+        current = dir.parent();
+    }
+    false
 }
 
 fn combine(main: String, specs: &[CustomRuleSpec], origin: &str) -> Result<String, ConfigError> {
