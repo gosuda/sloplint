@@ -133,9 +133,11 @@ unsigned tree_sitter_cpp_external_scanner_serialize(void *payload, char *buffer)
 }
 
 void tree_sitter_cpp_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
-    assert(length % sizeof(wchar_t) == 0 && "Can't decode serialized delimiter!");
-
     Scanner *scanner = (Scanner *)payload;
+    if (length % sizeof(wchar_t) != 0 || length > sizeof(scanner->delimiter)) {
+        reset(scanner);
+        return;
+    }
     scanner->delimiter_length = length / sizeof(wchar_t);
     if (length > 0) {
         memcpy(&scanner->delimiter[0], buffer, length);

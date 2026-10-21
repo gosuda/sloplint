@@ -123,9 +123,13 @@ static void deserialize(Scanner *scanner, const char *buffer, unsigned length) {
         reset(scanner);
     } else {
         uint32_t size = 0;
-        scanner->last_glob_paren_depth = buffer[size++];
-        scanner->ext_was_in_double_quote = buffer[size++];
-        scanner->ext_saw_outside_quote = buffer[size++];
+        if (length < 4) {
+            reset(scanner);
+            return;
+        }
+        uint8_t last_glob_paren_depth = buffer[size++];
+        bool ext_was_in_double_quote = buffer[size++];
+        bool ext_saw_outside_quote = buffer[size++];
         uint32_t heredoc_count = (unsigned char)buffer[size++];
         for (uint32_t i = 0; i < heredoc_count; i++) {
             Heredoc *heredoc = NULL;
@@ -137,12 +141,26 @@ static void deserialize(Scanner *scanner, const char *buffer, unsigned length) {
                 heredoc = array_back(&scanner->heredocs);
             }
 
+            if (length - size < 3) {
+                reset(scanner);
+                return;
+            }
             heredoc->is_raw = buffer[size++];
             heredoc->started = buffer[size++];
             heredoc->allows_indent = buffer[size++];
 
-            memcpy(&heredoc->delimiter.size, &buffer[size], sizeof(uint32_t));
+            if (length - size < sizeof(uint32_t)) {
+                reset(scanner);
+                return;
+            }
+            uint32_t delimiter_size;
+            memcpy(&delimiter_size, &buffer[size], sizeof(uint32_t));
+            if (delimiter_size > length - size - sizeof(uint32_t)) {
+                reset(scanner);
+                return;
+            }
             size += sizeof(uint32_t);
+            heredoc->delimiter.size = delimiter_size;
             array_reserve(&heredoc->delimiter, heredoc->delimiter.size);
 
             if (heredoc->delimiter.size > 0) {
@@ -150,7 +168,13 @@ static void deserialize(Scanner *scanner, const char *buffer, unsigned length) {
                 size += heredoc->delimiter.size;
             }
         }
-        assert(size == length);
+        if (size != length) {
+            reset(scanner);
+            return;
+        }
+        scanner->last_glob_paren_depth = last_glob_paren_depth;
+        scanner->ext_was_in_double_quote = ext_was_in_double_quote;
+        scanner->ext_saw_outside_quote = ext_saw_outside_quote;
     }
 }
 
