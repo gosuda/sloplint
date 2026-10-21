@@ -162,8 +162,11 @@ fn boundary_non_utf8_filename_is_skipped() {
     let (_t, root) = tmp();
     put(&root, "src/a.rs", "pub fn handle() {}\n");
     let raw = std::ffi::OsStr::from_bytes(b"src/bad\xff.rs");
-    std::fs::write(root.join(raw), b"pub fn handle() {}\n")
-        .unwrap_or_else(|e| panic!("write non-UTF-8 name: {e}"));
+    if let Err(e) = std::fs::write(root.join(raw), b"pub fn handle() {}\n") {
+        const EILSEQ: i32 = 92;
+        assert_eq!(e.raw_os_error(), Some(EILSEQ), "write non-UTF-8 name: {e}");
+        return;
+    }
     let r = run_ok(&RunOptions {
         strictness: Some(Strictness::Standard),
         mode: Some(Mode::Threshold),
