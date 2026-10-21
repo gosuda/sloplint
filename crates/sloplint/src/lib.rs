@@ -231,6 +231,20 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         .filter(|entry| entry.lang == Lang::OcamlInterface)
         .map(|entry| entry.rel.clone())
         .collect();
+    let mut active_ids = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
+    let mut active_families = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
+    for id in CATALOG
+        .iter()
+        .map(|info| info.id)
+        .chain(config.custom_rules.iter().map(|spec| spec.id.as_str()))
+    {
+        if rules.is_active(id) {
+            for (at, _) in id.match_indices('/') {
+                active_families.insert(id[..at].to_string());
+            }
+            active_ids.insert(id.to_string());
+        }
+    }
     let pipe = Pipeline {
         rules: &rules,
         custom: &custom,
@@ -240,6 +254,8 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         test_globs: &test_globs,
         cache: &loaded,
         interfaces: &interfaces,
+        active_ids,
+        active_families,
     };
     let outcomes = analyze_all(&discovery.entries, &pipe, &pool)?;
     let (analyzed, skipped_outcomes) = split_outcomes(outcomes, &scopes);
@@ -331,6 +347,8 @@ struct Pipeline<'a> {
     test_globs: &'a GlobSet,
     cache: &'a Loaded,
     interfaces: &'a HashSet<String>,
+    active_ids: HashSet<String>,
+    active_families: HashSet<String>,
 }
 
 enum Outcome {
@@ -613,12 +631,9 @@ fn unused_findings(
 }
 
 fn suppression_active(pipe: &Pipeline<'_>, suppression: &Suppression) -> bool {
-    suppression.rules.iter().all(|pattern| {
-        CATALOG
-            .iter()
-            .map(|info| info.id)
-            .chain(pipe.config.custom_rules.iter().map(|spec| spec.id.as_str()))
-            .any(|id| pattern.matches(id) && pipe.rules.is_active(id))
+    suppression.rules.iter().all(|pattern| match pattern {
+        RulePattern::Exact(id) => pipe.active_ids.contains(&**id),
+        RulePattern::Family(family) => pipe.active_families.contains(&**family),
     })
 }
 
