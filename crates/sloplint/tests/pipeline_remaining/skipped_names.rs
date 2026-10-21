@@ -58,6 +58,10 @@ fn reported(report: &Report) -> BTreeSet<String> {
 fn set<const N: usize>(paths: [&str; N]) -> BTreeSet<String> {
     paths.iter().map(|p| (*p).to_string()).collect()
 }
+fn name_is_unrepresentable(e: &std::io::Error) -> bool {
+    const EILSEQ: i32 = 92;
+    e.raw_os_error() == Some(EILSEQ)
+}
 
 /// A line comment whose `@generated` marker ends `shift` bytes after the window edge.
 fn marker_near_window_edge(shift: usize) -> String {
@@ -76,7 +80,10 @@ fn a_non_utf8_name_outside_the_scope_is_not_counted() {
     let bad = root
         .join("other")
         .join(std::ffi::OsStr::from_bytes(b"bad\xff.rs"));
-    std::fs::write(&bad, SAMPLE).unwrap_or_else(|e| panic!("write non-UTF-8 name: {e}"));
+    if let Err(e) = std::fs::write(&bad, SAMPLE) {
+        assert!(name_is_unrepresentable(&e), "write non-UTF-8 name: {e}");
+        return;
+    }
 
     assert_eq!(
         counts(&run_ok(&scoped(&root, vec![]))),
@@ -105,7 +112,10 @@ fn lossy_equal_file_names_do_not_share_an_explicit_scope() {
     let invalid = root
         .join("other")
         .join(std::ffi::OsStr::from_bytes(b"bad\xff.rs"));
-    std::fs::write(&invalid, SAMPLE).unwrap_or_else(|e| panic!("write non-UTF-8 name: {e}"));
+    if let Err(e) = std::fs::write(&invalid, SAMPLE) {
+        assert!(name_is_unrepresentable(&e), "write non-UTF-8 name: {e}");
+        return;
+    }
     symlink("bad\u{FFFD}.rs", root.join("other/link.rs")).unwrap_or_else(|e| panic!("link: {e}"));
 
     assert_eq!(
@@ -147,7 +157,10 @@ fn lossy_equal_dir_names_do_not_share_an_explicit_scope() {
     let invalid_dir = root
         .join("parent")
         .join(std::ffi::OsStr::from_bytes(b"scope\xff"));
-    std::fs::create_dir_all(&invalid_dir).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    if let Err(e) = std::fs::create_dir_all(&invalid_dir) {
+        assert!(name_is_unrepresentable(&e), "mkdir: {e}");
+        return;
+    }
     std::fs::write(invalid_dir.join("b.rs"), SAMPLE)
         .unwrap_or_else(|e| panic!("write non-UTF-8 dir child: {e}"));
 
