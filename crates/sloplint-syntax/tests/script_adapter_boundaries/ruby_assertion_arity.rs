@@ -21,6 +21,31 @@ end
 "#;
 
 #[test]
+fn block_only_assertions_still_count() {
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let input = FileInput {
+        lang: Lang::Ruby,
+        path: "case.rb",
+        source: "class VerifyTest < Minitest::Test\n  def verify\n    assert_silent { work }\n    assert_raises { work }\n  end\nend\n",
+        is_test_file: false,
+        has_interface: false,
+    };
+    let analysis = analyze(&mut Parsers::new(), &input, &custom);
+    assert!(analysis.parse_error.is_none(), "case.rb parses");
+    let lines: Vec<u32> = analysis
+        .facts
+        .assertions
+        .iter()
+        .map(|a| a.pos.line)
+        .collect();
+    assert_eq!(lines, vec![3, 4], "block-only assertions stay recorded");
+    assert!(
+        analysis.facts.assertions.iter().all(|a| !a.has_message),
+        "a block-only assertion carries no message operand"
+    );
+}
+
+#[test]
 fn trailing_string_is_a_message_only_after_both_operands() {
     let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
     let input = FileInput {

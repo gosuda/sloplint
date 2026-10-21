@@ -814,12 +814,14 @@ impl LangHooks for RubyHooks {
             return rspec_assertion(cx, n);
         }
         let arity = minitest_arity(method)?;
-        let list = first_of_kind(n, &["argument_list"])?;
-        let last_str = rfind_named_child(list, |c| c.kind() != "comment")
-            .is_some_and(|a| a.kind() == "string" || a.kind() == "heredoc_body");
+        let has_message = first_of_kind(n, &["argument_list"]).is_some_and(|list| {
+            let last_str = rfind_named_child(list, |c| c.kind() != "comment")
+                .is_some_and(|a| a.kind() == "string" || a.kind() == "heredoc_body");
+            count_named_child(list, |c| c.kind() != "comment") > arity && last_str
+        });
         Some(Assertion {
             pos: pos_of(n),
-            has_message: count_named_child(list, |c| c.kind() != "comment") > arity && last_str,
+            has_message,
             comparison: arity > 1,
         })
     }
