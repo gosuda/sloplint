@@ -7,8 +7,9 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    last_segment, named_children, narrow, pos_of, preceding_comments, string_arg_shape, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    child_by_field, first_named_child, first_named_child_matching, last_segment, named_children,
+    narrow, pos_of, preceding_comments, string_arg_shape, text,
 };
 use crate::spec::Role;
 
@@ -84,10 +85,7 @@ fn py_one_param<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Param<'s>>) {
             bool_default: false,
         }),
         "typed_parameter" => {
-            let name = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "identifier")
-                .map_or("", |c| text(cx, c));
+            let name = first_named_child_matching(n, &["identifier"]).map_or("", |c| text(cx, c));
             out.push(Param {
                 name,
                 ty: child_by_field(n, "type").map(|t| text(cx, t)),
@@ -115,10 +113,7 @@ fn py_one_param<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Param<'s>>) {
             });
         }
         "list_splat_pattern" | "dictionary_splat_pattern" => {
-            let name = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "identifier")
-                .map_or("", |c| text(cx, c));
+            let name = first_named_child_matching(n, &["identifier"]).map_or("", |c| text(cx, c));
             out.push(Param {
                 name,
                 ty: None,
@@ -143,29 +138,29 @@ fn py_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>>) {
 
 fn docstring(n: Node<'_>) -> Option<Node<'_>> {
     let body = child_by_field(n, "body")?;
-    let first = named_children(body).into_iter().next()?;
+    let first = first_named_child(body)?;
     if first.kind() != "expression_statement" {
         return None;
     }
-    let kids = named_children(first);
-    if kids.len() != 1 || kids.first().is_some_and(|c| c.kind() != "string") {
+    if first.named_child_count() != 1
+        || first_named_child(first).is_some_and(|c| c.kind() != "string")
+    {
         return None;
     }
-    kids.into_iter().next()
+    first_named_child(first)
 }
 
 fn is_doc_expr(n: Node<'_>) -> bool {
     if n.kind() != "expression_statement" {
         return false;
     }
-    let kids = named_children(n);
-    kids.len() == 1 && kids.first().is_some_and(|c| c.kind() == "string")
+    n.named_child_count() == 1 && first_named_child(n).is_some_and(|c| c.kind() == "string")
 }
 
 fn py_single_call(n: Node<'_>) -> Option<usize> {
     match n.kind() {
         "expression_statement" | "return_statement" => {
-            let inner = named_children(n).into_iter().next()?;
+            let inner = first_named_child(n)?;
             (inner.kind() == "call").then_some(inner.id())
         }
         _ => None,
@@ -173,14 +168,13 @@ fn py_single_call(n: Node<'_>) -> Option<usize> {
 }
 
 fn py_sole(body: Node<'_>) -> Option<usize> {
-    let mut stmts = named_children(body).into_iter();
-    let first = stmts.next()?;
-    let target = if is_doc_expr(first) {
-        stmts.next()?
+    let first = body.named_child(0)?;
+    let (target, rest) = if is_doc_expr(first) {
+        (body.named_child(1)?, 2)
     } else {
-        first
+        (first, 1)
     };
-    if stmts.next().is_some() {
+    if body.named_child(rest).is_some() {
         return None;
     }
     py_single_call(target)
@@ -206,7 +200,7 @@ fn py_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
             "identifier" => return Some((text(cx, cur), pos_of(cur))),
             "attribute" => cur = child_by_field(cur, "object")?,
             "subscript" => cur = child_by_field(cur, "value")?,
-            "parenthesized_expression" => cur = named_children(cur).into_iter().next()?,
+            "parenthesized_expression" => cur = first_named_child(cur)?,
             _ => return None,
         }
     }
@@ -220,7 +214,7 @@ fn py_callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
             "attribute" => cur = child_by_field(cur, "object")?,
             "subscript" => cur = child_by_field(cur, "value")?,
             "call" => cur = child_by_field(cur, "function")?,
-            "parenthesized_expression" => cur = named_children(cur).into_iter().next()?,
+            "parenthesized_expression" => cur = first_named_child(cur)?,
             _ => return None,
         }
     }
@@ -270,11 +264,10 @@ fn strip_as(value: &str) -> &str {
 }
 
 fn py_raise<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: &str) -> Stmt<'s> {
-    let mut kids = named_children(s).into_iter();
-    let Some(first) = kids.next() else {
+    let Some(first) = s.named_child(0) else {
         return Stmt::Rethrow;
     };
-    if kids.next().is_some() {
+    if s.named_child(1).is_some() {
         return Stmt::Other;
     }
     if first.kind() == "identifier" && text(cx, first) == binding {
@@ -291,7 +284,7 @@ fn raise_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: &str) -> Stmt<'s> {
     if s.kind() != "expression_statement" {
         return Stmt::Other;
     }
-    let Some(inner) = named_children(s).into_iter().next() else {
+    let Some(inner) = first_named_child(s) else {
         return Stmt::Other;
     };
     if inner.kind() == "call" {
@@ -635,30 +628,28 @@ impl LangHooks for PythonHooks {
         if child_by_field(n, "guard").is_some() {
             return None;
         }
-        let pat = named_children(n).into_iter().next()?;
+        let pat = first_named_child(n)?;
         if text(cx, pat) != "_" {
             return None;
         }
         let enum_like = n.parent().is_some_and(|p| {
-            named_children(p)
-                .into_iter()
-                .filter(|c| c.kind() == "case_clause" && c.id() != n.id())
-                .any(|arm| {
-                    named_children(arm)
-                        .into_iter()
-                        .next()
-                        .and_then(|pat| {
-                            if pat.kind() == "case_pattern" {
-                                named_children(pat).into_iter().next()
-                            } else {
-                                Some(pat)
-                            }
-                        })
-                        .is_some_and(|q| {
-                            (q.kind() == "dotted_name" && named_children(q).len() >= 2)
-                                || q.kind() == "class_pattern"
-                        })
-                })
+            any_named_child(p, |arm| {
+                if arm.kind() != "case_clause" || arm.id() == n.id() {
+                    return false;
+                }
+                first_named_child(arm)
+                    .and_then(|pat| {
+                        if pat.kind() == "case_pattern" {
+                            first_named_child(pat)
+                        } else {
+                            Some(pat)
+                        }
+                    })
+                    .is_some_and(|q| {
+                        (q.kind() == "dotted_name" && q.named_child_count() >= 2)
+                            || q.kind() == "class_pattern"
+                    })
+            })
         });
         Some(WildcardArm {
             pos: pos_of(n),
@@ -671,16 +662,14 @@ impl LangHooks for PythonHooks {
             return None;
         }
         let binding = child_by_field(n, "alias").map_or("", |a| strip_as(text(cx, a)));
-        let block = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "block")?;
+        let block = first_named_child_matching(n, &["block"])?;
         let mut stmts = Vec::new();
         for s in named_children(block) {
             if s.kind() == "pass_statement" {
                 continue;
             }
             if s.kind() == "expression_statement" {
-                let inner = named_children(s).into_iter().next();
+                let inner = first_named_child(s);
                 if inner.is_some_and(|v| v.kind() == "ellipsis") {
                     continue;
                 }
@@ -789,13 +778,10 @@ impl LangHooks for PythonHooks {
         if n.kind() != "assert_statement" {
             return None;
         }
-        let kids = named_children(n);
         Some(Assertion {
             pos: pos_of(n),
-            has_message: kids.len() >= 2,
-            comparison: kids
-                .first()
-                .is_some_and(|f| f.kind() == "comparison_operator"),
+            has_message: n.named_child_count() >= 2,
+            comparison: first_named_child(n).is_some_and(|f| f.kind() == "comparison_operator"),
         })
     }
 

@@ -8,9 +8,10 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    first_of_kind, has_child_kind, named_children, narrow, pos_of, preceding_comments,
-    string_arg_shape, text, trimmed,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    child_by_field, find_named_child, first_named_child, first_named_child_matching, first_of_kind,
+    has_child_kind, last_named_child, named_children, narrow, only_named_child_matching, pos_of,
+    preceding_comments, string_arg_shape, text, trimmed,
 };
 use crate::spec::Role;
 
@@ -65,22 +66,12 @@ fn sole_call_id(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
     if body.kind() != "block" {
         return None;
     }
-    let live: Vec<Node<'_>> = named_children(body)
-        .into_iter()
-        .filter(|c| c.kind() != "comment")
-        .collect();
-    if live.len() != 1 {
-        return None;
-    }
-    let mut node = live[0];
+    let mut node = only_named_child_matching(body, |c| c.kind() != "comment")?;
     if node.kind() == "expression_statement" {
-        let mut cursor = node.walk();
-        node = node
-            .named_children(&mut cursor)
-            .find(|c| c.kind() != "comment")?;
+        node = find_named_child(node, |c| c.kind() != "comment")?;
     }
     if node.kind() == "return_expression" || node.kind() == "try_expression" {
-        node = named_children(node).first().copied()?;
+        node = first_named_child(node)?;
     }
     (node.kind() == "call_expression").then_some(node.id())
 }
@@ -97,7 +88,7 @@ fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
             continue;
         }
         if kind == "dereference_expression" {
-            current = named_children(current).first().copied()?;
+            current = first_named_child(current)?;
             continue;
         }
         if kind == "parenthesized_expression" {
@@ -164,13 +155,13 @@ fn is_import_builtin(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
 fn stmt_for<'s>(cx: &Cx<'_, 's>, n: Node<'_>, bound: &str) -> Stmt<'s> {
     let mut current = n;
     if current.kind() == "statement" {
-        match named_children(current).first().copied() {
+        match first_named_child(current) {
             Some(next) => current = next,
             None => return Stmt::Other,
         }
     }
     if current.kind() == "expression_statement" {
-        match named_children(current).first().copied() {
+        match first_named_child(current) {
             Some(next) => current = next,
             None => return Stmt::Other,
         }
@@ -191,7 +182,7 @@ fn stmt_for<'s>(cx: &Cx<'_, 's>, n: Node<'_>, bound: &str) -> Stmt<'s> {
         };
     }
     if current.kind() == "return_expression" {
-        let first = named_children(current).first().copied();
+        let first = first_named_child(current);
         if first.is_some_and(|a| a.kind() == "identifier" && text(cx, a) == bound) {
             return Stmt::Rethrow;
         }
@@ -200,9 +191,7 @@ fn stmt_for<'s>(cx: &Cx<'_, 's>, n: Node<'_>, bound: &str) -> Stmt<'s> {
 }
 
 fn import_module<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
-    let found = named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "string_content");
+    let found = first_named_child_matching(n, &["string_content"]);
     found.map(|c| text(cx, c)).unwrap_or("")
 }
 
@@ -213,9 +202,7 @@ fn import_names<'s>(
     let holder = builtin.parent()?;
     let value = child_by_field(holder, "expression");
     if holder.kind() == "variable_declaration" && value.is_some_and(|e| e.id() == builtin.id()) {
-        let id = named_children(holder)
-            .into_iter()
-            .find(|c| c.kind() == "identifier")?;
+        let id = first_named_child_matching(holder, &["identifier"])?;
         return Some((text(cx, id), None, ImportKind::Namespace));
     }
     let object = child_by_field(holder, "object");
@@ -229,10 +216,7 @@ fn import_names<'s>(
     if decl.kind() != "variable_declaration" {
         return None;
     }
-    let binding = named_children(decl)
-        .into_iter()
-        .find(|c| c.kind() == "identifier")
-        .map(|c| text(cx, c));
+    let binding = first_named_child_matching(decl, &["identifier"]).map(|c| text(cx, c));
     let alias = match binding {
         Some(found) if found != member => Some(found),
         _ => None,
@@ -278,9 +262,7 @@ fn push_using<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
     let Some(args) = child_by_field(expr, "arguments") else {
         return;
     };
-    let found = named_children(args)
-        .into_iter()
-        .find(|c| c.kind() == "string");
+    let found = first_named_child_matching(args, &["string"]);
     let Some(literal) = found else { return };
     if import_module(cx, literal).is_empty() {
         return;
@@ -317,11 +299,12 @@ fn sibling_enum(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     let Some(parent) = n.parent() else {
         return false;
     };
-    named_children(parent)
-        .into_iter()
-        .filter(|s| s.kind() == "switch_case")
-        .filter(|s| s.id() != n.id())
-        .any(|s| case_has_enum(cx, s))
+    any_named_child(parent, |s| {
+        if s.kind() != "switch_case" || s.id() == n.id() {
+            return false;
+        }
+        case_has_enum(cx, s)
+    })
 }
 
 fn field_value_source<'s>(cx: &Cx<'_, 's>, name: Node<'_>, value: Node<'_>) -> Option<&'s str> {
@@ -386,9 +369,8 @@ fn callee_root(func: Node<'_>) -> Option<Node<'_>> {
 
 fn catch_bound<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
     let payload = first_of_kind(n, &["payload"]);
-    let named = payload.map(|p| named_children(p));
-    named
-        .and_then(|kids| kids.into_iter().find(|c| c.kind() == "identifier"))
+    payload
+        .and_then(|p| first_named_child_matching(p, &["identifier"]))
         .map(|id| text(cx, id))
         .unwrap_or("")
 }
@@ -451,10 +433,7 @@ impl LangHooks for ZigHooks {
         if n.kind() != "variable_declaration" || !has_child_kind(n, "var") {
             return;
         }
-        if let Some(id) = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "identifier")
-        {
+        if let Some(id) = first_named_child_matching(n, &["identifier"]) {
             out.push((text(cx, id), pos_of(id)));
         }
     }
@@ -517,9 +496,7 @@ impl LangHooks for ZigHooks {
         if holder.kind() != "variable_declaration" {
             return None;
         }
-        let name_node = named_children(holder)
-            .into_iter()
-            .find(|c| c.kind() == "identifier")?;
+        let name_node = first_named_child_matching(holder, &["identifier"])?;
         let public = has_pub(holder);
         let abstraction = n.kind() == "opaque_declaration";
         let name = text(cx, name_node);
@@ -557,8 +534,7 @@ impl LangHooks for ZigHooks {
         if n.kind() != "catch_expression" {
             return None;
         }
-        let kids = named_children(n);
-        let body = kids.last().copied()?;
+        let body = last_named_child(n)?;
         let bound = catch_bound(cx, n);
         let stmts = if body.kind() == "block" {
             named_children(body)
@@ -590,10 +566,13 @@ impl LangHooks for ZigHooks {
         let mut source: Option<&'s str> = None;
         let mut complete = true;
         for field in &fields {
-            let kids = named_children(*field);
-            let found = match kids.as_slice() {
-                [name, value] if name.kind() == "identifier" => {
-                    field_value_source(cx, *name, *value)
+            let found = match (
+                field.named_child(0),
+                field.named_child(1),
+                field.named_child(2),
+            ) {
+                (Some(name), Some(value), None) if name.kind() == "identifier" => {
+                    field_value_source(cx, name, value)
                 }
                 _ => None,
             };
@@ -626,10 +605,7 @@ impl LangHooks for ZigHooks {
             if in_function || !has_child_kind(n, "var") {
                 return;
             }
-            if let Some(id) = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "identifier")
-            {
+            if let Some(id) = first_named_child_matching(n, &["identifier"]) {
                 let global = (AmbientKind::GlobalMutable, text(cx, id), pos_of(id));
                 out.push(global);
             }
@@ -656,9 +632,7 @@ impl LangHooks for ZigHooks {
             return None;
         }
         let args = child_by_field(n, "arguments")?;
-        let mut kids = named_children(args).into_iter();
-        kids.next()?;
-        let second = kids.next()?;
+        let second = args.named_child(1)?;
         (second.kind() != "string").then_some("computed field name (@field)")
     }
 

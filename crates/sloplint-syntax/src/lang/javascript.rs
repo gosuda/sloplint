@@ -7,9 +7,10 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    first_of_kind, has_child_kind, named_children, narrow, pos_of, preceding_comments,
-    sole_call_id, string_arg_shape, strip_quotes, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    child_by_field, count_named_child, find_named_child, first_of_kind, has_child_kind,
+    named_children, narrow, only_named_child_matching, pos_of, preceding_comments, sole_call_id,
+    string_arg_shape, strip_quotes, text,
 };
 use crate::spec::Role;
 
@@ -77,7 +78,7 @@ fn code_children(n: Node<'_>) -> Vec<Node<'_>> {
 }
 
 fn first_code(n: Node<'_>) -> Option<Node<'_>> {
-    code_children(n).into_iter().next()
+    find_named_child(n, |child| child.kind() != "comment")
 }
 
 fn parent_kind_is(n: Node<'_>, kind: &str) -> bool {
@@ -247,7 +248,11 @@ fn closure_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
 }
 
 fn sole_call_of(body: Node<'_>) -> Option<usize> {
-    sole_call_id(body, code_children, statement_call)
+    sole_call_id(
+        body,
+        |block| only_named_child_matching(block, |c| c.kind() != "comment"),
+        statement_call,
+    )
 }
 
 fn statement_call(statement: Node<'_>) -> Option<usize> {
@@ -507,21 +512,18 @@ fn export_facts<'s>(
     site: &ImportSite<'s>,
     out: &mut Vec<Import<'s>>,
 ) {
-    let children = code_children(statement);
-    if let Some(clause) = children
-        .iter()
-        .find(|child| child.kind() == "export_clause")
-    {
-        for spec in code_children(*clause) {
+    if let Some(clause) = find_named_child(statement, |child| {
+        child.kind() != "comment" && child.kind() == "export_clause"
+    }) {
+        for spec in code_children(clause) {
             named_specifier_fact(cx, spec, site, out);
         }
         return;
     }
-    if let Some(namespace) = children
-        .iter()
-        .find(|child| child.kind() == "namespace_export")
-    {
-        let name = first_code(*namespace).map_or("*", |id| text(cx, id));
+    if let Some(namespace) = find_named_child(statement, |child| {
+        child.kind() != "comment" && child.kind() == "namespace_export"
+    }) {
+        let name = first_code(namespace).map_or("*", |id| text(cx, id));
         out.push(site.fact(name, None, ImportKind::Namespace));
         return;
     }
@@ -809,8 +811,9 @@ fn handler_site<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Handler<'s>> {
 
 fn switch_default_arm(n: Node<'_>) -> WildcardArm {
     let enum_like = n.parent().is_some_and(|body| {
-        code_children(body).into_iter().any(|sibling| {
-            sibling.kind() == "switch_case"
+        any_named_child(body, |sibling| {
+            sibling.kind() != "comment"
+                && sibling.kind() == "switch_case"
                 && child_by_field(sibling, "value")
                     .is_some_and(|value| value.kind() == "member_expression")
         })
@@ -907,10 +910,7 @@ impl LangHooks for JavaScriptHooks {
         if n.kind() != "object" {
             return None;
         }
-        let fields = named_children(n)
-            .iter()
-            .filter(|child| child.kind() == "pair")
-            .count();
+        let fields = count_named_child(n, |child| child.kind() == "pair");
         Some(FieldCopy {
             pos: pos_of(n),
             fields: narrow(fields),

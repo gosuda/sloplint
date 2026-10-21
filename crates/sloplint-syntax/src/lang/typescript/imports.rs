@@ -4,7 +4,8 @@ use sloplint_core::facts::{CallKind, ImplRef, Import, ImportKind, Stmt};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, child_by_field, first_of_kind, last_segment, named_children, pos_of, strip_quotes, text,
+    Cx, child_by_field, first_named_child, first_named_child_matching, first_of_kind, last_segment,
+    named_children, pos_of, strip_quotes, text,
 };
 
 pub(crate) fn clause_imports<'s>(
@@ -25,10 +26,8 @@ pub(crate) fn clause_imports<'s>(
             }),
             "named_imports" => import_specifiers(cx, c, module, out),
             "namespace_import" => {
-                let name = named_children(c)
-                    .into_iter()
-                    .find(|g| g.kind() == "identifier")
-                    .map_or("", |g| text(cx, g));
+                let name =
+                    first_named_child_matching(c, &["identifier"]).map_or("", |g| text(cx, g));
                 out.push(Import {
                     pos: pos_of(c),
                     module: Cow::Borrowed(module),
@@ -126,7 +125,7 @@ pub(crate) fn catch_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: &str) -> Stm
     if s.kind() != "expression_statement" {
         return Stmt::Other;
     }
-    let Some(inner) = named_children(s).into_iter().next() else {
+    let Some(inner) = first_named_child(s) else {
         return Stmt::Other;
     };
     if inner.kind() == "call_expression" {
@@ -143,10 +142,8 @@ pub(crate) fn catch_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: &str) -> Stm
 }
 
 pub(crate) fn throw_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: &str) -> Stmt<'s> {
-    let hit = named_children(s)
-        .into_iter()
-        .next()
-        .is_some_and(|e| e.kind() == "identifier" && text(cx, e) == binding);
+    let hit =
+        first_named_child(s).is_some_and(|e| e.kind() == "identifier" && text(cx, e) == binding);
     if hit { Stmt::Rethrow } else { Stmt::Other }
 }
 
@@ -214,10 +211,7 @@ pub(crate) fn import_stmt<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import
         return;
     }
     let module = child_by_field(n, "source").map_or("", |s| strip_quotes(text(cx, s)));
-    let Some(clause) = named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "import_clause")
-    else {
+    let Some(clause) = first_named_child_matching(n, &["import_clause"]) else {
         out.push(Import {
             pos: pos_of(n),
             module: Cow::Borrowed(module),
@@ -236,16 +230,10 @@ pub(crate) fn export_namespace<'s>(
     module: &'s str,
     out: &mut Vec<Import<'s>>,
 ) -> bool {
-    let Some(ns) = named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "namespace_export")
-    else {
+    let Some(ns) = first_named_child_matching(n, &["namespace_export"]) else {
         return false;
     };
-    let name = named_children(ns)
-        .into_iter()
-        .find(|g| g.kind() == "identifier")
-        .map_or("", |g| text(cx, g));
+    let name = first_named_child_matching(ns, &["identifier"]).map_or("", |g| text(cx, g));
     out.push(Import {
         pos: pos_of(ns),
         module: Cow::Borrowed(module),
@@ -297,10 +285,7 @@ pub(crate) fn export_stmt<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import
         return;
     }
     let mut specs = Vec::new();
-    if let Some(clause) = named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "export_clause")
-    {
+    if let Some(clause) = first_named_child_matching(n, &["export_clause"]) {
         specs = export_specs(cx, clause);
     }
     if specs.is_empty() {

@@ -2,13 +2,13 @@ use sloplint_core::facts::{Arg, ArgShape, Pos};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, binary_concat, child_by_field, named_children, narrow, pos_of, sole_call_id,
-    string_arg_shape, text,
+    Cx, binary_concat, child_by_field, first_named_child, named_children, narrow,
+    only_named_child_matching, pos_of, sole_call_id, string_arg_shape, text,
 };
 
 pub(crate) fn ts_call_stmt(n: Node<'_>) -> Option<usize> {
     let inner = match n.kind() {
-        "return_statement" | "expression_statement" => named_children(n).into_iter().next()?,
+        "return_statement" | "expression_statement" => first_named_child(n)?,
         _ => return None,
     };
     let mut cur = inner;
@@ -17,7 +17,7 @@ pub(crate) fn ts_call_stmt(n: Node<'_>) -> Option<usize> {
             return Some(cur.id());
         }
         if cur.kind() == "await_expression" {
-            cur = named_children(cur).into_iter().next()?;
+            cur = first_named_child(cur)?;
         } else {
             return None;
         }
@@ -27,12 +27,7 @@ pub(crate) fn ts_call_stmt(n: Node<'_>) -> Option<usize> {
 pub(crate) fn ts_sole_call(body: Node<'_>) -> Option<usize> {
     sole_call_id(
         body,
-        |block| {
-            named_children(block)
-                .into_iter()
-                .filter(|c| c.kind() != "comment")
-                .collect()
-        },
+        |block| only_named_child_matching(block, |c| c.kind() != "comment"),
         ts_call_stmt,
     )
 }
@@ -82,7 +77,7 @@ pub(crate) fn ts_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)
             "identifier" | "this" => return Some((text(cx, cur), pos_of(cur))),
             "member_expression" => cur = child_by_field(cur, "object")?,
             "subscript_expression" => cur = child_by_field(cur, "object")?,
-            "parenthesized_expression" => cur = named_children(cur).into_iter().next()?,
+            "parenthesized_expression" => cur = first_named_child(cur)?,
             _ => return None,
         }
     }

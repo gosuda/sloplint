@@ -7,9 +7,10 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field, first_of_kind,
-    has_child_kind, last_segment, named_children, narrow, pos_of, preceding_comments, slice,
-    string_arg_shape, text, trimmed,
+    CallHead, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    child_by_field, find_map_named_child, find_named_child, first_named_child_matching,
+    first_of_kind, has_child_kind, last_named_child, last_segment, named_children, narrow,
+    only_named_child_matching, pos_of, preceding_comments, slice, string_arg_shape, text, trimmed,
 };
 use crate::spec::Role;
 
@@ -48,7 +49,7 @@ impl LangHooks for SwiftHooks {
         let name_node = child_by_field(n, "name")?;
         let class = ancestors(n).find(|a| a.kind() == "class_declaration");
         let xctest = class.is_some_and(|c| {
-            named_children(c).into_iter().any(|s| {
+            any_named_child(c, |s| {
                 s.kind() == "inheritance_specifier" && trimmed(cx, s).contains("XCTestCase")
             })
         });
@@ -102,9 +103,7 @@ impl LangHooks for SwiftHooks {
     }
 
     fn imports<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
-        let target = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "identifier");
+        let target = first_named_child_matching(n, &["identifier"]);
         let (Some(target), "import_declaration") = (target, n.kind()) else {
             return;
         };
@@ -173,16 +172,13 @@ impl LangHooks for SwiftHooks {
                 .map_or_else(|| trimmed(cx, pattern), |id| trimmed(cx, id)),
             None => "error",
         };
-        let stmts = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "statements")
-            .map_or_else(Vec::new, |body| {
-                named_children(body)
-                    .into_iter()
-                    .filter(|c| !COMMENT_KINDS.contains(&c.kind()))
-                    .map(|s| handler_stmt(cx, s, binding))
-                    .collect()
-            });
+        let stmts = first_named_child_matching(n, &["statements"]).map_or_else(Vec::new, |body| {
+            named_children(body)
+                .into_iter()
+                .filter(|c| !COMMENT_KINDS.contains(&c.kind()))
+                .map(|s| handler_stmt(cx, s, binding))
+                .collect()
+        });
         Some(Handler {
             pos: pos_of(n),
             stmts,
@@ -243,9 +239,7 @@ impl LangHooks for SwiftHooks {
         if n.kind() != "call_expression" {
             return None;
         }
-        let first = value_arguments(n)
-            .first()
-            .and_then(|a| child_by_field(*a, "value"))?;
+        let first = first_value_argument(n).and_then(|a| child_by_field(a, "value"))?;
         let message = match trimmed(cx, n.named_child(0)?) {
             "NSSelectorFromString" => "NSSelectorFromString() with computed name",
             "NSClassFromString" => "NSClassFromString() with computed name",
@@ -262,7 +256,7 @@ impl LangHooks for SwiftHooks {
         let arguments = value_arguments(n);
         let (has_message, comparison) = match callee {
             "assert" | "precondition" => {
-                let first = arguments.first().and_then(|a| child_by_field(*a, "value"));
+                let first = first_value_argument(n).and_then(|a| child_by_field(a, "value"));
                 let comparison = first.is_some_and(|v| {
                     matches!(v.kind(), "comparison_expression" | "equality_expression")
                 });
@@ -310,25 +304,33 @@ fn suffix_children<'a>(call: Node<'a>, kind: &str) -> Vec<Node<'a>> {
         .collect()
 }
 
+fn first_suffix_child<'a>(call: Node<'a>, kind: &str) -> Option<Node<'a>> {
+    find_map_named_child(call, |c| {
+        if c.kind() != "call_suffix" {
+            return None;
+        }
+        first_named_child_matching(c, &[kind])
+    })
+}
+
+fn first_value_argument(call: Node<'_>) -> Option<Node<'_>> {
+    first_suffix_child(call, "value_arguments")
+        .and_then(|list| first_named_child_matching(list, &["value_argument"]))
+}
+
 fn is_subscript(call: Node<'_>) -> bool {
-    suffix_children(call, "value_arguments")
-        .first()
+    first_suffix_child(call, "value_arguments")
         .and_then(|list| list.child(0))
         .is_some_and(|open| open.kind() == "[")
 }
 
-fn modifier_children(n: Node<'_>) -> Vec<Node<'_>> {
-    named_children(n)
-        .into_iter()
-        .filter(|c| c.kind() == "modifiers")
-        .flat_map(named_children)
-        .collect()
-}
-
 fn has_public_modifier(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    modifier_children(n)
-        .into_iter()
-        .any(|m| m.kind() == "visibility_modifier" && PUBLIC_WORDS.contains(&trimmed(cx, m)))
+    any_named_child(n, |c| {
+        c.kind() == "modifiers"
+            && any_named_child(c, |m| {
+                m.kind() == "visibility_modifier" && PUBLIC_WORDS.contains(&trimmed(cx, m))
+            })
+    })
 }
 
 fn is_public(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
@@ -342,25 +344,19 @@ fn enclosing_public(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
 }
 
 fn swift_test_attribute(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    modifier_children(n)
-        .into_iter()
-        .filter(|c| c.kind() == "attribute")
-        .flat_map(named_children)
-        .any(|c| c.kind() == "user_type" && trimmed(cx, c) == "Test")
+    any_named_child(n, |c| {
+        c.kind() == "modifiers"
+            && any_named_child(c, |a| {
+                a.kind() == "attribute"
+                    && any_named_child(a, |u| u.kind() == "user_type" && trimmed(cx, u) == "Test")
+            })
+    })
 }
 
 fn sole_call(body: Node<'_>) -> Option<usize> {
-    let statements = named_children(body)
-        .into_iter()
-        .find(|c| c.kind() == "statements")?;
-    let significant: Vec<Node<'_>> = named_children(statements)
-        .into_iter()
-        .filter(|c| !COMMENT_KINDS.contains(&c.kind()))
-        .collect();
-    let [only] = significant.as_slice() else {
-        return None;
-    };
-    let call = unwrap_statement(*only)?;
+    let statements = first_named_child_matching(body, &["statements"])?;
+    let only = only_named_child_matching(statements, |c| !COMMENT_KINDS.contains(&c.kind()))?;
+    let call = unwrap_statement(only)?;
     (call.kind() == "call_expression" && !is_subscript(call)).then(|| call.id())
 }
 
@@ -441,9 +437,7 @@ fn default_is_bool(cx: &Cx<'_, '_>, func: Node<'_>, after: usize, before: usize)
 }
 
 fn is_var(cx: &Cx<'_, '_>, decl: Node<'_>) -> bool {
-    named_children(decl)
-        .into_iter()
-        .find(|c| c.kind() == "value_binding_pattern")
+    first_named_child_matching(decl, &["value_binding_pattern"])
         .and_then(|pattern| child_by_field(pattern, "mutability"))
         .is_some_and(|mutability| trimmed(cx, mutability) == "var")
 }
@@ -462,8 +456,11 @@ fn global_scope(cx: &Cx<'_, '_>, decl: Node<'_>) -> bool {
     let nested =
         ancestors(decl).any(|a| matches!(a.kind(), "class_declaration" | "protocol_declaration"));
     !nested
-        || modifier_children(decl).into_iter().any(|m| {
-            m.kind() == "property_modifier" && matches!(trimmed(cx, m), "static" | "class")
+        || any_named_child(decl, |c| {
+            c.kind() == "modifiers"
+                && any_named_child(c, |m| {
+                    m.kind() == "property_modifier" && matches!(trimmed(cx, m), "static" | "class")
+                })
         })
 }
 
@@ -523,9 +520,7 @@ fn inheritance_refs<'s>(cx: &Cx<'_, 's>, class: Node<'_>) -> Vec<ImplRef<'s>> {
         .into_iter()
         .filter(|c| c.kind() == "inheritance_specifier")
         .filter_map(|specifier| {
-            let user = named_children(specifier)
-                .into_iter()
-                .find(|c| c.kind() == "user_type")?;
+            let user = first_named_child_matching(specifier, &["user_type"])?;
             let base = trimmed(cx, user);
             let cut = base.find('<').unwrap_or(base.len());
             Some(ImplRef {
@@ -537,9 +532,7 @@ fn inheritance_refs<'s>(cx: &Cx<'_, 's>, class: Node<'_>) -> Vec<ImplRef<'s>> {
 }
 
 fn pattern_of(entry: Node<'_>) -> Option<Node<'_>> {
-    named_children(entry)
-        .into_iter()
-        .find(|c| matches!(c.kind(), "switch_pattern" | "pattern"))
+    find_named_child(entry, |c| matches!(c.kind(), "switch_pattern" | "pattern"))
 }
 
 fn is_wildcard_entry(cx: &Cx<'_, '_>, entry: Node<'_>) -> bool {
@@ -550,11 +543,11 @@ fn is_wildcard_entry(cx: &Cx<'_, '_>, entry: Node<'_>) -> bool {
 
 fn sibling_enum_like(cx: &Cx<'_, '_>, entry: Node<'_>) -> bool {
     entry.parent().is_some_and(|parent| {
-        named_children(parent)
-            .into_iter()
-            .filter(|s| s.kind() == "switch_entry" && s.id() != entry.id())
-            .filter_map(pattern_of)
-            .any(|pattern| enum_pattern(trimmed(cx, pattern)))
+        any_named_child(parent, |s| {
+            s.kind() == "switch_entry"
+                && s.id() != entry.id()
+                && pattern_of(s).is_some_and(|pattern| enum_pattern(trimmed(cx, pattern)))
+        })
     })
 }
 
@@ -579,8 +572,8 @@ fn handler_stmt<'s>(cx: &Cx<'_, 's>, statement: Node<'_>, binding: &str) -> Stmt
         }
         "control_transfer_statement"
             if has_child_kind(statement, "throw_keyword")
-                && named_children(statement).last().is_some_and(|last| {
-                    last.kind() == "simple_identifier" && trimmed(cx, *last) == binding
+                && last_named_child(statement).is_some_and(|last| {
+                    last.kind() == "simple_identifier" && trimmed(cx, last) == binding
                 }) =>
         {
             Stmt::Rethrow

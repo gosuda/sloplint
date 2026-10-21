@@ -8,8 +8,9 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field, named_children,
-    narrow, pos_of, preceding_comments, slice, string_arg_shape, strip_quotes, text,
+    CallHead, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    child_by_field, named_children, narrow, pos_of, preceding_comments, slice, string_arg_shape,
+    strip_quotes, text,
 };
 use crate::lang::c_family::{
     self, angles, collect_fragments, flat, in_function, inner, pair_source, plain_assert, root_of,
@@ -297,12 +298,11 @@ fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     }
 }
 fn concat_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    let kids = named_children(n);
-    if kids.iter().any(|c| c.kind() == "identifier") {
+    if any_named_child(n, |c| c.kind() == "identifier") {
         return ArgShape::Concat;
     }
     let mut segments = Vec::new();
-    for c in kids {
+    for c in named_children(n) {
         if c.kind() != "string_literal" {
             return ArgShape::Other;
         }

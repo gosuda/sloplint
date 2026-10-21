@@ -8,9 +8,10 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    named_children, narrow, pos_of, preceding_comments, slice, string_arg_shape, strip_quotes,
-    text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    child_by_field, find_named_child, first_named_child, first_named_child_matching,
+    named_children, narrow, only_named_child_matching, pos_of, preceding_comments,
+    rfind_named_child, slice, string_arg_shape, strip_quotes, text,
 };
 use crate::lang::c_family::{
     self, angles, collect_fragments, flat, in_function, inner, pair_source, plain_assert, root_of,
@@ -177,9 +178,7 @@ impl LangHooks for ObjcHooks {
             return None;
         }
         let bound = catch_binding(cx, n);
-        let body = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "compound_statement")?;
+        let body = first_named_child_matching(n, &["compound_statement"])?;
         let mut stmts = Vec::new();
         for stmt in named_children(body) {
             if stmt.kind() == "comment" {
@@ -386,9 +385,7 @@ fn parens(raw: &str) -> &str {
     }
 }
 fn method<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
-    let body = named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "compound_statement")?;
+    let body = first_named_child_matching(n, &["compound_statement"])?;
     let name_node = selector_name(n)?;
     let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
     Some(FunctionHead {
@@ -406,25 +403,19 @@ fn method<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     })
 }
 fn selector_name(n: Node<'_>) -> Option<Node<'_>> {
-    let kids = named_children(n);
-    match kids.iter().find(|c| c.kind() == "keyword_declarator") {
-        Some(kd) => named_children(*kd)
-            .into_iter()
-            .find(|c| c.kind() == "identifier"),
-        None => kids.into_iter().find(|c| c.kind() == "identifier"),
+    match find_named_child(n, |c| c.kind() == "keyword_declarator") {
+        Some(kd) => first_named_child_matching(kd, &["identifier"]),
+        None => first_named_child_matching(n, &["identifier"]),
     }
 }
 fn impl_is_test<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     let mut parent = n.parent();
     while let Some(found) = parent {
         if found.kind() == "class_implementation" {
-            return named_children(found)
-                .into_iter()
-                .find(|c| c.kind() == "identifier")
-                .is_some_and(|id| {
-                    let name = text(cx, id);
-                    name.ends_with("Test") || name.ends_with("Tests")
-                });
+            return first_named_child_matching(found, &["identifier"]).is_some_and(|id| {
+                let name = text(cx, id);
+                name.ends_with("Test") || name.ends_with("Tests")
+            });
         }
         parent = found.parent();
     }
@@ -445,15 +436,8 @@ fn method_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
     out
 }
 fn keyword_param<'s>(cx: &Cx<'_, 's>, kd: Node<'_>) -> Option<Param<'s>> {
-    let ids: Vec<Node<'_>> = named_children(kd)
-        .into_iter()
-        .filter(|c| c.kind() == "identifier")
-        .collect();
-    let name_node = *ids.last()?;
-    let ty = named_children(kd)
-        .into_iter()
-        .find(|c| c.kind() == "method_type")
-        .map(|t| parens(text(cx, t)));
+    let name_node = rfind_named_child(kd, |c| c.kind() == "identifier")?;
+    let ty = first_named_child_matching(kd, &["method_type"]).map(|t| parens(text(cx, t)));
     Some(Param {
         name: text(cx, name_node),
         ty,
@@ -461,9 +445,7 @@ fn keyword_param<'s>(cx: &Cx<'_, 's>, kd: Node<'_>) -> Option<Param<'s>> {
     })
 }
 fn method_param<'s>(cx: &Cx<'_, 's>, mp: Node<'_>) -> Option<Param<'s>> {
-    let name_node = named_children(mp)
-        .into_iter()
-        .find(|c| c.kind() == "identifier")?;
+    let name_node = first_named_child_matching(mp, &["identifier"])?;
     let ty = child_by_field(mp, "type").map(|t| text(cx, t));
     Some(Param {
         name: text(cx, name_node),
@@ -472,27 +454,17 @@ fn method_param<'s>(cx: &Cx<'_, 's>, mp: Node<'_>) -> Option<Param<'s>> {
     })
 }
 fn method_return<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
-    named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "method_type")
-        .map(|t| parens(text(cx, t)))
+    first_named_child_matching(n, &["method_type"]).map(|t| parens(text(cx, t)))
 }
 fn sole_call(body: Node<'_>, kinds: &[&str]) -> Option<usize> {
     if body.kind() != "compound_statement" {
         return None;
     }
-    let mut stmts = named_children(body)
-        .into_iter()
-        .filter(|c| c.kind() != "comment");
-    let stmt = stmts.next()?;
-    if stmts.next().is_some() {
-        return None;
-    }
+    let stmt = only_named_child_matching(body, |c| c.kind() != "comment")?;
     if stmt.kind() != "expression_statement" && stmt.kind() != "return_statement" {
         return None;
     }
-    let expr =
-        child_by_field(stmt, "expression").or_else(|| named_children(stmt).into_iter().next())?;
+    let expr = child_by_field(stmt, "expression").or_else(|| first_named_child(stmt))?;
     if expr.kind() != "call_expression" && expr.kind() != "message_expression" {
         return None;
     }
@@ -519,9 +491,7 @@ fn msg_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
 }
 fn first_selector<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     let mut cursor = n.walk();
-    let methods: Vec<Node<'_>> = n.children_by_field_name("method", &mut cursor).collect();
-    methods
-        .into_iter()
+    n.children_by_field_name("method", &mut cursor)
         .find(|c| c.kind() == "identifier")
         .map(|c| text(cx, c))
 }
@@ -544,7 +514,7 @@ fn call_args<'s>(cx: &Cx<'_, 's>, args_node: Node<'_>) -> Vec<Arg<'s>> {
 }
 fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     if n.kind() == "at_expression" {
-        return match named_children(n).into_iter().next() {
+        return match first_named_child(n) {
             Some(found) if found.kind() == "string_literal" => {
                 string_arg_shape(cx, found, &["string_content"])
             }
@@ -560,12 +530,11 @@ fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     }
 }
 fn concat_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    let kids = named_children(n);
-    if kids.iter().any(|c| c.kind() == "identifier") {
+    if any_named_child(n, |c| c.kind() == "identifier") {
         return ArgShape::Concat;
     }
     let mut segments = Vec::new();
-    for c in kids {
+    for c in named_children(n) {
         if c.kind() != "string_literal" {
             return ArgShape::Other;
         }
@@ -646,9 +615,7 @@ fn class_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
         return None;
     }
     let superclass = child_by_field(n, "superclass");
-    let name_node = named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "identifier" && Some(*c) != superclass)?;
+    let name_node = find_named_child(n, |c| c.kind() == "identifier" && Some(c) != superclass)?;
     Some(TypeHead {
         def: Some(TypeDef {
             name: text(cx, name_node),
@@ -661,9 +628,7 @@ fn class_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     })
 }
 fn protocol_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
-    let name_node = named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "identifier")?;
+    let name_node = first_named_child_matching(n, &["identifier"])?;
     Some(TypeHead {
         def: Some(TypeDef {
             name: text(cx, name_node),
@@ -676,18 +641,12 @@ fn protocol_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     })
 }
 fn catch_binding<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
-    let type_name = named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "type_name")?;
-    let id = named_children(type_name)
-        .into_iter()
-        .find(|c| c.kind() == "identifier");
+    let type_name = first_named_child_matching(n, &["type_name"])?;
+    let id = first_named_child_matching(type_name, &["identifier"]);
     if let Some(found) = id {
         return Some(text(cx, found));
     }
-    let declarator = named_children(type_name)
-        .into_iter()
-        .find(|c| c.kind() == "pointer_declarator")?;
+    let declarator = first_named_child_matching(type_name, &["pointer_declarator"])?;
     first_ident(cx, declarator)
 }
 fn first_ident<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
@@ -702,8 +661,7 @@ fn first_ident<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
 }
 fn catch_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, bound: Option<&'s str>) -> Stmt<'s> {
     if stmt.kind() == "expression_statement" {
-        let expr =
-            child_by_field(stmt, "expression").or_else(|| named_children(stmt).into_iter().next());
+        let expr = child_by_field(stmt, "expression").or_else(|| first_named_child(stmt));
         if expr.is_some_and(|e| e.kind() == "call_expression") {
             return call_stmt(cx, expr);
         }
@@ -723,7 +681,7 @@ fn catch_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, bound: Option<&'s str>) -> St
         };
     }
     if stmt.kind() == "throw_statement" {
-        let thrown = named_children(stmt).into_iter().next();
+        let thrown = first_named_child(stmt);
         match thrown {
             None => return Stmt::Rethrow,
             Some(found) if found.kind() == "identifier" && Some(text(cx, found)) == bound => {
@@ -773,11 +731,12 @@ fn dot_env<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
 }
 fn msg_env<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     let mut cursor = n.walk();
-    let methods: Vec<Node<'_>> = n.children_by_field_name("method", &mut cursor).collect();
-    if methods.len() != 1
-        || methods[0].kind() != "identifier"
-        || text(cx, methods[0]) != "environment"
-    {
+    let mut methods = n.children_by_field_name("method", &mut cursor);
+    let only = methods.next()?;
+    if methods.next().is_some() {
+        return None;
+    }
+    if only.kind() != "identifier" || text(cx, only) != "environment" {
         return None;
     }
     let receiver = child_by_field(n, "receiver")?;

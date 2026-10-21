@@ -8,9 +8,10 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, first_of_kind,
-    last_segment, named_children, narrow, pos_of, preceding_comments, slice, string_arg_shape,
-    strip_quotes, text, trimmed,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field,
+    find_named_child, first_named_child, first_named_child_matching, first_of_kind, last_segment,
+    named_children, narrow, only_named_child_matching, pos_of, preceding_comments,
+    rfind_named_child, slice, string_arg_shape, strip_quotes, text, trimmed,
 };
 use crate::spec::Role;
 
@@ -94,7 +95,7 @@ fn php_public<'s>(cx: &Cx<'_, 's>, n: Node<'_>, kind: &str) -> bool {
     if kind != "method_declaration" {
         return true;
     }
-    !named_children(n).into_iter().any(|c| is_private_vis(cx, c))
+    !any_named_child(n, |c| is_private_vis(cx, c))
 }
 fn php_in_test<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     if cx.is_test_file {
@@ -103,11 +104,12 @@ fn php_in_test<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     let mut current = n.parent();
     while let Some(parent) = current {
         if parent.kind() == "class_declaration" {
-            return named_children(parent)
-                .into_iter()
-                .filter(|c| c.kind() == "base_clause")
-                .flat_map(named_children)
-                .any(|base| last_segment(text(cx, base), &["\\"]) == "TestCase");
+            return any_named_child(parent, |c| {
+                c.kind() == "base_clause"
+                    && any_named_child(c, |base| {
+                        last_segment(text(cx, base), &["\\"]) == "TestCase"
+                    })
+            });
         }
         current = parent.parent();
     }
@@ -147,31 +149,24 @@ fn php_sole_call(n: Node<'_>) -> Option<usize> {
     if body.kind() != "compound_statement" {
         return None;
     }
-    let stmts: Vec<Node<'_>> = named_children(body)
-        .into_iter()
-        .filter(|c| c.kind() != "comment")
-        .collect();
-    if stmts.len() != 1 {
-        return None;
-    }
-    let stmt = stmts.first()?;
+    let stmt = only_named_child_matching(body, |c| c.kind() != "comment")?;
     let inner = if stmt.kind() == "expression_statement" || stmt.kind() == "return_statement" {
-        named_children(*stmt).into_iter().next()?
+        first_named_child(stmt)?
     } else {
-        *stmt
+        stmt
     };
     (is_call_kind(inner.kind()) || inner.kind() == "object_creation_expression")
         .then(|| node_id(inner))
 }
 fn php_arg_expr(arg: Node<'_>) -> Node<'_> {
     let named = child_by_field(arg, "name").map(|v| v.id());
-    named_children(arg)
-        .into_iter()
-        .rfind(|c| Some(c.id()) != named && c.kind() != "reference_modifier")
-        .unwrap_or(arg)
+    rfind_named_child(arg, |c| {
+        Some(c.id()) != named && c.kind() != "reference_modifier"
+    })
+    .unwrap_or(arg)
 }
 fn fragment_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>, body: &str, frag: &str) -> ArgShape<'s> {
-    match named_children(n).into_iter().find(|c| c.kind() == body) {
+    match find_named_child(n, |c| c.kind() == body) {
         Some(found) => {
             let parts: Vec<&'s str> = named_children(found)
                 .into_iter()
@@ -192,7 +187,7 @@ fn php_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         "nowdoc" => fragment_shape(cx, n, "nowdoc_body", "nowdoc_string"),
         "binary_expression" => {
             let dot = child_by_field(n, "operator").is_some_and(|o| text(cx, o) == ".");
-            let has_str = named_children(n).into_iter().any(|c| {
+            let has_str = any_named_child(n, |c| {
                 matches!(
                     c.kind(),
                     "string" | "encapsed_string" | "heredoc" | "nowdoc"
@@ -265,9 +260,7 @@ fn php_stmt_callee<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> (&'s str, CallKind) {
         }
         "scoped_call_expression" => php_callee_span(cx, n, "scope"),
         "object_creation_expression" => (
-            named_children(n)
-                .into_iter()
-                .find(|c| matches!(c.kind(), "name" | "qualified_name" | "relative_name"))
+            first_named_child_matching(n, &["name", "qualified_name", "relative_name"])
                 .map(|c| text(cx, c))
                 .unwrap_or(""),
             CallKind::New,
@@ -331,10 +324,7 @@ fn is_env_superglobal(t: &str) -> bool {
 }
 fn php_first_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     let list = child_by_field(n, "arguments")?;
-    named_children(list)
-        .into_iter()
-        .find(|c| c.kind() == "argument")
-        .map(|a| text(cx, php_arg_expr(a)))
+    first_named_child_matching(list, &["argument"]).map(|a| text(cx, php_arg_expr(a)))
 }
 fn php_two_operand(rest: &str) -> bool {
     matches!(
@@ -353,7 +343,7 @@ fn php_two_operand(rest: &str) -> bool {
 }
 fn php_handler_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, binding: &str) -> Stmt<'s> {
     let inner = if stmt.kind() == "expression_statement" {
-        named_children(stmt).into_iter().next().unwrap_or(stmt)
+        first_named_child(stmt).unwrap_or(stmt)
     } else {
         stmt
     };
@@ -362,7 +352,7 @@ fn php_handler_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, binding: &str) -> Stmt<
         return Stmt::Call { callee, kind };
     }
     if inner.kind() == "throw_expression" {
-        let thrown = named_children(inner).into_iter().next();
+        let thrown = first_named_child(inner);
         let rethrown = thrown
             .is_some_and(|t| t.kind() == "variable_name" && strip_dollar(text(cx, t)) == binding);
         if rethrown {
@@ -375,22 +365,26 @@ fn member_source<'s>(cx: &Cx<'_, 's>, expr: Node<'_>, want: &str) -> Option<&'s 
     if expr.kind() != "member_access_expression" {
         return None;
     }
-    let kids = named_children(expr);
-    let [obj_node, mem_node] = kids.as_slice() else {
+    if expr.named_child_count() != 2 {
+        return None;
+    }
+    let (Some(obj_node), Some(mem_node)) = (expr.named_child(0), expr.named_child(1)) else {
         return None;
     };
-    (obj_node.kind() == "variable_name" && text(cx, *mem_node) == want)
-        .then(|| strip_dollar(text(cx, *obj_node)))
+    (obj_node.kind() == "variable_name" && text(cx, mem_node) == want)
+        .then(|| strip_dollar(text(cx, obj_node)))
 }
 fn array_field_source<'s>(cx: &Cx<'_, 's>, elem: Node<'_>) -> Option<&'s str> {
-    let kids = named_children(elem);
-    let [key_node, val_node] = kids.as_slice() else {
+    if elem.named_child_count() != 2 {
+        return None;
+    }
+    let (Some(key_node), Some(val_node)) = (elem.named_child(0), elem.named_child(1)) else {
         return None;
     };
     if key_node.kind() != "string" {
         return None;
     }
-    member_source(cx, *val_node, strip_quotes(text(cx, *key_node)))
+    member_source(cx, val_node, strip_quotes(text(cx, key_node)))
 }
 fn array_copy<'s>(cx: &Cx<'_, 's>, n: Node<'_>, elems: &[Node<'_>]) -> Option<FieldCopy<'s>> {
     if elems.is_empty() {
@@ -481,7 +475,7 @@ impl LangHooks for PhpHooks {
                 return;
             }
             if current.kind() == "subscript_expression" {
-                match named_children(current).into_iter().next() {
+                match first_named_child(current) {
                     Some(next) => current = next,
                     None => return,
                 }
@@ -543,16 +537,12 @@ impl LangHooks for PhpHooks {
     }
     fn imports<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
         if n.kind() == "namespace_use_declaration" {
-            let prefix = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "namespace_name")
+            let prefix = first_named_child_matching(n, &["namespace_name"])
                 .map(|c| text(cx, c))
                 .unwrap_or("");
             for clause in use_clauses(n) {
                 let alias_node = child_by_field(clause, "alias");
-                let path = named_children(clause)
-                    .into_iter()
-                    .find(|c| Some(c.id()) != alias_node.map(|a| a.id()))
+                let path = find_named_child(clause, |c| Some(c.id()) != alias_node.map(|a| a.id()))
                     .map(|c| text(cx, c))
                     .unwrap_or("");
                 if path.is_empty() {
@@ -644,18 +634,10 @@ impl LangHooks for PhpHooks {
         }
         let mut enum_like = false;
         if let Some(parent) = n.parent() {
-            for sib in named_children(parent) {
-                if sib.kind() != "case_statement" && sib.kind() != "match_conditional_expression" {
-                    continue;
-                }
-                let enum_const = named_children(sib)
-                    .into_iter()
-                    .any(|c| c.kind() == "class_constant_access_expression");
-                if enum_const {
-                    enum_like = true;
-                    break;
-                }
-            }
+            enum_like = any_named_child(parent, |sib| {
+                (sib.kind() == "case_statement" || sib.kind() == "match_conditional_expression")
+                    && any_named_child(sib, |c| c.kind() == "class_constant_access_expression")
+            });
         }
         Some(WildcardArm {
             pos: pos_of(n),
@@ -721,11 +703,7 @@ impl LangHooks for PhpHooks {
         let _ = in_function;
         match n.kind() {
             "subscript_expression" => {
-                let base = named_children(n)
-                    .into_iter()
-                    .next()
-                    .map(|b| text(cx, b))
-                    .unwrap_or("");
+                let base = first_named_child(n).map(|b| text(cx, b)).unwrap_or("");
                 if is_env_superglobal(base) {
                     out.push((AmbientKind::EnvRead, base, pos_of(n)));
                 } else if base == "$_SESSION" || base == "$GLOBALS" {
@@ -735,10 +713,7 @@ impl LangHooks for PhpHooks {
             "global_declaration" => push_first_var(cx, n, AmbientKind::GlobalWrite, out),
             "function_static_declaration" => push_first_var(cx, n, AmbientKind::GlobalMutable, out),
             "property_declaration" => {
-                if named_children(n)
-                    .into_iter()
-                    .any(|c| c.kind() == "static_modifier")
-                {
+                if any_named_child(n, |c| c.kind() == "static_modifier") {
                     push_first_var(cx, n, AmbientKind::GlobalMutable, out);
                 }
             }

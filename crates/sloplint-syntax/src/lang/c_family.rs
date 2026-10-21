@@ -3,7 +3,11 @@
 use sloplint_core::facts::{AmbientKind, Arg, ArgShape, Assertion, Pos};
 use tree_sitter::Node;
 
-use crate::hooks::{Cx, child_by_field, named_children, narrow, pos_of, slice, text};
+use crate::hooks::{
+    Cx, any_named_child, child_by_field, find_named_child, first_named_child,
+    first_named_child_matching, named_children, narrow, only_named_child_matching, pos_of, slice,
+    text,
+};
 
 pub(crate) fn flat(t: &str) -> String {
     t.chars().filter(|c| !c.is_whitespace()).collect()
@@ -15,12 +19,12 @@ pub(crate) fn angles(t: &str) -> &str {
         .unwrap_or(t)
 }
 pub(crate) fn word<'s>(cx: &Cx<'_, 's>, n: Node<'_>, kinds: &[&str], words: &[&str]) -> bool {
-    named_children(n)
-        .iter()
-        .any(|c| kinds.contains(&c.kind()) && words.contains(&text(cx, *c)))
+    any_named_child(n, |c| {
+        kinds.contains(&c.kind()) && words.contains(&text(cx, c))
+    })
 }
 pub(crate) fn inner(n: Node<'_>) -> Option<Node<'_>> {
-    child_by_field(n, "declarator").or_else(|| named_children(n).into_iter().next())
+    child_by_field(n, "declarator").or_else(|| first_named_child(n))
 }
 pub(crate) fn unwrap<'n>(n: Node<'n>, wrap: &[&str]) -> Node<'n> {
     let mut current = n;
@@ -79,9 +83,9 @@ pub(crate) fn const_pointer(cx: &Cx<'_, '_>, d: Node<'_>, wrap: &[&str]) -> bool
     let mut innermost_const = false;
     while wrap.contains(&current.kind()) {
         if current.kind() == "pointer_declarator" {
-            innermost_const = named_children(current)
-                .iter()
-                .any(|c| c.kind() == "type_qualifier" && text(cx, *c) == "const");
+            innermost_const = any_named_child(current, |c| {
+                c.kind() == "type_qualifier" && text(cx, c) == "const"
+            });
         }
         let Some(found) = inner(current) else {
             break;
@@ -121,7 +125,7 @@ pub(crate) fn root_of<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)
                 current = next
             }
             "parenthesized_expression" => {
-                let next = named_children(current).into_iter().next()?;
+                let next = first_named_child(current)?;
                 current = next
             }
             _ => return None,
@@ -149,11 +153,7 @@ pub(crate) fn bin_op<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     n.child(1).map(|op| text(cx, op))
 }
 pub(crate) fn first_arg(n: Node<'_>) -> Option<Node<'_>> {
-    child_by_field(n, "arguments").and_then(|a| {
-        named_children(a)
-            .into_iter()
-            .find(|c| c.kind() != "comment")
-    })
+    child_by_field(n, "arguments").and_then(|a| find_named_child(a, |c| c.kind() != "comment"))
 }
 pub(crate) fn plain_assert(cx: &Cx<'_, '_>, n: Node<'_>) -> Assertion {
     let arg = first_arg(n).filter(|a| a.kind() == "binary_expression");
@@ -195,9 +195,7 @@ pub(crate) fn pair_source<'s>(cx: &Cx<'_, 's>, pair: Node<'_>) -> Option<&'s str
 pub(crate) fn designator_of<'s>(cx: &Cx<'_, 's>, pair: Node<'_>) -> Option<&'s str> {
     for c in named_children(pair) {
         if c.kind() == "field_designator" {
-            let found = named_children(c)
-                .into_iter()
-                .find(|d| d.kind() == "field_identifier")?;
+            let found = first_named_child_matching(c, &["field_identifier"])?;
             return Some(text(cx, found));
         }
         if c.kind() == "field_identifier" {
@@ -234,18 +232,11 @@ pub(crate) fn sole_call(body: Node<'_>) -> Option<usize> {
     if body.kind() != "compound_statement" {
         return None;
     }
-    let mut stmts = named_children(body)
-        .into_iter()
-        .filter(|c| c.kind() != "comment");
-    let stmt = stmts.next()?;
-    if stmts.next().is_some() {
-        return None;
-    }
+    let stmt = only_named_child_matching(body, |c| c.kind() != "comment")?;
     if stmt.kind() != "expression_statement" && stmt.kind() != "return_statement" {
         return None;
     }
-    let expr =
-        child_by_field(stmt, "expression").or_else(|| named_children(stmt).into_iter().next())?;
+    let expr = child_by_field(stmt, "expression").or_else(|| first_named_child(stmt))?;
     (expr.kind() == "call_expression").then_some(expr.id())
 }
 pub(crate) fn call_args<'s>(

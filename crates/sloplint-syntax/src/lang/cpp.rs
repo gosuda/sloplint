@@ -8,9 +8,10 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    has_child_kind, named_children, narrow, pos_of, preceding_comments, slice, string_arg_shape,
-    strip_quotes, text, trimmed,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    child_by_field, first_named_child, first_named_child_matching, has_child_kind, named_children,
+    narrow, pos_of, preceding_comments, rfind_named_child, slice, string_arg_shape, strip_quotes,
+    text, trimmed,
 };
 use crate::lang::c_family::{
     self, angles, bin_op, collect_fragments, first_arg, flat, in_function, inner, pair_source,
@@ -456,12 +457,11 @@ fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     }
 }
 fn concat_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    let kids = named_children(n);
-    if kids.iter().any(|c| c.kind() == "identifier") {
+    if any_named_child(n, |c| c.kind() == "identifier") {
         return ArgShape::Concat;
     }
     let mut segments = Vec::new();
-    for c in kids {
+    for c in named_children(n) {
         if c.kind() != "string_literal" && c.kind() != "raw_string_literal" {
             return ArgShape::Other;
         }
@@ -501,9 +501,7 @@ fn scope_of(path: &str) -> (&str, &str) {
     }
 }
 fn push_using<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
-    let Some(target) = named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "identifier" || c.kind() == "qualified_identifier")
+    let Some(target) = first_named_child_matching(n, &["identifier", "qualified_identifier"])
     else {
         return;
     };
@@ -541,7 +539,7 @@ fn push_using<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
 }
 fn push_alias<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) -> Option<()> {
     let alias_node = child_by_field(n, "name")?;
-    let target = named_children(n).into_iter().rfind(|c| {
+    let target = rfind_named_child(n, |c| {
         c.kind() == "namespace_identifier" || c.kind() == "nested_namespace_specifier"
     })?;
     let (module, name) = scope_of(text(cx, target));
@@ -600,7 +598,7 @@ fn base_ref<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<ImplRef<'s>> {
     })
 }
 fn is_abstract<'s>(cx: &Cx<'_, 's>, body: Node<'_>) -> bool {
-    named_children(body).into_iter().any(|c| {
+    any_named_child(body, |c| {
         c.kind() == "field_declaration" && field_pure(cx, c)
             || c.kind() == "function_definition" && has_child_kind(c, "pure_virtual_clause")
     })
@@ -655,16 +653,13 @@ fn alias_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
 }
 fn catch_binding<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     let params = child_by_field(n, "parameters")?;
-    let decl_node = named_children(params)
-        .into_iter()
-        .find(|c| c.kind() == "parameter_declaration")?;
+    let decl_node = first_named_child_matching(params, &["parameter_declaration"])?;
     let found = unwrap(child_by_field(decl_node, "declarator")?);
     (found.kind() == "identifier").then_some(text(cx, found))
 }
 fn catch_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, bound: Option<&'s str>) -> Stmt<'s> {
     if stmt.kind() == "expression_statement" {
-        let expr =
-            child_by_field(stmt, "expression").or_else(|| named_children(stmt).into_iter().next());
+        let expr = child_by_field(stmt, "expression").or_else(|| first_named_child(stmt));
         if expr.is_some_and(|e| e.kind() == "call_expression") {
             let callee = expr
                 .and_then(|e| child_by_field(e, "function"))
@@ -678,7 +673,7 @@ fn catch_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, bound: Option<&'s str>) -> St
         return Stmt::Other;
     }
     if stmt.kind() == "throw_statement" {
-        let thrown = named_children(stmt).into_iter().next();
+        let thrown = first_named_child(stmt);
         match thrown {
             None => return Stmt::Rethrow,
             Some(found) if found.kind() == "identifier" && Some(text(cx, found)) == bound => {

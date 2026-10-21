@@ -6,8 +6,10 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, first_of_kind,
-    named_children, narrow, pos_of, preceding_comments, slice, strip_quotes, text, trimmed,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    find_named_child, first_named_child, first_named_child_matching, first_of_kind,
+    last_named_child, named_children, narrow, only_named_child_matching, pos_of,
+    preceding_comments, slice, strip_quotes, text, trimmed,
 };
 use crate::spec::Role;
 
@@ -141,14 +143,7 @@ fn enclosing_class<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
     ""
 }
 fn single_named(n: Node<'_>) -> Option<Node<'_>> {
-    let kids: Vec<Node<'_>> = named_children(n)
-        .into_iter()
-        .filter(|c| c.kind() != "comment")
-        .collect();
-    match kids.as_slice() {
-        [one] => Some(*one),
-        _ => None,
-    }
+    only_named_child_matching(n, |c| c.kind() != "comment")
 }
 fn ps_sole_call(n: Node<'_>) -> Option<usize> {
     let body = first_of_kind(n, &["script_block"])?;
@@ -165,12 +160,10 @@ fn ps_sole_call(n: Node<'_>) -> Option<usize> {
     (stmt.kind() == "command" || stmt.kind() == "invokation_expression").then(|| node_id(stmt))
 }
 fn ps_string_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    let kids = named_children(n);
-    if kids
-        .iter()
-        .any(|c| c.kind() == "variable" || c.kind() == "sub_expression")
-    {
-        let parts: Vec<&'s str> = kids
+    if any_named_child(n, |c| {
+        c.kind() == "variable" || c.kind() == "sub_expression"
+    }) {
+        let parts: Vec<&'s str> = named_children(n)
             .into_iter()
             .filter(|c| c.kind() != "variable" && c.kind() != "sub_expression")
             .map(|c| text(cx, c))
@@ -260,9 +253,7 @@ fn unwrap_operand(mut n: Node<'_>) -> Node<'_> {
     n
 }
 fn ps_command_call<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
-    let name = named_children(n)
-        .into_iter()
-        .find(|c| c.kind() == "command_name" || c.kind() == "command_name_expr")?;
+    let name = first_named_child_matching(n, &["command_name", "command_name_expr"])?;
     let mut args = Vec::new();
     match first_of_kind(n, &["command_elements"]) {
         Some(list) => {
@@ -293,9 +284,9 @@ fn ps_command_call<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     })
 }
 fn invokation_receiver(n: Node<'_>) -> Option<Node<'_>> {
-    named_children(n)
-        .into_iter()
-        .find(|c| c.kind() != "member_name" && c.kind() != "argument_list")
+    find_named_child(n, |c| {
+        c.kind() != "member_name" && c.kind() != "argument_list"
+    })
 }
 fn ps_receiver_root<'s>(cx: &Cx<'_, 's>, recv: Node<'_>) -> Option<&'s str> {
     let mut current = recv;
@@ -303,7 +294,7 @@ fn ps_receiver_root<'s>(cx: &Cx<'_, 's>, recv: Node<'_>) -> Option<&'s str> {
         match current.kind() {
             "variable" => return Some(ps_var_name(text(cx, current))),
             "member_access" | "element_access" => {
-                let next = named_children(current).into_iter().next()?;
+                let next = first_named_child(current)?;
                 current = next
             }
             _ => return None,
@@ -364,7 +355,7 @@ fn is_plain_ps_var(t: &str) -> bool {
         && !s.starts_with("local:")
 }
 fn write_operand_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    let mut current = match named_children(n).into_iter().next() {
+    let mut current = match first_named_child(n) {
         Some(first) => first,
         None => return,
     };
@@ -377,7 +368,7 @@ fn write_operand_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, 
             "unary_expression"
             | "member_access"
             | "element_access"
-            | "parenthesized_expression" => match named_children(current).into_iter().next() {
+            | "parenthesized_expression" => match first_named_child(current) {
                 Some(next) => current = next,
                 None => return,
             },
@@ -394,9 +385,8 @@ fn sibling_enum_like(n: Node<'_>) -> bool {
             continue;
         }
         if let Some(cond) = first_of_kind(sib, &["switch_clause_condition"]) {
-            let kids = named_children(cond);
-            let member = kids.iter().any(|c| c.kind() == "member_access");
-            let typed = kids.iter().any(|c| c.kind() == "type_literal");
+            let member = any_named_child(cond, |c| c.kind() == "member_access");
+            let typed = any_named_child(cond, |c| c.kind() == "type_literal");
             if member && typed {
                 return true;
             }
@@ -430,10 +420,10 @@ fn ps_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>) -> Stmt<'s> {
         };
     }
     if stmt.kind() == "flow_control_statement" && trimmed(cx, stmt).starts_with("throw") {
-        return match named_children(stmt).last() {
+        return match last_named_child(stmt) {
             None => Stmt::Rethrow,
             Some(last) => {
-                let t = text(cx, *last);
+                let t = text(cx, last);
                 let known = t == "$_" || t == "$PSItem" || t == "$_.Exception";
                 if known { Stmt::Rethrow } else { Stmt::Other }
             }
@@ -493,9 +483,9 @@ impl LangHooks for PowerShellHooks {
         let public = if kind == "function_statement" {
             true
         } else {
-            !named_children(n)
-                .into_iter()
-                .any(|c| c.kind() == "class_attribute" && trimmed(cx, c) == "hidden")
+            !any_named_child(n, |c| {
+                c.kind() == "class_attribute" && trimmed(cx, c) == "hidden"
+            })
         };
         let return_type = if kind == "class_method_definition" {
             first_of_kind(n, &["type_literal"]).map(|t| text(cx, t))
@@ -535,10 +525,7 @@ impl LangHooks for PowerShellHooks {
         if n.kind() != "assignment_expression" {
             return;
         }
-        let Some(left) = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "left_assignment_expression")
-        else {
+        let Some(left) = first_named_child_matching(n, &["left_assignment_expression"]) else {
             return;
         };
         let t = trimmed(cx, left);
@@ -637,15 +624,14 @@ impl LangHooks for PowerShellHooks {
         }
         let mut source: Option<&'s str> = None;
         for entry in entries {
-            let kids = named_children(entry);
-            let key = kids.iter().find(|c| c.kind() == "key_expression")?;
-            let value = kids.iter().find(|c| c.kind() != "key_expression")?;
-            let want = strip_quotes(text(cx, *key));
-            let unwrapped = unwrap_pipeline(*value);
+            let key = find_named_child(entry, |c| c.kind() == "key_expression")?;
+            let value = find_named_child(entry, |c| c.kind() != "key_expression")?;
+            let want = strip_quotes(text(cx, key));
+            let unwrapped = unwrap_pipeline(value);
             if unwrapped.kind() != "member_access" {
                 return None;
             }
-            let obj = named_children(unwrapped).into_iter().next()?;
+            let obj = first_named_child(unwrapped)?;
             if obj.kind() != "variable" {
                 return None;
             }
@@ -661,7 +647,7 @@ impl LangHooks for PowerShellHooks {
         }
         Some(FieldCopy {
             pos: pos_of(n),
-            fields: narrow(named_children(n).len()),
+            fields: narrow(n.named_child_count()),
             source,
         })
     }
@@ -697,9 +683,7 @@ impl LangHooks for PowerShellHooks {
     }
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
         if n.kind() == "command" {
-            let name = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "command_name" || c.kind() == "command_name_expr")?;
+            let name = first_named_child_matching(n, &["command_name", "command_name_expr"])?;
             let t = text(cx, name);
             if t.eq_ignore_ascii_case("invoke-expression") || t.eq_ignore_ascii_case("iex") {
                 return Some("Invoke-Expression");
@@ -725,9 +709,7 @@ impl LangHooks for PowerShellHooks {
         if n.kind() != "command" {
             return None;
         }
-        let name = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "command_name" || c.kind() == "command_name_expr")?;
+        let name = first_named_child_matching(n, &["command_name", "command_name_expr"])?;
         if text(cx, name) != "Should" {
             return None;
         }

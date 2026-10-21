@@ -7,9 +7,10 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, first_of_kind,
-    named_children, narrow, pos_of, preceding_comments, slice, string_arg_shape, strip_quotes,
-    text, trimmed,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field,
+    find_named_child, first_named_child, first_named_child_matching, first_of_kind, named_children,
+    narrow, only_named_child_matching, pos_of, preceding_comments, slice, string_arg_shape,
+    strip_quotes, text, trimmed,
 };
 use crate::spec::Role;
 
@@ -109,14 +110,10 @@ fn odin_params<'s>(cx: &Cx<'_, 's>, holder: Option<Node<'_>>) -> (Vec<Param<'s>>
                 params.push(param);
             }
         } else if child.kind() == "default_parameter" {
-            let name = named_children(child)
-                .into_iter()
-                .find(is_identifier)
+            let name = find_named_child(child, |c| is_identifier(&c))
                 .map(|c| text(cx, c))
                 .unwrap_or("");
-            let value = named_children(child)
-                .into_iter()
-                .find(|c| !is_identifier(c))
+            let value = find_named_child(child, |c| !is_identifier(&c))
                 .map(|e| text(cx, e))
                 .unwrap_or("");
             let defaulted = value == "true" || value == "false";
@@ -137,19 +134,12 @@ fn odin_sole(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
     if body.kind() != "block" {
         return None;
     }
-    let live: Vec<Node<'_>> = named_children(body)
-        .into_iter()
-        .filter(|c| c.kind() != "comment")
-        .collect();
-    if live.len() != 1 {
-        return None;
-    }
-    let mut node = live[0];
+    let mut node = only_named_child_matching(body, |c| c.kind() != "comment")?;
     if node.kind() == "statement" {
-        node = named_children(node).first().copied()?;
+        node = first_named_child(node)?;
     }
     if node.kind() == "return_statement" {
-        node = named_children(node).first().copied()?;
+        node = first_named_child(node)?;
     }
     (node.kind() == "call_expression").then_some(node.id())
 }
@@ -174,11 +164,10 @@ fn odin_write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
         if kind == "identifier" {
             return Some((text(cx, current), pos_of(current)));
         }
-        let kids = named_children(current);
-        if kind == "member_expression" && kids.len() == 2 {
-            current = kids[0];
+        if kind == "member_expression" && current.named_child_count() == 2 {
+            current = current.named_child(0)?;
         } else if kind == "index_expression" {
-            current = kids.first().copied()?;
+            current = first_named_child(current)?;
         } else if kind == "parenthesized_expression" {
             current = child_by_field(current, "expression")?;
         } else {
@@ -241,7 +230,7 @@ fn odin_callee_root<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
         if current.kind() == "identifier" {
             return Some(text(cx, current));
         }
-        current = named_children(current).first().copied()?;
+        current = first_named_child(current)?;
     }
 }
 
@@ -257,18 +246,25 @@ fn odin_field_source<'s>(cx: &Cx<'_, 's>, field: Node<'_>) -> Option<&'s str> {
     if !assigned {
         return None;
     }
-    let kids = named_children(field);
-    if kids.len() != 2 || kids[1].kind() != "member_expression" {
+    if field.named_child_count() != 2 {
         return None;
     }
-    let parts = named_children(kids[1]);
-    if parts.len() != 2 || !is_identifier(&parts[0]) {
+    let (Some(first), Some(member)) = (field.named_child(0), field.named_child(1)) else {
+        return None;
+    };
+    if member.kind() != "member_expression" || member.named_child_count() != 2 {
         return None;
     }
-    if text(cx, parts[1]) != text(cx, kids[0]) {
+    let (Some(part), Some(other)) = (member.named_child(0), member.named_child(1)) else {
+        return None;
+    };
+    if !is_identifier(&part) {
         return None;
     }
-    Some(text(cx, parts[0]))
+    if text(cx, other) != text(cx, first) {
+        return None;
+    }
+    Some(text(cx, part))
 }
 
 fn odin_is_compare(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
@@ -280,17 +276,18 @@ fn odin_is_compare(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
 }
 
 fn is_implicit_selector(c: Node<'_>) -> bool {
-    c.kind() == "member_expression" && named_children(c).len() == 1
+    c.kind() == "member_expression" && c.named_child_count() == 1
 }
 
 fn sibling_enum(n: Node<'_>) -> bool {
     let Some(parent) = n.parent() else {
         return false;
     };
-    named_children(parent)
-        .into_iter()
-        .filter(|s| s.kind() == "switch_case" && s.id() != n.id())
-        .any(|s| child_by_field(s, "condition").is_some_and(is_implicit_selector))
+    any_named_child(parent, |s| {
+        s.kind() == "switch_case"
+            && s.id() != n.id()
+            && child_by_field(s, "condition").is_some_and(is_implicit_selector)
+    })
 }
 
 fn is_test_ident(cx: &Cx<'_, '_>, c: Node<'_>) -> bool {
@@ -344,15 +341,13 @@ impl LangHooks for OdinHooks {
         let parent = n.parent()?;
         let name_node = match parent.kind() {
             "procedure_declaration" | "const_declaration" | "variable_declaration" => {
-                named_children(parent)
-                    .into_iter()
-                    .find(|c| matches!(c.kind(), "expression" | "identifier"))?
+                first_named_child_matching(parent, &["expression", "identifier"])?
             }
             "assignment_statement" => {
                 if !has_operator(parent, cx, ":=") {
                     return None;
                 }
-                let first = named_children(parent).first().copied()?;
+                let first = first_named_child(parent)?;
                 if !is_identifier(&first) {
                     return None;
                 }
@@ -408,8 +403,7 @@ impl LangHooks for OdinHooks {
         if n.kind() != "call_expression" {
             return None;
         }
-        let func =
-            child_by_field(n, "function").or_else(|| named_children(n).into_iter().next())?;
+        let func = child_by_field(n, "function").or_else(|| first_named_child(n))?;
         let args = positional_nodes(n, func)
             .into_iter()
             .map(|a| make_arg(cx, a))
@@ -428,9 +422,7 @@ impl LangHooks for OdinHooks {
             return;
         }
         let pos = pos_of(n);
-        let raw = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "string")
+        let raw = first_named_child_matching(n, &["string"])
             .map(|s| text(cx, s))
             .unwrap_or("");
         let module = Cow::Borrowed(strip_quotes(raw));
@@ -467,9 +459,7 @@ impl LangHooks for OdinHooks {
             "struct_declaration" | "enum_declaration" | "union_declaration" => {}
             _ => return None,
         }
-        let name_node = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "expression")?;
+        let name_node = first_named_child_matching(n, &["expression"])?;
         let top = n.parent().is_some_and(|p| p.kind() == "source_file");
         let public = top && !attr_has(cx, n, "private");
         let def = typedef_at(text(cx, name_node), pos_of(name_node), public);
@@ -484,7 +474,7 @@ impl LangHooks for OdinHooks {
         if n.kind() != "attribute" {
             return None;
         }
-        let tested = named_children(n).iter().any(|c| is_test_ident(cx, *c));
+        let tested = any_named_child(n, |c| is_test_ident(cx, c));
         tested.then_some(Container::TestModule)
     }
 
@@ -545,7 +535,7 @@ impl LangHooks for OdinHooks {
             if in_function {
                 return;
             }
-            let found = named_children(n).into_iter().find(is_identifier);
+            let found = find_named_child(n, |c| is_identifier(&c));
             if let Some(id) = found {
                 let global = (AmbientKind::GlobalMutable, text(cx, id), pos_of(id));
                 out.push(global);
@@ -556,7 +546,7 @@ impl LangHooks for OdinHooks {
             return;
         }
         let callee = child_by_field(n, "function")
-            .or_else(|| named_children(n).into_iter().next())
+            .or_else(|| first_named_child(n))
             .map(|f| qualified_callee(cx, n, f))
             .unwrap_or("");
         if is_env_callee(callee) {
@@ -569,8 +559,7 @@ impl LangHooks for OdinHooks {
         if n.kind() != "call_expression" {
             return None;
         }
-        let func =
-            child_by_field(n, "function").or_else(|| named_children(n).into_iter().next())?;
+        let func = child_by_field(n, "function").or_else(|| first_named_child(n))?;
         if !is_reflect_callee(qualified_callee(cx, n, func)) {
             return None;
         }
@@ -585,8 +574,7 @@ impl LangHooks for OdinHooks {
         if n.kind() != "call_expression" {
             return None;
         }
-        let func =
-            child_by_field(n, "function").or_else(|| named_children(n).into_iter().next())?;
+        let func = child_by_field(n, "function").or_else(|| first_named_child(n))?;
         let callee = qualified_callee(cx, n, func);
         if is_formatted_assert(callee) {
             let messaged = Assertion {

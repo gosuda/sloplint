@@ -5,8 +5,9 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, has_child_kind,
-    named_children, pos_of, preceding_comments, strip_quotes, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field,
+    first_named_child, first_named_child_matching, has_child_kind, named_children, pos_of,
+    preceding_comments, strip_quotes, text,
 };
 pub(crate) mod calls;
 pub(crate) mod imports;
@@ -79,7 +80,7 @@ fn member_public(cx: &Cx<'_, '_>, n: Node<'_>, name_kind: &str) -> bool {
     if name_kind == "private_property_identifier" {
         return false;
     }
-    if named_children(n).into_iter().any(|c| {
+    if any_named_child(n, |c| {
         c.kind() == "accessibility_modifier"
             && (text(cx, c) == "private" || text(cx, c) == "protected")
     }) {
@@ -364,10 +365,7 @@ impl LangHooks for TypeScriptHooks {
         let mut container = None;
         if kind == "class_declaration" || kind == "abstract_class_declaration" {
             let mut has_impl = false;
-            if let Some(heritage) = named_children(n)
-                .into_iter()
-                .find(|c| c.kind() == "class_heritage")
-            {
+            if let Some(heritage) = first_named_child_matching(n, &["class_heritage"]) {
                 has_impl = heritage_impls(cx, heritage, &mut impls);
             }
             container = Some(Container::Class {
@@ -389,12 +387,11 @@ impl LangHooks for TypeScriptHooks {
 
     fn match_arm(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<WildcardArm> {
         let enum_like = n.parent().is_some_and(|p| {
-            named_children(p)
-                .into_iter()
-                .filter(|c| c.kind() == "switch_case" && c.id() != n.id())
-                .any(|c| {
-                    child_by_field(c, "value").is_some_and(|v| v.kind() == "member_expression")
-                })
+            any_named_child(p, |c| {
+                c.kind() == "switch_case"
+                    && c.id() != n.id()
+                    && child_by_field(c, "value").is_some_and(|v| v.kind() == "member_expression")
+            })
         });
         Some(WildcardArm {
             pos: pos_of(n),
@@ -534,10 +531,10 @@ impl LangHooks for TypeScriptHooks {
         if callee != "assert" && callee != "assert.ok" && callee != "console.assert" {
             return None;
         }
-        let args = child_by_field(n, "arguments").map_or(Vec::new(), named_children);
-        let comparison = args.first().is_some_and(|a| {
+        let args = child_by_field(n, "arguments");
+        let comparison = args.and_then(first_named_child).is_some_and(|a| {
             a.kind() == "binary_expression"
-                && child_by_field(*a, "operator").is_some_and(|o| {
+                && child_by_field(a, "operator").is_some_and(|o| {
                     matches!(
                         text(cx, o),
                         "==" | "===" | "!=" | "!==" | "<" | ">" | "<=" | ">="
@@ -546,7 +543,7 @@ impl LangHooks for TypeScriptHooks {
         });
         Some(Assertion {
             pos: pos_of(n),
-            has_message: args.len() >= 2,
+            has_message: args.is_some_and(|a| a.named_child_count() >= 2),
             comparison,
         })
     }

@@ -6,8 +6,9 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, binary_concat, child_by_field, last_segment,
-    named_children, narrow, pos_of, preceding_comments, string_arg_shape, text, trimmed,
+    CallHead, Cx, FunctionHead, LangHooks, binary_concat, child_by_field, find_named_child,
+    first_named_child_matching, last_segment, named_children, narrow, only_named_child_matching,
+    pos_of, preceding_comments, string_arg_shape, text, trimmed,
 };
 use crate::spec::Role;
 
@@ -106,7 +107,7 @@ impl LangHooks for RHooks {
             "requireNamespace" | "source" => ImportKind::SideEffect,
             _ => return,
         };
-        let Some(first) = argument_values(n).first().copied() else {
+        let Some(first) = first_argument_value(n) else {
             return;
         };
         let module = if first.kind() == "string" {
@@ -138,11 +139,7 @@ impl LangHooks for RHooks {
         let handler_fn =
             child_by_field(n, "value").filter(|v| v.kind() == "function_definition")?;
         let binding = child_by_field(handler_fn, "parameters")
-            .and_then(|list| {
-                named_children(list)
-                    .into_iter()
-                    .find(|p| p.kind() == "parameter")
-            })
+            .and_then(|list| first_named_child_matching(list, &["parameter"]))
             .map(|parameter| param_name(cx, parameter));
         Some(Handler {
             pos: pos_of(n),
@@ -174,7 +171,7 @@ impl LangHooks for RHooks {
 
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
         let short = last_segment(trimmed(cx, child_by_field(n, "function")?), &["::"]);
-        let first = argument_values(n).first().copied();
+        let first = first_argument_value(n);
         match short {
             "eval" => Some("eval() of runtime code"),
             "evalq" => Some("evalq() of runtime code"),
@@ -250,13 +247,6 @@ fn argument_nodes(call: Node<'_>) -> Vec<Node<'_>> {
     })
 }
 
-fn argument_values(call: Node<'_>) -> Vec<Node<'_>> {
-    argument_nodes(call)
-        .into_iter()
-        .filter_map(|argument| child_by_field(argument, "value"))
-        .collect()
-}
-
 fn string_content<'s>(cx: &Cx<'_, 's>, string: Node<'_>) -> Option<&'s str> {
     child_by_field(string, "content").map(|content| text(cx, content))
 }
@@ -300,11 +290,8 @@ fn sole_call(body: Option<Node<'_>>) -> Option<usize> {
     if body.kind() != "braced_expression" {
         return None;
     }
-    let statements = body_statements(body);
-    match statements.as_slice() {
-        [only] if only.kind() == "call" => Some(only.id()),
-        _ => None,
-    }
+    let only = only_named_child_matching(body, |c| c.kind() != "comment")?;
+    (only.kind() == "call").then_some(only.id())
 }
 
 fn callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
@@ -347,7 +334,7 @@ fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
         "identifier" => Some((text(cx, n), pos_of(n))),
         "extract_operator" => write_root(cx, child_by_field(n, "lhs")?),
         "subset" | "subset2" => write_root(cx, child_by_field(n, "function")?),
-        "call" => write_root(cx, argument_values(n).first().copied()?),
+        "call" => write_root(cx, first_argument_value(n)?),
         _ => None,
     }
 }
@@ -379,13 +366,29 @@ fn handler_stmt<'s>(cx: &Cx<'_, 's>, statement: Node<'_>, binding: Option<&str>)
     })
 }
 
+fn first_argument_value(call: Node<'_>) -> Option<Node<'_>> {
+    let list = child_by_field(call, "arguments")?;
+    find_named_child(list, |c| {
+        c.kind() == "argument" && child_by_field(c, "value").is_some()
+    })
+    .and_then(|argument| child_by_field(argument, "value"))
+}
+
+fn single_argument_value(call: Node<'_>) -> Option<Node<'_>> {
+    let list = child_by_field(call, "arguments")?;
+    only_named_child_matching(list, |c| {
+        c.kind() == "argument" && child_by_field(c, "value").is_some()
+    })
+    .and_then(|argument| child_by_field(argument, "value"))
+}
+
 fn is_rethrow(cx: &Cx<'_, '_>, call: Node<'_>, binding: Option<&str>) -> bool {
     let (Some(binding), Some(function)) = (binding, child_by_field(call, "function")) else {
         return false;
     };
-    let values = argument_values(call);
     last_segment(trimmed(cx, function), &["::"]) == "stop"
-        && matches!(values.as_slice(), [only] if only.kind() == "identifier" && trimmed(cx, *only) == binding)
+        && single_argument_value(call)
+            .is_some_and(|only| only.kind() == "identifier" && trimmed(cx, only) == binding)
 }
 
 fn computed_lookup(short: &str) -> Option<&'static str> {

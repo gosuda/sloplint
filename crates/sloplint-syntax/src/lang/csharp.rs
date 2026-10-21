@@ -1,7 +1,8 @@
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    has_child_kind, named_children, narrow, pos_of, preceding_comments, string_arg_shape, text,
-    trimmed,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
+    child_by_field, find_map_named_child, find_named_child, first_named_child,
+    first_named_child_matching, has_child_kind, named_children, narrow, only_named_child_matching,
+    pos_of, preceding_comments, rfind_named_child, string_arg_shape, text, trimmed,
 };
 use crate::spec::Role;
 use sloplint_core::facts::{
@@ -76,18 +77,17 @@ const STRING_KINDS: &[&str] = &[
     "interpolated_string_expression",
 ];
 fn has_mod(cx: &Cx<'_, '_>, n: Node<'_>, word: &str) -> bool {
-    named_children(n)
-        .into_iter()
-        .any(|c| c.kind() == "modifier" && trimmed(cx, c) == word)
+    any_named_child(n, |c| c.kind() == "modifier" && trimmed(cx, c) == word)
 }
 fn attr_hit(cx: &Cx<'_, '_>, n: Node<'_>, wants: &[&str]) -> bool {
-    named_children(n)
-        .into_iter()
-        .filter(|c| c.kind() == "attribute_list")
-        .flat_map(named_children)
-        .filter(|a| a.kind() == "attribute")
-        .filter_map(|a| child_by_field(a, "name"))
-        .any(|nm| wants.contains(&seg_last(trimmed(cx, nm))))
+    any_named_child(n, |c| {
+        c.kind() == "attribute_list"
+            && any_named_child(c, |a| {
+                a.kind() == "attribute"
+                    && child_by_field(a, "name")
+                        .is_some_and(|nm| wants.contains(&seg_last(trimmed(cx, nm))))
+            })
+    })
 }
 fn cut_generics(t: &str) -> &str {
     match t.find('<') {
@@ -110,7 +110,7 @@ fn seg_last(t: &str) -> &str {
 }
 fn unwrap_await(mut n: Node<'_>) -> Node<'_> {
     while n.kind() == "await_expression" {
-        let Some(next) = named_children(n).into_iter().next() else {
+        let Some(next) = first_named_child(n) else {
             break;
         };
         n = next;
@@ -119,9 +119,7 @@ fn unwrap_await(mut n: Node<'_>) -> Node<'_> {
 }
 fn callee_text<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
     if func.kind() == "generic_name"
-        && let Some(i) = named_children(func)
-            .into_iter()
-            .find(|c| c.kind() == "identifier")
+        && let Some(i) = first_named_child_matching(func, &["identifier"])
     {
         return text(cx, i);
     }
@@ -134,9 +132,7 @@ fn last_name<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
         return text(cx, m);
     }
     if func.kind() == "generic_name"
-        && let Some(i) = named_children(func)
-            .into_iter()
-            .find(|c| c.kind() == "identifier")
+        && let Some(i) = first_named_child_matching(func, &["identifier"])
     {
         return text(cx, i);
     }
@@ -145,10 +141,7 @@ fn last_name<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
 fn callee_root<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
     match func.kind() {
         "identifier" | "this" | "base" => Some(text(cx, func)),
-        "generic_name" => named_children(func)
-            .into_iter()
-            .find(|c| c.kind() == "identifier")
-            .map(|i| text(cx, i)),
+        "generic_name" => first_named_child_matching(func, &["identifier"]).map(|i| text(cx, i)),
         "member_access_expression" => callee_root(cx, child_by_field(func, "expression")?),
         _ => None,
     }
@@ -159,7 +152,7 @@ fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
         "member_access_expression" | "element_access_expression" => {
             write_root(cx, child_by_field(n, "expression")?)
         }
-        "parenthesized_expression" => write_root(cx, named_children(n).into_iter().next()?),
+        "parenthesized_expression" => write_root(cx, first_named_child(n)?),
         _ => None,
     }
 }
@@ -188,9 +181,7 @@ fn arg_shape<'s>(cx: &Cx<'_, 's>, e: Node<'_>) -> ArgShape<'s> {
 }
 fn arg_expr(n: Node<'_>) -> Option<Node<'_>> {
     let named = child_by_field(n, "name").map(|m| m.id());
-    named_children(n)
-        .into_iter()
-        .find(|c| Some(c.id()) != named)
+    find_named_child(n, |c| Some(c.id()) != named)
 }
 fn args_from_list<'s>(cx: &Cx<'_, 's>, list: Node<'_>) -> Vec<Arg<'s>> {
     named_children(list)
@@ -217,11 +208,7 @@ fn arg_len(n: Node<'_>) -> u32 {
     count
 }
 fn first_arg(n: Node<'_>) -> Option<Node<'_>> {
-    child_by_field(n, "arguments").and_then(|l| {
-        named_children(l)
-            .into_iter()
-            .find(|c| c.kind() == "argument")
-    })
+    child_by_field(n, "arguments").and_then(|l| first_named_child_matching(l, &["argument"]))
 }
 fn params_from_list<'s>(cx: &Cx<'_, 's>, pl: Node<'_>, out: &mut Vec<Param<'s>>) {
     if let Some(nm) = child_by_field(pl, "name") {
@@ -241,37 +228,24 @@ fn params_from_list<'s>(cx: &Cx<'_, 's>, pl: Node<'_>, out: &mut Vec<Param<'s>>)
         let dq = |d: Node<'_>| {
             d.kind() == "boolean_literal" && (trimmed(cx, d) == "true" || trimmed(cx, d) == "false")
         };
-        let nested = named_children(c)
-            .into_iter()
-            .filter(|d| d.kind() == "expression")
-            .flat_map(named_children)
-            .any(&dq);
+        let nested = any_named_child(c, |d| d.kind() == "expression" && any_named_child(d, &dq));
         out.push(Param {
             name: text(cx, nm),
             ty: child_by_field(c, "type").map(|t| text(cx, t)),
-            bool_default: named_children(c).into_iter().any(&dq) || nested,
+            bool_default: any_named_child(c, &dq) || nested,
         });
     }
 }
 fn sole_call_of(body: Node<'_>) -> Option<usize> {
     if body.kind() == "arrow_expression_clause" {
-        let call = unwrap_await(named_children(body).into_iter().next()?);
+        let call = unwrap_await(first_named_child(body)?);
         return (call.kind() == "invocation_expression").then_some(call.id());
     }
-    let mut sole = None;
-    let mut count = 0u32;
-    for c in named_children(body) {
-        if c.kind() == "comment" {
-            continue;
-        }
-        count += 1;
-        sole = Some(c);
-    }
-    let stmt = sole.filter(|_| count == 1)?;
+    let stmt = only_named_child_matching(body, |c| c.kind() != "comment")?;
     if stmt.kind() != "return_statement" && stmt.kind() != "expression_statement" {
         return None;
     }
-    let call = unwrap_await(named_children(stmt).into_iter().next()?);
+    let call = unwrap_await(first_named_child(stmt)?);
     (call.kind() == "invocation_expression").then_some(call.id())
 }
 fn tuple_names<'s>(cx: &Cx<'_, 's>, t: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
@@ -285,7 +259,7 @@ fn tuple_names<'s>(cx: &Cx<'_, 's>, t: Node<'_>, out: &mut Vec<(&'s str, Pos)>) 
 }
 fn stmt_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: Option<&'s str>) -> Stmt<'s> {
     if s.kind() == "throw_statement" {
-        return match (named_children(s).into_iter().next(), binding) {
+        return match (first_named_child(s), binding) {
             (None, _) => Stmt::Rethrow,
             (Some(e), Some(b)) if e.kind() == "identifier" && text(cx, e) == b => Stmt::Rethrow,
             _ => Stmt::Other,
@@ -294,38 +268,39 @@ fn stmt_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: Option<&'s str>) -> Stmt<'
     if s.kind() != "expression_statement" {
         return Stmt::Other;
     }
-    named_children(s)
-        .into_iter()
-        .filter(|c| c.kind() == "invocation_expression")
-        .filter_map(|c| child_by_field(c, "function"))
-        .next()
-        .map(|f| Stmt::Call {
-            callee: callee_text(cx, f),
-            kind: CallKind::Plain,
-        })
-        .unwrap_or(Stmt::Other)
+    find_map_named_child(s, |c| {
+        if c.kind() != "invocation_expression" {
+            return None;
+        }
+        child_by_field(c, "function")
+    })
+    .map(|f| Stmt::Call {
+        callee: callee_text(cx, f),
+        kind: CallKind::Plain,
+    })
+    .unwrap_or(Stmt::Other)
 }
 fn sib_member(parent: Node<'_>, self_id: usize) -> bool {
-    named_children(parent)
-        .into_iter()
-        .filter(|s| s.id() != self_id)
-        .any(|sib| {
-            let mut stack = vec![sib];
-            while let Some(cur) = stack.pop() {
-                if cur.id() != sib.id() && cur.kind() == "member_access_expression" {
-                    return true;
-                }
-                if cur.id() == sib.id()
-                    || matches!(
-                        cur.kind(),
-                        "expression" | "pattern" | "constant_pattern" | "when_clause"
-                    )
-                {
-                    stack.extend(named_children(cur));
-                }
+    any_named_child(parent, |sib| {
+        if sib.id() == self_id {
+            return false;
+        }
+        let mut stack = vec![sib];
+        while let Some(cur) = stack.pop() {
+            if cur.id() != sib.id() && cur.kind() == "member_access_expression" {
+                return true;
             }
-            false
-        })
+            if cur.id() == sib.id()
+                || matches!(
+                    cur.kind(),
+                    "expression" | "pattern" | "constant_pattern" | "when_clause"
+                )
+            {
+                stack.extend(named_children(cur));
+            }
+        }
+        false
+    })
 }
 impl LangHooks for CSharpHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
@@ -347,9 +322,7 @@ impl LangHooks for CSharpHooks {
         if let Some(Container::Class { exported, .. }) = inner {
             public = public && exported;
         }
-        let overrides = named_children(n)
-            .into_iter()
-            .any(|c| c.kind() == "explicit_interface_specifier")
+        let overrides = any_named_child(n, |c| c.kind() == "explicit_interface_specifier")
             || has_mod(cx, n, "override");
         let interface_bound = matches!(
             inner,
@@ -400,21 +373,24 @@ impl LangHooks for CSharpHooks {
         if n.kind() != "local_declaration_statement" || has_mod(cx, n, "const") {
             return;
         }
-        for d in named_children(n)
-            .into_iter()
-            .filter(|c| c.kind() == "variable_declaration")
-            .flat_map(named_children)
-            .filter(|d| d.kind() == "variable_declarator")
-        {
-            let mut tupled = false;
-            for t in named_children(d) {
-                if t.kind() == "tuple_pattern" {
-                    tupled = true;
-                    tuple_names(cx, t, out);
-                }
+        for decl in named_children(n) {
+            if decl.kind() != "variable_declaration" {
+                continue;
             }
-            if !tupled && let Some(nm) = child_by_field(d, "name") {
-                out.push((text(cx, nm), pos_of(nm)));
+            for d in named_children(decl) {
+                if d.kind() != "variable_declarator" {
+                    continue;
+                }
+                let mut tupled = false;
+                for t in named_children(d) {
+                    if t.kind() == "tuple_pattern" {
+                        tupled = true;
+                        tuple_names(cx, t, out);
+                    }
+                }
+                if !tupled && let Some(nm) = child_by_field(d, "name") {
+                    out.push((text(cx, nm), pos_of(nm)));
+                }
             }
         }
     }
@@ -431,7 +407,7 @@ impl LangHooks for CSharpHooks {
         let arith = (0..n.child_count())
             .filter_map(|i| n.child(i))
             .any(|c| c.kind() == "++" || c.kind() == "--");
-        if arith && let Some(e) = named_children(n).into_iter().next() {
+        if arith && let Some(e) = first_named_child(n) {
             out.extend(write_root(cx, e));
         }
     }
@@ -466,13 +442,9 @@ impl LangHooks for CSharpHooks {
         }
         let alias_node = child_by_field(n, "name");
         let alias_id = alias_node.map(|a| a.id());
-        let mut target = None;
-        for c in named_children(n) {
-            if Some(c.id()) != alias_id {
-                target = Some(c);
-            }
-        }
-        let Some(t) = target else { return };
+        let Some(t) = rfind_named_child(n, |c| Some(c.id()) != alias_id) else {
+            return;
+        };
         let full = text(cx, t);
         if has_child_kind(n, "static") {
             out.push(Import {
@@ -572,7 +544,7 @@ impl LangHooks for CSharpHooks {
         let wildcard = if kind == "switch_section" {
             has_child_kind(n, "default")
         } else {
-            named_children(n).into_iter().any(|c| c.kind() == "discard")
+            any_named_child(n, |c| c.kind() == "discard")
         };
         if !wildcard {
             return None;
@@ -594,9 +566,7 @@ impl LangHooks for CSharpHooks {
             return None;
         }
         let body = child_by_field(n, "body")?;
-        let binding = named_children(n)
-            .into_iter()
-            .find(|c| c.kind() == "catch_declaration")
+        let binding = first_named_child_matching(n, &["catch_declaration"])
             .and_then(|d| child_by_field(d, "name"))
             .map(|m| text(cx, m));
         let mut stmts = Vec::new();
@@ -679,13 +649,17 @@ impl LangHooks for CSharpHooks {
             if has_mod(cx, n, "static")
                 && !has_mod(cx, n, "readonly")
                 && !has_mod(cx, n, "const")
-                && let Some(nm) = named_children(n)
-                    .into_iter()
-                    .filter(|c| c.kind() == "variable_declaration")
-                    .flat_map(named_children)
-                    .filter(|d| d.kind() == "variable_declarator")
-                    .filter_map(|d| child_by_field(d, "name"))
-                    .next()
+                && let Some(nm) = find_map_named_child(n, |c| {
+                    if c.kind() != "variable_declaration" {
+                        return None;
+                    }
+                    find_map_named_child(c, |d| {
+                        if d.kind() != "variable_declarator" {
+                            return None;
+                        }
+                        child_by_field(d, "name")
+                    })
+                })
             {
                 out.push((AmbientKind::GlobalMutable, text(cx, nm), pos_of(nm)));
             }
