@@ -9,9 +9,9 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
-    child_by_field, find_named_child, first_named_child, first_named_child_matching,
-    named_children, narrow, only_named_child_matching, pos_of, preceding_comments,
-    rfind_named_child, slice, string_arg_shape, strip_quotes, text,
+    child_by_field, count_named_child, find_named_child, first_named_child,
+    first_named_child_matching, named_children, narrow, only_named_child_matching, pos_of,
+    preceding_comments, rfind_named_child, slice, string_arg_shape, strip_quotes, text,
 };
 use crate::lang::c_family::{
     self, angles, collect_fragments, flat, in_function, inner, pair_source, plain_assert, root_of,
@@ -281,12 +281,7 @@ impl LangHooks for ObjcHooks {
             return Some(plain_assert(cx, n));
         }
         let argc = child_by_field(n, "arguments")
-            .map(|a| {
-                named_children(a)
-                    .into_iter()
-                    .filter(|c| c.kind() != "comment")
-                    .count()
-            })
+            .map(|a| count_named_child(a, |child| child.kind() != "comment"))
             .unwrap_or(0);
         let (has_message, comparison) = match callee {
             "NSAssert" | "NSCAssert" => (argc >= 2, false),
