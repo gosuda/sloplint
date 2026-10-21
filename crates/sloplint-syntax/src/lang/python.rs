@@ -96,10 +96,8 @@ fn py_one_param<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Param<'s>>) {
         }
         "default_parameter" => {
             let name = child_by_field(n, "name").map_or("", |v| text(cx, v));
-            let def = child_by_field(n, "value").is_some_and(|v| {
-                let t = text(cx, v);
-                t == "true" || t == "false"
-            });
+            let def =
+                child_by_field(n, "value").is_some_and(|v| matches!(v.kind(), "true" | "false"));
             out.push(Param {
                 name,
                 ty: None,
@@ -108,10 +106,8 @@ fn py_one_param<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Param<'s>>) {
         }
         "typed_default_parameter" => {
             let name = child_by_field(n, "name").map_or("", |v| text(cx, v));
-            let def = child_by_field(n, "value").is_some_and(|v| {
-                let t = text(cx, v);
-                t == "true" || t == "false"
-            });
+            let def =
+                child_by_field(n, "value").is_some_and(|v| matches!(v.kind(), "true" | "false"));
             out.push(Param {
                 name,
                 ty: child_by_field(n, "type").map(|t| text(cx, t)),
