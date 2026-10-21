@@ -233,10 +233,10 @@ fn sole_call_of(n: Node<'_>) -> Option<usize> {
 }
 
 fn container_public(cx: &Cx<'_, '_>) -> bool {
-    match cx.containers.last() {
+    match cx.innermost_container() {
         None => true,
-        Some(&Container::Class { exported, .. }) => exported,
-        Some(&Container::Trait { public }) => public,
+        Some(Container::Class { exported, .. }) => exported,
+        Some(Container::Trait { public }) => public,
         Some(_) => false,
     }
 }

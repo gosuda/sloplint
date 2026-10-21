@@ -436,7 +436,7 @@ impl LangHooks for PhpHooks {
             name,
             name_pos: pos_of(name_node),
             public: php_public(cx, n, kind),
-            interface_bound: matches!(cx.containers.last(), Some(Container::Trait { .. })),
+            interface_bound: matches!(cx.innermost_container(), Some(Container::Trait { .. })),
             in_test: php_in_test(cx, n),
             params,
             return_type: field_text(cx, n, "return_type"),

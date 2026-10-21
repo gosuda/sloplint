@@ -53,11 +53,6 @@ const STR_KINDS: [&str; 2] = ["string_literal", "raw_string_literal"];
 fn field_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>, field: &str) -> &'s str {
     child_by_field(n, field).map_or("", |v| text(cx, v))
 }
-fn test_mod(cx: &Cx<'_, '_>) -> bool {
-    cx.containers
-        .iter()
-        .any(|c| matches!(c, Container::TestModule))
-}
 fn has_test_attr(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     let mut row = n.start_position().row;
     let mut cur = n.prev_sibling();
@@ -276,7 +271,7 @@ fn leaf_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Imp
         name,
         alias,
         kind: ImportKind::Named,
-        in_test: test_mod(cx),
+        in_test: cx.in_test_module(),
     });
 }
 fn wild_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Import<'s>>) {
@@ -287,7 +282,7 @@ fn wild_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Imp
         name: "*",
         alias: None,
         kind: ImportKind::Wildcard,
-        in_test: test_mod(cx),
+        in_test: cx.in_test_module(),
     });
 }
 fn push_use<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &mut String, out: &mut Vec<Import<'s>>) {
@@ -611,11 +606,11 @@ impl LangHooks for RustHooks {
             &["attribute_item"],
         );
         let member = matches!(
-            cx.containers.last(),
+            cx.innermost_container(),
             Some(Container::Trait { public: true })
         );
         let bound = matches!(
-            cx.containers.last(),
+            cx.innermost_container(),
             Some(Container::Impl {
                 interface_bound: true
             })
@@ -625,7 +620,7 @@ impl LangHooks for RustHooks {
             name_pos: pos_of(name_node),
             public: has_child_kind(n, "visibility_modifier") || member,
             interface_bound: bound,
-            in_test: cx.is_test_file || test_mod(cx) || has_test_attr(cx, n),
+            in_test: cx.is_test_file || cx.in_test_module() || has_test_attr(cx, n),
             params,
             return_type: child_by_field(n, "return_type").map(|t| text(cx, t)),
             missing_annotations: Vec::new(),

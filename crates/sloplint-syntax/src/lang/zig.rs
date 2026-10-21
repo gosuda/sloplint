@@ -57,24 +57,8 @@ fn has_pub(n: Node<'_>) -> bool {
     (0..n.child_count()).any(|i| n.child(i).is_some_and(is_pub_token))
 }
 
-fn inner_exported(cx: &Cx<'_, '_>) -> Option<bool> {
-    for c in cx.containers.iter().rev() {
-        if let Container::Class { exported, .. } = c {
-            return Some(*exported);
-        }
-    }
-    None
-}
-
 fn in_test(cx: &Cx<'_, '_>) -> bool {
-    if cx.is_test_file {
-        return true;
-    }
-    cx.containers.iter().any(is_test_module)
-}
-
-fn is_test_module(c: &Container) -> bool {
-    matches!(c, Container::TestModule)
+    cx.is_test_file || cx.in_test_module()
 }
 
 fn sole_call_id(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
@@ -273,7 +257,7 @@ fn push_import_string<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>
     let shape = import_names(cx, builtin);
     let (name, alias, kind) = shape.unwrap_or(("", None, ImportKind::SideEffect));
     let pos = pos_of(n);
-    let flagged = cx.containers.iter().any(is_test_module);
+    let flagged = cx.in_test_module();
     out.push(Import {
         pos,
         module,
@@ -303,7 +287,7 @@ fn push_using<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
     }
     let module = Cow::Borrowed(import_module(cx, literal));
     let pos = pos_of(n);
-    let flagged = cx.containers.iter().any(is_test_module);
+    let flagged = cx.in_test_module();
     let wild = ImportKind::Wildcard;
     out.push(Import {
         pos,
@@ -382,7 +366,7 @@ fn zig_param<'s>(cx: &Cx<'_, 's>, child: Node<'_>) -> Option<Param<'s>> {
 }
 
 fn is_method_receiver(cx: &Cx<'_, '_>, params: &[Param<'_>]) -> bool {
-    let last = cx.containers.last();
+    let last = cx.innermost_container();
     let method = matches!(last, Some(Container::Class { .. }));
     method && params.first().is_some_and(|p| p.name == "self")
 }
@@ -430,7 +414,7 @@ impl LangHooks for ZigHooks {
         if is_method_receiver(cx, &params) {
             params.remove(0);
         }
-        let exported = inner_exported(cx).unwrap_or(true);
+        let exported = cx.nearest_class_exported().unwrap_or(true);
         let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
         let return_type = child_by_field(n, "type").map(|t| text(cx, t));
         Some(FunctionHead {

@@ -205,7 +205,7 @@ fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     let name = child_by_field(n, "name")?;
     let annotations = annotation_names(cx, n);
     let in_trait = matches!(
-        cx.containers.last(),
+        cx.innermost_container(),
         Some(Container::Trait { public: true })
     );
     let public = has_keyword(n, "public") || (in_trait && !has_keyword(n, "private"));

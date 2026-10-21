@@ -63,21 +63,15 @@ pub(crate) struct TypeScriptHooks;
 /// Shared hook table for the TypeScript and TSX grammars.
 pub(crate) static HOOKS: TypeScriptHooks = TypeScriptHooks;
 
-fn enclosing_class(cx: &Cx<'_, '_>, member: Node<'_>) -> Option<(bool, bool)> {
-    let body = member.parent().filter(|b| b.kind() == "class_body")?;
-    let class = body.parent()?;
-    if !matches!(
-        class.kind(),
-        "class_declaration" | "abstract_class_declaration"
-    ) {
-        return None;
-    }
-    cx.containers.iter().rev().find_map(|c| match c {
-        Container::Class {
-            exported,
-            implements,
-        } => Some((*exported, *implements)),
-        _ => None,
+fn class_member(member: Node<'_>) -> bool {
+    let Some(body) = member.parent().filter(|b| b.kind() == "class_body") else {
+        return false;
+    };
+    body.parent().is_some_and(|class| {
+        matches!(
+            class.kind(),
+            "class_declaration" | "abstract_class_declaration"
+        )
     })
 }
 
@@ -91,7 +85,7 @@ fn member_public(cx: &Cx<'_, '_>, n: Node<'_>, name_kind: &str) -> bool {
     }) {
         return false;
     }
-    enclosing_class(cx, n).is_some_and(|(exported, _)| exported)
+    class_member(n) && cx.nearest_class_exported().unwrap_or(false)
 }
 
 fn exported(cx: &Cx<'_, '_>, decl: Node<'_>, name: &str) -> bool {
@@ -189,7 +183,7 @@ impl LangHooks for TypeScriptHooks {
             name,
             name_pos: pos_of(name_node),
             public,
-            interface_bound: enclosing_class(cx, n).is_some_and(|(_, implements)| implements),
+            interface_bound: class_member(n) && cx.nearest_class_implements().unwrap_or(false),
             in_test: cx.is_test_file,
             params,
             return_type: ret,
@@ -262,8 +256,8 @@ impl LangHooks for TypeScriptHooks {
                 name,
                 name_pos: pos_of(name_node),
                 public: member_public(cx, parent, name_node.kind()),
-                interface_bound: enclosing_class(cx, parent)
-                    .is_some_and(|(_, implements)| implements),
+                interface_bound: class_member(parent)
+                    && cx.nearest_class_implements().unwrap_or(false),
                 in_test: cx.is_test_file,
                 params,
                 return_type: ret,

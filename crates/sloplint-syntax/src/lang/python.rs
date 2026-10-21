@@ -45,14 +45,7 @@ pub(crate) struct PythonHooks;
 pub(crate) static HOOKS: PythonHooks = PythonHooks;
 
 fn enclosing_exported(cx: &Cx<'_, '_>) -> bool {
-    cx.containers
-        .iter()
-        .rev()
-        .find_map(|c| match c {
-            Container::Class { exported, .. } => Some(*exported),
-            _ => None,
-        })
-        .unwrap_or(true)
+    cx.nearest_class_exported().unwrap_or(true)
 }
 
 struct Placement {

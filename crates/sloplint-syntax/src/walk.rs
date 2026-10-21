@@ -388,16 +388,18 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     pub(crate) fn make_cx(&self) -> Cx<'_, 's> {
-        Cx {
-            src: self.src,
-            path: self.path,
-            lang: self.lang,
-            is_test_file: self.is_test_file,
-            has_interface: self.has_interface,
-            containers: &self.containers,
-            exports: &self.exports,
-            levels: &self.levels[..self.levels.len().min(self.depth + 1)],
-        }
+        Cx::file(
+            self.src,
+            self.path,
+            self.lang,
+            self.is_test_file,
+            self.has_interface,
+        )
+        .scoped(
+            &self.containers,
+            &self.exports,
+            &self.levels[..self.levels.len().min(self.depth + 1)],
+        )
     }
 
     fn score_top(&mut self, delta: u32) {

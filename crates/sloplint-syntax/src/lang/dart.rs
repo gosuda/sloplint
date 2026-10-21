@@ -441,13 +441,13 @@ impl LangHooks for DartHooks {
         let name_node = child_by_field(sig, "name")?;
         let name = text(cx, name_node);
         let mut public = !name.starts_with('_');
-        match cx.containers.last() {
+        match cx.innermost_container() {
             None => {}
             Some(Container::Class { exported, .. }) => {
-                public = public && *exported;
+                public = public && exported;
             }
             Some(Container::Trait { public: tp }) => {
-                public = public && *tp;
+                public = public && tp;
             }
             Some(_) => {}
         }
@@ -456,7 +456,7 @@ impl LangHooks for DartHooks {
                 .into_iter()
                 .any(|c| c.kind() == "annotation" && annotation_name(cx, c) == "override");
         let interface_bound = matches!(
-            cx.containers.last(),
+            cx.innermost_container(),
             Some(Container::Class {
                 implements: true,
                 ..
@@ -634,13 +634,13 @@ impl LangHooks for DartHooks {
         let name_node = child_by_field(n, "name")?;
         let name = text(cx, name_node);
         let mut public = !name.starts_with('_');
-        match cx.containers.last() {
+        match cx.innermost_container() {
             None => {}
             Some(Container::Class { exported, .. }) => {
-                public = public && *exported;
+                public = public && exported;
             }
             Some(Container::Trait { public: tp }) => {
-                public = public && *tp;
+                public = public && tp;
             }
             Some(_) => {}
         }

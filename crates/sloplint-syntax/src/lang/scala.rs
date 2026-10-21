@@ -441,24 +441,24 @@ impl LangHooks for ScalaHooks {
             .find(|c| c.kind() == "modifiers");
         let mut public = !mods.is_some_and(|m| has_child_kind(m, "access_modifier"));
         public = public && !is_nested_fn(n);
-        match cx.containers.last() {
+        match cx.innermost_container() {
             None => {}
             Some(Container::Class { exported, .. }) => {
-                public = public && *exported;
+                public = public && exported;
             }
             Some(Container::Trait { public: tp }) => {
-                public = public && *tp;
+                public = public && tp;
             }
             Some(_) => {}
         }
         let interface_bound = matches!(
-            cx.containers.last(),
+            cx.innermost_container(),
             Some(Container::Class {
                 implements: true,
                 ..
             })
         ) && mods.is_some_and(|m| has_child_kind(m, "override"));
-        let in_test = cx.is_test_file || cx.containers.contains(&Container::TestModule);
+        let in_test = cx.is_test_file || cx.in_test_module();
         let mut params = Vec::new();
         for c in named_children(n) {
             if c.kind() == "parameters" {
@@ -613,13 +613,13 @@ impl LangHooks for ScalaHooks {
                 || (c.kind() == "modifiers" && has_child_kind(c, "access_modifier"))
         });
         let mut public = !restricted;
-        match cx.containers.last() {
+        match cx.innermost_container() {
             None => {}
             Some(Container::Class { exported, .. }) => {
-                public = public && *exported;
+                public = public && exported;
             }
             Some(Container::Trait { public: tp }) => {
-                public = public && *tp;
+                public = public && tp;
             }
             Some(_) => {}
         }

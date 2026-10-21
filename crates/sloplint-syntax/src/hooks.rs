@@ -14,14 +14,52 @@ pub(crate) struct Cx<'t, 's> {
     pub lang: Lang,
     pub is_test_file: bool,
     pub has_interface: bool,
-    pub containers: &'t [Container],
-    pub exports: &'t [&'s str],
+    containers: &'t [Container],
+    exports: &'t [&'s str],
     /// The nodes entered so far under each open ancestor, outermost level first.
     ///
     /// The last entry of each level is the open ancestor itself, or the visited
     /// node on the innermost level, and the entries before it are its earlier
     /// siblings in tree order.
-    pub levels: &'t [Vec<Node<'t>>],
+    levels: &'t [Vec<Node<'t>>],
+}
+
+impl<'t, 's> Cx<'t, 's> {
+    /// A view of one file with no container open, nothing exported, and no node entered.
+    pub(crate) fn file(
+        src: &'s str,
+        path: &'s str,
+        lang: Lang,
+        is_test_file: bool,
+        has_interface: bool,
+    ) -> Self {
+        Self {
+            src,
+            path,
+            lang,
+            is_test_file,
+            has_interface,
+            containers: &[],
+            exports: &[],
+            levels: &[],
+        }
+    }
+
+    /// The same view of the file with the walker's open containers, top level
+    /// exports, and entered nodes attached.
+    pub(crate) fn scoped(
+        self,
+        containers: &'t [Container],
+        exports: &'t [&'s str],
+        levels: &'t [Vec<Node<'t>>],
+    ) -> Self {
+        Self {
+            containers,
+            exports,
+            levels,
+            ..self
+        }
+    }
 }
 
 impl Cx<'_, '_> {
@@ -30,6 +68,40 @@ impl Cx<'_, '_> {
         self.exports
             .binary_search_by(|probe| (*probe).cmp(name))
             .is_ok()
+    }
+
+    /// The innermost open container; `None` at the file's top level.
+    pub(crate) fn innermost_container(&self) -> Option<Container> {
+        self.containers.last().copied()
+    }
+
+    /// True when any open container is a test module.
+    pub(crate) fn in_test_module(&self) -> bool {
+        self.containers.contains(&Container::TestModule)
+    }
+
+    /// Whether the nearest open class is exported; `None` when none is open.
+    pub(crate) fn nearest_class_exported(&self) -> Option<bool> {
+        self.containers.iter().rev().find_map(|c| match *c {
+            Container::Class { exported, .. } => Some(exported),
+            _ => None,
+        })
+    }
+
+    /// Whether the nearest open class implements an interface; `None` when none is open.
+    pub(crate) fn nearest_class_implements(&self) -> Option<bool> {
+        self.containers.iter().rev().find_map(|c| match *c {
+            Container::Class { implements, .. } => Some(implements),
+            _ => None,
+        })
+    }
+
+    /// Whether the nearest open implementation is interface-bound; `None` when none is open.
+    pub(crate) fn nearest_impl_interface_bound(&self) -> Option<bool> {
+        self.containers.iter().rev().find_map(|c| match *c {
+            Container::Impl { interface_bound } => Some(interface_bound),
+            _ => None,
+        })
     }
 }
 
