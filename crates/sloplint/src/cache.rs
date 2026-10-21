@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -43,6 +44,75 @@ struct ShardWrite<'a> {
     version: u32,
     config_key: &'a [u8; 32],
     files: &'a [(&'a str, &'a FileOutput)],
+}
+
+/// One entry read from disk: its output is handed out once, its content hash stays.
+struct Slot {
+    hash: [u8; 32],
+    output: Option<FileOutput>,
+}
+
+type ShardEntries = HashMap<Box<str>, Slot>;
+
+/// The cached entries of every shard, indexed by the shard that held them.
+///
+/// Taking an entry moves its output out and leaves its rel key and content
+/// hash in place. A shard's rel set therefore outlives the drain, and
+/// [`Cache::store`] compares it with the new entries without a second copy of
+/// the keys.
+pub struct Loaded {
+    shards: Vec<Mutex<ShardEntries>>,
+    entries: usize,
+}
+
+impl Loaded {
+    /// A cache that holds no entries.
+    pub fn empty() -> Self {
+        Self::new((0..=255u8).map(|_| HashMap::new()).collect())
+    }
+
+    fn new(shards: Vec<ShardEntries>) -> Self {
+        Self {
+            entries: shards.iter().map(HashMap::len).sum(),
+            shards: shards.into_iter().map(Mutex::new).collect(),
+        }
+    }
+
+    /// How many entries were loaded, whether or not they were taken since.
+    pub fn entry_count(&self) -> usize {
+        self.entries
+    }
+
+    /// Moves out the output cached for `rel` when it was computed from `hash` and is still there.
+    pub fn take(&self, rel: &str, hash: &[u8; 32]) -> Option<FileOutput> {
+        let mut shard = self.shard(shard_byte(rel));
+        let slot = shard.get_mut(rel)?;
+        if slot.hash == *hash {
+            slot.output.take()
+        } else {
+            None
+        }
+    }
+
+    fn shard(&self, byte: u8) -> MutexGuard<'_, ShardEntries> {
+        self.shards[usize::from(byte)]
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Whether shard `byte` held exactly the rels of the new entries, with the same content hashes.
+    fn same_set(&self, byte: u8, entries: Option<&[(&str, &FileOutput)]>) -> bool {
+        let old = self.shard(byte);
+        match entries {
+            None => old.is_empty(),
+            Some(entries) => {
+                entries.len() == old.len()
+                    && entries.iter().all(|(rel, output)| {
+                        old.get(*rel).is_some_and(|slot| slot.hash == output.hash)
+                    })
+            }
+        }
+    }
 }
 
 /// Hashes a file's BOM-stripped source; this is the cache's content key.
@@ -119,34 +189,54 @@ pub fn open(
 }
 
 impl Cache {
-    /// Loads the cached outputs keyed by relative path from every shard present.
+    /// Loads the cached entries of every shard present, keyed by relative path within their shard.
     ///
-    /// Shards are read and decoded in parallel on the current rayon pool.
+    /// Shards are read, decoded, and indexed in parallel on the current rayon pool.
     /// A shard that cannot be read, fails to parse, or carries the wrong
     /// version or key contributes zero entries and never aborts the load. A
     /// symlinked shard directory yields an empty cache. No cache file is ever
     /// followed through a symlink or reparse point; only its vetted
     /// directories are trusted. Configuration and baseline inputs keep
     /// following symlinks to regular files.
-    pub fn load(&self) -> HashMap<Box<str>, FileOutput> {
+    pub fn load(&self) -> Loaded {
         let shards = self.dir.join(SHARD_DIR);
         if !fs::symlink_metadata(&shards).is_ok_and(|meta| meta.is_dir()) {
-            return HashMap::new();
+            return Loaded::empty();
         }
-        (0..=255u8)
-            .into_par_iter()
-            .filter_map(|byte| {
-                let bytes = read_regular_nofollow(&shards.join(shard_file(byte))).ok()?;
-                let shard = postcard::from_bytes::<Shard>(&bytes).ok()?;
-                (shard.version == VERSION && shard.config_key == self.key).then_some(shard.files)
-            })
-            .flatten_iter()
-            .collect()
+        Loaded::new(
+            (0..=255u8)
+                .into_par_iter()
+                .map(|byte| self.decode_shard(&shards, byte).unwrap_or_default())
+                .collect(),
+        )
+    }
+
+    fn decode_shard(&self, shards: &Path, byte: u8) -> Option<ShardEntries> {
+        let bytes = read_regular_nofollow(&shards.join(shard_file(byte))).ok()?;
+        let shard = postcard::from_bytes::<Shard>(&bytes).ok()?;
+        (shard.version == VERSION && shard.config_key == self.key).then(|| {
+            shard
+                .files
+                .into_iter()
+                .map(|(rel, output)| {
+                    let hash = output.hash;
+                    (
+                        rel,
+                        Slot {
+                            hash,
+                            output: Some(output),
+                        },
+                    )
+                })
+                .collect()
+        })
     }
 
     /// Writes the cache atomically; a failure warns on stderr and never fails the run.
-    pub fn store(&self, files: &[(&str, &FileOutput)], old_hashes: &HashMap<Box<str>, [u8; 32]>) {
-        if let Err(error) = self.write_shards(files, old_hashes) {
+    ///
+    /// `old` is what [`Cache::load`] read, after this run took its hits.
+    pub fn store(&self, files: &[(&str, &FileOutput)], old: &Loaded) {
+        if let Err(error) = self.write_shards(files, old) {
             warn(format!(
                 "cache not written in {}: {error}",
                 self.dir.display()
@@ -162,11 +252,7 @@ impl Cache {
     /// is rewritten, one without has its file removed. That covers deleted
     /// files and also stale-key or corrupt shards that loaded no entries: the
     /// store is the only prune.
-    fn write_shards(
-        &self,
-        files: &[(&str, &FileOutput)],
-        old_hashes: &HashMap<Box<str>, [u8; 32]>,
-    ) -> io::Result<()> {
+    fn write_shards(&self, files: &[(&str, &FileOutput)], old: &Loaded) -> io::Result<()> {
         let mut fresh: HashMap<u8, Vec<(&str, &FileOutput)>> = HashMap::new();
         for &(rel, output) in files {
             fresh
@@ -174,23 +260,13 @@ impl Cache {
                 .or_default()
                 .push((rel, output));
         }
-        let mut stale: HashMap<u8, Vec<&str>> = HashMap::new();
-        for rel in old_hashes.keys() {
-            let rel: &str = rel;
-            stale.entry(shard_byte(rel)).or_default().push(rel);
-        }
         let shards = self.dir.join(SHARD_DIR);
         let dirty: Vec<u8> = (0..=255u8)
             .filter(|&byte| {
                 let entries = fresh.get(&byte);
                 let present = fs::symlink_metadata(shards.join(shard_file(byte)))
                     .is_ok_and(|meta| meta.is_file());
-                present != entries.is_some()
-                    || !same_set(
-                        entries.map(Vec::as_slice),
-                        stale.get(&byte).map(Vec::as_slice),
-                        old_hashes,
-                    )
+                present != entries.is_some() || !old.same_set(byte, entries.map(Vec::as_slice))
             })
             .collect();
         if dirty.is_empty() {
@@ -295,26 +371,6 @@ fn shard_byte(rel: &str) -> u8 {
 /// File name of shard `byte`, e.g. `shard-3f.bin`: two lowercase hex chars.
 fn shard_file(byte: u8) -> String {
     format!("shard-{byte:02x}.bin")
-}
-
-/// Whether a shard's new entries name exactly the loaded rels with the same content hashes.
-fn same_set(
-    entries: Option<&[(&str, &FileOutput)]>,
-    rels: Option<&[&str]>,
-    old_hashes: &HashMap<Box<str>, [u8; 32]>,
-) -> bool {
-    match (entries, rels) {
-        (None, None) => true,
-        (Some(entries), Some(rels)) => {
-            entries.len() == rels.len()
-                && entries.iter().all(|(rel, output)| {
-                    old_hashes
-                        .get(*rel)
-                        .is_some_and(|hash| *hash == output.hash)
-                })
-        }
-        _ => false,
-    }
 }
 
 /// Hashes everything that shapes per-file output: the binary bytes, the effective config, and custom rule files.

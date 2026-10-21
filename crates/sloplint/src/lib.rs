@@ -12,12 +12,11 @@ mod terminal;
 
 pub use terminal::TerminalText;
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::io::{self, Read, Write};
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 
 use globset::GlobSet;
 use rayon::prelude::*;
@@ -31,7 +30,7 @@ use sloplint_core::{Config, ConfigError, FailOn, Finding, Mode, Severity, Strict
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 use thiserror::Error;
 
-use cache::FileOutput;
+use cache::{FileOutput, Loaded};
 use discover::Entry;
 use project::Overrides;
 
@@ -222,12 +221,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     };
     let loaded = cache
         .as_ref()
-        .map_or_else(HashMap::new, |cache| pool.install(|| cache.load()));
-    let cached_hashes: HashMap<Box<str>, [u8; 32]> = loaded
-        .iter()
-        .map(|(rel, output)| (rel.clone(), output.hash))
-        .collect();
-    let cached = Mutex::new(loaded);
+        .map_or_else(Loaded::empty, |cache| pool.install(|| cache.load()));
     let test_globs = project::glob_set(&config.project.test_globs, "project.test_globs")?;
     let interfaces: HashSet<String> = discovery
         .entries
@@ -242,7 +236,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         root: &root,
         filter: &opts.rule_filter,
         test_globs: &test_globs,
-        cache: &cached,
+        cache: &loaded,
         interfaces: &interfaces,
     };
     let outcomes = analyze_all(&discovery.entries, &pipe, &pool)?;
@@ -261,7 +255,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
             .count(),
     );
     if let Some(cache) = &cache {
-        store_if_touched(cache, &analyzed, &cached_hashes);
+        store_if_touched(cache, &analyzed, &loaded);
     }
     let mut all = merge(&pipe, analyzed, &pool)?;
     all.retain(|finding| scopes.contains(Path::new(&*finding.path)));
@@ -333,7 +327,7 @@ struct Pipeline<'a> {
     root: &'a Path,
     filter: &'a RuleFilter,
     test_globs: &'a GlobSet,
-    cache: &'a Mutex<HashMap<Box<str>, FileOutput>>,
+    cache: &'a Loaded,
     interfaces: &'a HashSet<String>,
 }
 
@@ -345,6 +339,7 @@ enum Outcome {
 struct Analyzed {
     rel: String,
     output: FileOutput,
+    from_cache: bool,
     source: Option<Box<str>>,
 }
 
@@ -395,23 +390,9 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
         hash,
         interface,
     };
-    let hit = {
-        let mut guard = pipe
-            .cache
-            .lock()
-            .unwrap_or_else(|poison| poison.into_inner());
-        if guard
-            .get(entry.rel.as_str())
-            .is_some_and(|cached| cached.hash == probe.hash)
-        {
-            guard.remove(entry.rel.as_str())
-        } else {
-            None
-        }
-    };
-    let output = match hit {
-        Some(output) => output,
-        None => analyze_file(parsers, entry, &probe, pipe),
+    let (output, from_cache) = match pipe.cache.take(entry.rel.as_str(), &probe.hash) {
+        Some(output) => (output, true),
+        None => (analyze_file(parsers, entry, &probe, pipe), false),
     };
     let reports_unused = pipe.filter.0.is_empty()
         || pipe
@@ -427,6 +408,7 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
     Ok(Outcome::Analyzed(Box::new(Analyzed {
         rel: entry.rel.clone(),
         output,
+        from_cache,
         source,
     })))
 }
@@ -547,23 +529,15 @@ fn split_outcomes(outcomes: Vec<Outcome>, scopes: &project::Scopes) -> (Vec<Anal
 /// A warm run whose every file hit the cache would write back the entries it
 /// just loaded. The store is also the only prune: a count mismatch means the
 /// cache holds entries for deleted files and must be rewritten.
-fn store_if_touched(
-    cache: &cache::Cache,
-    analyzed: &[Analyzed],
-    cached_hashes: &HashMap<Box<str>, [u8; 32]>,
-) {
-    let touched = analyzed.len() != cached_hashes.len()
-        || analyzed.iter().any(|file| {
-            cached_hashes
-                .get(file.rel.as_str())
-                .is_none_or(|hash| *hash != file.output.hash)
-        });
+fn store_if_touched(cache: &cache::Cache, analyzed: &[Analyzed], loaded: &Loaded) {
+    let touched =
+        analyzed.len() != loaded.entry_count() || analyzed.iter().any(|file| !file.from_cache);
     if touched {
         let view: Vec<(&str, &FileOutput)> = analyzed
             .iter()
             .map(|file| (file.rel.as_str(), &file.output))
             .collect();
-        cache.store(&view, cached_hashes);
+        cache.store(&view, loaded);
     }
 }
 
