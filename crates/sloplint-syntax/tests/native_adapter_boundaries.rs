@@ -1,4 +1,4 @@
-//! C, C++, Objective-C, Dart, Java, and Scala adapter boundaries, observed through `analyze` only.
+//! C, C++, C#, Objective-C, Dart, Java, and Scala adapter boundaries, observed through `analyze` only.
 //!
 //! One child module per mechanism, so each fix lands with its own case module and
 //! one declaration here, while the crate links a single integration-test executable.
@@ -11,6 +11,8 @@ mod c_family_param_declarators;
 mod cpp_operator_functions;
 #[path = "native_adapter_boundaries/cpp_virtual_interface_bound.rs"]
 mod cpp_virtual_interface_bound;
+#[path = "native_adapter_boundaries/csharp_test_attributes.rs"]
+mod csharp_test_attributes;
 #[path = "native_adapter_boundaries/dart_barrel_directives.rs"]
 mod dart_barrel_directives;
 #[path = "native_adapter_boundaries/dart_namespace_import_names.rs"]
