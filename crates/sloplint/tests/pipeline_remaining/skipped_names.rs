@@ -9,8 +9,10 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use sloplint::{Report, RunOptions, run};
-use sloplint_core::config::{Mode, Strictness};
+use sloplint::{
+    NameDecision, Report, RunOptions, Scopes, decide_file_name, decide_non_file_name, run,
+};
+use sloplint_core::config::{Config, Mode, Strictness};
 
 const SAMPLE: &str = "pub fn handle(flag: bool) {}\n";
 const GENERATED_WINDOW: usize = 2048;
@@ -83,6 +85,9 @@ fn a_non_utf8_name_outside_the_scope_is_not_counted() {
         .join(std::ffi::OsStr::from_bytes(b"bad\xff.rs"));
     if let Err(e) = std::fs::write(&bad, SAMPLE) {
         assert!(name_is_unrepresentable(&e), "write non-UTF-8 name: {e}");
+        eprintln!(
+            "SKIP a_non_utf8_name_outside_the_scope_is_not_counted: filesystem cannot represent the 0xFF name: {e}"
+        );
         return;
     }
 
@@ -103,6 +108,48 @@ fn a_non_utf8_name_outside_the_scope_is_not_counted() {
     );
 }
 
+#[test]
+fn non_utf8_skip_scope_membership_is_hermetic() {
+    let config = Config::default();
+    let valid = Path::new("src/lib.rs");
+    assert!(
+        matches!(
+            decide_file_name(valid, &config),
+            NameDecision::Analyze { .. }
+        ),
+        "the valid sibling analyzes"
+    );
+    let whole = Scopes::default();
+    let src = Scopes::from_relative([PathBuf::from("src")]);
+    let other = Scopes::from_relative([PathBuf::from("other")]);
+    assert!(whole.contains(valid));
+    assert!(src.contains(valid));
+    assert!(!other.contains(valid));
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        let bad = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
+        assert!(
+            matches!(decide_file_name(bad, &config), NameDecision::Skipped),
+            "the invalid-byte name is a counted skip"
+        );
+        assert!(whole.contains(bad));
+        assert!(!src.contains(bad));
+        assert!(other.contains(bad));
+    }
+    #[cfg(not(unix))]
+    {
+        let standin = Path::new("other/bad\u{FFFD}.rs");
+        assert!(matches!(
+            decide_file_name(standin, &config),
+            NameDecision::Analyze { .. }
+        ));
+        assert!(whole.contains(standin));
+        assert!(!src.contains(standin));
+        assert!(other.contains(standin));
+    }
+}
+
 #[cfg(unix)]
 #[test]
 fn lossy_equal_file_names_do_not_share_an_explicit_scope() {
@@ -115,6 +162,9 @@ fn lossy_equal_file_names_do_not_share_an_explicit_scope() {
         .join(std::ffi::OsStr::from_bytes(b"bad\xff.rs"));
     if let Err(e) = std::fs::write(&invalid, SAMPLE) {
         assert!(name_is_unrepresentable(&e), "write non-UTF-8 name: {e}");
+        eprintln!(
+            "SKIP lossy_equal_file_names_do_not_share_an_explicit_scope: filesystem cannot represent the 0xFF name: {e}"
+        );
         return;
     }
     symlink("bad\u{FFFD}.rs", root.join("other/link.rs")).unwrap_or_else(|e| panic!("link: {e}"));
@@ -139,6 +189,53 @@ fn lossy_equal_file_names_do_not_share_an_explicit_scope() {
     );
 }
 
+#[test]
+fn lossy_equal_file_scope_is_hermetic() {
+    let config = Config::default();
+    let valid = Path::new("other/bad\u{FFFD}.rs");
+    let link = Path::new("other/link.rs");
+    assert!(
+        matches!(
+            decide_file_name(valid, &config),
+            NameDecision::Analyze { .. }
+        ),
+        "the valid name analyzes"
+    );
+    assert!(
+        matches!(decide_non_file_name(link, &config), NameDecision::Skipped),
+        "the link is a counted skip"
+    );
+    let whole = Scopes::default();
+    let explicit = Scopes::from_relative([valid.to_path_buf()]);
+    let parent = Scopes::from_relative([PathBuf::from("other")]);
+    assert!(whole.contains(valid));
+    assert!(whole.contains(link));
+    assert!(explicit.contains(valid));
+    assert!(!explicit.contains(link));
+    assert!(parent.contains(valid));
+    assert!(parent.contains(link));
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        let invalid = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
+        assert_eq!(
+            invalid.to_string_lossy(),
+            valid.to_string_lossy(),
+            "the names are lossy-equal"
+        );
+        assert!(
+            matches!(decide_file_name(invalid, &config), NameDecision::Skipped),
+            "the invalid-byte name is a counted skip"
+        );
+        assert!(whole.contains(invalid));
+        assert!(
+            !explicit.contains(invalid),
+            "lossy-equal names share no explicit file scope"
+        );
+        assert!(parent.contains(invalid));
+    }
+}
+
 #[cfg(unix)]
 #[test]
 fn lossy_equal_dir_names_do_not_share_an_explicit_scope() {
@@ -160,6 +257,9 @@ fn lossy_equal_dir_names_do_not_share_an_explicit_scope() {
         .join(std::ffi::OsStr::from_bytes(b"scope\xff"));
     if let Err(e) = std::fs::create_dir_all(&invalid_dir) {
         assert!(name_is_unrepresentable(&e), "mkdir: {e}");
+        eprintln!(
+            "SKIP lossy_equal_dir_names_do_not_share_an_explicit_scope: filesystem cannot represent the 0xFF name: {e}"
+        );
         return;
     }
     std::fs::write(invalid_dir.join("b.rs"), SAMPLE)
@@ -183,6 +283,55 @@ fn lossy_equal_dir_names_do_not_share_an_explicit_scope() {
         (1, 2),
         "the valid parent includes both directories"
     );
+}
+
+#[test]
+fn lossy_equal_dir_scope_is_hermetic() {
+    let config = Config::default();
+    let pipe = Path::new("parent/scope\u{FFFD}/pipe.rs");
+    let child = Path::new("parent/scope\u{FFFD}/b.rs");
+    assert!(
+        matches!(decide_non_file_name(pipe, &config), NameDecision::Skipped),
+        "the FIFO is a counted skip"
+    );
+    assert!(
+        matches!(
+            decide_file_name(child, &config),
+            NameDecision::Analyze { .. }
+        ),
+        "the valid child analyzes"
+    );
+    let whole = Scopes::default();
+    let explicit = Scopes::from_relative([PathBuf::from("parent/scope\u{FFFD}")]);
+    let parent = Scopes::from_relative([PathBuf::from("parent")]);
+    assert!(whole.contains(pipe));
+    assert!(explicit.contains(pipe));
+    assert!(!explicit.contains(Path::new("parent/unrelated/b.rs")));
+    assert!(parent.contains(pipe));
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        let invalid_dir = Path::new(std::ffi::OsStr::from_bytes(b"parent/scope\xff"));
+        assert_eq!(
+            invalid_dir.to_string_lossy(),
+            "parent/scope\u{FFFD}",
+            "the directories are lossy-equal"
+        );
+        let invalid_child = Path::new(std::ffi::OsStr::from_bytes(b"parent/scope\xff/b.rs"));
+        assert!(
+            matches!(
+                decide_file_name(invalid_child, &config),
+                NameDecision::Skipped
+            ),
+            "the invalid-byte child is a counted skip"
+        );
+        assert!(whole.contains(invalid_child));
+        assert!(
+            !explicit.contains(invalid_child),
+            "lossy-equal directories share no explicit scope"
+        );
+        assert!(parent.contains(invalid_child));
+    }
 }
 
 #[cfg(unix)]

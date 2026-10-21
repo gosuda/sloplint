@@ -152,6 +152,13 @@ pub struct Scopes {
 }
 
 impl Scopes {
+    /// Builds scopes directly from root-relative paths, without resolving anything on disk.
+    pub fn from_relative(paths: impl IntoIterator<Item = PathBuf>) -> Self {
+        Self {
+            paths: paths.into_iter().collect(),
+        }
+    }
+
     /// Whether `path` is one of the scopes or lies under one, matching whole path components; no scopes cover the whole root.
     pub fn contains(&self, path: &Path) -> bool {
         self.paths.is_empty()

@@ -3,9 +3,10 @@ mod cli_contract;
 
 use clap::Parser;
 use sloplint::cli::{Cli, Command};
-use sloplint::{Report, RunError, RunOptions, run};
-use sloplint_core::config::{Mode, Strictness};
+use sloplint::{NameDecision, Report, RunError, RunOptions, Scopes, decide_file_name, run};
+use sloplint_core::config::{Config, Mode, Strictness};
 use sloplint_core::finding::Severity;
+use sloplint_core::lang::Lang;
 use sloplint_core::{RuleFilter, RulePattern};
 use std::path::{Path, PathBuf};
 
@@ -165,6 +166,9 @@ fn boundary_non_utf8_filename_is_skipped() {
     if let Err(e) = std::fs::write(root.join(raw), b"pub fn handle() {}\n") {
         const EILSEQ: i32 = 92;
         assert_eq!(e.raw_os_error(), Some(EILSEQ), "write non-UTF-8 name: {e}");
+        eprintln!(
+            "SKIP boundary_non_utf8_filename_is_skipped: filesystem cannot represent the 0xFF name: {e}"
+        );
         return;
     }
     let r = run_ok(&RunOptions {
@@ -192,6 +196,41 @@ fn boundary_non_utf8_filename_is_skipped() {
         "no finding may cite the unnamed file: {:?}",
         r.findings.iter().map(|f| &*f.path).collect::<Vec<_>>()
     );
+}
+
+#[test]
+fn boundary_non_utf8_skip_decision_is_hermetic() {
+    let config = Config::default();
+    let valid = Path::new("src/bad\u{FFFD}.rs");
+    let NameDecision::Analyze { rel, lang } = decide_file_name(valid, &config) else {
+        panic!("valid U+FFFD name must analyze");
+    };
+    assert_eq!(rel, "src/bad\u{FFFD}.rs");
+    assert_eq!(lang, Lang::Rust);
+    let whole = Scopes::default();
+    assert!(whole.contains(valid));
+    let src = Scopes::from_relative([PathBuf::from("src")]);
+    assert!(src.contains(valid));
+    let other = Scopes::from_relative([PathBuf::from("other")]);
+    assert!(!other.contains(valid));
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        let bad = Path::new(std::ffi::OsStr::from_bytes(b"src/bad\xff.rs"));
+        assert!(
+            matches!(decide_file_name(bad, &config), NameDecision::Skipped),
+            "invalid-byte name is a counted skip"
+        );
+        assert!(whole.contains(bad));
+        assert!(src.contains(bad));
+        assert!(!other.contains(bad));
+        let explicit = Scopes::from_relative([valid.to_path_buf()]);
+        assert!(explicit.contains(valid));
+        assert!(
+            !explicit.contains(bad),
+            "lossy-equal names share no explicit file scope"
+        );
+    }
 }
 
 // AA-I14, AA-X9: component boundary, root scope, nonexistent and symlink-escape errors.

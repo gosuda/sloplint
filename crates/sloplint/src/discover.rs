@@ -94,20 +94,52 @@ impl Found {
         let Ok(relative) = entry.path().strip_prefix(root) else {
             return;
         };
-        match normalize_rel_path(relative) {
-            Some(rel) => match enabled_lang(&rel, config) {
-                Some(lang) if kind.is_file() => self.entries.push(Entry {
-                    rel,
-                    abs: entry.path().to_path_buf(),
-                    lang,
-                }),
-                Some(_) => self.skipped.push(relative.to_path_buf()),
-                None => {}
-            },
-            None => {
-                if enabled_lang(&lossy_rel(relative), config).is_some() {
-                    self.skipped.push(relative.to_path_buf());
-                }
+        let decision = if kind.is_file() {
+            decide_file_name(relative, config)
+        } else {
+            decide_non_file_name(relative, config)
+        };
+        match decision {
+            NameDecision::Analyze { rel, lang } => self.entries.push(Entry {
+                rel,
+                abs: entry.path().to_path_buf(),
+                lang,
+            }),
+            NameDecision::Skipped => self.skipped.push(relative.to_path_buf()),
+            NameDecision::Ignored => {}
+        }
+    }
+}
+
+/// Whether a walked name is analyzed, counted as a skip, or ignored outright.
+pub enum NameDecision {
+    Analyze { rel: String, lang: Lang },
+    Skipped,
+    Ignored,
+}
+
+/// Classifies a regular file's root-relative name without touching the filesystem.
+pub fn decide_file_name(relative: &Path, config: &Config) -> NameDecision {
+    decide_name(relative, true, config)
+}
+
+/// Classifies a non-regular walked name without touching the filesystem.
+pub fn decide_non_file_name(relative: &Path, config: &Config) -> NameDecision {
+    decide_name(relative, false, config)
+}
+
+fn decide_name(relative: &Path, is_file: bool, config: &Config) -> NameDecision {
+    match normalize_rel_path(relative) {
+        Some(rel) => match enabled_lang(&rel, config) {
+            Some(lang) if is_file => NameDecision::Analyze { rel, lang },
+            Some(_) => NameDecision::Skipped,
+            None => NameDecision::Ignored,
+        },
+        None => {
+            if enabled_lang(&lossy_rel(relative), config).is_some() {
+                NameDecision::Skipped
+            } else {
+                NameDecision::Ignored
             }
         }
     }
