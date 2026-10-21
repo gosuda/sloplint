@@ -58,6 +58,7 @@ fn reported(report: &Report) -> BTreeSet<String> {
 fn set<const N: usize>(paths: [&str; N]) -> BTreeSet<String> {
     paths.iter().map(|p| (*p).to_string()).collect()
 }
+#[cfg(unix)]
 fn name_is_unrepresentable(e: &std::io::Error) -> bool {
     const EILSEQ: i32 = 92;
     e.raw_os_error() == Some(EILSEQ)
