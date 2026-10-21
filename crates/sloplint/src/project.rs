@@ -639,23 +639,47 @@ mod tests {
         let whole = Scopes::default();
         let src = Scopes::from_relative([PathBuf::from("src")]);
         let other = Scopes::from_relative([PathBuf::from("other")]);
-        assert!(whole.contains(valid));
-        assert!(src.contains(valid));
-        assert!(!other.contains(valid));
+        assert!(
+            whole.contains(valid),
+            "the whole scope contains the valid path"
+        );
+        assert!(src.contains(valid), "the src scope contains the valid path");
+        assert!(
+            !other.contains(valid),
+            "the other scope excludes the valid path"
+        );
         #[cfg(unix)]
         {
             use std::os::unix::ffi::OsStrExt;
             let bad = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
-            assert!(whole.contains(bad));
-            assert!(!src.contains(bad));
-            assert!(other.contains(bad));
+            assert!(
+                whole.contains(bad),
+                "the whole scope contains the non-utf8 path"
+            );
+            assert!(
+                !src.contains(bad),
+                "the src scope excludes the non-utf8 path"
+            );
+            assert!(
+                other.contains(bad),
+                "the other scope contains the non-utf8 path"
+            );
         }
         #[cfg(not(unix))]
         {
             let standin = Path::new("other/bad\u{FFFD}.rs");
-            assert!(whole.contains(standin));
-            assert!(!src.contains(standin));
-            assert!(other.contains(standin));
+            assert!(
+                whole.contains(standin),
+                "the whole scope contains the standin path"
+            );
+            assert!(
+                !src.contains(standin),
+                "the src scope excludes the standin path"
+            );
+            assert!(
+                other.contains(standin),
+                "the other scope contains the standin path"
+            );
         }
     }
 
@@ -666,12 +690,30 @@ mod tests {
         let whole = Scopes::default();
         let explicit = Scopes::from_relative([valid.to_path_buf()]);
         let parent = Scopes::from_relative([PathBuf::from("other")]);
-        assert!(whole.contains(valid));
-        assert!(whole.contains(link));
-        assert!(explicit.contains(valid));
-        assert!(!explicit.contains(link));
-        assert!(parent.contains(valid));
-        assert!(parent.contains(link));
+        assert!(
+            whole.contains(valid),
+            "the whole scope contains the valid path"
+        );
+        assert!(
+            whole.contains(link),
+            "the whole scope contains the link path"
+        );
+        assert!(
+            explicit.contains(valid),
+            "the explicit scope contains the valid path"
+        );
+        assert!(
+            !explicit.contains(link),
+            "the explicit scope excludes the link path"
+        );
+        assert!(
+            parent.contains(valid),
+            "the parent scope contains the valid path"
+        );
+        assert!(
+            parent.contains(link),
+            "the parent scope contains the link path"
+        );
         #[cfg(unix)]
         {
             use std::os::unix::ffi::OsStrExt;
@@ -681,12 +723,18 @@ mod tests {
                 valid.to_string_lossy(),
                 "the names are lossy-equal"
             );
-            assert!(whole.contains(invalid));
+            assert!(
+                whole.contains(invalid),
+                "the whole scope contains the lossy-equal path"
+            );
             assert!(
                 !explicit.contains(invalid),
                 "lossy-equal names share no explicit file scope"
             );
-            assert!(parent.contains(invalid));
+            assert!(
+                parent.contains(invalid),
+                "the parent scope contains the lossy-equal path"
+            );
         }
     }
 
@@ -697,13 +745,34 @@ mod tests {
         let whole = Scopes::default();
         let explicit = Scopes::from_relative([PathBuf::from("parent/scope\u{FFFD}")]);
         let parent = Scopes::from_relative([PathBuf::from("parent")]);
-        assert!(whole.contains(pipe));
-        assert!(explicit.contains(pipe));
-        assert!(!explicit.contains(Path::new("parent/unrelated/b.rs")));
-        assert!(parent.contains(pipe));
-        assert!(whole.contains(child));
-        assert!(explicit.contains(child));
-        assert!(parent.contains(child));
+        assert!(
+            whole.contains(pipe),
+            "the whole scope contains the pipe path"
+        );
+        assert!(
+            explicit.contains(pipe),
+            "the explicit scope contains the pipe path"
+        );
+        assert!(
+            !explicit.contains(Path::new("parent/unrelated/b.rs")),
+            "the explicit scope excludes the unrelated path"
+        );
+        assert!(
+            parent.contains(pipe),
+            "the parent scope contains the pipe path"
+        );
+        assert!(
+            whole.contains(child),
+            "the whole scope contains the child path"
+        );
+        assert!(
+            explicit.contains(child),
+            "the explicit scope contains the child path"
+        );
+        assert!(
+            parent.contains(child),
+            "the parent scope contains the child path"
+        );
         #[cfg(unix)]
         {
             use std::os::unix::ffi::OsStrExt;
@@ -714,12 +783,18 @@ mod tests {
                 "the directories are lossy-equal"
             );
             let invalid_child = Path::new(std::ffi::OsStr::from_bytes(b"parent/scope\xff/b.rs"));
-            assert!(whole.contains(invalid_child));
+            assert!(
+                whole.contains(invalid_child),
+                "the whole scope contains the lossy child"
+            );
             assert!(
                 !explicit.contains(invalid_child),
                 "lossy-equal directories share no explicit scope"
             );
-            assert!(parent.contains(invalid_child));
+            assert!(
+                parent.contains(invalid_child),
+                "the parent scope contains the lossy child"
+            );
         }
     }
 
@@ -727,20 +802,38 @@ mod tests {
     fn boundary_non_utf8_skip_scope_membership_is_hermetic() {
         let valid = Path::new("src/bad\u{FFFD}.rs");
         let whole = Scopes::default();
-        assert!(whole.contains(valid));
+        assert!(
+            whole.contains(valid),
+            "the whole scope contains the valid path"
+        );
         let src = Scopes::from_relative([PathBuf::from("src")]);
-        assert!(src.contains(valid));
+        assert!(src.contains(valid), "the src scope contains the valid path");
         let other = Scopes::from_relative([PathBuf::from("other")]);
-        assert!(!other.contains(valid));
+        assert!(
+            !other.contains(valid),
+            "the other scope excludes the valid path"
+        );
         #[cfg(unix)]
         {
             use std::os::unix::ffi::OsStrExt;
             let bad = Path::new(std::ffi::OsStr::from_bytes(b"src/bad\xff.rs"));
-            assert!(whole.contains(bad));
-            assert!(src.contains(bad));
-            assert!(!other.contains(bad));
+            assert!(
+                whole.contains(bad),
+                "the whole scope contains the non-utf8 path"
+            );
+            assert!(
+                src.contains(bad),
+                "the src scope contains the non-utf8 path"
+            );
+            assert!(
+                !other.contains(bad),
+                "the other scope excludes the non-utf8 path"
+            );
             let explicit = Scopes::from_relative([valid.to_path_buf()]);
-            assert!(explicit.contains(valid));
+            assert!(
+                explicit.contains(valid),
+                "the explicit scope contains the valid path"
+            );
             assert!(
                 !explicit.contains(bad),
                 "lossy-equal names share no explicit file scope"

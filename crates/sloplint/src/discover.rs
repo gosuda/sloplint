@@ -267,10 +267,13 @@ mod tests {
         #[cfg(not(unix))]
         {
             let standin = Path::new("other/bad\u{FFFD}.rs");
-            assert!(matches!(
-                decide_file_name(standin, &config),
-                NameDecision::Analyze { .. }
-            ));
+            assert!(
+                matches!(
+                    decide_file_name(standin, &config),
+                    NameDecision::Analyze { .. }
+                ),
+                "the standin name analyzes"
+            );
         }
     }
 
