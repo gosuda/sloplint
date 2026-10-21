@@ -636,3 +636,121 @@ fn a_different_executable_never_reuses_stored_header_outcomes() {
         "a different executable served an entry stored by another one: {stdout}"
     );
 }
+
+/// A reparse point planted at the cache file's own name must neither be read nor written
+/// through. Mirrors [`planted_cache_symlink_is_never_written_through`] against the Windows
+/// reparse-point refusal in `open_for_read_nofollow`. Creating a file symlink needs a
+/// privilege the runner may lack; that skip is printed, never silent.
+#[cfg(windows)]
+#[test]
+fn planted_reparse_cache_is_never_read_or_written_through() {
+    let (_tmp, root) = sample_project();
+    let home = CacheHome::new();
+    let cold = home.check(&root, &[]);
+    let files = home.cache_files();
+    assert_eq!(
+        files.len(),
+        1,
+        "one project stores one cache file: {files:?}"
+    );
+    let genuine = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read cache: {e}"));
+    let planted_marker = GENERIC_TEXT.replace("code", "mode");
+    let at = genuine
+        .windows(GENERIC_TEXT.len())
+        .position(|window| window == GENERIC_TEXT.as_bytes())
+        .unwrap_or_else(|| panic!("the finding message is not in the cache bytes"));
+    let mut forged = genuine.clone();
+    forged[at..at + planted_marker.len()].copy_from_slice(planted_marker.as_bytes());
+    let (_outside, base) = tempdir();
+    let planted_path = base.join("forged.bin");
+    std::fs::write(&planted_path, &forged).unwrap_or_else(|e| panic!("plant: {e}"));
+    std::fs::remove_file(&files[0]).unwrap_or_else(|e| panic!("remove cache: {e}"));
+    match std::os::windows::fs::symlink_file(&planted_path, &files[0]) {
+        Ok(()) => {}
+        Err(error) if error.raw_os_error() == Some(1314) => {
+            eprintln!(
+                "SKIP planted_reparse_cache_is_never_read_or_written_through: \
+                 this account cannot create symlinks: {error}"
+            );
+            return;
+        }
+        Err(error) => panic!("symlink: {error}"),
+    }
+    let out = home.output(&root, &[]);
+    assert!(
+        out.status.success(),
+        "a planted link failed the run: {:?}",
+        out.status
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        cold,
+        "the cache load followed a symlinked cache file"
+    );
+    assert!(
+        !String::from_utf8_lossy(&out.stdout).contains(&planted_marker),
+        "a forged cache behind a symlink was reused: {}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    let after = std::fs::read(&planted_path).unwrap_or_else(|e| panic!("read planted: {e}"));
+    assert_eq!(
+        after, forged,
+        "the cache store wrote through a planted symlink"
+    );
+}
+
+/// A directory junction planted at the shard directory must yield an empty cache: the load
+/// never follows a reparse point to attacker-controlled shard bytes, and the store never
+/// writes through it. Junctions need no privilege to create.
+#[cfg(windows)]
+#[test]
+fn planted_junction_shard_dir_yields_empty_cache() {
+    let (_tmp, root) = sample_project();
+    let home = CacheHome::new();
+    let cold = home.check(&root, &[]);
+    let files = home.cache_files();
+    assert_eq!(
+        files.len(),
+        1,
+        "one project stores one cache file: {files:?}"
+    );
+    let shard_dir = files[0]
+        .parent()
+        .unwrap_or_else(|| panic!("{} has no directory", files[0].display()))
+        .to_path_buf();
+    let (_outside, base) = tempdir();
+    let target = base.join("attacker");
+    mkdir(&target);
+    let moved = base.join("cache-v2");
+    std::fs::rename(&shard_dir, &moved).unwrap_or_else(|e| panic!("move shards: {e}"));
+    let link = std::process::Command::new("cmd")
+        .args(["/c", "mklink", "/J"])
+        .arg(&shard_dir)
+        .arg(&target)
+        .output()
+        .unwrap_or_else(|e| panic!("spawn mklink: {e}"));
+    assert!(
+        link.status.success(),
+        "mklink junction: {}",
+        String::from_utf8_lossy(&link.stderr)
+    );
+    let out = home.output(&root, &[]);
+    assert!(
+        out.status.success(),
+        "a junction at the shard directory failed the run: {:?}",
+        out.status
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        cold,
+        "the cache load followed a junctioned shard directory"
+    );
+    let written: Vec<PathBuf> = std::fs::read_dir(&target)
+        .unwrap_or_else(|e| panic!("{}: {e}", target.display()))
+        .map(|entry| entry.unwrap_or_else(|e| panic!("entry: {e}")).path())
+        .collect();
+    assert!(
+        written.is_empty(),
+        "the cache store wrote through the junction: {written:?}"
+    );
+}
