@@ -11,13 +11,10 @@ use super::EmptyOptions;
 const APPLICABLE: &[Lang] = &[
     Lang::TypeScript,
     Lang::Tsx,
-    Lang::JavaScript,
     Lang::Python,
     Lang::Kotlin,
     Lang::Scala,
-    Lang::Swift,
     Lang::Dart,
-    Lang::CSharp,
 ];
 
 const FIX: &str = "annotate every parameter and the return type";
