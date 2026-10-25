@@ -324,3 +324,40 @@ fn test_dangling_implicit_config_symlink_rejected() {
     };
     assert_eq!(path, link_path);
 }
+
+#[test]
+fn test_baseline_with_utf8_bom_accepted_in_ratchet() {
+    let code =
+        "pub fn handle(x: Option<i32>) { match x { Some(1) => {}, Some(2) => {}, _ => {} } }\n";
+    let (_tmp, root) = project("[project]\nstrictness = \"strict\"\n");
+    fs::write(root.join("src/lib.rs"), code).expect("write code");
+
+    let mut threshold_opts = options(&root);
+    threshold_opts.strictness = Some(Strictness::Strict);
+    let report = run(&threshold_opts).expect("threshold run");
+    assert!(
+        !report.findings.is_empty(),
+        "must produce findings under strict"
+    );
+
+    let mut findings = report.findings;
+    sloplint_core::baseline::Baseline::assign_fingerprints(&mut findings);
+    let baseline = sloplint_core::baseline::Baseline::from_findings(&findings);
+    let json = baseline.to_json();
+    let mut content = vec![0xEF, 0xBB, 0xBF];
+    content.extend_from_slice(json.as_bytes());
+    fs::write(root.join("sloplint-baseline.json"), &content).expect("write baseline with BOM");
+
+    let mut ratchet_opts = options(&root);
+    ratchet_opts.strictness = Some(Strictness::Strict);
+    ratchet_opts.mode = Some(Mode::Ratchet);
+    let result = run(&ratchet_opts);
+    let Ok(ratchet_report) = result else {
+        panic!("BOM-prefixed baseline must load successfully: {result:?}");
+    };
+    assert_eq!(ratchet_report.findings.len(), 0);
+    assert!(
+        ratchet_report.summary.baselined > 0,
+        "baselined count must be positive"
+    );
+}

@@ -667,13 +667,16 @@ fn apply_gate(
 
 fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunError> {
     let path = project::resolve_within_root(root, name)?;
-    let text = match project::read_bounded_string(&path, project::MAX_BASELINE_BYTES) {
+    let mut text = match project::read_bounded_string(&path, project::MAX_BASELINE_BYTES) {
         Ok(text) => text,
         Err(source) if source.kind() == io::ErrorKind::NotFound => {
             return Err(RunError::BaselineMissing { path });
         }
         Err(source) => return Err(RunError::Io { path, source }),
     };
+    if text.starts_with('\u{feff}') {
+        text.drain(..'\u{feff}'.len_utf8());
+    }
     Baseline::from_json(&text).map_err(|error| RunError::BaselineCorrupt {
         path,
         message: error.to_string(),
