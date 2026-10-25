@@ -57,3 +57,21 @@ fn other_import_forms_are_unchanged() {
         ]
     );
 }
+
+#[test]
+fn export_namespace_reexports_name_module_and_binding() {
+    let source = "export * as ns from './module';\n";
+    assert_eq!(
+        imports(source),
+        vec![row("./module", "ns", ImportKind::Namespace)]
+    );
+}
+
+#[test]
+fn export_star_without_alias_yields_wildcard_not_namespace() {
+    let source = "export * from './module';\n";
+    assert_eq!(
+        imports(source),
+        vec![row("./module", "*", ImportKind::Wildcard)]
+    );
+}
