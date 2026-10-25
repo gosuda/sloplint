@@ -63,7 +63,7 @@ pub struct RunOptions {
     /// ship a forged cache. An unusable cache location disables the cache
     /// with a warning instead of failing the run; `false` does no cache work.
     pub use_cache: bool,
-    /// Worker threads for the tree walk, cache load, analysis, and finalization; zero means the available parallelism.
+    /// Worker threads for the tree walk, cache load, analysis, and finalization; zero means the available parallelism. Clamped to 512.
     pub jobs: usize,
     /// Record the findings as the baseline instead of gating on them.
     pub write_baseline: bool,
@@ -801,11 +801,15 @@ fn threshold(fail_on: FailOn) -> Option<Severity> {
     }
 }
 
+const MAX_JOBS: usize = 512;
+
 fn jobs(requested: usize) -> usize {
     if requested == 0 {
-        std::thread::available_parallelism().map_or(1, NonZeroUsize::get)
+        std::thread::available_parallelism()
+            .map_or(1, NonZeroUsize::get)
+            .min(MAX_JOBS)
     } else {
-        requested
+        requested.min(MAX_JOBS)
     }
 }
 
@@ -817,5 +821,24 @@ fn io_error(path: &Path, source: io::Error) -> RunError {
     RunError::Io {
         path: path.to_path_buf(),
         source,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MAX_JOBS, jobs};
+
+    #[test]
+    fn absurd_job_requests_clamp_to_the_documented_ceiling() {
+        assert_eq!(
+            jobs(usize::MAX),
+            MAX_JOBS,
+            "a library request above the ceiling must clamp instead of asking rayon for that many threads"
+        );
+        assert_eq!(
+            jobs(7),
+            7,
+            "an in-range request must pass through unchanged"
+        );
     }
 }
