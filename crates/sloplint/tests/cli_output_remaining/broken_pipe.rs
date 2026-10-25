@@ -48,33 +48,64 @@ fn spawn_closed_stdout(cwd: &Path, args: &[&str]) -> Output {
 fn check_with_deny_findings_and_closed_stdout_exits_one_without_stderr() {
     let project = deny_project(MANY_FINDINGS);
     let output = spawn_closed_stdout(project.path(), &["check", "--no-cache"]);
-    assert_eq!(output.status.code(), Some(1));
-    assert!(output.stderr.is_empty());
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "a closed stdout must keep the deny verdict"
+    );
+    assert!(
+        output.stderr.is_empty(),
+        "a closed stdout is the consumer's choice and prints nothing"
+    );
 }
 
 #[test]
 fn check_clean_project_with_closed_stdout_exits_zero_without_stderr() {
     let project = clean_project();
     let output = spawn_closed_stdout(project.path(), &["check", "--no-cache"]);
-    assert_eq!(output.status.code(), Some(0));
-    assert!(output.stderr.is_empty());
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "a closed stdout must keep the clean verdict"
+    );
+    assert!(
+        output.stderr.is_empty(),
+        "a closed stdout is the consumer's choice and prints nothing"
+    );
 }
 
 #[test]
 fn rules_with_closed_stdout_exits_zero_without_stderr() {
     let project = clean_project();
     let output = spawn_closed_stdout(project.path(), &["rules"]);
-    assert_eq!(output.status.code(), Some(0));
-    assert!(output.stderr.is_empty());
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "rules with a closed stdout still succeeds"
+    );
+    assert!(
+        output.stderr.is_empty(),
+        "a closed stdout is the consumer's choice and prints nothing"
+    );
 }
 
 #[test]
 fn baseline_with_closed_stdout_exits_zero_without_stderr() {
     let project = clean_project();
     let output = spawn_closed_stdout(project.path(), &["baseline", "--no-cache"]);
-    assert_eq!(output.status.code(), Some(0));
-    assert!(output.stderr.is_empty());
-    assert!(project.path().join("sloplint-baseline.json").exists());
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "baseline writes the file before it prints the status line"
+    );
+    assert!(
+        output.stderr.is_empty(),
+        "a closed stdout is the consumer's choice and prints nothing"
+    );
+    assert!(
+        project.path().join("sloplint-baseline.json").exists(),
+        "the baseline file must exist even when the status line is lost"
+    );
 }
 
 #[cfg(unix)]
@@ -95,7 +126,14 @@ fn stdout_to_dev_full_exits_three_with_stderr_message() {
         .stderr(Stdio::piped())
         .output()
         .expect("spawn sloplint");
-    assert_eq!(output.status.code(), Some(3));
+    assert_eq!(
+        output.status.code(),
+        Some(3),
+        "a full disk is an IO error, not a closed consumer"
+    );
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.starts_with("sloplint: error: "));
+    assert!(
+        stderr.starts_with("sloplint: error: "),
+        "a full disk must still be reported on stderr"
+    );
 }
