@@ -7,6 +7,8 @@
 mod baseline_directory;
 #[path = "pipeline_remaining/baseline_replace.rs"]
 mod baseline_replace;
+#[path = "pipeline_remaining/baseline_target.rs"]
+mod baseline_target;
 #[path = "pipeline_remaining/bounded_read_reserve.rs"]
 mod bounded_read_reserve;
 #[path = "pipeline_remaining/cache_location.rs"]

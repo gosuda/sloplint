@@ -94,6 +94,9 @@ pub enum RunError {
     /// The baseline file is not a valid version-1 baseline.
     #[error("baseline {}: {message}", path.display())]
     BaselineCorrupt { path: PathBuf, message: String },
+    /// The baseline target is a regular file whose content is not a sloplint baseline; it is left untouched.
+    #[error("{} exists and is not a sloplint baseline; refusing to overwrite it (delete the file to record a new baseline)", path.display())]
+    NotABaseline { path: PathBuf },
     /// `init` would overwrite an existing configuration.
     #[error("{} already exists", path.display())]
     ConfigExists { path: PathBuf },
@@ -268,11 +271,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     };
     let baseline_written = if opts.write_baseline {
         let path = project::resolve_within_root(&root, &config.project.baseline)?;
-        write_replacing(
-            &path,
-            Baseline::from_findings(&reported).to_json().as_bytes(),
-        )
-        .map_err(|source| io_error(&path, source))?;
+        record_baseline(&path, &reported)?;
         Some(config.project.baseline.clone())
     } else {
         None
@@ -718,6 +717,42 @@ pub fn read_source(path: &Path, max_bytes: u64) -> Result<String, RunError> {
         text.drain(..'\u{feff}'.len_utf8());
     }
     Ok(text)
+}
+
+/// Records `findings` at `path`, replacing only a prior baseline.
+///
+/// An existing regular file must already parse as a version-1 baseline, checked before
+/// anything is written, so a configuration or source file named as the baseline is
+/// refused and left as it was. A missing target is created. A directory, FIFO, or
+/// device is left to the I/O refusal of [`write_replacing`], which never reads it.
+fn record_baseline(path: &Path, findings: &[Finding]) -> Result<(), RunError> {
+    ensure_prior_baseline(path)?;
+    write_replacing(path, Baseline::from_findings(findings).to_json().as_bytes())
+        .map_err(|source| io_error(path, source))
+}
+
+/// Refuses an existing regular file at `path` whose content does not parse as a baseline.
+///
+/// Only regular files are read; a missing target or a non-regular one returns `Ok`, so
+/// the write path refuses a directory or FIFO with its existing I/O error.
+fn ensure_prior_baseline(path: &Path) -> Result<(), RunError> {
+    let meta = match fs::metadata(path) {
+        Ok(meta) => meta,
+        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(source) => return Err(io_error(path, source)),
+    };
+    if !meta.is_file() {
+        return Ok(());
+    }
+    let bytes = project::read_regular(path).map_err(|source| io_error(path, source))?;
+    let parses = std::str::from_utf8(&bytes).is_ok_and(|text| Baseline::from_json(text).is_ok());
+    if parses {
+        Ok(())
+    } else {
+        Err(RunError::NotABaseline {
+            path: path.to_path_buf(),
+        })
+    }
 }
 
 /// Replaces `path` with `bytes` so no reader or crash ever sees a partial file.

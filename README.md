@@ -130,6 +130,8 @@ Unused-suppression findings retain separate identities, so baselining one does n
 
 `project.baseline` is a path relative to the project root. Absolute paths, `..` escapes, and parent or leaf symlinks that resolve outside the root are rejected with an error and leave the outside target untouched; nested paths inside the root keep working.
 
+`sloplint baseline` refuses to replace an existing regular file that is not a sloplint baseline, such as `sloplint.toml` or a source file: it exits 2 and leaves the file untouched; delete the file to record a baseline there.
+
 The cache lives in the per-user cache directory (`$XDG_CACHE_HOME` when absolute, else `~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`) under `sloplint/<hash of the project root>/cache-v2/shard-<NN>.bin` (files sharded by the first BLAKE3 byte of their path), never in the checkout: a repository could ship a forged cache, so the project's `.sloplint` is never read, migrated, or deleted. A run rewrites only the shards whose files changed. A `cache-v1.bin` left by an older release is neither read nor removed; delete it by hand to reclaim the space. An old `.sloplint` directory in the checkout is ignored. Directories are created private (`0700` on unix); a symlinked, non-directory, or group/other-writable cache directory, a cache directory inside the project root, a missing home, or an unreadable executable disables the cache with a warning instead of failing the run. `--no-cache` does no cache work. Invalid or mismatched cache contents fall back to fresh analysis.
 
 ### Custom rules
