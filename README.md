@@ -132,7 +132,7 @@ Unused-suppression findings retain separate identities, so baselining one does n
 
 `sloplint baseline` refuses to replace an existing regular file that is not a sloplint baseline, such as `sloplint.toml` or a source file: it exits 2 and leaves the file untouched; delete the file to record a baseline there.
 
-The cache lives in the per-user cache directory (`$XDG_CACHE_HOME` when absolute, else `~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`) under `sloplint/<hash of the project root>/cache-v2/shard-<NN>.bin` (files sharded by the first BLAKE3 byte of their path), never in the checkout: a repository could ship a forged cache, so the project's `.sloplint` is never read, migrated, or deleted. A run rewrites only the shards whose files changed. A `cache-v1.bin` left by an older release is neither read nor removed; delete it by hand to reclaim the space. An old `.sloplint` directory in the checkout is ignored. Directories are created private (`0700` on unix); a symlinked, non-directory, or group/other-writable cache directory, a cache directory inside the project root, a missing home, or an unreadable executable disables the cache with a warning instead of failing the run. `--no-cache` does no cache work. Invalid or mismatched cache contents fall back to fresh analysis.
+The cache lives in the per-user cache directory (`$XDG_CACHE_HOME` when absolute, else `~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`) under `sloplint/<hash of the project root>/cache-v2/shard-<NN>.bin` (files sharded by the first BLAKE3 byte of their path), never in the checkout: a repository could ship a forged cache, so the project's `.sloplint` is never read, migrated, or deleted. A run rewrites only the shards whose files changed. A `cache-v1.bin` left by an older release is neither read nor removed; delete it by hand to reclaim the space. An old `.sloplint` directory in the checkout is ignored. Directories are created private (`0700` on unix); a symlinked, non-directory, or group/other-writable cache directory, a cache directory inside the project root, a missing home, or an unreadable executable disables the cache with a warning instead of failing the run. `--no-cache` does no cache work. A shard that cannot be decoded, or whose version or configuration key does not match, falls back to fresh analysis. Shards carry no checksum: a byte flipped inside a shard that still decodes is served as cached output, so delete the cache directory after disk damage.
 
 ### Custom rules
 
@@ -151,7 +151,7 @@ query = '''
 '''
 ```
 
-Files named by `project.custom_rule_files` load even when hidden or gitignored; source discovery keeps its usual filters.
+Files named by `project.custom_rule_files` load even when hidden or gitignored; source discovery keeps its usual filters. Patterns must stay inside the project root: an absolute pattern or one containing `..` is a configuration error. A custom rule file reached through a symlink, by name or by glob, is a configuration error that names the link; sloplint never follows it.
 
 A custom rule runs on the tree that parsed. A `language = "cpp"` rule therefore applies to a `.h` file that parsed as C++ after a failed C parse.
 
@@ -162,6 +162,8 @@ Inline where you cannot fix yet; a reason is required, and unused suppressions a
 ```rust
 // sloplint-allow(complexity/cognitive-depth): state machine is one place by design
 ```
+
+A directive covers the lines of its own comment and the one line after it. A finding reported on any other line, such as a `slop/echo-comment` finding anchored on the first line of a doc block, needs the directive on or directly before that line; a blank line, a decorator, or an annotation between the directive and the construct leaves the directive unused. `sloplint-allow-file(rule)` covers the whole file. The reason ends at the end of the line or at the closing delimiter of the comment's own syntax (`*/`, `*)`, `#>`, `-->`).
 
 ### Output formats
 
