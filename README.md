@@ -99,7 +99,7 @@ A `.h` file can hold C, C++, or Objective-C, so sloplint parses it as C first. I
 
 Unknown `--rule` selectors fail with exit 2 listing the valid rule ids.
 
-Every run analyzes the whole project root; `PATHS` only filters which findings are reported.
+Every run analyzes the whole project root; `PATHS` only filters which findings are reported. Hidden entries are skipped. `.gitignore` and `.git/info/exclude` stop at the git repository that encloses the root (the nearest directory holding `.git`, as a directory or a file): ancestor `.gitignore` files above that repository are not applied, and when the root is inside a repository, a nested repository under the root does not inherit the root's `.gitignore`. `.ignore` files apply from every ancestor directory, as in ripgrep. Outside any repository, ancestor `.gitignore` files apply as before.
 
 ### Configuration
 

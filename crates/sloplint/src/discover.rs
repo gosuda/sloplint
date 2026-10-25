@@ -198,13 +198,20 @@ fn lossy_rel(relative: &Path) -> String {
         .join("/")
 }
 
+/// Whether `root` or an ancestor holds a `.git` entry: a directory in a clone, or a file in a worktree or submodule.
+fn inside_repository(root: &Path) -> bool {
+    root.ancestors().any(|dir| dir.join(".git").exists())
+}
+
 /// Configures a walk of `root` with gitignore and hidden-file filters, pruning every entry that matches `prune`.
+///
+/// Inside a repository, `require_git` stops `.gitignore` and `.git/info/exclude` at the repository root, so files above it are not applied. `.ignore` files still apply from every ancestor, as in ripgrep. Outside a repository, ancestor `.gitignore` files apply as before.
 fn walker(root: &Path, prune: GlobSet) -> WalkBuilder {
     let base = root.to_path_buf();
     let mut builder = WalkBuilder::new(root);
     builder
         .standard_filters(true)
-        .require_git(false)
+        .require_git(inside_repository(root))
         .follow_links(false);
     builder
         .filter_entry(move |entry| entry.depth() == 0 || !is_pruned(&base, entry.path(), &prune));

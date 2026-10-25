@@ -13,6 +13,8 @@ mod baseline_target;
 mod bounded_read_reserve;
 #[path = "pipeline_remaining/cache_location.rs"]
 mod cache_location;
+#[path = "pipeline_remaining/gitignore_boundary.rs"]
+mod gitignore_boundary;
 #[path = "pipeline_remaining/header_cpp_fallback.rs"]
 mod header_cpp_fallback;
 #[path = "pipeline_remaining/header_fallbacks.rs"]
