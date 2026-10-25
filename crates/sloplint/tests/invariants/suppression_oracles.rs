@@ -393,13 +393,9 @@ fn suppressions_for_inactive_rules_stay_silent() {
     assert_no_failures(&failures);
 }
 
-/// Known defect, reported and not fixed. `reason_until_terminator` in
-/// `crates/sloplint-core/src/suppress.rs` ends a reason at a newline, `*/`, or `-->` only. A block
-/// comment closed by any other delimiter keeps that delimiter as its reason, so a blank reason is
-/// accepted instead of reported as `meta/invalid-suppression`. Repro: `(* sloplint-allow(grep/generic-name):   *)`
-/// above `let handle` in `src/lib.ml`.
+/// A blank reason is reported as `meta/invalid-suppression` in every sample's comment syntax,
+/// including block comments closed by `*)` or `#>`.
 #[test]
-#[ignore = "known defect: block comments with other closers accept a blank reason"]
 fn blank_reason_is_invalid_in_every_sample() {
     let mut failures = Vec::new();
     for sample in SAMPLES {
