@@ -49,10 +49,8 @@ pub(crate) static TABLE: &[(&str, Role)] = &[
     ("member_expression", Role::Member),
 ];
 
-/// The JavaScript adapter; one grammar parses `.js`, `.jsx`, `.mjs`, and `.cjs`.
 pub(crate) static HOOKS: JavaScriptHooks = JavaScriptHooks;
 
-/// Hooks for the JavaScript grammar.
 pub(crate) struct JavaScriptHooks;
 
 const COMMENTS: &[&str] = &["comment"];
