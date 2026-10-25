@@ -5,6 +5,8 @@
 
 #[path = "pipeline_remaining/baseline_replace.rs"]
 mod baseline_replace;
+#[path = "pipeline_remaining/bounded_read_reserve.rs"]
+mod bounded_read_reserve;
 #[path = "pipeline_remaining/cache_location.rs"]
 mod cache_location;
 #[path = "pipeline_remaining/header_cpp_fallback.rs"]

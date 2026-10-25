@@ -667,8 +667,14 @@ fn read_within_limit(path: &Path, max_bytes: u64) -> io::Result<Option<Vec<u8>>>
     if len > max_bytes {
         return Ok(None);
     }
-    let cap = usize::try_from(len.min(max_bytes.saturating_add(1))).unwrap_or(0);
-    let mut bytes = Vec::with_capacity(cap);
+    let cap = usize::try_from(len.min(max_bytes.saturating_add(1))).unwrap_or(usize::MAX);
+    let mut bytes = Vec::new();
+    bytes.try_reserve_exact(cap).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::OutOfMemory,
+            format!("file of {len} bytes does not fit in memory"),
+        )
+    })?;
     file.take(max_bytes.saturating_add(1))
         .read_to_end(&mut bytes)?;
     Ok((u64::try_from(bytes.len()).unwrap_or(u64::MAX) <= max_bytes).then_some(bytes))
