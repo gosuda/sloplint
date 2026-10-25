@@ -34,7 +34,6 @@ fn analyze_with<'s>(
         path,
         source,
         is_test_file: false,
-        has_interface: false,
     };
     analyze(&mut Parsers::new(), &input, custom)
 }

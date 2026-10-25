@@ -8,6 +8,7 @@ mod spec;
 mod walk;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::collections::hash_map::Entry;
 
 use sloplint_core::facts::FileFacts;
@@ -18,22 +19,39 @@ use tree_sitter::{Node, Parser, Tree};
 pub use custom::CustomRules;
 use spec::spec;
 
-/// Lazily configured parsers, one per language actually analyzed.
-pub struct Parsers {
+/// Lazily configured parsers, one per language actually analyzed, and the run's
+/// OCaml sibling-interface set.
+pub struct Parsers<'o> {
     parsers: HashMap<Lang, Parser>,
+    ocaml_interfaces: Option<&'o HashSet<String>>,
 }
 
-impl Default for Parsers {
+impl Default for Parsers<'_> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Parsers {
+impl<'o> Parsers<'o> {
     /// Creates an empty pool; a language's parser is configured on first use.
-    pub fn new() -> Parsers {
+    ///
+    /// With no interface set, every OCaml implementation exports its top-level values.
+    pub fn new() -> Self {
         Parsers {
             parsers: HashMap::new(),
+            ocaml_interfaces: None,
+        }
+    }
+
+    /// Creates an empty pool whose OCaml implementations can be shadowed by interfaces.
+    ///
+    /// `interfaces` holds the `.ml` paths, relative to the project root, whose sibling
+    /// `.mli` is in the analyzed set. Such an implementation exports nothing: its
+    /// top-level bindings and types are not public.
+    pub fn with_ocaml_interfaces(interfaces: &'o HashSet<String>) -> Self {
+        Parsers {
+            parsers: HashMap::new(),
+            ocaml_interfaces: Some(interfaces),
         }
     }
 
@@ -78,8 +96,6 @@ pub struct FileInput<'s> {
     pub source: &'s str,
     /// Whether the path matches a configured test glob.
     pub is_test_file: bool,
-    /// Whether an OCaml `.ml` file has a sibling `.mli` in the analyzed set.
-    pub has_interface: bool,
 }
 
 /// One analyzed file: facts, suppressible comments, parse-error position, custom hits.
@@ -117,22 +133,23 @@ pub struct Analysis<'s> {
 /// drift) that never depend on the source, so they stop the run instead of
 /// passing as clean.
 pub fn analyze<'s>(
-    parsers: &mut Parsers,
+    parsers: &mut Parsers<'_>,
     input: &FileInput<'s>,
     custom: &'s CustomRules,
 ) -> Analysis<'s> {
     let tree = parsers.parse(input.lang, input.source);
     let root = tree.root_node();
     if !root.has_error() {
-        return clean_analysis(input, input.lang, &tree, custom);
+        return clean_analysis(parsers, input, input.lang, &tree, custom);
     }
     for &fallback in input.lang.parse_fallbacks(input.path) {
         let retried = parsers.parse(fallback, input.source);
         if !retried.root_node().has_error() {
-            return clean_analysis(input, fallback, &retried, custom);
+            return clean_analysis(parsers, input, fallback, &retried, custom);
         }
     }
-    let comments = spec(input.lang).walk_comments(input, root).comments;
+    let hooks = lang::hooks_for(input.lang, input.path, parsers.ocaml_interfaces);
+    let comments = spec(input.lang).walk_comments(hooks, input, root).comments;
     Analysis {
         facts: walk::empty_facts(input, input.lang),
         comments,
@@ -146,12 +163,14 @@ pub fn analyze<'s>(
 /// The tree decides the role table, hooks, custom rules, and the language of the
 /// facts, so all four come from `parsed_as`.
 fn clean_analysis<'s>(
+    parsers: &Parsers<'_>,
     input: &FileInput<'s>,
     parsed_as: Lang,
     tree: &Tree,
     custom: &'s CustomRules,
 ) -> Analysis<'s> {
-    let walked = spec(parsed_as).walk(input, tree.root_node());
+    let hooks = lang::hooks_for(parsed_as, input.path, parsers.ocaml_interfaces);
+    let walked = spec(parsed_as).walk(hooks, input, tree.root_node());
     let custom_hits = custom.run(tree, input.source, parsed_as);
     Analysis {
         facts: walked.facts,

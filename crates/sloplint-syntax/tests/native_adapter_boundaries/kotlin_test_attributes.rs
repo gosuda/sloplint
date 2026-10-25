@@ -50,7 +50,6 @@ fn test_file_marks_all_functions_in_test() {
         path: "case_test.kt",
         source,
         is_test_file: true,
-        has_interface: false,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "parses cleanly");

@@ -115,7 +115,6 @@ fn render(message: &str, source: &str) -> Vec<String> {
         path: "src/a.rs",
         source,
         is_test_file: false,
-        has_interface: false,
     };
     let analysis = analyze(&mut parsers, &input, &custom);
     rules

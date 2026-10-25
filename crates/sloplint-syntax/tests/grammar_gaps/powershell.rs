@@ -21,7 +21,6 @@ fn run<'s>(source: &'s str) -> Analysis<'s> {
         path: "gap.ps1",
         source,
         is_test_file: false,
-        has_interface: false,
     };
     analyze(&mut Parsers::new(), &input, &NO_CUSTOM)
 }
@@ -857,7 +856,6 @@ fn query_hits(source: &str, query: &str) -> usize {
         path: "gap.ps1",
         source,
         is_test_file: false,
-        has_interface: false,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &rules);
     assert!(

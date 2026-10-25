@@ -332,7 +332,6 @@ fn custom_queries_run_against_the_tree_that_was_parsed() {
             path,
             source,
             is_test_file: false,
-            has_interface: false,
         };
         let analysis = analyze(&mut Parsers::new(), &input, &rules);
         assert!(analysis.parse_error.is_none(), "{path} parses cleanly");

@@ -10,7 +10,6 @@ fn globals(lang: Lang, source: &str) -> (Vec<String>, bool, bool) {
         path: "a.ts",
         source,
         is_test_file: false,
-        has_interface: false,
     };
     let analysis = analyze(&mut parsers, &input, &custom);
     assert!(

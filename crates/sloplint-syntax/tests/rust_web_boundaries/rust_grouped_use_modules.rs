@@ -17,7 +17,6 @@ fn imports(source: &str) -> Vec<Row> {
         path: "src/lib.rs",
         source,
         is_test_file: false,
-        has_interface: false,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(

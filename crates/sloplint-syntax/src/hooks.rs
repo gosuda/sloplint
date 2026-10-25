@@ -13,7 +13,6 @@ pub(crate) struct Cx<'t, 's> {
     pub path: &'s str,
     pub lang: Lang,
     pub is_test_file: bool,
-    pub has_interface: bool,
     containers: &'t [Container],
     exports: &'t [&'s str],
     /// The nodes entered so far under each open ancestor, outermost level first.
@@ -26,19 +25,12 @@ pub(crate) struct Cx<'t, 's> {
 
 impl<'t, 's> Cx<'t, 's> {
     /// A view of one file with no container open, nothing exported, and no node entered.
-    pub(crate) fn file(
-        src: &'s str,
-        path: &'s str,
-        lang: Lang,
-        is_test_file: bool,
-        has_interface: bool,
-    ) -> Self {
+    pub(crate) fn file(src: &'s str, path: &'s str, lang: Lang, is_test_file: bool) -> Self {
         Self {
             src,
             path,
             lang,
             is_test_file,
-            has_interface,
             containers: &[],
             exports: &[],
             levels: &[],

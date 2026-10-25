@@ -391,7 +391,6 @@ struct Analyzed {
 struct Probe<'a> {
     text: &'a str,
     hash: [u8; 32],
-    interface: bool,
 }
 
 fn analyze_all(
@@ -402,13 +401,20 @@ fn analyze_all(
     let results: Vec<Result<Outcome, RunError>> = pool.install(|| {
         entries
             .par_iter()
-            .map_init(Parsers::new, |parsers, entry| process(parsers, entry, pipe))
+            .map_init(
+                || Parsers::with_ocaml_interfaces(pipe.interfaces),
+                |parsers, entry| process(parsers, entry, pipe),
+            )
             .collect()
     });
     results.into_iter().collect()
 }
 
-fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<Outcome, RunError> {
+fn process(
+    parsers: &mut Parsers<'_>,
+    entry: &Entry,
+    pipe: &Pipeline<'_>,
+) -> Result<Outcome, RunError> {
     let skipped = || Ok(Outcome::Skipped(entry.rel.clone()));
     let bytes = match read_within_limit(&entry.abs, pipe.config.project.max_file_bytes) {
         Err(source) if source.kind() == io::ErrorKind::NotFound => return skipped(),
@@ -435,7 +441,6 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
         let probe = Probe {
             text: owned.as_str(),
             hash,
-            interface,
         };
         match pipe.cache.take(entry.rel.as_str(), &probe.hash) {
             Some(output) => (output, true),
@@ -452,7 +457,7 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
 }
 
 fn analyze_file(
-    parsers: &mut Parsers,
+    parsers: &mut Parsers<'_>,
     entry: &Entry,
     probe: &Probe<'_>,
     pipe: &Pipeline<'_>,
@@ -462,7 +467,6 @@ fn analyze_file(
         path: entry.rel.as_str(),
         source: probe.text,
         is_test_file: pipe.test_globs.is_match(entry.rel.as_str()),
-        has_interface: probe.interface,
     };
     let analysis = analyze(parsers, &input, pipe.custom);
     let world = WorldFacts::from_facts(&analysis.facts);

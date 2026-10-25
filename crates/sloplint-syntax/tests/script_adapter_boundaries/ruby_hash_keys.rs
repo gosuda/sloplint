@@ -32,7 +32,6 @@ fn keyword_and_rocket_pairs_report_one_to_one_copies() {
         path: "case.rb",
         source: SOURCE,
         is_test_file: false,
-        has_interface: false,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.rb parses");

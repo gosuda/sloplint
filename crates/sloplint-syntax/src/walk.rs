@@ -8,7 +8,7 @@ use sloplint_core::lang::Lang;
 use sloplint_core::suppress::CommentText;
 use tree_sitter::Node;
 
-use crate::hooks::{Container, Cx, narrow, pos_of};
+use crate::hooks::{Container, Cx, LangHooks, narrow, pos_of};
 use crate::spec::{LangSpec, Role};
 
 /// What one full walk produced: facts plus the suppressible comments.
@@ -19,32 +19,39 @@ pub(crate) struct Walked<'s> {
 
 impl LangSpec {
     /// Walks one file's tree once, collecting every fact the roles produce.
-    pub(crate) fn walk<'s>(&self, input: &crate::FileInput<'s>, root: Node<'_>) -> Walked<'s> {
-        self.walk_impl(input, true, root)
+    pub(crate) fn walk<'s>(
+        &self,
+        hooks: &'static dyn LangHooks,
+        input: &crate::FileInput<'s>,
+        root: Node<'_>,
+    ) -> Walked<'s> {
+        self.walk_impl(hooks, input, true, root)
     }
 
     /// Walks one file's tree collecting only the suppressible comments.
     pub(crate) fn walk_comments<'s>(
         &self,
+        hooks: &'static dyn LangHooks,
         input: &crate::FileInput<'s>,
         root: Node<'_>,
     ) -> Walked<'s> {
-        self.walk_impl(input, false, root)
+        self.walk_impl(hooks, input, false, root)
     }
 
     fn walk_impl<'s>(
         &self,
+        hooks: &'static dyn LangHooks,
         input: &crate::FileInput<'s>,
         collect_facts: bool,
         root: Node<'_>,
     ) -> Walked<'s> {
         let mut state = WalkState {
             spec: self,
+            hooks,
             src: input.source,
             path: input.path,
             lang: self.lang,
             is_test_file: input.is_test_file,
-            has_interface: input.has_interface,
             collect_facts,
             facts: empty_facts(input, self.lang),
             comments: Vec::new(),
@@ -126,11 +133,11 @@ pub(crate) enum Mark {
 /// All mutable walk state; the tree cursor lives only in [`WalkState::run`].
 pub(crate) struct WalkState<'s, 'a, 't> {
     pub spec: &'a LangSpec,
+    pub hooks: &'static dyn LangHooks,
     pub src: &'s str,
     pub path: &'s str,
     pub lang: Lang,
     pub is_test_file: bool,
-    pub has_interface: bool,
     pub collect_facts: bool,
     pub facts: FileFacts<'s>,
     pub comments: Vec<CommentText<'s>>,
@@ -147,7 +154,7 @@ pub(crate) struct WalkState<'s, 'a, 't> {
 impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     pub(crate) fn run(&mut self, root: Node<'t>) {
         if self.collect_facts {
-            let hooks = self.spec.hooks;
+            let hooks = self.hooks;
             let mut names = Vec::new();
             hooks.exported_names(root, &self.make_cx(), &mut names);
             names.sort_unstable();
@@ -181,7 +188,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             descending = false;
         }
         if self.collect_facts {
-            let hooks = self.spec.hooks;
+            let hooks = self.hooks;
             let barrel = {
                 let cx = self.make_cx();
                 hooks.barrel(root, &cx)
@@ -261,7 +268,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     fn enter_if(&mut self, node: Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         if !self.fn_stack.is_empty() {
             if hooks.is_else_if(node) {
                 self.score_top(1);
@@ -296,7 +303,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     fn enter_function_like(&mut self, role: Role, node: Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let head = if role == Role::Function {
             let cx = self.make_cx();
             hooks.function(node, &cx)
@@ -319,7 +326,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     fn enter_call_site(&mut self, node: Node<'_>) {
         {
             let cx = self.make_cx();
-            if self.spec.hooks.control_call(node, &cx) {
+            if self.hooks.control_call(node, &cx) {
                 self.score_nested(node);
             }
         }
@@ -388,14 +395,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     pub(crate) fn make_cx(&self) -> Cx<'_, 's> {
-        Cx::file(
-            self.src,
-            self.path,
-            self.lang,
-            self.is_test_file,
-            self.has_interface,
-        )
-        .scoped(
+        Cx::file(self.src, self.path, self.lang, self.is_test_file).scoped(
             &self.containers,
             &self.exports,
             &self.levels[..self.levels.len().min(self.depth + 1)],
