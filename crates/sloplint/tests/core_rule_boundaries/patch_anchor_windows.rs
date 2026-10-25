@@ -127,15 +127,16 @@ fn unicode_whitespace_does_not_split_a_group() {
 }
 
 #[test]
-fn periodic_input_reports_each_phase_with_non_overlapping_starts() {
+fn periodic_input_reports_its_region_once_with_non_overlapping_starts() {
     let period: String = (0..3)
         .map(|k| format!("first_line_{k} = call_site_{k}(alpha_argument)\n"))
         .collect();
-    let expected: Vec<(u32, String)> = [(1, "1, 7, 13"), (2, "2, 8, 14"), (3, "3, 9, 15")]
-        .iter()
-        .map(|(line, starts)| (*line, format!("3 identical 6-line blocks (lines {starts})")))
-        .collect();
-    assert_eq!(reported(&period.repeat(7)), expected);
+    let expected = vec![(1, "3 identical 6-line blocks (lines 1, 7, 13)".to_string())];
+    assert_eq!(
+        reported(&period.repeat(7)),
+        expected,
+        "lines 2 and 3 slide into one run with only two non-overlapping occurrences, so only line 1 is reported"
+    );
 }
 
 #[test]
