@@ -1,7 +1,5 @@
 //! `agent/colocated-tests`: modules with public functions and no nearby tests.
 
-use std::collections::HashSet;
-
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::{Deserialize, Serialize};
 
@@ -67,7 +65,7 @@ enum Candidates {
     Names(NameForm),
     /// `<dir>{stem}{tail}` next to the analyzed file.
     Dir(&'static str),
-    /// Fixed root-relative paths with a `{stem}` placeholder.
+    /// Fixed root-relative paths, each with one `{stem}` placeholder or none.
     Root(&'static [&'static str]),
     /// Any file under a `tests/` directory named `<stem>.rs` or starting with `<stem>_`.
     RustTests,
@@ -205,10 +203,33 @@ fn conventions(lang: Lang) -> Candidates {
         .unwrap_or(Candidates::None)
 }
 
+/// Orders `elem` against the concatenation of `parts` without building that string.
+fn cmp_composite(elem: &str, parts: &[&str]) -> std::cmp::Ordering {
+    let mut elem_bytes = elem.as_bytes();
+    for &part in parts {
+        let part_bytes = part.as_bytes();
+        let common = elem_bytes.len().min(part_bytes.len());
+        match elem_bytes[..common].cmp(&part_bytes[..common]) {
+            std::cmp::Ordering::Equal => {
+                if elem_bytes.len() < part_bytes.len() {
+                    return std::cmp::Ordering::Less;
+                }
+                elem_bytes = &elem_bytes[common..];
+            }
+            ord => return ord,
+        }
+    }
+    if elem_bytes.is_empty() {
+        std::cmp::Ordering::Equal
+    } else {
+        std::cmp::Ordering::Greater
+    }
+}
+
 /// The analyzed path set, indexed once per run so each module answers in `O(log n)`.
 struct PathIndex<'a> {
     paths: Vec<&'a str>,
-    names: HashSet<&'a str>,
+    names: Vec<&'a str>,
     rust_tests: Vec<&'a str>,
 }
 
@@ -225,9 +246,12 @@ impl<'a> PathIndex<'a> {
             .collect();
         rust_tests.sort_unstable();
         rust_tests.dedup();
+        let mut names: Vec<&'a str> = files.iter().map(|file| file_name(file.path)).collect();
+        names.sort_unstable();
+        names.dedup();
         PathIndex {
             paths,
-            names: files.iter().map(|file| file_name(file.path)).collect(),
+            names,
             rust_tests,
         }
     }
@@ -244,44 +268,53 @@ fn has_counterpart(index: &PathIndex<'_>, path: &str, lang: Lang) -> bool {
     }
 }
 
-fn names_match(names: &HashSet<&str>, path: &str, form: &NameForm) -> bool {
+fn names_match(names: &[&str], path: &str, form: &NameForm) -> bool {
     let (stem, own_ext) = stem_ext(path);
     let ext = form.ext.unwrap_or(own_ext);
-    form.prefixes
-        .iter()
-        .any(|prefix| names.contains(format!("{prefix}{stem}.{ext}").as_str()))
-        || form
-            .infixes
-            .iter()
-            .any(|infix| names.contains(format!("{stem}{infix}.{ext}").as_str()))
+    form.prefixes.iter().any(|prefix| {
+        names
+            .binary_search_by(|elem| cmp_composite(elem, &[prefix, stem, ".", ext]))
+            .is_ok()
+    }) || form.infixes.iter().any(|infix| {
+        names
+            .binary_search_by(|elem| cmp_composite(elem, &[stem, infix, ".", ext]))
+            .is_ok()
+    })
 }
 
 fn dir_match(paths: &[&str], path: &str, tail: &str) -> bool {
     let dir = dir_prefix(path);
     let stem = stem_ext(path).0;
-    let candidate = format!("{dir}{stem}{tail}");
-    paths.binary_search(&candidate.as_str()).is_ok()
+    paths
+        .binary_search_by(|elem| cmp_composite(elem, &[dir, stem, tail]))
+        .is_ok()
 }
 
 fn root_match(paths: &[&str], templates: &[&str], path: &str) -> bool {
     let stem = stem_ext(path).0;
-    templates.iter().any(|template| {
-        let candidate = template.replace("{stem}", stem);
-        paths.binary_search(&candidate.as_str()).is_ok()
-    })
+    templates
+        .iter()
+        .any(|template| match template.split_once("{stem}") {
+            Some((prefix, suffix)) => paths
+                .binary_search_by(|elem| cmp_composite(elem, &[prefix, stem, suffix]))
+                .is_ok(),
+            None => paths.binary_search(template).is_ok(),
+        })
 }
 
 fn rust_match(test_names: &[&str], path: &str) -> bool {
     let stem = stem_ext(path).0;
-    let exact = format!("{stem}.rs");
-    if test_names.binary_search(&exact.as_str()).is_ok() {
+    if test_names
+        .binary_search_by(|elem| cmp_composite(elem, &[stem, ".rs"]))
+        .is_ok()
+    {
         return true;
     }
-    let prefix = format!("{stem}_");
-    let start = test_names.partition_point(|name| *name < prefix.as_str());
-    test_names[start..]
-        .first()
-        .is_some_and(|name| name.starts_with(prefix.as_str()))
+    let start = test_names.partition_point(|name| cmp_composite(name, &[stem, "_"]).is_lt());
+    test_names[start..].first().is_some_and(|name| {
+        name.strip_prefix(stem)
+            .is_some_and(|rest| rest.starts_with('_'))
+    })
 }
 
 fn under_tests(path: &str) -> bool {
@@ -307,16 +340,22 @@ fn web_match(paths: &[&str], path: &str) -> bool {
     let dir = dir_prefix(path);
     let stem = stem_ext(path).0;
     if WEB_TAILS.iter().any(|tail| {
-        let candidate = format!("{dir}{stem}{tail}");
-        paths.binary_search(&candidate.as_str()).is_ok()
+        paths
+            .binary_search_by(|elem| cmp_composite(elem, &[dir, stem, tail]))
+            .is_ok()
     }) {
         return true;
     }
-    let prefix = format!("{dir}__tests__/{stem}.test.");
-    let start = paths.partition_point(|candidate| *candidate < prefix.as_str());
-    paths[start..]
-        .first()
-        .is_some_and(|candidate| candidate.starts_with(prefix.as_str()))
+    let start = paths.partition_point(|candidate| {
+        cmp_composite(candidate, &[dir, "__tests__/", stem, ".test."]).is_lt()
+    });
+    paths[start..].first().is_some_and(|candidate| {
+        candidate
+            .strip_prefix(dir)
+            .and_then(|c| c.strip_prefix("__tests__/"))
+            .and_then(|c| c.strip_prefix(stem))
+            .is_some_and(|c| c.starts_with(".test."))
+    })
 }
 
 /// The fix text names the canonical counterpart a module should gain.
