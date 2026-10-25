@@ -1,5 +1,7 @@
 //! Findings, severity levels, and the shared position-to-column/context projection.
 
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 
 use crate::facts::{FileFacts, NamedSite, Pos};
@@ -133,7 +135,7 @@ pub fn source_site(source: &str, pos: Pos) -> (u32, Box<str>) {
         }
         column += 1;
     }
-    (column, context_of(text))
+    (column, Box::from(context_of(text)))
 }
 
 /// The byte offset where each `\n`-separated part of `source` starts, in line order.
@@ -190,15 +192,23 @@ fn line_at(source: &str, line: u32) -> (usize, &str) {
     (0, "")
 }
 
-fn context_of(line: &str) -> Box<str> {
-    let cleaned = line.replace('\r', "");
-    let trimmed = cleaned.trim();
-    let cut = trimmed.chars().count() > MAX_CONTEXT_CHARS;
-    let mut out: String = trimmed.chars().take(MAX_CONTEXT_CHARS).collect();
-    if cut {
+fn clip_context(trimmed: &str) -> Cow<'_, str> {
+    if trimmed.chars().count() > MAX_CONTEXT_CHARS {
+        let mut out: String = trimmed.chars().take(MAX_CONTEXT_CHARS).collect();
         out.push_str("...");
+        Cow::Owned(out)
+    } else {
+        Cow::Borrowed(trimmed)
     }
-    out.into_boxed_str()
+}
+
+fn context_of(line: &str) -> Cow<'_, str> {
+    if line.contains('\r') {
+        let cleaned = line.replace('\r', "");
+        Cow::Owned(clip_context(cleaned.trim()).into_owned())
+    } else {
+        clip_context(line.trim())
+    }
 }
 
 #[cfg(test)]
