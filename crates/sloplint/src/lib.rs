@@ -667,14 +667,17 @@ fn apply_gate(
 
 fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunError> {
     let path = project::resolve_within_root(root, name)?;
-    let text = match project::read_regular_string(&path) {
+    let text = match project::read_bounded_string(&path, project::MAX_BASELINE_BYTES) {
         Ok(text) => text,
         Err(source) if source.kind() == io::ErrorKind::NotFound => {
             return Err(RunError::BaselineMissing { path });
         }
         Err(source) => return Err(RunError::Io { path, source }),
     };
-    Baseline::from_json(&text).map_err(|message| RunError::BaselineCorrupt { path, message })
+    Baseline::from_json(&text).map_err(|error| RunError::BaselineCorrupt {
+        path,
+        message: error.to_string(),
+    })
 }
 
 fn read_within_limit(path: &Path, max_bytes: u64) -> io::Result<Option<Vec<u8>>> {

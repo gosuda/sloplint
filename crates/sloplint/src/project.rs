@@ -13,6 +13,27 @@ use sloplint_core::{CustomRuleSpec, FailOn};
 use crate::RunError;
 use crate::discover;
 
+/// Maximum size of `sloplint.toml` or any single custom rule file (1 MiB).
+///
+/// Legitimate configuration files are small (< 100 KB; this repository uses 65 bytes).
+/// 1 MiB accommodates ~25,000 lines of TOML, exceeding any legitimate configuration
+/// while stopping oversized hostile inputs before full read and parse.
+pub const MAX_CONFIG_FILE_BYTES: u64 = 1_048_576;
+
+/// Maximum combined size across all matched custom rule files (16 MiB).
+///
+/// Accommodates up to 16 maximum-size rule files or hundreds of modular rule sets
+/// holding thousands of custom tree-sitter rules, far above legitimate repository needs.
+pub const MAX_CUSTOM_RULES_TOTAL_BYTES: u64 = 16_777_216;
+
+/// Maximum size of a ratchet baseline file (512 MiB).
+///
+/// Real baselines measure ~186 bytes/entry on this repository (1,575 entries in 286 KB)
+/// and ~209 bytes/entry on a Go module-cache tree with deep paths (15,201 entries in 3.19 MB).
+/// For the 1,000,000 entry ceiling, 512 MiB provides ~536 bytes/entry (>2.5x measured average),
+/// accommodating long paths while preventing memory exhaustion.
+pub const MAX_BASELINE_BYTES: u64 = 536_870_912;
+
 /// File name of the configuration file.
 pub const CONFIG_FILE: &str = "sloplint.toml";
 
@@ -110,9 +131,22 @@ pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunErro
         Some(path) => (read_required(path)?, origin_name(path)),
         None => {
             let path = location.root.join(CONFIG_FILE);
-            match read_regular_string(&path) {
+            match read_bounded_string(&path, MAX_CONFIG_FILE_BYTES) {
                 Ok(text) => (text, origin_name(&path)),
                 Err(source) if source.kind() == io::ErrorKind::NotFound => {
+                    match fs::symlink_metadata(&path) {
+                        Ok(meta) if meta.file_type().is_symlink() => {
+                            return Err(RunError::Io { path, source });
+                        }
+                        Ok(_) => {}
+                        Err(meta_err) if meta_err.kind() == io::ErrorKind::NotFound => {}
+                        Err(meta_err) => {
+                            return Err(RunError::Io {
+                                path,
+                                source: meta_err,
+                            });
+                        }
+                    }
                     (String::new(), origin_name(&path))
                 }
                 Err(source) => {
@@ -365,8 +399,8 @@ fn require_regular(file: &fs::File, meta: &fs::Metadata) -> io::Result<()> {
 
 /// Reads a whole regular file, never more than the size it had when opened.
 ///
-/// There is deliberately no fixed ceiling: a baseline or cache grows with the
-/// project, so any constant would reject legitimate inputs. Streams such as
+/// Configuration and baseline inputs enforce ceilings via [`read_bounded_string`].
+/// Trusted internal reads such as executable hashing use this reader. Streams such as
 /// `/dev/zero` are refused as non-regular instead, and the read is bounded by
 /// the opened file's own size, so a file that keeps growing fails with an
 /// error rather than being read without end.
@@ -412,9 +446,17 @@ fn read_bounded(file: fs::File, len: u64) -> io::Result<Vec<u8>> {
     Ok(bytes)
 }
 
-/// Reads a whole regular file as UTF-8 text; see [`read_regular`].
-pub fn read_regular_string(path: &Path) -> io::Result<String> {
-    String::from_utf8(read_regular(path)?).map_err(|_| {
+/// Reads a regular file as UTF-8 text, enforcing `max_bytes` ceiling; see [`read_regular`].
+pub fn read_bounded_string(path: &Path, max_bytes: u64) -> io::Result<String> {
+    let (file, len) = open_regular(path)?;
+    if len > max_bytes {
+        return Err(io::Error::new(
+            io::ErrorKind::FileTooLarge,
+            format!("file of {len} bytes exceeds ceiling of {max_bytes} bytes"),
+        ));
+    }
+    let bytes = read_bounded(file, len)?;
+    String::from_utf8(bytes).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidData,
             "stream did not contain valid UTF-8",
@@ -448,7 +490,7 @@ fn find_root(cwd: &Path) -> PathBuf {
 }
 
 fn read_required(path: &Path) -> Result<String, RunError> {
-    read_regular_string(path).map_err(|source| {
+    read_bounded_string(path, MAX_CONFIG_FILE_BYTES).map_err(|source| {
         if source.kind() == io::ErrorKind::NotFound {
             RunError::PathNotFound {
                 path: path.to_path_buf(),
@@ -485,26 +527,34 @@ fn read_custom_sources(
         return Ok(Vec::new());
     }
     let matcher = glob_set(patterns, "project.custom_rule_files")?;
-    let roots = custom_source_roots(root, patterns);
+    let roots = custom_source_roots(root, patterns)?;
     let mut sources: BTreeMap<String, String> = BTreeMap::new();
+    let mut total_bytes: u64 = 0;
     for base in &roots {
-        read_custom_root(root, base, &matcher, &mut sources)?;
+        read_custom_root(root, base, &matcher, &mut sources, &mut total_bytes)?;
     }
     Ok(sources.into_iter().collect())
 }
 
 enum CustomSelection<'a> {
-    Skip,
     Literal(&'a str),
     Prefix(&'a str),
 }
 
-fn custom_selection(pattern: &str) -> CustomSelection<'_> {
-    if Path::new(pattern).is_absolute() {
-        return CustomSelection::Skip;
+fn custom_selection(pattern: &str) -> Result<CustomSelection<'_>, ConfigError> {
+    if pattern.starts_with('/') || pattern.starts_with('\\') || Path::new(pattern).is_absolute() {
+        return Err(ConfigError::Glob {
+            key: "project.custom_rule_files".to_string(),
+            glob: pattern.to_string(),
+            message: "pattern must be relative".to_string(),
+        });
     }
-    if pattern.split('/').any(|part| part == "..") {
-        return CustomSelection::Skip;
+    if pattern.split(['/', '\\']).any(|part| part == "..") {
+        return Err(ConfigError::Glob {
+            key: "project.custom_rule_files".to_string(),
+            glob: pattern.to_string(),
+            message: "pattern cannot contain `..`".to_string(),
+        });
     }
     let mut end = None;
     for (index, c) in pattern.char_indices() {
@@ -514,19 +564,18 @@ fn custom_selection(pattern: &str) -> CustomSelection<'_> {
         }
     }
     match end {
-        None => CustomSelection::Literal(pattern),
+        None => Ok(CustomSelection::Literal(pattern)),
         Some(index) => match pattern[..index].rfind('/') {
-            Some(pos) => CustomSelection::Prefix(&pattern[..index][..pos]),
-            None => CustomSelection::Prefix(""),
+            Some(pos) => Ok(CustomSelection::Prefix(&pattern[..index][..pos])),
+            None => Ok(CustomSelection::Prefix("")),
         },
     }
 }
 
-fn custom_source_roots(root: &Path, patterns: &[String]) -> BTreeSet<PathBuf> {
+fn custom_source_roots(root: &Path, patterns: &[String]) -> Result<BTreeSet<PathBuf>, ConfigError> {
     let mut roots = BTreeSet::new();
     for pattern in patterns {
-        match custom_selection(pattern) {
-            CustomSelection::Skip => {}
+        match custom_selection(pattern)? {
             CustomSelection::Literal(rel) => {
                 roots.insert(root.join(rel));
             }
@@ -539,7 +588,7 @@ fn custom_source_roots(root: &Path, patterns: &[String]) -> BTreeSet<PathBuf> {
             }
         }
     }
-    roots
+    Ok(roots)
 }
 
 fn read_custom_root(
@@ -547,15 +596,40 @@ fn read_custom_root(
     base: &Path,
     matcher: &GlobSet,
     sources: &mut BTreeMap<String, String>,
+    total_bytes: &mut u64,
 ) -> Result<(), RunError> {
     let is_root = base == root;
-    if !is_root && has_dir_symlink(root, base) {
-        return Ok(());
+    if !is_root {
+        match has_dir_symlink(root, base) {
+            Ok(true) => {
+                let rel = base
+                    .strip_prefix(root)
+                    .ok()
+                    .and_then(normalize_rel_path)
+                    .unwrap_or_else(|| base.display().to_string());
+                return Err(RunError::Config(ConfigError::Glob {
+                    key: "project.custom_rule_files".to_string(),
+                    glob: rel,
+                    message: "custom rule file cannot be a symlink".to_string(),
+                }));
+            }
+            Ok(false) => {}
+            Err((path, source)) => return Err(RunError::Io { path, source }),
+        }
     }
     match fs::symlink_metadata(base) {
         Ok(meta) if meta.file_type().is_symlink() => {
             if !is_root {
-                return Ok(());
+                let rel = base
+                    .strip_prefix(root)
+                    .ok()
+                    .and_then(normalize_rel_path)
+                    .unwrap_or_else(|| base.display().to_string());
+                return Err(RunError::Config(ConfigError::Glob {
+                    key: "project.custom_rule_files".to_string(),
+                    glob: rel,
+                    message: "custom rule file cannot be a symlink".to_string(),
+                }));
             }
         }
         Ok(_) => {}
@@ -582,7 +656,7 @@ fn read_custom_root(
         let Some(kind) = entry.file_type() else {
             continue;
         };
-        if kind.is_dir() || kind.is_symlink() {
+        if kind.is_dir() {
             continue;
         }
         let Ok(relative) = entry.path().strip_prefix(root) else {
@@ -594,32 +668,72 @@ fn read_custom_root(
         if rel.is_empty() || !matcher.is_match(rel.as_str()) || sources.contains_key(&rel) {
             continue;
         }
-        let text = read_regular_string(entry.path()).map_err(|source| RunError::Io {
+        if kind.is_symlink() {
+            return Err(RunError::Config(ConfigError::Glob {
+                key: "project.custom_rule_files".to_string(),
+                glob: rel,
+                message: "custom rule file cannot be a symlink".to_string(),
+            }));
+        }
+        let (file, len) = open_regular_nofollow(entry.path()).map_err(|source| RunError::Io {
             path: entry.path().to_path_buf(),
             source,
         })?;
+        if len > MAX_CONFIG_FILE_BYTES {
+            return Err(RunError::Io {
+                path: entry.path().to_path_buf(),
+                source: io::Error::new(
+                    io::ErrorKind::FileTooLarge,
+                    format!("file of {len} bytes exceeds ceiling of {MAX_CONFIG_FILE_BYTES} bytes"),
+                ),
+            });
+        }
+        let next_total = total_bytes.saturating_add(len);
+        if next_total > MAX_CUSTOM_RULES_TOTAL_BYTES {
+            return Err(RunError::Io {
+                path: entry.path().to_path_buf(),
+                source: io::Error::new(
+                    io::ErrorKind::FileTooLarge,
+                    format!(
+                        "custom rule files exceed total ceiling of {MAX_CUSTOM_RULES_TOTAL_BYTES} bytes"
+                    ),
+                ),
+            });
+        }
+        let bytes = read_bounded(file, len).map_err(|source| RunError::Io {
+            path: entry.path().to_path_buf(),
+            source,
+        })?;
+        let text = String::from_utf8(bytes).map_err(|_| RunError::Io {
+            path: entry.path().to_path_buf(),
+            source: io::Error::new(
+                io::ErrorKind::InvalidData,
+                "stream did not contain valid UTF-8",
+            ),
+        })?;
+        *total_bytes = next_total;
         sources.insert(rel, text);
     }
     Ok(())
 }
 
-fn has_dir_symlink(root: &Path, candidate: &Path) -> bool {
+fn has_dir_symlink(root: &Path, candidate: &Path) -> Result<bool, (PathBuf, io::Error)> {
     let mut current = candidate.parent();
     while let Some(dir) = current {
         if dir == root {
             break;
         }
         if !dir.starts_with(root) {
-            return true;
+            return Ok(true);
         }
         match fs::symlink_metadata(dir) {
-            Ok(meta) if meta.file_type().is_symlink() => return true,
+            Ok(meta) if meta.file_type().is_symlink() => return Ok(true),
             Ok(_) => {}
-            Err(_) => return false,
+            Err(source) => return Err((dir.to_path_buf(), source)),
         }
         current = dir.parent();
     }
-    false
+    Ok(false)
 }
 
 fn combine(main: String, specs: &[CustomRuleSpec], origin: &str) -> Result<String, ConfigError> {

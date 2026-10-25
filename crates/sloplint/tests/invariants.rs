@@ -513,18 +513,15 @@ fn audit_custom_files_dir_symlink_is_not_followed() {
         "sloplint.toml",
         "[project]\ncustom_rule_files = [\"ok.toml\", \"alias.toml\", \"link/*.toml\", \"link/evil.toml\"]\n",
     );
-    let report = run_ok(&standard(&root));
-    assert!(
-        report
-            .findings
-            .iter()
-            .any(|f| &*f.rule == "custom/ok-hit" && &*f.path == "src/main.rs"),
-        "direct selection must still load"
-    );
-    assert!(
-        !fired(&report, "custom/evil-hit"),
-        "symlinked directory must not be followed"
-    );
+    let Err(error) = run(&standard(&root)) else {
+        panic!("symlinked custom rule file must fail closed");
+    };
+    assert_eq!(error.exit_code(), 2);
+    let RunError::Config(ConfigError::Glob { key, glob, .. }) = error else {
+        panic!("expected ConfigError::Glob, got: {error:?}");
+    };
+    assert_eq!(key, "project.custom_rule_files");
+    assert!(glob.contains("alias.toml"), "error must name alias.toml");
 }
 
 #[test]

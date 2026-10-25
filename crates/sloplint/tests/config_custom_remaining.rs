@@ -1,5 +1,7 @@
 //! Configuration loading and custom-rule coverage, one module per mechanism.
 
+#[path = "config_custom_remaining/ceilings.rs"]
+mod ceilings;
 #[path = "config_custom_remaining/dispatch.rs"]
 mod dispatch;
 #[path = "config_custom_remaining/findings.rs"]

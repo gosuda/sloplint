@@ -103,7 +103,7 @@ Every run analyzes the whole project root; `PATHS` only filters which findings a
 
 ### Configuration
 
-`--config FILE` names a file that must exist; without `--config`, a missing `sloplint.toml` falls back to defaults.
+`--config FILE` names a file that must exist; without `--config`, a missing `sloplint.toml` falls back to defaults. Configuration and custom rule files are capped at 1 MiB per file (16 MiB total for custom rules); baselines are capped at 512 MiB and 1,000,000 entries.
 
 Rule option names and values are validated even when a rule is disabled or filtered out. An invalid threshold or unknown option fails with exit `2`; changing strictness cannot hide the error.
 
