@@ -48,7 +48,12 @@ impl CustomRules {
     /// The returned hits borrow the rules table (`&'s self`) for capture
     /// names and the file source for capture text; the caller must keep
     /// both alive while the hits are used.
-    pub fn run<'s>(&'s self, tree: &Tree, source: &'s str, lang: Lang) -> Vec<CustomHit<'s>> {
+    pub(crate) fn run<'s>(
+        &'s self,
+        tree: &Tree,
+        source: &'s str,
+        lang: Lang,
+    ) -> Vec<CustomHit<'s>> {
         let mut queries = self
             .entries
             .iter()
