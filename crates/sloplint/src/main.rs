@@ -64,14 +64,8 @@ fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
     };
     match sloplint::execute(&options) {
         Ok(execution) => {
-            let status: u8 = match emit(&execution, args.format) {
-                Ok(()) if execution.failed => 1,
-                Ok(()) => 0,
-                Err(error) => {
-                    emit_error(&error.to_string());
-                    3
-                }
-            };
+            let success = if execution.failed { 1 } else { 0 };
+            let status = sink_status(emit(&execution, args.format), success);
             std::process::exit(i32::from(status));
         }
         Err(error) => report_error(&error),
@@ -395,14 +389,20 @@ fn print_text(text: &str, kind: TextKind) -> ExitCode {
     ExitCode::from(print_text_status(text, kind))
 }
 
-/// Writes `text` to stdout and returns the process status: 0 on success, 3 on error.
+/// Writes `text` to stdout and returns the process status: 0 on success or broken pipe, 3 on error.
 fn print_text_status(text: &str, kind: TextKind) -> u8 {
     let written = with_buffered_stdout(|out| match kind {
         TextKind::Plain => write!(out, "{}", TerminalText::block(text)),
         TextKind::Json => write_guarded(out, text.as_bytes()),
     });
-    match written {
-        Ok(()) => 0,
+    sink_status(written, 0)
+}
+
+/// Maps a stdout sink result to a process status, treating a broken pipe as a stopped consumer.
+fn sink_status(result: io::Result<()>, success: u8) -> u8 {
+    match result {
+        Ok(()) => success,
+        Err(error) if error.kind() == io::ErrorKind::BrokenPipe => success,
         Err(error) => {
             emit_error(&error.to_string());
             3
