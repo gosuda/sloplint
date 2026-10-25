@@ -572,12 +572,11 @@ fn world_findings(pipe: &Pipeline<'_>, analyzed: &[Analyzed]) -> Vec<Finding> {
 
 fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Result<Vec<Finding>, RunError> {
     let FileOutput {
-        findings,
+        mut findings,
         mut suppressions,
         parsed,
         ..
     } = file.output;
-    let mut findings = fingerprinted(findings);
     suppress::apply(&mut findings, &mut suppressions);
     if parsed
         && (pipe.filter.0.is_empty()
@@ -587,14 +586,14 @@ fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Result<Vec<Finding>, RunErro
                 .iter()
                 .any(|p| p.matches("meta/unused-suppression")))
     {
-        findings.extend(fingerprinted(unused_findings(
+        findings.extend(unused_findings(
             pipe,
             &file.rel,
             &suppressions,
             file.source.as_deref(),
-        )?));
+        )?);
     }
-    Ok(findings)
+    Ok(fingerprinted(findings))
 }
 
 fn unused_findings(

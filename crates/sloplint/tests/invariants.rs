@@ -583,7 +583,7 @@ fn audit_unused_ratchet_reports_only_new() {
 }
 
 #[test]
-fn audit_unused_ordinary_ordinal_survives_suppression() {
+fn audit_suppressed_duplicate_does_not_renumber_visible_ordinal() {
     let (_tmp, root) = tempdir();
     write(
         &root,
@@ -613,8 +613,8 @@ fn audit_unused_ordinary_ordinal_survives_suppression() {
         .collect();
     assert_eq!(kept.len(), 1, "suppression must drop only the first");
     assert_eq!(
-        kept[0].fingerprint, before[1].fingerprint,
-        "second ordinal must survive suppression"
+        kept[0].fingerprint, before[0].fingerprint,
+        "first ordinal survives suppression so deleting the suppressed duplicate does not renumber"
     );
 }
 
