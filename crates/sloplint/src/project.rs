@@ -375,12 +375,20 @@ pub fn read_regular(path: &Path) -> io::Result<Vec<u8>> {
     read_bounded(file, len)
 }
 
-/// Reads a whole regular file without following a trailing symlink; see [`read_regular`].
+/// Reads a regular file of at most `max_len` bytes without following a trailing symlink.
 ///
 /// The cache uses this so a link planted at a shard file is refused instead of being
-/// followed. Configuration and baseline inputs keep using [`read_regular`].
-pub fn read_regular_nofollow(path: &Path) -> io::Result<Vec<u8>> {
+/// followed. The length comes from the opened handle, so a file swapped in after any
+/// earlier check cannot exceed the cap. Configuration and baseline inputs keep using
+/// [`read_regular`].
+pub fn read_regular_nofollow(path: &Path, max_len: u64) -> io::Result<Vec<u8>> {
     let (file, len) = open_regular_nofollow(path)?;
+    if len > max_len {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("file of {len} bytes exceeds the {max_len}-byte cap"),
+        ));
+    }
     read_bounded(file, len)
 }
 

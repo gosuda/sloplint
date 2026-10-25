@@ -16,6 +16,16 @@ const NAMESPACE: &str = "sloplint";
 /// Directory holding the per-shard cache files `shard-<NN>.bin`.
 const SHARD_DIR: &str = "cache-v2";
 
+/// Maximum serialized size in bytes of a single cache shard file (64 MiB).
+///
+/// Across 256 shards, a shard holds 1/256th of a project's files. Even a
+/// repository of 250,000 files averages ~1,000 files per shard; at a typical
+/// 1-4 KiB of findings, suppressions, and world facts per file, a realistic
+/// shard is well under 4 MiB. 64 MiB accommodates multi-million file projects
+/// while preventing an oversized or attacker-planted shard from triggering
+/// unbounded allocations during read or deserialization.
+const MAX_SHARD_BYTES: u64 = 64 * 1024 * 1024;
+
 /// Everything one analyzed file contributes, reproduced verbatim on a cache hit.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileOutput {
@@ -236,7 +246,7 @@ impl Cache {
     }
 
     fn decode_shard(&self, shards: &Path, byte: u8) -> Option<ShardEntries> {
-        let bytes = read_regular_nofollow(&shards.join(shard_file(byte))).ok()?;
+        let bytes = read_regular_nofollow(&shards.join(shard_file(byte)), MAX_SHARD_BYTES).ok()?;
         let shard = postcard::from_bytes::<Shard>(&bytes).ok()?;
         (shard.version == VERSION && shard.config_key == self.key).then(|| {
             shard
@@ -352,6 +362,12 @@ impl Cache {
             files: entries,
         })
         .map_err(io::Error::other)?;
+        if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > MAX_SHARD_BYTES {
+            return Err(io::Error::other(format!(
+                "shard of {} bytes exceeds the {MAX_SHARD_BYTES}-byte cap",
+                bytes.len()
+            )));
+        }
         let name = path
             .file_name()
             .and_then(|name| name.to_str())

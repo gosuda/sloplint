@@ -221,3 +221,84 @@ fn a_shard_left_with_only_deleted_files_is_pruned() {
     assert_eq!(warm.stdout, out.stdout, "the pruned cache must stay warm");
     assert!(warm.stderr.is_empty(), "stderr: {}", text(&warm.stderr));
 }
+
+#[test]
+fn an_oversized_shard_is_ignored_and_recomputed() {
+    let (_tmp, root) = project();
+    put(&root, "a.rs", SAMPLE);
+    put(&root, "b.rs", SAMPLE);
+    let (_home_guard, home) = temp();
+
+    let cold = isolated(&root, &CHECK, &home);
+    succeeded_with_finding(&cold);
+    let files = cache_files(&home);
+    assert_eq!(files.len(), 3, "one shard per file: {files:?}");
+    let oversized = shard_holding(&files, "a.rs");
+    let sibling = shard_holding(&files, "b.rs");
+    assert_ne!(oversized, sibling, "a.rs and b.rs must shard apart");
+    let genuine = file_bytes(&oversized);
+
+    let file = std::fs::OpenOptions::new()
+        .write(true)
+        .open(&oversized)
+        .unwrap_or_else(|e| panic!("open shard: {e}"));
+    file.set_len(64 * 1024 * 1024 + 1)
+        .unwrap_or_else(|e| panic!("set_len: {e}"));
+    drop(file);
+
+    let uncached = isolated(&root, &UNCACHED, &home);
+
+    let out = isolated(&root, &CHECK, &home);
+    assert!(out.status.success(), "stderr: {}", text(&out.stderr));
+    assert!(out.stderr.is_empty(), "stderr: {}", text(&out.stderr));
+    assert_eq!(
+        out.stdout, uncached.stdout,
+        "the run with an oversized shard must produce correct output"
+    );
+    assert_eq!(
+        file_bytes(&oversized),
+        genuine,
+        "the store must replace the oversized shard with the genuine one"
+    );
+
+    let warm = isolated(&root, &CHECK, &home);
+    assert_eq!(
+        warm.stdout, uncached.stdout,
+        "the healed shard must produce output matching an uncached run"
+    );
+    assert!(warm.stderr.is_empty(), "stderr: {}", text(&warm.stderr));
+}
+
+#[test]
+fn a_hostile_length_prefix_shard_is_ignored_and_recomputed() {
+    let (_tmp, root) = project();
+    put(&root, "a.rs", SAMPLE);
+    let (_home_guard, home) = temp();
+
+    let cold = isolated(&root, &CHECK, &home);
+    succeeded_with_finding(&cold);
+    let files = cache_files(&home);
+    let target = shard_holding(&files, "a.rs");
+
+    let genuine = file_bytes(&target);
+    let mut hostile = genuine[..1 + 32].to_vec();
+    hostile.extend_from_slice(&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f]);
+    std::fs::write(&target, &hostile).unwrap_or_else(|e| panic!("write hostile: {e}"));
+
+    let uncached = isolated(&root, &UNCACHED, &home);
+
+    let out = isolated(&root, &CHECK, &home);
+    assert!(out.status.success(), "stderr: {}", text(&out.stderr));
+    assert!(out.stderr.is_empty(), "stderr: {}", text(&out.stderr));
+    assert_eq!(
+        out.stdout, uncached.stdout,
+        "the run with a hostile length prefix shard must produce correct output"
+    );
+
+    let warm = isolated(&root, &CHECK, &home);
+    assert_eq!(
+        warm.stdout, uncached.stdout,
+        "the healed shard must produce output matching an uncached run"
+    );
+    assert!(warm.stderr.is_empty(), "stderr: {}", text(&warm.stderr));
+}
