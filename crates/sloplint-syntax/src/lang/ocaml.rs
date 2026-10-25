@@ -480,7 +480,12 @@ impl LangHooks for OcamlHooks {
         }
     }
 
-    fn closure_as_function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
         if n.kind() != "fun_expression" && n.kind() != "function_expression" {
             return None;
         }
@@ -501,8 +506,8 @@ impl LangHooks for OcamlHooks {
         ))
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        n.parent().is_some_and(|p| p.kind() == "else_clause")
+    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|p| p.kind() == "else_clause")
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

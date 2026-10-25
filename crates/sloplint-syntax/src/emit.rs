@@ -105,6 +105,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             decls: HashMap::new(),
             sole_call: head.sole_call,
         });
+        self.assert_mark_entered(node.id());
         self.marks.push((node.id(), Mark::Fn));
     }
 
@@ -322,6 +323,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             self.facts.has_inline_tests = true;
         }
         self.containers.push(container);
+        self.assert_mark_entered(mark);
         self.marks.push((mark, Mark::Container));
     }
 

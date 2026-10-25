@@ -4,8 +4,58 @@ use sloplint_core::facts::{
     AmbientKind, Arg, ArgShape, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import,
     Param, Pos, TypeDef, WildcardArm,
 };
+use std::cell::RefCell;
+use std::collections::HashMap;
+
 use sloplint_core::lang::Lang;
 use tree_sitter::Node;
+
+/// Explicit member state set by marker children, memoized across one walk.
+///
+/// A member's governing state is the last marker child before it inside the same
+/// container. The first query for any member runs one forward pass over every child
+/// of its container and records the state before each child, so later queries for
+/// siblings are lookups rather than backward scans over the container.
+#[derive(Default)]
+pub(crate) struct MemberStates {
+    before: RefCell<HashMap<usize, Option<bool>>>,
+}
+
+impl MemberStates {
+    /// The state set by the last marker child of `container` before `member`, if any.
+    ///
+    /// `marker` reads one child and returns the state it sets, or `None` when the
+    /// child sets nothing. `member` must be a child of `container`.
+    pub(crate) fn state_before(
+        &self,
+        container: Node<'_>,
+        member: Node<'_>,
+        marker: impl Fn(Node<'_>) -> Option<bool>,
+    ) -> Option<bool> {
+        let known = self.before.borrow().contains_key(&member.id());
+        if !known {
+            self.record(container, marker);
+        }
+        let before = self.before.borrow();
+        let state = before.get(&member.id());
+        debug_assert!(state.is_some(), "a member is a child of its container");
+        state.copied().flatten()
+    }
+
+    /// Records the state before every child of `container` in one forward pass.
+    fn record(&self, container: Node<'_>, marker: impl Fn(Node<'_>) -> Option<bool>) {
+        let mut state = None;
+        let mut pass = Vec::new();
+        let mut cursor = container.walk();
+        for child in container.children(&mut cursor) {
+            pass.push((child.id(), state));
+            if let Some(set) = marker(child) {
+                state = Some(set);
+            }
+        }
+        self.before.borrow_mut().extend(pass);
+    }
+}
 
 /// What one language's hooks know about the node currently being visited.
 pub(crate) struct Cx<'t, 's> {
@@ -13,6 +63,8 @@ pub(crate) struct Cx<'t, 's> {
     pub path: &'s str,
     pub lang: Lang,
     pub is_test_file: bool,
+    /// The walk's memo of member states, shared by every node the walk visits.
+    pub members: &'t MemberStates,
     containers: &'t [Container],
     exports: &'t [&'s str],
     /// The nodes entered so far under each open ancestor, outermost level first.
@@ -25,12 +77,19 @@ pub(crate) struct Cx<'t, 's> {
 
 impl<'t, 's> Cx<'t, 's> {
     /// A view of one file with no container open, nothing exported, and no node entered.
-    pub(crate) fn file(src: &'s str, path: &'s str, lang: Lang, is_test_file: bool) -> Self {
+    pub(crate) fn file(
+        src: &'s str,
+        path: &'s str,
+        lang: Lang,
+        is_test_file: bool,
+        members: &'t MemberStates,
+    ) -> Self {
         Self {
             src,
             path,
             lang,
             is_test_file,
+            members,
             containers: &[],
             exports: &[],
             levels: &[],
@@ -142,8 +201,15 @@ pub(crate) trait LangHooks: Sync {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>>;
 
     /// Reads a `Closure`-role node as a named function when the language names it.
-    fn closure_as_function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
-        let _ = (n, cx);
+    ///
+    /// `parent` is the node's parent as the walker tracks it, so no hook climbs the tree.
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
+        let _ = (n, parent, cx);
         None
     }
 
@@ -153,8 +219,8 @@ pub(crate) trait LangHooks: Sync {
         false
     }
 
-    /// True when this `If`-role node is the else-if form of its parent.
-    fn is_else_if(&self, n: Node<'_>) -> bool;
+    /// True when this `If`-role node is the else-if form of `parent`, its walker-tracked parent.
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool;
 
     /// True when a `Call`-role node spells a control construct (R's `switch`).
     fn control_call(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> bool {

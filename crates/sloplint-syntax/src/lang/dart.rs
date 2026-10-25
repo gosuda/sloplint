@@ -478,11 +478,11 @@ impl LangHooks for DartHooks {
         })
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
         if n.kind() != "if_statement" {
             return false;
         }
-        let Some(p) = n.parent() else {
+        let Some(p) = parent else {
             return false;
         };
         if p.kind() != "if_statement" {

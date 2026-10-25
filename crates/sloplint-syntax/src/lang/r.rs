@@ -38,7 +38,12 @@ impl LangHooks for RHooks {
         None
     }
 
-    fn closure_as_function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
         let (name, binary) = bound_function(cx, n)?;
         let (doc, doc_pos) = preceding_comments(cx, binary, COMMENT_KINDS, &[]);
         Some(FunctionHead {
@@ -56,8 +61,8 @@ impl LangHooks for RHooks {
         })
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        n.parent().is_some_and(|parent| {
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|parent| {
             parent.kind() == "if_statement"
                 && child_by_field(parent, "alternative").is_some_and(|alt| alt.id() == n.id())
         })

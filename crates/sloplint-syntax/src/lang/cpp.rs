@@ -96,8 +96,8 @@ impl LangHooks for CppHooks {
             sole_call: sole_call(body),
         })
     }
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        n.parent().is_some_and(|p| p.kind() == "else_clause")
+    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|p| p.kind() == "else_clause")
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         if n.kind() != "declaration" {
@@ -342,21 +342,16 @@ fn is_public<'s>(cx: &Cx<'_, 's>, n: Node<'_>, list: Option<Node<'_>>) -> bool {
         .parent()
         .filter(|p| p.kind() == "template_declaration")
         .unwrap_or(n);
-    let mut access: Option<&str> = None;
-    let mut sib = anchor.prev_sibling();
-    while let Some(found) = sib {
-        if found.kind() == "access_specifier" {
-            access = Some(trimmed(cx, found));
-            break;
-        }
-        sib = found.prev_sibling();
-    }
-    match access {
-        Some(spec) => spec.starts_with("public"),
-        None => items
-            .parent()
-            .is_some_and(|g| g.kind() == "struct_specifier"),
-    }
+    cx.members
+        .state_before(items, anchor, |sib| access_marker(cx, sib))
+        .unwrap_or_else(|| {
+            items
+                .parent()
+                .is_some_and(|g| g.kind() == "struct_specifier")
+        })
+}
+fn access_marker(cx: &Cx<'_, '_>, sib: Node<'_>) -> Option<bool> {
+    (sib.kind() == "access_specifier").then(|| trimmed(cx, sib).starts_with("public"))
 }
 fn in_anonymous(n: Node<'_>) -> bool {
     let mut parent = n.parent();

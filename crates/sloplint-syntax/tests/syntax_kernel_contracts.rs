@@ -23,3 +23,5 @@ mod sole_call_forwarding;
 mod support;
 #[path = "syntax_kernel_contracts/swift_throws.rs"]
 mod swift_throws;
+#[path = "syntax_kernel_contracts/walk_scaling.rs"]
+mod walk_scaling;

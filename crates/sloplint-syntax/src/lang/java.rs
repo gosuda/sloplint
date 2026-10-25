@@ -386,8 +386,8 @@ fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     }
 }
 
-fn is_else_if(n: Node<'_>) -> bool {
-    n.parent()
+fn is_else_if(n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+    parent
         .filter(|parent| parent.kind() == "if_statement")
         .and_then(|parent| child_by_field(parent, "alternative"))
         .is_some_and(|alternative| alternative.id() == n.id())
@@ -633,8 +633,8 @@ impl LangHooks for JavaHooks {
         function_head(cx, n)
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        is_else_if(n)
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        is_else_if(n, parent)
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

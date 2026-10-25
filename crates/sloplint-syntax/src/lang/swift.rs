@@ -73,8 +73,8 @@ impl LangHooks for SwiftHooks {
         first_of_kind(n, &["throws"]).is_some_and(|clause| trimmed(cx, clause) == "throws")
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        n.parent().is_some_and(|p| p.kind() == "if_statement")
+    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|p| p.kind() == "if_statement")
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

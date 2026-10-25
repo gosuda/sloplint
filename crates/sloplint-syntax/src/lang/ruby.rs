@@ -93,6 +93,19 @@ fn wrapped_by_marker<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     field_text(cx, grand, "method")
         .is_some_and(|m| matches!(m, "private" | "protected" | "module_function"))
 }
+fn ruby_visibility_marker(cx: &Cx<'_, '_>, sib: Node<'_>) -> Option<bool> {
+    if sib.kind() == "identifier" {
+        return match text(cx, sib) {
+            "private" | "protected" => Some(false),
+            "public" => Some(true),
+            _ => None,
+        };
+    }
+    if sib.kind() == "call" {
+        return bare_marker_call(cx, sib);
+    }
+    None
+}
 fn ruby_public<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     if n.kind() == "singleton_method" {
         return true;
@@ -100,24 +113,12 @@ fn ruby_public<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     if wrapped_by_marker(cx, n) {
         return false;
     }
-    let mut current = n.prev_sibling();
-    while let Some(sib) = current {
-        if sib.kind() == "identifier" {
-            let t = text(cx, sib);
-            if t == "private" || t == "protected" {
-                return false;
-            }
-            if t == "public" {
-                return true;
-            }
-        } else if sib.kind() == "call"
-            && let Some(public) = bare_marker_call(cx, sib)
-        {
-            return public;
-        }
-        current = sib.prev_sibling();
-    }
-    true
+    let Some(container) = n.parent() else {
+        return true;
+    };
+    cx.members
+        .state_before(container, n, |sib| ruby_visibility_marker(cx, sib))
+        .unwrap_or(true)
 }
 fn is_protocol_method(name: &str) -> bool {
     matches!(
@@ -553,7 +554,7 @@ impl LangHooks for RubyHooks {
             sole_call: ruby_sole_call(n),
         })
     }
-    fn is_else_if(&self, _n: Node<'_>) -> bool {
+    fn is_else_if(&self, _n: Node<'_>, _parent: Option<Node<'_>>) -> bool {
         false
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

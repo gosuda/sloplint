@@ -518,7 +518,7 @@ impl LangHooks for PowerShellHooks {
             sole_call: ps_sole_call(n),
         })
     }
-    fn is_else_if(&self, _n: Node<'_>) -> bool {
+    fn is_else_if(&self, _n: Node<'_>, _parent: Option<Node<'_>>) -> bool {
         false
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

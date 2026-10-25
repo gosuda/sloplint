@@ -65,7 +65,7 @@ impl LangHooks for StarlarkHooks {
         })
     }
 
-    fn is_else_if(&self, _n: Node<'_>) -> bool {
+    fn is_else_if(&self, _n: Node<'_>, _parent: Option<Node<'_>>) -> bool {
         false
     }
 

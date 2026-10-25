@@ -472,7 +472,7 @@ impl LangHooks for PythonHooks {
         })
     }
 
-    fn is_else_if(&self, _: Node<'_>) -> bool {
+    fn is_else_if(&self, _: Node<'_>, _parent: Option<Node<'_>>) -> bool {
         false
     }
 

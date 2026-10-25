@@ -626,8 +626,8 @@ impl LangHooks for RustHooks {
             sole_call: sole_call_id(body),
         })
     }
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        n.parent().is_some_and(|p| p.kind() == "else_clause")
+    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|p| p.kind() == "else_clause")
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         let Some(pat) = child_by_field(n, "pattern") else {

@@ -334,7 +334,12 @@ impl LangHooks for OdinHooks {
         None
     }
 
-    fn closure_as_function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
         if n.kind() != "procedure" {
             return None;
         }
@@ -378,7 +383,7 @@ impl LangHooks for OdinHooks {
         })
     }
 
-    fn is_else_if(&self, _n: Node<'_>) -> bool {
+    fn is_else_if(&self, _n: Node<'_>, _parent: Option<Node<'_>>) -> bool {
         false
     }
 

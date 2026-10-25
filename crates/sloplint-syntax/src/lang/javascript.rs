@@ -164,8 +164,12 @@ struct ClosureSite<'a> {
     header: Node<'a>,
 }
 
-fn closure_site<'a>(cx: &Cx<'_, '_>, n: Node<'a>) -> Option<ClosureSite<'a>> {
-    let parent = n.parent()?;
+fn closure_site<'a>(
+    cx: &Cx<'_, '_>,
+    n: Node<'a>,
+    parent: Option<Node<'a>>,
+) -> Option<ClosureSite<'a>> {
+    let parent = parent?;
     match parent.kind() {
         "variable_declarator" => declarator_site(cx, n, parent),
         "field_definition" => field_site(cx, n, parent),
@@ -844,8 +848,13 @@ impl LangHooks for JavaScriptHooks {
         Some(head_for(cx, site, params))
     }
 
-    fn closure_as_function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
-        let found = closure_site(cx, n)?;
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
+        let found = closure_site(cx, n, parent)?;
         let body = child_by_field(n, "body")?;
         let site = HeadSite {
             name: found.name,
@@ -856,8 +865,8 @@ impl LangHooks for JavaScriptHooks {
         Some(head_for(cx, site, closure_params(cx, n)))
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        parent_kind_is(n, "else_clause")
+    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|parent| parent.kind() == "else_clause")
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

@@ -590,10 +590,9 @@ fn previous_code_sibling(n: Node<'_>) -> Option<Node<'_>> {
     None
 }
 
-fn is_else_if(n: Node<'_>) -> bool {
+fn is_else_if(n: Node<'_>, parent: Option<Node<'_>>) -> bool {
     n.kind() == "if_expression"
-        && n.parent()
-            .is_some_and(|parent| parent.kind() == "if_expression")
+        && parent.is_some_and(|parent| parent.kind() == "if_expression")
         && previous_code_sibling(n).is_some_and(|sibling| sibling.kind() == "else")
 }
 
@@ -694,8 +693,8 @@ impl LangHooks for KotlinHooks {
         function_head(cx, n)
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        is_else_if(n)
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        is_else_if(n, parent)
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
