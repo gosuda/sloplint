@@ -17,6 +17,7 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 use globset::GlobSet;
 use rayon::prelude::*;
@@ -227,22 +228,8 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         .entries
         .iter()
         .filter(|entry| entry.lang == Lang::OcamlInterface)
-        .map(|entry| entry.rel.clone())
+        .filter_map(|entry| entry.rel.strip_suffix('i').map(str::to_string))
         .collect();
-    let mut active_ids = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
-    let mut active_families = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
-    for id in CATALOG
-        .iter()
-        .map(|info| info.id)
-        .chain(config.custom_rules.iter().map(|spec| spec.id.as_str()))
-    {
-        if rules.is_active(id) {
-            for (at, _) in id.match_indices('/') {
-                active_families.insert(id[..at].to_string());
-            }
-            active_ids.insert(id.to_string());
-        }
-    }
     let pipe = Pipeline {
         rules: &rules,
         custom: &custom,
@@ -252,8 +239,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         test_globs: &test_globs,
         cache: &loaded,
         interfaces: &interfaces,
-        active_ids,
-        active_families,
+        active_rules: OnceLock::new(),
     };
     let outcomes = analyze_all(&discovery.entries, &pipe, &pool)?;
     let (analyzed, skipped_outcomes) = split_outcomes(outcomes, &scopes);
@@ -336,6 +322,29 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     })
 }
 
+struct ActiveRules {
+    ids: HashSet<String>,
+    families: HashSet<String>,
+}
+
+fn build_active_rules(rules: &RuleSet, config: &Config) -> ActiveRules {
+    let mut ids = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
+    let mut families = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
+    for id in CATALOG
+        .iter()
+        .map(|info| info.id)
+        .chain(config.custom_rules.iter().map(|spec| spec.id.as_str()))
+    {
+        if rules.is_active(id) {
+            for (at, _) in id.match_indices('/') {
+                families.insert(id[..at].to_string());
+            }
+            ids.insert(id.to_string());
+        }
+    }
+    ActiveRules { ids, families }
+}
+
 struct Pipeline<'a> {
     rules: &'a RuleSet,
     custom: &'a CustomRules,
@@ -345,8 +354,27 @@ struct Pipeline<'a> {
     test_globs: &'a GlobSet,
     cache: &'a Loaded,
     interfaces: &'a HashSet<String>,
-    active_ids: HashSet<String>,
-    active_families: HashSet<String>,
+    active_rules: OnceLock<ActiveRules>,
+}
+
+impl Pipeline<'_> {
+    fn active_rules(&self) -> &ActiveRules {
+        self.active_rules
+            .get_or_init(|| build_active_rules(self.rules, self.config))
+    }
+
+    fn is_operand_active(&self, pattern: &RulePattern) -> bool {
+        let active = self.active_rules();
+        match pattern {
+            RulePattern::Exact(id) => active.ids.contains(&**id),
+            RulePattern::Family(family) => active.families.contains(&**family),
+        }
+    }
+
+    fn reports_unused(&self) -> bool {
+        self.rules.is_active("meta/unused-suppression")
+            && self.filter.matches("meta/unused-suppression")
+    }
 }
 
 enum Outcome {
@@ -398,8 +426,7 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
     if owned.starts_with('\u{feff}') {
         owned.drain(..'\u{feff}'.len_utf8());
     }
-    let interface =
-        entry.lang == Lang::Ocaml && pipe.interfaces.contains(&format!("{}i", entry.rel));
+    let interface = entry.lang == Lang::Ocaml && pipe.interfaces.contains(entry.rel.as_str());
     let hash = if interface {
         cache::interface_hash(owned.as_str())
     } else {
@@ -416,13 +443,7 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
             None => (analyze_file(parsers, entry, &probe, pipe), false),
         }
     };
-    let reports_unused = pipe.filter.0.is_empty()
-        || pipe
-            .filter
-            .0
-            .iter()
-            .any(|p| p.matches("meta/unused-suppression"));
-    let source = (reports_unused && !output.suppressions.is_empty()).then_some(owned);
+    let source = (pipe.reports_unused() && !output.suppressions.is_empty()).then_some(owned);
     Ok(Outcome::Analyzed(Box::new(Analyzed {
         rel: entry.rel.clone(),
         output,
@@ -578,14 +599,7 @@ fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Result<Vec<Finding>, RunErro
         ..
     } = file.output;
     suppress::apply(&mut findings, &mut suppressions);
-    if parsed
-        && (pipe.filter.0.is_empty()
-            || pipe
-                .filter
-                .0
-                .iter()
-                .any(|p| p.matches("meta/unused-suppression")))
-    {
+    if parsed && pipe.reports_unused() {
         findings.extend(unused_findings(
             pipe,
             &file.rel,
@@ -628,10 +642,10 @@ fn unused_findings(
 }
 
 fn suppression_active(pipe: &Pipeline<'_>, suppression: &Suppression) -> bool {
-    suppression.rules.iter().all(|pattern| match pattern {
-        RulePattern::Exact(id) => pipe.active_ids.contains(&**id),
-        RulePattern::Family(family) => pipe.active_families.contains(&**family),
-    })
+    suppression
+        .rules
+        .iter()
+        .all(|pattern| pipe.is_operand_active(pattern))
 }
 
 fn apply_gate(
