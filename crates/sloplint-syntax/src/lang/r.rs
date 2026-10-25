@@ -300,10 +300,13 @@ fn sole_call(body: Option<Node<'_>>) -> Option<usize> {
 }
 
 fn callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
-    match callee.kind() {
-        "identifier" => Some(text(cx, callee)),
-        "extract_operator" => callee_root(cx, child_by_field(callee, "lhs")?),
-        _ => None,
+    let mut current = callee;
+    loop {
+        current = match current.kind() {
+            "identifier" => return Some(text(cx, current)),
+            "extract_operator" => child_by_field(current, "lhs")?,
+            _ => return None,
+        };
     }
 }
 
@@ -335,12 +338,15 @@ fn shape_of<'s>(cx: &Cx<'_, 's>, value: Node<'_>) -> ArgShape<'s> {
 }
 
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    match n.kind() {
-        "identifier" => Some((text(cx, n), pos_of(n))),
-        "extract_operator" => write_root(cx, child_by_field(n, "lhs")?),
-        "subset" | "subset2" => write_root(cx, child_by_field(n, "function")?),
-        "call" => write_root(cx, first_argument_value(n)?),
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "identifier" => return Some((text(cx, current), pos_of(current))),
+            "extract_operator" => child_by_field(current, "lhs")?,
+            "subset" | "subset2" => child_by_field(current, "function")?,
+            "call" => first_argument_value(current)?,
+            _ => return None,
+        };
     }
 }
 

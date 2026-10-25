@@ -279,14 +279,15 @@ fn first_identifier<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
 }
 
 fn collect_identifiers<'s>(cx: &Cx<'_, 's>, target: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    match target.kind() {
-        "identifier" => out.push((text(cx, target), pos_of(target))),
-        "pattern_list" | "tuple_pattern" | "list_pattern" => {
-            for child in named_children(target) {
-                collect_identifiers(cx, child, out);
+    let mut pending = vec![target];
+    while let Some(node) = pending.pop() {
+        match node.kind() {
+            "identifier" => out.push((text(cx, node), pos_of(node))),
+            "pattern_list" | "tuple_pattern" | "list_pattern" => {
+                pending.extend(named_children(node).into_iter().rev());
             }
+            _ => {}
         }
-        _ => {}
     }
 }
 

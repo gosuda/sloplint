@@ -298,13 +298,14 @@ fn head_for<'s>(cx: &Cx<'_, 's>, site: HeadSite<'_>, params: Vec<Param<'s>>) -> 
 }
 
 fn root_of_callee(n: Node<'_>) -> Option<Node<'_>> {
-    match n.kind() {
-        "identifier" | "this" | "super" => Some(n),
-        "member_expression" | "subscript_expression" => {
-            root_of_callee(child_by_field(n, "object")?)
-        }
-        "parenthesized_expression" => root_of_callee(first_code(n)?),
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "identifier" | "this" | "super" => return Some(current),
+            "member_expression" | "subscript_expression" => child_by_field(current, "object")?,
+            "parenthesized_expression" => first_code(current)?,
+            _ => return None,
+        };
     }
 }
 
@@ -366,65 +367,81 @@ fn declared_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)
     }
 }
 
+enum PatternFrame<'t> {
+    Pattern(Node<'t>),
+    Member(Node<'t>),
+}
+
 fn collect_pattern<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    let mut pending = vec![PatternFrame::Pattern(n)];
+    while let Some(frame) = pending.pop() {
+        match frame {
+            PatternFrame::Pattern(node) => expand_pattern(cx, node, out, &mut pending),
+            PatternFrame::Member(node) => expand_member(cx, node, out, &mut pending),
+        }
+    }
+}
+
+fn expand_pattern<'s, 't>(
+    cx: &Cx<'_, 's>,
+    n: Node<'t>,
+    out: &mut Vec<(&'s str, Pos)>,
+    pending: &mut Vec<PatternFrame<'t>>,
+) {
     match n.kind() {
         "identifier" | "shorthand_property_identifier_pattern" => {
             out.push((text(cx, n), pos_of(n)));
         }
         "object_pattern" => {
-            for child in named_children(n) {
-                collect_object_member(cx, child, out);
-            }
+            pending.extend(
+                named_children(n)
+                    .into_iter()
+                    .rev()
+                    .map(PatternFrame::Member),
+            );
         }
         "array_pattern" => {
-            for child in named_children(n) {
-                collect_pattern(cx, child, out);
-            }
+            pending.extend(
+                named_children(n)
+                    .into_iter()
+                    .rev()
+                    .map(PatternFrame::Pattern),
+            );
         }
-        "rest_pattern" => {
-            if let Some(inner) = first_code(n) {
-                collect_pattern(cx, inner, out);
-            }
-        }
+        "rest_pattern" => pending.extend(first_code(n).map(PatternFrame::Pattern)),
         "assignment_pattern" => {
-            if let Some(left) = child_by_field(n, "left") {
-                collect_pattern(cx, left, out);
-            }
+            pending.extend(child_by_field(n, "left").map(PatternFrame::Pattern));
         }
         _ => {}
     }
 }
 
-fn collect_object_member<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+fn expand_member<'s, 't>(
+    cx: &Cx<'_, 's>,
+    n: Node<'t>,
+    out: &mut Vec<(&'s str, Pos)>,
+    pending: &mut Vec<PatternFrame<'t>>,
+) {
     match n.kind() {
         "shorthand_property_identifier_pattern" => out.push((text(cx, n), pos_of(n))),
-        "pair_pattern" => {
-            if let Some(value) = child_by_field(n, "value") {
-                collect_pattern(cx, value, out);
-            }
-        }
+        "pair_pattern" => pending.extend(child_by_field(n, "value").map(PatternFrame::Pattern)),
         "object_assignment_pattern" => {
-            if let Some(left) = child_by_field(n, "left") {
-                collect_pattern(cx, left, out);
-            }
+            pending.extend(child_by_field(n, "left").map(PatternFrame::Pattern));
         }
-        "rest_pattern" => {
-            if let Some(inner) = first_code(n) {
-                collect_pattern(cx, inner, out);
-            }
-        }
+        "rest_pattern" => pending.extend(first_code(n).map(PatternFrame::Pattern)),
         _ => {}
     }
 }
 
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    match n.kind() {
-        "identifier" | "this" => Some((text(cx, n), pos_of(n))),
-        "member_expression" | "subscript_expression" => {
-            write_root(cx, child_by_field(n, "object")?)
-        }
-        "parenthesized_expression" => write_root(cx, first_code(n)?),
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "identifier" | "this" => return Some((text(cx, current), pos_of(current))),
+            "member_expression" | "subscript_expression" => child_by_field(current, "object")?,
+            "parenthesized_expression" => first_code(current)?,
+            _ => return None,
+        };
     }
 }
 
