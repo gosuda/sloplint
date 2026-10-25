@@ -342,7 +342,7 @@ fn open_for_read(path: &Path) -> io::Result<fs::File> {
 /// Unix uses `O_NOFOLLOW`, so a symlink at the final component fails with a loop error
 /// instead of being followed. Windows refuses a trailing symlink or reparse point before
 /// opening. Configuration and baseline inputs keep using [`open_regular`], which follows
-/// symlinks to regular files; only the cache uses this opener.
+/// symlinks to regular files; the cache and analyzed sources use this opener.
 pub fn open_regular_nofollow(path: &Path) -> io::Result<(fs::File, u64)> {
     let file = open_for_read_nofollow(path)?;
     let meta = file.metadata()?;
@@ -368,18 +368,52 @@ fn open_for_read_nofollow(path: &Path) -> io::Result<fs::File> {
             "not a regular file",
         ));
     }
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::MetadataExt;
-        const REPARSE_POINT: u32 = 0x400;
-        if meta.file_attributes() & REPARSE_POINT != 0 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "not a regular file",
-            ));
-        }
+    if is_reparse_point(&meta) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "not a regular file",
+        ));
     }
     fs::File::open(path)
+}
+
+/// Whether a failed nofollow open of `path` was refused because the path is a symlink, a
+/// Windows reparse point, or a FIFO, device, or socket.
+///
+/// Unix reports a trailing symlink as `ELOOP`. A non-regular file is refused as
+/// `InvalidInput`, and that counts only when the path, inspected without following links,
+/// is neither a regular file nor a directory, or is a reparse point. A directory keeps its
+/// platform error, and so does any other failure, such as permissions or a path that cannot
+/// be named.
+pub fn refused_without_following(path: &Path, error: &io::Error) -> bool {
+    if is_symlink_loop(error) {
+        return true;
+    }
+    error.kind() == io::ErrorKind::InvalidInput
+        && fs::symlink_metadata(path)
+            .is_ok_and(|meta| (!meta.is_file() && !meta.is_dir()) || is_reparse_point(&meta))
+}
+
+#[cfg(windows)]
+fn is_reparse_point(meta: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    const REPARSE_POINT: u32 = 0x400;
+    meta.file_attributes() & REPARSE_POINT != 0
+}
+
+#[cfg(not(windows))]
+fn is_reparse_point(_meta: &fs::Metadata) -> bool {
+    false
+}
+
+#[cfg(unix)]
+fn is_symlink_loop(error: &io::Error) -> bool {
+    error.raw_os_error() == Some(libc::ELOOP)
+}
+
+#[cfg(not(unix))]
+fn is_symlink_loop(_error: &io::Error) -> bool {
+    false
 }
 
 fn require_regular(file: &fs::File, meta: &fs::Metadata) -> io::Result<()> {

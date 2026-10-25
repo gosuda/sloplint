@@ -682,8 +682,18 @@ fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunError> {
     })
 }
 
+/// Reads a source file of at most `max_bytes` bytes without following a trailing symlink.
+///
+/// Returns `Ok(None)` when the file is over the bound, or when a nofollow open refuses the
+/// path as a symlink, reparse point, or FIFO, device, or socket (see
+/// [`project::refused_without_following`]); a directory and every other open or read error
+/// is returned.
 fn read_within_limit(path: &Path, max_bytes: u64) -> io::Result<Option<Vec<u8>>> {
-    let (file, len) = project::open_regular(path)?;
+    let (file, len) = match project::open_regular_nofollow(path) {
+        Ok(opened) => opened,
+        Err(source) if project::refused_without_following(path, &source) => return Ok(None),
+        Err(source) => return Err(source),
+    };
     if len > max_bytes {
         return Ok(None);
     }
@@ -702,15 +712,18 @@ fn read_within_limit(path: &Path, max_bytes: u64) -> io::Result<Option<Vec<u8>>>
 
 /// Reads a whole regular file as UTF-8 text, bounded by `max_bytes`.
 ///
-/// Opens the path without blocking and refuses FIFOs and devices;
-/// returns an error when the file grows past the bound or is not valid UTF-8.
+/// Opens the path without following a trailing symlink and refuses FIFOs, devices, and
+/// directories; returns an error for those, when the file grows past the bound, or when
+/// the content is not valid UTF-8.
 /// A leading byte-order mark is removed in place when present.
 pub fn read_source(path: &Path, max_bytes: u64) -> Result<String, RunError> {
     let invalid =
         |message: &'static str| io_error(path, io::Error::new(io::ErrorKind::InvalidData, message));
     let bytes = read_within_limit(path, max_bytes)
         .map_err(|source| io_error(path, source))?
-        .ok_or_else(|| invalid("file grew past max_file_bytes while being linted"))?;
+        .ok_or_else(|| {
+            invalid("file is not regular, or grew past max_file_bytes while being linted")
+        })?;
     let mut text =
         String::from_utf8(bytes).map_err(|_| invalid("stream did not contain valid UTF-8"))?;
     if text.starts_with('\u{feff}') {
@@ -895,6 +908,90 @@ mod tests {
             jobs(7),
             7,
             "an in-range request must pass through unchanged"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlink_at_a_source_path_is_a_skip_and_its_target_is_never_read() {
+        use super::read_within_limit;
+        let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+        let outside = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+        let target = outside.path().join("target.rs");
+        std::fs::write(&target, "pub fn outside() {}\n").unwrap_or_else(|e| panic!("write: {e}"));
+        let link = tmp.path().join("link.rs");
+        std::os::unix::fs::symlink(&target, &link).unwrap_or_else(|e| panic!("symlink: {e}"));
+        let refused = read_within_limit(&link, 4096).unwrap_or_else(|e| {
+            panic!("a symlink at a source path must be a counted skip, not an IO error: {e}")
+        });
+        assert_eq!(
+            refused, None,
+            "a symlink must never be followed to the outside file's bytes"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_fifo_at_a_source_path_is_a_skip() {
+        use super::read_within_limit;
+        let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+        let fifo = tmp.path().join("pipe.rs");
+        let status = std::process::Command::new("mkfifo")
+            .arg(&fifo)
+            .status()
+            .unwrap_or_else(|e| panic!("spawn mkfifo: {e}"));
+        assert!(
+            status.success(),
+            "mkfifo {} failed: {status}",
+            fifo.display()
+        );
+        let refused = read_within_limit(&fifo, 4096).unwrap_or_else(|e| {
+            panic!("a FIFO at a source path must be a counted skip, not an IO error: {e}")
+        });
+        assert_eq!(
+            refused, None,
+            "a FIFO at a source path must be skipped, never read"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_directory_at_a_source_path_keeps_its_platform_error() {
+        use super::read_within_limit;
+        let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+        let dir = tmp.path().join("dir.rs");
+        std::fs::create_dir(&dir).unwrap_or_else(|e| panic!("mkdir: {e}"));
+        assert!(
+            read_within_limit(&dir, 4096).is_err(),
+            "a directory keeps the platform's own error, not a counted skip"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_path_the_opener_cannot_name_keeps_its_error() {
+        use super::read_within_limit;
+        use std::os::unix::ffi::OsStrExt;
+        let unnamable = std::path::Path::new(std::ffi::OsStr::from_bytes(b"bad\0name.rs"));
+        assert!(
+            read_within_limit(unnamable, 4096).is_err(),
+            "a path the opener cannot name is an invalid-input error, not a counted skip"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_regular_source_at_a_source_path_is_read_in_full() {
+        use super::read_within_limit;
+        let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+        let file = tmp.path().join("inside.rs");
+        std::fs::write(&file, "pub fn inside() {}\n").unwrap_or_else(|e| panic!("write: {e}"));
+        let read = read_within_limit(&file, 4096)
+            .unwrap_or_else(|e| panic!("a regular source must still read: {e}"));
+        assert_eq!(
+            read.as_deref(),
+            Some(&b"pub fn inside() {}\n"[..]),
+            "the regular file must be read in full"
         );
     }
 }

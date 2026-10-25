@@ -21,6 +21,8 @@ mod header_fallbacks;
 mod implicit_scope;
 #[path = "pipeline_remaining/init_failure.rs"]
 mod init_failure;
+#[path = "pipeline_remaining/nofollow_sources.rs"]
+mod nofollow_sources;
 #[path = "pipeline_remaining/parse_failed_suppressions.rs"]
 mod parse_failed_suppressions;
 #[path = "pipeline_remaining/parse_failed_world_facts.rs"]
