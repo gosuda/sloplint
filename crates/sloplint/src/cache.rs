@@ -8,7 +8,7 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use sloplint_core::{Config, Finding, Suppression, WorldFacts};
 
-use crate::project::{read_regular, read_regular_nofollow};
+use crate::fileio::{read_regular, read_regular_nofollow};
 use crate::terminal::TerminalText;
 
 const VERSION: u32 = 3;
