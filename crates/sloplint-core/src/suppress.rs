@@ -29,8 +29,8 @@ pub struct Suppression {
     pub file_level: bool,
     /// Rule patterns this suppression silences.
     pub rules: Vec<RulePattern>,
-    /// Set once the suppression has matched at least one finding.
-    pub used: bool,
+    /// Usage flag per operand in `rules`, true if the operand matched at least one finding.
+    pub used: Vec<bool>,
 }
 
 /// A suppression operand: an exact rule id or a whole `family/*`.
@@ -112,8 +112,9 @@ pub fn parse_suppressions(
 
 /// Drops suppressed findings and marks every matching suppression used; `meta/*` is never suppressible.
 pub fn apply(findings: &mut Vec<Finding>, suppressions: &mut [Suppression]) {
+    let total_operands: usize = suppressions.iter().map(|s| s.rules.len()).sum();
     let index = Index::of(suppressions);
-    let mut used = vec![false; suppressions.len()];
+    let mut used = vec![false; total_operands];
     let mut dropped = vec![false; findings.len()];
     for (finding, drop) in findings.iter().zip(dropped.iter_mut()) {
         if finding.rule.starts_with("meta/") {
@@ -123,27 +124,38 @@ pub fn apply(findings: &mut Vec<Finding>, suppressions: &mut [Suppression]) {
     }
     let mut drops = dropped.into_iter();
     findings.retain(|_| !drops.next().unwrap_or(false));
-    for (suppression, hit) in suppressions.iter_mut().zip(used) {
-        suppression.used |= hit;
+    let mut hits = used.into_iter();
+    for suppression in suppressions.iter_mut() {
+        for (index, hit) in hits.by_ref().take(suppression.rules.len()).enumerate() {
+            if let Some(u) = suppression.used.get_mut(index) {
+                *u |= hit;
+            }
+        }
     }
 }
 
 struct Index<'s> {
-    exact: HashMap<&'s str, Vec<usize>>,
-    families: HashMap<&'s str, Vec<usize>>,
+    exact: HashMap<&'s str, Vec<(usize, usize)>>,
+    families: HashMap<&'s str, Vec<(usize, usize)>>,
     suppressions: &'s [Suppression],
 }
 
 impl<'s> Index<'s> {
     fn of(suppressions: &'s [Suppression]) -> Self {
-        let mut exact: HashMap<&'s str, Vec<usize>> = HashMap::new();
-        let mut families: HashMap<&'s str, Vec<usize>> = HashMap::new();
+        let mut exact: HashMap<&'s str, Vec<(usize, usize)>> = HashMap::new();
+        let mut families: HashMap<&'s str, Vec<(usize, usize)>> = HashMap::new();
+        let mut flat_id = 0;
         for (id, suppression) in suppressions.iter().enumerate() {
             for pattern in &suppression.rules {
                 match pattern {
-                    RulePattern::Exact(rule) => exact.entry(&**rule).or_default().push(id),
-                    RulePattern::Family(family) => families.entry(&**family).or_default().push(id),
+                    RulePattern::Exact(rule) => {
+                        exact.entry(&**rule).or_default().push((id, flat_id));
+                    }
+                    RulePattern::Family(family) => {
+                        families.entry(&**family).or_default().push((id, flat_id));
+                    }
                 }
+                flat_id += 1;
             }
         }
         Index {
@@ -160,9 +172,9 @@ impl<'s> Index<'s> {
             .filter_map(|(at, _)| self.families.get(&rule[..at]))
             .flatten();
         let mut hit = false;
-        for &id in exact.chain(families) {
+        for &(id, flat_id) in exact.chain(families) {
             if self.covers(id, line) {
-                used[id] = true;
+                used[flat_id] = true;
                 hit = true;
             }
         }
@@ -196,13 +208,16 @@ fn scan_comment(
             MARKER.len()
         };
         match directive(&tail[keyword..], known) {
-            Ok(rules) => suppressions.push(Suppression {
-                start_line: comment.start_line,
-                end_line: comment.end_line,
-                file_level,
-                rules,
-                used: false,
-            }),
+            Ok(rules) => {
+                let used = vec![false; rules.len()];
+                suppressions.push(Suppression {
+                    start_line: comment.start_line,
+                    end_line: comment.end_line,
+                    file_level,
+                    rules,
+                    used,
+                });
+            }
             Err(problem) => findings.push(meta::invalid_suppression_finding(
                 path,
                 source,

@@ -155,7 +155,7 @@ A custom rule runs on the tree that parsed. A `language = "cpp"` rule therefore 
 
 ### Suppressions
 
-Inline where you cannot fix yet; a reason is required, and unused suppressions are lint findings too:
+Inline where you cannot fix yet; a reason is required, and unused suppressions are lint findings too. A directive that names several rules is judged operand by operand: each active rule (or `family/*`) it names that matches no finding in its coverage is reported in one `meta/unused-suppression` finding for the directive, even when a sibling operand matched. Operands for rules that are off or excluded by `--rule` are never reported:
 
 ```rust
 // sloplint-allow(complexity/cognitive-depth): state machine is one place by design

@@ -623,7 +623,7 @@ fn baseline_duplicates_unknown_rules_and_extra_fields() {
 /// Malformed caches derived from a valid one: a version byte, 32 key bytes, then a
 /// varint-prefixed entry sequence.
 fn corrupt_caches(valid: &[u8]) -> Vec<(&'static str, Vec<u8>)> {
-    assert!(valid.len() > 33 && valid[0] == 2, "layout changed");
+    assert!(valid.len() > 33 && valid[0] == 3, "layout changed");
     let after_header = |tail: &[u8]| [&valid[..33], tail].concat();
     let mut max_len = vec![0xff; 9];
     max_len.push(1);

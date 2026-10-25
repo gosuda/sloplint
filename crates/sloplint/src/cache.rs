@@ -11,7 +11,7 @@ use sloplint_core::{Config, Finding, Suppression, WorldFacts};
 use crate::project::{read_regular, read_regular_nofollow};
 use crate::terminal::TerminalText;
 
-const VERSION: u32 = 2;
+const VERSION: u32 = 3;
 const NAMESPACE: &str = "sloplint";
 /// Directory holding the per-shard cache files `shard-<NN>.bin`.
 const SHARD_DIR: &str = "cache-v2";

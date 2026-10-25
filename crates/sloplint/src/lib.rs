@@ -327,7 +327,7 @@ struct ActiveRules {
     families: HashSet<String>,
 }
 
-fn build_active_rules(rules: &RuleSet, config: &Config) -> ActiveRules {
+fn build_active_rules(rules: &RuleSet, config: &Config, filter: &RuleFilter) -> ActiveRules {
     let mut ids = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
     let mut families = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
     for id in CATALOG
@@ -335,7 +335,7 @@ fn build_active_rules(rules: &RuleSet, config: &Config) -> ActiveRules {
         .map(|info| info.id)
         .chain(config.custom_rules.iter().map(|spec| spec.id.as_str()))
     {
-        if rules.is_active(id) {
+        if rules.is_active(id) && filter.matches(id) {
             for (at, _) in id.match_indices('/') {
                 families.insert(id[..at].to_string());
             }
@@ -360,7 +360,7 @@ struct Pipeline<'a> {
 impl Pipeline<'_> {
     fn active_rules(&self) -> &ActiveRules {
         self.active_rules
-            .get_or_init(|| build_active_rules(self.rules, self.config))
+            .get_or_init(|| build_active_rules(self.rules, self.config, self.filter))
     }
 
     fn is_operand_active(&self, pattern: &RulePattern) -> bool {
@@ -616,11 +616,20 @@ fn unused_findings(
     suppressions: &[Suppression],
     source: Option<&str>,
 ) -> Result<Vec<Finding>, RunError> {
-    let unused: Vec<&Suppression> = suppressions
+    let candidates: Vec<(&Suppression, Vec<&RulePattern>)> = suppressions
         .iter()
-        .filter(|suppression| !suppression.used && suppression_active(pipe, suppression))
+        .filter_map(|suppression| {
+            let unused_active: Vec<&RulePattern> = suppression
+                .rules
+                .iter()
+                .zip(&suppression.used)
+                .filter(|(pattern, used)| !**used && pipe.is_operand_active(pattern))
+                .map(|(pattern, _)| pattern)
+                .collect();
+            (!unused_active.is_empty()).then_some((suppression, unused_active))
+        })
         .collect();
-    if unused.is_empty() {
+    if candidates.is_empty() {
         return Ok(Vec::new());
     }
     let fallback;
@@ -631,21 +640,14 @@ fn unused_findings(
             &fallback
         }
     };
-    Ok(unused
+    Ok(candidates
         .into_iter()
-        .filter_map(|suppression| {
-            let patterns = describe(&suppression.rules);
+        .filter_map(|(suppression, unused_patterns)| {
+            let patterns = describe(&unused_patterns);
             pipe.rules
                 .unused_suppression(rel, text, suppression.start_line, &patterns)
         })
         .collect())
-}
-
-fn suppression_active(pipe: &Pipeline<'_>, suppression: &Suppression) -> bool {
-    suppression
-        .rules
-        .iter()
-        .all(|pattern| pipe.is_operand_active(pattern))
 }
 
 fn apply_gate(
@@ -795,7 +797,7 @@ fn is_generated(bytes: &[u8]) -> bool {
     head.contains("@generated") || (head.contains("Code generated") && head.contains("DO NOT EDIT"))
 }
 
-fn describe(patterns: &[RulePattern]) -> String {
+fn describe(patterns: &[&RulePattern]) -> String {
     patterns
         .iter()
         .map(|pattern| match pattern {

@@ -9,6 +9,8 @@ mod isolated_cache;
 mod ocaml_interface;
 #[path = "invariants/suppression_oracles.rs"]
 mod suppression_oracles;
+#[path = "invariants/suppression_usage.rs"]
+mod suppression_usage;
 
 use sloplint::{Report, RunError, RunOptions, run};
 use std::path::{Path, PathBuf};
