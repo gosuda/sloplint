@@ -8,6 +8,7 @@ mod spec;
 mod walk;
 
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
 use sloplint_core::facts::FileFacts;
 use sloplint_core::lang::Lang;
@@ -46,11 +47,17 @@ impl Parsers {
     /// exactly like a clean file. Syntax errors in the source are not faults; they
     /// yield a tree with error nodes.
     fn parse(&mut self, lang: Lang, source: &str) -> tree_sitter::Tree {
-        let language = spec(lang).language.clone();
-        let parser = self.parsers.entry(lang).or_default();
-        parser
-            .set_language(&language)
-            .unwrap_or_else(|error| panic!("grammar for {lang:?} failed to load: {error}"));
+        let parser = match self.parsers.entry(lang) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => {
+                let language = spec(lang).language.clone();
+                let mut parser = Parser::new();
+                parser
+                    .set_language(&language)
+                    .unwrap_or_else(|error| panic!("grammar for {lang:?} failed to load: {error}"));
+                entry.insert(parser)
+            }
+        };
         parser
             .parse(source, None)
             .unwrap_or_else(|| panic!("tree-sitter returned no tree for {lang:?}"))
