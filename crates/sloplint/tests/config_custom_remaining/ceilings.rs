@@ -137,7 +137,12 @@ fn test_oversized_baseline_refused() {
     let RunError::Io { path, source } = error else {
         panic!("expected RunError::Io, got: {error:?}");
     };
-    assert_eq!(path, baseline_path);
+    assert_eq!(
+        path,
+        baseline_path
+            .canonicalize()
+            .expect("canonical baseline path")
+    );
     assert_eq!(source.kind(), std::io::ErrorKind::FileTooLarge);
     assert!(
         source.to_string().contains(&MAX_BASELINE_BYTES.to_string()),
@@ -172,7 +177,12 @@ fn test_over_count_baseline_refused() {
     let RunError::BaselineCorrupt { path, message } = error else {
         panic!("expected RunError::BaselineCorrupt, got: {error:?}");
     };
-    assert_eq!(path, baseline_path);
+    assert_eq!(
+        path,
+        baseline_path
+            .canonicalize()
+            .expect("canonical baseline path")
+    );
     assert!(
         message.contains(&MAX_BASELINE_ENTRIES.to_string()),
         "error must contain baseline entry limit"
