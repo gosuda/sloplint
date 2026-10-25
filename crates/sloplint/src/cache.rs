@@ -62,19 +62,21 @@ type ShardEntries = HashMap<Box<str>, Slot>;
 /// the keys.
 pub struct Loaded {
     shards: Vec<Mutex<ShardEntries>>,
+    present: [bool; 256],
     entries: usize,
 }
 
 impl Loaded {
     /// A cache that holds no entries.
     pub fn empty() -> Self {
-        Self::new((0..=255u8).map(|_| HashMap::new()).collect())
+        Self::new((0..=255u8).map(|_| HashMap::new()).collect(), [false; 256])
     }
 
-    fn new(shards: Vec<ShardEntries>) -> Self {
+    fn new(shards: Vec<ShardEntries>, present: [bool; 256]) -> Self {
         Self {
             entries: shards.iter().map(HashMap::len).sum(),
             shards: shards.into_iter().map(Mutex::new).collect(),
+            present,
         }
     }
 
@@ -200,15 +202,37 @@ impl Cache {
     /// following symlinks to regular files.
     pub fn load(&self) -> Loaded {
         let shards = self.dir.join(SHARD_DIR);
-        if !fs::symlink_metadata(&shards).is_ok_and(|meta| meta.is_dir()) {
+        if vet_existing(&shards).is_err()
+            || !fs::symlink_metadata(&shards).is_ok_and(|meta| meta.is_dir())
+        {
             return Loaded::empty();
         }
-        Loaded::new(
-            (0..=255u8)
-                .into_par_iter()
-                .map(|byte| self.decode_shard(&shards, byte).unwrap_or_default())
-                .collect(),
-        )
+        let Ok(read_dir) = fs::read_dir(&shards) else {
+            return Loaded::empty();
+        };
+        let mut present = [false; 256];
+        let mut on_disk = Vec::new();
+        for entry in read_dir.flatten() {
+            let Some(byte) = parse_shard_file_name(&entry.file_name()) else {
+                continue;
+            };
+            if entry.file_type().is_ok_and(|kind| kind.is_file()) {
+                present[usize::from(byte)] = true;
+                on_disk.push(byte);
+            }
+        }
+        let decoded: Vec<(u8, ShardEntries)> = on_disk
+            .into_par_iter()
+            .filter_map(|byte| {
+                self.decode_shard(&shards, byte)
+                    .map(|entries| (byte, entries))
+            })
+            .collect();
+        let mut shards_vec: Vec<ShardEntries> = (0..=255u8).map(|_| HashMap::new()).collect();
+        for (byte, entries) in decoded {
+            shards_vec[usize::from(byte)] = entries;
+        }
+        Loaded::new(shards_vec, present)
     }
 
     fn decode_shard(&self, shards: &Path, byte: u8) -> Option<ShardEntries> {
@@ -262,10 +286,10 @@ impl Cache {
         }
         let shards = self.dir.join(SHARD_DIR);
         let dirty: Vec<u8> = (0..=255u8)
+            .filter(|&byte| old.present[usize::from(byte)] || fresh.contains_key(&byte))
             .filter(|&byte| {
                 let entries = fresh.get(&byte);
-                let present = fs::symlink_metadata(shards.join(shard_file(byte)))
-                    .is_ok_and(|meta| meta.is_file());
+                let present = old.present[usize::from(byte)];
                 present != entries.is_some() || !old.same_set(byte, entries.map(Vec::as_slice))
             })
             .collect();
@@ -371,6 +395,20 @@ fn shard_byte(rel: &str) -> u8 {
 /// File name of shard `byte`, e.g. `shard-3f.bin`: two lowercase hex chars.
 fn shard_file(byte: u8) -> String {
     format!("shard-{byte:02x}.bin")
+}
+
+fn parse_shard_file_name(name: &std::ffi::OsStr) -> Option<u8> {
+    let s = name.to_str()?;
+    let hex = s.strip_prefix("shard-")?.strip_suffix(".bin")?;
+    if hex.len() == 2
+        && hex
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    {
+        u8::from_str_radix(hex, 16).ok()
+    } else {
+        None
+    }
 }
 
 /// Hashes everything that shapes per-file output: the binary bytes, the effective config, and custom rule files.
