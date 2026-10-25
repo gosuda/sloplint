@@ -3,6 +3,8 @@
 //! One child module per mechanism, so each fix lands with its own case module and one
 //! declaration here, while the crate links a single integration-test executable.
 
+#[path = "pipeline_remaining/baseline_directory.rs"]
+mod baseline_directory;
 #[path = "pipeline_remaining/baseline_replace.rs"]
 mod baseline_replace;
 #[path = "pipeline_remaining/bounded_read_reserve.rs"]

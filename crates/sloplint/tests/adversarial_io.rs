@@ -527,9 +527,8 @@ fn baseline_empty_dot_and_directory_names_are_refused_or_io() {
     }
     let left = std::fs::read_dir(&dir).map(|d| d.count());
     assert_eq!(left.ok(), Some(0), "directory was touched");
-    let cause = cause_of(std::fs::write(&dir, ""));
     let args = ["baseline", "--no-cache"];
-    assert_cli_failure(&root, &args, 3, &[str_of(&dir), &cause]);
+    assert_cli_failure(&root, &args, 3, &[str_of(&dir), "not a regular file"]);
 }
 
 // AA-S12: a missing leaf is BaselineMissing (exit 2, hint); a missing parent is Io (exit 3).

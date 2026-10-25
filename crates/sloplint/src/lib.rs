@@ -716,7 +716,7 @@ fn write_replacing(path: &Path, bytes: &[u8]) -> io::Result<()> {
         }
     })?;
     if let Some(meta) = &existing {
-        if !meta.is_file() && !meta.is_dir() {
+        if !meta.is_file() {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 "not a regular file",
