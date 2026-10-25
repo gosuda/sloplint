@@ -119,3 +119,44 @@ fn many_findings_in_one_file_resolve_their_own_lines() {
         );
     }
 }
+
+// A125: edge-case line endings resolve correctly through the unified line_starts index.
+// Edge differences between the old Source index and core line_starts helper:
+// 1. Empty file (""): old index was empty (line(1) -> None); line_starts returns [0] (line(1) -> Some("")).
+//    Rendered fallback maps both to empty string.
+// 2. Trailing newline ("a\n"): old index filtered start < text.len() (line(2) -> None); line_starts returns [0, 2] (line(2) -> Some("")).
+//    Rendered fallback maps both to empty string.
+// 3. CRLF ("\r\n"): both split on '\n' alone; strip_suffix('\r') handles the carriage return.
+// 4. Lone CR ('\r'): neither splits on '\r'; content remains on line 1 and is escaped as \x0d.
+// 5. Last line without newline ("a\nb"): both include the final line offset in starts.
+#[test]
+fn edge_case_line_endings_render_expected_snippets() {
+    let tmp = project(&[
+        ("trailing_lf.rs", "pub fn handle() {}\n"),
+        ("no_trailing_lf.rs", "pub fn handle() {}"),
+        ("trailing_crlf.rs", "pub fn handle() {}\r\n"),
+        ("lone_cr.rs", "pub fn handle() {}\rpub fn run() {}\n"),
+        ("empty.rs", ""),
+    ]);
+    let output = human(tmp.path(), "grep/generic-name");
+    assert!(
+        output.contains("trailing_lf.rs:1:8"),
+        "trailing LF missing in:\n{output}"
+    );
+    assert!(
+        output.contains("no_trailing_lf.rs:1:8"),
+        "no trailing LF missing in:\n{output}"
+    );
+    assert!(
+        output.contains("trailing_crlf.rs:1:8"),
+        "trailing CRLF missing in:\n{output}"
+    );
+    assert!(
+        output.contains("lone_cr.rs:1:8"),
+        "lone CR missing in:\n{output}"
+    );
+    assert!(
+        output.contains("1 \u{2502} pub fn handle() {}\\x0dpub fn run() {}"),
+        "lone CR must render escaped and not split lines in:\n{output}"
+    );
+}
