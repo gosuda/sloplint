@@ -459,6 +459,12 @@ fn read_custom_root(
                 }));
             }
             Ok(false) => {}
+            Err((_, source))
+                if source.kind() == io::ErrorKind::NotFound
+                    || source.kind() == io::ErrorKind::NotADirectory =>
+            {
+                return Ok(());
+            }
             Err((path, source)) => return Err(RunError::Io { path, source }),
         }
     }

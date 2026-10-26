@@ -312,6 +312,48 @@ fn test_custom_rule_glob_regular_file_still_loads() {
     );
 }
 
+#[test]
+fn test_missing_nested_ancestor_yields_empty_matches() {
+    let (_tmp, root) = project("[project]\ncustom_rule_files = [\"rules/optional/*.toml\"]\n");
+
+    let opts = options(&root);
+    let result = run(&opts);
+    assert!(
+        result.is_ok(),
+        "absent nested ancestor must yield empty matches, not an error: {result:?}"
+    );
+}
+
+#[test]
+fn test_regular_file_ancestor_component_yields_empty_matches() {
+    let (_tmp, root) = project("[project]\ncustom_rule_files = [\"rules/optional/deep/*.toml\"]\n");
+    fs::write(root.join("rules"), "not a directory\n").expect("write rules file");
+
+    let opts = options(&root);
+    let result = run(&opts);
+    assert!(
+        result.is_ok(),
+        "regular-file ancestor component must yield empty matches, not an error: {result:?}"
+    );
+}
+
+#[test]
+fn test_absent_shallow_pattern_yields_empty_matches() {
+    let (_tmp, root) = project("[project]\ncustom_rule_files = [\"absent/*.toml\"]\n");
+    let shallow = options(&root);
+    assert!(
+        run(&shallow).is_ok(),
+        "absent shallow glob prefix must yield empty matches"
+    );
+
+    let (_tmp, root) = project("[project]\ncustom_rule_files = [\"absent.toml\"]\n");
+    let literal = options(&root);
+    assert!(
+        run(&literal).is_ok(),
+        "absent literal custom rule file must yield empty matches"
+    );
+}
+
 #[cfg(unix)]
 #[test]
 fn test_dangling_implicit_config_symlink_rejected() {
