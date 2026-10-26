@@ -102,7 +102,8 @@ impl Starts {
     }
 }
 
-/// One repeated region: the first window starts of its occurrences and the kept lines each spans.
+/// One repeated region: the starts of the occurrences its full span still covers, and the kept
+/// lines each spans.
 struct Run {
     starts: Vec<usize>,
     span: usize,
@@ -152,35 +153,49 @@ impl UniquePatchAnchors {
     /// Each repeated region once, ascending by its first start.
     ///
     /// A window group whose starts each sit one kept line after the previous group's starts is a
-    /// later window of that run, so only the run's first window is kept. A run of `n` windows
-    /// spans `window + n - 1` kept lines, which is the block length reported. That longer span
-    /// can push occurrences closer than one span apart, leaving fewer than `min_repeats`
-    /// non-overlapping ones, so a run keeps the longest span that still fits `min_repeats`
-    /// occurrences of its first window's starts instead of suppressing repeats that already
-    /// qualify as plain windows.
+    /// later window of that run, so only the run's first window is kept. Later windows may cover
+    /// fewer occurrences than the first one: a tail copy's next window can hold different lines
+    /// or pass the file's end, and `slides_into` keeps the occurrences those windows still cover
+    /// as a prefix of the first window's starts. A run of `n` windows spans `window + n - 1` kept
+    /// lines, so only that prefix truly heads a block of the full span. The longer span can also
+    /// push occurrences closer than one span apart, leaving fewer than `min_repeats`
+    /// non-overlapping ones, so a run keeps the longest span whose surviving occurrences still
+    /// fit `min_repeats` of them instead of suppressing repeats that already qualify as plain
+    /// windows.
     fn repeated_runs(&self, kept: &[(u32, Cow<'_, str>)]) -> Vec<Run> {
         let repeated = self.repeated_windows(kept);
-        (0..repeated.len())
-            .filter(|&index| !continues_run(&repeated, index))
-            .filter_map(|index| {
-                let starts = &repeated[index];
-                Some(Run {
-                    starts: starts.clone(),
-                    span: self.qualifying_span(starts, run_windows(&repeated, index))?,
+        let mut runs = Vec::new();
+        for (index, group) in repeated.iter().enumerate() {
+            if continues_run(&repeated, index) {
+                continue;
+            }
+            // Sizes of the run's window groups, first window first. Each later group drops the
+            // tail occurrences whose next window no longer matches or no longer fits, so the
+            // occurrences a span of `n` windows covers are the first `lengths[n - 1]` starts of
+            // the first window.
+            let mut lengths = vec![group.len()];
+            let mut current = index;
+            while let Some(next) = group_starting_at(&repeated, repeated[current][0] + 1)
+                .filter(|&next| slides_into(&repeated[current], &repeated[next]))
+            {
+                lengths.push(repeated[next].len());
+                current = next;
+            }
+            let first = group;
+            // Spans are tried longest first down to a single window, so a run never reports a
+            // shorter block than its first window.
+            if let Some(run) = (1..=lengths.len()).rev().find_map(|windows| {
+                let span = self.window + windows - 1;
+                let survivors = &first[..lengths[windows - 1]];
+                (non_overlapping_starts(survivors, span).len() >= self.min_repeats).then(|| Run {
+                    starts: survivors.to_vec(),
+                    span,
                 })
-            })
-            .collect()
-    }
-
-    /// Longest span of `1..=windows` coalesced windows that still leaves `min_repeats`
-    /// non-overlapping occurrences of `starts`, or `None` when even one window does not.
-    ///
-    /// Spans are tried longest first down to a single window, so a run never reports a shorter
-    /// block than its first window. The count only drops as the span grows, and both the probe
-    /// count and each probe are bounded by the run, never by a re-scan of the file.
-    fn qualifying_span(&self, starts: &[usize], windows: usize) -> Option<usize> {
-        let fits = |span: usize| non_overlapping_count(starts, span) >= self.min_repeats;
-        ((self.window..=self.window + windows - 1).rev()).find(|&span| fits(span))
+            }) {
+                runs.push(run);
+            }
+        }
+        runs
     }
 
     fn report(
@@ -190,21 +205,13 @@ impl UniquePatchAnchors {
         run: &Run,
         out: &mut Vec<Finding>,
     ) {
-        let mut accepted: Vec<u32> = Vec::new();
-        let mut next_free = 0usize;
-        for &start in &run.starts {
-            if start < next_free {
-                continue;
-            }
-            accepted.push(kept[start].0);
-            next_free = start + run.span;
-        }
+        let accepted = non_overlapping_starts(&run.starts, run.span);
         if accepted.len() < self.min_repeats {
             return;
         }
         let lines = accepted
             .iter()
-            .map(|line| line.to_string())
+            .map(|&start| kept[start].0.to_string())
             .collect::<Vec<_>>()
             .join(", ");
         let message = format!(
@@ -215,7 +222,7 @@ impl UniquePatchAnchors {
         out.push(Finding::at(
             facts,
             Pos {
-                line: accepted[0],
+                line: kept[accepted[0]].0,
                 byte: 0,
             },
             INFO.id,
@@ -234,7 +241,8 @@ fn group_starting_at(repeated: &[Vec<usize>], start: usize) -> Option<usize> {
 }
 
 /// True when `later` lists the same starts as `earlier`, each one kept line further on, with
-/// `later` allowed to miss the tail occurrences whose next window would pass the file's end.
+/// `later` allowed to miss the tail occurrences whose next window no longer matches or would
+/// pass the file's end.
 fn slides_into(earlier: &[usize], later: &[usize]) -> bool {
     later.len() <= earlier.len()
         && earlier
@@ -252,32 +260,20 @@ fn continues_run(repeated: &[Vec<usize>], index: usize) -> bool {
         .is_some_and(|earlier| slides_into(&repeated[earlier], starts))
 }
 
-/// Windows in the run that begins at group `index`, counting that group.
-fn run_windows(repeated: &[Vec<usize>], index: usize) -> usize {
-    let mut current = index;
-    let mut windows = 1;
-    while let Some(next) = group_starting_at(repeated, repeated[current][0] + 1)
-        .filter(|&next| slides_into(&repeated[current], &repeated[next]))
-    {
-        current = next;
-        windows += 1;
-    }
-    windows
-}
-
-/// Occurrences `report` accepts when each must start at or after the previous accepted start
-/// plus `span`; `starts` are ascending.
-fn non_overlapping_count(starts: &[usize], span: usize) -> usize {
-    let mut count = 0;
+/// Occurrences a span admits without overlap: each must start at or after the previous accepted
+/// start plus `span`; `starts` are ascending. The span search and `report` must count the same
+/// acceptance, so both share this greedy.
+fn non_overlapping_starts(starts: &[usize], span: usize) -> Vec<usize> {
+    let mut accepted = Vec::new();
     let mut next_free = 0;
     for &start in starts {
         if start < next_free {
             continue;
         }
-        count += 1;
+        accepted.push(start);
         next_free = start + span;
     }
-    count
+    accepted
 }
 
 fn kept_lines(source: &str) -> Vec<(u32, Cow<'_, str>)> {
