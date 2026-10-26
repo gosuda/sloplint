@@ -9,12 +9,18 @@ const RULE: &str = "agent/unique-patch-anchors";
 
 /// `(line, message)` of every finding for `source` written to `a.py`, in report order.
 fn reported(source: &str) -> Vec<(u32, String)> {
+    reported_at(Strictness::Strict, source)
+}
+
+/// `reported` at an explicit strictness, for scenarios that need a window other than the
+/// strict one.
+fn reported_at(strictness: Strictness, source: &str) -> Vec<(u32, String)> {
     let tmp = tempfile::tempdir().unwrap();
     std::fs::write(tmp.path().join("a.py"), source).unwrap();
     let execution = execute(&RunOptions {
         cwd: tmp.path().to_path_buf(),
         root: Some(tmp.path().to_path_buf()),
-        strictness: Some(Strictness::Strict),
+        strictness: Some(strictness),
         mode: Some(Mode::Threshold),
         rule_filter: RuleFilter(vec![RulePattern::parse(RULE).unwrap()]),
         use_cache: false,
@@ -136,6 +142,25 @@ fn periodic_input_reports_its_region_once_with_non_overlapping_starts() {
         reported(&period.repeat(7)),
         expected,
         "lines 2 and 3 slide into one run with only two non-overlapping occurrences, so only line 1 is reported"
+    );
+}
+
+#[test]
+fn a_run_whose_coalesced_span_drops_below_min_repeats_keeps_a_qualifying_span() {
+    let block: String = (0..8)
+        .map(|k| format!("result_{k} = helper_function_{k}(alpha_argument, beta_argument)\n"))
+        .collect();
+    let head: String = block
+        .lines()
+        .take(2)
+        .map(|line| format!("{line}\n"))
+        .collect();
+    let source = format!("{block}{block}{block}{head}");
+    assert_eq!(
+        reported_at(Strictness::Standard, &source),
+        vec![(1, "3 identical 8-line blocks (lines 1, 9, 17)".to_string())],
+        "the coalesced span-10 run fits only two non-overlapping occurrences, so the run must \
+         fall back to its span-8 window instead of suppressing three qualifying repeats"
     );
 }
 

@@ -153,16 +153,34 @@ impl UniquePatchAnchors {
     ///
     /// A window group whose starts each sit one kept line after the previous group's starts is a
     /// later window of that run, so only the run's first window is kept. A run of `n` windows
-    /// spans `window + n - 1` kept lines, which is the block length reported.
+    /// spans `window + n - 1` kept lines, which is the block length reported. That longer span
+    /// can push occurrences closer than one span apart, leaving fewer than `min_repeats`
+    /// non-overlapping ones, so a run keeps the longest span that still fits `min_repeats`
+    /// occurrences of its first window's starts instead of suppressing repeats that already
+    /// qualify as plain windows.
     fn repeated_runs(&self, kept: &[(u32, Cow<'_, str>)]) -> Vec<Run> {
         let repeated = self.repeated_windows(kept);
         (0..repeated.len())
             .filter(|&index| !continues_run(&repeated, index))
-            .map(|index| Run {
-                starts: repeated[index].clone(),
-                span: self.window + run_windows(&repeated, index) - 1,
+            .filter_map(|index| {
+                let starts = &repeated[index];
+                Some(Run {
+                    starts: starts.clone(),
+                    span: self.qualifying_span(starts, run_windows(&repeated, index))?,
+                })
             })
             .collect()
+    }
+
+    /// Longest span of `1..=windows` coalesced windows that still leaves `min_repeats`
+    /// non-overlapping occurrences of `starts`, or `None` when even one window does not.
+    ///
+    /// Spans are tried longest first down to a single window, so a run never reports a shorter
+    /// block than its first window. The count only drops as the span grows, and both the probe
+    /// count and each probe are bounded by the run, never by a re-scan of the file.
+    fn qualifying_span(&self, starts: &[usize], windows: usize) -> Option<usize> {
+        let fits = |span: usize| non_overlapping_count(starts, span) >= self.min_repeats;
+        ((self.window..=self.window + windows - 1).rev()).find(|&span| fits(span))
     }
 
     fn report(
@@ -215,9 +233,10 @@ fn group_starting_at(repeated: &[Vec<usize>], start: usize) -> Option<usize> {
         .ok()
 }
 
-/// True when `later` lists the same starts as `earlier`, each one kept line further on.
+/// True when `later` lists the same starts as `earlier`, each one kept line further on, with
+/// `later` allowed to miss the tail occurrences whose next window would pass the file's end.
 fn slides_into(earlier: &[usize], later: &[usize]) -> bool {
-    earlier.len() == later.len()
+    later.len() <= earlier.len()
         && earlier
             .iter()
             .zip(later)
@@ -244,6 +263,21 @@ fn run_windows(repeated: &[Vec<usize>], index: usize) -> usize {
         windows += 1;
     }
     windows
+}
+
+/// Occurrences `report` accepts when each must start at or after the previous accepted start
+/// plus `span`; `starts` are ascending.
+fn non_overlapping_count(starts: &[usize], span: usize) -> usize {
+    let mut count = 0;
+    let mut next_free = 0;
+    for &start in starts {
+        if start < next_free {
+            continue;
+        }
+        count += 1;
+        next_free = start + span;
+    }
+    count
 }
 
 fn kept_lines(source: &str) -> Vec<(u32, Cow<'_, str>)> {
@@ -397,6 +431,21 @@ mod tests {
                 (7, "3 identical 5-line blocks (lines 7, 18, 29)".to_string()),
             ],
             "only the unchanged prefix and suffix of the block may be reported"
+        );
+    }
+
+    #[test]
+    fn a_run_whose_coalesced_span_drops_below_min_repeats_keeps_a_qualifying_span() {
+        let block: Vec<String> = (0..8)
+            .map(|k| format!("let value_{k} = compute_stage_{k}(alpha_input, beta_input);"))
+            .collect();
+        let copy = block.join("\n");
+        let source = format!("{copy}\n{copy}\n{copy}\n{}\n{}\n", block[0], block[1]);
+        assert_eq!(
+            findings(8, 3, &source),
+            [(1, "3 identical 8-line blocks (lines 1, 9, 17)".to_string())],
+            "the coalesced span-10 run fits only two non-overlapping occurrences, so the run \
+             must keep its span-8 window rather than suppress three qualifying repeats"
         );
     }
 }
