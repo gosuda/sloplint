@@ -237,7 +237,7 @@ pub fn read_bounded_string(path: &Path, max_bytes: u64) -> io::Result<String> {
     })
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::refused_without_following;
     use std::io;
