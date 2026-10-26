@@ -202,6 +202,38 @@ impl<'s> Index<'s> {
     }
 }
 
+/// Whether a byte can continue an identifier token (`[A-Za-z0-9_]`).
+fn is_ident_byte(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_'
+}
+
+/// Offset where the comment payload starts: just past its opener (`//`, `#`,
+/// `/*`, ...). A comment matching no opener is treated as a line comment and
+/// its payload starts past any leading whitespace.
+fn payload_base(text: &str) -> usize {
+    let trimmed = text.trim_start();
+    let leading = text.len() - trimmed.len();
+    for (opener, _) in REASON_CLOSERS {
+        if trimmed.starts_with(opener) {
+            return leading + opener.len();
+        }
+    }
+    leading
+}
+
+/// Whether `start` is a directive position: no identifier characters sit
+/// between the payload base and the marker. Decoration such as extra slashes
+/// (`///`), stars (`/* * ...`), or whitespace still counts as the start, while
+/// prose (`see ...`) does not.
+fn is_directive_start(text: &str, base: usize, start: usize) -> bool {
+    if start <= base {
+        return true;
+    }
+    text.as_bytes()[base..start]
+        .iter()
+        .all(|&b| !is_ident_byte(b))
+}
+
 fn scan_comment(
     path: &str,
     source: &str,
@@ -212,9 +244,14 @@ fn scan_comment(
 ) {
     let text = comment.text;
     let closer = reason_closer(text);
-    let mut offset = 0usize;
-    while let Some(at) = text[offset..].find(MARKER) {
-        let start = offset + at;
+    let base = payload_base(text);
+    for (start, _) in text.match_indices(MARKER) {
+        if start > 0 && is_ident_byte(text.as_bytes()[start - 1]) {
+            // Mid-token occurrence (e.g. `xsloplint-allow`): not a directive
+            // attempt at all, so neither suppress nor report. Later
+            // boundary-anchored markers are still visited.
+            continue;
+        }
         let tail = &text[start..];
         let file_level = tail.starts_with(FILE_MARKER);
         let keyword = if file_level {
@@ -222,7 +259,21 @@ fn scan_comment(
         } else {
             MARKER.len()
         };
-        match directive(&tail[keyword..], known, closer) {
+        let rest = &tail[keyword..];
+        // An exact keyword — either marker terminated by the end of the comment
+        // or a non-word char — is always a directive attempt: well-formed ones
+        // suppress and malformed ones are reported, wherever they sit. A word
+        // that only extends a marker (an allowlist or allowfile suffix) is a
+        // candidate at directive start only, since mid-sentence it is prose
+        // and is ignored instead of reported as a false malformed directive.
+        let exact = rest
+            .as_bytes()
+            .first()
+            .is_none_or(|&b| !is_ident_byte(b) && b != b'-');
+        if !exact && !is_directive_start(text, base, start) {
+            continue;
+        }
+        match directive(rest, known, closer) {
             Ok(rules) => {
                 let used = vec![false; rules.len()];
                 suppressions.push(Suppression {
@@ -240,7 +291,6 @@ fn scan_comment(
                 &problem.text(),
             )),
         }
-        offset = start + keyword;
     }
 }
 
@@ -395,6 +445,86 @@ mod tests {
             outcome("(* outer (* inner *) sloplint-allow(x): *)"),
             (0, 1),
             "a directive after a nested comment with a blank reason is invalid"
+        );
+    }
+
+    #[test]
+    fn mid_token_marker_is_ignored_entirely() {
+        for text in [
+            "// xsloplint-allow(x): reason",
+            "// foosloplint-allow(x): reason",
+            "# _sloplint-allow(x): reason",
+            "/* xsloplint-allow-file(x): reason */",
+        ] {
+            assert_eq!(
+                outcome(text),
+                (0, 0),
+                "`{text}`: a marker preceded by an identifier char is prose, not a directive"
+            );
+        }
+    }
+
+    #[test]
+    fn boundary_marker_is_honored_mid_comment() {
+        assert_eq!(
+            outcome("// see sloplint-allow(x): reason"),
+            (1, 0),
+            "a boundary-anchored directive mid-comment still suppresses"
+        );
+    }
+
+    #[test]
+    fn allowlist_at_payload_start_is_invalid_but_mid_sentence_is_prose() {
+        assert_eq!(
+            outcome("// sloplint-allowlist"),
+            (0, 1),
+            "a bare `sloplint-allowlist` where a directive would start is malformed"
+        );
+        for text in [
+            "// see the sloplint-allowlist for details",
+            "// see sloplint-allowlist",
+            "# see the sloplint-allowlist for details",
+        ] {
+            assert_eq!(
+                outcome(text),
+                (0, 0),
+                "`{text}`: prose mentioning the marker mid-sentence must stay silent"
+            );
+        }
+    }
+
+    #[test]
+    fn exact_keyword_mid_sentence_is_still_a_directive_attempt() {
+        for text in ["// foo sloplint-allow bad", "// foo sloplint-allow(x)"] {
+            assert_eq!(
+                outcome(text),
+                (0, 1),
+                "`{text}`: an exact keyword after a boundary is validated even mid-sentence"
+            );
+        }
+        assert_eq!(
+            outcome("// see sloplint-allow(x): reason, and sloplint-allow bad"),
+            (1, 1),
+            "a valid directive still suppresses while a later exact-keyword typo is reported"
+        );
+        assert_eq!(
+            outcome("// see sloplint-allowlist(x): reason"),
+            (0, 0),
+            "a longer word stays prose mid-sentence even with directive shape after it"
+        );
+    }
+
+    #[test]
+    fn later_boundary_marker_survives_earlier_mid_token_junk() {
+        assert_eq!(
+            outcome("// a xsloplint-allow(x): junk sloplint-allow(x): reason"),
+            (1, 0),
+            "scanning must continue past a mid-token occurrence to the boundary-anchored marker"
+        );
+        assert_eq!(
+            outcome("// a xsloplint- b sloplint-allow(x): reason"),
+            (1, 0),
+            "a bare mid-token fragment must not hide the later directive"
         );
     }
 }
