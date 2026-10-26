@@ -8,8 +8,11 @@ use std::path::Path;
 /// controlling one, so a FIFO planted at the path
 /// (even one swapped in after a directory listing) returns at once instead of
 /// waiting for a writer; the opened handle is then inspected and anything but
-/// a regular file is refused before a byte is read. Symlinks to regular files
-/// are followed. A directory keeps the platform's own directory error.
+/// a regular file is refused before a byte is read. On other platforms the open
+/// is a plain open: std has no non-blocking open for a planted named pipe, so
+/// there such a path can stall the open itself instead of returning at once.
+/// Symlinks to regular files are followed. A directory keeps the platform's
+/// own directory error.
 pub fn open_regular(path: &Path) -> io::Result<(fs::File, u64)> {
     let file = open_for_read(path)?;
     let meta = file.metadata()?;
@@ -34,8 +37,10 @@ fn open_for_read(path: &Path) -> io::Result<fs::File> {
 /// Opens `path` without following a trailing symlink, returning the handle and its size.
 ///
 /// Unix uses `O_NOFOLLOW`, so a symlink at the final component fails with a loop error
-/// instead of being followed. Windows refuses a trailing symlink or reparse point before
-/// opening. Configuration and baseline inputs keep using [`open_regular`], which follows
+/// instead of being followed. Windows opens the final component with reparse-point
+/// processing disabled and refuses the opened handle whose own metadata still shows a
+/// reparse point, so a link swapped in after any earlier inspection is refused, never
+/// followed. Configuration and baseline inputs keep using [`open_regular`], which follows
 /// symlinks to regular files; the cache and analyzed sources use this opener.
 pub fn open_regular_nofollow(path: &Path) -> io::Result<(fs::File, u64)> {
     let file = open_for_read_nofollow(path)?;
@@ -53,7 +58,29 @@ fn open_for_read_nofollow(path: &Path) -> io::Result<fs::File> {
         .open(path)
 }
 
-#[cfg(not(unix))]
+#[cfg(windows)]
+fn open_for_read_nofollow(path: &Path) -> io::Result<fs::File> {
+    use std::os::windows::fs::OpenOptionsExt;
+    const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
+    // The flag opens the final component itself instead of its target, so the
+    // handle's own metadata decides: a link swapped in after an earlier
+    // directory listing or path inspection is refused, not followed.
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+        .open(path)?;
+    if is_reparse_point(&file.metadata()?) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "not a regular file",
+        ));
+    }
+    Ok(file)
+}
+
+/// Fallback for platforms with neither unix nor windows open options. It can only
+/// pre-check the path, so a link swapped in after the check is still followed.
+#[cfg(not(any(unix, windows)))]
 fn open_for_read_nofollow(path: &Path) -> io::Result<fs::File> {
     let meta = fs::symlink_metadata(path)?;
     if meta.file_type().is_symlink() {
@@ -74,13 +101,17 @@ fn open_for_read_nofollow(path: &Path) -> io::Result<fs::File> {
 /// Whether a failed nofollow open of `path` was refused because the path is a symlink, a
 /// Windows reparse point, or a FIFO, device, or socket.
 ///
-/// Unix reports a trailing symlink as `ELOOP`. A non-regular file is refused as
-/// `InvalidInput`, and that counts only when the path, inspected without following links,
-/// is neither a regular file nor a directory, or is a reparse point. A directory keeps its
-/// platform error, and so does any other failure, such as permissions or a path that cannot
-/// be named.
+/// Unix reports a trailing symlink as `ELOOP`. A unix socket cannot be opened at all: its
+/// open fails with `ENXIO`, and that counts only when the path, inspected without following
+/// links, is a socket. A non-regular file is refused as `InvalidInput`, and that counts
+/// only when the path, inspected without following links, is neither a regular file nor a
+/// directory, or is a reparse point. A directory keeps its platform error, and so does any
+/// other failure, such as permissions or a path that cannot be named.
 pub fn refused_without_following(path: &Path, error: &io::Error) -> bool {
     if is_symlink_loop(error) {
+        return true;
+    }
+    if refused_socket_open(path, error) {
         return true;
     }
     error.kind() == io::ErrorKind::InvalidInput
@@ -107,6 +138,18 @@ fn is_symlink_loop(error: &io::Error) -> bool {
 
 #[cfg(not(unix))]
 fn is_symlink_loop(_error: &io::Error) -> bool {
+    false
+}
+
+#[cfg(unix)]
+fn refused_socket_open(path: &Path, error: &io::Error) -> bool {
+    use std::os::unix::fs::FileTypeExt;
+    error.raw_os_error() == Some(libc::ENXIO)
+        && fs::symlink_metadata(path).is_ok_and(|meta| meta.file_type().is_socket())
+}
+
+#[cfg(not(unix))]
+fn refused_socket_open(_path: &Path, _error: &io::Error) -> bool {
     false
 }
 
