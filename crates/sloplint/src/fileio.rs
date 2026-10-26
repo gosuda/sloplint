@@ -102,8 +102,9 @@ fn open_for_read_nofollow(path: &Path) -> io::Result<fs::File> {
 /// Windows reparse point, or a FIFO, device, or socket.
 ///
 /// Unix reports a trailing symlink as `ELOOP`. A unix socket cannot be opened at all: its
-/// open fails with `ENXIO`, and that counts only when the path, inspected without following
-/// links, is a socket. A non-regular file is refused as `InvalidInput`, and that counts
+/// open fails with `ENXIO` on Linux and `EOPNOTSUPP` on macOS, and either counts only when
+/// the path, inspected without following links, is a socket. A non-regular file is refused
+/// as `InvalidInput`, and that counts
 /// only when the path, inspected without following links, is neither a regular file nor a
 /// directory, or is a reparse point. A directory keeps its platform error, and so does any
 /// other failure, such as permissions or a path that cannot be named.
@@ -144,8 +145,9 @@ fn is_symlink_loop(_error: &io::Error) -> bool {
 #[cfg(unix)]
 fn refused_socket_open(path: &Path, error: &io::Error) -> bool {
     use std::os::unix::fs::FileTypeExt;
-    error.raw_os_error() == Some(libc::ENXIO)
-        && fs::symlink_metadata(path).is_ok_and(|meta| meta.file_type().is_socket())
+    let errno = error.raw_os_error();
+    let socket_open_errno = errno == Some(libc::ENXIO) || errno == Some(libc::EOPNOTSUPP);
+    socket_open_errno && fs::symlink_metadata(path).is_ok_and(|meta| meta.file_type().is_socket())
 }
 
 #[cfg(not(unix))]
@@ -233,4 +235,56 @@ pub fn read_bounded_string(path: &Path, max_bytes: u64) -> io::Result<String> {
             "stream did not contain valid UTF-8",
         )
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::refused_without_following;
+    use std::io;
+
+    #[cfg(unix)]
+    fn socket_open_errnos() -> [i32; 2] {
+        [libc::ENXIO, libc::EOPNOTSUPP]
+    }
+
+    /// Every errno a platform reports when a unix socket is opened must count as the
+    /// non-regular refusal, but only when the path really is a socket.
+    #[cfg(unix)]
+    #[test]
+    fn socket_open_errnos_are_refusals_for_a_socket() {
+        use std::os::unix::net::UnixListener;
+        let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+        let sock = tmp.path().join("sock.rs");
+        let _listener = UnixListener::bind(&sock).unwrap_or_else(|e| panic!("bind socket: {e}"));
+        for errno in socket_open_errnos() {
+            let error = io::Error::from_raw_os_error(errno);
+            assert!(
+                refused_without_following(&sock, &error),
+                "os error {errno} on a socket must be the counted refusal"
+            );
+        }
+    }
+
+    /// The socket errnos must never launder an unsupported-operation failure on anything
+    /// that is not a socket: a regular file keeps its own error, as does a missing path
+    /// whose inspection finds no socket at all.
+    #[cfg(unix)]
+    #[test]
+    fn socket_open_errnos_on_a_regular_file_still_surface() {
+        let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+        let regular = tmp.path().join("regular.rs");
+        std::fs::write(&regular, "pub fn regular() {}\n").unwrap_or_else(|e| panic!("write: {e}"));
+        let missing = tmp.path().join("missing.rs");
+        for errno in socket_open_errnos() {
+            let error = io::Error::from_raw_os_error(errno);
+            assert!(
+                !refused_without_following(&regular, &error),
+                "os error {errno} on a regular file must surface, never count as a refusal"
+            );
+            assert!(
+                !refused_without_following(&missing, &error),
+                "os error {errno} with no socket present must surface, never count as a refusal"
+            );
+        }
+    }
 }
