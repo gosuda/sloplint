@@ -3,7 +3,7 @@ use std::io::{self, Read, Write};
 use std::path::Path;
 
 use sloplint_core::Finding;
-use sloplint_core::baseline::Baseline;
+use sloplint_core::baseline::{Baseline, MAX_BASELINE_ENTRIES};
 
 use crate::{RunError, fileio, io_error, project};
 
@@ -79,18 +79,68 @@ pub fn read_source(path: &Path, max_bytes: u64) -> Result<String, RunError> {
 ///
 /// An existing regular file must already parse as a version-1 baseline, checked before
 /// anything is written, so a configuration or source file named as the baseline is
-/// refused and left as it was. A missing target is created. A directory, FIFO, or
-/// device is left to the I/O refusal of [`write_replacing`], which never reads it.
+/// refused and left as it was. A missing target is created. The document is also held
+/// to the entry and byte limits [`load_baseline`] enforces, checked before anything is
+/// written, so a baseline no later run could load is never recorded. A directory, FIFO,
+/// or device is left to the I/O refusal of [`write_replacing`], which never reads it.
 pub(crate) fn record_baseline(path: &Path, findings: &[Finding]) -> Result<(), RunError> {
     ensure_prior_baseline(path)?;
-    write_replacing(path, Baseline::from_findings(findings).to_json().as_bytes())
-        .map_err(|source| io_error(path, source))
+    let baseline = Baseline::from_findings(findings);
+    let json = baseline.to_json();
+    validate_baseline_limits(
+        path,
+        baseline.entries.len(),
+        json.len(),
+        MAX_BASELINE_ENTRIES,
+        project::MAX_BASELINE_BYTES,
+    )?;
+    write_replacing(path, json.as_bytes()).map_err(|source| io_error(path, source))
+}
+
+/// Refuses a would-be baseline document that [`load_baseline`] would reject by size.
+///
+/// `entries` is the document's deduplicated entry count and `bytes` its serialized
+/// length; the limits are parameters so tests can exercise the boundaries without
+/// materializing a full-size document. The check reads and writes nothing, so a
+/// refusal leaves any prior target byte-for-byte intact.
+fn validate_baseline_limits(
+    path: &Path,
+    entries: usize,
+    bytes: usize,
+    max_entries: usize,
+    max_bytes: u64,
+) -> Result<(), RunError> {
+    if entries > max_entries {
+        return Err(RunError::Io {
+            path: path.to_path_buf(),
+            source: io::Error::new(
+                io::ErrorKind::FileTooLarge,
+                format!("baseline has {entries} entries, more than the limit of {max_entries}"),
+            ),
+        });
+    }
+    let bytes = u64::try_from(bytes).unwrap_or(u64::MAX);
+    if bytes > max_bytes {
+        return Err(RunError::Io {
+            path: path.to_path_buf(),
+            source: io::Error::new(
+                io::ErrorKind::FileTooLarge,
+                format!("baseline of {bytes} bytes exceeds ceiling of {max_bytes} bytes"),
+            ),
+        });
+    }
+    Ok(())
 }
 
 /// Refuses an existing regular file at `path` whose content does not parse as a baseline.
 ///
-/// Only regular files are read; a missing target or a non-regular one returns `Ok`, so
-/// the write path refuses a directory or FIFO with its existing I/O error.
+/// Only regular files are read, bounded by [`project::MAX_BASELINE_BYTES`] like
+/// [`load_baseline`]: the length is checked before anything is read, so a target past
+/// the cap, including a sparse one, is refused without being read; a leading
+/// byte-order mark is tolerated; and a nofollow open that refuses the path reports
+/// [`RunError::NotABaseline`] instead of reading through a swapped-in symlink. A
+/// missing target or a non-regular one returns `Ok`, so the write path refuses a
+/// directory or FIFO with its existing I/O error.
 fn ensure_prior_baseline(path: &Path) -> Result<(), RunError> {
     let meta = match fs::metadata(path) {
         Ok(meta) => meta,
@@ -100,15 +150,16 @@ fn ensure_prior_baseline(path: &Path) -> Result<(), RunError> {
     if !meta.is_file() {
         return Ok(());
     }
-    let bytes = fileio::read_regular(path).map_err(|source| io_error(path, source))?;
-    let parses = std::str::from_utf8(&bytes).is_ok_and(|text| Baseline::from_json(text).is_ok());
-    if parses {
-        Ok(())
-    } else {
-        Err(RunError::NotABaseline {
-            path: path.to_path_buf(),
-        })
-    }
+    let refused = || RunError::NotABaseline {
+        path: path.to_path_buf(),
+    };
+    let bytes = read_within_limit(path, project::MAX_BASELINE_BYTES)
+        .map_err(|source| io_error(path, source))?
+        .ok_or_else(refused)?;
+    let parses = std::str::from_utf8(&bytes)
+        .map(|text| text.strip_prefix('\u{feff}').unwrap_or(text))
+        .is_ok_and(|text| Baseline::from_json(text).is_ok());
+    if parses { Ok(()) } else { Err(refused()) }
 }
 
 /// Replaces `path` with `bytes` so no reader or crash ever sees a partial file.
@@ -272,6 +323,68 @@ mod tests {
             read.as_deref(),
             Some(&b"pub fn inside() {}\n"[..]),
             "the regular file must be read in full"
+        );
+    }
+
+    #[test]
+    fn a_baseline_document_at_the_limits_is_accepted_and_past_them_refused() {
+        use super::validate_baseline_limits;
+        let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+        let path = tmp.path().join("baseline.json");
+        let (max_entries, max_bytes) = (2usize, 64u64);
+        validate_baseline_limits(&path, max_entries, 64, max_entries, max_bytes)
+            .unwrap_or_else(|e| panic!("a document at both limits must record: {e}"));
+        let over_entries =
+            validate_baseline_limits(&path, max_entries + 1, 8, max_entries, max_bytes)
+                .expect_err("past the entry limit must be refused");
+        assert!(
+            format!("{over_entries:?}").contains("FileTooLarge"),
+            "the entry refusal must be a ceiling error: {over_entries:?}"
+        );
+        let over_bytes = validate_baseline_limits(&path, 1, 65, max_entries, max_bytes)
+            .expect_err("past the byte ceiling must be refused");
+        assert!(
+            format!("{over_bytes:?}").contains("FileTooLarge"),
+            "the byte refusal must be a ceiling error: {over_bytes:?}"
+        );
+    }
+
+    #[test]
+    fn a_recorded_baseline_roundtrips_through_the_load_parser_and_deduplicates() {
+        use super::{Baseline, record_baseline};
+        use sloplint_core::finding::{Finding, Severity};
+        let finding = Finding {
+            rule: "generic-name".into(),
+            severity: Severity::Warn,
+            path: "first.rs".into(),
+            line: 1,
+            column: 7,
+            message: "rename handle".to_string(),
+            fix: String::new(),
+            context: "fn handle".into(),
+            fingerprint: "0123456789abcdef0123456789abcdef".into(),
+        };
+        let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+        let path = tmp.path().join("baseline.json");
+        record_baseline(&path, &[finding.clone(), finding.clone()])
+            .unwrap_or_else(|e| panic!("record: {e}"));
+        let stored = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read: {e}"));
+        let parsed = Baseline::from_json(&stored)
+            .unwrap_or_else(|e| panic!("the recorded baseline must reload: {e}"));
+        assert_eq!(parsed.entries.len(), 1, "identical identities deduplicate");
+        assert_eq!(
+            parsed,
+            Baseline::from_findings(&[finding]),
+            "the recorded document must roundtrip through the load parser"
+        );
+        record_baseline(&path, &[]).unwrap_or_else(|e| panic!("re-record: {e}"));
+        let replaced = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read: {e}"));
+        assert!(
+            Baseline::from_json(&replaced)
+                .unwrap_or_else(|e| panic!("the replacement must reload: {e}"))
+                .entries
+                .is_empty(),
+            "re-recording must replace the prior baseline"
         );
     }
 }

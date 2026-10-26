@@ -14,6 +14,9 @@ use sloplint_core::config::{Mode, Strictness};
 const BASELINE: &str = "sloplint-baseline.json";
 const SAMPLE: &str = "pub fn handle(flag: bool) {}\n";
 
+/// Mirrors the private `project::MAX_BASELINE_BYTES` ceiling on a baseline document.
+const MAX_BASELINE_BYTES: u64 = 536_870_912;
+
 fn project(baseline: &str) -> (tempfile::TempDir, PathBuf) {
     let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
     let root = std::fs::canonicalize(tmp.path()).unwrap_or_else(|e| panic!("canonicalize: {e}"));
@@ -211,4 +214,91 @@ fn an_existing_file_that_is_not_a_baseline_is_refused_and_left_alone() {
         put(&root, BASELINE, &body);
         assert_refused(&root, BASELINE, &body, case);
     }
+}
+
+#[test]
+fn a_bom_prefixed_prior_baseline_is_replaced_by_a_fresh_one() {
+    let (_tmp, root) = project(BASELINE);
+    run_ok(&recording(&root));
+    let mut bommed = b"\xef\xbb\xbf".to_vec();
+    bommed.extend_from_slice(&read(&root.join(BASELINE)));
+    put(&root, BASELINE, &bommed);
+    put(&root, "second.rs", SAMPLE.as_bytes());
+    let report = run_ok(&recording(&root));
+    assert_eq!(
+        report.findings.len(),
+        2,
+        "one generic-name finding per source file"
+    );
+    let stored = read(&root.join(BASELINE));
+    assert!(
+        !stored.starts_with(b"\xef\xbb\xbf"),
+        "the replacement must drop the byte-order mark"
+    );
+    assert_eq!(
+        stored_entries(&root),
+        2,
+        "the replacement must be a valid baseline covering both findings"
+    );
+    let gate = run_ok(&gating(&root));
+    assert_eq!(
+        (
+            gate.findings.len(),
+            gate.summary.baselined,
+            gate.summary.stale
+        ),
+        (0, 2, 0),
+        "the replacement must gate cleanly"
+    );
+}
+
+#[test]
+fn a_sparse_prior_target_past_the_byte_cap_is_refused_and_left_untouched() {
+    let (_tmp, root) = project(BASELINE);
+    let path = root.join(BASELINE);
+    let file = std::fs::File::create(&path).unwrap_or_else(|e| panic!("create: {e}"));
+    file.set_len(MAX_BASELINE_BYTES + 1)
+        .unwrap_or_else(|e| panic!("set_len: {e}"));
+    drop(file);
+    let unchanged = || {
+        assert_eq!(
+            std::fs::metadata(&path)
+                .unwrap_or_else(|e| panic!("meta: {e}"))
+                .len(),
+            MAX_BASELINE_BYTES + 1,
+            "the sparse target must keep its size"
+        );
+    };
+
+    let error =
+        run(&recording(&root)).expect_err("a prior target past the byte cap must be refused");
+    assert!(
+        format!("{error:?}").starts_with("NotABaseline"),
+        "expected NotABaseline, got {error}"
+    );
+    assert_eq!(
+        error.exit_code(),
+        2,
+        "refusing to overwrite is a usage error: {error}"
+    );
+    assert!(
+        error.to_string().contains(&*path.to_string_lossy()),
+        "the refusal must name the path: {error}"
+    );
+    unchanged();
+    assert!(
+        temporaries(&root).is_empty(),
+        "temporary files remain: {:?}",
+        temporaries(&root)
+    );
+
+    let out = cli(&root, &["baseline", "--no-cache"]);
+    let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+    assert_eq!(out.status.code(), Some(2), "CLI status; stderr: {stderr}");
+    unchanged();
+    assert!(
+        temporaries(&root).is_empty(),
+        "the CLI left temporary files: {:?}",
+        temporaries(&root)
+    );
 }
