@@ -14,11 +14,7 @@ fn call_chains_keep_their_callee_root_in_linear_time() {
         let source = format!("def g\n  a{}\nend\n", ".b".repeat(DEPTH));
         within_linear_budget(|| {
             with_facts(Lang::Ruby, "chain.rb", &source, |facts| {
-                assert_eq!(
-                    facts.calls.len(),
-                    DEPTH,
-                    "every nested call must be facted"
-                );
+                assert_eq!(facts.calls.len(), DEPTH, "every nested call must be facted");
                 assert!(
                     facts.calls.iter().all(|call| call.callee_root == Some("a")),
                     "every call in the chain must root at a"

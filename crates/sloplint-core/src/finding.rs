@@ -128,13 +128,14 @@ pub fn source_site(source: &str, pos: Pos) -> (u32, Box<str>) {
     let (start, text) = line_at(source, pos.line);
     let pos_byte = usize::try_from(pos.byte).unwrap_or(usize::MAX);
     let target = pos_byte.saturating_sub(start).min(text.len());
-    let mut column = 1u32;
-    for (offset, _) in text.char_indices() {
-        if offset >= target {
-            break;
-        }
-        column += 1;
-    }
+    let chars = match text.get(..target) {
+        Some(prefix) if prefix.is_ascii() => target,
+        _ => text
+            .char_indices()
+            .take_while(|(offset, _)| *offset < target)
+            .count(),
+    };
+    let column = u32::try_from(chars).unwrap_or(u32::MAX).saturating_add(1);
     (column, Box::from(context_of(text)))
 }
 
@@ -193,12 +194,15 @@ fn line_at(source: &str, line: u32) -> (usize, &str) {
 }
 
 fn clip_context(trimmed: &str) -> Cow<'_, str> {
-    if trimmed.chars().count() > MAX_CONTEXT_CHARS {
-        let mut out: String = trimmed.chars().take(MAX_CONTEXT_CHARS).collect();
-        out.push_str("...");
-        Cow::Owned(out)
-    } else {
-        Cow::Borrowed(trimmed)
+    let mut chars = trimmed.char_indices();
+    match chars.nth(MAX_CONTEXT_CHARS) {
+        Some((end, _)) => {
+            let mut out = String::with_capacity(end + 3);
+            out.push_str(&trimmed[..end]);
+            out.push_str("...");
+            Cow::Owned(out)
+        }
+        None => Cow::Borrowed(trimmed),
     }
 }
 
