@@ -3,6 +3,7 @@ use std::fs;
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::time::SystemTime;
 
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -63,6 +64,17 @@ struct Slot {
 }
 
 type ShardEntries = HashMap<Box<str>, Slot>;
+
+/// What the load observed around one shard-file read: the modification time
+/// from just before the read and the length the decode ran on (the bytes
+/// read, or the pre-read size when the read itself failed).
+///
+/// Both halves feed the prune's freshness guard: a failed shard is unlinked
+/// only while a fresh stat still matches both.
+struct Observed {
+    len: u64,
+    mtime: SystemTime,
+}
 
 /// The cached entries of every shard, indexed by the shard that held them.
 ///
@@ -205,7 +217,11 @@ impl Cache {
     ///
     /// Shards are read, decoded, and indexed in parallel on the current rayon pool.
     /// A shard that cannot be read, fails to parse, or carries the wrong
-    /// version or key contributes zero entries and never aborts the load. A
+    /// version or key contributes zero entries and never aborts the load. Such
+    /// a shard, and any shard path that is not a regular file, is unlinked
+    /// best-effort during the load, but only while a fresh stat still shows
+    /// the same file the load observed; a shard a concurrent writer replaced
+    /// meanwhile is left alone. A removal failure never aborts the load. A
     /// symlinked shard directory yields an empty cache. No cache file is ever
     /// followed through a symlink or reparse point; only its vetted
     /// directories are trusted. Configuration and baseline inputs keep
@@ -229,13 +245,40 @@ impl Cache {
             if entry.file_type().is_ok_and(|kind| kind.is_file()) {
                 present[usize::from(byte)] = true;
                 on_disk.push(byte);
+            } else {
+                // `file_type` never follows symlinks, so a symlink counts as
+                // not regular here. A non-regular shard path can never decode,
+                // so unlink it best-effort — but only while a fresh stat still
+                // shows a non-regular file, so a valid shard a concurrent
+                // writer renamed into this path after the scan is left alone.
+                // A failed stat leaves the path in place.
+                let path = entry.path();
+                if fs::symlink_metadata(&path).is_ok_and(|meta| !meta.is_file()) {
+                    let _ = fs::remove_file(path);
+                }
             }
         }
+        // Prune shards whose bytes disagree with this run's cache on the rayon
+        // pool, alongside the decode and without further sequential file I/O:
+        // a shard whose file disagrees with this run's cache is
+        // rewritten-or-removed by the store anyway, so pruning undecodable
+        // files during the load has identical semantics and prevents unbounded
+        // junk accumulation on warm runs, where the store is skipped entirely.
+        // Each unlink is guarded by a fresh stat: only a file still matching
+        // what the decode observed (regular, same length, same mtime) is
+        // removed, so a shard a concurrent writer replaced after the read is
+        // left alone. The residual window — a replacement with identical
+        // length and mtime — costs one cold shard rebuild, never a wrong
+        // result. Any unlink failure is ignored.
         let decoded: Vec<(u8, ShardEntries)> = on_disk
             .into_par_iter()
-            .filter_map(|byte| {
-                self.decode_shard(&shards, byte)
-                    .map(|entries| (byte, entries))
+            .filter_map(|byte| match self.decode_shard(&shards, byte) {
+                (Some(entries), _) => Some((byte, entries)),
+                (None, Some(observed)) => {
+                    unlink_if_same(&shards.join(shard_file(byte)), &observed);
+                    None
+                }
+                (None, None) => None,
             })
             .collect();
         let mut shards_vec: Vec<ShardEntries> = (0..=255u8).map(|_| HashMap::new()).collect();
@@ -245,25 +288,47 @@ impl Cache {
         Loaded::new(shards_vec, present)
     }
 
-    fn decode_shard(&self, shards: &Path, byte: u8) -> Option<ShardEntries> {
-        let bytes = read_regular_nofollow(&shards.join(shard_file(byte)), MAX_SHARD_BYTES).ok()?;
-        let shard = postcard::from_bytes::<Shard>(&bytes).ok()?;
-        (shard.version == VERSION && shard.config_key == self.key).then(|| {
-            shard
-                .files
-                .into_iter()
-                .map(|(rel, output)| {
-                    let hash = output.hash;
-                    (
-                        rel,
-                        Slot {
-                            hash,
-                            output: Some(output),
-                        },
-                    )
-                })
-                .collect()
-        })
+    /// Reads and decodes one shard file, with what the read observed.
+    ///
+    /// The second half is the pre-read modification time plus the length the
+    /// decode ran on: the bytes read, or the pre-read size when the read
+    /// itself failed. The load unlinks a failed shard only while a fresh stat
+    /// still matches both, so a shard a concurrent writer replaced after the
+    /// read is left alone.
+    fn decode_shard(&self, shards: &Path, byte: u8) -> (Option<ShardEntries>, Option<Observed>) {
+        let path = shards.join(shard_file(byte));
+        // Stat before the read, on this rayon thread: the prune compares this
+        // mtime with a fresh stat before unlinking. Parallel with the other
+        // decodes, so no new sequential file I/O.
+        let pre = fs::symlink_metadata(&path).ok();
+        let mtime = pre.as_ref().and_then(|meta| meta.modified().ok());
+        let Ok(bytes) = read_regular_nofollow(&path, MAX_SHARD_BYTES) else {
+            let len = pre.as_ref().map(|meta| meta.len()).unwrap_or(0);
+            return (None, mtime.map(|mtime| Observed { len, mtime }));
+        };
+        let len = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
+        let observed = mtime.map(|mtime| Observed { len, mtime });
+        let Ok(shard) = postcard::from_bytes::<Shard>(&bytes) else {
+            return (None, observed);
+        };
+        if shard.version != VERSION || shard.config_key != self.key {
+            return (None, observed);
+        }
+        let entries: ShardEntries = shard
+            .files
+            .into_iter()
+            .map(|(rel, output)| {
+                let hash = output.hash;
+                (
+                    rel,
+                    Slot {
+                        hash,
+                        output: Some(output),
+                    },
+                )
+            })
+            .collect();
+        (Some(entries), observed)
     }
 
     /// Writes the cache atomically; a failure warns on stderr and never fails the run.
@@ -284,8 +349,9 @@ impl Cache {
     /// entries and its rel set and content hashes equal the loaded ones, so a
     /// warm run rewrites nothing. Every other shard is dirty: one with entries
     /// is rewritten, one without has its file removed. That covers deleted
-    /// files and also stale-key or corrupt shards that loaded no entries: the
-    /// store is the only prune.
+    /// files; stale-key, corrupt, or non-regular shards that loaded no entries
+    /// are already pruned best-effort by the load, and the store removes any
+    /// that raced back.
     fn write_shards(&self, files: &[(&str, &FileOutput)], old: &Loaded) -> io::Result<()> {
         let mut fresh: HashMap<u8, Vec<(&str, &FileOutput)>> = HashMap::new();
         for &(rel, output) in files {
@@ -400,6 +466,26 @@ impl Cache {
         fs::rename(&tmp, path).inspect_err(|_| {
             let _ = fs::remove_file(&tmp);
         })
+    }
+}
+
+/// Unlinks `path` only while it is still the file `observed` describes: a
+/// regular file with the same length and modification time.
+///
+/// A concurrent writer replaces a shard by renaming a new file into place,
+/// which changes the modification time (and all but adversarially identical
+/// lengths); such a replacement is left alone. The residual window — a
+/// replacement with identical length and mtime — costs one cold shard
+/// rebuild, never a wrong result: the cache only avoids recomputation.
+/// Unlink failures are ignored.
+fn unlink_if_same(path: &Path, observed: &Observed) {
+    let same = fs::symlink_metadata(path).is_ok_and(|meta| {
+        meta.is_file()
+            && meta.len() == observed.len
+            && meta.modified().is_ok_and(|mtime| mtime == observed.mtime)
+    });
+    if same {
+        let _ = fs::remove_file(path);
     }
 }
 
