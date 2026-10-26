@@ -31,12 +31,29 @@ fn put(root: &Path, rel: &str, body: &str) {
     std::fs::write(&path, body).unwrap_or_else(|e| panic!("writing fixture {rel} failed: {e}"));
 }
 
-/// `check` from `cwd` with `HOME` and `XDG_CONFIG_HOME` inside `base`; returns stdout after asserting success.
+/// `core.excludesFile` value for `path` in portable git-config syntax: forward slashes survive
+/// both git's backslash escapes and the `ignore` crate's literal path parsing on Windows.
+fn excludes_value(path: &Path) -> String {
+    path.display().to_string().replace('\\', "/")
+}
+
+/// `check` from `cwd` with an isolated home (`HOME` and, on Windows, `USERPROFILE`) and
+/// `XDG_CONFIG_HOME` inside `base`; returns stdout after asserting success.
+///
+/// `USERPROFILE` matters because the `ignore` crate resolves `~/.gitconfig` via
+/// `std::env::home_dir()`, which reads `USERPROFILE` — not `HOME` — on Windows. Without it the
+/// child would read the runner's real global gitconfig instead of the fixture, silently dropping
+/// `core.excludesFile`. `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_SYSTEM` are cleared for the same
+/// reason: the `ignore` crate prefers them over the home config, so host values would break
+/// isolation.
 fn check(base: &Path, cwd: &Path) -> String {
     let out = Command::new(env!("CARGO_BIN_EXE_sloplint"))
         .current_dir(cwd)
         .env("HOME", base.join("home"))
+        .env("USERPROFILE", base.join("home"))
         .env("XDG_CONFIG_HOME", base.join("config"))
+        .env_remove("GIT_CONFIG_GLOBAL")
+        .env_remove("GIT_CONFIG_SYSTEM")
         .args(["check", "--no-cache", "--fail-on", "never"])
         .output()
         .unwrap_or_else(|e| panic!("spawning sloplint check failed: {e}"));
@@ -118,7 +135,10 @@ fn a_repository_negation_beats_global_excludes_in_a_subdirectory_root() {
     put(
         &base,
         "home/.gitconfig",
-        &format!("[core]\n\texcludesFile = {}\n", excludes.display()),
+        &format!(
+            "[core]\n\texcludesFile = \"{}\"\n",
+            excludes_value(&excludes)
+        ),
     );
     put(&base, "home/excludes", "x.rs\n");
     mkdir(&base, "repo/.git");
@@ -138,7 +158,10 @@ fn global_excludes_still_apply_in_a_subdirectory_root() {
     put(
         &base,
         "home/.gitconfig",
-        &format!("[core]\n\texcludesFile = {}\n", excludes.display()),
+        &format!(
+            "[core]\n\texcludesFile = \"{}\"\n",
+            excludes_value(&excludes)
+        ),
     );
     put(&base, "home/excludes", "glob.rs\n");
     mkdir(&base, "repo/.git");
