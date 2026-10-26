@@ -6,7 +6,7 @@
 
 use sloplint_core::lang::Lang;
 
-use super::support::{DEPTH, binding, on_default_stack, with_facts};
+use super::support::{DEPTH, binding, on_default_stack, with_facts, within_linear_budget};
 
 /// A field-access receiver nested at every level roots the one call at the leftmost identifier.
 #[test]
@@ -19,6 +19,34 @@ fn field_receiver_chains_keep_their_receiver_root() {
         with_facts(Lang::Java, "C.java", &source, |facts| {
             assert_eq!(facts.calls.len(), 1, "one call");
             assert_eq!(facts.calls[0].callee_root, Some("a"));
+        });
+    });
+}
+
+/// Every call in a 20,000-link method chain roots at the leftmost identifier, in linear time.
+///
+/// Each call finds its root by following the receivers below it, so an unmemoized walk
+/// costs the sum of the chain lengths and blows the budget at this depth.
+#[test]
+fn method_chains_keep_their_receiver_root_in_linear_time() {
+    on_default_stack(|| {
+        let source = format!(
+            "class C {{\n    void g() {{\n        x = a{};\n    }}\n}}\n",
+            ".m()".repeat(DEPTH)
+        );
+        within_linear_budget(|| {
+            with_facts(Lang::Java, "C.java", &source, |facts| {
+                assert_eq!(facts.calls.len(), DEPTH, "one call per link");
+                assert!(
+                    facts.calls.iter().all(|c| c.callee_root == Some("a")),
+                    "every link roots at a: {:?}",
+                    facts
+                        .calls
+                        .iter()
+                        .map(|c| c.callee_root)
+                        .collect::<Vec<_>>()
+                );
+            });
         });
     });
 }

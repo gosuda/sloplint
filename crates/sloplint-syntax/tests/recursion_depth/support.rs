@@ -1,11 +1,32 @@
 //! Shared setup: analyze one deep source through the public API on a default-sized thread stack.
 
+use std::time::{Duration, Instant};
+
 use sloplint_core::facts::{FileFacts, Function, MutBinding};
 use sloplint_core::lang::Lang;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 /// Nesting depth for every case: deep enough to overflow a 2 MiB stack under recursion.
 pub const DEPTH: usize = 20_000;
+
+/// Wall-clock budget for analyzing one source at [`DEPTH`].
+///
+/// Linear analysis takes well under a second in a debug build. A pass that rescans the nodes
+/// below every node costs minutes at this depth, so the budget separates the two shapes with a
+/// wide margin on a slow machine.
+pub const LINEAR_BUDGET: Duration = Duration::from_secs(30);
+
+/// Runs `check` and requires that it finishes within [`LINEAR_BUDGET`].
+pub fn within_linear_budget<T>(check: impl FnOnce() -> T) -> T {
+    let started = Instant::now();
+    let value = check();
+    let took = started.elapsed();
+    assert!(
+        took < LINEAR_BUDGET,
+        "analysis took {took:?} at depth {DEPTH}, so it is no longer linear in depth"
+    );
+    value
+}
 
 /// Runs `check` on a thread with the default 2 MiB stack, so an overflowing helper aborts the test
 /// binary (a failure) instead of hanging the harness.

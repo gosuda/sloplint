@@ -561,19 +561,30 @@ fn macro_ambient<'s>(
     ));
 }
 fn is_env_callee(callee: &str) -> bool {
-    if ["env::var", "env::var_os", "env::vars", "env::vars_os"]
-        .iter()
-        .any(|s| callee.ends_with(*s))
-    {
+    const ENVS: [&str; 4] = ["env::var", "env::var_os", "env::vars", "env::vars_os"];
+    if ENVS.iter().any(|s| callee.ends_with(*s)) {
         return true;
     }
-    if !callee.contains(char::is_whitespace) {
-        return false;
+    // Whitespace-tolerant fallback without scanning the whole callee: the joined
+    // text ends with a target exactly when the callee's trailing non-whitespace
+    // chars do, so only the longest-target tail matters. The old
+    // `contains`-then-`split_whitespace` walked the full callee per call, which
+    // made a member-call chain quadratic.
+    const MAX_ENV_TAIL: usize = "env::vars_os".len();
+    let mut tail = ['\0'; MAX_ENV_TAIL];
+    let mut len = 0;
+    for c in callee.chars().rev() {
+        if c.is_whitespace() {
+            continue;
+        }
+        if len == MAX_ENV_TAIL {
+            break;
+        }
+        tail[len] = c;
+        len += 1;
     }
-    let joined: String = callee.split_whitespace().collect();
-    ["env::var", "env::var_os", "env::vars", "env::vars_os"]
-        .iter()
-        .any(|s| joined.ends_with(*s))
+    ENVS.iter()
+        .any(|s| s.len() <= len && s.chars().rev().enumerate().all(|(i, c)| tail[i] == c))
 }
 fn env_ambient<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
     let Some(func) = child_by_field(n, "function") else {

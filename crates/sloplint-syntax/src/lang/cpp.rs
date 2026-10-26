@@ -261,7 +261,15 @@ impl LangHooks for CppHooks {
             }
             "call_expression" => {
                 let func = child_by_field(n, "function")?;
-                match flat(text(cx, func)).as_str() {
+                let raw = text(cx, func);
+                // The targets below are bare identifiers and `flat` only
+                // strips whitespace, so a callee holding anything but letters
+                // can never match; the prescan stops at the first such byte
+                // instead of copying the chain text per call.
+                if !raw.bytes().all(|b| b.is_ascii_alphabetic()) {
+                    return None;
+                }
+                match flat(raw).as_str() {
                     "dlsym" | "dlvsym" => Some("runtime symbol lookup (dlsym)"),
                     "GetProcAddress" => Some("runtime symbol lookup (GetProcAddress)"),
                     _ => None,
@@ -697,7 +705,13 @@ fn global_ambient<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, 
     }
 }
 fn env_ambient<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
-    c_family::env_ambient(cx, n, out, ENVS)
+    // c_family::env_ambient flattens the whole callee text, which costs O(depth)
+    // per call in a member-call chain. No ENVS entry contains a paren and `flat`
+    let paren = child_by_field(n, "function")
+        .is_some_and(|f| text(cx, f).bytes().any(|b| b == b'(' || b == b')'));
+    if !paren {
+        c_family::env_ambient(cx, n, out, ENVS);
+    }
 }
 fn gtest_assert<'s>(cx: &Cx<'_, 's>, n: Node<'_>, callee: &'s str) -> Assertion {
     let mut has_message = false;

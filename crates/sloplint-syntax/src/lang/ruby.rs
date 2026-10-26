@@ -5,11 +5,11 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    count_named_child, find_named_child, first_named_child, first_named_child_matching,
-    first_of_kind, has_child_kind, last_segment, named_children, narrow, only_named_child_matching,
-    pos_of, preceding_comments, rfind_named_child, slice, string_arg_shape, strip_quotes, text,
-    trimmed,
+    CallHead, Container, Cx, FunctionHead, LangHooks, Link, TypeHead, binary_concat,
+    child_by_field, count_named_child, find_named_child, first_named_child,
+    first_named_child_matching, first_of_kind, has_child_kind, last_segment, named_children,
+    narrow, only_named_child_matching, pos_of, preceding_comments, rfind_named_child, slice,
+    string_arg_shape, strip_quotes, text, trimmed,
 };
 use crate::spec::Role;
 
@@ -258,17 +258,23 @@ fn ruby_call_kind<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> CallKind {
         CallKind::Plain
     }
 }
+/// The chain family of [`ruby_receiver_root`] in the walk's chain-root memo.
+const RECEIVER_CHAIN: u8 = 0;
+
+/// The leftmost receiver of a call chain: the first node that is not a call with a receiver.
+///
+/// Memoized, so a chain of `n` calls costs `O(n)` and not `O(n²)`; every call would
+/// otherwise walk the receivers of all the calls below it.
 fn ruby_receiver_root<'s>(cx: &Cx<'_, 's>, recv: Node<'_>) -> &'s str {
-    let mut current = recv;
-    loop {
+    cx.chain_root(RECEIVER_CHAIN, recv, |current| {
         if current.kind() != "call" {
-            return text(cx, current);
+            return Link::Root(current);
         }
         match child_by_field(current, "receiver") {
-            Some(next) => current = next,
-            None => return text(cx, current),
+            Some(next) => Link::Next(next),
+            None => Link::Root(current),
         }
-    }
+    })
 }
 fn call_args(n: Node<'_>) -> Vec<Node<'_>> {
     match first_of_kind(n, &["argument_list"]) {

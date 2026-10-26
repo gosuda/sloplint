@@ -8,9 +8,9 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field,
-    find_named_child, first_named_child, first_named_child_matching, first_of_kind, last_segment,
-    named_children, narrow, only_named_child_matching, pos_of, preceding_comments,
+    CallHead, Container, Cx, FunctionHead, LangHooks, Link, TypeHead, any_named_child,
+    child_by_field, find_named_child, first_named_child, first_named_child_matching, first_of_kind,
+    last_segment, named_children, narrow, only_named_child_matching, pos_of, preceding_comments,
     rfind_named_child, slice, string_arg_shape, strip_quotes, text, trimmed,
 };
 use crate::spec::Role;
@@ -231,17 +231,56 @@ fn php_call_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
         })
         .collect()
 }
+/// The chain family of [`php_object_root`] in the walk's chain-root memo.
+const OBJECT_CHAIN: u8 = 3;
+
+/// True when a memoized root can end a valid chain: a bare name. Valid terminals are
+/// always single variables (dollar-stripped below), so anything else ends the chain
+/// at an unsupported node (a plain call, a scoped name) and keeps its historical
+/// `None`.
+fn is_chain_root(t: &str) -> bool {
+    !t.as_bytes().first().is_some_and(|b| b.is_ascii_digit())
+        && t.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'$' || !b.is_ascii())
+}
+
+/// The leftmost variable of an object chain: the first node without an `object` field.
+///
+/// Memoized, so a chain of `n` calls costs `O(n)` and not `O(n²)`; every call would
+/// otherwise walk the objects of all the calls below it. A chain that starts at a
+/// node with no object to follow keeps its old `None` without touching the memo,
+/// and a chain that ends at one is recognized by its non-name root text.
 fn php_object_root<'s>(cx: &Cx<'_, 's>, obj: Node<'_>) -> Option<&'s str> {
-    let mut current = obj;
-    loop {
-        if current.kind() == "variable_name" {
-            return Some(strip_dollar(text(cx, current)));
-        }
-        {
-            let next = child_by_field(current, "object")?;
-            current = next
-        }
+    if obj.kind() != "variable_name" && child_by_field(obj, "object").is_none() {
+        return None;
     }
+    let root = cx.chain_root(OBJECT_CHAIN, obj, |current| {
+        if current.kind() == "variable_name" {
+            return Link::Root(current);
+        }
+        match child_by_field(current, "object") {
+            Some(next) => Link::Next(next),
+            None => Link::Root(current),
+        }
+    });
+    let root = strip_dollar(root);
+    is_chain_root(root).then_some(root)
+}
+/// The last `::`/`->`/`.`/`\`-separated segment of a call's callee without scanning its
+/// receiver chain: the last separator always follows the object, so scanning from the
+/// object's end finds the same segment as scanning the whole span, and every call in
+/// a chain would otherwise rescan the chain's text below it.
+fn php_callee_last<'s>(cx: &Cx<'_, 's>, n: Node<'_>, callee: &'s str) -> &'s str {
+    const SEPS: &[&str] = &["::", "->", ".", "\\"];
+    let field = if n.kind() == "scoped_call_expression" {
+        "scope"
+    } else {
+        "object"
+    };
+    let (Some(base), Some(name)) = (child_by_field(n, field), child_by_field(n, "name")) else {
+        return last_segment(callee, SEPS);
+    };
+    last_segment(slice(cx.src, base.end_byte(), name.end_byte()), SEPS)
 }
 fn php_scope_root<'s>(cx: &Cx<'_, 's>, scope: Node<'_>) -> Option<&'s str> {
     let t = text(cx, scope);
@@ -719,7 +758,7 @@ impl LangHooks for PhpHooks {
             }
             kind if is_call_kind(kind) => {
                 let (callee, _) = php_stmt_callee(cx, n);
-                let last = last_segment(callee, &["::", "->", ".", "\\"]);
+                let last = php_callee_last(cx, n, callee);
                 if last == "getenv" || last == "apache_getenv" {
                     out.push((
                         AmbientKind::EnvRead,
@@ -778,7 +817,7 @@ impl LangHooks for PhpHooks {
             return None;
         }
         let (callee, _) = php_stmt_callee(cx, n);
-        let name = last_segment(callee, &["::", "->", ".", "\\"]);
+        let name = php_callee_last(cx, n, callee);
         if !name.starts_with("assert") {
             return None;
         }

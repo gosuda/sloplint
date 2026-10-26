@@ -8,8 +8,8 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    first_named_child, first_named_child_matching, last_named_child, last_segment, named_children,
-    narrow, pos_of, preceding_comments, string_arg_shape, strip_quotes, text,
+    first_named_child, first_named_child_matching, last_named_child, named_children, narrow,
+    pos_of, preceding_comments, string_arg_shape, strip_quotes, text,
 };
 use crate::spec::Role;
 
@@ -329,20 +329,38 @@ fn is_sentinel(cx: &Cx<'_, '_>, spec: Node<'_>) -> bool {
     })
 }
 
-fn tail_two(callee: &str) -> &str {
-    let mut first = callee.len();
-    let mut second = callee.len();
-    for (i, c) in callee.char_indices() {
-        if c == '.' || c == '/' {
-            second = first;
-            first = i + 1;
+/// The text after the last `.` or `/` separator: one backward pass stopping at
+/// the first separator instead of an `rfind` per separator (the missing
+/// separator would scan the whole callee per call and make a member-call
+/// chain quadratic).
+fn go_last_segment(callee: &str) -> &str {
+    let bytes = callee.as_bytes();
+    let mut start = bytes.len();
+    for &b in bytes.iter().rev() {
+        start -= 1;
+        if b == b'.' || b == b'/' {
+            return &callee[start + 1..];
         }
     }
-    if second == callee.len() {
-        callee
-    } else {
-        callee.split_at(second).1
+    callee
+}
+
+fn tail_two(callee: &str) -> &str {
+    // The last two dot- or slash-separated segments: only the tail matters, so
+    // scan back from the end and stop at the second separator. A member-call
+    // chain reruns this per call, and any scan touching the whole callee per
+    // call makes the chain quadratic. Separators are ASCII, so byte indices
+    // land on char boundaries exactly as the old forward scan computed.
+    let mut seen = 0;
+    for (i, &b) in callee.as_bytes().iter().enumerate().rev() {
+        if b == b'.' || b == b'/' {
+            seen += 1;
+            if seen == 2 {
+                return &callee[i + 1..];
+            }
+        }
     }
+    callee
 }
 
 fn go_var_specs(n: Node<'_>) -> Vec<Node<'_>> {
@@ -631,7 +649,7 @@ impl LangHooks for GoHooks {
             return None;
         }
         let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
-        let last = last_segment(callee, &[".", "/"]);
+        let last = go_last_segment(callee);
         if last != "MethodByName" && last != "FieldByName" {
             return None;
         }
