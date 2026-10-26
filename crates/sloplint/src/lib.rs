@@ -6,17 +6,21 @@ pub mod rules_cmd;
 
 mod cache;
 mod discover;
+mod fileio;
 mod project;
 mod settings;
+mod store;
 mod terminal;
 
+pub use store::read_source;
 pub use terminal::TerminalText;
 
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
-use std::io::{self, Read, Write};
+use std::io;
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 use globset::GlobSet;
 use rayon::prelude::*;
@@ -33,6 +37,7 @@ use thiserror::Error;
 use cache::{FileOutput, Loaded};
 use discover::Entry;
 use project::Overrides;
+use store::{load_baseline, read_within_limit, record_baseline};
 
 const GENERATED_WINDOW: usize = 2048;
 
@@ -63,7 +68,7 @@ pub struct RunOptions {
     /// ship a forged cache. An unusable cache location disables the cache
     /// with a warning instead of failing the run; `false` does no cache work.
     pub use_cache: bool,
-    /// Worker threads for the tree walk, cache load, analysis, and finalization; zero means the available parallelism.
+    /// Worker threads for the tree walk, cache load, analysis, and finalization; zero means the available parallelism. Clamped to 512.
     pub jobs: usize,
     /// Record the findings as the baseline instead of gating on them.
     pub write_baseline: bool,
@@ -93,6 +98,9 @@ pub enum RunError {
     /// The baseline file is not a valid version-1 baseline.
     #[error("baseline {}: {message}", path.display())]
     BaselineCorrupt { path: PathBuf, message: String },
+    /// The baseline target is a regular file whose content is not a sloplint baseline; it is left untouched.
+    #[error("{} exists and is not a sloplint baseline; refusing to overwrite it (delete the file to record a new baseline)", path.display())]
+    NotABaseline { path: PathBuf },
     /// `init` would overwrite an existing configuration.
     #[error("{} already exists", path.display())]
     ConfigExists { path: PathBuf },
@@ -227,22 +235,8 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         .entries
         .iter()
         .filter(|entry| entry.lang == Lang::OcamlInterface)
-        .map(|entry| entry.rel.clone())
+        .filter_map(|entry| entry.rel.strip_suffix('i').map(str::to_string))
         .collect();
-    let mut active_ids = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
-    let mut active_families = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
-    for id in CATALOG
-        .iter()
-        .map(|info| info.id)
-        .chain(config.custom_rules.iter().map(|spec| spec.id.as_str()))
-    {
-        if rules.is_active(id) {
-            for (at, _) in id.match_indices('/') {
-                active_families.insert(id[..at].to_string());
-            }
-            active_ids.insert(id.to_string());
-        }
-    }
     let pipe = Pipeline {
         rules: &rules,
         custom: &custom,
@@ -252,8 +246,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         test_globs: &test_globs,
         cache: &loaded,
         interfaces: &interfaces,
-        active_ids,
-        active_families,
+        active_rules: OnceLock::new(),
     };
     let outcomes = analyze_all(&discovery.entries, &pipe, &pool)?;
     let (analyzed, skipped_outcomes) = split_outcomes(outcomes, &scopes);
@@ -282,11 +275,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     };
     let baseline_written = if opts.write_baseline {
         let path = project::resolve_within_root(&root, &config.project.baseline)?;
-        write_replacing(
-            &path,
-            Baseline::from_findings(&reported).to_json().as_bytes(),
-        )
-        .map_err(|source| io_error(&path, source))?;
+        record_baseline(&path, &reported)?;
         Some(config.project.baseline.clone())
     } else {
         None
@@ -336,6 +325,29 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     })
 }
 
+struct ActiveRules {
+    ids: HashSet<String>,
+    families: HashSet<String>,
+}
+
+fn build_active_rules(rules: &RuleSet, config: &Config, filter: &RuleFilter) -> ActiveRules {
+    let mut ids = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
+    let mut families = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
+    for id in CATALOG
+        .iter()
+        .map(|info| info.id)
+        .chain(config.custom_rules.iter().map(|spec| spec.id.as_str()))
+    {
+        if rules.is_active(id) && filter.matches(id) {
+            for (at, _) in id.match_indices('/') {
+                families.insert(id[..at].to_string());
+            }
+            ids.insert(id.to_string());
+        }
+    }
+    ActiveRules { ids, families }
+}
+
 struct Pipeline<'a> {
     rules: &'a RuleSet,
     custom: &'a CustomRules,
@@ -345,8 +357,27 @@ struct Pipeline<'a> {
     test_globs: &'a GlobSet,
     cache: &'a Loaded,
     interfaces: &'a HashSet<String>,
-    active_ids: HashSet<String>,
-    active_families: HashSet<String>,
+    active_rules: OnceLock<ActiveRules>,
+}
+
+impl Pipeline<'_> {
+    fn active_rules(&self) -> &ActiveRules {
+        self.active_rules
+            .get_or_init(|| build_active_rules(self.rules, self.config, self.filter))
+    }
+
+    fn is_operand_active(&self, pattern: &RulePattern) -> bool {
+        let active = self.active_rules();
+        match pattern {
+            RulePattern::Exact(id) => active.ids.contains(&**id),
+            RulePattern::Family(family) => active.families.contains(&**family),
+        }
+    }
+
+    fn reports_unused(&self) -> bool {
+        self.rules.is_active("meta/unused-suppression")
+            && self.filter.matches("meta/unused-suppression")
+    }
 }
 
 enum Outcome {
@@ -364,7 +395,6 @@ struct Analyzed {
 struct Probe<'a> {
     text: &'a str,
     hash: [u8; 32],
-    interface: bool,
 }
 
 fn analyze_all(
@@ -375,13 +405,20 @@ fn analyze_all(
     let results: Vec<Result<Outcome, RunError>> = pool.install(|| {
         entries
             .par_iter()
-            .map_init(Parsers::new, |parsers, entry| process(parsers, entry, pipe))
+            .map_init(
+                || Parsers::with_ocaml_interfaces(pipe.interfaces),
+                |parsers, entry| process(parsers, entry, pipe),
+            )
             .collect()
     });
     results.into_iter().collect()
 }
 
-fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<Outcome, RunError> {
+fn process(
+    parsers: &mut Parsers<'_>,
+    entry: &Entry,
+    pipe: &Pipeline<'_>,
+) -> Result<Outcome, RunError> {
     let skipped = || Ok(Outcome::Skipped(entry.rel.clone()));
     let bytes = match read_within_limit(&entry.abs, pipe.config.project.max_file_bytes) {
         Err(source) if source.kind() == io::ErrorKind::NotFound => return skipped(),
@@ -398,8 +435,7 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
     if owned.starts_with('\u{feff}') {
         owned.drain(..'\u{feff}'.len_utf8());
     }
-    let interface =
-        entry.lang == Lang::Ocaml && pipe.interfaces.contains(&format!("{}i", entry.rel));
+    let interface = entry.lang == Lang::Ocaml && pipe.interfaces.contains(entry.rel.as_str());
     let hash = if interface {
         cache::interface_hash(owned.as_str())
     } else {
@@ -409,20 +445,13 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
         let probe = Probe {
             text: owned.as_str(),
             hash,
-            interface,
         };
         match pipe.cache.take(entry.rel.as_str(), &probe.hash) {
             Some(output) => (output, true),
             None => (analyze_file(parsers, entry, &probe, pipe), false),
         }
     };
-    let reports_unused = pipe.filter.0.is_empty()
-        || pipe
-            .filter
-            .0
-            .iter()
-            .any(|p| p.matches("meta/unused-suppression"));
-    let source = (reports_unused && !output.suppressions.is_empty()).then_some(owned);
+    let source = (pipe.reports_unused() && !output.suppressions.is_empty()).then_some(owned);
     Ok(Outcome::Analyzed(Box::new(Analyzed {
         rel: entry.rel.clone(),
         output,
@@ -432,7 +461,7 @@ fn process(parsers: &mut Parsers, entry: &Entry, pipe: &Pipeline<'_>) -> Result<
 }
 
 fn analyze_file(
-    parsers: &mut Parsers,
+    parsers: &mut Parsers<'_>,
     entry: &Entry,
     probe: &Probe<'_>,
     pipe: &Pipeline<'_>,
@@ -442,7 +471,6 @@ fn analyze_file(
         path: entry.rel.as_str(),
         source: probe.text,
         is_test_file: pipe.test_globs.is_match(entry.rel.as_str()),
-        has_interface: probe.interface,
     };
     let analysis = analyze(parsers, &input, pipe.custom);
     let world = WorldFacts::from_facts(&analysis.facts);
@@ -572,29 +600,21 @@ fn world_findings(pipe: &Pipeline<'_>, analyzed: &[Analyzed]) -> Vec<Finding> {
 
 fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Result<Vec<Finding>, RunError> {
     let FileOutput {
-        findings,
+        mut findings,
         mut suppressions,
         parsed,
         ..
     } = file.output;
-    let mut findings = fingerprinted(findings);
     suppress::apply(&mut findings, &mut suppressions);
-    if parsed
-        && (pipe.filter.0.is_empty()
-            || pipe
-                .filter
-                .0
-                .iter()
-                .any(|p| p.matches("meta/unused-suppression")))
-    {
-        findings.extend(fingerprinted(unused_findings(
+    if parsed && pipe.reports_unused() {
+        findings.extend(unused_findings(
             pipe,
             &file.rel,
             &suppressions,
             file.source.as_deref(),
-        )?));
+        )?);
     }
-    Ok(findings)
+    Ok(fingerprinted(findings))
 }
 
 fn unused_findings(
@@ -603,11 +623,20 @@ fn unused_findings(
     suppressions: &[Suppression],
     source: Option<&str>,
 ) -> Result<Vec<Finding>, RunError> {
-    let unused: Vec<&Suppression> = suppressions
+    let candidates: Vec<(&Suppression, Vec<&RulePattern>)> = suppressions
         .iter()
-        .filter(|suppression| !suppression.used && suppression_active(pipe, suppression))
+        .filter_map(|suppression| {
+            let unused_active: Vec<&RulePattern> = suppression
+                .rules
+                .iter()
+                .zip(&suppression.used)
+                .filter(|(pattern, used)| !**used && pipe.is_operand_active(pattern))
+                .map(|(pattern, _)| pattern)
+                .collect();
+            (!unused_active.is_empty()).then_some((suppression, unused_active))
+        })
         .collect();
-    if unused.is_empty() {
+    if candidates.is_empty() {
         return Ok(Vec::new());
     }
     let fallback;
@@ -618,21 +647,14 @@ fn unused_findings(
             &fallback
         }
     };
-    Ok(unused
+    Ok(candidates
         .into_iter()
-        .filter_map(|suppression| {
-            let patterns = describe(&suppression.rules);
+        .filter_map(|(suppression, unused_patterns)| {
+            let patterns = describe(&unused_patterns);
             pipe.rules
                 .unused_suppression(rel, text, suppression.start_line, &patterns)
         })
         .collect())
-}
-
-fn suppression_active(pipe: &Pipeline<'_>, suppression: &Suppression) -> bool {
-    suppression.rules.iter().all(|pattern| match pattern {
-        RulePattern::Exact(id) => pipe.active_ids.contains(&**id),
-        RulePattern::Family(family) => pipe.active_families.contains(&**family),
-    })
 }
 
 fn apply_gate(
@@ -650,133 +672,12 @@ fn apply_gate(
     Ok(baseline.filter(all, &|path: &str| scopes.contains(Path::new(path))))
 }
 
-fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunError> {
-    let path = project::resolve_within_root(root, name)?;
-    let text = match project::read_regular_string(&path) {
-        Ok(text) => text,
-        Err(source) if source.kind() == io::ErrorKind::NotFound => {
-            return Err(RunError::BaselineMissing { path });
-        }
-        Err(source) => return Err(RunError::Io { path, source }),
-    };
-    Baseline::from_json(&text).map_err(|message| RunError::BaselineCorrupt { path, message })
-}
-
-fn read_within_limit(path: &Path, max_bytes: u64) -> io::Result<Option<Vec<u8>>> {
-    let (file, len) = project::open_regular(path)?;
-    if len > max_bytes {
-        return Ok(None);
-    }
-    let cap = usize::try_from(len.min(max_bytes.saturating_add(1))).unwrap_or(0);
-    let mut bytes = Vec::with_capacity(cap);
-    file.take(max_bytes.saturating_add(1))
-        .read_to_end(&mut bytes)?;
-    Ok((u64::try_from(bytes.len()).unwrap_or(u64::MAX) <= max_bytes).then_some(bytes))
-}
-
-/// Reads a whole regular file as UTF-8 text, bounded by `max_bytes`.
-///
-/// Opens the path without blocking and refuses FIFOs and devices;
-/// returns an error when the file grows past the bound or is not valid UTF-8.
-/// A leading byte-order mark is removed in place when present.
-pub fn read_source(path: &Path, max_bytes: u64) -> Result<String, RunError> {
-    let invalid =
-        |message: &'static str| io_error(path, io::Error::new(io::ErrorKind::InvalidData, message));
-    let bytes = read_within_limit(path, max_bytes)
-        .map_err(|source| io_error(path, source))?
-        .ok_or_else(|| invalid("file grew past max_file_bytes while being linted"))?;
-    let mut text =
-        String::from_utf8(bytes).map_err(|_| invalid("stream did not contain valid UTF-8"))?;
-    if text.starts_with('\u{feff}') {
-        text.drain(..'\u{feff}'.len_utf8());
-    }
-    Ok(text)
-}
-
-/// Replaces `path` with `bytes` so no reader or crash ever sees a partial file.
-///
-/// The bytes go to an exclusively created sibling file that is renamed over
-/// `path`; on any failure the sibling is removed and `path` is untouched. An
-/// existing target must be a regular file writable by this user (a FIFO or
-/// device is refused without blocking) and keeps its permissions. The
-/// name is replaced, not followed, so a symlink swapped in after
-/// `resolve_within_root` cannot redirect the write.
-fn write_replacing(path: &Path, bytes: &[u8]) -> io::Result<()> {
-    let existing = fs::metadata(path).map(Some).or_else(|error| {
-        if error.kind() == io::ErrorKind::NotFound {
-            Ok(None)
-        } else {
-            Err(error)
-        }
-    })?;
-    if let Some(meta) = &existing {
-        if !meta.is_file() && !meta.is_dir() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "not a regular file",
-            ));
-        }
-        probe_writable(path)?;
-    }
-    let permissions = existing.map(|meta| meta.permissions());
-    let stamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |elapsed| elapsed.subsec_nanos());
-    let name = path.file_name().unwrap_or_default().to_string_lossy();
-    let tmp = path.with_file_name(format!(".{name}.{}.{stamp}.tmp", std::process::id()));
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&tmp)?;
-    let written = file
-        .write_all(bytes)
-        .and_then(|()| match permissions {
-            Some(permissions) => file.set_permissions(permissions),
-            None => Ok(()),
-        })
-        .and_then(|()| file.sync_all());
-    drop(file);
-    written
-        .and_then(|()| fs::rename(&tmp, path))
-        .inspect_err(|_| {
-            let _ = fs::remove_file(&tmp);
-        })
-}
-
-/// Probes that an existing baseline target is writable without blocking on a FIFO.
-///
-/// Unix opens the path nonblocking with no controlling terminal, so a FIFO swapped in
-/// after the metadata check fails at once instead of waiting for a reader; the opened
-/// handle is then refused unless it is a regular file. A read-only regular file still
-/// fails here, preserving the read-only rejection before any temporary file is made.
-#[cfg(unix)]
-fn probe_writable(path: &Path) -> io::Result<()> {
-    use std::os::unix::fs::OpenOptionsExt;
-    let file = fs::OpenOptions::new()
-        .write(true)
-        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
-        .open(path)?;
-    let meta = file.metadata()?;
-    if !meta.is_file() {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "not a regular file",
-        ));
-    }
-    Ok(())
-}
-
-#[cfg(not(unix))]
-fn probe_writable(path: &Path) -> io::Result<()> {
-    fs::OpenOptions::new().write(true).open(path).map(|_| ())
-}
-
 fn is_generated(bytes: &[u8]) -> bool {
     let head = String::from_utf8_lossy(&bytes[..bytes.len().min(GENERATED_WINDOW)]);
     head.contains("@generated") || (head.contains("Code generated") && head.contains("DO NOT EDIT"))
 }
 
-fn describe(patterns: &[RulePattern]) -> String {
+fn describe(patterns: &[&RulePattern]) -> String {
     patterns
         .iter()
         .map(|pattern| match pattern {
@@ -795,11 +696,15 @@ fn threshold(fail_on: FailOn) -> Option<Severity> {
     }
 }
 
+const MAX_JOBS: usize = 512;
+
 fn jobs(requested: usize) -> usize {
     if requested == 0 {
-        std::thread::available_parallelism().map_or(1, NonZeroUsize::get)
+        std::thread::available_parallelism()
+            .map_or(1, NonZeroUsize::get)
+            .min(MAX_JOBS)
     } else {
-        requested
+        requested.min(MAX_JOBS)
     }
 }
 
@@ -811,5 +716,24 @@ fn io_error(path: &Path, source: io::Error) -> RunError {
     RunError::Io {
         path: path.to_path_buf(),
         source,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MAX_JOBS, jobs};
+
+    #[test]
+    fn absurd_job_requests_clamp_to_the_documented_ceiling() {
+        assert_eq!(
+            jobs(usize::MAX),
+            MAX_JOBS,
+            "a library request above the ceiling must clamp instead of asking rayon for that many threads"
+        );
+        assert_eq!(
+            jobs(7),
+            7,
+            "an in-range request must pass through unchanged"
+        );
     }
 }

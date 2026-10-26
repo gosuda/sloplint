@@ -139,21 +139,29 @@ fn last_name<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
     seg_last(trimmed(cx, func))
 }
 fn callee_root<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
-    match func.kind() {
-        "identifier" | "this" | "base" => Some(text(cx, func)),
-        "generic_name" => first_named_child_matching(func, &["identifier"]).map(|i| text(cx, i)),
-        "member_access_expression" => callee_root(cx, child_by_field(func, "expression")?),
-        _ => None,
+    let mut current = func;
+    loop {
+        current = match current.kind() {
+            "identifier" | "this" | "base" => return Some(text(cx, current)),
+            "generic_name" => {
+                return first_named_child_matching(current, &["identifier"]).map(|i| text(cx, i));
+            }
+            "member_access_expression" => child_by_field(current, "expression")?,
+            _ => return None,
+        };
     }
 }
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    match n.kind() {
-        "identifier" | "this" => Some((text(cx, n), pos_of(n))),
-        "member_access_expression" | "element_access_expression" => {
-            write_root(cx, child_by_field(n, "expression")?)
-        }
-        "parenthesized_expression" => write_root(cx, first_named_child(n)?),
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "identifier" | "this" => return Some((text(cx, current), pos_of(current))),
+            "member_access_expression" | "element_access_expression" => {
+                child_by_field(current, "expression")?
+            }
+            "parenthesized_expression" => first_named_child(current)?,
+            _ => return None,
+        };
     }
 }
 fn arg_shape<'s>(cx: &Cx<'_, 's>, e: Node<'_>) -> ArgShape<'s> {
@@ -249,9 +257,10 @@ fn sole_call_of(body: Node<'_>) -> Option<usize> {
     (call.kind() == "invocation_expression").then_some(call.id())
 }
 fn tuple_names<'s>(cx: &Cx<'_, 's>, t: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    for c in named_children(t) {
+    let mut pending: Vec<Node<'_>> = named_children(t).into_iter().rev().collect();
+    while let Some(c) = pending.pop() {
         if c.kind() == "tuple_pattern" {
-            tuple_names(cx, c, out);
+            pending.extend(named_children(c).into_iter().rev());
         } else if c.kind() == "identifier" {
             out.push((text(cx, c), pos_of(c)));
         }
@@ -358,11 +367,11 @@ impl LangHooks for CSharpHooks {
             sole_call: sole_call_of(body),
         })
     }
-    fn is_else_if(&self, n: Node<'_>) -> bool {
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
         if n.kind() != "if_statement" {
             return false;
         }
-        let Some(p) = n.parent() else { return false };
+        let Some(p) = parent else { return false };
         if p.kind() != "if_statement" {
             return false;
         }

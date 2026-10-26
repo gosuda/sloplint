@@ -10,7 +10,7 @@ use crate::walk::{FnFrame, FrameDecl, Mark, WalkState};
 
 impl<'s, 'a> WalkState<'s, 'a, '_> {
     pub(crate) fn enter_typedef(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let head = {
             let cx = self.make_cx();
             hooks.typedef(node, &cx)
@@ -28,7 +28,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn enter_impl(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let head = {
             let cx = self.make_cx();
             hooks.typedef(node, &cx)
@@ -53,7 +53,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn enter_module(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let container = {
             let cx = self.make_cx();
             hooks.container(node, &cx)
@@ -64,7 +64,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn enter_match_arm(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let arm = {
             let cx = self.make_cx();
             hooks.match_arm(node, &cx)
@@ -78,7 +78,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     pub(crate) fn push_function(&mut self, node: tree_sitter::Node<'_>, head: FunctionHead<'s>) {
         let untyped_throws = {
             let cx = self.make_cx();
-            self.spec.hooks.untyped_throws(node, &cx)
+            self.hooks.untyped_throws(node, &cx)
         };
         let index = self.facts.functions.len();
         self.facts.functions.push(Function {
@@ -105,11 +105,12 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             decls: HashMap::new(),
             sole_call: head.sole_call,
         });
+        self.assert_mark_entered(node.id());
         self.marks.push((node.id(), Mark::Fn));
     }
 
     pub(crate) fn push_call(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let head = {
             let cx = self.make_cx();
             hooks.call(node, &cx)
@@ -133,7 +134,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn push_imports(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let mut imports = Vec::new();
         {
             let cx = self.make_cx();
@@ -143,7 +144,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn push_assertion(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let assertion = {
             let cx = self.make_cx();
             hooks.assertion(node, &cx)
@@ -154,7 +155,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn push_dynamic(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let what = {
             let cx = self.make_cx();
             hooks.dynamic(node, &cx)
@@ -168,7 +169,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn push_struct_lit(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let copy = {
             let cx = self.make_cx();
             hooks.struct_lit(node, &cx)
@@ -179,7 +180,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn push_handler(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let handler = {
             let cx = self.make_cx();
             hooks.handler(node, &cx)
@@ -190,7 +191,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn collect_ambient(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let owner = self.fn_stack.last().map(|frame| narrow(frame.index));
         let mut found = Vec::new();
         {
@@ -208,7 +209,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn apply_write_roots(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let mut roots = Vec::new();
         {
             let cx = self.make_cx();
@@ -220,7 +221,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn push_decls(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let mut names = Vec::new();
         {
             let cx = self.make_cx();
@@ -249,7 +250,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn apply_bind(&mut self, node: tree_sitter::Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let mut names = Vec::new();
         {
             let cx = self.make_cx();
@@ -322,6 +323,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             self.facts.has_inline_tests = true;
         }
         self.containers.push(container);
+        self.assert_mark_entered(mark);
         self.marks.push((mark, Mark::Container));
     }
 

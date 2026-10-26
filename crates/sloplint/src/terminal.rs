@@ -8,14 +8,16 @@ use std::io;
 ///
 /// Source lines, file names, and configuration values can hold bytes that a terminal
 /// interprets as commands, such as an escape sequence that writes the clipboard or moves
-/// the cursor over earlier output. Writing a `TerminalText` instead of the raw text
-/// replaces each C0 control character (except tab), DEL, and each C1 control character
-/// with an escape that shows the code point:
+/// the cursor over earlier output, and Unicode bidirectional controls that reorder the
+/// text a reader sees (CVE-2021-42574). Writing a `TerminalText` instead of the raw text
+/// replaces each C0 control character (except tab), DEL, each C1 control character, and
+/// each bidi control with an escape that shows the code point:
 ///
 /// - ASCII controls and DEL become `\x` plus two lowercase hex digits, such as `\x1b`
 ///   and `\x7f`.
-/// - C1 controls (U+0080 to U+009F) become `\u{..}` with lowercase hex digits, such as
-///   `\u{9b}`.
+/// - C1 controls (U+0080 to U+009F) and Unicode bidirectional controls (U+061C, U+200E,
+///   U+200F, U+202A to U+202E, U+2066 to U+2069) become `\u{..}` with lowercase hex digits,
+///   such as `\u{9b}` and `\u{202e}`.
 ///
 /// Every other character, including tab, quotes, backslash, and all other Unicode, is
 /// written unchanged. The line feed and carriage return are controls: [`line`] escapes
@@ -117,10 +119,10 @@ impl<'a> TerminalText<'a> {
 /// Scans `bytes` from `from` for the next escaped control.
 ///
 /// Returns the control's byte offset, byte length, and code point value. ASCII controls
-/// and DEL have length 1 with the byte as the value; C1 controls have length 2 with the
-/// trailing byte's value as the code point. Tab is never a control, and the line feed is
+/// and DEL have length 1 with the byte as the value; C1 controls and Unicode bidi controls
+/// have their scalar value as the code point. Tab is never a control, and the line feed is
 /// skipped when `keep_newlines` holds.
-fn next_control(bytes: &[u8], keep_newlines: bool, from: usize) -> Option<(usize, usize, u8)> {
+fn next_control(bytes: &[u8], keep_newlines: bool, from: usize) -> Option<(usize, usize, u32)> {
     let mut at = from;
     while at < bytes.len() {
         if bytes[at..].first_chunk::<16>().is_some_and(plain_block) {
@@ -135,52 +137,76 @@ fn next_control(bytes: &[u8], keep_newlines: bool, from: usize) -> Option<(usize
 }
 
 /// The byte length and code point value of the control starting at `at`, if one does.
-fn control_at(bytes: &[u8], at: usize, keep_newlines: bool) -> Option<(usize, u8)> {
+fn control_at(bytes: &[u8], at: usize, keep_newlines: bool) -> Option<(usize, u32)> {
     match bytes[at] {
         b'\t' => None,
         b'\n' if keep_newlines => None,
-        byte @ (0x00..=0x1f | 0x7f) => Some((1, byte)),
+        byte @ (0x00..=0x1f | 0x7f) => Some((1, u32::from(byte))),
         0xC2 => bytes
             .get(at + 1)
             .copied()
             .filter(|next| (0x80..=0x9f).contains(next))
-            .map(|next| (2, next)),
-        0x20..=0x7e | 0x80..=0xC1 | 0xC3..=0xff => None,
+            .map(|next| (2, u32::from(next))),
+        0xD8 => bytes
+            .get(at + 1)
+            .copied()
+            .filter(|&next| next == 0x9C)
+            .map(|_| (2, 0x061c)),
+        0xE2 => match (bytes.get(at + 1).copied(), bytes.get(at + 2).copied()) {
+            (Some(b1), Some(b2)) => {
+                let code = (2 << 12) | (u32::from(b1 & 0x3f) << 6) | u32::from(b2 & 0x3f);
+                match code {
+                    0x200e | 0x200f | 0x202a..=0x202e | 0x2066..=0x2069 => Some((3, code)),
+                    _ => None,
+                }
+            }
+            _ => None,
+        },
+        _ => None,
     }
 }
 
 /// Whether a 16-byte block holds no byte that can start a control.
 ///
-/// Every control starts with a byte below `0x20`, the DEL byte, or the `0xC2` lead byte of
-/// a C1 character, so a block without them is skipped whole. The fold has no early exit,
-/// so it compiles to one vector compare.
+/// Every control starts with a byte below `0x20`, the DEL byte, the `0xC2` lead byte of
+/// a C1 character, or `0xD8`/`0xE2` for bidi controls, so a block without them is skipped whole.
+/// The fold has no early exit, so it compiles to one vector compare.
 fn plain_block(block: &[u8; 16]) -> bool {
     !block.iter().fold(false, |hit, &byte| {
-        hit | (byte < 0x20) | (byte == 0x7f) | (byte == 0xC2)
+        hit | (byte < 0x20) | (byte == 0x7f) | (byte == 0xC2) | (byte == 0xD8) | (byte == 0xE2)
     })
 }
 
 /// Writes the escape bytes for one control found by [`next_control`].
 ///
-/// Length 1 writes `\x` plus two lowercase hex digits; length 2 writes `\u{..}` with
+/// Length 1 writes `\x` plus two lowercase hex digits; larger lengths write `\u{..}` with
 /// lowercase hex digits, matching the [`Display`](fmt::Display) rendering exactly.
-fn write_escape<W: io::Write + ?Sized>(out: &mut W, len: usize, code: u8) -> io::Result<()> {
+fn write_escape<W: io::Write + ?Sized>(out: &mut W, len: usize, code: u32) -> io::Result<()> {
     if len == 1 {
-        out.write_all(&[
-            b'\\',
-            b'x',
-            HEX[(code >> 4) as usize],
-            HEX[(code & 0x0f) as usize],
-        ])
+        let hi = usize::try_from((code >> 4) & 0x0f).expect("hex digit fits usize");
+        let lo = usize::try_from(code & 0x0f).expect("hex digit fits usize");
+        out.write_all(&[b'\\', b'x', HEX[hi], HEX[lo]])
     } else {
-        out.write_all(&[
-            b'\\',
-            b'u',
-            b'{',
-            HEX[((code >> 4) & 0x0f) as usize],
-            HEX[(code & 0x0f) as usize],
-            b'}',
-        ])
+        let mut buf = [0u8; 10];
+        buf[0] = b'\\';
+        buf[1] = b'u';
+        buf[2] = b'{';
+        let mut cursor = 3;
+        let bits = 32 - code.leading_zeros();
+        let shift = bits.saturating_sub(1) / 4 * 4;
+        let mut s = shift;
+        loop {
+            let digit = usize::try_from((code >> s) & 0x0f).expect("hex digit fits usize");
+            buf[cursor] = HEX[digit];
+            cursor += 1;
+            if s < 4 {
+                break;
+            }
+            s -= 4;
+        }
+        buf[cursor] = b'}';
+        cursor += 1;
+        out.write_all(&buf[..cursor])
     }
 }
 

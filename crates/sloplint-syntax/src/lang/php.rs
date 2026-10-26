@@ -440,8 +440,8 @@ impl LangHooks for PhpHooks {
             sole_call: php_sole_call(n),
         })
     }
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        n.kind() == "if_statement" && n.parent().is_some_and(|p| p.kind() == "else_clause")
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        n.kind() == "if_statement" && parent.is_some_and(|p| p.kind() == "else_clause")
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         if !matches!(

@@ -22,7 +22,6 @@ fn run(source: &str) -> Analysis<'_> {
         path: "gap.c",
         source,
         is_test_file: false,
-        has_interface: false,
     };
     analyze(&mut Parsers::new(), &input, &NO_CUSTOM)
 }

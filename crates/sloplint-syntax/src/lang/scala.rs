@@ -86,10 +86,13 @@ fn func_node(n: Node<'_>) -> Option<Node<'_>> {
 }
 
 fn callee_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
-    match n.kind() {
-        "identifier" => Some(text(cx, n)),
-        "field_expression" => callee_root(cx, child_by_field(n, "value")?),
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "identifier" => return Some(text(cx, current)),
+            "field_expression" => child_by_field(current, "value")?,
+            _ => return None,
+        };
     }
 }
 
@@ -98,11 +101,14 @@ fn func_root<'s>(cx: &Cx<'_, 's>, f: Node<'_>) -> Option<&'s str> {
 }
 
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    match n.kind() {
-        "identifier" => Some((text(cx, n), pos_of(n))),
-        "field_expression" => write_root(cx, child_by_field(n, "value")?),
-        "parenthesized_expression" => write_root(cx, first_named_child(n)?),
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "identifier" => return Some((text(cx, current), pos_of(current))),
+            "field_expression" => child_by_field(current, "value")?,
+            "parenthesized_expression" => first_named_child(current)?,
+            _ => return None,
+        };
     }
 }
 
@@ -226,34 +232,33 @@ fn first_ident<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
 }
 
 fn collect_idents<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    if n.kind() == "wildcard" {
-        return;
-    }
-    if n.kind() == "identifier" {
-        out.push((text(cx, n), pos_of(n)));
-        return;
-    }
-    for c in named_children(n) {
-        collect_idents(cx, c, out);
+    let mut pending = vec![n];
+    while let Some(node) = pending.pop() {
+        match node.kind() {
+            "wildcard" => {}
+            "identifier" => out.push((text(cx, node), pos_of(node))),
+            _ => pending.extend(named_children(node).into_iter().rev()),
+        }
     }
 }
 
 fn binding_of<'s>(cx: &Cx<'_, 's>, pat: Option<Node<'_>>) -> Option<&'s str> {
-    let p = pat?;
-    if p.kind() == "identifier" {
-        return Some(text(cx, p));
-    }
-    if p.kind() == "capture_pattern" {
-        return child_by_field(p, "name").map(|m| text(cx, m));
-    }
-    if p.kind() != "typed_pattern" {
-        return None;
-    }
-    let inner = child_by_field(p, "pattern")?;
-    if inner.kind() == "identifier" {
-        Some(text(cx, inner))
-    } else {
-        binding_of(cx, Some(inner))
+    let mut current = pat?;
+    loop {
+        if current.kind() == "identifier" {
+            return Some(text(cx, current));
+        }
+        if current.kind() == "capture_pattern" {
+            return child_by_field(current, "name").map(|m| text(cx, m));
+        }
+        if current.kind() != "typed_pattern" {
+            return None;
+        }
+        let inner = child_by_field(current, "pattern")?;
+        if inner.kind() == "identifier" {
+            return Some(text(cx, inner));
+        }
+        current = inner;
     }
 }
 
@@ -487,11 +492,11 @@ impl LangHooks for ScalaHooks {
         })
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
         if n.kind() != "if_expression" {
             return false;
         }
-        let Some(p) = n.parent() else {
+        let Some(p) = parent else {
             return false;
         };
         if p.kind() != "if_expression" {

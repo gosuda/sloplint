@@ -129,7 +129,8 @@ fn a_replacement_never_exposes_a_partial_file_to_existing_links() {
 fn a_symlink_leaf_inside_the_root_keeps_pointing_at_its_updated_target() {
     use std::os::unix::fs::symlink;
     let (_tmp, root) = project();
-    put(&root, "real.json", "");
+    let prior = "{\"version\":1,\"findings\":[]}\n";
+    put(&root, "real.json", prior);
     symlink("real.json", root.join("link.json")).unwrap_or_else(|e| panic!("link: {e}"));
     put(
         &root,
@@ -148,8 +149,9 @@ fn a_symlink_leaf_inside_the_root_keeps_pointing_at_its_updated_target() {
         (0, 1),
         "the baseline read through the link must cover the one finding"
     );
-    assert!(
-        !read(&root.join("real.json")).is_empty(),
+    assert_ne!(
+        read(&root.join("real.json")),
+        prior.as_bytes(),
         "the target was not updated"
     );
 }

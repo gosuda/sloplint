@@ -333,10 +333,13 @@ fn import_fact<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Import<'s>> {
 }
 
 fn receiver_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
-    match n.kind() {
-        "identifier" | "this" | "super" => Some(text(cx, n)),
-        "field_access" | "method_invocation" => receiver_root(cx, child_by_field(n, "object")?),
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "identifier" | "this" | "super" => return Some(text(cx, current)),
+            "field_access" | "method_invocation" => child_by_field(current, "object")?,
+            _ => return None,
+        };
     }
 }
 
@@ -386,8 +389,8 @@ fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     }
 }
 
-fn is_else_if(n: Node<'_>) -> bool {
-    n.parent()
+fn is_else_if(n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+    parent
         .filter(|parent| parent.kind() == "if_statement")
         .and_then(|parent| child_by_field(parent, "alternative"))
         .is_some_and(|alternative| alternative.id() == n.id())
@@ -411,11 +414,14 @@ fn local_declared<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)
 }
 
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    match n.kind() {
-        "identifier" | "this" => Some((text(cx, n), pos_of(n))),
-        "field_access" => write_root(cx, child_by_field(n, "object")?),
-        "array_access" => write_root(cx, child_by_field(n, "array")?),
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "identifier" | "this" => return Some((text(cx, current), pos_of(current))),
+            "field_access" => child_by_field(current, "object")?,
+            "array_access" => child_by_field(current, "array")?,
+            _ => return None,
+        };
     }
 }
 
@@ -633,8 +639,8 @@ impl LangHooks for JavaHooks {
         function_head(cx, n)
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        is_else_if(n)
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        is_else_if(n, parent)
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

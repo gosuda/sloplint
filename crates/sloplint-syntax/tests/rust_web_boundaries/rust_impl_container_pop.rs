@@ -18,7 +18,6 @@ fn a_public_free_function_after_a_trait_impl_is_neither_interface_bound_nor_inhe
         path: "src/lib.rs",
         source: SOURCE,
         is_test_file: false,
-        has_interface: false,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(

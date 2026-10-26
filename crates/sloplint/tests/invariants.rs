@@ -9,6 +9,8 @@ mod isolated_cache;
 mod ocaml_interface;
 #[path = "invariants/suppression_oracles.rs"]
 mod suppression_oracles;
+#[path = "invariants/suppression_usage.rs"]
+mod suppression_usage;
 
 use sloplint::{Report, RunError, RunOptions, run};
 use std::path::{Path, PathBuf};
@@ -511,18 +513,15 @@ fn audit_custom_files_dir_symlink_is_not_followed() {
         "sloplint.toml",
         "[project]\ncustom_rule_files = [\"ok.toml\", \"alias.toml\", \"link/*.toml\", \"link/evil.toml\"]\n",
     );
-    let report = run_ok(&standard(&root));
-    assert!(
-        report
-            .findings
-            .iter()
-            .any(|f| &*f.rule == "custom/ok-hit" && &*f.path == "src/main.rs"),
-        "direct selection must still load"
-    );
-    assert!(
-        !fired(&report, "custom/evil-hit"),
-        "symlinked directory must not be followed"
-    );
+    let Err(error) = run(&standard(&root)) else {
+        panic!("symlinked custom rule file must fail closed");
+    };
+    assert_eq!(error.exit_code(), 2);
+    let RunError::Config(ConfigError::Glob { key, glob, .. }) = error else {
+        panic!("expected ConfigError::Glob, got: {error:?}");
+    };
+    assert_eq!(key, "project.custom_rule_files");
+    assert!(glob.contains("alias.toml"), "error must name alias.toml");
 }
 
 #[test]
@@ -583,7 +582,7 @@ fn audit_unused_ratchet_reports_only_new() {
 }
 
 #[test]
-fn audit_unused_ordinary_ordinal_survives_suppression() {
+fn audit_suppressed_duplicate_does_not_renumber_visible_ordinal() {
     let (_tmp, root) = tempdir();
     write(
         &root,
@@ -613,8 +612,8 @@ fn audit_unused_ordinary_ordinal_survives_suppression() {
         .collect();
     assert_eq!(kept.len(), 1, "suppression must drop only the first");
     assert_eq!(
-        kept[0].fingerprint, before[1].fingerprint,
-        "second ordinal must survive suppression"
+        kept[0].fingerprint, before[0].fingerprint,
+        "first ordinal survives suppression so deleting the suppressed duplicate does not renumber"
     );
 }
 

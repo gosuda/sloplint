@@ -29,8 +29,8 @@ pub struct Suppression {
     pub file_level: bool,
     /// Rule patterns this suppression silences.
     pub rules: Vec<RulePattern>,
-    /// Set once the suppression has matched at least one finding.
-    pub used: bool,
+    /// Usage flag per operand in `rules`, true if the operand matched at least one finding.
+    pub used: Vec<bool>,
 }
 
 /// A suppression operand: an exact rule id or a whole `family/*`.
@@ -72,6 +72,20 @@ const MARKER: &str = "sloplint-allow";
 const FILE_MARKER: &str = "sloplint-allow-file";
 const SUPPRESSIBLE_FAMILIES: [&str; 5] = ["complexity", "grep", "slop", "agent", "custom"];
 
+/// Comment openers and the text that ends a directive's reason, keyed by how the comment opens.
+/// The newline ends every reason, so a reason never spans lines. A block opener also ends its
+/// reason at its own closer, and a comment matching no opener is treated as a line comment.
+/// `<!--` is listed for its `-->` closer; no bundled adapter emits HTML comments.
+const REASON_CLOSERS: &[(&str, &str)] = &[
+    ("//", "\n"),
+    ("#", "\n"),
+    ("=begin", "=end"),
+    ("/*", "*/"),
+    ("(*", "*)"),
+    ("<#", "#>"),
+    ("<!--", "-->"),
+];
+
 enum Problem {
     Malformed,
     MissingReason,
@@ -112,8 +126,9 @@ pub fn parse_suppressions(
 
 /// Drops suppressed findings and marks every matching suppression used; `meta/*` is never suppressible.
 pub fn apply(findings: &mut Vec<Finding>, suppressions: &mut [Suppression]) {
+    let total_operands: usize = suppressions.iter().map(|s| s.rules.len()).sum();
     let index = Index::of(suppressions);
-    let mut used = vec![false; suppressions.len()];
+    let mut used = vec![false; total_operands];
     let mut dropped = vec![false; findings.len()];
     for (finding, drop) in findings.iter().zip(dropped.iter_mut()) {
         if finding.rule.starts_with("meta/") {
@@ -123,27 +138,38 @@ pub fn apply(findings: &mut Vec<Finding>, suppressions: &mut [Suppression]) {
     }
     let mut drops = dropped.into_iter();
     findings.retain(|_| !drops.next().unwrap_or(false));
-    for (suppression, hit) in suppressions.iter_mut().zip(used) {
-        suppression.used |= hit;
+    let mut hits = used.into_iter();
+    for suppression in suppressions.iter_mut() {
+        for (index, hit) in hits.by_ref().take(suppression.rules.len()).enumerate() {
+            if let Some(u) = suppression.used.get_mut(index) {
+                *u |= hit;
+            }
+        }
     }
 }
 
 struct Index<'s> {
-    exact: HashMap<&'s str, Vec<usize>>,
-    families: HashMap<&'s str, Vec<usize>>,
+    exact: HashMap<&'s str, Vec<(usize, usize)>>,
+    families: HashMap<&'s str, Vec<(usize, usize)>>,
     suppressions: &'s [Suppression],
 }
 
 impl<'s> Index<'s> {
     fn of(suppressions: &'s [Suppression]) -> Self {
-        let mut exact: HashMap<&'s str, Vec<usize>> = HashMap::new();
-        let mut families: HashMap<&'s str, Vec<usize>> = HashMap::new();
+        let mut exact: HashMap<&'s str, Vec<(usize, usize)>> = HashMap::new();
+        let mut families: HashMap<&'s str, Vec<(usize, usize)>> = HashMap::new();
+        let mut flat_id = 0;
         for (id, suppression) in suppressions.iter().enumerate() {
             for pattern in &suppression.rules {
                 match pattern {
-                    RulePattern::Exact(rule) => exact.entry(&**rule).or_default().push(id),
-                    RulePattern::Family(family) => families.entry(&**family).or_default().push(id),
+                    RulePattern::Exact(rule) => {
+                        exact.entry(&**rule).or_default().push((id, flat_id));
+                    }
+                    RulePattern::Family(family) => {
+                        families.entry(&**family).or_default().push((id, flat_id));
+                    }
                 }
+                flat_id += 1;
             }
         }
         Index {
@@ -160,9 +186,9 @@ impl<'s> Index<'s> {
             .filter_map(|(at, _)| self.families.get(&rule[..at]))
             .flatten();
         let mut hit = false;
-        for &id in exact.chain(families) {
+        for &(id, flat_id) in exact.chain(families) {
             if self.covers(id, line) {
-                used[id] = true;
+                used[flat_id] = true;
                 hit = true;
             }
         }
@@ -185,6 +211,7 @@ fn scan_comment(
     findings: &mut Vec<Finding>,
 ) {
     let text = comment.text;
+    let closer = reason_closer(text);
     let mut offset = 0usize;
     while let Some(at) = text[offset..].find(MARKER) {
         let start = offset + at;
@@ -195,14 +222,17 @@ fn scan_comment(
         } else {
             MARKER.len()
         };
-        match directive(&tail[keyword..], known) {
-            Ok(rules) => suppressions.push(Suppression {
-                start_line: comment.start_line,
-                end_line: comment.end_line,
-                file_level,
-                rules,
-                used: false,
-            }),
+        match directive(&tail[keyword..], known, closer) {
+            Ok(rules) => {
+                let used = vec![false; rules.len()];
+                suppressions.push(Suppression {
+                    start_line: comment.start_line,
+                    end_line: comment.end_line,
+                    file_level,
+                    rules,
+                    used,
+                });
+            }
             Err(problem) => findings.push(meta::invalid_suppression_finding(
                 path,
                 source,
@@ -214,7 +244,11 @@ fn scan_comment(
     }
 }
 
-fn directive(rest: &str, known: &dyn Fn(&str) -> bool) -> Result<Vec<RulePattern>, Problem> {
+fn directive(
+    rest: &str,
+    known: &dyn Fn(&str) -> bool,
+    closer: &str,
+) -> Result<Vec<RulePattern>, Problem> {
     let after_open = rest.strip_prefix('(').ok_or(Problem::Malformed)?;
     let close = after_open.find(')').ok_or(Problem::Malformed)?;
     let list = &after_open[..close];
@@ -222,7 +256,7 @@ fn directive(rest: &str, known: &dyn Fn(&str) -> bool) -> Result<Vec<RulePattern
         .trim_start()
         .strip_prefix(':')
         .ok_or(Problem::Malformed)?;
-    if reason_until_terminator(reason).trim().is_empty() {
+    if reason_until_terminator(reason, closer).trim().is_empty() {
         return Err(Problem::MissingReason);
     }
     let mut rules = Vec::new();
@@ -243,8 +277,124 @@ fn directive(rest: &str, known: &dyn Fn(&str) -> bool) -> Result<Vec<RulePattern
     Ok(rules)
 }
 
-fn reason_until_terminator(text: &str) -> &str {
-    let ends = [text.find('\n'), text.find("*/"), text.find("-->")];
+fn reason_closer(text: &str) -> &'static str {
+    let head = text.trim_start();
+    REASON_CLOSERS
+        .iter()
+        .find(|(opener, _)| head.starts_with(*opener))
+        .map_or("\n", |&(_, closer)| closer)
+}
+
+fn reason_until_terminator<'t>(text: &'t str, closer: &str) -> &'t str {
+    let ends = [text.find('\n'), text.find(closer)];
     let end = ends.into_iter().flatten().min().unwrap_or(text.len());
     &text[..end]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Independent expected `(opener, closer)` pairs, one per syntax the adapters emit. They are
+    /// written out rather than read from `REASON_CLOSERS`, so a wrong production closer fails the
+    /// test instead of matching itself. A line comment has no closer and ends at the newline.
+    const SYNTAXES: &[(&str, &str)] = &[
+        ("//", ""),
+        ("#", ""),
+        ("=begin", " =end"),
+        ("/*", " */"),
+        ("(*", " *)"),
+        ("<#", " #>"),
+        ("<!--", " -->"),
+    ];
+
+    /// Runs the parser over one comment and returns `(suppressions, findings)` counts.
+    fn outcome(text: &str) -> (usize, usize) {
+        let comment = CommentText {
+            start_line: 1,
+            end_line: 1,
+            text,
+        };
+        let (suppressions, findings) =
+            parse_suppressions("src/lib.rs", text, &[comment], &|_| true);
+        (suppressions.len(), findings.len())
+    }
+
+    #[test]
+    fn blank_reason_is_invalid_under_every_opener() {
+        for (open, close) in SYNTAXES {
+            let text = format!("{open} sloplint-allow(x):   {close}");
+            assert_eq!(
+                outcome(&text),
+                (0, 1),
+                "a blank reason in `{text}` must yield one invalid directive and no suppression"
+            );
+        }
+    }
+
+    #[test]
+    fn non_blank_reason_is_valid_under_every_opener() {
+        for (open, close) in SYNTAXES {
+            let text = format!("{open} sloplint-allow(x): reason{close}");
+            assert_eq!(
+                outcome(&text),
+                (1, 0),
+                "a reason in `{text}` must yield one suppression and no finding"
+            );
+        }
+    }
+
+    #[test]
+    fn line_comment_keeps_a_foreign_closer_inside_its_reason() {
+        for text in [
+            "// sloplint-allow(x): */",
+            "// sloplint-allow(x): -->",
+            "// sloplint-allow(x): #>",
+            "# sloplint-allow(x): *)",
+            "# sloplint-allow(x): -->",
+        ] {
+            assert_eq!(
+                outcome(text),
+                (1, 0),
+                "`{text}`: a line comment's reason runs to the newline, so a foreign closer is reason text"
+            );
+        }
+    }
+
+    #[test]
+    fn block_comment_ignores_a_closer_of_another_syntax() {
+        assert_eq!(
+            outcome("(* sloplint-allow(x): */ *)"),
+            (1, 0),
+            "an OCaml comment closes at `*)`; `*/` inside its reason is reason text"
+        );
+        assert_eq!(
+            outcome("/* sloplint-allow(x): *) */"),
+            (1, 0),
+            "a C comment closes at `*/`; `*)` inside its reason is reason text"
+        );
+    }
+
+    #[test]
+    fn block_comment_reason_ends_at_its_line() {
+        assert_eq!(
+            outcome("/* sloplint-allow(x):\n  reason */"),
+            (0, 1),
+            "a block comment's reason ends at the newline, so this one is blank"
+        );
+    }
+
+    #[test]
+    fn nested_block_comments_keep_their_reason_rules() {
+        assert_eq!(
+            outcome("/* outer /* inner */ sloplint-allow(x): reason */"),
+            (1, 0),
+            "a directive after a nested comment with a reason is valid"
+        );
+        assert_eq!(
+            outcome("(* outer (* inner *) sloplint-allow(x): *)"),
+            (0, 1),
+            "a directive after a nested comment with a blank reason is invalid"
+        );
+    }
 }

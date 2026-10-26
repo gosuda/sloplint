@@ -195,8 +195,13 @@ impl LangHooks for TypeScriptHooks {
         })
     }
 
-    fn closure_as_function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
-        let parent = n.parent()?;
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
+        let parent = parent?;
         if parent.kind() == "variable_declarator" {
             if child_by_field(parent, "value").is_some_and(|v| v.id() != n.id()) {
                 return None;
@@ -271,8 +276,8 @@ impl LangHooks for TypeScriptHooks {
         None
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        n.parent().is_some_and(|p| p.kind() == "else_clause")
+    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|p| p.kind() == "else_clause")
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

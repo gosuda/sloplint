@@ -1,6 +1,8 @@
-//! A sibling `.mli` hides the `.ml` publics: the lone file reports
-//! `grep/generic-name` while the paired project does not, through the cold
-//! library run and through the cached binary run.
+//! A sibling `.mli` in the analyzed set hides the `.ml` publics: the lone file
+//! reports `grep/generic-name` while the paired project does not, through the
+//! cold library run and through the cached binary run. Only the implementation
+//! that has the interface is hidden, an interface outside the analyzed set hides
+//! nothing, and an interface added after a cached run takes effect.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -50,6 +52,40 @@ fn sibling_interface_hides_publics_cold() {
     assert_ne!(
         lone_report.findings, paired_report.findings,
         "the paired run must report different findings",
+    );
+}
+
+#[test]
+fn interface_outside_the_analyzed_set_hides_nothing() {
+    let (_tmp, root) = paired_project();
+    write(
+        &root,
+        "sloplint.toml",
+        "[project]\nextend_exclude = [\"src/lib.mli\"]\n",
+    );
+    let report = run_ok(&standard(&root));
+    assert!(
+        fired(&report, "grep/generic-name"),
+        "an excluded lib.mli is outside the analyzed set, so `handle` stays public: {:?}",
+        report.findings,
+    );
+}
+
+#[test]
+fn interface_hides_only_its_own_implementation() {
+    let (_tmp, root) = paired_project();
+    write(&root, "src/other.ml", LIB_ML);
+    let report = run_ok(&standard(&root));
+    let generic: Vec<&str> = report
+        .findings
+        .iter()
+        .filter(|f| &*f.rule == "grep/generic-name")
+        .map(|f| &*f.path)
+        .collect();
+    assert_eq!(
+        generic,
+        ["src/other.ml"],
+        "only the implementation without a sibling interface exports `handle`",
     );
 }
 
@@ -110,5 +146,23 @@ fn sibling_interface_hides_publics_through_cache() {
     assert!(
         lone_out.contains("[grep/generic-name]"),
         "the lone lib.ml must expose `handle`: {lone_out}",
+    );
+}
+
+#[test]
+fn interface_added_after_a_cached_run_hides_publics() {
+    let (_tmp, root) = lone_project();
+    let home = CacheHome::new();
+    let lone_out = home.check(&root);
+    assert!(
+        lone_out.contains("[grep/generic-name]"),
+        "the lone lib.ml must expose `handle`: {lone_out}",
+    );
+
+    write(&root, "src/lib.mli", LIB_MLI);
+    let paired_out = home.check(&root);
+    assert!(
+        !paired_out.contains("[grep/generic-name]"),
+        "the cached lone run must not serve findings once lib.mli exists: {paired_out}",
     );
 }

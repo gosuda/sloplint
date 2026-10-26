@@ -429,14 +429,10 @@ impl RuleSet {
         if !self.is_active(meta::PARSE_ERROR.id) {
             return None;
         }
-        let mut finding = [meta::parse_error_finding(path, source, pos)];
-        self.cap_levels(&mut finding);
-        Some(
-            finding
-                .into_iter()
-                .next()
-                .unwrap_or_else(|| meta::parse_error_finding(path, source, pos)),
-        )
+        let mut findings = [meta::parse_error_finding(path, source, pos)];
+        self.cap_levels(&mut findings);
+        let [finding] = findings;
+        Some(finding)
     }
 
     /// Builds the `meta/unused-suppression` finding when the rule is active.
@@ -450,14 +446,10 @@ impl RuleSet {
         if !self.is_active(meta::UNUSED_SUPPRESSION.id) {
             return None;
         }
-        let mut finding = [meta::unused_suppression_finding(path, source, line, rules)];
-        self.cap_levels(&mut finding);
-        Some(
-            finding
-                .into_iter()
-                .next()
-                .unwrap_or_else(|| meta::unused_suppression_finding(path, source, line, rules)),
-        )
+        let mut findings = [meta::unused_suppression_finding(path, source, line, rules)];
+        self.cap_levels(&mut findings);
+        let [finding] = findings;
+        Some(finding)
     }
 
     /// Applies the level cap to findings emitted outside the rule run, such as suppression meta findings.

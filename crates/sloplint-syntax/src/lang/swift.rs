@@ -73,8 +73,8 @@ impl LangHooks for SwiftHooks {
         first_of_kind(n, &["throws"]).is_some_and(|clause| trimmed(cx, clause) == "throws")
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        n.parent().is_some_and(|p| p.kind() == "if_statement")
+    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|p| p.kind() == "if_statement")
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
@@ -361,12 +361,14 @@ fn sole_call(body: Node<'_>) -> Option<usize> {
 }
 
 fn unwrap_statement(node: Node<'_>) -> Option<Node<'_>> {
-    let inner = match node.kind() {
-        "control_transfer_statement" => child_by_field(node, "result"),
-        "try_expression" | "await_expression" => child_by_field(node, "expr"),
-        _ => return Some(node),
-    };
-    unwrap_statement(inner?)
+    let mut current = node;
+    loop {
+        current = match current.kind() {
+            "control_transfer_statement" => child_by_field(current, "result")?,
+            "try_expression" | "await_expression" => child_by_field(current, "expr")?,
+            _ => return Some(current),
+        };
+    }
 }
 
 fn params<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Vec<Param<'s>> {
@@ -465,22 +467,28 @@ fn global_scope(cx: &Cx<'_, '_>, decl: Node<'_>) -> bool {
 }
 
 fn root_of<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    match n.kind() {
-        "simple_identifier" => Some((text(cx, n), pos_of(n))),
-        "self_expression" => Some(("self", pos_of(n))),
-        "navigation_expression" | "postfix_expression" => root_of(cx, child_by_field(n, "target")?),
-        "directly_assignable_expression" => root_of(cx, n.named_child(0)?),
-        "call_expression" if is_subscript(n) => root_of(cx, n.named_child(0)?),
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "simple_identifier" => return Some((text(cx, current), pos_of(current))),
+            "self_expression" => return Some(("self", pos_of(current))),
+            "navigation_expression" | "postfix_expression" => child_by_field(current, "target")?,
+            "directly_assignable_expression" => current.named_child(0)?,
+            "call_expression" if is_subscript(current) => current.named_child(0)?,
+            _ => return None,
+        };
     }
 }
 
 fn callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
-    match callee.kind() {
-        "simple_identifier" => Some(text(cx, callee)),
-        "self_expression" => Some("self"),
-        "navigation_expression" => callee_root(cx, child_by_field(callee, "target")?),
-        _ => None,
+    let mut current = callee;
+    loop {
+        current = match current.kind() {
+            "simple_identifier" => return Some(text(cx, current)),
+            "self_expression" => return Some("self"),
+            "navigation_expression" => child_by_field(current, "target")?,
+            _ => return None,
+        };
     }
 }
 

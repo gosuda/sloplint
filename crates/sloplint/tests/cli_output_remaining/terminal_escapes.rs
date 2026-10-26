@@ -347,7 +347,7 @@ fn terminal_text_escapes_exactly_the_documented_controls() {
     );
     let untouched = concat!(
         "tab\t space ~ quote\" backslash\\ ",
-        "\u{a0}\u{a1}\u{e9}\u{200d}\u{202e}\u{1f980}"
+        "\u{a0}\u{a1}\u{e9}\u{200d}\u{202f}\u{1f980}"
     );
     assert_eq!(
         TerminalText::line(untouched).to_string(),
@@ -373,7 +373,12 @@ fn terminal_text_finds_controls_at_every_offset_around_block_edges() {
                 '\t' => shown.push(c),
                 '\n' if keep_newlines => shown.push(c),
                 '\0'..='\u{1f}' | '\u{7f}' => shown.push_str(&format!("\\x{:02x}", u32::from(c))),
-                '\u{80}'..='\u{9f}' => shown.push_str(&format!("\\u{{{:x}}}", u32::from(c))),
+                '\u{80}'..='\u{9f}'
+                | '\u{61c}'
+                | '\u{200e}'
+                | '\u{200f}'
+                | '\u{202a}'..='\u{202e}'
+                | '\u{2066}'..='\u{2069}' => shown.push_str(&format!("\\u{{{:x}}}", u32::from(c))),
                 _ => shown.push(c),
             }
         }
@@ -381,6 +386,7 @@ fn terminal_text_finds_controls_at_every_offset_around_block_edges() {
     }
     let controls = [
         '\u{0}', '\n', '\u{1b}', '\u{1f}', '\u{7f}', '\u{80}', '\u{9b}', '\u{9f}', '\u{a0}',
+        '\u{61c}', '\u{202e}', '\u{2069}',
     ];
     let texts = controls.iter().flat_map(|control| {
         ["a", "\u{e9}", "\t"].into_iter().flat_map(move |filler| {
@@ -479,4 +485,86 @@ fn valid_unicode_and_tabs_pass_through_unchanged() {
         text(&plain)
     );
     assert_contains(text(&plain), "\u{e9} \u{a9}\u{a0}\u{ff}", "human snippet");
+}
+
+const BIDI_CONTROLS: &str = "\u{61c}\u{200e}\u{200f}\u{202a}\u{202b}\u{202c}\u{202d}\u{202e}\u{2066}\u{2067}\u{2068}\u{2069}";
+const BIDI_CONTROLS_VISIBLE: &str = "\\u{61c}\\u{200e}\\u{200f}\\u{202a}\\u{202b}\\u{202c}\\u{202d}\\u{202e}\\u{2066}\\u{2067}\\u{2068}\\u{2069}";
+
+#[test]
+fn terminal_text_escapes_unicode_bidi_controls() {
+    assert_eq!(
+        TerminalText::line(BIDI_CONTROLS).to_string(),
+        BIDI_CONTROLS_VISIBLE,
+        "Unicode bidi controls must each show as an escape"
+    );
+    assert_eq!(
+        TerminalText::block(BIDI_CONTROLS).to_string(),
+        BIDI_CONTROLS_VISIBLE,
+        "Unicode bidi controls in block mode must each show as an escape"
+    );
+}
+
+#[test]
+fn bidi_controls_render_escaped_in_terminal_output_and_raw_in_json() {
+    let bidi_source = format!("pub fn handle() {{}} // {BIDI_CONTROLS}\n");
+    let tmp = project(&[("sloplint.toml", ""), ("a.rs", &bidi_source)]);
+    #[cfg(unix)]
+    write(
+        tmp.path(),
+        "dir/\u{202e}evil\u{202c}.rs",
+        "pub fn handle() {}\n",
+    );
+
+    let human = sloplint(tmp.path(), &["check", "--no-cache", "--format", "human"]);
+    assert_eq!(human.status.code(), Some(0), "human exit code");
+    let human_plain = without_sgr(&human.stdout);
+    let human_text = text(&human_plain);
+    assert_contains(
+        human_text,
+        BIDI_CONTROLS_VISIBLE,
+        "bidi controls in human source snippet",
+    );
+    #[cfg(unix)]
+    assert_contains(
+        human_text,
+        "dir/\\u{202e}evil\\u{202c}.rs",
+        "bidi controls in human path snippet",
+    );
+
+    let agent = sloplint(tmp.path(), &["check", "--no-cache", "--format", "agent"]);
+    assert_eq!(agent.status.code(), Some(0), "agent exit code");
+    let agent_text = text(&agent.stdout);
+    assert_contains(
+        agent_text,
+        &format!("  context: pub fn handle() {{}} // {BIDI_CONTROLS_VISIBLE}\n"),
+        "bidi controls in agent context",
+    );
+    #[cfg(unix)]
+    assert_contains(
+        agent_text,
+        "dir/\\u{202e}evil\\u{202c}.rs",
+        "bidi controls in agent path",
+    );
+
+    let json = sloplint(tmp.path(), &["check", "--no-cache", "--format", "json"]);
+    assert_eq!(json.status.code(), Some(0), "json exit code");
+    let doc: Document =
+        sonic_rs::from_slice(&json.stdout).unwrap_or_else(|e| panic!("stdout is not JSON: {e}"));
+    let a_finding = doc
+        .findings
+        .iter()
+        .find(|row| row.path == "a.rs")
+        .unwrap_or_else(|| panic!("no finding for a.rs"));
+    assert_eq!(
+        a_finding.context,
+        format!("pub fn handle() {{}} // {BIDI_CONTROLS}"),
+        "JSON context must keep raw bidi controls"
+    );
+    #[cfg(unix)]
+    assert!(
+        doc.findings
+            .iter()
+            .any(|row| row.path == "dir/\u{202e}evil\u{202c}.rs"),
+        "JSON path must keep raw bidi controls"
+    );
 }

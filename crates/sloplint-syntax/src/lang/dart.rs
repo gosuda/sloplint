@@ -125,18 +125,20 @@ fn param_from<'s>(cx: &Cx<'_, 's>, p: Node<'_>, next: Option<Node<'_>>, out: &mu
 }
 
 fn params_from_list<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>>) {
-    let mut i: u32 = 0;
-    let count = u32::try_from(list.named_child_count()).unwrap_or(u32::MAX);
-    while i < count {
-        let Some(kid) = list.named_child(i) else {
-            break;
+    let mut frames: Vec<(Node<'_>, u32)> = vec![(list, 0)];
+    while let Some(&(parent, index)) = frames.last() {
+        let Some(kid) = parent.named_child(index) else {
+            frames.pop();
+            continue;
         };
-        if kid.kind() == "formal_parameter" {
-            param_from(cx, kid, list.named_child(i.saturating_add(1)), out);
-        } else if kid.kind() == "optional_formal_parameters" {
-            params_from_list(cx, kid, out);
+        if let Some(frame) = frames.last_mut() {
+            frame.1 = index.saturating_add(1);
         }
-        i += 1;
+        if kid.kind() == "formal_parameter" {
+            param_from(cx, kid, parent.named_child(index.saturating_add(1)), out);
+        } else if kid.kind() == "optional_formal_parameters" {
+            frames.push((kid, 0));
+        }
     }
 }
 
@@ -160,26 +162,29 @@ fn sole_call_of(body: Node<'_>) -> Option<usize> {
 }
 
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    match n.kind() {
-        "identifier" | "this" | "super" => Some((text(cx, n), pos_of(n))),
-        "member_expression" | "index_expression" => write_root(cx, child_by_field(n, "object")?),
-        "assignable_expression" => {
-            if let Some(o) = child_by_field(n, "object") {
-                write_root(cx, o)
-            } else {
-                write_root(cx, first_named_child(n)?)
-            }
-        }
-        "parenthesized_expression" => write_root(cx, first_named_child(n)?),
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "identifier" | "this" | "super" => return Some((text(cx, current), pos_of(current))),
+            "member_expression" | "index_expression" => child_by_field(current, "object")?,
+            "assignable_expression" => match child_by_field(current, "object") {
+                Some(object) => object,
+                None => first_named_child(current)?,
+            },
+            "parenthesized_expression" => first_named_child(current)?,
+            _ => return None,
+        };
     }
 }
 
 fn callee_root<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
-    match func.kind() {
-        "identifier" | "this" | "super" => Some(text(cx, func)),
-        "member_expression" => callee_root(cx, child_by_field(func, "object")?),
-        _ => None,
+    let mut current = func;
+    loop {
+        current = match current.kind() {
+            "identifier" | "this" | "super" => return Some(text(cx, current)),
+            "member_expression" => child_by_field(current, "object")?,
+            _ => return None,
+        };
     }
 }
 
@@ -478,11 +483,11 @@ impl LangHooks for DartHooks {
         })
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
         if n.kind() != "if_statement" {
             return false;
         }
-        let Some(p) = n.parent() else {
+        let Some(p) = parent else {
             return false;
         };
         if p.kind() != "if_statement" {

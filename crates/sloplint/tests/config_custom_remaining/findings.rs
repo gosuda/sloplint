@@ -26,7 +26,6 @@ fn findings_for(toml_src: &str, path: &str, source: &str) -> Vec<Finding> {
         path,
         source,
         is_test_file: false,
-        has_interface: false,
     };
     let analysis = analyze(&mut parsers, &input, &custom);
     rules.custom_findings(&analysis.facts, &analysis.custom_hits)

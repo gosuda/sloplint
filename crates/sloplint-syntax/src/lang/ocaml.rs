@@ -44,25 +44,36 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("assert_expression", Role::Assert),
 ];
 
-/// OCaml language hooks.
-pub(crate) static HOOKS: OcamlHooks = OcamlHooks;
+/// OCaml language hooks for an implementation no sibling interface shadows.
+pub(crate) static HOOKS: OcamlHooks = OcamlHooks { shadowed: false };
+
+/// OCaml hooks for an implementation whose sibling interface is in the analyzed set.
+pub(crate) static SHADOWED_HOOKS: OcamlHooks = OcamlHooks { shadowed: true };
 
 /// OCaml adapter.
-pub(crate) struct OcamlHooks;
+pub(crate) struct OcamlHooks {
+    /// Whether a sibling `.mli` in the analyzed set hides this implementation's top-level
+    /// declarations.
+    shadowed: bool,
+}
 
-fn ocaml_public(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    if cx.lang != Lang::Ocaml || cx.has_interface {
-        return false;
+impl OcamlHooks {
+    /// Whether the binding or type at `n` is public: a top-level declaration of an
+    /// implementation that no sibling interface shadows.
+    fn public_at(&self, cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+        if cx.lang != Lang::Ocaml || self.shadowed {
+            return false;
+        }
+        let Some(parent) = n.parent() else {
+            return false;
+        };
+        if parent.kind() == "compilation_unit" || parent.kind() == "structure" {
+            return true;
+        }
+        parent
+            .parent()
+            .is_some_and(|g| g.kind() == "compilation_unit" || g.kind() == "structure")
     }
-    let Some(parent) = n.parent() else {
-        return false;
-    };
-    if parent.kind() == "compilation_unit" || parent.kind() == "structure" {
-        return true;
-    }
-    parent
-        .parent()
-        .is_some_and(|g| g.kind() == "compilation_unit" || g.kind() == "structure")
 }
 
 fn impl_bound(cx: &Cx<'_, '_>) -> bool {
@@ -150,6 +161,7 @@ fn let_head<'s>(
     lb: Node<'_>,
     params_src: Node<'_>,
     body: Node<'_>,
+    public: bool,
 ) -> FunctionHead<'s> {
     let name_node = child_by_field(lb, "pattern");
     let params = ocaml_params(cx, params_src);
@@ -159,7 +171,7 @@ fn let_head<'s>(
     FunctionHead {
         name: name_node.map(|p| text(cx, p)).unwrap_or(""),
         name_pos: name_node.map(pos_of).unwrap_or_else(|| pos_of(lb)),
-        public: ocaml_public(cx, lb),
+        public,
         interface_bound: impl_bound(cx),
         in_test: cx.is_test_file,
         params,
@@ -436,15 +448,14 @@ impl LangHooks for OcamlHooks {
                 if closure || !typed {
                     return None;
                 }
-                Some(let_head(cx, n, n, body))
+                Some(let_head(cx, n, n, body, self.public_at(cx, n)))
             }
             "method_definition" => {
                 let name_node = child_by_field(n, "method_name")?;
                 let body = child_by_field(n, "body")?;
-                let mut head = let_head(cx, n, n, body);
+                let mut head = let_head(cx, n, n, body, true);
                 head.name = text(cx, name_node);
                 head.name_pos = pos_of(name_node);
-                head.public = true;
                 Some(head)
             }
             "value_specification" => {
@@ -469,7 +480,12 @@ impl LangHooks for OcamlHooks {
         }
     }
 
-    fn closure_as_function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
         if n.kind() != "fun_expression" && n.kind() != "function_expression" {
             return None;
         }
@@ -481,11 +497,17 @@ impl LangHooks for OcamlHooks {
         if body.is_some_and(|b| b.id() != n.id()) {
             return None;
         }
-        Some(let_head(cx, parent, n, child_by_field(n, "body")?))
+        Some(let_head(
+            cx,
+            parent,
+            n,
+            child_by_field(n, "body")?,
+            self.public_at(cx, parent),
+        ))
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        n.parent().is_some_and(|p| p.kind() == "else_clause")
+    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|p| p.kind() == "else_clause")
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
@@ -619,7 +641,7 @@ impl LangHooks for OcamlHooks {
             let def = typedef_at(
                 text(cx, name_node),
                 pos_of(name_node),
-                cx.lang == Lang::OcamlInterface || ocaml_public(cx, n),
+                cx.lang == Lang::OcamlInterface || self.public_at(cx, n),
                 true,
             );
             return Some(TypeHead {
@@ -637,7 +659,7 @@ impl LangHooks for OcamlHooks {
         let def = typedef_at(
             text(cx, name_node),
             pos_of(name_node),
-            cx.lang == Lang::OcamlInterface || ocaml_public(cx, n),
+            cx.lang == Lang::OcamlInterface || self.public_at(cx, n),
             no_body && no_synonym,
         );
         Some(TypeHead {

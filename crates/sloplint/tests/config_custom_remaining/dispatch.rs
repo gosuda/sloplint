@@ -41,7 +41,6 @@ fn callee_hits(custom: &CustomRules, lang: Lang, path: &str, source: &str) -> Ve
         path,
         source,
         is_test_file: false,
-        has_interface: false,
     };
     let analysis = analyze(&mut parsers, &input, custom);
     assert!(analysis.parse_error.is_none(), "{path} must parse");

@@ -38,7 +38,12 @@ impl LangHooks for RHooks {
         None
     }
 
-    fn closure_as_function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
         let (name, binary) = bound_function(cx, n)?;
         let (doc, doc_pos) = preceding_comments(cx, binary, COMMENT_KINDS, &[]);
         Some(FunctionHead {
@@ -56,8 +61,8 @@ impl LangHooks for RHooks {
         })
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        n.parent().is_some_and(|parent| {
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|parent| {
             parent.kind() == "if_statement"
                 && child_by_field(parent, "alternative").is_some_and(|alt| alt.id() == n.id())
         })
@@ -295,10 +300,13 @@ fn sole_call(body: Option<Node<'_>>) -> Option<usize> {
 }
 
 fn callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
-    match callee.kind() {
-        "identifier" => Some(text(cx, callee)),
-        "extract_operator" => callee_root(cx, child_by_field(callee, "lhs")?),
-        _ => None,
+    let mut current = callee;
+    loop {
+        current = match current.kind() {
+            "identifier" => return Some(text(cx, current)),
+            "extract_operator" => child_by_field(current, "lhs")?,
+            _ => return None,
+        };
     }
 }
 
@@ -330,12 +338,15 @@ fn shape_of<'s>(cx: &Cx<'_, 's>, value: Node<'_>) -> ArgShape<'s> {
 }
 
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    match n.kind() {
-        "identifier" => Some((text(cx, n), pos_of(n))),
-        "extract_operator" => write_root(cx, child_by_field(n, "lhs")?),
-        "subset" | "subset2" => write_root(cx, child_by_field(n, "function")?),
-        "call" => write_root(cx, first_argument_value(n)?),
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "identifier" => return Some((text(cx, current), pos_of(current))),
+            "extract_operator" => child_by_field(current, "lhs")?,
+            "subset" | "subset2" => child_by_field(current, "function")?,
+            "call" => first_argument_value(current)?,
+            _ => return None,
+        };
     }
 }
 

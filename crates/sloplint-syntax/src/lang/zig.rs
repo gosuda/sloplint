@@ -414,8 +414,8 @@ impl LangHooks for ZigHooks {
         })
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        if n.parent().is_some_and(|p| p.kind() == "else_clause") {
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        if parent.is_some_and(|p| p.kind() == "else_clause") {
             return true;
         }
         let mut current = n.prev_sibling();

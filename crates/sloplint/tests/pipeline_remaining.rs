@@ -3,10 +3,18 @@
 //! One child module per mechanism, so each fix lands with its own case module and one
 //! declaration here, while the crate links a single integration-test executable.
 
+#[path = "pipeline_remaining/baseline_directory.rs"]
+mod baseline_directory;
 #[path = "pipeline_remaining/baseline_replace.rs"]
 mod baseline_replace;
+#[path = "pipeline_remaining/baseline_target.rs"]
+mod baseline_target;
+#[path = "pipeline_remaining/bounded_read_reserve.rs"]
+mod bounded_read_reserve;
 #[path = "pipeline_remaining/cache_location.rs"]
 mod cache_location;
+#[path = "pipeline_remaining/gitignore_boundary.rs"]
+mod gitignore_boundary;
 #[path = "pipeline_remaining/header_cpp_fallback.rs"]
 mod header_cpp_fallback;
 #[path = "pipeline_remaining/header_fallbacks.rs"]
@@ -15,6 +23,8 @@ mod header_fallbacks;
 mod implicit_scope;
 #[path = "pipeline_remaining/init_failure.rs"]
 mod init_failure;
+#[path = "pipeline_remaining/nofollow_sources.rs"]
+mod nofollow_sources;
 #[path = "pipeline_remaining/parse_failed_suppressions.rs"]
 mod parse_failed_suppressions;
 #[path = "pipeline_remaining/parse_failed_world_facts.rs"]

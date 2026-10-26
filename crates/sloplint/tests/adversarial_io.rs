@@ -527,9 +527,8 @@ fn baseline_empty_dot_and_directory_names_are_refused_or_io() {
     }
     let left = std::fs::read_dir(&dir).map(|d| d.count());
     assert_eq!(left.ok(), Some(0), "directory was touched");
-    let cause = cause_of(std::fs::write(&dir, ""));
     let args = ["baseline", "--no-cache"];
-    assert_cli_failure(&root, &args, 3, &[str_of(&dir), &cause]);
+    assert_cli_failure(&root, &args, 3, &[str_of(&dir), "not a regular file"]);
 }
 
 // AA-S12: a missing leaf is BaselineMissing (exit 2, hint); a missing parent is Io (exit 3).
@@ -624,7 +623,7 @@ fn baseline_duplicates_unknown_rules_and_extra_fields() {
 /// Malformed caches derived from a valid one: a version byte, 32 key bytes, then a
 /// varint-prefixed entry sequence.
 fn corrupt_caches(valid: &[u8]) -> Vec<(&'static str, Vec<u8>)> {
-    assert!(valid.len() > 33 && valid[0] == 2, "layout changed");
+    assert!(valid.len() > 33 && valid[0] == 3, "layout changed");
     let after_header = |tail: &[u8]| [&valid[..33], tail].concat();
     let mut max_len = vec![0xff; 9];
     max_len.push(1);

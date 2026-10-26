@@ -1,11 +1,12 @@
 //! Grammar wiring: one adapter module per language plus the grammar table.
 
+use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use sloplint_core::lang::Lang;
 
 use crate::hooks::LangHooks;
-use crate::spec::{LangSpec, Role};
+use crate::spec::{LangSpec, Role, spec};
 
 pub(crate) mod bash;
 pub(crate) mod c;
@@ -209,4 +210,21 @@ pub(crate) fn spec_for(lang: Lang) -> LangSpec {
         panic!("no grammar wired for {lang:?}");
     };
     LangSpec::new(lang, entry.language.clone(), entry.table, entry.hooks)
+}
+
+/// The adapter hooks that walk a file at `path` as `lang`.
+///
+/// Only an OCaml implementation varies by file: one whose sibling interface is in
+/// `ocaml_interfaces` takes the shadowed hooks, which export nothing.
+pub(crate) fn hooks_for(
+    lang: Lang,
+    path: &str,
+    ocaml_interfaces: Option<&HashSet<String>>,
+) -> &'static dyn LangHooks {
+    let shadowed = ocaml_interfaces.is_some_and(|set| set.contains(path));
+    if lang == Lang::Ocaml && shadowed {
+        &ocaml::SHADOWED_HOOKS
+    } else {
+        spec(lang).hooks
+    }
 }

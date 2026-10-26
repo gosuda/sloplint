@@ -14,6 +14,10 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
+mod use_tree;
+
+use use_tree::push_use;
+
 /// Role table for the Rust grammar.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_item", Role::Function),
@@ -282,28 +286,6 @@ fn wild_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Imp
         in_test: cx.in_test_module(),
     });
 }
-fn push_use<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &mut String, out: &mut Vec<Import<'s>>) {
-    match n.kind() {
-        "scoped_use_list" => {
-            if let Some(path) = child_by_field(n, "path") {
-                let base = prefix.len();
-                prefix.push_str(text(cx, path));
-                prefix.push_str("::");
-                if let Some(list) = child_by_field(n, "list") {
-                    push_use(cx, list, prefix, out);
-                }
-                prefix.truncate(base);
-            }
-        }
-        "use_list" => {
-            for child in named_children(n) {
-                push_use(cx, child, prefix, out);
-            }
-        }
-        "use_wildcard" => wild_import(cx, n, prefix, out),
-        _ => leaf_import(cx, n, prefix, out),
-    }
-}
 fn enum_pattern(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
     let mut cursor = pat.walk();
     loop {
@@ -362,37 +344,47 @@ fn err_bound<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<Option<&'s str>> {
     }
     (text(cx, only) == "_").then_some(None)
 }
-fn pattern_may_match_err(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
-    let inner = if pat.kind() == "match_pattern" {
-        let cond = child_by_field(pat, "condition").map(|c| c.id());
-        let mut cursor = pat.walk();
-        let mut kids = pat
-            .children(&mut cursor)
-            .filter(|c| Some(c.id()) != cond && (c.is_named() || c.kind() == "_"));
-        let Some(only) = kids.next() else {
-            return false;
-        };
-        if kids.next().is_some() {
-            return false;
-        }
-        only
-    } else {
-        pat
-    };
-    match inner.kind() {
-        "tuple_struct_pattern" => {
-            child_by_field(inner, "type").is_some_and(|t| text(cx, t) == "Err")
-        }
-        "or_pattern" => {
-            let mut cursor = inner.walk();
-            inner
-                .children(&mut cursor)
-                .filter(|c| c.is_named() || c.kind() == "_")
-                .any(|c| pattern_may_match_err(cx, c))
-        }
-        "_" | "identifier" => true,
-        _ => false,
+fn match_arm_pattern(pat: Node<'_>) -> Option<Node<'_>> {
+    if pat.kind() != "match_pattern" {
+        return Some(pat);
     }
+    let cond = child_by_field(pat, "condition").map(|c| c.id());
+    let mut cursor = pat.walk();
+    let mut kids = pat
+        .children(&mut cursor)
+        .filter(|c| Some(c.id()) != cond && (c.is_named() || c.kind() == "_"));
+    let only = kids.next()?;
+    if kids.next().is_some() {
+        return None;
+    }
+    Some(only)
+}
+
+fn pattern_may_match_err(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
+    let mut pending = vec![pat];
+    while let Some(node) = pending.pop() {
+        let Some(inner) = match_arm_pattern(node) else {
+            continue;
+        };
+        match inner.kind() {
+            "tuple_struct_pattern" => {
+                if child_by_field(inner, "type").is_some_and(|t| text(cx, t) == "Err") {
+                    return true;
+                }
+            }
+            "or_pattern" => {
+                let mut cursor = inner.walk();
+                pending.extend(
+                    inner
+                        .children(&mut cursor)
+                        .filter(|c| c.is_named() || c.kind() == "_"),
+                );
+            }
+            "_" | "identifier" => return true,
+            _ => {}
+        }
+    }
+    false
 }
 fn has_err_selective_predecessor(cx: &Cx<'_, '_>, arm: Node<'_>) -> bool {
     let Some(parent) = arm.parent() else {
@@ -494,17 +486,19 @@ fn first_segment(value: &str) -> &str {
     path.split("::").next().map_or("", |s| s)
 }
 fn use_first<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
-    match n.kind() {
-        "scoped_use_list" => {
-            let path = child_by_field(n, "path")?;
-            if text(cx, path) == "self" {
-                use_first(cx, child_by_field(n, "list")?.named_child(0)?)
-            } else {
-                Some(first_segment(text(cx, path)))
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "scoped_use_list" => {
+                let path = child_by_field(current, "path")?;
+                if text(cx, path) != "self" {
+                    return Some(first_segment(text(cx, path)));
+                }
+                child_by_field(current, "list")?.named_child(0)?
             }
-        }
-        "use_list" => use_first(cx, n.named_child(0)?),
-        _ => Some(first_segment(text(cx, n))),
+            "use_list" => current.named_child(0)?,
+            _ => return Some(first_segment(text(cx, current))),
+        };
     }
 }
 fn is_cell_token(tok: &str) -> bool {
@@ -626,8 +620,8 @@ impl LangHooks for RustHooks {
             sole_call: sole_call_id(body),
         })
     }
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        n.parent().is_some_and(|p| p.kind() == "else_clause")
+    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|p| p.kind() == "else_clause")
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         let Some(pat) = child_by_field(n, "pattern") else {

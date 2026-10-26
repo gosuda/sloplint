@@ -13,7 +13,6 @@ fn enum_like(body: &str) -> Vec<bool> {
         path: "src/lib.rs",
         source: &source,
         is_test_file: false,
-        has_interface: false,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(

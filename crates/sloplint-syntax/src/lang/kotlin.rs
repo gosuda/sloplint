@@ -424,12 +424,15 @@ fn variable_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)
 }
 
 fn callee_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
-    match n.kind() {
-        "navigation_expression" => callee_root(cx, first_code(n)?),
-        "identifier" => Some(text(cx, n)),
-        "this_expression" => Some("this"),
-        "super_expression" => Some("super"),
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "navigation_expression" => first_code(current)?,
+            "identifier" => return Some(text(cx, current)),
+            "this_expression" => return Some("this"),
+            "super_expression" => return Some("super"),
+            _ => return None,
+        };
     }
 }
 
@@ -590,10 +593,9 @@ fn previous_code_sibling(n: Node<'_>) -> Option<Node<'_>> {
     None
 }
 
-fn is_else_if(n: Node<'_>) -> bool {
+fn is_else_if(n: Node<'_>, parent: Option<Node<'_>>) -> bool {
     n.kind() == "if_expression"
-        && n.parent()
-            .is_some_and(|parent| parent.kind() == "if_expression")
+        && parent.is_some_and(|parent| parent.kind() == "if_expression")
         && previous_code_sibling(n).is_some_and(|sibling| sibling.kind() == "else")
 }
 
@@ -666,12 +668,15 @@ fn assertion_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<Assertion> {
 }
 
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    match n.kind() {
-        "identifier" | "this_expression" => Some((text(cx, n), pos_of(n))),
-        "navigation_expression" | "index_expression" | "parenthesized_expression" => {
-            write_root(cx, first_code(n)?)
-        }
-        _ => None,
+    let mut current = n;
+    loop {
+        current = match current.kind() {
+            "identifier" | "this_expression" => return Some((text(cx, current), pos_of(current))),
+            "navigation_expression" | "index_expression" | "parenthesized_expression" => {
+                first_code(current)?
+            }
+            _ => return None,
+        };
     }
 }
 
@@ -694,8 +699,8 @@ impl LangHooks for KotlinHooks {
         function_head(cx, n)
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        is_else_if(n)
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        is_else_if(n, parent)
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

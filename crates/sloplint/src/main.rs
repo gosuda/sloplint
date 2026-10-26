@@ -11,6 +11,7 @@ use clap::Parser;
 use sloplint::cli::{BaselineArgs, CheckArgs, Cli, Command, Format, RulesArgs};
 use sloplint::rules_cmd::{self, RulesRequest};
 use sloplint::{Execution, Report, RunError, RunOptions, Summary, TerminalText, init};
+use sloplint_core::finding::line_starts;
 use sloplint_core::{Finding, RuleFilter, Severity};
 
 fn main() -> ExitCode {
@@ -63,14 +64,8 @@ fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
     };
     match sloplint::execute(&options) {
         Ok(execution) => {
-            let status: u8 = match emit(&execution, args.format) {
-                Ok(()) if execution.failed => 1,
-                Ok(()) => 0,
-                Err(error) => {
-                    emit_error(&error.to_string());
-                    3
-                }
-            };
+            let success = if execution.failed { 1 } else { 0 };
+            let status = sink_status(emit(&execution, args.format), success);
             std::process::exit(i32::from(status));
         }
         Err(error) => report_error(&error),
@@ -168,9 +163,9 @@ fn emit(execution: &Execution, format: Format) -> io::Result<()> {
 
 /// Buffers output that writes no styling of its own, with no escape-stripping pass.
 ///
-/// Agent lines escape every C0, DEL, and C1 control through [`TerminalText`],
-/// and JSON escapes them in strings, so no terminal control byte from
-/// scanned files reaches stdout.
+/// Agent lines escape every C0, DEL, C1, and bidi control through [`TerminalText`],
+/// and JSON escapes C0, DEL, and C1 in strings (bidi controls stay raw there, as data),
+/// so no terminal control from scanned files reaches stdout.
 fn with_plain_stdout(write: impl FnOnce(&mut dyn Write) -> io::Result<()>) -> io::Result<()> {
     let mut out = BufWriter::with_capacity(OUTPUT_BUFFER_BYTES, io::stdout().lock());
     write(&mut out)?;
@@ -278,26 +273,19 @@ fn write_human(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
 
 struct Source {
     text: String,
-    starts: Vec<usize>,
+    starts: Vec<u32>,
 }
 
 impl Source {
     fn new(text: String) -> Self {
-        let mut starts = Vec::new();
-        if !text.is_empty() {
-            starts.push(0);
-            starts.extend(
-                text.match_indices('\n')
-                    .map(|(at, _)| at + 1)
-                    .filter(|&start| start < text.len()),
-            );
-        }
+        let starts = line_starts(&text);
         Source { text, starts }
     }
 
     fn line(&self, line: u32) -> Option<&str> {
         let index = usize::try_from(line.saturating_sub(1)).ok()?;
-        let rest = self.text.get(*self.starts.get(index)?..)?;
+        let start = usize::try_from(*self.starts.get(index)?).ok()?;
+        let rest = self.text.get(start..)?;
         let row = rest.split('\n').next()?;
         Some(row.strip_suffix('\r').unwrap_or(row))
     }
@@ -401,14 +389,20 @@ fn print_text(text: &str, kind: TextKind) -> ExitCode {
     ExitCode::from(print_text_status(text, kind))
 }
 
-/// Writes `text` to stdout and returns the process status: 0 on success, 3 on error.
+/// Writes `text` to stdout and returns the process status: 0 on success or broken pipe, 3 on error.
 fn print_text_status(text: &str, kind: TextKind) -> u8 {
     let written = with_buffered_stdout(|out| match kind {
         TextKind::Plain => write!(out, "{}", TerminalText::block(text)),
         TextKind::Json => write_guarded(out, text.as_bytes()),
     });
-    match written {
-        Ok(()) => 0,
+    sink_status(written, 0)
+}
+
+/// Maps a stdout sink result to a process status, treating a broken pipe as a stopped consumer.
+fn sink_status(result: io::Result<()>, success: u8) -> u8 {
+    match result {
+        Ok(()) => success,
+        Err(error) if error.kind() == io::ErrorKind::BrokenPipe => success,
         Err(error) => {
             emit_error(&error.to_string());
             3

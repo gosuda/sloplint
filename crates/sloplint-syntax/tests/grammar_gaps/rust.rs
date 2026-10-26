@@ -20,7 +20,6 @@ fn run<'s>(path: &'s str, source: &'s str) -> Analysis<'s> {
         path,
         source,
         is_test_file: false,
-        has_interface: false,
     };
     analyze(&mut Parsers::new(), &input, &NO_CUSTOM)
 }

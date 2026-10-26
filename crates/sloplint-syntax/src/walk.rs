@@ -8,7 +8,7 @@ use sloplint_core::lang::Lang;
 use sloplint_core::suppress::CommentText;
 use tree_sitter::Node;
 
-use crate::hooks::{Container, Cx, narrow, pos_of};
+use crate::hooks::{Container, Cx, LangHooks, MemberStates, narrow, pos_of};
 use crate::spec::{LangSpec, Role};
 
 /// What one full walk produced: facts plus the suppressible comments.
@@ -19,32 +19,39 @@ pub(crate) struct Walked<'s> {
 
 impl LangSpec {
     /// Walks one file's tree once, collecting every fact the roles produce.
-    pub(crate) fn walk<'s>(&self, input: &crate::FileInput<'s>, root: Node<'_>) -> Walked<'s> {
-        self.walk_impl(input, true, root)
+    pub(crate) fn walk<'s>(
+        &self,
+        hooks: &'static dyn LangHooks,
+        input: &crate::FileInput<'s>,
+        root: Node<'_>,
+    ) -> Walked<'s> {
+        self.walk_impl(hooks, input, true, root)
     }
 
     /// Walks one file's tree collecting only the suppressible comments.
     pub(crate) fn walk_comments<'s>(
         &self,
+        hooks: &'static dyn LangHooks,
         input: &crate::FileInput<'s>,
         root: Node<'_>,
     ) -> Walked<'s> {
-        self.walk_impl(input, false, root)
+        self.walk_impl(hooks, input, false, root)
     }
 
     fn walk_impl<'s>(
         &self,
+        hooks: &'static dyn LangHooks,
         input: &crate::FileInput<'s>,
         collect_facts: bool,
         root: Node<'_>,
     ) -> Walked<'s> {
         let mut state = WalkState {
             spec: self,
+            hooks,
             src: input.source,
             path: input.path,
             lang: self.lang,
             is_test_file: input.is_test_file,
-            has_interface: input.has_interface,
             collect_facts,
             facts: empty_facts(input, self.lang),
             comments: Vec::new(),
@@ -52,8 +59,11 @@ impl LangSpec {
             marks: Vec::new(),
             containers: Vec::new(),
             exports: Vec::new(),
+            members: MemberStates::default(),
             levels: Vec::new(),
             depth: 0,
+            #[cfg(debug_assertions)]
+            entered: Vec::new(),
         };
         state.run(root);
         Walked {
@@ -126,11 +136,11 @@ pub(crate) enum Mark {
 /// All mutable walk state; the tree cursor lives only in [`WalkState::run`].
 pub(crate) struct WalkState<'s, 'a, 't> {
     pub spec: &'a LangSpec,
+    pub hooks: &'static dyn LangHooks,
     pub src: &'s str,
     pub path: &'s str,
     pub lang: Lang,
     pub is_test_file: bool,
-    pub has_interface: bool,
     pub collect_facts: bool,
     pub facts: FileFacts<'s>,
     pub comments: Vec<CommentText<'s>>,
@@ -138,16 +148,21 @@ pub(crate) struct WalkState<'s, 'a, 't> {
     pub marks: Vec<(usize, Mark)>,
     pub containers: Vec<Container>,
     pub exports: Vec<&'s str>,
+    /// Member states memoized for the hooks, one forward pass per container.
+    pub members: MemberStates,
     /// The nodes entered so far under each open ancestor, indexed by tree depth.
     pub levels: Vec<Vec<Node<'t>>>,
     /// The tree depth of the node being entered or exited.
     pub depth: usize,
+    /// Ids of the nodes entered and not yet exited, innermost last (debug builds only).
+    #[cfg(debug_assertions)]
+    pub entered: Vec<usize>,
 }
 
 impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     pub(crate) fn run(&mut self, root: Node<'t>) {
         if self.collect_facts {
-            let hooks = self.spec.hooks;
+            let hooks = self.hooks;
             let mut names = Vec::new();
             hooks.exported_names(root, &self.make_cx(), &mut names);
             names.sort_unstable();
@@ -181,7 +196,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             descending = false;
         }
         if self.collect_facts {
-            let hooks = self.spec.hooks;
+            let hooks = self.hooks;
             let barrel = {
                 let cx = self.make_cx();
                 hooks.barrel(root, &cx)
@@ -191,6 +206,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     fn enter(&mut self, node: Node<'t>) {
+        self.open_node(node);
         let role = self.spec.role_for(node.kind_id());
         if !self.collect_facts {
             if role == Role::Comment {
@@ -260,10 +276,16 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
         }
     }
 
+    /// The parent of the node being entered, read from the open level above it.
+    fn visited_parent(&self) -> Option<Node<'t>> {
+        let above = self.depth.checked_sub(1)?;
+        self.levels.get(above)?.last().copied()
+    }
+
     fn enter_if(&mut self, node: Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         if !self.fn_stack.is_empty() {
-            if hooks.is_else_if(node) {
+            if hooks.is_else_if(node, self.visited_parent()) {
                 self.score_top(1);
             } else {
                 let line = pos_of(node).line;
@@ -296,13 +318,14 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     fn enter_function_like(&mut self, role: Role, node: Node<'_>) {
-        let hooks = self.spec.hooks;
+        let hooks = self.hooks;
         let head = if role == Role::Function {
             let cx = self.make_cx();
             hooks.function(node, &cx)
         } else {
+            let parent = self.visited_parent();
             let cx = self.make_cx();
-            hooks.closure_as_function(node, &cx)
+            hooks.closure_as_function(node, parent, &cx)
         };
         match head {
             Some(head) => self.push_function(node, head),
@@ -319,7 +342,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     fn enter_call_site(&mut self, node: Node<'_>) {
         {
             let cx = self.make_cx();
-            if self.spec.hooks.control_call(node, &cx) {
+            if self.hooks.control_call(node, &cx) {
                 self.score_nested(node);
             }
         }
@@ -355,16 +378,54 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
 
     pub(crate) fn exit(&mut self, node: Node<'_>) {
         let id = node.id();
-        let mut index = self.marks.len();
-        while index > 0 {
-            index -= 1;
-            if self.marks[index].0 != id {
-                continue;
+        self.close_node(id);
+        while let Some(&(mark_node, mark)) = self.marks.last() {
+            if mark_node != id {
+                break;
             }
-            let mark = self.marks.remove(index).1;
+            self.marks.pop();
             self.apply_mark(mark);
         }
     }
+
+    /// Records that `node` is being entered, for the debug check of mark order.
+    #[cfg(debug_assertions)]
+    fn open_node(&mut self, node: Node<'_>) {
+        self.entered.push(node.id());
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn open_node(&mut self, _node: Node<'_>) {}
+
+    /// Checks that `id` is the innermost entered node, so its marks are on top.
+    #[cfg(debug_assertions)]
+    fn close_node(&mut self, id: usize) {
+        debug_assert_eq!(
+            self.entered.pop(),
+            Some(id),
+            "nodes exit innermost first, so each node's marks sit on top of the stack"
+        );
+    }
+
+    #[cfg(not(debug_assertions))]
+    fn close_node(&mut self, _id: usize) {}
+
+    /// Checks that a mark is keyed to the node being entered.
+    ///
+    /// Marks are pushed only while their own node is entered. Every node therefore
+    /// pops its marks before its ancestors' marks come back to the top, so `exit`
+    /// only needs to look at the top of the stack.
+    #[cfg(debug_assertions)]
+    pub(crate) fn assert_mark_entered(&self, mark: usize) {
+        debug_assert_eq!(
+            self.entered.last(),
+            Some(&mark),
+            "a mark is keyed to the node being entered, or a later push would bury it"
+        );
+    }
+
+    #[cfg(not(debug_assertions))]
+    pub(crate) fn assert_mark_entered(&self, _mark: usize) {}
 
     fn apply_mark(&mut self, mark: Mark) {
         match mark {
@@ -393,7 +454,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             self.path,
             self.lang,
             self.is_test_file,
-            self.has_interface,
+            &self.members,
         )
         .scoped(
             &self.containers,
@@ -418,6 +479,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     fn bump_nest(&mut self, mark: usize, line: u32) {
+        self.assert_mark_entered(mark);
         let Some(frame) = self.fn_stack.last_mut() else {
             return;
         };
@@ -432,6 +494,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     fn bump_frames(&mut self, mark: usize) {
+        self.assert_mark_entered(mark);
         let Some(frame) = self.fn_stack.last_mut() else {
             return;
         };

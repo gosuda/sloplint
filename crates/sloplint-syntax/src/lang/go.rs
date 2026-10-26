@@ -414,8 +414,8 @@ impl LangHooks for GoHooks {
         })
     }
 
-    fn is_else_if(&self, n: Node<'_>) -> bool {
-        n.parent()
+    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent
             .and_then(|p| p.child_by_field_name("alternative"))
             .is_some_and(|a| a.id() == n.id())
     }

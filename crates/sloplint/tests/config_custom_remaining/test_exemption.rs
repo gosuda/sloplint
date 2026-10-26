@@ -25,7 +25,6 @@ fn check_with_test_flag(rules: &RuleSet, is_test_file: bool) -> Vec<Finding> {
         path: "src/lib.rs",
         source: SOURCE,
         is_test_file,
-        has_interface: false,
     };
     let analysis = analyze(&mut parsers, &input, &custom);
     assert!(analysis.parse_error.is_none(), "the sample must parse");

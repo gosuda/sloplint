@@ -20,7 +20,6 @@ fn audit_analyze<'s>(lang: Lang, path: &'s str, source: &'s str) -> Analysis<'s>
         path,
         source,
         is_test_file: false,
-        has_interface: false,
     };
     analyze(&mut parsers, &input, &EMPTY_CUSTOM)
 }

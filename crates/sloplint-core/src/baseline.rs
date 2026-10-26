@@ -6,9 +6,17 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::fmt::{self, Write as _};
 
-use serde::{Deserialize, Serialize};
+use serde::de::{IgnoredAny, SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
+use thiserror::Error;
 
 use crate::finding::Finding;
+
+/// Most findings a version-1 baseline document may hold; larger documents are rejected.
+///
+/// An audit of a 100k-file Go corpus produced ~502k findings; 1,000,000 entries provides
+/// 2x headroom over massive corpora while bounding memory consumption during parsing.
+pub const MAX_BASELINE_ENTRIES: usize = 1_000_000;
 
 /// A set of baselined findings, keyed by path, rule, and fingerprint.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,23 +36,98 @@ pub struct BaselineEntry {
     pub fingerprint: Box<str>,
 }
 
-#[derive(Serialize, Deserialize)]
+/// Why a baseline document was rejected.
+#[derive(Debug, Error)]
+pub enum BaselineError {
+    /// The text is not a baseline JSON document.
+    #[error("invalid baseline JSON: {0}")]
+    Json(String),
+    /// The document declares a version other than 1.
+    #[error("unsupported baseline version {0}")]
+    Version(u32),
+    /// The document lists more findings than [`MAX_BASELINE_ENTRIES`].
+    #[error("has {count} entries, more than the limit of {limit}")]
+    TooManyEntries { count: usize, limit: usize },
+}
+
+#[derive(Serialize)]
 struct BaselineFile {
     version: u32,
     findings: Vec<BaselineEntry>,
 }
 
-impl Baseline {
-    /// Parses a baseline document; only version 1 is accepted.
-    pub fn from_json(s: &str) -> Result<Baseline, String> {
-        let doc: BaselineFile =
-            sonic_rs::from_str(s).map_err(|error| format!("invalid baseline JSON: {error}"))?;
-        if doc.version != 1 {
-            return Err(format!("unsupported baseline version {}", doc.version));
+#[derive(Deserialize)]
+struct BaselineDocument {
+    version: u32,
+    #[serde(deserialize_with = "capped_findings")]
+    findings: Findings,
+}
+
+enum Findings {
+    Within(Vec<BaselineEntry>),
+    Over(usize),
+}
+
+/// Deserializes the findings array while storing at most [`MAX_BASELINE_ENTRIES`] of them.
+///
+/// Past the ceiling each remaining element is validated and counted but not kept, so the
+/// memory a document can take is bounded by the ceiling, not by its byte length.
+fn capped_findings<'de, D>(deserializer: D) -> Result<Findings, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct Capped;
+
+    impl<'de> Visitor<'de> for Capped {
+        type Value = Findings;
+
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("a list of baseline findings")
         }
-        Ok(Baseline {
-            entries: doc.findings.into_iter().collect(),
-        })
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Findings, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut entries = Vec::new();
+            while entries.len() < MAX_BASELINE_ENTRIES {
+                let Some(entry) = seq.next_element::<BaselineEntry>()? else {
+                    return Ok(Findings::Within(entries));
+                };
+                entries.push(entry);
+            }
+            let mut extra = 0usize;
+            while seq.next_element::<IgnoredAny>()?.is_some() {
+                extra += 1;
+            }
+            Ok(if extra == 0 {
+                Findings::Within(entries)
+            } else {
+                Findings::Over(MAX_BASELINE_ENTRIES + extra)
+            })
+        }
+    }
+
+    deserializer.deserialize_seq(Capped)
+}
+
+impl Baseline {
+    /// Parses a baseline document; only version 1 holding at most [`MAX_BASELINE_ENTRIES`] findings is accepted.
+    pub fn from_json(s: &str) -> Result<Baseline, BaselineError> {
+        let doc: BaselineDocument =
+            sonic_rs::from_str(s).map_err(|error| BaselineError::Json(error.to_string()))?;
+        if doc.version != 1 {
+            return Err(BaselineError::Version(doc.version));
+        }
+        match doc.findings {
+            Findings::Within(entries) => Ok(Baseline {
+                entries: entries.into_iter().collect(),
+            }),
+            Findings::Over(count) => Err(BaselineError::TooManyEntries {
+                count,
+                limit: MAX_BASELINE_ENTRIES,
+            }),
+        }
     }
 
     /// Pretty-prints the baseline with sorted entries and a trailing newline.

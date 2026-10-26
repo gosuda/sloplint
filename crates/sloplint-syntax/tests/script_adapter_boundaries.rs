@@ -25,5 +25,7 @@ mod ruby_assertion_arity;
 mod ruby_hash_keys;
 #[path = "script_adapter_boundaries/ruby_keyword_booleans.rs"]
 mod ruby_keyword_booleans;
+#[path = "script_adapter_boundaries/ruby_member_visibility.rs"]
+mod ruby_member_visibility;
 #[path = "script_adapter_boundaries/ruby_superclass.rs"]
 mod ruby_superclass;

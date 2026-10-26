@@ -26,6 +26,7 @@ use sloplint_core::text::normalize_rel_path;
 type Key = (String, u32, String, String);
 
 const PARSE_ERROR: &str = "meta/parse-error";
+const UNUSED_SUPPRESSION: &str = "meta/unused-suppression";
 const NEAR_MISS: &str = "-near-miss";
 const METADATA: [&str; 2] = ["expected.txt", "sloplint.toml"];
 
@@ -208,6 +209,9 @@ fn run_fixture(fixture: &Fixture) -> sloplint::Report {
     let mut selectors = vec![fixture.rule.as_str()];
     if fixture.rule != PARSE_ERROR {
         selectors.push(PARSE_ERROR);
+    }
+    if fixture.rule == UNUSED_SUPPRESSION {
+        selectors.push("grep/generic-name");
     }
     let patterns = selectors
         .into_iter()
