@@ -7,9 +7,9 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
-    child_by_field, first_named_child, first_named_child_matching, last_segment, named_children,
-    narrow, pos_of, preceding_comments, string_arg_shape, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, Link, TypeHead, any_named_child,
+    binary_concat, child_by_field, first_named_child, first_named_child_matching, last_segment,
+    named_children, narrow, pos_of, preceding_comments, string_arg_shape, text,
 };
 use crate::spec::Role;
 
@@ -206,18 +206,52 @@ fn py_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     }
 }
 
+/// The chain family of [`py_callee_root`] in the walk's chain-root memo.
+const CALLEE_CHAIN: u8 = 1;
+
+/// True when a memoized root can end a valid chain: a bare name that is not a keyword
+/// literal. Valid terminals are always single identifiers, so anything else ends the
+/// chain at an unsupported node (a literal, a parenthesized composite) and keeps its
+/// historical `None`.
+fn is_chain_root(t: &str) -> bool {
+    !matches!(t, "True" | "False" | "None")
+        && !t.as_bytes().first().is_some_and(|b| b.is_ascii_digit())
+        && t.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || !b.is_ascii())
+}
+
+/// The leftmost name of a callee chain: the first node that is not an attribute,
+/// subscript, call, or parenthesized expression.
+///
+/// Memoized, so a chain of `n` calls costs `O(n)` and not `O(n²)`; every call would
+/// otherwise walk the callees of all the calls below it. A callee that starts at an
+/// unsupported node keeps its old `None` without touching the memo, and a chain that
+/// ends at one is recognized by its non-name root text.
 fn py_callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
-    let mut cur = callee;
-    loop {
-        match cur.kind() {
-            "identifier" => return Some(text(cx, cur)),
-            "attribute" => cur = child_by_field(cur, "object")?,
-            "subscript" => cur = child_by_field(cur, "value")?,
-            "call" => cur = child_by_field(cur, "function")?,
-            "parenthesized_expression" => cur = first_named_child(cur)?,
-            _ => return None,
-        }
+    match callee.kind() {
+        "identifier" | "attribute" | "subscript" | "call" | "parenthesized_expression" => {}
+        _ => return None,
     }
+    let root = cx.chain_root(CALLEE_CHAIN, callee, |current| match current.kind() {
+        "attribute" => match child_by_field(current, "object") {
+            Some(next) => Link::Next(next),
+            None => Link::Root(current),
+        },
+        "subscript" => match child_by_field(current, "value") {
+            Some(next) => Link::Next(next),
+            None => Link::Root(current),
+        },
+        "call" => match child_by_field(current, "function") {
+            Some(next) => Link::Next(next),
+            None => Link::Root(current),
+        },
+        "parenthesized_expression" => match first_named_child(current) {
+            Some(next) => Link::Next(next),
+            None => Link::Root(current),
+        },
+        _ => Link::Root(current),
+    });
+    is_chain_root(root).then_some(root)
 }
 
 fn py_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {

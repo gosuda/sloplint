@@ -8,7 +8,7 @@ use sloplint_core::lang::Lang;
 use sloplint_core::suppress::CommentText;
 use tree_sitter::Node;
 
-use crate::hooks::{Container, Cx, LangHooks, MemberStates, narrow, pos_of};
+use crate::hooks::{ChainRoots, Container, Cx, LangHooks, MemberStates, narrow, pos_of};
 use crate::spec::{LangSpec, Role};
 
 /// What one full walk produced: facts plus the suppressible comments.
@@ -60,6 +60,7 @@ impl LangSpec {
             containers: Vec::new(),
             exports: Vec::new(),
             members: MemberStates::default(),
+            chains: ChainRoots::default(),
             levels: Vec::new(),
             depth: 0,
             #[cfg(debug_assertions)]
@@ -150,6 +151,8 @@ pub(crate) struct WalkState<'s, 'a, 't> {
     pub exports: Vec<&'s str>,
     /// Member states memoized for the hooks, one forward pass per container.
     pub members: MemberStates,
+    /// Chain roots memoized for the hooks, one walk down each chain.
+    pub chains: ChainRoots,
     /// The nodes entered so far under each open ancestor, indexed by tree depth.
     pub levels: Vec<Vec<Node<'t>>>,
     /// The tree depth of the node being entered or exited.
@@ -455,6 +458,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             self.lang,
             self.is_test_file,
             &self.members,
+            &self.chains,
         )
         .scoped(
             &self.containers,

@@ -91,6 +91,10 @@ impl CalleePattern {
     /// Reports whether the pattern matches the callee under this call kind.
     ///
     /// All whitespace is ignored, segments split on `::`, `?.`, `->`, `?->`, `\`, and `.`, a `$` that starts a longer segment is ignored (`$this`, `$logger`), and a `Macro` callee gains a trailing `!` on its last segment. The callee is scanned in place and nothing is allocated.
+    ///
+    /// Segments are consumed back to front, so the last segment rejects first: a
+    /// pattern that cannot match costs the length of one tail segment, not a
+    /// scan of the whole callee.
     pub fn matches(&self, callee: &str, kind: CallKind) -> bool {
         if self.new_only && kind != CallKind::New {
             return false;
@@ -98,10 +102,13 @@ impl CalleePattern {
         let Some((tail, heads)) = self.segments.split_last() else {
             return false;
         };
-        let (count, last) = scan_segments(callee);
-        if count < self.segments.len() {
+        if !tail_can_match(callee, &tail.text, kind) {
             return false;
         }
+        let mut remaining = SegmentsRev::new(callee);
+        let Some(last) = remaining.next() else {
+            return false;
+        };
         let tail_matches = if kind == CallKind::Macro {
             tail.matches_macro_last(last)
         } else {
@@ -110,8 +117,7 @@ impl CalleePattern {
         if !tail_matches {
             return false;
         }
-        let mut remaining = Segments::new(callee).skip(count - self.segments.len());
-        heads.iter().all(|head| {
+        heads.iter().rev().all(|head| {
             remaining
                 .next()
                 .is_some_and(|candidate| head.matches_plain(candidate))
@@ -155,6 +161,38 @@ impl Segment {
     }
 }
 
+/// Whether the callee's visible tail can still match the pattern's last segment.
+///
+/// A matching last segment always ends with the pattern's tail text: a leading
+/// `$` is only ever stripped from the front and whitespace is ignored, so a
+/// callee whose visible characters do not end that way cannot match. (A `Macro`
+/// callee gains a `!` the text may lack, so a callee ending with the tail minus
+/// one trailing `!` can also match.) This reads only as many trailing characters
+/// as the tail text is long, so a pattern that cannot match costs the tail's
+/// length instead of a scan of the whole callee.
+///
+/// When the tail does match, the reverse scan below still costs only the last
+/// few segments: it yields segments back to front and stops after the
+/// pattern's own segments, so a deep chain ending in a configured pattern
+/// stays linear too.
+fn tail_can_match(callee: &str, tail: &str, kind: CallKind) -> bool {
+    if ends_with_visible(callee, tail) {
+        return true;
+    }
+    match kind {
+        CallKind::Macro => ends_with_visible(callee, tail.strip_suffix('!').unwrap_or(tail)),
+        _ => false,
+    }
+}
+
+/// Whether the callee's non-whitespace characters end with `tail`.
+fn ends_with_visible(callee: &str, tail: &str) -> bool {
+    let mut visible = callee.chars().rev().filter(is_visible as fn(&char) -> bool);
+    tail.chars()
+        .rev()
+        .all(|expected| visible.next() == Some(expected))
+}
+
 fn strip_sigil(text: &str, suffix: bool) -> &str {
     match text.strip_prefix('$') {
         Some(rest) if !suffix && !rest.is_empty() => rest,
@@ -162,76 +200,111 @@ fn strip_sigil(text: &str, suffix: bool) -> &str {
     }
 }
 
-fn scan_segments(callee: &str) -> (usize, &str) {
-    let mut count = 0usize;
-    let mut last = "";
-    for segment in Segments::new(callee) {
-        count += 1;
-        last = segment;
-    }
-    (count, last)
-}
-
-struct Segments<'a> {
+/// Yields the raw segments of `callee` from last to first, the exact reverse of a
+/// left-to-right split. Each yielded range keeps its interior whitespace, like the
+/// forward walk: callers normalize with [`Segment::candidate`].
+struct SegmentsRev<'a> {
     text: &'a str,
-    pos: usize,
+    /// End (exclusive) of the current rightmost un-yielded segment.
+    end: usize,
     done: bool,
+    /// `(run length, `:` consumed so far)` inside the current visible run of
+    /// `:`.
+    ///
+    /// `::` pairs left to right, so whether a `:` ends a pair depends on its
+    /// position `h` counted back from the run's last `:`: it pairs exactly when
+    /// `h + len` is odd.
+    colon_run: Option<(usize, usize)>,
 }
 
-impl<'a> Segments<'a> {
-    fn new(text: &'a str) -> Segments<'a> {
-        Segments {
+impl<'a> SegmentsRev<'a> {
+    fn new(text: &'a str) -> SegmentsRev<'a> {
+        SegmentsRev {
             text,
-            pos: 0,
+            end: text.len(),
             done: false,
+            colon_run: None,
+        }
+    }
+
+    /// Whether the `:` at `index` ends a `::` separator, and where that separator
+    /// starts. `seen` counts the `:` consumed so far in this run — scanned ones,
+    /// plus the partner inside each yielded separator — so it equals the
+    /// position of `index` counted back from the run's last `:`. The run length
+    /// is measured once, on that last `:`.
+    fn colon_pair_start(&mut self, index: usize) -> Option<usize> {
+        let (len, seen) = match self.colon_run {
+            Some((len, seen)) => (len, seen + 1),
+            None => {
+                let mut len = 1usize;
+                let mut cursor = index;
+                while let Some((i, ':')) = prev_visible(self.text, cursor) {
+                    len += 1;
+                    cursor = i;
+                }
+                (len, 1)
+            }
+        };
+        if (seen + len) % 2 == 1 {
+            self.colon_run = Some((len, seen + 1));
+            prev_visible(self.text, index).map(|(left, _)| left)
+        } else {
+            self.colon_run = Some((len, seen));
+            None
         }
     }
 }
 
-impl<'a> Iterator for Segments<'a> {
+impl<'a> Iterator for SegmentsRev<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<&'a str> {
         if self.done {
             return None;
         }
-        let start = self.pos;
-        let mut cursor = start;
-        while let Some((index, ch)) = next_visible(self.text, cursor) {
-            if let Some(end) = separator_end(self.text, index, ch) {
-                self.pos = end;
-                return Some(&self.text[start..index]);
+        let mut cursor = self.end;
+        while let Some((index, ch)) = prev_visible(self.text, cursor) {
+            let start = if ch == ':' {
+                self.colon_pair_start(index)
+            } else {
+                self.colon_run = None;
+                separator_start(self.text, index, ch)
+            };
+            if let Some(start) = start {
+                let segment = &self.text[index + ch.len_utf8()..self.end];
+                self.end = start;
+                return Some(segment);
             }
-            cursor = index + ch.len_utf8();
+            cursor = index;
         }
         self.done = true;
-        Some(&self.text[start..])
+        Some(&self.text[..self.end])
     }
 }
 
-fn next_visible(text: &str, from: usize) -> Option<(usize, char)> {
-    text[from..]
+fn prev_visible(text: &str, before: usize) -> Option<(usize, char)> {
+    text[..before]
         .char_indices()
+        .rev()
         .find(|(_, ch)| !ch.is_whitespace())
-        .map(|(offset, ch)| (from + offset, ch))
 }
 
-fn eat(text: &str, from: usize, want: char) -> Option<usize> {
-    match next_visible(text, from) {
-        Some((index, ch)) if ch == want => Some(index + ch.len_utf8()),
-        _ => None,
-    }
-}
-
-fn separator_end(text: &str, index: usize, ch: char) -> Option<usize> {
-    let after = index + ch.len_utf8();
+/// The byte index where the separator ending at `(index, ch)` starts, or `None`
+/// when `ch` is not the end of a segment separator. `?` and `-` are separators
+/// only inside `?.`, `?->`, or `->`, so they never end one: the scan reaches
+/// them only through `.` or `>`. `:` pairs are decided by [`SegmentsRev`]
+/// because their direction depends on the run they sit in.
+fn separator_start(text: &str, index: usize, ch: char) -> Option<usize> {
     match ch {
-        '.' | '\\' => Some(after),
-        ':' => eat(text, after, ':'),
-        '-' => eat(text, after, '>'),
-        '?' => match next_visible(text, after) {
-            Some((dot, '.')) => Some(dot + 1),
-            Some((dash, '-')) => eat(text, dash + 1, '>'),
+        '.' | '\\' => match prev_visible(text, index) {
+            Some((q, '?')) if ch == '.' => Some(q),
+            _ => Some(index),
+        },
+        '>' => match prev_visible(text, index) {
+            Some((dash, '-')) => match prev_visible(text, dash) {
+                Some((q, '?')) => Some(q),
+                _ => Some(dash),
+            },
             _ => None,
         },
         _ => None,
@@ -331,6 +404,101 @@ mod tests {
     }
 
     #[test]
+    fn long_callee_without_matching_tail_rejects() {
+        let pattern = CalleePattern::parse("logger.info").unwrap();
+        let deep = format!("echo {}{}", "$(".repeat(20_000), ")".repeat(20_000));
+        assert!(
+            !pattern.matches(&deep, CallKind::Plain),
+            "a callee whose tail is not the pattern's last segment cannot match"
+        );
+        let chain = format!("{}info", "x.".repeat(1_000));
+        assert!(
+            CalleePattern::parse("x.info")
+                .unwrap()
+                .matches(&chain, CallKind::Plain),
+            "a callee ending in the pattern's segments still matches"
+        );
+        let bang = CalleePattern::parse("info!").unwrap();
+        for callee in ["tracing::info!", "tracing::info"] {
+            assert!(
+                bang.matches(callee, CallKind::Macro),
+                "info! still matches {callee} under Macro"
+            );
+        }
+        assert!(
+            !bang.matches("tracing::debug!", CallKind::Macro),
+            "info! still rejects a non-matching macro callee"
+        );
+    }
+
+    #[test]
+    fn nested_callees_reject_every_pattern_in_linear_time() {
+        use std::time::{Duration, Instant};
+        let patterns = [
+            "log",
+            "info",
+            "warn",
+            "error",
+            "debug",
+            "trace",
+            "logger.info",
+            "console.log",
+            "console.error",
+            "tracing::info",
+            "tracing::warn",
+            "std::env::var",
+            "*Error",
+            "new *Error",
+        ];
+        let patterns: Vec<CalleePattern> = patterns
+            .into_iter()
+            .map(|p| CalleePattern::parse(p).unwrap())
+            .collect();
+        // Prebuilt outside the timed region; each callee nests one level deeper.
+        // One format! per callee keeps construction at one copy of its own text.
+        let mut callees = Vec::with_capacity(4_000);
+        let mut open = String::from("f(");
+        let mut close = String::from(")");
+        for _ in 0..4_000 {
+            open.push_str("$(");
+            close.push(')');
+            callees.push(format!("{open}x{close}"));
+        }
+        let reject_all = |callees: &[String]| {
+            for callee in callees {
+                for pattern in &patterns {
+                    assert!(
+                        !pattern.matches(callee, CallKind::Plain),
+                        "a nested callee matches no log pattern"
+                    );
+                }
+            }
+        };
+        let bytes = |callees: &[String]| callees.iter().map(String::len).sum::<usize>();
+        let bytes_small = bytes(&callees[..1_000]);
+        let bytes_total = bytes(&callees[..]);
+        let start = Instant::now();
+        reject_all(&callees[..1_000]);
+        let small = start.elapsed();
+        reject_all(&callees[1_000..]);
+        let total = start.elapsed();
+        // A matcher linear in callee text keeps a constant cost per byte; the
+        // old whole-callee rescan made the per-byte cost grow with depth. Four
+        // times the per-byte floor separates the two without timing the input
+        // size itself (which is inherently quadratic across 4,000 depths). The
+        // comparison is cross-multiplied so it stays in integer nanoseconds.
+        assert!(
+            total.as_nanos() * (bytes_small as u128)
+                < 4 * small.as_nanos().max(1) * (bytes_total as u128),
+            "matching cost per callee byte must stay flat, not grow with depth"
+        );
+        assert!(
+            total < Duration::from_secs(90),
+            "rejecting every pattern at every depth must stay linear in depth"
+        );
+    }
+
+    #[test]
     fn rejects_malformed_patterns() {
         assert!(
             CalleePattern::parse("").is_err(),
@@ -389,6 +557,106 @@ mod tests {
             let last = changed.len() - 1;
             changed[last].push('z');
             prop_assert!(!pattern.matches(&changed.join("."), CallKind::Plain));
+        }
+
+        #[test]
+        fn segments_rev_reverses_forward_split(callee in "[a-z0-9:.>\\-?$ ]{0,60}") {
+            let forward = forward_segments(&callee);
+            let reverse: Vec<&str> = SegmentsRev::new(&callee).collect();
+            prop_assert_eq!(
+                reverse,
+                forward.into_iter().rev().collect::<Vec<&str>>(),
+                "backward walk must yield the forward split reversed"
+            );
+        }
+    }
+
+    /// The reference forward segment walk, kept only as a test oracle for
+    /// [`SegmentsRev`]: production matching consumes segments back to front.
+    fn forward_segments(text: &str) -> Vec<&str> {
+        let mut out = Vec::new();
+        let mut start = 0usize;
+        let mut cursor = start;
+        loop {
+            match next_visible(text, cursor) {
+                Some((index, ch)) => match separator_end(text, index, ch) {
+                    Some(end) => {
+                        out.push(&text[start..index]);
+                        start = end;
+                        cursor = end;
+                    }
+                    None => cursor = index + ch.len_utf8(),
+                },
+                None => {
+                    out.push(&text[start..]);
+                    return out;
+                }
+            }
+        }
+    }
+
+    fn next_visible(text: &str, from: usize) -> Option<(usize, char)> {
+        text[from..]
+            .char_indices()
+            .find(|(_, ch)| !ch.is_whitespace())
+            .map(|(offset, ch)| (from + offset, ch))
+    }
+
+    fn eat(text: &str, from: usize, want: char) -> Option<usize> {
+        match next_visible(text, from) {
+            Some((index, ch)) if ch == want => Some(index + ch.len_utf8()),
+            _ => None,
+        }
+    }
+
+    fn separator_end(text: &str, index: usize, ch: char) -> Option<usize> {
+        let after = index + ch.len_utf8();
+        match ch {
+            '.' | '\\' => Some(after),
+            ':' => eat(text, after, ':'),
+            '-' => eat(text, after, '>'),
+            '?' => match next_visible(text, after) {
+                Some((dot, '.')) => Some(dot + 1),
+                Some((dash, '-')) => eat(text, dash + 1, '>'),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn segments_rev_pairs_colons_left_to_right() {
+        for (callee, expected) in [
+            ("a::b", vec!["a", "b"]),
+            ("a:::b", vec!["a", ":b"]),
+            ("a::::b", vec!["a", "", "b"]),
+            ("a:.b", vec!["a:", "b"]),
+            ("a::.b", vec!["a", "", "b"]),
+            ("a:::", vec!["a", ":"]),
+            ("::a", vec!["", "a"]),
+            ("x ?. a.b", vec!["x ", " a", "b"]),
+            ("a->b", vec!["a", "b"]),
+            ("a?->b", vec!["a", "b"]),
+            ("a\\b", vec!["a", "b"]),
+            ("a:b", vec!["a:b"]),
+            ("a-b", vec!["a-b"]),
+            ("a?b", vec!["a?b"]),
+            ("a. b . c", vec!["a", " b ", " c"]),
+            ("", vec![""]),
+            ("a.", vec!["a", ""]),
+            (".a", vec!["", "a"]),
+        ] {
+            let forward = forward_segments(callee);
+            assert_eq!(
+                forward, expected,
+                "forward oracle and pinned split disagree for {callee:?}"
+            );
+            let got: Vec<&str> = SegmentsRev::new(callee).collect::<Vec<_>>();
+            assert_eq!(
+                got,
+                expected.into_iter().rev().collect::<Vec<_>>(),
+                "wrong backward split for {callee:?}"
+            );
         }
     }
 }

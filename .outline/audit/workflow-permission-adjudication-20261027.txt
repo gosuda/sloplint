@@ -1,0 +1,36 @@
+Final verdict — from inspected evidence, with anchor corrections accepted:
+
+```json
+{
+  "overall": "AGREE with parent: neither High. Environment = conditional hardening (Info as a YAML key); Sidecars = Info/low usability, not a security gap.",
+  "environment_publish_167": {
+    "verdict": "False positive as filed medium-vulnerability; valid only as Info hardening / governance-uncertainty note",
+    "agree_disagree": "AGREE environment alone does not stop a tag writer who controls the workflow file; DISAGREE that absence of the key is itself a medium vuln",
+    "attacker_qualification": "Two cases: (a) writer can only point a v* tag at an EXISTING trusted commit -> a configured `environment:` with required reviewers DOES pause publication, gate holds; (b) writer can push a commit + tag (workflow-file control) -> they delete/rename `environment:` and bypass unconditionally. Capability (b) is the one that defeats the key. Tag creation alone does not prove commit control, so unconditional-bypass wording is wrong; report both cases.",
+    "missing_invariant": "Trusted-workflow provenance (publish definition must come from default branch, not the tagged commit) + server-side tag authorization (tag ruleset). Both are repository configuration, unknown here per no-inference rule — same boundary as declined S2.",
+    "attestation_note": "Attestation does not fix authorization: --signer-workflow/--source-ref/--source-digest name the attacker's own workflow+commit, so `gh attestation verify` PASSES for a tag-author build. It proves which commit built the artifact, not that the commit was authorized.",
+    "evidence": [
+      "release.yml:4-5 on.push.tags trigger (proves tag trigger, not who controls commits)",
+      "release.yml:167-172 publish job, no environment key, contents:write",
+      "release.yml:183-186 publish Verify packaging (correction accepted, was miscited 179-185)",
+      "release.yml:187-200 Verify attestations; 191-196 loop with --signer-workflow/--source-ref/--source-digest/--deny-self-hosted-runners",
+      "release.yml:244-262 classify_asset incl. 255-262 digest compare (correction accepted: function starts ~244, digest at 255-262)",
+      "release.yml:310-311 second require_tag_at_sha + --draft=false (correction accepted, was miscited 296-298 which is the post-upload identical loop)",
+      "scripts/verify-release.sh:23-33 verify_tag is string-vs-version only, no authorization",
+      ".outline/audit/queue-workflows.json item S2 (64-77 block) declined tag-move medium: tag-rule authority is repository setting, not workflow code"
+    ]
+  },
+  "sidecars_subject_path": {
+    "verdict": "No security gap; Info completeness/usability at most",
+    "agree_disagree": "AGREE with parent low usability note; AGREE with advisories it is not a security finding",
+    "reason": "Sidecar is bound to the attested archive by trusted code twice in-run; consumer trust anchor is the archive attestation per README. Unattested sidecar cannot launder a bad archive — mismatch fails before upload/publication.",
+    "evidence": [
+      "release.yml:159-164 attest action; globs at 162-164 (dist/*.tar.gz, *.zip, *.cdx.json) — sidecars excluded (correction accepted)",
+      "release.yml:183-186 publish Verify packaging reruns verifier on artifact set",
+      "scripts/verify-release.sh:37-43 check_checksum_file: digest format, name match, single line, sha256sum --check",
+      "scripts/verify-release.sh:84-102 every sidecar required and checked",
+      "README:38 sidecars explicitly non-trust-anchor; provenance via archive attestation"
+    ]
+  }
+}
+```

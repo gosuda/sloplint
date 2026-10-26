@@ -57,6 +57,65 @@ impl MemberStates {
     }
 }
 
+/// One step along a chain of nodes that ends in a root.
+pub(crate) enum Link<'n> {
+    /// The chain continues at this node.
+    Next(Node<'n>),
+    /// The chain ends at this node, whose text is the root.
+    Root(Node<'n>),
+}
+
+/// Chain roots memoized across one walk.
+///
+/// A call's callee root comes from following its receiver chain to the end, so in
+/// a chain of `n` calls every call repeats the walk of every call below it. The
+/// first query records the root for every node on its path, so the later queries
+/// for the inner calls stop after one step instead of walking down again.
+///
+/// A chain family names one step function. A node's recorded root belongs to the
+/// family that recorded it, so two step functions never read each other's roots.
+#[derive(Default)]
+pub(crate) struct ChainRoots {
+    known: RefCell<HashMap<(u8, usize), (usize, usize)>>,
+    /// Scratch for the nodes of one cold walk, kept to reuse its allocation.
+    path: RefCell<Vec<usize>>,
+}
+
+impl ChainRoots {
+    /// The byte range of the root at the end of the chain `step` follows from `start`.
+    ///
+    /// `step` must give the same answer for a node on every call within one family.
+    fn root<'n>(
+        &self,
+        family: u8,
+        start: Node<'n>,
+        step: impl Fn(Node<'n>) -> Link<'n>,
+    ) -> (usize, usize) {
+        let mut path = std::mem::take(&mut *self.path.borrow_mut());
+        path.clear();
+        let mut current = start;
+        let found = loop {
+            let next = match step(current) {
+                Link::Next(next) => next,
+                Link::Root(root) => break (root.start_byte(), root.end_byte()),
+            };
+            path.push(current.id());
+            let known = self.known.borrow().get(&(family, next.id())).copied();
+            if let Some(known) = known {
+                break known;
+            }
+            current = next;
+        };
+        if !path.is_empty() {
+            self.known
+                .borrow_mut()
+                .extend(path.drain(..).map(|id| ((family, id), found)));
+        }
+        *self.path.borrow_mut() = path;
+        found
+    }
+}
+
 /// What one language's hooks know about the node currently being visited.
 pub(crate) struct Cx<'t, 's> {
     pub src: &'s str,
@@ -65,6 +124,8 @@ pub(crate) struct Cx<'t, 's> {
     pub is_test_file: bool,
     /// The walk's memo of member states, shared by every node the walk visits.
     pub members: &'t MemberStates,
+    /// The walk's memo of chain roots, shared by every node the walk visits.
+    chains: &'t ChainRoots,
     containers: &'t [Container],
     exports: &'t [&'s str],
     /// The nodes entered so far under each open ancestor, outermost level first.
@@ -83,6 +144,7 @@ impl<'t, 's> Cx<'t, 's> {
         lang: Lang,
         is_test_file: bool,
         members: &'t MemberStates,
+        chains: &'t ChainRoots,
     ) -> Self {
         Self {
             src,
@@ -90,6 +152,7 @@ impl<'t, 's> Cx<'t, 's> {
             lang,
             is_test_file,
             members,
+            chains,
             containers: &[],
             exports: &[],
             levels: &[],
@@ -110,6 +173,23 @@ impl<'t, 's> Cx<'t, 's> {
             levels,
             ..self
         }
+    }
+}
+
+impl<'s> Cx<'_, 's> {
+    /// The text of the root at the end of the chain `step` follows from `start`.
+    ///
+    /// Equal to following `step` link by link until a `Root` ends it,
+    /// but each node's answer is recorded under `family` (one id per step function),
+    /// so a chain of `n` nested calls costs `O(n)` in total and not `O(n²)`.
+    pub(crate) fn chain_root<'n>(
+        &self,
+        family: u8,
+        start: Node<'n>,
+        step: impl Fn(Node<'n>) -> Link<'n>,
+    ) -> &'s str {
+        let (from, to) = self.chains.root(family, start, step);
+        slice(self.src, from, to)
     }
 }
 

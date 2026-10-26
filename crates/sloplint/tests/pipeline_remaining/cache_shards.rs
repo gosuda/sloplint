@@ -302,3 +302,75 @@ fn a_hostile_length_prefix_shard_is_ignored_and_recomputed() {
     );
     assert!(warm.stderr.is_empty(), "stderr: {}", text(&warm.stderr));
 }
+
+#[test]
+fn undecodable_and_symlinked_shards_are_pruned_by_a_warm_load() {
+    let (_tmp, root) = project();
+    put(&root, "a.rs", SAMPLE);
+    let (_home_guard, home) = temp();
+
+    let cold = isolated(&root, &CHECK, &home);
+    succeeded_with_finding(&cold);
+    let files = cache_files(&home);
+    let live: std::collections::HashMap<PathBuf, Vec<u8>> = files
+        .iter()
+        .map(|path| (path.clone(), file_bytes(path)))
+        .collect();
+    let warm = isolated(&root, &CHECK, &home);
+    assert_eq!(warm.stdout, cold.stdout, "the second run must be warm");
+    assert!(warm.stderr.is_empty(), "stderr: {}", text(&warm.stderr));
+
+    let shards = files[0]
+        .parent()
+        .unwrap_or_else(|| panic!("{} has no directory", files[0].display()))
+        .to_path_buf();
+    let mut free = (0..=255u8)
+        .map(|byte| shards.join(format!("shard-{byte:02x}.bin")))
+        .filter(|path| !files.contains(path));
+    let junk = free
+        .next()
+        .unwrap_or_else(|| panic!("every shard name is taken"));
+    std::fs::write(&junk, b"not a cache").unwrap_or_else(|e| panic!("plant junk: {e}"));
+    #[cfg(unix)]
+    let link = {
+        let link = free
+            .next()
+            .unwrap_or_else(|| panic!("only one shard name is free"));
+        std::os::unix::fs::symlink(&files[0], &link).unwrap_or_else(|e| panic!("symlink: {e}"));
+        link
+    };
+
+    // No source changed, so every file hits the cache and the store is
+    // skipped: only the load can remove what was planted.
+    let out = isolated(&root, &CHECK, &home);
+    assert!(out.status.success(), "stderr: {}", text(&out.stderr));
+    assert_eq!(
+        out.stdout, cold.stdout,
+        "a warm run past planted junk must match the cold output"
+    );
+    assert!(out.stderr.is_empty(), "stderr: {}", text(&out.stderr));
+    assert!(
+        !junk.exists(),
+        "an undecodable shard must be pruned by the load: {}",
+        junk.display()
+    );
+    #[cfg(unix)]
+    assert!(
+        std::fs::symlink_metadata(&link).is_err(),
+        "a symlinked shard must be pruned by the load: {}",
+        link.display()
+    );
+    for path in &files {
+        assert_eq!(
+            &file_bytes(path),
+            live.get(path)
+                .unwrap_or_else(|| panic!("{} is a new shard", path.display())),
+            "a valid shard must survive the prune: {}",
+            path.display()
+        );
+    }
+
+    let warm = isolated(&root, &CHECK, &home);
+    assert_eq!(warm.stdout, cold.stdout, "the pruned cache must stay warm");
+    assert!(warm.stderr.is_empty(), "stderr: {}", text(&warm.stderr));
+}

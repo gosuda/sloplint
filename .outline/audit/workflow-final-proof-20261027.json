@@ -1,0 +1,26 @@
+{
+  "status": "pass",
+  "queueSha256": "482f4327cb8f58d8659a0edd0d8ac09a908ecc2324c38a43bff9124524ad78a6",
+  "queueStatus": "clean",
+  "counts": {
+    "total": 7,
+    "open": 1,
+    "openCriticalHigh": 0,
+    "openAtOrAboveFloor": 0,
+    "fixedAtOrAboveFloor": 0,
+    "lowDebt": 0
+  },
+  "checks": [
+    "all five selected review passes represented",
+    "every dismissal has explicit evidence-based reason",
+    "blocked-ratio gate evaluated before clean verdict",
+    "current counts agree with items",
+    "coverage repair and policy correction files exist",
+    "final shared parent verification passed"
+  ],
+  "limits": [
+    "Hosted jobs not executed; runner availability not checked live",
+    "Windows Compress-Archive and hosted attestations not exercised locally"
+  ],
+  "supersedesSnapshotProof": ".outline/audit/workflow-closure-consistency-20261027.json"
+}
