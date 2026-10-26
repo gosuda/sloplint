@@ -1,0 +1,8 @@
+{
+  "supersedesClaimIn": ".outline/audit/workflow-ci-coverage-20261027.txt",
+  "rejectedClaims": ["NO deny.toml", "cargo-deny defaults"],
+  "authoritativeEvidence": "deny.toml:1-23 read by parent",
+  "correctedVerdict": "cargo deny check uses repository deny.toml. It configures advisories version 2, warns on multiple versions, sets a license allowlist and confidence threshold 0.8, and denies unknown registries and git sources. The workflow verifies the downloaded tool checksum before extraction and execution.",
+  "rawEvidencePolicy": "Keep the worker packet immutable. Do not accept the rejected claims as facts. This correction takes precedence for the consolidated report.",
+  "anchors": ["Richard Feynman", "Tony Hoare"]
+}

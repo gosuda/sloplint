@@ -1,0 +1,60 @@
+{
+  "iteration": 1,
+  "scope": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml"
+  ],
+  "changedFiles": [],
+  "batches": [],
+  "fixAttempts": 0,
+  "verification": [
+    {
+      "command": "actionlint -shellcheck=<shellcheck-0.11.0> -verbose .github/workflows/ci.yml .github/workflows/release.yml",
+      "exit": 0,
+      "tool": "actionlint 1.7.12",
+      "note": "shellcheck enabled; SC2086 probe exit 1 confirms activation"
+    },
+    {
+      "command": "bash scripts/selftest-release-scripts.sh",
+      "exit": 0,
+      "passed": 63
+    },
+    {
+      "command": "shellcheck -x scripts/verify-release.sh scripts/selftest-release-scripts.sh",
+      "exit": 0
+    },
+    {
+      "command": "cargo fmt --all --check",
+      "exit": 0
+    },
+    {
+      "command": "actionlint with explicit shellcheck && shellcheck -x both scripts && bash scripts/selftest-release-scripts.sh",
+      "exit": 0,
+      "passed": 63,
+      "stage": "final parent proof after coverage repair"
+    }
+  ],
+  "reReviewEvidence": [
+    ".outline/audit/workflow-permission-adjudication-20261027.txt",
+    ".outline/audit/workflow-compression-adjudication-20261027.txt",
+    ".outline/audit/workflow-ci-coverage-20261027.txt",
+    ".outline/audit/workflow-ci-coverage-correction-20261027.json",
+    ".outline/audit/workflow-release-coverage-20261027.txt"
+  ],
+  "counts": {
+    "total": 7,
+    "open": 1,
+    "openCriticalHigh": 0,
+    "openAtOrAboveFloor": 0,
+    "fixedAtOrAboveFloor": 0,
+    "lowDebt": 0
+  },
+  "falsePositiveGate": {
+    "total": 7,
+    "dismissed": 6,
+    "ratio": 0.8571428571428571,
+    "blocked": false
+  },
+  "regressionsRolledBack": 0,
+  "status": "clean-at-high-floor"
+}

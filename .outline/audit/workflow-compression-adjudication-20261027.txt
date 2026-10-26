@@ -1,0 +1,27 @@
+{
+  "verdicts": [
+    {
+      "id": "duplicate-release-builds",
+      "verdict": "medium cost, not a consumer-visible failure; retain",
+      "lines": {
+        "ci_release_build": "ci.yml:78",
+        "release_reuses_ci": "release.yml:37",
+        "release_build": "release.yml:60"
+      },
+      "reason": "ci.yml:78 feeds the dogfood self-lint that must run identically on PR and tag runs, while release.yml:60 produces the archived and attested artifact; sharing would need a new cross-file interface, and the cost (estimate, unmeasured: about six extra release-profile compiles per tag) buys no consumer-visible change."
+    },
+    {
+      "id": "paginated-release-reloads",
+      "verdict": "required; no change",
+      "lines": {
+        "list_lookup": "release.yml:232-241",
+        "reloads": "release.yml:269,272,303"
+      },
+      "reason": "The by-tag endpoint is published-only, so the draft created at release.yml:271 is visible only via the paginated list, which also backs the duplicate-tag guard (release.yml:239, selftest-pinned); each reload re-reads changed server state."
+    }
+  ],
+  "closing_compression": {
+    "safe_deletion": "Drop redundant verify-tag from attest (release.yml:140) and publish (release.yml:168) needs, already ordered transitively via ci, build, and sbom (release.yml:34,40,95).",
+    "must_keep": "Keep both Verify packaging steps: verify-release.sh dist is what enforces the expected target set, checksums, archive members, and SBOM on publish's own re-downloaded copy, which neither the publish script nor the attestation loop re-checks."
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "status": "resolved",
+  "supersedes": ".outline/audit/workflow-closure-coverage-20261027.json",
+  "reason": "That immutable worker artifact describes the pre-repair coverage snapshot, not the final audit state.",
+  "resolvedGaps": {
+    "G-1": "CI coverage repair inspected deny checksum-before-execution and policy wiring. Parent correction confirms actual deny.toml policy.",
+    "G-2": "CI coverage repair inspected all six target-runner pairs, command order and Windows binary suffix.",
+    "G-3": "Release coverage repair inspected SBOM installer checksum, output singleton, per-target naming and lock-drift check.",
+    "G-4": "Release coverage repair inspected reusable workflow SHA context, permissions and dependency wiring.",
+    "G-5": "Coverage repair supplied explicit per-job, relevant-domain findings or reasoned no-finding notes."
+  },
+  "evidence": [
+    ".outline/audit/workflow-ci-coverage-20261027.txt",
+    ".outline/audit/workflow-ci-coverage-correction-20261027.json",
+    ".outline/audit/workflow-release-coverage-20261027.txt",
+    ".outline/audit/workflow-final-proof-20261027.json"
+  ],
+  "limits": "Static coverage does not claim hosted job execution. The original worker artifact remains unchanged to preserve its evidence.",
+  "anchors": ["Richard Feynman", "Tony Hoare"]
+}

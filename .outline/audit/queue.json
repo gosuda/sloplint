@@ -1,0 +1,405 @@
+{
+  "scope": ".github/workflows/",
+  "changedFiles": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml"
+  ],
+  "framework": "Rust CLI / GitHub Actions",
+  "flags": {
+    "HAS_DB": false,
+    "HAS_API": false,
+    "FRONTEND": false,
+    "BACKEND": true,
+    "CICD": true
+  },
+  "prioritySignals": {
+    "testGaps": [
+      {
+        "file": ".github/workflows/ci.yml",
+        "total_touches": 6,
+        "recent_touches": 6,
+        "bugfix_touches": 0,
+        "test_cochanges": 0,
+        "hotspot_score": 18,
+        "bug_rate": 0.0,
+        "test_gap_score": 18.0,
+        "complexity_band": 1,
+        "pain_score": 36.0
+      },
+      {
+        "file": ".github/workflows/release.yml",
+        "total_touches": 7,
+        "recent_touches": 7,
+        "bugfix_touches": 0,
+        "test_cochanges": 3,
+        "hotspot_score": 21,
+        "bug_rate": 0.0,
+        "test_gap_score": 5.25,
+        "complexity_band": 1,
+        "pain_score": 42.0
+      }
+    ],
+    "hotspots": [
+      {
+        "file": ".github/workflows/ci.yml",
+        "total_touches": 6,
+        "recent_touches": 6,
+        "bugfix_touches": 0,
+        "test_cochanges": 0,
+        "hotspot_score": 18,
+        "bug_rate": 0.0,
+        "test_gap_score": 18.0,
+        "complexity_band": 1,
+        "pain_score": 36.0
+      },
+      {
+        "file": ".github/workflows/release.yml",
+        "total_touches": 7,
+        "recent_touches": 7,
+        "bugfix_touches": 0,
+        "test_cochanges": 3,
+        "hotspot_score": 21,
+        "bug_rate": 0.0,
+        "test_gap_score": 5.25,
+        "complexity_band": 1,
+        "pain_score": 42.0
+      }
+    ],
+    "bugspots": [],
+    "slopConcentration": [],
+    "entryPoints": [
+      "ci: push/main, pull_request, workflow_call",
+      "release: push/semver-tag, verify-tag, build, sbom, attest, publish"
+    ],
+    "complexityProxy": "two YAML workflow files with inline shell; release publication has stateful asset reconciliation"
+  },
+  "selectedReviewers": [
+    "code-quality",
+    "security",
+    "performance",
+    "test-quality",
+    "devops"
+  ],
+  "severityFloor": "high",
+  "caps": {
+    "maxIterations": 5,
+    "fixAttemptCap": 20,
+    "attemptsPerItem": 3
+  },
+  "iteration": 1,
+  "maxIterations": 5,
+  "fixAttempts": 0,
+  "rawResults": [
+    {
+      "pass": "code-quality",
+      "findings": [
+        {
+          "file": ".github/workflows/ci.yml",
+          "line": 27,
+          "severity": "medium",
+          "category": "ci-gate",
+          "description": "cargo fmt --all walks vendored dependencies; prior audit observed formatting diffs.",
+          "suggestion": "Scope formatting to authored crates.",
+          "confidence": "high",
+          "falsePositive": true,
+          "falsePositiveReason": "Current exact cargo fmt --all --check executed this run: exit 0, no output. Prior failure is stale; do not weaken the working gate.",
+          "pass": "code-quality"
+        }
+      ]
+    },
+    {
+      "pass": "security",
+      "findings": [
+        {
+          "file": ".github/workflows/release.yml",
+          "line": 167,
+          "severity": "medium",
+          "category": "release-authorization",
+          "description": "Publish has no environment approval gate; release authorization depends on repository tag/workflow protections not established by this local audit.",
+          "suggestion": "Review repository-level tag and workflow protections; an environment field alone is removable by a tag-controlled workflow.",
+          "confidence": "medium",
+          "falsePositive": false,
+          "falsePositiveReason": "",
+          "pass": "security"
+        },
+        {
+          "file": ".github/workflows/release.yml",
+          "line": 160,
+          "severity": "low",
+          "category": "artifact-provenance",
+          "description": "Checksum sidecars are not separately attested, while the archives and SBOMs are.",
+          "suggestion": "Treat sidecars as convenience integrity checks; verify attested archive digests.",
+          "confidence": "medium",
+          "falsePositive": false,
+          "falsePositiveReason": "",
+          "pass": "security"
+        }
+      ],
+      "notes": "Retained initial findings despite unexplained later empty output. Environment approval is hardening, not a demonstrated bypass fix; unknown repository rulesets remain unverified."
+    },
+    {
+      "pass": "performance",
+      "findings": [
+        {
+          "file": ".github/workflows/release.yml",
+          "line": 60,
+          "severity": "medium",
+          "category": "duplicate-work",
+          "description": "Tag releases compile six release binaries in reusable CI and again in packaging jobs at the same SHA, increasing billed build work.",
+          "suggestion": "Share built artifacts while preserving pre-tag release-profile checks; do not remove release coverage.",
+          "confidence": "high",
+          "falsePositive": false,
+          "falsePositiveReason": "",
+          "pass": "performance"
+        },
+        {
+          "file": ".github/workflows/release.yml",
+          "line": 234,
+          "severity": "medium",
+          "category": "repeated-api-scan",
+          "description": "load_release paginates all releases two or three times per publication.",
+          "suggestion": "Investigate a draft-capable tag-specific lookup without losing fresh post-upload state.",
+          "confidence": "high",
+          "falsePositive": false,
+          "falsePositiveReason": "",
+          "pass": "performance"
+        }
+      ]
+    },
+    {
+      "pass": "test-quality",
+      "findings": [],
+      "notes": "Test-quality pass inspected scripts and workflows, found three supporting-script limitations retained in outOfScopeNotes; not an absent review. Per-job coverage repair provides additional relevant lens notes."
+    },
+    {
+      "pass": "devops",
+      "findings": [
+        {
+          "file": ".github/workflows/ci.yml",
+          "line": 27,
+          "severity": "high",
+          "category": "ci-gating",
+          "description": "Prior October 21 fmt gate failure was reported as current.",
+          "suggestion": "Scope fmt to authored crates.",
+          "confidence": "high",
+          "falsePositive": true,
+          "falsePositiveReason": "Current cargo fmt --all --check exits 0. Historical failure does not reproduce on current tree.",
+          "pass": "devops"
+        },
+        {
+          "file": ".github/workflows/release.yml",
+          "line": 142,
+          "severity": "medium",
+          "category": "actions-usage",
+          "description": "Attest job omits artifact-metadata: write.",
+          "suggestion": "Only add if storage-record creation is enabled.",
+          "confidence": "high",
+          "falsePositive": true,
+          "falsePositiveReason": "This subject-path flow does not enable push-to-registry/create-storage-record; existing attestation permissions suffice.",
+          "pass": "devops"
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "file": ".github/workflows/ci.yml",
+      "line": 27,
+      "severity": "high",
+      "category": "ci-gating",
+      "description": "Prior October 21 fmt gate failure was reported as current.",
+      "suggestion": "Scope fmt to authored crates.",
+      "confidence": "high",
+      "falsePositive": true,
+      "falsePositiveReason": "Current cargo fmt --all --check exits 0. Historical failure does not reproduce on current tree.",
+      "pass": "devops",
+      "id": "WF-2",
+      "status": "false-positive"
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "line": 27,
+      "severity": "medium",
+      "category": "ci-gate",
+      "description": "cargo fmt --all walks vendored dependencies; prior audit observed formatting diffs.",
+      "suggestion": "Scope formatting to authored crates.",
+      "confidence": "high",
+      "falsePositive": true,
+      "falsePositiveReason": "Current exact cargo fmt --all --check executed this run: exit 0, no output. Prior failure is stale; do not weaken the working gate.",
+      "pass": "code-quality",
+      "id": "WF-1",
+      "status": "false-positive"
+    },
+    {
+      "file": ".github/workflows/release.yml",
+      "line": 60,
+      "severity": "medium",
+      "category": "duplicate-work",
+      "description": "Tag releases compile six release binaries in reusable CI and again in packaging jobs at the same SHA, increasing billed build work.",
+      "suggestion": "Share built artifacts while preserving pre-tag release-profile checks; do not remove release coverage.",
+      "confidence": "high",
+      "falsePositive": false,
+      "falsePositiveReason": "",
+      "pass": "performance",
+      "id": "WF-4",
+      "status": "open",
+      "reviewerSeverity": "high",
+      "severityAdjustmentReason": "Duplicate computation is concrete cost, not demonstrated outage or likely normal-input correctness failure; medium resource inefficiency."
+    },
+    {
+      "file": ".github/workflows/release.yml",
+      "line": 142,
+      "severity": "medium",
+      "category": "actions-usage",
+      "description": "Attest job omits artifact-metadata: write.",
+      "suggestion": "Only add if storage-record creation is enabled.",
+      "confidence": "high",
+      "falsePositive": true,
+      "falsePositiveReason": "This subject-path flow does not enable push-to-registry/create-storage-record; existing attestation permissions suffice.",
+      "pass": "devops",
+      "id": "WF-3",
+      "status": "false-positive"
+    },
+    {
+      "file": ".github/workflows/release.yml",
+      "line": 167,
+      "severity": "medium",
+      "category": "release-authorization",
+      "description": "Publish has no environment approval gate; release authorization depends on repository tag/workflow protections not established by this local audit.",
+      "suggestion": "Review repository-level tag and workflow protections; an environment field alone is removable by a tag-controlled workflow.",
+      "confidence": "medium",
+      "falsePositive": true,
+      "falsePositiveReason": "Absence of environment key is not an established vulnerability: workflow-controlling tag writer can omit the key, whereas tag-only writer on trusted commits could be gated by server-configured reviewers. Repository rulesets and workflow authorization are unknown; retain governance uncertainty, not a demonstrated medium code defect.",
+      "pass": "security",
+      "id": "WF-6",
+      "status": "false-positive"
+    },
+    {
+      "file": ".github/workflows/release.yml",
+      "line": 234,
+      "severity": "medium",
+      "category": "repeated-api-scan",
+      "description": "load_release paginates all releases two or three times per publication.",
+      "suggestion": "Investigate a draft-capable tag-specific lookup without losing fresh post-upload state.",
+      "confidence": "high",
+      "falsePositive": true,
+      "falsePositiveReason": "Paginated list supports authenticated draft discovery and duplicate-tag detection; fresh reloads are needed after mutations. Official REST docs describe by-tag endpoint as published-release lookup, so suggested replacement does not preserve draft lifecycle. No observed cost failure.",
+      "pass": "performance",
+      "id": "WF-5",
+      "status": "false-positive",
+      "verificationLimit": "No tag-specific endpoint substitution verified; draft semantics must be preserved.",
+      "evidenceUrl": "https://docs.github.com/en/rest/releases/releases#get-a-release-by-tag-name"
+    },
+    {
+      "file": ".github/workflows/release.yml",
+      "line": 160,
+      "severity": "low",
+      "category": "artifact-provenance",
+      "description": "Checksum sidecars are not separately attested, while the archives and SBOMs are.",
+      "suggestion": "Treat sidecars as convenience integrity checks; verify attested archive digests.",
+      "confidence": "medium",
+      "falsePositive": true,
+      "falsePositiveReason": "README explicitly says checksum sidecars are not a trust anchor; archive attestations establish provenance. Sidecar consistency is verified before publication. No missing promised property.",
+      "pass": "security",
+      "id": "WF-7",
+      "status": "false-positive"
+    }
+  ],
+  "lowDebt": [],
+  "counts": {
+    "total": 7,
+    "open": 1,
+    "openCriticalHigh": 0,
+    "openAtOrAboveFloor": 0,
+    "fixedAtOrAboveFloor": 0,
+    "lowDebt": 0
+  },
+  "falsePositive": {
+    "total": 7,
+    "dismissed": 6,
+    "ratio": 0.8571428571428571,
+    "blocked": false
+  },
+  "hashHistory": [
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  ],
+  "verification": [
+    {
+      "command": "actionlint -shellcheck=<shellcheck-0.11.0> -verbose .github/workflows/ci.yml .github/workflows/release.yml",
+      "exit": 0,
+      "tool": "actionlint 1.7.12",
+      "note": "shellcheck enabled; SC2086 probe exit 1 confirms activation"
+    },
+    {
+      "command": "bash scripts/selftest-release-scripts.sh",
+      "exit": 0,
+      "passed": 63
+    },
+    {
+      "command": "shellcheck -x scripts/verify-release.sh scripts/selftest-release-scripts.sh",
+      "exit": 0
+    },
+    {
+      "command": "cargo fmt --all --check",
+      "exit": 0
+    },
+    {
+      "command": "actionlint with explicit shellcheck && shellcheck -x both scripts && bash scripts/selftest-release-scripts.sh",
+      "exit": 0,
+      "passed": 63,
+      "stage": "final parent proof after coverage repair"
+    }
+  ],
+  "decisions": [
+    "Preserve previous queue at queue.before-workflow-audit-20261027.json",
+    "Scope limited to two workflow files; scripts read-only supporting evidence",
+    "Spine anchor mode active; no commit or publication under spine-driven",
+    "Coverage repair CI pass examined all CI jobs. Rejected its erroneous no deny.toml note: parent read actual deny.toml with licenses allowlist and unknown registry/git deny. Worker output retained unchanged, correction recorded here."
+  ],
+  "updatedAt": "2026-10-26T20:22:10.220322+00:00",
+  "outOfScopeNotes": [
+    {
+      "file": "scripts/verify-release.sh",
+      "line": 45,
+      "severity": "medium",
+      "description": "Archive validator checks member names but not regular-file kinds; packaging commands currently produce regular members. Supporting-script scope only; no demonstrated high failure."
+    },
+    {
+      "file": "scripts/selftest-release-scripts.sh",
+      "line": 47,
+      "severity": "low",
+      "description": "Negative tests accept any nonzero error; existing positive baselines and mutation evidence mitigate wrong-reason risk."
+    },
+    {
+      "file": "scripts/selftest-release-scripts.sh",
+      "line": 70,
+      "severity": "low",
+      "description": "Local stubs do not execute hosted attestations or Windows Compress-Archive. Verification limitation, not new scoped defect."
+    }
+  ],
+  "status": "clean",
+  "simplification": "Keep repeated packaging checks (different downloaded copies), list reloads (fresh draft state), and direct verify-tag dependencies (explicit prerequisites). No workflow edits: only retained medium cost issue requires a new artifact-sharing interface; do not add ceremony at high severity floor.",
+  "coverageRepair": {
+    "threshold": "both scoped evidence packets usable",
+    "result": "2/2 usable; CI policy-file factual error corrected by parent",
+    "evidence": [
+      ".outline/audit/workflow-ci-coverage-20261027.txt",
+      ".outline/audit/workflow-release-coverage-20261027.txt"
+    ],
+    "resolvedGaps": [
+      "G-1 deny checksum-before-execution and actual deny.toml policy inspected",
+      "G-2 all six native runner-target pairs, ordered gates and Windows suffix inspected",
+      "G-3 SBOM checksum, singleton target, exact generated path and lock-drift gates inspected",
+      "G-4 reusable ci SHA context, read permissions and needs DAG inspected",
+      "G-5 per-job relevant five-lens notes now present"
+    ],
+    "remainingLimits": [
+      "Hosted jobs not executed; runner availability not checked live",
+      "Windows Compress-Archive and hosted attestations not exercised locally"
+    ],
+    "corrections": [
+      ".outline/audit/workflow-ci-coverage-correction-20261027.json takes precedence over erroneous worker no-policy-file assertion."
+    ]
+  },
+  "governanceLimit": "Repository-level tag/workflow authorization and environment reviewer configuration not inspected; no claim of authorization assurance."
+}
