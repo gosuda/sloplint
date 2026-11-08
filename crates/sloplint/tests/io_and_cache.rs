@@ -620,29 +620,44 @@ fn baseline_duplicates_unknown_rules_and_extra_fields() {
     assert_eq!(tally(&extra), (0, n, 0), "extra fields are ignored");
 }
 
-/// Malformed caches derived from a valid one: a version byte, 32 key bytes, then a
-/// varint-prefixed entry sequence.
+/// Malformed caches derived from a valid one: a 32-byte BLAKE3 digest, then a payload of a version byte, 32 key bytes, and a varint-prefixed entry sequence.
 fn corrupt_caches(valid: &[u8]) -> Vec<(&'static str, Vec<u8>)> {
-    assert!(valid.len() > 33 && valid[0] == 3, "layout changed");
-    let after_header = |tail: &[u8]| [&valid[..33], tail].concat();
+    assert!(valid.len() > 65 && valid[32] == 4, "layout changed");
+    let payload = &valid[32..];
+    let signed = |mut bytes: Vec<u8>| {
+        let mut shard = blake3::hash(&bytes).as_bytes().to_vec();
+        shard.append(&mut bytes);
+        shard
+    };
+    let after_header = |tail: &[u8]| [&payload[..33], tail].concat();
     let mut max_len = vec![0xff; 9];
     max_len.push(1);
     let mut entry = vec![1u8];
     entry.extend(&max_len);
-    let with = |index: usize, byte: u8| {
+    let with_payload = |index: usize, byte: u8| {
+        let mut bytes = payload.to_vec();
+        bytes[index] = byte;
+        signed(bytes)
+    };
+    let with_digest = |index: usize, byte: u8| {
         let mut bytes = valid.to_vec();
         bytes[index] = byte;
         bytes
     };
     vec![
         ("empty file", Vec::new()),
-        ("garbage text", b"not a postcard cache".to_vec()),
-        ("truncated", valid[..valid.len() / 2].to_vec()),
-        ("entry count u64::MAX", after_header(&max_len)),
-        ("path length u64::MAX", after_header(&entry)),
-        ("version 0", with(0, 0)),
-        ("version 1", with(0, 1)),
-        ("flipped key byte", with(1, !valid[1])),
+        ("shorter than a digest", valid[..10].to_vec()),
+        ("flipped digest byte", with_digest(0, !valid[0])),
+        ("garbage payload", signed(b"not a postcard cache".to_vec())),
+        (
+            "truncated payload",
+            signed(payload[..payload.len() / 2].to_vec()),
+        ),
+        ("entry count u64::MAX", signed(after_header(&max_len))),
+        ("path length u64::MAX", signed(after_header(&entry))),
+        ("version 0", with_payload(0, 0)),
+        ("version 1", with_payload(0, 1)),
+        ("flipped key byte", with_payload(1, !payload[1])),
     ]
 }
 

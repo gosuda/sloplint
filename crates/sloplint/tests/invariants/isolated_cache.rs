@@ -142,18 +142,25 @@ const CPP_FINDING: &str = "only forwards its parameters to `items_.push_back`";
 
 const CPP_PLANTED: &str = "only forwards its parameters to `items_.push_bacm`";
 
-/// Rewrites the one stored occurrence of `from` in the cache file with the same-length `to`.
+/// Rewrites the one stored occurrence of `from` in the shard payload with the same-length
+/// `to`, then re-digests the payload, so the forged shard stays decodable and self-consistent.
 fn plant(file: &Path, from: &str, to: &str) {
     assert_eq!(from.len(), to.len(), "a plant must keep the stored length");
     let mut bytes = std::fs::read(file).unwrap_or_else(|e| panic!("read cache: {e}"));
-    let spots: Vec<usize> = bytes
+    assert!(
+        bytes.len() > 32,
+        "a shard must hold a 32-byte digest and a payload"
+    );
+    let spots: Vec<usize> = bytes[32..]
         .windows(from.len())
         .enumerate()
         .filter(|(_, window)| *window == from.as_bytes())
         .map(|(at, _)| at)
         .collect();
     assert_eq!(spots.len(), 1, "the cache must hold {from:?} exactly once");
-    bytes[spots[0]..spots[0] + to.len()].copy_from_slice(to.as_bytes());
+    let (digest, payload) = bytes.split_at_mut(32);
+    payload[spots[0]..spots[0] + to.len()].copy_from_slice(to.as_bytes());
+    digest.copy_from_slice(blake3::hash(payload).as_bytes());
     std::fs::write(file, &bytes).unwrap_or_else(|e| panic!("plant: {e}"));
 }
 
@@ -207,20 +214,7 @@ fn warm_cache_reuses_stored_findings() {
         1,
         "one project stores one cache file: {files:?}"
     );
-    let mut bytes = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read cache: {e}"));
-    let spots: Vec<usize> = bytes
-        .windows(GENERIC_TEXT.len())
-        .enumerate()
-        .filter(|(_, window)| *window == GENERIC_TEXT.as_bytes())
-        .map(|(at, _)| at)
-        .collect();
-    assert_eq!(
-        spots.len(),
-        1,
-        "the stored finding must hold its message once"
-    );
-    bytes[spots[0]..spots[0] + planted.len()].copy_from_slice(planted.as_bytes());
-    std::fs::write(&files[0], &bytes).unwrap_or_else(|e| panic!("plant: {e}"));
+    plant(&files[0], GENERIC_TEXT, &planted);
     let warm = home.check(&root, &[]);
     assert!(
         warm.contains(&planted),
@@ -230,6 +224,63 @@ fn warm_cache_reuses_stored_findings() {
     assert!(
         uncached.contains(GENERIC_TEXT) && !uncached.contains(&planted),
         "an uncached run must report the computed finding: {uncached}"
+    );
+}
+
+/// A shard file is the BLAKE3 digest of its payload followed by the payload. Flipping one
+/// byte of the stored finding keeps the payload decodable but fails the digest, so the warm
+/// run must reanalyze and print exactly what an uncached run prints.
+#[test]
+fn a_flipped_byte_inside_a_decodable_shard_is_not_served() {
+    let (_tmp, root) = tempdir();
+    write(&root, "sloplint.toml", "");
+    write(&root, "src/lib.rs", SAMPLE);
+    let home = CacheHome::new();
+    let run = |extra: &[&str]| -> Output {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_sloplint"));
+        command
+            .current_dir(&root)
+            .args(["check", "--strictness", "strict", "--fail-on", "never"])
+            .args(extra);
+        home.isolate(&mut command)
+            .output()
+            .unwrap_or_else(|e| panic!("spawn sloplint: {e}"))
+    };
+    let cold = run(&[]);
+    let cold_stdout = String::from_utf8_lossy(&cold.stdout);
+    assert!(
+        cold_stdout.contains("[complexity/boolean-params]"),
+        "the cold run must report the boolean-parameter finding: {cold_stdout}"
+    );
+    let files = home.cache_files();
+    assert_eq!(files.len(), 1, "one project stores one shard: {files:?}");
+    let mut bytes = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read shard: {e}"));
+    let Some(at) = bytes
+        .windows(b"handle".len())
+        .position(|window| window == b"handle")
+    else {
+        panic!("the stored finding must name the function");
+    };
+    assert_eq!(bytes[at], b'h', "the flip must land on the h of handle");
+    bytes[at] = b'j';
+    std::fs::write(&files[0], &bytes).unwrap_or_else(|e| panic!("plant: {e}"));
+    let warm = run(&[]);
+    let fresh = run(&["--no-cache"]);
+    assert_eq!(
+        String::from_utf8_lossy(&warm.stdout),
+        String::from_utf8_lossy(&fresh.stdout),
+        "a shard whose digest fails must be reanalyzed, not served: {}",
+        String::from_utf8_lossy(&warm.stdout)
+    );
+    assert_eq!(
+        warm.status.code(),
+        fresh.status.code(),
+        "the reanalyzed run must exit like the uncached run"
+    );
+    assert!(
+        warm.stderr.is_empty(),
+        "the reanalysis must not warn on stderr: {}",
+        String::from_utf8_lossy(&warm.stderr)
     );
 }
 

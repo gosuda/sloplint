@@ -12,7 +12,7 @@ use sloplint_core::{Config, Finding, Suppression, WorldFacts};
 use crate::fileio::{read_regular, read_regular_nofollow};
 use crate::terminal::TerminalText;
 
-const VERSION: u32 = 3;
+const VERSION: u32 = 4;
 const NAMESPACE: &str = "sloplint";
 /// Directory holding the per-shard cache files `shard-<NN>.bin`.
 const SHARD_DIR: &str = "cache-v2";
@@ -308,7 +308,13 @@ impl Cache {
         };
         let len = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
         let observed = mtime.map(|mtime| Observed { len, mtime });
-        let Ok(shard) = postcard::from_bytes::<Shard>(&bytes) else {
+        let Some((digest, payload)) = bytes.split_first_chunk::<32>() else {
+            return (None, observed);
+        };
+        if blake3::hash(payload).as_bytes() != digest {
+            return (None, observed);
+        }
+        let Ok(shard) = postcard::from_bytes::<Shard>(payload) else {
             return (None, observed);
         };
         if shard.version != VERSION || shard.config_key != self.key {
@@ -428,7 +434,7 @@ impl Cache {
             files: entries,
         })
         .map_err(io::Error::other)?;
-        if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > MAX_SHARD_BYTES {
+        if u64::try_from(bytes.len().saturating_add(32)).unwrap_or(u64::MAX) > MAX_SHARD_BYTES {
             return Err(io::Error::other(format!(
                 "shard of {} bytes exceeds the {MAX_SHARD_BYTES}-byte cap",
                 bytes.len()
@@ -457,7 +463,11 @@ impl Cache {
                 }
                 other => other?,
             };
-            if let Err(error) = file.write_all(&bytes).and_then(|()| file.sync_all()) {
+            if let Err(error) = file
+                .write_all(blake3::hash(&bytes).as_bytes())
+                .and_then(|()| file.write_all(&bytes))
+                .and_then(|()| file.sync_all())
+            {
                 drop(file);
                 let _ = fs::remove_file(&tmp);
                 return Err(error);
