@@ -1,5 +1,3 @@
-//! `grep/generic-name`: public functions whose names are too generic to search for.
-
 use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
@@ -30,7 +28,6 @@ const DEFAULT_NAMES: &[&str] = &[
     "util",
 ];
 
-/// `grep/generic-name`: flags public functions whose normalized name lands in the generic list.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "grep/generic-name",
     family: Family::Grep,

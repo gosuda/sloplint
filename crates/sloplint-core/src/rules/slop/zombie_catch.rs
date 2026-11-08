@@ -1,5 +1,3 @@
-//! `slop/zombie-catch`: handlers that swallow, rethrow unchanged, or log-and-rethrow.
-
 use std::collections::BTreeMap;
 
 use crate::callee::CalleePattern;
@@ -9,7 +7,6 @@ use crate::finding::{Finding, Level, Severity};
 use crate::lang::Lang;
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 
-/// `slop/zombie-catch`: an error handler that hides or duplicates the failure.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "slop/zombie-catch",
     family: Family::Slop,

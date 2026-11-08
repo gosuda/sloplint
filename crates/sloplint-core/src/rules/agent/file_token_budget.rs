@@ -1,5 +1,3 @@
-//! `agent/file-token-budget`: files longer than the profile's line budget.
-
 use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
@@ -9,7 +7,6 @@ use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Threshol
 
 use crate::rules::threshold_options;
 
-/// `agent/file-token-budget`: flags files whose line count exceeds the budget.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "agent/file-token-budget",
     family: Family::Agent,

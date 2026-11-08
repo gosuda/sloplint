@@ -1,5 +1,3 @@
-//! `sloplint rules`: effective rule levels and options as agent text or JSON.
-
 use std::io;
 use std::path::PathBuf;
 
@@ -18,18 +16,12 @@ const PROFILES: [Strictness; 4] = [
     Strictness::Strict,
 ];
 
-/// Inputs to `sloplint rules`.
 #[derive(Debug, Clone, Default)]
 pub struct RulesRequest {
-    /// Directory that discovery starts from.
     pub cwd: PathBuf,
-    /// Explicit configuration file.
     pub config: Option<PathBuf>,
-    /// Strictness override.
     pub strictness: Option<Strictness>,
-    /// Show only this rule, with its rationale and presets, when set.
     pub id: Option<String>,
-    /// Output format; `human` prints the agent text.
     pub format: Format,
 }
 
@@ -75,7 +67,6 @@ struct JsonPreset<'a> {
     options: &'a toml::Table,
 }
 
-/// Renders the effective rule table for `request` in its requested format.
 pub fn render(request: &RulesRequest) -> Result<String, RunError> {
     let location = project::locate(&request.cwd, None, request.config.as_deref());
     let loaded = project::load(
@@ -95,8 +86,8 @@ pub fn render(request: &RulesRequest) -> Result<String, RunError> {
             path: request.cwd.clone(),
             source: io::Error::other(source),
         }),
-        (_, false) => Ok(list_text(strictness, &shown)),
-        (_, true) => Ok(detail_text(strictness, &shown)),
+        (Format::Agent | Format::Human, false) => Ok(list_text(strictness, &shown)),
+        (Format::Agent | Format::Human, true) => Ok(detail_text(strictness, &shown)),
     }
 }
 

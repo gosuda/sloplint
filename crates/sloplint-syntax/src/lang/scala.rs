@@ -14,7 +14,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Node-kind roles for the Scala grammar.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
     ("lambda_expression", Role::Closure),
@@ -41,10 +40,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("field_expression", Role::Member),
 ];
 
-/// Hooks reading Scala definitions, calls, imports, and handlers.
 pub(crate) static HOOKS: ScalaHooks = ScalaHooks;
 
-/// Unit hooks for Scala.
 pub(crate) struct ScalaHooks;
 
 const REFLECT_NAMES: &[&str] = &[

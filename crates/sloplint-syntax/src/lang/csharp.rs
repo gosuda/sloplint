@@ -12,7 +12,6 @@ use sloplint_core::facts::{
 use sloplint_core::text::longest_static_chunk;
 use std::borrow::Cow;
 use tree_sitter::Node;
-/// Node-kind roles for the C# grammar.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("method_declaration", Role::Function),
     ("constructor_declaration", Role::Function),
@@ -46,9 +45,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("initializer_expression", Role::StructLit),
     ("field_declaration", Role::StaticItem),
 ];
-/// Hooks reading C# declarations, calls, imports, and handlers.
 pub(crate) static HOOKS: CSharpHooks = CSharpHooks;
-/// Unit hooks for C#.
 pub(crate) struct CSharpHooks;
 const TEST_ATTRS: &[&str] = &[
     "Test",

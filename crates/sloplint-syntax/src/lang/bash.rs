@@ -9,7 +9,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Role table mapping Bash node kinds to walker roles.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
     ("if_statement", Role::If),
@@ -30,10 +29,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("expansion", Role::Global),
 ];
 
-/// Bash language hooks.
 pub(crate) static HOOKS: BashHooks = BashHooks;
 
-/// Bash adapter.
 pub(crate) struct BashHooks;
 
 fn sole_call_id(body: Node<'_>) -> Option<usize> {

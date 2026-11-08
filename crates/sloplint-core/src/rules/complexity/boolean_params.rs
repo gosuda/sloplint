@@ -1,5 +1,3 @@
-//! `complexity/boolean-params`: flags public functions taking boolean parameters.
-
 use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
@@ -9,7 +7,6 @@ use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Threshol
 
 use crate::rules::threshold_options;
 
-/// Catalog entry for `complexity/boolean-params`.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "complexity/boolean-params",
     family: Family::Complexity,

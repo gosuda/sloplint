@@ -1,5 +1,3 @@
-//! `agent/informative-assertions`: assertions without failure messages.
-
 use crate::config::Strictness;
 use crate::facts::FileFacts;
 use crate::finding::{Finding, Level, Severity};
@@ -12,7 +10,6 @@ const MESSAGE: &str = "assertion without a failure message";
 const RUST_COMPARISON_FIX: &str = "use assert_eq!/assert_ne! or add a message naming the invariant";
 const GENERIC_FIX: &str = "add a message that names the violated invariant and the observed value";
 
-/// `agent/informative-assertions`: flags bare assertions that say nothing on failure.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "agent/informative-assertions",
     family: Family::Agent,

@@ -13,7 +13,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Role table mapping PowerShell node kinds to walker roles.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_statement", Role::Function),
     ("class_method_definition", Role::Function),
@@ -42,10 +41,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("variable", Role::Global),
 ];
 
-/// PowerShell language hooks.
 pub(crate) static HOOKS: PowerShellHooks = PowerShellHooks;
 
-/// PowerShell adapter.
 pub(crate) struct PowerShellHooks;
 
 fn node_id(n: Node<'_>) -> usize {

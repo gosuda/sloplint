@@ -1,5 +1,3 @@
-//! `grep/homonym-definitions`: one name defined in many files.
-
 use std::collections::{HashMap, HashSet};
 use std::hash::BuildHasher;
 
@@ -17,7 +15,6 @@ const ALLOWED_NAMES: &[&str] = &[
     "__init__", "setup", "teardown", "test", "String", "Error", "Result", "Config", "Options",
 ];
 
-/// `grep/homonym-definitions`: flags names defined in at least `min_files` distinct files.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "grep/homonym-definitions",
     family: Family::Grep,
@@ -99,7 +96,6 @@ impl WorldRule for HomonymDefinitions {
     }
 }
 
-/// Collects the sites of every name in `reported`, in file then definition order.
 fn add_definitions<'a>(
     file: &WorldFile<'a>,
     reported: &HashSet<&'a str>,
@@ -117,10 +113,6 @@ fn add_definitions<'a>(
 }
 
 impl HomonymDefinitions {
-    /// Names outside `allow` that are defined in at least `min_files` distinct files.
-    ///
-    /// Counting comes first so that only reported names are sorted: on a large tree almost
-    /// every name falls below the threshold.
     fn reported_names<'a>(&self, files: &[WorldFile<'a>]) -> HashSet<&'a str> {
         const NAME_SHARDS: usize = 64;
         let state = std::hash::RandomState::new();

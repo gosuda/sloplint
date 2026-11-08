@@ -1,5 +1,3 @@
-//! Callee-pattern parsing and matching for log callees and allow lists.
-
 use std::iter::Filter;
 use std::str::Chars;
 
@@ -17,7 +15,6 @@ struct Segment {
     suffix: bool,
 }
 
-/// A parsed callee pattern such as `info!`, `logger.info`, `*Error`, or `new *Error`.
 #[derive(Debug, Clone)]
 pub struct CalleePattern {
     new_only: bool,
@@ -25,9 +22,6 @@ pub struct CalleePattern {
 }
 
 impl CalleePattern {
-    /// Parses a pattern: segments split on `.` and `::`, a leading `*` on the last segment matches any suffix, and a `new ` prefix restricts the match to `CallKind::New`.
-    ///
-    /// Shapes that cannot match a normalized callee are errors that name the pattern: whitespace inside the pattern (callees lose all whitespace before matching), a `*` anywhere but the first character of the last segment, and `?.`, `\`, or `->`, which callee normalization consumes as segment separators (write `.` or `::` instead).
     pub fn parse(s: &str) -> Result<CalleePattern, String> {
         let trimmed = s.trim();
         if trimmed.is_empty() || trimmed == "new" {
@@ -88,13 +82,6 @@ impl CalleePattern {
         Ok(CalleePattern { new_only, segments })
     }
 
-    /// Reports whether the pattern matches the callee under this call kind.
-    ///
-    /// All whitespace is ignored, segments split on `::`, `?.`, `->`, `?->`, `\`, and `.`, a `$` that starts a longer segment is ignored (`$this`, `$logger`), and a `Macro` callee gains a trailing `!` on its last segment. The callee is scanned in place and nothing is allocated.
-    ///
-    /// Segments are consumed back to front, so the last segment rejects first: a
-    /// pattern that cannot match costs the length of one tail segment, not a
-    /// scan of the whole callee.
     pub fn matches(&self, callee: &str, kind: CallKind) -> bool {
         if self.new_only && kind != CallKind::New {
             return false;
@@ -161,20 +148,6 @@ impl Segment {
     }
 }
 
-/// Whether the callee's visible tail can still match the pattern's last segment.
-///
-/// A matching last segment always ends with the pattern's tail text: a leading
-/// `$` is only ever stripped from the front and whitespace is ignored, so a
-/// callee whose visible characters do not end that way cannot match. (A `Macro`
-/// callee gains a `!` the text may lack, so a callee ending with the tail minus
-/// one trailing `!` can also match.) This reads only as many trailing characters
-/// as the tail text is long, so a pattern that cannot match costs the tail's
-/// length instead of a scan of the whole callee.
-///
-/// When the tail does match, the reverse scan below still costs only the last
-/// few segments: it yields segments back to front and stops after the
-/// pattern's own segments, so a deep chain ending in a configured pattern
-/// stays linear too.
 fn tail_can_match(callee: &str, tail: &str, kind: CallKind) -> bool {
     if ends_with_visible(callee, tail) {
         return true;
@@ -185,7 +158,6 @@ fn tail_can_match(callee: &str, tail: &str, kind: CallKind) -> bool {
     }
 }
 
-/// Whether the callee's non-whitespace characters end with `tail`.
 fn ends_with_visible(callee: &str, tail: &str) -> bool {
     let mut visible = callee.chars().rev().filter(is_visible as fn(&char) -> bool);
     tail.chars()
@@ -200,20 +172,10 @@ fn strip_sigil(text: &str, suffix: bool) -> &str {
     }
 }
 
-/// Yields the raw segments of `callee` from last to first, the exact reverse of a
-/// left-to-right split. Each yielded range keeps its interior whitespace, like the
-/// forward walk: callers normalize with [`Segment::candidate`].
 struct SegmentsRev<'a> {
     text: &'a str,
-    /// End (exclusive) of the current rightmost un-yielded segment.
     end: usize,
     done: bool,
-    /// `(run length, `:` consumed so far)` inside the current visible run of
-    /// `:`.
-    ///
-    /// `::` pairs left to right, so whether a `:` ends a pair depends on its
-    /// position `h` counted back from the run's last `:`: it pairs exactly when
-    /// `h + len` is odd.
     colon_run: Option<(usize, usize)>,
 }
 
@@ -227,11 +189,6 @@ impl<'a> SegmentsRev<'a> {
         }
     }
 
-    /// Whether the `:` at `index` ends a `::` separator, and where that separator
-    /// starts. `seen` counts the `:` consumed so far in this run — scanned ones,
-    /// plus the partner inside each yielded separator — so it equals the
-    /// position of `index` counted back from the run's last `:`. The run length
-    /// is measured once, on that last `:`.
     fn colon_pair_start(&mut self, index: usize) -> Option<usize> {
         let (len, seen) = match self.colon_run {
             Some((len, seen)) => (len, seen + 1),
@@ -289,11 +246,6 @@ fn prev_visible(text: &str, before: usize) -> Option<(usize, char)> {
         .find(|(_, ch)| !ch.is_whitespace())
 }
 
-/// The byte index where the separator ending at `(index, ch)` starts, or `None`
-/// when `ch` is not the end of a segment separator. `?` and `-` are separators
-/// only inside `?.`, `?->`, or `->`, so they never end one: the scan reaches
-/// them only through `.` or `>`. `:` pairs are decided by [`SegmentsRev`]
-/// because their direction depends on the run they sit in.
 fn separator_start(text: &str, index: usize, ch: char) -> Option<usize> {
     match ch {
         '.' | '\\' => match prev_visible(text, index) {

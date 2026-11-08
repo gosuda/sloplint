@@ -1,5 +1,3 @@
-//! Custom `[[custom_rules]]` specs: validation, interpolation, and path filtering.
-
 use std::collections::BTreeSet;
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
@@ -10,33 +8,22 @@ use crate::config::{Config, ConfigError};
 use crate::finding::{Level, Severity};
 use crate::lang::ALL_CONFIG_KEYS;
 
-/// One declarative custom rule from `[[custom_rules]]`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CustomRuleSpec {
-    /// Rule id; must match `custom/[a-z0-9]+(-[a-z0-9]+)*`.
     pub id: String,
-    /// Config key of the language the query runs against.
     pub language: String,
-    /// Severity of every finding this rule reports.
     pub severity: Severity,
-    /// Finding message; `{name}` placeholders become capture text.
     pub message: String,
-    /// Why the pattern is a defect, shown by `sloplint rules` and the human renderer.
     pub why: String,
-    /// Instruction that fixes a reported hit.
     pub fix: String,
-    /// Tree-sitter query carrying a `@match` capture.
     pub query: String,
-    /// Path globs the rule applies to; empty means every analyzed file.
     #[serde(default)]
     pub include: Vec<String>,
-    /// Path globs the rule never applies to.
     #[serde(default)]
     pub exclude: Vec<String>,
 }
 
-/// Validates one spec's schema; `seen` accumulates ids for duplicate detection.
 pub fn validate_custom_rule_spec(
     spec: &CustomRuleSpec,
     seen: &mut BTreeSet<String>,
@@ -83,22 +70,16 @@ fn valid_id(id: &str) -> bool {
         })
 }
 
-/// A malformed `{name}` placeholder in a custom rule message; offsets are byte offsets of the `{`.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum PlaceholderError {
-    /// A `{` that no `}` closes.
     #[error("message has an unclosed `{{` at byte {offset}; write `{{{{` for a literal brace")]
     Unclosed { offset: usize },
-    /// A `{}` that names no capture.
     #[error(
         "message has an empty placeholder `{{}}` at byte {offset}; name a capture or write `{{{{}}}}` for literal braces"
     )]
     Empty { offset: usize },
 }
 
-/// Extracts `{name}` placeholders from a message; `{{` and `}}` are literal escapes.
-///
-/// A `{` that opens neither an escape nor a closed, non-empty `{name}` is an error.
 pub fn message_placeholders(message: &str) -> Result<Vec<String>, PlaceholderError> {
     let mut names = Vec::new();
     let mut chars = message.char_indices().peekable();
@@ -118,7 +99,6 @@ pub fn message_placeholders(message: &str) -> Result<Vec<String>, PlaceholderErr
     Ok(names)
 }
 
-/// Reads the name after the `{` at `offset` up to its closing `}`.
 fn read_placeholder(
     chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>,
     offset: usize,
@@ -137,7 +117,6 @@ fn read_placeholder(
     Err(PlaceholderError::Unclosed { offset })
 }
 
-/// Renders a message; each placeholder becomes the first line of its capture, clipped to 60 chars.
 pub fn interpolate(message: &str, captures: &[(&str, &str)]) -> String {
     let mut out = String::with_capacity(message.len());
     let mut chars = message.chars().peekable();
@@ -257,7 +236,6 @@ fn glob(pattern: &str, key: &str) -> Result<Glob, ConfigError> {
     })
 }
 
-/// Effective level of a custom rule: its severity unless `[rules."<id>"] level` overrides it.
 pub fn custom_level(config: &Config, spec: &CustomRuleSpec) -> Level {
     config
         .rules

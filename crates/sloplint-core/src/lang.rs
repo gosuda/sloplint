@@ -1,8 +1,5 @@
-//! Source-language identity, path detection, and per-language entry-file rules.
-
 use serde::{Deserialize, Serialize};
 
-/// One of the twenty-four grammars sloplint analyzes; `TypeScript`/`Tsx` share the `typescript` config key and `Ocaml`/`OcamlInterface` share `ocaml`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Lang {
     Rust,
@@ -32,13 +29,10 @@ pub enum Lang {
     Starlark,
 }
 
-/// The extension that C, C++, and Objective-C headers share; the table routes it to C.
 const HEADER_EXTENSION: &str = ".h";
 
-/// The grammars a `.h` file that fails as C is parsed with, in order; see [`Lang::parse_fallbacks`].
 const HEADER_FALLBACKS: &[Lang] = &[Lang::Cpp, Lang::ObjC];
 
-/// Every extension rule in priority order; the first matching entry wins and matching is case-sensitive.
 const EXTENSIONS: &[(&str, Lang)] = &[
     (".rs", Lang::Rust),
     (".ts", Lang::TypeScript),
@@ -95,7 +89,6 @@ const EXTENSIONS: &[(&str, Lang)] = &[
     (".bazel", Lang::Starlark),
 ];
 
-/// Exact file-name rules applied when no extension rule matched.
 const SPECIAL_NAMES: &[(&str, Lang)] = &[
     ("Rakefile", Lang::Ruby),
     ("Gemfile", Lang::Ruby),
@@ -123,7 +116,6 @@ const SPECIAL_NAMES: &[(&str, Lang)] = &[
     ("BUCK", Lang::Starlark),
 ];
 
-/// Every variant in declaration order; the one list consumers iterate instead of keeping a copy.
 pub const ALL_LANGS: &[Lang] = &[
     Lang::Rust,
     Lang::TypeScript,
@@ -152,7 +144,6 @@ pub const ALL_LANGS: &[Lang] = &[
     Lang::Starlark,
 ];
 
-/// The 23 config keys in `[project].languages` order; `typescript` and `ocaml` each cover two variants.
 pub const ALL_CONFIG_KEYS: &[&str] = &[
     "rust",
     "typescript",
@@ -179,7 +170,6 @@ pub const ALL_CONFIG_KEYS: &[&str] = &[
     "starlark",
 ];
 
-/// Config keys paired with the primary variant that answers for the key.
 const PRIMARY_KEY_LANGS: &[(&str, Lang)] = &[
     ("rust", Lang::Rust),
     ("typescript", Lang::TypeScript),
@@ -257,7 +247,6 @@ fn file_name_of(rel_path: &str) -> &str {
 }
 
 impl Lang {
-    /// Detects the language of a `/`-separated relative path by extension first, then by exact file name; `.blade.php` files are never linted.
     pub fn from_path(rel_path: &str) -> Option<Lang> {
         if rel_path.ends_with(".blade.php") {
             return None;
@@ -275,15 +264,12 @@ impl Lang {
             })
     }
 
-    /// The grammars to parse a file with, in order, after its parse as `self` has a syntax error; empty when no second parse applies.
-    ///
-    /// A `.h` file routes to C, yet C++ and Objective-C headers share the extension, so a `.h` file that fails as C is tried as C++ and then as Objective-C. The first grammar that parses it without error wins, so the order decides a header that both accept. C++ comes first because the Objective-C grammar also accepts some C++ headers, such as a `namespace` holding a template-typed member, so trying it first would claim them, while no sampled header that uses `@interface`, `@protocol`, `@class`, or blocks parses as C++. C++ first also keeps the earlier C++ fallback unchanged. No other path falls back, and the routed language stays the file's language for selection, budgets, and statistics.
+    /// Cpp precedes ObjC: the Objective-C grammar also accepts some C++ headers, so Cpp must try them first.
     pub fn parse_fallbacks(self, rel_path: &str) -> &'static [Lang] {
         let header = self == Lang::C && file_name_of(rel_path).ends_with(HEADER_EXTENSION);
         if header { HEADER_FALLBACKS } else { &[] }
     }
 
-    /// The `[languages.<key>]` config key for this variant.
     pub fn config_key(self) -> &'static str {
         match self {
             Lang::Rust => "rust",
@@ -312,7 +298,6 @@ impl Lang {
         }
     }
 
-    /// Resolves a config key to its primary variant; the shared keys answer `TypeScript` and `Ocaml`.
     pub fn from_config_key(key: &str) -> Option<Lang> {
         PRIMARY_KEY_LANGS
             .iter()
@@ -320,7 +305,6 @@ impl Lang {
             .map(|(_, lang)| *lang)
     }
 
-    /// Reports whether the path is an entry file for this language, per the per-language entry rules.
     pub fn is_entry_file(self, rel_path: &str) -> bool {
         let spec = self.entry_spec();
         let base = file_name_of(rel_path);

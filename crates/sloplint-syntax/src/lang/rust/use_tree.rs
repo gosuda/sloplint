@@ -1,18 +1,14 @@
-//! Walks a Rust `use` tree with an explicit stack, so nesting depth cannot exhaust the thread stack.
-
 use sloplint_core::facts::Import;
 use tree_sitter::Node;
 
 use super::{leaf_import, wild_import};
 use crate::hooks::{Cx, child_by_field, named_children, text};
 
-/// A pending step of [`push_use`]: visit a use-tree node, or restore the prefix length.
 enum UseStep<'t> {
     Visit(Node<'t>),
     Restore(usize),
 }
 
-/// Pushes every import under the use tree `n`, prefixing each path with `prefix`.
 pub(super) fn push_use<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
@@ -28,8 +24,6 @@ pub(super) fn push_use<'s>(
     }
 }
 
-/// Expands one use-tree node: a scoped list pushes its prefix and a restore, a list pushes its
-/// children in reverse so the first child is visited first, and a leaf emits its import.
 fn visit_use<'s, 't>(
     cx: &Cx<'_, 's>,
     n: Node<'t>,

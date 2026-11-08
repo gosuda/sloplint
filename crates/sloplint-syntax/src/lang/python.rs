@@ -13,7 +13,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Role table for the Python grammar.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
     ("lambda", Role::Closure),
@@ -39,10 +38,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("global_statement", Role::Global),
 ];
 
-/// Hooks for the Python grammar.
 pub(crate) struct PythonHooks;
 
-/// Shared hook table for the Python grammar.
 pub(crate) static HOOKS: PythonHooks = PythonHooks;
 
 fn enclosing_exported(cx: &Cx<'_, '_>) -> bool {
@@ -206,13 +203,8 @@ fn py_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     }
 }
 
-/// The chain family of [`py_callee_root`] in the walk's chain-root memo.
 const CALLEE_CHAIN: u8 = 1;
 
-/// True when a memoized root can end a valid chain: a bare name that is not a keyword
-/// literal. Valid terminals are always single identifiers, so anything else ends the
-/// chain at an unsupported node (a literal, a parenthesized composite) and keeps its
-/// historical `None`.
 fn is_chain_root(t: &str) -> bool {
     !matches!(t, "True" | "False" | "None")
         && !t.as_bytes().first().is_some_and(|b| b.is_ascii_digit())
@@ -220,13 +212,6 @@ fn is_chain_root(t: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b == b'_' || !b.is_ascii())
 }
 
-/// The leftmost name of a callee chain: the first node that is not an attribute,
-/// subscript, call, or parenthesized expression.
-///
-/// Memoized, so a chain of `n` calls costs `O(n)` and not `O(n²)`; every call would
-/// otherwise walk the callees of all the calls below it. A callee that starts at an
-/// unsupported node keeps its old `None` without touching the memo, and a chain that
-/// ends at one is recognized by its non-name root text.
 fn py_callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
     match callee.kind() {
         "identifier" | "attribute" | "subscript" | "call" | "parenthesized_expression" => {}

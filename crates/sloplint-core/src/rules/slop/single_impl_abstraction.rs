@@ -1,5 +1,3 @@
-//! `slop/single-impl-abstraction`: abstractions with exactly one implementation.
-
 use std::collections::HashMap;
 
 use crate::config::Strictness;
@@ -8,9 +6,6 @@ use crate::finding::{Finding, Level, Severity};
 use crate::lang::Lang;
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
 
-/// Languages whose abstractions this rule judges. Adapters for other languages (Ruby mixins,
-/// PHP interfaces, Go interfaces) also emit abstraction or implementation facts, which this
-/// rule must not read.
 const APPLICABLE: &[Lang] = &[
     Lang::Rust,
     Lang::TypeScript,
@@ -27,7 +22,6 @@ const APPLICABLE: &[Lang] = &[
     Lang::Dart,
 ];
 
-/// `slop/single-impl-abstraction`: an interface whose only implementation is itself.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "slop/single-impl-abstraction",
     family: Family::Slop,
@@ -108,7 +102,6 @@ impl WorldRule for SingleImplAbstraction {
     }
 }
 
-/// Abstraction sites in name order; runs of equal names keep file order.
 type Sites<'a> = Vec<(&'a str, &'a str, &'a NamedSite)>;
 
 fn applicable_files<'f, 'a>(files: &'f [WorldFile<'a>]) -> impl Iterator<Item = &'f WorldFile<'a>> {
@@ -128,7 +121,6 @@ fn abstraction_sites<'a>(files: &[WorldFile<'a>]) -> Sites<'a> {
     sites
 }
 
-/// First implementation site of a name, and whether any later site repeats it.
 struct ImplSites<'a> {
     first: (&'a str, &'a NamedSite),
     repeated: bool,

@@ -1,5 +1,3 @@
-//! Grammar wiring: one adapter module per language plus the grammar table.
-
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
@@ -33,10 +31,8 @@ pub(crate) mod swift;
 pub(crate) mod typescript;
 pub(crate) mod zig;
 
-/// A role table exported by one adapter module.
 pub(crate) type Table = &'static [(&'static str, Role)];
 
-/// One wired grammar: its language, role table, and adapter hooks.
 struct Grammar {
     lang: Lang,
     language: tree_sitter::Language,
@@ -44,8 +40,6 @@ struct Grammar {
     hooks: &'static dyn LangHooks,
 }
 
-/// Every grammar wired to its `Lang`; TypeScript and TSX share one adapter,
-/// as do OCaml and its interface grammar.
 static GRAMMARS: LazyLock<Vec<Grammar>> = LazyLock::new(|| {
     vec![
         grammar(
@@ -186,7 +180,6 @@ static GRAMMARS: LazyLock<Vec<Grammar>> = LazyLock::new(|| {
     ]
 });
 
-/// Builds one [`Grammar`], converting the language function to a [`tree_sitter::Language`].
 fn grammar(
     lang: Lang,
     language: impl Into<tree_sitter::Language>,
@@ -201,10 +194,6 @@ fn grammar(
     }
 }
 
-/// Builds the spec of one language by looking up its wired grammar.
-///
-/// A missing entry means `spec.rs` and this table disagree about the
-/// `Lang` variants, a programming error.
 pub(crate) fn spec_for(lang: Lang) -> LangSpec {
     let Some(entry) = GRAMMARS.iter().find(|grammar| grammar.lang == lang) else {
         panic!("no grammar wired for {lang:?}");
@@ -212,10 +201,6 @@ pub(crate) fn spec_for(lang: Lang) -> LangSpec {
     LangSpec::new(lang, entry.language.clone(), entry.table, entry.hooks)
 }
 
-/// The adapter hooks that walk a file at `path` as `lang`.
-///
-/// Only an OCaml implementation varies by file: one whose sibling interface is in
-/// `ocaml_interfaces` takes the shadowed hooks, which export nothing.
 pub(crate) fn hooks_for(
     lang: Lang,
     path: &str,

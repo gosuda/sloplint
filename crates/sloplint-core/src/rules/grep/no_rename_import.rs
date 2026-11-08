@@ -1,5 +1,3 @@
-//! `grep/no-rename-import`: import aliases that hide the original name from text search.
-
 use serde::{Deserialize, Serialize};
 
 use super::{parse_options, string_values};
@@ -8,7 +6,6 @@ use crate::facts::{FileFacts, Import, ImportKind};
 use crate::finding::{Finding, Level, Severity};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 
-/// `grep/no-rename-import`: flags named imports whose alias hides the original name.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "grep/no-rename-import",
     family: Family::Grep,

@@ -1,5 +1,3 @@
-//! `complexity/nested-mutation`: flags outer bindings written deep inside loops or closures.
-
 use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
@@ -9,7 +7,6 @@ use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Threshol
 
 use crate::rules::threshold_options;
 
-/// Catalog entry for `complexity/nested-mutation`.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "complexity/nested-mutation",
     family: Family::Complexity,

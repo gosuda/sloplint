@@ -1,5 +1,3 @@
-//! CLI pipeline: discovery, caching, rule evaluation, merge, and the ratchet gate.
-
 pub mod cli;
 pub mod init;
 pub mod rules_cmd;
@@ -41,73 +39,45 @@ use store::{load_baseline, read_within_limit, record_baseline};
 
 const GENERATED_WINDOW: usize = 2048;
 
-/// Inputs to one lint run; `Some` fields override the configuration file.
 #[derive(Debug, Clone, Default)]
 pub struct RunOptions {
-    /// Directory that relative PATHS resolve against.
     pub cwd: PathBuf,
-    /// Explicit project root, which skips discovery.
     pub root: Option<PathBuf>,
-    /// Explicit configuration file.
     pub config: Option<PathBuf>,
-    /// Paths whose findings are reported; empty means the whole root.
     pub paths: Vec<PathBuf>,
-    /// Strictness override.
     pub strictness: Option<Strictness>,
-    /// Gate mode override.
     pub mode: Option<Mode>,
-    /// Fail-on override.
     pub fail_on: Option<FailOn>,
-    /// Report only matching rules; an empty filter matches all.
     pub rule_filter: RuleFilter,
-    /// Read and write the per-user cache for this project root: under
-    /// `XDG_CACHE_HOME` (when absolute), else `~/.cache` (unix),
-    /// `~/Library/Caches` (macOS), or `%LOCALAPPDATA%` (Windows), in
-    /// `sloplint/<hash of the root path>/cache-v2/shard-<NN>.bin`. The checkout's own
-    /// `.sloplint` is neither read nor written, because a repository can
-    /// ship a forged cache. An unusable cache location disables the cache
-    /// with a warning instead of failing the run; `false` does no cache work.
+    /// The cache lives under the per-user cache home, never the checkout: a repository can ship a forged cache.
     pub use_cache: bool,
-    /// Worker threads for the tree walk, cache load, analysis, and finalization; zero means the available parallelism. Clamped to 512.
     pub jobs: usize,
-    /// Record the findings as the baseline instead of gating on them.
     pub write_baseline: bool,
 }
 
-/// Why a run could not complete.
 #[derive(Debug, Error)]
 pub enum RunError {
-    /// The configuration or a rule option is invalid.
     #[error(transparent)]
     Config(#[from] ConfigError),
-    /// A file or directory could not be read or listed.
     #[error("{}: {source}", path.display())]
     Io { path: PathBuf, source: io::Error },
-    /// A PATH resolves outside the project root.
     #[error("path is outside the project root: {}", path.display())]
     PathOutsideRoot { path: PathBuf },
-    /// A PATH does not exist.
     #[error("path not found: {}", path.display())]
     PathNotFound { path: PathBuf },
-    /// Ratchet mode found no baseline file.
     #[error("baseline file not found: {}; run 'sloplint baseline'", path.display())]
     BaselineMissing { path: PathBuf },
-    /// A baseline path resolves outside the project root.
     #[error("baseline path is outside the project root: {}", path.display())]
     BaselineOutsideRoot { path: PathBuf },
-    /// The baseline file is not a valid version-1 baseline.
     #[error("baseline {}: {message}", path.display())]
     BaselineCorrupt { path: PathBuf, message: String },
-    /// The baseline target is a regular file whose content is not a sloplint baseline; it is left untouched.
     #[error("{} exists and is not a sloplint baseline; refusing to overwrite it (delete the file to record a new baseline)", path.display())]
     NotABaseline { path: PathBuf },
-    /// `init` would overwrite an existing configuration.
     #[error("{} already exists", path.display())]
     ConfigExists { path: PathBuf },
 }
 
 impl RunError {
-    /// Process exit code: 3 for I/O that stops the run, 2 for usage and configuration errors.
     pub fn exit_code(&self) -> u8 {
         match self {
             RunError::Io { .. } => 3,
@@ -116,53 +86,31 @@ impl RunError {
     }
 }
 
-/// Counts of a run, as shown on the summary line.
 #[derive(Debug, Clone, Serialize)]
 pub struct Summary {
-    /// Effective strictness profile.
     pub strictness: Strictness,
-    /// Analyzed files inside the PATH scope.
     pub files: u32,
-    /// Reported findings.
     pub findings: u32,
-    /// Reported deny findings.
     pub deny: u32,
-    /// Reported warn findings.
     pub warn: u32,
-    /// Findings matched by the baseline and hidden.
     pub baselined: u32,
-    /// Baseline entries in scope that matched nothing.
     pub stale: u32,
-    /// Files in scope skipped by policy: over `max_file_bytes`, generated, not UTF-8 (content or name), or not regular files (symlinks are never followed, FIFOs and devices never opened). Read errors fail the run instead.
     pub skipped: u32,
 }
 
-/// The reported findings and their counts.
 #[derive(Debug, Clone)]
 pub struct Report {
-    /// Reported findings, sorted by path, line, column, rule, and message.
     pub findings: Vec<Finding>,
-    /// Rule id to rationale for every rule with a reported finding.
     pub rules_fired: BTreeMap<String, String>,
-    /// Counts for the summary line.
     pub summary: Summary,
 }
 
-/// A finished run: the report plus what the CLI needs to render and exit.
 #[derive(Debug, Clone)]
 pub struct Execution {
-    /// The report shown to the user.
     pub report: Report,
-    /// Canonical project root, used to re-read source lines for rendering.
     pub root: PathBuf,
-    /// Configured baseline path when `write_baseline` wrote one.
     pub baseline_written: Option<String>,
-    /// Whether a reported finding reached `fail_on`.
     pub failed: bool,
-    /// Effective `max_file_bytes` limit for re-reading source lines during rendering.
-    ///
-    /// Carried from the active configuration so the human renderer reuses the
-    /// same bound without reloading configuration or using a default.
     pub max_file_bytes: u64,
     pool: Arc<rayon::ThreadPool>,
 }
@@ -173,17 +121,10 @@ impl Execution {
     }
 }
 
-/// Lints the project root and returns the reported findings.
 pub fn run(opts: &RunOptions) -> Result<Report, RunError> {
     execute(opts).map(|execution| execution.report)
 }
 
-/// The PATH scope for a run given no PATHS: `cwd` when it lies strictly inside the project root, else empty (the whole root).
-///
-/// Resolves the root exactly as [`execute`] does (same `root` and `config`
-/// handling) but loads no configuration and discovers no files, so a command
-/// line without PATHS can scope to the working directory without failing when
-/// `--config` places the root elsewhere.
 pub fn implicit_scope(
     cwd: &Path,
     root: Option<&Path>,
@@ -200,7 +141,6 @@ pub fn implicit_scope(
     })
 }
 
-/// Lints the project root and returns the report with its render and exit state.
 pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let location = project::locate(&opts.cwd, opts.root.as_deref(), opts.config.as_deref());
     let root =
@@ -515,9 +455,6 @@ fn analyze_file(
     }
 }
 
-/// Attaches world findings to their files, finalizes every file on `pool`, and sorts the report.
-///
-/// The first error in path order wins, as in [`analyze_all`].
 fn merge(
     pipe: &Pipeline<'_>,
     mut analyzed: Vec<Analyzed>,
@@ -552,22 +489,17 @@ fn merge(
     Ok(all)
 }
 
-/// Report order: path, line, column, rule, then message.
 fn report_order(a: &Finding, b: &Finding) -> std::cmp::Ordering {
     (&a.path, a.line, a.column, &a.rule, &a.message)
         .cmp(&(&b.path, b.line, b.column, &b.rule, &b.message))
 }
 
-/// Sorts findings into report order and assigns their baseline fingerprints.
-///
-/// Fingerprints number equal findings in order, so the sort must come first.
 fn fingerprinted(mut findings: Vec<Finding>) -> Vec<Finding> {
     findings.sort_by(report_order);
     Baseline::assign_fingerprints(&mut findings);
     findings
 }
 
-/// Separates analyzed files from skipped ones and counts the skipped files in scope.
 fn split_outcomes(outcomes: Vec<Outcome>, scopes: &project::Scopes) -> (Vec<Analyzed>, u32) {
     let mut analyzed = Vec::with_capacity(outcomes.len());
     let mut skipped = 0;
@@ -580,11 +512,6 @@ fn split_outcomes(outcomes: Vec<Outcome>, scopes: &project::Scopes) -> (Vec<Anal
     (analyzed, skipped)
 }
 
-/// Stores this run's outputs unless every one matches its loaded cache entry.
-///
-/// A warm run whose every file hit the cache would write back the entries it
-/// just loaded. The store is also the only prune: a count mismatch means the
-/// cache holds entries for deleted files and must be rewritten.
 fn store_if_touched(cache: &cache::Cache, analyzed: &[Analyzed], loaded: &Loaded) {
     let touched =
         analyzed.len() != loaded.entry_count() || analyzed.iter().any(|file| !file.from_cache);

@@ -1,5 +1,3 @@
-//! `agent/explicit-boundary-types`: public signatures missing type annotations.
-
 use crate::config::Strictness;
 use crate::facts::FileFacts;
 use crate::finding::{Finding, Level, Severity};
@@ -19,7 +17,6 @@ const APPLICABLE: &[Lang] = &[
 
 const FIX: &str = "annotate every parameter and the return type";
 
-/// `agent/explicit-boundary-types`: flags public signatures lacking annotations.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "agent/explicit-boundary-types",
     family: Family::Agent,

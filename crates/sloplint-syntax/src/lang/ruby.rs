@@ -13,7 +13,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Role table mapping Ruby node kinds to walker roles.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("method", Role::Function),
     ("singleton_method", Role::Function),
@@ -49,10 +48,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("class_variable", Role::Global),
 ];
 
-/// Ruby language hooks.
 pub(crate) static HOOKS: RubyHooks = RubyHooks;
 
-/// Ruby adapter.
 pub(crate) struct RubyHooks;
 
 fn node_id(n: Node<'_>) -> usize {
@@ -258,13 +255,8 @@ fn ruby_call_kind<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> CallKind {
         CallKind::Plain
     }
 }
-/// The chain family of [`ruby_receiver_root`] in the walk's chain-root memo.
 const RECEIVER_CHAIN: u8 = 0;
 
-/// The leftmost receiver of a call chain: the first node that is not a call with a receiver.
-///
-/// Memoized, so a chain of `n` calls costs `O(n)` and not `O(n²)`; every call would
-/// otherwise walk the receivers of all the calls below it.
 fn ruby_receiver_root<'s>(cx: &Cx<'_, 's>, recv: Node<'_>) -> &'s str {
     cx.chain_root(RECEIVER_CHAIN, recv, |current| {
         if current.kind() != "call" {

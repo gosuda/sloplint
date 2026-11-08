@@ -1,5 +1,3 @@
-//! The slop family: zero-information code.
-
 pub(crate) mod barrel_file;
 pub(crate) mod echo_comment;
 pub(crate) mod field_copy;

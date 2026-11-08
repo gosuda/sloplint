@@ -1,5 +1,3 @@
-//! Turns tree-sitter parse trees into sloplint-core file facts.
-
 mod custom;
 mod emit;
 mod hooks;
@@ -19,8 +17,6 @@ use tree_sitter::{Node, Parser, Tree};
 pub use custom::CustomRules;
 use spec::spec;
 
-/// Lazily configured parsers, one per language actually analyzed, and the run's
-/// OCaml sibling-interface set.
 pub struct Parsers<'o> {
     parsers: HashMap<Lang, Parser>,
     ocaml_interfaces: Option<&'o HashSet<String>>,
@@ -33,9 +29,6 @@ impl Default for Parsers<'_> {
 }
 
 impl<'o> Parsers<'o> {
-    /// Creates an empty pool; a language's parser is configured on first use.
-    ///
-    /// With no interface set, every OCaml implementation exports its top-level values.
     pub fn new() -> Self {
         Parsers {
             parsers: HashMap::new(),
@@ -43,11 +36,6 @@ impl<'o> Parsers<'o> {
         }
     }
 
-    /// Creates an empty pool whose OCaml implementations can be shadowed by interfaces.
-    ///
-    /// `interfaces` holds the `.ml` paths, relative to the project root, whose sibling
-    /// `.mli` is in the analyzed set. Such an implementation exports nothing: its
-    /// top-level bindings and types are not public.
     pub fn with_ocaml_interfaces(interfaces: &'o HashSet<String>) -> Self {
         Parsers {
             parsers: HashMap::new(),
@@ -55,15 +43,6 @@ impl<'o> Parsers<'o> {
         }
     }
 
-    /// Parses one file.
-    ///
-    /// # Panics
-    ///
-    /// Panics when the pinned grammar cannot be loaded into the parser or the parser
-    /// returns no tree. Both are build faults, like the grammar-drift panic in
-    /// [`spec`], and never depend on the file: a quiet empty analysis would look
-    /// exactly like a clean file. Syntax errors in the source are not faults; they
-    /// yield a tree with error nodes.
     fn parse(&mut self, lang: Lang, source: &str) -> tree_sitter::Tree {
         let parser = match self.parsers.entry(lang) {
             Entry::Occupied(entry) => entry.into_mut(),
@@ -82,56 +61,21 @@ impl<'o> Parsers<'o> {
     }
 }
 
-/// One file to analyze, borrowed from the run's file table.
 pub struct FileInput<'s> {
-    /// The file's routed language, chosen from its name.
-    ///
-    /// It decides which grammar parses first and the path-only entry-file flag. The grammar
-    /// that produces the facts can differ; see [`Lang::parse_fallbacks`] and
-    /// [`FileFacts::lang`].
     pub lang: Lang,
     /// The path relative to the project root, `/`-separated.
     pub path: &'s str,
-    /// The BOM-stripped source text.
     pub source: &'s str,
-    /// Whether the path matches a configured test glob.
     pub is_test_file: bool,
 }
 
-/// One analyzed file: facts, suppressible comments, parse-error position, custom hits.
 pub struct Analysis<'s> {
-    /// The facts every file rule reads; empty when the parse failed.
     pub facts: FileFacts<'s>,
-    /// Comments carrying `sloplint-allow` text, for suppression parsing.
     pub comments: Vec<CommentText<'s>>,
-    /// The first error or missing node when the parse failed.
     pub parse_error: Option<Pos>,
-    /// Custom-rule query hits; empty when the parse failed.
     pub custom_hits: Vec<CustomHit<'s>>,
 }
 
-/// Parses and walks one file into facts, comments, and custom-rule hits.
-///
-/// A source with syntax errors yields empty facts, the collected comments, and
-/// the first error position, so one file's findings never depend on other files.
-///
-/// A file whose language has [`Lang::parse_fallbacks`] (a `.h` file routed to C
-/// has C++ and then Objective-C) is parsed again with each grammar in that order
-/// while every earlier parse has errors, and the first error-free tree wins. That
-/// tree is walked with its grammar's roles and hooks and queried with its custom
-/// rules, and the facts carry its language, so every language-keyed rule reads the
-/// grammar that produced them. When every parse fails, the result is the first
-/// parse's error and comments, and the empty facts keep `input.lang`.
-///
-/// Custom hits borrow the rules table for capture names and the file source
-/// for capture text, so `custom` shares the `'s` lifetime of the input.
-///
-/// # Panics
-///
-/// Panics when the pinned grammar for `input.lang` or one of its fallbacks cannot
-/// be loaded or the parser returns no tree. Both are build faults (grammar or ABI
-/// drift) that never depend on the source, so they stop the run instead of
-/// passing as clean.
 pub fn analyze<'s>(
     parsers: &mut Parsers<'_>,
     input: &FileInput<'s>,
@@ -158,10 +102,6 @@ pub fn analyze<'s>(
     }
 }
 
-/// Walks and queries an error-free `tree` that the `parsed_as` grammar produced.
-///
-/// The tree decides the role table, hooks, custom rules, and the language of the
-/// facts, so all four come from `parsed_as`.
 fn clean_analysis<'s>(
     parsers: &Parsers<'_>,
     input: &FileInput<'s>,
@@ -180,8 +120,6 @@ fn clean_analysis<'s>(
     }
 }
 
-/// The position of the first error or missing node, cursor DFS order, or
-/// [`None`] when recovery hides every fault in the tree.
 fn first_error_pos(root: Node<'_>) -> Option<Pos> {
     let mut cursor = root.walk();
     loop {
@@ -203,9 +141,6 @@ fn first_error_pos(root: Node<'_>) -> Option<Pos> {
     }
 }
 
-/// The 1-based line and byte offset where `root` ends. Recovery can hide every
-/// error and missing node yet still flag `has_error`; the tree's end then
-/// stands in for the fault so a failed parse always reports a position.
 fn root_end_pos(root: Node<'_>) -> Pos {
     Pos {
         line: hooks::narrow(root.end_position().row) + 1,

@@ -18,7 +18,6 @@ use self::imports::{
 };
 use crate::spec::Role;
 
-/// Role table for the TypeScript and TSX grammars.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_declaration", Role::Function),
     ("generator_function_declaration", Role::Function),
@@ -39,8 +38,6 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("new_expression", Role::NewCall),
     ("lexical_declaration", Role::Decl),
     ("variable_declaration", Role::Decl),
-    // sloplint: `using` bindings are immutable, so they declare a scope but never
-    // contribute mutable names; decl_names skips them like `const`.
     ("using_declaration", Role::Decl),
     ("assignment_expression", Role::Write),
     ("augmented_assignment_expression", Role::Write),
@@ -58,10 +55,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("member_expression", Role::Member),
 ];
 
-/// Hooks for the TypeScript and TSX grammars.
 pub(crate) struct TypeScriptHooks;
 
-/// Shared hook table for the TypeScript and TSX grammars.
 pub(crate) static HOOKS: TypeScriptHooks = TypeScriptHooks;
 
 fn class_member(member: Node<'_>) -> bool {
@@ -347,8 +342,6 @@ impl LangHooks for TypeScriptHooks {
             for part in named_children(stmt) {
                 match part.kind() {
                     "identifier" => out.push(text(cx, part)),
-                    // sloplint: the grammar gives the anonymous keyword `default` no named
-                    // node, so a bare `default` in an export list reads as an empty name.
                     "export_clause" => out.extend(
                         export_specs(cx, part)
                             .iter()

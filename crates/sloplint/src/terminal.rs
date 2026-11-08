@@ -4,40 +4,7 @@ use std::borrow::Cow;
 use std::fmt;
 use std::io;
 
-/// Untrusted text that displays with terminal control characters made visible.
-///
-/// Source lines, file names, and configuration values can hold bytes that a terminal
-/// interprets as commands, such as an escape sequence that writes the clipboard or moves
-/// the cursor over earlier output, and Unicode bidirectional controls that reorder the
-/// text a reader sees (CVE-2021-42574). Writing a `TerminalText` instead of the raw text
-/// replaces each C0 control character (except tab), DEL, each C1 control character, and
-/// each bidi control with an escape that shows the code point:
-///
-/// - ASCII controls and DEL become `\x` plus two lowercase hex digits, such as `\x1b`
-///   and `\x7f`.
-/// - C1 controls (U+0080 to U+009F) and Unicode bidirectional controls (U+061C, U+200E,
-///   U+200F, U+202A to U+202E, U+2066 to U+2069) become `\u{..}` with lowercase hex digits,
-///   such as `\u{9b}` and `\u{202e}`.
-///
-/// Every other character, including tab, quotes, backslash, and all other Unicode, is
-/// written unchanged. The line feed and carriage return are controls: [`line`] escapes
-/// them so one field stays on one output line, while [`block`] keeps the line feed for
-/// multi-line text.
-///
-/// Escaping is idempotent: text that is already escaped contains no control characters,
-/// so a second pass changes nothing.
-///
-/// [`line`]: TerminalText::line
-/// [`block`]: TerminalText::block
-///
-/// # Examples
-///
-/// ```
-/// use sloplint::TerminalText;
-///
-/// let shown = TerminalText::line("a\u{1b}]52;c;Zm9v\u{7}b\u{9b}2J\tc").to_string();
-/// assert_eq!(shown, "a\\x1b]52;c;Zm9v\\x07b\\u{9b}2J\tc");
-/// ```
+/// Escapes terminal and bidi controls (CVE-2021-42574) in untrusted text before display.
 #[derive(Debug, Clone, Copy)]
 pub struct TerminalText<'a> {
     text: &'a str,
@@ -45,8 +12,6 @@ pub struct TerminalText<'a> {
 }
 
 impl<'a> TerminalText<'a> {
-    /// Wraps text that belongs on one output line: the line feed and carriage return are
-    /// escaped along with every other control character.
     pub fn line(text: &'a str) -> Self {
         TerminalText {
             text,
@@ -54,8 +19,6 @@ impl<'a> TerminalText<'a> {
         }
     }
 
-    /// Wraps multi-line text: the line feed is kept as the line separator, and every other
-    /// control character is escaped.
     pub fn block(text: &'a str) -> Self {
         TerminalText {
             text,
@@ -63,19 +26,6 @@ impl<'a> TerminalText<'a> {
         }
     }
 
-    /// Returns the text itself, borrowed, when it holds no control character, and an
-    /// escaped copy otherwise.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::borrow::Cow;
-    /// use sloplint::TerminalText;
-    ///
-    /// assert!(matches!(TerminalText::line("plain \u{e9}").into_text(), Cow::Borrowed(_)));
-    /// assert_eq!(TerminalText::line("a\nb").into_text(), "a\\x0ab");
-    /// assert_eq!(TerminalText::block("a\nb").into_text(), "a\nb");
-    /// ```
     pub fn into_text(self) -> Cow<'a, str> {
         if next_control(self.text.as_bytes(), self.keep_newlines, 0).is_some() {
             Cow::Owned(self.to_string())
@@ -84,24 +34,6 @@ impl<'a> TerminalText<'a> {
         }
     }
 
-    /// Writes the escaped text directly to `out` without [`fmt`] machinery.
-    ///
-    /// Clean byte runs go out with [`io::Write::write_all`] and each control is replaced
-    /// by its escape bytes, so the emitted bytes equal the [`Display`](fmt::Display)
-    /// rendering exactly while skipping the formatter.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use sloplint::TerminalText;
-    ///
-    /// # fn main() -> std::io::Result<()> {
-    /// let mut out = Vec::new();
-    /// TerminalText::line("a\x1b[2J\u{9b}").write_escaped(&mut out)?;
-    /// assert_eq!(out.as_slice(), b"a\\x1b[2J\\u{9b}".as_slice());
-    /// # Ok(())
-    /// # }
-    /// ```
     pub fn write_escaped<W: io::Write + ?Sized>(&self, out: &mut W) -> io::Result<()> {
         let bytes = self.text.as_bytes();
         let mut run = 0;
@@ -116,12 +48,6 @@ impl<'a> TerminalText<'a> {
     }
 }
 
-/// Scans `bytes` from `from` for the next escaped control.
-///
-/// Returns the control's byte offset, byte length, and code point value. ASCII controls
-/// and DEL have length 1 with the byte as the value; C1 controls and Unicode bidi controls
-/// have their scalar value as the code point. Tab is never a control, and the line feed is
-/// skipped when `keep_newlines` holds.
 fn next_control(bytes: &[u8], keep_newlines: bool, from: usize) -> Option<(usize, usize, u32)> {
     let mut at = from;
     while at < bytes.len() {
@@ -136,7 +62,6 @@ fn next_control(bytes: &[u8], keep_newlines: bool, from: usize) -> Option<(usize
     None
 }
 
-/// The byte length and code point value of the control starting at `at`, if one does.
 fn control_at(bytes: &[u8], at: usize, keep_newlines: bool) -> Option<(usize, u32)> {
     match bytes[at] {
         b'\t' => None,
@@ -166,21 +91,12 @@ fn control_at(bytes: &[u8], at: usize, keep_newlines: bool) -> Option<(usize, u3
     }
 }
 
-/// Whether a 16-byte block holds no byte that can start a control.
-///
-/// Every control starts with a byte below `0x20`, the DEL byte, the `0xC2` lead byte of
-/// a C1 character, or `0xD8`/`0xE2` for bidi controls, so a block without them is skipped whole.
-/// The fold has no early exit, so it compiles to one vector compare.
 fn plain_block(block: &[u8; 16]) -> bool {
     !block.iter().fold(false, |hit, &byte| {
         hit | (byte < 0x20) | (byte == 0x7f) | (byte == 0xC2) | (byte == 0xD8) | (byte == 0xE2)
     })
 }
 
-/// Writes the escape bytes for one control found by [`next_control`].
-///
-/// Length 1 writes `\x` plus two lowercase hex digits; larger lengths write `\u{..}` with
-/// lowercase hex digits, matching the [`Display`](fmt::Display) rendering exactly.
 fn write_escape<W: io::Write + ?Sized>(out: &mut W, len: usize, code: u32) -> io::Result<()> {
     if len == 1 {
         let hi = usize::try_from((code >> 4) & 0x0f).expect("hex digit fits usize");
@@ -210,7 +126,6 @@ fn write_escape<W: io::Write + ?Sized>(out: &mut W, len: usize, code: u32) -> io
     }
 }
 
-/// Lowercase hex digits used by [`write_escape`].
 const HEX: &[u8; 16] = b"0123456789abcdef";
 
 impl fmt::Display for TerminalText<'_> {
@@ -229,5 +144,55 @@ impl fmt::Display for TerminalText<'_> {
             at = run;
         }
         f.write_str(&self.text[run..])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::borrow::Cow;
+
+    use super::TerminalText;
+
+    #[test]
+    fn line_escapes_controls_and_keeps_tab() {
+        let shown = TerminalText::line("a\u{1b}]52;c;Zm9v\u{7}b\u{9b}2J\tc").to_string();
+        assert_eq!(
+            shown, "a\\x1b]52;c;Zm9v\\x07b\\u{9b}2J\tc",
+            "ascii controls, DEL, and C1 must render as escapes while tab stays"
+        );
+    }
+
+    #[test]
+    fn into_text_borrows_clean_text_and_escapes_controls() {
+        assert!(
+            matches!(
+                TerminalText::line("plain \u{e9}").into_text(),
+                Cow::Borrowed(_)
+            ),
+            "clean text must come back borrowed"
+        );
+        assert_eq!(
+            TerminalText::line("a\nb").into_text(),
+            "a\\x0ab",
+            "line mode must escape the line feed"
+        );
+        assert_eq!(
+            TerminalText::block("a\nb").into_text(),
+            "a\nb",
+            "block mode must keep the line feed"
+        );
+    }
+
+    #[test]
+    fn write_escaped_emits_the_display_bytes() {
+        let mut out = Vec::new();
+        TerminalText::line("a\x1b[2J\u{9b}")
+            .write_escaped(&mut out)
+            .unwrap_or_else(|e| panic!("write to a Vec: {e}"));
+        assert_eq!(
+            out.as_slice(),
+            b"a\\x1b[2J\\u{9b}".as_slice(),
+            "write_escaped must emit the Display bytes"
+        );
     }
 }

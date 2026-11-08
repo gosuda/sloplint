@@ -1,5 +1,3 @@
-//! `grep/multiline-argument`: call arguments that span many lines.
-
 use serde::{Deserialize, Serialize};
 
 use super::{parse_options, string_values};
@@ -23,7 +21,6 @@ const ALLOWED_CALLEES: &[&str] = &[
     "b.Run",
 ];
 
-/// `grep/multiline-argument`: flags the widest multi-line argument of a call site.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "grep/multiline-argument",
     family: Family::Grep,

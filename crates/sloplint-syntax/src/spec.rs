@@ -1,5 +1,3 @@
-//! Grammar-driven role tables: every node kind of a grammar mapped to its walker role.
-
 use std::sync::LazyLock;
 
 use sloplint_core::lang::{ALL_LANGS, Lang};
@@ -19,7 +17,6 @@ pub(crate) enum Role {
     ElseIf,
     Match,
     Loop,
-    /// A `with`-style block: bumps nesting depth only, adds no cognitive score.
     With,
     Catch,
     Ternary,
@@ -44,21 +41,13 @@ pub(crate) enum Role {
     StaticItem,
 }
 
-/// One language's grammar, its kind-to-role table, and its adapter hooks.
 pub struct LangSpec {
-    /// The language this spec serves.
     pub lang: Lang,
-    /// The grammar the roles and hooks were built against.
     pub(crate) language: tree_sitter::Language,
     pub(crate) roles: Vec<Role>,
     pub(crate) hooks: &'static dyn LangHooks,
 }
 
-/// The process-wide spec of each language, built once on first use.
-///
-/// Specs are stored at their language's discriminant, so the order of
-/// `ALL_LANGS` never affects lookup; a language missing from or repeated in
-/// that list panics at first use instead of serving another language's spec.
 pub(crate) fn spec(lang: Lang) -> &'static LangSpec {
     static SPECS: LazyLock<Vec<LangSpec>> = LazyLock::new(|| {
         let mut specs: Vec<LangSpec> = ALL_LANGS.iter().map(|&lang| lang::spec_for(lang)).collect();
@@ -76,10 +65,6 @@ pub(crate) fn spec(lang: Lang) -> &'static LangSpec {
 }
 
 impl LangSpec {
-    /// Builds a spec, mapping every table name onto its grammar kind ids.
-    ///
-    /// A table name matching no kind id is a grammar/version mismatch, a
-    /// programming error, so it panics at startup.
     pub(crate) fn new(
         lang: Lang,
         language: tree_sitter::Language,
@@ -94,11 +79,7 @@ impl LangSpec {
         }
     }
 
-    /// The role vector indexed by node kind id: `None` for unmapped kinds.
-    ///
-    /// Table entries first match named kinds; an entry matching no named kind
-    /// falls back to anonymous keyword kinds so keyword tokens like Ruby's
-    /// `else` still map.
+    /// Keyword table entries match anonymous kinds: tree-sitter marks keywords unnamed.
     pub(crate) fn roles_from(
         lang: Lang,
         language: tree_sitter::Language,
@@ -112,7 +93,6 @@ impl LangSpec {
         roles
     }
 
-    /// The role of a node kind id; `None` when out of range.
     pub(crate) fn role_for(&self, kind_id: u16) -> Role {
         self.roles
             .get(kind_id as usize)
@@ -121,7 +101,6 @@ impl LangSpec {
     }
 }
 
-/// First pass: every named kind whose kind name appears in the table.
 fn apply_named(
     language: tree_sitter::Language,
     table: &[(&str, Role)],
@@ -142,7 +121,6 @@ fn apply_named(
     }
 }
 
-/// Second pass: table entries with no named kind match anonymous keyword ids.
 fn apply_fallback(
     lang: Lang,
     language: tree_sitter::Language,

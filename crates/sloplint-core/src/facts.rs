@@ -1,5 +1,3 @@
-//! Per-file facts shared by the syntax walker, the rules, and the cache.
-
 use std::borrow::Cow;
 
 use serde::{Deserialize, Serialize};
@@ -7,31 +5,17 @@ use serde::{Deserialize, Serialize};
 use crate::finding::source_site_indexed;
 use crate::lang::Lang;
 
-/// A source position: `line` is 1-based and `byte` is the offset in the BOM-stripped source.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Pos {
     pub line: u32,
     pub byte: u32,
 }
 
-/// Everything one analyzed file contributes; all strings borrow the file source.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileFacts<'s> {
-    /// The language of the grammar that produced these facts, which every language-keyed
-    /// rule and table reads.
-    ///
-    /// A `.h` file routed to C that fails as C carries `Cpp` here when it parses as C++ and
-    /// `ObjC` when only the Objective-C grammar parses it, so its log-callee table, primitive
-    /// types, and rule applicability are those of that language. A file that failed to parse
-    /// has no tree to read and carries its routed language. Selection by `project.languages`
-    /// and the path-only `is_entry_file` flag follow the routed language, not this field.
     pub lang: Lang,
     pub path: &'s str,
     pub source: &'s str,
-    /// The byte offset where each line of `source` starts, from [`crate::finding::line_starts`].
-    ///
-    /// The index belongs to `source`; [`crate::finding::Finding::at`] and the world sites read it
-    /// to find a line without rescanning the file.
     pub line_starts: Vec<u32>,
     pub is_test_file: bool,
     pub is_entry_file: bool,
@@ -52,7 +36,6 @@ pub struct FileFacts<'s> {
     pub has_inline_tests: bool,
 }
 
-/// One named function or method with its complexity metrics and surface annotations.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Function<'s> {
     pub name: &'s str,
@@ -64,9 +47,6 @@ pub struct Function<'s> {
     pub in_test: bool,
     pub params: Vec<Param<'s>>,
     pub return_type: Option<&'s str>,
-    /// True when the signature declares plain `throws` with no error type.
-    ///
-    /// Typed `throws(E)`, `rethrows`, and languages without the clause are false.
     pub untyped_throws: bool,
     pub missing_annotations: Vec<&'s str>,
     pub cognitive: u32,
@@ -75,7 +55,7 @@ pub struct Function<'s> {
     pub sole_call: Option<u32>,
 }
 
-/// One function parameter; the receiver (`self`/`this`/`cls`/Go receiver) is never a `Param`.
+/// The receiver (`self`/`this`/`cls`/Go receiver) is never a `Param`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Param<'s> {
     pub name: &'s str,
@@ -83,7 +63,6 @@ pub struct Param<'s> {
     pub bool_default: bool,
 }
 
-/// How a call site invokes its callee.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CallKind {
     Plain,
@@ -91,7 +70,6 @@ pub enum CallKind {
     New,
 }
 
-/// One call site with its argument shapes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Call<'s> {
     pub pos: Pos,
@@ -101,7 +79,6 @@ pub struct Call<'s> {
     pub args: Vec<Arg<'s>>,
 }
 
-/// One call argument: its line span and the shape of its expression.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Arg<'s> {
     pub shape: ArgShape<'s>,
@@ -109,7 +86,6 @@ pub struct Arg<'s> {
     pub end_line: u32,
 }
 
-/// The literal-run shape of a call argument.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgShape<'s> {
     Str { longest_static: u32 },
@@ -118,7 +94,6 @@ pub enum ArgShape<'s> {
     Other,
 }
 
-/// One mutable binding with its span of mutability and deepest nested write.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MutBinding<'s> {
     pub name: &'s str,
@@ -128,7 +103,6 @@ pub struct MutBinding<'s> {
     pub nested_write_pos: Option<Pos>,
 }
 
-/// How an import brings names into scope.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ImportKind {
     Named,
@@ -137,7 +111,6 @@ pub enum ImportKind {
     SideEffect,
 }
 
-/// One import site; `module` is owned when a language builds it from pieces.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Import<'s> {
     pub pos: Pos,
@@ -148,7 +121,6 @@ pub struct Import<'s> {
     pub in_test: bool,
 }
 
-/// One named type declaration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeDef<'s> {
     pub name: &'s str,
@@ -157,21 +129,18 @@ pub struct TypeDef<'s> {
     pub abstraction: bool,
 }
 
-/// One trait, interface, or superclass reference from an implementation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImplRef<'s> {
     pub name: &'s str,
     pub pos: Pos,
 }
 
-/// One match arm that catches everything.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WildcardArm {
     pub pos: Pos,
     pub enum_like: bool,
 }
 
-/// One statement kind inside an error handler.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Stmt<'s> {
     Call { callee: &'s str, kind: CallKind },
@@ -179,14 +148,12 @@ pub enum Stmt<'s> {
     Other,
 }
 
-/// One catch/rescue/recover handler and its statement sequence.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Handler<'s> {
     pub pos: Pos,
     pub stmts: Vec<Stmt<'s>>,
 }
 
-/// One assertion call site.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Assertion {
     pub pos: Pos,
@@ -194,7 +161,6 @@ pub struct Assertion {
     pub comparison: bool,
 }
 
-/// One struct/object literal that copies fields one-to-one from another value.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldCopy<'s> {
     pub pos: Pos,
@@ -202,14 +168,12 @@ pub struct FieldCopy<'s> {
     pub source: Option<&'s str>,
 }
 
-/// One construct that resolves a symbol by a runtime-built name; `what` names the mechanism.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DynamicSymbol {
     pub pos: Pos,
     pub what: &'static str,
 }
 
-/// The kind of ambient state a construct touches.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AmbientKind {
     GlobalMutable,
@@ -217,7 +181,7 @@ pub enum AmbientKind {
     EnvRead,
 }
 
-/// One ambient-state site; `in_function` is the index of the enclosing function when any.
+/// `in_function` indexes [`FileFacts::functions`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ambient<'s> {
     pub pos: Pos,
@@ -226,13 +190,12 @@ pub struct Ambient<'s> {
     pub in_function: Option<u32>,
 }
 
-/// Barrel-file candidates: per re-export, candidate `/`-separated rel paths in priority order.
+/// Per re-export, candidate `/`-separated rel paths in priority order.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Barrel {
     pub targets: Vec<Vec<String>>,
 }
 
-/// One owned, line-addressed name site for world-level rules.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NamedSite {
     pub name: Box<str>,
@@ -241,10 +204,8 @@ pub struct NamedSite {
     pub context: Box<str>,
 }
 
-/// The owned, serializable projection of `FileFacts` that world rules and the cache consume.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorldFacts {
-    /// The language of the grammar that produced the facts, copied from [`FileFacts::lang`].
     pub lang: Lang,
     pub is_test_file: bool,
     pub is_entry_file: bool,
@@ -257,7 +218,6 @@ pub struct WorldFacts {
 }
 
 impl WorldFacts {
-    /// Projects borrowed file facts into the owned world view; line/column/context come from the same helper as findings.
     pub fn from_facts(facts: &FileFacts<'_>) -> WorldFacts {
         let public_functions =
             u32::try_from(facts.functions.iter().filter(|f| f.public).count()).unwrap_or(u32::MAX);

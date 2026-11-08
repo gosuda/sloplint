@@ -1,5 +1,3 @@
-//! Entry point for the sloplint binary: parses arguments, runs the pipeline, renders, and maps exit codes.
-
 use std::io::{self, BufWriter, Write};
 use std::ops::Range;
 use std::path::Path;
@@ -33,13 +31,7 @@ fn main() -> ExitCode {
     }
 }
 
-/// Runs `check`: executes the pipeline, emits the report, and exits with its status.
-///
-/// Ends the process directly with [`std::process::exit`] while `execution` is still in
-/// scope instead of returning: tearing down the run would free every finding's heap
-/// strings object by object just before the process ends, while the OS reclaims the
-/// whole heap at exit. Values on the live stack stay reachable for LeakSanitizer, and
-/// output is flushed before exiting, so bytes and statuses match a normal return.
+/// Exits in-scope so the run's heap stays reachable for LeakSanitizer; output is flushed first, so bytes match a return.
 fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
     let config = args.run.select.config.as_deref();
     let paths = if args.paths.is_empty() {
@@ -162,11 +154,6 @@ fn emit(execution: &Execution, format: Format) -> io::Result<()> {
     }
 }
 
-/// Buffers output that writes no styling of its own, with no escape-stripping pass.
-///
-/// Agent lines escape every C0, DEL, C1, and bidi control through [`TerminalText`],
-/// and JSON escapes C0, DEL, and C1 in strings (bidi controls stay raw there, as data),
-/// so no terminal control from scanned files reaches stdout.
 fn with_plain_stdout(write: impl FnOnce(&mut dyn Write) -> io::Result<()>) -> io::Result<()> {
     let mut out = BufWriter::with_capacity(OUTPUT_BUFFER_BYTES, io::stdout().lock());
     write(&mut out)?;
@@ -401,7 +388,6 @@ fn severity_name(severity: Severity) -> &'static str {
     }
 }
 
-/// Writes `text` to stdout and returns the process status: 0 on success or broken pipe, 3 on error.
 fn print_text_status(text: &str, kind: TextKind) -> u8 {
     let written = with_buffered_stdout(|out| match kind {
         TextKind::Plain => write!(out, "{}", TerminalText::block(text)),
@@ -410,7 +396,6 @@ fn print_text_status(text: &str, kind: TextKind) -> u8 {
     sink_status(written, 0)
 }
 
-/// Maps a stdout sink result to a process status, treating a broken pipe as a stopped consumer.
 fn sink_status(result: io::Result<()>, success: u8) -> u8 {
     match result {
         Ok(()) => success,
@@ -427,7 +412,6 @@ fn fail(message: &str, code: u8) -> ExitCode {
     ExitCode::from(code)
 }
 
-/// Prints one `sloplint: error: ...` line to stderr, escaping terminal controls.
 fn emit_error(message: &str) {
     let _ = writeln!(
         io::stderr(),

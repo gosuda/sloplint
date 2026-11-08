@@ -1,5 +1,3 @@
-//! Declarative custom query rules: compilation per grammar and execution per file.
-
 use sloplint_core::lang::{ALL_LANGS, Lang};
 use sloplint_core::rules::custom::message_placeholders;
 use sloplint_core::{ConfigError, CustomHit, CustomRuleSpec};
@@ -8,21 +6,11 @@ use tree_sitter::{Query, QueryCursor, StreamingIterator, Tree};
 use crate::hooks::{narrow, pos_of, slice};
 use crate::spec::spec;
 
-/// Every compiled custom rule, paired with each grammar it runs against.
-///
-/// The query owns its capture names; `run` borrows them from the query, so
-/// hits borrow the rules table for capture names and the file source for
-/// capture text.
 pub struct CustomRules {
     entries: Vec<(Lang, u32, Query)>,
 }
 
 impl CustomRules {
-    /// Compiles every spec against its language's grammar or grammars.
-    ///
-    /// `typescript` specs compile against both the TypeScript and TSX
-    /// grammars, and `ocaml` specs against both the `.ml` and `.mli`
-    /// grammars, so one spec covers every file spelling of a language.
     pub fn compile(specs: &[CustomRuleSpec]) -> Result<CustomRules, ConfigError> {
         let mut entries = Vec::new();
         for (index, rule) in specs.iter().enumerate() {
@@ -40,14 +28,6 @@ impl CustomRules {
         Ok(CustomRules { entries })
     }
 
-    /// Runs every query compiled for `lang` against the file's tree.
-    ///
-    /// Each match yields one hit at its `@match` capture carrying every
-    /// `(capture name, capture text)` pair for message interpolation.
-    ///
-    /// The returned hits borrow the rules table (`&'s self`) for capture
-    /// names and the file source for capture text; the caller must keep
-    /// both alive while the hits are used.
     pub(crate) fn run<'s>(
         &'s self,
         tree: &Tree,
@@ -77,7 +57,6 @@ impl CustomRules {
     }
 }
 
-/// The languages a config key names; empty for an unknown key.
 fn langs_for_key(key: &str) -> Vec<Lang> {
     ALL_LANGS
         .iter()
@@ -86,7 +65,6 @@ fn langs_for_key(key: &str) -> Vec<Lang> {
         .collect()
 }
 
-/// Compiles one spec against one grammar and validates its captures.
 fn compile_query(lang: Lang, rule: &CustomRuleSpec) -> Result<Query, ConfigError> {
     let language = spec(lang).language.clone();
     let query = Query::new(&language, &rule.query).map_err(|error| {
@@ -115,7 +93,6 @@ fn compile_query(lang: Lang, rule: &CustomRuleSpec) -> Result<Query, ConfigError
     Ok(query)
 }
 
-/// Wraps a compile failure in the typed custom-rule error.
 fn custom_error(rule: &CustomRuleSpec, message: &str) -> ConfigError {
     ConfigError::CustomRule {
         id: rule.id.clone(),
@@ -123,7 +100,6 @@ fn custom_error(rule: &CustomRuleSpec, message: &str) -> ConfigError {
     }
 }
 
-/// Builds one hit from a match; `None` when the match lacks `@match`.
 fn hit_from_match<'s>(
     names: &[&'s str],
     captures: &[tree_sitter::QueryCapture<'_>],

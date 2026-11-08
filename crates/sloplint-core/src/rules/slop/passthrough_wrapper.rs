@@ -1,5 +1,3 @@
-//! `slop/passthrough-wrapper`: functions whose body is exactly one forwarded call.
-
 use crate::config::Strictness;
 use crate::facts::{ArgShape, Call, FileFacts, Function};
 use crate::finding::{Finding, Level, Severity};
@@ -7,7 +5,6 @@ use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 
 const RECEIVER_ROOTS: [&str; 4] = ["self", "this", "cls", "super"];
 
-/// `slop/passthrough-wrapper`: a function that only forwards its parameters.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "slop/passthrough-wrapper",
     family: Family::Slop,

@@ -18,7 +18,6 @@ use crate::lang::c_family::{
 };
 use crate::spec::Role;
 
-/// Role table for C.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
     ("if_statement", Role::If),
@@ -45,9 +44,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("preproc_def", Role::Global),
     ("preproc_function_def", Role::Global),
 ];
-/// Hooks for C.
 pub(crate) struct CHooks;
-/// Hooks instance for C.
 pub(crate) static HOOKS: CHooks = CHooks;
 const WRAP: &[&str] = &[
     "pointer_declarator",

@@ -19,7 +19,6 @@ use crate::lang::c_family::{
 };
 use crate::spec::Role;
 
-/// Role table for Objective-C.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
     ("method_definition", Role::Function),
@@ -54,9 +53,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("preproc_def", Role::Global),
     ("preproc_function_def", Role::Global),
 ];
-/// Hooks for Objective-C.
 pub(crate) struct ObjcHooks;
-/// Hooks instance for Objective-C.
 pub(crate) static HOOKS: ObjcHooks = ObjcHooks;
 const WRAP: &[&str] = &[
     "pointer_declarator",

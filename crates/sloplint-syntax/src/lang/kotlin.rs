@@ -14,7 +14,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Node kinds of the Kotlin grammar and the walker role each one plays.
 pub(crate) static TABLE: &[(&str, Role)] = &[
     ("function_declaration", Role::Function),
     ("secondary_constructor", Role::Function),
@@ -39,10 +38,8 @@ pub(crate) static TABLE: &[(&str, Role)] = &[
     ("when_entry", Role::MatchArm),
 ];
 
-/// The Kotlin adapter for `.kt` files.
 pub(crate) static HOOKS: KotlinHooks = KotlinHooks;
 
-/// Hooks for the Kotlin grammar.
 pub(crate) struct KotlinHooks;
 
 const COMMENTS: &[&str] = &["line_comment", "block_comment"];

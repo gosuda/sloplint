@@ -14,7 +14,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Role table mapping Odin node kinds to walker roles.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("procedure", Role::Closure),
     ("if_statement", Role::If),
@@ -41,10 +40,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("struct", Role::StructLit),
 ];
 
-/// Odin language hooks.
 pub(crate) static HOOKS: OdinHooks = OdinHooks;
 
-/// Odin adapter.
 pub(crate) struct OdinHooks;
 
 fn is_anon_text(cx: &Cx<'_, '_>, c: Node<'_>, want: &str) -> bool {

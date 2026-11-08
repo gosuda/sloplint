@@ -1,5 +1,3 @@
-//! `grep/contiguous-log-literal`: log calls whose message is not a searchable literal.
-
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
@@ -11,7 +9,6 @@ use crate::facts::{ArgShape, Call, FileFacts};
 use crate::finding::{Finding, Level, Severity};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 
-/// `grep/contiguous-log-literal`: flags log calls whose first argument lacks a fixed literal run.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "grep/contiguous-log-literal",
     family: Family::Grep,

@@ -1,13 +1,6 @@
-//! Settings taken from the process environment, read in one place so the rest of the pipeline receives them as plain values.
-
 use std::path::PathBuf;
 
-/// The user's cache directory: an absolute `XDG_CACHE_HOME` on every platform, else the platform default.
-///
-/// A relative `XDG_CACHE_HOME` is invalid per the XDG base directory
-/// specification and is ignored, so the cache never lands relative to the
-/// working directory (which may be the checkout). `None` means no per-user
-/// directory is available.
+/// Ignores a relative `XDG_CACHE_HOME` (invalid per the XDG spec) so the cache never lands inside the checkout.
 pub fn cache_base() -> Option<PathBuf> {
     absolute_var("XDG_CACHE_HOME").or_else(platform_cache_base)
 }

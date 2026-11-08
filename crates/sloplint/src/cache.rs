@@ -14,32 +14,18 @@ use crate::terminal::TerminalText;
 
 const VERSION: u32 = 4;
 const NAMESPACE: &str = "sloplint";
-/// Directory holding the per-shard cache files `shard-<NN>.bin`.
 const SHARD_DIR: &str = "cache-v2";
 
-/// Maximum serialized size in bytes of a single cache shard file (64 MiB).
-///
-/// Across 256 shards, a shard holds 1/256th of a project's files. Even a
-/// repository of 250,000 files averages ~1,000 files per shard; at a typical
-/// 1-4 KiB of findings, suppressions, and world facts per file, a realistic
-/// shard is well under 4 MiB. 64 MiB accommodates multi-million file projects
-/// while preventing an oversized or attacker-planted shard from triggering
-/// unbounded allocations during read or deserialization.
+/// Caps one shard's read and write so a planted cache file cannot force an unbounded allocation; realistic shards stay well under 4 MiB.
 const MAX_SHARD_BYTES: u64 = 64 * 1024 * 1024;
 
-/// Everything one analyzed file contributes, reproduced verbatim on a cache hit.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileOutput {
-    /// Content hash the output was computed from.
     pub hash: [u8; 32],
-    /// Whether the file parsed. A file with a syntax error carries only its
-    /// `meta/parse-error` finding, so its suppressions cannot be judged unused.
     pub parsed: bool,
-    /// Findings before suppression and fingerprinting.
+    /// Stored before suppression and fingerprinting; both re-run after a cache hit.
     pub findings: Vec<Finding>,
-    /// Suppression directives found in the file.
     pub suppressions: Vec<Suppression>,
-    /// The file's contribution to cross-file rules.
     pub world: WorldFacts,
 }
 
@@ -57,7 +43,6 @@ struct ShardWrite<'a> {
     files: &'a [(&'a str, &'a FileOutput)],
 }
 
-/// One entry read from disk: its output is handed out once, its content hash stays.
 struct Slot {
     hash: [u8; 32],
     output: Option<FileOutput>,
@@ -65,23 +50,12 @@ struct Slot {
 
 type ShardEntries = HashMap<Box<str>, Slot>;
 
-/// What the load observed around one shard-file read: the modification time
-/// from just before the read and the length the decode ran on (the bytes
-/// read, or the pre-read size when the read itself failed).
-///
-/// Both halves feed the prune's freshness guard: a failed shard is unlinked
-/// only while a fresh stat still matches both.
+/// What decode_shard saw around one read; unlink_if_same deletes only while a fresh stat still matches both fields.
 struct Observed {
     len: u64,
     mtime: SystemTime,
 }
 
-/// The cached entries of every shard, indexed by the shard that held them.
-///
-/// Taking an entry moves its output out and leaves its rel key and content
-/// hash in place. A shard's rel set therefore outlives the drain, and
-/// [`Cache::store`] compares it with the new entries without a second copy of
-/// the keys.
 pub struct Loaded {
     shards: Vec<Mutex<ShardEntries>>,
     present: [bool; 256],
@@ -89,7 +63,6 @@ pub struct Loaded {
 }
 
 impl Loaded {
-    /// A cache that holds no entries.
     pub fn empty() -> Self {
         Self::new((0..=255u8).map(|_| HashMap::new()).collect(), [false; 256])
     }
@@ -102,12 +75,10 @@ impl Loaded {
         }
     }
 
-    /// How many entries were loaded, whether or not they were taken since.
     pub fn entry_count(&self) -> usize {
         self.entries
     }
 
-    /// Moves out the output cached for `rel` when it was computed from `hash` and is still there.
     pub fn take(&self, rel: &str, hash: &[u8; 32]) -> Option<FileOutput> {
         let mut shard = self.shard(shard_byte(rel));
         let slot = shard.get_mut(rel)?;
@@ -124,7 +95,6 @@ impl Loaded {
             .unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// Whether shard `byte` held exactly the rels of the new entries, with the same content hashes.
     fn same_set(&self, byte: u8, entries: Option<&[(&str, &FileOutput)]>) -> bool {
         let old = self.shard(byte);
         match entries {
@@ -139,12 +109,10 @@ impl Loaded {
     }
 }
 
-/// Hashes a file's BOM-stripped source; this is the cache's content key.
 pub fn source_hash(text: &str) -> [u8; 32] {
     *blake3::hash(text.as_bytes()).as_bytes()
 }
 
-/// Hashes an OCaml implementation with its sibling interface, whose presence changes the file's facts.
 pub fn interface_hash(text: &str) -> [u8; 32] {
     let mut hasher = blake3::Hasher::new();
     hasher.update(text.as_bytes());
@@ -152,23 +120,12 @@ pub fn interface_hash(text: &str) -> [u8; 32] {
     *hasher.finalize().as_bytes()
 }
 
-/// The per-user cache of one project root.
-///
-/// The cache lives in the user's cache directory, never inside the checkout:
-/// everything a repository can contain is attacker-controlled, and the key
-/// below is computable from public inputs, so a cache file shipped in a tree
-/// must never be trusted. Files under the checkout's `.sloplint` are not read,
-/// written, or removed.
+/// Per-user cache for one project root; repo contents are attacker-controlled and this key is derivable from public inputs, so a cache file inside a checkout is never trusted.
 pub struct Cache {
     dir: PathBuf,
     key: [u8; 32],
 }
 
-/// Resolves, vets, and keys the cache for `root` under the user's cache directory `base`, or warns and returns `None`.
-///
-/// A cache is an optimization, so every problem here disables it instead of
-/// failing the run. Nothing is created: directories that do not exist yet are
-/// made by [`Cache::store`].
 pub fn open(
     base: Option<PathBuf>,
     root: &Path,
@@ -213,19 +170,7 @@ pub fn open(
 }
 
 impl Cache {
-    /// Loads the cached entries of every shard present, keyed by relative path within their shard.
-    ///
-    /// Shards are read, decoded, and indexed in parallel on the current rayon pool.
-    /// A shard that cannot be read, fails to parse, or carries the wrong
-    /// version or key contributes zero entries and never aborts the load. Such
-    /// a shard, and any shard path that is not a regular file, is unlinked
-    /// best-effort during the load, but only while a fresh stat still shows
-    /// the same file the load observed; a shard a concurrent writer replaced
-    /// meanwhile is left alone. A removal failure never aborts the load. A
-    /// symlinked shard directory yields an empty cache. No cache file is ever
-    /// followed through a symlink or reparse point; only its vetted
-    /// directories are trusted. Configuration and baseline inputs keep
-    /// following symlinks to regular files.
+    /// Prunes undecodable and non-regular shard files here even on warm runs, where the store writes nothing.
     pub fn load(&self) -> Loaded {
         let shards = self.dir.join(SHARD_DIR);
         if vet_existing(&shards).is_err()
@@ -246,30 +191,12 @@ impl Cache {
                 present[usize::from(byte)] = true;
                 on_disk.push(byte);
             } else {
-                // `file_type` never follows symlinks, so a symlink counts as
-                // not regular here. A non-regular shard path can never decode,
-                // so unlink it best-effort — but only while a fresh stat still
-                // shows a non-regular file, so a valid shard a concurrent
-                // writer renamed into this path after the scan is left alone.
-                // A failed stat leaves the path in place.
                 let path = entry.path();
                 if fs::symlink_metadata(&path).is_ok_and(|meta| !meta.is_file()) {
                     let _ = fs::remove_file(path);
                 }
             }
         }
-        // Prune shards whose bytes disagree with this run's cache on the rayon
-        // pool, alongside the decode and without further sequential file I/O:
-        // a shard whose file disagrees with this run's cache is
-        // rewritten-or-removed by the store anyway, so pruning undecodable
-        // files during the load has identical semantics and prevents unbounded
-        // junk accumulation on warm runs, where the store is skipped entirely.
-        // Each unlink is guarded by a fresh stat: only a file still matching
-        // what the decode observed (regular, same length, same mtime) is
-        // removed, so a shard a concurrent writer replaced after the read is
-        // left alone. The residual window — a replacement with identical
-        // length and mtime — costs one cold shard rebuild, never a wrong
-        // result. Any unlink failure is ignored.
         let decoded: Vec<(u8, ShardEntries)> = on_disk
             .into_par_iter()
             .filter_map(|byte| match self.decode_shard(&shards, byte) {
@@ -288,22 +215,17 @@ impl Cache {
         Loaded::new(shards_vec, present)
     }
 
-    /// Reads and decodes one shard file, with what the read observed.
-    ///
-    /// The second half is the pre-read modification time plus the length the
-    /// decode ran on: the bytes read, or the pre-read size when the read
-    /// itself failed. The load unlinks a failed shard only while a fresh stat
-    /// still matches both, so a shard a concurrent writer replaced after the
-    /// read is left alone.
     fn decode_shard(&self, shards: &Path, byte: u8) -> (Option<ShardEntries>, Option<Observed>) {
         let path = shards.join(shard_file(byte));
-        // Stat before the read, on this rayon thread: the prune compares this
-        // mtime with a fresh stat before unlinking. Parallel with the other
-        // decodes, so no new sequential file I/O.
-        let pre = fs::symlink_metadata(&path).ok();
-        let mtime = pre.as_ref().and_then(|meta| meta.modified().ok());
+        let stat_before_read = fs::symlink_metadata(&path).ok();
+        let mtime = stat_before_read
+            .as_ref()
+            .and_then(|meta| meta.modified().ok());
         let Ok(bytes) = read_regular_nofollow(&path, MAX_SHARD_BYTES) else {
-            let len = pre.as_ref().map(|meta| meta.len()).unwrap_or(0);
+            let len = stat_before_read
+                .as_ref()
+                .map(|meta| meta.len())
+                .unwrap_or(0);
             return (None, mtime.map(|mtime| Observed { len, mtime }));
         };
         let len = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
@@ -337,9 +259,6 @@ impl Cache {
         (Some(entries), observed)
     }
 
-    /// Writes the cache atomically; a failure warns on stderr and never fails the run.
-    ///
-    /// `old` is what [`Cache::load`] read, after this run took its hits.
     pub fn store(&self, files: &[(&str, &FileOutput)], old: &Loaded) {
         if let Err(error) = self.write_shards(files, old) {
             warn(format!(
@@ -349,15 +268,6 @@ impl Cache {
         }
     }
 
-    /// Rewrites or removes every shard whose file disagrees with this run's entries.
-    ///
-    /// A shard is settled when its file is present exactly when it has
-    /// entries and its rel set and content hashes equal the loaded ones, so a
-    /// warm run rewrites nothing. Every other shard is dirty: one with entries
-    /// is rewritten, one without has its file removed. That covers deleted
-    /// files; stale-key, corrupt, or non-regular shards that loaded no entries
-    /// are already pruned best-effort by the load, and the store removes any
-    /// that raced back.
     fn write_shards(&self, files: &[(&str, &FileOutput)], old: &Loaded) -> io::Result<()> {
         let mut fresh: HashMap<u8, Vec<(&str, &FileOutput)>> = HashMap::new();
         for &(rel, output) in files {
@@ -381,9 +291,6 @@ impl Cache {
         self.write_dirty(&shards, &fresh, &dirty)
     }
 
-    /// Creates the private directories and rewrites or removes each dirty shard.
-    ///
-    /// Every dirty shard is attempted even after one fails; the first error is returned.
     fn write_dirty(
         &self,
         shards: &Path,
@@ -419,14 +326,7 @@ impl Cache {
         first_error.map_or(Ok(()), Err)
     }
 
-    /// Writes one shard through a per-process temporary file and rename.
-    ///
-    /// Directories are created `0700` on unix (see [`Cache::write_shards`]).
-    /// They are vetted again after creation so a link swapped in between
-    /// cannot be used, and the temporary file is created exclusively, so a
-    /// pre-planted symlink at its path is left alone instead of being
-    /// followed. Only the owned temporary file is renamed or removed, after
-    /// its handle is closed.
+    /// A link swapped into a directory after its creation is re-vetted away before any write.
     fn write_shard(&self, path: &Path, entries: &[(&str, &FileOutput)]) -> io::Result<()> {
         let bytes = postcard::to_allocvec(&ShardWrite {
             version: VERSION,
@@ -479,15 +379,7 @@ impl Cache {
     }
 }
 
-/// Unlinks `path` only while it is still the file `observed` describes: a
-/// regular file with the same length and modification time.
-///
-/// A concurrent writer replaces a shard by renaming a new file into place,
-/// which changes the modification time (and all but adversarially identical
-/// lengths); such a replacement is left alone. The residual window — a
-/// replacement with identical length and mtime — costs one cold shard
-/// rebuild, never a wrong result: the cache only avoids recomputation.
-/// Unlink failures are ignored.
+/// Leaves a shard a concurrent writer replaced: an identical-length, identical-mtime swap costs one cold rebuild, never a wrong result.
 fn unlink_if_same(path: &Path, observed: &Observed) {
     let same = fs::symlink_metadata(path).is_ok_and(|meta| {
         meta.is_file()
@@ -499,12 +391,10 @@ fn unlink_if_same(path: &Path, observed: &Observed) {
     }
 }
 
-/// The shard holding `rel`: the first BLAKE3 byte of the relative path.
 fn shard_byte(rel: &str) -> u8 {
     blake3::hash(rel.as_bytes()).as_bytes()[0]
 }
 
-/// File name of shard `byte`, e.g. `shard-3f.bin`: two lowercase hex chars.
 fn shard_file(byte: u8) -> String {
     format!("shard-{byte:02x}.bin")
 }
@@ -523,13 +413,6 @@ fn parse_shard_file_name(name: &std::ffi::OsStr) -> Option<u8> {
     }
 }
 
-/// Hashes everything that shapes per-file output: the binary bytes, the effective config, and custom rule files.
-///
-/// The binary bytes hold every grammar, adapter, and parse choice, including the retries of a
-/// failed `.h` parse as C++ and then Objective-C, so a changed grammar or fallback changes the
-/// key and no entry stored by another binary is read. Within one binary a path fixes its
-/// routed language and the bytes fix the retry outcome, so the path and content hash alone
-/// identify an entry.
 fn config_key(config: &Config, custom_sources: &[(String, String)]) -> io::Result<[u8; 32]> {
     let mut hasher = blake3::Hasher::new();
     let exe = std::env::current_exe()?;
@@ -543,7 +426,6 @@ fn config_key(config: &Config, custom_sources: &[(String, String)]) -> io::Resul
     Ok(*hasher.finalize().as_bytes())
 }
 
-/// Names a project's directory by the canonical root path: 32 lowercase hex characters.
 fn root_key(root: &Path) -> String {
     let mut hasher = blake3::Hasher::new();
     #[cfg(unix)]
@@ -556,7 +438,6 @@ fn root_key(root: &Path) -> String {
     hasher.finalize().to_hex().as_str()[..32].to_string()
 }
 
-/// Whether `dir`, resolved through its nearest existing ancestor, lies under `root`.
 fn inside(dir: &Path, root: &Path) -> bool {
     let mut missing = Vec::new();
     let mut probe = dir;
@@ -578,13 +459,7 @@ fn inside(dir: &Path, root: &Path) -> bool {
     }
 }
 
-/// Refuses an existing directory that another party could have planted or can modify.
-///
-/// A missing path is fine. A symlink is never followed, so a link cannot
-/// redirect the cache. On unix the directory must also not be writable by
-/// group or others and must accept a file from this user; together those mean
-/// only its owner (or root) can change it, so no other user can substitute a
-/// cache.
+/// Refuses a directory another party could have planted or can modify, so no other user can substitute a cache.
 fn vet_existing(dir: &Path) -> Result<(), String> {
     let meta = match fs::symlink_metadata(dir) {
         Ok(meta) => meta,
@@ -650,7 +525,7 @@ fn unsafe_dir(reason: String) -> io::Error {
     ))
 }
 
-/// Prints one warning line; paths and OS error text are untrusted, so the whole message is escaped for the terminal.
+/// Warning text embeds untrusted paths and OS errors, so the whole line is escaped for the terminal.
 fn warn(message: String) {
     let _ = writeln!(
         io::stderr(),

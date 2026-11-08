@@ -1,5 +1,3 @@
-//! `sloplint-allow` suppression comments: parsing, matching, and application.
-
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -7,43 +5,30 @@ use serde::{Deserialize, Serialize};
 use crate::finding::Finding;
 use crate::rules::meta;
 
-/// A comment's text with the source lines it spans, recorded by the syntax walk.
 #[derive(Debug, Clone, Copy)]
 pub struct CommentText<'s> {
-    /// First source line of the comment, 1-based.
     pub start_line: u32,
-    /// Last source line of the comment, 1-based.
     pub end_line: u32,
     /// Raw comment text including delimiters.
     pub text: &'s str,
 }
 
-/// One parsed suppression directive.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Suppression {
-    /// First source line covered, 1-based.
     pub start_line: u32,
-    /// Last source line covered before the one extra trailing line.
     pub end_line: u32,
-    /// File-level suppressions cover every line of the file.
     pub file_level: bool,
-    /// Rule patterns this suppression silences.
     pub rules: Vec<RulePattern>,
-    /// Usage flag per operand in `rules`, true if the operand matched at least one finding.
     pub used: Vec<bool>,
 }
 
-/// A suppression operand: an exact rule id or a whole `family/*`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RulePattern {
-    /// Matches exactly this rule id.
     Exact(Box<str>),
-    /// Matches every rule whose id starts with this family plus `/`.
     Family(Box<str>),
 }
 
 impl RulePattern {
-    /// Parses `family/*` into [`RulePattern::Family`] and anything else into [`RulePattern::Exact`].
     pub fn parse(s: &str) -> Result<RulePattern, String> {
         if let Some(family) = s.strip_suffix("/*") {
             if family.is_empty() {
@@ -57,7 +42,6 @@ impl RulePattern {
         Ok(RulePattern::Exact(s.into()))
     }
 
-    /// Whether `rule_id` is covered by this pattern.
     pub fn matches(&self, rule_id: &str) -> bool {
         match self {
             RulePattern::Exact(id) => rule_id == &**id,
@@ -72,10 +56,7 @@ const MARKER: &str = "sloplint-allow";
 const FILE_MARKER: &str = "sloplint-allow-file";
 const SUPPRESSIBLE_FAMILIES: [&str; 5] = ["complexity", "grep", "slop", "agent", "custom"];
 
-/// Comment openers and the text that ends a directive's reason, keyed by how the comment opens.
-/// The newline ends every reason, so a reason never spans lines. A block opener also ends its
-/// reason at its own closer, and a comment matching no opener is treated as a line comment.
-/// `<!--` is listed for its `-->` closer; no bundled adapter emits HTML comments.
+/// `<!--` is listed only for its `-->` closer; no bundled adapter emits HTML comments.
 const REASON_CLOSERS: &[(&str, &str)] = &[
     ("//", "\n"),
     ("#", "\n"),
@@ -102,7 +83,6 @@ impl Problem {
     }
 }
 
-/// Scans comments for suppression directives, returning them plus `meta/invalid-suppression` findings.
 pub fn parse_suppressions(
     path: &str,
     source: &str,
@@ -124,7 +104,6 @@ pub fn parse_suppressions(
     (suppressions, findings)
 }
 
-/// Drops suppressed findings and marks every matching suppression used; `meta/*` is never suppressible.
 pub fn apply(findings: &mut Vec<Finding>, suppressions: &mut [Suppression]) {
     let total_operands: usize = suppressions.iter().map(|s| s.rules.len()).sum();
     let index = Index::of(suppressions);
@@ -202,14 +181,10 @@ impl<'s> Index<'s> {
     }
 }
 
-/// Whether a byte can continue an identifier token (`[A-Za-z0-9_]`).
 fn is_ident_byte(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
 }
 
-/// Offset where the comment payload starts: just past its opener (`//`, `#`,
-/// `/*`, ...). A comment matching no opener is treated as a line comment and
-/// its payload starts past any leading whitespace.
 fn payload_base(text: &str) -> usize {
     let trimmed = text.trim_start();
     let leading = text.len() - trimmed.len();
@@ -221,10 +196,6 @@ fn payload_base(text: &str) -> usize {
     leading
 }
 
-/// Whether `start` is a directive position: no identifier characters sit
-/// between the payload base and the marker. Decoration such as extra slashes
-/// (`///`), stars (`/* * ...`), or whitespace still counts as the start, while
-/// prose (`see ...`) does not.
 fn is_directive_start(text: &str, base: usize, start: usize) -> bool {
     if start <= base {
         return true;
@@ -247,9 +218,6 @@ fn scan_comment(
     let base = payload_base(text);
     for (start, _) in text.match_indices(MARKER) {
         if start > 0 && is_ident_byte(text.as_bytes()[start - 1]) {
-            // Mid-token occurrence (e.g. `xsloplint-allow`): not a directive
-            // attempt at all, so neither suppress nor report. Later
-            // boundary-anchored markers are still visited.
             continue;
         }
         let tail = &text[start..];
@@ -260,12 +228,6 @@ fn scan_comment(
             MARKER.len()
         };
         let rest = &tail[keyword..];
-        // An exact keyword — either marker terminated by the end of the comment
-        // or a non-word char — is always a directive attempt: well-formed ones
-        // suppress and malformed ones are reported, wherever they sit. A word
-        // that only extends a marker (an allowlist or allowfile suffix) is a
-        // candidate at directive start only, since mid-sentence it is prose
-        // and is ignored instead of reported as a false malformed directive.
         let exact = rest
             .as_bytes()
             .first()

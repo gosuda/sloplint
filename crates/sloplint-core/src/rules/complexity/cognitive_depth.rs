@@ -1,5 +1,3 @@
-//! `complexity/cognitive-depth`: flags functions whose cognitive complexity exceeds the thresholds.
-
 use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
@@ -9,7 +7,6 @@ use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Threshol
 
 use crate::rules::threshold_options;
 
-/// Catalog entry for `complexity/cognitive-depth`.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "complexity/cognitive-depth",
     family: Family::Complexity,

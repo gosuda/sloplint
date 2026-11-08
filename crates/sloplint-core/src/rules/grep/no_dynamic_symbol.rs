@@ -1,12 +1,9 @@
-//! `grep/no-dynamic-symbol`: symbols resolved by a name built at runtime.
-
 use super::{EmptyOptions, parse_options};
 use crate::config::Strictness;
 use crate::facts::FileFacts;
 use crate::finding::{Finding, Level, Severity};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 
-/// `grep/no-dynamic-symbol`: flags every runtime-built symbol lookup site.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "grep/no-dynamic-symbol",
     family: Family::Grep,

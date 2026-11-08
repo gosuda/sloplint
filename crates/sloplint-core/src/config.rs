@@ -1,5 +1,3 @@
-//! The `sloplint.toml` configuration model: defaults, parsing, and validation.
-
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
@@ -11,7 +9,6 @@ use crate::lang::ALL_CONFIG_KEYS;
 use crate::rules::CATALOG;
 use crate::rules::custom::{CustomRuleSpec, validate_custom_rule_spec};
 
-/// Maps a config key back to itself as a `'static` string when it names a language.
 pub fn static_language_key(key: &str) -> Option<&'static str> {
     ALL_CONFIG_KEYS
         .iter()
@@ -19,23 +16,17 @@ pub fn static_language_key(key: &str) -> Option<&'static str> {
         .copied()
 }
 
-/// Strictness profile that selects every rule's level and thresholds from one preset matrix.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum Strictness {
-    /// Gates only egregious complexity, giant files, and swallowed errors.
     Minimal,
-    /// Adds precise, low-false-positive greppability and agent rules at warn.
     Basic,
-    /// Enables every heuristic rule with moderate thresholds. The default.
     #[default]
     Standard,
-    /// The full posture; twelve rules at deny.
     Strict,
 }
 
 impl Strictness {
-    /// Config-file and CLI spelling of this profile.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Minimal => "minimal",
@@ -46,40 +37,26 @@ impl Strictness {
     }
 }
 
-/// Gate mode selecting between absolute thresholds and a recorded baseline.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum Mode {
-    /// Fail when reported findings reach `fail_on`.
     #[default]
     Threshold,
-    /// Fail only on findings absent from the baseline.
     Ratchet,
 }
 
-/// Project-wide settings under `[project]`.
 #[derive(Clone, Debug, Serialize)]
 pub struct ProjectConfig {
-    /// Profile selecting every rule preset.
     pub strictness: Strictness,
-    /// Languages enabled for analysis, as config keys.
     pub languages: Vec<String>,
-    /// Gate mode for `sloplint check`.
     pub mode: Mode,
-    /// Baseline file path relative to the project root.
     pub baseline: String,
-    /// Lowest reported severity that fails the run.
     pub fail_on: FailOn,
-    /// Exclude globs; a file matching any one is never analyzed.
     pub exclude: Vec<String>,
-    /// Globs appended to the exclude list without replacing it.
     pub extend_exclude: Vec<String>,
-    /// Globs marking test files, which exempt rules skip.
     pub test_globs: Vec<String>,
-    /// Files larger than this many bytes are skipped.
-    /// TOML values must be in `0..=u32::MAX` to fit parser byte positions.
+    /// TOML values must fit `0..=u32::MAX` to match parser byte positions.
     pub max_file_bytes: u64,
-    /// Globs naming extra files that hold `[[custom_rules]]` tables.
     pub custom_rule_files: Vec<String>,
 }
 
@@ -100,23 +77,17 @@ impl Default for ProjectConfig {
     }
 }
 
-/// Per-language settings under `[languages.<key>]`.
 #[derive(Clone, Debug, Serialize)]
 pub struct LanguageConfig {
-    /// Callee patterns counted as log or error calls by the grep rules.
     pub log_callees: Vec<String>,
 }
 
-/// A fully resolved `sloplint.toml`: defaults merged with every user table.
 #[derive(Clone, Debug, Serialize)]
 pub struct Config {
-    /// Project-wide settings.
     pub project: ProjectConfig,
-    /// Per-language settings keyed by config key; every known key is present.
+    /// Always holds every known config key.
     pub languages: BTreeMap<String, LanguageConfig>,
-    /// Per-rule override tables keyed by rule id.
     pub rules: BTreeMap<String, toml::Table>,
-    /// Declarative custom query rules.
     pub custom_rules: Vec<CustomRuleSpec>,
 }
 
@@ -131,45 +102,33 @@ impl Default for Config {
     }
 }
 
-/// Why a config failed to load; display strings quote the offending input.
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    /// The file is not valid TOML or violates a table's shape.
     #[error("{origin}: {message}")]
     Toml { origin: String, message: String },
-    /// A rule-table key or report selector names no catalog or custom rule.
     #[error("unknown rule `{id}`; valid ids: {}", valid.join(", "))]
     UnknownRule { id: String, valid: Vec<String> },
-    /// A rule option or language callee pattern is malformed.
     #[error("{rule}: {message}")]
     RuleOption { rule: String, message: String },
-    /// A rule's thresholds are inverted or below one.
     #[error("{rule}: warn_at {warn_at} must be at least 1 and at most deny_at {deny_at}")]
     Threshold {
         rule: String,
         warn_at: u32,
         deny_at: u32,
     },
-    /// A glob pattern does not compile.
     #[error("{key}: invalid glob `{glob}`: {message}")]
     Glob {
         key: String,
         glob: String,
         message: String,
     },
-    /// A `[[custom_rules]]` entry violates its schema.
     #[error("custom rule `{id}`: {message}")]
     CustomRule { id: String, message: String },
-    /// A language key is not one of the twenty-three known config keys.
     #[error("unknown language `{value}`")]
     UnknownLanguage { value: String },
 }
 
 impl ConfigError {
-    /// Builds [`ConfigError::Toml`] for a failed parse of `source`, read from `origin`.
-    ///
-    /// When the parser reports a span, the message starts with the 1-based line
-    /// and column (in Unicode scalar values) where the span begins.
     pub fn from_toml(origin: &str, source: &str, error: &toml::de::Error) -> ConfigError {
         let message = match error.span() {
             Some(span) => {
@@ -229,7 +188,6 @@ struct RawConfig {
     custom_rules: Option<Vec<CustomRuleSpec>>,
 }
 
-/// Parses `sloplint.toml` text into a fully defaulted, validated [`Config`].
 pub fn parse_config(toml_src: &str, origin: &str) -> Result<Config, ConfigError> {
     let raw: RawConfig = toml::from_str(toml_src)
         .map_err(|error| ConfigError::from_toml(origin, toml_src, &error))?;

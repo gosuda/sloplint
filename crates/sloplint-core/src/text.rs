@@ -1,6 +1,3 @@
-//! Path normalization, identifier splitting, and static-literal chunk measurement.
-
-/// Joins path components with `/`, returning `None` when a component is not UTF-8.
 pub fn normalize_rel_path(path: &std::path::Path) -> Option<String> {
     let mut parts: Vec<&str> = Vec::new();
     for component in path.components() {
@@ -9,7 +6,6 @@ pub fn normalize_rel_path(path: &std::path::Path) -> Option<String> {
     Some(parts.join("/"))
 }
 
-/// Splits an identifier on non-alphanumerics, on lower-to-upper boundaries, and on letter-digit boundaries, lowercasing each word.
 pub fn identifier_words(s: &str) -> impl Iterator<Item = String> {
     s.split(|c: char| !c.is_alphanumeric()).flat_map(split_word)
 }
@@ -35,7 +31,6 @@ fn is_boundary(prev: char, next: char) -> bool {
     prev.is_ascii_digit() != next.is_ascii_digit() || (prev.is_lowercase() && next.is_uppercase())
 }
 
-/// Returns the longest literal run, in characters, across the static segments of a format string: placeholders (`{...}`, printf specs), doubled braces as literals, and backslash escapes break the run.
 pub fn longest_static_chunk(segments: &[&str]) -> u32 {
     segments
         .iter()

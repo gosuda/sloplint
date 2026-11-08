@@ -13,7 +13,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Role table for the Go grammar.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_declaration", Role::Function),
     ("method_declaration", Role::Function),
@@ -36,10 +35,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("composite_literal", Role::StructLit),
 ];
 
-/// Hooks for the Go grammar.
 pub(crate) struct GoHooks;
 
-/// Shared hook table for the Go grammar.
 pub(crate) static HOOKS: GoHooks = GoHooks;
 
 fn variadic_ty<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
@@ -329,10 +326,6 @@ fn is_sentinel(cx: &Cx<'_, '_>, spec: Node<'_>) -> bool {
     })
 }
 
-/// The text after the last `.` or `/` separator: one backward pass stopping at
-/// the first separator instead of an `rfind` per separator (the missing
-/// separator would scan the whole callee per call and make a member-call
-/// chain quadratic).
 fn go_last_segment(callee: &str) -> &str {
     let bytes = callee.as_bytes();
     let mut start = bytes.len();
@@ -346,11 +339,6 @@ fn go_last_segment(callee: &str) -> &str {
 }
 
 fn tail_two(callee: &str) -> &str {
-    // The last two dot- or slash-separated segments: only the tail matters, so
-    // scan back from the end and stop at the second separator. A member-call
-    // chain reruns this per call, and any scan touching the whole callee per
-    // call makes the chain quadratic. Separators are ASCII, so byte indices
-    // land on char boundaries exactly as the old forward scan computed.
     let mut seen = 0;
     for (i, &b) in callee.as_bytes().iter().enumerate().rev() {
         if b == b'.' || b == b'/' {

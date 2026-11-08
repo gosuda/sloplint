@@ -1,5 +1,3 @@
-//! `sloplint init`: writes a default `sloplint.toml` in the current directory.
-
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::Path;
@@ -13,17 +11,7 @@ use crate::project::CONFIG_FILE;
 
 const HEADER: &str = "# sloplint configuration. Every value shown is the default. Run 'sloplint rules' for the effective rule settings; override one rule with [rules.\"<id>\"].";
 
-/// Writes `sloplint.toml` into `cwd`, refusing to overwrite an existing file.
-///
-/// The text is written to a sibling temporary file and published with a hard
-/// link, which fails if the name exists, so the configuration appears whole or
-/// not at all and an existing file or symlink (even a dangling one) is never
-/// touched. When the link cannot be made for any reason other than the name
-/// existing (for example a filesystem without hard links), it falls back to
-/// creating the final name exclusively; if writing then fails, the file this
-/// call created is removed. Either way a failure leaves no empty or partial
-/// configuration that later runs would load and later `init` calls would
-/// refuse to replace.
+/// The config is published with a hard link, which fails when the name exists where a rename would not; filesystems without hard links fall back to an exclusive create.
 pub fn write_default(cwd: &Path) -> Result<(), RunError> {
     let path = cwd.join(CONFIG_FILE);
     let exists = || RunError::ConfigExists { path: path.clone() };
@@ -51,7 +39,6 @@ pub fn write_default(cwd: &Path) -> Result<(), RunError> {
     }
 }
 
-/// Creates `path` exclusively and writes `bytes`; a failed write removes the file this call created.
 fn write_new(path: &Path, bytes: &[u8]) -> io::Result<()> {
     let mut file = OpenOptions::new().write(true).create_new(true).open(path)?;
     let written = file.write_all(bytes).and_then(|()| file.sync_all());

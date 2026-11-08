@@ -14,7 +14,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Node kinds of the Java grammar and the walker role each one plays.
 pub(crate) static TABLE: &[(&str, Role)] = &[
     ("method_declaration", Role::Function),
     ("constructor_declaration", Role::Function),
@@ -45,10 +44,8 @@ pub(crate) static TABLE: &[(&str, Role)] = &[
     ("field_declaration", Role::StaticItem),
 ];
 
-/// The Java adapter for `.java` files.
 pub(crate) static HOOKS: JavaHooks = JavaHooks;
 
-/// Hooks for the Java grammar.
 pub(crate) struct JavaHooks;
 
 const COMMENTS: &[&str] = &["line_comment", "block_comment"];
@@ -332,12 +329,8 @@ fn import_fact<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Import<'s>> {
     })
 }
 
-/// The chain family of [`receiver_root`] in the walk's chain-root memo.
 const RECEIVER_CHAIN: u8 = 2;
 
-/// True when a memoized root can end a valid chain: a bare name that is not a keyword
-/// literal. Valid terminals are always single names, so anything else ends the chain
-/// at an unsupported node (a literal, a `new`) and keeps its historical `None`.
 fn is_chain_root(t: &str) -> bool {
     !matches!(t, "true" | "false" | "null")
         && !t.as_bytes().first().is_some_and(|b| b.is_ascii_digit())
@@ -345,13 +338,6 @@ fn is_chain_root(t: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'$' || !b.is_ascii())
 }
 
-/// The leftmost name of a receiver chain: the first node that is not a field access
-/// or method invocation with an object.
-///
-/// Memoized, so a chain of `n` calls costs `O(n)` and not `O(n²)`; every call would
-/// otherwise walk the receivers of all the calls below it. A receiver that starts at
-/// an unsupported node keeps its old `None` without touching the memo, and a chain
-/// that ends at one is recognized by its non-name root text.
 fn receiver_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     match n.kind() {
         "identifier" | "this" | "super" | "field_access" | "method_invocation" => {}

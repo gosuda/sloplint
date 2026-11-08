@@ -1,5 +1,3 @@
-//! The agent family: code an autonomous agent can discover, load, patch, and verify.
-
 pub(crate) mod ambient_global_state;
 pub(crate) mod catch_all_match;
 pub(crate) mod colocated_tests;
@@ -12,12 +10,10 @@ pub(crate) mod unique_patch_anchors;
 
 use serde::{Deserialize, Serialize};
 
-/// Option table shared by rules that accept no options.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct EmptyOptions {}
 
-/// Builds a TOML string array for a fixed preset option.
 pub(crate) fn string_values(items: &[&str]) -> toml::Value {
     toml::Value::Array(
         items

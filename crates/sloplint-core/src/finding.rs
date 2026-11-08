@@ -1,12 +1,9 @@
-//! Findings, severity levels, and the shared position-to-column/context projection.
-
 use std::borrow::Cow;
 
 use serde::{Deserialize, Serialize};
 
 use crate::facts::{FileFacts, NamedSite, Pos};
 
-/// How loudly a finding speaks; `Warn` sorts before `Deny`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Severity {
@@ -14,7 +11,6 @@ pub enum Severity {
     Deny,
 }
 
-/// A rule's configured loudness cap; `Off` disables the rule entirely.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Level {
@@ -23,7 +19,6 @@ pub enum Level {
     Deny,
 }
 
-/// The finding severity a run fails on; `Never` never fails.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FailOn {
@@ -32,7 +27,6 @@ pub enum FailOn {
     Never,
 }
 
-/// One reported defect with its location, instructions, and ratchet fingerprint.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Finding {
     pub rule: Box<str>,
@@ -46,14 +40,9 @@ pub struct Finding {
     pub fingerprint: Box<str>,
 }
 
-/// Longest context string kept before the `...` suffix is appended.
 const MAX_CONTEXT_CHARS: usize = 160;
 
 impl Finding {
-    /// Builds a finding inside an analyzed file; column and context come from `facts.source`.
-    ///
-    /// The line is found through the file's line index, so the cost is the length of that line.
-    /// The result equals [`Finding::at_source`] for the same path, source, and position.
     pub fn at(
         facts: &FileFacts<'_>,
         pos: Pos,
@@ -76,7 +65,6 @@ impl Finding {
         }
     }
 
-    /// Builds a finding whose line, column, and context are copied from a `NamedSite`.
     pub fn at_site(
         path: &str,
         site: &NamedSite,
@@ -98,7 +86,6 @@ impl Finding {
         }
     }
 
-    /// Builds a finding from a raw source string, computing column and context at `pos`.
     pub fn at_source(
         path: &str,
         source: &str,
@@ -123,7 +110,6 @@ impl Finding {
     }
 }
 
-/// Projects a source position to `(column, context)`: the column counts Unicode scalar values from the line start, and the context is the trimmed line truncated to 160 chars with `...` when cut.
 pub fn source_site(source: &str, pos: Pos) -> (u32, Box<str>) {
     let (start, text) = line_at(source, pos.line);
     let pos_byte = usize::try_from(pos.byte).unwrap_or(usize::MAX);
@@ -139,12 +125,6 @@ pub fn source_site(source: &str, pos: Pos) -> (u32, Box<str>) {
     (column, Box::from(context_of(text)))
 }
 
-/// The byte offset where each `\n`-separated part of `source` starts, in line order.
-///
-/// The index always has at least one entry, because the empty source is one empty line, and a
-/// trailing newline starts a last empty line. An index belongs to the source it was built from:
-/// pass it to [`source_site_indexed`] only with that same source. Offsets past `u32::MAX` clamp,
-/// like [`Pos::byte`].
 pub fn line_starts(source: &str) -> Vec<u32> {
     let mut starts = vec![0];
     for (at, _) in source.match_indices('\n') {
@@ -153,11 +133,6 @@ pub fn line_starts(source: &str) -> Vec<u32> {
     starts
 }
 
-/// [`source_site`] through a line index built by [`line_starts`] for the same `source`.
-///
-/// The line is taken from `pos.line` alone, independently of `pos.byte`, and invalid positions
-/// resolve exactly as in [`source_site`]: line 0 is the first line, a line past the last one is an
-/// empty line, and a byte outside the line clamps to its ends. The cost is the length of the line.
 pub fn source_site_indexed(starts: &[u32], source: &str, pos: Pos) -> (u32, Box<str>) {
     let index = offset(pos.line.saturating_sub(1));
     let Some(&start) = starts.get(index) else {
