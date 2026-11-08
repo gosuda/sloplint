@@ -15,8 +15,6 @@ mod bounded_read_reserve;
 mod cache_location;
 #[path = "pipeline_remaining/gitignore_boundary.rs"]
 mod gitignore_boundary;
-#[path = "pipeline_remaining/header_cpp_fallback.rs"]
-mod header_cpp_fallback;
 #[path = "pipeline_remaining/header_fallbacks.rs"]
 mod header_fallbacks;
 #[path = "pipeline_remaining/implicit_scope.rs"]
