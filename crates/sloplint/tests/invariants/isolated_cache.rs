@@ -368,17 +368,12 @@ fn planted_cache_symlink_is_never_written_through() {
         1,
         "one project stores one cache file: {files:?}"
     );
-    let genuine = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read cache: {e}"));
     let planted = GENERIC_TEXT.replace("code", "mode");
-    let at = genuine
-        .windows(GENERIC_TEXT.len())
-        .position(|window| window == GENERIC_TEXT.as_bytes())
-        .unwrap_or_else(|| panic!("the finding message is not in the cache bytes"));
-    let mut forged = genuine.clone();
-    forged[at..at + planted.len()].copy_from_slice(planted.as_bytes());
     let (_outside, base) = tempdir();
     let planted_path = base.join("forged.bin");
-    std::fs::write(&planted_path, &forged).unwrap_or_else(|e| panic!("plant: {e}"));
+    std::fs::copy(&files[0], &planted_path).unwrap_or_else(|e| panic!("plant: {e}"));
+    plant(&planted_path, GENERIC_TEXT, &planted);
+    let forged = std::fs::read(&planted_path).unwrap_or_else(|e| panic!("read forged: {e}"));
     std::fs::remove_file(&files[0]).unwrap_or_else(|e| panic!("remove cache: {e}"));
     std::os::unix::fs::symlink(&planted_path, &files[0]).unwrap_or_else(|e| panic!("symlink: {e}"));
     let out = home.output(&root, &[]);
@@ -704,17 +699,12 @@ fn planted_reparse_cache_is_never_read_or_written_through() {
         1,
         "one project stores one cache file: {files:?}"
     );
-    let genuine = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read cache: {e}"));
     let planted_marker = GENERIC_TEXT.replace("code", "mode");
-    let at = genuine
-        .windows(GENERIC_TEXT.len())
-        .position(|window| window == GENERIC_TEXT.as_bytes())
-        .unwrap_or_else(|| panic!("the finding message is not in the cache bytes"));
-    let mut forged = genuine.clone();
-    forged[at..at + planted_marker.len()].copy_from_slice(planted_marker.as_bytes());
     let (_outside, base) = tempdir();
     let planted_path = base.join("forged.bin");
-    std::fs::write(&planted_path, &forged).unwrap_or_else(|e| panic!("plant: {e}"));
+    std::fs::copy(&files[0], &planted_path).unwrap_or_else(|e| panic!("plant: {e}"));
+    plant(&planted_path, GENERIC_TEXT, &planted_marker);
+    let forged = std::fs::read(&planted_path).unwrap_or_else(|e| panic!("read forged: {e}"));
     std::fs::remove_file(&files[0]).unwrap_or_else(|e| panic!("remove cache: {e}"));
     match std::os::windows::fs::symlink_file(&planted_path, &files[0]) {
         Ok(()) => {}
@@ -765,14 +755,7 @@ fn planted_junction_shard_dir_yields_empty_cache() {
         1,
         "one project stores one cache file: {files:?}"
     );
-    let genuine = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read cache: {e}"));
     let planted_marker = GENERIC_TEXT.replace("code", "mode");
-    let at = genuine
-        .windows(GENERIC_TEXT.len())
-        .position(|window| window == GENERIC_TEXT.as_bytes())
-        .unwrap_or_else(|| panic!("the finding message is not in the cache bytes"));
-    let mut forged = genuine.clone();
-    forged[at..at + planted_marker.len()].copy_from_slice(planted_marker.as_bytes());
     let shard_dir = files[0]
         .parent()
         .unwrap_or_else(|| panic!("{} has no directory", files[0].display()))
@@ -784,8 +767,10 @@ fn planted_junction_shard_dir_yields_empty_cache() {
     let (_outside, base) = tempdir();
     let target = base.join("attacker");
     mkdir(&target);
-    std::fs::write(target.join(&shard_name), &forged)
-        .unwrap_or_else(|e| panic!("plant forged shard: {e}"));
+    let planted_path = target.join(&shard_name);
+    std::fs::copy(&files[0], &planted_path).unwrap_or_else(|e| panic!("plant forged shard: {e}"));
+    plant(&planted_path, GENERIC_TEXT, &planted_marker);
+    let forged = std::fs::read(&planted_path).unwrap_or_else(|e| panic!("read forged: {e}"));
     std::fs::remove_dir_all(&shard_dir).unwrap_or_else(|e| panic!("remove shards: {e}"));
     let link = std::process::Command::new("cmd")
         .args(["/c", "mklink", "/J"])
