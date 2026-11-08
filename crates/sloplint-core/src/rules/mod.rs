@@ -9,6 +9,8 @@ pub(crate) mod slop;
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use rayon::prelude::*;
+
 use crate::callee::CalleePattern;
 use crate::config::{Config, ConfigError, Strictness, static_language_key};
 use crate::facts::{FileFacts, Pos, WorldFacts};
@@ -398,14 +400,18 @@ impl RuleSet {
 
     /// Runs every active world rule over the path-sorted file set and caps their levels.
     pub fn check_world(&self, files: &[WorldFile<'_>]) -> Vec<Finding> {
-        let mut out = Vec::new();
-        for (info, rule) in &self.world_rules {
-            let mut found = Vec::new();
-            rule.check(files, &mut found);
-            cap_with_level(self.levels.get(info.id), &mut found);
-            out.append(&mut found);
-        }
-        out
+        self.world_rules
+            .par_iter()
+            .map(|(info, rule)| {
+                let mut found = Vec::new();
+                rule.check(files, &mut found);
+                cap_with_level(self.levels.get(info.id), &mut found);
+                found
+            })
+            .collect::<Vec<Vec<Finding>>>()
+            .into_iter()
+            .flatten()
+            .collect()
     }
 
     /// Turns custom-rule hits into findings with path globs, the level cap, and interpolation applied.

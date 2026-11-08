@@ -514,7 +514,7 @@ fn merge(
     pool: &rayon::ThreadPool,
 ) -> Result<Vec<Finding>, RunError> {
     let mut orphans = Vec::new();
-    for finding in world_findings(pipe, &analyzed) {
+    for finding in pool.install(|| world_findings(pipe, &analyzed)) {
         match analyzed.binary_search_by(|file| file.rel.as_str().cmp(&*finding.path)) {
             Ok(index) => analyzed[index].output.findings.push(finding),
             Err(_) => orphans.push(finding),

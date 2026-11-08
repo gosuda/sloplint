@@ -955,6 +955,7 @@ dependencies = [
  "blake3",
  "globset",
  "proptest",
+ "rayon",
  "serde",
  "sonic-rs",
  "thiserror",
