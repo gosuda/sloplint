@@ -18,3 +18,9 @@ mod placeholders;
 mod test_exemption;
 #[path = "config_custom_remaining/toml_location.rs"]
 mod toml_location;
+
+fn numbers(text: &str) -> Vec<u64> {
+    text.split(|c: char| !c.is_ascii_digit())
+        .filter_map(|part| part.parse::<u64>().ok())
+        .collect()
+}

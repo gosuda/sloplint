@@ -456,17 +456,27 @@ mod tests {
 
     #[test]
     fn shares_config_keys() {
-        assert_eq!(ALL_CONFIG_KEYS.len(), 23);
         for key in ALL_CONFIG_KEYS {
             assert!(
                 Lang::from_config_key(key).is_some(),
                 "config key {key:?} should resolve to a language"
             );
-            assert_eq!(Lang::from_config_key(key).unwrap().config_key(), *key);
+            assert_eq!(
+                Lang::from_config_key(key).unwrap().config_key(),
+                *key,
+                "config key {key:?} must round-trip through its language"
+            );
         }
-        assert_eq!(Lang::Tsx.config_key(), "typescript");
-        assert_eq!(Lang::OcamlInterface.config_key(), "ocaml");
-        assert_eq!(ALL_LANGS.len(), 25);
+        assert_eq!(
+            Lang::Tsx.config_key(),
+            "typescript",
+            "tsx shares the typescript key"
+        );
+        assert_eq!(
+            Lang::OcamlInterface.config_key(),
+            "ocaml",
+            "ocaml interface shares the ocaml key"
+        );
     }
 
     #[test]

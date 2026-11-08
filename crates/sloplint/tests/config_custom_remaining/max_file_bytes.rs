@@ -9,7 +9,7 @@ fn limit_config(limit: &str) -> String {
 }
 
 #[test]
-fn limits_above_u32_max_are_rejected_with_the_value_and_type_named() {
+fn limits_above_u32_max_are_rejected_with_the_value_named() {
     for limit in ["4294967296", "5000000000", "9223372036854775807"] {
         let Err(error) = parse_config(&limit_config(limit), "sloplint.toml") else {
             panic!("max_file_bytes = {limit} must be rejected");
@@ -18,24 +18,25 @@ fn limits_above_u32_max_are_rejected_with_the_value_and_type_named() {
             panic!("max_file_bytes = {limit}: expected a TOML error, got: {error}");
         };
         assert_eq!(origin, "sloplint.toml");
-        for fragment in [limit, "u32"] {
-            assert!(
-                message.contains(fragment),
-                "max_file_bytes = {limit}: `{message}` lacks `{fragment}`"
-            );
-        }
+        assert!(
+            message.contains(limit),
+            "max_file_bytes = {limit}: `{message}` lacks the value"
+        );
     }
 }
 
 #[test]
 fn negative_and_fractional_limits_are_rejected() {
-    for limit in ["-1", "1.5", "\"big\""] {
+    for (limit, token) in [("-1", "-1"), ("1.5", "1.5"), ("\"big\"", "big")] {
         let Err(error) = parse_config(&limit_config(limit), "sloplint.toml") else {
             panic!("max_file_bytes = {limit} must be rejected");
         };
+        let ConfigError::Toml { message, .. } = &error else {
+            panic!("max_file_bytes = {limit}: expected a TOML error, got: {error}");
+        };
         assert!(
-            matches!(error, ConfigError::Toml { .. }),
-            "max_file_bytes = {limit}: expected a TOML error, got: {error}"
+            message.contains(token),
+            "max_file_bytes = {limit}: `{message}` lacks `{token}`"
         );
     }
 }

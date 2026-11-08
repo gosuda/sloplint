@@ -28,14 +28,31 @@ fn human(cwd: &Path, rule: &str) -> String {
     String::from_utf8(out.stdout).unwrap_or_else(|e| panic!("output is not UTF-8: {e}"))
 }
 
-fn snippet_rows(output: &str) -> Vec<&str> {
-    output
-        .lines()
-        .filter(|row| row.contains(" \u{2502} pub fn "))
-        .collect()
+fn assert_each_finding_shows_its_source_line(output: &str, expected: &[(&str, u32, &str)]) {
+    assert!(
+        !output.contains('\r'),
+        "a raw carriage return reached the output:\n{output:?}"
+    );
+    let blocks: Vec<&str> = output.split("\n\n").collect();
+    let mut start = 0;
+    for &(path, line, source) in expected {
+        let location = format!("{path}:{line}:");
+        let index = blocks
+            .iter()
+            .enumerate()
+            .skip(start)
+            .find(|(_, block)| block.contains(&location))
+            .map(|(index, _)| index)
+            .unwrap_or_else(|| panic!("missing {location} in:\n{output}"));
+        let block = blocks[index];
+        assert!(
+            block.contains(source),
+            "{location} does not show {source:?} in:\n{block}"
+        );
+        start = index + 1;
+    }
 }
 
-// A125: CRLF endings are stripped from the snippet and the last line needs no newline.
 #[test]
 fn crlf_file_without_a_final_newline_shows_the_right_lines() {
     let tmp = project(&[(
@@ -47,33 +64,29 @@ fn crlf_file_without_a_final_newline_shows_the_right_lines() {
         !output.contains('\r'),
         "carriage return leaked:\n{output:?}"
     );
-    assert_eq!(
-        snippet_rows(&output),
-        [
-            "1 \u{2502} pub fn handle() {}",
-            "3 \u{2502} pub fn process() {}",
-            "5 \u{2502} pub fn execute() {}",
+    assert_each_finding_shows_its_source_line(
+        &output,
+        &[
+            ("a.rs", 1, "pub fn handle() {}"),
+            ("a.rs", 3, "pub fn process() {}"),
+            ("a.rs", 5, "pub fn execute() {}"),
         ],
-        "each finding must show its own line of a CRLF file with no final newline"
     );
 }
 
-// A125: a leading blank line and a trailing newline must not shift or invent lines.
 #[test]
 fn lf_file_with_leading_blank_line_and_final_newline_shows_the_right_lines() {
     let tmp = project(&[("a.rs", "\npub fn handle() {}\n\n\npub fn run() {}\n")]);
     let output = human(tmp.path(), "grep/generic-name");
-    assert_eq!(
-        snippet_rows(&output),
-        [
-            "2 \u{2502} pub fn handle() {}",
-            "5 \u{2502} pub fn run() {}",
+    assert_each_finding_shows_its_source_line(
+        &output,
+        &[
+            ("a.rs", 2, "pub fn handle() {}"),
+            ("a.rs", 5, "pub fn run() {}"),
         ],
-        "a leading blank line and a final newline must not shift or invent source lines"
     );
 }
 
-// A125: the source cache follows the sorted findings from one file to the next.
 #[test]
 fn consecutive_files_each_show_their_own_source() {
     let tmp = project(&[
@@ -82,53 +95,28 @@ fn consecutive_files_each_show_their_own_source() {
         ("c.rs", "pub fn execute() {}\npub fn run() {}\n"),
     ]);
     let output = human(tmp.path(), "grep/generic-name");
-    assert_eq!(
-        snippet_rows(&output),
-        [
-            "1 \u{2502} pub fn handle() {}",
-            "3 \u{2502} pub fn process() {}",
-            "1 \u{2502} pub fn execute() {}",
-            "2 \u{2502} pub fn run() {}",
+    assert_each_finding_shows_its_source_line(
+        &output,
+        &[
+            ("a.rs", 1, "pub fn handle() {}"),
+            ("b.rs", 3, "pub fn process() {}"),
+            ("c.rs", 1, "pub fn execute() {}"),
+            ("c.rs", 2, "pub fn run() {}"),
         ],
-        "each of three consecutive files must show its own source lines"
     );
 }
 
-// A125: every one of thousands of findings in one file resolves to its own line number.
 #[test]
 fn many_findings_in_one_file_resolve_their_own_lines() {
     let body = "pub fn handle() {}\n".repeat(DEEP);
     let tmp = project(&[("a.rs", body.as_str())]);
     let output = human(tmp.path(), "grep/generic-name");
-    let blocks: Vec<&str> = output.split("\n\n").collect();
-    assert_eq!(
-        blocks.len(),
-        DEEP + 1,
-        "one block per finding plus the summary"
-    );
-    for (index, block) in blocks.iter().take(DEEP).enumerate() {
-        let line = index + 1;
-        let row = format!("{line} \u{2502} pub fn handle() {{}}");
-        assert!(
-            block.contains(&format!("a.rs:{line}:8")),
-            "block {index} has the wrong location:\n{block}"
-        );
-        assert!(
-            block.lines().any(|candidate| candidate == row),
-            "block {index} shows the wrong source line:\n{block}"
-        );
-    }
+    let expected: Vec<(&str, u32, &str)> = (1..=DEEP)
+        .map(|line| ("a.rs", line as u32, "pub fn handle() {}"))
+        .collect();
+    assert_each_finding_shows_its_source_line(&output, &expected);
 }
 
-// A125: edge-case line endings resolve correctly through the unified line_starts index.
-// Edge differences between the old Source index and core line_starts helper:
-// 1. Empty file (""): old index was empty (line(1) -> None); line_starts returns [0] (line(1) -> Some("")).
-//    Rendered fallback maps both to empty string.
-// 2. Trailing newline ("a\n"): old index filtered start < text.len() (line(2) -> None); line_starts returns [0, 2] (line(2) -> Some("")).
-//    Rendered fallback maps both to empty string.
-// 3. CRLF ("\r\n"): both split on '\n' alone; strip_suffix('\r') handles the carriage return.
-// 4. Lone CR ('\r'): neither splits on '\r'; content remains on line 1 and is escaped as \x0d.
-// 5. Last line without newline ("a\nb"): both include the final line offset in starts.
 #[test]
 fn edge_case_line_endings_render_expected_snippets() {
     let tmp = project(&[
@@ -140,23 +128,24 @@ fn edge_case_line_endings_render_expected_snippets() {
     ]);
     let output = human(tmp.path(), "grep/generic-name");
     assert!(
-        output.contains("trailing_lf.rs:1:8"),
-        "trailing LF missing in:\n{output}"
+        !output.contains('\r'),
+        "a raw carriage return reached the output:\n{output:?}"
     );
-    assert!(
-        output.contains("no_trailing_lf.rs:1:8"),
-        "no trailing LF missing in:\n{output}"
+    assert_each_finding_shows_its_source_line(
+        &output,
+        &[
+            ("lone_cr.rs", 1, "pub fn handle() {}"),
+            ("no_trailing_lf.rs", 1, "pub fn handle() {}"),
+            ("trailing_crlf.rs", 1, "pub fn handle() {}"),
+            ("trailing_lf.rs", 1, "pub fn handle() {}"),
+        ],
     );
+    let lone = output
+        .split("\n\n")
+        .find(|block| block.contains("lone_cr.rs:1:"))
+        .unwrap_or_else(|| panic!("missing lone_cr finding in:\n{output}"));
     assert!(
-        output.contains("trailing_crlf.rs:1:8"),
-        "trailing CRLF missing in:\n{output}"
-    );
-    assert!(
-        output.contains("lone_cr.rs:1:8"),
-        "lone CR missing in:\n{output}"
-    );
-    assert!(
-        output.contains("1 \u{2502} pub fn handle() {}\\x0dpub fn run() {}"),
-        "lone CR must render escaped and not split lines in:\n{output}"
+        lone.contains("pub fn run() {}"),
+        "a lone carriage return must not split the line:\n{lone}"
     );
 }

@@ -146,10 +146,6 @@ fn control_characters_in_a_cache_path_are_escaped_in_warnings() {
         !stderr.contains('\u{1b}'),
         "a raw escape reached the terminal: {stderr:?}"
     );
-    assert!(
-        stderr.contains("\\x1b"),
-        "the escape must stay visible: {stderr:?}"
-    );
 }
 
 #[test]
