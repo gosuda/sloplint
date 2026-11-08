@@ -7,7 +7,7 @@ use crate::facts::{FileFacts, Pos};
 use crate::finding::{Finding, Level};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 
-use super::threshold_options;
+use crate::rules::threshold_options;
 
 /// `agent/file-token-budget`: flags files whose line count exceeds the budget.
 pub(crate) const INFO: RuleInfo = RuleInfo {

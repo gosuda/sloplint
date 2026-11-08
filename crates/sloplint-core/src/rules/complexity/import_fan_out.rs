@@ -9,7 +9,7 @@ use crate::facts::{FileFacts, Pos};
 use crate::finding::{Finding, Level};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 
-use super::threshold_options;
+use crate::rules::threshold_options;
 
 /// Catalog entry for `complexity/import-fan-out`.
 pub(crate) const INFO: RuleInfo = RuleInfo {

@@ -246,6 +246,20 @@ pub(crate) fn parse_level(s: &str) -> Option<Level> {
     }
 }
 
+/// Builds the `{ warn_at, deny_at }` option table every metric preset carries.
+pub(crate) fn threshold_options(warn_at: u32, deny_at: u32) -> toml::Table {
+    let mut options = toml::Table::new();
+    options.insert(
+        "warn_at".to_string(),
+        toml::Value::Integer(i64::from(warn_at)),
+    );
+    options.insert(
+        "deny_at".to_string(),
+        toml::Value::Integer(i64::from(deny_at)),
+    );
+    options
+}
+
 /// Active rules built from one config plus a filter; safe to share across threads.
 pub struct RuleSet {
     file_rules: Vec<(&'static RuleInfo, Box<dyn FileRule>)>,

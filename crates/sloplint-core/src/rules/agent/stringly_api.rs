@@ -8,7 +8,7 @@ use crate::finding::{Finding, Level};
 use crate::lang::Lang;
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 
-use super::threshold_options;
+use crate::rules::threshold_options;
 
 const RUST: &[&str] = &[
     "str", "String", "i8", "i16", "i32", "i64", "i128", "isize", "u8", "u16", "u32", "u64", "u128",
