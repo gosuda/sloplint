@@ -12,7 +12,7 @@ license = "Apache-2.0"
 [workspace.dependencies]
 sloplint-core = { path = "crates/sloplint-core" }
 sloplint-syntax = { path = "crates/sloplint-syntax" }
-tree-sitter = "0.27.1"
+tree-sitter = "0.27.2"
 tree-sitter-rust = { path = "vendor/tree-sitter-rust" }
 tree-sitter-typescript = { path = "vendor/tree-sitter-typescript" }
 tree-sitter-go = { path = "vendor/tree-sitter-go" }
