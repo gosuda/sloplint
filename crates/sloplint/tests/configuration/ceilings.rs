@@ -37,7 +37,7 @@ fn options(root: &Path) -> RunOptions {
 }
 
 #[test]
-fn test_oversized_config_refused() {
+fn oversized_config_refused() {
     let (_tmp, root) = project("");
     let config_path = root.join("sloplint.toml");
     let file = File::create(&config_path).expect("create config");
@@ -63,7 +63,7 @@ fn test_oversized_config_refused() {
 }
 
 #[test]
-fn test_oversized_custom_rule_file_refused() {
+fn oversized_custom_rule_file_refused() {
     let (_tmp, root) = project("[project]\ncustom_rule_files = [\"rules/*.toml\"]\n");
     let rules_dir = root.join("rules");
     fs::create_dir_all(&rules_dir).expect("create rules dir");
@@ -91,7 +91,7 @@ fn test_oversized_custom_rule_file_refused() {
 }
 
 #[test]
-fn test_total_custom_ceiling_refused() {
+fn total_custom_ceiling_refused() {
     let (_tmp, root) = project("[project]\ncustom_rule_files = [\"rules/*.toml\"]\n");
     let rules_dir = root.join("rules");
     fs::create_dir_all(&rules_dir).expect("create rules dir");
@@ -121,7 +121,7 @@ fn test_total_custom_ceiling_refused() {
 }
 
 #[test]
-fn test_oversized_baseline_refused() {
+fn oversized_baseline_refused() {
     let (_tmp, root) = project("[project]\nmode = \"ratchet\"\n");
     let baseline_path = root.join("sloplint-baseline.json");
     let file = File::create(&baseline_path).expect("create baseline");
@@ -151,7 +151,7 @@ fn test_oversized_baseline_refused() {
 }
 
 #[test]
-fn test_over_count_baseline_refused() {
+fn over_count_baseline_refused() {
     let (_tmp, root) = project("[project]\nmode = \"ratchet\"\n");
     let baseline_path = root.join("sloplint-baseline.json");
     let mut file = File::create(&baseline_path).expect("create baseline");
@@ -190,7 +190,7 @@ fn test_over_count_baseline_refused() {
 }
 
 #[test]
-fn test_absolute_and_dotdot_custom_rule_patterns_rejected() {
+fn absolute_and_dotdot_custom_rule_patterns_rejected() {
     for pattern in [
         "/abs/rules.toml",
         "/rules/*.toml",
@@ -213,7 +213,7 @@ fn test_absolute_and_dotdot_custom_rule_patterns_rejected() {
 
 #[cfg(unix)]
 #[test]
-fn test_unreadable_ancestor_metadata_fails_closed() {
+fn unreadable_ancestor_metadata_fails_closed() {
     use std::os::unix::fs::PermissionsExt;
 
     let (_tmp, root) = project("[project]\ncustom_rule_files = [\"forbidden/sub/deep/*.toml\"]\n");
@@ -248,7 +248,7 @@ fn test_unreadable_ancestor_metadata_fails_closed() {
 
 #[cfg(unix)]
 #[test]
-fn test_custom_rule_literal_symlink_rejected() {
+fn custom_rule_literal_symlink_rejected() {
     let (_tmp, root) = project("[project]\ncustom_rule_files = [\"rules/link.toml\"]\n");
     let rules_dir = root.join("rules");
     fs::create_dir_all(&rules_dir).expect("create rules dir");
@@ -273,7 +273,7 @@ fn test_custom_rule_literal_symlink_rejected() {
 
 #[cfg(unix)]
 #[test]
-fn test_custom_rule_glob_matching_symlink_rejected() {
+fn custom_rule_glob_matching_symlink_rejected() {
     let (_tmp, root) = project("[project]\ncustom_rule_files = [\"rules/*.toml\"]\n");
     let rules_dir = root.join("rules");
     fs::create_dir_all(&rules_dir).expect("create rules dir");
@@ -297,7 +297,7 @@ fn test_custom_rule_glob_matching_symlink_rejected() {
 }
 
 #[test]
-fn test_custom_rule_glob_regular_file_still_loads() {
+fn custom_rule_glob_regular_file_still_loads() {
     let rule_content = "[[custom_rules]]\nid = \"custom/test-rule\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"test\"\nwhy = \"test\"\nfix = \"test\"\nquery = \"(function_item) @match\"\n";
     let (_tmp, root) = project("[project]\ncustom_rule_files = [\"rules/*.toml\"]\n");
     let rules_dir = root.join("rules");
@@ -313,7 +313,7 @@ fn test_custom_rule_glob_regular_file_still_loads() {
 }
 
 #[test]
-fn test_missing_nested_ancestor_yields_empty_matches() {
+fn missing_nested_ancestor_yields_empty_matches() {
     let (_tmp, root) = project("[project]\ncustom_rule_files = [\"rules/optional/*.toml\"]\n");
 
     let opts = options(&root);
@@ -325,7 +325,7 @@ fn test_missing_nested_ancestor_yields_empty_matches() {
 }
 
 #[test]
-fn test_regular_file_ancestor_component_yields_empty_matches() {
+fn regular_file_ancestor_component_yields_empty_matches() {
     let (_tmp, root) = project("[project]\ncustom_rule_files = [\"rules/optional/deep/*.toml\"]\n");
     fs::write(root.join("rules"), "not a directory\n").expect("write rules file");
 
@@ -338,7 +338,7 @@ fn test_regular_file_ancestor_component_yields_empty_matches() {
 }
 
 #[test]
-fn test_absent_shallow_pattern_yields_empty_matches() {
+fn absent_shallow_pattern_yields_empty_matches() {
     let (_tmp, root) = project("[project]\ncustom_rule_files = [\"absent/*.toml\"]\n");
     let shallow = options(&root);
     assert!(
@@ -356,7 +356,7 @@ fn test_absent_shallow_pattern_yields_empty_matches() {
 
 #[cfg(unix)]
 #[test]
-fn test_dangling_implicit_config_symlink_rejected() {
+fn dangling_implicit_config_symlink_rejected() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let root = tmp.path().to_path_buf();
     let src = root.join("src");
@@ -378,7 +378,7 @@ fn test_dangling_implicit_config_symlink_rejected() {
 }
 
 #[test]
-fn test_baseline_with_utf8_bom_accepted_in_ratchet() {
+fn baseline_with_utf8_bom_accepted_in_ratchet() {
     let code =
         "pub fn handle(x: Option<i32>) { match x { Some(1) => {}, Some(2) => {}, _ => {} } }\n";
     let (_tmp, root) = project("[project]\nstrictness = \"strict\"\n");

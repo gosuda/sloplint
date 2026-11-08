@@ -1,8 +1,4 @@
 //! Audit-error propagation contracts observed through `analyze` only.
-//!
-//! Moved verbatim out of the `audit_propagation_tests` unit module in
-//! `crates/sloplint-syntax/src/lib.rs` so that file stays under the
-//! file-token budget; every case runs against the crate's public surface.
 
 use std::sync::LazyLock;
 

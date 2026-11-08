@@ -1,4 +1,4 @@
-#[path = "adversarial_boundaries/cli_contract.rs"]
+#[path = "analysis_boundaries/cli_contract.rs"]
 mod cli_contract;
 
 use clap::Parser;
