@@ -8,6 +8,7 @@ use std::process::ExitCode;
 use annotate_snippets::renderer::DecorStyle;
 use annotate_snippets::{AnnotationKind, Group, Level, Renderer, Snippet};
 use clap::Parser;
+use rayon::prelude::*;
 use sloplint::cli::{BaselineArgs, CheckArgs, Cli, Command, Format, RulesArgs};
 use sloplint::rules_cmd::{self, RulesRequest};
 use sloplint::{Execution, Report, RunError, RunOptions, Summary, TerminalText, init};
@@ -155,7 +156,7 @@ fn with_buffered_stdout(write: impl FnOnce(&mut dyn Write) -> io::Result<()>) ->
 
 fn emit(execution: &Execution, format: Format) -> io::Result<()> {
     match format {
-        Format::Agent => with_plain_stdout(|out| write_agent(&execution.report, out)),
+        Format::Agent => with_plain_stdout(|out| write_agent(execution, out)),
         Format::Human => with_buffered_stdout(|out| write_human(execution, out)),
         Format::Json => with_plain_stdout(|out| write_json(&execution.report, out)),
     }
@@ -172,25 +173,20 @@ fn with_plain_stdout(write: impl FnOnce(&mut dyn Write) -> io::Result<()>) -> io
     out.flush()
 }
 
-fn write_agent(report: &Report, out: &mut dyn Write) -> io::Result<()> {
-    let mut digits = itoa::Buffer::new();
-    for finding in &report.findings {
-        TerminalText::line(&finding.path).write_escaped(out)?;
-        out.write_all(b":")?;
-        out.write_all(digits.format(finding.line).as_bytes())?;
-        out.write_all(b":")?;
-        out.write_all(digits.format(finding.column).as_bytes())?;
-        out.write_all(b": ")?;
-        out.write_all(severity_name(finding.severity).as_bytes())?;
-        out.write_all(b": ")?;
-        TerminalText::line(&finding.message).write_escaped(out)?;
-        out.write_all(b" [")?;
-        TerminalText::line(&finding.rule).write_escaped(out)?;
-        out.write_all(b"]\n  context: ")?;
-        TerminalText::line(&finding.context).write_escaped(out)?;
-        out.write_all(b"\n  fix: ")?;
-        TerminalText::line(&finding.fix).write_escaped(out)?;
-        out.write_all(b"\n")?;
+fn write_agent(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
+    const RENDER_CHUNK: usize = 2048;
+    let report = &execution.report;
+    let window = RENDER_CHUNK * execution.install(rayon::current_num_threads);
+    for chunk in report.findings.chunks(window) {
+        let buffers = execution.install(|| {
+            chunk
+                .par_chunks(RENDER_CHUNK)
+                .map(render_findings)
+                .collect::<io::Result<Vec<Vec<u8>>>>()
+        })?;
+        for buffer in &buffers {
+            out.write_all(buffer)?;
+        }
     }
     if !report.findings.is_empty() {
         writeln!(out)?;
@@ -205,6 +201,30 @@ fn write_agent(report: &Report, out: &mut dyn Write) -> io::Result<()> {
         }
     }
     writeln!(out, "{}", summary_line(&report.summary))
+}
+
+fn render_findings(findings: &[Finding]) -> io::Result<Vec<u8>> {
+    let mut buffer = Vec::new();
+    let mut digits = itoa::Buffer::new();
+    for finding in findings {
+        TerminalText::line(&finding.path).write_escaped(&mut buffer)?;
+        buffer.write_all(b":")?;
+        buffer.write_all(digits.format(finding.line).as_bytes())?;
+        buffer.write_all(b":")?;
+        buffer.write_all(digits.format(finding.column).as_bytes())?;
+        buffer.write_all(b": ")?;
+        buffer.write_all(severity_name(finding.severity).as_bytes())?;
+        buffer.write_all(b": ")?;
+        TerminalText::line(&finding.message).write_escaped(&mut buffer)?;
+        buffer.write_all(b" [")?;
+        TerminalText::line(&finding.rule).write_escaped(&mut buffer)?;
+        buffer.write_all(b"]\n  context: ")?;
+        TerminalText::line(&finding.context).write_escaped(&mut buffer)?;
+        buffer.write_all(b"\n  fix: ")?;
+        TerminalText::line(&finding.fix).write_escaped(&mut buffer)?;
+        buffer.write_all(b"\n")?;
+    }
+    Ok(buffer)
 }
 
 fn write_json(report: &Report, out: &mut dyn Write) -> io::Result<()> {

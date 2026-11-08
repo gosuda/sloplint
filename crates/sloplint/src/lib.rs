@@ -20,7 +20,7 @@ use std::fs;
 use std::io;
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use globset::GlobSet;
 use rayon::prelude::*;
@@ -164,6 +164,13 @@ pub struct Execution {
     /// Carried from the active configuration so the human renderer reuses the
     /// same bound without reloading configuration or using a default.
     pub max_file_bytes: u64,
+    pool: Arc<rayon::ThreadPool>,
+}
+
+impl Execution {
+    pub fn install<R: Send>(&self, op: impl FnOnce() -> R + Send) -> R {
+        self.pool.install(op)
+    }
 }
 
 /// Lints the project root and returns the reported findings.
@@ -212,10 +219,12 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let custom = CustomRules::compile(&config.custom_rules)?;
     let scopes = project::scopes(&root, &opts.cwd, &opts.paths)?;
     let workers = jobs(opts.jobs);
-    let pool = rayon::ThreadPoolBuilder::new()
-        .num_threads(workers)
-        .build()
-        .map_err(|error| io_error(&root, io::Error::other(error)))?;
+    let pool = Arc::new(
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(workers)
+            .build()
+            .map_err(|error| io_error(&root, io::Error::other(error)))?,
+    );
     let discovery = discover::discover(&root, &config, workers)?;
     let cache = if opts.use_cache {
         cache::open(
@@ -322,6 +331,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         baseline_written,
         failed,
         max_file_bytes: config.project.max_file_bytes,
+        pool,
     })
 }
 
