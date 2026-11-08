@@ -125,7 +125,7 @@ fn rules(cwd: &Path, args: &RulesArgs) -> ExitCode {
         TextKind::Plain
     };
     match rules_cmd::render(&request) {
-        Ok(text) => print_text(&text, kind),
+        Ok(text) => ExitCode::from(print_text_status(&text, kind)),
         Err(error) => report_error(&error),
     }
 }
@@ -334,7 +334,7 @@ fn render_finding(
         .primary_title(TerminalText::line(&finding.message).into_text())
         .id(TerminalText::line(&finding.rule).into_text());
     let snippet = Snippet::source(text)
-        .line_start(line_number(finding.line))
+        .line_start(usize::try_from(finding.line).unwrap_or(usize::MAX))
         .path(TerminalText::line(&finding.path).into_text())
         .annotation(AnnotationKind::Primary.span(span));
     let groups = [
@@ -360,10 +360,6 @@ fn span_for(text: &str, column: u32) -> Range<usize> {
     last..text.len()
 }
 
-fn line_number(line: u32) -> usize {
-    usize::try_from(line).unwrap_or(usize::MAX)
-}
-
 fn summary_line(summary: &Summary) -> String {
     format!(
         "summary: strictness={} files={} findings={} deny={} warn={} baselined={} stale={} skipped={}",
@@ -383,10 +379,6 @@ fn severity_name(severity: Severity) -> &'static str {
         Severity::Warn => "warn",
         Severity::Deny => "deny",
     }
-}
-
-fn print_text(text: &str, kind: TextKind) -> ExitCode {
-    ExitCode::from(print_text_status(text, kind))
 }
 
 /// Writes `text` to stdout and returns the process status: 0 on success or broken pipe, 3 on error.
