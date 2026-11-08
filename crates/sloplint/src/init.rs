@@ -4,7 +4,8 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::Path;
 
-use sloplint_core::config::{Config, LANGUAGE_KEYS};
+use sloplint_core::config::Config;
+use sloplint_core::lang::ALL_CONFIG_KEYS;
 use sloplint_core::{FailOn, Mode};
 
 use crate::RunError;
@@ -87,8 +88,8 @@ fn default_text(config: &Config) -> String {
         format!("custom_rule_files = {}", array(&project.custom_rule_files)),
         String::new(),
     ];
-    for key in LANGUAGE_KEYS {
-        if let Some(language) = config.languages.get(key) {
+    for key in ALL_CONFIG_KEYS {
+        if let Some(language) = config.languages.get(*key) {
             lines.push(format!("[languages.{key}]"));
             lines.push(format!("log_callees = {}", array(&language.log_callees)));
         }

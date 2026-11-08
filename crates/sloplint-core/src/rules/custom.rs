@@ -6,8 +6,9 @@ use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::config::{Config, ConfigError, LANGUAGE_KEYS};
+use crate::config::{Config, ConfigError};
 use crate::finding::{Level, Severity};
+use crate::lang::ALL_CONFIG_KEYS;
 
 /// One declarative custom rule from `[[custom_rules]]`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -49,7 +50,7 @@ pub fn validate_custom_rule_spec(
     if !seen.insert(spec.id.clone()) {
         return Err(format!("duplicate id `{}`", spec.id));
     }
-    if !LANGUAGE_KEYS.contains(&spec.language.as_str()) {
+    if !ALL_CONFIG_KEYS.contains(&spec.language.as_str()) {
         return Err(format!("unknown language `{}`", spec.language));
     }
     for (field, value) in [

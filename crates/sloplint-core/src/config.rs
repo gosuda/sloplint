@@ -7,39 +7,13 @@ use thiserror::Error;
 
 use crate::callee::CalleePattern;
 use crate::finding::FailOn;
+use crate::lang::ALL_CONFIG_KEYS;
 use crate::rules::CATALOG;
 use crate::rules::custom::{CustomRuleSpec, validate_custom_rule_spec};
 
-/// Every valid `project.languages` entry and `[languages.<key>]` table name.
-pub const LANGUAGE_KEYS: [&str; 23] = [
-    "rust",
-    "typescript",
-    "javascript",
-    "python",
-    "go",
-    "java",
-    "kotlin",
-    "csharp",
-    "c",
-    "cpp",
-    "objc",
-    "php",
-    "ruby",
-    "bash",
-    "powershell",
-    "swift",
-    "r",
-    "scala",
-    "dart",
-    "zig",
-    "ocaml",
-    "odin",
-    "starlark",
-];
-
 /// Maps a config key back to itself as a `'static` string when it names a language.
 pub fn static_language_key(key: &str) -> Option<&'static str> {
-    LANGUAGE_KEYS
+    ALL_CONFIG_KEYS
         .iter()
         .find(|&&candidate| candidate == key)
         .copied()
@@ -113,7 +87,7 @@ impl Default for ProjectConfig {
     fn default() -> Self {
         ProjectConfig {
             strictness: Strictness::Standard,
-            languages: owned(&LANGUAGE_KEYS),
+            languages: owned(ALL_CONFIG_KEYS),
             mode: Mode::Threshold,
             baseline: "sloplint-baseline.json".to_string(),
             fail_on: FailOn::Deny,
