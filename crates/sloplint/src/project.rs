@@ -443,6 +443,11 @@ fn read_custom_root(
     sources: &mut BTreeMap<String, String>,
     total_bytes: &mut u64,
 ) -> Result<(), RunError> {
+    let symlink_refusal = |glob: &str| ConfigError::Glob {
+        key: "project.custom_rule_files".to_string(),
+        glob: glob.to_string(),
+        message: "custom rule file cannot be a symlink".to_string(),
+    };
     let is_root = base == root;
     if !is_root {
         match has_dir_symlink(root, base) {
@@ -452,11 +457,7 @@ fn read_custom_root(
                     .ok()
                     .and_then(normalize_rel_path)
                     .unwrap_or_else(|| base.display().to_string());
-                return Err(RunError::Config(ConfigError::Glob {
-                    key: "project.custom_rule_files".to_string(),
-                    glob: rel,
-                    message: "custom rule file cannot be a symlink".to_string(),
-                }));
+                return Err(RunError::Config(symlink_refusal(&rel)));
             }
             Ok(false) => {}
             Err((_, source))
@@ -476,11 +477,7 @@ fn read_custom_root(
                     .ok()
                     .and_then(normalize_rel_path)
                     .unwrap_or_else(|| base.display().to_string());
-                return Err(RunError::Config(ConfigError::Glob {
-                    key: "project.custom_rule_files".to_string(),
-                    glob: rel,
-                    message: "custom rule file cannot be a symlink".to_string(),
-                }));
+                return Err(RunError::Config(symlink_refusal(&rel)));
             }
         }
         Ok(_) => {}
@@ -520,11 +517,7 @@ fn read_custom_root(
             continue;
         }
         if kind.is_symlink() {
-            return Err(RunError::Config(ConfigError::Glob {
-                key: "project.custom_rule_files".to_string(),
-                glob: rel,
-                message: "custom rule file cannot be a symlink".to_string(),
-            }));
+            return Err(RunError::Config(symlink_refusal(&rel)));
         }
         let (file, len) = open_regular_nofollow(entry.path()).map_err(|source| RunError::Io {
             path: entry.path().to_path_buf(),
