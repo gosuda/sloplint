@@ -21,23 +21,9 @@ sloplint works from syntax alone: tree-sitter parses each file and per-language 
 
 ## Install
 
-Install from source using the commands below. Registry installation is not the supported setup path.
+Registry installation is not the supported setup path.
 
 Prerequisites: Git, [rustup](https://rustup.rs/), and a C/C++ toolchain for the target platform (the tree-sitter parsers and scanners compile native sources). The checked-in `rust-toolchain.toml` pins Rust 1.99.1, which `cargo` selects automatically.
-
-The release workflow builds binaries for Windows, macOS, and Linux on x86_64 and aarch64. Linux archives use the `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu` target names and link glibc dynamically. The supported baseline is glibc 2.39 or newer, matching the [Ubuntu 24.04 runners](https://packages.ubuntu.com/noble/libc6) used by CI and release builds. A binary may require older glibc symbols, but compatibility below 2.39 is not tested or promised. These Linux binaries do not run natively on Alpine or other musl-based systems.
-
-sloplint uses the platform default allocator on every target. It includes no custom allocator.
-
-CI builds and tests these targets and runs `sloplint check crates --strictness standard --mode threshold --fail-on deny` on each; see [.github/workflows/ci.yml](.github/workflows/ci.yml).
-
-Releases are cut by pushing a `vMAJOR.MINOR.PATCH` tag equal to the `sloplint` package version; none has been published yet. The release workflow checks the tag against the package version, runs the full CI workflow on the tagged commit, smoke-tests each binary (`--version` equals the tag and `check crates --strictness standard --mode threshold --fail-on deny` passes), and uploads `sloplint-<tag>-<target>.tar.gz|zip` with its `.sha256` file.
-
-Build jobs run without release credentials and hand archives off through workflow artifacts. Publication verifies that the artifact set holds exactly the expected archives and checksums with valid digests and member lists, re-resolves the tag to the built commit before creating or updating the release, and is rerunnable: identical assets are left alone, differing assets fail, and incomplete or missing assets are only repaired on draft releases; published releases are never modified.
-
-Every archive is attested with GitHub artifact attestations, and attestations are verified before publication. Each `.sha256` file detects corrupted downloads; it sits next to the archive, so it is not a trust anchor. To verify provenance: `gh attestation verify <archive> --repo OWNER/REPO --signer-workflow OWNER/REPO/.github/workflows/release.yml`. Releases require a public repository (artifact attestations).
-
-The workflow generates one CycloneDX 1.5 SBOM per target (`sloplint-<tag>-<target>.cdx.json`), attests it alongside the archives, and verifies it before publication. Each release holds the archives, their `.sha256` files, and the SBOMs.
 
 From source, using the checked-in toolchain pin (Rust 1.99.1):
 
@@ -58,7 +44,7 @@ sloplint check --strictness standard
 # src/lib.rs:1:8: warn: `handle` is a generic name shared by unrelated code [grep/generic-name]
 ```
 
-This Bash example creates a new project. In an existing project, run `sloplint init` once to write the default configuration, then run `sloplint check`.
+In an existing project, run `sloplint init` once to write the default configuration, then run `sloplint check`.
 
 Exit code `0` means the gate passed: the run can still list `warn` findings below `fail_on` (default `deny`). `1` means at least one reported finding is at or above `fail_on`; `2` means usage or config error; `3` means an I/O error stopped the run.
 
@@ -67,22 +53,12 @@ An unreadable source file stops the run with exit `3` and reports its path and c
 ## Features
 
 - **complexity/**: nesting-weighted cognitive depth, nesting depth, mutable-statement spans, nested mutation, boolean params, import fan-out.
-- **grep/**: generic names, homonym definitions across files, renamed and wildcard imports, runtime-built symbols (Java reflection calls require a non-literal first argument), non-literal log messages, multiline arguments.
-- **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors (error propagation such as Zig `try` and Odin `or_return` is not a handler), single-implementation abstractions (Rust, TypeScript including TSX, JavaScript, Python, Kotlin, Scala, Swift, Zig, C++, Java, C#, Dart; Ruby, PHP, and Go excluded), barrel files (wherever adapters emit barrel facts, including Dart and OCaml; PHP emits none), field-copy literals.
+- **grep/**: generic names, homonym definitions across files, renamed and wildcard imports, runtime-built symbols, non-literal log messages, multiline arguments.
+- **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors, single-implementation abstractions, barrel files, field-copy literals.
 - **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
 - **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs.
 
-For Zig catches, Go `if err != nil` blocks, Ruby `rescue` clauses, TypeScript `catch` clauses, and Rust `Err` match arms and `if let Err` guards, `slop/zombie-catch` treats an empty or comment-only body as a handler with no statements, distinct from an unchanged rethrow. Rust arms with a match or `if` guard are not handlers. An `Err` arm that only rethrows is excluded when an earlier arm's pattern may match `Err`. Returning a recovery value does not count as swallowing the error.
-
-Dart mutation rules track assignments, member and index writes, and prefix and postfix increments.
-
-PowerShell pass-through checks match variable arguments to declared parameter names without the `$` sigil. A second call or an assignment prevents a wrapper finding.
-
-Zig pass-through checks read declared parameters and exclude bodies with multiple calls.
-
-`meta/parse-error` is Warn in every profile, so a default `deny` gate still passes files with syntax errors reported as warnings; configure the rule as Deny or use `--fail-on warn` to fail on them. An empty `project.languages` list is valid and selects no languages, so no files are analyzed.
-
-A `.h` file can hold C, C++, or Objective-C, so sloplint parses it as C first. If the C parse has a syntax error, sloplint parses the file again as C++ and then as Objective-C. The first tree with no error wins, so a header that both grammars accept is C++. If every parse fails, the file reports the `meta/parse-error` position of the C parse, and no other file type gets a second parse. A header that parsed as C++ or Objective-C gets the rules of that language, so its `[languages.cpp]` or `[languages.objc]` log callees apply. The file stays a C file for `project.languages`, so `languages = ["cpp"]` or `["objc"]` does not select it.
+`meta/parse-error` is Warn in every profile, so a default `deny` gate does not fail on it. Set the rule to Deny or pass `--fail-on warn`. An empty `project.languages` list analyzes nothing.
 
 ## Usage
 
@@ -99,7 +75,7 @@ A `.h` file can hold C, C++, or Objective-C, so sloplint parses it as C first. I
 
 Unknown `--rule` selectors fail with exit 2 listing the valid rule ids.
 
-Every run analyzes the whole project root; `PATHS` only filters which findings are reported. Hidden entries are skipped. `.gitignore` and `.git/info/exclude` stop at the git repository that encloses the root (the nearest directory holding `.git`, as a directory or a file): ancestor `.gitignore` files above that repository are not applied, and when the root is inside a repository, a nested repository under the root does not inherit the root's `.gitignore`. `.ignore` files apply from every ancestor directory, as in ripgrep. Outside any repository, ancestor `.gitignore` files apply as before.
+Every run analyzes the project root. `PATHS` only filters reported findings. Hidden files are skipped. `.gitignore` applies up to the enclosing repository; `.ignore` applies from every ancestor directory.
 
 ### Configuration
 
@@ -125,14 +101,11 @@ sloplint baseline               # writes sloplint-baseline.json
 sloplint check --mode ratchet   # reports only findings absent from the baseline
 ```
 
-Baselines key findings by a fingerprint of rule, path, and normalized line; blank-line shifts do not re-report them. Line-local findings normalize the finding's source line, while whole-file findings carry a stable empty context, so a changed first line does not change their identity.
-Unused-suppression findings retain separate identities, so baselining one does not hide another added later.
-
-`project.baseline` is a path relative to the project root. Absolute paths, `..` escapes, and parent or leaf symlinks that resolve outside the root are rejected with an error and leave the outside target untouched; nested paths inside the root keep working.
+`project.baseline` is relative to the project root. Paths that resolve outside the root are rejected.
 
 `sloplint baseline` refuses to replace an existing regular file that is not a sloplint baseline, such as `sloplint.toml` or a source file: it exits 2 and leaves the file untouched; delete the file to record a baseline there.
 
-The cache lives in the per-user cache directory (`$XDG_CACHE_HOME` when absolute, else `~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`) under `sloplint/<hash of the project root>/cache-v2/shard-<NN>.bin` (files sharded by the first BLAKE3 byte of their path), never in the checkout: a repository could ship a forged cache, so the project's `.sloplint` is never read, migrated, or deleted. A run rewrites only the shards whose files changed. A `cache-v1.bin` left by an older release is neither read nor removed; delete it by hand to reclaim the space. An old `.sloplint` directory in the checkout is ignored. Directories are created private (`0700` on unix); a symlinked, non-directory, or group/other-writable cache directory, a cache directory inside the project root, a missing home, or an unreadable executable disables the cache with a warning instead of failing the run. `--no-cache` does no cache work. A shard that cannot be decoded, or whose version or configuration key does not match, falls back to fresh analysis. Shards carry no checksum: a byte flipped inside a shard that still decodes is served as cached output, so delete the cache directory after disk damage.
+The cache is per-user and never stored in the checkout. `--no-cache` skips it. A damaged or mismatched cache falls back to a fresh analysis.
 
 ### Custom rules
 
@@ -151,19 +124,17 @@ query = '''
 '''
 ```
 
-Files named by `project.custom_rule_files` load even when hidden or gitignored; source discovery keeps its usual filters. Patterns must stay inside the project root: an absolute pattern or one containing `..` is a configuration error. A custom rule file reached through a symlink, by name or by glob, is a configuration error that names the link; sloplint never follows it.
-
-A custom rule runs on the tree that parsed. A `language = "cpp"` rule therefore applies to a `.h` file that parsed as C++ after a failed C parse.
+Files named by `project.custom_rule_files` load even when hidden or gitignored. An absolute pattern, a pattern containing `..`, or a symlinked rule file is a configuration error.
 
 ### Suppressions
 
-Inline where you cannot fix yet; a reason is required, and unused suppressions are lint findings too. A directive that names several rules is judged operand by operand: each active rule (or `family/*`) it names that matches no finding in its coverage is reported in one `meta/unused-suppression` finding for the directive, even when a sibling operand matched. Operands for rules that are off or excluded by `--rule` are never reported:
+Suppress inline only where you cannot fix the code yet. A reason is required. A directive that suppresses nothing is itself a `meta/unused-suppression` finding, reported for each named active rule that matched nothing.
 
 ```rust
 // sloplint-allow(complexity/cognitive-depth): state machine is one place by design
 ```
 
-A directive covers the lines of its own comment and the one line after it. A finding reported on any other line, such as a `slop/echo-comment` finding anchored on the first line of a doc block, needs the directive on or directly before that line; a blank line, a decorator, or an annotation between the directive and the construct leaves the directive unused. `sloplint-allow-file(rule)` covers the whole file. The reason ends at the end of the line or at the closing delimiter of the comment's own syntax (`*/`, `*)`, `#>`, `-->`).
+A directive covers its own comment and the next line. `sloplint-allow-file(rule): reason` covers the whole file.
 
 ### Output formats
 
@@ -171,16 +142,11 @@ A directive covers the lines of its own comment and the one line after it. A fin
 
 ## Development
 
-```bash
-cargo fmt --all --check
-cargo test --workspace --locked
-cargo clippy --workspace --all-targets --locked -- -D warnings
-sloplint check crates       # self-lint with the repo's own sloplint.toml
-```
+Build, test, and self-lint commands are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Contributing
 
-Fork, branch, add or update fixtures for the rule you touch, run the four commands above, and open a pull request. Fixture cases live under `crates/sloplint/tests/fixtures/<family>/<rule>/` with an `expected.txt` per project. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

@@ -35,7 +35,7 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 ```
 
-CI runs `sloplint check crates --strictness standard --mode threshold --fail-on deny` (using the root `sloplint.toml`, which excludes test fixtures). Deny-level findings fail CI. Warn-level findings are reported without failing, so treat them as defects unless a reviewer accepts them. The self-lint gate is a contributor check, not a protected boundary. A pull request can change `sloplint.toml` (`exclude`, rule levels, custom rules) and the workflow itself, so reviewers must read those diffs. Maintainers should require review of `.github/` and `sloplint.toml` (for example with CODEOWNERS and branch protection):
+CI runs `sloplint check crates --strictness standard --mode threshold --fail-on deny` (using the root `sloplint.toml`, which excludes test fixtures). Deny-level findings fail CI. Warn-level findings are reported without failing, so treat them as defects unless a reviewer accepts them. The self-lint gate is a contributor check, not a protected boundary. A pull request can change `sloplint.toml` (`exclude`, rule levels, custom rules) and the workflow itself. Reviewers must read changes to `sloplint.toml` and `.github/`:
 
 ```bash
 sloplint check crates --strictness standard --mode threshold --fail-on deny
@@ -43,7 +43,7 @@ sloplint check crates --strictness standard --mode threshold --fail-on deny
 cargo run --locked -p sloplint -- check crates --format agent --strictness standard --mode threshold --fail-on deny
 ```
 
-Every file in `crates/` must pass `sloplint` under the default `standard` profile (`agent/file-token-budget` warns at 600 lines and denies at 1000 lines under `standard`, and 500/800 under `strict`). Place doc comments on `pub` items in `sloplint-core` and `sloplint-syntax`.
+Every file in `crates/` must pass `sloplint` under the default `standard` profile (`agent/file-token-budget` warns at 600 lines and denies at 1000 lines under `standard`, and 500/800 under `strict`).
 
 ## Adding a rule
 
@@ -67,4 +67,4 @@ Expectations live in `expected.txt` rather than inline comments so test markers 
 - Fork the repository and create a topic branch from `main`.
 - Keep one logical concern per commit. Write a capitalized, imperative subject line of roughly 50 characters (for example, `Add builtin rule catalog`).
 - Update or add fixtures in `crates/sloplint/tests/fixtures/<family>/<rule>/` for any rule or language adapter you change.
-- Run `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo test --workspace --locked`, and `sloplint check crates` before opening a pull request. All CI jobs in `.github/workflows/ci.yml` must pass.
+- All CI jobs in `.github/workflows/ci.yml` must pass.

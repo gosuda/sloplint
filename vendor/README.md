@@ -7,7 +7,7 @@ reporting `meta/parse-error`.
 
 ## Layout
 
-Every vendored crate follows the same layout:
+Every vendored crate carries `sloplint-grammar.patch` and `SLOPLINT.md`, which records its upstream tag and remaining failures. `tree-sitter-php` and `tree-sitter-typescript` keep their upstream nested layouts.
 
 | Entry | Meaning |
 |---|---|
@@ -35,22 +35,6 @@ Node is the JS runtime; `--js-runtime native` gives byte-identical `parser.c`.
 Keep `sloplint-grammar.patch` in sync: it must hold exactly the difference from
 the published crate, and `SLOPLINT.md` must describe the change and the
 regeneration provenance.
-
-## Index
-
-| Crate | Upstream | Fixes |
-|---|---|---|
-| `tree-sitter-c` | tree-sitter-c | GNU extensions (`asm`, `__signed`, `#embed`, storage-class spellings) |
-| `tree-sitter-cpp` | tree-sitter-cpp | 11 gap rows (expressions, preprocessor, attribute forms) |
-| `tree-sitter-go` | tree-sitter-go | generic methods, type-parameter shapes, terminator recovery |
-| `tree-sitter-javascript` | tree-sitter-javascript | tagged-template escapes, `await` chains |
-| `tree-sitter-typescript` | tree-sitter-typescript | `using` declarations, keyword member names, decorator forms |
-| `tree-sitter-powershell` | tree-sitter-powershell | script-argument parsing, native options, base-class chaining |
-| `tree-sitter-ruby` | tree-sitter-ruby | `=begin`/`=end` block-comment edge cases |
-| `tree-sitter-starlark` | tree-sitter-starlark | `assert` as an identifier |
-
-Each `SLOPLINT.md` lists the exact upstream tag and the constructs that still
-fail by design or by upstream limitation.
 
 ## Regression tests
 
