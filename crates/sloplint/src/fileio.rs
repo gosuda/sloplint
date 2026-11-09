@@ -140,11 +140,6 @@ fn require_regular(file: &fs::File, meta: &fs::Metadata) -> io::Result<()> {
     ))
 }
 
-pub fn read_regular(path: &Path) -> io::Result<Vec<u8>> {
-    let (file, len) = open_regular(path)?;
-    read_bounded(file, len)
-}
-
 pub fn read_regular_nofollow(path: &Path, max_len: u64) -> io::Result<Vec<u8>> {
     let (file, len) = open_regular_nofollow(path)?;
     if len > max_len {
