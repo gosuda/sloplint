@@ -21,7 +21,9 @@ sloplint works from syntax alone: tree-sitter parses each file and per-language 
 
 ## Install
 
-Registry installation is not the supported setup path.
+Install from source with the command below. Registry installation is not supported.
+
+Release archives cover x86_64 and aarch64 on Linux, macOS, and Windows; no release has been published yet. Linux binaries link glibc dynamically and need glibc 2.39 or newer. They do not run on musl systems such as Alpine. Each release holds the archives, one `.sha256` file per archive that detects a corrupted download, and one CycloneDX SBOM per target named `sloplint-<tag>-<target>.cdx.json`. To verify provenance, run `gh attestation verify <archive> --repo gosuda/sloplint --signer-workflow gosuda/sloplint/.github/workflows/release.yml`.
 
 Prerequisites: Git, [rustup](https://rustup.rs/), and a C/C++ toolchain for the target platform (the tree-sitter parsers and scanners compile native sources). The checked-in `rust-toolchain.toml` pins Rust 1.99.1, which `cargo` selects automatically.
 
@@ -105,7 +107,11 @@ sloplint check --mode ratchet   # reports only findings absent from the baseline
 
 `sloplint baseline` refuses to replace an existing regular file that is not a sloplint baseline, such as `sloplint.toml` or a source file: it exits 2 and leaves the file untouched; delete the file to record a baseline there.
 
-The cache is per-user and never stored in the checkout. `--no-cache` skips it. A damaged or mismatched cache falls back to a fresh analysis.
+The cache is per-user and never stored in the checkout. It lives in `sloplint/<hash of the project root>/cache-v2/` under `$XDG_CACHE_HOME` when that is absolute, else under `~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`. `--no-cache` skips it. A damaged or mismatched cache falls back to a fresh analysis.
+
+sloplint warns and runs without the cache when the cache directory is a symlink, is not a directory, is writable by group or others, or sits inside the project root, when no home directory is set, or when the running executable cannot be read.
+
+Older releases left a `cache-v1.bin` file in the per-user cache directory, and the oldest kept a `.sloplint` directory in the checkout. sloplint never reads or removes either; delete them by hand to reclaim the space.
 
 ### Custom rules
 
