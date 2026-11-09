@@ -13,6 +13,16 @@ pub(crate) const PARSE_ERROR: RuleInfo = RuleInfo {
     build: Build::Meta,
 };
 
+pub(crate) const CUSTOM_CAP: RuleInfo = RuleInfo {
+    id: "meta/custom-cap",
+    family: Family::Meta,
+    summary: "custom rule queries that hit the per-file work cap",
+    why: "A custom query that matches unbounded node combinations was stopped early, so its findings for the file are partial.",
+    exempt_tests: false,
+    preset: custom_cap_preset,
+    build: Build::Meta,
+};
+
 pub(crate) const INVALID_SUPPRESSION: RuleInfo = RuleInfo {
     id: "meta/invalid-suppression",
     family: Family::Meta,
@@ -36,6 +46,13 @@ pub(crate) const UNUSED_SUPPRESSION: RuleInfo = RuleInfo {
 fn parse_error_preset(_strictness: Strictness) -> Preset {
     Preset {
         level: Level::Warn,
+        options: toml::Table::new(),
+    }
+}
+
+fn custom_cap_preset(_strictness: Strictness) -> Preset {
+    Preset {
+        level: Level::Deny,
         options: toml::Table::new(),
     }
 }

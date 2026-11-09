@@ -14,6 +14,7 @@ use sloplint_core::lang::Lang;
 use sloplint_core::{CommentText, CustomHit, Pos};
 use tree_sitter::{Node, Parser, Tree};
 
+use custom::CustomHits;
 pub use custom::CustomRules;
 use spec::spec;
 
@@ -74,6 +75,7 @@ pub struct Analysis<'s> {
     pub comments: Vec<CommentText<'s>>,
     pub parse_error: Option<Pos>,
     pub custom_hits: Vec<CustomHit<'s>>,
+    pub custom_capped: Vec<&'s str>,
 }
 
 pub fn analyze<'s>(
@@ -99,6 +101,7 @@ pub fn analyze<'s>(
         comments,
         parse_error: Some(first_error_pos(root).unwrap_or_else(|| root_end_pos(root))),
         custom_hits: Vec::new(),
+        custom_capped: Vec::new(),
     }
 }
 
@@ -111,12 +114,13 @@ fn clean_analysis<'s>(
 ) -> Analysis<'s> {
     let hooks = lang::hooks_for(parsed_as, input.path, parsers.ocaml_interfaces);
     let walked = spec(parsed_as).walk(hooks, input, tree.root_node());
-    let custom_hits = custom.run(tree, input.source, parsed_as);
+    let CustomHits { hits, capped } = custom.run(tree, input.source, parsed_as);
     Analysis {
         facts: walked.facts,
         comments: walked.comments,
         parse_error: None,
-        custom_hits,
+        custom_hits: hits,
+        custom_capped: capped,
     }
 }
 

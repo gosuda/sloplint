@@ -30,7 +30,7 @@ use sloplint_core::lang::Lang;
 use sloplint_core::rules::{CATALOG, RuleFilter, RuleSet, WorldFile};
 use sloplint_core::suppress::{self, RulePattern, Suppression};
 use sloplint_core::{Config, ConfigError, FailOn, Finding, Mode, Severity, Strictness};
-use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
+use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 use thiserror::Error;
 
 use cache::{FileOutput, Loaded};
@@ -436,14 +436,7 @@ fn analyze_file(
         });
     let mut findings: Vec<Finding> = match analysis.parse_error {
         Some(pos) => pipe.rules.parse_error(&text, pos).into_iter().collect(),
-        None => {
-            let mut found = pipe.rules.check_file(&analysis.facts);
-            found.extend(
-                pipe.rules
-                    .custom_findings(&analysis.facts, &analysis.custom_hits),
-            );
-            found
-        }
+        None => rule_findings(pipe, &analysis),
     };
     pipe.rules.cap_levels(&mut meta);
     meta.retain(|finding| pipe.rules.is_active(&finding.rule));
@@ -455,6 +448,19 @@ fn analyze_file(
         suppressions,
         world,
     }
+}
+
+fn rule_findings(pipe: &Pipeline<'_>, analysis: &Analysis<'_>) -> Vec<Finding> {
+    let mut found = pipe.rules.check_file(&analysis.facts);
+    found.extend(
+        pipe.rules
+            .custom_findings(&analysis.facts, &analysis.custom_hits),
+    );
+    found.extend(
+        pipe.rules
+            .custom_caps(&analysis.facts, &analysis.custom_capped),
+    );
+    found
 }
 
 fn merge(

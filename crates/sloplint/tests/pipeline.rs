@@ -10,6 +10,8 @@ mod baseline_target;
 mod bounded_read_reserve;
 #[path = "pipeline/cache_location.rs"]
 mod cache_location;
+#[path = "pipeline/custom_rule_cap.rs"]
+mod custom_rule_cap;
 #[path = "pipeline/gitignore_boundary.rs"]
 mod gitignore_boundary;
 #[path = "pipeline/header_fallbacks.rs"]

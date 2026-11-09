@@ -58,9 +58,9 @@ An unreadable source file stops the run with exit `3` and reports its path and c
 - **grep/**: generic names, homonym definitions across files, renamed and wildcard imports, runtime-built symbols, non-literal log messages, multiline arguments.
 - **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors, single-implementation abstractions, barrel files, field-copy literals.
 - **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
-- **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs.
+- **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs. Each rule is bounded per file at 16,384 in-progress matches and 1,024 reported hits: a query that exceeds either cap reports `meta/custom-cap` instead of returning partial results silently.
 
-`meta/parse-error` is Warn in every profile, so a default `deny` gate does not fail on it. Set the rule to Deny or pass `--fail-on warn`. An empty `project.languages` list analyzes nothing.
+`meta/parse-error` is Warn in every profile, so a default `deny` gate does not fail on it. Set the rule to Deny or pass `--fail-on warn`. `meta/custom-cap` is Deny in every profile: a capped query's results are partial, so a default `deny` gate fails until the query is anchored. An empty `project.languages` list analyzes nothing.
 
 ## Usage
 

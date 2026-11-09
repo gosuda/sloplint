@@ -179,6 +179,7 @@ pub static CATALOG: &[RuleInfo] = &[
     grep::no_dynamic_symbol::INFO,
     grep::no_rename_import::INFO,
     grep::no_wildcard_import::INFO,
+    meta::CUSTOM_CAP,
     meta::INVALID_SUPPRESSION,
     meta::PARSE_ERROR,
     meta::UNUSED_SUPPRESSION,
@@ -401,6 +402,28 @@ impl RuleSet {
         self.cap_levels(&mut findings);
         let [finding] = findings;
         Some(finding)
+    }
+
+    pub fn custom_caps(&self, facts: &FileFacts<'_>, capped: &[&str]) -> Vec<Finding> {
+        if !self.is_active(meta::CUSTOM_CAP.id) {
+            return Vec::new();
+        }
+        let mut findings: Vec<Finding> = capped
+            .iter()
+            .map(|rule| {
+                Finding::at(
+                    facts,
+                    Pos { line: 1, byte: 0 },
+                    meta::CUSTOM_CAP.id,
+                    Severity::Deny,
+                    format!("custom rule {rule} hit the per-file query cap; its matches for this file are partial"),
+                    "anchor the query to specific parents or add predicates so it cannot match unbounded sibling combinations"
+                        .to_string(),
+                )
+            })
+            .collect();
+        self.cap_levels(&mut findings);
+        findings
     }
 
     pub fn unused_suppression(&self, text: &SourceText, line: u32, rules: &str) -> Option<Finding> {

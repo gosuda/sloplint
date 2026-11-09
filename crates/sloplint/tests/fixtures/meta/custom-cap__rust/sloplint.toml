@@ -1,0 +1,8 @@
+[[custom_rules]]
+id = "custom/pair-flood"
+language = "rust"
+severity = "warn"
+message = "pair"
+why = "unbounded sibling combination"
+fix = "anchor the query"
+query = "((identifier) @match (identifier) @other)"
