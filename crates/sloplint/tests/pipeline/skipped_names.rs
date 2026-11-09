@@ -25,9 +25,10 @@ fn project() -> (tempfile::TempDir, PathBuf) {
 fn put(root: &Path, rel: &str, body: &str) {
     let path = root.join(rel);
     if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir).unwrap_or_else(|e| panic!("mkdir {}: {e}", dir.display()));
+        std::fs::create_dir_all(dir)
+            .unwrap_or_else(|e| panic!("mkdir failed {}: {e}", dir.display()));
     }
-    std::fs::write(&path, body).unwrap_or_else(|e| panic!("write {rel}: {e}"));
+    std::fs::write(&path, body).unwrap_or_else(|e| panic!("write failed {rel}: {e}"));
 }
 
 fn scoped(root: &Path, paths: Vec<PathBuf>) -> RunOptions {
@@ -64,6 +65,16 @@ fn name_is_unrepresentable(e: &std::io::Error) -> bool {
     e.raw_os_error() == Some(EILSEQ)
 }
 
+/// Prints the capability skip, or fails when SLOPLINT_REQUIRE_FS_CAPS demands the capability,
+/// so a runner that silently drops the capability coverage turns red in CI.
+#[cfg(unix)]
+fn skip_unless_fs_caps_required(context: &str, error: &std::io::Error) {
+    if std::env::var_os("SLOPLINT_REQUIRE_FS_CAPS").is_some_and(|value| !value.is_empty()) {
+        panic!("SLOPLINT_REQUIRE_FS_CAPS is set but the capability is missing: {context}: {error}");
+    }
+    eprintln!("SKIP (capability unavailable) {context}: {error}");
+}
+
 /// A line comment whose `@generated` marker ends `shift` bytes after the window edge.
 fn marker_near_window_edge(shift: usize) -> String {
     let marker = "@generated";
@@ -77,14 +88,15 @@ fn a_non_utf8_name_outside_the_scope_is_not_counted() {
     use std::os::unix::ffi::OsStrExt;
     let (_tmp, root) = project();
     put(&root, "src/lib.rs", SAMPLE);
-    std::fs::create_dir_all(root.join("other")).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    std::fs::create_dir_all(root.join("other")).unwrap_or_else(|e| panic!("mkdir failed: {e}"));
     let bad = root
         .join("other")
         .join(std::ffi::OsStr::from_bytes(b"bad\xff.rs"));
     if let Err(e) = std::fs::write(&bad, SAMPLE) {
         assert!(name_is_unrepresentable(&e), "write non-UTF-8 name: {e}");
-        eprintln!(
-            "SKIP a_non_utf8_name_outside_the_scope_is_not_counted: filesystem cannot represent the 0xFF name: {e}"
+        skip_unless_fs_caps_required(
+            "a_non_utf8_name_outside_the_scope_is_not_counted: filesystem cannot represent the 0xFF name",
+            &e,
         );
         return;
     }
@@ -118,12 +130,14 @@ fn lossy_equal_file_names_do_not_share_an_explicit_scope() {
         .join(std::ffi::OsStr::from_bytes(b"bad\xff.rs"));
     if let Err(e) = std::fs::write(&invalid, SAMPLE) {
         assert!(name_is_unrepresentable(&e), "write non-UTF-8 name: {e}");
-        eprintln!(
-            "SKIP lossy_equal_file_names_do_not_share_an_explicit_scope: filesystem cannot represent the 0xFF name: {e}"
+        skip_unless_fs_caps_required(
+            "lossy_equal_file_names_do_not_share_an_explicit_scope: filesystem cannot represent the 0xFF name",
+            &e,
         );
         return;
     }
-    symlink("bad\u{FFFD}.rs", root.join("other/link.rs")).unwrap_or_else(|e| panic!("link: {e}"));
+    symlink("bad\u{FFFD}.rs", root.join("other/link.rs"))
+        .unwrap_or_else(|e| panic!("symlink failed: {e}"));
 
     assert_eq!(
         counts(&run_ok(&scoped(&root, vec![]))),
@@ -166,8 +180,9 @@ fn lossy_equal_dir_names_do_not_share_an_explicit_scope() {
         .join(std::ffi::OsStr::from_bytes(b"scope\xff"));
     if let Err(e) = std::fs::create_dir_all(&invalid_dir) {
         assert!(name_is_unrepresentable(&e), "mkdir: {e}");
-        eprintln!(
-            "SKIP lossy_equal_dir_names_do_not_share_an_explicit_scope: filesystem cannot represent the 0xFF name: {e}"
+        skip_unless_fs_caps_required(
+            "lossy_equal_dir_names_do_not_share_an_explicit_scope: filesystem cannot represent the 0xFF name",
+            &e,
         );
         return;
     }
@@ -200,10 +215,12 @@ fn a_symlinked_source_is_a_counted_skip_and_never_followed() {
     use std::os::unix::fs::symlink;
     let (_tmp, root) = project();
     put(&root, "shared/lib.rs", SAMPLE);
-    std::fs::create_dir_all(root.join("src")).unwrap_or_else(|e| panic!("mkdir: {e}"));
-    symlink("../shared/lib.rs", root.join("src/lib.rs")).unwrap_or_else(|e| panic!("link: {e}"));
-    symlink("missing.rs", root.join("src/dangling.rs")).unwrap_or_else(|e| panic!("link: {e}"));
-    symlink("shared", root.join("alias")).unwrap_or_else(|e| panic!("link: {e}"));
+    std::fs::create_dir_all(root.join("src")).unwrap_or_else(|e| panic!("mkdir failed: {e}"));
+    symlink("../shared/lib.rs", root.join("src/lib.rs"))
+        .unwrap_or_else(|e| panic!("symlink failed: {e}"));
+    symlink("missing.rs", root.join("src/dangling.rs"))
+        .unwrap_or_else(|e| panic!("symlink failed: {e}"));
+    symlink("shared", root.join("alias")).unwrap_or_else(|e| panic!("symlink failed: {e}"));
 
     let whole = run_ok(&scoped(&root, vec![]));
     assert_eq!(

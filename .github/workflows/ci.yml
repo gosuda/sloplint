@@ -60,14 +60,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-24.04, target: x86_64-unknown-linux-gnu }
-          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu }
+          - { os: ubuntu-24.04, target: x86_64-unknown-linux-gnu, require_fs_caps: "1" }
+          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, require_fs_caps: "1" }
           - { os: macos-26-intel, target: x86_64-apple-darwin }
           - { os: macos-26, target: aarch64-apple-darwin }
           - { os: windows-2025, target: x86_64-pc-windows-msvc }
           - { os: windows-11-arm, target: aarch64-pc-windows-msvc }
     env:
       MACOSX_DEPLOYMENT_TARGET: "11.0"
+      SLOPLINT_REQUIRE_FS_CAPS: ${{ matrix.require_fs_caps }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
