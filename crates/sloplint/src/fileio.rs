@@ -173,7 +173,20 @@ pub fn read_bounded(file: fs::File, len: u64) -> io::Result<Vec<u8>> {
 }
 
 pub fn read_bounded_string(path: &Path, max_bytes: u64) -> io::Result<String> {
-    let (file, len) = open_regular(path)?;
+    string_bounded_by(open_regular, path, max_bytes)
+}
+
+/// The no-follow twin of `read_bounded_string`: a symlink at `path` is refused, never read through.
+pub fn read_bounded_string_nofollow(path: &Path, max_bytes: u64) -> io::Result<String> {
+    string_bounded_by(open_regular_nofollow, path, max_bytes)
+}
+
+fn string_bounded_by(
+    open: impl FnOnce(&Path) -> io::Result<(fs::File, u64)>,
+    path: &Path,
+    max_bytes: u64,
+) -> io::Result<String> {
+    let (file, len) = open(path)?;
     if len > max_bytes {
         return Err(io::Error::new(
             io::ErrorKind::FileTooLarge,

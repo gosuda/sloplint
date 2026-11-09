@@ -12,7 +12,9 @@ use sloplint_core::{CustomRuleSpec, FailOn};
 
 use crate::RunError;
 use crate::discover;
-use crate::fileio::{open_regular_nofollow, read_bounded, read_bounded_string};
+use crate::fileio::{
+    open_regular_nofollow, read_bounded, read_bounded_string, read_bounded_string_nofollow,
+};
 
 /// Measured: this repository's own `sloplint.toml` is 65 bytes; the cap stops oversized hostile input at the read.
 pub const MAX_CONFIG_FILE_BYTES: u64 = 1_048_576;
@@ -87,13 +89,15 @@ pub fn locate(cwd: &Path, root: Option<&Path>, config: Option<&Path>) -> Locatio
     }
 }
 
-/// Config files are read once with no preceding existence probe, so a symlink swap cannot slip between check and read.
+/// Config files are read once with no preceding existence probe, so a symlink swap cannot slip
+/// between check and read. The default config is opened no-follow and any symlink there is
+/// refused, like a custom rule file, while an explicit `-c` path is read as given.
 pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunError> {
     let (main, origin) = match &location.config_path {
         Some(path) => (read_required(path)?, origin_name(path)),
         None => {
             let path = location.root.join(CONFIG_FILE);
-            match read_bounded_string(&path, MAX_CONFIG_FILE_BYTES) {
+            match read_bounded_string_nofollow(&path, MAX_CONFIG_FILE_BYTES) {
                 Ok(text) => (text, origin_name(&path)),
                 Err(source) if source.kind() == io::ErrorKind::NotFound => {
                     match fs::symlink_metadata(&path) {

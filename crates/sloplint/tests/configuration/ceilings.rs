@@ -377,6 +377,64 @@ fn dangling_implicit_config_symlink_rejected() {
     assert_eq!(path, link_path);
 }
 
+#[cfg(unix)]
+#[test]
+fn implicit_config_symlink_to_outside_target_rejected() {
+    let outside = tempfile::tempdir().expect("tempdir");
+    let target = outside.path().join("elsewhere.toml");
+    fs::write(&target, "[rules.\"grep/generic-name\"]\nlevel = \"off\"\n")
+        .expect("write outside target");
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let root = tmp.path().to_path_buf();
+    let src = root.join("src");
+    fs::create_dir_all(&src).expect("create src");
+    fs::write(src.join("lib.rs"), "pub fn handle() {}\n").expect("write lib.rs");
+
+    let link_path = root.join("sloplint.toml");
+    std::os::unix::fs::symlink(&target, &link_path).expect("symlink");
+
+    let opts = options(&root);
+    let Err(error) = run(&opts) else {
+        panic!("implicit sloplint.toml symlink to an outside file must be rejected, not followed");
+    };
+    assert_eq!(error.exit_code(), 3);
+    let RunError::Io { path, .. } = error else {
+        panic!("the linked config must never be parsed, got: {error:?}");
+    };
+    assert_eq!(path, link_path);
+}
+
+#[cfg(unix)]
+#[test]
+fn implicit_config_symlink_to_inside_target_rejected() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let root = tmp.path().to_path_buf();
+    let src = root.join("src");
+    fs::create_dir_all(&src).expect("create src");
+    fs::write(src.join("lib.rs"), "pub fn handle() {}\n").expect("write lib.rs");
+    fs::write(
+        root.join("real.toml"),
+        "[rules.\"grep/generic-name\"]\nlevel = \"off\"\n",
+    )
+    .expect("write inside target");
+
+    let link_path = root.join("sloplint.toml");
+    std::os::unix::fs::symlink(root.join("real.toml"), &link_path).expect("symlink");
+
+    let opts = options(&root);
+    let Err(error) = run(&opts) else {
+        panic!(
+            "implicit sloplint.toml symlink must be rejected like a custom rule file symlink, not followed"
+        );
+    };
+    assert_eq!(error.exit_code(), 3);
+    let RunError::Io { path, .. } = error else {
+        panic!("the linked config must never be parsed, got: {error:?}");
+    };
+    assert_eq!(path, link_path);
+}
+
 #[test]
 fn baseline_with_utf8_bom_accepted_in_ratchet() {
     let code =
