@@ -1,6 +1,6 @@
 use crate::config::Strictness;
 use crate::facts::Pos;
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Finding, Level, Severity, SourceText};
 use crate::rules::{Build, Family, Preset, RuleInfo};
 
 pub(crate) const PARSE_ERROR: RuleInfo = RuleInfo {
@@ -54,10 +54,9 @@ fn unused_suppression_preset(_strictness: Strictness) -> Preset {
     }
 }
 
-pub(crate) fn parse_error_finding(path: &str, source: &str, pos: Pos) -> Finding {
+pub(crate) fn parse_error_finding(text: &SourceText, pos: Pos) -> Finding {
     Finding::at_source(
-        path,
-        source,
+        text,
         pos,
         PARSE_ERROR.id,
         Severity::Warn,
@@ -66,15 +65,9 @@ pub(crate) fn parse_error_finding(path: &str, source: &str, pos: Pos) -> Finding
     )
 }
 
-pub(crate) fn invalid_suppression_finding(
-    path: &str,
-    source: &str,
-    line: u32,
-    problem: &str,
-) -> Finding {
+pub(crate) fn invalid_suppression_finding(text: &SourceText, line: u32, problem: &str) -> Finding {
     Finding::at_source(
-        path,
-        source,
+        text,
         Pos { line, byte: 0 },
         INVALID_SUPPRESSION.id,
         Severity::Deny,
@@ -83,10 +76,9 @@ pub(crate) fn invalid_suppression_finding(
     )
 }
 
-pub fn unused_suppression_finding(path: &str, source: &str, line: u32, rules: &str) -> Finding {
+pub fn unused_suppression_finding(text: &SourceText, line: u32, rules: &str) -> Finding {
     Finding::at_source(
-        path,
-        source,
+        text,
         Pos { line, byte: 0 },
         UNUSED_SUPPRESSION.id,
         Severity::Warn,

@@ -25,6 +25,7 @@ use rayon::prelude::*;
 use serde::Serialize;
 use sloplint_core::baseline::Baseline;
 use sloplint_core::facts::WorldFacts;
+use sloplint_core::finding::{SourceText, line_starts};
 use sloplint_core::lang::Lang;
 use sloplint_core::rules::{CATALOG, RuleFilter, RuleSet, WorldFile};
 use sloplint_core::suppress::{self, RulePattern, Suppression};
@@ -424,16 +425,17 @@ fn analyze_file(
     };
     let analysis = analyze(parsers, &input, pipe.custom);
     let world = WorldFacts::from_facts(&analysis.facts);
+    let text = SourceText {
+        path: entry.rel.as_str(),
+        source: probe.text,
+        line_starts: &analysis.facts.line_starts,
+    };
     let (suppressions, mut meta) =
-        suppress::parse_suppressions(&entry.rel, probe.text, &analysis.comments, &|id: &str| {
+        suppress::parse_suppressions(&text, &analysis.comments, &|id: &str| {
             pipe.rules.is_known(id)
         });
     let mut findings: Vec<Finding> = match analysis.parse_error {
-        Some(pos) => pipe
-            .rules
-            .parse_error(&entry.rel, probe.text, pos)
-            .into_iter()
-            .collect(),
+        Some(pos) => pipe.rules.parse_error(&text, pos).into_iter().collect(),
         None => {
             let mut found = pipe.rules.check_file(&analysis.facts);
             found.extend(
@@ -584,12 +586,17 @@ fn unused_findings(
             &fallback
         }
     };
+    let file = SourceText {
+        path: rel,
+        source: text,
+        line_starts: &line_starts(text),
+    };
     Ok(candidates
         .into_iter()
         .filter_map(|(suppression, unused_patterns)| {
             let patterns = describe(&unused_patterns);
             pipe.rules
-                .unused_suppression(rel, text, suppression.start_line, &patterns)
+                .unused_suppression(&file, suppression.start_line, &patterns)
         })
         .collect())
 }

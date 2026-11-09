@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::finding::Finding;
+use crate::finding::{Finding, SourceText};
 use crate::rules::meta;
 
 #[derive(Debug, Clone, Copy)]
@@ -84,22 +84,14 @@ impl Problem {
 }
 
 pub fn parse_suppressions(
-    path: &str,
-    source: &str,
+    text: &SourceText,
     comments: &[CommentText<'_>],
     known: &dyn Fn(&str) -> bool,
 ) -> (Vec<Suppression>, Vec<Finding>) {
     let mut suppressions = Vec::new();
     let mut findings = Vec::new();
     for comment in comments {
-        scan_comment(
-            path,
-            source,
-            comment,
-            known,
-            &mut suppressions,
-            &mut findings,
-        );
+        scan_comment(text, comment, known, &mut suppressions, &mut findings);
     }
     (suppressions, findings)
 }
@@ -197,25 +189,24 @@ fn payload_base(text: &str) -> usize {
 }
 
 fn scan_comment(
-    path: &str,
-    source: &str,
+    text: &SourceText,
     comment: &CommentText<'_>,
     known: &dyn Fn(&str) -> bool,
     suppressions: &mut Vec<Suppression>,
     findings: &mut Vec<Finding>,
 ) {
-    let text = comment.text;
-    let closer = reason_closer(text);
-    let base = payload_base(text);
-    let gap_end = text.as_bytes()[base..]
+    let payload = comment.text;
+    let closer = reason_closer(payload);
+    let base = payload_base(payload);
+    let gap_end = payload.as_bytes()[base..]
         .iter()
         .position(|&b| is_ident_byte(b))
-        .map_or(text.len(), |p| base + p);
-    for (start, _) in text.match_indices(MARKER) {
-        if start > 0 && is_ident_byte(text.as_bytes()[start - 1]) {
+        .map_or(payload.len(), |p| base + p);
+    for (start, _) in payload.match_indices(MARKER) {
+        if start > 0 && is_ident_byte(payload.as_bytes()[start - 1]) {
             continue;
         }
-        let tail = &text[start..];
+        let tail = &payload[start..];
         let file_level = tail.starts_with(FILE_MARKER);
         let keyword = if file_level {
             FILE_MARKER.len()
@@ -242,8 +233,7 @@ fn scan_comment(
                 });
             }
             Err(problem) => findings.push(meta::invalid_suppression_finding(
-                path,
-                source,
+                text,
                 comment.start_line,
                 &problem.text(),
             )),
@@ -301,6 +291,7 @@ fn reason_until_terminator<'t>(text: &'t str, closer: &str) -> &'t str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::finding::line_starts;
 
     /// Independent expected `(opener, closer)` pairs, one per syntax the adapters emit. They are
     /// written out rather than read from `REASON_CLOSERS`, so a wrong production closer fails the
@@ -322,8 +313,12 @@ mod tests {
             end_line: 1,
             text,
         };
-        let (suppressions, findings) =
-            parse_suppressions("src/lib.rs", text, &[comment], &|_| true);
+        let source = SourceText {
+            path: "src/lib.rs",
+            source: text,
+            line_starts: &line_starts(text),
+        };
+        let (suppressions, findings) = parse_suppressions(&source, &[comment], &|_| true);
         (suppressions.len(), findings.len())
     }
 
@@ -486,6 +481,44 @@ mod tests {
     }
 
     #[test]
+    fn invalid_directives_do_not_rescan_the_file_per_finding() {
+        use std::time::{Duration, Instant};
+
+        const LINES: usize = 20_000;
+        const DIRECTIVE: &str = "// sloplint-allow ghost-rule";
+        let mut text = String::with_capacity(LINES * (DIRECTIVE.len() + 1));
+        let comments: Vec<CommentText> = (1..=LINES)
+            .map(|index| {
+                let line = u32::try_from(index).expect("line fits u32");
+                text.push_str(DIRECTIVE);
+                text.push('\n');
+                CommentText {
+                    start_line: line,
+                    end_line: line,
+                    text: DIRECTIVE,
+                }
+            })
+            .collect();
+        let source = SourceText {
+            path: "big.rs",
+            source: &text,
+            line_starts: &line_starts(&text),
+        };
+        let start = Instant::now();
+        let (suppressions, findings) = parse_suppressions(&source, &comments, &|_| false);
+        let elapsed = start.elapsed();
+        assert_eq!(findings.len(), LINES, "one invalid finding per directive");
+        assert!(
+            suppressions.is_empty(),
+            "a malformed directive must never become a suppression"
+        );
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "{LINES} invalid directives took {elapsed:?}; per-finding scans are quadratic"
+        );
+    }
+
+    #[test]
     fn prose_occurrences_do_not_rescan_the_leading_gap() {
         let gap = " ".repeat(1_000_000);
         let occurrences = "sloplint-allowx ".repeat(40_000);
@@ -495,9 +528,13 @@ mod tests {
             end_line: 1,
             text: &text,
         };
+        let source = SourceText {
+            path: "src/lib.rs",
+            source: &text,
+            line_starts: &line_starts(&text),
+        };
         let started = std::time::Instant::now();
-        let (suppressions, findings) =
-            parse_suppressions("src/lib.rs", &text, &[comment], &|_| true);
+        let (suppressions, findings) = parse_suppressions(&source, &[comment], &|_| true);
         let elapsed = started.elapsed();
         assert_eq!(
             (suppressions.len(), findings.len()),

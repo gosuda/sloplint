@@ -42,6 +42,13 @@ pub struct Finding {
 
 const MAX_CONTEXT_CHARS: usize = 160;
 
+#[derive(Debug, Clone, Copy)]
+pub struct SourceText<'a> {
+    pub path: &'a str,
+    pub source: &'a str,
+    pub line_starts: &'a [u32],
+}
+
 impl Finding {
     pub fn at(
         facts: &FileFacts<'_>,
@@ -51,18 +58,18 @@ impl Finding {
         message: String,
         fix: String,
     ) -> Finding {
-        let (column, context) = source_site_indexed(&facts.line_starts, facts.source, pos);
-        Finding {
-            rule: rule.into(),
+        Self::at_source(
+            &SourceText {
+                path: facts.path,
+                source: facts.source,
+                line_starts: &facts.line_starts,
+            },
+            pos,
+            rule,
             severity,
-            path: facts.path.into(),
-            line: pos.line,
-            column,
             message,
             fix,
-            context,
-            fingerprint: Box::from(""),
-        }
+        )
     }
 
     pub fn at_site(
@@ -87,19 +94,18 @@ impl Finding {
     }
 
     pub fn at_source(
-        path: &str,
-        source: &str,
+        text: &SourceText<'_>,
         pos: Pos,
         rule: &str,
         severity: Severity,
         message: String,
         fix: String,
     ) -> Finding {
-        let (column, context) = source_site(source, pos);
+        let (column, context) = source_site_indexed(text.line_starts, text.source, pos);
         Finding {
             rule: rule.into(),
             severity,
-            path: path.into(),
+            path: text.path.into(),
             line: pos.line,
             column,
             message,
@@ -282,15 +288,13 @@ mod tests {
             column: 5,
             context: "let x = 1;".into(),
         };
-        let from_source = Finding::at_source(
-            "a.rs",
+        let text = SourceText {
+            path: "a.rs",
             source,
-            pos,
-            "r/one",
-            Severity::Deny,
-            "m".into(),
-            "f".into(),
-        );
+            line_starts: &line_starts(source),
+        };
+        let from_source =
+            Finding::at_source(&text, pos, "r/one", Severity::Deny, "m".into(), "f".into());
         assert_eq!(
             (from_source.line, from_source.column),
             (1, source_site(source, pos).0)

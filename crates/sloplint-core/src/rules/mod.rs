@@ -12,7 +12,7 @@ use rayon::prelude::*;
 use crate::callee::CalleePattern;
 use crate::config::{Config, ConfigError, Strictness, static_language_key};
 use crate::facts::{FileFacts, Pos, WorldFacts};
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Finding, Level, Severity, SourceText};
 use crate::suppress::RulePattern;
 
 pub use self::custom::CustomRuleSpec;
@@ -393,27 +393,21 @@ impl RuleSet {
         out
     }
 
-    pub fn parse_error(&self, path: &str, source: &str, pos: Pos) -> Option<Finding> {
+    pub fn parse_error(&self, text: &SourceText, pos: Pos) -> Option<Finding> {
         if !self.is_active(meta::PARSE_ERROR.id) {
             return None;
         }
-        let mut findings = [meta::parse_error_finding(path, source, pos)];
+        let mut findings = [meta::parse_error_finding(text, pos)];
         self.cap_levels(&mut findings);
         let [finding] = findings;
         Some(finding)
     }
 
-    pub fn unused_suppression(
-        &self,
-        path: &str,
-        source: &str,
-        line: u32,
-        rules: &str,
-    ) -> Option<Finding> {
+    pub fn unused_suppression(&self, text: &SourceText, line: u32, rules: &str) -> Option<Finding> {
         if !self.is_active(meta::UNUSED_SUPPRESSION.id) {
             return None;
         }
-        let mut findings = [meta::unused_suppression_finding(path, source, line, rules)];
+        let mut findings = [meta::unused_suppression_finding(text, line, rules)];
         self.cap_levels(&mut findings);
         let [finding] = findings;
         Some(finding)
@@ -607,8 +601,13 @@ mod tests {
     fn meta_parse_error_with_level_deny_escalates_to_deny() {
         let config = config_with_level("meta/parse-error", "deny");
         let rules = RuleSet::new(&config, &RuleFilter::default()).expect("rule resolves");
+        let text = SourceText {
+            path: "src/broken.rs",
+            source: "fn",
+            line_starts: &[0],
+        };
         let finding = rules
-            .parse_error("src/broken.rs", "fn", Pos { line: 1, byte: 0 })
+            .parse_error(&text, Pos { line: 1, byte: 0 })
             .expect("the parse error is reported");
         assert_eq!(finding.severity, Severity::Deny);
     }

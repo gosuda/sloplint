@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
-use crate::facts::{FileFacts, Pos};
+use crate::facts::{FileFacts, NamedSite};
 use crate::finding::{Finding, Level};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 
@@ -58,10 +58,15 @@ impl FileRule for FileTokenBudget {
             "split the file by concern into modules under {} lines",
             self.thresholds.warn_at
         );
-        out.push(Finding::at_source(
+        let site = NamedSite {
+            name: "".into(),
+            line: 1,
+            column: 1,
+            context: "".into(),
+        };
+        out.push(Finding::at_site(
             facts.path,
-            "",
-            Pos { line: 1, byte: 0 },
+            &site,
             INFO.id,
             severity,
             format!("file has {} lines", facts.line_count),
