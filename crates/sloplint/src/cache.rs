@@ -304,26 +304,30 @@ impl Cache {
         vet_existing(&self.dir).map_err(unsafe_dir)?;
         create_private(shards)?;
         vet_existing(shards).map_err(unsafe_dir)?;
-        let mut first_error: Option<io::Error> = None;
-        for &byte in dirty {
-            let path = shards.join(shard_file(byte));
-            let result = match fresh.get(&byte) {
-                Some(entries) => self.write_shard(&path, entries),
-                None => fs::remove_file(&path).or_else(|error| {
-                    if error.kind() == io::ErrorKind::NotFound {
-                        Ok(())
-                    } else {
-                        Err(error)
-                    }
-                }),
-            };
-            if let Err(error) = result
-                && first_error.is_none()
-            {
-                first_error = Some(error);
-            }
+        let errors = dirty
+            .par_iter()
+            .filter_map(|&byte| self.write_dirty_shard(shards, fresh, byte).err())
+            .collect::<Vec<io::Error>>();
+        errors.into_iter().next().map_or(Ok(()), Err)
+    }
+
+    fn write_dirty_shard(
+        &self,
+        shards: &Path,
+        fresh: &HashMap<u8, Vec<(&str, &FileOutput)>>,
+        byte: u8,
+    ) -> io::Result<()> {
+        let path = shards.join(shard_file(byte));
+        match fresh.get(&byte) {
+            Some(entries) => self.write_shard(&path, entries),
+            None => fs::remove_file(&path).or_else(|error| {
+                if error.kind() == io::ErrorKind::NotFound {
+                    Ok(())
+                } else {
+                    Err(error)
+                }
+            }),
         }
-        first_error.map_or(Ok(()), Err)
     }
 
     /// A link swapped into a directory after its creation is re-vetted away before any write.
@@ -363,11 +367,7 @@ impl Cache {
                 }
                 other => other?,
             };
-            if let Err(error) = file
-                .write_all(blake3::hash(&bytes).as_bytes())
-                .and_then(|()| file.write_all(&bytes))
-                .and_then(|()| file.sync_all())
-            {
+            if let Err(error) = stamp_and_sync(&mut file, &bytes) {
                 drop(file);
                 let _ = fs::remove_file(&tmp);
                 return Err(error);
@@ -377,6 +377,12 @@ impl Cache {
             let _ = fs::remove_file(&tmp);
         })
     }
+}
+
+fn stamp_and_sync(file: &mut fs::File, bytes: &[u8]) -> io::Result<()> {
+    file.write_all(blake3::hash(bytes).as_bytes())
+        .and_then(|()| file.write_all(bytes))
+        .and_then(|()| file.sync_all())
 }
 
 /// Leaves a shard a concurrent writer replaced: an identical-length, identical-mtime swap costs one cold rebuild, never a wrong result.
@@ -548,63 +554,5 @@ fn warn(message: String) {
 }
 
 #[cfg(test)]
-mod config_key_tests {
-    use super::*;
-    use crate::fileio::{open_regular, read_bounded};
-
-    fn pseudo_random(len: usize) -> Vec<u8> {
-        let mut state = 0x2545f4914f6cdd1du64;
-        (0..len)
-            .map(|_| {
-                state ^= state << 13;
-                state ^= state >> 7;
-                state ^= state << 17;
-                u8::try_from(state & 0xff).unwrap()
-            })
-            .collect()
-    }
-
-    #[test]
-    fn streamed_file_hash_matches_a_one_shot_read() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("blob");
-        std::fs::write(&path, pseudo_random(5 * 1024 * 1024 + 7)).unwrap();
-        let mut streamed = blake3::Hasher::new();
-        hash_regular_into(&mut streamed, &path).unwrap();
-        let one_shot = blake3::hash(&std::fs::read(&path).unwrap());
-        assert_eq!(
-            streamed.finalize(),
-            one_shot,
-            "streamed digest must equal the one-shot read digest"
-        );
-    }
-
-    fn materialized_config_key(
-        config: &Config,
-        custom_sources: &[(String, String)],
-    ) -> io::Result<[u8; 32]> {
-        let mut hasher = blake3::Hasher::new();
-        let exe = std::env::current_exe()?;
-        let (file, len) = open_regular(&exe)?;
-        hasher.update(&read_bounded(file, len)?);
-        hasher.update(&sonic_rs::to_vec(config).map_err(io::Error::other)?);
-        for (rel, text) in custom_sources {
-            hasher.update(rel.as_bytes());
-            hasher.update(&[0u8]);
-            hasher.update(text.as_bytes());
-        }
-        Ok(*hasher.finalize().as_bytes())
-    }
-
-    #[test]
-    fn config_key_matches_the_materialized_original() {
-        let config = Config::default();
-        let custom_sources = vec![("rel".to_string(), "text".to_string())];
-        let streamed = config_key(&config, &custom_sources).unwrap();
-        let materialized = materialized_config_key(&config, &custom_sources).unwrap();
-        assert_eq!(
-            streamed, materialized,
-            "config_key must equal the pre-change materialized key on this executable"
-        );
-    }
-}
+#[path = "cache_tests.rs"]
+mod tests;

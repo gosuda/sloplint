@@ -214,7 +214,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
             .count(),
     );
     if let Some(cache) = &cache {
-        store_if_touched(cache, &analyzed, &loaded);
+        pool.install(|| store_if_touched(cache, &analyzed, &loaded));
     }
     let mut all = merge(&pipe, analyzed, &pool)?;
     all.retain(|finding| scopes.contains(Path::new(&*finding.path)));
