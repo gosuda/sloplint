@@ -196,15 +196,6 @@ fn payload_base(text: &str) -> usize {
     leading
 }
 
-fn is_directive_start(text: &str, base: usize, start: usize) -> bool {
-    if start <= base {
-        return true;
-    }
-    text.as_bytes()[base..start]
-        .iter()
-        .all(|&b| !is_ident_byte(b))
-}
-
 fn scan_comment(
     path: &str,
     source: &str,
@@ -216,6 +207,10 @@ fn scan_comment(
     let text = comment.text;
     let closer = reason_closer(text);
     let base = payload_base(text);
+    let gap_end = text.as_bytes()[base..]
+        .iter()
+        .position(|&b| is_ident_byte(b))
+        .map_or(text.len(), |p| base + p);
     for (start, _) in text.match_indices(MARKER) {
         if start > 0 && is_ident_byte(text.as_bytes()[start - 1]) {
             continue;
@@ -232,7 +227,7 @@ fn scan_comment(
             .as_bytes()
             .first()
             .is_none_or(|&b| !is_ident_byte(b) && b != b'-');
-        if !exact && !is_directive_start(text, base, start) {
+        if !exact && start > gap_end {
             continue;
         }
         match directive(rest, known, closer) {
@@ -282,7 +277,7 @@ fn directive(
             RulePattern::Exact(id) if !known(id) || id.starts_with("meta/") => {
                 return Err(Problem::UnknownRule(token.to_string()));
             }
-            _ => {}
+            RulePattern::Family(_) | RulePattern::Exact(_) => {}
         }
         rules.push(pattern);
     }
@@ -487,6 +482,31 @@ mod tests {
             outcome("// a xsloplint- b sloplint-allow(x): reason"),
             (1, 0),
             "a bare mid-token fragment must not hide the later directive"
+        );
+    }
+
+    #[test]
+    fn prose_occurrences_do_not_rescan_the_leading_gap() {
+        let gap = " ".repeat(1_000_000);
+        let occurrences = "sloplint-allowx ".repeat(40_000);
+        let text = format!("// {gap}{occurrences}");
+        let comment = CommentText {
+            start_line: 1,
+            end_line: 1,
+            text: &text,
+        };
+        let started = std::time::Instant::now();
+        let (suppressions, findings) =
+            parse_suppressions("src/lib.rs", &text, &[comment], &|_| true);
+        let elapsed = started.elapsed();
+        assert_eq!(
+            (suppressions.len(), findings.len()),
+            (0, 1),
+            "the gap-anchored occurrence stays a malformed directive, the rest stay prose"
+        );
+        assert!(
+            elapsed < std::time::Duration::from_secs(1),
+            "one comment must cost one scan pass, not one pass per occurrence: {elapsed:?}"
         );
     }
 }
