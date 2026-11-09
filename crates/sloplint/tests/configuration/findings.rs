@@ -75,7 +75,7 @@ fn rule_severity_applies_without_a_level_table() {
 }
 
 #[test]
-fn a_level_table_caps_or_disables_but_never_raises() {
+fn a_level_table_caps_disables_or_raises() {
     let table = |level: &str| format!("[rules.\"custom/x\"]\nlevel = \"{level}\"\n");
     let capped = findings_for(
         &rule_src("deny", "call", "", &table("warn")),
@@ -100,15 +100,15 @@ fn a_level_table_caps_or_disables_but_never_raises() {
         CALL_SOURCE,
     );
     assert_eq!(same[0].severity, Severity::Deny);
-    let not_raised = findings_for(
+    let raised = findings_for(
         &rule_src("warn", "call", "", &table("deny")),
         "src/a.rs",
         CALL_SOURCE,
     );
     assert_eq!(
-        not_raised[0].severity,
-        Severity::Warn,
-        "level deny must not raise a warn rule"
+        raised[0].severity,
+        Severity::Deny,
+        "level deny raises a warn rule"
     );
 }
 
