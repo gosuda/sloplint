@@ -8,44 +8,52 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
-    child_by_field, count_named_child, find_named_child, first_of_kind, has_child_kind,
-    named_children, narrow, only_named_child_matching, pos_of, preceding_comments, sole_call_id,
-    string_arg_shape, strip_quotes, text,
+    child_by_field, code_children, count_named_child, find_named_child, first_of_kind,
+    has_child_kind, named_children, narrow, only_named_child_matching, pos_of, preceding_comments,
+    sole_call_id, string_arg_shape, strip_quotes, text,
 };
 use crate::spec::Role;
 
-pub(crate) static TABLE: &[(&str, Role)] = &[
-    ("function_declaration", Role::Function),
-    ("generator_function_declaration", Role::Function),
-    ("method_definition", Role::Function),
-    ("arrow_function", Role::Closure),
-    ("function_expression", Role::Closure),
-    ("generator_function", Role::Closure),
-    ("if_statement", Role::If),
-    ("else_clause", Role::ElseClause),
-    ("switch_statement", Role::Match),
-    ("for_statement", Role::Loop),
-    ("for_in_statement", Role::Loop),
-    ("while_statement", Role::Loop),
-    ("do_statement", Role::Loop),
-    ("catch_clause", Role::Catch),
-    ("ternary_expression", Role::Ternary),
-    ("call_expression", Role::Call),
-    ("new_expression", Role::NewCall),
-    ("lexical_declaration", Role::Decl),
-    ("variable_declaration", Role::Decl),
-    ("using_declaration", Role::Decl),
-    ("assignment_expression", Role::Write),
-    ("augmented_assignment_expression", Role::Write),
-    ("update_expression", Role::Write),
-    ("import_statement", Role::Import),
-    ("export_statement", Role::Export),
-    ("class_declaration", Role::TypeDef),
-    ("comment", Role::Comment),
-    ("switch_default", Role::MatchArm),
-    ("object", Role::StructLit),
-    ("member_expression", Role::Member),
-];
+macro_rules! js_table {
+    ($($extra:expr),* $(,)?) => {
+        &[
+            ("function_declaration", Role::Function),
+            ("generator_function_declaration", Role::Function),
+            ("method_definition", Role::Function),
+            ("arrow_function", Role::Closure),
+            ("function_expression", Role::Closure),
+            ("generator_function", Role::Closure),
+            ("if_statement", Role::If),
+            ("else_clause", Role::ElseClause),
+            ("switch_statement", Role::Match),
+            ("for_statement", Role::Loop),
+            ("for_in_statement", Role::Loop),
+            ("while_statement", Role::Loop),
+            ("do_statement", Role::Loop),
+            ("catch_clause", Role::Catch),
+            ("ternary_expression", Role::Ternary),
+            ("call_expression", Role::Call),
+            ("new_expression", Role::NewCall),
+            ("lexical_declaration", Role::Decl),
+            ("variable_declaration", Role::Decl),
+            ("using_declaration", Role::Decl),
+            ("assignment_expression", Role::Write),
+            ("augmented_assignment_expression", Role::Write),
+            ("update_expression", Role::Write),
+            ("import_statement", Role::Import),
+            ("export_statement", Role::Export),
+            ("class_declaration", Role::TypeDef),
+            ("comment", Role::Comment),
+            ("switch_default", Role::MatchArm),
+            ("object", Role::StructLit),
+            ("member_expression", Role::Member),
+            $($extra,)*
+        ]
+    };
+}
+pub(crate) use js_table;
+
+pub(crate) static TABLE: &[(&str, Role)] = js_table!();
 
 pub(crate) static HOOKS: JavaScriptHooks = JavaScriptHooks;
 
@@ -65,13 +73,6 @@ const EQUALITY_ASSERTS: &[&str] = &[
 ];
 const COMPARISON_OPS: &[&str] = &["==", "===", "!=", "!==", "<", ">", "<=", ">="];
 const JS_EXTENSIONS: &[&str] = &[".js", ".jsx", ".mjs", ".cjs"];
-
-fn code_children(n: Node<'_>) -> Vec<Node<'_>> {
-    named_children(n)
-        .into_iter()
-        .filter(|child| child.kind() != "comment")
-        .collect()
-}
 
 fn first_code(n: Node<'_>) -> Option<Node<'_>> {
     find_named_child(n, |child| child.kind() != "comment")
@@ -876,10 +877,6 @@ impl LangHooks for JavaScriptHooks {
             body,
         };
         Some(head_for(cx, site, closure_params(cx, n)))
-    }
-
-    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
-        parent.is_some_and(|parent| parent.kind() == "else_clause")
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

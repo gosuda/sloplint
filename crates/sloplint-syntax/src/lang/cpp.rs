@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use sloplint_core::facts::{
     AmbientKind, Arg, ArgShape, Assertion, CallKind, FieldCopy, Handler, ImplRef, Import,
-    ImportKind, Param, Pos, Stmt, TypeDef, WildcardArm,
+    ImportKind, Pos, Stmt, TypeDef, WildcardArm,
 };
 use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
@@ -10,12 +10,12 @@ use tree_sitter::Node;
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
     child_by_field, first_named_child, first_named_child_matching, has_child_kind, named_children,
-    narrow, pos_of, preceding_comments, rfind_named_child, slice, string_arg_shape, strip_quotes,
-    text, trimmed,
+    narrow, pos_of, preceding_comments, rfind_named_child, string_arg_shape, strip_quotes, text,
+    trimmed,
 };
 use crate::lang::c_family::{
-    self, angles, bin_op, collect_fragments, first_arg, flat, in_function, inner, pair_source,
-    plain_assert, root_of, sole_call, span, word,
+    self, CPP_DECLARATORS, angles, bin_op, collect_fragments, first_arg, flat, in_function, inner,
+    pair_source, plain_assert, root_of, sole_call, span, word,
 };
 use crate::spec::Role;
 
@@ -56,24 +56,19 @@ pub(crate) static TABLE: crate::lang::Table = &[
 ];
 pub(crate) struct CppHooks;
 pub(crate) static HOOKS: CppHooks = CppHooks;
-const WRAP: &[&str] = &[
-    "reference_declarator",
-    "pointer_declarator",
-    "array_declarator",
-    "parenthesized_declarator",
-    "attributed_declarator",
-];
-const ENVS: &[&str] = &[
-    "getenv",
-    "std::getenv",
-    "::getenv",
-    "secure_getenv",
-    "_dupenv_s",
-];
 impl LangHooks for CppHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let body = child_by_field(n, "body")?;
-        let (fd, name_node) = func_parts(n)?;
+        let (fd, name_node) = c_family::func_parts(
+            n,
+            &CPP_DECLARATORS,
+            &[
+                "identifier",
+                "field_identifier",
+                "destructor_name",
+                "operator_name",
+            ],
+        )?;
         let header = n
             .parent()
             .filter(|p| p.kind() == "template_declaration")
@@ -85,16 +80,18 @@ impl LangHooks for CppHooks {
             public: is_public(cx, n, member_list(n)),
             interface_bound: name_node.kind() == "operator_name" || is_bound(n, fd),
             in_test: cx.is_test_file,
-            params: params(cx, fd),
+            params: c_family::params(
+                cx,
+                fd,
+                &CPP_DECLARATORS,
+                &["parameter_declaration", "optional_parameter_declaration"],
+            ),
             return_type: return_type(cx, n, fd),
             missing_annotations: Vec::new(),
             doc,
             doc_pos,
             sole_call: sole_call(body),
         })
-    }
-    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
-        parent.is_some_and(|p| p.kind() == "else_clause")
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         if n.kind() != "declaration" {
@@ -108,7 +105,7 @@ impl LangHooks for CppHooks {
         ) {
             return;
         }
-        out.extend(decl_info(cx, n).0);
+        out.extend(c_family::decl_info(cx, n, CPP_DECLARATORS.wrap).0);
     }
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         let target = match n.kind() {
@@ -294,24 +291,6 @@ impl LangHooks for CppHooks {
         .then(|| catch2_assert(cx, n))
     }
 }
-fn unwrap(n: Node<'_>) -> Node<'_> {
-    c_family::unwrap(n, WRAP)
-}
-fn func_parts(n: Node<'_>) -> Option<(Node<'_>, Node<'_>)> {
-    let fd = unwrap(child_by_field(n, "declarator")?);
-    if fd.kind() != "function_declarator" {
-        return None;
-    }
-    let inner_node = child_by_field(fd, "declarator")?;
-    let name = match inner_node.kind() {
-        "identifier" | "field_identifier" | "destructor_name" | "operator_name" => inner_node,
-        "qualified_identifier" | "template_function" | "template_method" => {
-            child_by_field(inner_node, "name")?
-        }
-        _ => return None,
-    };
-    Some((fd, name))
-}
 fn member_list(n: Node<'_>) -> Option<Node<'_>> {
     let parent = n.parent()?;
     if parent.kind() == "field_declaration_list" {
@@ -359,54 +338,12 @@ fn in_anonymous(n: Node<'_>) -> bool {
 fn is_bound(n: Node<'_>, fd: Node<'_>) -> bool {
     has_child_kind(fd, "virtual_specifier") || has_child_kind(n, "virtual")
 }
-fn params<'s>(cx: &Cx<'_, 's>, fd: Node<'_>) -> Vec<Param<'s>> {
-    let mut out = Vec::new();
-    let Some(list) = child_by_field(fd, "parameters") else {
-        return out;
-    };
-    for c in named_children(list) {
-        if c.kind() != "parameter_declaration" && c.kind() != "optional_parameter_declaration" {
-            continue;
-        }
-        if let Some(found) = param(cx, c) {
-            out.push(found);
-        }
-    }
-    out
-}
-fn param_target(d: Node<'_>) -> (Option<Node<'_>>, bool) {
-    c_family::param_target(d, WRAP)
-}
-fn param<'s>(cx: &Cx<'_, 's>, p: Node<'_>) -> Option<Param<'s>> {
-    let ty_node = child_by_field(p, "type")?;
-    let declarator = child_by_field(p, "declarator");
-    let (named, callable) = declarator.map_or((None, false), param_target);
-    let name = named.map(|l| text(cx, l)).unwrap_or("");
-    let ty = match (named, declarator) {
-        (Some(found), _) if !callable => span(cx, ty_node, found),
-        (_, Some(d)) => slice(cx.src, p.start_byte(), d.end_byte()),
-        (_, None) => text(cx, ty_node),
-    };
-    if name.is_empty() && ty == "void" {
-        return None;
-    }
-    let default = child_by_field(p, "default_value")
-        .is_some_and(|d| text(cx, d) == "true" || text(cx, d) == "false");
-    Some(Param {
-        name,
-        ty: Some(ty),
-        bool_default: default,
-    })
-}
 fn return_type<'s>(cx: &Cx<'_, 's>, n: Node<'_>, fd: Node<'_>) -> Option<&'s str> {
     if let Some(trailing) = child_by_field(n, "trailing_return_type") {
         return child_by_field(trailing, "type_descriptor").map(|t| text(cx, t));
     }
     let ty = child_by_field(n, "type")?;
     Some(span(cx, ty, fd))
-}
-fn decl_info<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> (Vec<(&'s str, Pos)>, bool) {
-    c_family::decl_info(cx, n, WRAP)
 }
 fn callee_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     let mut current = n;
@@ -642,7 +579,10 @@ fn alias_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
 fn catch_binding<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     let params = child_by_field(n, "parameters")?;
     let decl_node = first_named_child_matching(params, &["parameter_declaration"])?;
-    let found = unwrap(child_by_field(decl_node, "declarator")?);
+    let found = c_family::unwrap(
+        child_by_field(decl_node, "declarator")?,
+        CPP_DECLARATORS.wrap,
+    );
     (found.kind() == "identifier").then_some(text(cx, found))
 }
 fn catch_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, bound: Option<&'s str>) -> Stmt<'s> {
@@ -681,7 +621,7 @@ fn global_ambient<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, 
     ) {
         return;
     }
-    let (names, func) = decl_info(cx, n);
+    let (names, func) = c_family::decl_info(cx, n, CPP_DECLARATORS.wrap);
     if func {
         return;
     }
@@ -693,7 +633,7 @@ fn env_ambient<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s
     if callee_holds_a_paren(cx, n) {
         return;
     }
-    c_family::env_ambient(cx, n, out, ENVS);
+    c_family::env_ambient(cx, n, out, CPP_DECLARATORS.envs);
 }
 
 fn callee_holds_a_paren(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {

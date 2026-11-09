@@ -197,14 +197,10 @@ fn make_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
 fn positional_nodes<'a>(n: Node<'a>, func: Node<'a>) -> Vec<Node<'a>> {
     let mut out = Vec::new();
     for child in named_children(n) {
-        if child.id() == func.id() {
+        if child.id() == func.id() || matches!(child.kind(), "comment" | "block_comment") {
             continue;
         }
-        if child.kind() == "arguments" {
-            out.extend(named_children(child));
-        } else {
-            out.push(child);
-        }
+        out.push(child);
     }
     out
 }
@@ -598,5 +594,46 @@ impl LangHooks for OdinHooks {
             has_message: arity,
             comparison,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::positional_nodes;
+
+    fn call_in(source: &str) -> (tree_sitter::Tree, usize, usize) {
+        let mut parser = tree_sitter::Parser::new();
+        let language: tree_sitter::Language = tree_sitter_odin::LANGUAGE.into();
+        parser.set_language(&language).expect("odin grammar loads");
+        let tree = parser.parse(source, None).expect("parser returns a tree");
+        fn find_call(n: tree_sitter::Node<'_>) -> Option<(usize, usize)> {
+            if n.kind() == "call_expression" {
+                return Some((n.start_byte(), n.end_byte()));
+            }
+            (0..n.named_child_count())
+                .find_map(|i| n.named_child(u32::try_from(i).ok()?).and_then(find_call))
+        }
+        let range = find_call(tree.root_node()).expect("a call_expression in the tree");
+        (tree, range.0, range.1)
+    }
+
+    #[test]
+    fn comment_between_arguments_is_not_an_argument() {
+        let (tree, start, end) = call_in("main :: proc() {\n\tf(a, /* c */ b)\n}\n");
+        let root = tree.root_node();
+        let call = root.descendant_for_byte_range(start, end).unwrap();
+        assert_eq!(call.kind(), "call_expression");
+        let func = call
+            .child_by_field_name("function")
+            .expect("a function field");
+        let kinds: Vec<&str> = positional_nodes(call, func)
+            .iter()
+            .map(|n| n.kind())
+            .collect();
+        assert_eq!(
+            kinds,
+            vec!["identifier", "identifier"],
+            "a comment inside the call must not become an argument"
+        );
     }
 }

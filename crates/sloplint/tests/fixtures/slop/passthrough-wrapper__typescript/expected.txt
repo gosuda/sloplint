@@ -1,1 +1,2 @@
 src/mod.ts:2 warn slop/passthrough-wrapper
+src/mod.ts:5 warn slop/passthrough-wrapper

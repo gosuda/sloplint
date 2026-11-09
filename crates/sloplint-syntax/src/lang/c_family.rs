@@ -1,4 +1,4 @@
-use sloplint_core::facts::{AmbientKind, Arg, ArgShape, Assertion, Pos};
+use sloplint_core::facts::{AmbientKind, Arg, ArgShape, Assertion, Param, Pos};
 use tree_sitter::Node;
 
 use crate::hooks::{
@@ -72,6 +72,102 @@ pub(crate) fn param_target<'n>(d: Node<'n>, wrap: &[&str]) -> (Option<Node<'n>>,
         (current.kind() == "identifier").then_some(current),
         callable,
     )
+}
+
+pub(crate) struct CDeclarators {
+    pub(crate) wrap: &'static [&'static str],
+    pub(crate) envs: &'static [&'static str],
+}
+
+pub(crate) static C_DECLARATORS: CDeclarators = CDeclarators {
+    wrap: &[
+        "pointer_declarator",
+        "array_declarator",
+        "parenthesized_declarator",
+        "attributed_declarator",
+    ],
+    envs: &["getenv", "secure_getenv", "_dupenv_s"],
+};
+
+pub(crate) static CPP_DECLARATORS: CDeclarators = CDeclarators {
+    wrap: &[
+        "reference_declarator",
+        "pointer_declarator",
+        "array_declarator",
+        "parenthesized_declarator",
+        "attributed_declarator",
+    ],
+    envs: &[
+        "getenv",
+        "std::getenv",
+        "::getenv",
+        "secure_getenv",
+        "_dupenv_s",
+    ],
+};
+
+pub(crate) fn func_parts<'n>(
+    n: Node<'n>,
+    decls: &CDeclarators,
+    name_kinds: &[&str],
+) -> Option<(Node<'n>, Node<'n>)> {
+    let fd = unwrap(child_by_field(n, "declarator")?, decls.wrap);
+    if fd.kind() != "function_declarator" {
+        return None;
+    }
+    let name = unwrap(child_by_field(fd, "declarator")?, decls.wrap);
+    let kind = name.kind();
+    if name_kinds.contains(&kind) {
+        return Some((fd, name));
+    }
+    match kind {
+        "qualified_identifier" | "template_function" | "template_method" => {
+            Some((fd, child_by_field(name, "name")?))
+        }
+        _ => None,
+    }
+}
+
+pub(crate) fn params<'s>(
+    cx: &Cx<'_, 's>,
+    fd: Node<'_>,
+    decls: &CDeclarators,
+    decl_kinds: &[&str],
+) -> Vec<Param<'s>> {
+    let mut out = Vec::new();
+    let Some(list) = child_by_field(fd, "parameters") else {
+        return out;
+    };
+    for c in named_children(list) {
+        if !decl_kinds.contains(&c.kind()) {
+            continue;
+        }
+        if let Some(found) = param(cx, c, decls) {
+            out.push(found);
+        }
+    }
+    out
+}
+
+pub(crate) fn param<'s>(cx: &Cx<'_, 's>, p: Node<'_>, decls: &CDeclarators) -> Option<Param<'s>> {
+    let ty_node = child_by_field(p, "type")?;
+    let declarator = child_by_field(p, "declarator");
+    let (named, callable) = declarator.map_or((None, false), |d| param_target(d, decls.wrap));
+    let name = named.map(|l| text(cx, l)).unwrap_or("");
+    let ty = match (named, declarator) {
+        (Some(found), _) if !callable => span(cx, ty_node, found),
+        (_, Some(d)) => slice(cx.src, p.start_byte(), d.end_byte()),
+        (_, None) => text(cx, ty_node),
+    };
+    if name.is_empty() && ty == "void" {
+        return None;
+    }
+    Some(Param {
+        name,
+        ty: Some(ty),
+        bool_default: child_by_field(p, "default_value")
+            .is_some_and(|d| text(cx, d) == "true" || text(cx, d) == "false"),
+    })
 }
 pub(crate) fn const_pointer(cx: &Cx<'_, '_>, d: Node<'_>, wrap: &[&str]) -> bool {
     let mut current = match d.kind() {

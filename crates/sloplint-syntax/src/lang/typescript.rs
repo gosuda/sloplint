@@ -6,8 +6,8 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field,
-    first_named_child, first_named_child_matching, has_child_kind, named_children, pos_of,
-    preceding_comments, strip_quotes, text,
+    code_children, first_named_child, first_named_child_matching, has_child_kind, named_children,
+    pos_of, preceding_comments, strip_quotes, text,
 };
 pub(crate) mod calls;
 pub(crate) mod imports;
@@ -16,44 +16,15 @@ use self::calls::{callee_root, ts_args, ts_declared, ts_root, ts_sole_call};
 use self::imports::{
     catch_stmt, export_specs, export_stmt, heritage_impls, import_stmt, parent_dir, ts_targets,
 };
+use crate::lang::javascript::js_table;
 use crate::spec::Role;
 
-pub(crate) static TABLE: crate::lang::Table = &[
-    ("function_declaration", Role::Function),
-    ("generator_function_declaration", Role::Function),
-    ("method_definition", Role::Function),
-    ("arrow_function", Role::Closure),
-    ("function_expression", Role::Closure),
-    ("generator_function", Role::Closure),
-    ("if_statement", Role::If),
-    ("else_clause", Role::ElseClause),
-    ("switch_statement", Role::Match),
-    ("for_statement", Role::Loop),
-    ("for_in_statement", Role::Loop),
-    ("while_statement", Role::Loop),
-    ("do_statement", Role::Loop),
-    ("catch_clause", Role::Catch),
-    ("ternary_expression", Role::Ternary),
-    ("call_expression", Role::Call),
-    ("new_expression", Role::NewCall),
-    ("lexical_declaration", Role::Decl),
-    ("variable_declaration", Role::Decl),
-    ("using_declaration", Role::Decl),
-    ("assignment_expression", Role::Write),
-    ("augmented_assignment_expression", Role::Write),
-    ("update_expression", Role::Write),
-    ("import_statement", Role::Import),
-    ("export_statement", Role::Export),
-    ("class_declaration", Role::TypeDef),
+pub(crate) static TABLE: crate::lang::Table = js_table!(
     ("abstract_class_declaration", Role::TypeDef),
     ("interface_declaration", Role::TypeDef),
     ("type_alias_declaration", Role::TypeDef),
     ("enum_declaration", Role::TypeDef),
-    ("comment", Role::Comment),
-    ("switch_default", Role::MatchArm),
-    ("object", Role::StructLit),
-    ("member_expression", Role::Member),
-];
+);
 
 pub(crate) struct TypeScriptHooks;
 
@@ -271,10 +242,6 @@ impl LangHooks for TypeScriptHooks {
         None
     }
 
-    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
-        parent.is_some_and(|p| p.kind() == "else_clause")
-    }
-
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         if n.kind() == "lexical_declaration"
             && !child_by_field(n, "kind").is_some_and(|k| text(cx, k) == "let")
@@ -429,7 +396,7 @@ impl LangHooks for TypeScriptHooks {
         let mut fields = 0u32;
         let mut source: Option<&'s str> = None;
         let mut poisoned = false;
-        for child in named_children(n) {
+        for child in code_children(n) {
             if child.kind() == "spread_element" {
                 continue;
             }

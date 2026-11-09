@@ -2,13 +2,16 @@ use sloplint_core::facts::{Arg, ArgShape, Pos};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, binary_concat, child_by_field, first_named_child, named_children, narrow,
-    only_named_child_matching, pos_of, sole_call_id, string_arg_shape, text,
+    Cx, binary_concat, child_by_field, code_children, find_named_child, first_named_child,
+    named_children, narrow, only_named_child_matching, pos_of, sole_call_id, string_arg_shape,
+    text,
 };
 
 pub(crate) fn ts_call_stmt(n: Node<'_>) -> Option<usize> {
     let inner = match n.kind() {
-        "return_statement" | "expression_statement" => first_named_child(n)?,
+        "return_statement" | "expression_statement" => {
+            find_named_child(n, |child| child.kind() != "comment")?
+        }
         _ => return None,
     };
     let mut cur = inner;
@@ -17,7 +20,7 @@ pub(crate) fn ts_call_stmt(n: Node<'_>) -> Option<usize> {
             return Some(cur.id());
         }
         if cur.kind() == "await_expression" {
-            cur = first_named_child(cur)?;
+            cur = find_named_child(cur, |child| child.kind() != "comment")?;
         } else {
             return None;
         }
@@ -108,7 +111,7 @@ pub(crate) fn ts_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
 pub(crate) fn ts_args<'s>(cx: &Cx<'_, 's>, args: Node<'_>) -> Vec<Arg<'s>> {
     let items = match args.kind() {
         "template_string" => vec![args],
-        _ => named_children(args),
+        _ => code_children(args),
     };
     items
         .into_iter()
@@ -144,13 +147,11 @@ mod tests {
         );
     }
 
-    // Adapter drift, pinned: the JavaScript adapter skips a leading comment before
-    // the returned expression; the TypeScript adapter does not.
     #[test]
-    fn leading_comment_hides_the_sole_call_in_typescript() {
-        assert_eq!(
-            sole_call_in_ts("function f() { return /* c */ g(); }"),
-            None
+    fn leading_comment_keeps_the_sole_call_in_typescript() {
+        assert!(
+            sole_call_in_ts("function f() { return /* c */ g(); }").is_some(),
+            "a leading comment must not hide the returned call"
         );
     }
 }

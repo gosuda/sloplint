@@ -241,7 +241,9 @@ pub(crate) trait LangHooks: Sync {
         false
     }
 
-    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool;
+    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|p| p.kind() == "else_clause")
+    }
 
     fn control_call(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
         let _ = (n, cx);
@@ -340,6 +342,13 @@ pub(crate) fn trimmed<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
 pub(crate) fn named_children(n: Node<'_>) -> Vec<Node<'_>> {
     let mut cursor = n.walk();
     n.named_children(&mut cursor).collect()
+}
+
+pub(crate) fn code_children(n: Node<'_>) -> Vec<Node<'_>> {
+    named_children(n)
+        .into_iter()
+        .filter(|child| child.kind() != "comment")
+        .collect()
 }
 
 pub(crate) fn first_named_child<'a>(n: Node<'a>) -> Option<Node<'a>> {
