@@ -1,93 +1,145 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum Lang {
-    Rust,
-    TypeScript,
-    Tsx,
-    JavaScript,
-    Python,
-    Go,
-    Java,
-    Kotlin,
-    CSharp,
-    C,
-    Cpp,
-    ObjC,
-    Php,
-    Ruby,
-    Bash,
-    PowerShell,
-    Swift,
-    R,
-    Scala,
-    Dart,
-    Zig,
-    Ocaml,
-    OcamlInterface,
-    Odin,
-    Starlark,
+struct LangIdentity {
+    key: &'static str,
+    extensions: &'static [&'static str],
+}
+
+macro_rules! languages {
+    ($($variant:ident => $key:literal, $extensions:expr;)*) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+        pub enum Lang {
+            $($variant,)*
+        }
+
+        impl Lang {
+            const fn identity(self) -> LangIdentity {
+                match self {
+                    $(Lang::$variant => LangIdentity { key: $key, extensions: $extensions },)*
+                }
+            }
+        }
+
+        pub const ALL_LANGS: &[Lang] = &[$(Lang::$variant,)*];
+    };
+}
+
+languages! {
+    Rust => "rust", &[".rs"];
+    TypeScript => "typescript", &[".ts", ".mts", ".cts"];
+    Tsx => "typescript", &[".tsx"];
+    JavaScript => "javascript", &[".js", ".jsx", ".mjs", ".cjs"];
+    Python => "python", &[".py", ".pyi"];
+    Go => "go", &[".go"];
+    Java => "java", &[".java"];
+    Kotlin => "kotlin", &[".kt", ".kts"];
+    CSharp => "csharp", &[".cs"];
+    C => "c", &[".c", HEADER_EXTENSION];
+    Cpp => "cpp", &[".cc", ".cpp", ".cxx", ".c++", ".C", ".hh", ".hpp", ".hxx", ".h++", ".ipp"];
+    ObjC => "objc", &[".m"];
+    Php => "php", &[".php"];
+    Ruby => "ruby", &[".rb", ".rake", ".gemspec", ".ru"];
+    Bash => "bash", &[".sh", ".bash", ".bats"];
+    PowerShell => "powershell", &[".ps1", ".psm1"];
+    Swift => "swift", &[".swift"];
+    R => "r", &[".r", ".R"];
+    Scala => "scala", &[".scala", ".sc"];
+    Dart => "dart", &[".dart"];
+    Zig => "zig", &[".zig"];
+    Ocaml => "ocaml", &[".ml"];
+    OcamlInterface => "ocaml", &[".mli"];
+    Odin => "odin", &[".odin"];
+    Starlark => "starlark", &[".bzl", ".star", ".BUILD", ".bazel"];
 }
 
 const HEADER_EXTENSION: &str = ".h";
 
 const HEADER_FALLBACKS: &[Lang] = &[Lang::Cpp, Lang::ObjC];
 
-const EXTENSIONS: &[(&str, Lang)] = &[
-    (".rs", Lang::Rust),
-    (".ts", Lang::TypeScript),
-    (".mts", Lang::TypeScript),
-    (".cts", Lang::TypeScript),
-    (".tsx", Lang::Tsx),
-    (".js", Lang::JavaScript),
-    (".jsx", Lang::JavaScript),
-    (".mjs", Lang::JavaScript),
-    (".cjs", Lang::JavaScript),
-    (".py", Lang::Python),
-    (".pyi", Lang::Python),
-    (".go", Lang::Go),
-    (".java", Lang::Java),
-    (".kt", Lang::Kotlin),
-    (".kts", Lang::Kotlin),
-    (".cs", Lang::CSharp),
-    (".c", Lang::C),
-    (HEADER_EXTENSION, Lang::C),
-    (".cc", Lang::Cpp),
-    (".cpp", Lang::Cpp),
-    (".cxx", Lang::Cpp),
-    (".c++", Lang::Cpp),
-    (".C", Lang::Cpp),
-    (".hh", Lang::Cpp),
-    (".hpp", Lang::Cpp),
-    (".hxx", Lang::Cpp),
-    (".h++", Lang::Cpp),
-    (".ipp", Lang::Cpp),
-    (".m", Lang::ObjC),
-    (".php", Lang::Php),
-    (".rb", Lang::Ruby),
-    (".rake", Lang::Ruby),
-    (".gemspec", Lang::Ruby),
-    (".ru", Lang::Ruby),
-    (".sh", Lang::Bash),
-    (".bash", Lang::Bash),
-    (".bats", Lang::Bash),
-    (".ps1", Lang::PowerShell),
-    (".psm1", Lang::PowerShell),
-    (".swift", Lang::Swift),
-    (".r", Lang::R),
-    (".R", Lang::R),
-    (".scala", Lang::Scala),
-    (".sc", Lang::Scala),
-    (".dart", Lang::Dart),
-    (".zig", Lang::Zig),
-    (".ml", Lang::Ocaml),
-    (".mli", Lang::OcamlInterface),
-    (".odin", Lang::Odin),
-    (".bzl", Lang::Starlark),
-    (".star", Lang::Starlark),
-    (".BUILD", Lang::Starlark),
-    (".bazel", Lang::Starlark),
-];
+const fn same_str(left: &str, right: &str) -> bool {
+    let (left, right) = (left.as_bytes(), right.as_bytes());
+    if left.len() != right.len() {
+        return false;
+    }
+    let mut index = 0;
+    while index < left.len() {
+        if left[index] != right[index] {
+            return false;
+        }
+        index += 1;
+    }
+    true
+}
+
+const fn key_seen_before(index: usize) -> bool {
+    let key = ALL_LANGS[index].identity().key;
+    let mut earlier = 0;
+    while earlier < index {
+        if same_str(ALL_LANGS[earlier].identity().key, key) {
+            return true;
+        }
+        earlier += 1;
+    }
+    false
+}
+
+const fn distinct_key_count() -> usize {
+    let mut count = 0;
+    let mut index = 0;
+    while index < ALL_LANGS.len() {
+        if !key_seen_before(index) {
+            count += 1;
+        }
+        index += 1;
+    }
+    count
+}
+
+const fn distinct_keys() -> [&'static str; distinct_key_count()] {
+    let mut keys = [""; distinct_key_count()];
+    let mut slot = 0;
+    let mut index = 0;
+    while index < ALL_LANGS.len() {
+        if !key_seen_before(index) {
+            keys[slot] = ALL_LANGS[index].identity().key;
+            slot += 1;
+        }
+        index += 1;
+    }
+    keys
+}
+
+pub const ALL_CONFIG_KEYS: &[&str] = &distinct_keys();
+
+const fn extension_count() -> usize {
+    let mut count = 0;
+    let mut index = 0;
+    while index < ALL_LANGS.len() {
+        count += ALL_LANGS[index].identity().extensions.len();
+        index += 1;
+    }
+    count
+}
+
+const fn extension_table() -> [(&'static str, Lang); extension_count()] {
+    let mut table = [("", Lang::Rust); extension_count()];
+    let mut slot = 0;
+    let mut index = 0;
+    while index < ALL_LANGS.len() {
+        let lang = ALL_LANGS[index];
+        let extensions = lang.identity().extensions;
+        let mut position = 0;
+        while position < extensions.len() {
+            table[slot] = (extensions[position], lang);
+            slot += 1;
+            position += 1;
+        }
+        index += 1;
+    }
+    table
+}
+
+const EXTENSIONS: &[(&str, Lang)] = &extension_table();
 
 const SPECIAL_NAMES: &[(&str, Lang)] = &[
     ("Rakefile", Lang::Ruby),
@@ -114,86 +166,6 @@ const SPECIAL_NAMES: &[(&str, Lang)] = &[
     ("MODULE.bazel", Lang::Starlark),
     ("Tiltfile", Lang::Starlark),
     ("BUCK", Lang::Starlark),
-];
-
-pub const ALL_LANGS: &[Lang] = &[
-    Lang::Rust,
-    Lang::TypeScript,
-    Lang::Tsx,
-    Lang::JavaScript,
-    Lang::Python,
-    Lang::Go,
-    Lang::Java,
-    Lang::Kotlin,
-    Lang::CSharp,
-    Lang::C,
-    Lang::Cpp,
-    Lang::ObjC,
-    Lang::Php,
-    Lang::Ruby,
-    Lang::Bash,
-    Lang::PowerShell,
-    Lang::Swift,
-    Lang::R,
-    Lang::Scala,
-    Lang::Dart,
-    Lang::Zig,
-    Lang::Ocaml,
-    Lang::OcamlInterface,
-    Lang::Odin,
-    Lang::Starlark,
-];
-
-pub const ALL_CONFIG_KEYS: &[&str] = &[
-    "rust",
-    "typescript",
-    "javascript",
-    "python",
-    "go",
-    "java",
-    "kotlin",
-    "csharp",
-    "c",
-    "cpp",
-    "objc",
-    "php",
-    "ruby",
-    "bash",
-    "powershell",
-    "swift",
-    "r",
-    "scala",
-    "dart",
-    "zig",
-    "ocaml",
-    "odin",
-    "starlark",
-];
-
-const PRIMARY_KEY_LANGS: &[(&str, Lang)] = &[
-    ("rust", Lang::Rust),
-    ("typescript", Lang::TypeScript),
-    ("javascript", Lang::JavaScript),
-    ("python", Lang::Python),
-    ("go", Lang::Go),
-    ("java", Lang::Java),
-    ("kotlin", Lang::Kotlin),
-    ("csharp", Lang::CSharp),
-    ("c", Lang::C),
-    ("cpp", Lang::Cpp),
-    ("objc", Lang::ObjC),
-    ("php", Lang::Php),
-    ("ruby", Lang::Ruby),
-    ("bash", Lang::Bash),
-    ("powershell", Lang::PowerShell),
-    ("swift", Lang::Swift),
-    ("r", Lang::R),
-    ("scala", Lang::Scala),
-    ("dart", Lang::Dart),
-    ("zig", Lang::Zig),
-    ("ocaml", Lang::Ocaml),
-    ("odin", Lang::Odin),
-    ("starlark", Lang::Starlark),
 ];
 
 #[derive(Clone, Copy)]
@@ -242,16 +214,12 @@ const STARLARK_ENTRY_FILES: &[&str] = &[
     "Tiltfile",
 ];
 
-fn file_name_of(rel_path: &str) -> &str {
-    rel_path.rsplit('/').next().unwrap_or(rel_path)
-}
-
 impl Lang {
     pub fn from_path(rel_path: &str) -> Option<Lang> {
         if rel_path.ends_with(".blade.php") {
             return None;
         }
-        let base = file_name_of(rel_path);
+        let base = rel_path.rsplit('/').next().unwrap_or(rel_path);
         EXTENSIONS
             .iter()
             .find(|(ext, _)| base.ends_with(ext))
@@ -266,48 +234,25 @@ impl Lang {
 
     /// Cpp precedes ObjC: the Objective-C grammar also accepts some C++ headers, so Cpp must try them first.
     pub fn parse_fallbacks(self, rel_path: &str) -> &'static [Lang] {
-        let header = self == Lang::C && file_name_of(rel_path).ends_with(HEADER_EXTENSION);
+        let base = rel_path.rsplit('/').next().unwrap_or(rel_path);
+        let header = self == Lang::C && base.ends_with(HEADER_EXTENSION);
         if header { HEADER_FALLBACKS } else { &[] }
     }
 
     pub fn config_key(self) -> &'static str {
-        match self {
-            Lang::Rust => "rust",
-            Lang::TypeScript | Lang::Tsx => "typescript",
-            Lang::JavaScript => "javascript",
-            Lang::Python => "python",
-            Lang::Go => "go",
-            Lang::Java => "java",
-            Lang::Kotlin => "kotlin",
-            Lang::CSharp => "csharp",
-            Lang::C => "c",
-            Lang::Cpp => "cpp",
-            Lang::ObjC => "objc",
-            Lang::Php => "php",
-            Lang::Ruby => "ruby",
-            Lang::Bash => "bash",
-            Lang::PowerShell => "powershell",
-            Lang::Swift => "swift",
-            Lang::R => "r",
-            Lang::Scala => "scala",
-            Lang::Dart => "dart",
-            Lang::Zig => "zig",
-            Lang::Ocaml | Lang::OcamlInterface => "ocaml",
-            Lang::Odin => "odin",
-            Lang::Starlark => "starlark",
-        }
+        self.identity().key
     }
 
     pub fn from_config_key(key: &str) -> Option<Lang> {
-        PRIMARY_KEY_LANGS
+        ALL_LANGS
             .iter()
-            .find(|(name, _)| *name == key)
-            .map(|(_, lang)| *lang)
+            .copied()
+            .find(|lang| lang.identity().key == key)
     }
 
     pub fn is_entry_file(self, rel_path: &str) -> bool {
         let spec = self.entry_spec();
-        let base = file_name_of(rel_path);
+        let base = rel_path.rsplit('/').next().unwrap_or(rel_path);
         let segments: Vec<&str> = rel_path.split('/').collect();
         spec.files.contains(&base)
             || (spec.any_config && base.contains(".config."))
@@ -435,6 +380,17 @@ mod tests {
             let falls_back =
                 Lang::from_path(path).is_some_and(|lang| !lang.parse_fallbacks(path).is_empty());
             assert_eq!(falls_back, path.ends_with(".h"), "{path}");
+        }
+    }
+
+    #[test]
+    fn every_extension_routes_back_to_its_language() {
+        for (extension, lang) in EXTENSIONS {
+            assert_eq!(
+                Lang::from_path(&format!("pkg/module{extension}")),
+                Some(*lang),
+                "{extension} must route to the language that declares it"
+            );
         }
     }
 
