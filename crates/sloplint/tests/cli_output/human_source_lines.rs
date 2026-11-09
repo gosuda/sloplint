@@ -27,6 +27,15 @@ fn human(cwd: &Path, rule: &str) -> String {
     assert_eq!(out.status.code(), Some(0), "exit code");
     String::from_utf8(out.stdout).unwrap_or_else(|e| panic!("output is not UTF-8: {e}"))
 }
+/// The number printed in the gutter of the block's source row: the digits before the ` │ `
+/// separator on the one row whose gutter holds a number. Annotation and fold rows share the
+/// separator but leave the gutter blank.
+fn snippet_row_number(block: &str) -> Option<u32> {
+    block.lines().find_map(|row| {
+        row.split_once(" │ ")
+            .and_then(|(gutter, _)| gutter.trim().parse().ok())
+    })
+}
 
 fn assert_each_finding_shows_its_source_line(output: &str, expected: &[(&str, u32, &str)]) {
     assert!(
@@ -49,8 +58,22 @@ fn assert_each_finding_shows_its_source_line(output: &str, expected: &[(&str, u3
             block.contains(source),
             "{location} does not show {source:?} in:\n{block}"
         );
+        assert_eq!(
+            snippet_row_number(block),
+            Some(line),
+            "{location} must label its source row with the finding's line number"
+        );
         start = index + 1;
     }
+    let printed: Vec<u32> = blocks
+        .iter()
+        .filter_map(|block| snippet_row_number(block))
+        .collect();
+    let wanted: Vec<u32> = expected.iter().map(|&(_, line, _)| line).collect();
+    assert_eq!(
+        printed, wanted,
+        "every printed snippet row must be one finding's own line, in order"
+    );
 }
 
 #[test]
@@ -135,6 +158,7 @@ fn edge_case_line_endings_render_expected_snippets() {
         &output,
         &[
             ("lone_cr.rs", 1, "pub fn handle() {}"),
+            ("lone_cr.rs", 1, "pub fn run() {}"),
             ("no_trailing_lf.rs", 1, "pub fn handle() {}"),
             ("trailing_crlf.rs", 1, "pub fn handle() {}"),
             ("trailing_lf.rs", 1, "pub fn handle() {}"),

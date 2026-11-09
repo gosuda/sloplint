@@ -451,6 +451,15 @@ mod tests {
                 "config key {key:?} must round-trip through its language"
             );
         }
+        let mut table = ALL_CONFIG_KEYS.to_vec();
+        table.sort_unstable();
+        let mut langs: Vec<&str> = ALL_LANGS.iter().map(|lang| lang.config_key()).collect();
+        langs.sort_unstable();
+        langs.dedup();
+        assert_eq!(
+            table, langs,
+            "the key table must hold exactly the distinct config keys of every language"
+        );
         assert_eq!(
             Lang::Tsx.config_key(),
             "typescript",

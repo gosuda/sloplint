@@ -288,8 +288,10 @@ fn a_hostile_length_prefix_shard_is_ignored_and_recomputed() {
     let target = shard_holding(&files, "a.rs");
 
     let genuine = file_bytes(&target);
-    let mut hostile = genuine[..1 + 32].to_vec();
-    hostile.extend_from_slice(&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f]);
+    let mut payload = genuine[32..65].to_vec();
+    payload.extend_from_slice(&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f]);
+    let mut hostile = blake3::hash(&payload).as_bytes().to_vec();
+    hostile.append(&mut payload);
     std::fs::write(&target, &hostile).unwrap_or_else(|e| panic!("write hostile: {e}"));
 
     let uncached = isolated(&root, &UNCACHED, &home);
