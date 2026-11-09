@@ -416,17 +416,8 @@ fn parse_shard_file_name(name: &std::ffi::OsStr) -> Option<u8> {
 fn hash_regular_into(hasher: &mut blake3::Hasher, path: &Path) -> io::Result<()> {
     let (file, len) = open_regular(path)?;
     let mut reader = file.take(len.saturating_add(1));
-    let mut buf = [0u8; 128 * 1024];
-    let mut read = 0u64;
-    loop {
-        let n = reader.read(&mut buf)?;
-        if n == 0 {
-            break;
-        }
-        read += u64::try_from(n).unwrap_or(u64::MAX);
-        hasher.update(&buf[..n]);
-    }
-    if read > len {
+    hasher.update_reader(&mut reader)?;
+    if reader.limit() == 0 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "file grew while being read",
