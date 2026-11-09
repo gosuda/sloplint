@@ -1,8 +1,4 @@
-//! Shared contracts for sloplint: language tables, file facts, findings,
-//! configuration, suppressions, baselines, and the rule catalog.
-//!
-//! This crate has no tree-sitter dependency and performs no I/O; the syntax
-//! crate turns parsed trees into these facts, and the CLI crate renders them.
+//! Contract types only: no tree-sitter dependency and no I/O; `sloplint-syntax` fills the facts from parsed trees, and the CLI renders them.
 
 pub mod baseline;
 pub mod callee;

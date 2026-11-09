@@ -1,5 +1,3 @@
-//! The rule catalog: metadata, thresholds, filters, and the resolver.
-
 pub(crate) mod agent;
 pub(crate) mod complexity;
 pub mod custom;
@@ -9,6 +7,8 @@ pub(crate) mod slop;
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use rayon::prelude::*;
+
 use crate::callee::CalleePattern;
 use crate::config::{Config, ConfigError, Strictness, static_language_key};
 use crate::facts::{FileFacts, Pos, WorldFacts};
@@ -17,25 +17,18 @@ use crate::suppress::RulePattern;
 
 pub use self::custom::CustomRuleSpec;
 
-/// Rule families; every rule id starts with its family prefix.
+/// Every rule id starts with its family prefix.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Family {
-    /// Working-memory load metrics.
     Complexity,
-    /// Text-search recall and precision.
     Grep,
-    /// Zero-information code.
     Slop,
-    /// Code an autonomous agent can discover, load, patch, and verify.
     Agent,
-    /// Linter self-checks emitted outside the rule run.
     Meta,
-    /// User-defined `[[custom_rules]]`.
     Custom,
 }
 
 impl Family {
-    /// The id prefix used in config and CLI output.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Complexity => "complexity",
@@ -48,60 +41,40 @@ impl Family {
     }
 }
 
-/// Static metadata and constructor for one builtin or meta rule.
 #[derive(Debug, Clone, Copy)]
 pub struct RuleInfo {
-    /// Full rule id, such as `complexity/cognitive-depth`.
     pub id: &'static str,
-    /// Family the id belongs to.
     pub family: Family,
-    /// One-line description shown by `sloplint rules`.
     pub summary: &'static str,
-    /// Rationale shown alongside fix instructions.
     pub why: &'static str,
-    /// Findings in test files are dropped when true.
     pub exempt_tests: bool,
-    /// Preset for one strictness profile.
     pub preset: fn(Strictness) -> Preset,
-    /// Constructor kind; `Meta` rules have none.
     pub build: Build,
 }
 
-/// A rule's complete option table and level for one strictness profile.
 #[derive(Debug, Clone)]
 pub struct Preset {
-    /// Level the profile assigns.
     pub level: Level,
-    /// Every option key the rule accepts at this profile.
     pub options: toml::Table,
 }
 
-/// Constructor signature for a per-file rule.
 pub type FileRuleBuilder = fn(toml::Table, &Settings) -> Result<Box<dyn FileRule>, String>;
 
-/// Constructor signature for a cross-file world rule.
 pub type WorldRuleBuilder = fn(toml::Table) -> Result<Box<dyn WorldRule>, String>;
 
-/// How a rule object is constructed from merged options.
 #[derive(Debug, Clone, Copy)]
 pub enum Build {
-    /// Per-file rule built from options and language settings.
     File(FileRuleBuilder),
-    /// Cross-file rule built from options only.
     World(WorldRuleBuilder),
-    /// Emitted outside the rule run; no constructor.
     Meta,
 }
 
-/// Language-scoped patterns shared with every file rule.
 #[derive(Debug, Clone, Default)]
 pub struct Settings {
-    /// Log callee patterns keyed by `Lang::config_key`.
     pub log_callees: BTreeMap<&'static str, Vec<CalleePattern>>,
 }
 
 impl Settings {
-    /// Builds settings from the resolved config's language tables.
     pub fn from_config(config: &Config) -> Settings {
         let mut log_callees = BTreeMap::new();
         for (key, language) in &config.languages {
@@ -118,37 +91,29 @@ impl Settings {
     }
 }
 
-/// Detection over one analyzed file.
 pub trait FileRule: Send + Sync {
-    /// Appends findings for `facts`; rules only detect, never cap or filter.
+    /// Rules only detect; the caller caps and filters.
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>);
 }
 
-/// Detection across every analyzed file, sorted by path.
+/// `files` arrives sorted by path.
 pub trait WorldRule: Send + Sync {
-    /// Appends findings for the whole file set.
     fn check(&self, files: &[WorldFile<'_>], out: &mut Vec<Finding>);
 }
 
-/// One file's world facts in the world-rule input slice.
 pub struct WorldFile<'a> {
-    /// Repo-relative path with `/` separators.
+    /// Repo-relative, `/`-separated.
     pub path: &'a str,
-    /// Serializable per-file summary.
     pub facts: &'a WorldFacts,
 }
 
-/// Shared warn/deny thresholds every metric rule grades with.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Thresholds {
-    /// Lowest value reported as warn.
     pub warn_at: u32,
-    /// Lowest value reported as deny.
     pub deny_at: u32,
 }
 
 impl Thresholds {
-    /// Creates thresholds; requires `1 <= warn_at <= deny_at`.
     pub fn new(warn_at: u32, deny_at: u32) -> Result<Thresholds, String> {
         if warn_at == 0 || warn_at > deny_at {
             return Err(format!(
@@ -158,7 +123,6 @@ impl Thresholds {
         Ok(Thresholds { warn_at, deny_at })
     }
 
-    /// Grades a metric value into a severity, or `None` below `warn_at`.
     pub fn grade(self, value: u32) -> Option<Severity> {
         if value >= self.deny_at {
             Some(Severity::Deny)
@@ -170,39 +134,28 @@ impl Thresholds {
     }
 }
 
-/// CLI `--rule` filter; an empty filter matches every rule.
 #[derive(Debug, Clone, Default)]
 pub struct RuleFilter(pub Vec<RulePattern>);
 
 impl RuleFilter {
-    /// Whether `rule_id` passes the filter.
     pub fn matches(&self, rule_id: &str) -> bool {
         self.0.is_empty() || self.0.iter().any(|pattern| pattern.matches(rule_id))
     }
 }
 
-/// One custom-rule query hit produced by the syntax crate.
 pub struct CustomHit<'s> {
-    /// Index into the config's `custom_rules` order.
     pub rule: u32,
-    /// Position of the `@match` capture start.
     pub pos: Pos,
-    /// `(capture name, node text)` pairs for message interpolation.
     pub captures: Vec<(&'s str, &'s str)>,
 }
 
-/// Effective resolution of one catalog rule, for `sloplint rules`.
 #[derive(Debug, Clone)]
 pub struct ResolvedRule {
-    /// Catalog metadata.
     pub info: &'static RuleInfo,
-    /// Level after the user table overrode the preset.
     pub level: Level,
-    /// Preset options with every user key written over them.
     pub options: toml::Table,
 }
 
-/// Every builtin and meta rule, listed by id in sorted order.
 pub static CATALOG: &[RuleInfo] = &[
     agent::ambient_global_state::INFO,
     agent::catch_all_match::INFO,
@@ -246,7 +199,19 @@ pub(crate) fn parse_level(s: &str) -> Option<Level> {
     }
 }
 
-/// Active rules built from one config plus a filter; safe to share across threads.
+pub(crate) fn threshold_options(warn_at: u32, deny_at: u32) -> toml::Table {
+    let mut options = toml::Table::new();
+    options.insert(
+        "warn_at".to_string(),
+        toml::Value::Integer(i64::from(warn_at)),
+    );
+    options.insert(
+        "deny_at".to_string(),
+        toml::Value::Integer(i64::from(deny_at)),
+    );
+    options
+}
+
 pub struct RuleSet {
     file_rules: Vec<(&'static RuleInfo, Box<dyn FileRule>)>,
     world_rules: Vec<(&'static RuleInfo, Box<dyn WorldRule>)>,
@@ -258,7 +223,6 @@ pub struct RuleSet {
 }
 
 impl RuleSet {
-    /// Rejects unknown `--rule` selectors before any rule is built.
     pub fn validate_filter(config: &Config, filter: &RuleFilter) -> Result<(), ConfigError> {
         for pattern in &filter.0 {
             let known = CATALOG
@@ -282,10 +246,6 @@ impl RuleSet {
         Ok(())
     }
 
-    /// Resolves every catalog rule: the preset of the active strictness with the user table over it.
-    ///
-    /// User options are checked even when the rule is off or filtered out.
-    /// Only enabled rules that pass the filter remain active.
     pub fn new(config: &Config, filter: &RuleFilter) -> Result<RuleSet, ConfigError> {
         Self::validate_filter(config, filter)?;
         let settings = Settings::from_config(config);
@@ -367,7 +327,6 @@ impl RuleSet {
         Ok(set)
     }
 
-    /// Runs every active file rule that applies to the file, then caps their levels.
     pub fn check_file(&self, facts: &FileFacts<'_>) -> Vec<Finding> {
         let mut out = Vec::new();
         for (info, rule) in &self.file_rules {
@@ -382,19 +341,21 @@ impl RuleSet {
         out
     }
 
-    /// Runs every active world rule over the path-sorted file set and caps their levels.
     pub fn check_world(&self, files: &[WorldFile<'_>]) -> Vec<Finding> {
-        let mut out = Vec::new();
-        for (info, rule) in &self.world_rules {
-            let mut found = Vec::new();
-            rule.check(files, &mut found);
-            cap_with_level(self.levels.get(info.id), &mut found);
-            out.append(&mut found);
-        }
-        out
+        self.world_rules
+            .par_iter()
+            .map(|(info, rule)| {
+                let mut found = Vec::new();
+                rule.check(files, &mut found);
+                cap_with_level(self.levels.get(info.id), &mut found);
+                found
+            })
+            .collect::<Vec<Vec<Finding>>>()
+            .into_iter()
+            .flatten()
+            .collect()
     }
 
-    /// Turns custom-rule hits into findings with path globs, the level cap, and interpolation applied.
     pub fn custom_findings(&self, facts: &FileFacts<'_>, hits: &[CustomHit<'_>]) -> Vec<Finding> {
         let mut out = Vec::new();
         for hit in hits {
@@ -424,7 +385,6 @@ impl RuleSet {
         out
     }
 
-    /// Builds the `meta/parse-error` finding when the rule is active; other rules skip the file.
     pub fn parse_error(&self, path: &str, source: &str, pos: Pos) -> Option<Finding> {
         if !self.is_active(meta::PARSE_ERROR.id) {
             return None;
@@ -435,7 +395,6 @@ impl RuleSet {
         Some(finding)
     }
 
-    /// Builds the `meta/unused-suppression` finding when the rule is active.
     pub fn unused_suppression(
         &self,
         path: &str,
@@ -452,7 +411,6 @@ impl RuleSet {
         Some(finding)
     }
 
-    /// Applies the level cap to findings emitted outside the rule run, such as suppression meta findings.
     pub fn cap_levels(&self, findings: &mut [Finding]) {
         for finding in findings.iter_mut() {
             let level = self.levels.get(&*finding.rule).copied();
@@ -462,7 +420,6 @@ impl RuleSet {
         }
     }
 
-    /// Rationale for a builtin, meta, or custom rule id.
     pub fn why(&self, rule: &str) -> Option<&str> {
         if let Some(info) = CATALOG.iter().find(|info| info.id == rule) {
             return Some(info.why);
@@ -473,18 +430,15 @@ impl RuleSet {
             .map(|entry| entry.why.as_str())
     }
 
-    /// Whether the id names a catalog or custom rule.
     pub fn is_known(&self, rule: &str) -> bool {
         CATALOG.iter().any(|info| info.id == rule)
             || self.custom.iter().any(|entry| &*entry.id == rule)
     }
 
-    /// Whether the rule is enabled above `off` and passes the filter.
     pub fn is_active(&self, rule: &str) -> bool {
         self.active.contains(rule)
     }
 
-    /// Effective level and options of every catalog rule, in catalog order.
     pub fn resolved(&self) -> &[ResolvedRule] {
         &self.resolved
     }

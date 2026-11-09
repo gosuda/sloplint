@@ -11,30 +11,18 @@ use sloplint_core::text::normalize_rel_path;
 use crate::RunError;
 use crate::project::glob_set;
 
-/// One lintable file: its repo-relative path, absolute path, and language.
 pub struct Entry {
-    /// Path relative to the project root, with `/` separators.
     pub rel: String,
-    /// Absolute path on disk.
     pub abs: PathBuf,
-    /// Language selected by the file's name.
     pub lang: Lang,
 }
 
-/// Every lintable file under the root, sorted by relative path.
 pub struct Discovery {
-    /// Lintable files in relative-path order.
+    /// Lintable files in ascending `rel` order; consumers binary-search by `rel`.
     pub entries: Vec<Entry>,
-    /// Lintable names that are never analyzed, as root-relative paths: non-UTF-8 names and entries that are not regular files (symlinks are never followed, FIFOs and devices never opened).
     pub skipped: Vec<PathBuf>,
 }
 
-/// Lists lintable files under `root` that match an enabled language and no exclude glob.
-///
-/// The tree is walked on `threads` threads. The result does not depend on
-/// the thread count: entries and skipped names are sorted, and when the walk
-/// fails the reported error is the least error message, chosen after every
-/// entry is visited.
 pub fn discover(root: &Path, config: &Config, threads: usize) -> Result<Discovery, RunError> {
     let patterns: Vec<String> = config
         .project
@@ -58,6 +46,7 @@ pub fn discover(root: &Path, config: &Config, threads: usize) -> Result<Discover
         mut skipped,
         errors,
     } = shared.into_inner().unwrap_or_else(PoisonError::into_inner);
+    // The least walk-error message keeps the failure deterministic across thread counts.
     if let Some(message) = errors.into_iter().min() {
         return Err(RunError::Io {
             path: root.to_path_buf(),
@@ -69,7 +58,6 @@ pub fn discover(root: &Path, config: &Config, threads: usize) -> Result<Discover
     Ok(Discovery { entries, skipped })
 }
 
-/// What the walker threads found: entries, skipped names, and walk error messages.
 #[derive(Default)]
 struct Found {
     entries: Vec<Entry>,
@@ -111,23 +99,21 @@ impl Found {
     }
 }
 
-/// Whether a walked name is analyzed, counted as a skip, or ignored outright.
 pub(crate) enum NameDecision {
     Analyze { rel: String, lang: Lang },
     Skipped,
     Ignored,
 }
 
-/// Classifies a regular file's root-relative name without touching the filesystem.
 pub(crate) fn decide_file_name(relative: &Path, config: &Config) -> NameDecision {
     decide_name(relative, true, config)
 }
 
-/// Classifies a non-regular walked name without touching the filesystem.
 pub(crate) fn decide_non_file_name(relative: &Path, config: &Config) -> NameDecision {
     decide_name(relative, false, config)
 }
 
+// Decides from the name text alone, never the filesystem: callers hold names of entries that may not exist.
 fn decide_name(relative: &Path, is_file: bool, config: &Config) -> NameDecision {
     match normalize_rel_path(relative) {
         Some(rel) => match enabled_lang(&rel, config) {
@@ -145,7 +131,6 @@ fn decide_name(relative: &Path, is_file: bool, config: &Config) -> NameDecision 
     }
 }
 
-/// Builds one [`Visitor`] per walker thread over a shared [`Found`].
 struct Collect<'a> {
     root: &'a Path,
     config: &'a Config,
@@ -163,7 +148,6 @@ impl<'a> ParallelVisitorBuilder<'a> for Collect<'a> {
     }
 }
 
-/// One walker thread's findings, merged into the shared [`Found`] when the thread finishes.
 struct Visitor<'a> {
     root: &'a Path,
     config: &'a Config,
@@ -198,14 +182,10 @@ fn lossy_rel(relative: &Path) -> String {
         .join("/")
 }
 
-/// Whether `root` or an ancestor holds a `.git` entry: a directory in a clone, or a file in a worktree or submodule.
 fn inside_repository(root: &Path) -> bool {
     root.ancestors().any(|dir| dir.join(".git").exists())
 }
 
-/// Configures a walk of `root` with gitignore and hidden-file filters, pruning every entry that matches `prune`.
-///
-/// Inside a repository, `require_git` stops `.gitignore` and `.git/info/exclude` at the repository root, so files above it are not applied. `.ignore` files still apply from every ancestor, as in ripgrep. Outside a repository, ancestor `.gitignore` files apply as before.
 fn walker(root: &Path, prune: GlobSet) -> WalkBuilder {
     let base = root.to_path_buf();
     let mut builder = WalkBuilder::new(root);
@@ -218,7 +198,6 @@ fn walker(root: &Path, prune: GlobSet) -> WalkBuilder {
     builder
 }
 
-/// Converts a walker failure into the run's I/O error.
 pub fn walk_error(root: &Path, error: ignore::Error) -> RunError {
     RunError::Io {
         path: root.to_path_buf(),

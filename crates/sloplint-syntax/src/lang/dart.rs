@@ -15,7 +15,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Node-kind roles for the Dart grammar.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_declaration", Role::Function),
     ("method_declaration", Role::Function),
@@ -53,10 +52,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("assert_statement", Role::Assert),
 ];
 
-/// Hooks reading Dart declarations, calls, imports, and handlers.
 pub(crate) static HOOKS: DartHooks = DartHooks;
 
-/// Unit hooks for Dart.
 pub(crate) struct DartHooks;
 
 fn has_anon(n: Node<'_>, kind: &str) -> bool {

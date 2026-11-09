@@ -1,5 +1,3 @@
-//! `complexity/import-fan-out`: flags files importing from too many distinct modules.
-
 use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
@@ -9,9 +7,8 @@ use crate::facts::{FileFacts, Pos};
 use crate::finding::{Finding, Level};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 
-use super::threshold_options;
+use crate::rules::threshold_options;
 
-/// Catalog entry for `complexity/import-fan-out`.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "complexity/import-fan-out",
     family: Family::Complexity,

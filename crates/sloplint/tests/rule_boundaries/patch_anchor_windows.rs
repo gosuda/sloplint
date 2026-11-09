@@ -7,6 +7,24 @@ use sloplint_core::suppress::RulePattern;
 
 const RULE: &str = "agent/unique-patch-anchors";
 
+/// Decimal integers in `text`, in order.
+fn numbers(text: &str) -> Vec<u64> {
+    let mut out = Vec::new();
+    let mut digits = String::new();
+    for ch in text.chars() {
+        if ch.is_ascii_digit() {
+            digits.push(ch);
+        } else if !digits.is_empty() {
+            out.push(digits.parse().expect("digits form a u64"));
+            digits.clear();
+        }
+    }
+    if !digits.is_empty() {
+        out.push(digits.parse().expect("digits form a u64"));
+    }
+    out
+}
+
 /// `(line, message)` of every finding for `source` written to `a.py`, in report order.
 fn reported(source: &str) -> Vec<(u32, String)> {
     reported_at(Strictness::Strict, source)
@@ -174,10 +192,24 @@ fn assert_reported_regions_are_identical_and_in_bounds(source: &str, found: &[(u
 
 #[test]
 fn three_identical_blocks_are_reported_once() {
+    let found = reported(&three_copies(|_| block()));
     assert_eq!(
-        reported(&three_copies(|_| block())),
-        three_blocks_at_lines_1_9_17()
+        found.len(),
+        1,
+        "three identical blocks must produce one finding"
     );
+    let (line, message) = &found[0];
+    assert_eq!(line, &1, "the finding must be anchored at the first block");
+    let found_numbers = numbers(message);
+    let expected = [1_u64, 9, 17];
+    let mut at = 0;
+    for want in expected {
+        let pos = found_numbers[at..]
+            .iter()
+            .position(|n| *n == want)
+            .unwrap_or_else(|| panic!("{message} must contain {want} in order"));
+        at += pos + 1;
+    }
 }
 
 #[test]

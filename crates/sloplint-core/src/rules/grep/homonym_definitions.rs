@@ -1,7 +1,7 @@
-//! `grep/homonym-definitions`: one name defined in many files.
-
 use std::collections::{HashMap, HashSet};
+use std::hash::BuildHasher;
 
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::{parse_options, string_values};
@@ -15,7 +15,6 @@ const ALLOWED_NAMES: &[&str] = &[
     "__init__", "setup", "teardown", "test", "String", "Error", "Result", "Config", "Options",
 ];
 
-/// `grep/homonym-definitions`: flags names defined in at least `min_files` distinct files.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "grep/homonym-definitions",
     family: Family::Grep,
@@ -97,7 +96,6 @@ impl WorldRule for HomonymDefinitions {
     }
 }
 
-/// Collects the sites of every name in `reported`, in file then definition order.
 fn add_definitions<'a>(
     file: &WorldFile<'a>,
     reported: &HashSet<&'a str>,
@@ -115,28 +113,51 @@ fn add_definitions<'a>(
 }
 
 impl HomonymDefinitions {
-    /// Names outside `allow` that are defined in at least `min_files` distinct files.
-    ///
-    /// Counting comes first so that only reported names are sorted: on a large tree almost
-    /// every name falls below the threshold.
     fn reported_names<'a>(&self, files: &[WorldFile<'a>]) -> HashSet<&'a str> {
-        let mut counts: HashMap<&'a str, (usize, usize)> = HashMap::new();
-        for (index, file) in files.iter().enumerate() {
-            for site in &file.facts.definitions {
-                if self.allow.contains(site.name.as_ref()) {
-                    continue;
+        const NAME_SHARDS: usize = 64;
+        let state = std::hash::RandomState::new();
+        let chunk = files
+            .len()
+            .div_ceil(rayon::current_num_threads() * 4)
+            .max(1);
+        let buckets: Vec<[Vec<(&'a str, usize)>; NAME_SHARDS]> = files
+            .par_chunks(chunk)
+            .enumerate()
+            .map(|(chunk_index, chunk_files)| {
+                let mut buckets: [Vec<(&'a str, usize)>; NAME_SHARDS] =
+                    std::array::from_fn(|_| Vec::new());
+                for (offset, file) in chunk_files.iter().enumerate() {
+                    for site in &file.facts.definitions {
+                        if self.allow.contains(site.name.as_ref()) {
+                            continue;
+                        }
+                        let shard =
+                            usize::from(state.hash_one(&*site.name).to_le_bytes()[0]) % NAME_SHARDS;
+                        buckets[shard].push((&site.name, chunk_index * chunk + offset));
+                    }
                 }
-                let (count, last) = counts.entry(&site.name).or_insert((0, usize::MAX));
-                if *last != index {
-                    *count += 1;
-                    *last = index;
+                buckets
+            })
+            .collect();
+        (0..NAME_SHARDS)
+            .into_par_iter()
+            .flat_map(|shard| {
+                let mut counts: HashMap<&'a str, (usize, usize)> = HashMap::new();
+                for bucket in &buckets {
+                    for &(name, index) in &bucket[shard] {
+                        let (count, last) = counts.entry(name).or_insert((0, usize::MAX));
+                        if *last != index {
+                            *count += 1;
+                            *last = index;
+                        }
+                    }
                 }
-            }
-        }
-        counts
-            .into_iter()
-            .filter(|(_, (count, _))| *count >= self.min_files)
-            .map(|(name, _)| name)
+                counts
+                    .into_iter()
+                    .filter(|(_, (count, _))| *count >= self.min_files)
+                    .map(|(name, _)| name)
+                    .collect::<Vec<_>>()
+            })
             .collect()
     }
 
@@ -166,6 +187,9 @@ mod tests {
     use super::*;
     use crate::facts::WorldFacts;
     use crate::lang::Lang;
+    use std::collections::{BTreeMap, BTreeSet};
+
+    use proptest::prelude::*;
 
     fn site(name: &str, line: u32) -> NamedSite {
         NamedSite {
@@ -268,5 +292,64 @@ mod tests {
             "the message must count files, not definitions: {}",
             out[0].message
         );
+    }
+
+    proptest! {
+        #[test]
+        fn sharded_counts_match_a_sequential_reference(
+            files in proptest::collection::vec(
+                proptest::collection::vec(
+                    prop_oneof![
+                        Just("a"),
+                        Just("b"),
+                        Just("c"),
+                        Just("d"),
+                        Just("e"),
+                        Just("f"),
+                        Just("g"),
+                        Just("h"),
+                    ],
+                    0..=6
+                ),
+                0..=60
+            ),
+            min_files in 1usize..=5,
+        ) {
+            let owned: Vec<WorldFacts> = files
+                .iter()
+                .map(|defs| facts(defs.iter().map(|&name| site(name, 1)).collect()))
+                .collect();
+            let world: Vec<WorldFile> = owned
+                .iter()
+                .map(|facts| WorldFile { path: "", facts })
+                .collect();
+            let rule = HomonymDefinitions {
+                allow: HashSet::from(["h".to_string()]),
+                min_files,
+            };
+            let pool = rayon::ThreadPoolBuilder::new()
+                .num_threads(4)
+                .build()
+                .expect("the proptest pool must build");
+            let reported = pool.install(|| rule.reported_names(&world));
+            let mut reference: BTreeMap<&str, BTreeSet<usize>> = BTreeMap::new();
+            for (index, defs) in files.iter().enumerate() {
+                for &name in defs {
+                    if name != "h" {
+                        reference.entry(name).or_default().insert(index);
+                    }
+                }
+            }
+            let expected: HashSet<&str> = reference
+                .into_iter()
+                .filter(|(_, indexes)| indexes.len() >= min_files)
+                .map(|(name, _)| name)
+                .collect();
+            assert_eq!(
+                reported,
+                expected,
+                "sharded counts must match the distinct-file reference"
+            );
+        }
     }
 }

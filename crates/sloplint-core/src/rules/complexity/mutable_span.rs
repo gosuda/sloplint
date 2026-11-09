@@ -1,5 +1,3 @@
-//! `complexity/mutable-span`: flags bindings that stay mutable across too many lines.
-
 use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
@@ -7,9 +5,8 @@ use crate::facts::FileFacts;
 use crate::finding::{Finding, Level};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 
-use super::threshold_options;
+use crate::rules::threshold_options;
 
-/// Catalog entry for `complexity/mutable-span`.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "complexity/mutable-span",
     family: Family::Complexity,

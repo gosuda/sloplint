@@ -15,7 +15,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Role table mapping OCaml node kinds to walker roles; both grammars share these kinds.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("let_binding", Role::Function),
     ("method_definition", Role::Function),
@@ -44,22 +43,15 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("assert_expression", Role::Assert),
 ];
 
-/// OCaml language hooks for an implementation no sibling interface shadows.
 pub(crate) static HOOKS: OcamlHooks = OcamlHooks { shadowed: false };
 
-/// OCaml hooks for an implementation whose sibling interface is in the analyzed set.
 pub(crate) static SHADOWED_HOOKS: OcamlHooks = OcamlHooks { shadowed: true };
 
-/// OCaml adapter.
 pub(crate) struct OcamlHooks {
-    /// Whether a sibling `.mli` in the analyzed set hides this implementation's top-level
-    /// declarations.
     shadowed: bool,
 }
 
 impl OcamlHooks {
-    /// Whether the binding or type at `n` is public: a top-level declaration of an
-    /// implementation that no sibling interface shadows.
     fn public_at(&self, cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
         if cx.lang != Lang::Ocaml || self.shadowed {
             return false;

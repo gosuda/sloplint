@@ -12,10 +12,8 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// R adapter hooks: named closures, calls, assignment targets, and `tryCatch` handlers.
 pub(crate) struct RHooks;
 
-/// R node kinds mapped to walker roles.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Closure),
     ("if_statement", Role::If),
@@ -28,7 +26,6 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("argument", Role::MatchArm),
 ];
 
-/// The R adapter instance the grammar table points at.
 pub(crate) static HOOKS: RHooks = RHooks;
 
 const COMMENT_KINDS: &[&str] = &["comment"];

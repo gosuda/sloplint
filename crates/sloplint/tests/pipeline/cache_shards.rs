@@ -27,18 +27,25 @@ fn shard_holding(files: &[PathBuf], rel: &str) -> PathBuf {
     shard
 }
 
-/// Rewrites every stored occurrence of `from` in `file` with the same-length `to`.
+/// Rewrites every stored occurrence of `from` in the shard payload with the same-length `to`,
+/// then re-digests the payload, so the planted shard stays self-consistent and is served.
 fn plant_same_length(file: &Path, from: &str, to: &str) {
     assert_eq!(from.len(), to.len(), "a plant must keep the stored length");
     let mut bytes = file_bytes(file);
+    assert!(
+        bytes.len() > 32,
+        "a shard must hold a 32-byte digest and a payload"
+    );
+    let (digest, payload) = bytes.split_at_mut(32);
     let mut count = 0;
-    for at in 0..=bytes.len().saturating_sub(from.len()) {
-        if bytes[at..at + from.len()] == *from.as_bytes() {
-            bytes[at..at + from.len()].copy_from_slice(to.as_bytes());
+    for at in 0..=payload.len().saturating_sub(from.len()) {
+        if payload[at..at + from.len()] == *from.as_bytes() {
+            payload[at..at + from.len()].copy_from_slice(to.as_bytes());
             count += 1;
         }
     }
     assert!(count > 0, "the cache must hold {from:?}");
+    digest.copy_from_slice(blake3::hash(payload).as_bytes());
     std::fs::write(file, &bytes)
         .unwrap_or_else(|e| panic!("cannot write the planted cache shard: {e}"));
 }
@@ -281,8 +288,10 @@ fn a_hostile_length_prefix_shard_is_ignored_and_recomputed() {
     let target = shard_holding(&files, "a.rs");
 
     let genuine = file_bytes(&target);
-    let mut hostile = genuine[..1 + 32].to_vec();
-    hostile.extend_from_slice(&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f]);
+    let mut payload = genuine[32..65].to_vec();
+    payload.extend_from_slice(&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f]);
+    let mut hostile = blake3::hash(&payload).as_bytes().to_vec();
+    hostile.append(&mut payload);
     std::fs::write(&target, &hostile).unwrap_or_else(|e| panic!("write hostile: {e}"));
 
     let uncached = isolated(&root, &UNCACHED, &home);

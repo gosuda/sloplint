@@ -12,10 +12,8 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Starlark (Bazel dialect) adapter hooks: functions, `load` imports, and calls.
 pub(crate) struct StarlarkHooks;
 
-/// Starlark node kinds mapped to walker roles.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
     ("lambda", Role::Closure),
@@ -31,7 +29,6 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("assert_statement", Role::Assert),
 ];
 
-/// The Starlark adapter instance the grammar table points at.
 pub(crate) static HOOKS: StarlarkHooks = StarlarkHooks;
 
 const COMMENT_KINDS: &[&str] = &["comment"];

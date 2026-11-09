@@ -14,7 +14,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Node kinds of the JavaScript grammar and the walker role each one plays.
 pub(crate) static TABLE: &[(&str, Role)] = &[
     ("function_declaration", Role::Function),
     ("generator_function_declaration", Role::Function),
@@ -35,7 +34,6 @@ pub(crate) static TABLE: &[(&str, Role)] = &[
     ("new_expression", Role::NewCall),
     ("lexical_declaration", Role::Decl),
     ("variable_declaration", Role::Decl),
-    // sloplint: `using` bindings are immutable; decl_names already tracks only `let`/`var`.
     ("using_declaration", Role::Decl),
     ("assignment_expression", Role::Write),
     ("augmented_assignment_expression", Role::Write),

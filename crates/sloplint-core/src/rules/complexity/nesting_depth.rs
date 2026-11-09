@@ -1,5 +1,3 @@
-//! `complexity/nesting-depth`: flags functions whose nesting depth exceeds the thresholds.
-
 use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
@@ -7,9 +5,8 @@ use crate::facts::FileFacts;
 use crate::finding::{Finding, Level};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 
-use super::threshold_options;
+use crate::rules::threshold_options;
 
-/// Catalog entry for `complexity/nesting-depth`.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "complexity/nesting-depth",
     family: Family::Complexity,

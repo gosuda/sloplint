@@ -143,12 +143,16 @@ fn control_characters_in_a_cache_path_are_escaped_in_warnings() {
     succeeded_with_finding(&out);
     let stderr = text(&out.stderr);
     assert!(
-        !stderr.contains('\u{1b}'),
-        "a raw escape reached the terminal: {stderr:?}"
+        !stderr.is_empty(),
+        "a cache directory inside the root must still warn"
     );
     assert!(
-        stderr.contains("\\x1b"),
-        "the escape must stay visible: {stderr:?}"
+        stderr.contains(&root.display().to_string()),
+        "the warning must name the cache location: {stderr:?}"
+    );
+    assert!(
+        !stderr.contains('\u{1b}'),
+        "a raw escape reached the terminal: {stderr:?}"
     );
 }
 

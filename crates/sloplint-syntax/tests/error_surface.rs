@@ -6,7 +6,7 @@
 //! it. `analyze` must still report a position then, falling back to the root's
 //! end. The tests here pin that fallback on one fixed input, the true position
 //! of a visible error, and a deep nesting walk on a small stack. The `.h`
-//! fallback route lives in syntax_kernel_contracts/header_fallbacks.rs.
+//! fallback route lives in analyze_facts/header_fallbacks.rs.
 //!
 //! Each test names the defect class it stops in its doc comment.
 

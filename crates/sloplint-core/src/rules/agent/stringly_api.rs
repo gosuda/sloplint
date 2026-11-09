@@ -1,5 +1,3 @@
-//! `agent/stringly-api`: runs of swappable primitive parameters.
-
 use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
@@ -8,7 +6,7 @@ use crate::finding::{Finding, Level};
 use crate::lang::Lang;
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 
-use super::threshold_options;
+use crate::rules::threshold_options;
 
 const RUST: &[&str] = &[
     "str", "String", "i8", "i16", "i32", "i64", "i128", "isize", "u8", "u16", "u32", "u64", "u128",
@@ -111,7 +109,6 @@ const OCAML: &[&str] = &["string", "int", "int64", "float", "bool", "char"];
 
 const FIX: &str = "wrap these parameters in distinct newtypes or one named struct";
 
-/// `agent/stringly-api`: flags adjacent primitive parameters callers can swap.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "agent/stringly-api",
     family: Family::Agent,

@@ -15,7 +15,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Role table mapping Zig node kinds to walker roles.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_declaration", Role::Function),
     ("if_statement", Role::If),
@@ -44,10 +43,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("anonymous_struct_initializer", Role::StructLit),
 ];
 
-/// Zig language hooks.
 pub(crate) static HOOKS: ZigHooks = ZigHooks;
 
-/// Zig adapter.
 pub(crate) struct ZigHooks;
 
 fn is_pub_token(c: Node<'_>) -> bool {

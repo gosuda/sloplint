@@ -1,5 +1,3 @@
-//! The single iterative tree walk that turns node roles into file facts.
-
 use std::collections::HashMap;
 
 use sloplint_core::facts::FileFacts;
@@ -11,14 +9,12 @@ use tree_sitter::Node;
 use crate::hooks::{ChainRoots, Container, Cx, LangHooks, MemberStates, narrow, pos_of};
 use crate::spec::{LangSpec, Role};
 
-/// What one full walk produced: facts plus the suppressible comments.
 pub(crate) struct Walked<'s> {
     pub facts: FileFacts<'s>,
     pub comments: Vec<CommentText<'s>>,
 }
 
 impl LangSpec {
-    /// Walks one file's tree once, collecting every fact the roles produce.
     pub(crate) fn walk<'s>(
         &self,
         hooks: &'static dyn LangHooks,
@@ -28,7 +24,6 @@ impl LangSpec {
         self.walk_impl(hooks, input, true, root)
     }
 
-    /// Walks one file's tree collecting only the suppressible comments.
     pub(crate) fn walk_comments<'s>(
         &self,
         hooks: &'static dyn LangHooks,
@@ -74,11 +69,7 @@ impl LangSpec {
     }
 }
 
-/// Empty facts for a file, carrying only its identity fields.
-///
-/// `lang` is the grammar the facts come from, which the hooks and every
-/// language-keyed rule read. The entry-file flag is the one identity field that
-/// follows the file's routed `input.lang`, because it depends on the path alone.
+/// The `lang` field is the grammar that produced the facts; `is_entry_file` follows the routed `input.lang`.
 pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>, lang: Lang) -> FileFacts<'s> {
     FileFacts {
         lang,
@@ -105,12 +96,10 @@ pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>, lang: Lang) -> FileF
     }
 }
 
-/// The number of lines in a source string; an empty string has none.
 pub(crate) fn line_count(source: &str) -> u32 {
     narrow(source.lines().count())
 }
 
-/// One open function: its fact index, scoring counters, and declared bindings.
 pub(crate) struct FnFrame<'s> {
     pub index: usize,
     pub nest: u32,
@@ -119,13 +108,11 @@ pub(crate) struct FnFrame<'s> {
     pub sole_call: Option<usize>,
 }
 
-/// The latest binding declared under one name inside a function frame.
 pub(crate) struct FrameDecl {
     pub binding: usize,
     pub frames_at_decl: u32,
 }
 
-/// Deferred state action for a node about to exit.
 #[derive(Clone, Copy)]
 pub(crate) enum Mark {
     Nest,
@@ -134,7 +121,6 @@ pub(crate) enum Mark {
     Container,
 }
 
-/// All mutable walk state; the tree cursor lives only in [`WalkState::run`].
 pub(crate) struct WalkState<'s, 'a, 't> {
     pub spec: &'a LangSpec,
     pub hooks: &'static dyn LangHooks,
@@ -149,15 +135,10 @@ pub(crate) struct WalkState<'s, 'a, 't> {
     pub marks: Vec<(usize, Mark)>,
     pub containers: Vec<Container>,
     pub exports: Vec<&'s str>,
-    /// Member states memoized for the hooks, one forward pass per container.
     pub members: MemberStates,
-    /// Chain roots memoized for the hooks, one walk down each chain.
     pub chains: ChainRoots,
-    /// The nodes entered so far under each open ancestor, indexed by tree depth.
     pub levels: Vec<Vec<Node<'t>>>,
-    /// The tree depth of the node being entered or exited.
     pub depth: usize,
-    /// Ids of the nodes entered and not yet exited, innermost last (debug builds only).
     #[cfg(debug_assertions)]
     pub entered: Vec<usize>,
 }
@@ -279,7 +260,6 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
         }
     }
 
-    /// The parent of the node being entered, read from the open level above it.
     fn visited_parent(&self) -> Option<Node<'t>> {
         let above = self.depth.checked_sub(1)?;
         self.levels.get(above)?.last().copied()
@@ -391,7 +371,6 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
         }
     }
 
-    /// Records that `node` is being entered, for the debug check of mark order.
     #[cfg(debug_assertions)]
     fn open_node(&mut self, node: Node<'_>) {
         self.entered.push(node.id());
@@ -400,7 +379,6 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     #[cfg(not(debug_assertions))]
     fn open_node(&mut self, _node: Node<'_>) {}
 
-    /// Checks that `id` is the innermost entered node, so its marks are on top.
     #[cfg(debug_assertions)]
     fn close_node(&mut self, id: usize) {
         debug_assert_eq!(
@@ -413,11 +391,6 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     #[cfg(not(debug_assertions))]
     fn close_node(&mut self, _id: usize) {}
 
-    /// Checks that a mark is keyed to the node being entered.
-    ///
-    /// Marks are pushed only while their own node is entered. Every node therefore
-    /// pops its marks before its ancestors' marks come back to the top, so `exit`
-    /// only needs to look at the top of the stack.
     #[cfg(debug_assertions)]
     pub(crate) fn assert_mark_entered(&self, mark: usize) {
         debug_assert_eq!(

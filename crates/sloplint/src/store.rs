@@ -25,12 +25,6 @@ pub(crate) fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunErro
     })
 }
 
-/// Reads a source file of at most `max_bytes` bytes without following a trailing symlink.
-///
-/// Returns `Ok(None)` when the file is over the bound, or when a nofollow open refuses the
-/// path as a symlink, reparse point, or FIFO, device, or socket (see
-/// [`fileio::refused_without_following`]); a directory and every other open or read error
-/// is returned.
 pub(crate) fn read_within_limit(path: &Path, max_bytes: u64) -> io::Result<Option<Vec<u8>>> {
     let (file, len) = match fileio::open_regular_nofollow(path) {
         Ok(opened) => opened,
@@ -53,12 +47,6 @@ pub(crate) fn read_within_limit(path: &Path, max_bytes: u64) -> io::Result<Optio
     Ok((u64::try_from(bytes.len()).unwrap_or(u64::MAX) <= max_bytes).then_some(bytes))
 }
 
-/// Reads a whole regular file as UTF-8 text, bounded by `max_bytes`.
-///
-/// Opens the path without following a trailing symlink and refuses FIFOs, devices, and
-/// directories; returns an error for those, when the file grows past the bound, or when
-/// the content is not valid UTF-8.
-/// A leading byte-order mark is removed in place when present.
 pub fn read_source(path: &Path, max_bytes: u64) -> Result<String, RunError> {
     let invalid =
         |message: &'static str| io_error(path, io::Error::new(io::ErrorKind::InvalidData, message));
@@ -75,14 +63,6 @@ pub fn read_source(path: &Path, max_bytes: u64) -> Result<String, RunError> {
     Ok(text)
 }
 
-/// Records `findings` at `path`, replacing only a prior baseline.
-///
-/// An existing regular file must already parse as a version-1 baseline, checked before
-/// anything is written, so a configuration or source file named as the baseline is
-/// refused and left as it was. A missing target is created. The document is also held
-/// to the entry and byte limits [`load_baseline`] enforces, checked before anything is
-/// written, so a baseline no later run could load is never recorded. A directory, FIFO,
-/// or device is left to the I/O refusal of [`write_replacing`], which never reads it.
 pub(crate) fn record_baseline(path: &Path, findings: &[Finding]) -> Result<(), RunError> {
     ensure_prior_baseline(path)?;
     let baseline = Baseline::from_findings(findings);
@@ -97,12 +77,6 @@ pub(crate) fn record_baseline(path: &Path, findings: &[Finding]) -> Result<(), R
     write_replacing(path, json.as_bytes()).map_err(|source| io_error(path, source))
 }
 
-/// Refuses a would-be baseline document that [`load_baseline`] would reject by size.
-///
-/// `entries` is the document's deduplicated entry count and `bytes` its serialized
-/// length; the limits are parameters so tests can exercise the boundaries without
-/// materializing a full-size document. The check reads and writes nothing, so a
-/// refusal leaves any prior target byte-for-byte intact.
 fn validate_baseline_limits(
     path: &Path,
     entries: usize,
@@ -132,15 +106,6 @@ fn validate_baseline_limits(
     Ok(())
 }
 
-/// Refuses an existing regular file at `path` whose content does not parse as a baseline.
-///
-/// Only regular files are read, bounded by [`project::MAX_BASELINE_BYTES`] like
-/// [`load_baseline`]: the length is checked before anything is read, so a target past
-/// the cap, including a sparse one, is refused without being read; a leading
-/// byte-order mark is tolerated; and a nofollow open that refuses the path reports
-/// [`RunError::NotABaseline`] instead of reading through a swapped-in symlink. A
-/// missing target or a non-regular one returns `Ok`, so the write path refuses a
-/// directory or FIFO with its existing I/O error.
 fn ensure_prior_baseline(path: &Path) -> Result<(), RunError> {
     let meta = match fs::metadata(path) {
         Ok(meta) => meta,
@@ -162,14 +127,7 @@ fn ensure_prior_baseline(path: &Path) -> Result<(), RunError> {
     if parses { Ok(()) } else { Err(refused()) }
 }
 
-/// Replaces `path` with `bytes` so no reader or crash ever sees a partial file.
-///
-/// The bytes go to an exclusively created sibling file that is renamed over
-/// `path`; on any failure the sibling is removed and `path` is untouched. An
-/// existing target must be a regular file writable by this user (a FIFO or
-/// device is refused without blocking) and keeps its permissions. The
-/// name is replaced, not followed, so a symlink swapped in after
-/// `resolve_within_root` cannot redirect the write.
+// sync_all before the rename: a crash never exposes a partially written baseline.
 fn write_replacing(path: &Path, bytes: &[u8]) -> io::Result<()> {
     let existing = fs::metadata(path).map(Some).or_else(|error| {
         if error.kind() == io::ErrorKind::NotFound {
@@ -212,12 +170,7 @@ fn write_replacing(path: &Path, bytes: &[u8]) -> io::Result<()> {
         })
 }
 
-/// Probes that an existing baseline target is writable without blocking on a FIFO.
-///
-/// Unix opens the path nonblocking with no controlling terminal, so a FIFO swapped in
-/// after the metadata check fails at once instead of waiting for a reader; the opened
-/// handle is then refused unless it is a regular file. A read-only regular file still
-/// fails here, preserving the read-only rejection before any temporary file is made.
+// O_NONBLOCK | O_NOCTTY: a FIFO swapped in after the metadata check fails at once instead of blocking on a reader.
 #[cfg(unix)]
 fn probe_writable(path: &Path) -> io::Result<()> {
     use std::os::unix::fs::OpenOptionsExt;

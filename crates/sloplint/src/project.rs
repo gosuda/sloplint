@@ -14,55 +14,31 @@ use crate::RunError;
 use crate::discover;
 use crate::fileio::{open_regular_nofollow, read_bounded, read_bounded_string};
 
-/// Maximum size of `sloplint.toml` or any single custom rule file (1 MiB).
-///
-/// Legitimate configuration files are small (< 100 KB; this repository uses 65 bytes).
-/// 1 MiB accommodates ~25,000 lines of TOML, exceeding any legitimate configuration
-/// while stopping oversized hostile inputs before full read and parse.
+/// Measured: this repository's own `sloplint.toml` is 65 bytes; the cap stops oversized hostile input at the read.
 pub const MAX_CONFIG_FILE_BYTES: u64 = 1_048_576;
 
-/// Maximum combined size across all matched custom rule files (16 MiB).
-///
-/// Accommodates up to 16 maximum-size rule files or hundreds of modular rule sets
-/// holding thousands of custom tree-sitter rules, far above legitimate repository needs.
+/// 16 files at the single-file maximum.
 pub const MAX_CUSTOM_RULES_TOTAL_BYTES: u64 = 16_777_216;
 
-/// Maximum size of a ratchet baseline file (512 MiB).
-///
-/// Real baselines measure ~186 bytes/entry on this repository (1,575 entries in 286 KB)
-/// and ~209 bytes/entry on a Go module-cache tree with deep paths (15,201 entries in 3.19 MB).
-/// For the 1,000,000 entry ceiling, 512 MiB provides ~536 bytes/entry (>2.5x measured average),
-/// accommodating long paths while preventing memory exhaustion.
+/// Measured ~186-209 bytes per baseline entry; 512 MiB gives 2.5x headroom at the 1,000,000 entry ceiling.
 pub const MAX_BASELINE_BYTES: u64 = 536_870_912;
 
-/// File name of the configuration file.
 pub const CONFIG_FILE: &str = "sloplint.toml";
 
-/// Where a run looks for its project root and configuration file.
 #[derive(Debug, Clone)]
 pub struct Location {
-    /// Project root; every path is relative to it.
     pub root: PathBuf,
-    /// Explicit configuration file from `--config`. `None` means no explicit
-    /// file was given, so `<root>/sloplint.toml` applies when present and
-    /// defaults apply when absent.
     pub config_path: Option<PathBuf>,
 }
 
-/// CLI overrides applied on top of the configuration file.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Overrides {
-    /// Strictness override.
     pub strictness: Option<Strictness>,
-    /// Gate mode override.
     pub mode: Option<Mode>,
-    /// Fail-on override.
     pub fail_on: Option<FailOn>,
 }
 
-/// A fully resolved configuration plus the custom-rule files it absorbed.
 pub struct Loaded {
-    /// Configuration with overrides applied.
     pub config: Config,
     /// Custom-rule files as `(relative path, text)`, sorted by path.
     pub custom_sources: Vec<(String, String)>,
@@ -91,16 +67,6 @@ struct CustomFragment<'a> {
     custom_rules: &'a [CustomRuleSpec],
 }
 
-/// Resolves the project root and configuration path: explicit values first, then the nearest ancestor of `cwd` that holds `sloplint.toml` or `.git`.
-///
-/// The ancestor walk stops at the first directory with either marker, so a
-/// `sloplint.toml` above the nearest `.git` belongs to some other project and
-/// is never used for this checkout; `--config` is the explicit override. With
-/// no marker anywhere the root is `cwd`.
-///
-/// An explicit `config` is kept as `Some`, even when the file does not exist,
-/// so `load` can fail on it. `None` means the configuration is implicit and
-/// `load` falls back to defaults when `<root>/sloplint.toml` is absent.
 pub fn locate(cwd: &Path, root: Option<&Path>, config: Option<&Path>) -> Location {
     let config_path = config.map(|path| cwd.join(path));
     match (root, config_path) {
@@ -121,12 +87,7 @@ pub fn locate(cwd: &Path, root: Option<&Path>, config: Option<&Path>) -> Locatio
     }
 }
 
-/// Reads and merges the configuration, including every `custom_rule_files` match, then applies overrides.
-///
-/// An explicit configuration file must exist: a missing file fails with the
-/// path, and any other read failure reports the path with its I/O error. An
-/// implicit configuration falls back to defaults when absent. Each candidate
-/// is read exactly once; no existence probe precedes the read.
+/// Config files are read once with no preceding existence probe, so a symlink swap cannot slip between check and read.
 pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunError> {
     let (main, origin) = match &location.config_path {
         Some(path) => (read_required(path)?, origin_name(path)),
@@ -180,14 +141,12 @@ pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunErro
     })
 }
 
-/// Root-relative PATH scopes, indexed so a membership test costs one hash lookup per path component.
 #[derive(Debug, Default)]
 pub struct Scopes {
     paths: HashSet<PathBuf>,
 }
 
 impl Scopes {
-    /// Builds scopes directly from root-relative paths, without resolving anything on disk.
     #[cfg(test)]
     pub(crate) fn from_relative(paths: impl IntoIterator<Item = PathBuf>) -> Self {
         Self {
@@ -195,7 +154,6 @@ impl Scopes {
         }
     }
 
-    /// Whether `path` is one of the scopes or lies under one, matching whole path components; no scopes cover the whole root.
     pub fn contains(&self, path: &Path) -> bool {
         self.paths.is_empty()
             || path
@@ -204,9 +162,6 @@ impl Scopes {
     }
 }
 
-/// Resolves the PATH arguments to root-relative scopes; no scopes means the whole root.
-///
-/// Every PATH is validated, including those after one that names the root itself.
 pub fn scopes(root: &Path, cwd: &Path, paths: &[PathBuf]) -> Result<Scopes, RunError> {
     let mut resolved: HashSet<PathBuf> = HashSet::new();
     let mut whole_root = false;
@@ -245,14 +200,7 @@ pub fn scopes(root: &Path, cwd: &Path, paths: &[PathBuf]) -> Result<Scopes, RunE
     Ok(Scopes { paths: resolved })
 }
 
-/// Resolves a configured baseline name to an absolute path inside `root`.
-///
-/// `root` must already be canonical. Empty and absolute names are rejected.
-/// An existing candidate is canonicalized whole, so symlink chains to the
-/// outside are rejected by the prefix check. A missing candidate is allowed
-/// only as an absent regular leaf: a dangling symlink leaf is rejected
-/// without being followed, and the immediate parent is canonicalized, so a
-/// missing parent stays an I/O failure. Nothing is created or written.
+/// Symlink chains are canonicalized whole and rejected outside `root`; a dangling leaf is refused unfollowed; `root` must arrive canonical; creates nothing.
 pub fn resolve_within_root(root: &Path, name: &str) -> Result<PathBuf, RunError> {
     let rel = Path::new(name);
     if name.is_empty() || rel.is_absolute() {
@@ -309,7 +257,6 @@ pub fn resolve_within_root(root: &Path, name: &str) -> Result<PathBuf, RunError>
     }
 }
 
-/// Compiles glob patterns into one set, naming `key` in any error.
 pub fn glob_set(patterns: &[String], key: &str) -> Result<GlobSet, ConfigError> {
     let mut builder = GlobSetBuilder::new();
     for pattern in patterns {
@@ -443,6 +390,11 @@ fn read_custom_root(
     sources: &mut BTreeMap<String, String>,
     total_bytes: &mut u64,
 ) -> Result<(), RunError> {
+    let symlink_refusal = |glob: &str| ConfigError::Glob {
+        key: "project.custom_rule_files".to_string(),
+        glob: glob.to_string(),
+        message: "custom rule file cannot be a symlink".to_string(),
+    };
     let is_root = base == root;
     if !is_root {
         match has_dir_symlink(root, base) {
@@ -452,11 +404,7 @@ fn read_custom_root(
                     .ok()
                     .and_then(normalize_rel_path)
                     .unwrap_or_else(|| base.display().to_string());
-                return Err(RunError::Config(ConfigError::Glob {
-                    key: "project.custom_rule_files".to_string(),
-                    glob: rel,
-                    message: "custom rule file cannot be a symlink".to_string(),
-                }));
+                return Err(RunError::Config(symlink_refusal(&rel)));
             }
             Ok(false) => {}
             Err((_, source))
@@ -476,11 +424,7 @@ fn read_custom_root(
                     .ok()
                     .and_then(normalize_rel_path)
                     .unwrap_or_else(|| base.display().to_string());
-                return Err(RunError::Config(ConfigError::Glob {
-                    key: "project.custom_rule_files".to_string(),
-                    glob: rel,
-                    message: "custom rule file cannot be a symlink".to_string(),
-                }));
+                return Err(RunError::Config(symlink_refusal(&rel)));
             }
         }
         Ok(_) => {}
@@ -520,11 +464,7 @@ fn read_custom_root(
             continue;
         }
         if kind.is_symlink() {
-            return Err(RunError::Config(ConfigError::Glob {
-                key: "project.custom_rule_files".to_string(),
-                glob: rel,
-                message: "custom rule file cannot be a symlink".to_string(),
-            }));
+            return Err(RunError::Config(symlink_refusal(&rel)));
         }
         let (file, len) = open_regular_nofollow(entry.path()).map_err(|source| RunError::Io {
             path: entry.path().to_path_buf(),

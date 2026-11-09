@@ -1,5 +1,3 @@
-//! Baseline files for ratchet mode and the finding fingerprints they key on.
-
 use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
@@ -12,40 +10,28 @@ use thiserror::Error;
 
 use crate::finding::Finding;
 
-/// Most findings a version-1 baseline document may hold; larger documents are rejected.
-///
-/// An audit of a 100k-file Go corpus produced ~502k findings; 1,000,000 entries provides
-/// 2x headroom over massive corpora while bounding memory consumption during parsing.
+/// 2x headroom over the ~502k findings an audit of a 100k-file Go corpus produced.
 pub const MAX_BASELINE_ENTRIES: usize = 1_000_000;
 
-/// A set of baselined findings, keyed by path, rule, and fingerprint.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Baseline {
-    /// Every recorded finding identity.
     pub entries: BTreeSet<BaselineEntry>,
 }
 
-/// One baselined finding identity; orders by path, then rule, then fingerprint.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct BaselineEntry {
     /// Repo-relative path with `/` separators.
     pub path: Box<str>,
-    /// Rule id that produced the finding.
     pub rule: Box<str>,
-    /// 32 lowercase hex chars identifying the finding's stable content.
     pub fingerprint: Box<str>,
 }
 
-/// Why a baseline document was rejected.
 #[derive(Debug, Error)]
 pub enum BaselineError {
-    /// The text is not a baseline JSON document.
     #[error("invalid baseline JSON: {0}")]
     Json(String),
-    /// The document declares a version other than 1.
     #[error("unsupported baseline version {0}")]
     Version(u32),
-    /// The document lists more findings than [`MAX_BASELINE_ENTRIES`].
     #[error("has {count} entries, more than the limit of {limit}")]
     TooManyEntries { count: usize, limit: usize },
 }
@@ -68,10 +54,7 @@ enum Findings {
     Over(usize),
 }
 
-/// Deserializes the findings array while storing at most [`MAX_BASELINE_ENTRIES`] of them.
-///
-/// Past the ceiling each remaining element is validated and counted but not kept, so the
-/// memory a document can take is bounded by the ceiling, not by its byte length.
+/// Past the ceiling, remaining elements are counted but not kept, so the stored baseline holds at most the entry limit.
 fn capped_findings<'de, D>(deserializer: D) -> Result<Findings, D::Error>
 where
     D: Deserializer<'de>,
@@ -112,7 +95,6 @@ where
 }
 
 impl Baseline {
-    /// Parses a baseline document; only version 1 holding at most [`MAX_BASELINE_ENTRIES`] findings is accepted.
     pub fn from_json(s: &str) -> Result<Baseline, BaselineError> {
         let doc: BaselineDocument =
             sonic_rs::from_str(s).map_err(|error| BaselineError::Json(error.to_string()))?;
@@ -130,7 +112,6 @@ impl Baseline {
         }
     }
 
-    /// Pretty-prints the baseline with sorted entries and a trailing newline.
     pub fn to_json(&self) -> String {
         let doc = BaselineFile {
             version: 1,
@@ -142,7 +123,6 @@ impl Baseline {
         json
     }
 
-    /// Collects findings that already carry fingerprints into a baseline.
     pub fn from_findings(findings: &[Finding]) -> Baseline {
         Baseline {
             entries: findings
@@ -156,7 +136,7 @@ impl Baseline {
         }
     }
 
-    /// Assigns `fingerprint` to every finding; input must be sorted by path then line.
+    /// Input must be sorted by path then line, so equal findings get ascending occurrence numbers.
     pub fn assign_fingerprints(findings: &mut [Finding]) {
         let mut assigned: Vec<Box<str>> = Vec::with_capacity(findings.len());
         let mut seen: HashMap<(&str, &str, Cow<'_, str>), u32> =
@@ -186,7 +166,6 @@ impl Baseline {
         }
     }
 
-    /// Splits findings into kept and baselined, counting baselined matches and stale in-scope entries.
     pub fn filter(
         &self,
         findings: Vec<Finding>,

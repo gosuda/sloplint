@@ -1,5 +1,3 @@
-//! `agent/ambient-global-state`: mutable globals, global writes, and environment reads.
-
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::{Deserialize, Serialize};
 
@@ -50,7 +48,6 @@ const OWNED_FIX: &str = "move this state into a value owned by the caller and pa
 const ENV_MESSAGE: &str = "process environment read outside entry or config code";
 const ENV_FIX: &str = "read configuration once at the entry point and pass it in as a parameter";
 
-/// `agent/ambient-global-state`: flags hidden global inputs and environment reads.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "agent/ambient-global-state",
     family: Family::Agent,

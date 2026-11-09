@@ -1,11 +1,8 @@
-//! `slop/barrel-file`: barrel files re-exporting from other barrel files.
-
 use crate::config::Strictness;
 use crate::facts::NamedSite;
 use crate::finding::{Finding, Level, Severity};
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
 
-/// `slop/barrel-file`: a pass-through re-export chain between a name and its definition.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "slop/barrel-file",
     family: Family::Slop,

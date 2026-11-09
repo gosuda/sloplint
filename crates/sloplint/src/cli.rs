@@ -1,5 +1,3 @@
-//! Command-line grammar: `check` (the default), `baseline`, `rules`, and `init`.
-
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};

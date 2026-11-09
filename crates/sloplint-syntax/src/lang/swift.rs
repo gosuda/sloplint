@@ -14,7 +14,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Swift adapter hooks: declarations, calls, error handlers, and ambient state.
 pub(crate) struct SwiftHooks;
 
 #[rustfmt::skip]

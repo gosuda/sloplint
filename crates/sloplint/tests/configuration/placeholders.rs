@@ -1,6 +1,7 @@
 //! Custom rule messages: malformed `{name}` placeholders are configuration errors,
 //! and `{{` / `}}` escapes survive to the rendered finding.
 
+use super::numbers;
 use sloplint_core::config::parse_config;
 use sloplint_core::lang::Lang;
 use sloplint_core::rules::custom::{PlaceholderError, message_placeholders};
@@ -29,43 +30,43 @@ fn spec(message: &str) -> CustomRuleSpec {
     }
 }
 
-fn custom_rule_error(error: &ConfigError, fragment: &str, context: &str) {
+fn custom_rule_error(error: &ConfigError, offset: u64, context: &str) {
     let ConfigError::CustomRule { id, message } = error else {
         panic!("{context}: expected a custom rule error, got: {error}");
     };
     assert_eq!(id, "custom/x", "{context}: error names the wrong rule");
     assert!(
-        message.contains(fragment),
-        "{context}: `{message}` lacks `{fragment}`"
+        numbers(message).contains(&offset),
+        "{context}: `{message}` does not name byte offset {offset}"
     );
 }
 
-const MALFORMED: [(&str, &str); 6] = [
-    ("x {name", "unclosed `{`"),
-    ("{m} then {oops", "unclosed `{`"),
-    ("{", "unclosed `{`"),
-    ("{{{m", "unclosed `{`"),
-    ("x {}", "empty placeholder"),
-    ("{m}{}", "empty placeholder"),
+const MALFORMED: [(&str, u64); 6] = [
+    ("x {name", 2),
+    ("{m} then {oops", 9),
+    ("{", 0),
+    ("{{{m", 2),
+    ("x {}", 2),
+    ("{m}{}", 3),
 ];
 
 #[test]
 fn malformed_placeholders_are_rejected_when_the_config_loads() {
-    for (message, fragment) in MALFORMED {
+    for (message, offset) in MALFORMED {
         let Err(error) = parse_config(&rule_src(message), "sloplint.toml") else {
             panic!("message {message:?} must be rejected");
         };
-        custom_rule_error(&error, fragment, message);
+        custom_rule_error(&error, offset, message);
     }
 }
 
 #[test]
 fn malformed_placeholders_are_rejected_when_queries_compile() {
-    for (message, fragment) in MALFORMED {
+    for (message, offset) in MALFORMED {
         let Err(error) = CustomRules::compile(&[spec(message)]) else {
             panic!("message {message:?} must be rejected by the query compiler");
         };
-        custom_rule_error(&error, fragment, message);
+        custom_rule_error(&error, offset, message);
     }
 }
 
@@ -74,7 +75,7 @@ fn the_error_names_the_offset_of_the_bad_brace() {
     let Err(error) = parse_config(&rule_src("ab {m} cd {oops"), "sloplint.toml") else {
         panic!("an unclosed brace must be rejected");
     };
-    custom_rule_error(&error, "at byte 10", "offset");
+    custom_rule_error(&error, 10, "offset");
 }
 
 #[test]

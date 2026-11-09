@@ -1,11 +1,8 @@
-//! The meta rules emitted outside the regular rule run.
-
 use crate::config::Strictness;
 use crate::facts::Pos;
 use crate::finding::{Finding, Level, Severity};
 use crate::rules::{Build, Family, Preset, RuleInfo};
 
-/// `meta/parse-error`: emitted by `RuleSet::parse_error` for files that fail to parse.
 pub(crate) const PARSE_ERROR: RuleInfo = RuleInfo {
     id: "meta/parse-error",
     family: Family::Meta,
@@ -16,7 +13,6 @@ pub(crate) const PARSE_ERROR: RuleInfo = RuleInfo {
     build: Build::Meta,
 };
 
-/// `meta/invalid-suppression`: emitted for malformed `sloplint-allow` directives.
 pub(crate) const INVALID_SUPPRESSION: RuleInfo = RuleInfo {
     id: "meta/invalid-suppression",
     family: Family::Meta,
@@ -27,7 +23,6 @@ pub(crate) const INVALID_SUPPRESSION: RuleInfo = RuleInfo {
     build: Build::Meta,
 };
 
-/// `meta/unused-suppression`: emitted in the merge stage for suppressions that match nothing.
 pub(crate) const UNUSED_SUPPRESSION: RuleInfo = RuleInfo {
     id: "meta/unused-suppression",
     family: Family::Meta,
@@ -59,7 +54,6 @@ fn unused_suppression_preset(_strictness: Strictness) -> Preset {
     }
 }
 
-/// Builds the `meta/parse-error` finding at a syntax-error position.
 pub(crate) fn parse_error_finding(path: &str, source: &str, pos: Pos) -> Finding {
     Finding::at_source(
         path,
@@ -72,7 +66,6 @@ pub(crate) fn parse_error_finding(path: &str, source: &str, pos: Pos) -> Finding
     )
 }
 
-/// Builds the `meta/invalid-suppression` finding at a directive's comment start line.
 pub(crate) fn invalid_suppression_finding(
     path: &str,
     source: &str,
@@ -90,7 +83,6 @@ pub(crate) fn invalid_suppression_finding(
     )
 }
 
-/// Builds the `meta/unused-suppression` finding at a suppression's comment start line.
 pub fn unused_suppression_finding(path: &str, source: &str, line: u32, rules: &str) -> Finding {
     Finding::at_source(
         path,

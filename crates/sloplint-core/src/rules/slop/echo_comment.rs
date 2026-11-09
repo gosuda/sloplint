@@ -1,5 +1,3 @@
-//! `slop/echo-comment`: doc comments that restate the function name.
-
 use std::collections::BTreeSet;
 
 use crate::config::Strictness;
@@ -14,7 +12,6 @@ const STOPWORDS: [&str; 32] = [
     "method", "fn", "func", "def", "self", "cls",
 ];
 
-/// `slop/echo-comment`: a doc comment whose words restate the name.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "slop/echo-comment",
     family: Family::Slop,

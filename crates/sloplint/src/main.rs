@@ -1,5 +1,3 @@
-//! Entry point for the sloplint binary: parses arguments, runs the pipeline, renders, and maps exit codes.
-
 use std::io::{self, BufWriter, Write};
 use std::ops::Range;
 use std::path::Path;
@@ -8,6 +6,7 @@ use std::process::ExitCode;
 use annotate_snippets::renderer::DecorStyle;
 use annotate_snippets::{AnnotationKind, Group, Level, Renderer, Snippet};
 use clap::Parser;
+use rayon::prelude::*;
 use sloplint::cli::{BaselineArgs, CheckArgs, Cli, Command, Format, RulesArgs};
 use sloplint::rules_cmd::{self, RulesRequest};
 use sloplint::{Execution, Report, RunError, RunOptions, Summary, TerminalText, init};
@@ -32,13 +31,7 @@ fn main() -> ExitCode {
     }
 }
 
-/// Runs `check`: executes the pipeline, emits the report, and exits with its status.
-///
-/// Ends the process directly with [`std::process::exit`] while `execution` is still in
-/// scope instead of returning: tearing down the run would free every finding's heap
-/// strings object by object just before the process ends, while the OS reclaims the
-/// whole heap at exit. Values on the live stack stay reachable for LeakSanitizer, and
-/// output is flushed before exiting, so bytes and statuses match a normal return.
+/// Exits in-scope so the run's heap stays reachable for LeakSanitizer; output is flushed first, so bytes match a return.
 fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
     let config = args.run.select.config.as_deref();
     let paths = if args.paths.is_empty() {
@@ -125,7 +118,7 @@ fn rules(cwd: &Path, args: &RulesArgs) -> ExitCode {
         TextKind::Plain
     };
     match rules_cmd::render(&request) {
-        Ok(text) => print_text(&text, kind),
+        Ok(text) => ExitCode::from(print_text_status(&text, kind)),
         Err(error) => report_error(&error),
     }
 }
@@ -155,42 +148,32 @@ fn with_buffered_stdout(write: impl FnOnce(&mut dyn Write) -> io::Result<()>) ->
 
 fn emit(execution: &Execution, format: Format) -> io::Result<()> {
     match format {
-        Format::Agent => with_plain_stdout(|out| write_agent(&execution.report, out)),
+        Format::Agent => with_plain_stdout(|out| write_agent(execution, out)),
         Format::Human => with_buffered_stdout(|out| write_human(execution, out)),
         Format::Json => with_plain_stdout(|out| write_json(&execution.report, out)),
     }
 }
 
-/// Buffers output that writes no styling of its own, with no escape-stripping pass.
-///
-/// Agent lines escape every C0, DEL, C1, and bidi control through [`TerminalText`],
-/// and JSON escapes C0, DEL, and C1 in strings (bidi controls stay raw there, as data),
-/// so no terminal control from scanned files reaches stdout.
 fn with_plain_stdout(write: impl FnOnce(&mut dyn Write) -> io::Result<()>) -> io::Result<()> {
     let mut out = BufWriter::with_capacity(OUTPUT_BUFFER_BYTES, io::stdout().lock());
     write(&mut out)?;
     out.flush()
 }
 
-fn write_agent(report: &Report, out: &mut dyn Write) -> io::Result<()> {
-    let mut digits = itoa::Buffer::new();
-    for finding in &report.findings {
-        TerminalText::line(&finding.path).write_escaped(out)?;
-        out.write_all(b":")?;
-        out.write_all(digits.format(finding.line).as_bytes())?;
-        out.write_all(b":")?;
-        out.write_all(digits.format(finding.column).as_bytes())?;
-        out.write_all(b": ")?;
-        out.write_all(severity_name(finding.severity).as_bytes())?;
-        out.write_all(b": ")?;
-        TerminalText::line(&finding.message).write_escaped(out)?;
-        out.write_all(b" [")?;
-        TerminalText::line(&finding.rule).write_escaped(out)?;
-        out.write_all(b"]\n  context: ")?;
-        TerminalText::line(&finding.context).write_escaped(out)?;
-        out.write_all(b"\n  fix: ")?;
-        TerminalText::line(&finding.fix).write_escaped(out)?;
-        out.write_all(b"\n")?;
+fn write_agent(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
+    const RENDER_CHUNK: usize = 2048;
+    let report = &execution.report;
+    let window = RENDER_CHUNK * execution.install(rayon::current_num_threads);
+    for chunk in report.findings.chunks(window) {
+        let buffers = execution.install(|| {
+            chunk
+                .par_chunks(RENDER_CHUNK)
+                .map(render_findings)
+                .collect::<io::Result<Vec<Vec<u8>>>>()
+        })?;
+        for buffer in &buffers {
+            out.write_all(buffer)?;
+        }
     }
     if !report.findings.is_empty() {
         writeln!(out)?;
@@ -205,6 +188,30 @@ fn write_agent(report: &Report, out: &mut dyn Write) -> io::Result<()> {
         }
     }
     writeln!(out, "{}", summary_line(&report.summary))
+}
+
+fn render_findings(findings: &[Finding]) -> io::Result<Vec<u8>> {
+    let mut buffer = Vec::new();
+    let mut digits = itoa::Buffer::new();
+    for finding in findings {
+        TerminalText::line(&finding.path).write_escaped(&mut buffer)?;
+        buffer.write_all(b":")?;
+        buffer.write_all(digits.format(finding.line).as_bytes())?;
+        buffer.write_all(b":")?;
+        buffer.write_all(digits.format(finding.column).as_bytes())?;
+        buffer.write_all(b": ")?;
+        buffer.write_all(severity_name(finding.severity).as_bytes())?;
+        buffer.write_all(b": ")?;
+        TerminalText::line(&finding.message).write_escaped(&mut buffer)?;
+        buffer.write_all(b" [")?;
+        TerminalText::line(&finding.rule).write_escaped(&mut buffer)?;
+        buffer.write_all(b"]\n  context: ")?;
+        TerminalText::line(&finding.context).write_escaped(&mut buffer)?;
+        buffer.write_all(b"\n  fix: ")?;
+        TerminalText::line(&finding.fix).write_escaped(&mut buffer)?;
+        buffer.write_all(b"\n")?;
+    }
+    Ok(buffer)
 }
 
 fn write_json(report: &Report, out: &mut dyn Write) -> io::Result<()> {
@@ -334,7 +341,7 @@ fn render_finding(
         .primary_title(TerminalText::line(&finding.message).into_text())
         .id(TerminalText::line(&finding.rule).into_text());
     let snippet = Snippet::source(text)
-        .line_start(line_number(finding.line))
+        .line_start(usize::try_from(finding.line).unwrap_or(usize::MAX))
         .path(TerminalText::line(&finding.path).into_text())
         .annotation(AnnotationKind::Primary.span(span));
     let groups = [
@@ -360,10 +367,6 @@ fn span_for(text: &str, column: u32) -> Range<usize> {
     last..text.len()
 }
 
-fn line_number(line: u32) -> usize {
-    usize::try_from(line).unwrap_or(usize::MAX)
-}
-
 fn summary_line(summary: &Summary) -> String {
     format!(
         "summary: strictness={} files={} findings={} deny={} warn={} baselined={} stale={} skipped={}",
@@ -385,11 +388,6 @@ fn severity_name(severity: Severity) -> &'static str {
     }
 }
 
-fn print_text(text: &str, kind: TextKind) -> ExitCode {
-    ExitCode::from(print_text_status(text, kind))
-}
-
-/// Writes `text` to stdout and returns the process status: 0 on success or broken pipe, 3 on error.
 fn print_text_status(text: &str, kind: TextKind) -> u8 {
     let written = with_buffered_stdout(|out| match kind {
         TextKind::Plain => write!(out, "{}", TerminalText::block(text)),
@@ -398,7 +396,6 @@ fn print_text_status(text: &str, kind: TextKind) -> u8 {
     sink_status(written, 0)
 }
 
-/// Maps a stdout sink result to a process status, treating a broken pipe as a stopped consumer.
 fn sink_status(result: io::Result<()>, success: u8) -> u8 {
     match result {
         Ok(()) => success,
@@ -415,7 +412,6 @@ fn fail(message: &str, code: u8) -> ExitCode {
     ExitCode::from(code)
 }
 
-/// Prints one `sloplint: error: ...` line to stderr, escaping terminal controls.
 fn emit_error(message: &str) {
     let _ = writeln!(
         io::stderr(),

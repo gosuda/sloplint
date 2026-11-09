@@ -1,5 +1,3 @@
-//! `agent/typed-error-boundary`: public functions returning untyped errors.
-
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Function};
 use crate::finding::{Finding, Level, Severity};
@@ -20,7 +18,6 @@ const RUST_MARKERS: &[&str] = &[
     "eyre::",
 ];
 
-/// `agent/typed-error-boundary`: flags untyped error types on public returns.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "agent/typed-error-boundary",
     family: Family::Agent,

@@ -18,7 +18,6 @@ mod use_tree;
 
 use use_tree::push_use;
 
-/// Role table for the Rust grammar.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_item", Role::Function),
     ("closure_expression", Role::Closure),
@@ -49,10 +48,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("static_item", Role::StaticItem),
 ];
 
-/// Hooks for the Rust grammar.
 pub(crate) struct RustHooks;
 
-/// Shared hook table for the Rust grammar.
 pub(crate) static HOOKS: RustHooks = RustHooks;
 const STR_KINDS: [&str; 2] = ["string_literal", "raw_string_literal"];
 fn field_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>, field: &str) -> &'s str {
@@ -565,11 +562,6 @@ fn is_env_callee(callee: &str) -> bool {
     if ENVS.iter().any(|s| callee.ends_with(*s)) {
         return true;
     }
-    // Whitespace-tolerant fallback without scanning the whole callee: the joined
-    // text ends with a target exactly when the callee's trailing non-whitespace
-    // chars do, so only the longest-target tail matters. The old
-    // `contains`-then-`split_whitespace` walked the full callee per call, which
-    // made a member-call chain quadratic.
     const MAX_ENV_TAIL: usize = "env::vars_os".len();
     let mut tail = ['\0'; MAX_ENV_TAIL];
     let mut len = 0;

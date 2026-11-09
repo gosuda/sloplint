@@ -286,7 +286,7 @@ const ORDER_FN: &str = "pub fn process_order(id: &str, account: &str, qty: u64) 
 // A035: a directive next to a doc comment must not become part of the doc text. Folded in, it
 // dilutes the restated name, so the echo finding never exists and the directive that should
 // remove it is reported as unused instead. Rust `///` placement only; Python and Java doc
-// placement is pinned in tests/syntax_kernel_contracts/directive_docs.rs.
+// placement is pinned in tests/analyze_facts/directive_docs.rs.
 #[test]
 fn directive_beside_a_restating_doc_removes_only_the_echo_finding() {
     let control = report_of("src/lib.rs", &format!("{DOC}{ORDER_FN}"), "");

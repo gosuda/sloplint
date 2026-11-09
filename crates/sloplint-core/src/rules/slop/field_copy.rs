@@ -1,11 +1,8 @@
-//! `slop/field-copy`: struct literals copying every field one-to-one from another value.
-
 use crate::config::Strictness;
 use crate::facts::FileFacts;
 use crate::finding::{Finding, Level, Severity};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 
-/// `slop/field-copy`: a literal that mirrors another value field for field.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "slop/field-copy",
     family: Family::Slop,

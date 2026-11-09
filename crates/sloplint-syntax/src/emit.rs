@@ -1,5 +1,3 @@
-//! Fact emission for the walk state: every method that appends one fact.
-
 use std::collections::HashMap;
 
 use sloplint_core::facts::{Ambient, Call, DynamicSymbol, Function, MutBinding, Pos};

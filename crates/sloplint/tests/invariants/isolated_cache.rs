@@ -142,18 +142,25 @@ const CPP_FINDING: &str = "only forwards its parameters to `items_.push_back`";
 
 const CPP_PLANTED: &str = "only forwards its parameters to `items_.push_bacm`";
 
-/// Rewrites the one stored occurrence of `from` in the cache file with the same-length `to`.
+/// Rewrites the one stored occurrence of `from` in the shard payload with the same-length
+/// `to`, then re-digests the payload, so the forged shard stays decodable and self-consistent.
 fn plant(file: &Path, from: &str, to: &str) {
     assert_eq!(from.len(), to.len(), "a plant must keep the stored length");
     let mut bytes = std::fs::read(file).unwrap_or_else(|e| panic!("read cache: {e}"));
-    let spots: Vec<usize> = bytes
+    assert!(
+        bytes.len() > 32,
+        "a shard must hold a 32-byte digest and a payload"
+    );
+    let spots: Vec<usize> = bytes[32..]
         .windows(from.len())
         .enumerate()
         .filter(|(_, window)| *window == from.as_bytes())
         .map(|(at, _)| at)
         .collect();
     assert_eq!(spots.len(), 1, "the cache must hold {from:?} exactly once");
-    bytes[spots[0]..spots[0] + to.len()].copy_from_slice(to.as_bytes());
+    let (digest, payload) = bytes.split_at_mut(32);
+    payload[spots[0]..spots[0] + to.len()].copy_from_slice(to.as_bytes());
+    digest.copy_from_slice(blake3::hash(payload).as_bytes());
     std::fs::write(file, &bytes).unwrap_or_else(|e| panic!("plant: {e}"));
 }
 
@@ -207,20 +214,7 @@ fn warm_cache_reuses_stored_findings() {
         1,
         "one project stores one cache file: {files:?}"
     );
-    let mut bytes = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read cache: {e}"));
-    let spots: Vec<usize> = bytes
-        .windows(GENERIC_TEXT.len())
-        .enumerate()
-        .filter(|(_, window)| *window == GENERIC_TEXT.as_bytes())
-        .map(|(at, _)| at)
-        .collect();
-    assert_eq!(
-        spots.len(),
-        1,
-        "the stored finding must hold its message once"
-    );
-    bytes[spots[0]..spots[0] + planted.len()].copy_from_slice(planted.as_bytes());
-    std::fs::write(&files[0], &bytes).unwrap_or_else(|e| panic!("plant: {e}"));
+    plant(&files[0], GENERIC_TEXT, &planted);
     let warm = home.check(&root, &[]);
     assert!(
         warm.contains(&planted),
@@ -230,6 +224,63 @@ fn warm_cache_reuses_stored_findings() {
     assert!(
         uncached.contains(GENERIC_TEXT) && !uncached.contains(&planted),
         "an uncached run must report the computed finding: {uncached}"
+    );
+}
+
+/// A shard file is the BLAKE3 digest of its payload followed by the payload. Flipping one
+/// byte of the stored finding keeps the payload decodable but fails the digest, so the warm
+/// run must reanalyze and print exactly what an uncached run prints.
+#[test]
+fn a_flipped_byte_inside_a_decodable_shard_is_not_served() {
+    let (_tmp, root) = tempdir();
+    write(&root, "sloplint.toml", "");
+    write(&root, "src/lib.rs", SAMPLE);
+    let home = CacheHome::new();
+    let run = |extra: &[&str]| -> Output {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_sloplint"));
+        command
+            .current_dir(&root)
+            .args(["check", "--strictness", "strict", "--fail-on", "never"])
+            .args(extra);
+        home.isolate(&mut command)
+            .output()
+            .unwrap_or_else(|e| panic!("spawn sloplint: {e}"))
+    };
+    let cold = run(&[]);
+    let cold_stdout = String::from_utf8_lossy(&cold.stdout);
+    assert!(
+        cold_stdout.contains("[complexity/boolean-params]"),
+        "the cold run must report the boolean-parameter finding: {cold_stdout}"
+    );
+    let files = home.cache_files();
+    assert_eq!(files.len(), 1, "one project stores one shard: {files:?}");
+    let mut bytes = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read shard: {e}"));
+    let Some(at) = bytes
+        .windows(b"handle".len())
+        .position(|window| window == b"handle")
+    else {
+        panic!("the stored finding must name the function");
+    };
+    assert_eq!(bytes[at], b'h', "the flip must land on the h of handle");
+    bytes[at] = b'j';
+    std::fs::write(&files[0], &bytes).unwrap_or_else(|e| panic!("plant: {e}"));
+    let warm = run(&[]);
+    let fresh = run(&["--no-cache"]);
+    assert_eq!(
+        String::from_utf8_lossy(&warm.stdout),
+        String::from_utf8_lossy(&fresh.stdout),
+        "a shard whose digest fails must be reanalyzed, not served: {}",
+        String::from_utf8_lossy(&warm.stdout)
+    );
+    assert_eq!(
+        warm.status.code(),
+        fresh.status.code(),
+        "the reanalyzed run must exit like the uncached run"
+    );
+    assert!(
+        warm.stderr.is_empty(),
+        "the reanalysis must not warn on stderr: {}",
+        String::from_utf8_lossy(&warm.stderr)
     );
 }
 
@@ -317,17 +368,12 @@ fn planted_cache_symlink_is_never_written_through() {
         1,
         "one project stores one cache file: {files:?}"
     );
-    let genuine = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read cache: {e}"));
     let planted = GENERIC_TEXT.replace("code", "mode");
-    let at = genuine
-        .windows(GENERIC_TEXT.len())
-        .position(|window| window == GENERIC_TEXT.as_bytes())
-        .unwrap_or_else(|| panic!("the finding message is not in the cache bytes"));
-    let mut forged = genuine.clone();
-    forged[at..at + planted.len()].copy_from_slice(planted.as_bytes());
     let (_outside, base) = tempdir();
     let planted_path = base.join("forged.bin");
-    std::fs::write(&planted_path, &forged).unwrap_or_else(|e| panic!("plant: {e}"));
+    std::fs::copy(&files[0], &planted_path).unwrap_or_else(|e| panic!("plant: {e}"));
+    plant(&planted_path, GENERIC_TEXT, &planted);
+    let forged = std::fs::read(&planted_path).unwrap_or_else(|e| panic!("read forged: {e}"));
     std::fs::remove_file(&files[0]).unwrap_or_else(|e| panic!("remove cache: {e}"));
     std::os::unix::fs::symlink(&planted_path, &files[0]).unwrap_or_else(|e| panic!("symlink: {e}"));
     let out = home.output(&root, &[]);
@@ -653,17 +699,12 @@ fn planted_reparse_cache_is_never_read_or_written_through() {
         1,
         "one project stores one cache file: {files:?}"
     );
-    let genuine = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read cache: {e}"));
     let planted_marker = GENERIC_TEXT.replace("code", "mode");
-    let at = genuine
-        .windows(GENERIC_TEXT.len())
-        .position(|window| window == GENERIC_TEXT.as_bytes())
-        .unwrap_or_else(|| panic!("the finding message is not in the cache bytes"));
-    let mut forged = genuine.clone();
-    forged[at..at + planted_marker.len()].copy_from_slice(planted_marker.as_bytes());
     let (_outside, base) = tempdir();
     let planted_path = base.join("forged.bin");
-    std::fs::write(&planted_path, &forged).unwrap_or_else(|e| panic!("plant: {e}"));
+    std::fs::copy(&files[0], &planted_path).unwrap_or_else(|e| panic!("plant: {e}"));
+    plant(&planted_path, GENERIC_TEXT, &planted_marker);
+    let forged = std::fs::read(&planted_path).unwrap_or_else(|e| panic!("read forged: {e}"));
     std::fs::remove_file(&files[0]).unwrap_or_else(|e| panic!("remove cache: {e}"));
     match std::os::windows::fs::symlink_file(&planted_path, &files[0]) {
         Ok(()) => {}
@@ -714,14 +755,7 @@ fn planted_junction_shard_dir_yields_empty_cache() {
         1,
         "one project stores one cache file: {files:?}"
     );
-    let genuine = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read cache: {e}"));
     let planted_marker = GENERIC_TEXT.replace("code", "mode");
-    let at = genuine
-        .windows(GENERIC_TEXT.len())
-        .position(|window| window == GENERIC_TEXT.as_bytes())
-        .unwrap_or_else(|| panic!("the finding message is not in the cache bytes"));
-    let mut forged = genuine.clone();
-    forged[at..at + planted_marker.len()].copy_from_slice(planted_marker.as_bytes());
     let shard_dir = files[0]
         .parent()
         .unwrap_or_else(|| panic!("{} has no directory", files[0].display()))
@@ -733,8 +767,10 @@ fn planted_junction_shard_dir_yields_empty_cache() {
     let (_outside, base) = tempdir();
     let target = base.join("attacker");
     mkdir(&target);
-    std::fs::write(target.join(&shard_name), &forged)
-        .unwrap_or_else(|e| panic!("plant forged shard: {e}"));
+    let planted_path = target.join(&shard_name);
+    std::fs::copy(&files[0], &planted_path).unwrap_or_else(|e| panic!("plant forged shard: {e}"));
+    plant(&planted_path, GENERIC_TEXT, &planted_marker);
+    let forged = std::fs::read(&planted_path).unwrap_or_else(|e| panic!("read forged: {e}"));
     std::fs::remove_dir_all(&shard_dir).unwrap_or_else(|e| panic!("remove shards: {e}"));
     let link = std::process::Command::new("cmd")
         .args(["/c", "mklink", "/J"])

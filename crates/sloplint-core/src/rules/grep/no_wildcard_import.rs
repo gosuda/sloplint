@@ -1,5 +1,3 @@
-//! `grep/no-wildcard-import`: wildcard imports that hide where each name comes from.
-
 use super::{EmptyOptions, parse_options};
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Import, ImportKind};
@@ -7,7 +5,6 @@ use crate::finding::{Finding, Level, Severity};
 use crate::lang::Lang;
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 
-/// `grep/no-wildcard-import`: flags imports that bring every name of a module into scope.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "grep/no-wildcard-import",
     family: Family::Grep,

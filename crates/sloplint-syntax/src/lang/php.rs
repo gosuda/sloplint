@@ -15,7 +15,6 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-/// Role table mapping PHP node kinds to walker roles.
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
     ("method_declaration", Role::Function),
@@ -63,10 +62,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("property_declaration", Role::StaticItem),
 ];
 
-/// PHP language hooks.
 pub(crate) static HOOKS: PhpHooks = PhpHooks;
 
-/// PHP adapter.
 pub(crate) struct PhpHooks;
 
 const CALL_KINDS: [&str; 4] = [
@@ -231,25 +228,14 @@ fn php_call_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
         })
         .collect()
 }
-/// The chain family of [`php_object_root`] in the walk's chain-root memo.
 const OBJECT_CHAIN: u8 = 3;
 
-/// True when a memoized root can end a valid chain: a bare name. Valid terminals are
-/// always single variables (dollar-stripped below), so anything else ends the chain
-/// at an unsupported node (a plain call, a scoped name) and keeps its historical
-/// `None`.
-fn is_chain_root(t: &str) -> bool {
+fn root_is_bare_name(t: &str) -> bool {
     !t.as_bytes().first().is_some_and(|b| b.is_ascii_digit())
         && t.bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'$' || !b.is_ascii())
 }
 
-/// The leftmost variable of an object chain: the first node without an `object` field.
-///
-/// Memoized, so a chain of `n` calls costs `O(n)` and not `O(n²)`; every call would
-/// otherwise walk the objects of all the calls below it. A chain that starts at a
-/// node with no object to follow keeps its old `None` without touching the memo,
-/// and a chain that ends at one is recognized by its non-name root text.
 fn php_object_root<'s>(cx: &Cx<'_, 's>, obj: Node<'_>) -> Option<&'s str> {
     if obj.kind() != "variable_name" && child_by_field(obj, "object").is_none() {
         return None;
@@ -264,12 +250,8 @@ fn php_object_root<'s>(cx: &Cx<'_, 's>, obj: Node<'_>) -> Option<&'s str> {
         }
     });
     let root = strip_dollar(root);
-    is_chain_root(root).then_some(root)
+    root_is_bare_name(root).then_some(root)
 }
-/// The last `::`/`->`/`.`/`\`-separated segment of a call's callee without scanning its
-/// receiver chain: the last separator always follows the object, so scanning from the
-/// object's end finds the same segment as scanning the whole span, and every call in
-/// a chain would otherwise rescan the chain's text below it.
 fn php_callee_last<'s>(cx: &Cx<'_, 's>, n: Node<'_>, callee: &'s str) -> &'s str {
     const SEPS: &[&str] = &["::", "->", ".", "\\"];
     let field = if n.kind() == "scoped_call_expression" {
@@ -277,10 +259,11 @@ fn php_callee_last<'s>(cx: &Cx<'_, 's>, n: Node<'_>, callee: &'s str) -> &'s str
     } else {
         "object"
     };
-    let (Some(base), Some(name)) = (child_by_field(n, field), child_by_field(n, "name")) else {
+    let (Some(receiver), Some(name)) = (child_by_field(n, field), child_by_field(n, "name")) else {
         return last_segment(callee, SEPS);
     };
-    last_segment(slice(cx.src, base.end_byte(), name.end_byte()), SEPS)
+    let callee_tail = slice(cx.src, receiver.end_byte(), name.end_byte());
+    last_segment(callee_tail, SEPS)
 }
 fn php_scope_root<'s>(cx: &Cx<'_, 's>, scope: Node<'_>) -> Option<&'s str> {
     let t = text(cx, scope);

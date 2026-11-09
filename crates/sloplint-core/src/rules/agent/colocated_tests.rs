@@ -1,5 +1,3 @@
-//! `agent/colocated-tests`: modules with public functions and no nearby tests.
-
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +11,6 @@ use super::string_values;
 
 const EXCLUDE: &[&str] = &["**/examples/**", "**/scripts/**"];
 
-/// `agent/colocated-tests`: flags testable modules with no counterpart or inline tests.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "agent/colocated-tests",
     family: Family::Agent,
@@ -58,20 +55,13 @@ fn build(options: toml::Table) -> Result<Box<dyn WorldRule>, String> {
     Ok(Box::new(ColocatedTests { exclude }))
 }
 
-/// Where a language looks for a module's tests.
 #[derive(Clone, Copy)]
-enum Candidates {
-    /// File names `{prefix}{stem}.{ext}` or `{stem}{infix}.{ext}` anywhere; `None` keeps the file's own extension.
+enum TestCandidates {
     Names(NameForm),
-    /// `<dir>{stem}{tail}` next to the analyzed file.
     Dir(&'static str),
-    /// Fixed root-relative paths, each with one `{stem}` placeholder or none.
     Root(&'static [&'static str]),
-    /// Any file under a `tests/` directory named `<stem>.rs` or starting with `<stem>_`.
     RustTests,
-    /// `.test.*`, `.spec.*`, and `__tests__/` forms next to the analyzed file.
     Web,
-    /// Inline tests only.
     None,
 }
 
@@ -88,18 +78,18 @@ const TYPED_SUFFIXES: NameForm = NameForm {
     ext: None,
 };
 
-fn conventions(lang: Lang) -> Candidates {
-    const TABLE: &[(Lang, Candidates)] = &[
-        (Lang::Rust, Candidates::RustTests),
-        (Lang::TypeScript, Candidates::Web),
-        (Lang::Tsx, Candidates::Web),
-        (Lang::JavaScript, Candidates::Web),
-        (Lang::Java, Candidates::Names(TYPED_SUFFIXES)),
-        (Lang::Kotlin, Candidates::Names(TYPED_SUFFIXES)),
-        (Lang::CSharp, Candidates::Names(TYPED_SUFFIXES)),
+fn conventions(lang: Lang) -> TestCandidates {
+    const TABLE: &[(Lang, TestCandidates)] = &[
+        (Lang::Rust, TestCandidates::RustTests),
+        (Lang::TypeScript, TestCandidates::Web),
+        (Lang::Tsx, TestCandidates::Web),
+        (Lang::JavaScript, TestCandidates::Web),
+        (Lang::Java, TestCandidates::Names(TYPED_SUFFIXES)),
+        (Lang::Kotlin, TestCandidates::Names(TYPED_SUFFIXES)),
+        (Lang::CSharp, TestCandidates::Names(TYPED_SUFFIXES)),
         (
             Lang::Scala,
-            Candidates::Names(NameForm {
+            TestCandidates::Names(NameForm {
                 prefixes: &[],
                 infixes: &["Spec", "Test", "Suite"],
                 ext: Some("scala"),
@@ -107,7 +97,7 @@ fn conventions(lang: Lang) -> Candidates {
         ),
         (
             Lang::Swift,
-            Candidates::Names(NameForm {
+            TestCandidates::Names(NameForm {
                 prefixes: &[],
                 infixes: &["Tests"],
                 ext: Some("swift"),
@@ -115,7 +105,7 @@ fn conventions(lang: Lang) -> Candidates {
         ),
         (
             Lang::ObjC,
-            Candidates::Names(NameForm {
+            TestCandidates::Names(NameForm {
                 prefixes: &[],
                 infixes: &["Tests"],
                 ext: Some("m"),
@@ -123,7 +113,7 @@ fn conventions(lang: Lang) -> Candidates {
         ),
         (
             Lang::Php,
-            Candidates::Names(NameForm {
+            TestCandidates::Names(NameForm {
                 prefixes: &[],
                 infixes: &["Test"],
                 ext: Some("php"),
@@ -131,7 +121,7 @@ fn conventions(lang: Lang) -> Candidates {
         ),
         (
             Lang::PowerShell,
-            Candidates::Names(NameForm {
+            TestCandidates::Names(NameForm {
                 prefixes: &[],
                 infixes: &[".Tests"],
                 ext: Some("ps1"),
@@ -139,7 +129,7 @@ fn conventions(lang: Lang) -> Candidates {
         ),
         (
             Lang::Python,
-            Candidates::Names(NameForm {
+            TestCandidates::Names(NameForm {
                 prefixes: &["test_"],
                 infixes: &["_test"],
                 ext: Some("py"),
@@ -147,7 +137,7 @@ fn conventions(lang: Lang) -> Candidates {
         ),
         (
             Lang::Bash,
-            Candidates::Names(NameForm {
+            TestCandidates::Names(NameForm {
                 prefixes: &["test_"],
                 infixes: &["_test"],
                 ext: Some("sh"),
@@ -155,7 +145,7 @@ fn conventions(lang: Lang) -> Candidates {
         ),
         (
             Lang::Ocaml,
-            Candidates::Names(NameForm {
+            TestCandidates::Names(NameForm {
                 prefixes: &["test_"],
                 infixes: &["_test"],
                 ext: Some("ml"),
@@ -163,7 +153,7 @@ fn conventions(lang: Lang) -> Candidates {
         ),
         (
             Lang::OcamlInterface,
-            Candidates::Names(NameForm {
+            TestCandidates::Names(NameForm {
                 prefixes: &["test_"],
                 infixes: &["_test"],
                 ext: Some("ml"),
@@ -171,7 +161,7 @@ fn conventions(lang: Lang) -> Candidates {
         ),
         (
             Lang::C,
-            Candidates::Names(NameForm {
+            TestCandidates::Names(NameForm {
                 prefixes: &["test_"],
                 infixes: &["_test", "_unittest"],
                 ext: None,
@@ -179,32 +169,34 @@ fn conventions(lang: Lang) -> Candidates {
         ),
         (
             Lang::Cpp,
-            Candidates::Names(NameForm {
+            TestCandidates::Names(NameForm {
                 prefixes: &["test_"],
                 infixes: &["_test", "_unittest"],
                 ext: None,
             }),
         ),
-        (Lang::Go, Candidates::Dir("_test.go")),
-        (Lang::Dart, Candidates::Root(&["test/{stem}_test.dart"])),
+        (Lang::Go, TestCandidates::Dir("_test.go")),
+        (Lang::Dart, TestCandidates::Root(&["test/{stem}_test.dart"])),
         (
             Lang::Ruby,
-            Candidates::Root(&["spec/{stem}_spec.rb", "test/{stem}_test.rb"]),
+            TestCandidates::Root(&["spec/{stem}_spec.rb", "test/{stem}_test.rb"]),
         ),
-        (Lang::R, Candidates::Root(&["tests/testthat/test-{stem}.R"])),
-        (Lang::Zig, Candidates::None),
-        (Lang::Odin, Candidates::None),
-        (Lang::Starlark, Candidates::None),
+        (
+            Lang::R,
+            TestCandidates::Root(&["tests/testthat/test-{stem}.R"]),
+        ),
+        (Lang::Zig, TestCandidates::None),
+        (Lang::Odin, TestCandidates::None),
+        (Lang::Starlark, TestCandidates::None),
     ];
     TABLE
         .iter()
         .find(|(candidate, _)| *candidate == lang)
         .map(|(_, candidates)| *candidates)
-        .unwrap_or(Candidates::None)
+        .unwrap_or(TestCandidates::None)
 }
 
-/// Orders `elem` against the concatenation of `parts` without building that string.
-fn cmp_composite(elem: &str, parts: &[&str]) -> std::cmp::Ordering {
+fn cmp_against_joined(elem: &str, parts: &[&str]) -> std::cmp::Ordering {
     let mut elem_bytes = elem.as_bytes();
     for &part in parts {
         let part_bytes = part.as_bytes();
@@ -226,7 +218,6 @@ fn cmp_composite(elem: &str, parts: &[&str]) -> std::cmp::Ordering {
     }
 }
 
-/// The analyzed path set, indexed once per run so each module answers in `O(log n)`.
 struct PathIndex<'a> {
     paths: Vec<&'a str>,
     names: Vec<&'a str>,
@@ -259,12 +250,12 @@ impl<'a> PathIndex<'a> {
 
 fn has_counterpart(index: &PathIndex<'_>, path: &str, lang: Lang) -> bool {
     match conventions(lang) {
-        Candidates::Names(form) => names_match(&index.names, path, &form),
-        Candidates::Dir(tail) => dir_match(&index.paths, path, tail),
-        Candidates::Root(templates) => root_match(&index.paths, templates, path),
-        Candidates::RustTests => rust_match(&index.rust_tests, path),
-        Candidates::Web => web_match(&index.paths, path),
-        Candidates::None => false,
+        TestCandidates::Names(form) => names_match(&index.names, path, &form),
+        TestCandidates::Dir(tail) => dir_match(&index.paths, path, tail),
+        TestCandidates::Root(templates) => root_match(&index.paths, templates, path),
+        TestCandidates::RustTests => rust_match(&index.rust_tests, path),
+        TestCandidates::Web => web_match(&index.paths, path),
+        TestCandidates::None => false,
     }
 }
 
@@ -273,11 +264,11 @@ fn names_match(names: &[&str], path: &str, form: &NameForm) -> bool {
     let ext = form.ext.unwrap_or(own_ext);
     form.prefixes.iter().any(|prefix| {
         names
-            .binary_search_by(|elem| cmp_composite(elem, &[prefix, stem, ".", ext]))
+            .binary_search_by(|elem| cmp_against_joined(elem, &[prefix, stem, ".", ext]))
             .is_ok()
     }) || form.infixes.iter().any(|infix| {
         names
-            .binary_search_by(|elem| cmp_composite(elem, &[stem, infix, ".", ext]))
+            .binary_search_by(|elem| cmp_against_joined(elem, &[stem, infix, ".", ext]))
             .is_ok()
     })
 }
@@ -286,7 +277,7 @@ fn dir_match(paths: &[&str], path: &str, tail: &str) -> bool {
     let dir = dir_prefix(path);
     let stem = stem_ext(path).0;
     paths
-        .binary_search_by(|elem| cmp_composite(elem, &[dir, stem, tail]))
+        .binary_search_by(|elem| cmp_against_joined(elem, &[dir, stem, tail]))
         .is_ok()
 }
 
@@ -296,7 +287,7 @@ fn root_match(paths: &[&str], templates: &[&str], path: &str) -> bool {
         .iter()
         .any(|template| match template.split_once("{stem}") {
             Some((prefix, suffix)) => paths
-                .binary_search_by(|elem| cmp_composite(elem, &[prefix, stem, suffix]))
+                .binary_search_by(|elem| cmp_against_joined(elem, &[prefix, stem, suffix]))
                 .is_ok(),
             None => paths.binary_search(template).is_ok(),
         })
@@ -305,12 +296,12 @@ fn root_match(paths: &[&str], templates: &[&str], path: &str) -> bool {
 fn rust_match(test_names: &[&str], path: &str) -> bool {
     let stem = stem_ext(path).0;
     if test_names
-        .binary_search_by(|elem| cmp_composite(elem, &[stem, ".rs"]))
+        .binary_search_by(|elem| cmp_against_joined(elem, &[stem, ".rs"]))
         .is_ok()
     {
         return true;
     }
-    let start = test_names.partition_point(|name| cmp_composite(name, &[stem, "_"]).is_lt());
+    let start = test_names.partition_point(|name| cmp_against_joined(name, &[stem, "_"]).is_lt());
     test_names[start..].first().is_some_and(|name| {
         name.strip_prefix(stem)
             .is_some_and(|rest| rest.starts_with('_'))
@@ -341,13 +332,13 @@ fn web_match(paths: &[&str], path: &str) -> bool {
     let stem = stem_ext(path).0;
     if WEB_TAILS.iter().any(|tail| {
         paths
-            .binary_search_by(|elem| cmp_composite(elem, &[dir, stem, tail]))
+            .binary_search_by(|elem| cmp_against_joined(elem, &[dir, stem, tail]))
             .is_ok()
     }) {
         return true;
     }
     let start = paths.partition_point(|candidate| {
-        cmp_composite(candidate, &[dir, "__tests__/", stem, ".test."]).is_lt()
+        cmp_against_joined(candidate, &[dir, "__tests__/", stem, ".test."]).is_lt()
     });
     paths[start..].first().is_some_and(|candidate| {
         candidate
@@ -358,61 +349,66 @@ fn web_match(paths: &[&str], path: &str) -> bool {
     })
 }
 
-/// The fix text names the canonical counterpart a module should gain.
 #[derive(Clone, Copy)]
-enum Fixup {
+enum Counterpart {
     Text(&'static str),
     DirStem(&'static str),
     Root(&'static str),
     Infix(&'static str, Option<&'static str>),
 }
 
-fn fixup(lang: Lang) -> Fixup {
-    const TABLE: &[(Lang, Fixup)] = &[
+fn counterpart(lang: Lang) -> Counterpart {
+    const TABLE: &[(Lang, Counterpart)] = &[
         (
             Lang::Rust,
-            Fixup::Text("a #[cfg(test)] mod tests in this file"),
+            Counterpart::Text("a #[cfg(test)] mod tests in this file"),
         ),
-        (Lang::TypeScript, Fixup::DirStem(".test.ts")),
-        (Lang::Tsx, Fixup::DirStem(".test.ts")),
-        (Lang::JavaScript, Fixup::DirStem(".test.js")),
-        (Lang::Python, Fixup::Root("tests/test_{stem}.py")),
-        (Lang::Go, Fixup::DirStem("_test.go")),
-        (Lang::Dart, Fixup::Root("test/{stem}_test.dart")),
-        (Lang::Ruby, Fixup::Root("spec/{stem}_spec.rb")),
-        (Lang::R, Fixup::Root("tests/testthat/test-{stem}.R")),
-        (Lang::Zig, Fixup::Text("a test block in this file")),
-        (Lang::Odin, Fixup::Text("an @(test) procedure in this file")),
-        (Lang::Java, Fixup::Infix("Test", None)),
-        (Lang::Kotlin, Fixup::Infix("Test", None)),
-        (Lang::CSharp, Fixup::Infix("Test", None)),
-        (Lang::Scala, Fixup::Infix("Spec", Some("scala"))),
-        (Lang::Swift, Fixup::Infix("Tests", Some("swift"))),
-        (Lang::ObjC, Fixup::Infix("Tests", Some("m"))),
-        (Lang::Php, Fixup::Infix("Test", Some("php"))),
-        (Lang::PowerShell, Fixup::Infix(".Tests", Some("ps1"))),
-        (Lang::Bash, Fixup::Infix("_test", Some("sh"))),
-        (Lang::Ocaml, Fixup::Infix("_test", Some("ml"))),
-        (Lang::OcamlInterface, Fixup::Infix("_test", Some("ml"))),
-        (Lang::C, Fixup::Infix("_test", None)),
-        (Lang::Cpp, Fixup::Infix("_test", None)),
-        (Lang::Starlark, Fixup::Text("")),
+        (Lang::TypeScript, Counterpart::DirStem(".test.ts")),
+        (Lang::Tsx, Counterpart::DirStem(".test.ts")),
+        (Lang::JavaScript, Counterpart::DirStem(".test.js")),
+        (Lang::Python, Counterpart::Root("tests/test_{stem}.py")),
+        (Lang::Go, Counterpart::DirStem("_test.go")),
+        (Lang::Dart, Counterpart::Root("test/{stem}_test.dart")),
+        (Lang::Ruby, Counterpart::Root("spec/{stem}_spec.rb")),
+        (Lang::R, Counterpart::Root("tests/testthat/test-{stem}.R")),
+        (Lang::Zig, Counterpart::Text("a test block in this file")),
+        (
+            Lang::Odin,
+            Counterpart::Text("an @(test) procedure in this file"),
+        ),
+        (Lang::Java, Counterpart::Infix("Test", None)),
+        (Lang::Kotlin, Counterpart::Infix("Test", None)),
+        (Lang::CSharp, Counterpart::Infix("Test", None)),
+        (Lang::Scala, Counterpart::Infix("Spec", Some("scala"))),
+        (Lang::Swift, Counterpart::Infix("Tests", Some("swift"))),
+        (Lang::ObjC, Counterpart::Infix("Tests", Some("m"))),
+        (Lang::Php, Counterpart::Infix("Test", Some("php"))),
+        (Lang::PowerShell, Counterpart::Infix(".Tests", Some("ps1"))),
+        (Lang::Bash, Counterpart::Infix("_test", Some("sh"))),
+        (Lang::Ocaml, Counterpart::Infix("_test", Some("ml"))),
+        (
+            Lang::OcamlInterface,
+            Counterpart::Infix("_test", Some("ml")),
+        ),
+        (Lang::C, Counterpart::Infix("_test", None)),
+        (Lang::Cpp, Counterpart::Infix("_test", None)),
+        (Lang::Starlark, Counterpart::Text("")),
     ];
     TABLE
         .iter()
         .find(|(candidate, _)| *candidate == lang)
-        .map(|(_, fixup)| *fixup)
-        .unwrap_or(Fixup::Text(""))
+        .map(|(_, counterpart)| *counterpart)
+        .unwrap_or(Counterpart::Text(""))
 }
 
 fn expected(path: &str, lang: Lang) -> String {
     let dir = dir_prefix(path);
     let (stem, ext) = stem_ext(path);
-    match fixup(lang) {
-        Fixup::Text(text) => text.to_string(),
-        Fixup::DirStem(tail) => format!("{dir}{stem}{tail}"),
-        Fixup::Root(template) => template.replace("{stem}", stem),
-        Fixup::Infix(infix, fixed) => format!("{dir}{stem}{infix}.{}", fixed.unwrap_or(ext)),
+    match counterpart(lang) {
+        Counterpart::Text(text) => text.to_string(),
+        Counterpart::DirStem(tail) => format!("{dir}{stem}{tail}"),
+        Counterpart::Root(template) => template.replace("{stem}", stem),
+        Counterpart::Infix(infix, fixed) => format!("{dir}{stem}{infix}.{}", fixed.unwrap_or(ext)),
     }
 }
 

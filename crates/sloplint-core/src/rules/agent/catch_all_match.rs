@@ -1,5 +1,3 @@
-//! `agent/catch-all-match`: wildcard arms over enum-like patterns.
-
 use crate::config::Strictness;
 use crate::facts::FileFacts;
 use crate::finding::{Finding, Level, Severity};
@@ -11,7 +9,6 @@ const MESSAGE: &str = "wildcard arm in a match over enum-like patterns";
 const FIX: &str =
     "list the remaining variants explicitly so a new variant fails the exhaustiveness check here";
 
-/// `agent/catch-all-match`: flags `_` arms that hide new enum variants.
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "agent/catch-all-match",
     family: Family::Agent,

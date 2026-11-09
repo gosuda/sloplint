@@ -1,5 +1,3 @@
-//! Helpers shared by the C, C++, and Objective-C adapters.
-
 use sloplint_core::facts::{AmbientKind, Arg, ArgShape, Assertion, Pos};
 use tree_sitter::Node;
 
