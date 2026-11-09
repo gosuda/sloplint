@@ -336,6 +336,58 @@ fn error_text_shows_controls_as_visible_escapes() {
     assert!(out.stdout.is_empty(), "stdout must stay empty on error");
 }
 
+// F17: a line feed in a repository id must not forge a workflow command on stderr.
+#[test]
+fn error_text_never_starts_a_line_with_a_workflow_command() {
+    let tmp = project(&[(
+        "sloplint.toml",
+        "[rules.\"x\\u000a::warning file=a::forged\"]\nlevel = \"warn\"\n",
+    )]);
+    let out = sloplint(tmp.path(), &["check", "--no-cache"]);
+    assert_eq!(out.status.code(), Some(2), "config error exit code");
+    let stderr = text(&out.stderr);
+    assert!(
+        !stderr.contains("\n::warning"),
+        "stderr forges a workflow command:\n{stderr}"
+    );
+    assert_contains(
+        stderr,
+        "\\x0a::warning file=a::forged",
+        "escaped line feed in stderr",
+    );
+    assert!(out.stdout.is_empty(), "stdout must stay empty on error");
+}
+
+// F17: block text keeps structural line feeds, so line-start field values must be defused.
+#[test]
+fn rules_listing_defuses_workflow_commands_at_line_starts() {
+    let config = concat!(
+        "[[custom_rules]]\n",
+        "id = \"custom/hostile-line\"\n",
+        "language = \"rust\"\n",
+        "severity = \"warn\"\n",
+        "message = \"bad\\n::warning file=a::forged\"\n",
+        "why = \"why the rule exists\"\n",
+        "fix = \"remove the call\"\n",
+        "query = '''\n",
+        "(macro_invocation macro: (identifier) @m (#eq? @m \"dbg\")) @match\n",
+        "'''\n",
+    );
+    let tmp = project(&[("sloplint.toml", config), ("a.rs", "fn c() { dbg!(1); }\n")]);
+    let out = sloplint(tmp.path(), &["rules"]);
+    assert_eq!(out.status.code(), Some(0), "rules exit code");
+    let stdout = text(&out.stdout);
+    assert!(
+        !stdout.contains("\n::warning"),
+        "rules listing forges a workflow command:\n{stdout}"
+    );
+    assert_contains(
+        stdout,
+        "\\x3a:warning file=a::forged",
+        "defused line start in rules listing",
+    );
+}
+
 // A027: the shared formatter escapes the documented controls and nothing around them.
 #[test]
 fn terminal_text_escapes_exactly_the_documented_controls() {
@@ -505,7 +557,7 @@ fn terminal_text_escapes_unicode_bidi_controls() {
 }
 
 #[test]
-fn bidi_controls_render_escaped_in_terminal_output_and_raw_in_json() {
+fn bidi_controls_render_escaped_in_terminal_output_and_json() {
     let bidi_source = format!("pub fn handle() {{}} // {BIDI_CONTROLS}\n");
     let tmp = project(&[("sloplint.toml", ""), ("a.rs", &bidi_source)]);
     #[cfg(unix)]
@@ -548,6 +600,30 @@ fn bidi_controls_render_escaped_in_terminal_output_and_raw_in_json() {
 
     let json = sloplint(tmp.path(), &["check", "--no-cache", "--format", "json"]);
     assert_eq!(json.status.code(), Some(0), "json exit code");
+    let json_text = text(&json.stdout);
+    for (control, visible) in [
+        ("\u{61c}", "\\u061c"),
+        ("\u{200e}", "\\u200e"),
+        ("\u{200f}", "\\u200f"),
+        ("\u{202a}", "\\u202a"),
+        ("\u{202b}", "\\u202b"),
+        ("\u{202c}", "\\u202c"),
+        ("\u{202d}", "\\u202d"),
+        ("\u{202e}", "\\u202e"),
+        ("\u{2066}", "\\u2066"),
+        ("\u{2067}", "\\u2067"),
+        ("\u{2068}", "\\u2068"),
+        ("\u{2069}", "\\u2069"),
+    ] {
+        assert!(
+            json_text.contains(visible),
+            "json stdout must escape {visible} instead of the raw control:\n{json_text}"
+        );
+        assert!(
+            !json_text.contains(control),
+            "json stdout must not carry the raw {visible} control:\n{json_text}"
+        );
+    }
     let doc: Document =
         sonic_rs::from_slice(&json.stdout).unwrap_or_else(|e| panic!("stdout is not JSON: {e}"));
     let a_finding = doc
@@ -558,13 +634,13 @@ fn bidi_controls_render_escaped_in_terminal_output_and_raw_in_json() {
     assert_eq!(
         a_finding.context,
         format!("pub fn handle() {{}} // {BIDI_CONTROLS}"),
-        "JSON context must keep raw bidi controls"
+        "JSON context must round-trip the bidi controls"
     );
     #[cfg(unix)]
     assert!(
         doc.findings
             .iter()
             .any(|row| row.path == "dir/\u{202e}evil\u{202c}.rs"),
-        "JSON path must keep raw bidi controls"
+        "JSON path must round-trip the bidi controls"
     );
 }

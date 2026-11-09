@@ -9,7 +9,9 @@ use clap::Parser;
 use rayon::prelude::*;
 use sloplint::cli::{BaselineArgs, CheckArgs, Cli, Command, Format, RulesArgs};
 use sloplint::rules_cmd::{self, RulesRequest};
-use sloplint::{Execution, Report, RunError, RunOptions, Summary, TerminalText, init};
+use sloplint::{
+    Execution, Report, RunError, RunOptions, Summary, TerminalText, init, next_control,
+};
 use sloplint_core::finding::line_starts;
 use sloplint_core::{Finding, RuleFilter, Severity};
 
@@ -239,28 +241,18 @@ where
     write_guarded(out, record)
 }
 
-fn write_guarded(out: &mut dyn Write, mut json: &[u8]) -> io::Result<()> {
-    while let Some((at, width, code)) = find_control(json) {
-        out.write_all(&json[..at])?;
-        write!(out, "\\u{code:04x}")?;
-        json = &json[at + width..];
-    }
-    out.write_all(json)
-}
-
-fn find_control(json: &[u8]) -> Option<(usize, usize, u8)> {
+fn write_guarded(out: &mut dyn Write, json: &[u8]) -> io::Result<()> {
+    let mut run = 0;
     let mut at = 0;
-    while at < json.len() {
-        match json[at] {
-            0x7f => return Some((at, 1, 0x7f)),
-            0xc2 => match json.get(at + 1) {
-                Some(&next) if (0x80..=0x9f).contains(&next) => return Some((at, 2, next)),
-                _ => at += 2,
-            },
-            _ => at += 1,
+    while let Some((off, width, code)) = next_control(json, at) {
+        if code != 0x0a {
+            out.write_all(&json[run..off])?;
+            write!(out, "\\u{code:04x}")?;
+            run = off + width;
         }
+        at = off + width;
     }
-    None
+    out.write_all(&json[run..])
 }
 
 fn write_human(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
@@ -416,7 +408,7 @@ fn emit_error(message: &str) {
     let _ = writeln!(
         io::stderr(),
         "sloplint: error: {}",
-        TerminalText::block(message)
+        TerminalText::line(message)
     );
 }
 

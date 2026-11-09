@@ -11,7 +11,7 @@ mod store;
 mod terminal;
 
 pub use store::read_source;
-pub use terminal::TerminalText;
+pub use terminal::{TerminalText, next_control};
 
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
