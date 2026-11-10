@@ -11,6 +11,8 @@ mod rust_grouped_use_modules;
 mod rust_impl_container_pop;
 #[path = "rust_web_boundaries/rust_self_barrel.rs"]
 mod rust_self_barrel;
+#[path = "rust_web_boundaries/rust_test_attributes.rs"]
+mod rust_test_attributes;
 #[path = "rust_web_boundaries/rust_thread_local_name.rs"]
 mod rust_thread_local_name;
 #[path = "rust_web_boundaries/typescript_callee_root.rs"]

@@ -55,6 +55,18 @@ const STR_KINDS: [&str; 2] = ["string_literal", "raw_string_literal"];
 fn field_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>, field: &str) -> &'s str {
     child_by_field(n, field).map_or("", |v| text(cx, v))
 }
+fn attribute_is_test(cx: &Cx<'_, '_>, sib: Node<'_>) -> bool {
+    let Some(attr) = first_named_child_matching(sib, &["attribute"]) else {
+        return false;
+    };
+    let path = first_named_child(attr).map_or("", |p| text(cx, p));
+    match child_by_field(attr, "arguments") {
+        None => path == "test" || path.ends_with("::test"),
+        Some(args) => {
+            path == "cfg" && text(cx, args).split_whitespace().collect::<String>() == "(test)"
+        }
+    }
+}
 fn has_test_attr(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     let mut row = n.start_position().row;
     let mut cur = n.prev_sibling();
@@ -64,10 +76,7 @@ fn has_test_attr(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
         }
         match sib.kind() {
             "attribute_item" => {
-                if text(cx, sib)
-                    .split(|c: char| !c.is_alphanumeric())
-                    .any(|t| t == "test")
-                {
+                if attribute_is_test(cx, sib) {
                     return true;
                 }
                 row = sib.start_position().row;
@@ -751,8 +760,7 @@ impl LangHooks for RustHooks {
                 if sib.kind() != "attribute_item" {
                     break;
                 }
-                let flat: String = text(cx, sib).split_whitespace().collect();
-                if flat.contains("cfg(test)") {
+                if attribute_is_test(cx, sib) {
                     return Some(Container::TestModule);
                 }
                 cur = sib.prev_sibling();

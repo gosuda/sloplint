@@ -1,0 +1,4 @@
+pos.rs:2 deny complexity/boolean-params
+pos.rs:14 deny complexity/boolean-params
+pos.rs:25 deny complexity/boolean-params
+pos.rs:31 deny complexity/boolean-params
