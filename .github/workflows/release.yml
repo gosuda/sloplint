@@ -64,7 +64,7 @@ jobs:
           if [ "$RUNNER_OS" = Windows ]; then bin="$bin.exe"; fi
           reported="$("$bin" --version | tr -d '\r')"
           test "$reported" = "sloplint ${GITHUB_REF_NAME#v}"
-          "$bin" check crates --format agent --strictness standard --mode threshold --fail-on major
+          "$bin" check crates --format agent --strictness standard --mode threshold --fail-on minor
       - name: Archive Unix
         if: runner.os != 'Windows'
         run: |

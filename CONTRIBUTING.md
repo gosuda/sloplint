@@ -35,15 +35,15 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 ```
 
-CI runs `sloplint check crates --strictness standard --mode threshold --fail-on major` (using the root `sloplint.toml`, which excludes test fixtures). Major and higher findings fail CI. Lower rungs are reported without failing, so treat them as defects unless a reviewer accepts them. The self-lint gate is a contributor check, not a protected boundary. A pull request can change `sloplint.toml` (`exclude`, rule levels, custom rules) and the workflow itself. Reviewers must read changes to `sloplint.toml` and `.github/`:
+CI runs `sloplint check crates --format agent --strictness standard --mode threshold --fail-on minor` (using the root `sloplint.toml`, which excludes test fixtures). Minor and higher findings fail CI. Lower rungs are reported without failing, so treat them as defects unless a reviewer accepts them. The self-lint gate is a contributor check, not a protected boundary. A pull request can change `sloplint.toml` (`exclude`, rule levels, custom rules) and the workflow itself. Reviewers must read changes to `sloplint.toml` and `.github/`:
 
 ```bash
-sloplint check crates --strictness standard --mode threshold --fail-on major
+sloplint check crates --format agent --strictness standard --mode threshold --fail-on minor
 # or, without installing the binary in PATH:
-cargo run --locked -p sloplint -- check crates --format agent --strictness standard --mode threshold --fail-on major
+cargo run --locked -p sloplint -- check crates --format agent --strictness standard --mode threshold --fail-on minor
 ```
 
-Every file in `crates/` must pass `sloplint` under the default `standard` profile (`agent/file-token-budget` reaches minor at 600 lines and major at 1000 lines under `standard`, and 500/800 under `strict`).
+Every file in `crates/` must pass `sloplint` under the default `standard` profile (the root `sloplint.toml` pins `agent/file-token-budget` thresholds to 600/1000/1500/2000).
 
 ## Adding a rule
 
@@ -51,6 +51,9 @@ Every file in `crates/` must pass `sloplint` under the default `standard` profil
 2. Define an `Options` struct with `#[derive(Serialize, Deserialize)]` and `#[serde(deny_unknown_fields)]`, a `preset(Strictness) -> Preset` function covering all four profiles (`Minimal`, `Basic`, `Standard`, `Strict`), and a `FileRule` or `WorldRule` implementation.
 3. Keep presets monotone from `minimal` to `strict`: rule levels must not decrease and metric thresholds (`Thresholds` cut points `minor_at`, `major_at`, `critical_at`, `blocker_at`) must not loosen as strictness increases.
 4. Export `pub(crate) const INFO: RuleInfo` from the rule module, declare the module in `crates/sloplint-core/src/rules/<family>/mod.rs`, and insert `INFO` into `CATALOG` in `crates/sloplint-core/src/rules/mod.rs` in sorted order by rule id.
+5. Hold the precision bar for any new or changed rule.
+6. Predicates read structural facts only. Rule files carry no per-language name lists.
+7. Each tightening ships a positive and a near-miss fixture per language touched. A test exemption is a role shift.
 
 ## Adding fixtures
 

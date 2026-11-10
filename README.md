@@ -12,7 +12,7 @@
 sloplint finds code patterns that make changes harder to review and apply: deep nesting, names hidden from search, redundant wrappers, and repeated blocks that make edits ambiguous. It gives developers and coding agents a source location, an explanation, and a suggested fix for each finding, using one CLI across 23 languages.
 
 - **23 languages**: Rust, TypeScript/TSX, JavaScript/JSX, Python, Go, Java, Kotlin, C#, C, C++, Objective-C, PHP, Ruby, Bash, PowerShell, Swift, R, Scala, Dart, Zig, OCaml, Odin, Starlark.
-- **28 builtin rules** in four families (`complexity/`, `grep/`, `slop/`, `agent/`), plus custom tree-sitter queries under `custom/`.
+- **27 builtin rules** in four families (`complexity/`, `grep/`, `slop/`, `agent/`), plus custom tree-sitter queries under `custom/`.
 - **4 strictness profiles** (`minimal`, `basic`, `standard`, `strict`), each monotone in coverage and thresholds.
 - **Ratchet mode** freezes today's findings into a baseline, so only new debt fails the build.
 - **Fix instructions** on every finding: not just what is wrong, but the shape of the change that resolves it.
@@ -43,7 +43,7 @@ sloplint init
 mkdir src
 printf 'pub fn handle(flag: bool) {}\n' > src/lib.rs
 sloplint check --strictness standard
-# src/lib.rs:1:8: minor/high: `handle` is a generic name shared by unrelated code [grep/generic-name]
+# src/lib.rs:1:8: minor/low: `handle` is a generic name shared by unrelated code [grep/generic-name]
 ```
 
 In an existing project, run `sloplint init` once to write the default configuration, then run `sloplint check`.
@@ -54,13 +54,13 @@ An unreadable source file stops the run with exit `3` and reports its path and c
 
 ## Features
 
-- **complexity/**: nesting-weighted cognitive depth, nesting depth, mutable-statement spans, nested mutation, boolean params, import fan-out.
+- **complexity/**: nesting-weighted cognitive depth, nesting depth, mutable-statement spans, boolean params, import fan-out.
 - **grep/**: generic names, homonym definitions across files, renamed and wildcard imports, runtime-built symbols, non-literal log messages, multiline arguments.
 - **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors, single-implementation abstractions, barrel files, field-copy literals.
 - **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
 - **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs. Each rule is bounded per file at 16,384 in-progress matches and 1,024 reported hits: a query that exceeds either cap reports `meta/custom-cap` instead of returning partial results silently.
 
-`meta/parse-error` is Minor in every profile, so a default `major` gate does not fail on it. Set the rule to a higher rung or pass `--fail-on minor`. `meta/custom-cap` is Blocker in every profile: a capped query's results are partial, so a default `major` gate fails until the query is anchored. An empty `project.languages` list analyzes nothing.
+`meta/parse-error` is Minor in every profile, so a default `major` gate does not fail on it. Set the rule to a higher rung or pass `--fail-on minor`. `meta/custom-cap` is Major in every profile: a capped query's results are partial, so a default `major` gate fails until the query is anchored. An empty `project.languages` list analyzes nothing.
 
 ## Severity ladder
 
@@ -72,49 +72,87 @@ Each finding carries `low < medium < high`. `project.min_confidence` (default `l
 
 ## Code roles
 
-Files are `library`, `entry`, `test`, `support`, `bench`, or `example`; `data` paths are excluded from analysis. The file role comes from path globs alone, resolved with precedence `data > bench > example > support > test > entry > library`. Language adapters additionally mark inline `test` and `bench` regions inside a file (test functions, `cfg(test)` modules, bench functions); a file with at least one inline test region reports `has_inline_tests`. Defaults:
+Files are `library`, `entry`, `test`, `support`, `bench`, or `example`; `data` paths are excluded from analysis. The file role comes from path globs alone, resolved with precedence `data > bench > example > support > test > entry > library`. Language adapters additionally mark inline `test` and `bench` regions inside a file (test functions, `cfg(test)` modules, bench functions), and Go `Example*` functions as `example` regions; a file with at least one inline test region reports `has_inline_tests`. Defaults:
 
 - `bench`: `**/benches/**,**/bench/**,**/benchmarks/**,**/benchmark/**,**/fuzz/**,**/fuzz_targets/**,**/*_bench.rs,**/*.bench.ts,**/*.bench.tsx,**/*.bench.js,**/*.bench.mjs,**/*_bench.py,**/bench_*.py,**/*_benchmark.cc,**/*_benchmark.cpp,**/*_bench.cc,**/*_bench.cpp,**/*_fuzzer.cc,**/*_fuzzer.cpp,**/src/jmh/**`
 - `example`: `**/examples/**,**/example/**,**/_examples/**`
 - `support`: `**/conftest.py,**/testutil/**,**/testutils/**,**/test_util/**,**/test_utils/**,**/test_helpers/**,**/test_support/**,**/testing/**,**/tests/common/**,**/tests/support/**,**/spec/support/**,**/__mocks__/**`
 - `entry`: `**/src/main.rs,**/src/bin/**,**/build.rs,**/main.go,**/cmd/**,**/__main__.py,**/manage.py,**/scripts/**`
 - `data`: `**/testdata/**,**/test-data/**,**/__fixtures__/**,**/__snapshots__/**`
-- `test`: the previous test default without `**/benches/**` and `**/testdata/**`
+- `test`: `**/tests/**,**/test/**,**/__tests__/**,**/*_test.go,**/test_*.py,**/*_test.py,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*_test.c,**/test_*.c,**/*_test.cc,**/*_test.cpp,**/*_test.cxx,**/*_unittest.cc,**/test_*.cc,**/test_*.cpp,**/*Tests.m,**/*Tests.cs,**/*Test.cs,**/*.Tests/**,**/*_test.dart,**/*Spec.scala,**/*Test.scala,**/*Suite.scala,**/*.test.js,**/*.test.jsx,**/*.test.mjs,**/*.test.cjs,**/*.spec.js,**/*.spec.jsx,**/*.spec.mjs,**/*.spec.cjs,**/*Test.java,**/*Tests.java,**/*Test.kt,**/*Tests.kt,**/Tests/**,**/*Tests.swift,**/*Test.php,**/*_spec.rb,**/*_test.rb,**/spec/**,**/*.bats,**/test_*.sh,**/*_test.sh,**/tests/**/*.sh,**/*.Tests.ps1,**/*.tests.ps1,**/tests/**/*.ps1`
 
 Role shifts lower findings by role (K = keep, L1 = lower one rung, L2 = lower two rungs, O = off):
 
-| Rule | conf | entry | test | support | bench | example |
-|---|---|---|---|---|---|---|
-| complexity/cognitive-depth | high | K | L1 | K | L1 | K |
-| complexity/nesting-depth | high | K | L1 | K | L1 | K |
-| complexity/mutable-span | medium | K | L1 | K | O | L1 |
-| complexity/nested-mutation | medium | K | L1 | K | O | L1 |
-| complexity/boolean-params | high | L1 | O | L1 | O | O |
-| complexity/import-fan-out | medium | L1 | L1 | K | L1 | L1 |
-| grep/contiguous-log-literal | medium | K | O | L1 | O | O |
-| grep/generic-name | medium | L1 | O | K | O | O |
-| grep/homonym-definitions | low | K | O | K | O | O |
-| grep/multiline-argument | medium | K | O | L1 | O | L1 |
-| grep/no-dynamic-symbol | medium | K | L1 | K | L1 | K |
-| grep/no-rename-import | high | K | L1 | K | L1 | K |
-| grep/no-wildcard-import | high | K | O | L1 | O | L1 |
-| slop/barrel-file | medium | K | O | K | O | O |
-| slop/echo-comment | medium | K | L1 | K | L1 | K |
-| slop/field-copy | medium | K | O | L1 | O | L1 |
-| slop/passthrough-wrapper | medium | K | O | K | O | L1 |
-| slop/single-impl-abstraction | low | K | O | K | O | O |
-| slop/zombie-catch | medium | K | L1 | K | L1 | K |
-| agent/ambient-global-state | medium | O | O | L1 | O | O |
-| agent/catch-all-match | medium | K | L1 | K | L1 | L1 |
-| agent/colocated-tests | low | O | O | O | O | O |
-| agent/explicit-boundary-types | high | L1 | O | L1 | O | O |
-| agent/file-token-budget | high | K | L1 | K | L1 | K |
-| agent/informative-assertions | high | K | K | K | O | L1 |
-| agent/stringly-api | medium | L1 | O | L1 | O | O |
-| agent/typed-error-boundary | medium | O | O | L1 | O | O |
-| agent/unique-patch-anchors | medium | K | L1 | K | L1 | K |
-| meta/* (4 rules) | high | K | K | K | K | K |
-| custom/* | spec | K | K | K | K | K |
+| Rule | minimal | basic | standard | strict | conf | entry | test | support | bench | example | Predicate |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| complexity/cognitive-depth | Off | Off | Off | info | low | K | L1 | K | L1 | K | Scores if/loop/catch with depth weight; flags iff score >= cut and max depth >= 2 |
+| complexity/nesting-depth | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags control nesting depth >= cut |
+| complexity/mutable-span | Off | Off | Off | info | low | K | L1 | K | O | L1 | Flags bindings written on 2+ lines spanning >= cut lines |
+| complexity/boolean-params | Off | Off | Off | info | low | L1 | O | L1 | O | O | Flags exported fns with >= 2 Bool or bool-defaulted params, skipping variadic, keyword-only, and overloads |
+| complexity/import-fan-out | Off | Off | minor | major | medium | L1 | L1 | K | L1 | L1 | Counts distinct third-party package roots of module-scope imports; barrel reexport-only files skipped |
+| grep/contiguous-log-literal | Off | Off | Off | info | low | K | O | L1 | O | O | Flags message-bearing log calls with missing, non-literal, or < 8 char static messages |
+| grep/generic-name | Off | Off | minor | minor | low | L1 | O | K | O | O | Flags exported fns named from the generic denylist |
+| grep/homonym-definitions | Off | Off | Off | info | low | K | O | K | O | O | Flags free fn or type names defined in >= 8 files (5 strict) of one package |
+| grep/multiline-argument | Off | Off | Off | minor | medium | K | O | L1 | O | L1 | Strict-only: flags collection args spanning >= 15 lines outside tests, generated files, and binding initializers |
+| grep/no-dynamic-symbol | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags runtime-built symbols except proxy forwarding, literal-table loops, and string module imports |
+| grep/no-rename-import | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags `import x as y` renames |
+| grep/no-wildcard-import | Off | Off | Off | info | low | K | O | L1 | O | L1 | Flags `*` imports binding open names into non-test module scope; preludes and same-file children exempt |
+| slop/barrel-file | Off | Off | minor | minor | low | K | O | K | O | O | Flags barrels re-exporting from another barrel with resolvable local candidates |
+| slop/echo-comment | Off | Off | minor | minor | medium | K | L1 | K | L1 | K | Flags comments whose stemmed word set exactly equals the function name set |
+| slop/field-copy | Off | Off | minor | minor | low | K | O | L1 | O | L1 | Flags constructions copying >= 6 fields (4 strict) from one source; method callees, kwargs bags, and same-type rebuilds excluded |
+| slop/passthrough-wrapper | Off | Off | Off | info | low | K | O | K | O | L1 | Flags sole-call wrappers to simple-path callees outside self, params, deprecated, trait, test, and referenced uses |
+| slop/single-impl-abstraction | Off | Off | minor | minor | medium | K | O | K | O | O | Flags private traits or interfaces with exactly one concrete same-package implementation |
+| slop/zombie-catch | Off | Off | Off | info | low | K | L1 | K | L1 | K | Strict-only: flags empty handlers at Info; log-and-rethrow arms reported, bare rethrows dropped |
+| agent/ambient-global-state | Off | Off | Off | info | low | O | O | L1 | O | O | Flags package mutables assigned in functions and env reads stored or written through the env object |
+| agent/catch-all-match | Off | Off | Off | info | low | K | L1 | K | L1 | L1 | Flags bare wildcards on Ident, Field, or Path scrutinees with no Some, None, Ok, or Err sibling |
+| agent/colocated-tests | Off | Off | Off | info | low | O | O | O | O | O | Strict-only: flags exported fns in packages with zero tests |
+| agent/explicit-boundary-types | Off | minor | minor | minor | medium | L1 | O | L1 | O | O | Flags exported fns in TS, Python, Kotlin, Scala, and Dart with missing annotations |
+| agent/file-token-budget | Off | Off | Off | info | low | K | O | O | L1 | L1 | Strict-only: flags files with >= 600 lines; generated files skipped |
+| agent/informative-assertions | Off | Off | Off | info | low | K | K | K | O | L1 | Flags bare-name or top ==/!= asserts (Rust), Name or Attr (Python), and bool-literal True/False (Go) |
+| agent/stringly-api | Off | Off | Off | info | low | L1 | O | L1 | O | O | Flags runs of >= 3 same-kind stringly params (4 to deny); runs break on kind change or defaulted params |
+| agent/typed-error-boundary | Off | Off | Off | info | low | O | O | O | O | O | Flags exported fns whose error slot is anyhow, eyre, Box dyn Error, or an untyped throw |
+| agent/unique-patch-anchors | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags 8-line (6 strict) blocks repeated >= 3 times inside function bodies |
+| meta/parse-error | minor | minor | minor | minor | high | K | K | K | K | K | Syntax errors that stop analysis of a file |
+| meta/custom-cap | major | major | major | major | high | K | K | K | K | K | Custom-query hits over the per-file work cap; results are partial |
+| meta/invalid-suppression | major | major | major | major | high | K | K | K | K | K | Suppression directives that name unknown rules or lack a reason |
+| meta/unused-suppression | minor | minor | minor | minor | high | K | K | K | K | K | Suppression directives that match nothing |
+| custom/* | spec | spec | spec | spec | spec | K | K | K | K | K | Tree-sitter queries from configuration with per-rule severity |
+
+## Precision
+
+A finding is true when a senior reviewer would ask for a change. Each rule was measured on the same 15 corpora of real open-source code: a sample of its findings was counted as true, noise, or wrong. A rule stays on at `standard` only when at least 80 percent of its sampled findings are true after tightening. A rule below that bar is `Off` at minimal, basic, and standard and runs only at strict, at `info` with `low` confidence. `--min-confidence` and `--fail-on` decide what gates. Counts below are the pre-tightening samples from the per-rule reports.
+
+| Rule | Sampled | True | Noise | Wrong |
+|---|---|---|---|---|
+| complexity/boolean-params | 43 | 7 | 28 | 8 |
+| complexity/cognitive-depth | 43 | 12 | 29 | 2 |
+| complexity/import-fan-out | 41 | 7 | 30 | 4 |
+| complexity/mutable-span | 56 | 0 | 52 | 4 |
+| complexity/nesting-depth | 45 | 6 | 37 | 2 |
+| grep/contiguous-log-literal | 41 | 7 | 24 | 10 |
+| grep/generic-name | 5 | 0 | 5 | 0 |
+| grep/homonym-definitions | 8 | 0 | 5 | 3 |
+| grep/multiline-argument | 42 | 1 | 39 | 2 |
+| grep/no-dynamic-symbol | 42 | 4 | 38 | 0 |
+| grep/no-rename-import | 128 | 0 | 55 | 73 |
+| grep/no-wildcard-import | 43 | 1 | 39 | 3 |
+| slop/barrel-file | 1 | 0 | 1 | 0 |
+| slop/echo-comment | 45 | 6 | 38 | 1 |
+| slop/field-copy | 2 | 0 | 1 | 1 |
+| slop/passthrough-wrapper | 42 | 0 | 20 | 22 |
+| slop/single-impl-abstraction | 32 | 0 | 31 | 1 |
+| slop/zombie-catch | 51 | 1 | 50 | 0 |
+| agent/ambient-global-state | 48 | 0 | 32 | 16 |
+| agent/catch-all-match | 50 | 4 | 46 | 0 |
+| agent/colocated-tests | 42 | 0 | 33 | 9 |
+| agent/explicit-boundary-types | 2 | 0 | 2 | 0 |
+| agent/file-token-budget | 42 | 10 | 32 | 0 |
+| agent/informative-assertions | 44 | 2 | 39 | 3 |
+| agent/stringly-api | 65 | 4 | 55 | 5 |
+| agent/typed-error-boundary | 0 | 0 | 0 | 0 |
+| agent/unique-patch-anchors | 42 | 1 | 41 | 0 |
+
+`grep/no-rename-import` (0 of 128) and `agent/colocated-tests` (0 of 42) run only at strict, at `info` with `low` confidence. `slop/zombie-catch` (1 of 51) runs only at strict, at `info` with `low` confidence. Zero-true tightenings are redefined predicates and are re-sampled; a re-sample below 80 percent true flips the rule to `Off` or `info` without further review.
 
 ## Usage
 
@@ -206,7 +244,11 @@ Agent lines read `path:line:col: <rung>/<confidence>: message [rule]`, followed 
 
 ## Development
 
-Build, test, and self-lint commands are in [CONTRIBUTING.md](CONTRIBUTING.md).
+Build, test, and lint commands are in [CONTRIBUTING.md](CONTRIBUTING.md). CI runs the self-lint gate below from the release binary. Run the same command locally:
+
+```bash
+sloplint check crates --format agent --strictness standard --mode threshold --fail-on minor
+```
 
 ## Contributing
 
