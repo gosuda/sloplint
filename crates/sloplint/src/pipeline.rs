@@ -1,3 +1,5 @@
+//! Per-file analysis, world facts, and the merge that produces the run's findings.
+
 use std::collections::HashSet;
 use std::io;
 use std::path::Path;
@@ -9,8 +11,7 @@ use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 use sloplint_core::baseline::Baseline;
 use sloplint_core::facts::WorldFacts;
-use sloplint_core::finding::{SourceText, line_starts};
-use sloplint_core::lang::Lang;
+use sloplint_core::finding::{SourceText, line_context, line_starts};
 use sloplint_core::rules::{CATALOG, RuleFilter, RuleSet, WorldFile};
 use sloplint_core::suppress::{self, RulePattern, Suppression};
 use sloplint_core::{Config, Finding};
@@ -144,12 +145,7 @@ fn process(
     if owned.starts_with('\u{feff}') {
         owned.drain(..'\u{feff}'.len_utf8());
     }
-    let interface = entry.lang == Lang::Ocaml && pipe.interfaces.contains(entry.rel.as_str());
-    let hash = if interface {
-        cache::interface_hash(owned.as_str())
-    } else {
-        cache::source_hash(owned.as_str())
-    };
+    let hash = analyzed_hash(pipe.interfaces.contains(entry.rel.as_str()), owned.as_str());
     let (output, from_cache) = {
         let probe = Probe {
             text: owned.as_str(),
@@ -167,6 +163,14 @@ fn process(
         from_cache,
         source,
     })))
+}
+
+fn analyzed_hash(interface: bool, text: &str) -> [u8; 32] {
+    if interface {
+        cache::interface_hash(text)
+    } else {
+        cache::source_hash(text)
+    }
 }
 
 fn analyze_file(
@@ -259,8 +263,10 @@ pub(crate) fn merge(
     mut analyzed: Vec<Analyzed>,
     pool: &rayon::ThreadPool,
 ) -> Result<Vec<Finding>, RunError> {
+    let mut site = pool.install(|| world_findings(pipe, &analyzed));
+    resolve_site_context(pipe, &analyzed, &mut site);
     let mut orphans = Vec::new();
-    for finding in pool.install(|| world_findings(pipe, &analyzed)) {
+    for finding in site {
         match analyzed.binary_search_by(|file| file.rel.as_str().cmp(&*finding.path)) {
             Ok(index) => analyzed[index].output.findings.push(finding),
             Err(_) => orphans.push(finding),
@@ -286,6 +292,55 @@ pub(crate) fn merge(
     all.retain(|finding| pipe.filter.matches(&finding.rule));
     pool.install(|| all.par_sort_by(report_order));
     Ok(all)
+}
+
+fn resolve_site_context(pipe: &Pipeline<'_>, analyzed: &[Analyzed], findings: &mut [Finding]) {
+    findings.sort_by(|a, b| a.path.cmp(&b.path));
+    let mut start = 0;
+    while start < findings.len() {
+        let end = start
+            + findings[start..].partition_point(|finding| finding.path == findings[start].path);
+        resolve_group_context(pipe, analyzed, &mut findings[start..end]);
+        start = end;
+    }
+}
+
+fn resolve_group_context(pipe: &Pipeline<'_>, analyzed: &[Analyzed], group: &mut [Finding]) {
+    if !group.iter().any(|finding| finding.context_pending) {
+        return;
+    }
+    let Ok(index) = analyzed.binary_search_by(|file| file.rel.as_str().cmp(&*group[0].path)) else {
+        return;
+    };
+    let file = &analyzed[index];
+    fill_site_context(
+        pipe.root,
+        pipe.config.project.max_file_bytes,
+        pipe.interfaces.contains(&*group[0].path),
+        file.output.hash,
+        group,
+    );
+}
+
+fn fill_site_context(
+    root: &Path,
+    max_bytes: u64,
+    interface: bool,
+    analyzed: [u8; 32],
+    group: &mut [Finding],
+) {
+    let path = &*group[0].path;
+    let Ok(text) = read_source(&root.join(path), max_bytes) else {
+        return;
+    };
+    if analyzed_hash(interface, &text) != analyzed {
+        return;
+    }
+    let starts = line_starts(&text);
+    for finding in group.iter_mut().filter(|finding| finding.context_pending) {
+        finding.context = line_context(&starts, &text, finding.line);
+        finding.context_pending = false;
+    }
 }
 
 fn report_order(a: &Finding, b: &Finding) -> std::cmp::Ordering {
@@ -388,4 +443,98 @@ fn describe(patterns: &[&RulePattern]) -> String {
         })
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fill_site_context;
+    use sloplint_core::Severity;
+    use sloplint_core::finding::Finding;
+
+    const SOURCE: &str = "pub fn render() {}\n";
+
+    fn site_finding() -> Finding {
+        Finding::at_site(
+            "sample.rs",
+            &sloplint_core::facts::NamedSite {
+                name: "render".into(),
+                line: 1,
+                column: 8,
+            },
+            "grep/homonym-definitions",
+            Severity::Warn,
+            "message".to_string(),
+            "fix".to_string(),
+        )
+    }
+
+    fn root_for(body: Option<&str>) -> (tempfile::TempDir, std::path::PathBuf) {
+        let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
+        let root =
+            std::fs::canonicalize(tmp.path()).unwrap_or_else(|e| panic!("canonicalize: {e}"));
+        if let Some(body) = body {
+            std::fs::write(root.join("sample.rs"), body).unwrap_or_else(|e| panic!("write: {e}"));
+        }
+        (tmp, root)
+    }
+
+    #[test]
+    fn site_context_fills_from_a_source_that_still_hashes_the_same() {
+        let (_tmp, root) = root_for(Some(SOURCE));
+        let mut group = vec![site_finding()];
+        fill_site_context(
+            &root,
+            u64::MAX,
+            false,
+            crate::cache::source_hash(SOURCE),
+            &mut group,
+        );
+        assert_eq!(group[0].context.as_ref(), "pub fn render() {}");
+        assert!(
+            !group[0].context_pending,
+            "a filled site finding must clear its pending flag"
+        );
+    }
+
+    #[test]
+    fn site_context_stays_empty_when_the_source_no_longer_hashes_the_same() {
+        let (_tmp, root) = root_for(Some("pub fn renamed() {}\n"));
+        let mut group = vec![site_finding()];
+        fill_site_context(
+            &root,
+            u64::MAX,
+            false,
+            crate::cache::source_hash(SOURCE),
+            &mut group,
+        );
+        assert_eq!(group[0].context.as_ref(), "");
+    }
+
+    #[test]
+    fn site_context_stays_empty_when_the_source_cannot_be_read() {
+        let (_tmp, root) = root_for(None);
+        let mut group = vec![site_finding()];
+        fill_site_context(
+            &root,
+            u64::MAX,
+            false,
+            crate::cache::source_hash(SOURCE),
+            &mut group,
+        );
+        assert_eq!(group[0].context.as_ref(), "");
+    }
+
+    #[test]
+    fn site_context_stays_empty_when_the_read_is_bounded_away() {
+        let (_tmp, root) = root_for(Some(SOURCE));
+        let mut group = vec![site_finding()];
+        fill_site_context(
+            &root,
+            4,
+            false,
+            crate::cache::source_hash(SOURCE),
+            &mut group,
+        );
+        assert_eq!(group[0].context.as_ref(), "");
+    }
 }

@@ -276,6 +276,7 @@ mod tests {
                 fix: String::new(),
                 context: context.into_boxed_str(),
                 fingerprint: Box::from(""),
+                context_pending: false,
             })
     }
 

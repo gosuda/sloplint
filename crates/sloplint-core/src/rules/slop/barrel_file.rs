@@ -1,5 +1,4 @@
 use crate::config::Strictness;
-use crate::facts::NamedSite;
 use crate::finding::{Finding, Level, Severity};
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
 
@@ -50,15 +49,8 @@ impl WorldRule for BarrelFile {
             let Some(target) = chain_target(&paths, &barrels, targets) else {
                 continue;
             };
-            let site = NamedSite {
-                name: "".into(),
-                line: 1,
-                column: 1,
-                context: "".into(),
-            };
-            out.push(Finding::at_site(
+            out.push(Finding::at_file(
                 file.path,
-                &site,
                 INFO.id,
                 Severity::Warn,
                 format!("barrel file re-exports from another barrel `{target}`"),

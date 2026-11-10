@@ -38,6 +38,8 @@ pub struct Finding {
     pub fix: String,
     pub context: Box<str>,
     pub fingerprint: Box<str>,
+    #[serde(skip)]
+    pub context_pending: bool,
 }
 
 const MAX_CONTEXT_CHARS: usize = 160;
@@ -80,16 +82,31 @@ impl Finding {
         message: String,
         fix: String,
     ) -> Finding {
+        let mut finding = Self::at_file(path, rule, severity, message, fix);
+        finding.line = site.line;
+        finding.column = site.column;
+        finding.context_pending = true;
+        finding
+    }
+
+    pub fn at_file(
+        path: &str,
+        rule: &str,
+        severity: Severity,
+        message: String,
+        fix: String,
+    ) -> Finding {
         Finding {
             rule: rule.into(),
             severity,
             path: path.into(),
-            line: site.line,
-            column: site.column,
+            line: 1,
+            column: 1,
             message,
             fix,
-            context: site.context.clone(),
+            context: Box::from(""),
             fingerprint: Box::from(""),
+            context_pending: false,
         }
     }
 
@@ -112,23 +129,17 @@ impl Finding {
             fix,
             context,
             fingerprint: Box::from(""),
+            context_pending: false,
         }
     }
 }
 
 pub fn source_site(source: &str, pos: Pos) -> (u32, Box<str>) {
     let (start, text) = line_at(source, pos.line);
-    let pos_byte = usize::try_from(pos.byte).unwrap_or(usize::MAX);
-    let target = pos_byte.saturating_sub(start).min(text.len());
-    let chars = match text.get(..target) {
-        Some(prefix) if prefix.is_ascii() => target,
-        _ => text
-            .char_indices()
-            .take_while(|(offset, _)| *offset < target)
-            .count(),
-    };
-    let column = u32::try_from(chars).unwrap_or(u32::MAX).saturating_add(1);
-    (column, Box::from(context_of(text)))
+    (
+        column_in(text, offset(pos.byte).saturating_sub(start)),
+        Box::from(context_of(text)),
+    )
 }
 
 pub fn line_starts(source: &str) -> Vec<u32> {
@@ -140,22 +151,52 @@ pub fn line_starts(source: &str) -> Vec<u32> {
 }
 
 pub fn source_site_indexed(starts: &[u32], source: &str, pos: Pos) -> (u32, Box<str>) {
-    let index = offset(pos.line.saturating_sub(1));
-    let Some(&start) = starts.get(index) else {
+    let Some((start, end)) = line_span(starts, source, pos.line) else {
         return (1, Box::from(""));
     };
+    let text = source.get(start..end).unwrap_or("");
+    (
+        column_in(text, offset(pos.byte).saturating_sub(start)),
+        Box::from(context_of(text)),
+    )
+}
+
+pub fn source_column(starts: &[u32], source: &str, pos: Pos) -> u32 {
+    let Some((start, end)) = line_span(starts, source, pos.line) else {
+        return 1;
+    };
+    let text = source.get(start..end).unwrap_or("");
+    column_in(text, offset(pos.byte).saturating_sub(start))
+}
+
+pub fn line_context(starts: &[u32], source: &str, line: u32) -> Box<str> {
+    let Some((start, end)) = line_span(starts, source, line) else {
+        return Box::from("");
+    };
+    let text = source.get(start..end).unwrap_or("");
+    Box::from(context_of(text))
+}
+
+fn line_span(starts: &[u32], source: &str, line: u32) -> Option<(usize, usize)> {
+    let index = offset(line.saturating_sub(1));
+    let start = offset(*starts.get(index)?);
     let end = match starts.get(index + 1) {
         Some(&next) => offset(next).saturating_sub(1),
         None => source.len(),
     };
-    let text = source.get(offset(start)..end).unwrap_or("");
-    source_site(
-        text,
-        Pos {
-            line: 1,
-            byte: pos.byte.saturating_sub(start),
-        },
-    )
+    Some((start, end))
+}
+
+fn column_in(text: &str, byte_offset: usize) -> u32 {
+    let target = byte_offset.min(text.len());
+    let chars = match text.get(..target) {
+        Some(prefix) if prefix.is_ascii() => target,
+        _ => text
+            .char_indices()
+            .take_while(|(offset, _)| *offset < target)
+            .count(),
+    };
+    u32::try_from(chars).unwrap_or(u32::MAX).saturating_add(1)
 }
 
 fn offset(value: u32) -> usize {
@@ -286,7 +327,6 @@ mod tests {
             name: "x".into(),
             line: 1,
             column: 5,
-            context: "let x = 1;".into(),
         };
         let text = SourceText {
             path: "a.rs",
@@ -310,6 +350,9 @@ mod tests {
             "f".into(),
         );
         assert_eq!((from_site.line, from_site.column), (1, 5));
-        assert_eq!(from_site.context, site.context);
+        assert!(
+            from_site.context.is_empty() && from_site.context_pending,
+            "a site finding defers its context to the merge step"
+        );
     }
 }

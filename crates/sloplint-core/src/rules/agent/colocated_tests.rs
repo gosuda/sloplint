@@ -2,7 +2,7 @@ use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
-use crate::facts::{NamedSite, WorldFacts};
+use crate::facts::WorldFacts;
 use crate::finding::{Finding, Level, Severity};
 use crate::lang::Lang;
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
@@ -458,15 +458,8 @@ impl ColocatedTests {
 
     fn finding(&self, file: &WorldFile<'_>) -> Finding {
         let expected_path = expected(file.path, file.facts.lang);
-        let site = NamedSite {
-            name: "".into(),
-            line: 1,
-            column: 1,
-            context: "".into(),
-        };
-        Finding::at_site(
+        Finding::at_file(
             file.path,
-            &site,
             INFO.id,
             Severity::Warn,
             format!(

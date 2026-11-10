@@ -12,7 +12,7 @@ use sloplint_core::{Config, Finding, Suppression, WorldFacts};
 use crate::fileio::{open_regular, read_regular_nofollow};
 use crate::terminal::TerminalText;
 
-const VERSION: u32 = 4;
+const VERSION: u32 = 5;
 const NAMESPACE: &str = "sloplint";
 const SHARD_DIR: &str = "cache-v2";
 

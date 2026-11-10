@@ -14,6 +14,7 @@ fn finding(rule: &str, path: &str, line: u32, context: &str) -> Finding {
         fix: String::new(),
         context: context.into(),
         fingerprint: Box::from(""),
+        context_pending: false,
     }
 }
 

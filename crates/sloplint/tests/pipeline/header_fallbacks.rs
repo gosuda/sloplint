@@ -181,6 +181,7 @@ fn plain_header_findings_before_the_fallback() -> Vec<Finding> {
             fix: "add plain_test.h".to_string(),
             context: "".into(),
             fingerprint: "a6981459548c466a58b21a203054c8f8".into(),
+            context_pending: false,
         },
         Finding {
             rule: WRAPPER.into(),
@@ -193,6 +194,7 @@ fn plain_header_findings_before_the_fallback() -> Vec<Finding> {
                 .to_string(),
             context: "unsigned long get_length(const char *s) {".into(),
             fingerprint: "b5d276d5a4cf3599b5466afab353f485".into(),
+            context_pending: false,
         },
     ]
 }

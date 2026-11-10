@@ -171,7 +171,6 @@ mod tests {
             name: name.into(),
             line: 1,
             column: 1,
-            context: "".into(),
         }
     }
 

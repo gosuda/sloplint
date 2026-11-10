@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use serde::{Deserialize, Serialize};
 
-use crate::finding::source_site_indexed;
+use crate::finding::source_column;
 use crate::lang::Lang;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -201,7 +201,6 @@ pub struct NamedSite {
     pub name: Box<str>,
     pub line: u32,
     pub column: u32,
-    pub context: Box<str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -258,12 +257,10 @@ impl WorldFacts {
 }
 
 fn named_site(facts: &FileFacts<'_>, pos: Pos, name: &str) -> NamedSite {
-    let (column, context) = source_site_indexed(&facts.line_starts, facts.source, pos);
     NamedSite {
         name: name.to_owned().into_boxed_str(),
         line: pos.line,
-        column,
-        context,
+        column: source_column(&facts.line_starts, facts.source, pos),
     }
 }
 
@@ -372,7 +369,6 @@ mod tests {
         );
         assert_eq!(world.definitions[0].line, 1);
         assert_eq!(world.definitions[0].column, 9);
-        assert_eq!(world.definitions[0].context.as_ref(), "pub fn keep() {}");
         assert_eq!(
             world
                 .abstractions
@@ -385,6 +381,63 @@ mod tests {
         assert_eq!(
             world.barrel,
             Some(vec![vec!["a.rs".to_string(), "a/mod.rs".to_string()]])
+        );
+    }
+
+    #[test]
+    fn serialized_world_facts_carry_no_line_text() {
+        let source = "pub fn listed() { let withheld_token = 1; }\n";
+        let facts = FileFacts {
+            lang: Lang::Rust,
+            path: "src/lib.rs",
+            source,
+            line_starts: line_starts(source),
+            is_test_file: false,
+            is_entry_file: false,
+            line_count: 1,
+            functions: vec![Function {
+                name: "listed",
+                pos: Pos { line: 1, byte: 8 },
+                doc: vec![],
+                doc_pos: None,
+                public: true,
+                interface_bound: false,
+                in_test: false,
+                params: vec![],
+                return_type: None,
+                untyped_throws: false,
+                missing_annotations: vec![],
+                cognitive: 0,
+                max_depth: 0,
+                deepest_line: 0,
+                sole_call: None,
+            }],
+            calls: vec![],
+            bindings: vec![],
+            imports: vec![],
+            types: vec![],
+            impls: vec![],
+            wildcard_arms: vec![],
+            handlers: vec![],
+            assertions: vec![],
+            field_copies: vec![],
+            dynamic_symbols: vec![],
+            ambient: vec![],
+            barrel: None,
+            has_inline_tests: false,
+        };
+        let world = WorldFacts::from_facts(&facts);
+        let serialized = String::from_utf8(
+            sonic_rs::to_vec(&world).unwrap_or_else(|e| panic!("serialization failed: {e}")),
+        )
+        .unwrap_or_else(|e| panic!("serialized bytes are not UTF-8: {e}"));
+        assert!(
+            !serialized.contains("withheld_token"),
+            "world facts serialization must not carry source line text: {serialized}"
+        );
+        assert!(
+            serialized.contains("\"line\":1") && serialized.contains("\"column\":9"),
+            "positions stay in the serialization: {serialized}"
         );
     }
 }
