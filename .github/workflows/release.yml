@@ -23,6 +23,7 @@ env:
 jobs:
   verify-tag:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -39,6 +40,7 @@ jobs:
   build:
     needs: verify-tag
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -94,6 +96,7 @@ jobs:
   sbom:
     needs: verify-tag
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     env:
       CARGO_CYCLONEDX_VERSION: 0.5.9
       CARGO_CYCLONEDX_SHA256: fb8dbee9f182173e062a64a387b21a0badc6fab8b2abf9294973f012972bf6d8
@@ -139,6 +142,7 @@ jobs:
   attest:
     needs: [verify-tag, ci, build, sbom]
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       contents: read
       id-token: write
@@ -167,6 +171,7 @@ jobs:
   publish:
     needs: [verify-tag, ci, build, sbom, attest]
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       contents: write
       attestations: read
