@@ -1,1 +1,1 @@
-src/reexport.tsx:1 warn grep/no-wildcard-import
+src/reexport.tsx:1 minor grep/no-wildcard-import

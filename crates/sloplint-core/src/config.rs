@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::callee::CalleePattern;
-use crate::finding::FailOn;
+use crate::finding::{Confidence, FailOn, Severity};
 use crate::lang::ALL_CONFIG_KEYS;
 use crate::rules::CATALOG;
 use crate::rules::custom::{CustomRuleSpec, validate_custom_rule_spec};
@@ -52,9 +52,15 @@ pub struct ProjectConfig {
     pub mode: Mode,
     pub baseline: String,
     pub fail_on: FailOn,
+    pub min_confidence: Confidence,
     pub exclude: Vec<String>,
     pub extend_exclude: Vec<String>,
     pub test_globs: Vec<String>,
+    pub bench_globs: Vec<String>,
+    pub example_globs: Vec<String>,
+    pub support_globs: Vec<String>,
+    pub entry_globs: Vec<String>,
+    pub data_globs: Vec<String>,
     /// TOML values must fit `0..=u32::MAX` to match parser byte positions.
     pub max_file_bytes: u64,
     pub custom_rule_files: Vec<String>,
@@ -67,10 +73,16 @@ impl Default for ProjectConfig {
             languages: owned(ALL_CONFIG_KEYS),
             mode: Mode::Threshold,
             baseline: "sloplint-baseline.json".to_string(),
-            fail_on: FailOn::Deny,
+            fail_on: FailOn::At(Severity::Major),
+            min_confidence: Confidence::Low,
             exclude: split_csv(DEFAULT_EXCLUDE),
             extend_exclude: Vec::new(),
             test_globs: split_csv(DEFAULT_TEST_GLOBS),
+            bench_globs: split_csv(DEFAULT_BENCH_GLOBS),
+            example_globs: split_csv(DEFAULT_EXAMPLE_GLOBS),
+            support_globs: split_csv(DEFAULT_SUPPORT_GLOBS),
+            entry_globs: split_csv(DEFAULT_ENTRY_GLOBS),
+            data_globs: split_csv(DEFAULT_DATA_GLOBS),
             max_file_bytes: 2_097_152,
             custom_rule_files: Vec::new(),
         }
@@ -110,12 +122,6 @@ pub enum ConfigError {
     UnknownRule { id: String, valid: Vec<String> },
     #[error("{rule}: {message}")]
     RuleOption { rule: String, message: String },
-    #[error("{rule}: warn_at {warn_at} must be at least 1 and at most deny_at {deny_at}")]
-    Threshold {
-        rule: String,
-        warn_at: u32,
-        deny_at: u32,
-    },
     #[error("{key}: invalid glob `{glob}`: {message}")]
     Glob {
         key: String,
@@ -166,9 +172,15 @@ struct RawProject {
     mode: Option<Mode>,
     baseline: Option<String>,
     fail_on: Option<FailOn>,
+    min_confidence: Option<Confidence>,
     exclude: Option<Vec<String>>,
     extend_exclude: Option<Vec<String>>,
     test_globs: Option<Vec<String>>,
+    bench_globs: Option<Vec<String>>,
+    example_globs: Option<Vec<String>>,
+    support_globs: Option<Vec<String>>,
+    entry_globs: Option<Vec<String>>,
+    data_globs: Option<Vec<String>>,
     max_file_bytes: Option<u32>,
     custom_rule_files: Option<Vec<String>>,
 }
@@ -210,40 +222,42 @@ pub fn parse_config(toml_src: &str, origin: &str) -> Result<Config, ConfigError>
 
 fn merge_project(config: &mut Config, project: RawProject) -> Result<(), ConfigError> {
     let target = &mut config.project;
-    if let Some(strictness) = project.strictness {
-        target.strictness = strictness;
-    }
+    overwrite(&mut target.strictness, project.strictness);
     if let Some(languages) = project.languages {
-        for key in &languages {
-            if static_language_key(key).is_none() {
-                return Err(ConfigError::UnknownLanguage { value: key.clone() });
-            }
-        }
+        validate_language_keys(&languages)?;
         target.languages = languages;
     }
-    if let Some(mode) = project.mode {
-        target.mode = mode;
+    overwrite(&mut target.mode, project.mode);
+    overwrite(&mut target.baseline, project.baseline);
+    overwrite(&mut target.fail_on, project.fail_on);
+    overwrite(&mut target.min_confidence, project.min_confidence);
+    overwrite(&mut target.exclude, project.exclude);
+    overwrite(&mut target.extend_exclude, project.extend_exclude);
+    overwrite(&mut target.test_globs, project.test_globs);
+    overwrite(&mut target.bench_globs, project.bench_globs);
+    overwrite(&mut target.example_globs, project.example_globs);
+    overwrite(&mut target.support_globs, project.support_globs);
+    overwrite(&mut target.entry_globs, project.entry_globs);
+    overwrite(&mut target.data_globs, project.data_globs);
+    overwrite(
+        &mut target.max_file_bytes,
+        project.max_file_bytes.map(u64::from),
+    );
+    overwrite(&mut target.custom_rule_files, project.custom_rule_files);
+    Ok(())
+}
+
+fn overwrite<T>(target: &mut T, source: Option<T>) {
+    if let Some(value) = source {
+        *target = value;
     }
-    if let Some(baseline) = project.baseline {
-        target.baseline = baseline;
-    }
-    if let Some(fail_on) = project.fail_on {
-        target.fail_on = fail_on;
-    }
-    if let Some(exclude) = project.exclude {
-        target.exclude = exclude;
-    }
-    if let Some(extend_exclude) = project.extend_exclude {
-        target.extend_exclude = extend_exclude;
-    }
-    if let Some(test_globs) = project.test_globs {
-        target.test_globs = test_globs;
-    }
-    if let Some(max_file_bytes) = project.max_file_bytes {
-        target.max_file_bytes = u64::from(max_file_bytes);
-    }
-    if let Some(custom_rule_files) = project.custom_rule_files {
-        target.custom_rule_files = custom_rule_files;
+}
+
+fn validate_language_keys(languages: &[String]) -> Result<(), ConfigError> {
+    for key in languages {
+        if static_language_key(key).is_none() {
+            return Err(ConfigError::UnknownLanguage { value: key.clone() });
+        }
     }
     Ok(())
 }
@@ -277,6 +291,11 @@ fn validate_globs(config: &Config) -> Result<(), ConfigError> {
         ("project.exclude", &config.project.exclude),
         ("project.extend_exclude", &config.project.extend_exclude),
         ("project.test_globs", &config.project.test_globs),
+        ("project.bench_globs", &config.project.bench_globs),
+        ("project.example_globs", &config.project.example_globs),
+        ("project.support_globs", &config.project.support_globs),
+        ("project.entry_globs", &config.project.entry_globs),
+        ("project.data_globs", &config.project.data_globs),
         (
             "project.custom_rule_files",
             &config.project.custom_rule_files,
@@ -323,7 +342,9 @@ fn validate_rules_table(config: &Config) -> Result<(), ConfigError> {
                 if value.as_str().and_then(crate::rules::parse_level).is_none() {
                     return Err(ConfigError::RuleOption {
                         rule: id.clone(),
-                        message: format!("invalid level {value}; use off, warn, or deny"),
+                        message: format!(
+                            "invalid level {value}; use off, info, minor, major, critical, or blocker"
+                        ),
                     });
                 }
             } else if custom {
@@ -454,4 +475,15 @@ const DEFAULT_LOG_CALLEES: [(&str, &str); 23] = [
 
 const DEFAULT_EXCLUDE: &str = "**/node_modules/**,**/target/**,**/vendor/**,**/dist/**,**/build/**,**/.venv/**,**/venv/**,**/__pycache__/**,**/*.d.ts,**/.git/**,**/.sloplint/**";
 
-const DEFAULT_TEST_GLOBS: &str = "**/tests/**,**/test/**,**/__tests__/**,**/testdata/**,**/benches/**,**/*_test.go,**/test_*.py,**/*_test.py,**/conftest.py,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*_test.c,**/test_*.c,**/*_test.cc,**/*_test.cpp,**/*_test.cxx,**/*_unittest.cc,**/test_*.cc,**/test_*.cpp,**/*Tests.m,**/*Tests.cs,**/*Test.cs,**/*.Tests/**,**/*_test.dart,**/*Spec.scala,**/*Test.scala,**/*Suite.scala,**/*.test.js,**/*.test.jsx,**/*.test.mjs,**/*.test.cjs,**/*.spec.js,**/*.spec.jsx,**/*.spec.mjs,**/*.spec.cjs,**/*Test.java,**/*Tests.java,**/*Test.kt,**/*Tests.kt,**/Tests/**,**/*Tests.swift,**/*Test.php,**/*_spec.rb,**/*_test.rb,**/spec/**,**/*.bats,**/test_*.sh,**/*_test.sh,**/tests/**/*.sh,**/*.Tests.ps1,**/*.tests.ps1,**/tests/**/*.ps1";
+const DEFAULT_TEST_GLOBS: &str = "**/tests/**,**/test/**,**/__tests__/**,**/*_test.go,**/test_*.py,**/*_test.py,**/conftest.py,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*_test.c,**/test_*.c,**/*_test.cc,**/*_test.cpp,**/*_test.cxx,**/*_unittest.cc,**/test_*.cc,**/test_*.cpp,**/*Tests.m,**/*Tests.cs,**/*Test.cs,**/*.Tests/**,**/*_test.dart,**/*Spec.scala,**/*Test.scala,**/*Suite.scala,**/*.test.js,**/*.test.jsx,**/*.test.mjs,**/*.test.cjs,**/*.spec.js,**/*.spec.jsx,**/*.spec.mjs,**/*.spec.cjs,**/*Test.java,**/*Tests.java,**/*Test.kt,**/*Tests.kt,**/Tests/**,**/*Tests.swift,**/*Test.php,**/*_spec.rb,**/*_test.rb,**/spec/**,**/*.bats,**/test_*.sh,**/*_test.sh,**/tests/**/*.sh,**/*.Tests.ps1,**/*.tests.ps1,**/tests/**/*.ps1";
+
+const DEFAULT_BENCH_GLOBS: &str = "**/benches/**,**/bench/**,**/benchmarks/**,**/benchmark/**,**/fuzz/**,**/fuzz_targets/**,**/*_bench.rs,**/*.bench.ts,**/*.bench.tsx,**/*.bench.js,**/*.bench.mjs,**/*_bench.py,**/bench_*.py,**/*_benchmark.cc,**/*_benchmark.cpp,**/*_bench.cc,**/*_bench.cpp,**/*_fuzzer.cc,**/*_fuzzer.cpp,**/src/jmh/**";
+
+const DEFAULT_EXAMPLE_GLOBS: &str = "**/examples/**,**/example/**,**/_examples/**";
+
+const DEFAULT_SUPPORT_GLOBS: &str = "**/conftest.py,**/testutil/**,**/testutils/**,**/test_util/**,**/test_utils/**,**/test_helpers/**,**/test_support/**,**/testing/**,**/tests/common/**,**/tests/support/**,**/spec/support/**,**/__mocks__/**";
+
+const DEFAULT_ENTRY_GLOBS: &str = "**/src/main.rs,**/src/bin/**,**/build.rs,**/main.go,**/cmd/**,**/__main__.py,**/manage.py,**/scripts/**";
+
+const DEFAULT_DATA_GLOBS: &str =
+    "**/testdata/**,**/test-data/**,**/__fixtures__/**,**/__snapshots__/**";

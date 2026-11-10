@@ -1,1 +1,1 @@
-src/Greeter.java:4 warn slop/passthrough-wrapper
+src/Greeter.java:4 minor slop/passthrough-wrapper

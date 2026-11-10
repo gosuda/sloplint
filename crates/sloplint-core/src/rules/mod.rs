@@ -5,19 +5,20 @@ pub(crate) mod grep;
 pub mod meta;
 pub(crate) mod slop;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::callee::CalleePattern;
 use crate::config::{Config, ConfigError, Strictness, static_language_key};
 use crate::facts::{FileFacts, Pos, WorldFacts};
-use crate::finding::{Finding, Level, Severity, SourceText};
+use crate::finding::{Confidence, Finding, Level, Severity, SourceText};
+use crate::role::{CodeRole, RolePolicy, role_at};
 use crate::suppress::RulePattern;
 
 pub use self::custom::CustomRuleSpec;
 
-/// Every rule id starts with its family prefix.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Family {
     Complexity,
@@ -47,7 +48,8 @@ pub struct RuleInfo {
     pub family: Family,
     pub summary: &'static str,
     pub why: &'static str,
-    pub exempt_tests: bool,
+    pub confidence: Confidence,
+    pub roles: RolePolicy,
     pub preset: fn(Strictness) -> Preset,
     pub build: Build,
 }
@@ -92,42 +94,90 @@ impl Settings {
 }
 
 pub trait FileRule: Send + Sync {
-    /// Rules only detect; the caller caps and filters.
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>);
 }
 
-/// `files` arrives sorted by path.
 pub trait WorldRule: Send + Sync {
     fn check(&self, files: &[WorldFile<'_>], out: &mut Vec<Finding>);
 }
 
 pub struct WorldFile<'a> {
-    /// Repo-relative, `/`-separated.
     pub path: &'a str,
     pub facts: &'a WorldFacts,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct EmptyOptions {}
+
+pub(crate) fn parse_options<T: DeserializeOwned>(table: toml::Table) -> Result<T, String> {
+    toml::Value::Table(table)
+        .try_into()
+        .map_err(|error| error.to_string())
+}
+
+pub(crate) fn string_values(items: &[&str]) -> toml::Value {
+    toml::Value::Array(
+        items
+            .iter()
+            .map(|item| toml::Value::String((*item).to_string()))
+            .collect(),
+    )
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Thresholds {
-    pub warn_at: u32,
-    pub deny_at: u32,
+    pub minor_at: u32,
+    pub major_at: u32,
+    pub critical_at: u32,
+    pub blocker_at: u32,
 }
 
 impl Thresholds {
-    pub fn new(warn_at: u32, deny_at: u32) -> Result<Thresholds, String> {
-        if warn_at == 0 || warn_at > deny_at {
-            return Err(format!(
-                "warn_at {warn_at} must be at least 1 and at most deny_at {deny_at}"
-            ));
+    pub fn new(
+        minor_at: u32,
+        major_at: u32,
+        critical_at: u32,
+        blocker_at: u32,
+    ) -> Result<Thresholds, String> {
+        for (key, value) in [
+            ("minor_at", minor_at),
+            ("major_at", major_at),
+            ("critical_at", critical_at),
+            ("blocker_at", blocker_at),
+        ] {
+            if value == 0 {
+                return Err(format!(
+                    "{key} {value} must be at least 1 (minor_at <= major_at <= critical_at <= blocker_at)"
+                ));
+            }
         }
-        Ok(Thresholds { warn_at, deny_at })
+        for (low_key, low, high_key, high) in [
+            ("minor_at", minor_at, "major_at", major_at),
+            ("major_at", major_at, "critical_at", critical_at),
+            ("critical_at", critical_at, "blocker_at", blocker_at),
+        ] {
+            if low > high {
+                return Err(format!("{low_key} {low} must not exceed {high_key} {high}"));
+            }
+        }
+        Ok(Thresholds {
+            minor_at,
+            major_at,
+            critical_at,
+            blocker_at,
+        })
     }
 
     pub fn grade(self, value: u32) -> Option<Severity> {
-        if value >= self.deny_at {
-            Some(Severity::Deny)
-        } else if value >= self.warn_at {
-            Some(Severity::Warn)
+        if value >= self.blocker_at {
+            Some(Severity::Blocker)
+        } else if value >= self.critical_at {
+            Some(Severity::Critical)
+        } else if value >= self.major_at {
+            Some(Severity::Major)
+        } else if value >= self.minor_at {
+            Some(Severity::Minor)
         } else {
             None
         }
@@ -192,24 +242,27 @@ pub static CATALOG: &[RuleInfo] = &[
 ];
 
 pub(crate) fn parse_level(s: &str) -> Option<Level> {
-    match s {
-        "off" => Some(Level::Off),
-        "warn" => Some(Level::Warn),
-        "deny" => Some(Level::Deny),
-        _ => None,
+    if s == "off" {
+        return Some(Level::Off);
     }
+    Severity::parse(s).map(Level::At)
 }
 
-pub(crate) fn threshold_options(warn_at: u32, deny_at: u32) -> toml::Table {
+pub(crate) fn threshold_options(
+    minor_at: u32,
+    major_at: u32,
+    critical_at: u32,
+    blocker_at: u32,
+) -> toml::Table {
     let mut options = toml::Table::new();
-    options.insert(
-        "warn_at".to_string(),
-        toml::Value::Integer(i64::from(warn_at)),
-    );
-    options.insert(
-        "deny_at".to_string(),
-        toml::Value::Integer(i64::from(deny_at)),
-    );
+    for (key, value) in [
+        ("minor_at", minor_at),
+        ("major_at", major_at),
+        ("critical_at", critical_at),
+        ("blocker_at", blocker_at),
+    ] {
+        options.insert(key.to_string(), toml::Value::Integer(i64::from(value)));
+    }
     options
 }
 
@@ -273,7 +326,7 @@ impl RuleSet {
             .collect();
         let graded: BTreeSet<String> = resolved
             .iter()
-            .filter(|entry| entry.options.contains_key("warn_at"))
+            .filter(|entry| entry.options.contains_key("minor_at"))
             .map(|entry| entry.info.id.to_string())
             .collect();
         let mut file_rules = Vec::new();
@@ -338,12 +391,9 @@ impl RuleSet {
     pub fn check_file(&self, facts: &FileFacts<'_>) -> Vec<Finding> {
         let mut out = Vec::new();
         for (info, rule) in &self.file_rules {
-            if info.exempt_tests && facts.is_test_file {
-                continue;
-            }
             let mut found = Vec::new();
             rule.check(facts, &mut found);
-            self.cap_rule_findings(info, &mut found);
+            self.finish_file_findings(info, facts, &mut found);
             out.append(&mut found);
         }
         out
@@ -355,7 +405,7 @@ impl RuleSet {
             .map(|(info, rule)| {
                 let mut found = Vec::new();
                 rule.check(files, &mut found);
-                self.cap_rule_findings(info, &mut found);
+                self.finish_world_findings(info, files, &mut found);
                 found
             })
             .collect::<Vec<Vec<Finding>>>()
@@ -367,7 +417,10 @@ impl RuleSet {
     pub fn custom_findings(&self, facts: &FileFacts<'_>, hits: &[CustomHit<'_>]) -> Vec<Finding> {
         let mut out = Vec::new();
         for hit in hits {
-            let Some(entry) = self.custom.get(hit.rule as usize) else {
+            let Some(entry) = self
+                .custom
+                .get(usize::try_from(hit.rule).unwrap_or(usize::MAX))
+            else {
                 continue;
             };
             if !self.filter.matches(&entry.id) {
@@ -376,20 +429,20 @@ impl RuleSet {
             if !entry.matches_path(facts.path) {
                 continue;
             }
-            let severity = match entry.level {
-                Level::Off => continue,
-                Level::Warn => Severity::Warn,
-                Level::Deny => Severity::Deny,
+            let Some(severity) = entry.level.rung() else {
+                continue;
             };
             let message = custom::interpolate(&entry.message, &hit.captures);
-            out.push(Finding::at(
+            let mut finding = Finding::at(
                 facts,
                 hit.pos,
                 &entry.id,
                 severity,
                 message,
                 entry.fix.clone(),
-            ));
+            );
+            finding.confidence = entry.confidence;
+            out.push(finding);
         }
         out
     }
@@ -399,7 +452,7 @@ impl RuleSet {
             return None;
         }
         let mut findings = [meta::parse_error_finding(text, pos)];
-        self.cap_levels(&mut findings);
+        self.stamp_meta(&mut findings);
         let [finding] = findings;
         Some(finding)
     }
@@ -415,14 +468,14 @@ impl RuleSet {
                     facts,
                     Pos { line: 1, byte: 0 },
                     meta::CUSTOM_CAP.id,
-                    Severity::Deny,
+                    Severity::Major,
                     format!("custom rule {rule} hit the per-file query cap; its matches for this file are partial"),
                     "anchor the query to specific parents or add predicates so it cannot match unbounded sibling combinations"
                         .to_string(),
                 )
             })
             .collect();
-        self.cap_levels(&mut findings);
+        self.stamp_meta(&mut findings);
         findings
     }
 
@@ -431,31 +484,107 @@ impl RuleSet {
             return None;
         }
         let mut findings = [meta::unused_suppression_finding(text, line, rules)];
-        self.cap_levels(&mut findings);
+        self.stamp_meta(&mut findings);
         let [finding] = findings;
         Some(finding)
     }
 
-    fn cap_rule_findings(&self, info: &RuleInfo, found: &mut [Finding]) {
-        let level = self.levels.get(info.id);
-        cap_with_level(level, found);
-        if !self.graded.contains(info.id) {
-            raise_with_level(level, found);
+    fn stamp_meta(&self, findings: &mut [Finding]) {
+        for finding in findings.iter_mut() {
+            let graded = self.graded.contains(&*finding.rule);
+            if let Some(Level::At(ceiling)) = self.levels.get(&*finding.rule).copied() {
+                if graded {
+                    if finding.severity > ceiling {
+                        finding.severity = ceiling;
+                    }
+                } else {
+                    finding.severity = ceiling;
+                }
+            }
+            let confidence = self.confidence_for(&finding.rule);
+            finding.confidence = confidence;
         }
     }
 
     pub fn cap_levels(&self, findings: &mut [Finding]) {
-        for finding in findings.iter_mut() {
-            match self.levels.get(&*finding.rule).copied() {
-                Some(Level::Warn) if finding.severity == Severity::Deny => {
-                    finding.severity = Severity::Warn;
-                }
-                Some(Level::Deny) if finding.severity == Severity::Warn => {
-                    finding.severity = Severity::Deny;
-                }
-                _ => {}
-            }
+        self.stamp_meta(findings);
+    }
+
+    fn confidence_for(&self, rule: &str) -> Confidence {
+        if let Some(info) = CATALOG.iter().find(|info| info.id == rule) {
+            return info.confidence;
         }
+        if let Some(entry) = self.custom.iter().find(|entry| &*entry.id == rule) {
+            return entry.confidence;
+        }
+        Confidence::Medium
+    }
+
+    fn finish_file_findings(
+        &self,
+        info: &RuleInfo,
+        facts: &FileFacts<'_>,
+        found: &mut Vec<Finding>,
+    ) {
+        let Some(Level::At(ceiling)) = self.levels.get(info.id).copied() else {
+            found.clear();
+            return;
+        };
+        let graded = self.graded.contains(info.id);
+        found.retain_mut(|finding| {
+            if graded {
+                if finding.severity > ceiling {
+                    finding.severity = ceiling;
+                }
+            } else {
+                finding.severity = ceiling;
+            }
+            let shift = info.roles.shift(facts.role_at(finding.line));
+            match shift.apply(finding.severity) {
+                Some(severity) => {
+                    finding.severity = severity;
+                    finding.confidence = info.confidence;
+                    true
+                }
+                None => false,
+            }
+        });
+    }
+
+    fn finish_world_findings(
+        &self,
+        info: &RuleInfo,
+        files: &[WorldFile<'_>],
+        found: &mut Vec<Finding>,
+    ) {
+        let Some(Level::At(ceiling)) = self.levels.get(info.id).copied() else {
+            found.clear();
+            return;
+        };
+        let graded = self.graded.contains(info.id);
+        let index: HashMap<&str, &WorldFacts> =
+            files.iter().map(|file| (file.path, file.facts)).collect();
+        found.retain_mut(|finding| {
+            if graded {
+                if finding.severity > ceiling {
+                    finding.severity = ceiling;
+                }
+            } else {
+                finding.severity = ceiling;
+            }
+            let role = index
+                .get(&*finding.path)
+                .map(|facts| role_at(facts.role, &facts.regions, finding.line))
+                .unwrap_or(CodeRole::Library);
+            match info.roles.shift(role).apply(finding.severity) {
+                Some(severity) => {
+                    finding.severity = severity;
+                    finding.confidence = info.confidence;
+                    true
+                }
+                None => false,
+            }
+        });
     }
 
     pub fn why(&self, rule: &str) -> Option<&str> {
@@ -513,141 +642,117 @@ fn unknown_option(rule: &str, key: &str, known: &toml::Table) -> ConfigError {
     }
 }
 
-fn cap_with_level(level: Option<&Level>, found: &mut [Finding]) {
-    if level == Some(&Level::Warn) {
-        for finding in found.iter_mut() {
-            if finding.severity == Severity::Deny {
-                finding.severity = Severity::Warn;
-            }
-        }
-    }
-}
-
-fn raise_with_level(level: Option<&Level>, found: &mut [Finding]) {
-    if level == Some(&Level::Deny) {
-        for finding in found.iter_mut() {
-            if finding.severity == Severity::Warn {
-                finding.severity = Severity::Deny;
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::lang::Lang;
+    use crate::role::Shift;
 
-    fn config_with_level(rule: &str, level: &str) -> Config {
-        let mut table = toml::Table::new();
-        table.insert("level".to_string(), toml::Value::String(level.to_string()));
-        let mut config = Config::default();
-        config.rules.insert(rule.to_string(), table);
-        config
-    }
-
-    fn world_facts(barrel: Option<Vec<Vec<String>>>) -> WorldFacts {
+    fn world_facts(role: CodeRole) -> WorldFacts {
         WorldFacts {
-            lang: Lang::TypeScript,
-            is_test_file: false,
-            is_entry_file: false,
+            lang: Lang::Rust,
+            role,
+            regions: Vec::new(),
             has_inline_tests: false,
             public_functions: 0,
             definitions: Vec::new(),
             abstractions: Vec::new(),
             impls: Vec::new(),
-            barrel,
-        }
-    }
-
-    fn file_facts(line_count: u32) -> FileFacts<'static> {
-        FileFacts {
-            lang: Lang::Rust,
-            path: "src/big.rs",
-            source: "",
-            line_starts: vec![0],
-            is_test_file: false,
-            is_entry_file: false,
-            line_count,
-            functions: Vec::new(),
-            calls: Vec::new(),
-            bindings: Vec::new(),
-            imports: Vec::new(),
-            types: Vec::new(),
-            impls: Vec::new(),
-            wildcard_arms: Vec::new(),
-            handlers: Vec::new(),
-            assertions: Vec::new(),
-            field_copies: Vec::new(),
-            dynamic_symbols: Vec::new(),
-            ambient: Vec::new(),
             barrel: None,
-            has_inline_tests: false,
         }
     }
 
-    fn barrel_chains(target: &str) -> Option<Vec<Vec<String>>> {
-        Some(vec![vec![target.to_string()]])
+    fn test_preset(_: Strictness) -> Preset {
+        Preset {
+            level: Level::At(Severity::Major),
+            options: toml::Table::new(),
+        }
+    }
+
+    fn test_build(_: toml::Table) -> Result<Box<dyn WorldRule>, String> {
+        Err("unused".to_string())
     }
 
     #[test]
-    fn world_rule_with_level_deny_escalates_its_warn_findings() {
-        let config = config_with_level("slop/barrel-file", "deny");
-        let rules = RuleSet::new(&config, &RuleFilter::default()).expect("rule resolves");
-        let index_facts = world_facts(barrel_chains("src/other.ts"));
-        let other_facts = world_facts(barrel_chains("src/index.ts"));
+    fn world_findings_shift_by_file_role() {
+        let info = RuleInfo {
+            id: "test/world-shift",
+            family: Family::Agent,
+            summary: "test",
+            why: "test",
+            confidence: Confidence::High,
+            roles: RolePolicy {
+                entry: Shift::Keep,
+                test: Shift::Off,
+                support: Shift::Keep,
+                bench: Shift::Lower1,
+                example: Shift::Keep,
+            },
+            preset: test_preset,
+            build: Build::World(test_build),
+        };
+        let set = RuleSet {
+            file_rules: Vec::new(),
+            world_rules: Vec::new(),
+            resolved: Vec::new(),
+            levels: BTreeMap::from([("test/world-shift".to_string(), Level::At(Severity::Major))]),
+            graded: BTreeSet::new(),
+            active: BTreeSet::new(),
+            filter: RuleFilter::default(),
+            custom: Vec::new(),
+        };
+        let library = world_facts(CodeRole::Library);
+        let tested = world_facts(CodeRole::Test);
+        let bench = world_facts(CodeRole::Bench);
         let files = [
             WorldFile {
-                path: "src/index.ts",
-                facts: &index_facts,
+                path: "a.rs",
+                facts: &library,
             },
             WorldFile {
-                path: "src/other.ts",
-                facts: &other_facts,
+                path: "m.rs",
+                facts: &tested,
+            },
+            WorldFile {
+                path: "z.rs",
+                facts: &bench,
             },
         ];
-        let found = rules.check_world(&files);
-        assert!(!found.is_empty(), "the barrel chain must be reported");
+        let mut found = vec![
+            Finding::at_file(
+                "z.rs",
+                info.id,
+                Severity::Major,
+                "z".to_string(),
+                "f".to_string(),
+            ),
+            Finding::at_file(
+                "a.rs",
+                info.id,
+                Severity::Major,
+                "a".to_string(),
+                "f".to_string(),
+            ),
+            Finding::at_file(
+                "m.rs",
+                info.id,
+                Severity::Major,
+                "m".to_string(),
+                "f".to_string(),
+            ),
+        ];
+        set.finish_world_findings(&info, &files, &mut found);
+        let mut got: Vec<(&str, Severity)> = found
+            .iter()
+            .map(|finding| (&*finding.path, finding.severity))
+            .collect();
+        got.sort_unstable();
+        assert_eq!(got, [("a.rs", Severity::Major), ("z.rs", Severity::Minor)]);
         assert!(
             found
                 .iter()
-                .all(|finding| finding.severity == Severity::Deny),
-            "level deny escalates every barrel-file finding: {:?}",
-            found
-                .iter()
-                .map(|finding| finding.severity)
-                .collect::<Vec<_>>()
+                .all(|finding| finding.confidence == Confidence::High),
+            "world findings carry the rule's confidence"
         );
-    }
-
-    #[test]
-    fn meta_parse_error_with_level_deny_escalates_to_deny() {
-        let config = config_with_level("meta/parse-error", "deny");
-        let rules = RuleSet::new(&config, &RuleFilter::default()).expect("rule resolves");
-        let text = SourceText {
-            path: "src/broken.rs",
-            source: "fn",
-            line_starts: &[0],
-        };
-        let finding = rules
-            .parse_error(&text, Pos { line: 1, byte: 0 })
-            .expect("the parse error is reported");
-        assert_eq!(finding.severity, Severity::Deny);
-    }
-
-    #[test]
-    fn threshold_rule_with_level_deny_keeps_its_grade() {
-        let config = config_with_level("agent/file-token-budget", "deny");
-        let rules = RuleSet::new(&config, &RuleFilter::default()).expect("rule resolves");
-        let warn_tier = rules.check_file(&file_facts(700));
-        assert_eq!(warn_tier.len(), 1);
-        assert_eq!(
-            warn_tier[0].severity,
-            Severity::Warn,
-            "the warn tier keeps its own grade"
-        );
-        let deny_tier = rules.check_file(&file_facts(1200));
-        assert_eq!(deny_tier.len(), 1);
-        assert_eq!(deny_tier[0].severity, Severity::Deny);
     }
 }

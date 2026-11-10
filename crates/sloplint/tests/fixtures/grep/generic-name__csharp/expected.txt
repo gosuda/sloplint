@@ -1,1 +1,1 @@
-src/Worker.cs:2 warn grep/generic-name
+src/Worker.cs:2 minor grep/generic-name

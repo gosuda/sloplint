@@ -291,7 +291,7 @@ fn boundary_output_bytes_stable() {
     put(
         &root,
         "sloplint.toml",
-        "[[custom_rules]]\nid = \"custom/order-hit\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"order hit\"\nwhy = \"determinism probe\"\nfix = \"none\"\nquery = \"(call_expression) @match\"\n",
+        "[[custom_rules]]\nid = \"custom/order-hit\"\nlanguage = \"rust\"\nseverity = \"minor\"\nmessage = \"order hit\"\nwhy = \"determinism probe\"\nfix = \"none\"\nquery = \"(call_expression) @match\"\n",
     );
     put(
         &root,
@@ -377,7 +377,7 @@ fn boundary_deep_nesting_bounded() {
     {
         assert_eq!(&*n.path, "src/deep.rs");
         assert_eq!(n.line, 1);
-        assert_eq!(n.severity, Severity::Deny);
+        assert_eq!(n.severity, Severity::Major);
     } else {
         let pe = r
             .findings
@@ -388,14 +388,14 @@ fn boundary_deep_nesting_bounded() {
     }
 }
 
-// AA-R5: warn_at/deny_at line boundaries N-1/N/N+1 with real option keys.
+// AA-R5: minor_at/major_at/critical_at/blocker_at line boundaries with real option keys.
 #[test]
 fn boundary_file_budget_line_thresholds() {
     let (_t, root) = tmp();
     put(
         &root,
         "sloplint.toml",
-        "[rules.\"agent/file-token-budget\"]\nwarn_at = 8\ndeny_at = 10\n",
+        "[rules.\"agent/file-token-budget\"]\nminor_at = 8\nmajor_at = 10\ncritical_at = 15\nblocker_at = 20\n",
     );
     for n in [7u32, 8, 9, 10, 11] {
         let repeat = usize::try_from(n).unwrap_or_else(|e| panic!("u32 fits usize: {e}"));
@@ -417,11 +417,11 @@ fn boundary_file_budget_line_thresholds() {
             .find(|f| *f.path == format!("src/a{n}.rs"))
             .map(|f| f.severity)
     };
-    assert_eq!(sev(7), None, "7 lines below warn_at reports nothing");
-    assert_eq!(sev(8), Some(Severity::Warn), "8 lines hits warn_at");
-    assert_eq!(sev(9), Some(Severity::Warn), "9 lines stays warn");
-    assert_eq!(sev(10), Some(Severity::Deny), "10 lines hits deny_at");
-    assert_eq!(sev(11), Some(Severity::Deny), "11 lines stays deny");
+    assert_eq!(sev(7), None, "7 lines below minor_at reports nothing");
+    assert_eq!(sev(8), Some(Severity::Minor), "8 lines hits minor_at");
+    assert_eq!(sev(9), Some(Severity::Minor), "9 lines stays minor");
+    assert_eq!(sev(10), Some(Severity::Major), "10 lines hits major_at");
+    assert_eq!(sev(11), Some(Severity::Major), "11 lines stays major");
     for n in [8u32, 9, 10, 11] {
         let f = r
             .findings
@@ -443,7 +443,7 @@ fn boundary_file_budget_empty_and_no_final_newline() {
     put(
         &root,
         "sloplint.toml",
-        "[rules.\"agent/file-token-budget\"]\nwarn_at = 1\ndeny_at = 2\n",
+        "[rules.\"agent/file-token-budget\"]\nminor_at = 1\nmajor_at = 2\ncritical_at = 3\nblocker_at = 4\n",
     );
     let r = run_ok(&RunOptions {
         strictness: Some(Strictness::Standard),
@@ -461,7 +461,7 @@ fn boundary_file_budget_empty_and_no_final_newline() {
         .iter()
         .find(|f| &*f.path == "one.rs")
         .unwrap_or_else(|| panic!("one.rs must report"));
-    assert_eq!(one.severity, Severity::Warn, "1 line hits warn_at");
+    assert_eq!(one.severity, Severity::Minor, "1 line hits minor_at");
     assert_eq!(one.line, 1);
     assert_eq!(one.column, 1);
     let two = r
@@ -469,7 +469,7 @@ fn boundary_file_budget_empty_and_no_final_newline() {
         .iter()
         .find(|f| &*f.path == "two.rs")
         .unwrap_or_else(|| panic!("two.rs must report"));
-    assert_eq!(two.severity, Severity::Deny, "2 lines hit deny_at");
+    assert_eq!(two.severity, Severity::Major, "2 lines hit major_at");
     assert_eq!(two.line, 1);
     assert_eq!(two.column, 1);
 }

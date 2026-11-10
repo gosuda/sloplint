@@ -1,1 +1,1 @@
-src/lib.swift:8 deny agent/stringly-api
+src/lib.swift:8 major agent/stringly-api

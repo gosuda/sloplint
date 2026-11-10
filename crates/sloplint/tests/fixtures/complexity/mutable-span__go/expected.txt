@@ -1,1 +1,1 @@
-a.go:3 deny complexity/mutable-span
+a.go:3 major complexity/mutable-span

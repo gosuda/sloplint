@@ -305,10 +305,11 @@ mod tests {
     #[test]
     fn a_recorded_baseline_roundtrips_through_the_load_parser_and_deduplicates() {
         use super::{Baseline, record_baseline};
-        use sloplint_core::finding::{Finding, Severity};
+        use sloplint_core::finding::{Confidence, Finding, Severity};
         let finding = Finding {
             rule: "generic-name".into(),
-            severity: Severity::Warn,
+            severity: Severity::Minor,
+            confidence: Confidence::Medium,
             path: "first.rs".into(),
             line: 1,
             column: 7,

@@ -1,1 +1,1 @@
-src/big.cpp:1 deny agent/file-token-budget
+src/big.cpp:1 major agent/file-token-budget

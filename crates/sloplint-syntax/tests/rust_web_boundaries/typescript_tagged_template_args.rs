@@ -2,6 +2,7 @@
 //! of the first substitution is visible to the log-message rule. TypeScript matches JavaScript.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 fn shapes(lang: Lang, path: &str) -> Vec<(String, Vec<String>)> {
@@ -10,7 +11,7 @@ fn shapes(lang: Lang, path: &str) -> Vec<(String, Vec<String>)> {
         lang,
         path,
         source: SOURCE,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(

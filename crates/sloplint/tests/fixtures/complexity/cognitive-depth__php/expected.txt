@@ -1,1 +1,1 @@
-src/tangled.php:2 deny complexity/cognitive-depth
+src/tangled.php:2 major complexity/cognitive-depth

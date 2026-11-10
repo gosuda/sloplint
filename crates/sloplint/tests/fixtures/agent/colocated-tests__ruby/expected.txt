@@ -1,1 +1,1 @@
-service.rb:1 warn agent/colocated-tests
+service.rb:1 minor agent/colocated-tests

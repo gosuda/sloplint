@@ -1,1 +1,1 @@
-a.php:2 warn grep/homonym-definitions
+a.php:2 minor grep/homonym-definitions

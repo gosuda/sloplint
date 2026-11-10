@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use sloplint_core::facts::{Ambient, Call, DynamicSymbol, Function, MutBinding, Pos};
 use sloplint_core::suppress::CommentText;
 
-use crate::hooks::{Container, FunctionHead, is_directive_comment, narrow, pos_of, slice};
+use crate::hooks::{
+    Container, FunctionHead, attributed_region, is_directive_comment, narrow, pos_of, slice,
+};
 use crate::walk::{FnFrame, FrameDecl, Mark, WalkState};
 
 impl<'s, 'a> WalkState<'s, 'a, '_> {
@@ -52,12 +54,19 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
 
     pub(crate) fn enter_module(&mut self, node: tree_sitter::Node<'_>) {
         let hooks = self.hooks;
-        let container = {
+        let (container, region, leading) = {
             let cx = self.make_cx();
-            hooks.container(node, &cx)
+            (
+                hooks.container(node, &cx),
+                hooks.module_region(node, &cx),
+                hooks.module_leading(node, &cx),
+            )
         };
         if let Some(container) = container {
             self.push_container(node.id(), container);
+        }
+        if let Some(role) = region {
+            self.push_region(attributed_region(node, leading, role));
         }
     }
 
@@ -86,7 +95,6 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             doc_pos: head.doc_pos,
             public: head.public,
             interface_bound: head.interface_bound,
-            in_test: head.in_test,
             params: head.params,
             return_type: head.return_type,
             untyped_throws,
@@ -96,6 +104,9 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             deepest_line: 0,
             sole_call: None,
         });
+        if let Some(region) = head.region {
+            self.push_region(region);
+        }
         self.fn_stack.push(FnFrame {
             index,
             nest: 0,
@@ -317,9 +328,6 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     fn push_container(&mut self, mark: usize, container: Container) {
-        if matches!(container, Container::TestModule) {
-            self.facts.has_inline_tests = true;
-        }
         self.containers.push(container);
         self.assert_mark_entered(mark);
         self.marks.push((mark, Mark::Container));

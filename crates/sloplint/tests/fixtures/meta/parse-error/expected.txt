@@ -1,1 +1,1 @@
-src/broken.rs:1 warn meta/parse-error
+src/broken.rs:1 minor meta/parse-error

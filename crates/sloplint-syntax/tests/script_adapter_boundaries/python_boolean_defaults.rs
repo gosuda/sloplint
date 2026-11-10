@@ -3,6 +3,7 @@
 //! every Python boolean default.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 const SOURCE: &str = r#"def f(flag=True):
@@ -23,7 +24,7 @@ fn boolean_defaults(function: &str) -> Vec<(String, bool)> {
         lang: Lang::Python,
         path: "case.py",
         source: SOURCE,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.py parses");

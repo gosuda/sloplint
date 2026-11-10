@@ -1,1 +1,1 @@
-src/a.cpp:3 warn slop/field-copy
+src/a.cpp:3 minor slop/field-copy

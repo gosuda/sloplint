@@ -1,1 +1,1 @@
-src/a.cpp:2 deny agent/stringly-api
+src/a.cpp:2 major agent/stringly-api

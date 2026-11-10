@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
 use crate::facts::{AmbientKind, FileFacts};
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
-
-use super::string_values;
+use crate::rules::{parse_options, string_values};
 
 const ALLOW_FILES: &[&str] = &[
     "**/main.rs",
@@ -53,7 +53,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Agent,
     summary: "mutable globals, global writes, and environment reads outside entry code",
     why: "Hidden global inputs make behavior depend on state the signature does not show.",
-    exempt_tests: true,
+    confidence: Confidence::Medium,
+    roles: RolePolicy {
+        entry: Shift::Off,
+        test: Shift::Off,
+        support: Shift::Lower1,
+        bench: Shift::Off,
+        example: Shift::Off,
+    },
     preset,
     build: Build::File(build),
 };
@@ -71,8 +78,8 @@ struct AmbientGlobalState {
 fn preset(strictness: Strictness) -> Preset {
     let level = match strictness {
         Strictness::Minimal => Level::Off,
-        Strictness::Basic => Level::Warn,
-        Strictness::Standard | Strictness::Strict => Level::Deny,
+        Strictness::Basic => Level::At(Severity::Minor),
+        Strictness::Standard | Strictness::Strict => Level::At(Severity::Major),
     };
     let mut options = toml::Table::new();
     options.insert("allow_files".to_string(), string_values(ALLOW_FILES));
@@ -80,9 +87,7 @@ fn preset(strictness: Strictness) -> Preset {
 }
 
 fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>, String> {
-    let parsed: Options = toml::Value::Table(options)
-        .try_into()
-        .map_err(|error| error.to_string())?;
+    let parsed: Options = parse_options(options)?;
     let mut builder = GlobSetBuilder::new();
     for pattern in &parsed.allow_files {
         let glob =
@@ -107,7 +112,7 @@ impl FileRule for AmbientGlobalState {
                 facts,
                 site.pos,
                 INFO.id,
-                Severity::Deny,
+                Severity::Major,
                 message,
                 fix,
             ));

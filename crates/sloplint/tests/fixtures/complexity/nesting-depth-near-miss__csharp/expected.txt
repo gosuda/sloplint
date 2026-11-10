@@ -1,1 +1,1 @@
-# depth 3 (< warn_at 4): no finding.
+# depth 3 (< minor_at 4): no finding.

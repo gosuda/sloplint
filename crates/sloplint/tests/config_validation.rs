@@ -18,25 +18,23 @@ const PROFILES: [Strictness; 4] = [
 const LEVEL_LINES: [&str; 4] = [
     "",
     "level = \"off\"\n",
-    "level = \"warn\"\n",
-    "level = \"deny\"\n",
+    "level = \"minor\"\n",
+    "level = \"major\"\n",
 ];
 
 const NESTED: &str = "complexity/nested-mutation";
 const PROJECT_TABLE: &str = "[project]\nstrictness = \"strict\"\n";
 const RULES_TABLE: &str = "[rules.\"grep/generic-name\"]\nlevel = \"off\"\n";
 
-const THRESHOLD_CASES: [(u32, u32, bool); 10] = [
-    (0, 0, false),
-    (0, 5, false),
-    (1, 0, false),
-    (1, 1, true),
-    (1, 2, true),
-    (2, 1, false),
-    (5, 4, false),
-    (5, 5, true),
-    (1, u32::MAX, true),
-    (u32::MAX, u32::MAX, true),
+const CUT_CASES: [(u32, u32, u32, u32, bool); 8] = [
+    (0, 2, 3, 4, false),
+    (1, 1, 1, 1, true),
+    (1, 2, 3, 4, true),
+    (2, 1, 3, 4, false),
+    (1, 3, 2, 4, false),
+    (1, 2, 4, 3, false),
+    (1, u32::MAX, u32::MAX, u32::MAX, true),
+    (u32::MAX, u32::MAX, u32::MAX, u32::MAX, true),
 ];
 
 const FLOORS: [(&str, &str, &str, bool); 21] = [
@@ -64,10 +62,10 @@ const FLOORS: [(&str, &str, &str, bool); 21] = [
 ];
 
 const WRONG_TYPES: [(&str, &str, &str); 7] = [
-    (NESTED, "warn_at", "\"3\""),
-    (NESTED, "warn_at", "-1"),
-    (NESTED, "deny_at", "1.5"),
-    (NESTED, "warn_at", "true"),
+    (NESTED, "minor_at", "\"3\""),
+    (NESTED, "minor_at", "-1"),
+    (NESTED, "major_at", "1.5"),
+    (NESTED, "minor_at", "true"),
     ("slop/echo-comment", "min_similarity", "\"high\""),
     ("agent/colocated-tests", "exclude", "\"src/**\""),
     ("grep/homonym-definitions", "min_files", "[1]"),
@@ -76,7 +74,7 @@ const WRONG_TYPES: [(&str, &str, &str); 7] = [
 const CUSTOM_DEFAULTS: [(&str, &str); 7] = [
     ("id", "custom/ok"),
     ("language", "rust"),
-    ("severity", "warn"),
+    ("severity", "minor"),
     ("message", "hit"),
     ("why", "test why"),
     ("fix", "test fix"),
@@ -300,7 +298,10 @@ fn audit_config_threshold_boundaries_hold_for_every_rule_profile_and_level() {
         .iter()
         .filter(|info| {
             let options = (info.preset)(Strictness::Strict).options;
-            options.contains_key("warn_at") && options.contains_key("deny_at")
+            options.contains_key("minor_at")
+                && options.contains_key("major_at")
+                && options.contains_key("critical_at")
+                && options.contains_key("blocker_at")
         })
         .map(|info| info.id)
         .collect();
@@ -309,11 +310,15 @@ fn audit_config_threshold_boundaries_hold_for_every_rule_profile_and_level() {
         "threshold rules vanished: {rules:?}"
     );
     for rule in rules {
-        for (warn_at, deny_at, valid) in THRESHOLD_CASES {
-            let body = format!("warn_at = {warn_at}\ndeny_at = {deny_at}\n");
+        for (minor_at, major_at, critical_at, blocker_at, valid) in CUT_CASES {
+            let body = format!(
+                "minor_at = {minor_at}\nmajor_at = {major_at}\ncritical_at = {critical_at}\nblocker_at = {blocker_at}\n"
+            );
             for (level, strictness) in level_profiles(&PROFILES) {
                 let src = table(rule, level, &body);
-                let context = format!("{rule} {warn_at}/{deny_at} {level:?} {strictness:?}");
+                let context = format!(
+                    "{rule} {minor_at}/{major_at}/{critical_at}/{blocker_at} {level:?} {strictness:?}"
+                );
                 if valid {
                     accepted(&src, strictness, &context);
                     continue;
@@ -328,19 +333,32 @@ fn audit_config_threshold_boundaries_hold_for_every_rule_profile_and_level() {
 #[test]
 fn audit_config_partial_threshold_overrides_validate_against_the_preset() {
     for (level, strictness) in level_profiles(&PROFILES) {
-        let warn = preset_int(NESTED, strictness, "warn_at");
-        let deny = preset_int(NESTED, strictness, "deny_at");
-        let context = format!("preset {warn}/{deny} {level:?} {strictness:?}");
-        let high = table(NESTED, level, &format!("warn_at = {}\n", deny + 1));
+        let minor = preset_int(NESTED, strictness, "minor_at");
+        let major = preset_int(NESTED, strictness, "major_at");
+        let critical = preset_int(NESTED, strictness, "critical_at");
+        let blocker = preset_int(NESTED, strictness, "blocker_at");
+        let context =
+            format!("preset {minor}/{major}/{critical}/{blocker} {level:?} {strictness:?}");
+        let high = table(NESTED, level, &format!("minor_at = {}\n", major + 1));
         let error = rejected(&high, strictness, &context);
         rule_option(&error, NESTED, None, &context);
-        let low = table(NESTED, level, &format!("deny_at = {}\n", warn - 1));
+        let low = table(NESTED, level, &format!("major_at = {}\n", minor - 1));
         let error = rejected(&low, strictness, &context);
         rule_option(&error, NESTED, None, &context);
-        let at_deny = table(NESTED, level, &format!("warn_at = {deny}\n"));
-        accepted(&at_deny, strictness, &context);
-        let at_warn = table(NESTED, level, &format!("deny_at = {warn}\n"));
-        accepted(&at_warn, strictness, &context);
+        let descending = table(
+            NESTED,
+            level,
+            &format!("critical_at = {minor}\nmajor_at = {critical}\n"),
+        );
+        let error = rejected(&descending, strictness, &context);
+        rule_option(&error, NESTED, None, &context);
+        let zero = table(NESTED, level, "blocker_at = 0\n");
+        let error = rejected(&zero, strictness, &context);
+        rule_option(&error, NESTED, None, &context);
+        let at_major = table(NESTED, level, &format!("minor_at = {major}\n"));
+        accepted(&at_major, strictness, &context);
+        let at_minor = table(NESTED, level, &format!("major_at = {minor}\n"));
+        accepted(&at_minor, strictness, &context);
     }
 }
 
@@ -377,9 +395,9 @@ fn audit_config_unknown_option_is_rejected_for_every_rule_profile_and_level() {
         Some("bogus"),
         "meta rule option",
     );
-    let typo = table(NESTED, "level = \"off\"\n", "warn_att = 2\n");
+    let typo = table(NESTED, "level = \"off\"\n", "minor_att = 2\n");
     let error = rejected(&typo, Strictness::Minimal, "misspelled key");
-    rule_option(&error, NESTED, Some("warn_att"), "misspelled key");
+    rule_option(&error, NESTED, Some("minor_att"), "misspelled key");
 }
 
 #[test]
@@ -396,7 +414,7 @@ fn audit_config_wrong_type_option_values_name_the_key() {
 
 #[test]
 fn audit_config_invalid_level_values_name_the_value() {
-    for literal in ["\"fatal\"", "\"Warn\"", "3", "true"] {
+    for literal in ["\"fatal\"", "\"warn\"", "\"deny\"", "\"Warn\"", "3", "true"] {
         let src = format!("[rules.\"{NESTED}\"]\nlevel = {literal}\n");
         let error = parse_config(&src, "sloplint.toml").err();
         let error = error.unwrap_or_else(|| panic!("level = {literal} was accepted"));
@@ -407,8 +425,14 @@ fn audit_config_invalid_level_values_name_the_value() {
 #[test]
 fn audit_config_bad_rule_tables_fail_through_run_with_exit_two() {
     let cases = [
-        (NESTED, "warn_at = 9\ndeny_at = 1\n"),
-        (NESTED, "warn_at = 0\ndeny_at = 4\n"),
+        (
+            NESTED,
+            "minor_at = 9\nmajor_at = 1\ncritical_at = 2\nblocker_at = 3\n",
+        ),
+        (
+            NESTED,
+            "minor_at = 0\nmajor_at = 4\ncritical_at = 5\nblocker_at = 6\n",
+        ),
         (NESTED, "bogus = 1\n"),
         ("meta/parse-error", "bogus = 1\n"),
         ("grep/homonym-definitions", "min_files = 1\n"),
@@ -495,34 +519,38 @@ fn audit_config_level_caps_and_disables_still_apply_after_validation() {
     let rule = "complexity/nesting-depth";
     assert_eq!(
         nesting_severities(""),
-        [Severity::Deny],
-        "preset denies depth 8"
+        [Severity::Major],
+        "preset reports major for depth 8"
     );
-    let warn = table(rule, "level = \"warn\"\n", "");
+    let minor = table(rule, "level = \"minor\"\n", "");
     assert_eq!(
-        nesting_severities(&warn),
-        [Severity::Warn],
-        "level warn caps deny"
+        nesting_severities(&minor),
+        [Severity::Minor],
+        "level minor caps major"
     );
-    let deny = table(rule, "level = \"deny\"\n", "");
+    let major = table(rule, "level = \"major\"\n", "");
     assert_eq!(
-        nesting_severities(&deny),
-        [Severity::Deny],
-        "level deny keeps deny"
+        nesting_severities(&major),
+        [Severity::Major],
+        "level major keeps major"
     );
     let off = table(rule, "level = \"off\"\n", "");
     assert!(
         nesting_severities(&off).is_empty(),
         "level off reports nothing"
     );
-    let raised = table(rule, "", "warn_at = 9\ndeny_at = 9\n");
+    let raised = table(
+        rule,
+        "",
+        "minor_at = 9\nmajor_at = 9\ncritical_at = 9\nblocker_at = 9\n",
+    );
     assert!(
         nesting_severities(&raised).is_empty(),
         "thresholds above depth 8 pass"
     );
     let both = format!(
         "{off}{}",
-        table(NESTED, "level = \"off\"\n", "warn_at = 3\n")
+        table(NESTED, "level = \"off\"\n", "minor_at = 3\n")
     );
     assert!(
         nesting_severities(&both).is_empty(),
@@ -536,7 +564,7 @@ fn audit_config_level_caps_and_disables_still_apply_after_validation() {
     assert!(!set.is_active(rule), "off nesting-depth must stay inactive");
     assert!(
         !set.is_active(NESTED),
-        "off nested-mutation with warn_at override must stay inactive"
+        "off nested-mutation with minor_at override must stay inactive"
     );
     let mut filtered_config = parse_config(&raised, "sloplint.toml")
         .unwrap_or_else(|e| panic!("valid override rejected: {e}"));
@@ -658,7 +686,7 @@ fn audit_custom_rule_queries_must_compile_with_a_match_capture() {
 fn audit_custom_rule_tables_accept_only_a_valid_level() {
     let spec = custom_rule(&[]);
     let cases = [
-        ("warn_at = 1\n", None),
+        ("minor_at = 1\n", None),
         ("bogus = true\n", None),
         ("level = \"fatal\"\n", Some("fatal")),
     ];
@@ -670,10 +698,40 @@ fn audit_custom_rule_tables_accept_only_a_valid_level() {
 }
 
 #[test]
+fn audit_config_rejects_legacy_severity_words() {
+    for (src, token) in [
+        (table(NESTED, "level = \"warn\"\n", ""), "warn"),
+        (table(NESTED, "level = \"deny\"\n", ""), "deny"),
+        (table(NESTED, "", "warn_at = 2\n"), "warn_at"),
+        (table(NESTED, "", "deny_at = 2\n"), "deny_at"),
+    ] {
+        let error = rejected(&src, Strictness::Standard, &src);
+        rule_option(&error, NESTED, Some(token), &src);
+    }
+    for (src, token) in [
+        (custom_rule(&[("severity", "warn")]), "warn"),
+        (custom_rule(&[("severity", "deny")]), "deny"),
+    ] {
+        let error = rejected(&src, Strictness::Standard, &src);
+        let ConfigError::Toml { message, .. } = &error else {
+            panic!("{token}: expected a TOML error, got: {error}");
+        };
+        assert!(
+            message.contains(token),
+            "{token}: `{message}` lacks `{token}`"
+        );
+        assert!(
+            error.to_string().contains(token),
+            "{token}: display omits `{token}`: {error}"
+        );
+    }
+}
+
+#[test]
 fn audit_custom_rule_files_reject_bad_content_naming_the_file() {
     let singular = custom_rule(&[]).replace("[[custom_rules]]", "[[custom_rule]]");
     let missing_fix = custom_rule(&[]).replace("fix = \"test fix\"\n", "");
-    let typo_key = format!("{}severty = \"warn\"\n", custom_rule(&[]));
+    let typo_key = format!("{}severty = \"minor\"\n", custom_rule(&[]));
     let fatal = custom_rule(&[("severity", "fatal")]);
     let cases = [
         (

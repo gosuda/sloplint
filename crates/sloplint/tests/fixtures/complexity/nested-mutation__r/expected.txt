@@ -1,1 +1,1 @@
-src/grid.R:6 deny complexity/nested-mutation
+src/grid.R:6 major complexity/nested-mutation

@@ -1,1 +1,1 @@
-a.bzl:6 deny complexity/nested-mutation
+a.bzl:6 major complexity/nested-mutation

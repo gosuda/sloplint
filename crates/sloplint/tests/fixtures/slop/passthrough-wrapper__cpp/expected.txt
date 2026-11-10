@@ -1,1 +1,1 @@
-src/a.cpp:3 warn slop/passthrough-wrapper
+src/a.cpp:3 minor slop/passthrough-wrapper

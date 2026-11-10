@@ -1,1 +1,1 @@
-src/spread.tsx:2 deny complexity/mutable-span
+src/spread.tsx:2 major complexity/mutable-span

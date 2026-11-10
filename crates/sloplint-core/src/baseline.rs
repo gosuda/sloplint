@@ -253,7 +253,7 @@ fn fingerprint(rule: &str, path: &str, normalized: &str, occurrence: u32) -> Box
 
 #[cfg(test)]
 mod tests {
-    use crate::finding::{Finding, Severity};
+    use crate::finding::{Confidence, Finding, Severity};
     use proptest::prelude::*;
     use proptest::string::string_regex;
 
@@ -268,7 +268,8 @@ mod tests {
         )
             .prop_map(|(rule, path, context, line)| Finding {
                 rule: rule.into_boxed_str(),
-                severity: Severity::Warn,
+                severity: Severity::Minor,
+                confidence: Confidence::Medium,
                 path: path.into_boxed_str(),
                 line,
                 column: 1,

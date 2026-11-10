@@ -5,6 +5,7 @@
 //! in nested scopes, do not make anything local public.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 type Row = (String, bool);
@@ -15,7 +16,7 @@ fn visibility(lang: Lang, path: &str, source: &str) -> Vec<Row> {
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(

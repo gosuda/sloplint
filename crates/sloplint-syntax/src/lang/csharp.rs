@@ -1,6 +1,6 @@
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
-    child_by_field, find_map_named_child, find_named_child, first_named_child,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, attributed_region,
+    binary_concat, child_by_field, find_map_named_child, find_named_child, first_named_child,
     first_named_child_matching, has_child_kind, named_children, narrow, only_named_child_matching,
     pos_of, preceding_comments, rfind_named_child, string_arg_shape, text, trimmed,
 };
@@ -9,6 +9,7 @@ use sloplint_core::facts::{
     AmbientKind, Arg, ArgShape, Assertion, CallKind, FieldCopy, Handler, ImplRef, Import,
     ImportKind, Param, Pos, Stmt, TypeDef, WildcardArm,
 };
+use sloplint_core::role::CodeRole;
 use sloplint_core::text::longest_static_chunk;
 use std::borrow::Cow;
 use tree_sitter::Node;
@@ -337,7 +338,7 @@ impl LangHooks for CSharpHooks {
                 ..
             })
         ) && overrides;
-        let in_test = cx.is_test_file || cx.in_test_module() || attr_hit(cx, n, TEST_ATTRS);
+        let tested = cx.inside_test_module() || attr_hit(cx, n, TEST_ATTRS);
         let mut params = Vec::new();
         if let Some(pl) = child_by_field(n, "parameters") {
             params_from_list(cx, pl, &mut params);
@@ -355,7 +356,13 @@ impl LangHooks for CSharpHooks {
             name_pos: pos_of(name_node),
             public,
             interface_bound,
-            in_test,
+            region: tested.then(|| {
+                attributed_region(
+                    n,
+                    first_named_child_matching(n, &["attribute_list"]),
+                    CodeRole::Test,
+                )
+            }),
             params,
             return_type,
             missing_annotations: Vec::new(),
@@ -459,7 +466,6 @@ impl LangHooks for CSharpHooks {
                 name: seg_last(full),
                 alias: None,
                 kind: ImportKind::Wildcard,
-                in_test: cx.is_test_file,
             });
             return;
         }
@@ -480,7 +486,6 @@ impl LangHooks for CSharpHooks {
             } else {
                 ImportKind::Namespace
             },
-            in_test: cx.is_test_file,
         });
     }
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {

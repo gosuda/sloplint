@@ -1,0 +1,4 @@
+# Positive: cognitive 16 is major in library, lowered to minor in test and bench roles.
+src/lib.rs:1 major complexity/cognitive-depth
+src/lib.rs:24 minor complexity/cognitive-depth
+src/lib.rs:47 minor complexity/cognitive-depth

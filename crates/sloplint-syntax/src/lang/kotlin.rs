@@ -7,12 +7,13 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
-    child_by_field, find_named_child, first_of_kind, has_child_kind, last_named_child,
-    last_segment, named_children, narrow, only_named_child_matching, pos_of, preceding_comments,
-    rfind_named_child, string_arg_shape, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, attributed_region,
+    binary_concat, child_by_field, find_named_child, first_of_kind, has_child_kind,
+    last_named_child, last_segment, named_children, narrow, only_named_child_matching, pos_of,
+    preceding_comments, rfind_named_child, string_arg_shape, text,
 };
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
 
 pub(crate) static TABLE: &[(&str, Role)] = &[
     ("function_declaration", Role::Function),
@@ -294,7 +295,8 @@ fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
         Vec::new()
     };
     let annotations = annotation_names(cx, n);
-    let in_test = cx.is_test_file || annotations.iter().any(|a| TEST_ANNOTATIONS.contains(a));
+    let tested = annotations.iter().any(|a| TEST_ANNOTATIONS.contains(a));
+    let benched = !tested && annotations.contains(&"Benchmark");
     let public = !is_restricted(cx, n) && container_public(cx) && !is_nested_fn(n);
     let (doc, doc_pos) = preceding_comments(cx, n, COMMENTS, &[]);
     Some(FunctionHead {
@@ -302,7 +304,9 @@ fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
         name_pos,
         public,
         interface_bound: has_modifier_word(cx, n, "override"),
-        in_test,
+        region: tested
+            .then(|| attributed_region(n, modifiers_of(n), CodeRole::Test))
+            .or_else(|| benched.then(|| attributed_region(n, modifiers_of(n), CodeRole::Bench))),
         params: function_params(cx, n),
         return_type,
         missing_annotations,
@@ -363,7 +367,6 @@ fn typedef_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
 
 fn import_fact<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Import<'s>> {
     let pos = pos_of(n);
-    let in_test = cx.is_test_file;
     let qualified = first_of_kind(n, &["qualified_identifier"]);
     let count = u32::try_from(n.named_child_count()).unwrap_or(u32::MAX);
     let mut identifiers = (0..count)
@@ -386,7 +389,6 @@ fn import_fact<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Import<'s>> {
             name: "*",
             alias: None,
             kind: ImportKind::Wildcard,
-            in_test,
         });
     }
     let (module, name) = path.rsplit_once('.').unwrap_or(("", path));
@@ -396,7 +398,6 @@ fn import_fact<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Import<'s>> {
         name,
         alias,
         kind: ImportKind::Named,
-        in_test,
     })
 }
 

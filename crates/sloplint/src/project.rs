@@ -7,6 +7,8 @@ use globset::{Glob, GlobSet, GlobSetBuilder};
 use ignore::WalkBuilder;
 use serde::{Deserialize, Serialize};
 use sloplint_core::config::{Config, ConfigError, Mode, Strictness, parse_config};
+use sloplint_core::finding::Confidence;
+use sloplint_core::role::CodeRole;
 use sloplint_core::text::normalize_rel_path;
 use sloplint_core::{CustomRuleSpec, FailOn};
 
@@ -38,6 +40,7 @@ pub struct Overrides {
     pub strictness: Option<Strictness>,
     pub mode: Option<Mode>,
     pub fail_on: Option<FailOn>,
+    pub min_confidence: Option<Confidence>,
 }
 
 pub struct Loaded {
@@ -138,6 +141,9 @@ pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunErro
     }
     if let Some(fail_on) = overrides.fail_on {
         config.project.fail_on = fail_on;
+    }
+    if let Some(min_confidence) = overrides.min_confidence {
+        config.project.min_confidence = min_confidence;
     }
     Ok(Loaded {
         config,
@@ -276,6 +282,50 @@ pub fn glob_set(patterns: &[String], key: &str) -> Result<GlobSet, ConfigError> 
         glob: patterns.join(", "),
         message: error.to_string(),
     })
+}
+
+pub struct RoleSets {
+    bench: GlobSet,
+    example: GlobSet,
+    support: GlobSet,
+    entry: GlobSet,
+    test: GlobSet,
+    data: GlobSet,
+}
+
+impl RoleSets {
+    pub fn from_config(config: &Config) -> Result<Self, ConfigError> {
+        Ok(Self {
+            bench: glob_set(&config.project.bench_globs, "project.bench_globs")?,
+            example: glob_set(&config.project.example_globs, "project.example_globs")?,
+            support: glob_set(&config.project.support_globs, "project.support_globs")?,
+            entry: glob_set(&config.project.entry_globs, "project.entry_globs")?,
+            test: glob_set(&config.project.test_globs, "project.test_globs")?,
+            data: glob_set(&config.project.data_globs, "project.data_globs")?,
+        })
+    }
+
+    pub fn role(&self, rel: &str) -> CodeRole {
+        if self.data.is_match(rel) {
+            return CodeRole::Library;
+        }
+        if self.bench.is_match(rel) {
+            return CodeRole::Bench;
+        }
+        if self.example.is_match(rel) {
+            return CodeRole::Example;
+        }
+        if self.support.is_match(rel) {
+            return CodeRole::Support;
+        }
+        if self.test.is_match(rel) {
+            return CodeRole::Test;
+        }
+        if self.entry.is_match(rel) {
+            return CodeRole::Entry;
+        }
+        CodeRole::Library
+    }
 }
 
 fn find_root(cwd: &Path) -> PathBuf {

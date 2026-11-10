@@ -258,7 +258,7 @@ fn py_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
 }
 
 fn plain_import<'s>(
-    cx: &Cx<'_, 's>,
+    _cx: &Cx<'_, 's>,
     imp: (Node<'_>, &'s str, &'s str, Option<&'s str>),
     out: &mut Vec<Import<'s>>,
 ) {
@@ -269,7 +269,6 @@ fn plain_import<'s>(
         name,
         alias,
         kind: ImportKind::Named,
-        in_test: cx.is_test_file,
     });
 }
 
@@ -481,7 +480,7 @@ impl LangHooks for PythonHooks {
             name_pos: pos_of(name_node),
             public,
             interface_bound: dunder,
-            in_test: cx.is_test_file && name.starts_with("test"),
+            region: None,
             params,
             return_type: ret,
             missing_annotations: missing,
@@ -579,7 +578,6 @@ impl LangHooks for PythonHooks {
                         name: "*",
                         alias: None,
                         kind: ImportKind::Wildcard,
-                        in_test: cx.is_test_file,
                     });
                 } else if c.kind() == "aliased_import" {
                     let path = child_by_field(c, "name").map_or("", |v| text(cx, v));

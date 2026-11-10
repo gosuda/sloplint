@@ -1,1 +1,1 @@
-a.rb:1 warn complexity/cognitive-depth
+a.rb:1 minor complexity/cognitive-depth

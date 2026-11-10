@@ -5,8 +5,12 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::config::{Config, ConfigError};
-use crate::finding::{Level, Severity};
+use crate::finding::{Confidence, Level, Severity};
 use crate::lang::ALL_CONFIG_KEYS;
+
+fn default_confidence() -> Confidence {
+    Confidence::Medium
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -14,6 +18,8 @@ pub struct CustomRuleSpec {
     pub id: String,
     pub language: String,
     pub severity: Severity,
+    #[serde(default = "default_confidence")]
+    pub confidence: Confidence,
     pub message: String,
     pub why: String,
     pub fix: String,
@@ -176,6 +182,7 @@ pub(crate) struct CustomEntry {
     pub(crate) why: String,
     pub(crate) fix: String,
     pub(crate) level: Level,
+    pub(crate) confidence: Confidence,
     include: Option<GlobSet>,
     exclude: Option<GlobSet>,
 }
@@ -201,6 +208,7 @@ pub(crate) fn entries(config: &Config) -> Result<Vec<CustomEntry>, ConfigError> 
             why: spec.why.clone(),
             fix: spec.fix.clone(),
             level: custom_level(config, spec),
+            confidence: spec.confidence,
             include: compile(&spec.include, &format!("custom_rules[{index}].include"))?,
             exclude: compile(&spec.exclude, &format!("custom_rules[{index}].exclude"))?,
         });
@@ -241,10 +249,7 @@ pub fn custom_level(config: &Config, spec: &CustomRuleSpec) -> Level {
         .and_then(|table| table.get("level"))
         .and_then(|value| value.as_str())
         .and_then(crate::rules::parse_level)
-        .unwrap_or(match spec.severity {
-            Severity::Warn => Level::Warn,
-            Severity::Deny => Level::Deny,
-        })
+        .unwrap_or(Level::At(spec.severity))
 }
 
 #[cfg(test)]

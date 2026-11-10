@@ -1,1 +1,1 @@
-pos.c:1 deny complexity/import-fan-out
+pos.c:1 major complexity/import-fan-out

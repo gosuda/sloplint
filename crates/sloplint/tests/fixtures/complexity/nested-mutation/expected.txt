@@ -1,1 +1,1 @@
-src/lib.rs:6 deny complexity/nested-mutation
+src/lib.rs:6 major complexity/nested-mutation

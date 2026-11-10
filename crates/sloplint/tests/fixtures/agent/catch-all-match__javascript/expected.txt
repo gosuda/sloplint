@@ -1,1 +1,1 @@
-src/app.js:5 warn agent/catch-all-match
+src/app.js:5 minor agent/catch-all-match

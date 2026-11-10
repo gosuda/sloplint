@@ -6,6 +6,7 @@
 //! interface-bound, which proves the container stack popped on exit.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 const SOURCE: &str = "pub trait Renderer {\n\tfn render(&self, verbose: bool);\n}\npub struct Console;\nimpl Renderer for Console {\n\tfn render(&self, verbose: bool) {}\n}\npub fn toggle(flag: bool) {}\n";
@@ -17,7 +18,7 @@ fn a_public_free_function_after_a_trait_impl_is_neither_interface_bound_nor_inhe
         lang: Lang::Rust,
         path: "src/lib.rs",
         source: SOURCE,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(

@@ -1,1 +1,1 @@
-big.c:1 deny agent/file-token-budget
+big.c:1 major agent/file-token-budget

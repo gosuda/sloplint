@@ -2,6 +2,7 @@
 
 use sloplint_core::facts::FileFacts;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 /// The C-family grammars that share one declarator model, each with a path that selects it.
@@ -23,7 +24,7 @@ pub fn with_facts<R>(
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "{path} parses cleanly");

@@ -1,1 +1,1 @@
-src/a.m:1 deny agent/ambient-global-state
+src/a.m:1 major agent/ambient-global-state

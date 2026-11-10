@@ -14,6 +14,7 @@ use crate::hooks::{
     preceding_comments, strip_quotes, text, trimmed,
 };
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_declaration", Role::Function),
@@ -358,7 +359,6 @@ fn join_rel(dir: &str, uri: &str) -> String {
 struct ImportEmit<'a, 's> {
     module: &'s str,
     pos: Pos,
-    in_test: bool,
     out: &'a mut Vec<Import<'s>>,
 }
 
@@ -370,7 +370,6 @@ impl<'a, 's> ImportEmit<'a, 's> {
             name,
             alias,
             kind: ImportKind::Namespace,
-            in_test: self.in_test,
         });
     }
     fn named(&mut self, name: &'s str) {
@@ -380,7 +379,6 @@ impl<'a, 's> ImportEmit<'a, 's> {
             name,
             alias: None,
             kind: ImportKind::Named,
-            in_test: self.in_test,
         });
     }
     fn show_one(&mut self, cx: &Cx<'_, 's>, comb: Node<'_>) {
@@ -405,7 +403,59 @@ fn has_show(spec: Node<'_>) -> bool {
     })
 }
 
+fn dart_test_marker(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<CodeRole> {
+    if n.kind() != "call_expression" {
+        return None;
+    }
+    let name = child_by_field(n, "function").map_or("", |func| text(cx, func));
+    if !matches!(name, "test" | "testWidgets" | "group") {
+        return None;
+    }
+    let mut chain = n.parent();
+    while let Some(node) = chain {
+        let kind = node.kind();
+        if matches!(
+            kind,
+            "expression_statement"
+                | "block"
+                | "function_body"
+                | "function_expression"
+                | "function_expression_body"
+                | "for_statement"
+                | "if_statement"
+        ) || kind.contains("argument")
+        {
+            chain = node.parent();
+        } else if kind == "function_declaration" {
+            return dart_main_root(cx, node).then_some(CodeRole::Test);
+        } else if kind == "call_expression" {
+            let callee = child_by_field(node, "function").map_or("", |func| text(cx, func));
+            if callee == "group" {
+                chain = node.parent();
+            } else {
+                return None;
+            }
+        } else {
+            return None;
+        }
+    }
+    None
+}
+
+fn dart_main_root(cx: &Cx<'_, '_>, node: Node<'_>) -> bool {
+    let named = signature_of(node)
+        .and_then(|sig| child_by_field(sig, "name"))
+        .is_some_and(|id| text(cx, id) == "main");
+    named
+        && node
+            .parent()
+            .is_some_and(|parent| parent.kind() == "source_file")
+}
+
 impl LangHooks for DartHooks {
+    fn call_marker(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        dart_test_marker(cx, n)
+    }
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let kind = n.kind();
         let is_fn = kind == "function_declaration"
@@ -470,7 +520,7 @@ impl LangHooks for DartHooks {
             name_pos: pos_of(name_node),
             public,
             interface_bound,
-            in_test: cx.is_test_file,
+            region: None,
             params,
             return_type,
             missing_annotations: missing,
@@ -579,7 +629,6 @@ impl LangHooks for DartHooks {
         let mut emit = ImportEmit {
             module,
             pos: pos_of(n),
-            in_test: cx.is_test_file,
             out,
         };
         if has_show(spec) {

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::finding::source_column;
 use crate::lang::Lang;
+use crate::role::{CodeRole, RoleRegion, role_at};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Pos {
@@ -17,8 +18,8 @@ pub struct FileFacts<'s> {
     pub path: &'s str,
     pub source: &'s str,
     pub line_starts: Vec<u32>,
-    pub is_test_file: bool,
-    pub is_entry_file: bool,
+    pub role: CodeRole,
+    pub regions: Vec<RoleRegion>,
     pub line_count: u32,
     pub functions: Vec<Function<'s>>,
     pub calls: Vec<Call<'s>>,
@@ -36,6 +37,12 @@ pub struct FileFacts<'s> {
     pub has_inline_tests: bool,
 }
 
+impl<'s> FileFacts<'s> {
+    pub fn role_at(&self, line: u32) -> CodeRole {
+        role_at(self.role, &self.regions, line)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Function<'s> {
     pub name: &'s str,
@@ -44,7 +51,6 @@ pub struct Function<'s> {
     pub doc_pos: Option<Pos>,
     pub public: bool,
     pub interface_bound: bool,
-    pub in_test: bool,
     pub params: Vec<Param<'s>>,
     pub return_type: Option<&'s str>,
     pub untyped_throws: bool,
@@ -118,7 +124,6 @@ pub struct Import<'s> {
     pub name: &'s str,
     pub alias: Option<&'s str>,
     pub kind: ImportKind,
-    pub in_test: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -206,8 +211,8 @@ pub struct NamedSite {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorldFacts {
     pub lang: Lang,
-    pub is_test_file: bool,
-    pub is_entry_file: bool,
+    pub role: CodeRole,
+    pub regions: Vec<RoleRegion>,
     pub has_inline_tests: bool,
     pub public_functions: u32,
     pub definitions: Vec<NamedSite>,
@@ -235,8 +240,8 @@ impl WorldFacts {
         );
         WorldFacts {
             lang: facts.lang,
-            is_test_file: facts.is_test_file,
-            is_entry_file: facts.is_entry_file,
+            role: facts.role,
+            regions: facts.regions.clone(),
             has_inline_tests: facts.has_inline_tests,
             public_functions,
             definitions,
@@ -277,8 +282,8 @@ mod tests {
             path: "src/lib.rs",
             source,
             line_starts: line_starts(source),
-            is_test_file: false,
-            is_entry_file: true,
+            role: CodeRole::Entry,
+            regions: Vec::new(),
             line_count: 2,
             functions: vec![
                 Function {
@@ -288,7 +293,6 @@ mod tests {
                     doc_pos: None,
                     public: true,
                     interface_bound: false,
-                    in_test: false,
                     params: vec![],
                     return_type: None,
                     untyped_throws: false,
@@ -305,7 +309,6 @@ mod tests {
                     doc_pos: None,
                     public: true,
                     interface_bound: true,
-                    in_test: false,
                     params: vec![],
                     return_type: None,
                     untyped_throws: false,
@@ -322,7 +325,6 @@ mod tests {
                     doc_pos: None,
                     public: false,
                     interface_bound: false,
-                    in_test: false,
                     params: vec![],
                     return_type: None,
                     untyped_throws: false,
@@ -392,8 +394,8 @@ mod tests {
             path: "src/lib.rs",
             source,
             line_starts: line_starts(source),
-            is_test_file: false,
-            is_entry_file: false,
+            role: CodeRole::Library,
+            regions: Vec::new(),
             line_count: 1,
             functions: vec![Function {
                 name: "listed",
@@ -402,7 +404,6 @@ mod tests {
                 doc_pos: None,
                 public: true,
                 interface_bound: false,
-                in_test: false,
                 params: vec![],
                 return_type: None,
                 untyped_throws: false,

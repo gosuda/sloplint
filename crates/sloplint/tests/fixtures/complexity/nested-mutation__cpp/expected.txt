@@ -1,1 +1,1 @@
-src/a.cpp:6 deny complexity/nested-mutation
+src/a.cpp:6 major complexity/nested-mutation

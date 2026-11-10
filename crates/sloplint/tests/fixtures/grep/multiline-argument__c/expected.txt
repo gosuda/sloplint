@@ -1,1 +1,1 @@
-pos.c:2 warn grep/multiline-argument
+pos.c:2 minor grep/multiline-argument

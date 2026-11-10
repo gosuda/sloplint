@@ -1,0 +1,3 @@
+# Positive: generic names stay minor in both library and support (conftest.py) roles; the tests/ copy is Off.
+conftest.py:1 minor grep/generic-name
+src/lib.rs:1 minor grep/generic-name

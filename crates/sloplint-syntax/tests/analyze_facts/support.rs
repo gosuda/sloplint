@@ -3,6 +3,7 @@
 use std::sync::LazyLock;
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 static NO_CUSTOM: LazyLock<CustomRules> =
@@ -14,7 +15,7 @@ pub fn run<'s>(lang: Lang, path: &'s str, source: &'s str) -> Analysis<'s> {
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     analyze(&mut Parsers::new(), &input, &NO_CUSTOM)
 }

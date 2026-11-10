@@ -7,12 +7,13 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field,
-    find_named_child, first_named_child, first_named_child_matching, first_of_kind, named_children,
-    narrow, only_named_child_matching, pos_of, preceding_comments, slice, string_arg_shape,
-    strip_quotes, text, trimmed,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, attributed_region,
+    child_by_field, find_named_child, first_named_child, first_named_child_matching, first_of_kind,
+    named_children, narrow, only_named_child_matching, pos_of, preceding_comments, slice,
+    string_arg_shape, strip_quotes, text, trimmed,
 };
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("procedure", Role::Closure),
@@ -52,8 +53,11 @@ fn has_operator(n: Node<'_>, cx: &Cx<'_, '_>, op: &str) -> bool {
     (0..n.child_count()).any(|i| n.child(i).is_some_and(|c| is_anon_text(cx, c, op)))
 }
 
+fn odin_attributes<'a>(decl: Node<'a>) -> Option<Node<'a>> {
+    first_named_child_matching(decl, &["attributes"])
+}
 fn attr_has(cx: &Cx<'_, '_>, decl: Node<'_>, wanted: &str) -> bool {
-    let Some(attrs) = child_by_field(decl, "attributes") else {
+    let Some(attrs) = odin_attributes(decl) else {
         return false;
     };
     let mut stack = vec![attrs];
@@ -66,6 +70,17 @@ fn attr_has(cx: &Cx<'_, '_>, decl: Node<'_>, wanted: &str) -> bool {
         }
     }
     false
+}
+fn parent_test_attr<'a>(cx: &Cx<'_, '_>, decl: Node<'a>) -> Option<Node<'a>> {
+    let attrs = odin_attributes(decl)?;
+    let mut stack = vec![attrs];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "attribute" && any_named_child(node, |c| is_test_ident(cx, c)) {
+            return Some(node);
+        }
+        stack.extend(named_children(node));
+    }
+    None
 }
 
 fn is_identifier(c: &Node<'_>) -> bool {
@@ -127,16 +142,20 @@ fn odin_params<'s>(cx: &Cx<'_, 's>, holder: Option<Node<'_>>) -> (Vec<Param<'s>>
     (params, missing)
 }
 
+fn odin_is_code(child: Node<'_>) -> bool {
+    child.kind() != "comment" && child.kind() != "block_comment"
+}
+
 fn odin_sole(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
     if body.kind() != "block" {
         return None;
     }
-    let mut node = only_named_child_matching(body, |c| c.kind() != "comment")?;
+    let mut node = only_named_child_matching(body, odin_is_code)?;
     if node.kind() == "statement" {
-        node = first_named_child(node)?;
+        node = find_named_child(node, odin_is_code)?;
     }
     if node.kind() == "return_statement" {
-        node = first_named_child(node)?;
+        node = find_named_child(node, odin_is_code)?;
     }
     (node.kind() == "call_expression").then_some(node.id())
 }
@@ -359,14 +378,14 @@ impl LangHooks for OdinHooks {
         let (doc, doc_pos) = preceding_comments(cx, parent, &["comment", "block_comment"], &[]);
         let top = parent.parent().is_some_and(|g| g.kind() == "source_file");
         let public = top && !attr_has(cx, parent, "private");
-        let tested = cx.is_test_file || attr_has(cx, parent, "test");
+        let test_attr = parent_test_attr(cx, parent);
         let body = first_of_kind(n, &["block"]);
         Some(FunctionHead {
             name: text(cx, name_node),
             name_pos: pos_of(name_node),
             public,
             interface_bound: false,
-            in_test: tested,
+            region: test_attr.map(|attr| attributed_region(n, Some(attr), CodeRole::Test)),
             params,
             return_type,
             missing_annotations,
@@ -434,7 +453,6 @@ impl LangHooks for OdinHooks {
                 name: "",
                 alias: None,
                 kind: ImportKind::SideEffect,
-                in_test: false,
             };
             out.push(side);
             return;
@@ -447,7 +465,6 @@ impl LangHooks for OdinHooks {
             name,
             alias,
             kind: ImportKind::Namespace,
-            in_test: false,
         };
         out.push(namespaced);
     }

@@ -1,1 +1,1 @@
-src/mod.ts:6 deny complexity/nested-mutation
+src/mod.ts:6 major complexity/nested-mutation

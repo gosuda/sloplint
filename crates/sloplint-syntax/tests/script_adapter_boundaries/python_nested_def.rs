@@ -2,6 +2,7 @@
 //! is a class, and a `def` inside any function body is never public.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 const SOURCE: &str = r#"class Service:
@@ -44,7 +45,7 @@ fn signature(name: &str) -> (bool, Vec<String>) {
         lang: Lang::Python,
         path: "case.py",
         source: SOURCE,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.py parses");

@@ -72,9 +72,9 @@ fn rule_option_override_merges_with_preset() {
     write(
         &root,
         "sloplint.toml",
-        "[rules.\"complexity/cognitive-depth\"]\ndeny_at = 13\n",
+        "[rules.\"complexity/cognitive-depth\"]\nminor_at = 12\nmajor_at = 13\ncritical_at = 19\nblocker_at = 26\n",
     );
-    for (count, expected) in [(12, Severity::Warn), (13, Severity::Deny)] {
+    for (count, expected) in [(12, Severity::Minor), (13, Severity::Major)] {
         let ifs: String = (0..count)
             .map(|n| format!("    if v > {n} {{\n        return;\n    }}\n"))
             .collect();
@@ -92,7 +92,7 @@ fn rule_option_override_merges_with_preset() {
         assert_eq!(cognitive.len(), 1, "{count} ifs must fire once");
         assert_eq!(
             cognitive[0].severity, expected,
-            "{count} ifs with deny_at 13 must be {expected:?}"
+            "{count} ifs with major_at 13 must be {expected:?}"
         );
     }
 }
@@ -296,7 +296,7 @@ fn audit_filter_accepts_valid_selectors() {
         "sample.rs",
         "pub fn handle(flag: bool, other: bool) { foo(); }\nfn foo() {}\n",
     );
-    let call_rule = "[[custom_rules]]\nid = \"custom/no-call\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"call found\"\nwhy = \"test why\"\nfix = \"test fix\"\nquery = \"(call_expression) @match\"\n";
+    let call_rule = "[[custom_rules]]\nid = \"custom/no-call\"\nlanguage = \"rust\"\nseverity = \"minor\"\nmessage = \"call found\"\nwhy = \"test why\"\nfix = \"test fix\"\nquery = \"(call_expression) @match\"\n";
     write(&root, "sloplint.toml", call_rule);
     let check = |selector: &str| run_ok(&audit_filter_opts(&root, &[selector]));
     for (selector, rule, kind) in [
@@ -379,7 +379,7 @@ fn audit_config_present_explicit_changes_level() {
         .iter()
         .find(|f| &*f.rule == "grep/generic-name")
         .map(|f| f.severity);
-    assert_eq!(plain_sev, Some(Severity::Warn), "default level is warn");
+    assert_eq!(plain_sev, Some(Severity::Minor), "default level is minor");
     assert!(
         !fired(&custom, "grep/generic-name"),
         "explicit config must disable the selected rule"
@@ -388,7 +388,7 @@ fn audit_config_present_explicit_changes_level() {
 
 fn custom_rule(id: &str) -> String {
     format!(
-        "[[custom_rules]]\nid = \"{id}\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"{id} hit\"\nwhy = \"test why\"\nfix = \"test fix\"\nquery = \"(call_expression) @match\"\n"
+        "[[custom_rules]]\nid = \"{id}\"\nlanguage = \"rust\"\nseverity = \"minor\"\nmessage = \"{id} hit\"\nwhy = \"test why\"\nfix = \"test fix\"\nquery = \"(call_expression) @match\"\n"
     )
 }
 
@@ -675,5 +675,8 @@ fn audit_file_budget_whole_file_ratchet_identity() {
     assert_eq!(gated.summary.baselined, 1, "baselined count must hold");
     let after = threshold();
     assert_eq!(after.findings[0].line, 1, "shifted finding stays on line 1");
-    assert_eq!(after.findings[0].message, "file has 811 lines");
+    assert_eq!(
+        after.findings[0].message,
+        "file has 811 lines (minor at 500, major at 800, critical at 1200, blocker at 1600)"
+    );
 }

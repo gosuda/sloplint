@@ -3,12 +3,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
 use crate::facts::WorldFacts;
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::lang::Lang;
+use crate::role::{CodeRole, RolePolicy, Shift};
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
-
-use super::string_values;
-
+use crate::rules::{parse_options, string_values};
 const EXCLUDE: &[&str] = &["**/examples/**", "**/scripts/**"];
 
 pub(crate) const INFO: RuleInfo = RuleInfo {
@@ -16,7 +15,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Agent,
     summary: "modules with public functions and no tests nearby",
     why: "A module without nearby tests gives no executable specification to check an edit against.",
-    exempt_tests: false,
+    confidence: Confidence::Low,
+    roles: RolePolicy {
+        entry: Shift::Off,
+        test: Shift::Off,
+        support: Shift::Off,
+        bench: Shift::Off,
+        example: Shift::Off,
+    },
     preset,
     build: Build::World(build),
 };
@@ -34,7 +40,7 @@ struct ColocatedTests {
 fn preset(strictness: Strictness) -> Preset {
     let level = match strictness {
         Strictness::Minimal | Strictness::Basic | Strictness::Standard => Level::Off,
-        Strictness::Strict => Level::Warn,
+        Strictness::Strict => Level::At(Severity::Minor),
     };
     let mut options = toml::Table::new();
     options.insert("exclude".to_string(), string_values(EXCLUDE));
@@ -42,9 +48,7 @@ fn preset(strictness: Strictness) -> Preset {
 }
 
 fn build(options: toml::Table) -> Result<Box<dyn WorldRule>, String> {
-    let parsed: Options = toml::Value::Table(options)
-        .try_into()
-        .map_err(|error| error.to_string())?;
+    let parsed: Options = parse_options(options)?;
     let mut builder = GlobSetBuilder::new();
     for pattern in &parsed.exclude {
         let glob =
@@ -226,18 +230,27 @@ struct PathIndex<'a> {
 
 impl<'a> PathIndex<'a> {
     fn new(files: &[WorldFile<'a>]) -> PathIndex<'a> {
-        let mut paths: Vec<&'a str> = files.iter().map(|file| file.path).collect();
+        let mut paths: Vec<&'a str> = files
+            .iter()
+            .filter(|file| is_nearby_test(file.path, file.facts))
+            .map(|file| file.path)
+            .collect();
         paths.sort_unstable();
         paths.dedup();
         let mut rust_tests: Vec<&'a str> = files
             .iter()
+            .filter(|file| is_nearby_test(file.path, file.facts))
             .map(|file| file.path)
             .filter(|path| under_tests(path))
             .map(file_name)
             .collect();
         rust_tests.sort_unstable();
         rust_tests.dedup();
-        let mut names: Vec<&'a str> = files.iter().map(|file| file_name(file.path)).collect();
+        let mut names: Vec<&'a str> = files
+            .iter()
+            .filter(|file| is_nearby_test(file.path, file.facts))
+            .map(|file| file_name(file.path))
+            .collect();
         names.sort_unstable();
         names.dedup();
         PathIndex {
@@ -246,6 +259,51 @@ impl<'a> PathIndex<'a> {
             rust_tests,
         }
     }
+}
+
+fn is_nearby_test(path: &str, facts: &WorldFacts) -> bool {
+    matches!(facts.role, CodeRole::Test | CodeRole::Support)
+        || facts.has_inline_tests
+        || is_test_name(path, facts.lang)
+}
+
+fn is_test_name(path: &str, lang: Lang) -> bool {
+    match conventions(lang) {
+        TestCandidates::Names(form) => names_test_name(path, &form),
+        TestCandidates::Dir(tail) => file_name(path).ends_with(tail),
+        TestCandidates::Root(templates) => root_test_name(path, templates),
+        TestCandidates::RustTests => under_tests(path),
+        TestCandidates::Web => web_test_name(path),
+        TestCandidates::None => false,
+    }
+}
+
+fn names_test_name(path: &str, form: &NameForm) -> bool {
+    let name = file_name(path);
+    let (stem, ext) = stem_ext(path);
+    if form.ext.is_some_and(|want| ext != want) {
+        return false;
+    }
+    form.prefixes.iter().any(|prefix| name.starts_with(prefix))
+        || form.infixes.iter().any(|infix| stem.ends_with(infix))
+}
+
+fn root_test_name(path: &str, templates: &[&str]) -> bool {
+    let name = file_name(path);
+    templates
+        .iter()
+        .any(|template| match template.split_once("{stem}") {
+            Some((prefix, suffix)) => path.contains(prefix) && name.ends_with(suffix),
+            None => path == *template,
+        })
+}
+
+fn web_test_name(path: &str) -> bool {
+    let name = file_name(path);
+    if WEB_TAILS.iter().any(|tail| name.ends_with(tail)) {
+        return true;
+    }
+    path.contains("__tests__/") && name.contains(".test.")
 }
 
 fn has_counterpart(index: &PathIndex<'_>, path: &str, lang: Lang) -> bool {
@@ -449,8 +507,7 @@ impl WorldRule for ColocatedTests {
 impl ColocatedTests {
     fn skipped(&self, file: &WorldFile<'_>) -> bool {
         let facts: &WorldFacts = file.facts;
-        facts.is_test_file
-            || facts.is_entry_file
+        facts.role != CodeRole::Library
             || facts.public_functions == 0
             || facts.lang == Lang::Starlark
             || self.exclude.is_match(file.path)
@@ -461,7 +518,7 @@ impl ColocatedTests {
         Finding::at_file(
             file.path,
             INFO.id,
-            Severity::Warn,
+            Severity::Minor,
             format!(
                 "module with {} public functions has no tests",
                 file.facts.public_functions
@@ -478,10 +535,14 @@ mod tests {
     use globset::GlobSetBuilder;
 
     fn module(public_functions: u32, has_inline_tests: bool) -> WorldFacts {
+        module_as(CodeRole::Library, public_functions, has_inline_tests)
+    }
+
+    fn module_as(role: CodeRole, public_functions: u32, has_inline_tests: bool) -> WorldFacts {
         WorldFacts {
             lang: Lang::Rust,
-            is_test_file: false,
-            is_entry_file: false,
+            role,
+            regions: Vec::new(),
             has_inline_tests,
             public_functions,
             definitions: Vec::new(),
@@ -499,7 +560,7 @@ mod tests {
         let zed = module(1, false);
         let ay = module(1, false);
         let widget = module(1, false);
-        let counterpart = module(0, false);
+        let counterpart = module_as(CodeRole::Test, 0, false);
         let files = [
             WorldFile {
                 path: "z.rs",

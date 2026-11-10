@@ -1,1 +1,1 @@
-# Depth 3 passes (warn at 4).
+# Depth 3 passes (minor at 4).

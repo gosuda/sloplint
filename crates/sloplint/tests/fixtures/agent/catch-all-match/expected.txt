@@ -1,1 +1,1 @@
-src/status.rs:11 warn agent/catch-all-match
+src/status.rs:11 minor agent/catch-all-match

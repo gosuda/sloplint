@@ -22,7 +22,7 @@ const CUSTOM_RULE: &str = "custom/no-dbg-macro";
 const CONFIG: &str = r#"[[custom_rules]]
 id = "custom/no-dbg-macro"
 language = "rust"
-severity = "warn"
+severity = "minor"
 message = "bad \u001b]0;pwn\u0007 macro {m}"
 why = "why \u001b[2K\u009b"
 fix = "fix \u001b[1A\u007f"
@@ -169,7 +169,7 @@ fn agent_output_shows_controls_as_visible_escapes() {
     );
     assert_contains(
         stdout,
-        &format!("warn: {MESSAGE_VISIBLE} [{CUSTOM_RULE}]\n"),
+        &format!("minor/medium: {MESSAGE_VISIBLE} [{CUSTOM_RULE}]\n"),
         "message",
     );
     assert_contains(stdout, &format!("  fix: {FIX_VISIBLE}\n"), "fix");
@@ -181,7 +181,7 @@ fn agent_output_shows_controls_as_visible_escapes() {
     #[cfg(unix)]
     assert_contains(
         stdout,
-        "dir/\\x1b[2J\\u{9b}evil\\x07.rs:1:8: warn:",
+        "dir/\\x1b[2J\\u{9b}evil\\x07.rs:1:8: minor/medium:",
         "path with controls",
     );
 }
@@ -291,7 +291,9 @@ fn rules_command_escapes_text_and_keeps_json_lossless() {
     assert_inert(&agent.stdout, "rules stdout");
     assert_contains(
         text(&agent.stdout),
-        &format!("{CUSTOM_RULE} level=warn | bad \\x1b]0;pwn\\x07 macro {{m}}\n"),
+        &format!(
+            "{CUSTOM_RULE} level=minor confidence=medium roles=entry:keep,test:keep,support:keep,bench:keep,example:keep | bad \\x1b]0;pwn\\x07 macro {{m}}\n"
+        ),
         "rules summary line",
     );
     assert_contains(
@@ -323,7 +325,7 @@ fn rules_command_escapes_text_and_keeps_json_lossless() {
 fn error_text_shows_controls_as_visible_escapes() {
     let tmp = project(&[(
         "sloplint.toml",
-        "[rules.\"bad\\u001b]0;x\\u0007\"]\nlevel = \"warn\"\n",
+        "[rules.\"bad\\u001b]0;x\\u0007\"]\nlevel = \"minor\"\n",
     )]);
     let out = sloplint(tmp.path(), &["check", "--no-cache"]);
     assert_eq!(out.status.code(), Some(2), "config error exit code");
@@ -341,7 +343,7 @@ fn error_text_shows_controls_as_visible_escapes() {
 fn error_text_never_starts_a_line_with_a_workflow_command() {
     let tmp = project(&[(
         "sloplint.toml",
-        "[rules.\"x\\u000a::warning file=a::forged\"]\nlevel = \"warn\"\n",
+        "[rules.\"x\\u000a::warning file=a::forged\"]\nlevel = \"minor\"\n",
     )]);
     let out = sloplint(tmp.path(), &["check", "--no-cache"]);
     assert_eq!(out.status.code(), Some(2), "config error exit code");
@@ -365,7 +367,7 @@ fn rules_listing_defuses_workflow_commands_at_line_starts() {
         "[[custom_rules]]\n",
         "id = \"custom/hostile-line\"\n",
         "language = \"rust\"\n",
-        "severity = \"warn\"\n",
+        "severity = \"minor\"\n",
         "message = \"bad\\n::warning file=a::forged\"\n",
         "why = \"why the rule exists\"\n",
         "fix = \"remove the call\"\n",

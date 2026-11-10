@@ -1,1 +1,1 @@
-src/Runner.cs:5 warn grep/multiline-argument
+src/Runner.cs:5 minor grep/multiline-argument

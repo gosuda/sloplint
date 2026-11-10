@@ -1,2 +1,2 @@
-# Positive: nesting depth 5 (strict deny at 5).
-a.sh:1 deny complexity/nesting-depth
+# Positive: nesting depth 5 (strict major at 5).
+a.sh:1 major complexity/nesting-depth

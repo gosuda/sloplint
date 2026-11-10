@@ -1,1 +1,1 @@
-src/wide.py:1 deny complexity/import-fan-out
+src/wide.py:1 major complexity/import-fan-out

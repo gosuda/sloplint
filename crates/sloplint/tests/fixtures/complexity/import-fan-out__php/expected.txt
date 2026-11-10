@@ -1,1 +1,1 @@
-src/loader.php:2 deny complexity/import-fan-out
+src/loader.php:2 major complexity/import-fan-out

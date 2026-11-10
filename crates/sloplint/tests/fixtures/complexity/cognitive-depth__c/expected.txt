@@ -1,1 +1,1 @@
-pos.c:1 deny complexity/cognitive-depth
+pos.c:1 major complexity/cognitive-depth

@@ -1,1 +1,1 @@
-a.mli:1 warn agent/unique-patch-anchors
+a.mli:1 minor agent/unique-patch-anchors

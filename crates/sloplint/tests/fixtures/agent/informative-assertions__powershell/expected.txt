@@ -1,1 +1,1 @@
-a.ps1:2 deny agent/informative-assertions
+a.ps1:2 major agent/informative-assertions

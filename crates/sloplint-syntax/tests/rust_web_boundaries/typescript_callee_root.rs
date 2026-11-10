@@ -3,6 +3,7 @@
 //! free-function wrapper and the passthrough-wrapper rule can leave receiver forwarding alone.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 type Row = (String, Option<String>);
@@ -13,7 +14,7 @@ fn roots(lang: Lang, path: &str) -> Vec<Row> {
         lang,
         path,
         source: SOURCE,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(

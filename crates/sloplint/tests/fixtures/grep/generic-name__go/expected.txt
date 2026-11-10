@@ -1,2 +1,2 @@
-a.go:2 warn grep/generic-name
-a.go:3 warn grep/generic-name
+a.go:2 minor grep/generic-name
+a.go:3 minor grep/generic-name

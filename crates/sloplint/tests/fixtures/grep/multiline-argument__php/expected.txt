@@ -1,1 +1,1 @@
-src/build.php:3 warn grep/multiline-argument
+src/build.php:3 minor grep/multiline-argument

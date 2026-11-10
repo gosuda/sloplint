@@ -1,1 +1,1 @@
-# near-miss: single-loop accumulator writes 1 loop level deep < strict warn_at 2.
+# near-miss: single-loop accumulator writes 1 loop level deep < strict minor_at 2.

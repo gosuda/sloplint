@@ -9,6 +9,7 @@ use std::sync::LazyLock;
 
 use sloplint_core::facts::CallKind;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 static NO_CUSTOM: LazyLock<CustomRules> =
@@ -19,7 +20,7 @@ fn run<'s>(path: &'s str, source: &'s str) -> Analysis<'s> {
         lang: Lang::Rust,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     analyze(&mut Parsers::new(), &input, &NO_CUSTOM)
 }

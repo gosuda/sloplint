@@ -1,1 +1,1 @@
-a.dart:10 warn agent/catch-all-match
+a.dart:10 minor agent/catch-all-match

@@ -56,7 +56,7 @@ impl LangHooks for CHooks {
             name_pos: pos_of(name_node),
             public: !word(cx, n, &["storage_class_specifier"], &["static"]),
             interface_bound: false,
-            in_test: cx.is_test_file,
+            region: None,
             params: c_family::params(cx, fd, &C_DECLARATORS, &["parameter_declaration"]),
             return_type: return_type(cx, n, fd),
             missing_annotations: Vec::new(),
@@ -115,7 +115,6 @@ impl LangHooks for CHooks {
             name: "",
             alias: None,
             kind: ImportKind::SideEffect,
-            in_test: cx.is_test_file,
         });
     }
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {

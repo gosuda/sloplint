@@ -29,6 +29,7 @@ pub fn discover(root: &Path, config: &Config, threads: usize) -> Result<Discover
         .exclude
         .iter()
         .chain(&config.project.extend_exclude)
+        .chain(&config.project.data_globs)
         .cloned()
         .collect();
     let excludes = glob_set(&patterns, "project.exclude")?;

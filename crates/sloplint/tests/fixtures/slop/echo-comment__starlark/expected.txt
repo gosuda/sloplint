@@ -1,1 +1,1 @@
-a.bzl:2 warn slop/echo-comment
+a.bzl:2 minor slop/echo-comment

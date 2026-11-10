@@ -1,16 +1,24 @@
-use super::{EmptyOptions, parse_options};
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Import, ImportKind};
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::lang::Lang;
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
+use crate::rules::{EmptyOptions, parse_options};
 
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "grep/no-wildcard-import",
     family: Family::Grep,
     summary: "wildcard imports that hide where each name comes from",
     why: "A wildcard import hides where each name comes from.",
-    exempt_tests: true,
+    confidence: Confidence::High,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Off,
+        support: Shift::Lower1,
+        bench: Shift::Off,
+        example: Shift::Lower1,
+    },
     preset,
     build: Build::File(build),
 };
@@ -21,7 +29,9 @@ fn preset(strictness: Strictness) -> Preset {
     Preset {
         level: match strictness {
             Strictness::Minimal => Level::Off,
-            Strictness::Basic | Strictness::Standard | Strictness::Strict => Level::Warn,
+            Strictness::Basic | Strictness::Standard | Strictness::Strict => {
+                Level::At(Severity::Minor)
+            }
         },
         options: toml::Table::new(),
     }
@@ -42,7 +52,7 @@ impl FileRule for NoWildcardImport {
                 facts,
                 import.pos,
                 INFO.id,
-                Severity::Deny,
+                Severity::Major,
                 format!("wildcard import from `{}`", import.module),
                 "list the imported names explicitly".to_string(),
             ));
@@ -56,8 +66,6 @@ impl NoWildcardImport {
             return false;
         }
         let module = import.module.as_ref();
-        let prelude = module == "prelude" || module.ends_with("::prelude");
-        let test_super = (module == "super" || module.ends_with("::super")) && import.in_test;
-        prelude || test_super
+        module == "prelude" || module.ends_with("::prelude")
     }
 }

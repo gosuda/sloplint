@@ -34,7 +34,7 @@ fn boundary_byte_cap_limit_boundaries() {
         if hits == 1 {
             assert_eq!(&*g[0].path, "src/a.rs");
             assert_eq!(g[0].line, 1);
-            assert_eq!(g[0].severity, Severity::Warn);
+            assert_eq!(g[0].severity, Severity::Minor);
         }
     }
 }
@@ -114,7 +114,7 @@ fn boundary_non_utf8_filename_is_skipped() {
         "finding cites the valid path"
     );
     assert_eq!(generic[0].line, 1);
-    assert_eq!(generic[0].severity, Severity::Warn);
+    assert_eq!(generic[0].severity, Severity::Minor);
     assert!(
         r.findings.iter().all(|f| &*f.path == "src/a.rs"),
         "no finding may cite the unnamed file: {:?}",

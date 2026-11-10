@@ -2,17 +2,24 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
 use crate::facts::FileFacts;
-use crate::finding::{Finding, Level};
+use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
-
-use crate::rules::threshold_options;
+use crate::rules::{parse_options, threshold_options};
 
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "complexity/boolean-params",
     family: Family::Complexity,
     summary: "public functions taking boolean parameters",
     why: "Boolean arguments are unreadable at the call site and double the paths per flag.",
-    exempt_tests: true,
+    confidence: Confidence::High,
+    roles: RolePolicy {
+        entry: Shift::Lower1,
+        test: Shift::Off,
+        support: Shift::Lower1,
+        bench: Shift::Off,
+        example: Shift::Off,
+    },
     preset,
     build: Build::File(build),
 };
@@ -20,8 +27,10 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Options {
-    warn_at: u32,
-    deny_at: u32,
+    minor_at: u32,
+    major_at: u32,
+    critical_at: u32,
+    blocker_at: u32,
 }
 
 struct BooleanParams {
@@ -29,30 +38,33 @@ struct BooleanParams {
 }
 
 fn preset(strictness: Strictness) -> Preset {
-    let (level, warn_at, deny_at) = match strictness {
-        Strictness::Minimal => (Level::Off, 2, 3),
-        Strictness::Basic => (Level::Off, 2, 3),
-        Strictness::Standard => (Level::Warn, 2, 3),
-        Strictness::Strict => (Level::Deny, 1, 2),
+    let (level, minor_at, major_at, critical_at, blocker_at) = match strictness {
+        Strictness::Minimal => (Level::Off, 2, 3, 5, 6),
+        Strictness::Basic => (Level::Off, 2, 3, 5, 6),
+        Strictness::Standard => (Level::At(Severity::Minor), 2, 3, 5, 6),
+        Strictness::Strict => (Level::At(Severity::Major), 1, 2, 3, 4),
     };
     Preset {
         level,
-        options: threshold_options(warn_at, deny_at),
+        options: threshold_options(minor_at, major_at, critical_at, blocker_at),
     }
 }
 
 fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>, String> {
-    let parsed: Options = toml::Value::Table(options)
-        .try_into()
-        .map_err(|error| error.to_string())?;
-    let thresholds = Thresholds::new(parsed.warn_at, parsed.deny_at)?;
+    let parsed: Options = parse_options(options)?;
+    let thresholds = Thresholds::new(
+        parsed.minor_at,
+        parsed.major_at,
+        parsed.critical_at,
+        parsed.blocker_at,
+    )?;
     Ok(Box::new(BooleanParams { thresholds }))
 }
 
 impl FileRule for BooleanParams {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
         for function in &facts.functions {
-            if !function.public || function.interface_bound || function.in_test {
+            if !function.public || function.interface_bound {
                 continue;
             }
             let flagged: Vec<&str> = function
@@ -70,7 +82,13 @@ impl FileRule for BooleanParams {
             };
             let names = flagged.join(", ");
             let name = function.name;
-            let message = format!("`{name}` takes {count} boolean parameter(s): {names}");
+            let minor_at = self.thresholds.minor_at;
+            let major_at = self.thresholds.major_at;
+            let critical_at = self.thresholds.critical_at;
+            let blocker_at = self.thresholds.blocker_at;
+            let message = format!(
+                "`{name}` takes {count} boolean parameter(s): {names} (minor at {minor_at}, major at {major_at}, critical at {critical_at}, blocker at {blocker_at})"
+            );
             let fix = format!(
                 "replace {names} with a two-variant enum or with separately named functions"
             );

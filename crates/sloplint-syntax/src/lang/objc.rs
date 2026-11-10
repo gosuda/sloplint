@@ -298,7 +298,7 @@ fn c_function<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
         name_pos: pos_of(name_node),
         public: !word(cx, n, &["storage_class_specifier"], &["static"]),
         interface_bound: false,
-        in_test: cx.is_test_file,
+        region: None,
         params: c_family::params(cx, fd, &C_DECLARATORS, &["parameter_declaration"]),
         return_type: c_return(cx, n, fd),
         missing_annotations: Vec::new(),
@@ -327,7 +327,7 @@ fn method<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
         name_pos: pos_of(name_node),
         public: true,
         interface_bound: true,
-        in_test: cx.is_test_file || impl_is_test(cx, n),
+        region: None,
         params: method_params(cx, n),
         return_type: method_return(cx, n),
         missing_annotations: Vec::new(),
@@ -341,19 +341,6 @@ fn selector_name(n: Node<'_>) -> Option<Node<'_>> {
         Some(kd) => first_named_child_matching(kd, &["identifier"]),
         None => first_named_child_matching(n, &["identifier"]),
     }
-}
-fn impl_is_test<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
-    let mut parent = n.parent();
-    while let Some(found) = parent {
-        if found.kind() == "class_implementation" {
-            return first_named_child_matching(found, &["identifier"]).is_some_and(|id| {
-                let name = text(cx, id);
-                name.ends_with("Test") || name.ends_with("Tests")
-            });
-        }
-        parent = found.parent();
-    }
-    false
 }
 fn method_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
     let mut out = Vec::new();
@@ -490,7 +477,6 @@ fn push_include<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
         name: "",
         alias: None,
         kind: ImportKind::SideEffect,
-        in_test: cx.is_test_file,
     });
 }
 fn push_module<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
@@ -503,7 +489,6 @@ fn push_module<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
         name: "",
         alias: None,
         kind: ImportKind::SideEffect,
-        in_test: cx.is_test_file,
     });
 }
 fn tag_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {

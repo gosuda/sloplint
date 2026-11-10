@@ -81,4 +81,4 @@ jobs:
         run: |
           bin="target/${{ matrix.target }}/release/sloplint"
           if [ "$RUNNER_OS" = Windows ]; then bin="$bin.exe"; fi
-          "$bin" check crates --format agent --strictness standard --mode threshold --fail-on deny
+          "$bin" check crates --format agent --strictness standard --mode threshold --fail-on major

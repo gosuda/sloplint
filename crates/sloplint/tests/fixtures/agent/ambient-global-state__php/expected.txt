@@ -1,2 +1,2 @@
-src/store.php:3 deny agent/ambient-global-state
-src/store.php:8 deny agent/ambient-global-state
+src/store.php:3 major agent/ambient-global-state
+src/store.php:8 major agent/ambient-global-state

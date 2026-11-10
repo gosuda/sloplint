@@ -2,11 +2,12 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::parse_options;
 use crate::callee::CalleePattern;
 use crate::config::Strictness;
 use crate::facts::{ArgShape, Call, FileFacts};
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::role::{RolePolicy, Shift};
+use crate::rules::parse_options;
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 
 pub(crate) const INFO: RuleInfo = RuleInfo {
@@ -14,7 +15,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Grep,
     summary: "log calls whose message is not a searchable literal",
     why: "A log line that is not a fixed literal cannot be searched back to its call site.",
-    exempt_tests: false,
+    confidence: Confidence::Medium,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Off,
+        support: Shift::Lower1,
+        bench: Shift::Off,
+        example: Shift::Off,
+    },
     preset,
     build: Build::File(build),
 };
@@ -33,8 +41,8 @@ struct ContiguousLogLiteral {
 fn preset(strictness: Strictness) -> Preset {
     let (level, min_len) = match strictness {
         Strictness::Minimal | Strictness::Basic => (Level::Off, 8),
-        Strictness::Standard => (Level::Warn, 8),
-        Strictness::Strict => (Level::Deny, 12),
+        Strictness::Standard => (Level::At(Severity::Minor), 8),
+        Strictness::Strict => (Level::At(Severity::Major), 12),
     };
     Preset {
         level,
@@ -78,7 +86,7 @@ impl FileRule for ContiguousLogLiteral {
                 facts,
                 call.pos,
                 INFO.id,
-                Severity::Deny,
+                Severity::Major,
                 format!("log or error message is not a searchable literal ({reason})"),
                 format!(
                     "start the message with a fixed literal of at least {} characters and pass dynamic values as format arguments",

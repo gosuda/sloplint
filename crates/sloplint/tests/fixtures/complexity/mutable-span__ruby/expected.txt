@@ -1,1 +1,1 @@
-a.rb:2 warn complexity/mutable-span
+a.rb:2 minor complexity/mutable-span

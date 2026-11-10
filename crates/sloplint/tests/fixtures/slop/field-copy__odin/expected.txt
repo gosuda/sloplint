@@ -1,1 +1,1 @@
-a.odin:6 warn slop/field-copy
+a.odin:6 minor slop/field-copy

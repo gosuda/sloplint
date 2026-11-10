@@ -1,2 +1,2 @@
-a.go:2 deny meta/invalid-suppression
-a.go:4 deny meta/invalid-suppression
+a.go:2 major meta/invalid-suppression
+a.go:4 major meta/invalid-suppression

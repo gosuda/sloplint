@@ -1,2 +1,2 @@
 # Positive: public function with no test block in the file.
-src/service.zig:1 warn agent/colocated-tests
+src/service.zig:1 minor agent/colocated-tests

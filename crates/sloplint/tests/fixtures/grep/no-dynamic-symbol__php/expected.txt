@@ -1,2 +1,2 @@
-src/dispatch.php:3 warn grep/no-dynamic-symbol
-src/dispatch.php:4 warn grep/no-dynamic-symbol
+src/dispatch.php:3 minor grep/no-dynamic-symbol
+src/dispatch.php:4 minor grep/no-dynamic-symbol

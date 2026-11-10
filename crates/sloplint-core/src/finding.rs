@@ -4,33 +4,164 @@ use serde::{Deserialize, Serialize};
 
 use crate::facts::{FileFacts, NamedSite, Pos};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Severity {
-    Warn,
-    Deny,
+    Info,
+    Minor,
+    Major,
+    Critical,
+    Blocker,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+impl Severity {
+    pub const LADDER: [Severity; 5] = [
+        Severity::Info,
+        Severity::Minor,
+        Severity::Major,
+        Severity::Critical,
+        Severity::Blocker,
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Info => "info",
+            Self::Minor => "minor",
+            Self::Major => "major",
+            Self::Critical => "critical",
+            Self::Blocker => "blocker",
+        }
+    }
+
+    pub fn parse(text: &str) -> Option<Severity> {
+        match text {
+            "info" => Some(Severity::Info),
+            "minor" => Some(Severity::Minor),
+            "major" => Some(Severity::Major),
+            "critical" => Some(Severity::Critical),
+            "blocker" => Some(Severity::Blocker),
+            _ => None,
+        }
+    }
+
+    pub fn lowered(self, rungs: u8) -> Option<Severity> {
+        let index = Self::LADDER.iter().position(|&rung| rung == self)?;
+        index
+            .checked_sub(usize::from(rungs))
+            .and_then(|next| Self::LADDER.get(next).copied())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+pub enum Confidence {
+    Low,
+    Medium,
+    High,
+}
+
+impl Confidence {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High => "high",
+        }
+    }
+
+    pub fn parse(text: &str) -> Option<Confidence> {
+        match text {
+            "low" => Some(Confidence::Low),
+            "medium" => Some(Confidence::Medium),
+            "high" => Some(Confidence::High),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Level {
     Off,
-    Warn,
-    Deny,
+    At(Severity),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+impl Level {
+    pub(crate) fn rung(self) -> Option<Severity> {
+        match self {
+            Self::Off => None,
+            Self::At(severity) => Some(severity),
+        }
+    }
+}
+
+impl Serialize for Level {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Off => serializer.serialize_str("off"),
+            Self::At(severity) => serializer.serialize_str(severity.as_str()),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Level {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let text = String::deserialize(deserializer)?;
+        if text == "off" {
+            return Ok(Level::Off);
+        }
+        Severity::parse(&text).map(Level::At).ok_or_else(|| {
+            serde::de::Error::unknown_variant(
+                &text,
+                &["off", "info", "minor", "major", "critical", "blocker"],
+            )
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FailOn {
-    Warn,
-    Deny,
+    At(Severity),
     Never,
+}
+
+impl FailOn {
+    pub fn fails(self, severity: Severity) -> bool {
+        match self {
+            Self::Never => false,
+            Self::At(threshold) => severity >= threshold,
+        }
+    }
+}
+
+impl Serialize for FailOn {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Never => serializer.serialize_str("never"),
+            Self::At(severity) => serializer.serialize_str(severity.as_str()),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for FailOn {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let text = String::deserialize(deserializer)?;
+        if text == "never" {
+            return Ok(FailOn::Never);
+        }
+        Severity::parse(&text).map(FailOn::At).ok_or_else(|| {
+            serde::de::Error::unknown_variant(
+                &text,
+                &["info", "minor", "major", "critical", "blocker", "never"],
+            )
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Finding {
     pub rule: Box<str>,
     pub severity: Severity,
+    pub confidence: Confidence,
     pub path: Box<str>,
     pub line: u32,
     pub column: u32,
@@ -99,6 +230,7 @@ impl Finding {
         Finding {
             rule: rule.into(),
             severity,
+            confidence: Confidence::Medium,
             path: path.into(),
             line: 1,
             column: 1,
@@ -122,6 +254,7 @@ impl Finding {
         Finding {
             rule: rule.into(),
             severity,
+            confidence: Confidence::Medium,
             path: text.path.into(),
             line: pos.line,
             column,
@@ -300,23 +433,35 @@ mod tests {
     }
 
     #[test]
-    fn orders_and_serializes_levels() {
+    fn orders_and_serializes_ladder() {
         assert!(
-            Severity::Warn < Severity::Deny,
-            "Warn should order before Deny"
+            Severity::Info < Severity::Minor
+                && Severity::Minor < Severity::Major
+                && Severity::Major < Severity::Critical
+                && Severity::Critical < Severity::Blocker,
+            "ladder should order info < minor < major < critical < blocker"
         );
         assert!(
-            Level::Off < Level::Warn && Level::Warn < Level::Deny,
-            "levels should order Off < Warn < Deny"
+            Level::Off < Level::At(Severity::Info)
+                && Level::At(Severity::Info) < Level::At(Severity::Blocker),
+            "levels should order Off below every rung"
         );
         assert!(
-            FailOn::Warn < FailOn::Deny && FailOn::Deny < FailOn::Never,
-            "fail-on thresholds should order Warn < Deny < Never"
+            FailOn::At(Severity::Info) < FailOn::Never
+                && FailOn::At(Severity::Blocker) < FailOn::Never,
+            "fail-on thresholds should order every rung below Never"
         );
-        assert_eq!(sonic_rs::to_string(&Severity::Warn).unwrap(), "\"warn\"");
+        assert_eq!(sonic_rs::to_string(&Severity::Minor).unwrap(), "\"minor\"");
+        assert_eq!(sonic_rs::to_string(&Confidence::High).unwrap(), "\"high\"");
         assert_eq!(sonic_rs::to_string(&FailOn::Never).unwrap(), "\"never\"");
-        let level: Level = sonic_rs::from_str("\"deny\"").unwrap();
-        assert_eq!(level, Level::Deny);
+        assert_eq!(
+            sonic_rs::to_string(&Level::At(Severity::Major)).unwrap(),
+            "\"major\""
+        );
+        let level: Level = sonic_rs::from_str("\"major\"").unwrap();
+        assert_eq!(level, Level::At(Severity::Major));
+        let off: Level = sonic_rs::from_str("\"off\"").unwrap();
+        assert_eq!(off, Level::Off);
     }
 
     #[test]
@@ -333,8 +478,14 @@ mod tests {
             source,
             line_starts: &line_starts(source),
         };
-        let from_source =
-            Finding::at_source(&text, pos, "r/one", Severity::Deny, "m".into(), "f".into());
+        let from_source = Finding::at_source(
+            &text,
+            pos,
+            "r/one",
+            Severity::Blocker,
+            "m".into(),
+            "f".into(),
+        );
         assert_eq!(
             (from_source.line, from_source.column),
             (1, source_site(source, pos).0)
@@ -345,7 +496,7 @@ mod tests {
             "b.rs",
             &site,
             "r/two",
-            Severity::Warn,
+            Severity::Minor,
             "m".into(),
             "f".into(),
         );

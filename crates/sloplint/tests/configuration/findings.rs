@@ -2,6 +2,7 @@
 
 use sloplint_core::config::parse_config;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_core::{Finding, RuleFilter, RuleSet, Severity};
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
@@ -25,7 +26,7 @@ fn findings_for(toml_src: &str, path: &str, source: &str) -> Vec<Finding> {
         lang: Lang::Rust,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut parsers, &input, &custom);
     rules.custom_findings(&analysis.facts, &analysis.custom_hits)
@@ -38,7 +39,7 @@ fn hit_count(toml_src: &str, path: &str) -> usize {
 #[test]
 fn include_and_exclude_globs_filter_by_relative_path() {
     let both = rule_src(
-        "deny",
+        "major",
         "call",
         "include = [\"src/**\"]\nexclude = [\"**/gen/**\"]\n",
         "",
@@ -52,7 +53,7 @@ fn include_and_exclude_globs_filter_by_relative_path() {
     ] {
         assert_eq!(hit_count(&both, path), expected, "include+exclude, {path}");
     }
-    let exclude_only = rule_src("deny", "call", "exclude = [\"**/gen/**\"]\n", "");
+    let exclude_only = rule_src("major", "call", "exclude = [\"**/gen/**\"]\n", "");
     for (path, expected) in [("lib/z.rs", 1), ("gen/z.rs", 0)] {
         assert_eq!(
             hit_count(&exclude_only, path),
@@ -60,13 +61,13 @@ fn include_and_exclude_globs_filter_by_relative_path() {
             "exclude only, {path}"
         );
     }
-    let unfiltered = rule_src("deny", "call", "", "");
+    let unfiltered = rule_src("major", "call", "", "");
     assert_eq!(hit_count(&unfiltered, "anywhere/at/all.rs"), 1);
 }
 
 #[test]
 fn rule_severity_applies_without_a_level_table() {
-    for (declared, expected) in [("deny", Severity::Deny), ("warn", Severity::Warn)] {
+    for (declared, expected) in [("major", Severity::Major), ("minor", Severity::Minor)] {
         let found = findings_for(&rule_src(declared, "call", "", ""), "src/a.rs", CALL_SOURCE);
         assert_eq!(found.len(), 1, "{declared}");
         assert_eq!(found[0].severity, expected, "{declared}");
@@ -78,44 +79,44 @@ fn rule_severity_applies_without_a_level_table() {
 fn a_level_table_caps_disables_or_raises() {
     let table = |level: &str| format!("[rules.\"custom/x\"]\nlevel = \"{level}\"\n");
     let capped = findings_for(
-        &rule_src("deny", "call", "", &table("warn")),
+        &rule_src("major", "call", "", &table("minor")),
         "src/a.rs",
         CALL_SOURCE,
     );
     assert_eq!(capped.len(), 1);
     assert_eq!(
         capped[0].severity,
-        Severity::Warn,
-        "level warn caps a deny rule"
+        Severity::Minor,
+        "level minor caps a major rule"
     );
     let off = findings_for(
-        &rule_src("deny", "call", "", &table("off")),
+        &rule_src("major", "call", "", &table("off")),
         "src/a.rs",
         CALL_SOURCE,
     );
     assert!(off.is_empty(), "level off disables the rule: {off:?}");
     let same = findings_for(
-        &rule_src("deny", "call", "", &table("deny")),
+        &rule_src("major", "call", "", &table("major")),
         "src/a.rs",
         CALL_SOURCE,
     );
-    assert_eq!(same[0].severity, Severity::Deny);
+    assert_eq!(same[0].severity, Severity::Major);
     let raised = findings_for(
-        &rule_src("warn", "call", "", &table("deny")),
+        &rule_src("minor", "call", "", &table("major")),
         "src/a.rs",
         CALL_SOURCE,
     );
     assert_eq!(
         raised[0].severity,
-        Severity::Deny,
-        "level deny raises a warn rule"
+        Severity::Major,
+        "level major raises a minor rule"
     );
 }
 
 #[test]
 fn captures_interpolate_at_the_match_position() {
     let found = findings_for(
-        &rule_src("warn", "calls {callee}", "", ""),
+        &rule_src("minor", "calls {callee}", "", ""),
         "src/a.rs",
         "fn f() {\n    first(1);\n}\n",
     );
@@ -131,7 +132,7 @@ fn interpolated_captures_are_clipped_to_sixty_characters() {
     let long = "a".repeat(70);
     let source = format!("fn f() {{ {long}(); }}\n");
     let found = findings_for(
-        &rule_src("warn", "calls {callee}", "", ""),
+        &rule_src("minor", "calls {callee}", "", ""),
         "src/a.rs",
         &source,
     );
@@ -142,7 +143,7 @@ fn interpolated_captures_are_clipped_to_sixty_characters() {
 #[test]
 fn multiline_captures_interpolate_their_first_line_only() {
     let found = findings_for(
-        &rule_src("warn", "{match}", "", ""),
+        &rule_src("minor", "{match}", "", ""),
         "src/a.rs",
         "fn f() {\n    first(\n        1,\n    );\n}\n",
     );

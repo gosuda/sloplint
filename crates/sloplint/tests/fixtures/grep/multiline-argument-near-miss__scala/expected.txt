@@ -1,1 +1,1 @@
-# Near-miss: 5-line closure arg < strict warn_at 6.
+# Near-miss: 5-line closure arg < strict minor_at 6.

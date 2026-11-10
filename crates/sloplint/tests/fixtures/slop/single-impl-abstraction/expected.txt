@@ -1,1 +1,1 @@
-src/draw.rs:1 warn slop/single-impl-abstraction
+src/draw.rs:1 minor slop/single-impl-abstraction

@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use sloplint::{Report, RunOptions, run};
 use sloplint_core::config::{Mode, Strictness};
-use sloplint_core::finding::{Finding, Severity};
+use sloplint_core::finding::{Confidence, Finding, Severity};
 
 const PARSE_ERROR: &str = "meta/parse-error";
 const WRAPPER: &str = "slop/passthrough-wrapper";
@@ -173,7 +173,8 @@ fn plain_header_findings_before_the_fallback() -> Vec<Finding> {
     vec![
         Finding {
             rule: "agent/colocated-tests".into(),
-            severity: Severity::Warn,
+            severity: Severity::Minor,
+            confidence: Confidence::Low,
             path: "plain.h".into(),
             line: 1,
             column: 1,
@@ -185,7 +186,8 @@ fn plain_header_findings_before_the_fallback() -> Vec<Finding> {
         },
         Finding {
             rule: WRAPPER.into(),
-            severity: Severity::Warn,
+            severity: Severity::Minor,
+            confidence: Confidence::Medium,
             path: "plain.h".into(),
             line: 3,
             column: 15,
@@ -255,7 +257,7 @@ fn a_fallback_header_follows_the_cpp_log_and_type_tables() {
     let zombies = of_rule(&report, "slop/zombie-catch");
     assert_eq!(zombies.len(), 1, "the C++ table knows spdlog: {zombies:#?}");
     assert_eq!(zombies[0].line, 11, "the handler is the `catch` on line 11");
-    assert_eq!(zombies[0].severity, Severity::Deny);
+    assert_eq!(zombies[0].severity, Severity::Major);
     assert_eq!(
         zombies[0].message,
         "error handler logs and rethrows the same error"

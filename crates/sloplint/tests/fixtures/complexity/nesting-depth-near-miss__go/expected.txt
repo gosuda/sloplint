@@ -1,1 +1,1 @@
-# Depth 3 below strict warn_at=4.
+# Depth 3 below strict minor_at=4.

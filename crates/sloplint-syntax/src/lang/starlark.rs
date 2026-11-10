@@ -52,7 +52,7 @@ impl LangHooks for StarlarkHooks {
             name_pos: pos_of(name_node),
             public: !name.starts_with('_'),
             interface_bound: false,
-            in_test: cx.is_test_file,
+            region: None,
             params: params(cx, n),
             return_type: child_by_field(n, "return_type").map(|ty| trimmed(cx, ty)),
             missing_annotations: Vec::new(),
@@ -124,7 +124,6 @@ impl LangHooks for StarlarkHooks {
                 name: module,
                 alias: None,
                 kind: ImportKind::SideEffect,
-                in_test: cx.is_test_file,
             });
         } else {
             out.extend(symbols);
@@ -380,7 +379,6 @@ fn symbol_import<'s>(
         name,
         alias,
         kind: ImportKind::Named,
-        in_test: cx.is_test_file,
     })
 }
 

@@ -13,7 +13,7 @@ use sloplint::{
     Execution, Report, RunError, RunOptions, Summary, TerminalText, init, next_control,
 };
 use sloplint_core::finding::line_starts;
-use sloplint_core::{Finding, RuleFilter, Severity};
+use sloplint_core::{Finding, RuleFilter};
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
@@ -52,6 +52,7 @@ fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
         strictness: args.run.select.strictness.map(Into::into),
         mode: args.mode.map(Into::into),
         fail_on: args.fail_on.map(Into::into),
+        min_confidence: args.min_confidence.map(Into::into),
         rule_filter: RuleFilter(args.rules.clone()),
         use_cache: !args.run.no_cache,
         jobs: args.run.jobs.unwrap_or(0),
@@ -76,6 +77,7 @@ fn baseline(cwd: &Path, args: &BaselineArgs) -> ExitCode {
         strictness: args.run.select.strictness.map(Into::into),
         mode: None,
         fail_on: None,
+        min_confidence: None,
         rule_filter: RuleFilter::default(),
         use_cache: !args.run.no_cache,
         jobs: args.run.jobs.unwrap_or(0),
@@ -202,7 +204,9 @@ fn render_findings(findings: &[Finding]) -> io::Result<Vec<u8>> {
         buffer.write_all(b":")?;
         buffer.write_all(digits.format(finding.column).as_bytes())?;
         buffer.write_all(b": ")?;
-        buffer.write_all(severity_name(finding.severity).as_bytes())?;
+        buffer.write_all(finding.severity.as_str().as_bytes())?;
+        buffer.write_all(b"/")?;
+        buffer.write_all(finding.confidence.as_str().as_bytes())?;
         buffer.write_all(b": ")?;
         TerminalText::line(&finding.message).write_escaped(&mut buffer)?;
         buffer.write_all(b" [")?;
@@ -322,15 +326,24 @@ fn render_finding(
     let start = span_for(raw, finding.column).start;
     let span = TerminalText::line(&raw[..start]).into_text().len()..text.len();
     let level = match finding.severity {
-        Severity::Deny => Level::ERROR,
-        Severity::Warn => Level::WARNING,
+        sloplint_core::finding::Severity::Blocker => Level::ERROR,
+        sloplint_core::finding::Severity::Critical => Level::WARNING,
+        sloplint_core::finding::Severity::Major => Level::INFO,
+        sloplint_core::finding::Severity::Minor => Level::NOTE,
+        sloplint_core::finding::Severity::Info => Level::HELP,
     };
     let why = report
         .rules_fired
         .get(&*finding.rule)
         .map_or("", String::as_str);
+    let head = format!(
+        "{}/{}: {}",
+        finding.severity.as_str(),
+        finding.confidence.as_str(),
+        finding.message
+    );
     let title = level
-        .primary_title(TerminalText::line(&finding.message).into_text())
+        .primary_title(TerminalText::line(&head).into_text())
         .id(TerminalText::line(&finding.rule).into_text());
     let snippet = Snippet::source(text)
         .line_start(usize::try_from(finding.line).unwrap_or(usize::MAX))
@@ -361,23 +374,19 @@ fn span_for(text: &str, column: u32) -> Range<usize> {
 
 fn summary_line(summary: &Summary) -> String {
     format!(
-        "summary: strictness={} files={} findings={} deny={} warn={} baselined={} stale={} skipped={}",
+        "summary: strictness={} files={} findings={} blocker={} critical={} major={} minor={} info={} baselined={} stale={} skipped={}",
         summary.strictness.as_str(),
         summary.files,
         summary.findings,
-        summary.deny,
-        summary.warn,
+        summary.blocker,
+        summary.critical,
+        summary.major,
+        summary.minor,
+        summary.info,
         summary.baselined,
         summary.stale,
         summary.skipped
     )
-}
-
-fn severity_name(severity: Severity) -> &'static str {
-    match severity {
-        Severity::Warn => "warn",
-        Severity::Deny => "deny",
-    }
 }
 
 fn print_text_status(text: &str, kind: TextKind) -> u8 {

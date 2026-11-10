@@ -79,7 +79,7 @@ impl LangHooks for CppHooks {
             name_pos: pos_of(name_node),
             public: is_public(cx, n, member_list(n)),
             interface_bound: name_node.kind() == "operator_name" || is_bound(n, fd),
-            in_test: cx.is_test_file,
+            region: None,
             params: c_family::params(
                 cx,
                 fd,
@@ -416,7 +416,6 @@ fn push_include<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
         name: "",
         alias: None,
         kind: ImportKind::SideEffect,
-        in_test: cx.is_test_file,
     });
 }
 fn scope_of(path: &str) -> (&str, &str) {
@@ -437,7 +436,6 @@ fn push_using<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
             name: "",
             alias: None,
             kind: ImportKind::Wildcard,
-            in_test: cx.is_test_file,
         });
         return;
     }
@@ -448,7 +446,6 @@ fn push_using<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
             name: text(cx, target),
             alias: None,
             kind: ImportKind::Named,
-            in_test: cx.is_test_file,
         });
         return;
     }
@@ -459,7 +456,6 @@ fn push_using<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
         name,
         alias: None,
         kind: ImportKind::Named,
-        in_test: cx.is_test_file,
     });
 }
 fn push_alias<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) -> Option<()> {
@@ -474,7 +470,6 @@ fn push_alias<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) -> Op
         name,
         alias: Some(text(cx, alias_node)),
         kind: ImportKind::Named,
-        in_test: cx.is_test_file,
     });
     Some(())
 }

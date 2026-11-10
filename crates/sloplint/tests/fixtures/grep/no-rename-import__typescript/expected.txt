@@ -1,2 +1,2 @@
-src/mod.ts:1 warn grep/no-rename-import
-src/mod.ts:2 warn grep/no-rename-import
+src/mod.ts:1 minor grep/no-rename-import
+src/mod.ts:2 minor grep/no-rename-import

@@ -4,6 +4,7 @@
 //! an operand, not a failure message.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 const SOURCE: &str = r#"class VerifyTest < Minitest::Test
@@ -27,7 +28,7 @@ fn block_only_assertions_still_count() {
         lang: Lang::Ruby,
         path: "case.rb",
         source: "class VerifyTest < Minitest::Test\n  def verify\n    assert_silent { work }\n    assert_raises { work }\n  end\nend\n",
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.rb parses");
@@ -51,7 +52,7 @@ fn trailing_string_is_a_message_only_after_both_operands() {
         lang: Lang::Ruby,
         path: "case.rb",
         source: SOURCE,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.rb parses");

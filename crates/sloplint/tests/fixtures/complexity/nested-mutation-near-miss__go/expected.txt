@@ -1,1 +1,1 @@
-# Single-loop accumulator has depth 1, below strict warn_at=2.
+# Single-loop accumulator has depth 1, below strict minor_at=2.

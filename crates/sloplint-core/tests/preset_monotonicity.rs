@@ -5,12 +5,21 @@ use std::collections::BTreeSet;
 
 use sloplint_core::CATALOG;
 use sloplint_core::config::Strictness;
+use sloplint_core::finding::{Level, Severity};
 
 const PROFILES: [Strictness; 4] = [
     Strictness::Minimal,
     Strictness::Basic,
     Strictness::Standard,
     Strictness::Strict,
+];
+
+const RUNGS: [Severity; 5] = [
+    Severity::Info,
+    Severity::Minor,
+    Severity::Major,
+    Severity::Critical,
+    Severity::Blocker,
 ];
 
 #[test]
@@ -28,6 +37,17 @@ fn preset_levels_never_loosen_as_strictness_rises() {
                 PROFILES[index]
             );
         }
+    }
+}
+
+#[test]
+fn off_sits_below_every_rung() {
+    assert!(
+        RUNGS.iter().all(|rung| Level::Off < Level::At(*rung)),
+        "Off must order below every rung"
+    );
+    for window in RUNGS.windows(2) {
+        assert!(window[0] < window[1], "ladder must order {window:?}");
     }
 }
 
@@ -52,7 +72,30 @@ fn preset_numbers_never_loosen_as_strictness_rises() {
                 previous = value;
             }
         }
-        assert_warn_at_never_exceeds_deny_at(info.id, &tables);
+        assert_ladder_cut_points_ordered(info.id, &tables);
+    }
+}
+
+#[test]
+fn every_graded_rule_sets_all_four_cut_points() {
+    for info in CATALOG {
+        let tables: Vec<toml::Table> = PROFILES
+            .iter()
+            .map(|strictness| (info.preset)(*strictness).options)
+            .collect();
+        let graded = tables.iter().any(|table| table.contains_key("minor_at"));
+        if !graded {
+            continue;
+        }
+        for (table, strictness) in tables.iter().zip(PROFILES.iter()) {
+            for key in ["minor_at", "major_at", "critical_at", "blocker_at"] {
+                assert!(
+                    table.get(key).is_some(),
+                    "{}: graded rule is missing `{key}` at {strictness:?}",
+                    info.id
+                );
+            }
+        }
     }
 }
 
@@ -65,8 +108,8 @@ enum Loosening {
 fn direction(key: &str) -> Loosening {
     match key {
         "min_len" => Loosening::Rising,
-        "warn_at" | "deny_at" | "window" | "min_repeats" | "min_files" | "min_fields"
-        | "min_similarity" => Loosening::Falling,
+        "minor_at" | "major_at" | "critical_at" | "blocker_at" | "window" | "min_repeats"
+        | "min_files" | "min_fields" | "min_similarity" => Loosening::Falling,
         other => panic!(
             "numeric preset option `{other}` has no direction in preset_monotonicity::direction; \
              declare whether a larger value is stricter before shipping it"
@@ -122,15 +165,35 @@ fn assert_stable_numeric_keys(rule: &str, tables: &[toml::Table]) {
     }
 }
 
-fn assert_warn_at_never_exceeds_deny_at(rule: &str, tables: &[toml::Table]) {
+fn assert_ladder_cut_points_ordered(rule: &str, tables: &[toml::Table]) {
     for (table, strictness) in tables.iter().zip(PROFILES.iter()) {
-        let (Some(warn_at), Some(deny_at)) = (table.get("warn_at"), table.get("deny_at")) else {
+        let cuts: Vec<(&str, i64)> = ["minor_at", "major_at", "critical_at", "blocker_at"]
+            .into_iter()
+            .filter_map(|key| {
+                table
+                    .get(key)
+                    .and_then(|value| value.as_integer())
+                    .map(|cut| (key, cut))
+            })
+            .collect();
+        if cuts.is_empty() {
             continue;
-        };
-        let order = compare(rule, "warn_at", warn_at, deny_at);
-        assert!(
-            order != Ordering::Greater,
-            "{rule}: warn_at {warn_at} exceeds deny_at {deny_at} at {strictness:?}"
+        }
+        assert_eq!(
+            cuts.len(),
+            4,
+            "{rule}: graded cut points must come as a full ladder set at {strictness:?}"
         );
+        for pair in cuts.windows(2) {
+            assert!(
+                pair[0].1 <= pair[1].1,
+                "{}: `{}` {} exceeds `{}` {} at {strictness:?}",
+                rule,
+                pair[0].0,
+                pair[0].1,
+                pair[1].0,
+                pair[1].1
+            );
+        }
     }
 }

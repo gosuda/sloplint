@@ -1,1 +1,1 @@
-src/app.js:2 deny complexity/mutable-span
+src/app.js:2 major complexity/mutable-span

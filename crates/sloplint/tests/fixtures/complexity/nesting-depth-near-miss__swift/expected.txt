@@ -1,1 +1,1 @@
-# depth 3: below deny_at=5.
+# depth 3: below major_at=5.

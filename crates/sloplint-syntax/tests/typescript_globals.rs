@@ -1,5 +1,6 @@
 use sloplint_core::facts::AmbientKind;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 fn globals(lang: Lang, source: &str) -> (Vec<String>, bool, bool) {
@@ -9,7 +10,7 @@ fn globals(lang: Lang, source: &str) -> (Vec<String>, bool, bool) {
         lang,
         path: "a.ts",
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut parsers, &input, &custom);
     assert!(

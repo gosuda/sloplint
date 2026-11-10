@@ -1,7 +1,5 @@
-use std::io;
-
 use super::{Config, config_key, hash_regular_into};
-use crate::fileio::{open_regular, read_bounded};
+use sloplint_core::{Confidence, FailOn, config::Mode};
 
 fn pseudo_random(len: usize) -> Vec<u8> {
     let mut state = 0x2545f4914f6cdd1du64;
@@ -30,31 +28,35 @@ fn streamed_file_hash_matches_a_one_shot_read() {
     );
 }
 
-fn materialized_config_key(
-    config: &Config,
-    custom_sources: &[(String, String)],
-) -> io::Result<[u8; 32]> {
-    let mut hasher = blake3::Hasher::new();
-    let exe = std::env::current_exe()?;
-    let (file, len) = open_regular(&exe)?;
-    hasher.update(&read_bounded(file, len)?);
-    hasher.update(&sonic_rs::to_vec(config).map_err(io::Error::other)?);
-    for (rel, text) in custom_sources {
-        hasher.update(rel.as_bytes());
-        hasher.update(&[0u8]);
-        hasher.update(text.as_bytes());
-    }
-    Ok(*hasher.finalize().as_bytes())
+#[test]
+fn gate_only_settings_keep_the_cache_key() {
+    let base = Config::default();
+    let mut gated = Config::default();
+    gated.project.fail_on = FailOn::Never;
+    gated.project.min_confidence = Confidence::High;
+    gated.project.mode = Mode::Ratchet;
+    gated.project.baseline = String::from("other-baseline.json");
+    let custom_sources = vec![("rel".to_string(), "text".to_string())];
+    let uncut = config_key(&base, &custom_sources).unwrap();
+    let regated = config_key(&gated, &custom_sources).unwrap();
+    assert_eq!(
+        uncut, regated,
+        "fail_on, min_confidence, mode, and baseline must not invalidate the cache"
+    );
 }
 
 #[test]
-fn config_key_matches_the_materialized_original() {
-    let config = Config::default();
+fn rule_level_changes_the_cache_key() {
+    let base = Config::default();
+    let mut changed = Config::default();
+    let mut table = toml::Table::new();
+    table.insert("level".to_string(), toml::Value::String("off".to_string()));
+    changed.rules.insert("grep/generic-name".to_string(), table);
     let custom_sources = vec![("rel".to_string(), "text".to_string())];
-    let streamed = config_key(&config, &custom_sources).unwrap();
-    let materialized = materialized_config_key(&config, &custom_sources).unwrap();
-    assert_eq!(
-        streamed, materialized,
-        "config_key must equal the pre-change materialized key on this executable"
+    let uncut = config_key(&base, &custom_sources).unwrap();
+    let releveled = config_key(&changed, &custom_sources).unwrap();
+    assert_ne!(
+        uncut, releveled,
+        "a rule level changes analysis and must invalidate the cache"
     );
 }

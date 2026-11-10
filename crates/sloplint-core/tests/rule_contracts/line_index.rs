@@ -85,13 +85,14 @@ fn an_index_from_another_source_resolves_without_panicking() {
 fn findings_agree_with_source_findings_at_every_position() {
     let facts = facts_for(Lang::Rust, "src/mixed.rs", MIXED);
     for pos in positions(MIXED) {
-        let indexed = Finding::at(&facts, pos, "r/x", Severity::Warn, "m".into(), "f".into());
+        let indexed = Finding::at(&facts, pos, "r/x", Severity::Minor, "m".into(), "f".into());
         let text = SourceText {
             path: facts.path,
             source: facts.source,
             line_starts: &facts.line_starts,
         };
-        let scanned = Finding::at_source(&text, pos, "r/x", Severity::Warn, "m".into(), "f".into());
+        let scanned =
+            Finding::at_source(&text, pos, "r/x", Severity::Minor, "m".into(), "f".into());
         assert_eq!(
             indexed, scanned,
             "Finding::at must equal Finding::at_source at {pos:?}"

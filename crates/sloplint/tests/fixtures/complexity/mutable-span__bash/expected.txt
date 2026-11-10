@@ -1,2 +1,2 @@
-# Positive: `total` stays mutable for 30 lines (strict deny at 30).
-a.sh:2 deny complexity/mutable-span
+# Positive: `total` stays mutable for 30 lines (strict major at 30).
+a.sh:2 major complexity/mutable-span

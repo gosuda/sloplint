@@ -1,1 +1,1 @@
-src/a.cpp:5 warn agent/catch-all-match
+src/a.cpp:5 minor agent/catch-all-match

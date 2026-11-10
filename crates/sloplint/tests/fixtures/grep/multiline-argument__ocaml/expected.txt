@@ -1,1 +1,1 @@
-src/lib.ml:2 warn grep/multiline-argument
+src/lib.ml:2 minor grep/multiline-argument

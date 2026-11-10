@@ -1,1 +1,1 @@
-src/dyn.py:2 warn grep/no-dynamic-symbol
+src/dyn.py:2 minor grep/no-dynamic-symbol

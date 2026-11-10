@@ -1,1 +1,1 @@
-a.mli:1 warn meta/parse-error
+a.mli:1 minor meta/parse-error

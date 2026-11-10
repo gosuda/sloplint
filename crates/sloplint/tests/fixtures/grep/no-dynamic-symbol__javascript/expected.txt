@@ -1,1 +1,1 @@
-src/app.js:2 warn grep/no-dynamic-symbol
+src/app.js:2 minor grep/no-dynamic-symbol

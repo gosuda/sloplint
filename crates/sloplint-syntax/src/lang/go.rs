@@ -9,9 +9,10 @@ use tree_sitter::Node;
 use crate::hooks::{
     CallHead, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
     first_named_child, first_named_child_matching, last_named_child, named_children, narrow,
-    pos_of, preceding_comments, string_arg_shape, strip_quotes, text,
+    pos_of, preceding_comments, region_of, string_arg_shape, strip_quotes, text,
 };
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_declaration", Role::Function),
@@ -188,7 +189,6 @@ fn spec_import<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<Import<'s>>) {
     let module = child_by_field(spec, "path").map_or("", |p| strip_quotes(text(cx, p)));
     let seg = version_seg(module);
     let pos = pos_of(spec);
-    let test = cx.is_test_file;
     match child_by_field(spec, "name").map(|v| v.kind()) {
         Some("dot") => out.push(Import {
             pos,
@@ -196,7 +196,6 @@ fn spec_import<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<Import<'s>>) {
             name: "*",
             alias: None,
             kind: ImportKind::Wildcard,
-            in_test: test,
         }),
         Some("blank_identifier") => out.push(Import {
             pos,
@@ -204,7 +203,6 @@ fn spec_import<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<Import<'s>>) {
             name: "",
             alias: None,
             kind: ImportKind::SideEffect,
-            in_test: test,
         }),
         Some(_) => out.push(Import {
             pos,
@@ -212,7 +210,6 @@ fn spec_import<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<Import<'s>>) {
             name: seg,
             alias: child_by_field(spec, "name").map(|v| text(cx, v)),
             kind: ImportKind::Named,
-            in_test: test,
         }),
         None => out.push(Import {
             pos,
@@ -220,7 +217,6 @@ fn spec_import<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<Import<'s>>) {
             name: seg,
             alias: None,
             kind: ImportKind::Named,
-            in_test: test,
         }),
     }
 }
@@ -393,6 +389,38 @@ fn report_go_env<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &
     out.push((AmbientKind::EnvRead, callee, pos_of(n)));
 }
 
+fn go_is_test_file(path: &str) -> bool {
+    path.rsplit('/')
+        .next()
+        .unwrap_or(path)
+        .ends_with("_test.go")
+}
+fn go_name_ok(name: &str, prefix: &str) -> bool {
+    name.strip_prefix(prefix).is_some_and(|rest| {
+        rest.is_empty() || rest.chars().next().is_some_and(|c| !c.is_lowercase())
+    })
+}
+fn go_sig_ok(params: &[Param<'_>], want: &str) -> bool {
+    params.len() == 1 && params[0].ty.is_some_and(|ty| ty.trim() == want)
+}
+fn go_marker(name: &str, params: &[Param<'_>], path: &str) -> Option<CodeRole> {
+    if !go_is_test_file(path) {
+        return None;
+    }
+    if go_name_ok(name, "Test") && go_sig_ok(params, "*testing.T") {
+        return Some(CodeRole::Test);
+    }
+    if go_name_ok(name, "Benchmark") && go_sig_ok(params, "*testing.B") {
+        return Some(CodeRole::Bench);
+    }
+    if go_name_ok(name, "Fuzz") && go_sig_ok(params, "*testing.F") {
+        return Some(CodeRole::Bench);
+    }
+    if go_name_ok(name, "Example") && params.is_empty() {
+        return Some(CodeRole::Example);
+    }
+    None
+}
 impl LangHooks for GoHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let name_node = child_by_field(n, "name")?;
@@ -402,15 +430,15 @@ impl LangHooks for GoHooks {
             go_params(cx, list, &mut params);
         }
         let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
+        let marker = (n.kind() == "function_declaration")
+            .then(|| go_marker(name, &params, cx.path))
+            .flatten();
         Some(FunctionHead {
             name,
             name_pos: pos_of(name_node),
             public: name.chars().next().is_some_and(|c| c.is_uppercase()),
             interface_bound: n.kind() == "method_declaration",
-            in_test: cx.is_test_file
-                && ["Test", "Benchmark", "Fuzz", "Example"]
-                    .iter()
-                    .any(|p| name.starts_with(*p)),
+            region: marker.map(|role| region_of(n, role)),
             params,
             return_type: child_by_field(n, "result").map(|t| text(cx, t)),
             missing_annotations: Vec::new(),

@@ -1,17 +1,25 @@
 use serde::{Deserialize, Serialize};
 
-use super::{parse_options, string_values};
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Import, ImportKind};
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
+use crate::rules::{parse_options, string_values};
 
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "grep/no-rename-import",
     family: Family::Grep,
     summary: "import aliases that hide the original name from text search",
     why: "An alias removes the original name from text search at every use site.",
-    exempt_tests: false,
+    confidence: Confidence::High,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Lower1,
+        support: Shift::Keep,
+        bench: Shift::Lower1,
+        example: Shift::Keep,
+    },
     preset,
     build: Build::File(build),
 };
@@ -30,7 +38,9 @@ fn preset(strictness: Strictness) -> Preset {
     Preset {
         level: match strictness {
             Strictness::Minimal => Level::Off,
-            Strictness::Basic | Strictness::Standard | Strictness::Strict => Level::Warn,
+            Strictness::Basic | Strictness::Standard | Strictness::Strict => {
+                Level::At(Severity::Minor)
+            }
         },
         options: fixed_options(),
     }
@@ -62,7 +72,7 @@ impl FileRule for NoRenameImport {
                 facts,
                 import.pos,
                 INFO.id,
-                Severity::Deny,
+                Severity::Major,
                 format!("import alias `{alias}` hides `{}` from text search", import.name),
                 format!(
                     "import `{}` under its own name and qualify it with its module where names collide",

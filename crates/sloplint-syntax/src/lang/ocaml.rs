@@ -165,7 +165,7 @@ fn let_head<'s>(
         name_pos: name_node.map(pos_of).unwrap_or_else(|| pos_of(lb)),
         public,
         interface_bound: impl_bound(cx),
-        in_test: cx.is_test_file,
+        region: None,
         params,
         return_type,
         missing_annotations: missing,
@@ -459,7 +459,7 @@ impl LangHooks for OcamlHooks {
                     name_pos: pos_of(name_node),
                     public: true,
                     interface_bound: false,
-                    in_test: false,
+                    region: None,
                     params,
                     return_type,
                     missing_annotations: Vec::new(),
@@ -594,7 +594,6 @@ impl LangHooks for OcamlHooks {
                 name: "",
                 alias: None,
                 kind: ImportKind::Wildcard,
-                in_test: false,
             };
             out.push(opened);
             return;
@@ -622,7 +621,6 @@ impl LangHooks for OcamlHooks {
             name,
             alias,
             kind: ImportKind::Namespace,
-            in_test: false,
         };
         out.push(aliased);
     }

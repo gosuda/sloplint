@@ -1,1 +1,1 @@
-src/Store.cs:2 deny agent/ambient-global-state
+src/Store.cs:2 major agent/ambient-global-state

@@ -1,1 +1,1 @@
-a.bzl:2 warn grep/no-dynamic-symbol
+a.bzl:2 minor grep/no-dynamic-symbol

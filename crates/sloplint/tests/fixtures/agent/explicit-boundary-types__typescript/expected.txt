@@ -1,1 +1,1 @@
-src/mod.ts:1 warn agent/explicit-boundary-types
+src/mod.ts:1 minor agent/explicit-boundary-types

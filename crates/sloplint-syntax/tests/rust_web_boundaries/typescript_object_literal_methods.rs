@@ -3,6 +3,7 @@
 //! public nor interface-bound, which is how the JavaScript adapter already reads it.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 type Row = (String, bool, bool);
@@ -13,7 +14,7 @@ fn methods(lang: Lang, path: &str, source: &str) -> Vec<Row> {
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(

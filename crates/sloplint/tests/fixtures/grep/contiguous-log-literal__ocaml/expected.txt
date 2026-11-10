@@ -1,2 +1,2 @@
-src/lib.ml:2 deny grep/contiguous-log-literal
-src/lib.ml:3 deny grep/contiguous-log-literal
+src/lib.ml:2 major grep/contiguous-log-literal
+src/lib.ml:3 major grep/contiguous-log-literal

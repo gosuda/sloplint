@@ -1,2 +1,2 @@
-src/imports.php:2 warn grep/no-rename-import
-src/imports.php:3 warn grep/no-rename-import
+src/imports.php:2 minor grep/no-rename-import
+src/imports.php:3 minor grep/no-rename-import

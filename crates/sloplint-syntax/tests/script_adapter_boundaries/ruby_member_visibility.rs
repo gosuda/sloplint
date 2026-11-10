@@ -7,6 +7,7 @@
 //! `analyze` only.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 /// `(name, public)` for every function in `source`, sorted by name.
@@ -16,7 +17,7 @@ fn publicity(source: &str) -> Vec<(String, bool)> {
         lang: Lang::Ruby,
         path: "case.rb",
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.rb parses cleanly");

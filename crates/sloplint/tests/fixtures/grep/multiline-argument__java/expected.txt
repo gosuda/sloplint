@@ -1,1 +1,1 @@
-src/Calc.java:3 warn grep/multiline-argument
+src/Calc.java:3 minor grep/multiline-argument

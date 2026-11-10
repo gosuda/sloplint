@@ -1,1 +1,1 @@
-a.odin:8 deny complexity/nested-mutation
+a.odin:8 major complexity/nested-mutation

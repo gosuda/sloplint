@@ -1,1 +1,1 @@
-big.odin:1 deny agent/file-token-budget
+big.odin:1 major agent/file-token-budget

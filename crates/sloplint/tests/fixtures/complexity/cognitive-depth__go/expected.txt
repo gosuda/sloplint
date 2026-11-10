@@ -1,1 +1,1 @@
-a.go:2 deny complexity/cognitive-depth
+a.go:2 major complexity/cognitive-depth

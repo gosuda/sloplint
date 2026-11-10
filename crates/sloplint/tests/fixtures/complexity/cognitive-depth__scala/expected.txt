@@ -1,2 +1,2 @@
-# Positive: 16 sequential ifs = cognitive 16 >= strict deny_at 15.
-src/tangled.scala:2 deny complexity/cognitive-depth
+# Positive: 16 sequential ifs = cognitive 16 >= strict major_at 15.
+src/tangled.scala:2 major complexity/cognitive-depth

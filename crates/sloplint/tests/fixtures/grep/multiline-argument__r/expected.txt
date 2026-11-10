@@ -1,1 +1,1 @@
-src/call.R:2 warn grep/multiline-argument
+src/call.R:2 minor grep/multiline-argument

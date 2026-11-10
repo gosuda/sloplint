@@ -1,2 +1,2 @@
-src/names.php:2 warn grep/generic-name
-src/names.php:5 warn grep/generic-name
+src/names.php:2 minor grep/generic-name
+src/names.php:5 minor grep/generic-name

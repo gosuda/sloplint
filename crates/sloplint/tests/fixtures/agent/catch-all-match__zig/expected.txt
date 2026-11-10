@@ -1,2 +1,2 @@
 # Positive: `else` arm over enum-like (member-expression) patterns.
-src/status.zig:11 warn agent/catch-all-match
+src/status.zig:11 minor agent/catch-all-match

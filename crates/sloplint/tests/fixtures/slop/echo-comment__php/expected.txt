@@ -1,1 +1,1 @@
-src/order.php:2 warn slop/echo-comment
+src/order.php:2 minor slop/echo-comment

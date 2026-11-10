@@ -1,1 +1,1 @@
-src/render.kt:2 warn grep/multiline-argument
+src/render.kt:2 minor grep/multiline-argument

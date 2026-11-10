@@ -1,1 +1,1 @@
-src/flags.py:1 deny complexity/boolean-params
+src/flags.py:1 major complexity/boolean-params

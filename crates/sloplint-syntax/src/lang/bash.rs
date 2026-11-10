@@ -108,7 +108,7 @@ impl LangHooks for BashHooks {
             name_pos: pos_of(name_node),
             public: true,
             interface_bound: false,
-            in_test: cx.is_test_file,
+            region: None,
             params: Vec::new(),
             return_type: None,
             missing_annotations: Vec::new(),

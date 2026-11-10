@@ -1,1 +1,1 @@
-src/mod.ts:9 warn agent/catch-all-match
+src/mod.ts:9 minor agent/catch-all-match

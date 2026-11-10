@@ -7,7 +7,8 @@
 use std::sync::LazyLock;
 
 use sloplint_core::lang::Lang;
-use sloplint_core::{CustomRuleSpec, Severity};
+use sloplint_core::role::CodeRole;
+use sloplint_core::{Confidence, CustomRuleSpec, Severity};
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 /// JavaScript, TypeScript and TSX: every grammar that parses a script.
@@ -33,7 +34,7 @@ fn analyze_with<'s>(
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     analyze(&mut Parsers::new(), &input, custom)
 }
@@ -88,7 +89,8 @@ fn query_spec(language: &str, query: &str) -> CustomRuleSpec {
     CustomRuleSpec {
         id: "custom/probe".to_string(),
         language: language.to_string(),
-        severity: Severity::Warn,
+        severity: Severity::Minor,
+        confidence: Confidence::Medium,
         message: "probe".to_string(),
         why: "probe".to_string(),
         fix: "probe".to_string(),

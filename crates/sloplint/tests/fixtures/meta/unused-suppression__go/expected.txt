@@ -1,1 +1,1 @@
-a.go:2 warn meta/unused-suppression
+a.go:2 minor meta/unused-suppression

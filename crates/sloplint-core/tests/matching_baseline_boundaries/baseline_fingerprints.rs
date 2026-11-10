@@ -1,12 +1,13 @@
 use std::collections::{BTreeSet, HashMap};
 
 use proptest::prelude::*;
-use sloplint_core::{Baseline, BaselineEntry, Finding, Severity};
+use sloplint_core::{Baseline, BaselineEntry, Confidence, Finding, Severity};
 
 fn finding(rule: &str, path: &str, line: u32, context: &str) -> Finding {
     Finding {
         rule: rule.into(),
-        severity: Severity::Warn,
+        severity: Severity::Minor,
+        confidence: Confidence::Medium,
         path: path.into(),
         line,
         column: 1,

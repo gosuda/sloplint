@@ -1,1 +1,1 @@
-a.odin:4 warn complexity/mutable-span
+a.odin:4 minor complexity/mutable-span

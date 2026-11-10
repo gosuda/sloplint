@@ -1,18 +1,24 @@
 use std::borrow::Cow;
 
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import,
-    ImportKind, Param, Pos, Stmt, TypeDef, WildcardArm,
+    AmbientKind, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import, ImportKind,
+    Param, Pos, Stmt, TypeDef, WildcardArm,
 };
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
-    child_by_field, code_children, count_named_child, find_named_child, first_of_kind,
-    has_child_kind, named_children, narrow, only_named_child_matching, pos_of, preceding_comments,
-    sole_call_id, string_arg_shape, strip_quotes, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field,
+    code_children, count_named_child, find_named_child, first_of_kind, has_child_kind,
+    named_children, narrow, pos_of, strip_quotes, text,
 };
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
+
+mod calls;
+
+use calls::{call_head, closure_params, head_for};
+
+pub(crate) use calls::test_call_marker;
 
 macro_rules! js_table {
     ($($extra:expr),* $(,)?) => {
@@ -110,14 +116,6 @@ fn top_level(n: Node<'_>) -> bool {
         n.parent().map(|parent| parent.kind()),
         Some("program" | "export_statement")
     )
-}
-
-fn span_arg<'s>(n: Node<'_>, shape: ArgShape<'s>) -> Arg<'s> {
-    Arg {
-        shape,
-        start_line: narrow(n.start_position().row).saturating_add(1),
-        end_line: narrow(n.end_position().row).saturating_add(1),
-    }
 }
 
 fn formal_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>) -> Vec<Param<'s>> {
@@ -221,7 +219,6 @@ fn field_site<'a>(cx: &Cx<'_, '_>, n: Node<'a>, field: Node<'a>) -> Option<Closu
 struct ImportSite<'s> {
     pos: Pos,
     module: &'s str,
-    in_test: bool,
 }
 
 impl<'s> ImportSite<'s> {
@@ -232,42 +229,8 @@ impl<'s> ImportSite<'s> {
             name,
             alias,
             kind,
-            in_test: self.in_test,
         }
     }
-}
-
-fn closure_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
-    if let Some(single) = child_by_field(n, "parameter") {
-        return vec![Param {
-            name: text(cx, single),
-            ty: None,
-            bool_default: false,
-        }];
-    }
-    child_by_field(n, "parameters").map_or_else(Vec::new, |list| formal_params(cx, list))
-}
-
-fn sole_call_of(body: Node<'_>) -> Option<usize> {
-    sole_call_id(
-        body,
-        |block| only_named_child_matching(block, |c| c.kind() != "comment"),
-        statement_call,
-    )
-}
-
-fn statement_call(statement: Node<'_>) -> Option<usize> {
-    if !matches!(
-        statement.kind(),
-        "return_statement" | "expression_statement"
-    ) {
-        return None;
-    }
-    let mut expression = first_code(statement)?;
-    if expression.kind() == "await_expression" {
-        expression = first_code(expression)?;
-    }
-    (expression.kind() == "call_expression").then(|| expression.id())
 }
 
 struct HeadSite<'a> {
@@ -275,82 +238,6 @@ struct HeadSite<'a> {
     header: Node<'a>,
     public: bool,
     body: Node<'a>,
-}
-
-fn head_for<'s>(cx: &Cx<'_, 's>, site: HeadSite<'_>, params: Vec<Param<'s>>) -> FunctionHead<'s> {
-    let (doc, doc_pos) = preceding_comments(cx, site.header, COMMENTS, &[]);
-    FunctionHead {
-        name: text(cx, site.name),
-        name_pos: pos_of(site.name),
-        public: site.public,
-        interface_bound: false,
-        in_test: cx.is_test_file,
-        params,
-        return_type: None,
-        missing_annotations: Vec::new(),
-        doc,
-        doc_pos,
-        sole_call: sole_call_of(site.body),
-    }
-}
-
-fn root_of_callee(n: Node<'_>) -> Option<Node<'_>> {
-    let mut current = n;
-    loop {
-        current = match current.kind() {
-            "identifier" | "this" | "super" => return Some(current),
-            "member_expression" | "subscript_expression" => child_by_field(current, "object")?,
-            "parenthesized_expression" => first_code(current)?,
-            _ => return None,
-        };
-    }
-}
-
-fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    match n.kind() {
-        "string" | "template_string" => string_arg_shape(cx, n, &["string_fragment"]),
-        "binary_expression" if binary_concat(cx, n, "+", &["string", "template_string"]) => {
-            ArgShape::Concat
-        }
-        "identifier" => ArgShape::Ident(text(cx, n)),
-        _ => ArgShape::Other,
-    }
-}
-
-fn call_args<'s>(cx: &Cx<'_, 's>, arguments: Node<'_>) -> Vec<Arg<'s>> {
-    if arguments.kind() == "template_string" {
-        return vec![span_arg(arguments, arg_shape(cx, arguments))];
-    }
-    code_children(arguments)
-        .into_iter()
-        .map(|arg| span_arg(arg, arg_shape(cx, arg)))
-        .collect()
-}
-
-fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
-    match n.kind() {
-        "call_expression" => {
-            let function = child_by_field(n, "function")?;
-            let args = child_by_field(n, "arguments").map_or_else(Vec::new, |a| call_args(cx, a));
-            Some(CallHead {
-                callee: text(cx, function),
-                kind: CallKind::Plain,
-                callee_root: root_of_callee(function).map(|root| text(cx, root)),
-                args,
-            })
-        }
-        "new_expression" => {
-            let constructor = child_by_field(n, "constructor")?;
-            let args = child_by_field(n, "arguments").map_or_else(Vec::new, |a| call_args(cx, a));
-            Some(CallHead {
-                callee: text(cx, constructor),
-                kind: CallKind::New,
-                callee_root: None,
-                args,
-            })
-        }
-        _ => None,
-    }
 }
 
 fn declared_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
@@ -557,7 +444,6 @@ fn import_facts<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
     let site = ImportSite {
         pos: pos_of(n),
         module,
-        in_test: cx.is_test_file,
     };
     match n.kind() {
         "import_statement" => {
@@ -843,6 +729,9 @@ fn switch_default_arm(n: Node<'_>) -> WildcardArm {
 }
 
 impl LangHooks for JavaScriptHooks {
+    fn call_marker(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        test_call_marker(cx, n)
+    }
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let body = child_by_field(n, "body")?;
         let name = child_by_field(n, "name")?;
@@ -970,7 +859,7 @@ impl LangHooks for JavaScriptHooks {
 
 #[cfg(test)]
 mod tests {
-    use super::sole_call_of;
+    use super::calls::sole_call_of;
 
     fn sole_call_in_js(source: &str) -> Option<usize> {
         let mut parser = tree_sitter::Parser::new();

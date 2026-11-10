@@ -9,7 +9,8 @@ use std::sync::LazyLock;
 
 use sloplint_core::facts::{ArgShape, Call};
 use sloplint_core::lang::Lang;
-use sloplint_core::{CustomRuleSpec, Severity};
+use sloplint_core::role::CodeRole;
+use sloplint_core::{Confidence, CustomRuleSpec, Severity};
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 static NO_CUSTOM: LazyLock<CustomRules> =
@@ -20,7 +21,7 @@ fn run<'s>(source: &'s str) -> Analysis<'s> {
         lang: Lang::PowerShell,
         path: "gap.ps1",
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     analyze(&mut Parsers::new(), &input, &NO_CUSTOM)
 }
@@ -842,7 +843,8 @@ fn query_hits(source: &str, query: &str) -> usize {
     let spec = CustomRuleSpec {
         id: "custom/gap-probe".to_owned(),
         language: "powershell".to_owned(),
-        severity: Severity::Warn,
+        severity: Severity::Minor,
+        confidence: Confidence::Medium,
         message: "probe".to_owned(),
         why: "probe".to_owned(),
         fix: "probe".to_owned(),
@@ -855,7 +857,7 @@ fn query_hits(source: &str, query: &str) -> usize {
         lang: Lang::PowerShell,
         path: "gap.ps1",
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &rules);
     assert!(

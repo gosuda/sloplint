@@ -1,1 +1,1 @@
-a.bzl:2 deny complexity/mutable-span
+a.bzl:2 major complexity/mutable-span

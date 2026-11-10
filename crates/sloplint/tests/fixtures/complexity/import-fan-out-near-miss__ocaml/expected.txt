@@ -1,1 +1,1 @@
-# Near-miss: 9 distinct modules, below strict warn_at 10.
+# Near-miss: 9 distinct modules, below strict minor_at 10.

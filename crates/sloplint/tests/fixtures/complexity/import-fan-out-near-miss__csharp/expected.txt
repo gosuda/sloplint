@@ -1,1 +1,1 @@
-# 9 distinct modules (< warn_at 10): no finding.
+# 9 distinct modules (< minor_at 10): no finding.

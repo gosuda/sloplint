@@ -1,4 +1,5 @@
 use sloplint_core::lang::ALL_LANGS;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 #[test]
@@ -10,7 +11,7 @@ fn every_published_language_parses_and_analyzes() {
             lang: *lang,
             path: "src/sample",
             source: "",
-            is_test_file: false,
+            role: CodeRole::Library,
         };
         let analysis = analyze(&mut parsers, &input, &custom);
         assert!(

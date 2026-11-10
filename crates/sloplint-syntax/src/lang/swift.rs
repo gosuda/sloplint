@@ -7,12 +7,14 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
-    child_by_field, find_map_named_child, find_named_child, first_named_child_matching,
-    first_of_kind, has_child_kind, last_named_child, last_segment, named_children, narrow,
-    only_named_child_matching, pos_of, preceding_comments, slice, string_arg_shape, text, trimmed,
+    CallHead, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, attributed_region,
+    binary_concat, child_by_field, find_map_named_child, find_named_child,
+    first_named_child_matching, first_of_kind, has_child_kind, last_named_child, last_segment,
+    named_children, narrow, only_named_child_matching, pos_of, preceding_comments, slice,
+    string_arg_shape, text, trimmed,
 };
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
 
 pub(crate) struct SwiftHooks;
 
@@ -52,13 +54,15 @@ impl LangHooks for SwiftHooks {
                 s.kind() == "inheritance_specifier" && trimmed(cx, s).contains("XCTestCase")
             })
         });
+        let tested = xctest || swift_test_attribute(cx, n);
         let (doc, doc_pos) = preceding_comments(cx, n, COMMENT_KINDS, &[]);
         Some(FunctionHead {
             name: trimmed(cx, name_node),
             name_pos: pos_of(name_node),
             public: is_public(cx, n),
             interface_bound: class.is_some_and(|c| has_child_kind(c, "inheritance_specifier")),
-            in_test: cx.is_test_file || xctest || swift_test_attribute(cx, n),
+            region: tested
+                .then(|| attributed_region(n, first_of_kind(n, &["modifiers"]), CodeRole::Test)),
             params: params(cx, n),
             return_type: return_type(cx, n),
             missing_annotations: Vec::new(),
@@ -122,7 +126,6 @@ impl LangHooks for SwiftHooks {
             } else {
                 ImportKind::Namespace
             },
-            in_test: cx.is_test_file,
         });
     }
 

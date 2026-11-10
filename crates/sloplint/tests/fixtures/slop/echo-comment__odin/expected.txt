@@ -1,1 +1,1 @@
-a.odin:3 warn slop/echo-comment
+a.odin:3 minor slop/echo-comment

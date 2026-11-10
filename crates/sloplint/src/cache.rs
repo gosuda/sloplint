@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io::{self, Read as _, Write as _};
 use std::path::{Path, PathBuf};
@@ -7,12 +7,14 @@ use std::time::SystemTime;
 
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use sloplint_core::{Config, Finding, Suppression, WorldFacts};
+use sloplint_core::{
+    Config, CustomRuleSpec, Finding, LanguageConfig, Strictness, Suppression, WorldFacts,
+};
 
 use crate::fileio::{open_regular, read_regular_nofollow};
 use crate::terminal::TerminalText;
 
-const VERSION: u32 = 5;
+const VERSION: u32 = 6;
 const NAMESPACE: &str = "sloplint";
 const SHARD_DIR: &str = "cache-v2";
 
@@ -432,11 +434,48 @@ fn hash_regular_into(hasher: &mut blake3::Hasher, path: &Path) -> io::Result<()>
     Ok(())
 }
 
+#[derive(Serialize)]
+struct AnalysisKey<'a> {
+    strictness: Strictness,
+    languages: &'a [String],
+    language_tables: &'a BTreeMap<String, LanguageConfig>,
+    exclude: &'a [String],
+    extend_exclude: &'a [String],
+    test_globs: &'a [String],
+    bench_globs: &'a [String],
+    example_globs: &'a [String],
+    support_globs: &'a [String],
+    entry_globs: &'a [String],
+    data_globs: &'a [String],
+    max_file_bytes: u64,
+    rules: &'a BTreeMap<String, toml::Table>,
+    custom_rules: &'a [CustomRuleSpec],
+}
+
+fn analysis_key(config: &Config) -> AnalysisKey<'_> {
+    let project = &config.project;
+    AnalysisKey {
+        strictness: project.strictness,
+        languages: &project.languages,
+        language_tables: &config.languages,
+        exclude: &project.exclude,
+        extend_exclude: &project.extend_exclude,
+        test_globs: &project.test_globs,
+        bench_globs: &project.bench_globs,
+        example_globs: &project.example_globs,
+        support_globs: &project.support_globs,
+        entry_globs: &project.entry_globs,
+        data_globs: &project.data_globs,
+        max_file_bytes: project.max_file_bytes,
+        rules: &config.rules,
+        custom_rules: &config.custom_rules,
+    }
+}
 fn config_key(config: &Config, custom_sources: &[(String, String)]) -> io::Result<[u8; 32]> {
     let mut hasher = blake3::Hasher::new();
     let exe = std::env::current_exe()?;
     hash_regular_into(&mut hasher, &exe)?;
-    hasher.update(&sonic_rs::to_vec(config).map_err(io::Error::other)?);
+    hasher.update(&sonic_rs::to_vec(&analysis_key(config)).map_err(io::Error::other)?);
     for (rel, text) in custom_sources {
         hasher.update(rel.as_bytes());
         hasher.update(&[0u8]);

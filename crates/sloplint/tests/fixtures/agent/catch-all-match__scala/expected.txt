@@ -1,2 +1,2 @@
 # Positive: wildcard arm alongside a case-class pattern.
-src/shapes.scala:8 warn agent/catch-all-match
+src/shapes.scala:8 minor agent/catch-all-match

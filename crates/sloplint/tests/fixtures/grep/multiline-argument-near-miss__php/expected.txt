@@ -1,1 +1,1 @@
-# Argument spans 5 lines (warn at 6): no finding.
+# Argument spans 5 lines (minor at 6): no finding.

@@ -1,1 +1,1 @@
-src/mod.ts:2 deny complexity/mutable-span
+src/mod.ts:2 major complexity/mutable-span

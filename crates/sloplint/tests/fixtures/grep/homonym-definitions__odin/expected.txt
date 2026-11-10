@@ -1,1 +1,1 @@
-a.odin:3 warn grep/homonym-definitions
+a.odin:3 minor grep/homonym-definitions

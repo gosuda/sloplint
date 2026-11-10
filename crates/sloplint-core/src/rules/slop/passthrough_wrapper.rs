@@ -1,7 +1,9 @@
 use crate::config::Strictness;
 use crate::facts::{ArgShape, Call, FileFacts, Function};
-use crate::finding::{Finding, Level, Severity};
-use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
+use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::role::{RolePolicy, Shift};
+use crate::rules::EmptyOptions;
+use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, parse_options};
 
 const RECEIVER_ROOTS: [&str; 4] = ["self", "this", "cls", "super"];
 
@@ -10,7 +12,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Slop,
     summary: "functions whose body only forwards its parameters to another call",
     why: "A wrapper that only forwards adds a hop and hides nothing.",
-    exempt_tests: false,
+    confidence: Confidence::Medium,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Off,
+        support: Shift::Keep,
+        bench: Shift::Off,
+        example: Shift::Lower1,
+    },
     preset,
     build: Build::File(build),
 };
@@ -18,15 +27,15 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
 fn preset(strictness: Strictness) -> Preset {
     let level = match strictness {
         Strictness::Minimal => Level::Off,
-        Strictness::Basic | Strictness::Standard | Strictness::Strict => Level::Warn,
+        Strictness::Basic | Strictness::Standard | Strictness::Strict => Level::At(Severity::Minor),
     };
     Preset {
         level,
         options: toml::Table::new(),
     }
 }
-
-fn build(_options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>, String> {
+fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>, String> {
+    parse_options::<EmptyOptions>(options)?;
     Ok(Box::new(PassthroughWrapper))
 }
 
@@ -42,7 +51,7 @@ impl FileRule for PassthroughWrapper {
                 facts,
                 function.pos,
                 INFO.id,
-                Severity::Warn,
+                Severity::Minor,
                 format!(
                     "`{}` only forwards its parameters to `{callee}`",
                     function.name

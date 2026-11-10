@@ -1,1 +1,1 @@
-a.go:2 warn grep/no-rename-import
+a.go:2 minor grep/no-rename-import

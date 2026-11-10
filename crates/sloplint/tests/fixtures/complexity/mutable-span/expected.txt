@@ -1,1 +1,1 @@
-src/lib.rs:2 deny complexity/mutable-span
+src/lib.rs:2 major complexity/mutable-span

@@ -1,10 +1,10 @@
 use crate::config::Strictness;
 use crate::facts::FileFacts;
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::lang::Lang;
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
-
-use super::EmptyOptions;
+use crate::rules::{EmptyOptions, parse_options};
 
 const APPLICABLE: &[Lang] = &[
     Lang::TypeScript,
@@ -22,7 +22,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Agent,
     summary: "public functions with unannotated parameters or return types",
     why: "Unannotated public signatures force callers to read the body to learn the contract.",
-    exempt_tests: true,
+    confidence: Confidence::High,
+    roles: RolePolicy {
+        entry: Shift::Lower1,
+        test: Shift::Off,
+        support: Shift::Lower1,
+        bench: Shift::Off,
+        example: Shift::Off,
+    },
     preset,
     build: Build::File(build),
 };
@@ -30,7 +37,7 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
 fn preset(strictness: Strictness) -> Preset {
     let level = match strictness {
         Strictness::Minimal => Level::Off,
-        Strictness::Basic | Strictness::Standard | Strictness::Strict => Level::Warn,
+        Strictness::Basic | Strictness::Standard | Strictness::Strict => Level::At(Severity::Minor),
     };
     Preset {
         level,
@@ -39,9 +46,7 @@ fn preset(strictness: Strictness) -> Preset {
 }
 
 fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>, String> {
-    let _: EmptyOptions = toml::Value::Table(options)
-        .try_into()
-        .map_err(|error| error.to_string())?;
+    let _: EmptyOptions = parse_options(options)?;
     Ok(Box::new(ExplicitBoundaryTypes))
 }
 
@@ -53,7 +58,7 @@ impl FileRule for ExplicitBoundaryTypes {
             return;
         }
         for function in &facts.functions {
-            if !function.public || function.in_test || function.missing_annotations.is_empty() {
+            if !function.public || function.missing_annotations.is_empty() {
                 continue;
             }
             let missing = function.missing_annotations.join(", ");
@@ -63,7 +68,7 @@ impl FileRule for ExplicitBoundaryTypes {
                 facts,
                 function.pos,
                 INFO.id,
-                Severity::Warn,
+                Severity::Minor,
                 message,
                 FIX.to_string(),
             ));

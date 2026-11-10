@@ -7,15 +7,18 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
-    child_by_field, first_named_child, first_named_child_matching, first_of_kind, has_child_kind,
-    last_segment, named_children, narrow, only_named_child_matching, pos_of, preceding_comments,
-    string_arg_shape, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_preceding, attributed_region,
+    binary_concat, child_by_field, earliest_preceding, first_named_child,
+    first_named_child_matching, first_of_kind, has_child_kind, last_segment, named_children,
+    narrow, only_named_child_matching, pos_of, preceding_comments, string_arg_shape, text,
 };
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
 
+mod errors;
 mod use_tree;
 
+use errors::{body_stmts, err_bound, has_err_selective_predecessor, sibling_enum};
 use use_tree::push_use;
 
 pub(crate) static TABLE: crate::lang::Table = &[
@@ -55,38 +58,110 @@ const STR_KINDS: [&str; 2] = ["string_literal", "raw_string_literal"];
 fn field_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>, field: &str) -> &'s str {
     child_by_field(n, field).map_or("", |v| text(cx, v))
 }
+fn attr_last_segment<'s>(cx: &Cx<'_, 's>, attr: Node<'_>) -> &'s str {
+    let path = first_named_child(attr).map_or("", |p| text(cx, p));
+    path.rsplit("::").next().unwrap_or(path)
+}
+fn cfg_test_ids<'s>(cx: &Cx<'_, 's>, args: Node<'_>) -> Vec<&'s str> {
+    named_children(args)
+        .into_iter()
+        .filter(|c| c.kind() == "identifier")
+        .map(|c| text(cx, c))
+        .collect()
+}
+fn cfg_all_implies_test(cx: &Cx<'_, '_>, args: Node<'_>) -> bool {
+    let kids = named_children(args);
+    if kids.len() != 2 || kids[0].kind() != "identifier" || kids[1].kind() != "token_tree" {
+        return false;
+    }
+    if text(cx, kids[0]) != "all" {
+        return false;
+    }
+    cfg_test_ids(cx, kids[1]).contains(&"test")
+}
+fn cfg_implies_test(cx: &Cx<'_, '_>, attr: Node<'_>) -> bool {
+    let Some(args) = child_by_field(attr, "arguments") else {
+        return false;
+    };
+    if cfg_test_ids(cx, args) == ["test"] {
+        return true;
+    }
+    cfg_all_implies_test(cx, args)
+}
 fn attribute_is_test(cx: &Cx<'_, '_>, sib: Node<'_>) -> bool {
     let Some(attr) = first_named_child_matching(sib, &["attribute"]) else {
         return false;
     };
-    let path = first_named_child(attr).map_or("", |p| text(cx, p));
-    match child_by_field(attr, "arguments") {
-        None => path == "test" || path.ends_with("::test"),
-        Some(args) => {
-            path == "cfg" && text(cx, args).split_whitespace().collect::<String>() == "(test)"
-        }
+    if attr_last_segment(cx, attr) == "test" {
+        return true;
     }
+    let path = first_named_child(attr).map_or("", |p| text(cx, p));
+    if path != "cfg" && !path.ends_with("::cfg") {
+        return false;
+    }
+    cfg_implies_test(cx, attr)
 }
-fn has_test_attr(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    let mut row = n.start_position().row;
-    let mut cur = n.prev_sibling();
-    while let Some(sib) = cur {
-        if sib.end_position().row + 1 != row {
-            break;
+fn is_bracketed_test(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    if n.kind() != "token_tree" {
+        return false;
+    }
+    let mut cursor = n.walk();
+    let kids: Vec<Node<'_>> = n.children(&mut cursor).collect();
+    kids.len() == 3
+        && text(cx, kids[0]) == "["
+        && kids[1].kind() == "identifier"
+        && text(cx, kids[1]) == "test"
+        && text(cx, kids[2]) == "]"
+}
+fn is_test_fn_at(cx: &Cx<'_, '_>, kids: &[Node<'_>], i: usize) -> bool {
+    kids.len() >= i + 3
+        && text(cx, kids[i]) == "#"
+        && is_bracketed_test(cx, kids[i + 1])
+        && text(cx, kids[i + 2]) == "fn"
+}
+fn seq_has_test_fn(cx: &Cx<'_, '_>, tt: Node<'_>) -> bool {
+    let mut cursor = tt.walk();
+    let kids: Vec<Node<'_>> = tt.children(&mut cursor).collect();
+    (0..kids.len()).any(|i| is_test_fn_at(cx, &kids, i))
+}
+fn macro_has_test_fn(cx: &Cx<'_, '_>, tt: Node<'_>) -> bool {
+    let mut stack = vec![tt];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "token_tree" && seq_has_test_fn(cx, node) {
+            return true;
         }
-        match sib.kind() {
-            "attribute_item" => {
-                if attribute_is_test(cx, sib) {
-                    return true;
-                }
-                row = sib.start_position().row;
-            }
-            "line_comment" | "block_comment" => row = sib.start_position().row,
-            _ => break,
-        }
-        cur = sib.prev_sibling();
+        let mut cursor = node.walk();
+        stack.extend(node.children(&mut cursor));
     }
     false
+}
+fn attribute_is_bench(cx: &Cx<'_, '_>, sib: Node<'_>) -> bool {
+    let Some(attr) = first_named_child_matching(sib, &["attribute"]) else {
+        return false;
+    };
+    if child_by_field(attr, "arguments").is_some() {
+        return false;
+    }
+    let path = first_named_child(attr).map_or("", |p| text(cx, p));
+    path == "bench" || path.ends_with("::bench")
+}
+fn has_sibling_attr(
+    cx: &Cx<'_, '_>,
+    n: Node<'_>,
+    mut hit: impl FnMut(&Cx<'_, '_>, Node<'_>) -> bool,
+) -> bool {
+    any_preceding(
+        n,
+        "attribute_item",
+        &["line_comment", "block_comment"],
+        |sib| hit(cx, sib),
+    )
+}
+fn has_test_attr(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    has_sibling_attr(cx, n, attribute_is_test)
+}
+fn has_bench_attr(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    has_sibling_attr(cx, n, attribute_is_bench)
 }
 fn push_ident_tree<'a>(root: Node<'a>, out: &mut Vec<Node<'a>>) {
     let mut stack = vec![root];
@@ -276,7 +351,6 @@ fn leaf_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Imp
         name,
         alias,
         kind: ImportKind::Named,
-        in_test: cx.in_test_module(),
     });
 }
 fn wild_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Import<'s>>) {
@@ -287,189 +361,7 @@ fn wild_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, prefix: &str, out: &mut Vec<Imp
         name: "*",
         alias: None,
         kind: ImportKind::Wildcard,
-        in_test: cx.in_test_module(),
     });
-}
-fn enum_pattern(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
-    let mut cursor = pat.walk();
-    loop {
-        match cursor.node().kind() {
-            "tuple_struct_pattern" | "struct_pattern" => return true,
-            "match_pattern" | "or_pattern" if cursor.goto_first_child() => continue,
-            _ if text(cx, cursor.node()).contains("::") => return true,
-            _ => {}
-        }
-        while !cursor.goto_next_sibling() || cursor.field_name() == Some("condition") {
-            if !cursor.goto_parent() {
-                return false;
-            }
-        }
-    }
-}
-fn sibling_enum(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    n.parent().is_some_and(|parent| {
-        any_named_child(parent, |arm| {
-            arm.kind() == "match_arm"
-                && arm.id() != n.id()
-                && child_by_field(arm, "pattern").is_some_and(|p| enum_pattern(cx, p))
-        })
-    })
-}
-fn err_bound<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<Option<&'s str>> {
-    let pat = if pat.kind() == "match_pattern" {
-        if child_by_field(pat, "condition").is_some() {
-            return None;
-        }
-        let only = pat.named_child(0)?;
-        if pat.named_child(1).is_some() {
-            return None;
-        }
-        only
-    } else {
-        pat
-    };
-    if pat.kind() != "tuple_struct_pattern" {
-        return None;
-    }
-    if child_by_field(pat, "type").map_or("", |t| text(cx, t)) != "Err" {
-        return None;
-    }
-    let ty = child_by_field(pat, "type")?;
-    let mut cursor = pat.walk();
-    let mut rest = pat
-        .children(&mut cursor)
-        .filter(|c| c.id() != ty.id() && (c.is_named() || c.kind() == "_"));
-    let only = rest.next()?;
-    if rest.next().is_some() {
-        return None;
-    }
-    if only.kind() == "identifier" {
-        return Some(Some(text(cx, only)));
-    }
-    (text(cx, only) == "_").then_some(None)
-}
-fn match_arm_pattern(pat: Node<'_>) -> Option<Node<'_>> {
-    if pat.kind() != "match_pattern" {
-        return Some(pat);
-    }
-    let cond = child_by_field(pat, "condition").map(|c| c.id());
-    let mut cursor = pat.walk();
-    let mut kids = pat
-        .children(&mut cursor)
-        .filter(|c| Some(c.id()) != cond && (c.is_named() || c.kind() == "_"));
-    let only = kids.next()?;
-    if kids.next().is_some() {
-        return None;
-    }
-    Some(only)
-}
-
-fn pattern_may_match_err(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
-    let mut pending = vec![pat];
-    while let Some(node) = pending.pop() {
-        let Some(inner) = match_arm_pattern(node) else {
-            continue;
-        };
-        match inner.kind() {
-            "tuple_struct_pattern" => {
-                if child_by_field(inner, "type").is_some_and(|t| text(cx, t) == "Err") {
-                    return true;
-                }
-            }
-            "or_pattern" => {
-                let mut cursor = inner.walk();
-                pending.extend(
-                    inner
-                        .children(&mut cursor)
-                        .filter(|c| c.is_named() || c.kind() == "_"),
-                );
-            }
-            "_" | "identifier" => return true,
-            _ => {}
-        }
-    }
-    false
-}
-fn has_err_selective_predecessor(cx: &Cx<'_, '_>, arm: Node<'_>) -> bool {
-    let Some(parent) = arm.parent() else {
-        return false;
-    };
-    let mut cursor = parent.walk();
-    for sib in parent.children(&mut cursor) {
-        if sib.id() == arm.id() {
-            break;
-        }
-        if sib.kind() != "match_arm" {
-            continue;
-        }
-        if let Some(pat) = child_by_field(sib, "pattern")
-            && pattern_may_match_err(cx, pat)
-        {
-            return true;
-        }
-    }
-    false
-}
-fn is_err_ctor(cx: &Cx<'_, '_>, call: Node<'_>, bound: Option<&str>, callee: &str) -> bool {
-    let Some(b) = bound else {
-        return false;
-    };
-    if last_segment(callee, &["::", "."]) != "Err" {
-        return false;
-    }
-    child_by_field(call, "arguments")
-        .and_then(first_named_child)
-        .is_some_and(|f| f.kind() == "identifier" && text(cx, f) == b)
-}
-fn handler_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, bound: Option<&str>) -> Stmt<'s> {
-    let expr = if s.kind() == "expression_statement" {
-        first_named_child(s).unwrap_or(s)
-    } else {
-        s
-    };
-    match expr.kind() {
-        "call_expression" => {
-            let callee = child_by_field(expr, "function").map_or("", |f| text(cx, f));
-            if is_err_ctor(cx, expr, bound, callee) {
-                Stmt::Rethrow
-            } else {
-                Stmt::Call {
-                    callee,
-                    kind: CallKind::Plain,
-                }
-            }
-        }
-        "macro_invocation" => {
-            let callee = child_by_field(expr, "macro").map_or("", |m| text(cx, m));
-            Stmt::Call {
-                callee,
-                kind: CallKind::Macro,
-            }
-        }
-        "return_expression" => match first_named_child(expr) {
-            Some(v) if v.kind() == "call_expression" => {
-                let callee = child_by_field(v, "function").map_or("", |f| text(cx, f));
-                if is_err_ctor(cx, v, bound, callee) {
-                    Stmt::Rethrow
-                } else {
-                    Stmt::Other
-                }
-            }
-            _ => Stmt::Other,
-        },
-        _ => Stmt::Other,
-    }
-}
-fn body_stmts<'s>(cx: &Cx<'_, 's>, body: Node<'_>, bound: Option<&str>) -> Vec<Stmt<'s>> {
-    if body.kind() == "block" {
-        named_children(body)
-            .into_iter()
-            .filter(|c| c.kind() != "line_comment" && c.kind() != "block_comment")
-            .map(|s| handler_stmt(cx, s, bound))
-            .collect()
-    } else {
-        vec![handler_stmt(cx, body, bound)]
-    }
 }
 fn parent_dir(path: &str) -> &str {
     path.rfind('/').map_or("", |i| &path[..i])
@@ -616,12 +508,17 @@ impl LangHooks for RustHooks {
                 interface_bound: true
             })
         );
+        let tested = has_test_attr(cx, n);
+        let benched = !tested && has_bench_attr(cx, n);
+        let leading = earliest_preceding(n, "attribute_item", &["line_comment", "block_comment"]);
         Some(FunctionHead {
             name: text(cx, name_node),
             name_pos: pos_of(name_node),
             public: has_child_kind(n, "visibility_modifier") || member,
             interface_bound: bound,
-            in_test: cx.is_test_file || cx.in_test_module() || has_test_attr(cx, n),
+            region: tested
+                .then(|| attributed_region(n, leading, CodeRole::Test))
+                .or_else(|| benched.then(|| attributed_region(n, leading, CodeRole::Bench))),
             params,
             return_type: child_by_field(n, "return_type").map(|t| text(cx, t)),
             missing_annotations: Vec::new(),
@@ -754,19 +651,38 @@ impl LangHooks for RustHooks {
                 interface_bound: bound,
             });
         }
-        if n.kind() == "mod_item" {
-            let mut cur = n.prev_sibling();
-            while let Some(sib) = cur {
-                if sib.kind() != "attribute_item" {
-                    break;
-                }
-                if attribute_is_test(cx, sib) {
-                    return Some(Container::TestModule);
-                }
-                cur = sib.prev_sibling();
-            }
+        if n.kind() == "mod_item" && has_sibling_attr(cx, n, attribute_is_test) {
+            return Some(Container::TestModule);
         }
         None
+    }
+    fn module_region(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        if n.kind() == "mod_item" && has_sibling_attr(cx, n, attribute_is_test) {
+            return Some(CodeRole::Test);
+        }
+        None
+    }
+    fn call_marker(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        if n.kind() != "macro_invocation" {
+            return None;
+        }
+        let name = child_by_field(n, "macro").map_or("", |mac| text(cx, mac));
+        if last_segment(name, &["::"]) == "fuzz_target" {
+            return Some(CodeRole::Bench);
+        }
+        if matches!(last_segment(name, &["::"]), "proptest" | "quickcheck")
+            && first_named_child_matching(n, &["token_tree"])
+                .is_some_and(|tt| macro_has_test_fn(cx, tt))
+        {
+            return Some(CodeRole::Test);
+        }
+        None
+    }
+    fn module_leading<'t>(&self, n: Node<'t>, _cx: &Cx<'_, '_>) -> Option<Node<'t>> {
+        if n.kind() != "mod_item" {
+            return None;
+        }
+        earliest_preceding(n, "attribute_item", &["line_comment", "block_comment"])
     }
     fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
         let pat = child_by_field(n, "pattern")?;

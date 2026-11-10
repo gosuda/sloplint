@@ -1,14 +1,16 @@
 //! Shared config keys route one custom rule to every file spelling of a language.
 
 use sloplint_core::lang::Lang;
-use sloplint_core::{ConfigError, CustomRuleSpec, Severity};
+use sloplint_core::role::CodeRole;
+use sloplint_core::{Confidence, ConfigError, CustomRuleSpec, Severity};
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 fn rule(language: &str, query: &str) -> CustomRuleSpec {
     CustomRuleSpec {
         id: "custom/probe".to_string(),
         language: language.to_string(),
-        severity: Severity::Warn,
+        severity: Severity::Minor,
+        confidence: Confidence::Medium,
         message: "m".to_string(),
         why: "w".to_string(),
         fix: "f".to_string(),
@@ -31,7 +33,7 @@ fn observed<'s>(
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut parsers, &input, custom);
     assert!(analysis.parse_error.is_none(), "{path} must parse");

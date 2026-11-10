@@ -23,7 +23,7 @@ const WORLD_RULES: [&str; 3] = [
 
 /// Root config of the synthetic corpus. The threshold only changes a result when the root
 /// `sloplint.toml` is honored: the preset needs two boolean parameters before it fires.
-const SYNTHETIC_CONFIG: &str = "[rules.\"complexity/boolean-params\"]\nwarn_at = 1\n";
+const SYNTHETIC_CONFIG: &str = "[rules.\"complexity/boolean-params\"]\nminor_at = 1\n";
 
 /// A labelled corpus; the temp dir is held so the root outlives the test body.
 type Corpus = (&'static str, tempfile::TempDir, PathBuf);
@@ -290,7 +290,7 @@ fn severities(report: &Report) -> BTreeMap<(String, u32, String), Severity> {
         .collect()
 }
 
-/// How many findings turn from warn to deny between two profiles; a finding that vanishes or
+/// How many findings move up the ladder between two profiles; a finding that vanishes or
 /// loses severity under the stricter profile fails.
 fn escalations(
     label: &str,

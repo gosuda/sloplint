@@ -1,1 +1,1 @@
-a.go:4 warn meta/parse-error
+a.go:4 minor meta/parse-error

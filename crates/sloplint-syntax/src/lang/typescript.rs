@@ -1,14 +1,13 @@
-use sloplint_core::facts::{
-    AmbientKind, Assertion, Barrel, CallKind, FieldCopy, Handler, Import, Param, Pos, TypeDef,
-    WildcardArm,
-};
-use tree_sitter::Node;
-
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field,
     code_children, first_named_child, first_named_child_matching, has_child_kind, named_children,
     pos_of, preceding_comments, strip_quotes, text,
 };
+use sloplint_core::facts::{
+    AmbientKind, Assertion, Barrel, CallKind, FieldCopy, Handler, Import, Param, Pos, TypeDef,
+    WildcardArm,
+};
+use tree_sitter::Node;
 pub(crate) mod calls;
 pub(crate) mod imports;
 
@@ -16,8 +15,9 @@ use self::calls::{callee_root, ts_args, ts_declared, ts_root, ts_sole_call};
 use self::imports::{
     catch_stmt, export_specs, export_stmt, heritage_impls, import_stmt, parent_dir, ts_targets,
 };
-use crate::lang::javascript::js_table;
+use crate::lang::javascript::{js_table, test_call_marker};
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
 
 pub(crate) static TABLE: crate::lang::Table = js_table!(
     ("abstract_class_declaration", Role::TypeDef),
@@ -130,6 +130,9 @@ fn doc_anchor(n: Node<'_>) -> Node<'_> {
 }
 
 impl LangHooks for TypeScriptHooks {
+    fn call_marker(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        test_call_marker(cx, n)
+    }
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let body = child_by_field(n, "body")?;
         let name_node = child_by_field(n, "name")?;
@@ -151,7 +154,7 @@ impl LangHooks for TypeScriptHooks {
             name_pos: pos_of(name_node),
             public,
             interface_bound: class_member(n) && cx.nearest_class_implements().unwrap_or(false),
-            in_test: cx.is_test_file,
+            region: None,
             params,
             return_type: ret,
             missing_annotations: missing,
@@ -202,7 +205,7 @@ impl LangHooks for TypeScriptHooks {
                 name_pos: pos_of(name_node),
                 public,
                 interface_bound: false,
-                in_test: cx.is_test_file,
+                region: None,
                 params,
                 return_type: ret,
                 missing_annotations: missing,
@@ -230,7 +233,7 @@ impl LangHooks for TypeScriptHooks {
                 public: member_public(cx, parent, name_node.kind()),
                 interface_bound: class_member(parent)
                     && cx.nearest_class_implements().unwrap_or(false),
-                in_test: cx.is_test_file,
+                region: None,
                 params,
                 return_type: ret,
                 missing_annotations: missing,

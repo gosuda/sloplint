@@ -1,1 +1,1 @@
-a.dart:2 warn grep/multiline-argument
+a.dart:2 minor grep/multiline-argument

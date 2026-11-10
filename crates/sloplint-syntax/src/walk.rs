@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use sloplint_core::facts::FileFacts;
 use sloplint_core::finding::line_starts;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::{CodeRole, RoleRegion};
 use sloplint_core::suppress::CommentText;
 use tree_sitter::Node;
 
@@ -46,7 +47,6 @@ impl LangSpec {
             src: input.source,
             path: input.path,
             lang: self.lang,
-            is_test_file: input.is_test_file,
             collect_facts,
             facts: empty_facts(input, self.lang),
             comments: Vec::new(),
@@ -62,6 +62,7 @@ impl LangSpec {
             entered: Vec::new(),
         };
         state.run(root);
+        state.finish();
         Walked {
             facts: state.facts,
             comments: state.comments,
@@ -69,15 +70,15 @@ impl LangSpec {
     }
 }
 
-/// The `lang` field is the grammar that produced the facts; `is_entry_file` follows the routed `input.lang`.
+/// The `lang` field is the grammar that produced the facts.
 pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>, lang: Lang) -> FileFacts<'s> {
     FileFacts {
         lang,
         path: input.path,
         source: input.source,
         line_starts: line_starts(input.source),
-        is_test_file: input.is_test_file,
-        is_entry_file: input.lang.is_entry_file(input.path),
+        role: input.role,
+        regions: Vec::new(),
         line_count: line_count(input.source),
         functions: Vec::new(),
         calls: Vec::new(),
@@ -127,7 +128,6 @@ pub(crate) struct WalkState<'s, 'a, 't> {
     pub src: &'s str,
     pub path: &'s str,
     pub lang: Lang,
-    pub is_test_file: bool,
     pub collect_facts: bool,
     pub facts: FileFacts<'s>,
     pub comments: Vec<CommentText<'s>>,
@@ -323,11 +323,19 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     fn enter_call_site(&mut self, node: Node<'_>) {
-        {
+        let controls = {
             let cx = self.make_cx();
-            if self.hooks.control_call(node, &cx) {
-                self.score_nested(node);
-            }
+            self.hooks.control_call(node, &cx)
+        };
+        if controls {
+            self.score_nested(node);
+        }
+        let marker = {
+            let cx = self.make_cx();
+            self.hooks.call_marker(node, &cx)
+        };
+        if let Some(role) = marker {
+            self.push_region(crate::hooks::region_of(node, role));
         }
         self.push_call(node);
         self.push_imports(node);
@@ -424,16 +432,21 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
         }
     }
 
+    pub(crate) fn finish(&mut self) {
+        self.facts.regions.sort_by_key(|region| region.start_line);
+        self.facts.has_inline_tests = self
+            .facts
+            .regions
+            .iter()
+            .any(|region| region.role == CodeRole::Test);
+    }
+
+    pub(crate) fn push_region(&mut self, region: RoleRegion) {
+        self.facts.regions.push(region);
+    }
+
     pub(crate) fn make_cx(&self) -> Cx<'_, 's> {
-        Cx::file(
-            self.src,
-            self.path,
-            self.lang,
-            self.is_test_file,
-            &self.members,
-            &self.chains,
-        )
-        .scoped(
+        Cx::file(self.src, self.path, self.lang, &self.members, &self.chains).scoped(
             &self.containers,
             &self.exports,
             &self.levels[..self.levels.len().min(self.depth + 1)],

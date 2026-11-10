@@ -2,11 +2,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Param};
-use crate::finding::{Finding, Level};
+use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::lang::Lang;
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
-
-use crate::rules::threshold_options;
+use crate::rules::{parse_options, threshold_options};
 
 const RUST: &[&str] = &[
     "str", "String", "i8", "i16", "i32", "i64", "i128", "isize", "u8", "u16", "u32", "u64", "u128",
@@ -114,7 +114,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Agent,
     summary: "runs of consecutive primitive parameters of swappable types",
     why: "Adjacent primitive parameters of one type can be swapped without a compile error.",
-    exempt_tests: true,
+    confidence: Confidence::Medium,
+    roles: RolePolicy {
+        entry: Shift::Lower1,
+        test: Shift::Off,
+        support: Shift::Lower1,
+        bench: Shift::Off,
+        example: Shift::Off,
+    },
     preset,
     build: Build::File(build),
 };
@@ -122,8 +129,10 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Options {
-    warn_at: u32,
-    deny_at: u32,
+    minor_at: u32,
+    major_at: u32,
+    critical_at: u32,
+    blocker_at: u32,
 }
 
 struct StringlyApi {
@@ -131,23 +140,26 @@ struct StringlyApi {
 }
 
 fn preset(strictness: Strictness) -> Preset {
-    let (level, warn_at, deny_at) = match strictness {
-        Strictness::Minimal => (Level::Off, 3, 4),
-        Strictness::Basic => (Level::Off, 3, 4),
-        Strictness::Standard => (Level::Warn, 3, 4),
-        Strictness::Strict => (Level::Deny, 2, 3),
+    let (level, minor_at, major_at, critical_at, blocker_at) = match strictness {
+        Strictness::Minimal => (Level::Off, 3, 4, 6, 8),
+        Strictness::Basic => (Level::Off, 3, 4, 6, 8),
+        Strictness::Standard => (Level::At(Severity::Minor), 3, 4, 6, 8),
+        Strictness::Strict => (Level::At(Severity::Major), 2, 3, 5, 6),
     };
     Preset {
         level,
-        options: threshold_options(warn_at, deny_at),
+        options: threshold_options(minor_at, major_at, critical_at, blocker_at),
     }
 }
 
 fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>, String> {
-    let parsed: Options = toml::Value::Table(options)
-        .try_into()
-        .map_err(|error| error.to_string())?;
-    let thresholds = Thresholds::new(parsed.warn_at, parsed.deny_at)?;
+    let parsed: Options = parse_options(options)?;
+    let thresholds = Thresholds::new(
+        parsed.minor_at,
+        parsed.major_at,
+        parsed.critical_at,
+        parsed.blocker_at,
+    )?;
     Ok(Box::new(StringlyApi { thresholds }))
 }
 
@@ -155,7 +167,7 @@ impl FileRule for StringlyApi {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
         let primitives = primitives(facts.lang);
         for function in &facts.functions {
-            if !function.public || function.in_test {
+            if !function.public {
                 continue;
             }
             let Some((start, len)) = longest_run(&function.params, primitives) else {
@@ -173,8 +185,12 @@ impl FileRule for StringlyApi {
                 .collect::<Vec<_>>()
                 .join(", ");
             let name = function.name;
+            let minor_at = self.thresholds.minor_at;
+            let major_at = self.thresholds.major_at;
+            let critical_at = self.thresholds.critical_at;
+            let blocker_at = self.thresholds.blocker_at;
             let message = format!(
-                "`{name}` takes {len} consecutive primitive parameters ({names}) that callers can swap"
+                "`{name}` takes {len} consecutive primitive parameters ({names}) that callers can swap (minor at {minor_at}, major at {major_at}, critical at {critical_at}, blocker at {blocker_at})"
             );
             out.push(Finding::at(
                 facts,

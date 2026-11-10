@@ -1,1 +1,1 @@
-pos.c:1 warn grep/no-dynamic-symbol
+pos.c:1 minor grep/no-dynamic-symbol

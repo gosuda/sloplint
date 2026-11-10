@@ -2,6 +2,7 @@
 //! the barrel-file rule can chase `self::` re-exports to the file that defines them.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 fn targets(source: &str) -> Vec<Vec<String>> {
@@ -10,7 +11,7 @@ fn targets(source: &str) -> Vec<Vec<String>> {
         lang: Lang::Rust,
         path: "src/lib.rs",
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(

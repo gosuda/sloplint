@@ -2,14 +2,16 @@
 //! and the hits borrow capture text from the file they matched.
 
 use sloplint_core::lang::Lang;
-use sloplint_core::{CustomRuleSpec, Severity};
+use sloplint_core::role::CodeRole;
+use sloplint_core::{Confidence, CustomRuleSpec, Severity};
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 fn spec(id: &str, language: &str, query: &str) -> CustomRuleSpec {
     CustomRuleSpec {
         id: id.to_string(),
         language: language.to_string(),
-        severity: Severity::Warn,
+        severity: Severity::Minor,
+        confidence: Confidence::Medium,
         message: "call".to_string(),
         why: "w".to_string(),
         fix: "f".to_string(),
@@ -40,7 +42,7 @@ fn callee_hits(custom: &CustomRules, lang: Lang, path: &str, source: &str) -> Ve
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut parsers, &input, custom);
     assert!(analysis.parse_error.is_none(), "{path} must parse");

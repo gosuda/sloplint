@@ -191,8 +191,8 @@ fn expected(dir: &Path) -> BTreeSet<Key> {
             .parse()
             .unwrap_or_else(|e| panic!("{}:{}: {e}", dir.display(), i + 1));
         assert!(
-            sev == "warn" || sev == "deny",
-            "{}:{}: bad severity {sev}",
+            matches!(sev, "info" | "minor" | "major" | "critical" | "blocker"),
+            "{}:{}: bad severity {sev}, expected a ladder rung",
             dir.display(),
             i + 1
         );
@@ -232,8 +232,11 @@ fn run_fixture(fixture: &Fixture) -> sloplint::Report {
 
 fn severity_name(severity: Severity) -> &'static str {
     match severity {
-        Severity::Warn => "warn",
-        Severity::Deny => "deny",
+        Severity::Info => "info",
+        Severity::Minor => "minor",
+        Severity::Major => "major",
+        Severity::Critical => "critical",
+        Severity::Blocker => "blocker",
     }
 }
 
@@ -258,6 +261,17 @@ fn kind_problem(fixture: &Fixture, want: &BTreeSet<Key>) -> Option<String> {
         )),
         _ => None,
     }
+}
+
+/// Contract data globs: the CLI never analyzes these paths, so the runner
+/// does not require them to show up as analyzed or skipped.
+fn is_data_path(rel: &str) -> bool {
+    rel.split('/').any(|part| {
+        matches!(
+            part,
+            "testdata" | "test-data" | "__fixtures__" | "__snapshots__"
+        )
+    })
 }
 
 /// What is wrong with one fixture, as report lines; empty when its run matches `expected.txt`,
@@ -288,15 +302,23 @@ fn problems(fixture: &Fixture) -> Vec<String> {
     );
     found.extend(kind_problem(fixture, &want));
     let summary = &report.summary;
-    if usize::try_from(summary.files).ok() != Some(fixture.sources.len()) {
+    let data = fixture
+        .sources
+        .iter()
+        .filter(|rel| is_data_path(rel))
+        .count();
+    let live = fixture.sources.len() - data;
+    if usize::try_from(summary.files).ok() != Some(live) {
         found.push(format!(
-            "analyzed {} file(s) but the directory holds {} recognized source file(s): {:?}",
-            summary.files,
-            fixture.sources.len(),
-            fixture.sources
+            "analyzed {} file(s) but the directory holds {} analyzable source file(s): {:?}",
+            summary.files, live, fixture.sources
         ));
     }
-    if summary.skipped != 0 {
+    let skipped_ok = match u32::try_from(data) {
+        Ok(data) => summary.skipped == 0 || summary.skipped == data,
+        Err(_) => false,
+    };
+    if !skipped_ok {
         found.push(format!("skipped {} file(s)", summary.skipped));
     }
     found

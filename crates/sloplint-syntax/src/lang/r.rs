@@ -48,7 +48,7 @@ impl LangHooks for RHooks {
             name_pos: pos_of(binary),
             public: !name.starts_with('.'),
             interface_bound: false,
-            in_test: cx.is_test_file,
+            region: None,
             params: params(cx, n),
             return_type: None,
             missing_annotations: Vec::new(),
@@ -123,7 +123,6 @@ impl LangHooks for RHooks {
             name: module,
             alias: None,
             kind,
-            in_test: cx.is_test_file,
         });
     }
 

@@ -4,6 +4,7 @@
 
 use sloplint_core::callee::CalleePattern;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 const SOURCE: &str = r#"<?php
@@ -31,7 +32,7 @@ fn matches_on_line(line: u32, pattern: &str) -> (bool, String) {
         lang: Lang::Php,
         path: "case.php",
         source: SOURCE,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.php parses");

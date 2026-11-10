@@ -1,1 +1,1 @@
-a.go:14 warn agent/catch-all-match
+a.go:14 minor agent/catch-all-match

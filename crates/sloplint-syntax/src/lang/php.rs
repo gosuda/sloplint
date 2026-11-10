@@ -11,9 +11,10 @@ use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, Link, TypeHead, any_named_child,
     child_by_field, find_named_child, first_named_child, first_named_child_matching, first_of_kind,
     last_segment, named_children, narrow, only_named_child_matching, pos_of, preceding_comments,
-    rfind_named_child, slice, string_arg_shape, strip_quotes, text, trimmed,
+    region_of, rfind_named_child, slice, string_arg_shape, strip_quotes, text, trimmed,
 };
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
@@ -94,10 +95,7 @@ fn php_public<'s>(cx: &Cx<'_, 's>, n: Node<'_>, kind: &str) -> bool {
     }
     !any_named_child(n, |c| is_private_vis(cx, c))
 }
-fn php_in_test<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
-    if cx.is_test_file {
-        return true;
-    }
+fn php_in_test_class<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     let mut current = n.parent();
     while let Some(parent) = current {
         if parent.kind() == "class_declaration" {
@@ -448,12 +446,13 @@ impl LangHooks for PhpHooks {
             missing.push("return");
         }
         let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &["attribute_list"]);
+        let tested = php_in_test_class(cx, n);
         Some(FunctionHead {
             name,
             name_pos: pos_of(name_node),
             public: php_public(cx, n, kind),
             interface_bound: matches!(cx.innermost_container(), Some(Container::Trait { .. })),
-            in_test: php_in_test(cx, n),
+            region: tested.then(|| region_of(n, CodeRole::Test)),
             params,
             return_type: field_text(cx, n, "return_type"),
             missing_annotations: missing,
@@ -586,7 +585,6 @@ impl LangHooks for PhpHooks {
                     name,
                     alias: alias_node.map(|a| text(cx, a)),
                     kind: ImportKind::Named,
-                    in_test: false,
                 });
             }
             return;
@@ -604,7 +602,6 @@ impl LangHooks for PhpHooks {
                 name: "",
                 alias: None,
                 kind: ImportKind::SideEffect,
-                in_test: false,
             });
         }
     }

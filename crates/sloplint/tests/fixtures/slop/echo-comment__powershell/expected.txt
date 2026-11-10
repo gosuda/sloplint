@@ -1,1 +1,1 @@
-a.ps1:2 warn slop/echo-comment
+a.ps1:2 minor slop/echo-comment

@@ -1,1 +1,1 @@
-src/lib.rs:16 warn slop/field-copy
+src/lib.rs:16 minor slop/field-copy

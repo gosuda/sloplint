@@ -1,1 +1,1 @@
-# near-miss: 9 modules < strict warn_at 10.
+# near-miss: 9 modules < strict minor_at 10.

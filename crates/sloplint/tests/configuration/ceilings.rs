@@ -298,7 +298,7 @@ fn custom_rule_glob_matching_symlink_rejected() {
 
 #[test]
 fn custom_rule_glob_regular_file_still_loads() {
-    let rule_content = "[[custom_rules]]\nid = \"custom/test-rule\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"test\"\nwhy = \"test\"\nfix = \"test\"\nquery = \"(function_item) @match\"\n";
+    let rule_content = "[[custom_rules]]\nid = \"custom/test-rule\"\nlanguage = \"rust\"\nseverity = \"minor\"\nmessage = \"test\"\nwhy = \"test\"\nfix = \"test\"\nquery = \"(function_item) @match\"\n";
     let (_tmp, root) = project("[project]\ncustom_rule_files = [\"rules/*.toml\"]\n");
     let rules_dir = root.join("rules");
     fs::create_dir_all(&rules_dir).expect("create rules dir");

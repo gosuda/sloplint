@@ -1,1 +1,1 @@
-src/calls.py:2 warn grep/multiline-argument
+src/calls.py:2 minor grep/multiline-argument

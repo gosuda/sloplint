@@ -1,1 +1,1 @@
-src/a.cpp:2 deny complexity/mutable-span
+src/a.cpp:2 major complexity/mutable-span

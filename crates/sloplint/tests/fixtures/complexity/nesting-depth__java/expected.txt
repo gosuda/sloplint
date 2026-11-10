@@ -1,1 +1,1 @@
-src/Nested.java:2 deny complexity/nesting-depth
+src/Nested.java:2 major complexity/nesting-depth

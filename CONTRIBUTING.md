@@ -35,21 +35,21 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 ```
 
-CI runs `sloplint check crates --strictness standard --mode threshold --fail-on deny` (using the root `sloplint.toml`, which excludes test fixtures). Deny-level findings fail CI. Warn-level findings are reported without failing, so treat them as defects unless a reviewer accepts them. The self-lint gate is a contributor check, not a protected boundary. A pull request can change `sloplint.toml` (`exclude`, rule levels, custom rules) and the workflow itself. Reviewers must read changes to `sloplint.toml` and `.github/`:
+CI runs `sloplint check crates --strictness standard --mode threshold --fail-on major` (using the root `sloplint.toml`, which excludes test fixtures). Major and higher findings fail CI. Lower rungs are reported without failing, so treat them as defects unless a reviewer accepts them. The self-lint gate is a contributor check, not a protected boundary. A pull request can change `sloplint.toml` (`exclude`, rule levels, custom rules) and the workflow itself. Reviewers must read changes to `sloplint.toml` and `.github/`:
 
 ```bash
-sloplint check crates --strictness standard --mode threshold --fail-on deny
+sloplint check crates --strictness standard --mode threshold --fail-on major
 # or, without installing the binary in PATH:
-cargo run --locked -p sloplint -- check crates --format agent --strictness standard --mode threshold --fail-on deny
+cargo run --locked -p sloplint -- check crates --format agent --strictness standard --mode threshold --fail-on major
 ```
 
-Every file in `crates/` must pass `sloplint` under the default `standard` profile (`agent/file-token-budget` warns at 600 lines and denies at 1000 lines under `standard`, and 500/800 under `strict`).
+Every file in `crates/` must pass `sloplint` under the default `standard` profile (`agent/file-token-budget` reaches minor at 600 lines and major at 1000 lines under `standard`, and 500/800 under `strict`).
 
 ## Adding a rule
 
 1. Create `crates/sloplint-core/src/rules/<family>/<rule_name>.rs`, where `<family>` is `complexity`, `grep`, `slop`, or `agent`. Keep one rule per file.
 2. Define an `Options` struct with `#[derive(Serialize, Deserialize)]` and `#[serde(deny_unknown_fields)]`, a `preset(Strictness) -> Preset` function covering all four profiles (`Minimal`, `Basic`, `Standard`, `Strict`), and a `FileRule` or `WorldRule` implementation.
-3. Keep presets monotone from `minimal` to `strict`: rule levels must not decrease and metric thresholds (`Thresholds::new(warn_at, deny_at)`) must not loosen as strictness increases.
+3. Keep presets monotone from `minimal` to `strict`: rule levels must not decrease and metric thresholds (`Thresholds` cut points `minor_at`, `major_at`, `critical_at`, `blocker_at`) must not loosen as strictness increases.
 4. Export `pub(crate) const INFO: RuleInfo` from the rule module, declare the module in `crates/sloplint-core/src/rules/<family>/mod.rs`, and insert `INFO` into `CATALOG` in `crates/sloplint-core/src/rules/mod.rs` in sorted order by rule id.
 
 ## Adding fixtures
@@ -61,6 +61,8 @@ Every rule has a fixture directory at `crates/sloplint/tests/fixtures/<family>/<
 - `expected.txt` listing every expected finding, one per line, sorted by `<rel-path>:<line> <severity> <rule-id>` (`#` starts a comment; an empty file expects zero findings).
 
 Expectations live in `expected.txt` rather than inline comments so test markers never alter line counts, comments, or syntax trees in the analyzed source.
+
+Fixture paths decide file roles through the `test_globs`, `bench_globs`, `example_globs`, `support_globs`, `entry_globs`, and `data_globs` project lists (full defaults in README.md). `support_globs` covers test helpers such as `conftest.py`, `tests/common/`, `tests/support/`, and `__mocks__/`. Role shifts apply by path alone; content never changes the file role.
 
 ## Commit and pull request conventions
 

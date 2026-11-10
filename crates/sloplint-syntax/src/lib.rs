@@ -11,6 +11,7 @@ use std::collections::hash_map::Entry;
 
 use sloplint_core::facts::FileFacts;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_core::{CommentText, CustomHit, Pos};
 use tree_sitter::{Node, Parser, Tree};
 
@@ -67,7 +68,7 @@ pub struct FileInput<'s> {
     /// The path relative to the project root, `/`-separated.
     pub path: &'s str,
     pub source: &'s str,
-    pub is_test_file: bool,
+    pub role: CodeRole,
 }
 
 pub struct Analysis<'s> {

@@ -1,2 +1,2 @@
-src/imports.kt:1 warn grep/no-rename-import
-src/imports.kt:2 warn grep/no-rename-import
+src/imports.kt:1 minor grep/no-rename-import
+src/imports.kt:2 minor grep/no-rename-import

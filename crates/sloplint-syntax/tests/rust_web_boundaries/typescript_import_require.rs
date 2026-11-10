@@ -3,6 +3,7 @@
 
 use sloplint_core::facts::ImportKind;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 type Row = (String, String, ImportKind);
@@ -13,7 +14,7 @@ fn imports(source: &str) -> Vec<Row> {
         lang: Lang::TypeScript,
         path: "mod.ts",
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(

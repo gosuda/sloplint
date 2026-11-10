@@ -6,6 +6,7 @@
 
 use sloplint_core::facts::{CallKind, FileFacts};
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 const SOURCE: &str = r#"<?php
@@ -37,7 +38,7 @@ fn observe<R>(read: impl FnOnce(&FileFacts<'_>) -> R) -> R {
         lang: Lang::Php,
         path: "case.php",
         source: SOURCE,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.php parses");

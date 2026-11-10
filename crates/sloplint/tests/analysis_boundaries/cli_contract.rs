@@ -30,21 +30,25 @@ fn boundary_cli_exit_codes() {
     put(&root, "src/lib.rs", "pub fn handle(a: bool, b: bool) {}\n");
     let strict = ["check", "--no-cache", "--strictness", "strict"];
     let (code, stdout, _) = shipped(&root, &strict);
-    assert_eq!(code, Some(1), "a deny finding fails the default gate");
+    assert_eq!(code, Some(1), "a major finding fails the default gate");
     assert!(
         stdout.contains("[complexity/boolean-params]"),
-        "the deny finding is reported: {stdout}"
+        "the major finding is reported: {stdout}"
     );
     let never = [strict.as_slice(), &["--fail-on", "never"]].concat();
     assert_eq!(shipped(&root, &never).0, Some(0), "--fail-on never passes");
-    let warn_only = shipped(&root, &["check", "--no-cache"]);
-    assert_eq!(warn_only.0, Some(0), "warn findings pass the default gate");
+    let minor_only = shipped(&root, &["check", "--no-cache"]);
+    assert_eq!(
+        minor_only.0,
+        Some(0),
+        "minor findings pass the default gate"
+    );
     let (code, stdout, _) = shipped(&root, &["check", "--bogus-flag"]);
     assert_eq!(code, Some(2), "a usage error exits 2");
     assert!(stdout.is_empty(), "a usage error prints nothing on stdout");
 }
 
-// A047: the baseline suppresses the denies it records, and `init` with and without a
+// A047: the baseline suppresses the majors it records, and `init` with and without a
 // configuration already present.
 #[test]
 fn boundary_cli_baseline_and_init_commands() {
@@ -66,7 +70,7 @@ fn boundary_cli_baseline_and_init_commands() {
     assert_eq!(
         shipped(&root, &ratchet).0,
         Some(0),
-        "the baseline suppresses the denies it recorded"
+        "the baseline suppresses the major findings it recorded"
     );
     let (code, stdout, _) = shipped(&root, &["init"]);
     assert_eq!(code, Some(2), "init refuses to overwrite a configuration");

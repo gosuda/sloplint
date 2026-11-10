@@ -1,9 +1,10 @@
 use crate::config::Strictness;
 use crate::facts::FileFacts;
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::role::{RolePolicy, Shift};
+use crate::rules::EmptyOptions;
+use crate::rules::parse_options;
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
-
-use super::EmptyOptions;
 
 const MESSAGE: &str = "wildcard arm in a match over enum-like patterns";
 const FIX: &str =
@@ -14,7 +15,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Agent,
     summary: "wildcard match arms over enum-like patterns",
     why: "A wildcard arm hides new variants from exhaustiveness checking.",
-    exempt_tests: false,
+    confidence: Confidence::Medium,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Lower1,
+        support: Shift::Keep,
+        bench: Shift::Lower1,
+        example: Shift::Lower1,
+    },
     preset,
     build: Build::File(build),
 };
@@ -22,7 +30,7 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
 fn preset(strictness: Strictness) -> Preset {
     let level = match strictness {
         Strictness::Minimal => Level::Off,
-        Strictness::Basic | Strictness::Standard | Strictness::Strict => Level::Warn,
+        Strictness::Basic | Strictness::Standard | Strictness::Strict => Level::At(Severity::Minor),
     };
     Preset {
         level,
@@ -31,9 +39,7 @@ fn preset(strictness: Strictness) -> Preset {
 }
 
 fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>, String> {
-    let _: EmptyOptions = toml::Value::Table(options)
-        .try_into()
-        .map_err(|error| error.to_string())?;
+    let _: EmptyOptions = parse_options(options)?;
     Ok(Box::new(CatchAllMatch))
 }
 
@@ -49,7 +55,7 @@ impl FileRule for CatchAllMatch {
                 facts,
                 arm.pos,
                 INFO.id,
-                Severity::Warn,
+                Severity::Minor,
                 MESSAGE.to_string(),
                 FIX.to_string(),
             ));

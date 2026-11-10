@@ -2,12 +2,13 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use super::{parse_options, string_values};
 use crate::config::Strictness;
 use crate::facts::FileFacts;
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::lang::Lang;
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
+use crate::rules::{parse_options, string_values};
 use crate::text::identifier_words;
 
 const DEFAULT_NAMES: &[&str] = &[
@@ -33,7 +34,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Grep,
     summary: "public functions whose names are too generic to search for",
     why: "Generic names match unrelated code in every search.",
-    exempt_tests: false,
+    confidence: Confidence::Medium,
+    roles: RolePolicy {
+        entry: Shift::Lower1,
+        test: Shift::Off,
+        support: Shift::Keep,
+        bench: Shift::Off,
+        example: Shift::Off,
+    },
     preset,
     build: Build::File(build),
 };
@@ -52,7 +60,7 @@ fn preset(strictness: Strictness) -> Preset {
     Preset {
         level: match strictness {
             Strictness::Minimal | Strictness::Basic => Level::Off,
-            Strictness::Standard | Strictness::Strict => Level::Warn,
+            Strictness::Standard | Strictness::Strict => Level::At(Severity::Minor),
         },
         options: fixed_options(),
     }
@@ -116,7 +124,7 @@ impl FileRule for GenericName {
                 facts,
                 function.pos,
                 INFO.id,
-                Severity::Deny,
+                Severity::Major,
                 format!(
                     "`{}` is a generic name shared by unrelated code",
                     function.name

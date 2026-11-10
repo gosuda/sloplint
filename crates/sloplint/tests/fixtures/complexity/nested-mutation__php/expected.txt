@@ -1,1 +1,1 @@
-src/grid.php:7 deny complexity/nested-mutation
+src/grid.php:7 major complexity/nested-mutation

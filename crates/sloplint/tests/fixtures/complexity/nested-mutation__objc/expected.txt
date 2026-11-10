@@ -1,1 +1,1 @@
-src/a.m:5 warn complexity/nested-mutation
+src/a.m:5 minor complexity/nested-mutation

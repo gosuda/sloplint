@@ -1,1 +1,1 @@
-a.ps1:2 warn complexity/mutable-span
+a.ps1:2 minor complexity/mutable-span

@@ -1,1 +1,1 @@
-a.bzl:1 warn complexity/import-fan-out
+a.bzl:1 minor complexity/import-fan-out

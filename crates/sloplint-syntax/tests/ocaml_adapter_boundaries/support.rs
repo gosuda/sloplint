@@ -4,6 +4,7 @@ use std::collections::HashSet;
 
 use sloplint_core::facts::FileFacts;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 /// Analyzes `source` as `path` with no sibling interface, requires a clean
@@ -35,7 +36,7 @@ fn with_impl<R>(
         lang: Lang::Ocaml,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(parsers, &input, &custom);
     assert!(analysis.parse_error.is_none(), "{path} parses cleanly");

@@ -2,9 +2,10 @@ use std::collections::HashMap;
 
 use crate::config::Strictness;
 use crate::facts::NamedSite;
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::lang::Lang;
-use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
+use crate::role::{RolePolicy, Shift};
+use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule, parse_options};
 
 const APPLICABLE: &[Lang] = &[
     Lang::Rust,
@@ -27,7 +28,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Slop,
     summary: "abstractions with exactly one implementation",
     why: "An interface with one implementation is indirection without variation.",
-    exempt_tests: false,
+    confidence: Confidence::Low,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Off,
+        support: Shift::Keep,
+        bench: Shift::Off,
+        example: Shift::Off,
+    },
     preset,
     build: Build::World(build),
 };
@@ -35,7 +43,7 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
 fn preset(strictness: Strictness) -> Preset {
     let level = match strictness {
         Strictness::Minimal | Strictness::Basic => Level::Off,
-        Strictness::Standard | Strictness::Strict => Level::Warn,
+        Strictness::Standard | Strictness::Strict => Level::At(Severity::Minor),
     };
     Preset {
         level,
@@ -54,9 +62,7 @@ fn fixed_options() -> toml::Table {
 }
 
 fn build(options: toml::Table) -> Result<Box<dyn WorldRule>, String> {
-    let options: Options = toml::Value::Table(options)
-        .try_into()
-        .map_err(|error| error.to_string())?;
+    let options: Options = parse_options(options)?;
     Ok(Box::new(SingleImplAbstraction {
         allow: options.allow,
         allow_suffixes: options.allow_suffixes,
@@ -88,7 +94,7 @@ impl WorldRule for SingleImplAbstraction {
                         path,
                         site,
                         INFO.id,
-                        Severity::Warn,
+                        Severity::Minor,
                         format!(
                             "`{name}` has exactly one implementation ({impl_path}:{})",
                             impl_site.line
@@ -177,8 +183,8 @@ mod tests {
     fn facts(abstractions: Vec<NamedSite>, impls: Vec<NamedSite>) -> WorldFacts {
         WorldFacts {
             lang: Lang::Rust,
-            is_test_file: false,
-            is_entry_file: false,
+            role: crate::role::CodeRole::Library,
+            regions: Vec::new(),
             has_inline_tests: false,
             public_functions: 0,
             definitions: Vec::new(),

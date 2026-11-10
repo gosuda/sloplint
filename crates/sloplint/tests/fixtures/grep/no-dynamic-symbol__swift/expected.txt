@@ -1,1 +1,1 @@
-src/lib.swift:2 warn grep/no-dynamic-symbol
+src/lib.swift:2 minor grep/no-dynamic-symbol

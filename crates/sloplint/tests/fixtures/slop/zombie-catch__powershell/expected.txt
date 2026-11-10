@@ -1,1 +1,1 @@
-a.ps1:4 deny slop/zombie-catch
+a.ps1:4 major slop/zombie-catch

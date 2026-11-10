@@ -1,2 +1,2 @@
-a.go:4 deny grep/contiguous-log-literal
-a.go:7 deny grep/contiguous-log-literal
+a.go:4 major grep/contiguous-log-literal
+a.go:7 major grep/contiguous-log-literal

@@ -1,10 +1,10 @@
 use crate::config::Strictness;
 use crate::facts::FileFacts;
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::lang::Lang;
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
-
-use super::EmptyOptions;
+use crate::rules::{EmptyOptions, parse_options};
 
 const MESSAGE: &str = "assertion without a failure message";
 const RUST_COMPARISON_FIX: &str = "use assert_eq!/assert_ne! or add a message naming the invariant";
@@ -15,7 +15,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Agent,
     summary: "assertions without a failure message",
     why: "A bare assertion failure says nothing about the broken invariant or the values involved.",
-    exempt_tests: false,
+    confidence: Confidence::High,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Keep,
+        support: Shift::Keep,
+        bench: Shift::Off,
+        example: Shift::Lower1,
+    },
     preset,
     build: Build::File(build),
 };
@@ -23,8 +30,8 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
 fn preset(strictness: Strictness) -> Preset {
     let level = match strictness {
         Strictness::Minimal => Level::Off,
-        Strictness::Basic => Level::Warn,
-        Strictness::Standard | Strictness::Strict => Level::Deny,
+        Strictness::Basic => Level::At(Severity::Minor),
+        Strictness::Standard | Strictness::Strict => Level::At(Severity::Major),
     };
     Preset {
         level,
@@ -33,9 +40,7 @@ fn preset(strictness: Strictness) -> Preset {
 }
 
 fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>, String> {
-    let _: EmptyOptions = toml::Value::Table(options)
-        .try_into()
-        .map_err(|error| error.to_string())?;
+    let _: EmptyOptions = parse_options(options)?;
     Ok(Box::new(InformativeAssertions))
 }
 
@@ -59,7 +64,7 @@ impl FileRule for InformativeAssertions {
                 facts,
                 assertion.pos,
                 INFO.id,
-                Severity::Deny,
+                Severity::Major,
                 MESSAGE.to_string(),
                 fix.to_string(),
             ));

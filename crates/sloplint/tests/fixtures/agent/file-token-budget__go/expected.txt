@@ -1,1 +1,1 @@
-a.go:1 deny agent/file-token-budget
+a.go:1 major agent/file-token-budget

@@ -7,7 +7,8 @@
 
 use sloplint_core::facts::{FileFacts, Function};
 use sloplint_core::lang::Lang;
-use sloplint_core::{CustomRuleSpec, Pos, Severity};
+use sloplint_core::role::CodeRole;
+use sloplint_core::{Confidence, CustomRuleSpec, Pos, Severity};
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 use crate::support::{run, run_clean};
@@ -308,7 +309,8 @@ fn query_rule(language: &str, query: &str) -> CustomRuleSpec {
     CustomRuleSpec {
         id: format!("custom/{language}-hit"),
         language: language.to_string(),
-        severity: Severity::Warn,
+        severity: Severity::Minor,
+        confidence: Confidence::Medium,
         message: "hit".to_string(),
         why: "test why".to_string(),
         fix: "test fix".to_string(),
@@ -479,7 +481,7 @@ fn custom_queries_run_against_the_tree_that_was_parsed() {
             lang: Lang::C,
             path,
             source,
-            is_test_file: false,
+            role: CodeRole::Library,
         };
         let analysis = analyze(&mut Parsers::new(), &input, &rules);
         assert!(analysis.parse_error.is_none(), "{path} parses cleanly");

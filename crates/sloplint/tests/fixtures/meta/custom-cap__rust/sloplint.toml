@@ -1,7 +1,7 @@
 [[custom_rules]]
 id = "custom/pair-flood"
 language = "rust"
-severity = "warn"
+severity = "minor"
 message = "pair"
 why = "unbounded sibling combination"
 fix = "anchor the query"

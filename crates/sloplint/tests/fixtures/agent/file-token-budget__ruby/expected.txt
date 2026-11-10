@@ -1,1 +1,1 @@
-big.rb:1 deny agent/file-token-budget
+big.rb:1 major agent/file-token-budget

@@ -1,1 +1,1 @@
-src/lib.swift:13 warn agent/catch-all-match
+src/lib.swift:13 minor agent/catch-all-match

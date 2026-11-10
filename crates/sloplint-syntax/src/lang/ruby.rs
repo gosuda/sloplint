@@ -8,10 +8,11 @@ use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, Link, TypeHead, binary_concat,
     child_by_field, count_named_child, find_named_child, first_named_child,
     first_named_child_matching, first_of_kind, has_child_kind, last_segment, named_children,
-    narrow, only_named_child_matching, pos_of, preceding_comments, rfind_named_child, slice,
-    string_arg_shape, strip_quotes, text, trimmed,
+    narrow, only_named_child_matching, pos_of, preceding_comments, region_of, rfind_named_child,
+    slice, string_arg_shape, strip_quotes, text, trimmed,
 };
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("method", Role::Function),
@@ -161,10 +162,7 @@ fn superclass_name<'s>(cx: &Cx<'_, 's>, class: Node<'_>) -> Option<(&'s str, Pos
     let base = first_named_child(sup)?;
     Some((last_segment(text(cx, base), &["::"]), pos_of(sup)))
 }
-fn ruby_in_test<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
-    if cx.is_test_file {
-        return true;
-    }
+fn ruby_in_test_class<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     let mut current = n.parent();
     while let Some(parent) = current {
         if parent.kind() == "class" {
@@ -538,12 +536,13 @@ impl LangHooks for RubyHooks {
         let name_node = child_by_field(n, "name")?;
         let name = text(cx, name_node);
         let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
+        let tested = ruby_in_test_class(cx, n);
         Some(FunctionHead {
             name,
             name_pos: pos_of(name_node),
             public: ruby_public(cx, n),
             interface_bound: is_protocol_method(name),
-            in_test: ruby_in_test(cx, n),
+            region: tested.then(|| region_of(n, CodeRole::Test)),
             params: ruby_params(cx, n),
             return_type: None,
             missing_annotations: Vec::new(),
@@ -779,6 +778,23 @@ impl LangHooks for RubyHooks {
             AmbientKind::GlobalMutable
         };
         out.push((kind, text(cx, n), pos_of(n)));
+    }
+    fn call_marker(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        if n.kind() != "call" {
+            return None;
+        }
+        if !matches!(
+            field_text(cx, n, "method").unwrap_or(""),
+            "it" | "specify" | "example"
+        ) {
+            return None;
+        }
+        if let Some(recv) = child_by_field(n, "receiver")
+            && text(cx, recv) != "RSpec"
+        {
+            return None;
+        }
+        Some(CodeRole::Test)
     }
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
         if n.kind() != "call" {

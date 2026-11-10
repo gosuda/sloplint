@@ -4,11 +4,12 @@ use std::hash::BuildHasher;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use super::{parse_options, string_values};
 use crate::config::Strictness;
 use crate::facts::NamedSite;
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
+use crate::rules::{parse_options, string_values};
 
 const ALLOWED_NAMES: &[&str] = &[
     "new", "default", "from", "into", "fmt", "drop", "clone", "eq", "hash", "main", "init",
@@ -20,7 +21,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Grep,
     summary: "one name defined in many files",
     why: "Many definitions with one name make search results ambiguous.",
-    exempt_tests: false,
+    confidence: Confidence::Low,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Off,
+        support: Shift::Keep,
+        bench: Shift::Off,
+        example: Shift::Off,
+    },
     preset,
     build: Build::World(build),
 };
@@ -46,8 +54,8 @@ struct HomonymDefinitions {
 fn preset(strictness: Strictness) -> Preset {
     let (level, min_files) = match strictness {
         Strictness::Minimal | Strictness::Basic => (Level::Off, 8),
-        Strictness::Standard => (Level::Warn, 8),
-        Strictness::Strict => (Level::Warn, 5),
+        Strictness::Standard => (Level::At(Severity::Minor), 8),
+        Strictness::Strict => (Level::At(Severity::Minor), 5),
     };
     Preset {
         level,
@@ -176,7 +184,7 @@ impl HomonymDefinitions {
             first.path,
             first.site,
             INFO.id,
-            Severity::Deny,
+            Severity::Major,
             format!("`{name}` is defined in {file_count} files"),
             format!("give each definition a domain-specific name; other definitions: {joined}"),
         ));
@@ -202,8 +210,8 @@ mod tests {
     fn facts(defs: Vec<NamedSite>) -> WorldFacts {
         WorldFacts {
             lang: Lang::Rust,
-            is_test_file: false,
-            is_entry_file: false,
+            role: crate::role::CodeRole::Library,
+            regions: Vec::new(),
             has_inline_tests: false,
             public_functions: 0,
             definitions: defs,

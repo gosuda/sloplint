@@ -4,6 +4,7 @@
 
 use sloplint_core::facts::FileFacts;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 const SOURCE: &str = r#"class Cache:
@@ -38,7 +39,7 @@ fn root_of(callee: &str) -> Option<String> {
         lang: Lang::Python,
         path: "case.py",
         source: SOURCE,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.py parses");

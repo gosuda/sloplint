@@ -1,1 +1,1 @@
-src/lib.swift:6 warn grep/multiline-argument
+src/lib.swift:6 minor grep/multiline-argument

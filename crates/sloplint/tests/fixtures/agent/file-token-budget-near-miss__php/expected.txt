@@ -1,1 +1,1 @@
-# 10 lines: below warn_at = 20, so no finding.
+# 10 lines: below minor_at = 20, so no finding.

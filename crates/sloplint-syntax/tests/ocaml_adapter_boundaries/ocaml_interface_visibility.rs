@@ -1,5 +1,5 @@
 //! The sibling-`.mli` gate: a top-level `let` is public only while no interface
-//! hides it, and the interface-bound and test flags stay off either way.
+//! hides it, and the interface-bound marker and regions stay off either way.
 
 use crate::support::{with_lone_facts, with_paired_facts};
 
@@ -50,9 +50,9 @@ fn interface_gate_changes_only_visibility() {
             .expect("`handle` is recorded");
         (
             found.interface_bound,
-            found.in_test,
             found.params.len(),
             found.missing_annotations.len(),
+            facts.regions.is_empty(),
         )
     });
     let gated = with_paired_facts("lib.ml", SOURCE, |facts| {
@@ -63,15 +63,15 @@ fn interface_gate_changes_only_visibility() {
             .expect("`handle` is recorded");
         (
             found.interface_bound,
-            found.in_test,
             found.params.len(),
             found.missing_annotations.len(),
+            facts.regions.is_empty(),
         )
     });
     assert_eq!(plain, gated, "only `public` may change with the gate");
     assert_eq!(
         plain,
-        (false, false, 1, 2),
+        (false, 1, 2, true),
         "`handle` keeps one untyped parameter and no return type"
     );
 }

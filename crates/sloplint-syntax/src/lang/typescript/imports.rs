@@ -22,7 +22,6 @@ pub(crate) fn clause_imports<'s>(
                 name: text(cx, c),
                 alias: None,
                 kind: ImportKind::Named,
-                in_test: cx.is_test_file,
             }),
             "named_imports" => import_specifiers(cx, c, module, out),
             "namespace_import" => {
@@ -34,7 +33,6 @@ pub(crate) fn clause_imports<'s>(
                     name,
                     alias: None,
                     kind: ImportKind::Namespace,
-                    in_test: cx.is_test_file,
                 });
             }
             _ => {}
@@ -64,7 +62,6 @@ pub(crate) fn import_specifiers<'s>(
                 Some(alias)
             },
             kind: ImportKind::Named,
-            in_test: cx.is_test_file,
         });
     }
 }
@@ -202,7 +199,6 @@ pub(crate) fn require_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Imp
         name: clause.named_child(0).map_or("", |id| text(cx, id)),
         alias: None,
         kind: ImportKind::Namespace,
-        in_test: cx.is_test_file,
     });
     true
 }
@@ -218,7 +214,6 @@ pub(crate) fn import_stmt<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import
             name: "",
             alias: None,
             kind: ImportKind::SideEffect,
-            in_test: cx.is_test_file,
         });
         return;
     };
@@ -240,7 +235,6 @@ pub(crate) fn export_namespace<'s>(
         name,
         alias: None,
         kind: ImportKind::Namespace,
-        in_test: cx.is_test_file,
     });
     true
 }
@@ -256,7 +250,7 @@ pub(crate) fn has_export_star(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     false
 }
 pub(crate) fn push_named_exports<'a, 's>(
-    cx: &Cx<'_, 's>,
+    _cx: &Cx<'_, 's>,
     specs: Vec<(Node<'a>, &'s str, &'s str)>,
     module: &'s str,
     out: &mut Vec<Import<'s>>,
@@ -272,7 +266,6 @@ pub(crate) fn push_named_exports<'a, 's>(
                 Some(alias)
             },
             kind: ImportKind::Named,
-            in_test: cx.is_test_file,
         });
     }
 }
@@ -296,7 +289,6 @@ pub(crate) fn export_stmt<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import
                 name: "*",
                 alias: None,
                 kind: ImportKind::Wildcard,
-                in_test: cx.is_test_file,
             });
         }
         return;

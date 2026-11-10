@@ -3,6 +3,7 @@
 //! `::` inside an `if` guard says nothing about the matched type.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 fn enum_like(body: &str) -> Vec<bool> {
@@ -12,7 +13,7 @@ fn enum_like(body: &str) -> Vec<bool> {
         lang: Lang::Rust,
         path: "src/lib.rs",
         source: &source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(
@@ -76,5 +77,14 @@ fn guards_do_not_make_the_match_enum_like() {
         enum_like("        _ if cfg::ready() => 1,\n        _ => 0,\n"),
         [false],
         "a guarded wildcard is not itself an enum pattern"
+    );
+}
+
+#[test]
+fn string_literals_with_colons_do_not_make_the_match_enum_like() {
+    assert_eq!(
+        enum_like("        \"std::io\" => 1,\n        _ => 0,\n"),
+        [false],
+        "a string that spells a path is still a literal"
     );
 }

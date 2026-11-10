@@ -1,1 +1,1 @@
-a.odin:3 deny agent/ambient-global-state
+a.odin:3 major agent/ambient-global-state

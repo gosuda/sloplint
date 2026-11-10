@@ -1,1 +1,1 @@
-src/Accumulate.java:7 deny complexity/nested-mutation
+src/Accumulate.java:7 major complexity/nested-mutation

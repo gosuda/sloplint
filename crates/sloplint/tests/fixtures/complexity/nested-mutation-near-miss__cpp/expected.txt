@@ -1,1 +1,1 @@
-# near-miss: single-loop accumulator has depth 1 < strict warn_at 2.
+# near-miss: single-loop accumulator has depth 1 < strict minor_at 2.

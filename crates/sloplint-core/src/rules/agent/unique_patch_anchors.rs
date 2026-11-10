@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Pos};
-use crate::finding::{Finding, Level, Severity};
-use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
+use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::role::{RolePolicy, Shift};
+use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, parse_options};
 
 const MIN_STRONG_LINES: usize = 3;
 const STRONG_LINE_CHARS: usize = 8;
@@ -18,7 +19,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Agent,
     summary: "identical multi-line blocks repeated across a file",
     why: "Repeated identical blocks make search-and-replace edits ambiguous.",
-    exempt_tests: false,
+    confidence: Confidence::Medium,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Lower1,
+        support: Shift::Keep,
+        bench: Shift::Lower1,
+        example: Shift::Keep,
+    },
     preset,
     build: Build::File(build),
 };
@@ -38,8 +46,8 @@ struct UniquePatchAnchors {
 fn preset(strictness: Strictness) -> Preset {
     let (level, window) = match strictness {
         Strictness::Minimal | Strictness::Basic => (Level::Off, 8),
-        Strictness::Standard => (Level::Warn, 8),
-        Strictness::Strict => (Level::Warn, 6),
+        Strictness::Standard => (Level::At(Severity::Minor), 8),
+        Strictness::Strict => (Level::At(Severity::Minor), 6),
     };
     let mut options = toml::Table::new();
     options.insert(
@@ -51,9 +59,7 @@ fn preset(strictness: Strictness) -> Preset {
 }
 
 fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>, String> {
-    let parsed: Options = toml::Value::Table(options)
-        .try_into()
-        .map_err(|error| error.to_string())?;
+    let parsed: Options = parse_options(options)?;
     if parsed.window < 2 {
         return Err(format!("window {} must be at least 2", parsed.window));
     }
@@ -197,7 +203,7 @@ impl UniquePatchAnchors {
                 byte: 0,
             },
             INFO.id,
-            Severity::Warn,
+            Severity::Minor,
             message,
             FIX.to_string(),
         ));
@@ -296,8 +302,8 @@ mod tests {
             path: "src/lib.rs",
             source,
             line_starts: line_starts(source),
-            is_test_file: false,
-            is_entry_file: false,
+            role: crate::role::CodeRole::Library,
+            regions: Vec::new(),
             line_count: 0,
             functions: Vec::new(),
             calls: Vec::new(),

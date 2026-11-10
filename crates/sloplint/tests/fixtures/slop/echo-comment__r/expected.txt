@@ -1,1 +1,1 @@
-src/doc.R:1 warn slop/echo-comment
+src/doc.R:1 minor slop/echo-comment

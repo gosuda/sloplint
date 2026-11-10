@@ -1,2 +1,2 @@
-src/store.R:1 deny agent/ambient-global-state
-src/store.R:4 deny agent/ambient-global-state
+src/store.R:1 major agent/ambient-global-state
+src/store.R:4 major agent/ambient-global-state

@@ -1,1 +1,1 @@
-# near-miss: 3 lines < fixture warn_at 20.
+# near-miss: 3 lines < fixture minor_at 20.

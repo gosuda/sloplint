@@ -1,1 +1,1 @@
-src/lib.swift:6 deny complexity/nested-mutation
+src/lib.swift:6 major complexity/nested-mutation

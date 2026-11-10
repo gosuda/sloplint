@@ -6,6 +6,7 @@
 //! restarts at nest `0`.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 /// `(cognitive, max_depth)` of the function called `name` in `source`.
@@ -15,7 +16,7 @@ fn metrics(lang: Lang, path: &str, source: &str, name: &str) -> (u32, u32) {
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "{path} parses");

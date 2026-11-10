@@ -4,6 +4,7 @@ use std::sync::LazyLock;
 
 use sloplint_core::facts::Stmt;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 static EMPTY_CUSTOM: LazyLock<CustomRules> =
@@ -15,7 +16,7 @@ fn audit_analyze<'s>(lang: Lang, path: &'s str, source: &'s str) -> Analysis<'s>
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     analyze(&mut parsers, &input, &EMPTY_CUSTOM)
 }

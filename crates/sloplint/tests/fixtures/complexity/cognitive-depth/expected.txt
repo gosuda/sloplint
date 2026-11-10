@@ -1,1 +1,1 @@
-src/lib.rs:1 deny complexity/cognitive-depth
+src/lib.rs:1 major complexity/cognitive-depth

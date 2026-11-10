@@ -1,1 +1,1 @@
-a.mli:1 warn meta/unused-suppression
+a.mli:1 minor meta/unused-suppression

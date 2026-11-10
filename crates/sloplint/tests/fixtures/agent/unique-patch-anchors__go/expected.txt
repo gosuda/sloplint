@@ -1,1 +1,1 @@
-a.go:3 warn agent/unique-patch-anchors
+a.go:3 minor agent/unique-patch-anchors

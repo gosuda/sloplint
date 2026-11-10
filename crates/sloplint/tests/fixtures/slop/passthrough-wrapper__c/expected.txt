@@ -1,1 +1,1 @@
-pos.c:3 warn slop/passthrough-wrapper
+pos.c:3 minor slop/passthrough-wrapper

@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use sloplint_core::{FailOn, Mode, RulePattern, Strictness};
+use sloplint_core::finding::{Confidence, FailOn};
+use sloplint_core::{Mode, RulePattern, Strictness};
 
 /// Agent-first code quality linter for twenty-three languages.
 #[derive(Debug, Parser)]
@@ -40,9 +41,12 @@ pub struct CheckArgs {
     /// Gate mode, overriding `project.mode`.
     #[arg(long, value_enum)]
     pub mode: Option<ModeArg>,
-    /// Lowest severity that fails the run, overriding `project.fail_on`.
+    /// Lowest rung that fails the run, overriding `project.fail_on`.
     #[arg(long = "fail-on", value_enum)]
     pub fail_on: Option<FailOnArg>,
+    /// Lowest confidence counted toward the gate, overriding `project.min_confidence`.
+    #[arg(long = "min-confidence", value_enum)]
+    pub min_confidence: Option<ConfidenceArg>,
     /// Report only findings of this rule id or family (`family/*`); repeatable.
     #[arg(long = "rule", value_name = "ID", value_parser = parse_rule)]
     pub rules: Vec<RulePattern>,
@@ -115,7 +119,7 @@ pub enum Format {
 pub enum StrictnessArg {
     /// Gates only egregious complexity, giant files, and swallowed errors.
     Minimal,
-    /// Adds precise greppability and agent rules at warn.
+    /// Adds precise greppability and agent rules at minor.
     Basic,
     /// Enables every heuristic rule with moderate thresholds.
     Standard,
@@ -132,15 +136,32 @@ pub enum ModeArg {
     Ratchet,
 }
 
-/// Fail-on severities accepted on the command line.
+/// Fail-on rungs accepted on the command line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum FailOnArg {
-    /// Any finding fails the run.
-    Warn,
-    /// Only deny findings fail the run.
-    Deny,
+    /// Findings at or above info fail the run.
+    Info,
+    /// Findings at or above minor fail the run.
+    Minor,
+    /// Findings at or above major fail the run.
+    Major,
+    /// Findings at or above critical fail the run.
+    Critical,
+    /// Only blocker findings fail the run.
+    Blocker,
     /// Findings never fail the run.
     Never,
+}
+
+/// Confidence levels accepted on the command line.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum ConfidenceArg {
+    /// Every finding counts toward the gate.
+    Low,
+    /// Medium and high confidence findings count toward the gate.
+    Medium,
+    /// Only high confidence findings count toward the gate.
+    High,
 }
 
 impl From<StrictnessArg> for Strictness {
@@ -166,9 +187,22 @@ impl From<ModeArg> for Mode {
 impl From<FailOnArg> for FailOn {
     fn from(arg: FailOnArg) -> Self {
         match arg {
-            FailOnArg::Warn => FailOn::Warn,
-            FailOnArg::Deny => FailOn::Deny,
+            FailOnArg::Info => FailOn::At(sloplint_core::finding::Severity::Info),
+            FailOnArg::Minor => FailOn::At(sloplint_core::finding::Severity::Minor),
+            FailOnArg::Major => FailOn::At(sloplint_core::finding::Severity::Major),
+            FailOnArg::Critical => FailOn::At(sloplint_core::finding::Severity::Critical),
+            FailOnArg::Blocker => FailOn::At(sloplint_core::finding::Severity::Blocker),
             FailOnArg::Never => FailOn::Never,
+        }
+    }
+}
+
+impl From<ConfidenceArg> for Confidence {
+    fn from(arg: ConfidenceArg) -> Self {
+        match arg {
+            ConfidenceArg::Low => Confidence::Low,
+            ConfidenceArg::Medium => Confidence::Medium,
+            ConfidenceArg::High => Confidence::High,
         }
     }
 }

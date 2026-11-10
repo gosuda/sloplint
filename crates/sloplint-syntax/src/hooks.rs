@@ -2,10 +2,10 @@ use sloplint_core::facts::{
     AmbientKind, Arg, ArgShape, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import,
     Param, Pos, TypeDef, WildcardArm,
 };
+use sloplint_core::lang::Lang;
+use sloplint_core::role::{CodeRole, RoleRegion};
 use std::cell::RefCell;
 use std::collections::HashMap;
-
-use sloplint_core::lang::Lang;
 use tree_sitter::Node;
 
 #[derive(Default)]
@@ -91,7 +91,6 @@ pub(crate) struct Cx<'t, 's> {
     pub src: &'s str,
     pub path: &'s str,
     pub lang: Lang,
-    pub is_test_file: bool,
     pub members: &'t MemberStates,
     chains: &'t ChainRoots,
     containers: &'t [Container],
@@ -105,7 +104,6 @@ impl<'t, 's> Cx<'t, 's> {
         src: &'s str,
         path: &'s str,
         lang: Lang,
-        is_test_file: bool,
         members: &'t MemberStates,
         chains: &'t ChainRoots,
     ) -> Self {
@@ -113,7 +111,6 @@ impl<'t, 's> Cx<'t, 's> {
             src,
             path,
             lang,
-            is_test_file,
             members,
             chains,
             containers: &[],
@@ -161,7 +158,7 @@ impl Cx<'_, '_> {
         self.containers.last().copied()
     }
 
-    pub(crate) fn in_test_module(&self) -> bool {
+    pub(crate) fn inside_test_module(&self) -> bool {
         self.containers.contains(&Container::TestModule)
     }
 
@@ -200,7 +197,7 @@ pub(crate) struct FunctionHead<'s> {
     pub name_pos: Pos,
     pub public: bool,
     pub interface_bound: bool,
-    pub in_test: bool,
+    pub region: Option<RoleRegion>,
     pub params: Vec<Param<'s>>,
     pub return_type: Option<&'s str>,
     pub missing_annotations: Vec<&'s str>,
@@ -274,6 +271,21 @@ pub(crate) trait LangHooks: Sync {
         None
     }
 
+    fn call_marker(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        let _ = (n, cx);
+        None
+    }
+
+    fn module_region(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        let _ = (n, cx);
+        None
+    }
+
+    fn module_leading<'t>(&self, n: Node<'t>, cx: &Cx<'_, '_>) -> Option<Node<'t>> {
+        let _ = (n, cx);
+        None
+    }
+
     fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
         let _ = (n, cx);
         None
@@ -319,6 +331,60 @@ pub(crate) trait LangHooks: Sync {
     }
 }
 
+pub(crate) fn region_of(n: Node<'_>, role: CodeRole) -> RoleRegion {
+    RoleRegion {
+        start_line: narrow(n.start_position().row) + 1,
+        end_line: narrow(n.end_position().row) + 1,
+        role,
+    }
+}
+pub(crate) fn attributed_region(
+    item: Node<'_>,
+    leading: Option<Node<'_>>,
+    role: CodeRole,
+) -> RoleRegion {
+    let mut start = item.start_position().row;
+    if let Some(extra) = leading {
+        start = start.min(extra.start_position().row);
+    }
+    RoleRegion {
+        start_line: narrow(start) + 1,
+        end_line: narrow(item.end_position().row) + 1,
+        role,
+    }
+}
+pub(crate) fn any_preceding(
+    n: Node<'_>,
+    target: &str,
+    skip: &[&str],
+    mut hit: impl FnMut(Node<'_>) -> bool,
+) -> bool {
+    let mut cur = n.prev_sibling();
+    while let Some(sib) = cur {
+        if sib.kind() == target {
+            if hit(sib) {
+                return true;
+            }
+        } else if !skip.contains(&sib.kind()) {
+            break;
+        }
+        cur = sib.prev_sibling();
+    }
+    false
+}
+pub(crate) fn earliest_preceding<'a>(n: Node<'a>, target: &str, skip: &[&str]) -> Option<Node<'a>> {
+    let mut cur = n.prev_sibling();
+    let mut found = None;
+    while let Some(sib) = cur {
+        if sib.kind() == target {
+            found = Some(sib);
+        } else if !skip.contains(&sib.kind()) {
+            break;
+        }
+        cur = sib.prev_sibling();
+    }
+    found
+}
 /// Files are capped at `max_file_bytes` (2 MiB), so a real position never exceeds `u32::MAX`.
 pub(crate) fn narrow(value: usize) -> u32 {
     u32::try_from(value).unwrap_or(u32::MAX)

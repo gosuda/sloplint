@@ -1,1 +1,1 @@
-a.bzl:1 warn grep/no-rename-import
+a.bzl:1 minor grep/no-rename-import

@@ -1,2 +1,2 @@
-src/a.cpp:2 deny agent/informative-assertions
-src/a.cpp:3 deny agent/informative-assertions
+src/a.cpp:2 major agent/informative-assertions
+src/a.cpp:3 major agent/informative-assertions

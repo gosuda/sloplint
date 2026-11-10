@@ -1,13 +1,22 @@
 use crate::config::Strictness;
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
+use crate::rules::{EmptyOptions, parse_options};
 
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "slop/barrel-file",
     family: Family::Slop,
     summary: "barrel files re-exporting from other barrel files",
     why: "Chained re-exports add hops between a name and its definition.",
-    exempt_tests: false,
+    confidence: Confidence::Medium,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Off,
+        support: Shift::Keep,
+        bench: Shift::Off,
+        example: Shift::Off,
+    },
     preset,
     build: Build::World(build),
 };
@@ -15,7 +24,7 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
 fn preset(strictness: Strictness) -> Preset {
     let level = match strictness {
         Strictness::Minimal | Strictness::Basic => Level::Off,
-        Strictness::Standard | Strictness::Strict => Level::Warn,
+        Strictness::Standard | Strictness::Strict => Level::At(Severity::Minor),
     };
     Preset {
         level,
@@ -23,7 +32,8 @@ fn preset(strictness: Strictness) -> Preset {
     }
 }
 
-fn build(_options: toml::Table) -> Result<Box<dyn WorldRule>, String> {
+fn build(options: toml::Table) -> Result<Box<dyn WorldRule>, String> {
+    parse_options::<EmptyOptions>(options)?;
     Ok(Box::new(BarrelFile))
 }
 
@@ -52,7 +62,7 @@ impl WorldRule for BarrelFile {
             out.push(Finding::at_file(
                 file.path,
                 INFO.id,
-                Severity::Warn,
+                Severity::Minor,
                 format!("barrel file re-exports from another barrel `{target}`"),
                 "import from the defining module directly and delete the pass-through re-exports"
                     .to_string(),
@@ -90,8 +100,8 @@ mod tests {
     fn facts(barrel: Option<Vec<Vec<String>>>) -> WorldFacts {
         WorldFacts {
             lang: Lang::TypeScript,
-            is_test_file: false,
-            is_entry_file: false,
+            role: crate::role::CodeRole::Library,
+            regions: Vec::new(),
             has_inline_tests: false,
             public_functions: 0,
             definitions: Vec::new(),

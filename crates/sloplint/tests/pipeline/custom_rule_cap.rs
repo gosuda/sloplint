@@ -7,7 +7,6 @@
 use std::path::{Path, PathBuf};
 
 use sloplint::{Report, RunOptions, run};
-use sloplint_core::Severity;
 use sloplint_core::config::{Mode, Strictness};
 use sloplint_core::rules::RuleFilter;
 use sloplint_core::suppress::RulePattern;
@@ -33,7 +32,7 @@ fn put(root: &Path, rel: &str, body: &str) {
 
 fn pair_rule() -> String {
     format!(
-        "[[custom_rules]]\nid = \"custom/pair-flood\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"pair\"\nwhy = \"unbounded sibling combination\"\nfix = \"anchor the query\"\nquery = \"{PAIRS}\"\n"
+        "[[custom_rules]]\nid = \"custom/pair-flood\"\nlanguage = \"rust\"\nseverity = \"minor\"\nmessage = \"pair\"\nwhy = \"unbounded sibling combination\"\nfix = \"anchor the query\"\nquery = \"{PAIRS}\"\n"
     )
 }
 
@@ -69,14 +68,10 @@ fn reported(report: &Report) -> Vec<(String, u32, &'static str, String)> {
         .findings
         .iter()
         .map(|finding| {
-            let severity = match finding.severity {
-                Severity::Warn => "warn",
-                Severity::Deny => "deny",
-            };
             (
                 finding.path.to_string(),
                 finding.line,
-                severity,
+                finding.severity.as_str(),
                 finding.rule.to_string(),
             )
         })
@@ -91,12 +86,12 @@ fn a_sibling_combination_query_is_capped_and_names_the_rule() {
     let report = run(&options(&root, &["meta/*"])).unwrap_or_else(|e| panic!("run failed: {e}"));
     assert_eq!(
         reported(&report),
-        vec![("src/main.rs".to_string(), 1, "deny", CAP.to_string())],
+        vec![("src/main.rs".to_string(), 1, "major", CAP.to_string())],
         "{:#?}",
         report.findings
     );
     assert_eq!(report.summary.findings, 1);
-    assert_eq!(report.summary.deny, 1);
+    assert_eq!(report.summary.major, 1);
 }
 
 #[test]
@@ -115,5 +110,5 @@ fn a_query_under_the_cap_reports_its_pairs_without_a_cap_finding() {
     );
     assert_eq!(findings.len(), 10, "{findings:#?}");
     assert_eq!(report.summary.findings, 10);
-    assert_eq!(report.summary.deny, 0);
+    assert_eq!(report.summary.major, 0);
 }

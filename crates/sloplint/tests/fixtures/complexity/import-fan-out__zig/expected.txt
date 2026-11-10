@@ -1,2 +1,2 @@
-# Positive: 15 distinct modules >= strict deny_at 15; finding at the first import.
-src/imports.zig:1 deny complexity/import-fan-out
+# Positive: 15 distinct modules >= strict major_at 15; finding at the first import.
+src/imports.zig:1 major complexity/import-fan-out

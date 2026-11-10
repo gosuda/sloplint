@@ -2,8 +2,9 @@ use std::collections::BTreeSet;
 
 use crate::config::Strictness;
 use crate::facts::FileFacts;
-use crate::finding::{Finding, Level, Severity};
-use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
+use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::role::{RolePolicy, Shift};
+use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, parse_options};
 use crate::text::identifier_words;
 
 const STOPWORDS: [&str; 32] = [
@@ -17,7 +18,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Slop,
     summary: "doc comments that restate the function name",
     why: "A comment that repeats the name adds tokens and no information.",
-    exempt_tests: false,
+    confidence: Confidence::Medium,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Lower1,
+        support: Shift::Keep,
+        bench: Shift::Lower1,
+        example: Shift::Keep,
+    },
     preset,
     build: Build::File(build),
 };
@@ -25,8 +33,8 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
 fn preset(strictness: Strictness) -> Preset {
     let (level, min_similarity) = match strictness {
         Strictness::Minimal | Strictness::Basic => (Level::Off, 0.8),
-        Strictness::Standard => (Level::Warn, 0.8),
-        Strictness::Strict => (Level::Warn, 0.65),
+        Strictness::Standard => (Level::At(Severity::Minor), 0.8),
+        Strictness::Strict => (Level::At(Severity::Minor), 0.65),
     };
     Preset {
         level,
@@ -44,9 +52,7 @@ fn options(min_similarity: f64) -> toml::Table {
 }
 
 fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>, String> {
-    let options: Options = toml::Value::Table(options)
-        .try_into()
-        .map_err(|error| error.to_string())?;
+    let options: Options = parse_options(options)?;
     if options.min_similarity.is_nan()
         || options.min_similarity <= 0.0
         || options.min_similarity > 1.0
@@ -94,7 +100,7 @@ impl FileRule for EchoComment {
                 facts,
                 function.doc_pos.unwrap_or(function.pos),
                 INFO.id,
-                Severity::Warn,
+                Severity::Minor,
                 format!(
                     "doc comment restates the name `{}` (similarity {similarity:.2})",
                     function.name

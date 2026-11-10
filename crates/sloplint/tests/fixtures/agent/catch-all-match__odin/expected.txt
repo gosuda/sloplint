@@ -1,1 +1,1 @@
-a.odin:11 warn agent/catch-all-match
+a.odin:11 minor agent/catch-all-match

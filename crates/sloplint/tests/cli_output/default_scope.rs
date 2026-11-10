@@ -6,7 +6,7 @@
 use std::path::Path;
 use std::process::{Command, Output};
 
-const HANDLE_ROW: &str = "warn: `handle` is a generic name shared by unrelated code";
+const HANDLE_ROW: &str = "`handle` is a generic name shared by unrelated code";
 
 fn project() -> tempfile::TempDir {
     let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));

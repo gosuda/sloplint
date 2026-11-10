@@ -2,8 +2,10 @@ use std::io;
 use std::path::PathBuf;
 
 use serde::Serialize;
+use sloplint_core::finding::{Confidence, Level};
+use sloplint_core::role::{RolePolicy, Shift};
 use sloplint_core::rules::custom::custom_level;
-use sloplint_core::{Config, ConfigError, Level, Preset, RuleFilter, RuleSet, Strictness};
+use sloplint_core::{Config, ConfigError, Preset, RuleFilter, RuleSet, Strictness};
 
 use crate::RunError;
 use crate::cli::Format;
@@ -29,6 +31,8 @@ struct Listed {
     id: String,
     family: &'static str,
     level: Level,
+    confidence: Confidence,
+    roles: RolePolicy,
     options: toml::Table,
     summary: String,
     why: String,
@@ -46,6 +50,8 @@ struct JsonRule<'a> {
     id: &'a str,
     family: &'a str,
     level: Level,
+    confidence: Confidence,
+    roles: String,
     options: &'a toml::Table,
     summary: &'a str,
     why: &'a str,
@@ -115,9 +121,11 @@ fn header(strictness: Strictness) -> String {
 
 fn entry_line(entry: &Listed) -> String {
     format!(
-        "{} level={}{} | {}",
+        "{} level={} confidence={} {}{} | {}",
         entry.id,
         level_name(entry.level),
+        entry.confidence.as_str(),
+        roles_text(&entry.roles),
         options_text(&entry.options),
         entry.summary
     )
@@ -169,6 +177,8 @@ fn builtin_entries(rules: &RuleSet) -> Vec<Listed> {
             id: resolved.info.id.to_string(),
             family: resolved.info.family.as_str(),
             level: resolved.level,
+            confidence: resolved.info.confidence,
+            roles: resolved.info.roles,
             options: resolved.options.clone(),
             summary: resolved.info.summary.to_string(),
             why: resolved.info.why.to_string(),
@@ -187,6 +197,8 @@ fn custom_entries(config: &Config) -> Vec<Listed> {
             id: spec.id.clone(),
             family: "custom",
             level: custom_level(config, spec),
+            confidence: spec.confidence,
+            roles: RolePolicy::KEEP,
             options: toml::Table::new(),
             summary: spec.message.clone(),
             why: spec.why.clone(),
@@ -202,6 +214,8 @@ fn json(strictness: Strictness, shown: &[&Listed]) -> Result<String, sonic_rs::E
             id: &entry.id,
             family: entry.family,
             level: entry.level,
+            confidence: entry.confidence,
+            roles: roles_text(&entry.roles),
             options: &entry.options,
             summary: &entry.summary,
             why: &entry.why,
@@ -242,7 +256,26 @@ fn options_text(options: &toml::Table) -> String {
 fn level_name(level: Level) -> &'static str {
     match level {
         Level::Off => "off",
-        Level::Warn => "warn",
-        Level::Deny => "deny",
+        Level::At(severity) => severity.as_str(),
+    }
+}
+
+fn roles_text(policy: &RolePolicy) -> String {
+    format!(
+        "roles=entry:{},test:{},support:{},bench:{},example:{}",
+        shift_name(policy.entry),
+        shift_name(policy.test),
+        shift_name(policy.support),
+        shift_name(policy.bench),
+        shift_name(policy.example)
+    )
+}
+
+fn shift_name(shift: Shift) -> &'static str {
+    match shift {
+        Shift::Keep => "keep",
+        Shift::Lower1 => "lower1",
+        Shift::Lower2 => "lower2",
+        Shift::Off => "off",
     }
 }

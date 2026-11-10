@@ -14,6 +14,7 @@ use crate::hooks::{
     preceding_comments, string_arg_shape, text, trimmed,
 };
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_declaration", Role::Function),
@@ -53,10 +54,6 @@ fn is_pub_token(c: Node<'_>) -> bool {
 
 fn has_pub(n: Node<'_>) -> bool {
     (0..n.child_count()).any(|i| n.child(i).is_some_and(is_pub_token))
-}
-
-fn in_test(cx: &Cx<'_, '_>) -> bool {
-    cx.is_test_file || cx.in_test_module()
 }
 
 fn sole_call_id(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
@@ -238,14 +235,12 @@ fn push_import_string<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>
     let shape = import_names(cx, builtin);
     let (name, alias, kind) = shape.unwrap_or(("", None, ImportKind::SideEffect));
     let pos = pos_of(n);
-    let flagged = cx.in_test_module();
     out.push(Import {
         pos,
         module,
         name,
         alias,
         kind,
-        in_test: flagged,
     });
 }
 
@@ -266,7 +261,6 @@ fn push_using<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
     }
     let module = Cow::Borrowed(import_module(cx, literal));
     let pos = pos_of(n);
-    let flagged = cx.in_test_module();
     let wild = ImportKind::Wildcard;
     out.push(Import {
         pos,
@@ -274,7 +268,6 @@ fn push_using<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
         name: "",
         alias: None,
         kind: wild,
-        in_test: flagged,
     });
 }
 
@@ -401,7 +394,7 @@ impl LangHooks for ZigHooks {
             name_pos: pos_of(name_node),
             public: has_pub(n) && exported,
             interface_bound: false,
-            in_test: in_test(cx),
+            region: None,
             params,
             return_type,
             missing_annotations: Vec::new(),
@@ -515,6 +508,10 @@ impl LangHooks for ZigHooks {
 
     fn container(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<Container> {
         (n.kind() == "test_declaration").then_some(Container::TestModule)
+    }
+
+    fn module_region(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        (n.kind() == "test_declaration").then_some(CodeRole::Test)
     }
 
     fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {

@@ -344,7 +344,7 @@ fn invalid_and_unused_suppressions_report() {
 /// The `[[custom_rules]]` table whose query matches `sample`'s function declarations.
 fn custom_rule(sample: &Sample) -> String {
     format!(
-        "[[custom_rules]]\nid = \"custom/fn-decl\"\nlanguage = \"{}\"\nseverity = \"warn\"\nmessage = \"declared\"\nwhy = \"test why\"\nfix = \"test fix\"\nquery = \"{}\"\n",
+        "[[custom_rules]]\nid = \"custom/fn-decl\"\nlanguage = \"{}\"\nseverity = \"minor\"\nmessage = \"declared\"\nwhy = \"test why\"\nfix = \"test fix\"\nquery = \"{}\"\n",
         sample.language, sample.query
     )
 }

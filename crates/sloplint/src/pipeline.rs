@@ -5,7 +5,6 @@ use std::io;
 use std::path::Path;
 use std::sync::OnceLock;
 
-use globset::GlobSet;
 use rayon::prelude::*;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
@@ -31,7 +30,7 @@ pub(crate) struct Pipeline<'a> {
     pub(crate) config: &'a Config,
     pub(crate) root: &'a Path,
     pub(crate) filter: &'a RuleFilter,
-    pub(crate) test_globs: &'a GlobSet,
+    pub(crate) roles: &'a crate::project::RoleSets,
     pub(crate) cache: &'a Loaded,
     pub(crate) interfaces: &'a HashSet<String>,
     pub(crate) active_rules: OnceLock<ActiveRules>,
@@ -183,7 +182,7 @@ fn analyze_file(
         lang: entry.lang,
         path: entry.rel.as_str(),
         source: probe.text,
-        is_test_file: pipe.test_globs.is_match(entry.rel.as_str()),
+        role: pipe.roles.role(entry.rel.as_str()),
     };
     let analysis = analyze(parsers, &input, pipe.custom);
     let world = WorldFacts::from_facts(&analysis.facts);
@@ -462,7 +461,7 @@ mod tests {
                 column: 8,
             },
             "grep/homonym-definitions",
-            Severity::Warn,
+            Severity::Minor,
             "message".to_string(),
             "fix".to_string(),
         )

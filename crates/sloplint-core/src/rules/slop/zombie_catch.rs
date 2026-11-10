@@ -3,28 +3,38 @@ use std::collections::BTreeMap;
 use crate::callee::CalleePattern;
 use crate::config::Strictness;
 use crate::facts::{CallKind, FileFacts, Stmt};
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::lang::Lang;
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
+use crate::rules::{EmptyOptions, parse_options};
 
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "slop/zombie-catch",
     family: Family::Slop,
     summary: "error handlers that swallow, rethrow unchanged, or log and rethrow",
     why: "Swallowed, unchanged, or log-and-rethrow handlers hide or duplicate failures.",
-    exempt_tests: false,
+    confidence: Confidence::Medium,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Lower1,
+        support: Shift::Keep,
+        bench: Shift::Lower1,
+        example: Shift::Keep,
+    },
     preset,
     build: Build::File(build),
 };
 
 fn preset(_strictness: Strictness) -> Preset {
     Preset {
-        level: Level::Deny,
+        level: Level::At(Severity::Major),
         options: toml::Table::new(),
     }
 }
 
-fn build(_options: toml::Table, settings: &Settings) -> Result<Box<dyn FileRule>, String> {
+fn build(options: toml::Table, settings: &Settings) -> Result<Box<dyn FileRule>, String> {
+    parse_options::<EmptyOptions>(options)?;
     Ok(Box::new(ZombieCatch {
         log_callees: settings.log_callees.clone(),
     }))
@@ -49,7 +59,7 @@ impl FileRule for ZombieCatch {
                 facts,
                 handler.pos,
                 INFO.id,
-                Severity::Deny,
+                Severity::Major,
                 format!("error handler {kind}"),
                 fix.to_string(),
             ));

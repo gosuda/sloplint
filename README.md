@@ -43,12 +43,12 @@ sloplint init
 mkdir src
 printf 'pub fn handle(flag: bool) {}\n' > src/lib.rs
 sloplint check --strictness standard
-# src/lib.rs:1:8: warn: `handle` is a generic name shared by unrelated code [grep/generic-name]
+# src/lib.rs:1:8: minor/high: `handle` is a generic name shared by unrelated code [grep/generic-name]
 ```
 
 In an existing project, run `sloplint init` once to write the default configuration, then run `sloplint check`.
 
-Exit code `0` means the gate passed: the run can still list `warn` findings below `fail_on` (default `deny`). `1` means at least one reported finding is at or above `fail_on`; `2` means usage or config error; `3` means an I/O error stopped the run.
+Exit code `0` means the gate passed: the run can still list below-`fail_on` findings (default `major`). `1` means at least one reported finding is at or above `fail_on` and at or above `min_confidence`; `2` means usage or config error; `3` means an I/O error stopped the run.
 
 An unreadable source file stops the run with exit `3` and reports its path and cause. Oversized, generated, and non-UTF-8 source files remain counted skips.
 
@@ -60,7 +60,61 @@ An unreadable source file stops the run with exit `3` and reports its path and c
 - **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
 - **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs. Each rule is bounded per file at 16,384 in-progress matches and 1,024 reported hits: a query that exceeds either cap reports `meta/custom-cap` instead of returning partial results silently.
 
-`meta/parse-error` is Warn in every profile, so a default `deny` gate does not fail on it. Set the rule to Deny or pass `--fail-on warn`. `meta/custom-cap` is Deny in every profile: a capped query's results are partial, so a default `deny` gate fails until the query is anchored. An empty `project.languages` list analyzes nothing.
+`meta/parse-error` is Minor in every profile, so a default `major` gate does not fail on it. Set the rule to a higher rung or pass `--fail-on minor`. `meta/custom-cap` is Blocker in every profile: a capped query's results are partial, so a default `major` gate fails until the query is anchored. An empty `project.languages` list analyzes nothing.
+
+## Severity ladder
+
+Findings use five rungs, ordered `info < minor < major < critical < blocker`. Each graded rule sets four cut points (`minor_at`, `major_at`, `critical_at`, `blocker_at`); the highest cut point at or below the measured value wins. Each single-severity rule reports its level rung. `project.fail_on` names the lowest failing rung (`info|minor|major|critical|blocker|never`, default `major`). `[rules."<id>"] level` is `off` or a rung; for graded rules the level is a ceiling.
+
+## Confidence
+
+Each finding carries `low < medium < high`. `project.min_confidence` (default `low`) sets the lowest confidence counted toward the gate; `--min-confidence low|medium|high` overrides it. Low confidence findings still print, they only stop failing the run.
+
+## Code roles
+
+Files are `library`, `entry`, `test`, `support`, `bench`, or `example`; `data` paths are excluded from analysis. The file role comes from path globs alone, resolved with precedence `data > bench > example > support > test > entry > library`. Language adapters additionally mark inline `test` and `bench` regions inside a file (test functions, `cfg(test)` modules, bench functions); a file with at least one inline test region reports `has_inline_tests`. Defaults:
+
+- `bench`: `**/benches/**,**/bench/**,**/benchmarks/**,**/benchmark/**,**/fuzz/**,**/fuzz_targets/**,**/*_bench.rs,**/*.bench.ts,**/*.bench.tsx,**/*.bench.js,**/*.bench.mjs,**/*_bench.py,**/bench_*.py,**/*_benchmark.cc,**/*_benchmark.cpp,**/*_bench.cc,**/*_bench.cpp,**/*_fuzzer.cc,**/*_fuzzer.cpp,**/src/jmh/**`
+- `example`: `**/examples/**,**/example/**,**/_examples/**`
+- `support`: `**/conftest.py,**/testutil/**,**/testutils/**,**/test_util/**,**/test_utils/**,**/test_helpers/**,**/test_support/**,**/testing/**,**/tests/common/**,**/tests/support/**,**/spec/support/**,**/__mocks__/**`
+- `entry`: `**/src/main.rs,**/src/bin/**,**/build.rs,**/main.go,**/cmd/**,**/__main__.py,**/manage.py,**/scripts/**`
+- `data`: `**/testdata/**,**/test-data/**,**/__fixtures__/**,**/__snapshots__/**`
+- `test`: the previous test default without `**/benches/**` and `**/testdata/**`
+
+Role shifts lower findings by role (K = keep, L1 = lower one rung, L2 = lower two rungs, O = off):
+
+| Rule | conf | entry | test | support | bench | example |
+|---|---|---|---|---|---|---|
+| complexity/cognitive-depth | high | K | L1 | K | L1 | K |
+| complexity/nesting-depth | high | K | L1 | K | L1 | K |
+| complexity/mutable-span | medium | K | L1 | K | O | L1 |
+| complexity/nested-mutation | medium | K | L1 | K | O | L1 |
+| complexity/boolean-params | high | L1 | O | L1 | O | O |
+| complexity/import-fan-out | medium | L1 | L1 | K | L1 | L1 |
+| grep/contiguous-log-literal | medium | K | O | L1 | O | O |
+| grep/generic-name | medium | L1 | O | K | O | O |
+| grep/homonym-definitions | low | K | O | K | O | O |
+| grep/multiline-argument | medium | K | O | L1 | O | L1 |
+| grep/no-dynamic-symbol | medium | K | L1 | K | L1 | K |
+| grep/no-rename-import | high | K | L1 | K | L1 | K |
+| grep/no-wildcard-import | high | K | O | L1 | O | L1 |
+| slop/barrel-file | medium | K | O | K | O | O |
+| slop/echo-comment | medium | K | L1 | K | L1 | K |
+| slop/field-copy | medium | K | O | L1 | O | L1 |
+| slop/passthrough-wrapper | medium | K | O | K | O | L1 |
+| slop/single-impl-abstraction | low | K | O | K | O | O |
+| slop/zombie-catch | medium | K | L1 | K | L1 | K |
+| agent/ambient-global-state | medium | O | O | L1 | O | O |
+| agent/catch-all-match | medium | K | L1 | K | L1 | L1 |
+| agent/colocated-tests | low | O | O | O | O | O |
+| agent/explicit-boundary-types | high | L1 | O | L1 | O | O |
+| agent/file-token-budget | high | K | L1 | K | L1 | K |
+| agent/informative-assertions | high | K | K | K | O | L1 |
+| agent/stringly-api | medium | L1 | O | L1 | O | O |
+| agent/typed-error-boundary | medium | O | O | L1 | O | O |
+| agent/unique-patch-anchors | medium | K | L1 | K | L1 | K |
+| meta/* (4 rules) | high | K | K | K | K | K |
+| custom/* | spec | K | K | K | K | K |
 
 ## Usage
 
@@ -73,7 +127,7 @@ An unreadable source file stops the run with exit `3` and reports its path and c
 | `sloplint rules [ID]` | Show effective rule settings for the active profile |
 | `sloplint init` | Write a starter `sloplint.toml`; use `sloplint rules` for effective rule settings |
 
-`check` flags: `--format agent|human|json`, `--strictness`, `--mode threshold|ratchet`, `--fail-on warn|deny|never`, `--rule ID` (repeatable, `family/*` allowed), `--config FILE`, `--no-cache`, `--jobs N`.
+`check` flags: `--format agent|human|json`, `--strictness`, `--mode threshold|ratchet`, `--fail-on info|minor|major|critical|blocker|never`, `--min-confidence low|medium|high`, `--rule ID` (repeatable, `family/*` allowed), `--config FILE`, `--no-cache`, `--jobs N`.
 
 Unknown `--rule` selectors fail with exit 2 listing the valid rule ids.
 
@@ -84,16 +138,19 @@ Every run analyzes the project root. `PATHS` only filters reported findings. Hid
 `--config FILE` names a file that must exist; without `--config`, a missing `sloplint.toml` falls back to defaults. Configuration and custom rule files are capped at 1 MiB per file (16 MiB total for custom rules); baselines are capped at 512 MiB and 1,000,000 entries.
 
 Rule option names and values are validated even when a rule is disabled or filtered out. An invalid threshold or unknown option fails with exit `2`; changing strictness cannot hide the error.
+Project keys: `strictness`, `languages`, `mode`, `baseline`, `fail_on` (rung or `never`), `min_confidence` (`low|medium|high`), `exclude`, `extend_exclude`, `test_globs`, `bench_globs`, `example_globs`, `support_globs`, `entry_globs`, `data_globs`, `max_file_bytes`, `custom_rule_files`. Rule tables accept `level = "off"` or a rung plus graded cut points `minor_at`, `major_at`, `critical_at`, `blocker_at` (each at least 1, non-decreasing in rung order). Custom rules accept `severity` as a rung and optional `confidence` (default `medium`).
 
 ```toml
 [project]
 strictness = "standard"
+fail_on = "major"
+min_confidence = "low"
 
 [rules."complexity/cognitive-depth"]
-deny_at = 18                          # warn_at still comes from the preset
+major_at = 18                          # minor_at still comes from the preset
 
 [rules."agent/colocated-tests"]
-level = "warn"                        # enables a rule the standard profile leaves off
+level = "minor"                       # enables a rule the standard profile leaves off
 ```
 
 ### Ratchet mode
@@ -113,13 +170,12 @@ sloplint warns and runs without the cache when the cache directory is a symlink,
 
 Older releases left a `cache-v1.bin` file in the per-user cache directory, and the oldest kept a `.sloplint` directory in the checkout. sloplint never reads or removes either; delete them by hand to reclaim the space.
 
-### Custom rules
-
 ```toml
 [[custom_rules]]
 id = "custom/no-unwrap-in-lib"
 language = "rust"
-severity = "deny"
+severity = "major"
+confidence = "medium"
 message = "`{method}()` in library code"
 why = "unwrap panics on the error path and hides the failure from callers"
 fix = "propagate with ? and return a typed error"
@@ -145,6 +201,8 @@ A directive covers its own comment and the next line. `sloplint-allow-file(rule)
 ### Output formats
 
 `--format agent` (default, stable machine-parseable text), `--format human` (annotated snippets with color), `--format json` (one document: findings, rules fired, summary).
+
+Agent lines read `path:line:col: <rung>/<confidence>: message [rule]`, followed by `context:` and `fix:` lines. The summary reads `summary: strictness=S files=N findings=N blocker=N critical=N major=N minor=N info=N baselined=N stale=N skipped=N`. JSON findings carry `"severity"` and `"confidence"`; the JSON summary carries one count per rung. Human output uses one color per rung. `sloplint rules` shows `level`, `confidence`, `roles=entry:..,test:..,support:..,bench:..,example:..`, and cut points for graded rules.
 
 ## Development
 

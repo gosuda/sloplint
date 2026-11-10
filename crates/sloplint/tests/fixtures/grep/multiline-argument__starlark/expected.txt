@@ -1,1 +1,1 @@
-a.bzl:2 warn grep/multiline-argument
+a.bzl:2 minor grep/multiline-argument

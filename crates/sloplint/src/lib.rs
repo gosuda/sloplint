@@ -22,9 +22,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
 use serde::Serialize;
+use sloplint_core::finding::{Confidence, Severity};
 use sloplint_core::lang::Lang;
 use sloplint_core::rules::{RuleFilter, RuleSet};
-use sloplint_core::{ConfigError, FailOn, Finding, Mode, Severity, Strictness};
+use sloplint_core::{ConfigError, FailOn, Finding, Mode, Strictness};
 use sloplint_syntax::CustomRules;
 use thiserror::Error;
 
@@ -32,7 +33,6 @@ use cache::Loaded;
 use pipeline::Pipeline;
 use project::Overrides;
 use store::{load_baseline, record_baseline};
-
 #[derive(Debug, Clone, Default)]
 pub struct RunOptions {
     pub cwd: PathBuf,
@@ -42,6 +42,7 @@ pub struct RunOptions {
     pub strictness: Option<Strictness>,
     pub mode: Option<Mode>,
     pub fail_on: Option<FailOn>,
+    pub min_confidence: Option<Confidence>,
     pub rule_filter: RuleFilter,
     /// The cache lives under the per-user cache home, never the checkout: a repository can ship a forged cache.
     pub use_cache: bool,
@@ -79,14 +80,16 @@ impl RunError {
         }
     }
 }
-
 #[derive(Debug, Clone, Serialize)]
 pub struct Summary {
     pub strictness: Strictness,
     pub files: u32,
     pub findings: u32,
-    pub deny: u32,
-    pub warn: u32,
+    pub blocker: u32,
+    pub critical: u32,
+    pub major: u32,
+    pub minor: u32,
+    pub info: u32,
     pub baselined: u32,
     pub stale: u32,
     pub skipped: u32,
@@ -145,6 +148,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
             strictness: opts.strictness,
             mode: opts.mode,
             fail_on: opts.fail_on,
+            min_confidence: opts.min_confidence,
         },
     )?;
     let config = loaded.config;
@@ -173,7 +177,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let loaded = cache
         .as_ref()
         .map_or_else(Loaded::empty, |cache| pool.install(|| cache.load()));
-    let test_globs = project::glob_set(&config.project.test_globs, "project.test_globs")?;
+    let roles = project::RoleSets::from_config(&config)?;
     let interfaces: HashSet<String> = discovery
         .entries
         .iter()
@@ -186,7 +190,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         config: &config,
         root: &root,
         filter: &opts.rule_filter,
-        test_globs: &test_globs,
+        roles: &roles,
         cache: &loaded,
         interfaces: &interfaces,
         active_rules: OnceLock::new(),
@@ -217,18 +221,14 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     } else {
         None
     };
-    let deny = count(
-        reported
-            .iter()
-            .filter(|finding| finding.severity == Severity::Deny)
-            .count(),
-    );
-    let warn = count(
-        reported
-            .iter()
-            .filter(|finding| finding.severity == Severity::Warn)
-            .count(),
-    );
+    let rung = |severity: Severity| {
+        count(
+            reported
+                .iter()
+                .filter(|finding| finding.severity == severity)
+                .count(),
+        )
+    };
     let mut rules_fired: BTreeMap<String, String> = BTreeMap::new();
     for finding in &reported {
         if !rules_fired.contains_key(&*finding.rule) {
@@ -236,15 +236,20 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
             rules_fired.insert(finding.rule.to_string(), why.to_string());
         }
     }
+    let minimum = config.project.min_confidence;
     let failed = !opts.write_baseline
-        && threshold(config.project.fail_on)
-            .is_some_and(|minimum| reported.iter().any(|finding| finding.severity >= minimum));
+        && reported.iter().any(|finding| {
+            config.project.fail_on.fails(finding.severity) && finding.confidence >= minimum
+        });
     let summary = Summary {
         strictness: config.project.strictness,
         files,
         findings: count(reported.len()),
-        deny,
-        warn,
+        blocker: rung(Severity::Blocker),
+        critical: rung(Severity::Critical),
+        major: rung(Severity::Major),
+        minor: rung(Severity::Minor),
+        info: rung(Severity::Info),
         baselined,
         stale,
         skipped,
@@ -276,14 +281,6 @@ fn apply_gate(
         .entries
         .retain(|entry| pipe.filter.matches(&entry.rule));
     Ok(baseline.filter(all, &|path: &str| scopes.contains(Path::new(path))))
-}
-
-fn threshold(fail_on: FailOn) -> Option<Severity> {
-    match fail_on {
-        FailOn::Warn => Some(Severity::Warn),
-        FailOn::Deny => Some(Severity::Deny),
-        FailOn::Never => None,
-    }
 }
 
 const MAX_JOBS: usize = 512;

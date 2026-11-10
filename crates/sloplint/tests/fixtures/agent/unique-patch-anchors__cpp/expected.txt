@@ -1,1 +1,1 @@
-src/repeat.cpp:8 warn agent/unique-patch-anchors
+src/repeat.cpp:8 minor agent/unique-patch-anchors

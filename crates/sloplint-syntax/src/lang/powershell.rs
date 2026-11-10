@@ -506,7 +506,7 @@ impl LangHooks for PowerShellHooks {
             name_pos: pos_of(name_node),
             public,
             interface_bound: false,
-            in_test: cx.is_test_file,
+            region: None,
             params,
             return_type,
             missing_annotations: missing,

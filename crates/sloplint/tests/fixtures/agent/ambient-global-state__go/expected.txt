@@ -1,2 +1,2 @@
-a.go:3 deny agent/ambient-global-state
-a.go:5 deny agent/ambient-global-state
+a.go:3 major agent/ambient-global-state
+a.go:5 major agent/ambient-global-state

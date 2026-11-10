@@ -1,1 +1,1 @@
-a.swift:1 warn grep/homonym-definitions
+a.swift:1 minor grep/homonym-definitions

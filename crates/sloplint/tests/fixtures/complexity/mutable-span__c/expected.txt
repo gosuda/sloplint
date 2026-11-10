@@ -1,1 +1,1 @@
-pos.c:2 deny complexity/mutable-span
+pos.c:2 major complexity/mutable-span

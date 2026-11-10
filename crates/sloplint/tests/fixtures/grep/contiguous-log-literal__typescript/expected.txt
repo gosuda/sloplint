@@ -1,1 +1,1 @@
-src/mod.ts:2 deny grep/contiguous-log-literal
+src/mod.ts:2 major grep/contiguous-log-literal

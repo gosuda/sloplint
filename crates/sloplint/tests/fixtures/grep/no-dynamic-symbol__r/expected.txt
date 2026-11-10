@@ -1,1 +1,1 @@
-src/lookup.R:2 warn grep/no-dynamic-symbol
+src/lookup.R:2 minor grep/no-dynamic-symbol

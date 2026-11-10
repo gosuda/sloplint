@@ -1,1 +1,1 @@
-a.odin:4 deny grep/contiguous-log-literal
+a.odin:4 major grep/contiguous-log-literal

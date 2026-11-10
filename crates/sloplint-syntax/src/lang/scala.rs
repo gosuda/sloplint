@@ -10,9 +10,10 @@ use tree_sitter::Node;
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field,
     first_named_child, first_named_child_matching, has_child_kind, named_children, narrow, pos_of,
-    preceding_comments, slice, text, trimmed,
+    preceding_comments, region_of, slice, text, trimmed,
 };
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
@@ -329,7 +330,6 @@ fn import_path<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<&'s str> {
 #[derive(Clone, Copy)]
 struct Head {
     pos: Pos,
-    in_test: bool,
 }
 
 struct Emit<'a, 's> {
@@ -347,7 +347,6 @@ impl<'a, 's> Emit<'a, 's> {
             name,
             alias,
             kind: ImportKind::Named,
-            in_test: self.head.in_test,
         });
     }
     fn wild(&mut self) {
@@ -357,7 +356,6 @@ impl<'a, 's> Emit<'a, 's> {
             name: self.wild,
             alias: None,
             kind: ImportKind::Wildcard,
-            in_test: self.head.in_test,
         });
     }
     fn renamed(&mut self, cx: &Cx<'_, 's>, s: Node<'_>) {
@@ -389,15 +387,35 @@ impl<'a, 's> Emit<'a, 's> {
     }
 }
 
+fn is_suite_base(base: &str) -> bool {
+    let base = base.strip_prefix("Fixture").unwrap_or(base);
+    let base = base.strip_prefix("Async").unwrap_or(base);
+    if matches!(
+        base,
+        "Suite"
+            | "Suites"
+            | "FunSuite"
+            | "CatsEffectSuite"
+            | "Specification"
+            | "ZIOSpecDefault"
+            | "Properties"
+    ) {
+        return true;
+    }
+    base.starts_with("Any") && (base.ends_with("Suite") || base.ends_with("Spec"))
+}
+fn in_test_dir(path: &str) -> bool {
+    path.split('/').any(|seg| seg == "test" || seg == "tests")
+}
 fn extend_info<'s>(cx: &Cx<'_, 's>, c: Node<'_>) -> (Vec<ImplRef<'s>>, bool) {
     let mut impls = Vec::new();
-    let mut testy = false;
+    let mut testy = in_test_dir(cx.path);
     for t in named_children(c) {
         if t.kind() == "arguments" {
             continue;
         }
         let ttext = trimmed(cx, t);
-        testy |= ttext.ends_with("Suite") || ttext.ends_with("Spec");
+        testy |= is_suite_base(seg_last(ttext));
         impls.push(ImplRef {
             name: seg_last(ttext),
             pos: pos_of(t),
@@ -452,7 +470,7 @@ impl LangHooks for ScalaHooks {
                 ..
             })
         ) && mods.is_some_and(|m| has_child_kind(m, "override"));
-        let in_test = cx.is_test_file || cx.in_test_module();
+        let tested = cx.inside_test_module();
         let mut params = Vec::new();
         for c in named_children(n) {
             if c.kind() == "parameters" {
@@ -475,7 +493,7 @@ impl LangHooks for ScalaHooks {
             name_pos: pos_of(name_node),
             public,
             interface_bound,
-            in_test,
+            region: tested.then(|| region_of(n, CodeRole::Test)),
             params,
             return_type,
             missing_annotations: missing,
@@ -541,16 +559,23 @@ impl LangHooks for ScalaHooks {
             args: call_args(cx, n),
         })
     }
+    fn call_marker(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        if n.kind() != "call_expression" {
+            return None;
+        }
+        let func = child_by_field(n, "function")?;
+        if text(cx, func_node(func).unwrap_or(func)) != "test" {
+            return None;
+        }
+        cx.inside_test_module().then_some(CodeRole::Test)
+    }
 
     fn imports<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
         let kind = n.kind();
         if kind != "import_declaration" && kind != "export_declaration" {
             return;
         }
-        let head = Head {
-            pos: pos_of(n),
-            in_test: cx.is_test_file,
-        };
+        let head = Head { pos: pos_of(n) };
         let path = import_path(cx, n);
         let mut emit = Emit {
             module: path.join("."),
@@ -586,7 +611,6 @@ impl LangHooks for ScalaHooks {
             name,
             alias: None,
             kind: ImportKind::Named,
-            in_test: emit.head.in_test,
         });
     }
 

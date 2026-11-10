@@ -1,1 +1,1 @@
-src/app.js:4 deny slop/zombie-catch
+src/app.js:4 major slop/zombie-catch

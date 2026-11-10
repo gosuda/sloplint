@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 
 use sloplint_core::facts::{FileFacts, Function, MutBinding};
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 /// Nesting depth for every case: deep enough to overflow a 2 MiB stack under recursion.
@@ -51,7 +52,7 @@ pub fn with_facts<R>(
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "{path} parses cleanly");

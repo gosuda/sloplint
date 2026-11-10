@@ -3,6 +3,7 @@
 
 use sloplint_core::facts::AmbientKind;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 const SOURCE: &str = "const opts = { timeout: 1 };
@@ -21,7 +22,7 @@ fn declared(lang: Lang, path: &str) -> (Vec<String>, Vec<String>) {
         lang,
         path,
         source: SOURCE,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(

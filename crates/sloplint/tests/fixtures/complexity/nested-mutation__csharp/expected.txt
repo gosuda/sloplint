@@ -1,1 +1,1 @@
-src/Grids.cs:7 deny complexity/nested-mutation
+src/Grids.cs:7 major complexity/nested-mutation
