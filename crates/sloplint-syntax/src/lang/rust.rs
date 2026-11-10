@@ -178,10 +178,8 @@ fn shaped_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
 }
 fn macro_args<'s>(cx: &Cx<'_, 's>, tt: Node<'_>) -> Vec<Arg<'s>> {
     let mut groups: Vec<Vec<Node<'_>>> = vec![Vec::new()];
-    for i in 0..tt.child_count() {
-        let Some(child) = tt.child(i) else {
-            continue;
-        };
+    let mut cursor = tt.walk();
+    for child in tt.children(&mut cursor) {
         if !child.is_named() {
             let t = text(cx, child);
             if t == "," {
@@ -900,14 +898,11 @@ impl LangHooks for RustHooks {
             return None;
         }
         let tt = first_named_child_matching(n, &["token_tree"])?;
-        let mut tops = Vec::new();
-        for i in 0..tt.child_count() {
-            if let Some(c) = tt.child(i)
-                && c.kind() != "token_tree"
-            {
-                tops.push(c);
-            }
-        }
+        let mut cursor = tt.walk();
+        let tops: Vec<Node<'_>> = tt
+            .children(&mut cursor)
+            .filter(|c| c.kind() != "token_tree")
+            .collect();
         let has_message = if unreach {
             tops.iter().any(|c| {
                 let t = text(cx, *c);

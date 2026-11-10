@@ -115,16 +115,12 @@ fn gaps<'s>(cx: &Cx<'_, 's>, n: Node<'_>, gap_kind: &str) -> Vec<&'s str> {
     let mut cursor = n.start_byte() + open;
     let close_at = n.end_byte().saturating_sub(open);
     let mut segs = Vec::new();
-    let mut i = 0u32;
-    while i < n.child_count() {
-        match n.child(i) {
-            Some(c) if c.kind() == gap_kind => {
-                segs.push(slice(cx.src, cursor, c.start_byte()));
-                cursor = c.end_byte();
-            }
-            _ => {}
+    let mut walker = n.walk();
+    for c in n.children(&mut walker) {
+        if c.kind() == gap_kind {
+            segs.push(slice(cx.src, cursor, c.start_byte()));
+            cursor = c.end_byte();
         }
-        i += 1;
     }
     segs.push(slice(cx.src, cursor, close_at));
     segs
