@@ -45,12 +45,15 @@ expect_ok() {
 }
 
 expect_fail() {
-  local name="$1"
-  shift
+  local name="$1" want="$2"
+  shift 2
   if "$@" >"$work/out.log" 2>&1; then
     record bad "$name (expected failure)"
-  else
+  elif grep -qF -- "$want" "$work/out.log"; then
     record ok "$name"
+  else
+    record bad "$name (missing '$want' in output)"
+    sed 's/^/    /' "$work/out.log" >&2
   fi
 }
 
@@ -183,16 +186,16 @@ verify_tag() {
 one='{"packages":[{"name":"sloplint","version":"0.1.0"},{"name":"sloplint-core","version":"9.9.9"}]}'
 metadata "$one"
 expect_ok "tag matches the sloplint package version while another member differs" verify_tag v0.1.0
-expect_fail "tag with another version is rejected" verify_tag v0.2.0
-expect_fail "tag without v prefix is rejected" verify_tag 0.1.0
-expect_fail "empty version after v is rejected" verify_tag v
+expect_fail "tag with another version is rejected" "does not match sloplint package version" verify_tag v0.2.0
+expect_fail "tag without v prefix is rejected" "must be v followed by" verify_tag 0.1.0
+expect_fail "empty version after v is rejected" "must be v followed by" verify_tag v
 metadata '{"packages":[{"name":"sloplint-core","version":"0.1.0"}]}'
-expect_fail "missing sloplint package is rejected" verify_tag v0.1.0
+expect_fail "missing sloplint package is rejected" "expected exactly one sloplint package" verify_tag v0.1.0
 metadata '{"packages":[{"name":"sloplint","version":"0.1.0"},{"name":"sloplint","version":"0.1.0"}]}'
-expect_fail "two sloplint packages are rejected" verify_tag v0.1.0
+expect_fail "two sloplint packages are rejected" "expected exactly one sloplint package" verify_tag v0.1.0
 metadata "$one"
 touch "$state/cargo-fail"
-expect_fail "cargo metadata failure is not swallowed" verify_tag v0.1.0
+expect_fail "cargo metadata failure is not swallowed" "exiting with status 101" verify_tag v0.1.0
 
 targets=(x86_64-unknown-linux-gnu x86_64-pc-windows-msvc)
 dist="$work/dist"
@@ -235,22 +238,22 @@ build_dist v1.0.0
 expect_ok "complete dist passes, including a checksum file without trailing newline" verify_dist
 build_dist v1.0.0
 rm "$dist/sloplint-v1.0.0-x86_64-pc-windows-msvc.zip.sha256"
-expect_fail "missing checksum file is rejected" verify_dist
+expect_fail "missing checksum file is rejected" "does not hold exactly the expected" verify_dist
 build_dist v1.0.0
 printf '%s\n' extra >"$dist/stray.txt"
-expect_fail "unexpected file is rejected" verify_dist
+expect_fail "unexpected file is rejected" "does not hold exactly the expected" verify_dist
 build_dist v1.0.0
 printf '%s' tampered >>"$dist/sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz"
-expect_fail "archive that no longer matches its checksum is rejected" verify_dist
+expect_fail "archive that no longer matches its checksum is rejected" "sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz does not match sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz.sha256" verify_dist
 build_dist v1.0.0
 (cd "$dist" && printf '%s  %s\n' "$(sha256sum sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz | cut -d' ' -f1)" other.tar.gz >sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz.sha256)
-expect_fail "checksum file naming another archive is rejected" verify_dist
+expect_fail "checksum file naming another archive is rejected" ".sha256 names '" verify_dist
 build_dist v1.0.0
 mkdir "$work/stage2"
 printf '%s\n' binary >"$work/stage2/sloplint"
 tar -czf "$dist/sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz" -C "$work/stage2" sloplint
 (cd "$dist" && shasum -a 256 sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz >sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz.sha256)
-expect_fail "archive without LICENSE is rejected" verify_dist
+expect_fail "archive without LICENSE is rejected" "sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz holds [sloplint ] instead of [LICENSE sloplint ]" verify_dist
 build_dist v1.0.0
 python3 - "$dist/sloplint-v1.0.0-x86_64-pc-windows-msvc.zip" "$work/stage" <<'PY'
 import sys, zipfile
@@ -258,7 +261,7 @@ with zipfile.ZipFile(sys.argv[1], "w") as z:
     z.write(sys.argv[2] + "/sloplint.exe", "sloplint.exe")
 PY
 (cd "$dist" && shasum -a 256 sloplint-v1.0.0-x86_64-pc-windows-msvc.zip >sloplint-v1.0.0-x86_64-pc-windows-msvc.zip.sha256)
-expect_fail "msvc zip without LICENSE is rejected" verify_dist
+expect_fail "msvc zip without LICENSE is rejected" "sloplint-v1.0.0-x86_64-pc-windows-msvc.zip holds [sloplint.exe ] instead of [LICENSE sloplint.exe ]" verify_dist
 build_dist v1.0.0
 printf '%s\n' extra >"$work/stage/extra.txt"
 python3 - "$dist/sloplint-v1.0.0-x86_64-pc-windows-msvc.zip" "$work/stage" <<'PY'
@@ -269,14 +272,14 @@ with zipfile.ZipFile(sys.argv[1], "w") as z:
     z.write(sys.argv[2] + "/extra.txt", "extra.txt")
 PY
 (cd "$dist" && shasum -a 256 sloplint-v1.0.0-x86_64-pc-windows-msvc.zip >sloplint-v1.0.0-x86_64-pc-windows-msvc.zip.sha256)
-expect_fail "msvc zip with an extra entry is rejected" verify_dist
+expect_fail "msvc zip with an extra entry is rejected" "sloplint-v1.0.0-x86_64-pc-windows-msvc.zip holds [LICENSE extra.txt sloplint.exe ] instead of [LICENSE sloplint.exe ]" verify_dist
 build_dist v1.0.0
 printf '%s\n' extra >"$work/stage/zzz"
 tar -czf "$dist/sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz" -C "$work/stage" sloplint LICENSE zzz
 (cd "$dist" && shasum -a 256 sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz >sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz.sha256)
-expect_fail "linux tar with an extra member is rejected" verify_dist
+expect_fail "linux tar with an extra member is rejected" "sloplint-v1.0.0-x86_64-unknown-linux-gnu.tar.gz holds [LICENSE sloplint zzz ] instead of [LICENSE sloplint ]" verify_dist
 build_dist v0.9.0
-expect_fail "archives named for another tag are rejected" verify_dist
+expect_fail "archives named for another tag are rejected" "does not hold exactly the expected" verify_dist
 
 sbom_path="$dist/sloplint-v1.0.0-x86_64-unknown-linux-gnu.cdx.json"
 break_sbom() {
@@ -287,22 +290,22 @@ break_sbom() {
 
 build_dist v1.0.0
 rm "$sbom_path"
-expect_fail "missing SBOM is rejected" verify_dist
+expect_fail "missing SBOM is rejected" "does not hold exactly the expected" verify_dist
 build_dist v1.0.0
 printf '%s\n' 'not json' >"$sbom_path"
-expect_fail "SBOM that is not JSON is rejected" verify_dist
+expect_fail "SBOM that is not JSON is rejected" "is not a CycloneDX 1.5 SBOM" verify_dist
 break_sbom '.bomFormat = "SPDX"'
-expect_fail "SBOM with another format is rejected" verify_dist
+expect_fail "SBOM with another format is rejected" "is not a CycloneDX 1.5 SBOM" verify_dist
 break_sbom '.specVersion = "1.3"'
-expect_fail "SBOM with another spec version is rejected" verify_dist
+expect_fail "SBOM with another spec version is rejected" "is not a CycloneDX 1.5 SBOM" verify_dist
 break_sbom '.metadata.component.name = "other"'
-expect_fail "SBOM describing another package is rejected" verify_dist
+expect_fail "SBOM describing another package is rejected" "is not a CycloneDX 1.5 SBOM" verify_dist
 break_sbom '.metadata.component.version = "9.9.9"'
-expect_fail "SBOM describing another version is rejected" verify_dist
+expect_fail "SBOM describing another version is rejected" "is not a CycloneDX 1.5 SBOM" verify_dist
 break_sbom '.components = []'
-expect_fail "SBOM without components is rejected" verify_dist
+expect_fail "SBOM without components is rejected" "is not a CycloneDX 1.5 SBOM" verify_dist
 break_sbom 'del(.components)'
-expect_fail "SBOM without a components array is rejected" verify_dist
+expect_fail "SBOM without a components array is rejected" "is not a CycloneDX 1.5 SBOM" verify_dist
 
 sha="1111111111111111111111111111111111111111"
 export GITHUB_REPOSITORY=owner/repo GITHUB_SHA="$sha"
@@ -328,6 +331,9 @@ scenario() {
 called() {
   grep -qF -- "$1" "$state/calls.log"
 }
+last_called() {
+  tail -n 1 "$state/calls.log" | grep -qF -- "$1"
+}
 
 asset() {
   printf '{"id":%s,"name":"%s","state":"%s","digest":%s}' "$1" "$2" "$3" "$4"
@@ -351,7 +357,7 @@ else
 fi
 
 scenario "[{\"id\":7,\"tag_name\":\"v1.0.0\",\"draft\":true,\"assets\":[$(asset 11 a.txt uploaded '"sha256:deadbeef"')]}]"
-expect_fail "draft asset with different content fails" publish
+expect_fail "draft asset with different content fails" "with different content" publish
 if ! called "release upload" && ! called "release edit" && ! called "delete-asset"; then
   record ok "mismatch changes nothing"
 else
@@ -367,7 +373,7 @@ else
 fi
 
 scenario "[{\"id\":7,\"tag_name\":\"v1.0.0\",\"draft\":false,\"assets\":[$(asset 11 a.txt uploaded "\"$sum_a\"")]}]"
-expect_fail "published release missing an asset fails" publish
+expect_fail "published release missing an asset fails" "refusing to modify a published release" publish
 if ! called "release upload"; then
   record ok "published release gets no upload"
 else
@@ -376,25 +382,35 @@ fi
 
 scenario '[]'
 touch "$state/list-fail"
-expect_fail "release listing failure is not treated as a missing release" publish
+expect_fail "release listing failure is not treated as a missing release" "Bad credentials" publish
 if ! called "release create"; then
   record ok "no draft is created after a listing failure"
 else
   record bad "created a release after listing failure"
 fi
+if last_called "repos/owner/repo/releases?per_page=100"; then
+  record ok "listing failure stops at the release listing"
+else
+  record bad "listing failure did not stop at the release listing"
+fi
 
 scenario '[]'
 touch "$state/ref-fail"
-expect_fail "tag lookup failure stops before any release call" publish
+expect_fail "tag lookup failure stops before any release call" "Bad credentials" publish
 if ! called "release create"; then
   record ok "no draft is created after a tag lookup failure"
 else
   record bad "created a release after tag lookup failure"
 fi
+if last_called "repos/owner/repo/git/ref/tags/v1.0.0"; then
+  record ok "tag lookup failure stops at the tag lookup"
+else
+  record bad "tag lookup failure did not stop at the tag lookup"
+fi
 
 scenario '[]'
 printf '{"object":{"type":"commit","sha":"%s"}}\n' 2222222222222222222222222222222222222222 >"$state/ref.json"
-expect_fail "tag that moved off the built commit fails" publish
+expect_fail "tag that moved off the built commit fails" "but this run built" publish
 if ! called "release create"; then
   record ok "moved tag blocks creation"
 else
@@ -415,7 +431,7 @@ else
 fi
 
 scenario "[{\"id\":7,\"tag_name\":\"v1.0.0\",\"draft\":true,\"assets\":[$(asset 11 old.txt uploaded '"sha256:00"')]}]"
-expect_fail "unexpected asset on the draft fails" publish
+expect_fail "unexpected asset on the draft fails" "holds assets this run did not build" publish
 if ! called "release edit"; then
   record ok "unexpected asset blocks publication"
 else
@@ -423,11 +439,16 @@ else
 fi
 
 scenario '[{"id":7,"tag_name":"v1.0.0","draft":true,"assets":[]},{"id":8,"tag_name":"v1.0.0","draft":true,"assets":[]}]'
-expect_fail "duplicate releases for one tag fail" publish
+expect_fail "duplicate releases for one tag fail" "more than one release uses tag" publish
+if ! called "release create" && ! called "release edit"; then
+  record ok "duplicate releases change nothing"
+else
+  record bad "duplicate releases mutated the release"
+fi
 
 scenario '[]'
 export STUB_UPLOAD_DIGEST="sha256:ffff"
-expect_fail "upload that lands with another digest fails" publish
+expect_fail "upload that lands with another digest fails" "after upload" publish
 unset STUB_UPLOAD_DIGEST
 if ! called "release edit"; then
   record ok "bad upload digest blocks publication"
@@ -450,21 +471,21 @@ else
 fi
 scenario "[{\"id\":7,\"tag_name\":\"v1.0.0\",\"draft\":true,\"assets\":[$(asset 11 a.txt uploaded null),$(asset 12 b.txt uploaded "\"$sum_b\"")]}]"
 printf '%s\n' stale >"$state/blobs/11"
-expect_fail "draft asset without digest but different content fails" publish
+expect_fail "draft asset without digest but different content fails" "with different content" publish
 if ! called "release upload" && ! called "delete-asset" && ! called "release edit"; then
   record ok "mismatched download changes nothing"
 else
   record bad "mismatched download mutated the release"
 fi
 scenario "[{\"id\":7,\"tag_name\":\"v1.0.0\",\"draft\":false,\"assets\":[$(asset 11 a.txt starter null),$(asset 12 b.txt uploaded "\"$sum_b\"")]}]"
-expect_fail "published release with an incomplete asset fails" publish
+expect_fail "published release with an incomplete asset fails" "holds an incomplete" publish
 if ! called "delete-asset" && ! called "release upload"; then
   record ok "incomplete published asset changes nothing"
 else
   record bad "incomplete published asset mutated the release"
 fi
 scenario "[{\"id\":7,\"tag_name\":\"v1.0.0\",\"draft\":false,\"assets\":[$(asset 11 a.txt uploaded '"sha256:deadbeef"'),$(asset 12 b.txt uploaded "\"$sum_b\"")]}]"
-expect_fail "published release with different content fails" publish
+expect_fail "published release with different content fails" "with different content" publish
 if ! called "release upload" && ! called "delete-asset" && ! called "release edit" && ! called --clobber; then
   record ok "different content on a published release changes nothing"
 else
@@ -480,7 +501,7 @@ else
 fi
 scenario '[]'
 touch "$state/ref-moving"
-expect_fail "tag that moves mid-run fails before publication" publish
+expect_fail "tag that moves mid-run fails before publication" "but this run built" publish
 if ! called "release edit"; then
   record ok "moved tag blocks publication"
 else
