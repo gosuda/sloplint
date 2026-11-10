@@ -7,8 +7,8 @@ use std::io;
 /// Escapes terminal and bidi controls (CVE-2021-42574) in untrusted text before display.
 ///
 /// Line mode renders a single line: line feeds are escaped with the other controls. Block mode
-/// renders a document: line feeds are structural, and a line whose first characters would forge
-/// a CI workflow command has its first colon shown as `\x3a`.
+/// renders a document: line feeds are structural, and a line whose first non-whitespace
+/// characters would forge a CI workflow command has that first colon shown as `\x3a`.
 #[derive(Debug, Clone, Copy)]
 pub struct TerminalText<'a> {
     text: &'a str,
@@ -44,9 +44,9 @@ impl<'a> TerminalText<'a> {
 
     fn needs_escape(&self) -> bool {
         if self.keep_newlines {
-            self.text
-                .split('\n')
-                .any(|line| line.starts_with("::") || next_control(line.as_bytes(), 0).is_some())
+            self.text.split('\n').any(|line| {
+                command_colon(line).is_some() || next_control(line.as_bytes(), 0).is_some()
+            })
         } else {
             next_control(self.text.as_bytes(), 0).is_some()
         }
@@ -113,15 +113,23 @@ impl fmt::Display for TerminalText<'_> {
             if index > 0 {
                 f.write_str("\n")?;
             }
-            if line.starts_with("::") {
+            if let Some(at) = command_colon(line) {
+                escaped_controls(&line[..at], f)?;
                 f.write_str("\\x3a")?;
-                escaped_controls(&line[1..], f)?;
+                escaped_controls(&line[at + 1..], f)?;
             } else {
                 escaped_controls(line, f)?;
             }
         }
         Ok(())
     }
+}
+
+fn command_colon(line: &str) -> Option<usize> {
+    let command = line.trim_start();
+    command
+        .starts_with("::")
+        .then(|| line.len() - command.len())
 }
 
 fn escaped_controls(text: &str, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -206,6 +214,12 @@ mod tests {
             TerminalText::block("a\n::x").into_text(),
             "a\n\\x3a:x",
             "into_text must agree with Display on defused lines"
+        );
+        assert_eq!(
+            TerminalText::block("a\n ::error::x\n\t::warning file=f\n\u{a0}::notice::y")
+                .to_string(),
+            "a\n \\x3a:error::x\n\t\\x3a:warning file=f\n\u{a0}\\x3a:notice::y",
+            "the runner trims leading whitespace, so a padded command must be defused too"
         );
         assert_eq!(
             TerminalText::line("::warning").to_string(),
