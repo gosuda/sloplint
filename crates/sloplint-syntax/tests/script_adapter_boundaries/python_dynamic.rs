@@ -200,3 +200,149 @@ fn alternating_outer_and_nested_getattr_flags_both_sites() {
         "every flag names the computed getattr"
     );
 }
+
+const MODULE_TABLE_LOOP: &str = r#"import sys
+for package in ("urllib3", "idna"):
+    locals()[package] = __import__(package)
+"#;
+
+const PAIR_COMPREHENSION: &str = r#"import hashlib
+MAP = {
+    n: getattr(hashlib, a, None)
+    for n, a in ((1, "md5"), (2, "sha1"))
+}
+"#;
+
+const CALL_COMPREHENSION: &str = r#"import hashlib
+
+def pairs():
+    return ((1, "md5"),)
+
+MAP = {n: getattr(hashlib, a, None) for n, a in pairs()}
+"#;
+
+const CLASS_ATTR_TABLE: &str = r#"class Response:
+    __attrs__: list[str] = ["a", "b"]
+
+    def state(self):
+        return {attr: getattr(self, attr, None) for attr in self.__attrs__}
+"#;
+
+const CODES_TABLE: &str = r#"import types
+
+_codes = {404: ("not_found",), 418: ("im_a_teapot",)}
+codes = types.SimpleNamespace()
+
+def init():
+    for code, titles in _codes.items():
+        for title in titles:
+            setattr(codes, title, code)
+            setattr(codes, title.upper(), code)
+"#;
+
+const DOUBLE_TABLE: &str = r#"import types
+
+_codes = {404: ("not_found",)}
+_codes = {}
+
+def init():
+    for code, titles in _codes.items():
+        setattr(codes, title, code)
+"#;
+
+const SORTED_TABLE: &str = r#"import box as box
+
+BOXES = ["A", "B"]
+
+for name in sorted(BOXES):
+    print(getattr(box, name))
+"#;
+
+const CONST_NAME: &str = r#"GIBBERISH = "aihwerij"
+
+def probe(obj):
+    return hasattr(obj, GIBBERISH)
+"#;
+
+const DOUBLE_CONST: &str = r#"GIBBERISH = "abc"
+GIBBERISH = "def"
+
+def probe(obj):
+    return hasattr(obj, GIBBERISH)
+"#;
+
+#[test]
+fn module_table_loop_stays_silent() {
+    assert_eq!(dynamics(MODULE_TABLE_LOOP), Vec::<String>::new());
+}
+
+#[test]
+fn literal_pair_comprehension_stays_silent() {
+    assert_eq!(dynamics(PAIR_COMPREHENSION), Vec::<String>::new());
+}
+
+#[test]
+fn comprehension_over_call_result_still_flags() {
+    assert_eq!(dynamics(CALL_COMPREHENSION).len(), 1);
+}
+
+#[test]
+fn class_attr_table_loop_stays_silent() {
+    assert_eq!(dynamics(CLASS_ATTR_TABLE), Vec::<String>::new());
+}
+
+#[test]
+fn dict_items_table_loop_stays_silent() {
+    assert_eq!(dynamics(CODES_TABLE), Vec::<String>::new());
+}
+
+#[test]
+fn table_assigned_twice_still_flags() {
+    assert_eq!(dynamics(DOUBLE_TABLE).len(), 1);
+}
+
+#[test]
+fn sorted_table_loop_stays_silent() {
+    assert_eq!(dynamics(SORTED_TABLE), Vec::<String>::new());
+}
+
+#[test]
+fn const_string_hasattr_stays_silent() {
+    assert_eq!(dynamics(CONST_NAME), Vec::<String>::new());
+}
+
+#[test]
+fn const_assigned_twice_still_flags() {
+    assert_eq!(dynamics(DOUBLE_CONST).len(), 1);
+}
+
+const MODULE_CALL_LOOP: &str = r#"def names():
+    return ("a", "b")
+
+
+for name in names():
+    getattr(guest, name)
+"#;
+
+const FIELD_OF_LOOP_TARGET: &str = r#"for package in ("urllib3", "idna"):
+    getattr(mod, package.owner)
+"#;
+
+const CALL_WITH_ARGS: &str = r#"for title in ("a", "b"):
+    getattr(codes, title.replace("a", "b"))
+"#;
+
+#[test]
+fn module_loop_over_call_result_still_flags() {
+    assert_eq!(dynamics(MODULE_CALL_LOOP).len(), 1);
+}
+
+#[test]
+fn attribute_field_of_loop_target_still_flags() {
+    assert_eq!(dynamics(FIELD_OF_LOOP_TARGET).len(), 1);
+}
+
+#[test]
+fn attribute_call_with_arguments_still_flags() {
+    assert_eq!(dynamics(CALL_WITH_ARGS).len(), 1);
+}

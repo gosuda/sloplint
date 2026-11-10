@@ -11,6 +11,7 @@ use crate::spec::Role;
 
 pub(crate) mod ambient;
 pub(crate) mod calls;
+pub(crate) mod dynamic;
 pub(crate) mod funcs;
 pub(crate) mod imports;
 pub(crate) mod items;

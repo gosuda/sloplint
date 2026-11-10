@@ -6,6 +6,7 @@ use sloplint_core::facts::{
 };
 use tree_sitter::Node;
 
+use super::dynamic::closed_name;
 use super::funcs::visibility_of;
 use super::imports::import_module;
 use crate::hooks::{
@@ -282,12 +283,13 @@ fn call_dynamic(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
     match function.kind() {
         "subscript_expression" => {
             let index = child_by_field(function, "index")?;
-            (!matches!(index.kind(), "string" | "number")).then_some("computed method call")
+            (!matches!(index.kind(), "string" | "number") && !closed_name(cx, index))
+                .then_some("computed method call")
         }
         "identifier" => (text(cx, function) == "eval").then_some("eval"),
         "import" => {
             let first = child_by_field(n, "arguments").and_then(first_code)?;
-            (first.kind() != "string").then_some("dynamic import")
+            (first.kind() != "string" && !closed_name(cx, first)).then_some("dynamic import")
         }
         _ => None,
     }
