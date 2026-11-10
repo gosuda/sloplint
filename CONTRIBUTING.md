@@ -66,6 +66,11 @@ Every rule has a fixture directory at `crates/sloplint/tests/fixtures/<family>/<
 Expectations live in `expected.txt` rather than inline comments so test markers never alter line counts, comments, or syntax trees in the analyzed source.
 
 Fixture paths decide file roles through the `test_globs`, `bench_globs`, `example_globs`, `support_globs`, `entry_globs`, and `data_globs` project lists (full defaults in README.md). `support_globs` covers test helpers such as `conftest.py`, `tests/common/`, `tests/support/`, and `__mocks__/`. Role shifts apply by path alone; content never changes the file role.
+For `agent/colocated-tests`, add the manifest that defines each package. The rule reads the nearest `package.json`, `pyproject.toml`, or `setup.py`. Without a manifest it uses the first path segment.
+
+## Adapter notes
+
+Go and Dart count imports of their own module as one external root. Ruby records no import facts. In C++, an out-of-line definition whose class is declared in another file counts as an exported free function.
 
 ## Commit and pull request conventions
 
