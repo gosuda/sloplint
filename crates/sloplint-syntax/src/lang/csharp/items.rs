@@ -1,17 +1,16 @@
 use std::borrow::Cow;
 
 use sloplint_core::facts::{
-    AmbientKind, CallKind, FieldCopy, Handler, ImplRef, Import, ImportKind, ImportScope, Pos,
-    ScrutineeKind, Stmt, TypeDef, Visibility, WildcardArm,
+    AmbientKind, CallKind, FieldCopy, Handler, ImplRef, Import, ImportKind, ImportScope, Pos, Stmt,
+    TypeDef, Visibility,
 };
 use tree_sitter::Node;
 
 use super::calls::{arg_expr, callee_text, first_arg};
 use super::{attr_hit, has_mod, seg_last};
 use crate::hooks::{
-    Container, Cx, TypeHead, any_named_child, child_by_field, find_map_named_child,
-    first_named_child, first_named_child_matching, has_child_kind, named_children, pos_of,
-    rfind_named_child, text,
+    Container, Cx, FileSetKind, TypeHead, child_by_field, find_map_named_child, first_named_child,
+    first_named_child_matching, has_child_kind, named_children, pos_of, rfind_named_child, text,
 };
 
 pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
@@ -90,6 +89,48 @@ pub(crate) fn write_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s s
     }
 }
 
+fn collect_namespace<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    if n.kind() != "namespace_declaration" && n.kind() != "file_scoped_namespace_declaration" {
+        return;
+    }
+    let Some(nm) = child_by_field(n, "name") else {
+        return;
+    };
+    let Some(first) = text(cx, nm).split('.').next() else {
+        return;
+    };
+    if !first.is_empty() && !out.contains(&first) {
+        out.push(first);
+    }
+}
+
+fn file_namespace_firsts<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
+    let Some(root) = cx.root() else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    let mut stack = vec![root];
+    while let Some(n) = stack.pop() {
+        collect_namespace(cx, n, &mut out);
+        stack.extend(named_children(n));
+    }
+    out
+}
+
+fn external_root_for<'s>(cx: &Cx<'_, 's>, full: &'s str) -> Option<&'s str> {
+    let first = full.split('.').next().unwrap_or(full);
+    if first.is_empty() {
+        return None;
+    }
+    if cx
+        .file_names(FileSetKind::Module, || file_namespace_firsts(cx))
+        .contains(&first)
+    {
+        return None;
+    }
+    Some(first)
+}
+
 pub(crate) fn push_imports<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
     if n.kind() != "using_directive" {
         return;
@@ -110,7 +151,7 @@ pub(crate) fn push_imports<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Impor
             scope: ImportScope::Module,
             in_test: cx.inside_test_module(),
             is_reexport: false,
-            external_root: None,
+            external_root: external_root_for(cx, full),
         });
         return;
     }
@@ -134,7 +175,7 @@ pub(crate) fn push_imports<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Impor
         scope: ImportScope::Module,
         in_test: cx.inside_test_module(),
         is_reexport: false,
-        external_root: None,
+        external_root: external_root_for(cx, full),
     });
 }
 
@@ -229,107 +270,23 @@ pub(crate) fn typedef_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<
     })
 }
 
-fn switch_subject(n: Node<'_>) -> Option<Node<'_>> {
-    named_children(n).into_iter().find(|c| {
-        !matches!(
-            c.kind(),
-            "switch_body" | "switch_section" | "switch_expression_arm"
-        )
-    })
-}
-
-fn scrutinee_of(subject: Node<'_>) -> ScrutineeKind {
-    match subject.kind() {
-        "identifier" => ScrutineeKind::Ident,
-        "member_access_expression" => ScrutineeKind::Field,
-        "generic_name" | "qualified_name" => ScrutineeKind::Path,
-        _ => ScrutineeKind::Other,
-    }
-}
-
-fn match_host<'t>(cx: &Cx<'t, '_>, parent: Node<'t>) -> Option<Node<'t>> {
-    if parent.kind() == "switch_body" {
-        cx.parent_of(parent)
-    } else {
-        Some(parent)
-    }
-}
-
-fn blank_arm(pos: Pos) -> WildcardArm {
-    WildcardArm {
-        pos,
-        enum_like: false,
-        scrutinee: ScrutineeKind::Other,
-        variant_count: 0,
-        has_nullable_ctor: false,
-    }
-}
-
-fn sib_member(parent: Node<'_>, self_id: usize) -> bool {
-    any_named_child(parent, |sib| {
-        if sib.id() == self_id {
-            return false;
-        }
-        member_below(sib)
-    })
-}
-
-fn member_below(sib: Node<'_>) -> bool {
-    let mut stack = vec![sib];
-    while let Some(cur) = stack.pop() {
-        if cur.id() != sib.id() && cur.kind() == "member_access_expression" {
-            return true;
-        }
-        if cur.id() == sib.id() || is_pattern_kind(cur.kind()) {
-            stack.extend(named_children(cur));
-        }
-    }
-    false
-}
-
-fn is_pattern_kind(kind: &str) -> bool {
-    matches!(
-        kind,
-        "expression" | "pattern" | "constant_pattern" | "when_clause"
-    )
-}
-
-pub(crate) fn match_arm<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<WildcardArm> {
-    let kind = n.kind();
-    if kind != "switch_section" && kind != "switch_expression_arm" {
-        return None;
-    }
-    let wildcard = if kind == "switch_section" {
-        has_child_kind(n, "default")
-    } else {
-        any_named_child(n, |c| c.kind() == "discard")
-    };
-    if !wildcard {
-        return None;
-    }
-    let pos = pos_of(n);
-    let Some(parent) = cx.parent() else {
-        return Some(blank_arm(pos));
-    };
-    let scrutinee = match_host(cx, parent)
-        .and_then(switch_subject)
-        .map(scrutinee_of)
-        .unwrap_or(ScrutineeKind::Other);
-    Some(WildcardArm {
-        pos,
-        enum_like: sib_member(parent, n.id()),
-        scrutinee,
-        variant_count: 0,
-        has_nullable_ctor: false,
-    })
-}
-
 fn throw_site<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: Option<&'s str>) -> Stmt<'s> {
     match (first_named_child(s), binding) {
         (None, _) => Stmt::Rethrow,
         (Some(e), Some(b)) if e.kind() == "identifier" && text(cx, e) == b => Stmt::Rethrow,
         _ => Stmt::Other,
     }
+}
+
+fn unwrap_stmt_call(n: Node<'_>) -> Node<'_> {
+    let mut cur = n;
+    while cur.kind() == "await_expression" {
+        let Some(next) = first_named_child(cur) else {
+            break;
+        };
+        cur = next;
+    }
+    cur
 }
 
 fn stmt_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: Option<&'s str>) -> Stmt<'s> {
@@ -340,10 +297,11 @@ fn stmt_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: Option<&'s str>) -> Stmt<'
         return Stmt::Other;
     }
     find_map_named_child(s, |c| {
-        if c.kind() != "invocation_expression" {
+        let u = unwrap_stmt_call(c);
+        if u.kind() != "invocation_expression" {
             return None;
         }
-        child_by_field(c, "function")
+        child_by_field(u, "function")
     })
     .map(|f| Stmt::Call {
         callee: callee_text(cx, f),

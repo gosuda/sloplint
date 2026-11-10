@@ -1,0 +1,1 @@
+src/Catalog.php:4 minor slop/field-copy

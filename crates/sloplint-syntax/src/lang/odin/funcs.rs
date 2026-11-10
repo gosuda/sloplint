@@ -5,8 +5,8 @@ use tree_sitter::Node;
 use super::{has_operator, is_test_ident};
 use crate::hooks::{
     Cx, FunctionHead, any_named_child, attributed_region, find_named_child, first_named_child,
-    first_named_child_matching, first_of_kind, named_children, only_named_child_matching, pos_of,
-    preceding_comments, text,
+    first_named_child_matching, first_of_kind, last_named_child, named_children,
+    only_named_child_matching, pos_of, preceding_comments, text,
 };
 fn odin_attributes<'a>(decl: Node<'a>) -> Option<Node<'a>> {
     first_named_child_matching(decl, &["attributes"])
@@ -61,6 +61,27 @@ fn names_before_sep<'a>(cx: &Cx<'_, '_>, parent: Node<'a>, seps: &[&str]) -> Vec
     out
 }
 
+fn odin_primitive(ty: Option<&str>) -> PrimitiveKind {
+    match ty {
+        Some("bool") => PrimitiveKind::Bool,
+        Some("string" | "cstring") => PrimitiveKind::Str,
+        _ => PrimitiveKind::Other,
+    }
+}
+
+fn odin_defaulted(cx: &Cx<'_, '_>, child: Node<'_>) -> (bool, bool) {
+    let present = (0..child.child_count()).any(|i| {
+        child
+            .child(i)
+            .is_some_and(|c| !c.is_named() && text(cx, c) == "=")
+    });
+    let boolean = present
+        && named_children(child)
+            .last()
+            .is_some_and(|last| matches!(text(cx, *last), "true" | "false"));
+    (present, boolean)
+}
+
 fn odin_params<'s>(cx: &Cx<'_, 's>, holder: Option<Node<'_>>) -> (Vec<Param<'s>>, Vec<&'s str>) {
     let mut params = Vec::new();
     let mut missing = Vec::new();
@@ -70,18 +91,15 @@ fn odin_params<'s>(cx: &Cx<'_, 's>, holder: Option<Node<'_>>) -> (Vec<Param<'s>>
     for child in named_children(holder) {
         if child.kind() == "parameter" {
             let ty = first_of_kind(child, &["type"]).map(|t| text(cx, t));
-            let primitive_kind = if ty == Some("bool") {
-                PrimitiveKind::Bool
-            } else {
-                PrimitiveKind::Other
-            };
+            let primitive_kind = odin_primitive(ty);
+            let (has_default, bool_default) = odin_defaulted(cx, child);
             for name_node in names_before_sep(cx, child, &[":"]) {
                 let param = Param {
                     name: text(cx, name_node),
                     ty,
                     primitive_kind,
-                    has_default: false,
-                    bool_default: false,
+                    has_default,
+                    bool_default,
                     keyword_only: false,
                     is_variadic: false,
                 };
@@ -99,7 +117,7 @@ fn odin_params<'s>(cx: &Cx<'_, 's>, holder: Option<Node<'_>>) -> (Vec<Param<'s>>
                 name,
                 ty: None,
                 primitive_kind: PrimitiveKind::Other,
-                has_default: false,
+                has_default: true,
                 bool_default: defaulted,
                 keyword_only: false,
                 is_variadic: false,
@@ -110,6 +128,48 @@ fn odin_params<'s>(cx: &Cx<'_, 's>, holder: Option<Node<'_>>) -> (Vec<Param<'s>>
         }
     }
     (params, missing)
+}
+
+enum OdinOuter {
+    File,
+    Foreign,
+    Nested,
+}
+
+fn odin_outer(cx: &Cx<'_, '_>, decl: Node<'_>) -> OdinOuter {
+    let mut current = cx.parent_of(decl);
+    for _ in 0..8 {
+        let Some(node) = current else {
+            return OdinOuter::Nested;
+        };
+        match node.kind() {
+            "source_file" => return OdinOuter::File,
+            "foreign_block" => return OdinOuter::Foreign,
+            "block" | "statement" | "when_statement" | "else_clause" | "else_when_clause" => {
+                current = cx.parent_of(node);
+            }
+            _ => return OdinOuter::Nested,
+        }
+    }
+    OdinOuter::Nested
+}
+
+fn odin_top_level(cx: &Cx<'_, '_>, decl: Node<'_>) -> bool {
+    !matches!(odin_outer(cx, decl), OdinOuter::Nested)
+}
+
+fn odin_in_foreign(cx: &Cx<'_, '_>, decl: Node<'_>) -> bool {
+    matches!(odin_outer(cx, decl), OdinOuter::Foreign)
+}
+
+fn odin_package_is_main(cx: &Cx<'_, '_>) -> bool {
+    let Some(root) = cx.root() else {
+        return false;
+    };
+    named_children(root).iter().any(|c| {
+        c.kind() == "package_declaration"
+            && first_named_child(*c).is_some_and(|id| text(cx, id) == "main")
+    })
 }
 
 fn odin_is_code(child: Node<'_>) -> bool {
@@ -125,7 +185,10 @@ fn odin_sole(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
         node = find_named_child(node, odin_is_code)?;
     }
     if node.kind() == "return_statement" {
-        node = find_named_child(node, odin_is_code)?;
+        node = only_named_child_matching(node, odin_is_code)?;
+    }
+    while node.kind() == "member_expression" {
+        node = last_named_child(node)?;
     }
     (node.kind() == "call_expression").then_some(node.id())
 }
@@ -159,28 +222,31 @@ pub(crate) fn closure_head<'s>(
     let (params, missing_annotations) = odin_params(cx, holder);
     let return_type = first_of_kind(n, &["type", "named_type"]).map(|t| text(cx, t));
     let (doc, doc_pos) = preceding_comments(cx, parent, &["comment", "block_comment"], &[]);
-    let top = cx
-        .parent_of(parent)
-        .is_some_and(|g| g.kind() == "source_file");
-    let visibility = if top && !attr_has(cx, parent, "private") {
+    let name = text(cx, name_node);
+    let visibility = if odin_top_level(cx, parent) && !attr_has(cx, parent, "private") {
         Visibility::Exported
     } else {
         Visibility::Private
     };
+    let forced = attr_has(cx, parent, "export")
+        || attr_has(cx, parent, "link_name")
+        || odin_in_foreign(cx, parent);
     let test_attr = parent_test_attr(cx, parent);
     let body = first_of_kind(n, &["block"]);
     Some(FunctionHead {
-        name: text(cx, name_node),
+        shadow_params: Vec::new(),
+        name,
         name_pos: pos_of(name_node),
         visibility,
-        signature_forced: false,
-        entry_point: false,
+        signature_forced: forced,
+        entry_point: name == "main" && odin_package_is_main(cx),
         in_test: false,
         is_overload: false,
         is_deprecated: false,
         is_decorated: false,
         is_trait_item: false,
         region: test_attr.map(|attr| attributed_region(n, Some(attr), CodeRole::Test)),
+        receiver: None,
         params,
         return_type,
         missing_annotations,

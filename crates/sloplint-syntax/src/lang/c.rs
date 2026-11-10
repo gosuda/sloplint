@@ -8,13 +8,13 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, binary_concat,
-    child_by_field, named_children, narrow, pos_of, preceding_comments, string_arg_shape,
+    CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, binary_concat, child_by_field,
+    first_named_child, named_children, narrow, pos_of, preceding_comments, string_arg_shape,
     strip_quotes, text,
 };
 use crate::lang::c_family::{
-    self, C_DECLARATORS, angles, collect_fragments, flat, in_function, init_value, inner,
-    pair_source, plain_assert, root_of, sole_call, span, word,
+    self, C_DECLARATORS, angles, in_function, init_value, inner, pair_source, plain_assert,
+    root_of, sole_call, span, word,
 };
 use crate::spec::Role;
 
@@ -47,12 +47,22 @@ pub(crate) static TABLE: crate::lang::Table = &[
 pub(crate) struct CHooks;
 pub(crate) static HOOKS: CHooks = CHooks;
 impl LangHooks for CHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let body = child_by_field(n, "body")?;
         let (fd, name_node) = c_family::func_parts(n, &C_DECLARATORS, &["identifier"])?;
         let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
         let public = !word(cx, n, &["storage_class_specifier"], &["static"]);
+        let params = c_family::params(cx, fd, &C_DECLARATORS, &["parameter_declaration"]);
         Some(FunctionHead {
+            shadow_params: params
+                .iter()
+                .map(|param| param.name)
+                .filter(|name| !name.is_empty())
+                .collect(),
             name: text(cx, name_node),
             name_pos: pos_of(name_node),
             visibility: if public {
@@ -61,14 +71,15 @@ impl LangHooks for CHooks {
                 Visibility::Private
             },
             signature_forced: false,
-            entry_point: false,
+            entry_point: text(cx, name_node) == "main" && !in_function(cx),
             in_test: false,
             is_overload: false,
             is_deprecated: false,
             is_decorated: false,
             is_trait_item: false,
             region: None,
-            params: c_family::params(cx, fd, &C_DECLARATORS, &["parameter_declaration"]),
+            receiver: None,
+            params,
             return_type: return_type(cx, n, fd),
             missing_annotations: Vec::new(),
             doc,
@@ -101,11 +112,15 @@ impl LangHooks for CHooks {
         }
         let func = child_by_field(n, "function")?;
         let args_node = child_by_field(n, "arguments")?;
+        let simple = c_family::is_simple_callee(func);
         Some(CallHead {
             callee: text(cx, func),
             kind: CallKind::Plain,
-            callee_root: root_of(cx, func).map(|(name, _)| name),
-            is_simple_path: func.kind() == "identifier",
+            callee_root: simple
+                .then(|| root_of(cx, func))
+                .flatten()
+                .map(|(name, _)| name),
+            is_simple_path: simple,
             initializes_binding: init_value(cx, n),
             args: call_args(cx, args_node),
         })
@@ -145,22 +160,20 @@ impl LangHooks for CHooks {
         if child_by_field(n, "value").is_some() {
             return None;
         }
-        let mut enum_like = false;
-        if let Some(parent) = cx.parent() {
-            for sib in named_children(parent) {
-                if sib.kind() == "case_statement"
-                    && child_by_field(sib, "value").is_some_and(|v| v.kind() == "identifier")
-                {
-                    enum_like = true;
-                    break;
-                }
+        let mut ancestors = cx.ancestors();
+        let body = ancestors.next();
+        let switch = ancestors.next();
+        let (scrutinee, variant_count) = match (body, switch) {
+            (Some(body), Some(switch)) if switch.kind() == "switch_statement" => {
+                (switch_scrutinee(switch), case_labels(body))
             }
-        }
+            _ => (ScrutineeKind::Other, 0),
+        };
         Some(WildcardArm {
             pos: pos_of(n),
-            enum_like,
-            scrutinee: ScrutineeKind::Other,
-            variant_count: 0,
+            enum_like: variant_count >= 2,
+            scrutinee,
+            variant_count,
             has_nullable_ctor: false,
         })
     }
@@ -216,7 +229,7 @@ impl LangHooks for CHooks {
             }
             "call_expression" => {
                 let func = child_by_field(n, "function")?;
-                match flat(text(cx, func)).as_str() {
+                match text(cx, func) {
                     "dlsym" | "dlvsym" => Some("runtime symbol lookup (dlsym)"),
                     "GetProcAddress" => Some("runtime symbol lookup (GetProcAddress)"),
                     _ => None,
@@ -247,26 +260,129 @@ fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     match n.kind() {
         "string_literal" => string_arg_shape(cx, n, &["string_content"]),
         "concatenated_string" => concat_shape(cx, n),
-        "binary_expression" if binary_concat(cx, n, "+", &["string_literal"]) => ArgShape::Concat,
+        "binary_expression" if binary_concat(cx, n, "+", &["string_literal"]) => ArgShape::Concat {
+            longest_static: binary_static(cx, n),
+        },
         "identifier" => ArgShape::Ident(text(cx, n)),
-        "initializer_list" => ArgShape::Collection,
+        "initializer_list" => init_shape(n),
+        "compound_literal_expression" => compound_shape(n),
         _ => ArgShape::Other,
     }
 }
 fn concat_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    if any_named_child(n, |c| c.kind() == "identifier") {
-        return ArgShape::Concat;
-    }
-    let mut segments = Vec::new();
+    let mut best = 0;
+    let mut current = String::new();
+    let mut prefixed = false;
     for c in named_children(n) {
-        if c.kind() != "string_literal" {
-            return ArgShape::Other;
+        if c.kind() == "comment" {
+            continue;
         }
-        collect_fragments(cx, c, &["string_content"], &mut segments);
+        if c.kind() == "string_literal" {
+            let mut cursor = c.walk();
+            for piece in c.children(&mut cursor) {
+                if piece.kind() == "escape_sequence" {
+                    best = best.max(longest_static_chunk(&[current.as_str()]));
+                    current.clear();
+                } else if piece.kind() == "string_content" {
+                    current.push_str(text(cx, piece));
+                }
+            }
+            continue;
+        }
+        if c.kind() == "identifier" {
+            best = best.max(longest_static_chunk(&[current.as_str()]));
+            current.clear();
+            prefixed = true;
+            continue;
+        }
+        return ArgShape::Other;
     }
-    ArgShape::Str {
-        longest_static: longest_static_chunk(&segments),
+    let longest_static = best.max(longest_static_chunk(&[current.as_str()]));
+    if prefixed {
+        ArgShape::Concat { longest_static }
+    } else {
+        ArgShape::Str { longest_static }
     }
+}
+fn binary_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
+    let mut best = 0;
+    let mut current = n;
+    while let (Some(left), Some(right)) = (current.child(0), current.child(2)) {
+        for operand in [left, right] {
+            if operand.kind() == "string_literal"
+                && let ArgShape::Str { longest_static } =
+                    string_arg_shape(cx, operand, &["string_content"])
+            {
+                best = best.max(longest_static);
+            }
+        }
+        if left.kind() == "binary_expression" {
+            current = left;
+        } else {
+            break;
+        }
+    }
+    best
+}
+fn compound_shape<'s>(n: Node<'_>) -> ArgShape<'s> {
+    let Some(value) = child_by_field(n, "value") else {
+        return ArgShape::Other;
+    };
+    if value.kind() != "initializer_list" {
+        return ArgShape::Other;
+    }
+    init_shape(value)
+}
+fn init_shape<'s>(body: Node<'_>) -> ArgShape<'s> {
+    let mut code = false;
+    for child in named_children(body) {
+        match child.kind() {
+            "initializer_pair" => return ArgShape::Other,
+            "compound_statement"
+            | "function_definition"
+            | "lambda_expression"
+            | "block_literal" => {
+                code = true;
+            }
+            "parenthesized_expression"
+                if first_named_child(child)
+                    .is_some_and(|inner| inner.kind() == "compound_statement") =>
+            {
+                code = true;
+            }
+            _ => {}
+        }
+    }
+    if code {
+        ArgShape::CodeBody
+    } else {
+        ArgShape::Collection
+    }
+}
+fn switch_scrutinee(switch: Node<'_>) -> ScrutineeKind {
+    let cond = child_by_field(switch, "condition").and_then(|cond| {
+        if cond.kind() == "parenthesized_expression" {
+            first_named_child(cond)
+        } else {
+            Some(cond)
+        }
+    });
+    match cond.map(|node| node.kind()) {
+        Some("identifier") => ScrutineeKind::Ident,
+        Some("field_expression") => ScrutineeKind::Field,
+        _ => ScrutineeKind::Other,
+    }
+}
+fn case_labels(body: Node<'_>) -> u32 {
+    let mut count = 0;
+    for sib in named_children(body) {
+        if sib.kind() == "case_statement"
+            && child_by_field(sib, "value").is_some_and(|value| value.kind() == "identifier")
+        {
+            count += 1;
+        }
+    }
+    narrow(count)
 }
 fn tag_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     child_by_field(n, "body")?;

@@ -2,9 +2,10 @@ use sloplint_core::facts::{Arg, ArgShape, AssertShape, Assertion, CallKind};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, binary_concat, child_by_field, find_map_named_child, first_named_child_matching,
-    named_children, narrow, pos_of, string_arg_shape, text, trimmed,
+    CallHead, Cx, any_named_child, binary_concat, child_by_field, find_map_named_child,
+    first_named_child_matching, named_children, narrow, pos_of, string_arg_shape, text, trimmed,
 };
+use sloplint_core::text::longest_static_chunk;
 
 use super::syntax::STRING_KINDS;
 
@@ -51,6 +52,7 @@ fn callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
         current = match current.kind() {
             "simple_identifier" => return Some(text(cx, current)),
             "self_expression" => return Some("self"),
+            "super_expression" => return Some("super"),
             "navigation_expression" => child_by_field(current, "target")?,
             _ => return None,
         };
@@ -61,7 +63,7 @@ fn swift_is_simple_path(n: Node<'_>) -> bool {
     let mut current = n;
     loop {
         match current.kind() {
-            "simple_identifier" | "self_expression" => return true,
+            "simple_identifier" | "self_expression" | "super_expression" => return true,
             "navigation_expression" => match child_by_field(current, "target") {
                 Some(next) => current = next,
                 None => return false,
@@ -71,22 +73,103 @@ fn swift_is_simple_path(n: Node<'_>) -> bool {
     }
 }
 
+fn member_callee<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
+    let mut has_call = false;
+    let mut current = callee;
+    loop {
+        if current.kind() != "navigation_expression" {
+            break;
+        }
+        let target = child_by_field(current, "target")?;
+        if matches!(target.kind(), "call_expression" | "postfix_expression") {
+            has_call = true;
+        }
+        current = target;
+    }
+    if !has_call {
+        return None;
+    }
+    child_by_field(callee, "suffix")
+        .and_then(|suffix| child_by_field(suffix, "suffix"))
+        .map(|name| trimmed(cx, name))
+}
+
 fn swift_initializes_binding(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    let Some(parent) = cx.parent() else {
-        return false;
-    };
-    parent.kind() == "property_declaration"
-        && child_by_field(parent, "value").is_some_and(|v| v.id() == n.id())
+    let mut current = n;
+    loop {
+        let Some(parent) = cx.parent_of(current) else {
+            return false;
+        };
+        match parent.kind() {
+            "try_expression" | "await_expression" => current = parent,
+            "property_declaration" => {
+                return child_by_field(parent, "value").is_some_and(|v| v.id() == current.id());
+            }
+            _ => return false,
+        }
+    }
+}
+
+fn static_run(cx: &Cx<'_, '_>, value: Node<'_>, fragment_kinds: &[&str]) -> u32 {
+    let mut segments: Vec<&str> = Vec::new();
+    let mut cursor = value.walk();
+    for child in value.children(&mut cursor) {
+        if fragment_kinds.contains(&child.kind()) {
+            segments.push(text(cx, child));
+        }
+    }
+    longest_static_chunk(&segments)
+}
+
+fn concat_static(cx: &Cx<'_, '_>, value: Node<'_>) -> u32 {
+    let mut longest = 0;
+    let mut stack = vec![value];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "additive_expression"
+            && node.child_count() == 3
+            && node.child(1).is_some_and(|op| text(cx, op) == "+")
+        {
+            for operand in [node.child(0), node.child(2)].into_iter().flatten() {
+                stack.push(operand);
+            }
+        } else if STRING_KINDS.contains(&node.kind()) {
+            longest = longest.max(static_run(
+                cx,
+                node,
+                &["line_str_text", "multi_line_str_text", "raw_str_part"],
+            ));
+        }
+    }
+    longest
 }
 
 fn shape_of<'s>(cx: &Cx<'_, 's>, value: Node<'_>) -> ArgShape<'s> {
     match value.kind() {
         "line_string_literal" | "multi_line_string_literal" => {
-            string_arg_shape(cx, value, &["line_str_text", "multi_line_str_text"])
+            if child_by_field(value, "interpolation").is_some() {
+                ArgShape::Concat {
+                    longest_static: static_run(
+                        cx,
+                        value,
+                        &["line_str_text", "multi_line_str_text"],
+                    ),
+                }
+            } else {
+                string_arg_shape(cx, value, &["line_str_text", "multi_line_str_text"])
+            }
         }
         "raw_string_literal" => string_arg_shape(cx, value, &["raw_str_part"]),
-        "additive_expression" if binary_concat(cx, value, "+", STRING_KINDS) => ArgShape::Concat,
-        "array_literal" | "dictionary_literal" => ArgShape::Collection,
+        "additive_expression" if binary_concat(cx, value, "+", STRING_KINDS) => ArgShape::Concat {
+            longest_static: concat_static(cx, value),
+        },
+        "array_literal" => {
+            if any_named_child(value, |c| c.kind() == "lambda_literal") {
+                ArgShape::CodeBody
+            } else {
+                ArgShape::Collection
+            }
+        }
+        "dictionary_literal" => ArgShape::Other,
         "lambda_literal" => ArgShape::CodeBody,
         "simple_identifier" => ArgShape::Ident(trimmed(cx, value)),
         _ => ArgShape::Other,
@@ -104,8 +187,8 @@ fn arg<'s>(shape: ArgShape<'s>, n: Node<'_>) -> Arg<'s> {
 fn call_args<'s>(cx: &Cx<'_, 's>, call: Node<'_>) -> Vec<Arg<'s>> {
     let positional = value_arguments(call)
         .into_iter()
-        .filter_map(|argument| child_by_field(argument, "value"))
-        .map(|value| arg(shape_of(cx, value), value));
+        .filter_map(|argument| child_by_field(argument, "value").map(|value| (argument, value)))
+        .map(|(argument, value)| arg(shape_of(cx, value), argument));
     let trailing = suffix_children(call, "lambda_literal")
         .into_iter()
         .map(|lambda| arg(ArgShape::CodeBody, lambda));
@@ -117,8 +200,9 @@ pub(crate) fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>
         return None;
     }
     let callee = n.named_child(0)?;
+    let member = member_callee(cx, callee);
     Some(CallHead {
-        callee: trimmed(cx, callee),
+        callee: member.unwrap_or_else(|| trimmed(cx, callee)),
         kind: CallKind::Plain,
         callee_root: callee_root(cx, callee),
         is_simple_path: swift_is_simple_path(callee),
@@ -199,5 +283,12 @@ pub(crate) fn dynamic(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
         "NSClassFromString" => "NSClassFromString() with computed name",
         _ => return None,
     };
-    (first.kind() != "line_string_literal").then_some(message)
+    let is_dynamic = match first.kind() {
+        "line_string_literal" | "multi_line_string_literal" => {
+            child_by_field(first, "interpolation").is_some()
+        }
+        "raw_string_literal" => false,
+        _ => true,
+    };
+    is_dynamic.then_some(message)
 }

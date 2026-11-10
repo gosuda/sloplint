@@ -13,7 +13,7 @@ use crate::hooks::{
     narrow, pos_of, text,
 };
 
-pub(crate) const COMPARISON_OPS: &[&str] = &["==", "===", "!=", "!==", "<", ">", "<=", ">="];
+pub(crate) const EQ_NE_OPS: &[&str] = &["==", "===", "!=", "!=="];
 pub(crate) const PLAIN_ASSERTS: &[&str] = &["assert", "assert.ok", "console.assert"];
 pub(crate) const EQUALITY_ASSERTS: &[&str] = &[
     "assert.equal",
@@ -33,16 +33,22 @@ pub(crate) fn typedef_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<
         return None;
     }
     let name = child_by_field(n, "name")?;
+    let name_text = text(cx, name);
     let public = cx
         .parent_of(n)
-        .is_some_and(|parent| parent.kind() == "export_statement");
-    let impls: Vec<ImplRef<'s>> = first_code(n)
+        .is_some_and(|parent| parent.kind() == "export_statement")
+        || cx.is_exported(name_text);
+    let heritage = code_children(n)
+        .into_iter()
+        .find(|child| child.kind() == "class_heritage")
+        .and_then(first_code);
+    let impls: Vec<ImplRef<'s>> = heritage
         .and_then(|base| heritage_ref(cx, base))
         .into_iter()
         .collect();
     Some(TypeHead {
         def: Some(TypeDef {
-            name: text(cx, name),
+            name: name_text,
             pos: pos_of(name),
             visibility: visibility_of(public),
             abstraction: false,
@@ -301,7 +307,7 @@ pub(crate) fn dynamic_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str>
 fn comparison_arg(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     n.kind() == "binary_expression"
         && child_by_field(n, "operator")
-            .is_some_and(|operator| COMPARISON_OPS.contains(&text(cx, operator)))
+            .is_some_and(|operator| EQ_NE_OPS.contains(&text(cx, operator)))
 }
 
 fn bare_or_other(args: &[Node<'_>]) -> AssertShape {
@@ -324,6 +330,9 @@ pub(crate) fn assertion_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<Assertion> 
         return None;
     }
     let callee = text(cx, child_by_field(n, "function")?);
+    if !PLAIN_ASSERTS.contains(&callee) && !EQUALITY_ASSERTS.contains(&callee) {
+        return None;
+    }
     let args: Vec<Node<'_>> = child_by_field(n, "arguments")
         .filter(|arguments| arguments.kind() == "arguments")
         .map(code_children)

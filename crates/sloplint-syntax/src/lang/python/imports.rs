@@ -48,6 +48,13 @@ fn plain_import<'s>(
     });
 }
 
+fn alias_unless_same<'s>(path: &'s str, alias: &'s str) -> Option<&'s str> {
+    if alias == last_segment(path, &["."]) {
+        return None;
+    }
+    Some(alias)
+}
+
 fn reexport_here(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     cx.path.ends_with("__init__.py") && n.kind() == "import_from_statement"
 }
@@ -63,7 +70,12 @@ pub(crate) fn push_imports<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Impor
                 let alias = child_by_field(c, "alias").map_or("", |v| text(cx, v));
                 plain_import(
                     cx,
-                    (c, path, last_segment(path, &["."]), Some(alias)),
+                    (
+                        c,
+                        path,
+                        last_segment(path, &["."]),
+                        alias_unless_same(path, alias),
+                    ),
                     false,
                     out,
                 );
@@ -98,7 +110,12 @@ pub(crate) fn push_imports<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Impor
             let alias = child_by_field(c, "alias").map_or("", |v| text(cx, v));
             plain_import(
                 cx,
-                (c, module, last_segment(path, &["."]), Some(alias)),
+                (
+                    c,
+                    module,
+                    last_segment(path, &["."]),
+                    alias_unless_same(path, alias),
+                ),
                 reexport,
                 out,
             );

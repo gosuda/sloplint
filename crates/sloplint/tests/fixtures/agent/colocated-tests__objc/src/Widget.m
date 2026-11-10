@@ -1,1 +1,3 @@
-int WidgetValue(int x) { return x * 2; }
+int WidgetValue(int x) {
+    return x * 2;
+}

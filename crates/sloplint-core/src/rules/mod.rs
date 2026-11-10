@@ -78,19 +78,23 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn from_config(config: &Config) -> Settings {
+    pub fn from_config(config: &Config) -> Result<Settings, ConfigError> {
         let mut log_callees = BTreeMap::new();
         for (key, language) in &config.languages {
             if let Some(static_key) = static_language_key(key) {
-                let patterns = language
-                    .log_callees
-                    .iter()
-                    .filter_map(|pattern| CalleePattern::parse(pattern).ok())
-                    .collect();
+                let mut patterns = Vec::with_capacity(language.log_callees.len());
+                for pattern in &language.log_callees {
+                    patterns.push(CalleePattern::parse(pattern).map_err(|message| {
+                        ConfigError::RuleOption {
+                            rule: format!("languages.{key}"),
+                            message,
+                        }
+                    })?);
+                }
                 log_callees.insert(static_key, patterns);
             }
         }
-        Settings { log_callees }
+        Ok(Settings { log_callees })
     }
 }
 
@@ -264,4 +268,35 @@ pub(crate) fn threshold_options(
         options.insert(key.to_string(), toml::Value::Integer(i64::from(value)));
     }
     options
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_config_rejects_invalid_callee() {
+        let mut config = Config::default();
+        config
+            .languages
+            .get_mut("rust")
+            .unwrap_or_else(|| panic!("default config must contain rust"))
+            .log_callees
+            .push("new".to_string());
+        let Err(ConfigError::RuleOption { rule, .. }) = Settings::from_config(&config) else {
+            panic!("invalid callee must be rejected");
+        };
+        assert_eq!(
+            rule, "languages.rust",
+            "error must name the language: {rule}"
+        );
+    }
+
+    #[test]
+    fn from_config_accepts_defaults() {
+        assert!(
+            Settings::from_config(&Config::default()).is_ok(),
+            "defaults must build settings"
+        );
+    }
 }

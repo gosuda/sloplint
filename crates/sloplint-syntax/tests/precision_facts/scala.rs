@@ -1,4 +1,6 @@
-use sloplint_core::facts::{AssertShape, PrimitiveKind, ScrutineeKind, Visibility};
+use sloplint_core::facts::{
+    AmbientKind, ArgShape, AssertShape, PrimitiveKind, ScrutineeKind, Visibility,
+};
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
@@ -241,11 +243,11 @@ fn call_binding_and_assertion_shapes() {
         .iter()
         .find(|c| c.callee.ends_with("make") && c.callee != "make")
         .expect("has member make call");
-    assert!(member.initializes_binding, "val y = obj.make() initializes");
     assert!(
-        !member.is_simple_path,
-        "field-selected callee is not simple"
+        member.is_simple_path,
+        "qualified callee without calls is simple"
     );
+    assert_eq!(member.callee, "obj.make", "keeps the full member path");
     let mut top_eq = 0;
     let mut bare = 0;
     let mut other = 0;
@@ -259,4 +261,191 @@ fn call_binding_and_assertion_shapes() {
     assert_eq!(top_eq, 1, "v == 1 is a top-level comparison");
     assert_eq!(bare, 1, "ok is a bare name");
     assert_eq!(other, 1, "compute(v) is opaque");
+}
+
+#[test]
+fn in_function_write_to_top_level_var_is_one_global_write() {
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let analysis = analyze_src(
+        &mut Parsers::new(),
+        &custom,
+        "var count = 0\ndef bump(): Unit = {\ncount = 1\n}\n",
+        "src/Case.scala",
+    );
+    assert!(analysis.parse_error.is_none(), "parses");
+    let mutables: Vec<_> = analysis
+        .facts
+        .ambient
+        .iter()
+        .filter(|a| a.kind == AmbientKind::GlobalMutable)
+        .collect();
+    assert_eq!(mutables.len(), 1, "one top-level var is a global mutable");
+    assert_eq!(mutables[0].name, "count", "mutable keeps the declared name");
+    let writes: Vec<_> = analysis
+        .facts
+        .ambient
+        .iter()
+        .filter(|a| a.kind == AmbientKind::GlobalWrite)
+        .collect();
+    assert_eq!(writes.len(), 1, "in-function write joins the top-level var");
+    assert_eq!(writes[0].name, "count", "write keeps the assigned name");
+    assert!(
+        writes[0].in_function.is_some(),
+        "write is attributed inside the function"
+    );
+}
+
+#[test]
+fn qualified_callee_keeps_path_but_drops_receiver_calls() {
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let src = "object Svc {\n  def greet(n: String): String = Render.greet(n)\n  def boom(): Unit = {\n    services.getLogger().error(\"boom\")\n  }\n}\n";
+    let analysis = analyze_src(&mut Parsers::new(), &custom, src, "src/S.scala");
+    assert!(analysis.parse_error.is_none(), "parses");
+    let plain = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "Render.greet")
+        .expect("has qualified greet call");
+    assert!(
+        plain.is_simple_path,
+        "member chain on identifiers is simple"
+    );
+    assert_eq!(
+        plain.callee_root,
+        Some("Render"),
+        "root is the leftmost identifier"
+    );
+    let inner = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "services.getLogger")
+        .expect("has inner receiver call");
+    assert!(
+        inner.is_simple_path,
+        "receiver path without calls is simple"
+    );
+    let outer = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "error")
+        .expect("has outer error call");
+    assert!(!outer.is_simple_path, "receiver call breaks the path");
+    assert_eq!(outer.callee_root, None, "chain bottoms at a call");
+}
+
+#[test]
+fn long_infix_plus_chain_is_concat() {
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let src = "object L {\n  def a(id: String, reason: String): Unit = {\n    logger.error(\"Failed for \" + id + \": \" + reason)\n  }\n  def b(id: String): Unit = {\n    logger.warn(\"Failed for \" + id)\n  }\n}\n";
+    let analysis = analyze_src(&mut Parsers::new(), &custom, src, "src/L.scala");
+    assert!(analysis.parse_error.is_none(), "parses");
+    let err = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "logger.error")
+        .expect("has error call");
+    assert!(
+        matches!(err.args[0].shape, ArgShape::Concat { longest_static: 11 }),
+        "three-operand chain is concat"
+    );
+    let warn = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "logger.warn")
+        .expect("has warn call");
+    assert!(
+        matches!(warn.args[0].shape, ArgShape::Concat { longest_static: 11 }),
+        "two-operand plus stays concat"
+    );
+}
+
+#[test]
+fn block_argument_is_code_body() {
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let src = "object W {\n  def run(items: List[Int]): Unit = {\n    items.foreach { item =>\n      process(item)\n    }\n    items.map(process)\n  }\n}\n";
+    let analysis = analyze_src(&mut Parsers::new(), &custom, src, "src/W.scala");
+    assert!(analysis.parse_error.is_none(), "parses");
+    let each = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "items.foreach")
+        .expect("has foreach call");
+    assert!(
+        matches!(each.args[0].shape, ArgShape::CodeBody),
+        "block argument is a code body"
+    );
+    let mapped = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "items.map")
+        .expect("has map call");
+    assert!(
+        matches!(mapped.args[0].shape, ArgShape::Ident(_)),
+        "identifier argument stays ident"
+    );
+}
+
+#[test]
+fn curried_assert_result_reports_outer_call_once() {
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let src = "object C {\n  def check(a: Int, msg: String): Unit = {\n    assertResult(2)(a, msg)\n  }\n  def verify(a: Int, b: Int): Unit = {\n    assertResult(2, a)\n  }\n}\n";
+    let analysis = analyze_src(&mut Parsers::new(), &custom, src, "src/C.scala");
+    assert!(analysis.parse_error.is_none(), "parses");
+    assert_eq!(
+        analysis.facts.assertions.len(),
+        2,
+        "one fact per assertion site"
+    );
+    let outer = &analysis.facts.assertions[0];
+    assert!(
+        outer.comparison && outer.shape == AssertShape::TopEqNe,
+        "curried form is top-level"
+    );
+    assert!(
+        outer.has_message,
+        "message comes from the second argument list"
+    );
+    let single = &analysis.facts.assertions[1];
+    assert!(
+        single.comparison && single.shape == AssertShape::TopEqNe,
+        "single list stays top-level"
+    );
+    assert!(
+        single.has_message,
+        "two-argument single list keeps its message"
+    );
+}
+
+#[test]
+fn main_with_array_string_param_is_entry_point() {
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let src = "object Main {\n  def main(args: Array[String]): Unit = ()\n  def run(): Unit = ()\n}\nclass C {\n  def main(args: Array[String]): Unit = ()\n}\n";
+    let analysis = analyze_src(&mut Parsers::new(), &custom, src, "src/Main.scala");
+    assert!(analysis.parse_error.is_none(), "parses");
+    let mains: Vec<_> = analysis
+        .facts
+        .functions
+        .iter()
+        .filter(|f| f.name == "main")
+        .collect();
+    assert_eq!(mains.len(), 2, "object and class mains both present");
+    assert_eq!(
+        mains.iter().filter(|f| f.entry_point).count(),
+        1,
+        "only the object main is an entry"
+    );
+    let run = analysis
+        .facts
+        .functions
+        .iter()
+        .find(|f| f.name == "run")
+        .expect("has run");
+    assert!(!run.entry_point, "ordinary method stays non-entry");
 }

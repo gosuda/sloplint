@@ -6,8 +6,6 @@ mod baseline_directory;
 mod baseline_replace;
 #[path = "pipeline/baseline_target.rs"]
 mod baseline_target;
-#[path = "pipeline/bounded_read_reserve.rs"]
-mod bounded_read_reserve;
 #[path = "pipeline/cache_location.rs"]
 mod cache_location;
 #[path = "pipeline/custom_rule_cap.rs"]
@@ -36,6 +34,8 @@ mod ratchet_rule_filter;
 mod regular_inputs;
 #[path = "pipeline/root_resolution.rs"]
 mod root_resolution;
+#[path = "pipeline/skipped_baseline.rs"]
+mod skipped_baseline;
 #[path = "pipeline/skipped_names.rs"]
 mod skipped_names;
 #[path = "support/spawn.rs"]

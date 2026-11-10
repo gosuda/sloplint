@@ -199,3 +199,30 @@ public:
         "nested class members use their own field list",
     );
 }
+
+#[test]
+fn nested_namespaces_keep_anonymous_hidden_and_named_public() {
+    let source = r#"namespace Outer {
+namespace {
+struct Hidden {
+public:
+    void nested_anonymous_member(bool a) { (void)a; }
+};
+}
+struct Shown {
+public:
+    void nested_named_member(bool a) { (void)a; }
+};
+}
+void top_level(bool a) { (void)a; }
+"#;
+    assert_eq!(
+        publicity(source),
+        expected(&[
+            ("nested_anonymous_member", false),
+            ("nested_named_member", true),
+            ("top_level", true),
+        ]),
+        "anonymous stays hidden inside a named namespace and named members stay public",
+    );
+}

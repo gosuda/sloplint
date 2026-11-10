@@ -1,18 +1,44 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
-use crate::hooks::{Cx, child_by_field, named_children, narrow, pos_of, text};
+use crate::hooks::{Cx, FileSetKind, child_by_field, named_children, narrow, pos_of, text};
 use sloplint_core::facts::{ScrutineeKind, WildcardArm};
 use tree_sitter::Node;
 
-const NULLABLE_CTORS: [&str; 4] = ["Some", "None", "Ok", "Err"];
+pub(super) const NULLABLE_CTORS: [&str; 4] = ["Some", "None", "Ok", "Err"];
 
-fn ctor_name<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<&'s str> {
+fn is_scoped_constant(name: &str) -> bool {
+    let mut has_letter = false;
+    for c in name.chars() {
+        if c.is_ascii_uppercase() {
+            has_letter = true;
+        } else if c != '_' && !c.is_ascii_digit() {
+            return false;
+        }
+    }
+    has_letter
+}
+
+fn split_prefix(full: &str) -> (&str, &str) {
+    match full.rfind("::") {
+        Some(at) => (&full[..at], &full[at + 2..]),
+        None => ("", full),
+    }
+}
+
+fn ctor_group<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<(&'s str, &'s str)> {
     match pat.kind() {
         "tuple_struct_pattern" | "struct_pattern" => {
             let ty = child_by_field(pat, "type")?;
-            text(cx, ty).rsplit("::").next()
+            Some(split_prefix(text(cx, ty)))
         }
-        "scoped_identifier" | "scoped_type_identifier" => text(cx, pat).rsplit("::").next(),
+        "scoped_identifier" | "scoped_type_identifier" => {
+            let (prefix, name) = split_prefix(text(cx, pat));
+            if is_scoped_constant(name) {
+                None
+            } else {
+                Some((prefix, name))
+            }
+        }
         _ => None,
     }
 }
@@ -21,24 +47,92 @@ fn is_nullable_name(name: &str) -> bool {
     NULLABLE_CTORS.contains(&name)
 }
 
+fn is_nullable_ctor(prefix: &str, name: &str) -> bool {
+    if !is_nullable_name(name) {
+        return false;
+    }
+    prefix
+        .rsplit("::")
+        .next()
+        .is_some_and(|scope| scope.is_empty() || scope == "Option" || scope == "Result")
+}
+
+fn file_variant_names<'c, 's>(cx: &'c Cx<'_, 's>) -> &'c [&'s str] {
+    cx.file_names(FileSetKind::Member, || {
+        let mut names = Vec::new();
+        let mut stack = Vec::new();
+        if let Some(root) = cx.root() {
+            stack.push(root);
+        }
+        while let Some(node) = stack.pop() {
+            if node.kind() == "enum_variant"
+                && let Some(name) = child_by_field(node, "name")
+            {
+                names.push(text(cx, name));
+            }
+            stack.extend(named_children(node));
+        }
+        names
+    })
+}
+
+fn record_ctor<'s>(
+    groups: &mut BTreeMap<&'s str, BTreeSet<&'s str>>,
+    nullable: &mut bool,
+    prefix: &'s str,
+    name: &'s str,
+) {
+    if is_nullable_ctor(prefix, name) {
+        *nullable = true;
+    } else {
+        groups.entry(prefix).or_default().insert(name);
+    }
+}
+
 fn arm_pattern<'a>(pat: Node<'a>) -> Option<Node<'a>> {
     if pat.kind() != "match_pattern" {
         return Some(pat);
     }
-    if child_by_field(pat, "condition").is_some() {
-        return None;
-    }
-    let only = pat.named_child(0)?;
-    if pat.named_child(1).is_some() {
+    let guarded = child_by_field(pat, "condition").map(|cond| cond.id());
+    let mut parts = named_children(pat).into_iter().filter(|child| {
+        Some(child.id()) != guarded
+            && child.kind() != "line_comment"
+            && child.kind() != "block_comment"
+    });
+    let only = parts.next()?;
+    if parts.next().is_some() {
         return None;
     }
     Some(only)
 }
 
+fn starts_uppercase(name: &str) -> bool {
+    name.as_bytes()
+        .first()
+        .is_some_and(|b| b.is_ascii_uppercase())
+}
+
+fn insert_bare_name<'s>(
+    cx: &Cx<'_, 's>,
+    groups: &mut BTreeMap<&'s str, BTreeSet<&'s str>>,
+    nullable: &mut bool,
+    name: &'s str,
+) {
+    if is_nullable_name(name) {
+        if file_variant_names(cx).contains(&name) {
+            groups.entry("").or_default().insert(name);
+        } else {
+            *nullable = true;
+        }
+    } else if !is_scoped_constant(name) && starts_uppercase(name) {
+        groups.entry("").or_default().insert(name);
+    }
+}
+
 fn collect_names<'s>(
     cx: &Cx<'_, 's>,
     pat: Node<'_>,
-    names: &mut BTreeSet<&'s str>,
+    groups: &mut BTreeMap<&'s str, BTreeSet<&'s str>>,
     nullable: &mut bool,
 ) {
     let mut stack = vec![pat];
@@ -53,30 +147,38 @@ fn collect_names<'s>(
             continue;
         }
         if node.kind() == "identifier" {
-            let name = text(cx, node);
-            if is_nullable_name(name) {
-                *nullable = true;
+            insert_bare_name(cx, groups, nullable, text(cx, node));
+            continue;
+        }
+        if node.kind() == "scoped_identifier" || node.kind() == "scoped_type_identifier" {
+            if let Some((prefix, name)) = ctor_group(cx, node) {
+                record_ctor(groups, nullable, prefix, name);
             }
             continue;
         }
-        if let Some(name) = ctor_name(cx, node) {
-            if is_nullable_name(name) {
-                *nullable = true;
-            } else {
-                names.insert(name);
+        if node.kind() == "tuple_struct_pattern" || node.kind() == "struct_pattern" {
+            if let Some((prefix, name)) = ctor_group(cx, node) {
+                record_ctor(groups, nullable, prefix, name);
             }
+            let skip = child_by_field(node, "type").map(|ty| ty.id());
+            stack.extend(
+                named_children(node)
+                    .into_iter()
+                    .filter(|child| Some(child.id()) != skip),
+            );
+            continue;
         }
         stack.extend(named_children(node));
     }
 }
 
-fn sibling_facts<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(BTreeSet<&'s str>, bool)> {
+fn sibling_facts<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(u32, bool)> {
     let parent = cx.parent()?;
     if parent.kind() != "match_block" {
         return None;
     }
     let mut cursor = parent.walk();
-    let mut names = BTreeSet::new();
+    let mut groups: BTreeMap<&'s str, BTreeSet<&'s str>> = BTreeMap::new();
     let mut nullable = false;
     for sib in parent.children(&mut cursor) {
         if sib.id() == n.id() || sib.kind() != "match_arm" {
@@ -88,9 +190,10 @@ fn sibling_facts<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(BTreeSet<&'s str>,
         let Some(inner) = arm_pattern(pat) else {
             continue;
         };
-        collect_names(cx, inner, &mut names, &mut nullable);
+        collect_names(cx, inner, &mut groups, &mut nullable);
     }
-    Some((names, nullable))
+    let widest = groups.values().map(BTreeSet::len).max().unwrap_or(0);
+    Some((narrow(widest), nullable))
 }
 
 fn scrutinee_kind(cx: &Cx<'_, '_>, _n: Node<'_>) -> Option<ScrutineeKind> {
@@ -134,8 +237,7 @@ pub(super) fn wildcard_arm(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<WildcardArm> 
         return None;
     }
     let scrutinee = scrutinee_kind(cx, n)?;
-    let (names, nullable) = sibling_facts(cx, n)?;
-    let variant_count = narrow(names.len());
+    let (variant_count, nullable) = sibling_facts(cx, n)?;
     Some(WildcardArm {
         pos: pos_of(n),
         enum_like: variant_count >= 2,

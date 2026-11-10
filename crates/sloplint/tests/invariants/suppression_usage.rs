@@ -157,3 +157,73 @@ fn suppressed_duplicate_does_not_renumber_the_visible_fingerprint() {
         "a visible finding keeps its fingerprint when a suppressed duplicate is deleted"
     );
 }
+
+const DEEP_FN: &str = "pub fn reconcile_ledger(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32) -> i32 {\n    if a > 0 {\n        if b > 0 {\n            if c > 0 {\n                if d > 0 {\n                    if e > 0 {\n                        if f > 0 {\n                            return 1;\n                        }\n                    }\n                }\n            }\n        }\n    }\n    0\n}\n";
+
+const DEPTH_LEVELS: &str = "[rules.\"complexity/cognitive-depth\"]\nlevel = \"minor\"\n[rules.\"complexity/nesting-depth\"]\nlevel = \"minor\"\n";
+
+#[test]
+fn allow_nesting_keeps_cognitive_without_unused() {
+    let (_tmp, root) = tempdir();
+    write(&root, "sloplint.toml", DEPTH_LEVELS);
+    write(
+        &root,
+        "src/lib.rs",
+        &format!("// sloplint-allow(complexity/nesting-depth): nesting is reviewed\n{DEEP_FN}"),
+    );
+    let report = run_ok(&standard(&root));
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|f| &*f.rule == "complexity/cognitive-depth"),
+        "allowing nesting keeps the cognitive finding: {:?}",
+        report.findings
+    );
+    assert!(
+        report
+            .findings
+            .iter()
+            .all(|f| &*f.rule != "complexity/nesting-depth"),
+        "the allowed nesting finding stays suppressed: {:?}",
+        report.findings
+    );
+    assert!(
+        unused_messages(&report).is_empty(),
+        "the used nesting operand reports no unused: {:?}",
+        unused_messages(&report)
+    );
+}
+
+#[test]
+fn allow_cognitive_keeps_nesting() {
+    let (_tmp, root) = tempdir();
+    write(&root, "sloplint.toml", DEPTH_LEVELS);
+    write(
+        &root,
+        "src/lib.rs",
+        &format!("// sloplint-allow(complexity/cognitive-depth): cognitive is reviewed\n{DEEP_FN}"),
+    );
+    let report = run_ok(&standard(&root));
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|f| &*f.rule == "complexity/nesting-depth"),
+        "allowing cognitive keeps the nesting finding: {:?}",
+        report.findings
+    );
+    assert!(
+        report
+            .findings
+            .iter()
+            .all(|f| &*f.rule != "complexity/cognitive-depth"),
+        "the allowed cognitive finding stays suppressed: {:?}",
+        report.findings
+    );
+    assert!(
+        unused_messages(&report).is_empty(),
+        "the used cognitive operand reports no unused: {:?}",
+        unused_messages(&report)
+    );
+}

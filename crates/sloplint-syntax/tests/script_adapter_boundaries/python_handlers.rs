@@ -1,6 +1,6 @@
-//! Python handler, assertion, and struct-literal facts.
+//! Python handler, assertion, struct-literal, and match-arm facts.
 
-use sloplint_core::facts::{AssertShape, FileFacts};
+use sloplint_core::facts::{AssertShape, FileFacts, ScrutineeKind};
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
@@ -65,6 +65,19 @@ def rebuild(self, params):
 
 def bag(items):
     return dict(a=items.a, b=items.b)
+"#;
+
+const MATCHES: &str = r#"def f(color):
+    match color:
+        case Color.RED: return 1
+        case Color.GREEN: return 2
+        case _: return 0
+
+
+def g(x):
+    match x:
+        case 1: return 1
+        case _: return 0
 "#;
 
 fn with_facts(source: &str, read: impl FnOnce(&FileFacts<'_>)) {
@@ -152,5 +165,29 @@ fn member_dict_and_rebuild_copies_stay_silent() {
                 .all(|c| c.source != Some("obj") && c.source != Some("items"))
         );
         assert_eq!(facts.field_copies.len(), 1);
+    });
+}
+
+#[test]
+fn wildcard_arm_reads_match_subject_and_siblings() {
+    with_facts(MATCHES, |facts| {
+        assert_eq!(facts.wildcard_arms.len(), 2, "one wildcard arm per match");
+        let dotted = facts
+            .wildcard_arms
+            .iter()
+            .find(|a| a.variant_count == 2)
+            .expect("dotted patterns count two siblings");
+        assert_eq!(
+            dotted.scrutinee,
+            ScrutineeKind::Ident,
+            "match subject identifier is reported"
+        );
+        assert!(dotted.enum_like, "dotted siblings are enum-like");
+        let literal = facts
+            .wildcard_arms
+            .iter()
+            .find(|a| a.variant_count == 0)
+            .expect("literal patterns count no siblings");
+        assert!(!literal.enum_like, "literal patterns are not enum-like");
     });
 }

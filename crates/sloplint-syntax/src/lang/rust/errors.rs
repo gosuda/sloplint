@@ -1,6 +1,7 @@
 use sloplint_core::facts::{CallKind, Stmt};
 use tree_sitter::Node;
 
+use super::arms::NULLABLE_CTORS;
 use crate::hooks::{Cx, child_by_field, first_named_child, last_segment, named_children, text};
 
 pub(super) fn err_bound<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<Option<&'s str>> {
@@ -19,7 +20,11 @@ pub(super) fn err_bound<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<Option<&'s
     if pat.kind() != "tuple_struct_pattern" {
         return None;
     }
-    if child_by_field(pat, "type").map_or("", |t| text(cx, t)) != "Err" {
+    if last_segment(
+        child_by_field(pat, "type").map_or("", |t| text(cx, t)),
+        &["::"],
+    ) != "Err"
+    {
         return None;
     }
     let ty = child_by_field(pat, "type")?;
@@ -60,7 +65,9 @@ fn pattern_may_match_err(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
         };
         match inner.kind() {
             "tuple_struct_pattern" => {
-                if child_by_field(inner, "type").is_some_and(|t| text(cx, t) == "Err") {
+                if child_by_field(inner, "type")
+                    .is_some_and(|t| last_segment(text(cx, t), &["::"]) == "Err")
+                {
                     return true;
                 }
             }
@@ -139,8 +146,13 @@ fn handler_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, bound: Option<&str>) -> Stmt<'
                 let callee = child_by_field(v, "function").map_or("", |f| text(cx, f));
                 if is_err_ctor(cx, v, bound, callee) {
                     Stmt::Rethrow
-                } else {
+                } else if NULLABLE_CTORS.contains(&last_segment(callee, &["::", "."])) {
                     Stmt::Other
+                } else {
+                    Stmt::Call {
+                        callee,
+                        kind: CallKind::Plain,
+                    }
                 }
             }
             _ => Stmt::Other,
@@ -148,15 +160,29 @@ fn handler_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, bound: Option<&str>) -> Stmt<'
         _ => Stmt::Other,
     }
 }
+fn is_unit_stmt(s: Node<'_>) -> bool {
+    if s.kind() == "unit_expression" {
+        return true;
+    }
+    if s.kind() == "expression_statement" {
+        return first_named_child(s).is_some_and(|e| e.kind() == "unit_expression");
+    }
+    false
+}
+
 pub(super) fn body_stmts<'s>(
     cx: &Cx<'_, 's>,
     body: Node<'_>,
     bound: Option<&str>,
 ) -> Vec<Stmt<'s>> {
+    if body.kind() == "unit_expression" {
+        return Vec::new();
+    }
     if body.kind() == "block" {
         named_children(body)
             .into_iter()
             .filter(|c| c.kind() != "line_comment" && c.kind() != "block_comment")
+            .filter(|c| !is_unit_stmt(*c))
             .map(|s| handler_stmt(cx, s, bound))
             .collect()
     } else {

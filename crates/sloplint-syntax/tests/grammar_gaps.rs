@@ -32,6 +32,8 @@ mod objc;
 mod php;
 #[path = "grammar_gaps/powershell.rs"]
 mod powershell;
+#[path = "grammar_gaps/powershell_syntax.rs"]
+mod powershell_syntax;
 #[path = "grammar_gaps/python.rs"]
 mod python;
 #[path = "grammar_gaps/ruby.rs"]

@@ -2,26 +2,32 @@
 
 use sloplint_core::facts::{
     AmbientKind, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import, Pos,
-    ScrutineeKind, TypeDef, WildcardArm,
+    ScrutineeKind, TypeDef, Visibility, WildcardArm,
 };
 use sloplint_core::role::CodeRole;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, code_children,
-    find_named_child, first_named_child_matching, named_children, pos_of, strip_quotes, text,
+    CallHead, Container, Cx, FileSetKind, FunctionHead, LangHooks, ShadowKind, TypeHead,
+    child_by_field, code_children, find_named_child, first_named_child_matching, named_children,
+    pos_of, strip_quotes, text,
 };
-use crate::lang::javascript::{calls as js_calls, items as js_items, js_table, test_call_marker};
+use crate::lang::javascript::test_call_marker;
+use crate::lang::javascript::{calls as js_calls, is_test_path, items as js_items, js_table};
 use crate::spec::Role;
 pub(crate) mod ambient;
 pub(crate) mod calls;
 pub(crate) mod funcs;
 pub(crate) mod imports;
-use ambient::{ambient_sites, decl_names_for, write_roots_for};
-use calls::{callee_root, ts_args};
+use ambient::{
+    ambient_sites, decl_names_for, hoisted_shadows_for, shadow_kind_for, shadow_names_for,
+    write_roots_for,
+};
+use calls::{callee_root, collapsed_callee, ts_args, ts_sole_call};
 use funcs::{
-    TsHead, closure_params, doc_anchor, exported as ts_exported, function_head, has_override,
-    head_for, member_public, visibility_of,
+    TsHead, closure_params, closure_shadow_params, doc_anchor, exported as ts_exported,
+    function_head, has_decorator, has_override, head_for, is_deprecated_named, member_public,
+    missing_of, visibility_of,
 };
 use imports::{export_stmt, heritage_impls, import_stmt, parent_dir, ts_targets};
 pub(crate) static TABLE: crate::lang::Table = js_table!(
@@ -37,25 +43,27 @@ pub(crate) struct TypeScriptHooks;
 
 pub(crate) static HOOKS: TypeScriptHooks = TypeScriptHooks;
 
-fn file_enums<'s>(cx: &Cx<'_, 's>, _n: Node<'_>) -> Vec<&'s str> {
-    let Some(root) = cx.root() else {
-        return Vec::new();
-    };
-    let mut out = Vec::new();
-    for stmt in code_children(root) {
-        let decl = if stmt.kind() == "export_statement" {
-            find_enum(stmt)
-        } else if stmt.kind() == "enum_declaration" {
-            Some(stmt)
-        } else {
-            None
+fn file_enums<'c, 's>(cx: &'c Cx<'_, 's>) -> &'c [&'s str] {
+    cx.file_names(FileSetKind::Type, || {
+        let Some(root) = cx.root() else {
+            return Vec::new();
         };
-        out.extend(
-            decl.and_then(|d| child_by_field(d, "name"))
-                .map(|name| text(cx, name)),
-        );
-    }
-    out
+        let mut out = Vec::new();
+        for stmt in code_children(root) {
+            let decl = if stmt.kind() == "export_statement" {
+                find_enum(stmt)
+            } else if stmt.kind() == "enum_declaration" {
+                Some(stmt)
+            } else {
+                None
+            };
+            out.extend(
+                decl.and_then(|d| child_by_field(d, "name"))
+                    .map(|name| text(cx, name)),
+            );
+        }
+        out
+    })
 }
 
 fn find_enum(n: Node<'_>) -> Option<Node<'_>> {
@@ -81,7 +89,7 @@ fn switch_enum_info<'s>(
             count += 1;
         }
     }
-    (count > 0, count, scrutinee)
+    (count >= 2, count, scrutinee)
 }
 
 fn case_enum_object<'s>(cx: &Cx<'_, 's>, case: Node<'_>, enums: &[&'s str]) -> bool {
@@ -94,6 +102,10 @@ fn case_enum_object<'s>(cx: &Cx<'_, 's>, case: Node<'_>, enums: &[&'s str]) -> b
 }
 
 impl LangHooks for TypeScriptHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
     fn call_marker(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
         test_call_marker(cx, n)
     }
@@ -110,8 +122,33 @@ impl LangHooks for TypeScriptHooks {
         closure_from_parent(n, parent, cx)
     }
 
+    fn is_ternary_alternate(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        n.kind() == "ternary_expression"
+            && parent.is_some_and(|p| {
+                p.kind() == "ternary_expression"
+                    && p.child_by_field_name("alternative")
+                        .is_some_and(|a| a.id() == n.id())
+            })
+    }
+
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         decl_names_for(n, cx, out);
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        if node.kind() == "for_in_statement" {
+            return depth;
+        }
+        let _ = (node, cx);
+        depth.saturating_sub(1)
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        shadow_kind_for(kind)
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        shadow_names_for(n, cx, out);
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
@@ -125,7 +162,7 @@ impl LangHooks for TypeScriptHooks {
         let func = child_by_field(n, "function")?;
         let args = child_by_field(n, "arguments").map_or(Vec::new(), |a| ts_args(cx, a));
         Some(CallHead {
-            callee: text(cx, func),
+            callee: collapsed_callee(cx, func).unwrap_or_else(|| text(cx, func)),
             kind: CallKind::Plain,
             callee_root: callee_root(cx, func),
             is_simple_path: js_calls::simple_path(func),
@@ -156,8 +193,8 @@ impl LangHooks for TypeScriptHooks {
         if n.kind() != "switch_default" {
             return None;
         }
-        let enums = file_enums(cx, n);
-        let (enum_like, variant_count, scrutinee) = switch_enum_info(cx, n, &enums);
+        let enums = file_enums(cx);
+        let (enum_like, variant_count, scrutinee) = switch_enum_info(cx, n, enums);
         Some(WildcardArm {
             pos: pos_of(n),
             enum_like,
@@ -202,12 +239,55 @@ fn ts_new_call<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     let ctor = child_by_field(n, "constructor")?;
     let args = child_by_field(n, "arguments").map_or(Vec::new(), |a| ts_args(cx, a));
     Some(CallHead {
-        callee: text(cx, ctor),
+        callee: collapsed_callee(cx, ctor).unwrap_or_else(|| text(cx, ctor)),
         kind: CallKind::New,
-        callee_root: None,
+        callee_root: callee_root(cx, ctor),
         is_simple_path: js_calls::simple_path(ctor),
         initializes_binding: js_calls::initializes_binding(cx, n),
         args,
+    })
+}
+
+fn anonymous_closure<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
+    closure_head(n, cx, Visibility::Private)
+}
+
+fn exported_closure<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
+    closure_head(n, cx, Visibility::Exported)
+}
+
+fn closure_head<'s>(
+    n: Node<'_>,
+    cx: &Cx<'_, 's>,
+    visibility: Visibility,
+) -> Option<FunctionHead<'s>> {
+    let body = child_by_field(n, "body")?;
+    let mut params = Vec::new();
+    closure_params(cx, n, &mut params);
+    let ret = child_by_field(n, "return_type").map(|t| text(cx, t));
+    let missing = missing_of(&params, ret, "");
+    let mut shadow = closure_shadow_params(cx, n);
+    hoisted_shadows_for(cx, body, &mut shadow);
+    Some(FunctionHead {
+        shadow_params: shadow,
+        name: "",
+        name_pos: pos_of(n),
+        visibility,
+        signature_forced: false,
+        entry_point: false,
+        in_test: is_test_path(cx.path),
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        region: None,
+        receiver: None,
+        params,
+        return_type: ret,
+        missing_annotations: missing,
+        doc: Vec::new(),
+        doc_pos: None,
+        sole_call: ts_sole_call(body),
     })
 }
 
@@ -223,7 +303,10 @@ fn closure_from_parent<'s>(
     if parent.kind() == "public_field_definition" {
         return field_closure(n, parent, cx);
     }
-    None
+    if parent.kind() == "export_statement" {
+        return exported_closure(n, cx);
+    }
+    anonymous_closure(n, cx)
 }
 
 fn declarator_closure<'s>(
@@ -232,16 +315,16 @@ fn declarator_closure<'s>(
     cx: &Cx<'_, 's>,
 ) -> Option<FunctionHead<'s>> {
     if child_by_field(parent, "value").is_some_and(|v| v.id() != n.id()) {
-        return None;
+        return anonymous_closure(n, cx);
     }
-    let decl = cx.parent_of(parent)?;
-    let grand = cx.parent_of(decl)?;
-    if grand.kind() != "program" && grand.kind() != "export_statement" {
-        return None;
-    }
-    let name_node = child_by_field(parent, "name")?;
+    let Some(decl) = cx.parent_of(parent) else {
+        return anonymous_closure(n, cx);
+    };
+    let Some(name_node) = child_by_field(parent, "name") else {
+        return anonymous_closure(n, cx);
+    };
     if name_node.kind() != "identifier" {
-        return None;
+        return anonymous_closure(n, cx);
     }
     let public = ts_exported(cx, decl, text(cx, name_node));
     let mut params = Vec::new();
@@ -255,7 +338,12 @@ fn declarator_closure<'s>(
         overload: false,
         body: child_by_field(n, "body"),
     };
-    Some(head_for(cx, site, params))
+    let mut head = head_for(cx, site, params);
+    head.shadow_params = closure_shadow_params(cx, n);
+    if let Some(body) = child_by_field(n, "body") {
+        hoisted_shadows_for(cx, body, &mut head.shadow_params);
+    }
+    Some(head)
 }
 
 fn closure_header<'t>(cx: &Cx<'t, '_>, decl: Node<'t>) -> Node<'t> {
@@ -280,16 +368,22 @@ fn field_closure<'s>(n: Node<'_>, parent: Node<'_>, cx: &Cx<'_, 's>) -> Option<F
         overload: false,
         body: child_by_field(n, "body"),
     };
-    Some(head_for(cx, site, params))
+    let mut head = head_for(cx, site, params);
+    head.shadow_params = closure_shadow_params(cx, n);
+    if let Some(body) = child_by_field(n, "body") {
+        hoisted_shadows_for(cx, body, &mut head.shadow_params);
+    }
+    head.is_decorated = head.is_decorated || has_decorator(parent);
+    head.is_deprecated = head.is_deprecated || is_deprecated_named(parent, &head.doc, cx);
+    Some(head)
 }
 
 fn ts_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     let kind = n.kind();
-    let public = cx
-        .parent_of(n)
-        .is_some_and(|p| p.kind() == "export_statement");
     let abstraction = kind == "interface_declaration" || kind == "abstract_class_declaration";
     let name_node = child_by_field(n, "name")?;
+    let name = text(cx, name_node);
+    let public = ts_exported(cx, n, name);
     let mut impls: Vec<ImplRef<'s>> = Vec::new();
     let mut container = None;
     if kind == "class_declaration" || kind == "abstract_class_declaration" {

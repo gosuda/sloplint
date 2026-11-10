@@ -3,40 +3,96 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, binary_concat, child_by_field, first_named_child, first_named_child_matching,
-    last_named_child, named_children, narrow, pos_of, text,
+    CallHead, Cx, any_named_child, binary_concat, child_by_field, first_named_child,
+    first_named_child_matching, last_named_child, named_children, narrow, pos_of, text,
 };
 
-use super::syntax::{cut_generics, label_text};
+use super::syntax::{COMMENTS, cut_generics, label_text};
 
 fn callee_root<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
     let mut current = func;
     loop {
         current = match current.kind() {
             "identifier" | "this" | "super" => return Some(text(cx, current)),
-            "member_expression" => child_by_field(current, "object")?,
+            "member_expression" | "null_aware_member_expression" => {
+                child_by_field(current, "object")?
+            }
             _ => return None,
         };
     }
 }
 
-fn arg_shape<'s>(cx: &Cx<'_, 's>, e: Node<'_>) -> ArgShape<'s> {
-    if e.kind() == "string_literal" {
-        let mut segs = Vec::new();
-        for c in named_children(e) {
-            if c.kind().starts_with("template_chars") {
-                segs.push(text(cx, c));
+fn has_interpolation(n: Node<'_>) -> bool {
+    any_named_child(n, |c| {
+        c.kind() == "template_substitution"
+            || c.kind().starts_with("string_literal")
+                && any_named_child(c, |g| g.kind() == "template_substitution")
+    })
+}
+
+fn string_static<'s>(cx: &Cx<'_, 's>, e: Node<'_>) -> (u32, bool) {
+    let mut segs = Vec::new();
+    let mut dynamic = false;
+    for c in named_children(e) {
+        if c.kind() == "template_substitution" {
+            dynamic = true;
+        } else if c.kind().starts_with("template_chars") {
+            segs.push(text(cx, c));
+        } else {
+            for g in named_children(c) {
+                if g.kind() == "template_substitution" {
+                    dynamic = true;
+                } else if g.kind().starts_with("template_chars") {
+                    segs.push(text(cx, g));
+                }
             }
         }
-        return ArgShape::Str {
-            longest_static: longest_static_chunk(&segs),
-        };
+    }
+    (longest_static_chunk(&segs), dynamic)
+}
+
+fn concat_static(cx: &Cx<'_, '_>, e: Node<'_>) -> u32 {
+    let mut longest_static = 0;
+    let mut pending = vec![e];
+    while let Some(node) = pending.pop() {
+        if node.kind() == "string_literal" {
+            longest_static = longest_static.max(string_static(cx, node).0);
+        } else if node.kind() == "additive_expression"
+            && node.child(1).is_some_and(|op| text(cx, op) == "+")
+        {
+            pending.extend([node.child(0), node.child(2)].into_iter().flatten());
+        }
+    }
+    longest_static
+}
+
+fn collection_shape(n: Node<'_>) -> ArgShape<'static> {
+    for c in named_children(n) {
+        if c.kind() == "pair" {
+            return ArgShape::Other;
+        }
+        if c.kind() == "function_expression" {
+            return ArgShape::CodeBody;
+        }
+    }
+    ArgShape::Collection
+}
+
+fn arg_shape<'s>(cx: &Cx<'_, 's>, e: Node<'_>) -> ArgShape<'s> {
+    if e.kind() == "string_literal" {
+        let (longest_static, dynamic) = string_static(cx, e);
+        if dynamic {
+            return ArgShape::Concat { longest_static };
+        }
+        return ArgShape::Str { longest_static };
     }
     if e.kind() == "additive_expression" && binary_concat(cx, e, "+", &["string_literal"]) {
-        return ArgShape::Concat;
+        return ArgShape::Concat {
+            longest_static: concat_static(cx, e),
+        };
     }
     if e.kind() == "list_literal" || e.kind() == "set_or_map_literal" {
-        return ArgShape::Collection;
+        return collection_shape(e);
     }
     if e.kind() == "function_expression" {
         return ArgShape::CodeBody;
@@ -59,14 +115,15 @@ fn call_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
     let Some(list) = child_by_field(n, "arguments") else {
         return Vec::new();
     };
-    named_children(list)
-        .into_iter()
+    let mut cursor = list.walk();
+    list.named_children(&mut cursor)
+        .filter(|a| !COMMENTS.contains(&a.kind()))
         .map(|a| {
             let e = arg_value(a);
             Arg {
                 shape: arg_shape(cx, e),
-                start_line: narrow(e.start_position().row) + 1,
-                end_line: narrow(e.end_position().row) + 1,
+                start_line: narrow(a.start_position().row) + 1,
+                end_line: narrow(a.end_position().row) + 1,
             }
         })
         .collect()
@@ -77,10 +134,12 @@ fn dart_is_simple_path(n: Node<'_>) -> bool {
     loop {
         match current.kind() {
             "identifier" | "this" | "super" => return true,
-            "member_expression" => match child_by_field(current, "object") {
-                Some(next) => current = next,
-                None => return false,
-            },
+            "member_expression" | "null_aware_member_expression" => {
+                match child_by_field(current, "object") {
+                    Some(next) => current = next,
+                    None => return false,
+                }
+            }
             _ => return false,
         }
     }
@@ -92,17 +151,29 @@ fn dart_initializes_binding(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     };
     if parent.kind() != "initialized_variable_definition"
         && parent.kind() != "initialized_identifier"
+        && parent.kind() != "static_final_declaration"
     {
         return false;
     }
     child_by_field(parent, "value").is_some_and(|v| v.id() == n.id())
 }
 
+pub(crate) fn callee_text<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
+    let kind = func.kind();
+    if (kind == "member_expression" || kind == "null_aware_member_expression")
+        && !dart_is_simple_path(func)
+        && let Some(property) = child_by_field(func, "property")
+    {
+        return text(cx, property);
+    }
+    cut_generics(text(cx, func))
+}
+
 pub(crate) fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     if n.kind() == "call_expression" {
         let func = child_by_field(n, "function")?;
         return Some(CallHead {
-            callee: cut_generics(text(cx, func)),
+            callee: callee_text(cx, func),
             kind: CallKind::Plain,
             callee_root: callee_root(cx, func),
             is_simple_path: dart_is_simple_path(func),
@@ -140,7 +211,11 @@ fn expect_tail(cx: &Cx<'_, '_>, args_node: Node<'_>) -> (bool, bool) {
     let mut has_message = false;
     let mut positional = 0u32;
     let mut second = None;
-    for k in named_children(args_node) {
+    let mut cursor = args_node.walk();
+    for k in args_node.named_children(&mut cursor) {
+        if COMMENTS.contains(&k.kind()) {
+            continue;
+        }
         if k.kind() == "named_argument" {
             has_message |= is_reason_arg(cx, k);
             continue;
@@ -202,9 +277,13 @@ pub(crate) fn dynamic(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
         return None;
     }
     let args = child_by_field(n, "arguments")?;
-    let first = first_named_child(args)?;
-    if arg_value(first).kind() == "string_literal" {
-        return None;
+    let mut cursor = args.walk();
+    let first = args
+        .named_children(&mut cursor)
+        .find(|c| !COMMENTS.contains(&c.kind()))?;
+    let value = arg_value(first);
+    if value.kind() != "string_literal" {
+        return Some("symbol built at runtime");
     }
-    Some("symbol built at runtime")
+    has_interpolation(value).then_some("symbol built at runtime")
 }

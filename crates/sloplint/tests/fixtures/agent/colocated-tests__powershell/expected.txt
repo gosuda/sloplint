@@ -1,1 +1,1 @@
-Deploy.ps1:1 info agent/colocated-tests
+src/Service.ps1:1 info agent/colocated-tests

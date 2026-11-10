@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
@@ -97,6 +98,7 @@ pub struct Function<'s> {
     pub is_decorated: bool,
     pub is_trait_item: bool,
     pub is_method: bool,
+    pub receiver: Option<&'s str>,
     pub params: Vec<Param<'s>>,
     pub return_type: Option<&'s str>,
     pub untyped_throws: bool,
@@ -159,7 +161,7 @@ pub struct Arg<'s> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgShape<'s> {
     Str { longest_static: u32 },
-    Concat,
+    Concat { longest_static: u32 },
     Ident(&'s str),
     Collection,
     CodeBody,
@@ -295,6 +297,7 @@ pub struct WorldFacts {
     pub lang: Lang,
     pub role: CodeRole,
     pub regions: Vec<RoleRegion>,
+    #[serde(skip)]
     pub package: String,
     pub has_inline_tests: bool,
     pub public_functions: u32,
@@ -302,6 +305,7 @@ pub struct WorldFacts {
     pub abstractions: Vec<NamedSite>,
     pub impls: Vec<NamedSite>,
     pub barrel: Option<Vec<Vec<String>>>,
+    pub imports: Vec<Box<str>>,
 }
 
 impl WorldFacts {
@@ -349,8 +353,37 @@ impl WorldFacts {
                 .map(|i| named_site(facts, i.pos, i.name))
                 .collect(),
             barrel: facts.barrel.as_ref().map(|b| b.targets.clone()),
+            imports: import_targets(facts),
         }
     }
+}
+fn import_targets(facts: &FileFacts<'_>) -> Vec<Box<str>> {
+    let file_test = matches!(facts.role, CodeRole::Test | CodeRole::Bench);
+    let mut targets = Vec::new();
+    for import in &facts.imports {
+        if !import.in_test && !file_test {
+            continue;
+        }
+        let module: &str = &import.module;
+        if module.is_empty() {
+            continue;
+        }
+        if facts.lang == Lang::Go && is_single_segment(module) {
+            continue;
+        }
+        targets.push(Box::<str>::from(module));
+        let bound = module.rsplit(['/', '.']).next() != Some(import.name);
+        if !import.name.is_empty() && import.name != "*" && bound {
+            targets.push(Box::<str>::from(format!("{module}/{}", import.name)));
+        }
+    }
+    targets
+}
+fn is_single_segment(module: &str) -> bool {
+    !module.starts_with('.')
+        && !module.contains('/')
+        && !module.contains('.')
+        && !module.contains(':')
 }
 
 fn named_site(facts: &FileFacts<'_>, pos: Pos, name: &str) -> NamedSite {
@@ -360,26 +393,68 @@ fn named_site(facts: &FileFacts<'_>, pos: Pos, name: &str) -> NamedSite {
         column: source_column(&facts.line_starts, facts.source, pos),
     }
 }
-pub fn package_key(lang: Lang, path: &str) -> String {
+/// Which ecosystem a manifest file belongs to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ManifestKind {
+    JavaScript,
+    Python,
+}
+
+fn manifest_kind_for(lang: Lang) -> Option<ManifestKind> {
+    match lang {
+        Lang::TypeScript | Lang::Tsx | Lang::JavaScript => Some(ManifestKind::JavaScript),
+        Lang::Python => Some(ManifestKind::Python),
+        _ => None,
+    }
+}
+
+pub fn package_key(lang: Lang, path: &str, manifests: &BTreeSet<(ManifestKind, String)>) -> String {
+    if let Some(kind) = manifest_kind_for(lang)
+        && let Some(key) = nearest_manifest(path, manifests, kind)
+    {
+        return key;
+    }
+    legacy_package_key(lang, path)
+}
+
+fn nearest_manifest(
+    path: &str,
+    manifests: &BTreeSet<(ManifestKind, String)>,
+    kind: ManifestKind,
+) -> Option<String> {
+    let mut prefix = path;
+    while let Some(i) = prefix.rfind('/') {
+        prefix = &prefix[..i];
+        if manifests.contains(&(kind, prefix.to_string())) {
+            return Some(prefix.to_string());
+        }
+    }
+    if manifests.contains(&(kind, String::new())) {
+        return Some(String::new());
+    }
+    None
+}
+
+fn legacy_package_key(lang: Lang, path: &str) -> String {
     match lang {
         Lang::Rust => {
             let mut parts = path.split('/');
             if parts.next() == Some("crates")
                 && let Some(name) = parts.next()
                 && !name.is_empty()
+                && parts.next().is_some()
             {
                 return ["crates", name].join("/");
             }
             String::new()
         }
-        Lang::TypeScript | Lang::Tsx | Lang::JavaScript | Lang::Python => match path.find('/') {
-            Some(i) => path[..i].to_string(),
-            None => String::new(),
-        },
         Lang::Go => match path.rfind('/') {
             Some(i) => path[..i].to_string(),
             None => String::new(),
         },
-        _ => String::new(),
+        _ => match path.find('/') {
+            Some(i) => path[..i].to_string(),
+            None => String::new(),
+        },
     }
 }

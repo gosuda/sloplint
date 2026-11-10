@@ -1,5 +1,5 @@
-//! TypeScript call sites record the leftmost name of their callee chain, exactly as
-//! JavaScript does, so delegation through `this` or `super` is distinguishable from a
+//! TypeScript call sites record the leftmost name of their callee chain for plain and
+//! receiver chains, so delegation through `this` or `super` is distinguishable from a
 //! free-function wrapper and the passthrough-wrapper rule can leave receiver forwarding alone.
 
 use sloplint_core::lang::Lang;
@@ -47,23 +47,29 @@ const SOURCE: &str = "class Cache {
 }
 ";
 
-fn expected() -> Vec<Row> {
+fn expected(new_root: Option<&str>, indexed_root: Option<&str>) -> Vec<Row> {
     vec![
         row("this.store.get", Some("this")),
         row("(this.store).get", Some("this")),
         row("super.get", Some("super")),
         row("helper", Some("helper")),
-        row("a.b[c].d", Some("a")),
-        row("Store", None),
+        row("a.b[c].d", indexed_root),
+        row("Store", new_root),
     ]
 }
 
 #[test]
 fn typescript_calls_record_their_callee_root() {
-    assert_eq!(roots(Lang::TypeScript, "cache.ts"), expected());
+    assert_eq!(
+        roots(Lang::TypeScript, "cache.ts"),
+        expected(Some("Store"), Some("a"))
+    );
 }
 
 #[test]
 fn javascript_records_the_same_roots() {
-    assert_eq!(roots(Lang::JavaScript, "cache.js"), expected());
+    assert_eq!(
+        roots(Lang::JavaScript, "cache.js"),
+        expected(Some("Store"), None)
+    );
 }

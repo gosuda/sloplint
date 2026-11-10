@@ -1,17 +1,18 @@
-use sloplint_core::facts::{Barrel, FieldCopy, Handler, ImplRef, Stmt, TypeDef, Visibility};
+use sloplint_core::facts::{Barrel, FieldCopy, Handler, ImplRef, Pos, Stmt, TypeDef, Visibility};
 use sloplint_core::role::CodeRole;
 use tree_sitter::Node;
 
 use super::attrs::{
-    has_any_attr, has_bench_attr, has_deprecated_attr, has_sibling_attr, has_test_attr,
+    attr_last_segment, has_any_attr, has_bench_attr, has_deprecated_attr, has_sibling_attr,
+    has_test_attr,
 };
 use super::calls::sole_call_id;
 use super::errors::{body_stmts, err_bound, has_err_selective_predecessor};
 use super::params::{closure_params, rust_params};
 use crate::hooks::{
-    Container, Cx, FunctionHead, TypeHead, attributed_region, child_by_field, earliest_preceding,
-    first_named_child, first_named_child_matching, has_child_kind, last_segment, named_children,
-    pos_of, preceding_comments, text,
+    Container, Cx, FileSetKind, FunctionHead, TypeHead, attributed_region, child_by_field,
+    earliest_preceding, first_named_child, first_named_child_matching, has_child_kind,
+    last_segment, named_children, narrow, pos_of, preceding_comments, text,
 };
 
 fn visibility_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
@@ -23,9 +24,12 @@ fn visibility_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
 
 fn enclosing_trait_visibility<'s>(cx: &Cx<'_, 's>, _n: Node<'_>) -> Option<Visibility> {
     for node in cx.ancestors() {
+        if node.kind() == "function_item" {
+            return Some(Visibility::Private);
+        }
         if node.kind() == "trait_item" {
             match visibility_text(cx, node) {
-                Some("pub") => return Some(Visibility::Exported),
+                Some("pub") if !enclosed_in_private_mod(cx) => return Some(Visibility::Exported),
                 Some(_) => return Some(Visibility::Restricted),
                 None => return Some(Visibility::Private),
             }
@@ -35,6 +39,25 @@ fn enclosing_trait_visibility<'s>(cx: &Cx<'_, 's>, _n: Node<'_>) -> Option<Visib
         }
     }
     None
+}
+
+fn mod_is_public(cx: &Cx<'_, '_>, m: Node<'_>) -> bool {
+    named_children(m)
+        .into_iter()
+        .find(|c| c.kind() == "visibility_modifier")
+        .is_some_and(|v| text(cx, v) == "pub")
+}
+
+fn enclosed_in_private_mod(cx: &Cx<'_, '_>) -> bool {
+    for node in cx.ancestors() {
+        if node.kind() == "source_file" {
+            return false;
+        }
+        if node.kind() == "mod_item" && !mod_is_public(cx, node) {
+            return true;
+        }
+    }
+    false
 }
 
 pub(super) fn visibility_of<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Visibility {
@@ -54,7 +77,8 @@ pub(super) fn visibility_of<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Visibility {
         return Visibility::Private;
     }
     match visibility_text(cx, n) {
-        Some("pub") => Visibility::Exported,
+        Some("pub") if !enclosed_in_private_mod(cx) => Visibility::Exported,
+        Some("pub") => Visibility::Restricted,
         Some(_) => Visibility::Restricted,
         None => Visibility::Private,
     }
@@ -71,7 +95,8 @@ fn is_tokio_main(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
 }
 
 pub(super) fn is_entry_point(cx: &Cx<'_, '_>, n: Node<'_>, name: &str) -> bool {
-    name == "main" || is_tokio_main(cx, n)
+    (name == "main" || is_tokio_main(cx, n))
+        && cx.parent().is_some_and(|p| p.kind() == "source_file")
 }
 
 pub(super) fn fn_in_test(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
@@ -79,9 +104,24 @@ pub(super) fn fn_in_test(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
         return true;
     }
     for node in cx.ancestors() {
-        if node.kind() == "mod_item"
+        if node.kind() == "function_item" {
+            if has_test_attr(cx, node) || has_bench_attr(cx, node) {
+                return true;
+            }
+        } else if node.kind() == "mod_item"
             && child_by_field(node, "name").is_some_and(|m| text(cx, m) == "tests")
         {
+            return true;
+        } else if node.kind() == "source_file" {
+            return false;
+        }
+    }
+    false
+}
+
+fn nested_in_fn(cx: &Cx<'_, '_>) -> bool {
+    for node in cx.ancestors() {
+        if node.kind() == "function_item" {
             return true;
         }
         if node.kind() == "source_file" {
@@ -91,9 +131,66 @@ pub(super) fn fn_in_test(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     false
 }
 
+fn in_trait_impl(cx: &Cx<'_, '_>) -> bool {
+    let mut chain = cx.ancestors();
+    let Some(body) = chain.next() else {
+        return false;
+    };
+    if body.kind() != "declaration_list" {
+        return false;
+    }
+    let Some(impl_node) = chain.next() else {
+        return false;
+    };
+    impl_node.kind() == "impl_item" && child_by_field(impl_node, "trait").is_some()
+}
+
 pub(super) fn is_trait_item(cx: &Cx<'_, '_>) -> bool {
-    cx.innermost_container()
-        .is_some_and(|c| matches!(c, Container::Trait { .. }))
+    !nested_in_fn(cx)
+        && cx
+            .innermost_container()
+            .is_some_and(|c| matches!(c, Container::Trait { .. }))
+}
+
+fn has_extern_block(n: Node<'_>) -> bool {
+    named_children(n)
+        .into_iter()
+        .any(|c| c.kind() == "function_modifiers" && has_child_kind(c, "extern_modifier"))
+}
+
+fn has_abi_attr(cx: &Cx<'_, '_>, sib: Node<'_>) -> bool {
+    let Some(attr) = first_named_child_matching(sib, &["attribute"]) else {
+        return false;
+    };
+    matches!(attr_last_segment(cx, attr), "no_mangle" | "export_name")
+}
+
+fn has_abi_signature(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    has_extern_block(n) || has_sibling_attr(cx, n, has_abi_attr)
+}
+
+fn is_rustdoc(comment: &str) -> bool {
+    let bytes = comment.as_bytes();
+    if bytes.len() < 3 {
+        return false;
+    }
+    match (bytes[0], bytes[1], bytes[2]) {
+        (b'/', b'/', b'/') => bytes.get(3) != Some(&b'/'),
+        (b'/', b'/', b'!') => true,
+        (b'/', b'*', b'*') => !matches!(bytes.get(3), Some(b'*') | Some(b'/')),
+        (b'/', b'*', b'!') => true,
+        _ => false,
+    }
+}
+
+fn shifted_doc_pos(src: &str, base: Pos, kept: &str, span: u32) -> Pos {
+    if span == 0 {
+        return base;
+    }
+    Pos {
+        line: base.line + span,
+        byte: narrow(kept.as_ptr() as usize - src.as_ptr() as usize),
+    }
 }
 
 pub(super) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
@@ -102,26 +199,39 @@ pub(super) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
     let name = text(cx, name_node);
     let mut params = Vec::new();
     rust_params(cx, n, &mut params);
-    let (doc, doc_pos) = preceding_comments(
+    let (mut doc, mut doc_pos) = preceding_comments(
         cx,
         n,
         &["line_comment", "block_comment"],
         &["attribute_item"],
     );
-    let bound = matches!(
-        cx.innermost_container(),
-        Some(Container::Impl {
-            interface_bound: true
-        })
-    );
+    match doc.iter().position(|line| is_rustdoc(line)) {
+        None => {
+            doc.clear();
+            doc_pos = None;
+        }
+        Some(i) => {
+            let span: u32 = doc[..i]
+                .iter()
+                .map(|line| narrow(line.lines().count()))
+                .sum();
+            let kept = doc[i];
+            doc.retain(|line| is_rustdoc(line));
+            if let Some(base) = doc_pos {
+                doc_pos = Some(shifted_doc_pos(cx.src, base, kept, span));
+            }
+        }
+    }
+    let forced = in_trait_impl(cx) || has_abi_signature(cx, n);
     let tested = has_test_attr(cx, n);
     let benched = !tested && has_bench_attr(cx, n);
     let leading = earliest_preceding(n, "attribute_item", &["line_comment", "block_comment"]);
     Some(FunctionHead {
+        shadow_params: Vec::new(),
         name,
         name_pos: pos_of(name_node),
         visibility: visibility_of(cx, n),
-        signature_forced: bound,
+        signature_forced: forced,
         entry_point: is_entry_point(cx, n, name),
         in_test: fn_in_test(cx, n),
         is_overload: false,
@@ -131,6 +241,7 @@ pub(super) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
         region: tested
             .then(|| attributed_region(n, leading, CodeRole::Test))
             .or_else(|| benched.then(|| attributed_region(n, leading, CodeRole::Bench))),
+        receiver: None,
         params,
         return_type: child_by_field(n, "return_type").map(|t| text(cx, t)),
         missing_annotations: Vec::new(),
@@ -138,6 +249,21 @@ pub(super) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
         doc_pos,
         sole_call: sole_call_id(body),
     })
+}
+
+fn closure_in_test(cx: &Cx<'_, '_>) -> bool {
+    if cx.inside_test_module() {
+        return true;
+    }
+    for node in cx.ancestors() {
+        if node.kind() == "function_item" {
+            return fn_in_test(cx, node);
+        }
+        if node.kind() == "source_file" {
+            return false;
+        }
+    }
+    false
 }
 
 pub(super) fn closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
@@ -148,17 +274,19 @@ pub(super) fn closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionH
     let mut params = Vec::new();
     closure_params(cx, n, &mut params);
     Some(FunctionHead {
+        shadow_params: Vec::new(),
         name: "",
         name_pos: pos_of(n),
         visibility: Visibility::Private,
         signature_forced: false,
         entry_point: false,
-        in_test: cx.inside_test_module(),
+        in_test: closure_in_test(cx),
         is_overload: false,
         is_deprecated: false,
         is_decorated: false,
         is_trait_item: false,
         region: None,
+        receiver: None,
         params,
         return_type: child_by_field(n, "return_type").map(|t| text(cx, t)),
         missing_annotations: Vec::new(),
@@ -168,26 +296,28 @@ pub(super) fn closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionH
     })
 }
 
-fn file_trait_names<'s>(cx: &Cx<'_, 's>, _n: Node<'_>) -> Vec<&'s str> {
-    let Some(root) = cx.root() else {
-        return Vec::new();
-    };
-    named_children(root)
-        .into_iter()
-        .filter(|c| c.kind() == "trait_item")
-        .filter_map(|t| child_by_field(t, "name"))
-        .map(|name| text(cx, name))
-        .collect()
+fn file_trait_names<'c, 's>(cx: &'c Cx<'_, 's>) -> &'c [&'s str] {
+    cx.file_names(FileSetKind::Type, || {
+        let Some(root) = cx.root() else {
+            return Vec::new();
+        };
+        named_children(root)
+            .into_iter()
+            .filter(|c| c.kind() == "trait_item")
+            .filter_map(|t| child_by_field(t, "name"))
+            .map(|name| text(cx, name))
+            .collect()
+    })
 }
 
-fn child_is_abstract(cx: &Cx<'_, '_>, n: Node<'_>, impl_node: Node<'_>) -> bool {
+fn child_is_abstract(cx: &Cx<'_, '_>, impl_node: Node<'_>) -> bool {
     let Some(ty) = child_by_field(impl_node, "type") else {
         return false;
     };
     let last = text(cx, ty).rsplit("::").next().unwrap_or("");
     let base = last.split('<').next().unwrap_or("");
     let base = base.trim();
-    !base.is_empty() && file_trait_names(cx, n).contains(&base)
+    !base.is_empty() && file_trait_names(cx).contains(&base)
 }
 
 pub(super) fn typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
@@ -204,7 +334,7 @@ pub(super) fn typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> 
                 name: last_segment(base, &["::"]),
                 pos: pos_of(tr),
                 is_generic: child_by_field(n, "type_parameters").is_some(),
-                child_is_abstract: child_is_abstract(cx, n, n),
+                child_is_abstract: child_is_abstract(cx, n),
             });
         }
         return Some(TypeHead {

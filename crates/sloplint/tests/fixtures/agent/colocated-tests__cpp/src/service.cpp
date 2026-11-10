@@ -1,1 +1,3 @@
-int render(int x) { return x; }
+int render(int x) {
+    return x;
+}

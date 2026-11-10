@@ -51,7 +51,7 @@ fn matching_close(open: &str) -> &str {
     }
 }
 
-fn strip_outer<'a, 'b>(cx: &Cx<'_, 'b>, kids: &'a [Node<'b>]) -> &'a [Node<'b>] {
+fn strip_outer<'a, 'n>(cx: &Cx<'_, '_>, kids: &'a [Node<'n>]) -> &'a [Node<'n>] {
     let (Some(first), Some(last)) = (kids.first(), kids.last()) else {
         return kids;
     };
@@ -64,7 +64,7 @@ fn strip_outer<'a, 'b>(cx: &Cx<'_, 'b>, kids: &'a [Node<'b>]) -> &'a [Node<'b>] 
     kids
 }
 
-fn scan_condition<'s>(cx: &Cx<'_, 's>, tt: Node<'_>) -> CondShape {
+fn scan_condition(cx: &Cx<'_, '_>, tt: Node<'_>) -> CondShape {
     let mut tally = CondTally {
         named: 0,
         sole_ident: false,

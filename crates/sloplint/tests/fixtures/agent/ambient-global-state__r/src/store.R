@@ -7,3 +7,9 @@ bump <- function() {
 configure <- function() {
   Sys.setenv(APP_MODE = "prod")
 }
+
+total <- 0
+
+reset <- function() {
+  total <<- 0
+}

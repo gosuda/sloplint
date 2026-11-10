@@ -1,13 +1,15 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use sloplint_core::facts::{Ambient, Call, DynamicSymbol, Function, MutBinding, Pos};
-use sloplint_core::role::CodeRole;
+use sloplint_core::facts::{Ambient, AmbientKind, Call, DynamicSymbol, Function, MutBinding, Pos};
+use sloplint_core::role::{CodeRole, RoleRegion};
 use sloplint_core::suppress::CommentText;
 
 use crate::hooks::{
-    Container, FunctionHead, attributed_region, is_directive_comment, narrow, pos_of, slice,
+    Container, FunctionHead, ShadowKind, is_directive_comment, narrow, pos_of, slice,
 };
-use crate::walk::{FnFrame, FrameDecl, Mark, WalkState};
+use crate::shadow::{FnFrame, FrameDecl, Mark, ScopedShadow};
+use crate::spec::Role;
+use crate::walk::WalkState;
 
 impl<'s, 'a> WalkState<'s, 'a, '_> {
     pub(crate) fn enter_typedef(&mut self, node: tree_sitter::Node<'_>) {
@@ -89,6 +91,18 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             self.hooks.untyped_throws(node, &cx)
         };
         let index = self.facts.functions.len();
+        let mut params: HashSet<&'s str> = head
+            .params
+            .iter()
+            .map(|param| param.name)
+            .filter(|name| !name.is_empty())
+            .collect();
+        params.extend(
+            head.shadow_params
+                .iter()
+                .copied()
+                .filter(|name| !name.is_empty()),
+        );
         let is_method = self.method_depth > 0 || {
             let cx = self.make_cx();
             matches!(
@@ -113,6 +127,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             is_decorated: head.is_decorated,
             is_trait_item: head.is_trait_item,
             is_method,
+            receiver: head.receiver,
             params: head.params,
             return_type: head.return_type,
             untyped_throws,
@@ -132,8 +147,13 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             depth: 0,
             frames: 0,
             decls: HashMap::new(),
+            shadow: ScopedShadow::new(),
+            closure_base: self.closure_depth,
+            rebound: Default::default(),
+            params,
             sole_call: head.sole_call,
             scored: vec![false],
+            block_scoped: self.hooks.block_scoped_binds(),
         });
         self.assert_mark_entered(node.id());
         self.marks.push((node.id(), Mark::Fn));
@@ -230,7 +250,16 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             let cx = self.make_cx();
             hooks.ambient(node, &cx, owner.is_some(), &mut found);
         }
+        self.record_rebinding(node, &found);
         for (kind, name, pos) in found {
+            if kind == AmbientKind::GlobalWrite
+                && owner.is_some()
+                && hooks.shadow_filter() != ShadowKind::None
+                && !name.contains('.')
+                && self.is_shadowed(name, hooks.shadow_filter())
+            {
+                continue;
+            }
             self.facts.ambient.push(Ambient {
                 pos,
                 kind,
@@ -238,6 +267,44 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
                 in_function: owner,
             });
         }
+    }
+
+    fn record_rebinding(
+        &mut self,
+        node: tree_sitter::Node<'_>,
+        found: &[(AmbientKind, &'s str, Pos)],
+    ) {
+        if !matches!(
+            node.kind(),
+            "global_statement" | "nonlocal_statement" | "global_declaration"
+        ) {
+            return;
+        }
+        let Some(frame) = self.fn_stack.last_mut() else {
+            return;
+        };
+        for (kind, name, _) in found {
+            if *kind == AmbientKind::GlobalWrite {
+                frame.rebound.insert(*name);
+            }
+        }
+    }
+
+    fn is_shadowed(&self, name: &str, mode: ShadowKind) -> bool {
+        let mut declared = false;
+        for frame in &self.fn_stack {
+            if frame.rebound.contains(name) {
+                return false;
+            }
+            let live = match mode {
+                ShadowKind::None => false,
+                _ => frame.shadow.contains(name),
+            };
+            if live || frame.params.contains(name) {
+                declared = true;
+            }
+        }
+        declared
     }
 
     pub(crate) fn apply_write_roots(&mut self, node: tree_sitter::Node<'_>) {
@@ -255,10 +322,15 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     pub(crate) fn push_decls(&mut self, node: tree_sitter::Node<'_>) {
         let hooks = self.hooks;
         let mut names = Vec::new();
-        {
+        let parent = {
             let cx = self.make_cx();
             hooks.decl_names(node, &cx, &mut names);
-        }
+            hooks.decl_scope_parent(self.depth, node, &cx)
+        };
+        self.insert_decls(names, parent);
+    }
+
+    pub(crate) fn insert_decls(&mut self, names: Vec<(&'s str, Pos)>, parent: usize) {
         let at_frames = self.fn_stack.last().map_or(0, |frame| frame.frames);
         for (name, pos) in names {
             let index = self.facts.bindings.len();
@@ -271,13 +343,12 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
                 loop_depth: 0,
             });
             if let Some(frame) = self.fn_stack.last_mut() {
-                frame.decls.insert(
-                    name,
-                    FrameDecl {
-                        binding: index,
-                        frames_at_decl: at_frames,
-                    },
-                );
+                frame.decls.entry(name).or_default().push(FrameDecl {
+                    binding: index,
+                    frames_at_decl: at_frames,
+                    scope: parent,
+                });
+                frame.shadow.register(name, parent);
             }
         }
     }
@@ -289,9 +360,13 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             let cx = self.make_cx();
             hooks.decl_names(node, &cx, &mut names);
         }
+        let parent = {
+            let cx = self.make_cx();
+            self.hooks.decl_scope_parent(self.depth, node, &cx)
+        };
         let mut fresh: Vec<&str> = Vec::new();
         for (name, pos) in names {
-            if self.write_or_declare(name, pos) {
+            if self.write_or_declare(name, pos, parent) {
                 fresh.push(name);
             }
         }
@@ -308,47 +383,61 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
         }
     }
 
-    fn write_or_declare(&mut self, name: &'s str, pos: Pos) -> bool {
+    fn write_or_declare(&mut self, name: &'s str, pos: Pos, parent: usize) -> bool {
+        let binds_scoped = self.hooks.block_scoped_binds();
+        let existing = self
+            .fn_stack
+            .last()
+            .and_then(|frame| frame.decls.get(name))
+            .and_then(|stack| stack.last())
+            .map(|decl| (decl.binding, decl.frames_at_decl, decl.scope));
+        if let Some((binding, frames_at_decl, scope)) = existing
+            && !(binds_scoped && scope != parent)
+        {
+            let depth = self
+                .fn_stack
+                .last()
+                .map_or(0, |frame| frame.frames.saturating_sub(frames_at_decl));
+            self.record_write(binding, depth, pos);
+            return false;
+        }
         let Some(frame) = self.fn_stack.last_mut() else {
             return false;
         };
-        let found = frame
-            .decls
-            .get(name)
-            .map(|decl| (decl.binding, decl.frames_at_decl));
-        let Some((binding, frames_at_decl)) = found else {
-            let index = self.facts.bindings.len();
-            self.facts.bindings.push(MutBinding {
-                name,
-                pos,
-                last_write_line: pos.line,
-                first_write_line: pos.line,
-                write_lines: 0,
-                loop_depth: 0,
-            });
-            let at_frames = frame.frames;
-            frame.decls.insert(
-                name,
-                FrameDecl {
-                    binding: index,
-                    frames_at_decl: at_frames,
-                },
-            );
-            return true;
-        };
-        let depth = frame.frames.saturating_sub(frames_at_decl);
-        self.record_write(binding, depth, pos);
-        false
+        let index = self.facts.bindings.len();
+        self.facts.bindings.push(MutBinding {
+            name,
+            pos,
+            last_write_line: pos.line,
+            first_write_line: pos.line,
+            write_lines: 0,
+            loop_depth: 0,
+        });
+        let at_frames = frame.frames;
+        let scoped = self.hooks.shadow_filter() == ShadowKind::DeclsAndBinds;
+        frame.decls.entry(name).or_default().push(FrameDecl {
+            binding: index,
+            frames_at_decl: at_frames,
+            scope: parent,
+        });
+        if scoped {
+            frame.shadow.register(name, parent);
+        }
+        true
     }
 
     fn apply_write(&mut self, name: &str, pos: Pos) {
+        let binds_scoped = self.hooks.block_scoped_binds();
         let mut target = None;
         for frame in self.fn_stack.iter().rev() {
-            if let Some(decl) = frame.decls.get(name) {
+            if let Some(decl) = frame.decls.get(name).and_then(|stack| stack.last()) {
                 target = Some((
                     decl.binding,
                     frame.frames.saturating_sub(decl.frames_at_decl),
                 ));
+                break;
+            }
+            if binds_scoped && frame.params.contains(name) {
                 break;
             }
         }
@@ -392,5 +481,111 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             end_line: narrow(node.end_position().row) + 1,
             text,
         });
+    }
+}
+
+impl<'s, 'a> WalkState<'s, 'a, '_> {
+    pub(crate) fn enter_function_like(&mut self, role: Role, node: tree_sitter::Node<'_>) {
+        let hooks = self.hooks;
+        let head = if role == Role::Function {
+            let cx = self.make_cx();
+            hooks.function(node, &cx)
+        } else {
+            let parent = self.visited_parent();
+            let cx = self.make_cx();
+            hooks.closure_as_function(node, parent, &cx)
+        };
+        if role == Role::Closure && head.is_none() {
+            self.closure_depth += 1;
+            self.marks.push((node.id(), Mark::Closure));
+            self.shadow_closure_params(node);
+        }
+        if let Some(head) = head {
+            self.push_function(node, head);
+            let body = node
+                .child_by_field_name("body")
+                .or_else(|| Self::first_named_of_kind(node, "function_body"));
+            if let Some(body) = body {
+                let inner = if body.kind() == "function_body" {
+                    body.named_child(0)
+                } else {
+                    Some(body)
+                };
+                if let Some(inner) = inner
+                    && !matches!(
+                        inner.kind(),
+                        "statement_block" | "block" | "indented_block" | "compound_statement"
+                    )
+                {
+                    self.mark_value_return(self.closure_depth);
+                }
+            }
+        }
+    }
+    fn shadow_closure_params(&mut self, node: tree_sitter::Node<'_>) {
+        if self.fn_stack.is_empty() {
+            return;
+        }
+        let mut names = Vec::new();
+        {
+            let cx = self.make_cx();
+            self.hooks.shadow_names(node, &cx, &mut names);
+        }
+        if names.is_empty() {
+            return;
+        }
+        let depth = self.depth;
+        if let Some(frame) = self.fn_stack.last_mut() {
+            for name in names {
+                frame.shadow.register(name, depth);
+            }
+        }
+    }
+
+    fn first_named_of_kind<'n>(
+        node: tree_sitter::Node<'n>,
+        kind: &str,
+    ) -> Option<tree_sitter::Node<'n>> {
+        node.children(&mut node.walk())
+            .find(|child| child.kind() == kind)
+    }
+
+    pub(crate) fn enter_return(&mut self, node: tree_sitter::Node<'_>) {
+        if node.named_child_count() == 0 {
+            return;
+        }
+        self.mark_value_return(self.closure_depth);
+    }
+
+    fn mark_value_return(&mut self, depth: u32) {
+        let Some(frame) = self.fn_stack.last_mut() else {
+            return;
+        };
+        if frame.closure_base == depth {
+            self.facts.functions[frame.index].has_value_return = true;
+        }
+    }
+}
+
+pub(crate) fn region_of(n: tree_sitter::Node<'_>, role: CodeRole) -> RoleRegion {
+    RoleRegion {
+        start_line: narrow(n.start_position().row) + 1,
+        end_line: narrow(n.end_position().row) + 1,
+        role,
+    }
+}
+pub(crate) fn attributed_region(
+    item: tree_sitter::Node<'_>,
+    leading: Option<tree_sitter::Node<'_>>,
+    role: CodeRole,
+) -> RoleRegion {
+    let mut start = item.start_position().row;
+    if let Some(extra) = leading {
+        start = start.min(extra.start_position().row);
+    }
+    RoleRegion {
+        start_line: narrow(start) + 1,
+        end_line: narrow(item.end_position().row) + 1,
+        role,
     }
 }

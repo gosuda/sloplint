@@ -19,7 +19,7 @@ pub fn bare() {}
 const NESTED: &str = "\
 /// Outer doc.
 pub fn outer() {
-    // Inner note.
+    /// Inner note.
     fn inner() {}
 }
 
@@ -84,7 +84,7 @@ fn adjacent_comments_and_attributes_form_one_header() {
     assert_eq!(found[0].name, "documented", "functions keep source order");
     assert_eq!(
         found[0].doc,
-        ["/// First line.", "/// Second line.", "// Plain note."],
+        ["/// First line.", "/// Second line."],
         "comments chain through the attribute between them and the function"
     );
     assert_eq!(
@@ -116,7 +116,7 @@ fn nested_and_member_declarations_keep_their_own_comments() {
     );
     assert_eq!(
         found[1].doc,
-        ["// Inner note."],
+        ["/// Inner note."],
         "a function nested in a body owns the comment above it"
     );
     assert_eq!(
@@ -167,16 +167,63 @@ fn a_decorated_definition_is_the_header_anchor() {
 fn every_sibling_in_a_long_run_keeps_only_its_own_comment() {
     let mut source = String::new();
     for index in 0..40 {
-        source.push_str(&format!("// doc {index}\npub fn f{index}() {{}}\n"));
+        source.push_str(&format!("/// doc {index}\npub fn f{index}() {{}}\n"));
     }
     let found = headers(Lang::Rust, "case.rs", &source);
     assert_eq!(found.len(), 40, "forty functions are declared");
     for (index, header) in found.iter().enumerate() {
         assert_eq!(
             header.doc,
-            [format!("// doc {index}")],
+            [format!("/// doc {index}")],
             "function {} must see only the comment above it",
             header.name
         );
     }
+}
+
+#[test]
+fn plain_comments_are_not_rustdoc() {
+    let found = headers(
+        Lang::Rust,
+        "case.rs",
+        "// Process the order.\nfn process_order() {}\n",
+    );
+    assert_eq!(found.len(), 1, "the function is still declared");
+    assert!(
+        found[0].doc.is_empty(),
+        "a plain comment documents nothing: {:?}",
+        found[0].doc
+    );
+    assert_eq!(found[0].doc_line, None, "no doc means no doc position");
+    let found = headers(
+        Lang::Rust,
+        "case.rs",
+        "/// Process the order.\nfn process_order() {}\n",
+    );
+    assert_eq!(
+        found[0].doc,
+        ["/// Process the order."],
+        "a rustdoc comment still documents the function"
+    );
+    assert_eq!(found[0].doc_line, Some(1), "the doc starts at its own line");
+}
+
+#[test]
+fn plain_comment_before_rustdoc_shifts_the_doc_position() {
+    let found = headers(
+        Lang::Rust,
+        "case.rs",
+        "// Build step.\n/// Parse the input.\nfn parse() {}\n",
+    );
+    assert_eq!(found.len(), 1, "the function is still declared");
+    assert_eq!(
+        found[0].doc,
+        ["/// Parse the input."],
+        "only the rustdoc line documents the function"
+    );
+    assert_eq!(
+        found[0].doc_line,
+        Some(2),
+        "the doc starts at the rustdoc line, not the plain line"
+    );
 }

@@ -4,11 +4,11 @@ use sloplint_core::facts::{
 };
 use tree_sitter::Node;
 
-use super::calls::func_node;
+use super::calls::{call_identity, func_node};
 use super::funcs::{in_test_dir, seg_last};
 use crate::hooks::{
-    Container, Cx, TypeHead, any_named_child, child_by_field, first_named_child, has_child_kind,
-    named_children, narrow, pos_of, text, trimmed,
+    Container, Cx, FileSetKind, TypeHead, any_named_child, child_by_field, first_named_child,
+    has_child_kind, named_children, narrow, pos_of, text, trimmed,
 };
 
 pub(crate) fn first_ident<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
@@ -65,7 +65,7 @@ fn stmt_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: Option<&'s str>) -> Stmt<'
     if s.kind() != "call_expression" {
         return Stmt::Other;
     }
-    match func_node(s).map(|f| text(cx, f)) {
+    match call_identity(cx, s).map(|(callee, _, _)| callee) {
         Some(callee) => Stmt::Call {
             callee,
             kind: CallKind::Plain,
@@ -107,11 +107,19 @@ pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s st
     }
 }
 
+fn is_compound_write_op(op: &str) -> bool {
+    op.ends_with('=') && !matches!(op, "==" | "!=" | "<=" | ">=" | "===" | "!==" | "=:=")
+}
+
+fn is_compound_write(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    n.kind() == "infix_expression"
+        && child_by_field(n, "operator").is_some_and(|o| is_compound_write_op(text(cx, o)))
+}
+
 pub(crate) fn write_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    if n.kind() != "assignment_expression" {
-        return;
-    }
-    if let Some(l) = child_by_field(n, "left") {
+    if (n.kind() == "assignment_expression" || is_compound_write(cx, n))
+        && let Some(l) = child_by_field(n, "left")
+    {
         out.extend(write_root(cx, l));
     }
 }
@@ -229,6 +237,14 @@ fn match_scrutinee(cx: &Cx<'_, '_>, _n: Node<'_>) -> ScrutineeKind {
     }
 }
 
+fn bump_prefix<'s>(groups: &mut Vec<(&'s str, u32)>, prefix: &'s str) {
+    if let Some(entry) = groups.iter_mut().find(|(held, _)| *held == prefix) {
+        entry.1 += 1;
+    } else {
+        groups.push((prefix, 1));
+    }
+}
+
 pub(crate) fn match_arm<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<WildcardArm> {
     if n.kind() != "case_clause" {
         return None;
@@ -247,6 +263,8 @@ pub(crate) fn match_arm<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<WildcardArm>
         });
     };
     let mut variants = 0u32;
+    let mut case_class_count = 0u32;
+    let mut stable_groups: Vec<(&'s str, u32)> = Vec::new();
     let mut nullable = false;
     for s in named_children(parent) {
         if s.id() == n.id() || s.kind() != "case_clause" {
@@ -255,16 +273,29 @@ pub(crate) fn match_arm<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<WildcardArm>
         let Some(p) = child_by_field(s, "pattern") else {
             continue;
         };
-        if p.kind() == "stable_identifier" || p.kind() == "case_class_pattern" {
+        if p.kind() == "stable_identifier" {
             variants += 1;
+            let prefix = trimmed(cx, p)
+                .rsplit_once('.')
+                .map(|(head, _)| head)
+                .unwrap_or("");
+            bump_prefix(&mut stable_groups, prefix);
+        } else if p.kind() == "case_class_pattern" {
+            variants += 1;
+            case_class_count += 1;
         }
         if matches!(seg_last(trimmed(cx, p)), "Some" | "None" | "Ok" | "Err") {
             nullable = true;
         }
     }
+    let stable_best = stable_groups
+        .iter()
+        .map(|(_, count)| *count)
+        .max()
+        .unwrap_or(0);
     Some(WildcardArm {
         pos,
-        enum_like: variants >= 1,
+        enum_like: case_class_count >= 2 || stable_best >= 2,
         scrutinee: match_scrutinee(cx, n),
         variant_count: variants,
         has_nullable_ctor: nullable,
@@ -370,13 +401,19 @@ fn var_pattern_name<'s>(cx: &Cx<'_, 's>, c: Node<'_>) -> Option<&'s str> {
     first_ident(cx, pat).map(|(name, _)| name)
 }
 
-fn top_level_var<'s>(cx: &Cx<'_, 's>, _n: Node<'_>, name: &str) -> bool {
+fn top_level_names<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
     let Some(root) = cx.root() else {
-        return false;
+        return Vec::new();
     };
     named_children(root)
         .iter()
-        .any(|c| var_pattern_name(cx, *c) == Some(name))
+        .filter_map(|c| var_pattern_name(cx, *c))
+        .collect()
+}
+
+fn top_level_var<'s>(cx: &Cx<'_, 's>, _n: Node<'_>, name: &str) -> bool {
+    cx.file_names(FileSetKind::Scope, || top_level_names(cx))
+        .contains(&name)
 }
 
 fn report_assign_write<'s>(
@@ -409,7 +446,7 @@ pub(crate) fn ambient_head<'s>(
         }
         return;
     }
-    if in_function && n.kind() == "assignment_expression" {
+    if in_function && (n.kind() == "assignment_expression" || is_compound_write(cx, n)) {
         report_assign_write(cx, n, out);
         return;
     }

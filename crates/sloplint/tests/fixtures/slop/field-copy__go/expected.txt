@@ -1,0 +1,1 @@
+a.go:18 minor slop/field-copy

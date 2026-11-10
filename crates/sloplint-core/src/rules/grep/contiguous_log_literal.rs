@@ -103,13 +103,12 @@ impl ContiguousLogLiteral {
         }
         for arg in &call.args {
             match &arg.shape {
-                ArgShape::Str { longest_static } => {
+                ArgShape::Str { longest_static } | ArgShape::Concat { longest_static } => {
                     if *longest_static < self.min_len {
                         return Some(format!("longest literal run is {longest_static} chars"));
                     }
                     return None;
                 }
-                ArgShape::Concat => return None,
                 ArgShape::Ident(_)
                 | ArgShape::Other
                 | ArgShape::Collection
@@ -218,9 +217,9 @@ mod tests {
         }
     }
 
-    fn concat_arg() -> Arg<'static> {
+    fn concat_arg(longest_static: u32) -> Arg<'static> {
         Arg {
-            shape: ArgShape::Concat,
+            shape: ArgShape::Concat { longest_static },
             start_line: 1,
             end_line: 1,
         }
@@ -245,9 +244,42 @@ mod tests {
     }
 
     #[test]
-    fn concatenated_message_passes() {
-        let out = check(&rule(), vec![call(vec![concat_arg()])]);
-        assert!(out.is_empty(), "concatenated messages pass: {out:?}");
+    fn short_concat_flags() {
+        let out = check(&rule(), vec![call(vec![concat_arg(7)])]);
+        assert_eq!(out.len(), 1, "short concats flag once: {out:?}");
+        assert!(
+            out[0].message.contains("longest literal run is 7 chars"),
+            "the finding names the run: {}",
+            out[0].message
+        );
+    }
+
+    #[test]
+    fn boundary_concat_passes() {
+        let out = check(&rule(), vec![call(vec![concat_arg(8)])]);
+        assert!(out.is_empty(), "eight-char concats pass: {out:?}");
+    }
+
+    #[test]
+    fn empty_concat_flags() {
+        let out = check(&rule(), vec![call(vec![concat_arg(0)])]);
+        assert_eq!(out.len(), 1, "empty concats flag once: {out:?}");
+        assert!(
+            out[0].message.contains("longest literal run is 0 chars"),
+            "zero-static concats keep the run text: {}",
+            out[0].message
+        );
+    }
+
+    #[test]
+    fn empty_str_reports_zero_run() {
+        let out = check(&rule(), vec![call(vec![str_arg(0)])]);
+        assert_eq!(out.len(), 1, "empty literals flag once: {out:?}");
+        assert!(
+            out[0].message.contains("longest literal run is 0 chars"),
+            "empty literals keep the run text: {}",
+            out[0].message
+        );
     }
 
     #[test]

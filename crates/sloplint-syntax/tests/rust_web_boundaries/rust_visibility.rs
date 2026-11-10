@@ -225,3 +225,87 @@ fn test_marks_and_plain_test_modules_are_in_test() {
         ]
     );
 }
+
+#[test]
+fn methods_named_main_are_not_entry_points() {
+    let source = "impl Runner {\n    pub fn main() {}\n}\nfn main() {}\n";
+    assert_eq!(
+        functions(source),
+        vec![
+            row("main", EXPORTED, Flags::default()),
+            row(
+                "main",
+                PRIVATE,
+                Flags {
+                    entry: true,
+                    ..Default::default()
+                },
+            ),
+        ],
+        "only the free function at the file root is the program entry"
+    );
+}
+
+#[test]
+fn pub_fn_inside_a_private_module_is_not_exported() {
+    let source = "mod inner {\n    pub fn load() {}\n}\npub mod open {\n    pub fn serve() {}\n}\npub(crate) mod half {\n    pub fn mid() {}\n}\npub fn top() {}\n";
+    assert_eq!(
+        functions(source),
+        vec![
+            row("load", RESTRICTED, Flags::default()),
+            row("serve", EXPORTED, Flags::default()),
+            row("mid", RESTRICTED, Flags::default()),
+            row("top", EXPORTED, Flags::default()),
+        ],
+        "a pub fn under a private or restricted mod is not externally visible"
+    );
+}
+
+#[test]
+fn nested_fn_in_a_trait_default_body_is_not_a_trait_item() {
+    let source = "pub trait Render {\n    fn go(&self) {\n        fn helper() {}\n    }\n}\nmod m {\n    pub trait T {\n        fn take(&self) {}\n    }\n}\n";
+    assert_eq!(
+        functions(source),
+        vec![
+            row(
+                "go",
+                EXPORTED,
+                Flags {
+                    trait_item: true,
+                    ..Default::default()
+                },
+            ),
+            row("helper", PRIVATE, Flags::default()),
+            row(
+                "take",
+                RESTRICTED,
+                Flags {
+                    trait_item: true,
+                    ..Default::default()
+                },
+            ),
+        ],
+        "trait methods keep the trait mark while nested fns stay private free fns"
+    );
+}
+
+#[test]
+fn extern_and_no_mangle_signatures_are_forced() {
+    let source = "#[no_mangle]\npub extern \"C\" fn init() {}\npub fn plain() {}\n";
+    assert_eq!(
+        functions(source),
+        vec![
+            row(
+                "init",
+                EXPORTED,
+                Flags {
+                    forced: true,
+                    decorated: true,
+                    ..Default::default()
+                },
+            ),
+            row("plain", EXPORTED, Flags::default()),
+        ],
+        "a C-ABI symbol keeps its forced signature while a plain fn stays actionable"
+    );
+}

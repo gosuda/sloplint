@@ -1,1 +1,1 @@
-lib/service.dart:1 info agent/colocated-tests
+src/widget.dart:1 info agent/colocated-tests

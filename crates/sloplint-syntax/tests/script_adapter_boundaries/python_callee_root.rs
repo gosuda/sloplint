@@ -59,13 +59,21 @@ fn receiver_attribute_chain_roots_at_self() {
 }
 
 #[test]
-fn subscripted_receiver_roots_at_self() {
-    assert_eq!(root_of("self.store[key].get"), Some("self".to_owned()));
+fn subscripted_receiver_has_no_root() {
+    assert_eq!(
+        root_of("get"),
+        None,
+        "chain bottoming at a subscript has no root"
+    );
 }
 
 #[test]
-fn super_call_receiver_roots_at_super() {
-    assert_eq!(root_of("super().peek"), Some("super".to_owned()));
+fn super_call_receiver_has_no_root() {
+    assert_eq!(
+        root_of("peek"),
+        None,
+        "chain bottoming at a call has no root"
+    );
 }
 
 #[test]

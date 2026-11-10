@@ -19,7 +19,8 @@ function send(string $host, int $port = 80, bool $secure = true, float $ratio = 
 
 const CALLS: &str = r#"<?php
 $x = strlen($s);
-$this->render(["a" => 1]);
+$this->render([1, 2, 3]);
+$this->save(["a" => 1]);
 $fn($s);
 dispatch(function () { return 1; });
 "#;
@@ -43,6 +44,11 @@ class Plain {
     $this->assertTrue($ok);
   }
 }
+"#;
+
+const CHAINED_CALLS: &str = r#"<?php
+$cfg->get()->run($p);
+$this->render(["a" => 1]);
 "#;
 
 fn analyze_src<'s>(
@@ -184,6 +190,33 @@ fn call_binding_paths_and_arg_shapes() {
 }
 
 #[test]
+fn chained_member_call_through_a_call_is_not_a_simple_path() {
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let analysis = analyze_src(&mut Parsers::new(), &custom, CHAINED_CALLS, "src/C.php");
+    assert!(analysis.parse_error.is_none(), "parses");
+    let chained = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "run")
+        .expect("has chained call");
+    assert!(
+        !chained.is_simple_path,
+        "call whose receiver contains a call is not a simple path"
+    );
+    let direct = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "$this->render")
+        .expect("has direct member call");
+    assert!(
+        direct.is_simple_path,
+        "direct member call on a variable stays a simple path"
+    );
+}
+
+#[test]
 fn php_namespaced_uses_report_vendor_roots() {
     let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
     let analysis = analyze_src(&mut Parsers::new(), &custom, IMPORTS, "src/C.php");
@@ -263,4 +296,37 @@ fn assertions_shape_and_test_marking() {
         .find(|f| f.name == "check")
         .expect("has check");
     assert!(!plain_fn.in_test, "plain class method is not in test");
+}
+
+const CHAINED_FETCH: &str = r#"<?php
+$a->b()->c->d($x);
+$a->b->c($x);
+"#;
+
+#[test]
+fn chained_call_behind_a_property_fetch_is_not_a_simple_path() {
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let analysis = analyze_src(&mut Parsers::new(), &custom, CHAINED_FETCH, "src/C.php");
+    assert!(analysis.parse_error.is_none(), "parses");
+    let hidden = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "d")
+        .expect("has chained call");
+    assert_eq!(hidden.callee_root, None, "chain through a call has no root");
+    assert!(
+        !hidden.is_simple_path,
+        "call hidden behind a property fetch is not a simple path"
+    );
+    let plain = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "$a->b->c")
+        .expect("has pure property chain call");
+    assert!(
+        plain.is_simple_path,
+        "pure property chain stays a simple path"
+    );
 }

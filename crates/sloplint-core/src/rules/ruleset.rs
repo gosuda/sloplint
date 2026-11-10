@@ -43,7 +43,7 @@ impl RuleSet {
 
     pub fn new(config: &Config, filter: &RuleFilter) -> Result<RuleSet, ConfigError> {
         Self::validate_filter(config, filter)?;
-        let settings = Settings::from_config(config);
+        let settings = Settings::from_config(config)?;
         let mut resolved = Vec::with_capacity(CATALOG.len());
         for info in CATALOG {
             let user = config.rules.get(info.id);
@@ -136,12 +136,33 @@ impl RuleSet {
             self.finish_file_findings(info, facts, &mut found);
             out.append(&mut found);
         }
-        if self.is_active("complexity/cognitive-depth")
-            && self.selects("complexity/cognitive-depth")
-        {
-            suppress_nesting_where_cognitive_fired(&mut out);
-        }
         out
+    }
+
+    pub fn drop_shadowed_nesting(&self, findings: &mut Vec<Finding>) {
+        if !self.is_active("complexity/cognitive-depth")
+            || !self.selects("complexity/cognitive-depth")
+        {
+            return;
+        }
+        let mut fired = BTreeSet::new();
+        for finding in findings.iter() {
+            if finding.rule.as_ref() == "complexity/cognitive-depth" {
+                fired.insert((&*finding.path, finding.line, finding.column));
+            }
+        }
+        if fired.is_empty() {
+            return;
+        }
+        let mut drop = vec![false; findings.len()];
+        for (index, finding) in findings.iter().enumerate() {
+            if finding.rule.as_ref() != "complexity/nesting-depth" {
+                continue;
+            }
+            drop[index] = fired.contains(&(&*finding.path, finding.line, finding.column));
+        }
+        let mut drops = drop.into_iter();
+        findings.retain(|_| !drops.next().unwrap_or(false));
     }
 
     pub fn check_world(&self, files: &[WorldFile<'_>]) -> Vec<Finding> {
@@ -388,212 +409,6 @@ fn unknown_option(rule: &str, key: &str, known: &toml::Table) -> ConfigError {
     }
 }
 
-fn suppress_nesting_where_cognitive_fired(out: &mut Vec<Finding>) {
-    let mut fired = BTreeSet::new();
-    for finding in out.iter() {
-        if finding.rule.as_ref() == "complexity/cognitive-depth" {
-            fired.insert(finding.line);
-        }
-    }
-    if fired.is_empty() {
-        return;
-    }
-    out.retain(|finding| {
-        finding.rule.as_ref() != "complexity/nesting-depth" || !fired.contains(&finding.line)
-    });
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::facts::{Function, Visibility};
-    use crate::finding::line_starts;
-    use crate::lang::Lang;
-    use crate::role::Shift;
-
-    fn world_facts(role: CodeRole) -> WorldFacts {
-        WorldFacts {
-            lang: Lang::Rust,
-            role,
-            regions: Vec::new(),
-            package: "ledger".to_string(),
-            has_inline_tests: false,
-            public_functions: 0,
-            definitions: Vec::new(),
-            abstractions: Vec::new(),
-            impls: Vec::new(),
-            barrel: None,
-        }
-    }
-
-    fn test_preset(_: Strictness) -> Preset {
-        Preset {
-            level: Level::At(Severity::Major),
-            options: toml::Table::new(),
-        }
-    }
-
-    fn test_build(_: toml::Table) -> Result<Box<dyn WorldRule>, String> {
-        Err("unused".to_string())
-    }
-
-    #[test]
-    fn world_findings_shift_by_file_role() {
-        let info = RuleInfo {
-            id: "test/world-shift",
-            family: Family::Agent,
-            summary: "test",
-            why: "test",
-            confidence: Confidence::High,
-            roles: RolePolicy {
-                entry: Shift::Keep,
-                test: Shift::Off,
-                support: Shift::Keep,
-                bench: Shift::Lower1,
-                example: Shift::Keep,
-            },
-            preset: test_preset,
-            build: Build::World(test_build),
-        };
-        let set = RuleSet {
-            file_rules: Vec::new(),
-            world_rules: Vec::new(),
-            resolved: Vec::new(),
-            levels: BTreeMap::from([("test/world-shift".to_string(), Level::At(Severity::Major))]),
-            graded: BTreeSet::new(),
-            active: BTreeSet::new(),
-            filter: RuleFilter::default(),
-            custom: Vec::new(),
-        };
-        let library = world_facts(CodeRole::Library);
-        let tested = world_facts(CodeRole::Test);
-        let bench = world_facts(CodeRole::Bench);
-        let files = [
-            WorldFile {
-                path: "a.rs",
-                facts: &library,
-            },
-            WorldFile {
-                path: "m.rs",
-                facts: &tested,
-            },
-            WorldFile {
-                path: "z.rs",
-                facts: &bench,
-            },
-        ];
-        let mut found = vec![
-            Finding::at_file(
-                "z.rs",
-                info.id,
-                Severity::Major,
-                "z".to_string(),
-                "f".to_string(),
-            ),
-            Finding::at_file(
-                "a.rs",
-                info.id,
-                Severity::Major,
-                "a".to_string(),
-                "f".to_string(),
-            ),
-            Finding::at_file(
-                "m.rs",
-                info.id,
-                Severity::Major,
-                "m".to_string(),
-                "f".to_string(),
-            ),
-        ];
-        set.finish_world_findings(&info, &files, &mut found);
-        let mut got: Vec<(&str, Severity)> = found
-            .iter()
-            .map(|finding| (&*finding.path, finding.severity))
-            .collect();
-        got.sort_unstable();
-        assert_eq!(got, [("a.rs", Severity::Major), ("z.rs", Severity::Minor)]);
-        assert!(
-            found
-                .iter()
-                .all(|finding| finding.confidence == Confidence::High),
-            "world findings carry the rule's confidence"
-        );
-    }
-
-    #[test]
-    fn nesting_depth_drops_where_cognitive_depth_fires() {
-        let source = "fn reconcile_ledger() {}\n";
-        let facts = FileFacts {
-            lang: Lang::Rust,
-            path: "src/ledger.rs",
-            source,
-            line_starts: line_starts(source),
-            role: CodeRole::Library,
-            regions: Vec::new(),
-            line_count: 1,
-            package: "ledger".to_string(),
-            is_generated: false,
-            functions: vec![Function {
-                name: "reconcile_ledger",
-                pos: Pos { line: 1, byte: 3 },
-                doc: vec![],
-                doc_pos: None,
-                visibility: Visibility::Exported,
-                signature_forced: false,
-                entry_point: false,
-                in_test: false,
-                is_overload: false,
-                is_deprecated: false,
-                is_decorated: false,
-                is_trait_item: false,
-                is_method: false,
-                end_line: 1,
-                has_value_return: false,
-                params: vec![],
-                return_type: None,
-                untyped_throws: false,
-                missing_annotations: vec![],
-                cognitive: 100,
-                max_depth: 20,
-                deepest_line: 1,
-                sole_call: None,
-            }],
-            calls: vec![],
-            bindings: vec![],
-            imports: vec![],
-            types: vec![],
-            impls: vec![],
-            wildcard_arms: vec![],
-            handlers: vec![],
-            assertions: vec![],
-            field_copies: vec![],
-            dynamic_symbols: vec![],
-            ambient: vec![],
-            barrel: None,
-            has_inline_tests: false,
-        };
-        let mut config = Config::default();
-        config.project.strictness = Strictness::Strict;
-        let rules =
-            RuleSet::new(&config, &RuleFilter::default()).expect("the catalog rules resolve");
-        let found = rules.check_file(&facts);
-        assert!(
-            found
-                .iter()
-                .all(|finding| finding.severity == Severity::Info),
-            "both depth findings ride the strict info ceiling"
-        );
-        assert!(
-            found
-                .iter()
-                .any(|finding| finding.rule.as_ref() == "complexity/cognitive-depth"),
-            "the deep function still reports cognitive depth"
-        );
-        assert!(
-            found
-                .iter()
-                .all(|finding| finding.rule.as_ref() != "complexity/nesting-depth"),
-            "nesting depth stays silent on a function cognitive depth already flags"
-        );
-    }
-}
+#[path = "ruleset_tests.rs"]
+mod tests;

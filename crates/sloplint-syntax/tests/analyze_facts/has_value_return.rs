@@ -79,3 +79,29 @@ fn return_values_and_expression_bodies_mark_the_fact() {
         "a JS arrow expression body is a value return"
     );
 }
+
+#[test]
+fn return_inside_a_frameless_closure_marks_no_value() {
+    assert!(
+        !has_value_return(
+            Lang::Dart,
+            "loop.dart",
+            "f() {\n  [1].forEach((x) { return x; });\n}\n",
+            "f"
+        ),
+        "a return inside a frameless closure is no value return for the outer function"
+    );
+    assert!(
+        !has_value_return(
+            Lang::Php,
+            "map.php",
+            "<?php\nfunction f() { array_map(function ($x) { return $x; }, []); }\n",
+            "f"
+        ),
+        "a return inside an anonymous function is no value return for the outer function"
+    );
+    assert!(
+        has_value_return(Lang::Dart, "plain.dart", "f() { return 1; }\n", "f"),
+        "a plain return 1 is a value return"
+    );
+}

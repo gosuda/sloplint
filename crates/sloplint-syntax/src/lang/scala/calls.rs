@@ -21,7 +21,8 @@ fn callee_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     let mut current = n;
     loop {
         current = match current.kind() {
-            "identifier" => return Some(text(cx, current)),
+            "identifier" | "this" => return Some(text(cx, current)),
+            "generic_function" => child_by_field(current, "function")?,
             "field_expression" => child_by_field(current, "value")?,
             _ => return None,
         };
@@ -30,6 +31,26 @@ fn callee_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
 
 fn func_root<'s>(cx: &Cx<'_, 's>, f: Node<'_>) -> Option<&'s str> {
     callee_root(cx, func_node(f).unwrap_or(f))
+}
+
+pub(crate) fn callee_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
+    if n.kind() == "field_expression" {
+        let mut current = n;
+        loop {
+            match child_by_field(current, "value") {
+                Some(v) if v.kind() == "field_expression" => current = v,
+                Some(v) if matches!(v.kind(), "identifier" | "operator_identifier" | "this") => {
+                    return cut_at(text(cx, n), '[');
+                }
+                _ => {
+                    return child_by_field(n, "field")
+                        .map(|f| text(cx, f))
+                        .unwrap_or_else(|| cut_at(text(cx, n), '['));
+                }
+            }
+        }
+    }
+    cut_at(text(cx, n), '[')
 }
 
 fn gaps<'s>(cx: &Cx<'_, 's>, n: Node<'_>, gap_kind: &str) -> Vec<&'s str> {
@@ -49,42 +70,109 @@ fn gaps<'s>(cx: &Cx<'_, 's>, n: Node<'_>, gap_kind: &str) -> Vec<&'s str> {
     segs
 }
 
+fn collapse_escapes(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            if let Some(next) = chars.next() {
+                out.push(next);
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+fn plain_static_len<'s>(cx: &Cx<'_, 's>, a: Node<'_>) -> u32 {
+    let t = text(cx, a);
+    if t.starts_with("\"\"\"") {
+        return longest_static_chunk(&gaps(cx, a, "escape_sequence"));
+    }
+    let body = t.get(1..t.len().saturating_sub(1)).unwrap_or("");
+    let collapsed = collapse_escapes(body);
+    longest_static_chunk(&[collapsed.as_str()])
+}
+
+fn interpolated_static_len<'s>(cx: &Cx<'_, 's>, a: Node<'_>) -> u32 {
+    let inner = first_named_child_matching(a, &["interpolated_string"]).unwrap_or(a);
+    let segs = gaps(cx, inner, "interpolation");
+    let collapsed: Vec<String> = segs.iter().map(|s| collapse_escapes(s)).collect();
+    let refs: Vec<&str> = collapsed.iter().map(|s| s.as_str()).collect();
+    longest_static_chunk(&refs)
+}
+
+fn concat_tree_len(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<u32> {
+    let mut best = 0;
+    let mut found = false;
+    let mut stack = vec![n];
+    while let Some(c) = stack.pop() {
+        match c.kind() {
+            "infix_expression" => {
+                if child_by_field(c, "operator")
+                    .map(|o| text(cx, o))
+                    .unwrap_or("")
+                    != "+"
+                {
+                    continue;
+                }
+                stack.extend(
+                    [child_by_field(c, "left"), child_by_field(c, "right")]
+                        .into_iter()
+                        .flatten(),
+                );
+            }
+            "parenthesized_expression" => {
+                stack.extend(first_named_child(c));
+            }
+            "string" => {
+                found = true;
+                best = best.max(plain_static_len(cx, c));
+            }
+            "interpolated_string_expression" => {
+                found = true;
+                best = best.max(interpolated_static_len(cx, c));
+            }
+            _ => {}
+        }
+    }
+    found.then_some(best)
+}
+
 fn arg_shape<'s>(cx: &Cx<'_, 's>, a: Node<'_>) -> ArgShape<'s> {
     if a.kind() == "string" {
         return ArgShape::Str {
-            longest_static: longest_static_chunk(&gaps(cx, a, "escape_sequence")),
+            longest_static: plain_static_len(cx, a),
         };
     }
     if a.kind() == "interpolated_string_expression" {
-        let inner = first_named_child_matching(a, &["interpolated_string"]).unwrap_or(a);
-        return ArgShape::Str {
-            longest_static: longest_static_chunk(&gaps(cx, inner, "interpolation")),
+        return ArgShape::Concat {
+            longest_static: interpolated_static_len(cx, a),
         };
     }
-    if a.kind() == "infix_expression" && infix_concat(cx, a) {
-        return ArgShape::Concat;
+    if a.kind() == "infix_expression"
+        && let Some(best) = concat_tree_len(cx, a)
+    {
+        return ArgShape::Concat {
+            longest_static: best,
+        };
     }
     if a.kind() == "identifier" {
         return ArgShape::Ident(text(cx, a));
     }
-    if a.kind() == "lambda_expression" {
+    if a.kind() == "lambda_expression" || a.kind() == "block" || a.kind() == "case_block" {
         return ArgShape::CodeBody;
     }
-    ArgShape::Other
-}
-
-fn infix_concat(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    if child_by_field(n, "operator")
-        .map(|o| text(cx, o))
-        .unwrap_or("")
-        != "+"
-    {
-        return false;
+    if a.kind() == "tuple_expression" {
+        if named_children(a).iter().any(|c| {
+            c.kind() == "lambda_expression" || c.kind() == "block" || c.kind() == "case_block"
+        }) {
+            return ArgShape::CodeBody;
+        }
+        return ArgShape::Collection;
     }
-    [child_by_field(n, "left"), child_by_field(n, "right")]
-        .into_iter()
-        .flatten()
-        .any(|o| o.kind() == "string" || o.kind() == "interpolated_string_expression")
+    ArgShape::Other
 }
 
 fn arg_nodes(n: Node<'_>) -> Vec<Node<'_>> {
@@ -93,6 +181,9 @@ fn arg_nodes(n: Node<'_>) -> Vec<Node<'_>> {
     };
     if list.kind() == "arguments" {
         named_children(list)
+            .into_iter()
+            .filter(|c| c.kind() != "comment" && c.kind() != "block_comment")
+            .collect()
     } else {
         vec![list]
     }
@@ -124,8 +215,12 @@ fn is_simple(n: Node<'_>) -> bool {
     let mut current = n;
     loop {
         match current.kind() {
-            "identifier" => return true,
-            "parenthesized_expression" => match first_named_child(current) {
+            "identifier" | "operator_identifier" | "this" => return true,
+            "generic_function" => match child_by_field(current, "function") {
+                Some(next) => current = next,
+                None => return false,
+            },
+            "field_expression" => match child_by_field(current, "value") {
                 Some(next) => current = next,
                 None => return false,
             },
@@ -144,15 +239,26 @@ fn initializes_binding(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     child_by_field(parent, "value").is_some_and(|v| v.id() == n.id())
 }
 
+pub(crate) fn call_identity<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+) -> Option<(&'s str, Option<&'s str>, bool)> {
+    let func = child_by_field(n, "function")?;
+    if func.kind() == "call_expression" {
+        return Some(("", None, false));
+    }
+    let node = func_node(func).unwrap_or(func);
+    Some((callee_text(cx, node), func_root(cx, func), is_simple(node)))
+}
+
 pub(crate) fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     if n.kind() == "call_expression" || n.kind() == "split_call_condition" {
-        let func = child_by_field(n, "function")?;
-        let node = func_node(func).unwrap_or(func);
+        let (callee, callee_root, is_simple_path) = call_identity(cx, n)?;
         return Some(CallHead {
-            callee: text(cx, node),
+            callee,
             kind: CallKind::Plain,
-            callee_root: func_root(cx, func),
-            is_simple_path: is_simple(node),
+            callee_root,
+            is_simple_path,
             initializes_binding: initializes_binding(cx, n),
             args: call_args(cx, n),
         });
@@ -182,8 +288,19 @@ pub(crate) fn assertion_head(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<Assertion> 
     if n.kind() != "call_expression" {
         return None;
     }
+    if let Some(p) = cx.parent()
+        && p.kind() == "call_expression"
+        && child_by_field(p, "function").is_some_and(|f| f.id() == n.id())
+    {
+        return None;
+    }
     let func = func_node(n)?;
-    match seg_last(text(cx, func)) {
+    let name = if func.kind() == "call_expression" {
+        seg_last(text(cx, func_node(func).unwrap_or(func)))
+    } else {
+        seg_last(text(cx, func))
+    };
+    match name {
         "assert" => {
             let cond = first_arg(n);
             let cmp = cond.is_some_and(|f| {

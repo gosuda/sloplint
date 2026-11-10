@@ -50,3 +50,16 @@ fn reads_locals_and_immutable_statics_stay_quiet() {
         vec![(AmbientKind::GlobalMutable, "COUNTER".to_string())]
     );
 }
+
+#[test]
+fn two_functions_writing_the_same_static_both_join() {
+    let source = "static mut COUNTER: u32 = 0;\nfn bump() {\nCOUNTER += 1;\n}\nfn reset() {\nCOUNTER = 0;\n}\n";
+    assert_eq!(
+        ambient(source),
+        vec![
+            (AmbientKind::GlobalMutable, "COUNTER".to_string()),
+            (AmbientKind::GlobalWrite, "COUNTER".to_string()),
+            (AmbientKind::GlobalWrite, "COUNTER".to_string()),
+        ]
+    );
+}

@@ -35,9 +35,10 @@ fn main() -> ExitCode {
 
 /// Exits in-scope so the run's heap stays reachable for LeakSanitizer; output is flushed first, so bytes match a return.
 fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
+    let root = args.run.select.root.as_deref();
     let config = args.run.select.config.as_deref();
     let paths = if args.paths.is_empty() {
-        match sloplint::implicit_scope(cwd, None, config) {
+        match sloplint::implicit_scope(cwd, root, config) {
             Ok(scope) => scope,
             Err(error) => return report_error(&error),
         }
@@ -46,14 +47,16 @@ fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
     };
     let options = RunOptions {
         cwd: cwd.to_path_buf(),
-        root: None,
+        root: args.run.select.root.clone(),
         config: args.run.select.config.clone(),
         paths,
         strictness: args.run.select.strictness.map(Into::into),
         mode: args.mode.map(Into::into),
         fail_on: args.fail_on.map(Into::into),
         min_confidence: args.min_confidence.map(Into::into),
+        fail_on_skipped: args.fail_on_skipped,
         rule_filter: RuleFilter(args.rules.clone()),
+        cache_root: sloplint::settings::cache_base(),
         use_cache: !args.run.no_cache,
         jobs: args.run.jobs.unwrap_or(0),
         write_baseline: false,
@@ -67,18 +70,19 @@ fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
         Err(error) => report_error(&error),
     }
 }
-
 fn baseline(cwd: &Path, args: &BaselineArgs) -> ExitCode {
     let options = RunOptions {
         cwd: cwd.to_path_buf(),
-        root: None,
+        root: args.run.select.root.clone(),
         config: args.run.select.config.clone(),
         paths: Vec::new(),
         strictness: args.run.select.strictness.map(Into::into),
         mode: None,
         fail_on: None,
         min_confidence: None,
+        fail_on_skipped: false,
         rule_filter: RuleFilter::default(),
+        cache_root: sloplint::settings::cache_base(),
         use_cache: !args.run.no_cache,
         jobs: args.run.jobs.unwrap_or(0),
         write_baseline: true,
@@ -107,10 +111,10 @@ enum TextKind {
     Plain,
     Json,
 }
-
 fn rules(cwd: &Path, args: &RulesArgs) -> ExitCode {
     let request = RulesRequest {
         cwd: cwd.to_path_buf(),
+        root: args.select.root.clone(),
         config: args.select.config.clone(),
         strictness: args.select.strictness.map(Into::into),
         id: args.id.clone(),
@@ -191,7 +195,23 @@ fn write_agent(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
             )?;
         }
     }
-    writeln!(out, "{}", summary_line(&report.summary))
+    writeln!(out, "{}", summary_line(&report.summary))?;
+    write_skipped_gate(&report.skipped_gate, out)
+}
+
+fn write_skipped_gate(
+    gate: &[sloplint_core::baseline::SkippedEntry],
+    out: &mut dyn Write,
+) -> io::Result<()> {
+    for entry in gate {
+        writeln!(
+            out,
+            "skipped: {} ({})",
+            TerminalText::line(&entry.path),
+            TerminalText::line(&entry.reason),
+        )?;
+    }
+    Ok(())
 }
 
 fn render_findings(findings: &[Finding]) -> io::Result<Vec<u8>> {
@@ -233,6 +253,10 @@ fn write_json(report: &Report, out: &mut dyn Write) -> io::Result<()> {
     write_record(out, &mut record, &report.rules_fired)?;
     out.write_all(b",\n \"summary\":")?;
     write_record(out, &mut record, &report.summary)?;
+    if !report.skipped_gate.is_empty() {
+        out.write_all(b",\n \"skipped_gate\":")?;
+        write_record(out, &mut record, &report.skipped_gate)?;
+    }
     out.write_all(b"}\n")
 }
 
@@ -271,7 +295,8 @@ fn write_human(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
         writeln!(out, "{}", rendered.trim_end())?;
         writeln!(out)?;
     }
-    writeln!(out, "{}", summary_line(&execution.report.summary))
+    writeln!(out, "{}", summary_line(&execution.report.summary))?;
+    write_skipped_gate(&execution.report.skipped_gate, out)
 }
 
 struct Source {

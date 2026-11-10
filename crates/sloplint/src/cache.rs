@@ -13,8 +13,11 @@ use sloplint_core::{
 
 use crate::fileio::{Capped, Links, read_capped};
 use crate::terminal::TerminalText;
+#[path = "cache_dirs.rs"]
+mod dirs;
+use dirs::{create_private, unsafe_dir, vet_existing};
 
-const VERSION: u32 = 7;
+const VERSION: u32 = 8;
 const NAMESPACE: &str = "sloplint";
 const SHARD_DIR: &str = "cache-v2";
 
@@ -116,10 +119,7 @@ pub fn source_hash(text: &str) -> [u8; 32] {
 }
 
 pub fn interface_hash(text: &str) -> [u8; 32] {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(text.as_bytes());
-    hasher.update(b"\0interface");
-    *hasher.finalize().as_bytes()
+    blake3::derive_key("sloplint interface-shadowed source", text.as_bytes())
 }
 
 /// Per-user cache for one project root; repo contents are attacker-controlled and this key is derivable from public inputs, so a cache file inside a checkout is never trusted.
@@ -135,10 +135,7 @@ pub fn open(
     custom_sources: &[(String, String)],
 ) -> Option<Cache> {
     let Some(base) = base else {
-        warn(
-            "cache disabled: no per-user cache directory (set an absolute XDG_CACHE_HOME, or HOME / LOCALAPPDATA)"
-                .to_string(),
-        );
+        warn("cache disabled: no per-user cache directory was given".to_string());
         return None;
     };
     let namespace = base.join(NAMESPACE);
@@ -409,31 +406,15 @@ fn shard_file(byte: u8) -> String {
 }
 
 fn parse_shard_file_name(name: &std::ffi::OsStr) -> Option<u8> {
-    let s = name.to_str()?;
-    let hex = s.strip_prefix("shard-")?.strip_suffix(".bin")?;
-    if hex.len() == 2
+    let hex = name
+        .to_str()?
+        .strip_prefix("shard-")?
+        .strip_suffix(".bin")?;
+    (hex.len() == 2
         && hex
             .bytes()
-            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-    {
-        u8::from_str_radix(hex, 16).ok()
-    } else {
-        None
-    }
-}
-
-fn hash_regular_into(hasher: &mut blake3::Hasher, path: &Path) -> io::Result<()> {
-    match read_capped(path, u64::MAX, Links::Follow)? {
-        Capped::Bytes(bytes, _) => {
-            hasher.update(&bytes);
-            Ok(())
-        }
-        Capped::TooLarge(_) => Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "file grew while being read",
-        )),
-        Capped::NotRegular(source) => Err(source),
-    }
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+    .then(|| u8::from_str_radix(hex, 16).ok())?
 }
 
 #[derive(Serialize)]
@@ -475,13 +456,13 @@ fn analysis_key(config: &Config) -> AnalysisKey<'_> {
 }
 fn config_key(config: &Config, custom_sources: &[(String, String)]) -> io::Result<[u8; 32]> {
     let mut hasher = blake3::Hasher::new();
-    let exe = std::env::current_exe()?;
-    hash_regular_into(&mut hasher, &exe)?;
+    hasher.update_mmap_rayon(std::env::current_exe()?)?;
     hasher.update(&sonic_rs::to_vec(&analysis_key(config)).map_err(io::Error::other)?);
     for (rel, text) in custom_sources {
-        hasher.update(rel.as_bytes());
-        hasher.update(&[0u8]);
-        hasher.update(text.as_bytes());
+        for part in [rel, text] {
+            hasher.update(&u64::try_from(part.len()).unwrap_or(u64::MAX).to_le_bytes());
+            hasher.update(part.as_bytes());
+        }
     }
     Ok(*hasher.finalize().as_bytes())
 }
@@ -517,72 +498,6 @@ fn inside(dir: &Path, root: &Path) -> bool {
             _ => return false,
         }
     }
-}
-
-/// Refuses a directory another party could have planted or can modify, so no other user can substitute a cache.
-fn vet_existing(dir: &Path) -> Result<(), String> {
-    let meta = match fs::symlink_metadata(dir) {
-        Ok(meta) => meta,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => return Err(format!("cannot inspect it: {error}")),
-    };
-    if meta.file_type().is_symlink() {
-        return Err("it is a symlink".to_string());
-    }
-    if !meta.is_dir() {
-        return Err("it is not a directory".to_string());
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        if meta.permissions().mode() & 0o022 != 0 {
-            return Err("it is writable by group or others".to_string());
-        }
-        probe_writable(dir)?;
-    }
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::MetadataExt;
-        const REPARSE_POINT: u32 = 0x400;
-        if meta.file_attributes() & REPARSE_POINT != 0 {
-            return Err("it is a reparse point".to_string());
-        }
-    }
-    Ok(())
-}
-
-#[cfg(unix)]
-fn probe_writable(dir: &Path) -> Result<(), String> {
-    let probe = dir.join(format!(".probe.{}.tmp", std::process::id()));
-    match fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&probe)
-    {
-        Ok(file) => {
-            drop(file);
-            let _ = fs::remove_file(&probe);
-            Ok(())
-        }
-        Err(error) => Err(format!("it is not writable by this user: {error}")),
-    }
-}
-
-fn create_private(dir: &Path) -> io::Result<()> {
-    let mut builder = fs::DirBuilder::new();
-    builder.recursive(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::DirBuilderExt;
-        builder.mode(0o700);
-    }
-    builder.create(dir)
-}
-
-fn unsafe_dir(reason: String) -> io::Error {
-    io::Error::other(format!(
-        "refusing to use an unsafe cache directory: {reason}"
-    ))
 }
 
 /// Warning text embeds untrusted paths and OS errors, so the whole line is escaped for the terminal.

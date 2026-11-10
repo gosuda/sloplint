@@ -62,7 +62,7 @@ fn is_barrel_edge(kind: &str) -> bool {
 
 fn dart_external_root(module: &str) -> Option<&str> {
     if module.starts_with("dart:") {
-        return Some(module);
+        return None;
     }
     let rest = module.strip_prefix("package:")?;
     let end = rest.find('/').unwrap_or(rest.len());
@@ -74,6 +74,7 @@ struct ImportEmit<'a, 's> {
     module: &'s str,
     root: Option<&'s str>,
     pos: Pos,
+    reexport: bool,
     out: &'a mut Vec<Import<'s>>,
 }
 
@@ -87,7 +88,7 @@ impl<'a, 's> ImportEmit<'a, 's> {
             kind: ImportKind::Namespace,
             scope: ImportScope::Module,
             in_test: false,
-            is_reexport: false,
+            is_reexport: self.reexport,
             external_root: self.root,
         });
     }
@@ -100,7 +101,7 @@ impl<'a, 's> ImportEmit<'a, 's> {
             kind: ImportKind::Named,
             scope: ImportScope::Module,
             in_test: false,
-            is_reexport: false,
+            is_reexport: self.reexport,
             external_root: self.root,
         });
     }
@@ -140,6 +141,7 @@ pub(crate) fn imports<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>
         module,
         root: dart_external_root(module),
         pos: pos_of(n),
+        reexport: kind == "library_export",
         out,
     };
     if has_show(spec) {

@@ -21,6 +21,7 @@ const PROFILES: [Strictness; 4] = [
 #[derive(Debug, Clone, Default)]
 pub struct RulesRequest {
     pub cwd: PathBuf,
+    pub root: Option<PathBuf>,
     pub config: Option<PathBuf>,
     pub strictness: Option<Strictness>,
     pub id: Option<String>,
@@ -74,7 +75,11 @@ struct JsonPreset<'a> {
 }
 
 pub fn render(request: &RulesRequest) -> Result<String, RunError> {
-    let location = project::locate(&request.cwd, None, request.config.as_deref());
+    let location = project::locate(
+        &request.cwd,
+        request.root.as_deref(),
+        request.config.as_deref(),
+    );
     let loaded = project::load(
         &location,
         Overrides {

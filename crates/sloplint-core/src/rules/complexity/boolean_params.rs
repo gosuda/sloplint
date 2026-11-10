@@ -183,6 +183,7 @@ mod tests {
             is_decorated: false,
             is_trait_item: false,
             is_method: false,
+            receiver: None,
             params: vec![flag("verbose"), flag("force")],
             return_type: None,
             untyped_throws: false,

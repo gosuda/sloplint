@@ -200,7 +200,6 @@ fn require_regular(file: &fs::File, meta: &fs::Metadata) -> io::Result<()> {
         return Ok(());
     }
     if meta.is_dir() {
-        // One read makes a directory fail with the platform's own error instead of a generic refusal.
         let mut probe = file;
         let mut byte = [0u8; 1];
         let _ = probe.read(&mut byte)?;

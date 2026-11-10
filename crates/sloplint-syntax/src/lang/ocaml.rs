@@ -4,9 +4,10 @@ use sloplint_core::facts::{
 use sloplint_core::lang::Lang;
 use tree_sitter::Node;
 
-use crate::hooks::{CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead};
+use crate::hooks::{CallHead, Container, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead};
 use crate::spec::Role;
 
+mod ambient;
 mod calls;
 mod funcs;
 mod items;
@@ -70,6 +71,26 @@ impl OcamlHooks {
 }
 
 impl LangHooks for OcamlHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        matches!(kind, "let_expression" | "match_case")
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        ambient::shadow_names_head(n, cx, out);
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        if matches!(node.kind(), "let_expression" | "match_case") {
+            return depth;
+        }
+        let _ = (node, cx);
+        depth.saturating_sub(1)
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         funcs::function_head(self, n, cx)
     }
@@ -88,7 +109,7 @@ impl LangHooks for OcamlHooks {
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        items::decl_names_head(n, cx, out);
+        ambient::decl_names_head(n, cx, out);
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
@@ -130,7 +151,7 @@ impl LangHooks for OcamlHooks {
         in_function: bool,
         out: &mut Vec<(AmbientKind, &'s str, Pos)>,
     ) {
-        items::ambient_head(n, cx, in_function, out);
+        ambient::ambient_head(n, cx, in_function, out);
     }
 
     fn assertion(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {

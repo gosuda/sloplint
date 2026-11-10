@@ -2,7 +2,7 @@
 
 use sloplint_core::lang::Lang;
 
-use super::support::{DEPTH, on_default_stack, with_facts, within_linear_budget};
+use super::support::{on_default_stack, with_facts, within_linear_budget};
 
 /// A member-call chain keeps every call while staying linear in depth.
 ///
@@ -12,10 +12,11 @@ use super::support::{DEPTH, on_default_stack, with_facts, within_linear_budget};
 #[test]
 fn call_chains_keep_every_call_in_linear_time() {
     on_default_stack(|| {
-        let source = "package main\n\nfunc g() {\n\ta".to_owned() + &".B()".repeat(DEPTH) + "\n}\n";
-        within_linear_budget(|| {
+        within_linear_budget(|depth| {
+            let source =
+                "package main\n\nfunc g() {\n\ta".to_owned() + &".B()".repeat(depth) + "\n}\n";
             with_facts(Lang::Go, "chain.go", &source, |facts| {
-                assert_eq!(facts.calls.len(), DEPTH);
+                assert_eq!(facts.calls.len(), depth);
                 let rooted: Vec<_> = facts
                     .calls
                     .iter()

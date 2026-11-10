@@ -10,7 +10,7 @@ use super::calls::qualified_callee;
 use super::funcs::attr_has;
 use super::{has_operator, is_anon_text, is_test_ident};
 use crate::hooks::{
-    Container, Cx, TypeHead, any_named_child, child_by_field, find_named_child, first_named_child,
+    Container, Cx, FileSetKind, TypeHead, any_named_child, child_by_field, first_named_child,
     first_named_child_matching, named_children, narrow, pos_of, strip_quotes, text,
 };
 fn is_identifier(c: &Node<'_>) -> bool {
@@ -35,6 +35,15 @@ fn names_before_sep<'a>(cx: &Cx<'_, '_>, parent: Node<'a>, seps: &[&str]) -> Vec
 }
 
 pub(crate) fn decl_names_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
+    if n.kind() == "assignment_statement" {
+        if !has_operator(n, cx, ":=") {
+            return;
+        }
+        for name_node in names_before_sep(cx, n, &[":="]) {
+            out.push((text(cx, name_node), pos_of(name_node)));
+        }
+        return;
+    }
     if n.kind() != "var_declaration" && n.kind() != "variable_declaration" {
         return;
     }
@@ -43,13 +52,38 @@ pub(crate) fn decl_names_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&
     }
 }
 
-fn odin_lhs(n: Node<'_>) -> Vec<Node<'_>> {
+pub(crate) fn shadow_names_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+    if n.kind() != "for_statement" {
+        return;
+    }
+    if !has_operator(n, cx, "in") {
+        return;
+    }
+    for i in 0..n.child_count() {
+        let Some(child) = n.child(i) else {
+            continue;
+        };
+        if !child.is_named() {
+            if is_anon_text(cx, child, "in") {
+                break;
+            }
+        } else if let Some((name, _)) = odin_write_root(cx, child)
+            && name != "_"
+        {
+            out.push(name);
+        }
+    }
+}
+
+fn odin_lhs<'a>(cx: &Cx<'_, '_>, n: Node<'a>) -> Vec<Node<'a>> {
     let mut out = Vec::new();
     for i in 0..n.child_count() {
-        let Some(child) = n.child(i) else { continue };
+        let Some(child) = n.child(i) else {
+            continue;
+        };
         if child.is_named() {
             out.push(child);
-        } else {
+        } else if text(cx, child).contains('=') {
             break;
         }
     }
@@ -76,7 +110,7 @@ fn odin_write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
 }
 
 fn push_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    for target in odin_lhs(n) {
+    for target in odin_lhs(cx, n) {
         if let Some(root) = odin_write_root(cx, target) {
             out.push(root);
         }
@@ -97,6 +131,18 @@ fn last_path_segment(path: &str) -> &str {
     &path[colon.max(slash).min(path.len())..]
 }
 
+fn odin_external_root(module: &str) -> Option<&str> {
+    let (collection, rest) = module.split_once(':')?;
+    if collection.is_empty() || collection == "core" || collection == "base" {
+        return None;
+    }
+    let first = rest.split('/').next().unwrap_or("");
+    if first.is_empty() {
+        return None;
+    }
+    Some(&module[..collection.len() + 1 + first.len()])
+}
+
 pub(crate) fn imports_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
     if n.kind() != "import_declaration" {
         return;
@@ -105,14 +151,14 @@ pub(crate) fn imports_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Impor
     let raw = first_named_child_matching(n, &["string"])
         .map(|s| text(cx, s))
         .unwrap_or("");
-    let module = Cow::Borrowed(strip_quotes(raw));
-    let alias = child_by_field(n, "alias").map(|a| text(cx, a));
+    let inner = strip_quotes(raw);
+    let external_root = odin_external_root(inner);
     let foreign =
         (0..n.child_count()).any(|i| n.child(i).is_some_and(|c| is_anon_text(cx, c, "foreign")));
     if foreign {
         let side = Import {
             pos,
-            module,
+            module: Cow::Borrowed(inner),
             name: "",
             alias: None,
             kind: ImportKind::SideEffect,
@@ -124,18 +170,18 @@ pub(crate) fn imports_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Impor
         out.push(side);
         return;
     }
-    let inner = strip_quotes(raw);
+    let alias = child_by_field(n, "alias").map(|a| text(cx, a));
     let name = alias.unwrap_or_else(|| last_path_segment(inner));
     let namespaced = Import {
         pos,
-        module,
+        module: Cow::Borrowed(inner),
         name,
         alias,
         kind: ImportKind::Namespace,
         scope: ImportScope::Module,
         in_test: false,
         is_reexport: false,
-        external_root: None,
+        external_root,
     };
     out.push(namespaced);
 }
@@ -177,16 +223,23 @@ pub(crate) fn container_head(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Container> 
     tested.then_some(Container::TestModule)
 }
 
-fn is_implicit_selector(c: Node<'_>) -> bool {
-    c.kind() == "member_expression" && c.named_child_count() == 1
+fn odin_variant_condition(c: Node<'_>) -> bool {
+    if c.kind() != "member_expression" {
+        return false;
+    }
+    let count = c.named_child_count();
+    count >= 1
+        && c.named_child(narrow(count) - 1)
+            .is_some_and(|last| last.kind() == "identifier")
 }
 
-fn sibling_enum(parent: Node<'_>, skip: Node<'_>) -> bool {
-    any_named_child(parent, |s| {
-        s.kind() == "switch_case"
-            && s.id() != skip.id()
-            && child_by_field(s, "condition").is_some_and(is_implicit_selector)
-    })
+fn odin_variant_conditions(s: Node<'_>) -> u32 {
+    let mut cursor = s.walk();
+    narrow(
+        s.children_by_field_name("condition", &mut cursor)
+            .filter(|c| odin_variant_condition(*c))
+            .count(),
+    )
 }
 
 pub(crate) fn match_arm_head(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
@@ -197,11 +250,12 @@ pub(crate) fn match_arm_head(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm
         return None;
     }
     let parent = cx.parent()?;
+    let variant_count = odin_variant_count(parent, n);
     let arm = WildcardArm {
         pos: pos_of(n),
-        enum_like: sibling_enum(parent, n),
+        enum_like: variant_count >= 2,
         scrutinee: odin_scrutinee(parent),
-        variant_count: odin_variant_count(parent, n),
+        variant_count,
         has_nullable_ctor: odin_nullable_sibling(parent, n, cx),
     };
     Some(arm)
@@ -224,9 +278,7 @@ fn odin_variant_count(parent: Node<'_>, skip: Node<'_>) -> u32 {
         if s.kind() != "switch_case" || s.id() == skip.id() {
             continue;
         }
-        if child_by_field(s, "condition").is_some_and(is_implicit_selector) {
-            count = count.saturating_add(1);
-        }
+        count = count.saturating_add(odin_variant_conditions(s));
     }
     count
 }
@@ -313,7 +365,7 @@ fn is_env_callee(callee: &str) -> bool {
         || callee == "os2.lookup_env"
 }
 
-fn odin_file_globals<'s>(cx: &Cx<'_, 's>, _n: Node<'_>) -> Vec<&'s str> {
+fn odin_file_globals<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
     let Some(root) = cx.root() else {
         return Vec::new();
     };
@@ -322,7 +374,7 @@ fn odin_file_globals<'s>(cx: &Cx<'_, 's>, _n: Node<'_>) -> Vec<&'s str> {
         if decl.kind() != "var_declaration" && decl.kind() != "variable_declaration" {
             continue;
         }
-        if let Some(id) = find_named_child(decl, |c| is_identifier(&c)) {
+        for id in names_before_sep(cx, decl, &[":", ":="]) {
             let name = text(cx, id);
             if name != "_" {
                 names.push(name);
@@ -342,8 +394,7 @@ pub(crate) fn ambient_head<'s>(
         if in_function {
             return;
         }
-        let found = find_named_child(n, |c| is_identifier(&c));
-        if let Some(id) = found {
+        for id in names_before_sep(cx, n, &[":", ":="]) {
             let global = (AmbientKind::GlobalMutable, text(cx, id), pos_of(id));
             out.push(global);
         }
@@ -353,10 +404,11 @@ pub(crate) fn ambient_head<'s>(
         || (n.kind() == "assignment_statement" && has_operator(n, cx, "="))
     {
         if in_function {
-            for target in odin_lhs(n) {
+            let scope = cx.file_names(FileSetKind::Scope, || odin_file_globals(cx));
+            for target in odin_lhs(cx, n) {
                 if let Some((root, pos)) = odin_write_root(cx, target)
                     && root != "_"
-                    && odin_file_globals(cx, n).contains(&root)
+                    && scope.contains(&root)
                 {
                     out.push((AmbientKind::GlobalWrite, root, pos));
                 }

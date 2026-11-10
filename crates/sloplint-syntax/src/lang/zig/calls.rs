@@ -4,7 +4,7 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Cx, binary_concat, child_by_field, first_named_child_matching, first_of_kind,
-    named_children, narrow, string_arg_shape, text, trimmed,
+    has_child_kind, named_children, narrow, string_arg_shape, text, trimmed,
 };
 
 pub(crate) fn builtin_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
@@ -41,39 +41,86 @@ fn make_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
     }
 }
 
-fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
+fn multiline_static<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> u32 {
+    let raw = text(cx, n);
+    let clean = |line: &'s str| line.trim_start().strip_prefix("\\\\").unwrap_or(line);
+    let parts: Vec<&'s str> = raw.lines().map(clean).collect();
+    longest_static_chunk(&parts)
+}
+
+fn operand_static<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> u32 {
     match n.kind() {
-        "string" => string_arg_shape(cx, n, &["string_content"]),
-        "multiline_string" => {
-            let raw = text(cx, n);
-            let clean = |line: &'s str| line.trim_start().strip_prefix("\\\\").unwrap_or(line);
-            let parts: Vec<&'s str> = raw.lines().map(clean).collect();
-            ArgShape::Str {
-                longest_static: longest_static_chunk(&parts),
-            }
-        }
-        "identifier" => ArgShape::Ident(text(cx, n)),
-        "binary_expression" if binary_concat(cx, n, "++", &["string", "multiline_string"]) => {
-            ArgShape::Concat
-        }
-        "struct_initializer" | "anonymous_struct_initializer" | "array_literal" => {
-            ArgShape::Collection
-        }
-        "block" => ArgShape::CodeBody,
-        _ => ArgShape::Other,
+        "string" => match string_arg_shape(cx, n, &["string_content"]) {
+            ArgShape::Str { longest_static } => longest_static,
+            _ => 0,
+        },
+        "multiline_string" => multiline_static(cx, n),
+        _ => 0,
     }
 }
 
-fn callee_root(func: Node<'_>) -> Option<Node<'_>> {
-    let mut node = func;
+fn concat_static<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> u32 {
+    let mut best = 0;
+    let mut current = n;
     loop {
-        if node.kind() == "identifier" {
-            return Some(node);
+        if child_by_field(current, "operator").is_none_or(|op| text(cx, op) != "++") {
+            return best;
         }
-        {
-            let next = child_by_field(node, "object")?;
-            node = next
+        let mut inner = None;
+        if let Some(left) = child_by_field(current, "left") {
+            if left.kind() == "binary_expression" {
+                inner = Some(left);
+            } else {
+                best = best.max(operand_static(cx, left));
+            }
         }
+        if let Some(right) = child_by_field(current, "right") {
+            best = best.max(operand_static(cx, right));
+        }
+        let Some(next) = inner else {
+            return best;
+        };
+        current = next;
+    }
+}
+
+fn init_shape<'s>(n: Node<'_>) -> ArgShape<'s> {
+    let Some(list) = first_of_kind(n, &["initializer_list"]) else {
+        return ArgShape::Other;
+    };
+    let mut keyed = false;
+    let mut code = false;
+    for element in named_children(list) {
+        if super::items::init_pair(element).is_some() {
+            keyed = true;
+        } else if element.kind() == "block" || element.kind() == "block_expression" {
+            code = true;
+        }
+    }
+    if keyed {
+        return ArgShape::Other;
+    }
+    if code {
+        return ArgShape::CodeBody;
+    }
+    ArgShape::Collection
+}
+
+fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
+    match n.kind() {
+        "string" => string_arg_shape(cx, n, &["string_content"]),
+        "multiline_string" => ArgShape::Str {
+            longest_static: multiline_static(cx, n),
+        },
+        "identifier" => ArgShape::Ident(text(cx, n)),
+        "binary_expression" if binary_concat(cx, n, "++", &["string", "multiline_string"]) => {
+            ArgShape::Concat {
+                longest_static: concat_static(cx, n),
+            }
+        }
+        "struct_initializer" | "anonymous_struct_initializer" => init_shape(n),
+        "block" => ArgShape::CodeBody,
+        _ => ArgShape::Other,
     }
 }
 
@@ -99,6 +146,40 @@ fn zig_is_simple_path(func: Node<'_>) -> bool {
     }
 }
 
+fn callee_root(func: Node<'_>) -> Option<Node<'_>> {
+    let mut node = func;
+    loop {
+        if node.kind() == "identifier" {
+            return Some(node);
+        }
+        {
+            let next = child_by_field(node, "object")?;
+            node = next
+        }
+    }
+}
+
+fn path_callee<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
+    trimmed(cx, func)
+}
+
+fn stripped_callee<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
+    if func.kind() == "field_expression"
+        && let Some(member) = child_by_field(func, "member")
+    {
+        return text(cx, member);
+    }
+    let full = trimmed(cx, func);
+    let mut cut = full.len();
+    for (idx, byte) in full.bytes().enumerate() {
+        if byte == b'(' || byte == b'[' {
+            cut = idx;
+            break;
+        }
+    }
+    full[..cut].trim_end()
+}
+
 pub(crate) fn decl_value(holder: Node<'_>) -> Option<Node<'_>> {
     let mut cursor = holder.walk();
     let mut seen_eq = false;
@@ -122,6 +203,9 @@ fn zig_initializes_binding(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     if holder.kind() != "variable_declaration" {
         return false;
     }
+    if !has_child_kind(holder, "var") && !has_child_kind(holder, "const") {
+        return false;
+    }
     if decl_value(holder).is_none_or(|found| found.id() != n.id()) {
         return false;
     }
@@ -132,16 +216,22 @@ fn zig_initializes_binding(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
 pub(crate) fn zig_call<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
     if n.kind() == "call_expression" {
         let func = child_by_field(n, "function")?;
-        let root = callee_root(func);
+        let simple = zig_is_simple_path(func);
+        let root = if simple { callee_root(func) } else { None };
         let args = positional_nodes(n, func)
             .into_iter()
             .map(|a| make_arg(cx, a))
             .collect();
+        let callee = if simple {
+            path_callee(cx, func)
+        } else {
+            stripped_callee(cx, func)
+        };
         return Some(CallHead {
-            callee: trimmed(cx, func),
+            callee,
             kind: CallKind::Plain,
             callee_root: root.map(|r| text(cx, r)),
-            is_simple_path: zig_is_simple_path(func),
+            is_simple_path: simple,
             initializes_binding: zig_initializes_binding(cx, n),
             args,
         });

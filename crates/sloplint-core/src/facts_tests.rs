@@ -2,6 +2,7 @@ use crate::facts::*;
 use crate::finding::line_starts;
 use crate::lang::Lang;
 use crate::role::CodeRole;
+use std::collections::BTreeSet;
 
 fn plain_function(name: &str, pos: Pos) -> Function<'_> {
     Function {
@@ -18,6 +19,7 @@ fn plain_function(name: &str, pos: Pos) -> Function<'_> {
         is_decorated: false,
         is_trait_item: false,
         is_method: false,
+        receiver: None,
         params: vec![],
         return_type: None,
         untyped_throws: false,
@@ -149,8 +151,8 @@ fn serialized_world_facts_carry_no_line_text() {
         "positions stay in the serialization: {serialized}"
     );
     assert!(
-        serialized.contains("\"package\":\"ledger\""),
-        "the package key travels with the world facts: {serialized}"
+        !serialized.contains("package"),
+        "the package key must not travel with the world facts; the runner re-stamps it per run: {serialized}"
     );
 }
 
@@ -367,5 +369,111 @@ fn generic_and_abstract_impls_stay_out_of_world() {
             .map(|i| i.name.as_ref())
             .collect::<Vec<_>>(),
         ["Draw"],
+    );
+}
+
+fn manifests(dirs: &[(&str, ManifestKind)]) -> BTreeSet<(ManifestKind, String)> {
+    dirs.iter()
+        .map(|(dir, kind)| (*kind, dir.to_string()))
+        .collect()
+}
+
+#[test]
+fn package_key_prefers_the_nearest_manifest_directory() {
+    let found = manifests(&[
+        ("packages", ManifestKind::JavaScript),
+        ("packages/ui", ManifestKind::JavaScript),
+    ]);
+    assert_eq!(
+        package_key(Lang::TypeScript, "packages/ui/src/button.ts", &found),
+        "packages/ui",
+        "the nearest manifest directory names the package"
+    );
+    assert_eq!(
+        package_key(Lang::TypeScript, "packages/api/src/client.ts", &found),
+        "packages",
+        "a file outside the nested manifest falls back to the outer manifest"
+    );
+}
+
+#[test]
+fn package_key_without_manifests_uses_the_first_path_segment() {
+    let empty = manifests(&[]);
+    assert_eq!(
+        package_key(Lang::Bash, "deploy/probe.sh", &empty),
+        "deploy",
+        "a manifest-less file groups by its top-level directory"
+    );
+    assert_eq!(
+        package_key(Lang::Python, "main.py", &empty),
+        "",
+        "a root file with no manifest belongs to the empty package"
+    );
+    assert_eq!(
+        package_key(Lang::Rust, "crates/ledger/src/lib.rs", &empty),
+        "crates/ledger",
+        "the Rust workspace layout survives without manifests"
+    );
+    assert_eq!(
+        package_key(Lang::Go, "internal/tag/add.go", &empty),
+        "internal/tag",
+        "the Go directory layout survives without manifests"
+    );
+    assert_eq!(
+        package_key(Lang::Rust, "crates/util.rs", &empty),
+        "",
+        "a file directly under crates is not its own package"
+    );
+    assert_eq!(
+        package_key(Lang::Rust, "crates/tests/util.rs", &empty),
+        "crates/tests",
+        "a crate directory under crates still resolves"
+    );
+}
+
+#[test]
+fn package_key_at_the_root_manifest_covers_its_ecosystem() {
+    let root = manifests(&[("", ManifestKind::JavaScript)]);
+    assert_eq!(
+        package_key(Lang::TypeScript, "src/app.ts", &root),
+        "",
+        "a root manifest puts every file of its ecosystem in the empty package"
+    );
+    assert_eq!(
+        package_key(Lang::TypeScript, "deploy/probe.ts", &root),
+        "",
+        "a root manifest covers nested directories too"
+    );
+    let python = manifests(&[("", ManifestKind::Python)]);
+    assert_eq!(
+        package_key(Lang::Python, "src/app.py", &python),
+        "",
+        "a root python manifest covers python files"
+    );
+}
+
+#[test]
+fn manifests_apply_only_to_their_ecosystem() {
+    let js = manifests(&[("", ManifestKind::JavaScript)]);
+    assert_eq!(
+        package_key(Lang::Bash, "deploy/probe.sh", &js),
+        "deploy",
+        "a shell file ignores a javascript manifest"
+    );
+    assert_eq!(
+        package_key(Lang::Go, "internal/tag/add.go", &js),
+        "internal/tag",
+        "a go file ignores a javascript manifest"
+    );
+    assert_eq!(
+        package_key(Lang::Rust, "crates/ledger/src/lib.rs", &js),
+        "crates/ledger",
+        "a rust file ignores a javascript manifest"
+    );
+    let py = manifests(&[("", ManifestKind::Python)]);
+    assert_eq!(
+        package_key(Lang::JavaScript, "src/app.js", &py),
+        "src",
+        "a javascript file ignores a python manifest"
     );
 }

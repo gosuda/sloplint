@@ -5,18 +5,25 @@ use sloplint_core::lang::Lang;
 
 use super::support::{DEPTH, binding, binding_names, on_default_stack, with_facts};
 
-/// Member, parenthesized, and subscript callees all root at their leftmost identifier.
+/// Member and parenthesized callees root at their leftmost identifier; a subscript
+/// link clears the root.
 #[test]
 fn member_call_chains_keep_their_callee_roots() {
     on_default_stack(|| {
         let members = format!("{}f();\n", "a.".repeat(DEPTH));
         let parens = format!("{}a{}();\n", "(".repeat(DEPTH), ")".repeat(DEPTH));
         let subscripts = format!("a{}();\n", "[0]".repeat(DEPTH));
-        for source in [members, parens, subscripts] {
+        for source in [members, parens] {
             with_facts(Lang::JavaScript, "case.js", &source, |facts| {
                 assert_eq!(facts.calls[0].callee_root, Some("a"));
             });
         }
+        with_facts(Lang::JavaScript, "case.js", &subscripts, |facts| {
+            assert_eq!(
+                facts.calls[0].callee_root, None,
+                "an index link clears the root"
+            );
+        });
     });
 }
 

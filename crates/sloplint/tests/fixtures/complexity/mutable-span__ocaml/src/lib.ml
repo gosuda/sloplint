@@ -1,0 +1,19 @@
+let spread (limit : int) : int =
+  let total = ref 0 in
+  total := !total + 1;
+  let a = 1 in
+  let b = 2 in
+  let c = 3 in
+  let d = 4 in
+  let e = 5 in
+  let f = 6 in
+  let g = a + b in
+  let h = c + d in
+  let i = e + f in
+  let j = g + h in
+  let k = h + i in
+  let m = i + j in
+  let n = j + k in
+  let o = k + m in
+  total := !total + limit;
+  !total

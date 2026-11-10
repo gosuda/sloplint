@@ -1,7 +1,7 @@
 use sloplint_core::facts::{Param, PrimitiveKind};
 use tree_sitter::Node;
 
-use crate::hooks::{Cx, child_by_field, named_children, text};
+use crate::hooks::{Cx, child_by_field, first_of_kind, named_children, text};
 
 pub(crate) fn is_parameter(c: &Node<'_>) -> bool {
     c.kind() == "parameter"
@@ -94,15 +94,17 @@ pub(crate) fn spec_signature<'s>(
         }
         let domain = child_by_field(current, "domain");
         let labeled = domain.is_some_and(|d| d.kind() == "labeled_argument_type");
-        let name = match domain {
-            Some(found) if labeled => label_of(cx, found),
-            _ => "",
+        let (name, ty) = match domain {
+            Some(found) if labeled => (
+                label_of(cx, found),
+                child_by_field(found, "type").map(|t| text(cx, t)),
+            ),
+            found => ("", found.map(|d| text(cx, d))),
         };
-        let ty = domain.map(|d| text(cx, d));
         params.push(Param {
             name,
             ty,
-            primitive_kind: PrimitiveKind::Other,
+            primitive_kind: primitive_of(ty),
             has_default: false,
             bool_default: false,
             keyword_only: false,
@@ -116,7 +118,7 @@ pub(crate) fn spec_signature<'s>(
 }
 
 fn label_of<'s>(cx: &Cx<'_, 's>, domain: Node<'_>) -> &'s str {
-    child_by_field(domain, "label_name")
+    first_of_kind(domain, &["label_name"])
         .map(|l| text(cx, l))
         .unwrap_or("")
 }

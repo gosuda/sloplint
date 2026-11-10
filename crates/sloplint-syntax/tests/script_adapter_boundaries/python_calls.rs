@@ -65,14 +65,17 @@ fn bare_call_is_a_simple_path() {
 }
 
 #[test]
-fn member_chain_is_not_a_simple_path() {
+fn member_chain_is_a_simple_path() {
     let calls = calls_of();
     let chained = calls
         .iter()
         .find(|c| c.0 == "store.get")
         .expect("has store.get");
-    assert!(!chained.1);
-    assert!(!chained.2);
+    assert!(
+        chained.1,
+        "ruling 12: member-joined identifiers are a simple path"
+    );
+    assert!(!chained.2, "member chain is not a binding");
 }
 
 #[test]

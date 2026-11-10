@@ -45,6 +45,15 @@ fn strip_lifetime(rest: &str) -> Option<&str> {
     Some(body[end..].trim_start())
 }
 
+fn strip_known_prefix<'a>(rest: &'a str, prefixes: &[&str]) -> &'a str {
+    for prefix in prefixes {
+        if let Some(inner) = rest.strip_prefix(prefix) {
+            return inner;
+        }
+    }
+    rest
+}
+
 pub(super) fn primitive_kind_of(ty: Option<&str>) -> PrimitiveKind {
     let mut rest = ty.map_or("", |t| t.trim());
     loop {
@@ -60,6 +69,9 @@ pub(super) fn primitive_kind_of(ty: Option<&str>) -> PrimitiveKind {
             break;
         }
     }
+    rest = strip_known_prefix(rest, &["::"]);
+    rest = strip_known_prefix(rest, &["std::", "core::", "alloc::"]);
+    rest = strip_known_prefix(rest, &["primitive::", "string::"]);
     match rest {
         "bool" => PrimitiveKind::Bool,
         "str" | "String" => PrimitiveKind::Str,

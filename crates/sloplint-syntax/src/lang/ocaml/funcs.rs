@@ -9,8 +9,13 @@ use crate::hooks::{
     first_of_kind, pos_of, preceding_comments, text,
 };
 
-fn impl_bound(cx: &Cx<'_, '_>) -> bool {
-    cx.nearest_impl_interface_bound().unwrap_or(false)
+fn module_constrained(cx: &Cx<'_, '_>) -> bool {
+    for ancestor in cx.ancestors() {
+        if ancestor.kind() == "module_binding" {
+            return child_by_field(ancestor, "module_type").is_some();
+        }
+    }
+    false
 }
 
 pub(crate) fn pattern_ident<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<(&'s str, Pos)> {
@@ -51,6 +56,30 @@ fn ocaml_sole(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
     (inner.kind() == "application_expression").then_some(inner.id())
 }
 
+fn has_attribute(cx: &Cx<'_, '_>, n: Node<'_>, wanted: Option<&str>) -> bool {
+    any_named_child(n, |child| {
+        if child.kind() != "item_attribute" {
+            return false;
+        }
+        match wanted {
+            None => true,
+            Some(name) => {
+                first_of_kind(child, &["attribute_id"]).is_some_and(|id| text(cx, id) == name)
+            }
+        }
+    })
+}
+
+fn in_module_signature(cx: &Cx<'_, '_>) -> bool {
+    let mut chain = cx.ancestors();
+    if !chain.next().is_some_and(|p| p.kind() == "signature") {
+        return false;
+    }
+    chain
+        .next()
+        .is_some_and(|p| p.kind() == "module_type_definition")
+}
+
 fn let_head<'s>(
     cx: &Cx<'_, 's>,
     lb: Node<'_>,
@@ -63,18 +92,25 @@ fn let_head<'s>(
     let return_type = child_by_field(lb, "type").map(|t| text(cx, t));
     let missing = missing_of(&params, return_type);
     let (doc, doc_pos) = ocaml_header(cx, lb);
+    let shadow_params: Vec<&'s str> = params
+        .iter()
+        .map(|p| p.name)
+        .filter(|name| !name.is_empty())
+        .collect();
     FunctionHead {
+        shadow_params,
         name: name_node.map(|p| text(cx, p)).unwrap_or(""),
         name_pos: name_node.map(pos_of).unwrap_or_else(|| pos_of(lb)),
         visibility,
-        signature_forced: impl_bound(cx),
+        signature_forced: module_constrained(cx),
         entry_point: false,
-        in_test: false,
+        in_test: cx.inside_test_module(),
         is_overload: false,
-        is_deprecated: false,
-        is_decorated: false,
+        is_deprecated: has_attribute(cx, lb, Some("deprecated")),
+        is_decorated: has_attribute(cx, lb, None),
         is_trait_item: false,
         region: None,
+        receiver: None,
         params,
         return_type,
         missing_annotations: missing,
@@ -111,10 +147,11 @@ pub(crate) fn function_head<'s>(
             Some(head)
         }
         "value_specification" => {
-            let name_node = child_by_field(n, "value_name")?;
+            let name_node = first_of_kind(n, &["value_name"])?;
             let (params, return_type) = spec_signature(cx, n);
             let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
             Some(FunctionHead {
+                shadow_params: Vec::new(),
                 name: text(cx, name_node),
                 name_pos: pos_of(name_node),
                 visibility: Visibility::Exported,
@@ -122,10 +159,11 @@ pub(crate) fn function_head<'s>(
                 entry_point: false,
                 in_test: false,
                 is_overload: false,
-                is_deprecated: false,
-                is_decorated: false,
-                is_trait_item: false,
+                is_deprecated: has_attribute(cx, n, Some("deprecated")),
+                is_decorated: has_attribute(cx, n, None),
+                is_trait_item: in_module_signature(cx),
                 region: None,
+                receiver: None,
                 params,
                 return_type,
                 missing_annotations: Vec::new(),
@@ -154,11 +192,26 @@ pub(crate) fn closure_head<'s>(
     if body.is_some_and(|b| b.id() != n.id()) {
         return None;
     }
-    Some(let_head(
-        cx,
-        parent,
-        n,
-        child_by_field(n, "body")?,
-        hooks.visibility_at(cx, parent),
-    ))
+    if n.kind() == "function_expression" {
+        return Some(let_head(
+            cx,
+            parent,
+            parent,
+            n,
+            hooks.visibility_at(cx, parent),
+        ));
+    }
+    let fun_body = child_by_field(n, "body")?;
+    let mut head = let_head(cx, parent, n, fun_body, hooks.visibility_at(cx, parent));
+    let mut params = ocaml_params(cx, parent);
+    params.append(&mut head.params);
+    head.params = params;
+    head.missing_annotations = missing_of(&head.params, head.return_type);
+    head.shadow_params = head
+        .params
+        .iter()
+        .map(|p| p.name)
+        .filter(|name| !name.is_empty())
+        .collect();
+    Some(head)
 }

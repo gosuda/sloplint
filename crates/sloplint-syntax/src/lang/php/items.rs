@@ -72,13 +72,18 @@ pub(crate) fn write_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s s
     }
 }
 
-fn clause_refs<'s>(cx: &Cx<'_, 's>, clause: Node<'_>, out: &mut Vec<ImplRef<'s>>) {
+fn clause_refs<'s>(
+    cx: &Cx<'_, 's>,
+    clause: Node<'_>,
+    child_is_abstract: bool,
+    out: &mut Vec<ImplRef<'s>>,
+) {
     for item in named_children(clause) {
         out.push(ImplRef {
             name: last_segment(text(cx, item), &["\\"]),
             pos: pos_of(item),
             is_generic: false,
-            child_is_abstract: false,
+            child_is_abstract,
         });
     }
 }
@@ -92,34 +97,52 @@ pub(crate) fn typedef_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<
         return None;
     }
     let name_node = child_by_field(n, "name")?;
-    let mut impls = Vec::new();
-    let mut implements = false;
-    for child in named_children(n) {
-        if child.kind() == "base_clause" {
-            clause_refs(cx, child, &mut impls);
-        } else if child.kind() == "class_interface_clause" {
-            implements = true;
-            clause_refs(cx, child, &mut impls);
-        }
-    }
-    let container = if kind == "class_declaration" || kind == "enum_declaration" {
-        Some(Container::Class {
-            exported: true,
-            implements,
-        })
-    } else {
-        Some(Container::Trait { public: true })
-    };
+    let child_abstract = is_abstract_type(kind, n);
+    let (impls, implements) = collect_clauses(cx, n, child_abstract);
     Some(TypeHead {
         def: Some(TypeDef {
             name: text(cx, name_node),
             pos: pos_of(name_node),
             visibility: Visibility::Exported,
-            abstraction: kind == "interface_declaration" || kind == "trait_declaration",
+            abstraction: child_abstract,
         }),
         impls,
-        container,
+        container: container_of(kind, implements),
     })
+}
+
+fn is_abstract_type(kind: &str, n: Node<'_>) -> bool {
+    kind == "interface_declaration"
+        || kind == "trait_declaration"
+        || any_named_child(n, |c| c.kind() == "abstract_modifier")
+}
+
+fn collect_clauses<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    child_is_abstract: bool,
+) -> (Vec<ImplRef<'s>>, bool) {
+    let mut impls = Vec::new();
+    let mut implements = false;
+    for child in named_children(n) {
+        if child.kind() == "base_clause" {
+            clause_refs(cx, child, child_is_abstract, &mut impls);
+        } else if child.kind() == "class_interface_clause" {
+            implements = true;
+            clause_refs(cx, child, child_is_abstract, &mut impls);
+        }
+    }
+    (impls, implements)
+}
+
+fn container_of(kind: &str, implements: bool) -> Option<Container> {
+    if kind == "class_declaration" || kind == "enum_declaration" {
+        return Some(Container::Class {
+            exported: true,
+            implements,
+        });
+    }
+    Some(Container::Trait { public: true })
 }
 
 fn cond_kind(cond: Node<'_>) -> ScrutineeKind {
@@ -144,22 +167,36 @@ fn scrutinee_of(cx: &Cx<'_, '_>, _n: Node<'_>) -> ScrutineeKind {
     ScrutineeKind::Other
 }
 
-fn sibling_class_consts(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
+fn arm_variant_names<'s>(cx: &Cx<'_, 's>, arm: Node<'_>, out: &mut Vec<&'s str>) {
+    if arm.kind() != "case_statement" && arm.kind() != "match_conditional_expression" {
+        return;
+    }
+    for child in named_children(arm) {
+        if child.kind() == "class_constant_access_expression" {
+            out.push(text(cx, child));
+        } else if child.kind() == "match_condition_list" {
+            for cond in named_children(child) {
+                if cond.kind() == "class_constant_access_expression" {
+                    out.push(text(cx, cond));
+                }
+            }
+        }
+    }
+}
+
+fn sibling_variants(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
     let Some(parent) = cx.parent() else {
         return 0;
     };
-    let mut count = 0u32;
+    let mut names: Vec<&str> = Vec::new();
     for sib in named_children(parent) {
-        if sib.id() == n.id() {
-            continue;
-        }
-        if (sib.kind() == "case_statement" || sib.kind() == "match_conditional_expression")
-            && any_named_child(sib, |c| c.kind() == "class_constant_access_expression")
-        {
-            count += 1;
+        if sib.id() != n.id() {
+            arm_variant_names(cx, sib, &mut names);
         }
     }
-    count
+    names.sort_unstable();
+    names.dedup();
+    narrow(names.len())
 }
 
 pub(crate) fn match_arm(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
@@ -167,10 +204,10 @@ pub(crate) fn match_arm(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
     if kind != "default_statement" && kind != "match_default_expression" {
         return None;
     }
-    let variants = sibling_class_consts(cx, n);
+    let variants = sibling_variants(cx, n);
     Some(WildcardArm {
         pos: pos_of(n),
-        enum_like: variants >= 1,
+        enum_like: variants >= 2,
         scrutinee: scrutinee_of(cx, n),
         variant_count: variants,
         has_nullable_ctor: false,

@@ -121,8 +121,9 @@ fn control_characters_in_a_cache_path_are_escaped_in_warnings() {
         !stderr.is_empty(),
         "a cache directory inside the root must still warn"
     );
+    let rendered = sloplint::TerminalText::line(&hostile.display().to_string()).to_string();
     assert!(
-        stderr.contains(&root.display().to_string()),
+        stderr.contains(&rendered),
         "the warning must name the cache location: {stderr:?}"
     );
     assert!(

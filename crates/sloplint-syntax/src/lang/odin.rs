@@ -1,7 +1,7 @@
 use sloplint_core::facts::{AmbientKind, Assertion, FieldCopy, Import, Pos, WildcardArm};
 use tree_sitter::Node;
 
-use crate::hooks::{CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, text};
+use crate::hooks::{CallHead, Container, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, text};
 use crate::spec::Role;
 
 mod calls;
@@ -51,6 +51,14 @@ pub(crate) fn is_test_ident(cx: &Cx<'_, '_>, c: Node<'_>) -> bool {
 }
 
 impl LangHooks for OdinHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
+    fn ambient_bind(&self) -> bool {
+        true
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let _ = (n, cx);
         None
@@ -71,6 +79,22 @@ impl LangHooks for OdinHooks {
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         items::decl_names_head(n, cx, out);
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        if node.kind() == "for_statement" {
+            return depth;
+        }
+        let _ = (node, cx);
+        depth.saturating_sub(1)
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        matches!(kind, "for_statement")
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        items::shadow_names_head(n, cx, out);
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

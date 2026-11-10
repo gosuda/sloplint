@@ -7,24 +7,40 @@ pub fn normalize_rel_path(path: &std::path::Path) -> Option<String> {
 }
 
 pub fn identifier_words(s: &str) -> impl Iterator<Item = String> {
-    s.split(|c: char| !c.is_alphanumeric()).flat_map(split_word)
-}
-
-fn split_word(word: &str) -> Vec<String> {
-    let chars: Vec<char> = word.chars().collect();
-    let mut words: Vec<String> = Vec::new();
+    let mut chars = s.chars();
     let mut current = String::new();
-    for (i, &c) in chars.iter().enumerate() {
-        if i > 0 && is_boundary(chars[i - 1], c) {
-            words.push(current.to_lowercase());
-            current.clear();
+    let mut prev: Option<char> = None;
+    let mut done = false;
+    std::iter::from_fn(move || {
+        for c in chars.by_ref() {
+            if !c.is_alphanumeric() {
+                if !current.is_empty() {
+                    prev = None;
+                    let out = current.to_lowercase();
+                    current.clear();
+                    return Some(out);
+                }
+                prev = None;
+                continue;
+            }
+            if let Some(p) = prev
+                && is_boundary(p, c)
+            {
+                let out = current.to_lowercase();
+                current.clear();
+                current.push(c);
+                prev = Some(c);
+                return Some(out);
+            }
+            current.push(c);
+            prev = Some(c);
         }
-        current.push(c);
-    }
-    if !current.is_empty() {
-        words.push(current.to_lowercase());
-    }
-    words
+        if done || current.is_empty() {
+            return None;
+        }
+        done = true;
+        Some(std::mem::take(&mut current).to_lowercase())
+    })
 }
 
 fn is_boundary(prev: char, next: char) -> bool {
@@ -46,45 +62,53 @@ struct Scan {
 }
 
 impl Scan {
-    fn step(&mut self, chars: &[char]) {
-        let c = chars[self.i];
-        if c == '\\' {
-            self.break_run();
-            self.i = (self.i + 2).min(chars.len());
-        } else if c == '{' {
-            self.brace(chars);
-        } else if c == '}' && chars.get(self.i + 1) == Some(&'}') {
-            self.run += 1;
-            self.i += 2;
-        } else if c == '%' {
-            self.percent(chars);
-        } else {
-            self.run += 1;
-            self.i += 1;
+    fn step(&mut self, bytes: &[u8]) {
+        match bytes[self.i] {
+            b'\\' => self.escape(bytes),
+            b'{' => self.brace(bytes),
+            b'}' if bytes.get(self.i + 1) == Some(&b'}') => {
+                self.run += 1;
+                self.i += 2;
+            }
+            b'%' => self.percent(bytes),
+            b => {
+                self.run += 1;
+                self.i += utf8_len(b);
+            }
         }
     }
 
-    fn brace(&mut self, chars: &[char]) {
-        if chars.get(self.i + 1) == Some(&'{') {
+    fn escape(&mut self, bytes: &[u8]) {
+        self.break_run();
+        self.i += 1;
+        if self.i < bytes.len() {
+            self.i = (self.i + utf8_len(bytes[self.i])).min(bytes.len());
+        }
+    }
+
+    fn brace(&mut self, bytes: &[u8]) {
+        if bytes.get(self.i + 1) == Some(&b'{') {
             self.run += 1;
             self.i += 2;
             return;
         }
         self.break_run();
         self.i += 1;
-        while self.i < chars.len() && chars[self.i] != '}' {
+        while self.i < bytes.len() && bytes[self.i] != b'}' {
             self.i += 1;
         }
-        self.i = (self.i + 1).min(chars.len());
+        if self.i < bytes.len() {
+            self.i += 1;
+        }
     }
 
-    fn percent(&mut self, chars: &[char]) {
-        if chars.get(self.i + 1) == Some(&'%') {
+    fn percent(&mut self, bytes: &[u8]) {
+        if bytes.get(self.i + 1) == Some(&b'%') {
             self.run += 1;
             self.i += 2;
             return;
         }
-        if let Some(width) = printf_width(&chars[self.i + 1..]) {
+        if let Some(width) = printf_width(&bytes[self.i + 1..]) {
             self.break_run();
             self.i += 1 + width;
             return;
@@ -100,33 +124,45 @@ impl Scan {
 }
 
 fn longest_in_segment(segment: &str) -> u32 {
-    let chars: Vec<char> = segment.chars().collect();
+    let bytes = segment.as_bytes();
     let mut scan = Scan {
         best: 0,
         run: 0,
         i: 0,
     };
-    while scan.i < chars.len() {
-        scan.step(&chars);
+    while scan.i < bytes.len() {
+        scan.step(bytes);
     }
     scan.best.max(scan.run)
 }
 
-fn printf_width(chars: &[char]) -> Option<usize> {
+fn utf8_len(first: u8) -> usize {
+    if first < 0x80 {
+        1
+    } else if first & 0xE0 == 0xC0 {
+        2
+    } else if first & 0xF0 == 0xE0 {
+        3
+    } else {
+        4
+    }
+}
+
+fn printf_width(bytes: &[u8]) -> Option<usize> {
     let mut i = 0usize;
-    while i < chars.len() && matches!(chars[i], '-' | '+' | ' ' | '#' | '0') {
+    while i < bytes.len() && matches!(bytes[i], b'-' | b'+' | b' ' | b'#' | b'0') {
         i += 1;
     }
-    while i < chars.len() && chars[i].is_ascii_digit() {
+    while i < bytes.len() && bytes[i].is_ascii_digit() {
         i += 1;
     }
-    if i < chars.len() && chars[i] == '.' {
+    if i < bytes.len() && bytes[i] == b'.' {
         i += 1;
-        while i < chars.len() && chars[i].is_ascii_digit() {
+        while i < bytes.len() && bytes[i].is_ascii_digit() {
             i += 1;
         }
     }
-    (i < chars.len() && chars[i].is_ascii_alphabetic()).then_some(i + 1)
+    (i < bytes.len() && bytes[i].is_ascii_alphabetic()).then_some(i + 1)
 }
 
 #[cfg(test)]
@@ -154,6 +190,18 @@ mod tests {
         assert_eq!(words, ["process", "order", "x", "86", "count"]);
         let words: Vec<String> = identifier_words("__init__").collect();
         assert_eq!(words, ["init"]);
+        let words: Vec<String> = identifier_words("ΟΔΟΣ").collect();
+        assert_eq!(
+            words,
+            ["οδος"],
+            "whole-word lowercase must apply final sigma"
+        );
+        let words: Vec<String> = identifier_words("ΟΔΟΣ2").collect();
+        assert_eq!(
+            words,
+            ["οδος", "2"],
+            "digit boundary must split after final sigma"
+        );
     }
 
     proptest! {

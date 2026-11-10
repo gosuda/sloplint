@@ -59,24 +59,64 @@ fn method_vis<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Visibility {
     }
 }
 
+fn signature_forced(cx: &Cx<'_, '_>, name: &str) -> bool {
+    if name.starts_with("__") {
+        return true;
+    }
+    let container = cx.ancestors().find(|parent| {
+        matches!(
+            parent.kind(),
+            "class_declaration"
+                | "anonymous_class_declaration"
+                | "enum_declaration"
+                | "interface_declaration"
+                | "trait_declaration"
+        )
+    });
+    container.is_some_and(|parent| {
+        any_named_child(parent, |clause| {
+            matches!(clause.kind(), "base_clause" | "class_interface_clause")
+        })
+    })
+}
+
 fn primitive_of(ty: Option<&str>) -> PrimitiveKind {
     let Some(raw) = ty else {
         return PrimitiveKind::Other;
     };
-    let seg = raw
+    let Some(sole) = sole_member(raw) else {
+        return PrimitiveKind::Other;
+    };
+    let seg = sole
         .trim()
         .trim_start_matches('?')
         .rsplit('\\')
         .next()
         .unwrap_or("")
-        .trim()
-        .to_lowercase();
-    match seg.as_str() {
-        "string" => PrimitiveKind::Str,
-        "bool" => PrimitiveKind::Bool,
-        "int" | "integer" => PrimitiveKind::Int,
-        "float" | "double" => PrimitiveKind::Float,
-        _ => PrimitiveKind::Other,
+        .trim();
+    if seg.eq_ignore_ascii_case("string") {
+        return PrimitiveKind::Str;
+    }
+    if seg.eq_ignore_ascii_case("bool") {
+        return PrimitiveKind::Bool;
+    }
+    if seg.eq_ignore_ascii_case("int") || seg.eq_ignore_ascii_case("integer") {
+        return PrimitiveKind::Int;
+    }
+    if seg.eq_ignore_ascii_case("float") || seg.eq_ignore_ascii_case("double") {
+        return PrimitiveKind::Float;
+    }
+    PrimitiveKind::Other
+}
+
+fn sole_member(raw: &str) -> Option<&str> {
+    let mut members = raw
+        .split('|')
+        .map(str::trim)
+        .filter(|member| !member.is_empty() && !member.eq_ignore_ascii_case("null"));
+    match (members.next(), members.next()) {
+        (Some(sole), None) => Some(sole),
+        _ => None,
     }
 }
 
@@ -99,7 +139,7 @@ fn push_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>, missing: &mut Vec<&'s str>) -> 
         let has_default = child_by_field(p, "default_value").is_some();
         let bool_default = child_by_field(p, "default_value")
             .map(|d| trimmed(cx, d))
-            .is_some_and(|d| d == "true" || d == "false");
+            .is_some_and(|d| d.eq_ignore_ascii_case("true") || d.eq_ignore_ascii_case("false"));
         if ty.is_none() {
             missing.push(name);
         }
@@ -151,6 +191,7 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
     let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &["attribute_list"]);
     let tested = in_test_class(cx, n) || is_test_path(cx.path);
     Some(FunctionHead {
+        shadow_params: Vec::new(),
         name,
         name_pos: pos_of(name_node),
         visibility: if kind == "method_declaration" {
@@ -158,7 +199,11 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
         } else {
             Visibility::Exported
         },
-        signature_forced: false,
+        signature_forced: if kind == "method_declaration" {
+            signature_forced(cx, name)
+        } else {
+            false
+        },
         entry_point: false,
         in_test: tested,
         is_overload: false,
@@ -166,6 +211,7 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
         is_decorated: any_named_child(n, |c| c.kind() == "attribute_list"),
         is_trait_item: matches!(cx.innermost_container(), Some(Container::Trait { .. })),
         region: tested.then(|| region_of(n, CodeRole::Test)),
+        receiver: None,
         params,
         return_type: child_by_field(n, "return_type").map(|t| text(cx, t)),
         missing_annotations: missing,

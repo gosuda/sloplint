@@ -4,7 +4,7 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field,
+    CallHead, Container, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, child_by_field,
     first_named_child_matching, last_segment, text,
 };
 use crate::spec::Role;
@@ -22,7 +22,7 @@ mod params;
 use ambient::ambient;
 use arms::wildcard_arm;
 use asserts::assertion;
-use calls::{call_args, callee_root, initializes_binding, is_simple_path, macro_args};
+use calls::{call_args, callee_root, callee_text, initializes_binding, is_simple_path, macro_args};
 use imports::{push_use, use_facts};
 use items::{
     barrel, call_marker, closure_head, container, function_head, handler, module_leading,
@@ -65,6 +65,10 @@ pub(crate) struct RustHooks;
 pub(crate) static HOOKS: RustHooks = RustHooks;
 
 impl LangHooks for RustHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         function_head(cx, n)
     }
@@ -101,7 +105,7 @@ impl LangHooks for RustHooks {
         }
         let func = child_by_field(n, "function")?;
         Some(CallHead {
-            callee: text(cx, func),
+            callee: callee_text(cx, func),
             kind: CallKind::Plain,
             callee_root: callee_root(cx, func),
             is_simple_path: is_simple_path(func),

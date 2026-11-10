@@ -11,10 +11,10 @@ mod pipeline;
 mod project;
 mod roles;
 mod scopes;
-mod settings;
+pub mod settings;
+mod skips;
 mod store;
 mod terminal;
-
 pub use error::RunError;
 pub use store::read_source;
 pub use terminal::{TerminalText, next_control};
@@ -27,6 +27,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
 use serde::Serialize;
+use sloplint_core::baseline::{Baseline, SkippedEntry};
 use sloplint_core::finding::{Confidence, Severity};
 use sloplint_core::rules::{RuleFilter, RuleSet};
 use sloplint_core::{FailOn, Finding, Mode, Strictness};
@@ -49,7 +50,9 @@ pub struct RunOptions {
     pub mode: Option<Mode>,
     pub fail_on: Option<FailOn>,
     pub min_confidence: Option<Confidence>,
+    pub fail_on_skipped: bool,
     pub rule_filter: RuleFilter,
+    pub cache_root: Option<PathBuf>,
     /// The cache lives under the per-user cache home, never the checkout: a repository can ship a forged cache.
     pub use_cache: bool,
     pub jobs: usize,
@@ -76,6 +79,7 @@ pub struct Report {
     pub findings: Vec<Finding>,
     pub rules_fired: BTreeMap<String, String>,
     pub summary: Summary,
+    pub skipped_gate: Vec<SkippedEntry>,
 }
 
 #[derive(Debug, Clone)]
@@ -103,9 +107,23 @@ pub fn implicit_scope(
     root: Option<&Path>,
     config: Option<&Path>,
 ) -> Result<Vec<PathBuf>, RunError> {
+    let explicit = root.is_some();
     let location = project::locate(cwd, root, config);
-    let root =
-        fs::canonicalize(&location.root).map_err(|source| io_error(&location.root, source))?;
+    let root = fs::canonicalize(&location.root).map_err(|source| {
+        if (source.kind() == io::ErrorKind::NotFound
+            || source.kind() == io::ErrorKind::NotADirectory)
+            && (explicit || config.is_some())
+        {
+            RunError::PathNotFound {
+                path: location.root.clone(),
+            }
+        } else {
+            io_error(&location.root, source)
+        }
+    })?;
+    if explicit && !root.is_dir() {
+        return Err(RunError::NotADirectory { path: root });
+    }
     let here = fs::canonicalize(cwd).map_err(|source| io_error(cwd, source))?;
     Ok(if here != root && here.starts_with(&root) {
         vec![cwd.to_path_buf()]
@@ -116,8 +134,21 @@ pub fn implicit_scope(
 
 pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let location = project::locate(&opts.cwd, opts.root.as_deref(), opts.config.as_deref());
-    let root =
-        fs::canonicalize(&location.root).map_err(|source| io_error(&location.root, source))?;
+    let root = fs::canonicalize(&location.root).map_err(|source| {
+        if (source.kind() == io::ErrorKind::NotFound
+            || source.kind() == io::ErrorKind::NotADirectory)
+            && (opts.root.is_some() || opts.config.is_some())
+        {
+            RunError::PathNotFound {
+                path: location.root.clone(),
+            }
+        } else {
+            io_error(&location.root, source)
+        }
+    })?;
+    if opts.root.is_some() && !root.is_dir() {
+        return Err(RunError::NotADirectory { path: root });
+    }
     let loaded = project::load(
         &location,
         Overrides {
@@ -141,7 +172,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let discovery = discover::discover(&root, &config, workers)?;
     let cache = if opts.use_cache {
         cache::open(
-            settings::cache_base(),
+            opts.cache_root.clone(),
             &root,
             &config,
             &loaded.custom_sources,
@@ -162,31 +193,31 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         root: &root,
         roles: &roles,
         cache: &loaded,
+        manifests: &discovery.manifests,
         shadowed: &shadowed,
         active_rules: OnceLock::new(),
     };
-    let (analyzed, skipped_outcomes) = pipeline::run(&discovery.entries, &pipe, &pool, &scopes)?;
-    let skipped = count(
-        discovery
-            .skipped
-            .iter()
-            .filter(|rel| scopes.contains(rel.as_path()))
-            .count(),
-    ) + skipped_outcomes;
+    let (analyzed, pipe_skipped) = pipeline::run(&discovery.entries, &pipe, &pool)?;
+    let skipped_entries = if opts.write_baseline {
+        skips::collect(pipe_skipped, &discovery.skipped, None)
+    } else {
+        skips::collect(pipe_skipped, &discovery.skipped, Some(&scopes))
+    };
+    let skipped = count(skipped_entries.len());
     let files = pipeline::count_in_scope(&analyzed, &scopes);
     if let Some(cache) = &cache {
         pool.install(|| pipeline::store_if_touched(cache, &analyzed, &loaded));
     }
     let mut all = pipeline::merge(&pipe, analyzed, &pool)?;
     all.retain(|finding| scopes.contains(Path::new(&*finding.path)));
-    let (reported, baselined, stale) = if opts.write_baseline {
-        (all, 0, 0)
+    let (reported, baselined, stale, baseline) = if opts.write_baseline {
+        (all, 0, 0, Baseline::empty())
     } else {
         apply_gate(&pipe, &scopes, all)?
     };
     let baseline_written = if opts.write_baseline {
         let path = project::resolve_within_root(&root, &config.project.baseline)?;
-        record_baseline(&path, &reported)?;
+        record_baseline(&path, &reported, &skipped_entries)?;
         Some(config.project.baseline.clone())
     } else {
         None
@@ -207,10 +238,18 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         }
     }
     let minimum = config.project.min_confidence;
+    let gate_on = !opts.write_baseline && (config.project.fail_on_skipped || opts.fail_on_skipped);
+    let skipped_gate: Vec<SkippedEntry> = if !gate_on {
+        Vec::new()
+    } else if pipe.config.project.mode != Mode::Ratchet {
+        skipped_entries.clone()
+    } else {
+        baseline.newly_skipped(&skipped_entries)
+    };
     let failed = !opts.write_baseline
-        && reported.iter().any(|finding| {
+        && (reported.iter().any(|finding| {
             config.project.fail_on.fails(finding.severity) && finding.confidence >= minimum
-        });
+        }) || !skipped_gate.is_empty());
     let summary = Summary {
         strictness: config.project.strictness,
         files,
@@ -229,6 +268,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
             findings: reported,
             rules_fired,
             summary,
+            skipped_gate,
         },
         root,
         baseline_written,
@@ -242,15 +282,17 @@ fn apply_gate(
     pipe: &Pipeline<'_>,
     scopes: &Scopes,
     all: Vec<Finding>,
-) -> Result<(Vec<Finding>, u32, u32), RunError> {
+) -> Result<(Vec<Finding>, u32, u32, Baseline), RunError> {
     if pipe.config.project.mode != Mode::Ratchet {
-        return Ok((all, 0, 0));
+        return Ok((all, 0, 0, Baseline::empty()));
     }
     let mut baseline = load_baseline(pipe.root, &pipe.config.project.baseline)?;
     baseline
         .entries
         .retain(|entry| pipe.rules.selects(&entry.rule));
-    Ok(baseline.filter(all, &|path: &str| scopes.contains(Path::new(path))))
+    let (kept, baselined, stale) =
+        baseline.filter(all, &|path: &str| scopes.contains(Path::new(path)));
+    Ok((kept, baselined, stale, baseline))
 }
 
 const MAX_JOBS: usize = 512;

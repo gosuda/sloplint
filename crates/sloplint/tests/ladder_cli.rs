@@ -45,11 +45,11 @@ fn min_confidence_high_drops_low_confidence_findings_from_the_gate() {
     let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
     let root = tmp.path();
     write(root, "src/widget.ts", "export function widget(): void {}\n");
-    write(root, "sloplint.toml", "");
+    write(root, "src/dummy.test.ts", "export const dummy = 1;\n");
     let (failed_low, count_low) = gate_failed(root, Confidence::Low, "agent/colocated-tests");
     assert!(
         count_low > 0,
-        "colocated-tests must fire without a test file"
+        "colocated-tests must fire with unmatched evidence in the package"
     );
     assert!(failed_low, "low confidence findings must fail with min low");
     let (failed_high, count_high) = gate_failed(root, Confidence::High, "agent/colocated-tests");

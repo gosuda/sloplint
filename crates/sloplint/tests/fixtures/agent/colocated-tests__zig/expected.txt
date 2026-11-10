@@ -1,2 +1,1 @@
-# Positive: public function with no test block in the file.
 src/service.zig:1 info agent/colocated-tests

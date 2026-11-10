@@ -1,4 +1,4 @@
-//! Rust colocated-test lookup: any `tests/` file in the package covers every module.
+//! Rust colocated-test lookup: a test file covers only modules it shares a key with.
 
 use sloplint::{RunOptions, execute};
 use sloplint_core::config::{Mode, Strictness};
@@ -44,7 +44,15 @@ fn with_widget(extra: &[(&str, &str)]) -> Vec<String> {
 
 #[test]
 fn module_without_tests_is_reported() {
-    assert_eq!(with_widget(&[]), ["src/widget.rs"]);
+    assert_eq!(
+        with_widget(&[("tests/unrelated.rs", PRIVATE_ONLY)]),
+        ["src/widget.rs"]
+    );
+}
+
+#[test]
+fn package_without_evidence_stays_silent() {
+    assert_eq!(with_widget(&[]), Vec::<String>::new());
 }
 
 #[test]
@@ -59,16 +67,20 @@ fn tests_dir_file_in_the_package_suppresses() {
 #[test]
 fn any_tests_file_in_the_package_suppresses_regardless_of_stem() {
     let found = with_widget(&[("tests/unrelated.rs", PRIVATE_ONLY)]);
-    assert!(
-        found.is_empty(),
-        "any tests/ file marks the package tested, but the rule reported {found:?}"
+    assert_eq!(
+        found,
+        ["src/widget.rs"],
+        "a different stem shares no key, so widget stays flagged"
     );
 }
 
 #[test]
 fn tests_dir_in_another_package_does_not_suppress() {
     assert_eq!(
-        with_widget(&[("crates/other/tests/widget.rs", PRIVATE_ONLY)]),
+        with_widget(&[
+            ("tests/unrelated.rs", PRIVATE_ONLY),
+            ("crates/other/tests/widget.rs", PRIVATE_ONLY)
+        ]),
         ["src/widget.rs"]
     );
 }
@@ -85,14 +97,15 @@ fn tests_dir_under_src_suppresses() {
 #[test]
 fn one_tests_file_covers_every_module_in_the_package() {
     let files = [
+        ("src/widget.rs", "pub fn widget() {}\n"),
         ("src/a/widget.rs", "pub fn a_widget() {}\n"),
-        ("src/b/widget.rs", "pub fn b_widget() {}\n"),
         ("tests/widget.rs", PRIVATE_ONLY),
     ];
     let found = reported(&files);
-    assert!(
-        found.is_empty(),
-        "one tests/widget.rs must cover every module in the package, but the rule reported {found:?}"
+    assert_eq!(
+        found,
+        ["src/a/widget.rs"],
+        "tests/widget.rs covers the module it shares a key with, the other stays flagged"
     );
 }
 
@@ -111,13 +124,17 @@ fn many_modules_without_tests_are_all_reported() {
         .map(|(rel, contents)| (rel.as_str(), contents.as_str()))
         .collect();
     files.push(("tests/only.rs", PRIVATE_ONLY));
-    assert!(
-        reported(&files).is_empty(),
-        "one tests file must cover all sixty modules in the package"
+    assert_eq!(
+        reported(&files).len(),
+        60,
+        "evidence without shared keys leaves all sixty modules flagged"
     );
     let bare: Vec<(&str, &str)> = modules
         .iter()
         .map(|(rel, contents)| (rel.as_str(), contents.as_str()))
         .collect();
-    assert_eq!(reported(&bare).len(), 60);
+    assert!(
+        reported(&bare).is_empty(),
+        "a package without evidence stays silent"
+    );
 }

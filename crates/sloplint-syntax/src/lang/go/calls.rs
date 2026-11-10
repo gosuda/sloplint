@@ -4,8 +4,8 @@ use sloplint_core::facts::{Arg, ArgShape, AssertShape, Assertion};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, Link, binary_concat, child_by_field, first_named_child, named_children, narrow, pos_of,
-    string_arg_shape, text,
+    Cx, Link, binary_concat, child_by_field, code_children, first_named_child, named_children,
+    narrow, pos_of, string_arg_shape, text,
 };
 const GO_CALLEE: u8 = 11;
 
@@ -15,7 +15,7 @@ pub(crate) fn go_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
             string_arg_shape(cx, n, &["interpreted_string_literal_content"])
         }
         "raw_string_literal" => string_arg_shape(cx, n, &["raw_string_literal_content"]),
-        "composite_literal" => ArgShape::Collection,
+        "composite_literal" => go_collection_shape(n),
         "func_literal" => ArgShape::CodeBody,
         "identifier" => ArgShape::Ident(text(cx, n)),
         _ if binary_concat(
@@ -25,10 +25,68 @@ pub(crate) fn go_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
             &["interpreted_string_literal", "raw_string_literal"],
         ) =>
         {
-            ArgShape::Concat
+            ArgShape::Concat {
+                longest_static: go_concat_static(cx, n),
+            }
         }
         _ => ArgShape::Other,
     }
+}
+
+fn go_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
+    let mut chunks = Vec::new();
+    let mut stack = vec![n];
+    while let Some(m) = stack.pop() {
+        if m.kind() == "binary_expression"
+            && child_by_field(m, "operator").is_some_and(|o| text(cx, o) == "+")
+        {
+            if let Some(right) = child_by_field(m, "right") {
+                stack.push(right);
+            }
+            if let Some(left) = child_by_field(m, "left") {
+                stack.push(left);
+            }
+            continue;
+        }
+        if m.kind() == "interpreted_string_literal" || m.kind() == "raw_string_literal" {
+            let mut cursor = m.walk();
+            for child in m.children(&mut cursor) {
+                if child.kind() == "interpreted_string_literal_content"
+                    || child.kind() == "raw_string_literal_content"
+                {
+                    chunks.push(text(cx, child));
+                }
+            }
+        }
+    }
+    sloplint_core::text::longest_static_chunk(&chunks)
+}
+
+fn go_has_func_literal(root: Node<'_>) -> bool {
+    let mut stack = vec![root];
+    while let Some(n) = stack.pop() {
+        if n.kind() == "func_literal" {
+            return true;
+        }
+        let mut cursor = n.walk();
+        stack.extend(n.children(&mut cursor));
+    }
+    false
+}
+
+fn go_collection_shape<'s>(n: Node<'_>) -> ArgShape<'s> {
+    let body = child_by_field(n, "body");
+    if body.is_some_and(|b| {
+        named_children(b)
+            .iter()
+            .any(|e| e.kind() == "keyed_element")
+    }) {
+        return ArgShape::Other;
+    }
+    if body.is_some_and(go_has_func_literal) {
+        return ArgShape::CodeBody;
+    }
+    ArgShape::Collection
 }
 
 pub(crate) fn go_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
@@ -48,18 +106,9 @@ pub(crate) fn go_is_simple_path(n: Node<'_>) -> bool {
                 let Some(next) = child_by_field(cur, "operand") else {
                     return false;
                 };
-                if !matches!(
-                    next.kind(),
-                    "identifier" | "selector_expression" | "parenthesized_expression"
-                ) {
+                if !matches!(next.kind(), "identifier" | "selector_expression") {
                     return false;
                 }
-                cur = next;
-            }
-            "parenthesized_expression" => {
-                let Some(next) = first_named_child(cur) else {
-                    return false;
-                };
                 cur = next;
             }
             _ => return false,
@@ -73,10 +122,49 @@ pub(crate) fn go_callee_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str
     }
     let root = cx.chain_root(GO_CALLEE, n, |cur| match cur.kind() {
         "selector_expression" => child_by_field(cur, "operand").map_or(Link::Root(cur), Link::Next),
-        "parenthesized_expression" => first_named_child(cur).map_or(Link::Root(cur), Link::Next),
         _ => Link::Root(cur),
     });
     (!root.is_empty()).then_some(root)
+}
+
+pub(crate) fn go_callee<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
+    let mut cur = func;
+    loop {
+        match cur.kind() {
+            "identifier" => return text(cx, cur),
+            "selector_expression" => {
+                if go_receiver_calls(child_by_field(cur, "operand")) {
+                    return child_by_field(cur, "field").map_or("", |f| text(cx, f));
+                }
+                return text(cx, cur);
+            }
+            "parenthesized_expression" => match first_named_child(cur) {
+                Some(next) => cur = next,
+                None => return "",
+            },
+            _ => return "",
+        }
+    }
+}
+
+fn go_receiver_calls(operand: Option<Node<'_>>) -> bool {
+    let Some(mut cur) = operand else {
+        return false;
+    };
+    loop {
+        match cur.kind() {
+            "call_expression" | "index_expression" | "slice_expression" => return true,
+            "parenthesized_expression" => match first_named_child(cur) {
+                Some(next) => cur = next,
+                None => return false,
+            },
+            "selector_expression" => match child_by_field(cur, "operand") {
+                Some(next) => cur = next,
+                None => return false,
+            },
+            _ => return false,
+        }
+    }
 }
 
 fn cx_grandparent<'t>(cx: &Cx<'t, '_>) -> Option<Node<'t>> {
@@ -183,7 +271,7 @@ fn tail_two(callee: &str) -> &str {
 
 pub(crate) fn go_call_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
     child_by_field(n, "arguments").map_or(Vec::new(), |a| {
-        named_children(a)
+        code_children(a)
             .into_iter()
             .map(|c| go_arg(cx, c))
             .collect()
@@ -203,11 +291,13 @@ pub(crate) fn go_assertion(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<Assertion> {
     {
         return None;
     }
-    let args = child_by_field(n, "arguments");
-    let count = args.map_or(0, |a| a.named_child_count());
+    let args = child_by_field(n, "arguments")
+        .map(code_children)
+        .unwrap_or_default();
+    let count = args.len();
     let (shape, literal) = args
-        .and_then(|a| a.named_child(1))
-        .map_or((AssertShape::Other, false), |v| go_assert_shape(cx, v));
+        .get(1)
+        .map_or((AssertShape::Other, false), |v| go_assert_shape(cx, *v));
     Some(Assertion {
         pos: pos_of(n),
         has_message: count >= 3,
@@ -227,7 +317,7 @@ pub(crate) fn go_dynamic(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
     if last != "MethodByName" && last != "FieldByName" {
         return None;
     }
-    let first = child_by_field(n, "arguments").and_then(first_named_child);
+    let first = child_by_field(n, "arguments").and_then(|a| code_children(a).into_iter().next());
     if first.is_some_and(|f| {
         f.kind() == "interpreted_string_literal" || f.kind() == "raw_string_literal"
     }) {

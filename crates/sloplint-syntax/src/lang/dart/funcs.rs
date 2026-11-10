@@ -7,7 +7,7 @@ use crate::hooks::{
     named_children, only_named_child_matching, pos_of, preceding_comments, region_of, text,
 };
 
-use super::syntax::{annotation_name, signature_of};
+use super::syntax::{COMMENTS, annotation_name, has_anon, signature_of};
 
 pub(crate) fn dart_primitive(ty: Option<&str>) -> PrimitiveKind {
     let Some(raw) = ty else {
@@ -22,25 +22,44 @@ pub(crate) fn dart_primitive(ty: Option<&str>) -> PrimitiveKind {
     }
 }
 
-fn param_from<'s>(cx: &Cx<'_, 's>, p: Node<'_>, next: Option<Node<'_>>, out: &mut Vec<Param<'s>>) {
-    let Some(nm) = child_by_field(p, "name") else {
+struct ParamCell<'n> {
+    node: Node<'n>,
+    default: Option<Node<'n>>,
+    named: bool,
+}
+
+fn param_from<'s>(cx: &Cx<'_, 's>, cell: ParamCell<'_>, out: &mut Vec<Param<'s>>) {
+    let Some(nm) = child_by_field(cell.node, "name") else {
         return;
     };
-    let ty = first_named_child_matching(p, &["type"]).map(|t| text(cx, t));
+    let ty = first_named_child_matching(cell.node, &["type"]).map(|t| text(cx, t));
+    let has_default = cell.default.is_some_and(|nx| {
+        !matches!(
+            nx.kind(),
+            "formal_parameter"
+                | "optional_formal_parameters"
+                | "annotation"
+                | "comment"
+                | "block_comment"
+                | "documentation_block_comment"
+        )
+    });
     out.push(Param {
         name: text(cx, nm),
         ty,
         primitive_kind: dart_primitive(ty),
-        has_default: false,
-        bool_default: next.is_some_and(|nx| nx.kind() == "true" || nx.kind() == "false"),
-        keyword_only: false,
+        has_default,
+        bool_default: cell
+            .default
+            .is_some_and(|nx| nx.kind() == "true" || nx.kind() == "false"),
+        keyword_only: cell.named,
         is_variadic: false,
     });
 }
 
 fn params_from_list<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>>) {
-    let mut frames: Vec<(Node<'_>, u32)> = vec![(list, 0)];
-    while let Some(&(parent, index)) = frames.last() {
+    let mut frames: Vec<(Node<'_>, u32, bool)> = vec![(list, 0, false)];
+    while let Some((parent, index, named)) = frames.last().copied() {
         let Some(kid) = parent.named_child(index) else {
             frames.pop();
             continue;
@@ -49,9 +68,24 @@ fn params_from_list<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>
             frame.1 = index.saturating_add(1);
         }
         if kid.kind() == "formal_parameter" {
-            param_from(cx, kid, parent.named_child(index.saturating_add(1)), out);
+            let mut following = index.saturating_add(1);
+            while parent
+                .named_child(following)
+                .is_some_and(|nx| COMMENTS.contains(&nx.kind()))
+            {
+                following = following.saturating_add(1);
+            }
+            param_from(
+                cx,
+                ParamCell {
+                    node: kid,
+                    default: parent.named_child(following),
+                    named,
+                },
+                out,
+            );
         } else if kid.kind() == "optional_formal_parameters" {
-            frames.push((kid, 0));
+            frames.push((kid, 0, has_anon(kid, "{")));
         }
     }
 }
@@ -197,6 +231,7 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
         &[],
     );
     Some(FunctionHead {
+        shadow_params: params.iter().map(|param| param.name).collect(),
         name,
         name_pos: pos_of(name_node),
         visibility: visibility_of(cx, name),
@@ -208,6 +243,7 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
         is_decorated: false,
         is_trait_item: false,
         region: main_test_region(cx, n, body),
+        receiver: None,
         params,
         return_type,
         missing_annotations: missing,
@@ -229,4 +265,11 @@ pub(crate) fn is_else_if(n: Node<'_>, parent: Option<Node<'_>>) -> bool {
     }
     p.child_by_field_name("alternative")
         .is_some_and(|a| a.id() == n.id())
+}
+
+pub(crate) fn closure_shadow_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    if n.kind() != "function_expression" {
+        return;
+    }
+    out.extend(collect_params(cx, n).into_iter().map(|param| param.name));
 }

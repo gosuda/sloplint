@@ -6,8 +6,8 @@ use tree_sitter::Node;
 
 use super::first_code;
 use crate::hooks::{
-    CallHead, Cx, binary_concat, child_by_field, code_children, narrow, only_named_child_matching,
-    sole_call_id, string_arg_shape, text,
+    CallHead, Cx, child_by_field, code_children, narrow, only_named_child_matching, sole_call_id,
+    spine_has_call, string_arg_shape, text,
 };
 
 fn span_arg<'s>(n: Node<'_>, shape: ArgShape<'s>) -> Arg<'s> {
@@ -104,7 +104,7 @@ fn root_of_callee(n: Node<'_>) -> Option<Node<'_>> {
     loop {
         current = match current.kind() {
             "identifier" | "this" | "super" => return Some(current),
-            "member_expression" | "subscript_expression" => child_by_field(current, "object")?,
+            "member_expression" => child_by_field(current, "object")?,
             "parenthesized_expression" => first_code(current)?,
             _ => return None,
         };
@@ -131,12 +131,7 @@ pub(crate) fn simple_path(n: Node<'_>) -> bool {
                 };
                 current = object;
             }
-            "parenthesized_expression" => {
-                let Some(inner) = first_code(current) else {
-                    return false;
-                };
-                current = inner;
-            }
+            "parenthesized_expression" => return false,
             _ => return false,
         }
     }
@@ -153,13 +148,104 @@ pub(crate) fn initializes_binding(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
         && child_by_field(parent, "name").is_some_and(|name| name.kind() == "identifier")
 }
 
+pub(crate) fn collapsed_callee<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
+    if func.kind() != "member_expression" {
+        return None;
+    }
+    let property = child_by_field(func, "property")?;
+    if !matches!(
+        property.kind(),
+        "identifier" | "property_identifier" | "private_property_identifier"
+    ) {
+        return None;
+    }
+    spine_has_call(func, "object", &["parenthesized_expression"]).then_some(text(cx, property))
+}
+
+fn callee_text<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
+    collapsed_callee(cx, func).unwrap_or_else(|| text(cx, func))
+}
+
+fn plus_operands<'n>(cx: &Cx<'_, '_>, n: Node<'n>) -> Option<(Node<'n>, Node<'n>)> {
+    if n.kind() != "binary_expression" || n.child_count() != 3 {
+        return None;
+    }
+    let (Some(left), Some(op), Some(right)) = (n.child(0), n.child(1), n.child(2)) else {
+        return None;
+    };
+    (text(cx, op) == "+").then_some((left, right))
+}
+
+fn concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<u32> {
+    plus_operands(cx, n)?;
+    let mut longest = 0;
+    let mut found = false;
+    let mut chain = vec![n];
+    while let Some(node) = chain.pop() {
+        let mut current = node;
+        while current.kind() == "parenthesized_expression" {
+            let Some(inner) = first_code(current) else {
+                break;
+            };
+            current = inner;
+        }
+        if let Some((left, right)) = plus_operands(cx, current) {
+            chain.push(left);
+            chain.push(right);
+        } else if matches!(current.kind(), "string" | "template_string") {
+            found = true;
+            if let ArgShape::Str { longest_static } =
+                string_arg_shape(cx, current, &["string_fragment"])
+            {
+                longest = longest.max(longest_static);
+            }
+        }
+    }
+    found.then_some(longest)
+}
+
+fn template_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
+    let longest_static = match string_arg_shape(cx, n, &["string_fragment"]) {
+        ArgShape::Str { longest_static } => longest_static,
+        _ => 0,
+    };
+    if code_children(n)
+        .iter()
+        .any(|child| child.kind() == "template_substitution")
+    {
+        ArgShape::Concat { longest_static }
+    } else {
+        ArgShape::Str { longest_static }
+    }
+}
+
+fn array_shape<'s>(n: Node<'_>) -> ArgShape<'s> {
+    if code_children(n).iter().any(|child| {
+        matches!(
+            child.kind(),
+            "arrow_function"
+                | "function_expression"
+                | "generator_function"
+                | "function"
+                | "statement_block"
+        )
+    }) {
+        ArgShape::CodeBody
+    } else {
+        ArgShape::Collection
+    }
+}
+
 fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     match n.kind() {
-        "string" | "template_string" => string_arg_shape(cx, n, &["string_fragment"]),
-        "binary_expression" if binary_concat(cx, n, "+", &["string", "template_string"]) => {
-            ArgShape::Concat
-        }
-        "array" | "object" => ArgShape::Collection,
+        "string" => string_arg_shape(cx, n, &["string_fragment"]),
+        "template_string" => template_shape(cx, n),
+        "binary_expression" => match concat_static(cx, n) {
+            Some(longest_static) => ArgShape::Concat { longest_static },
+            None => ArgShape::Other,
+        },
+        "array" => array_shape(n),
+        "object" => ArgShape::Other,
         "arrow_function" | "function_expression" | "generator_function" | "function" => {
             ArgShape::CodeBody
         }
@@ -182,7 +268,7 @@ fn plain_call<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     let function = child_by_field(n, "function")?;
     let args = child_by_field(n, "arguments").map_or_else(Vec::new, |a| call_args(cx, a));
     Some(CallHead {
-        callee: text(cx, function),
+        callee: callee_text(cx, function),
         kind: CallKind::Plain,
         callee_root: root_of_callee(function).map(|root| text(cx, root)),
         is_simple_path: simple_path(function),
@@ -195,9 +281,9 @@ fn new_call<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     let constructor = child_by_field(n, "constructor")?;
     let args = child_by_field(n, "arguments").map_or_else(Vec::new, |a| call_args(cx, a));
     Some(CallHead {
-        callee: text(cx, constructor),
+        callee: callee_text(cx, constructor),
         kind: CallKind::New,
-        callee_root: None,
+        callee_root: root_of_callee(constructor).map(|root| text(cx, root)),
         is_simple_path: simple_path(constructor),
         initializes_binding: initializes_binding(cx, n),
         args,

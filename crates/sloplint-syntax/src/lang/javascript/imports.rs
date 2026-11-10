@@ -120,8 +120,11 @@ fn named_specifier_fact<'s>(
     let Some(name) = child_by_field(spec, "name") else {
         return;
     };
-    let alias = child_by_field(spec, "alias").map(|alias| text(cx, alias));
-    out.push(site.fact(text(cx, name), alias, ImportKind::Named));
+    let name_text = text(cx, name);
+    let alias = child_by_field(spec, "alias")
+        .map(|alias| text(cx, alias))
+        .filter(|found| found != &name_text);
+    out.push(site.fact(name_text, alias, ImportKind::Named));
 }
 
 fn named_import_facts<'s>(
@@ -198,7 +201,86 @@ pub(crate) fn import_facts<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Impor
     match n.kind() {
         "import_statement" => push_imports(cx, n, out),
         "export_statement" => push_reexports(cx, n, out),
+        "call_expression" => push_require(cx, n, out),
         _ => {}
+    }
+}
+
+fn push_require<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
+    if !child_by_field(n, "function")
+        .is_some_and(|function| function.kind() == "identifier" && text(cx, function) == "require")
+    {
+        return;
+    }
+    let Some(args) = child_by_field(n, "arguments") else {
+        return;
+    };
+    let Some(first) = code_children(args).into_iter().next() else {
+        return;
+    };
+    if first.kind() != "string" {
+        return;
+    }
+    let module = strip_quotes(text(cx, first));
+    if module.is_empty() {
+        return;
+    }
+    let site = ImportSite::imported(cx, n, module);
+    let bound = cx
+        .parent()
+        .filter(|parent| parent.kind() == "variable_declarator")
+        .and_then(|parent| child_by_field(parent, "name"));
+    match bound {
+        Some(name) if name.kind() == "identifier" => {
+            out.push(site.fact(text(cx, name), None, ImportKind::Namespace));
+        }
+        Some(pattern) if pattern.kind() == "object_pattern" => {
+            push_require_pattern_names(cx, pattern, &site, out);
+        }
+        _ => out.push(site.fact("", None, ImportKind::SideEffect)),
+    }
+}
+
+fn destructured_bound(value: Node<'_>) -> Option<Node<'_>> {
+    match value.kind() {
+        "identifier" => Some(value),
+        "assignment_pattern" => {
+            child_by_field(value, "left").filter(|left| left.kind() == "identifier")
+        }
+        _ => None,
+    }
+}
+
+fn push_require_pattern_names<'s>(
+    cx: &Cx<'_, 's>,
+    pattern: Node<'_>,
+    site: &ImportSite<'s>,
+    out: &mut Vec<Import<'s>>,
+) {
+    for child in code_children(pattern) {
+        match child.kind() {
+            "shorthand_property_identifier_pattern" => {
+                out.push(site.fact(text(cx, child), None, ImportKind::Named));
+            }
+            "pair_pattern" => {
+                let key =
+                    child_by_field(child, "key").filter(|key| key.kind() == "property_identifier");
+                let bound = child_by_field(child, "value").and_then(destructured_bound);
+                if let (Some(key), Some(bound)) = (key, bound) {
+                    let name = text(cx, key);
+                    let alias = text(cx, bound);
+                    out.push(site.fact(name, (alias != name).then_some(alias), ImportKind::Named));
+                }
+            }
+            "object_assignment_pattern" => {
+                let left = child_by_field(child, "left")
+                    .filter(|left| left.kind() == "shorthand_property_identifier_pattern");
+                if let Some(left) = left {
+                    out.push(site.fact(text(cx, left), None, ImportKind::Named));
+                }
+            }
+            _ => {}
+        }
     }
 }
 
@@ -212,8 +294,88 @@ fn push_imports<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
         .filter(|child| child.kind() == "import_clause")
         .collect();
 
-    for clause in clauses {
-        named_import_facts(cx, clause, &site, out);
+    for clause in &clauses {
+        named_import_facts(cx, *clause, &site, out);
+    }
+
+    if clauses.is_empty() {
+        out.push(site.fact("", None, ImportKind::SideEffect));
+    }
+}
+
+pub(crate) fn exported_names_of<'s>(root: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+    for statement in code_children(root) {
+        if statement.kind() == "export_statement" && import_module(cx, statement).is_none() {
+            local_export_names(cx, statement, out);
+        } else if statement.kind() == "expression_statement" {
+            commonjs_export_names(cx, statement, out);
+        }
+    }
+}
+
+fn is_module_exports(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    n.kind() == "member_expression"
+        && child_by_field(n, "object")
+            .is_some_and(|object| object.kind() == "identifier" && text(cx, object) == "module")
+        && child_by_field(n, "property").is_some_and(|property| text(cx, property) == "exports")
+}
+
+fn push_module_keys<'s>(cx: &Cx<'_, 's>, right: Node<'_>, out: &mut Vec<&'s str>) {
+    match right.kind() {
+        "object" => {
+            for child in code_children(right) {
+                match child.kind() {
+                    "shorthand_property_identifier" => out.push(text(cx, child)),
+                    "pair" => {
+                        let key = child_by_field(child, "key")
+                            .filter(|key| key.kind() == "property_identifier");
+                        if let Some(key) = key {
+                            out.push(text(cx, key));
+                        }
+                    }
+                    "method_definition" => {
+                        let name = child_by_field(child, "name")
+                            .filter(|name| name.kind() == "property_identifier");
+                        if let Some(name) = name {
+                            out.push(text(cx, name));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        "identifier" => out.push(text(cx, right)),
+        _ => {}
+    }
+}
+
+fn commonjs_export_names<'s>(cx: &Cx<'_, 's>, statement: Node<'_>, out: &mut Vec<&'s str>) {
+    let Some(assignment) = code_children(statement).into_iter().next() else {
+        return;
+    };
+    if assignment.kind() != "assignment_expression" {
+        return;
+    }
+    let (Some(left), Some(right)) = (
+        child_by_field(assignment, "left"),
+        child_by_field(assignment, "right"),
+    ) else {
+        return;
+    };
+    if is_module_exports(cx, left) {
+        push_module_keys(cx, right, out);
+        return;
+    }
+    if left.kind() == "member_expression" {
+        let target = child_by_field(left, "object").is_some_and(|object| {
+            object.kind() == "identifier" && text(cx, object) == "exports"
+                || is_module_exports(cx, object)
+        });
+        let property = child_by_field(left, "property")
+            .filter(|property| property.kind() == "property_identifier");
+        if let Some(property) = property.filter(|_| target) {
+            out.push(text(cx, property));
+        }
     }
 }
 
@@ -235,14 +397,6 @@ pub(crate) fn local_export_names<'s>(cx: &Cx<'_, 's>, statement: Node<'_>, out: 
                 }
             }
             _ => {}
-        }
-    }
-}
-
-pub(crate) fn exported_names_of<'s>(root: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
-    for statement in code_children(root) {
-        if statement.kind() == "export_statement" && import_module(cx, statement).is_none() {
-            local_export_names(cx, statement, out);
         }
     }
 }

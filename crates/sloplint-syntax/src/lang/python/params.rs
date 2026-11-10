@@ -66,13 +66,6 @@ fn is_dunder(name: &str) -> bool {
     name.len() > 4 && name.starts_with("__") && name.ends_with("__")
 }
 
-fn in_test_class(cx: &Cx<'_, '_>) -> bool {
-    let Some(class) = enclosing_class(cx) else {
-        return false;
-    };
-    child_by_field(class, "name").is_some_and(|v| text(cx, v).starts_with("Test"))
-}
-
 pub(crate) fn function_flags(
     cx: &Cx<'_, '_>,
     n: Node<'_>,
@@ -82,13 +75,14 @@ pub(crate) fn function_flags(
     let dunder = is_dunder(name);
     let exported_here = cx.nearest_class_exported().unwrap_or(true);
     let visible = !place.local
-        && (dunder || (!name.starts_with('_') && (!place.class_member || exported_here)));
+        && (!name.starts_with('_') || dunder)
+        && (!place.class_member || exported_here);
     let visibility = if visible {
         Visibility::Exported
     } else {
         Visibility::Private
     };
-    let test_marked = is_test_path(cx.path) && (name.starts_with("test") || in_test_class(cx));
+    let test_marked = is_test_path(cx.path);
     FunctionFlags {
         visibility,
         signature_forced: dunder,
@@ -240,10 +234,19 @@ pub(crate) fn push_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Par
             continue;
         }
         push_one(cx, child, keyword_only, out);
-        if child.kind() == "list_splat_pattern" {
+        if child.kind() == "list_splat_pattern" || wraps_splat(child) {
             keyword_only = true;
         }
     }
+}
+
+fn wraps_splat(child: Node<'_>) -> bool {
+    if child.kind() != "typed_parameter" {
+        return false;
+    }
+    named_children(child)
+        .iter()
+        .any(|c| c.kind() == "list_splat_pattern" || c.kind() == "dictionary_splat_pattern")
 }
 
 fn push_one<'s>(cx: &Cx<'_, 's>, n: Node<'_>, keyword_only: bool, out: &mut Vec<Param<'s>>) {

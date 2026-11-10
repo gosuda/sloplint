@@ -1,0 +1,1 @@
+# Near-miss: 3 one-to-one fields, below min_fields=4 at strict.

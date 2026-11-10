@@ -102,3 +102,17 @@ fn closure_parameters_read_the_same_types() {
         ]
     );
 }
+
+#[test]
+fn qualified_primitive_paths_classify() {
+    let source = "fn f(a: std::primitive::bool, b: std::string::String, c: bool) {}\n";
+    assert_eq!(
+        kinds(source),
+        vec![
+            ("a".to_string(), PrimitiveKind::Bool),
+            ("b".to_string(), PrimitiveKind::Str),
+            ("c".to_string(), PrimitiveKind::Bool),
+        ],
+        "path-qualified spellings read as their bare primitive"
+    );
+}

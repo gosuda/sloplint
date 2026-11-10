@@ -247,6 +247,7 @@ mod tests {
             abstractions: Vec::new(),
             impls: Vec::new(),
             barrel: None,
+            imports: Vec::new(),
         }
     }
 

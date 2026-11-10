@@ -4,7 +4,7 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     Cx, FunctionHead, any_named_child, attributed_region, child_by_field,
-    first_named_child_matching, first_of_kind, named_children, only_named_child_matching, pos_of,
+    first_named_child_matching, first_of_kind, only_named_child_matching, pos_of,
     preceding_comments, slice, trimmed,
 };
 
@@ -100,40 +100,59 @@ fn unwrap_statement(node: Node<'_>) -> Option<Node<'_>> {
 }
 
 fn param_type<'s>(cx: &Cx<'_, 's>, parameter: Node<'_>) -> Option<&'s str> {
-    (0..parameter.child_count())
-        .filter(|&i| parameter.field_name_for_child(i) == Some("name"))
-        .filter_map(|i| parameter.child(i))
-        .find(|c| c.kind() != "simple_identifier")
-        .map(|ty| trimmed(cx, ty))
+    child_by_field(parameter, "type").map(|ty| trimmed(cx, ty))
 }
 
-fn default_is_bool(cx: &Cx<'_, '_>, func: Node<'_>, after: usize, before: usize) -> bool {
-    (0..func.child_count())
-        .filter(|&index| func.field_name_for_child(index) == Some("default_value"))
-        .filter_map(|index| func.child(index))
-        .find(|child| child.start_byte() >= after && child.start_byte() < before)
-        .is_some_and(|value| matches!(trimmed(cx, value), "true" | "false"))
+fn default_in<'a>(
+    defaults: &[Node<'a>],
+    cursor: &mut usize,
+    after: usize,
+    before: usize,
+) -> Option<Node<'a>> {
+    while *cursor < defaults.len() && defaults[*cursor].start_byte() < after {
+        *cursor += 1;
+    }
+    let found = defaults
+        .get(*cursor)
+        .filter(|value| value.start_byte() < before)
+        .copied();
+    if found.is_some() {
+        *cursor += 1;
+    }
+    found
 }
 
 fn params<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Vec<Param<'s>> {
-    let parameters: Vec<Node<'_>> = named_children(func)
-        .into_iter()
-        .filter(|c| c.kind() == "parameter")
-        .collect();
+    let count = func.child_count();
+    let mut parameters: Vec<Node<'_>> = Vec::new();
+    let mut defaults: Vec<Node<'_>> = Vec::new();
+    for index in 0..count {
+        let Some(child) = func.child(index) else {
+            continue;
+        };
+        if child.kind() == "parameter" {
+            parameters.push(child);
+        } else if func.field_name_for_child(index) == Some("default_value") {
+            defaults.push(child);
+        }
+    }
+    let mut cursor = 0;
     parameters
         .iter()
         .enumerate()
-        .map(|(index, parameter)| {
+        .map(|(position, parameter)| {
             let next = parameters
-                .get(index + 1)
+                .get(position + 1)
                 .map_or(usize::MAX, |p| p.start_byte());
+            let default_value = default_in(&defaults, &mut cursor, parameter.end_byte(), next);
             let ty = param_type(cx, *parameter);
             Param {
                 name: child_by_field(*parameter, "name").map_or("", |name| trimmed(cx, name)),
                 ty,
                 primitive_kind: swift_primitive(ty),
-                has_default: false,
-                bool_default: default_is_bool(cx, func, parameter.end_byte(), next),
+                has_default: default_value.is_some(),
+                bool_default: default_value
+                    .is_some_and(|value| matches!(trimmed(cx, value), "true" | "false")),
                 keyword_only: false,
                 is_variadic: false,
             }
@@ -179,9 +198,37 @@ pub(crate) fn is_else_if(_n: Node<'_>, parent: Option<Node<'_>>) -> bool {
     parent.is_some_and(|p| p.kind() == "if_statement")
 }
 
+fn has_main_attribute(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    any_named_child(n, |c| {
+        c.kind() == "modifiers"
+            && any_named_child(c, |a| {
+                a.kind() == "attribute"
+                    && any_named_child(a, |u| u.kind() == "user_type" && trimmed(cx, u) == "main")
+            })
+    })
+}
+
+fn is_main_entry(cx: &Cx<'_, '_>, name: &str) -> bool {
+    name == "main"
+        && cx
+            .ancestors()
+            .find(|a| a.kind() == "class_declaration")
+            .is_some_and(|a| has_main_attribute(cx, a))
+}
+
 pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     let body = child_by_field(n, "body")?;
-    let name_node = child_by_field(n, "name")?;
+    let is_init = n.kind() == "init_declaration";
+    let name_node = child_by_field(n, "name");
+    let (name, name_pos) = if is_init {
+        match name_node {
+            Some(node) => (trimmed(cx, node), pos_of(node)),
+            None => ("init", pos_of(n)),
+        }
+    } else {
+        let node = name_node?;
+        (trimmed(cx, node), pos_of(node))
+    };
     let class = cx.ancestors().find(|a| a.kind() == "class_declaration");
     let xctest = class.is_some_and(|c| {
         any_named_child(c, |s| {
@@ -191,11 +238,12 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
     let tested = xctest || swift_test_attribute(cx, n);
     let (doc, doc_pos) = preceding_comments(cx, n, COMMENT_KINDS, &[]);
     Some(FunctionHead {
-        name: trimmed(cx, name_node),
-        name_pos: pos_of(name_node),
+        shadow_params: Vec::new(),
+        name,
+        name_pos,
         visibility: visibility_of(cx, n),
         signature_forced: is_override(cx, n),
-        entry_point: false,
+        entry_point: is_main_entry(cx, name),
         in_test: false,
         is_overload: false,
         is_deprecated: false,
@@ -203,6 +251,7 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
         is_trait_item: false,
         region: tested
             .then(|| attributed_region(n, first_of_kind(n, &["modifiers"]), CodeRole::Test)),
+        receiver: None,
         params: params(cx, n),
         return_type: return_type(cx, n),
         missing_annotations: Vec::new(),

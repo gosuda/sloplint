@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, PoisonError};
@@ -5,6 +6,7 @@ use std::sync::{Mutex, PoisonError};
 use globset::GlobSet;
 use ignore::{DirEntry, ParallelVisitor, ParallelVisitorBuilder, WalkBuilder, WalkState};
 use sloplint_core::Config;
+use sloplint_core::facts::ManifestKind;
 use sloplint_core::lang::Lang;
 use sloplint_core::text::normalize_rel_path;
 
@@ -20,7 +22,8 @@ pub struct Entry {
 pub struct Discovery {
     /// Lintable files in ascending `rel` order; consumers binary-search by `rel`.
     pub entries: Vec<Entry>,
-    pub skipped: Vec<PathBuf>,
+    pub skipped: Vec<(PathBuf, &'static str)>,
+    pub manifests: BTreeSet<(ManifestKind, String)>,
 }
 
 pub fn discover(root: &Path, config: &Config, threads: usize) -> Result<Discovery, RunError> {
@@ -45,6 +48,7 @@ pub fn discover(root: &Path, config: &Config, threads: usize) -> Result<Discover
     let Found {
         mut entries,
         mut skipped,
+        manifests,
         errors,
     } = shared.into_inner().unwrap_or_else(PoisonError::into_inner);
     // The least walk-error message keeps the failure deterministic across thread counts.
@@ -56,13 +60,18 @@ pub fn discover(root: &Path, config: &Config, threads: usize) -> Result<Discover
     }
     entries.sort_by(|a, b| a.rel.cmp(&b.rel));
     skipped.sort();
-    Ok(Discovery { entries, skipped })
+    Ok(Discovery {
+        entries,
+        skipped,
+        manifests,
+    })
 }
 
 #[derive(Default)]
 struct Found {
     entries: Vec<Entry>,
-    skipped: Vec<PathBuf>,
+    skipped: Vec<(PathBuf, &'static str)>,
+    manifests: BTreeSet<(ManifestKind, String)>,
     errors: Vec<String>,
 }
 
@@ -70,6 +79,7 @@ impl Found {
     fn absorb(&mut self, other: &mut Found) {
         self.entries.append(&mut other.entries);
         self.skipped.append(&mut other.skipped);
+        self.manifests.append(&mut other.manifests);
         self.errors.append(&mut other.errors);
     }
 
@@ -83,6 +93,11 @@ impl Found {
         let Ok(relative) = entry.path().strip_prefix(root) else {
             return;
         };
+        if kind.is_file()
+            && let Some((mkind, dir)) = manifest_dir(relative)
+        {
+            self.manifests.insert((mkind, dir));
+        }
         let decision = if kind.is_file() {
             decide_file_name(relative, config)
         } else {
@@ -94,15 +109,43 @@ impl Found {
                 abs: entry.path().to_path_buf(),
                 lang,
             }),
-            NameDecision::Skipped => self.skipped.push(relative.to_path_buf()),
+            NameDecision::Skipped(reason) => {
+                let reason = if kind.is_symlink() {
+                    "symlink"
+                } else if kind.is_file() {
+                    reason
+                } else {
+                    "non-regular"
+                };
+                self.skipped.push((relative.to_path_buf(), reason));
+            }
             NameDecision::Ignored => {}
         }
     }
 }
 
+const MANIFESTS: &[(&str, ManifestKind)] = &[
+    ("package.json", ManifestKind::JavaScript),
+    ("pyproject.toml", ManifestKind::Python),
+    ("setup.py", ManifestKind::Python),
+];
+
+fn manifest_dir(relative: &Path) -> Option<(ManifestKind, String)> {
+    let name = relative.file_name()?.to_str()?;
+    let kind = MANIFESTS
+        .iter()
+        .find(|(known, _)| *known == name)
+        .map(|(_, kind)| *kind)?;
+    let rel = normalize_rel_path(relative)?;
+    match rel.rfind('/') {
+        Some(i) => Some((kind, rel[..i].to_string())),
+        None => Some((kind, String::new())),
+    }
+}
+
 pub(crate) enum NameDecision {
     Analyze { rel: String, lang: Lang },
-    Skipped,
+    Skipped(&'static str),
     Ignored,
 }
 
@@ -119,12 +162,12 @@ fn decide_name(relative: &Path, is_file: bool, config: &Config) -> NameDecision 
     match normalize_rel_path(relative) {
         Some(rel) => match enabled_lang(&rel, config) {
             Some(lang) if is_file => NameDecision::Analyze { rel, lang },
-            Some(_) => NameDecision::Skipped,
+            Some(_) => NameDecision::Skipped("non-regular"),
             None => NameDecision::Ignored,
         },
         None => {
             if enabled_lang(&lossy_rel(relative), config).is_some() {
-                NameDecision::Skipped
+                NameDecision::Skipped("non-utf8-name")
             } else {
                 NameDecision::Ignored
             }
@@ -209,7 +252,7 @@ pub fn walk_error(root: &Path, error: ignore::Error) -> RunError {
 fn is_pruned(base: &Path, path: &Path, prune: &GlobSet) -> bool {
     path.strip_prefix(base)
         .ok()
-        .and_then(normalize_rel_path)
+        .map(|relative| normalize_rel_path(relative).unwrap_or_else(|| lossy_rel(relative)))
         .is_some_and(|rel| prune.is_match(rel.as_str()))
 }
 
@@ -247,7 +290,10 @@ mod tests {
             use std::os::unix::ffi::OsStrExt;
             let bad = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
             assert!(
-                matches!(decide_file_name(bad, &config), NameDecision::Skipped),
+                matches!(
+                    decide_file_name(bad, &config),
+                    NameDecision::Skipped("non-utf8-name")
+                ),
                 "the invalid-byte name is a counted skip"
             );
         }
@@ -277,7 +323,10 @@ mod tests {
             "the valid name analyzes"
         );
         assert!(
-            matches!(decide_non_file_name(link, &config), NameDecision::Skipped),
+            matches!(
+                decide_non_file_name(link, &config),
+                NameDecision::Skipped("non-regular")
+            ),
             "the link is a counted skip"
         );
         #[cfg(unix)]
@@ -285,7 +334,10 @@ mod tests {
             use std::os::unix::ffi::OsStrExt;
             let invalid = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
             assert!(
-                matches!(decide_file_name(invalid, &config), NameDecision::Skipped),
+                matches!(
+                    decide_file_name(invalid, &config),
+                    NameDecision::Skipped("non-utf8-name")
+                ),
                 "the invalid-byte name is a counted skip"
             );
         }
@@ -297,7 +349,10 @@ mod tests {
         let pipe = Path::new("parent/scope\u{FFFD}/pipe.rs");
         let child = Path::new("parent/scope\u{FFFD}/b.rs");
         assert!(
-            matches!(decide_non_file_name(pipe, &config), NameDecision::Skipped),
+            matches!(
+                decide_non_file_name(pipe, &config),
+                NameDecision::Skipped("non-regular")
+            ),
             "the FIFO is a counted skip"
         );
         assert!(
@@ -314,7 +369,7 @@ mod tests {
             assert!(
                 matches!(
                     decide_file_name(invalid_child, &config),
-                    NameDecision::Skipped
+                    NameDecision::Skipped("non-utf8-name")
                 ),
                 "the invalid-byte child is a counted skip"
             );
@@ -335,7 +390,10 @@ mod tests {
             use std::os::unix::ffi::OsStrExt;
             let bad = Path::new(std::ffi::OsStr::from_bytes(b"src/bad\xff.rs"));
             assert!(
-                matches!(decide_file_name(bad, &config), NameDecision::Skipped),
+                matches!(
+                    decide_file_name(bad, &config),
+                    NameDecision::Skipped("non-utf8-name")
+                ),
                 "invalid-byte name is a counted skip"
             );
         }

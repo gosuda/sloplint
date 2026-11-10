@@ -15,17 +15,17 @@ mod planted_links;
 /// One generic-name finding, with a message that holds `GENERIC_TEXT` exactly once.
 const SAMPLE: &str = "pub fn handle(flag: bool, other: bool) {}\n";
 
-const GENERIC_TEXT: &str = "shared by unrelated code";
+pub(super) const GENERIC_TEXT: &str = "shared by unrelated code";
 
 /// Temp dirs standing in for the user's cache and home directories.
-struct CacheHome {
+pub(super) struct CacheHome {
     /// Keeps the directories alive for the test's lifetime.
     _tmp: tempfile::TempDir,
     base: PathBuf,
 }
 
 impl CacheHome {
-    fn new() -> CacheHome {
+    pub(super) fn new() -> CacheHome {
         let (tmp, base) = tempdir();
         for name in ["xdg", "home", "local"] {
             mkdir(&base.join(name));
@@ -34,7 +34,7 @@ impl CacheHome {
     }
 
     /// Points the child's per-user cache and home directories at this test's temp dirs.
-    fn isolate<'c>(&self, command: &'c mut Command) -> &'c mut Command {
+    pub(super) fn isolate<'c>(&self, command: &'c mut Command) -> &'c mut Command {
         command
             .env("XDG_CACHE_HOME", self.base.join("xdg"))
             .env("HOME", self.base.join("home"))
@@ -58,7 +58,7 @@ impl CacheHome {
     }
 
     /// Runs `sloplint check` in `root` and returns stdout; a stderr warning fails the test.
-    fn check(&self, root: &Path, extra: &[&str]) -> String {
+    pub(super) fn check(&self, root: &Path, extra: &[&str]) -> String {
         let out = self.output(root, extra);
         let stderr = String::from_utf8_lossy(&out.stderr);
         assert!(
@@ -70,7 +70,7 @@ impl CacheHome {
     }
 
     /// Every stored cache file, `<xdg>/sloplint/<key>/cache-v2/shard-<NN>.bin`.
-    fn cache_files(&self) -> Vec<PathBuf> {
+    pub(super) fn cache_files(&self) -> Vec<PathBuf> {
         let namespace = self.base.join("xdg").join("sloplint");
         let Ok(keys) = std::fs::read_dir(&namespace) else {
             return Vec::new();
@@ -170,7 +170,7 @@ fn plant(file: &Path, from: &str, to: &str) {
 }
 
 /// A project holding [`SAMPLE`] and an empty configuration.
-fn sample_project() -> (tempfile::TempDir, PathBuf) {
+pub(super) fn sample_project() -> (tempfile::TempDir, PathBuf) {
     let (tmp, root) = tempdir();
     write(&root, "sloplint.toml", "");
     write(&root, "sample.rs", SAMPLE);
@@ -278,42 +278,6 @@ fn a_flipped_byte_inside_a_decodable_shard_is_not_served() {
         warm.stderr.is_empty(),
         "the reanalysis must stay silent on stderr: {}",
         String::from_utf8_lossy(&warm.stderr)
-    );
-}
-
-/// A cache populated by a `--rule` run must not hide rules from the next unfiltered run.
-#[test]
-fn audit_filter_cache_stays_unfiltered() {
-    let (_tmp, root) = tempdir();
-    write(&root, "sloplint.toml", "");
-    write(
-        &root,
-        "sample.rs",
-        "/// Handle.\npub fn handle(flag: bool) {}\n",
-    );
-    let home = CacheHome::new();
-    let filtered = home.check(&root, &["--rule", "grep/generic-name"]);
-    assert!(
-        filtered.contains("[grep/generic-name]"),
-        "the filtered run missed its rule"
-    );
-    assert!(
-        !filtered.contains("[slop/echo-comment]"),
-        "the filter leaked another rule"
-    );
-    assert_eq!(
-        home.cache_files().len(),
-        1,
-        "the filtered run stored no cache, so the full run would pass cold"
-    );
-    let full = home.check(&root, &[]);
-    assert!(
-        full.contains("[grep/generic-name]"),
-        "the full run after the filtered cache missed generic-name"
-    );
-    assert!(
-        full.contains("[slop/echo-comment]"),
-        "the filtered cache poisoned the later full run"
     );
 }
 
@@ -557,71 +521,5 @@ fn a_different_executable_never_reuses_stored_header_outcomes() {
     assert!(
         stdout.contains(CPP_FINDING) && !stdout.contains(CPP_PLANTED),
         "a different executable served an entry stored by another one: {stdout}"
-    );
-}
-
-/// Gate-only flags must not invalidate stored analysis, while a rule level must.
-/// The shard bytes stay identical across `--fail-on` and `--min-confidence` runs
-/// and change once `grep/generic-name` is disabled.
-#[test]
-fn gate_only_flags_reuse_stored_shards_while_rule_levels_do_not() {
-    let (_tmp, root) = sample_project();
-    let home = CacheHome::new();
-    let run = |extra: &[&str]| -> Output {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_sloplint"));
-        command
-            .current_dir(&root)
-            .args(["check", "--strictness", "standard"])
-            .args(extra);
-        home.isolate(&mut command)
-            .output()
-            .unwrap_or_else(|e| panic!("spawn sloplint: {e}"))
-    };
-    let cold = run(&["--fail-on", "never"]);
-    assert!(
-        cold.status.success(),
-        "the cold run must succeed: {:?}: {}",
-        cold.status,
-        String::from_utf8_lossy(&cold.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&cold.stdout).contains(GENERIC_TEXT),
-        "the cold run must report the generic-name finding"
-    );
-    let files = home.cache_files();
-    assert_eq!(files.len(), 1, "one project stores one shard: {files:?}");
-    let before = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read shard: {e}"));
-    let gated = run(&["--fail-on", "major", "--min-confidence", "high"]);
-    assert!(
-        gated.status.success(),
-        "the gated run must succeed: {:?}: {}",
-        gated.status,
-        String::from_utf8_lossy(&gated.stderr)
-    );
-    let after = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read shard: {e}"));
-    assert_eq!(
-        before, after,
-        "gate-only flags must reuse the stored shard bytes"
-    );
-    write(
-        &root,
-        "sloplint.toml",
-        "[rules.\"grep/generic-name\"]\nlevel = \"off\"\n",
-    );
-    let releveled = run(&["--fail-on", "never"]);
-    assert!(
-        releveled.status.success(),
-        "the releveled run must succeed: {:?}: {}",
-        releveled.status,
-        String::from_utf8_lossy(&releveled.stderr)
-    );
-    assert!(
-        !String::from_utf8_lossy(&releveled.stdout).contains(GENERIC_TEXT),
-        "disabling the rule must drop its finding"
-    );
-    let rotated = std::fs::read(&files[0]).unwrap_or_else(|e| panic!("read shard: {e}"));
-    assert_ne!(
-        before, rotated,
-        "a rule level changes analysis and must not reuse the stored shard bytes"
     );
 }

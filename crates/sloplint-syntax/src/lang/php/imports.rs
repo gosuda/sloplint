@@ -5,8 +5,8 @@ use tree_sitter::Node;
 
 use super::funcs::{inside_fn, is_test_path};
 use crate::hooks::{
-    Cx, child_by_field, find_named_child, first_named_child_matching, named_children, pos_of,
-    strip_quotes, text,
+    Cx, FileSetKind, child_by_field, find_named_child, first_named_child_matching, named_children,
+    pos_of, strip_quotes, text,
 };
 
 fn use_clauses(n: Node<'_>) -> Vec<Node<'_>> {
@@ -25,9 +25,44 @@ fn use_clauses(n: Node<'_>) -> Vec<Node<'_>> {
     out
 }
 
-fn external_root_of<'s>(prefix: &'s str, path: &'s str) -> Option<&'s str> {
-    let top = if prefix.is_empty() { path } else { prefix };
-    if !top.contains('\\') {
+fn file_namespace<'s>(cx: &Cx<'_, 's>) -> Option<&'s str> {
+    cx.file_names(FileSetKind::Module, || {
+        let mut found: Vec<&'s str> = Vec::new();
+        if let Some(root) = cx.root() {
+            let namespace = find_named_child(root, |child| child.kind() == "namespace_definition");
+            if let Some(name) = namespace.and_then(|ns| child_by_field(ns, "name")) {
+                found.push(text(cx, name));
+            }
+        }
+        found
+    })
+    .first()
+    .copied()
+}
+
+fn same_package(prefix: &str, prior: &str, namespace: &str) -> bool {
+    let mut segments = prefix
+        .split('\\')
+        .chain(prior.split('\\'))
+        .filter(|seg| !seg.is_empty());
+    namespace
+        .split('\\')
+        .filter(|seg| !seg.is_empty())
+        .all(|part| segments.next() == Some(part))
+}
+
+fn external_root_of<'s>(
+    prefix: &'s str,
+    prior: &'s str,
+    namespace: Option<&str>,
+) -> Option<&'s str> {
+    let top = if prefix.is_empty() { prior } else { prefix };
+    if top.is_empty() {
+        return None;
+    }
+    if let Some(ns) = namespace
+        && same_package(prefix, prior, ns)
+    {
         return None;
     }
     top.split('\\').find(|seg| !seg.is_empty())
@@ -42,9 +77,15 @@ fn include_module<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
     ""
 }
 
+#[derive(Clone, Copy)]
+struct UseContext<'s> {
+    prefix: &'s str,
+    namespace: Option<&'s str>,
+}
+
 fn clause_import<'s>(
     cx: &Cx<'_, 's>,
-    prefix: &'s str,
+    context: UseContext<'s>,
     clause: Node<'_>,
     scope: ImportScope,
     in_test: bool,
@@ -60,12 +101,12 @@ fn clause_import<'s>(
     let cut = path.rfind('\\').map(|at| at + 1).unwrap_or(0);
     let (prior, name) = path.split_at(cut);
     let prior = prior.strip_suffix('\\').unwrap_or(prior);
-    let module: Cow<'s, str> = if prefix.is_empty() {
+    let module: Cow<'s, str> = if context.prefix.is_empty() {
         Cow::Borrowed(prior)
     } else if prior.is_empty() {
-        Cow::Borrowed(prefix)
+        Cow::Borrowed(context.prefix)
     } else {
-        Cow::Owned(format!("{prefix}\\{prior}"))
+        Cow::Owned(format!("{}\\{prior}", context.prefix))
     };
     out.push(Import {
         pos: pos_of(clause),
@@ -76,7 +117,7 @@ fn clause_import<'s>(
         scope,
         in_test,
         is_reexport: false,
-        external_root: external_root_of(prefix, path),
+        external_root: external_root_of(context.prefix, prior, context.namespace),
     });
 }
 
@@ -99,11 +140,14 @@ pub(crate) fn push_imports<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Impor
     };
     let in_test = is_test_path(cx.path);
     if is_use {
-        let prefix = first_named_child_matching(n, &["namespace_name"])
-            .map(|c| text(cx, c))
-            .unwrap_or("");
+        let context = UseContext {
+            prefix: first_named_child_matching(n, &["namespace_name"])
+                .map(|c| text(cx, c))
+                .unwrap_or(""),
+            namespace: file_namespace(cx),
+        };
         for clause in use_clauses(n) {
-            clause_import(cx, prefix, clause, scope, in_test, out);
+            clause_import(cx, context, clause, scope, in_test, out);
         }
         return;
     }

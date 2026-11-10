@@ -4,13 +4,12 @@ use sloplint_core::facts::{Import, ImportKind, ImportScope};
 use tree_sitter::Node;
 
 use super::attrs::{has_bench_attr, has_test_attr, mod_is_test};
-use crate::hooks::{Cx, child_by_field, has_child_kind, named_children, pos_of, text};
+use crate::hooks::{Cx, FileSetKind, child_by_field, has_child_kind, named_children, pos_of, text};
 
-pub(super) struct UseFacts<'s> {
+pub(super) struct UseFacts {
     pub scope: ImportScope,
     pub in_test: bool,
     pub is_reexport: bool,
-    pub file_mods: Vec<&'s str>,
 }
 
 fn encloses_fn(cx: &Cx<'_, '_>) -> bool {
@@ -56,7 +55,7 @@ fn file_mods<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
         .collect()
 }
 
-pub(super) fn use_facts<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> UseFacts<'s> {
+pub(super) fn use_facts<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> UseFacts {
     UseFacts {
         scope: if encloses_fn(cx) {
             ImportScope::FunctionLocal
@@ -65,7 +64,6 @@ pub(super) fn use_facts<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> UseFacts<'s> {
         },
         in_test: test_attr_on_ancestor(cx),
         is_reexport: has_child_kind(n, "visibility_modifier"),
-        file_mods: file_mods(cx),
     }
 }
 
@@ -93,14 +91,6 @@ fn enclosing_mod_public(cx: &Cx<'_, '_>) -> bool {
         }
     }
     false
-}
-
-fn is_prelude_path(parts: &[&str], path: &str) -> bool {
-    parts
-        .iter()
-        .flat_map(|p| p.split("::"))
-        .chain(path.split("::"))
-        .any(|seg| seg == "prelude" || seg.ends_with("_prelude"))
 }
 
 fn same_file_child<'s>(parts: &[&'s str], path: &'s str, mods: &[&'s str]) -> bool {
@@ -134,13 +124,14 @@ fn wildcard_kind<'s>(
     cx: &Cx<'_, '_>,
     parts: &[&'s str],
     path: &'s str,
-    facts: &UseFacts<'s>,
+    facts: &UseFacts,
 ) -> (ImportKind, bool, Option<&'s str>) {
     let root = external_root_of(root_first(parts, path));
-    if facts.scope == ImportScope::FunctionLocal || is_prelude_path(parts, path) {
-        return (ImportKind::Named, facts.in_test, root);
-    }
-    if same_file_child(parts, path, &facts.file_mods) {
+    if same_file_child(
+        parts,
+        path,
+        cx.file_names(FileSetKind::Module, || file_mods(cx)),
+    ) {
         return (ImportKind::Named, false, None);
     }
     if starts_with_super(parts, path) && !enclosing_mod_public(cx) {
@@ -176,9 +167,6 @@ fn leaf_parts<'s>(
 ) -> Option<(&'s str, Option<&'s str>, Vec<&'s str>)> {
     let (path, alias) = if n.kind() == "use_as_clause" {
         let alias = child_by_field(n, "alias").map_or("", |a| text(cx, a));
-        if alias == "_" {
-            return None;
-        }
         (
             child_by_field(n, "path").map_or("", |p| text(cx, p)),
             Some(alias),
@@ -202,7 +190,7 @@ fn push_leaf<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
     parts: &[&'s str],
-    facts: &UseFacts<'s>,
+    facts: &UseFacts,
     out: &mut Vec<Import<'s>>,
 ) {
     let Some((path, alias, base)) = leaf_parts(cx, n, parts) else {
@@ -211,6 +199,12 @@ fn push_leaf<'s>(
     let name = last_segment(path);
     let head = path[..path.len() - name.len()].trim_end_matches(':');
     let module = joined_module(&base, head, name);
+    let mods = cx.file_names(FileSetKind::Module, || file_mods(cx));
+    let external_root = if same_file_child(&base, path, mods) {
+        None
+    } else {
+        external_root_of(root_first(&base, path))
+    };
     out.push(Import {
         pos: pos_of(n),
         module,
@@ -220,7 +214,7 @@ fn push_leaf<'s>(
         scope: facts.scope,
         in_test: facts.in_test,
         is_reexport: facts.is_reexport,
-        external_root: external_root_of(root_first(&base, path)),
+        external_root,
     });
 }
 
@@ -228,7 +222,7 @@ fn push_wildcard<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
     parts: &[&'s str],
-    facts: &UseFacts<'s>,
+    facts: &UseFacts,
     out: &mut Vec<Import<'s>>,
 ) {
     let path = n.named_child(0).map_or("", |c| text(cx, c));
@@ -256,7 +250,7 @@ pub(super) fn push_use<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
     parts: &mut Vec<&'s str>,
-    facts: &UseFacts<'s>,
+    facts: &UseFacts,
     out: &mut Vec<Import<'s>>,
 ) {
     let mut steps = vec![UseStep::Visit(n)];
@@ -272,7 +266,7 @@ fn visit_use<'s, 't>(
     cx: &Cx<'_, 's>,
     n: Node<'t>,
     parts: &mut Vec<&'s str>,
-    facts: &UseFacts<'s>,
+    facts: &UseFacts,
     out: &mut Vec<Import<'s>>,
     steps: &mut Vec<UseStep<'t>>,
 ) {

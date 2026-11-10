@@ -1,0 +1,1 @@
+# The barrel re-exports a defining module, not another barrel.

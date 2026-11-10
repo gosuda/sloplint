@@ -7,9 +7,9 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, TypeHead, any_named_child, child_by_field, find_named_child, first_named_child_matching,
-    first_of_kind, has_child_kind, last_named_child, last_segment, named_children, narrow, pos_of,
-    slice, text, trimmed,
+    Cx, FileSetKind, TypeHead, any_named_child, child_by_field, find_named_child,
+    first_named_child_matching, first_of_kind, has_child_kind, last_named_child, last_segment,
+    named_children, narrow, pos_of, slice, text, trimmed,
 };
 
 use super::funcs::visibility_of;
@@ -68,6 +68,15 @@ pub(crate) fn imports<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>
             .trim()
             .is_empty()
     });
+    let is_reexport = any_named_child(n, |c| {
+        c.kind() == "modifiers"
+            && any_named_child(c, |a| {
+                a.kind() == "attribute"
+                    && any_named_child(a, |u| {
+                        u.kind() == "user_type" && trimmed(cx, u) == "_exported"
+                    })
+            })
+    });
     out.push(Import {
         pos: pos_of(n),
         module: Cow::Borrowed(module),
@@ -80,8 +89,8 @@ pub(crate) fn imports<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>
         },
         scope: ImportScope::Module,
         in_test: false,
-        is_reexport: false,
-        external_root: Some(module),
+        is_reexport,
+        external_root: Some(module.split('.').next().unwrap_or(module)),
     })
 }
 
@@ -143,17 +152,6 @@ fn is_wildcard_entry(cx: &Cx<'_, '_>, entry: Node<'_>) -> bool {
         || (!has_child_kind(entry, "where_keyword")
             && pattern_of(entry).is_some_and(|pattern| trimmed(cx, pattern) == "_"))
 }
-
-fn sibling_enum_like(cx: &Cx<'_, '_>, entry: Node<'_>) -> bool {
-    cx.parent().is_some_and(|parent| {
-        any_named_child(parent, |s| {
-            s.kind() == "switch_entry"
-                && s.id() != entry.id()
-                && pattern_of(s).is_some_and(|pattern| enum_pattern(trimmed(cx, pattern)))
-        })
-    })
-}
-
 fn enum_pattern(pattern: &str) -> bool {
     pattern.starts_with('.')
         || pattern.split_once('.').is_some_and(|(head, tail)| {
@@ -163,6 +161,22 @@ fn enum_pattern(pattern: &str) -> bool {
         })
 }
 
+fn is_nullable_pattern(pattern: &str) -> bool {
+    if pattern.starts_with("Optional.") || pattern.starts_with("Result.") {
+        return true;
+    }
+    let case = pattern.strip_prefix('.').unwrap_or(pattern);
+    let ident = case.split(['(', ' ', ':']).next().unwrap_or(case);
+    matches!(ident, "some" | "none" | "ok" | "err")
+}
+fn enum_root(pattern: &str) -> &str {
+    let text = pattern.trim();
+    if text.starts_with('.') {
+        "."
+    } else {
+        text.split(['.', '(']).next().unwrap_or(text)
+    }
+}
 fn switch_scrutinee(cx: &Cx<'_, '_>, _n: Node<'_>) -> ScrutineeKind {
     cx.ancestors()
         .find_map(|node| {
@@ -177,29 +191,49 @@ fn switch_scrutinee(cx: &Cx<'_, '_>, _n: Node<'_>) -> ScrutineeKind {
         .unwrap_or(ScrutineeKind::Other)
 }
 
-fn sibling_variants(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
+fn sibling_info(cx: &Cx<'_, '_>, n: Node<'_>) -> (u32, bool, bool) {
     let Some(parent) = cx.parent() else {
-        return 0;
+        return (0, false, false);
     };
-    narrow(
-        named_children(parent)
-            .into_iter()
-            .filter(|s| {
-                s.id() != n.id()
-                    && s.kind() == "switch_entry"
-                    && pattern_of(*s).is_some_and(|p| enum_pattern(trimmed(cx, p)))
-            })
-            .count(),
-    )
+    let mut count = 0;
+    let mut nullable = false;
+    let mut root: Option<&str> = None;
+    let mut same = true;
+    for sibling in named_children(parent) {
+        if sibling.id() == n.id() || sibling.kind() != "switch_entry" {
+            continue;
+        }
+        for child in named_children(sibling) {
+            if !matches!(child.kind(), "switch_pattern" | "pattern") {
+                continue;
+            }
+            let text = trimmed(cx, child);
+            if !enum_pattern(text) {
+                continue;
+            }
+            count += 1;
+            nullable = nullable || is_nullable_pattern(text);
+            let next = enum_root(text);
+            match root {
+                None => root = Some(next),
+                Some(current) if current != next => same = false,
+                _ => {}
+            }
+        }
+    }
+    (narrow(count), nullable, count >= 2 && same)
 }
 
 pub(crate) fn match_arm(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
-    (n.kind() == "switch_entry" && is_wildcard_entry(cx, n)).then(|| WildcardArm {
-        pos: pos_of(n),
-        enum_like: sibling_enum_like(cx, n),
-        scrutinee: switch_scrutinee(cx, n),
-        variant_count: sibling_variants(cx, n),
-        has_nullable_ctor: false,
+    (n.kind() == "switch_entry" && is_wildcard_entry(cx, n)).then(|| {
+        let (variant_count, has_nullable_ctor, enum_like) = sibling_info(cx, n);
+        WildcardArm {
+            pos: pos_of(n),
+            enum_like,
+            scrutinee: switch_scrutinee(cx, n),
+            variant_count,
+            has_nullable_ctor,
+        }
     })
 }
 
@@ -284,7 +318,10 @@ pub(crate) fn struct_lit<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FieldCopy<'
     })
 }
 
-fn global_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>) -> Vec<&'s str> {
+fn global_names<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
+    let Some(root) = cx.root() else {
+        return Vec::new();
+    };
     let mut names = Vec::new();
     for c in named_children(root) {
         if c.kind() != "property_declaration" {
@@ -299,10 +336,8 @@ fn global_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>) -> Vec<&'s str> {
 }
 
 fn global_declares(cx: &Cx<'_, '_>, _n: Node<'_>, name: &str) -> bool {
-    let Some(root) = cx.root() else {
-        return false;
-    };
-    global_names(cx, root).into_iter().any(|g| g == name)
+    cx.file_names(FileSetKind::Scope, || global_names(cx))
+        .contains(&name)
 }
 
 fn report_global_write<'s>(

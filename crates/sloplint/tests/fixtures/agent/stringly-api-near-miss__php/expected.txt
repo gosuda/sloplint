@@ -1,0 +1,1 @@
+# longest same-kind run is 2 below strict minor_at 3: no finding.

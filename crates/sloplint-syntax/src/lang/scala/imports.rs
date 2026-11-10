@@ -88,7 +88,7 @@ impl<'a, 's> Emit<'a, 's> {
     fn selector(&mut self, cx: &Cx<'_, 's>, s: Node<'_>) {
         if s.kind() == "identifier" {
             self.named(text(cx, s), None);
-        } else if s.kind() == "as_renamed_identifier" {
+        } else if s.kind() == "as_renamed_identifier" || s.kind() == "arrow_renamed_identifier" {
             self.renamed(cx, s);
         } else if s.kind() == "namespace_wildcard" {
             self.wild();
@@ -106,7 +106,7 @@ impl<'a, 's> Emit<'a, 's> {
         } else if c.kind() == "namespace_selectors" {
             self.selectors(cx, c);
             true
-        } else if c.kind() == "as_renamed_identifier" {
+        } else if c.kind() == "as_renamed_identifier" || c.kind() == "arrow_renamed_identifier" {
             self.renamed(cx, c);
             true
         } else {
@@ -122,7 +122,10 @@ pub(crate) fn push_imports<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Impor
     }
     let head = Head { pos: pos_of(n) };
     let path = import_path(cx, n);
-    let root = path.first().copied().filter(|first| *first != "scala");
+    let root = path
+        .first()
+        .copied()
+        .filter(|first| !matches!(*first, "scala" | "java" | "javax"));
     let mut emit = Emit {
         module: path.join("."),
         wild: path.last().copied().unwrap_or(""),

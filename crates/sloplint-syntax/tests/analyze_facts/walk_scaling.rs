@@ -146,7 +146,11 @@ fn nested_closure_exit_stays_linear_in_depth() {
         nested_closures(depth),
         deepest_and_count,
     );
-    assert_eq!(functions, 1, "one function, `top`");
+    assert_eq!(
+        functions,
+        depth + 1,
+        "top plus every nested closure is its own function"
+    );
     assert_eq!(
         max_depth, 0,
         "headless closure shells open no nesting level"

@@ -30,6 +30,7 @@ fn world_facts(barrel: Option<Vec<Vec<String>>>) -> WorldFacts {
         abstractions: Vec::new(),
         impls: Vec::new(),
         barrel,
+        imports: Vec::new(),
     }
 }
 
@@ -207,6 +208,7 @@ fn test_role_finding_lowers_one_rung() {
         is_decorated: false,
         is_trait_item: false,
         is_method: false,
+        receiver: None,
         end_line: 1,
         has_value_return: false,
         params: Vec::new(),

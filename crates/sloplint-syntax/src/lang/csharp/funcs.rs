@@ -1,4 +1,4 @@
-use sloplint_core::facts::{Param, PrimitiveKind, Visibility};
+use sloplint_core::facts::{Param, Pos, PrimitiveKind, Visibility};
 use sloplint_core::role::CodeRole;
 use tree_sitter::Node;
 
@@ -129,21 +129,97 @@ fn head_visibility(cx: &Cx<'_, '_>, n: Node<'_>, kind: &str) -> (Visibility, boo
     (visibility, in_trait)
 }
 
+fn accessor_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
+    for anc in cx.ancestors() {
+        if matches!(
+            anc.kind(),
+            "property_declaration"
+                | "indexer_declaration"
+                | "event_declaration"
+                | "event_field_declaration"
+        ) {
+            if let Some(nm) = child_by_field(anc, "name") {
+                return text(cx, nm);
+            }
+            return "";
+        }
+    }
+    child_by_field(n, "name").map(|m| text(cx, m)).unwrap_or("")
+}
+
+fn extra_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
+    match n.kind() {
+        "accessor_declaration" => Some(accessor_name(cx, n)),
+        "destructor_declaration" => child_by_field(n, "name").map(|m| text(cx, m)),
+        _ => Some(""),
+    }
+}
+
+fn head_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>, kind: &str) -> Option<(&'s str, Pos)> {
+    if matches!(
+        kind,
+        "accessor_declaration"
+            | "operator_declaration"
+            | "conversion_operator_declaration"
+            | "destructor_declaration"
+    ) {
+        return extra_name(cx, n).map(|nm| (nm, pos_of(n)));
+    }
+    child_by_field(n, "name").map(|m| (text(cx, m), pos_of(m)))
+}
+
+fn accessor_visibility(cx: &Cx<'_, '_>, current: Visibility, in_trait: bool) -> Visibility {
+    if current != Visibility::Private || in_trait {
+        return current;
+    }
+    for anc in cx.ancestors() {
+        if matches!(
+            anc.kind(),
+            "property_declaration"
+                | "indexer_declaration"
+                | "event_declaration"
+                | "event_field_declaration"
+        ) {
+            if has_mod(cx, anc, "public") || has_mod(cx, anc, "protected") {
+                return Visibility::Exported;
+            }
+            if has_mod(cx, anc, "internal") {
+                return Visibility::Restricted;
+            }
+            return Visibility::Private;
+        }
+    }
+    current
+}
+
 pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     let kind = n.kind();
+    let is_extra = matches!(
+        kind,
+        "accessor_declaration"
+            | "operator_declaration"
+            | "conversion_operator_declaration"
+            | "destructor_declaration"
+    );
     if kind != "method_declaration"
         && kind != "constructor_declaration"
         && kind != "local_function_statement"
+        && !is_extra
     {
         return None;
     }
-    let body = child_by_field(n, "body")?;
-    if body.kind() != "block" && body.kind() != "arrow_expression_clause" {
-        return None;
-    }
-    let name_node = child_by_field(n, "name")?;
-    let name = text(cx, name_node);
+    let sole_call = match child_by_field(n, "body") {
+        Some(b) if b.kind() == "block" || b.kind() == "arrow_expression_clause" => sole_call_of(b),
+        Some(_) => return None,
+        None => None,
+    };
+    let (name, name_pos) = head_name(cx, n, kind)?;
     let (visibility, in_trait) = head_visibility(cx, n, kind);
+    let visibility = if kind == "accessor_declaration" {
+        accessor_visibility(cx, visibility, in_trait)
+    } else {
+        visibility
+    };
     let tested = cx.inside_test_module() || attr_hit(cx, n, TEST_ATTRS);
     let mut params = Vec::new();
     if let Some(pl) = child_by_field(n, "parameters") {
@@ -151,18 +227,21 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
     }
     let return_type = if kind == "constructor_declaration" {
         None
-    } else if kind == "local_function_statement" {
+    } else if kind == "local_function_statement"
+        || kind == "operator_declaration"
+        || kind == "conversion_operator_declaration"
+    {
         child_by_field(n, "type").map(|t| text(cx, t))
     } else {
         child_by_field(n, "returns").map(|t| text(cx, t))
     };
     let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
     Some(FunctionHead {
+        shadow_params: Vec::new(),
         name,
-        name_pos: pos_of(name_node),
+        name_pos,
         visibility,
-        signature_forced: any_named_child(n, |c| c.kind() == "explicit_interface_specifier")
-            || has_mod(cx, n, "override"),
+        signature_forced: has_mod(cx, n, "override"),
         entry_point: kind == "method_declaration" && name == "Main",
         in_test: tested,
         is_overload: false,
@@ -176,11 +255,84 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
                 CodeRole::Test,
             )
         }),
+        receiver: None,
         params,
         return_type,
         missing_annotations: Vec::new(),
         doc,
         doc_pos,
-        sole_call: sole_call_of(body),
+        sole_call,
+    })
+}
+
+fn closure_sole_call(body: Node<'_>) -> Option<usize> {
+    if body.kind() == "invocation_expression" {
+        return Some(body.id());
+    }
+    sole_call_of(body)
+}
+
+fn closure_tested(cx: &Cx<'_, '_>) -> bool {
+    if cx.inside_test_module() {
+        return true;
+    }
+    cx.ancestors().any(|a| {
+        matches!(
+            a.kind(),
+            "method_declaration" | "constructor_declaration" | "local_function_statement"
+        ) && attr_hit(cx, a, TEST_ATTRS)
+    })
+}
+fn closure_param<'s>(cx: &Cx<'_, 's>, pl: Node<'_>, out: &mut Vec<Param<'s>>) {
+    if pl.kind() == "parameter_list" {
+        params_from_list(cx, pl, out);
+        return;
+    }
+    let Some(id) = child_by_field(pl, "name").or_else(|| first_named_child(pl)) else {
+        return;
+    };
+    out.push(Param {
+        name: text(cx, id),
+        ty: None,
+        primitive_kind: PrimitiveKind::Other,
+        has_default: false,
+        bool_default: false,
+        keyword_only: false,
+        is_variadic: false,
+    });
+}
+
+fn closure_body(n: Node<'_>) -> Option<Node<'_>> {
+    child_by_field(n, "body").or_else(|| first_named_child_matching(n, &["block"]))
+}
+
+pub(crate) fn closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
+    if n.kind() != "lambda_expression" && n.kind() != "anonymous_method_expression" {
+        return None;
+    }
+    let mut params = Vec::new();
+    if let Some(pl) = child_by_field(n, "parameters") {
+        closure_param(cx, pl, &mut params);
+    }
+    Some(FunctionHead {
+        shadow_params: Vec::new(),
+        name: "",
+        name_pos: pos_of(n),
+        visibility: Visibility::Private,
+        signature_forced: false,
+        entry_point: false,
+        in_test: closure_tested(cx),
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        region: None,
+        params,
+        receiver: None,
+        return_type: None,
+        missing_annotations: Vec::new(),
+        doc: Vec::new(),
+        doc_pos: None,
+        sole_call: closure_body(n).and_then(closure_sole_call),
     })
 }

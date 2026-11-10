@@ -12,3 +12,5 @@ mod human_source_lines;
 mod output_stream;
 #[path = "cli_output/terminal_escapes.rs"]
 mod terminal_escapes;
+#[path = "cli_output/terminal_text.rs"]
+mod terminal_text;

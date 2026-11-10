@@ -25,12 +25,12 @@ fn use_trees_report_every_leaf() {
 #[test]
 fn self_use_chains_find_their_module() {
     on_default_stack(|| {
-        let source = format!(
-            "mod a;\npub use self::{}a{};\n",
-            "{self::".repeat(DEPTH),
-            "}".repeat(DEPTH)
-        );
-        within_linear_budget(|| {
+        within_linear_budget(|depth| {
+            let source = format!(
+                "mod a;\npub use self::{}a{};\n",
+                "{self::".repeat(depth),
+                "}".repeat(depth)
+            );
             with_facts(Lang::Rust, "case.rs", &source, |facts| {
                 assert!(
                     facts.barrel.is_none(),
@@ -78,10 +78,10 @@ fn or_pattern_predecessors_match_their_shallow_form() {
 #[test]
 fn call_chains_keep_every_call_in_linear_time() {
     on_default_stack(|| {
-        let source = "fn g() {\n    a".to_owned() + &".b()".repeat(DEPTH) + ";\n}\n";
-        within_linear_budget(|| {
+        within_linear_budget(|depth| {
+            let source = "fn g() {\n    a".to_owned() + &".b()".repeat(depth) + ";\n}\n";
             with_facts(Lang::Rust, "chain.rs", &source, |facts| {
-                assert_eq!(facts.calls.len(), DEPTH);
+                assert_eq!(facts.calls.len(), depth);
                 let inner = facts
                     .calls
                     .iter()

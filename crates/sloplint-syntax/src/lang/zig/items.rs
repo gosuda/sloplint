@@ -5,9 +5,9 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Container, Cx, TypeHead, child_by_field, first_named_child, first_named_child_matching,
-    first_of_kind, has_child_kind, last_named_child, last_segment, named_children, narrow, pos_of,
-    text, trimmed,
+    Container, Cx, FileSetKind, TypeHead, child_by_field, first_named_child,
+    first_named_child_matching, first_of_kind, has_child_kind, last_named_child, last_segment,
+    named_children, narrow, pos_of, text, trimmed,
 };
 
 use super::calls::builtin_name;
@@ -262,32 +262,43 @@ pub(crate) fn zig_handler<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'s
     })
 }
 
+pub(crate) fn init_pair(n: Node<'_>) -> Option<(Node<'_>, Node<'_>)> {
+    if n.kind() != "assignment_expression" {
+        return None;
+    }
+    if child_by_field(n, "operator").is_none_or(|op| op.kind() != "=") {
+        return None;
+    }
+    let left = child_by_field(n, "left")?;
+    if left.kind() != "field_expression" || child_by_field(left, "object").is_some() {
+        return None;
+    }
+    let name = child_by_field(left, "member")?;
+    if name.kind() != "identifier" {
+        return None;
+    }
+    let value = child_by_field(n, "right")?;
+    Some((name, value))
+}
+
 pub(crate) fn zig_struct_lit<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FieldCopy<'s>> {
     if n.kind() != "struct_initializer" && n.kind() != "anonymous_struct_initializer" {
         return None;
     }
     let list = first_named_child_matching(n, &["initializer_list"])?;
-    let fields: Vec<Node<'_>> = named_children(list)
-        .into_iter()
-        .filter(|c| c.kind() == "field_initializer")
-        .collect();
-    if fields.is_empty() {
+    let mut pairs = Vec::new();
+    for element in named_children(list) {
+        if let Some(pair) = init_pair(element) {
+            pairs.push(pair);
+        }
+    }
+    if pairs.is_empty() {
         return None;
     }
     let mut source: Option<&'s str> = None;
     let mut complete = true;
-    for field in &fields {
-        let found = match (
-            field.named_child(0),
-            field.named_child(1),
-            field.named_child(2),
-        ) {
-            (Some(name), Some(value), None) if name.kind() == "identifier" => {
-                field_value_source(cx, name, value)
-            }
-            _ => None,
-        };
-        match found {
+    for &(name, value) in &pairs {
+        match field_value_source(cx, name, value) {
             Some(current) if source.is_none_or(|prev| prev == current) => {
                 source = Some(current);
             }
@@ -300,7 +311,7 @@ pub(crate) fn zig_struct_lit<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FieldCo
     let source = if complete { source } else { None };
     Some(FieldCopy {
         pos: pos_of(n),
-        fields: narrow(fields.len()),
+        fields: narrow(pairs.len()),
         source,
     })
 }
@@ -316,12 +327,16 @@ fn report_assign_global_write<'s>(
     let Some((root, pos)) = write_root(cx, left) else {
         return;
     };
-    if root != "_" && zig_file_vars(cx, n).contains(&root) {
+    if root != "_"
+        && cx
+            .file_names(FileSetKind::Scope, || zig_file_vars(cx))
+            .contains(&root)
+    {
         out.push((AmbientKind::GlobalWrite, root, pos));
     }
 }
 
-fn zig_file_vars<'s>(cx: &Cx<'_, 's>, _n: Node<'_>) -> Vec<&'s str> {
+fn zig_file_vars<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
     let Some(root) = cx.root() else {
         return Vec::new();
     };
@@ -340,6 +355,57 @@ fn zig_file_vars<'s>(cx: &Cx<'_, 's>, _n: Node<'_>) -> Vec<&'s str> {
     names
 }
 
+fn report_headed_targets<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    scope: &[&'s str],
+    out: &mut Vec<(AmbientKind, &'s str, Pos)>,
+) {
+    let mut open = false;
+    let mut cursor = n.walk();
+    for child in n.children(&mut cursor) {
+        if !child.is_named() {
+            if child.kind() == "=" {
+                return;
+            }
+            open = child.kind() == "var" || child.kind() == "const";
+            continue;
+        }
+        if open {
+            continue;
+        }
+        if let Some((root, pos)) = write_root(cx, child)
+            && root != "_"
+            && scope.contains(&root)
+        {
+            out.push((AmbientKind::GlobalWrite, root, pos));
+        }
+    }
+}
+
+fn report_headerless_writes<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    scope: &[&'s str],
+    out: &mut Vec<(AmbientKind, &'s str, Pos)>,
+) {
+    let mut cursor = n.walk();
+    for child in n.children(&mut cursor) {
+        if child.is_named() {
+            if let Some((root, pos)) = write_root(cx, child)
+                && root != "_"
+                && scope.contains(&root)
+            {
+                out.push((AmbientKind::GlobalWrite, root, pos));
+            }
+            continue;
+        }
+        if child.kind() != "," {
+            return;
+        }
+    }
+}
+
 pub(crate) fn zig_ambient<'s>(
     n: Node<'_>,
     cx: &Cx<'_, 's>,
@@ -348,14 +414,11 @@ pub(crate) fn zig_ambient<'s>(
 ) {
     if n.kind() == "variable_declaration" {
         if in_function {
-            if !has_child_kind(n, "var")
-                && !has_child_kind(n, "const")
-                && let Some(target) = first_named_child(n)
-                && let Some((root, pos)) = write_root(cx, target)
-                && root != "_"
-                && zig_file_vars(cx, n).contains(&root)
-            {
-                out.push((AmbientKind::GlobalWrite, root, pos));
+            let scope = cx.file_names(FileSetKind::Scope, || zig_file_vars(cx));
+            if has_child_kind(n, "var") || has_child_kind(n, "const") {
+                report_headed_targets(cx, n, scope, out);
+            } else {
+                report_headerless_writes(cx, n, scope, out);
             }
             return;
         }

@@ -53,6 +53,7 @@ pub struct ProjectConfig {
     pub baseline: String,
     pub fail_on: FailOn,
     pub min_confidence: Confidence,
+    pub fail_on_skipped: bool,
     pub exclude: Vec<String>,
     pub extend_exclude: Vec<String>,
     pub test_globs: Vec<String>,
@@ -61,10 +62,12 @@ pub struct ProjectConfig {
     pub support_globs: Vec<String>,
     pub entry_globs: Vec<String>,
     pub data_globs: Vec<String>,
-    /// TOML values must fit `0..=u32::MAX` to match parser byte positions.
+    /// Values above `MAX_SOURCE_FILE_BYTES` are rejected to bound per-file memory.
     pub max_file_bytes: u64,
     pub custom_rule_files: Vec<String>,
 }
+
+pub const MAX_SOURCE_FILE_BYTES: u64 = 16_777_216;
 
 impl Default for ProjectConfig {
     fn default() -> Self {
@@ -75,6 +78,7 @@ impl Default for ProjectConfig {
             baseline: "sloplint-baseline.json".to_string(),
             fail_on: FailOn::At(Severity::Major),
             min_confidence: Confidence::Low,
+            fail_on_skipped: false,
             exclude: split_csv(DEFAULT_EXCLUDE),
             extend_exclude: Vec::new(),
             test_globs: split_csv(DEFAULT_TEST_GLOBS),
@@ -173,6 +177,7 @@ struct RawProject {
     baseline: Option<String>,
     fail_on: Option<FailOn>,
     min_confidence: Option<Confidence>,
+    fail_on_skipped: Option<bool>,
     exclude: Option<Vec<String>>,
     extend_exclude: Option<Vec<String>>,
     test_globs: Option<Vec<String>>,
@@ -181,7 +186,7 @@ struct RawProject {
     support_globs: Option<Vec<String>>,
     entry_globs: Option<Vec<String>>,
     data_globs: Option<Vec<String>>,
-    max_file_bytes: Option<u32>,
+    max_file_bytes: Option<i64>,
     custom_rule_files: Option<Vec<String>>,
 }
 
@@ -205,7 +210,7 @@ pub fn parse_config(toml_src: &str, origin: &str) -> Result<Config, ConfigError>
         .map_err(|error| ConfigError::from_toml(origin, toml_src, &error))?;
     let mut config = Config::default();
     if let Some(project) = raw.project {
-        merge_project(&mut config, project)?;
+        merge_project(&mut config, project, origin)?;
     }
     if let Some(languages) = raw.languages {
         merge_languages(&mut config, languages)?;
@@ -216,11 +221,21 @@ pub fn parse_config(toml_src: &str, origin: &str) -> Result<Config, ConfigError>
     if let Some(custom_rules) = raw.custom_rules {
         config.custom_rules = custom_rules;
     }
-    validate(&config)?;
+    validate(&config, origin)?;
     Ok(config)
 }
 
-fn merge_project(config: &mut Config, project: RawProject) -> Result<(), ConfigError> {
+fn max_file_bytes_error(origin: &str, limit: i64) -> ConfigError {
+    ConfigError::Toml {
+        origin: origin.to_string(),
+        message: format!("max_file_bytes {limit} exceeds ceiling of {MAX_SOURCE_FILE_BYTES} bytes"),
+    }
+}
+fn merge_project(
+    config: &mut Config,
+    project: RawProject,
+    origin: &str,
+) -> Result<(), ConfigError> {
     let target = &mut config.project;
     overwrite(&mut target.strictness, project.strictness);
     if let Some(languages) = project.languages {
@@ -231,6 +246,7 @@ fn merge_project(config: &mut Config, project: RawProject) -> Result<(), ConfigE
     overwrite(&mut target.baseline, project.baseline);
     overwrite(&mut target.fail_on, project.fail_on);
     overwrite(&mut target.min_confidence, project.min_confidence);
+    overwrite(&mut target.fail_on_skipped, project.fail_on_skipped);
     overwrite(&mut target.exclude, project.exclude);
     overwrite(&mut target.extend_exclude, project.extend_exclude);
     overwrite(&mut target.test_globs, project.test_globs);
@@ -239,10 +255,13 @@ fn merge_project(config: &mut Config, project: RawProject) -> Result<(), ConfigE
     overwrite(&mut target.support_globs, project.support_globs);
     overwrite(&mut target.entry_globs, project.entry_globs);
     overwrite(&mut target.data_globs, project.data_globs);
-    overwrite(
-        &mut target.max_file_bytes,
-        project.max_file_bytes.map(u64::from),
-    );
+    if let Some(limit) = project.max_file_bytes {
+        let bytes = u64::try_from(limit).map_err(|_| max_file_bytes_error(origin, limit))?;
+        if bytes > MAX_SOURCE_FILE_BYTES {
+            return Err(max_file_bytes_error(origin, limit));
+        }
+        target.max_file_bytes = bytes;
+    }
     overwrite(&mut target.custom_rule_files, project.custom_rule_files);
     Ok(())
 }
@@ -279,11 +298,25 @@ fn merge_languages(
     Ok(())
 }
 
-fn validate(config: &Config) -> Result<(), ConfigError> {
+fn validate(config: &Config, origin: &str) -> Result<(), ConfigError> {
+    validate_max_file_bytes(config, origin)?;
     validate_globs(config)?;
     validate_log_callees(config)?;
     validate_rules_table(config)?;
     validate_custom_rules(config)
+}
+
+fn validate_max_file_bytes(config: &Config, origin: &str) -> Result<(), ConfigError> {
+    let limit = config.project.max_file_bytes;
+    if limit > MAX_SOURCE_FILE_BYTES {
+        return Err(ConfigError::Toml {
+            origin: origin.to_string(),
+            message: format!(
+                "max_file_bytes {limit} exceeds ceiling of {MAX_SOURCE_FILE_BYTES} bytes"
+            ),
+        });
+    }
+    Ok(())
 }
 
 fn validate_globs(config: &Config) -> Result<(), ConfigError> {
@@ -486,108 +519,5 @@ const DEFAULT_DATA_GLOBS: &str =
     "**/testdata/**,**/test-data/**,**/__fixtures__/**,**/__snapshots__/**";
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn callees(language: &str) -> Vec<String> {
-        Config::default()
-            .languages
-            .get(language)
-            .unwrap_or_else(|| panic!("missing log-callee defaults for {language}"))
-            .log_callees
-            .clone()
-    }
-
-    fn assert_callees(language: &str, keep: &[&str], drop: &[&str]) {
-        let current = callees(language);
-        for name in keep {
-            assert!(
-                current.iter().any(|candidate| candidate.as_str() == *name),
-                "{language} defaults must still match {name}: {}",
-                current.join(",")
-            );
-        }
-        for name in drop {
-            assert!(
-                current.iter().all(|candidate| candidate.as_str() != *name),
-                "{language} defaults must not match {name}"
-            );
-        }
-    }
-
-    #[test]
-    fn default_log_callees_keep_message_bearers_only() {
-        assert_callees(
-            "rust",
-            &["trace!", "debug!", "info!", "warn!", "error!"],
-            &["anyhow!", "bail!", "eyre!", "panic!"],
-        );
-        assert_callees(
-            "typescript",
-            &["console.error", "logger.error"],
-            &["new *Error"],
-        );
-        assert_callees(
-            "javascript",
-            &["console.error", "logger.error"],
-            &["new *Error"],
-        );
-        assert_callees(
-            "python",
-            &["logging.error", "logger.exception"],
-            &["*Error", "*Exception"],
-        );
-        assert_callees(
-            "go",
-            &["log.Fatal", "slog.Error"],
-            &["fmt.Errorf", "errors.New"],
-        );
-        assert_callees(
-            "java",
-            &["logger.error", "LOG.fatal"],
-            &[
-                "printStackTrace",
-                "System.err.println",
-                "System.out.println",
-            ],
-        );
-        assert_callees(
-            "kotlin",
-            &["logger.error", "LOG.error"],
-            &["printStackTrace", "System.err.println", "println"],
-        );
-        assert_callees(
-            "csharp",
-            &["Console.WriteLine", "logger.LogError"],
-            &["new *Exception"],
-        );
-        assert_callees(
-            "cpp",
-            &["spdlog::error", "printf"],
-            &["*Error", "*Exception", "*_error"],
-        );
-        assert_callees("php", &["error_log", "Log::error"], &["new *Exception"]);
-        assert_callees(
-            "scala",
-            &["logger.error", "println"],
-            &["new *Exception", "new *Error"],
-        );
-        assert_callees(
-            "dart",
-            &["print", "logger.severe"],
-            &["*Exception", "*Error"],
-        );
-        assert_callees(
-            "zig",
-            &["std.log.err", "log.debug"],
-            &["panic!", "compileError!"],
-        );
-        assert_callees(
-            "ocaml",
-            &["Logs.err", "prerr_endline"],
-            &["failwith", "invalid_arg"],
-        );
-        assert_callees("odin", &["log.error", "fmt.eprintf"], &["panic"]);
-        assert_callees("starlark", &["print"], &["fail"]);
-    }
-}
+#[path = "config_tests.rs"]
+mod tests;

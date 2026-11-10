@@ -55,3 +55,61 @@ fn nested_closures_each_read_as_a_function() {
     assert_eq!(found[1].1, vec!["x".to_string()]);
     assert_eq!(found[2].1, vec!["x".to_string()]);
 }
+
+#[test]
+fn closures_inside_test_functions_are_in_test() {
+    let source = "fn p() {\n    let a = || 1;\n}\n#[test]\nfn t() {\n    let b = || 2;\n}\n";
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let input = FileInput {
+        lang: Lang::Rust,
+        path: "src/lib.rs",
+        source,
+        role: CodeRole::Library,
+    };
+    let analysis = analyze(&mut Parsers::new(), &input, &custom);
+    assert!(
+        analysis.parse_error.is_none(),
+        "closure source parses, first syntax error at {:?}",
+        analysis.parse_error
+    );
+    let found: Vec<(&str, bool)> = analysis
+        .facts
+        .functions
+        .iter()
+        .map(|f| (f.name, f.in_test))
+        .collect();
+    assert_eq!(
+        found,
+        vec![("p", false), ("", false), ("t", true), ("", true)],
+        "a closure inherits the test mark of its enclosing function"
+    );
+}
+
+#[test]
+fn nested_functions_inside_test_functions_are_in_test() {
+    let source = "#[test]\nfn t() {\n    fn build() {}\n}\nfn p() {\n    fn q() {}\n}\n";
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let input = FileInput {
+        lang: Lang::Rust,
+        path: "src/lib.rs",
+        source,
+        role: CodeRole::Library,
+    };
+    let analysis = analyze(&mut Parsers::new(), &input, &custom);
+    assert!(
+        analysis.parse_error.is_none(),
+        "nested function source parses, first syntax error at {:?}",
+        analysis.parse_error
+    );
+    let found: Vec<(&str, bool)> = analysis
+        .facts
+        .functions
+        .iter()
+        .map(|f| (f.name, f.in_test))
+        .collect();
+    assert_eq!(
+        found,
+        vec![("t", true), ("build", true), ("p", false), ("q", false)],
+        "a nested fn inherits the test mark of its enclosing function"
+    );
+}

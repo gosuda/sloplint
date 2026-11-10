@@ -1,4 +1,6 @@
-use sloplint_core::facts::{AssertShape, CallKind, ImportKind, ImportScope, Stmt, Visibility};
+use sloplint_core::facts::{
+    ArgShape, AssertShape, CallKind, ImportKind, ImportScope, Stmt, Visibility,
+};
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
@@ -235,6 +237,277 @@ fn r_stopifnot_shapes_split_bare_name_and_top_eq_ne() {
             compared.shape,
             AssertShape::TopEqNe,
             "top-level equality is top eq-ne"
+        );
+    });
+}
+
+const NESTED: &str = r#"outer <- function(x) {
+  helper <- function(verbose = TRUE, quiet = FALSE) x
+  helper(TRUE)
+}
+"#;
+
+const NAMESPACED: &str = r#"stats::median(x)
+"#;
+
+const LOCAL_IMPORT: &str = r#"f <- function() {
+  library(dplyr)
+}
+"#;
+
+const DOTS: &str = r#"g <- function(..., verbose = FALSE) NULL
+h <- function(x, y, ...) NULL
+"#;
+
+const DEFAULTS: &str = r#"f <- function(x, verbose = TRUE, debug = FALSE, quiet = TRUE) NULL
+"#;
+
+fn named_function<'s>(
+    analysis: &'s Analysis<'s>,
+    name: &str,
+) -> &'s sloplint_core::facts::Function<'s> {
+    analysis
+        .facts
+        .functions
+        .iter()
+        .find(|f| f.name == name)
+        .unwrap_or_else(|| panic!("has function {name}"))
+}
+
+#[test]
+fn nested_bound_functions_report_private() {
+    with_facts(NESTED, |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses nested closure");
+        assert_eq!(
+            named_function(analysis, "helper").visibility,
+            Visibility::Private,
+            "helper nested in outer is not visible outside it"
+        );
+        assert_eq!(
+            named_function(analysis, "outer").visibility,
+            Visibility::Exported,
+            "top-level binding stays exported"
+        );
+    });
+}
+
+#[test]
+fn namespaced_calls_report_simple_paths() {
+    with_facts(NAMESPACED, |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses namespaced call");
+        assert_eq!(analysis.facts.calls.len(), 1, "finds the call");
+        let call = &analysis.facts.calls[0];
+        assert_eq!(
+            call.callee, "stats::median",
+            "keeps the qualified callee text"
+        );
+        assert_eq!(call.callee_root, Some("stats"), "root is the package name");
+        assert!(call.is_simple_path, "qualified name is a simple path");
+    });
+    with_facts(CALL_INIT, |analysis| {
+        let call = &analysis.facts.calls[0];
+        assert_eq!(call.callee_root, Some("f"), "bare callee keeps its root");
+        assert!(call.is_simple_path, "bare callee stays a simple path");
+    });
+}
+
+#[test]
+fn function_local_imports_report_function_scope() {
+    with_facts(LOCAL_IMPORT, |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses local library call");
+        assert_eq!(analysis.facts.imports.len(), 1, "finds the import");
+        assert_eq!(
+            analysis.facts.imports[0].scope,
+            ImportScope::FunctionLocal,
+            "library in a function body is function-local"
+        );
+    });
+    with_facts(IMPORTS, |analysis| {
+        assert_eq!(
+            analysis.facts.imports[0].scope,
+            ImportScope::Module,
+            "top-level library keeps module scope"
+        );
+    });
+}
+
+#[test]
+fn defaulted_params_report_has_default() {
+    with_facts(DEFAULTS, |analysis| {
+        assert!(
+            analysis.parse_error.is_none(),
+            "parses defaulted parameters"
+        );
+        let f = named_function(analysis, "f");
+        assert_eq!(f.params.len(), 4, "keeps every parameter");
+        assert!(!f.params[0].has_default, "x stays default-free");
+        for param in &f.params[1..] {
+            assert!(param.has_default, "{} reports its default", param.name);
+        }
+        assert!(
+            f.params[1].primitive_kind == sloplint_core::facts::PrimitiveKind::Bool,
+            "TRUE default keeps the bool kind"
+        );
+    });
+    with_facts(FUNS, |analysis| {
+        assert!(
+            !named_function(analysis, "helper").params[0].has_default,
+            "plain parameter keeps no default"
+        );
+    });
+}
+
+#[test]
+fn dots_parameter_reports_variadic_and_keyword_only() {
+    with_facts(DOTS, |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses dots parameters");
+        let g = named_function(analysis, "g");
+        assert!(g.params[0].is_variadic, "dots parameter is variadic");
+        assert!(!g.params[0].keyword_only, "dots itself is not keyword-only");
+        assert!(
+            g.params[1].keyword_only,
+            "parameter after dots is keyword-only"
+        );
+        assert!(!g.params[1].is_variadic, "named parameter is not variadic");
+        let h = named_function(analysis, "h");
+        assert_eq!(h.params.len(), 3, "keeps every parameter");
+        assert!(!h.params[0].is_variadic, "plain parameter is not variadic");
+        assert!(
+            !h.params[0].keyword_only,
+            "parameter before dots stays positional"
+        );
+        assert!(h.params[2].is_variadic, "trailing dots is variadic");
+    });
+}
+
+const CHAINED: &str = r#"f <- function(x) f2(x)(x)
+g <- function(x) make_client(x)$connect(x)
+"#;
+
+#[test]
+fn chained_applications_report_names_without_arguments() {
+    with_facts(CHAINED, |analysis| {
+        assert!(
+            analysis.parse_error.is_none(),
+            "parses chained applications"
+        );
+        assert_eq!(analysis.facts.calls.len(), 4, "finds all applications");
+        let applied = analysis
+            .facts
+            .calls
+            .iter()
+            .find(|call| !call.is_simple_path && call.callee == "f2")
+            .unwrap_or_else(|| panic!("has the outer application"));
+        assert_eq!(
+            applied.callee_root, None,
+            "call-result callee has no path root"
+        );
+        let member = analysis
+            .facts
+            .calls
+            .iter()
+            .find(|call| call.callee == "connect")
+            .unwrap_or_else(|| panic!("has the member application"));
+        assert_eq!(
+            member.callee_root, None,
+            "member on a call result has no path root"
+        );
+        assert!(
+            !member.is_simple_path,
+            "member on a call result is not a simple path"
+        );
+        let factory = analysis
+            .facts
+            .calls
+            .iter()
+            .find(|call| call.is_simple_path)
+            .unwrap_or_else(|| panic!("has the inner application"));
+        assert_eq!(factory.callee, "f2", "inner application keeps its name");
+        assert_eq!(
+            factory.callee_root,
+            Some("f2"),
+            "inner application keeps its root"
+        );
+    });
+}
+
+const CONCATS: &str = r#"log("failed to download archive " + path)
+log("ok " + path)
+log(path + "")
+"#;
+
+const ARGUMENTS: &str = r#"run(c(1, 2))
+make(list(key = 1))
+take(function(x) x)
+hold({
+  x
+})
+keep(path)
+"#;
+
+#[test]
+fn concatenations_carry_static_run_lengths() {
+    with_facts(CONCATS, |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses concatenations");
+        assert_eq!(analysis.facts.calls.len(), 3, "finds all three calls");
+        assert!(
+            matches!(
+                analysis.facts.calls[0].args[0].shape,
+                ArgShape::Concat { longest_static: 27 }
+            ),
+            "twenty-seven static characters measure twenty-seven"
+        );
+        assert!(
+            matches!(
+                analysis.facts.calls[1].args[0].shape,
+                ArgShape::Concat { longest_static: 3 }
+            ),
+            "three static characters measure three"
+        );
+        assert!(
+            matches!(
+                analysis.facts.calls[2].args[0].shape,
+                ArgShape::Concat { longest_static: 0 }
+            ),
+            "empty static operand measures zero"
+        );
+    });
+}
+
+#[test]
+fn constructor_calls_stay_other_and_blocks_are_code_body() {
+    with_facts(ARGUMENTS, |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses shaped arguments");
+        let shape = |callee: &str| {
+            analysis
+                .facts
+                .calls
+                .iter()
+                .find(|call| call.callee == callee)
+                .unwrap_or_else(|| panic!("has the {callee} call"))
+                .args[0]
+                .shape
+                .clone()
+        };
+        assert!(
+            matches!(shape("run"), ArgShape::Other),
+            "nested constructor call stays other"
+        );
+        assert!(
+            matches!(shape("make"), ArgShape::Other),
+            "keyed constructor call stays other"
+        );
+        assert!(
+            matches!(shape("take"), ArgShape::CodeBody),
+            "closure argument is a code body"
+        );
+        assert!(
+            matches!(shape("hold"), ArgShape::CodeBody),
+            "block argument is a code body"
+        );
+        assert!(
+            matches!(shape("keep"), ArgShape::Ident("path")),
+            "plain identifier keeps its name"
         );
     });
 }

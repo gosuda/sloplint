@@ -144,6 +144,7 @@ mod tests {
             is_decorated: false,
             is_trait_item: false,
             is_method: false,
+            receiver: None,
             params: Vec::<Param<'s>>::new(),
             return_type: None,
             untyped_throws: false,

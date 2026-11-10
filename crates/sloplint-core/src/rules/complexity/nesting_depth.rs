@@ -68,17 +68,21 @@ impl FileRule for NestingDepth {
                 continue;
             };
             let value = function.max_depth;
-            let name = function.name;
+            let name = if function.name.is_empty() {
+                format!("anonymous function at line {}", function.pos.line)
+            } else {
+                format!("`{}`", function.name)
+            };
             let minor_at = self.thresholds.minor_at;
             let major_at = self.thresholds.major_at;
             let critical_at = self.thresholds.critical_at;
             let blocker_at = self.thresholds.blocker_at;
             let deepest_line = function.deepest_line;
             let message = format!(
-                "nesting depth {value} in `{name}` (minor at {minor_at}, major at {major_at}, critical at {critical_at}, blocker at {blocker_at})"
+                "nesting depth {value} in {name} (minor at {minor_at}, major at {major_at}, critical at {critical_at}, blocker at {blocker_at})"
             );
             let fix = format!(
-                "reduce nesting in `{name}` below {minor_at}: use guard clauses or extract the block at line {deepest_line} into a helper"
+                "reduce nesting in {name} below {minor_at}: use guard clauses or extract the block at line {deepest_line} into a helper"
             );
             out.push(Finding::at(
                 facts,
@@ -147,6 +151,7 @@ mod tests {
             is_decorated: false,
             is_trait_item: false,
             is_method: false,
+            receiver: None,
             params: Vec::new(),
             return_type: None,
             untyped_throws: false,
@@ -190,6 +195,50 @@ mod tests {
             severities(rule.as_ref(), vec![nested("router")]),
             vec![Severity::Minor],
             "strict still fires; the ruleset ceiling caps the graded rung to info"
+        );
+    }
+
+    #[test]
+    fn anonymous_callback_reports_a_line_label() {
+        let source = "fn f() {}\n";
+        let facts = FileFacts {
+            lang: Lang::Rust,
+            path: "src/lib.rs",
+            source,
+            line_starts: line_starts(source),
+            role: CodeRole::Library,
+            regions: Vec::new(),
+            line_count: 1,
+            package: String::new(),
+            is_generated: false,
+            functions: vec![nested("")],
+            calls: Vec::new(),
+            bindings: Vec::new(),
+            imports: Vec::new(),
+            types: Vec::new(),
+            impls: Vec::new(),
+            wildcard_arms: Vec::new(),
+            handlers: Vec::new(),
+            assertions: Vec::new(),
+            field_copies: Vec::new(),
+            dynamic_symbols: Vec::new(),
+            ambient: Vec::new(),
+            barrel: None,
+            has_inline_tests: false,
+        };
+        let strict = preset(Strictness::Strict);
+        let rule = build(strict.options, &Settings::default()).expect("strict preset builds");
+        let mut out = Vec::new();
+        rule.check(&facts, &mut out);
+        assert_eq!(
+            out.len(),
+            1,
+            "an unnamed deep function still reports: {out:?}"
+        );
+        assert!(
+            out[0].message.contains("anonymous function at line 1"),
+            "empty names print a line label, not empty backticks: {}",
+            out[0].message
         );
     }
 }

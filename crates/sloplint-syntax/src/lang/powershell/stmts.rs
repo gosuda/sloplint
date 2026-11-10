@@ -72,6 +72,25 @@ pub(crate) fn ps_write_roots<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'
     }
 }
 
+fn ps_write_target(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    let mut current = n;
+    for _ in 0..12 {
+        let Some(parent) = cx.parent_of(current) else {
+            return false;
+        };
+        match parent.kind() {
+            "left_assignment_expression" => return true,
+            "pre_increment_expression"
+            | "post_increment_expression"
+            | "pre_decrement_expression"
+            | "post_decrement_expression" => return true,
+            "assignment_expression" => return false,
+            _ => current = parent,
+        }
+    }
+    false
+}
+
 pub(crate) fn ps_ambient<'s>(
     n: Node<'_>,
     cx: &Cx<'_, 's>,
@@ -86,18 +105,21 @@ pub(crate) fn ps_ambient<'s>(
         out.push((AmbientKind::EnvRead, t, pos_of(n)));
         return;
     }
-    if t.starts_with("$global:")
+    let scoped = t.starts_with("$global:")
         || t.starts_with("${global:")
         || t.starts_with("$script:")
         || t.starts_with("${script:")
         || t.starts_with("$using:")
-        || t.starts_with("${using:")
-    {
-        let kind = if in_function {
-            AmbientKind::GlobalWrite
-        } else {
-            AmbientKind::GlobalMutable
-        };
-        out.push((kind, t, pos_of(n)));
+        || t.starts_with("${using:");
+    if !scoped {
+        return;
     }
+    let kind = if !in_function {
+        AmbientKind::GlobalMutable
+    } else if ps_write_target(cx, n) {
+        AmbientKind::GlobalWrite
+    } else {
+        return;
+    };
+    out.push((kind, t, pos_of(n)));
 }

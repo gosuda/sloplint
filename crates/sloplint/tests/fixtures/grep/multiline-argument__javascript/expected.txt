@@ -1,2 +1,2 @@
 # Positive: Collection arg spans lines 4-20 (17 lines >= strict Minor(15)); finding at the call.
-src/app.js:4 minor grep/multiline-argument
+src/app.js:4 info grep/multiline-argument

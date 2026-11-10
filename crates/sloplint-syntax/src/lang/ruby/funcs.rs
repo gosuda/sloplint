@@ -1,12 +1,12 @@
 use sloplint_core::facts::{Param, Pos, PrimitiveKind};
 use tree_sitter::Node;
 
-use crate::hooks::{
-    Cx, child_by_field, first_named_child, first_named_child_matching, first_of_kind,
-    has_child_kind, last_segment, named_children, only_named_child_matching, pos_of, text, trimmed,
-};
-
 use super::field_text;
+use crate::hooks::{
+    Cx, FileSetKind, child_by_field, first_named_child, first_named_child_matching, first_of_kind,
+    has_child_kind, last_segment, named_children, only_named_child_matching, pos_of, strip_quotes,
+    text, trimmed,
+};
 
 pub(crate) fn node_id(n: Node<'_>) -> usize {
     n.id()
@@ -22,8 +22,8 @@ pub(crate) fn bare_marker_call<'s>(cx: &Cx<'_, 's>, sib: Node<'_>) -> Option<boo
         return None;
     }
     match method {
-        "private" | "protected" | "module_function" => Some(false),
-        "public" => Some(true),
+        "private" | "module_function" => Some(false),
+        "protected" | "public" => Some(true),
         _ => None,
     }
 }
@@ -40,14 +40,13 @@ pub(crate) fn wrapped_by_marker<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     if grand.kind() != "call" {
         return false;
     }
-    field_text(cx, grand, "method")
-        .is_some_and(|m| matches!(m, "private" | "protected" | "module_function"))
+    field_text(cx, grand, "method").is_some_and(|m| matches!(m, "private" | "module_function"))
 }
 pub(crate) fn ruby_visibility_marker(cx: &Cx<'_, '_>, sib: Node<'_>) -> Option<bool> {
     if sib.kind() == "identifier" {
         return match text(cx, sib) {
-            "private" | "protected" => Some(false),
-            "public" => Some(true),
+            "private" => Some(false),
+            "protected" | "public" => Some(true),
             _ => None,
         };
     }
@@ -63,6 +62,10 @@ pub(crate) fn ruby_public<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
     if wrapped_by_marker(cx, n) {
         return false;
     }
+    let name = child_by_field(n, "name").map(|v| text(cx, v)).unwrap_or("");
+    if explicit_private_names(cx).contains(&name) {
+        return false;
+    }
     let Some(container) = cx.parent_of(n) else {
         return true;
     };
@@ -70,41 +73,52 @@ pub(crate) fn ruby_public<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
         .state_before(container, n, |sib| ruby_visibility_marker(cx, sib))
         .unwrap_or(true)
 }
+pub(crate) fn explicit_private_names<'x, 's>(cx: &'x Cx<'_, 's>) -> &'x [&'s str] {
+    cx.file_names(FileSetKind::Member, || {
+        let mut out = Vec::new();
+        let Some(root) = cx.root() else {
+            return out;
+        };
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "call" {
+                collect_marker_names(cx, node, &mut out);
+            }
+            stack.extend(named_children(node));
+        }
+        out
+    })
+}
+fn collect_marker_names<'s>(cx: &Cx<'_, 's>, node: Node<'_>, out: &mut Vec<&'s str>) {
+    if child_by_field(node, "receiver").is_some() {
+        return;
+    }
+    if field_text(cx, node, "method") != Some("private") {
+        return;
+    }
+    let Some(list) = first_of_kind(node, &["argument_list"]) else {
+        return;
+    };
+    for arg in named_children(list) {
+        let name = match arg.kind() {
+            "simple_symbol" => text(cx, arg).strip_prefix(':').unwrap_or(""),
+            "string" => strip_quotes(text(cx, arg)),
+            "identifier" | "constant" => text(cx, arg),
+            _ => continue,
+        };
+        if !name.is_empty() && !out.contains(&name) {
+            out.push(name);
+        }
+    }
+}
 pub(crate) fn is_protocol_method(name: &str) -> bool {
     matches!(
         name,
         "initialize"
             | "to_s"
-            | "to_str"
-            | "to_i"
-            | "to_a"
-            | "to_h"
             | "inspect"
             | "hash"
-            | "eql?"
             | "=="
-            | "!="
-            | "<=>"
-            | "<"
-            | ">"
-            | "<="
-            | ">="
-            | "each"
-            | "call"
-            | "[]"
-            | "[]="
-            | "<<"
-            | "+"
-            | "-"
-            | "*"
-            | "/"
-            | "%"
-            | "succ"
-            | "next"
-            | "length"
-            | "size"
-            | "empty?"
-            | "coerce"
             | "method_missing"
             | "respond_to_missing?"
     )
@@ -137,6 +151,38 @@ pub(crate) fn push_plain_param<'s>(cx: &Cx<'_, 's>, child: Node<'_>, out: &mut V
         is_variadic: false,
     });
 }
+fn push_optional_param<'s>(cx: &Cx<'_, 's>, child: Node<'_>, out: &mut Vec<Param<'s>>) {
+    push_named_default_param(cx, child, out, false);
+}
+fn push_keyword_param<'s>(cx: &Cx<'_, 's>, child: Node<'_>, out: &mut Vec<Param<'s>>) {
+    push_named_default_param(cx, child, out, true);
+}
+fn push_named_default_param<'s>(
+    cx: &Cx<'_, 's>,
+    child: Node<'_>,
+    out: &mut Vec<Param<'s>>,
+    keyword_only: bool,
+) {
+    let name = field_text(cx, child, "name").unwrap_or("");
+    let value = child_by_field(child, "value");
+    let flag = value.is_some_and(|v| {
+        let default = trimmed(cx, v);
+        default == "true" || default == "false"
+    });
+    out.push(Param {
+        name,
+        ty: None,
+        primitive_kind: if flag {
+            PrimitiveKind::Bool
+        } else {
+            PrimitiveKind::Other
+        },
+        has_default: value.is_some(),
+        bool_default: flag,
+        keyword_only,
+        is_variadic: false,
+    });
+}
 pub(crate) fn ruby_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
     let mut out = Vec::new();
     let params = first_named_child_matching(n, &["method_parameters"]);
@@ -145,46 +191,24 @@ pub(crate) fn ruby_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
     };
     for child in named_children(params) {
         match child.kind() {
-            "identifier" => out.push(Param {
-                name: text(cx, child),
-                ty: None,
-                primitive_kind: PrimitiveKind::Other,
-                has_default: false,
-                bool_default: false,
-                keyword_only: false,
-                is_variadic: false,
-            }),
-            "optional_parameter" | "keyword_parameter" => {
-                let name = field_text(cx, child, "name").unwrap_or("");
-                let default = child_by_field(child, "value")
-                    .map(|v| trimmed(cx, v))
-                    .unwrap_or("");
-                let flag = default == "true" || default == "false";
-                out.push(Param {
-                    name,
-                    ty: None,
-                    primitive_kind: if flag {
-                        PrimitiveKind::Bool
-                    } else {
-                        PrimitiveKind::Other
-                    },
-                    has_default: false,
-                    bool_default: flag,
-                    keyword_only: false,
-                    is_variadic: false,
-                });
+            "optional_parameter" => {
+                push_optional_param(cx, child, &mut out);
             }
-            "destructured_parameter" | "forward_parameter" => {
+            "keyword_parameter" => {
+                push_keyword_param(cx, child, &mut out);
+            }
+            "splat_parameter" => {
                 out.push(Param {
-                    name: text(cx, child),
+                    name: field_text(cx, child, "name").unwrap_or_else(|| text(cx, child)),
                     ty: None,
                     primitive_kind: PrimitiveKind::Other,
                     has_default: false,
                     bool_default: false,
                     keyword_only: false,
-                    is_variadic: false,
+                    is_variadic: true,
                 });
             }
+            "hash_splat_parameter" | "block_parameter" => {}
             _ => push_plain_param(cx, child, &mut out),
         }
     }

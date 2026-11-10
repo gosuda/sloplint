@@ -1,11 +1,19 @@
 //! Walker and parse-stage contracts observed through `analyze` only.
 
+#[path = "analyze_facts/callback_functions.rs"]
+mod callback_functions;
 #[path = "analyze_facts/declaration_scopes.rs"]
 mod declaration_scopes;
 #[path = "analyze_facts/directive_docs.rs"]
 mod directive_docs;
 #[path = "analyze_facts/else_if_chains.rs"]
 mod else_if_chains;
+#[path = "analyze_facts/global_write_scope_end.rs"]
+mod global_write_scope_end;
+#[path = "analyze_facts/global_write_shadow.rs"]
+mod global_write_shadow;
+#[path = "analyze_facts/go_block_bindings.rs"]
+mod go_block_bindings;
 #[path = "analyze_facts/has_value_return.rs"]
 mod has_value_return;
 #[path = "analyze_facts/header_comment_chains.rs"]

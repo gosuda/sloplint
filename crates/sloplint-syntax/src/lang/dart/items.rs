@@ -1,5 +1,5 @@
 use crate::hooks::{
-    Container, Cx, TypeHead, any_named_child, child_by_field, find_map_named_child,
+    Container, Cx, FileSetKind, TypeHead, any_named_child, child_by_field, find_map_named_child,
     first_named_child, has_child_kind, named_children, narrow, pos_of, text, trimmed,
 };
 use sloplint_core::facts::{
@@ -9,7 +9,7 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use super::funcs::visibility_of;
-use super::syntax::{cut_generics, has_anon, label_text, last_ident};
+use super::syntax::{COMMENTS, has_anon, label_text, last_ident};
 
 pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     if n.kind() != "local_variable_declaration" {
@@ -22,6 +22,13 @@ pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s st
             && let Some(nm) = child_by_field(c, "name")
         {
             out.push((text(cx, nm), pos_of(nm)));
+            for e in named_children(c) {
+                if e.kind() == "initialized_identifier"
+                    && let Some(extra) = child_by_field(e, "name")
+                {
+                    out.push((text(cx, extra), pos_of(extra)));
+                }
+            }
         }
     }
 }
@@ -71,20 +78,21 @@ pub(crate) fn write_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s s
     }
 }
 
-fn top_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    find_map_named_child(n, |c| {
+fn top_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    for c in named_children(n) {
         if c.kind() != "initialized_identifier_list" && c.kind() != "static_final_declaration_list"
         {
-            return None;
+            continue;
         }
-        find_map_named_child(c, |e| {
+        for e in named_children(c) {
             if e.kind() != "initialized_identifier" && e.kind() != "static_final_declaration" {
-                return None;
+                continue;
             }
-            child_by_field(e, "name")
-        })
-    })
-    .map(|nm| (text(cx, nm), pos_of(nm)))
+            if let Some(nm) = child_by_field(e, "name") {
+                out.push((text(cx, nm), pos_of(nm)));
+            }
+        }
+    }
 }
 
 fn push_impl<'s>(cx: &Cx<'_, 's>, t: Node<'_>, impls: &mut Vec<ImplRef<'s>>) {
@@ -114,8 +122,24 @@ fn super_impls<'s>(cx: &Cx<'_, 's>, c: Node<'_>, impls: &mut Vec<ImplRef<'s>>) {
     }
 }
 
+fn extension_container<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
+    let name_node = child_by_field(n, "name")?;
+    let name = text(cx, name_node);
+    Some(TypeHead {
+        def: None,
+        impls: Vec::new(),
+        container: Some(Container::Class {
+            exported: !name.starts_with('_'),
+            implements: false,
+        }),
+    })
+}
+
 pub(crate) fn typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     let kind = n.kind();
+    if kind == "extension_declaration" {
+        return extension_container(cx, n);
+    }
     let is_type = kind == "class_declaration"
         || kind == "mixin_declaration"
         || kind == "enum_declaration"
@@ -167,13 +191,6 @@ fn arm_pattern_member(n: Node<'_>) -> bool {
     })
 }
 
-fn sibling_member(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    let Some(parent) = cx.parent() else {
-        return false;
-    };
-    any_named_child(parent, |s| s.id() != n.id() && arm_pattern_member(s))
-}
-
 fn switch_scrutinee(cx: &Cx<'_, '_>, _n: Node<'_>) -> Option<ScrutineeKind> {
     for current in cx.ancestors() {
         let kind = current.kind();
@@ -206,6 +223,53 @@ fn sibling_variants(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
     )
 }
 
+fn prefix_in<'s>(cx: &Cx<'_, 's>, m: Node<'_>) -> Option<&'s str> {
+    if m.kind() == "member_expression" {
+        return child_by_field(m, "object").map(|o| text(cx, o));
+    }
+    if m.kind() == "constant_pattern" && m.named_child_count() == 2 {
+        return m.named_child(0).map(|first| text(cx, first));
+    }
+    None
+}
+
+fn member_prefix<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
+    for c in named_children(n) {
+        if let Some(prefix) = prefix_in(cx, c) {
+            return Some(prefix);
+        }
+        if !c.kind().contains("statement") && c.kind() != "block" {
+            for g in named_children(c) {
+                if let Some(prefix) = prefix_in(cx, g) {
+                    return Some(prefix);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn sibling_same_prefix(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    let Some(parent) = cx.parent() else {
+        return false;
+    };
+    let mut cursor = parent.walk();
+    let mut seen: Vec<&str> = Vec::new();
+    for s in parent.named_children(&mut cursor) {
+        if s.id() == n.id() {
+            continue;
+        }
+        let Some(prefix) = member_prefix(cx, s) else {
+            continue;
+        };
+        if seen.contains(&prefix) {
+            return true;
+        }
+        seen.push(prefix);
+    }
+    false
+}
+
 pub(crate) fn match_arm(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
     let kind = n.kind();
     let is_arm = kind == "switch_statement_case"
@@ -214,25 +278,17 @@ pub(crate) fn match_arm(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
     if !is_arm {
         return None;
     }
-    let pos = pos_of(n);
+    if kind != "switch_statement_default" {
+        let first = first_named_child(n)?;
+        if trimmed(cx, first) != "_" {
+            return None;
+        }
+    }
     let scrutinee = switch_scrutinee(cx, n).unwrap_or(ScrutineeKind::Other);
     let variant_count = sibling_variants(cx, n);
-    if kind == "switch_statement_default" {
-        return Some(WildcardArm {
-            pos,
-            enum_like: sibling_member(cx, n),
-            scrutinee,
-            variant_count,
-            has_nullable_ctor: false,
-        });
-    }
-    let first = first_named_child(n)?;
-    if trimmed(cx, first) != "_" {
-        return None;
-    }
     Some(WildcardArm {
-        pos,
-        enum_like: sibling_member(cx, n),
+        pos: pos_of(n),
+        enum_like: variant_count >= 2 && sibling_same_prefix(cx, n),
         scrutinee,
         variant_count,
         has_nullable_ctor: false,
@@ -252,7 +308,7 @@ fn stmt_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: Option<&'s str>) -> Stmt<'
 fn stmt_call<'s>(cx: &Cx<'_, 's>, c: Node<'_>, binding: Option<&'s str>) -> Option<Stmt<'s>> {
     if c.kind() == "call_expression" {
         return child_by_field(c, "function").map(|f| Stmt::Call {
-            callee: cut_generics(text(cx, f)),
+            callee: super::calls::callee_text(cx, f),
             kind: CallKind::Plain,
         });
     }
@@ -330,62 +386,59 @@ pub(crate) fn struct_lit<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FieldCopy<'
         return None;
     }
     let args_node = child_by_field(n, "arguments")?;
-    let kids = named_children(args_node);
-    if kids.is_empty() {
-        return None;
-    }
+    let mut cursor = args_node.walk();
     let mut source: Option<&'s str> = None;
-    for a in &kids {
-        let s = struct_arg(cx, *a)?;
-        match source {
-            None => source = Some(s),
-            Some(prev) if prev == s => {}
-            Some(_) => return None,
+    let mut fields = 0u32;
+    for a in args_node.named_children(&mut cursor) {
+        if COMMENTS.contains(&a.kind()) {
+            continue;
         }
+        let found = struct_arg(cx, a)?;
+        if source.is_none() {
+            source = Some(found);
+        } else if source != Some(found) {
+            return None;
+        }
+        fields += 1;
+    }
+    if fields == 0 {
+        return None;
     }
     Some(FieldCopy {
         pos: pos_of(n),
-        fields: narrow(kids.len()),
+        fields,
         source,
     })
 }
 
-fn list_declares(cx: &Cx<'_, '_>, list: Node<'_>, name: &str) -> bool {
-    let is_list = list.kind() == "initialized_identifier_list"
-        || list.kind() == "static_final_declaration_list";
-    if !is_list {
-        return false;
-    }
-    for e in named_children(list) {
-        if child_by_field(e, "name").is_some_and(|nm| text(cx, nm) == name) {
-            return true;
+fn top_level_names<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
+    let Some(root) = cx.root() else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for c in named_children(root) {
+        if c.kind() != "top_level_variable_declaration" {
+            continue;
+        }
+        for list in named_children(c) {
+            let is_list = list.kind() == "initialized_identifier_list"
+                || list.kind() == "static_final_declaration_list";
+            if !is_list {
+                continue;
+            }
+            for e in named_children(list) {
+                if let Some(nm) = child_by_field(e, "name") {
+                    out.push(text(cx, nm));
+                }
+            }
         }
     }
-    false
-}
-
-fn decl_declares(cx: &Cx<'_, '_>, c: Node<'_>, name: &str) -> bool {
-    if c.kind() != "top_level_variable_declaration" {
-        return false;
-    }
-    for list in named_children(c) {
-        if list_declares(cx, list, name) {
-            return true;
-        }
-    }
-    false
+    out
 }
 
 fn top_level_declares(cx: &Cx<'_, '_>, _n: Node<'_>, name: &str) -> bool {
-    let Some(root) = cx.root() else {
-        return false;
-    };
-    for c in named_children(root) {
-        if decl_declares(cx, c, name) {
-            return true;
-        }
-    }
-    false
+    cx.file_names(FileSetKind::Scope, || top_level_names(cx))
+        .contains(&name)
 }
 
 fn report_global_write<'s>(
@@ -418,7 +471,9 @@ pub(crate) fn ambient<'s>(
         }) {
             return;
         }
-        if let Some((name, pos)) = top_name(cx, n) {
+        let mut declared = Vec::new();
+        top_names(cx, n, &mut declared);
+        for (name, pos) in declared {
             out.push((AmbientKind::GlobalMutable, name, pos));
         }
         return;

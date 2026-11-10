@@ -2,21 +2,24 @@
 
 use tree_sitter::Node;
 
-use crate::hooks::{Cx, child_by_field, last_segment, named_children, text};
+use crate::hooks::{Cx, child_by_field, code_children, last_segment, named_children, text};
 
 use super::enclosing_function;
 
 pub(crate) fn py_call_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
-    let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
+    let func = child_by_field(n, "function")?;
+    let callee = text(cx, func);
     let last = last_segment(callee, &["."]);
     if is_attr_fallback(last) {
         return fallback_name(n, cx, last);
     }
-    if last == "eval" {
-        return Some("eval");
-    }
-    if last == "exec" {
-        return Some("exec");
+    if func.kind() == "identifier" {
+        if last == "eval" {
+            return Some("eval");
+        }
+        if last == "exec" {
+            return Some("exec");
+        }
     }
     if last == "__import__" {
         return import_name(n, cx, "__import__");
@@ -158,16 +161,21 @@ fn name_from_literals(arg: Node<'_>, _site: Node<'_>, cx: &Cx<'_, '_>) -> bool {
     let Some(func) = enclosing_function(cx) else {
         return false;
     };
-    let targets = literal_targets(func, cx);
-    if targets.is_empty() {
-        return false;
-    }
-    let mut ids = Vec::new();
-    collect_idents(arg, cx, &mut ids);
-    if ids.is_empty() {
-        return false;
-    }
-    ids.iter().all(|id| targets.iter().any(|t| t == id))
+    cx.literal_targets(
+        func.id(),
+        || literal_targets(func, cx),
+        |targets| {
+            if targets.is_empty() {
+                return false;
+            }
+            let mut ids = Vec::new();
+            collect_idents(arg, cx, &mut ids);
+            if ids.is_empty() {
+                return false;
+            }
+            ids.iter().all(|id| targets.iter().any(|t| t == id))
+        },
+    )
 }
 
 fn collect_idents(n: Node<'_>, cx: &Cx<'_, '_>, out: &mut Vec<String>) {
@@ -176,19 +184,15 @@ fn collect_idents(n: Node<'_>, cx: &Cx<'_, '_>, out: &mut Vec<String>) {
         if cur.kind() == "identifier" {
             out.push(text(cx, cur).to_owned());
         }
-        stack.extend(named_children(cur).into_iter().rev());
+        let mut cursor = cur.walk();
+        stack.extend(cur.children(&mut cursor).filter(|child| child.is_named()));
     }
 }
 
 fn literal_targets(func: Node<'_>, cx: &Cx<'_, '_>) -> Vec<String> {
     let mut out = Vec::new();
     let mut stack = vec![func];
-    let mut budget = 2000u32;
     while let Some(cur) = stack.pop() {
-        if budget == 0 {
-            break;
-        }
-        budget -= 1;
         if cur.id() != func.id()
             && matches!(
                 cur.kind(),
@@ -200,7 +204,8 @@ fn literal_targets(func: Node<'_>, cx: &Cx<'_, '_>) -> Vec<String> {
         if cur.kind() == "for_statement" {
             push_for_targets(cur, cx, &mut out);
         }
-        stack.extend(named_children(cur));
+        let mut cursor = cur.walk();
+        stack.extend(cur.children(&mut cursor).filter(|child| child.is_named()));
     }
     out
 }
@@ -245,7 +250,7 @@ fn module_alias_is_literal(alias: Node<'_>, cx: &Cx<'_, '_>) -> bool {
     module_assignments(root).into_iter().any(|stmt| {
         child_by_field(stmt, "left")
             .is_some_and(|left| left.kind() == "identifier" && text(cx, left) == want)
-            && child_by_field(stmt, "right").is_some_and(is_literal_collection)
+            && child_by_field(stmt, "right").is_some_and(|r| is_literal_collection(r))
     })
 }
 
@@ -265,12 +270,16 @@ fn bind_names(n: Node<'_>, cx: &Cx<'_, '_>, out: &mut Vec<String>) {
 fn is_literal_collection(n: Node<'_>) -> bool {
     match n.kind() {
         "list" | "tuple" | "set" => {
-            let kids = named_children(n);
+            let kids = code_children(n);
             !kids.is_empty() && kids.iter().all(|c| c.kind() == "string")
         }
         "dictionary" => {
-            let kids = named_children(n);
-            !kids.is_empty() && kids.iter().all(|c| c.kind() == "string")
+            let kids = code_children(n);
+            !kids.is_empty()
+                && kids.iter().all(|c| {
+                    c.kind() == "pair"
+                        && child_by_field(*c, "key").is_some_and(|k| k.kind() == "string")
+                })
         }
         _ => false,
     }

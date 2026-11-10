@@ -1,2 +1,3 @@
 src/store.R:1 info agent/ambient-global-state
 src/store.R:8 info agent/ambient-global-state
+src/store.R:11 info agent/ambient-global-state

@@ -3,7 +3,8 @@
 use sloplint_core::facts::{Param, PrimitiveKind, Visibility};
 use tree_sitter::Node;
 
-use super::calls::ts_sole_call;
+use super::ambient::hoisted_shadows_for;
+use super::calls::{ts_pat, ts_sole_call};
 use crate::hooks::{
     Cx, FunctionHead, any_named_child, child_by_field, find_named_child, named_children, pos_of,
     preceding_comments, text,
@@ -64,11 +65,11 @@ pub(crate) fn has_override(n: Node<'_>) -> bool {
     find_named_child(n, |child| child.kind() == "override_modifier").is_some()
 }
 
-fn has_decorator(n: Node<'_>) -> bool {
+pub(crate) fn has_decorator(n: Node<'_>) -> bool {
     find_named_child(n, |child| child.kind() == "decorator").is_some()
 }
 
-fn is_deprecated_named(node: Node<'_>, doc: &[&str], cx: &Cx<'_, '_>) -> bool {
+pub(crate) fn is_deprecated_named(node: Node<'_>, doc: &[&str], cx: &Cx<'_, '_>) -> bool {
     if doc.iter().any(|line| line.contains("@deprecated")) {
         return true;
     }
@@ -109,14 +110,14 @@ fn default_of(child: Node<'_>) -> (bool, bool) {
 }
 
 fn push_required_param<'s>(cx: &Cx<'_, 's>, child: Node<'_>, out: &mut Vec<Param<'s>>) {
-    push_param(cx, child, false, out);
+    push_pat(cx, child, out);
 }
 
 fn push_optional_param<'s>(cx: &Cx<'_, 's>, child: Node<'_>, out: &mut Vec<Param<'s>>) {
-    push_param(cx, child, true, out);
+    push_pat(cx, child, out);
 }
 
-fn push_param<'s>(cx: &Cx<'_, 's>, child: Node<'_>, optional: bool, out: &mut Vec<Param<'s>>) {
+fn push_pat<'s>(cx: &Cx<'_, 's>, child: Node<'_>, out: &mut Vec<Param<'s>>) {
     let Some(pat) = child_by_field(child, "pattern") else {
         return;
     };
@@ -130,7 +131,7 @@ fn push_param<'s>(cx: &Cx<'_, 's>, child: Node<'_>, optional: bool, out: &mut Ve
         name,
         ty,
         primitive_kind: primitive_of(ty),
-        has_default: valued || optional,
+        has_default: valued,
         bool_default,
         keyword_only: false,
         is_variadic: variadic,
@@ -145,6 +146,47 @@ pub(crate) fn ts_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param
             _ => {}
         }
     }
+}
+
+fn shadow_pat_names<'s>(cx: &Cx<'_, 's>, pat: Node<'_>, out: &mut Vec<&'s str>) {
+    match pat.kind() {
+        "object_pattern" | "array_pattern" | "rest_pattern" => {
+            let mut found = Vec::new();
+            ts_pat(cx, pat, &mut found);
+            out.extend(found.into_iter().map(|(name, _)| name));
+        }
+        "assignment_pattern" => {
+            if let Some(left) = child_by_field(pat, "left") {
+                shadow_pat_names(cx, left, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+pub(crate) fn shadow_param_names<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<&'s str>) {
+    for child in named_children(list) {
+        if child.kind() != "required_parameter" && child.kind() != "optional_parameter" {
+            continue;
+        }
+        let Some(pat) = child_by_field(child, "pattern") else {
+            continue;
+        };
+        if pat.kind() == "this" {
+            continue;
+        }
+        shadow_pat_names(cx, pat, out);
+    }
+}
+
+pub(crate) fn closure_shadow_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<&'s str> {
+    let mut out = Vec::new();
+    if let Some(list) = child_by_field(n, "parameters") {
+        shadow_param_names(cx, list, &mut out);
+    } else if let Some(single) = child_by_field(n, "parameter") {
+        shadow_pat_names(cx, single, &mut out);
+    }
+    out
 }
 
 pub(crate) fn closure_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Param<'s>>) {
@@ -198,6 +240,7 @@ pub(crate) fn head_for<'s>(
     let (doc, doc_pos) = preceding_comments(cx, site.header, &["comment"], &["decorator"]);
     let deprecated = is_deprecated_named(site.node, &doc, cx);
     FunctionHead {
+        shadow_params: Vec::new(),
         name,
         name_pos: pos_of(site.name),
         visibility: site.visibility,
@@ -209,6 +252,7 @@ pub(crate) fn head_for<'s>(
         is_decorated: has_decorator(site.node),
         is_trait_item: false,
         region: None,
+        receiver: None,
         params,
         return_type: ret,
         missing_annotations: missing,
@@ -244,8 +288,10 @@ pub(crate) fn function_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Function
         return None;
     }
     let mut params = Vec::new();
+    let mut shadow = Vec::new();
     if let Some(list) = child_by_field(n, "parameters") {
         ts_params(cx, list, &mut params);
+        shadow_param_names(cx, list, &mut shadow);
     }
     let site = TsHead {
         name: name_node,
@@ -256,5 +302,10 @@ pub(crate) fn function_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Function
         overload,
         body: child_by_field(n, "body"),
     };
-    Some(head_for(cx, site, params))
+    let mut head = head_for(cx, site, params);
+    head.shadow_params = shadow;
+    if let Some(body) = child_by_field(n, "body") {
+        hoisted_shadows_for(cx, body, &mut head.shadow_params);
+    }
+    Some(head)
 }

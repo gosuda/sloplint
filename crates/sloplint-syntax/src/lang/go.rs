@@ -4,7 +4,7 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, child_by_field, text,
 };
 use crate::spec::Role;
 
@@ -27,6 +27,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("short_var_declaration", Role::Bind),
     ("assignment_statement", Role::Write),
     ("inc_statement", Role::Write),
+    ("return_statement", Role::Return),
     ("dec_statement", Role::Write),
     ("import_declaration", Role::Import),
     ("type_spec", Role::TypeDef),
@@ -40,6 +41,10 @@ pub(crate) struct GoHooks;
 pub(crate) static HOOKS: GoHooks = GoHooks;
 
 impl LangHooks for GoHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let name_node = child_by_field(n, "name")?;
         let mut params = Vec::new();
@@ -74,6 +79,40 @@ impl LangHooks for GoHooks {
         stmts::go_decl_names(cx, n, out);
     }
 
+    fn decl_visible_in_initializer(&self) -> bool {
+        false
+    }
+
+    fn decl_piece(&self, kind: &str) -> bool {
+        kind == "var_spec"
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        if node.kind() == "type_switch_statement" {
+            return depth;
+        }
+        if cx.parent().is_some_and(|p| p.kind() == "for_clause") {
+            depth.saturating_sub(2)
+        } else {
+            depth.saturating_sub(1)
+        }
+    }
+
+    fn block_scoped_binds(&self) -> bool {
+        true
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        matches!(
+            kind,
+            "range_clause" | "type_switch_statement" | "receive_statement"
+        )
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        stmts::go_shadow_names(cx, n, out);
+    }
+
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         stmts::go_write_roots(cx, n, out);
     }
@@ -85,7 +124,7 @@ impl LangHooks for GoHooks {
         let func = child_by_field(n, "function")?;
         let args = calls::go_call_args(cx, n);
         Some(CallHead {
-            callee: text(cx, func),
+            callee: calls::go_callee(cx, func),
             kind: CallKind::Plain,
             callee_root: calls::go_callee_root(cx, func),
             is_simple_path: calls::go_is_simple_path(func),

@@ -2,8 +2,8 @@ use sloplint_core::facts::{AmbientKind, Pos};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, child_by_field, first_named_child, first_of_kind, has_child_kind, last_segment,
-    named_children, pos_of, text,
+    Cx, FileSetKind, child_by_field, first_named_child, first_of_kind, has_child_kind,
+    last_segment, named_children, pos_of, text,
 };
 
 fn is_cell_token(tok: &str) -> bool {
@@ -127,16 +127,12 @@ pub(super) fn write_roots<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s s
     }
 }
 
-fn file_static_mut_names<'s>(cx: &Cx<'_, 's>, _n: Node<'_>) -> Vec<&'s str> {
-    let Some(root) = cx.root() else {
-        return Vec::new();
-    };
-    let mut names = Vec::new();
+fn collect_static_mut_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str>) {
     let mut stack = vec![root];
     while let Some(node) = stack.pop() {
         if node.kind() == "static_item" && has_child_kind(node, "mutable_specifier") {
             if let Some(name) = child_by_field(node, "name") {
-                names.push(text(cx, name));
+                out.push(text(cx, name));
             }
             continue;
         }
@@ -145,7 +141,6 @@ fn file_static_mut_names<'s>(cx: &Cx<'_, 's>, _n: Node<'_>) -> Vec<&'s str> {
         }
         stack.extend(named_children(node));
     }
-    names
 }
 
 fn assign_global_write<'s>(
@@ -163,7 +158,14 @@ fn assign_global_write<'s>(
     let Some((root, _)) = write_root(cx, left) else {
         return;
     };
-    if root != "_" && file_static_mut_names(cx, n).contains(&root) {
+    let globals = cx.file_names(FileSetKind::Scope, || {
+        let mut names = Vec::new();
+        if let Some(file) = cx.root() {
+            collect_static_mut_names(cx, file, &mut names);
+        }
+        names
+    });
+    if root != "_" && globals.contains(&root) {
         out.push((AmbientKind::GlobalWrite, root, pos_of(n)));
     }
 }

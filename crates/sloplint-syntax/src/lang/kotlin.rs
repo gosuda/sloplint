@@ -4,8 +4,8 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, first_of_kind,
-    named_children, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, any_named_child,
+    first_of_kind, named_children, text,
 };
 use crate::spec::Role;
 
@@ -16,6 +16,7 @@ mod items;
 pub(crate) static TABLE: &[(&str, Role)] = &[
     ("function_declaration", Role::Function),
     ("secondary_constructor", Role::Function),
+    ("primary_constructor", Role::Function),
     ("lambda_literal", Role::Closure),
     ("anonymous_function", Role::Closure),
     ("if_expression", Role::If),
@@ -31,6 +32,7 @@ pub(crate) static TABLE: &[(&str, Role)] = &[
     ("import", Role::Import),
     ("class_declaration", Role::TypeDef),
     ("object_declaration", Role::TypeDef),
+    ("object_literal", Role::Impl),
     ("type_alias", Role::TypeDef),
     ("line_comment", Role::Comment),
     ("block_comment", Role::Comment),
@@ -154,24 +156,19 @@ pub(crate) fn type_visibility(cx: &Cx<'_, '_>, n: Node<'_>) -> Visibility {
     }
 }
 
-pub(crate) fn is_nested_fn(cx: &Cx<'_, '_>) -> bool {
-    for parent in cx.ancestors() {
-        if matches!(
-            parent.kind(),
-            "function_declaration"
-                | "secondary_constructor"
-                | "lambda_literal"
-                | "anonymous_function"
-                | "anonymous_initializer"
-                | "block"
-        ) {
-            return true;
-        }
+pub(crate) fn stricter_visibility(first: Visibility, second: Visibility) -> Visibility {
+    match (first, second) {
+        (Visibility::Private, _) | (_, Visibility::Private) => Visibility::Private,
+        (Visibility::Restricted, _) | (_, Visibility::Restricted) => Visibility::Restricted,
+        _ => Visibility::Exported,
     }
-    false
 }
 
 impl LangHooks for KotlinHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         funcs::function_head(cx, n)
     }
@@ -197,9 +194,15 @@ impl LangHooks for KotlinHooks {
             out.extend(items::import_fact(cx, n));
         }
     }
-
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {
         items::typedef_head(cx, n)
+    }
+
+    fn container(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<Container> {
+        (n.kind() == "object_literal").then_some(Container::Class {
+            exported: false,
+            implements: false,
+        })
     }
 
     fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {

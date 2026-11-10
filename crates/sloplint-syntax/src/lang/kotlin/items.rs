@@ -7,16 +7,17 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use super::calls::callee_of;
-use super::{code_children, first_code, has_modifier_word, type_visibility};
+use super::{code_children, first_code, has_modifier_word, stricter_visibility, type_visibility};
 use crate::hooks::{
-    Container, Cx, TypeHead, child_by_field, first_of_kind, has_child_kind, last_segment,
-    named_children, pos_of, rfind_named_child, text,
+    Container, Cx, FileSetKind, TypeHead, child_by_field, first_of_kind, has_child_kind,
+    last_segment, named_children, pos_of, rfind_named_child, text,
 };
 
 pub(crate) fn delegate_ref<'s>(
     cx: &Cx<'_, 's>,
     spec: Node<'_>,
     child_is_abstract: bool,
+    is_generic: bool,
 ) -> Option<ImplRef<'s>> {
     let user = first_of_kind(spec, &["constructor_invocation"])
         .and_then(|invocation| first_of_kind(invocation, &["user_type"]))
@@ -25,7 +26,7 @@ pub(crate) fn delegate_ref<'s>(
     Some(ImplRef {
         name: text(cx, last),
         pos: pos_of(last),
-        is_generic: has_child_kind(spec, "type_arguments"),
+        is_generic,
         child_is_abstract,
     })
 }
@@ -36,7 +37,19 @@ pub(crate) fn typedef_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<
         "class_declaration" | "object_declaration" => child_by_field(n, "name")?,
         _ => return None,
     };
-    let visibility = type_visibility(cx, n);
+    let mut visibility = type_visibility(cx, n);
+    for p in cx.ancestors() {
+        match p.kind() {
+            "object_literal" => visibility = Visibility::Private,
+            "class_declaration" | "object_declaration" => {
+                visibility = stricter_visibility(visibility, type_visibility(cx, p));
+            }
+            _ => {}
+        }
+        if visibility == Visibility::Private {
+            break;
+        }
+    }
     let is_class = n.kind() == "class_declaration";
     let is_interface = is_class && has_child_kind(n, "interface");
     let abstraction = is_class && (is_interface || has_modifier_word(cx, n, "abstract"));
@@ -50,12 +63,13 @@ pub(crate) fn typedef_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<
             implements: false,
         }),
     };
+    let is_generic = has_child_kind(n, "type_parameters");
     let impls: Vec<ImplRef<'s>> =
         first_of_kind(n, &["delegation_specifiers"]).map_or_else(Vec::new, |list| {
             named_children(list)
                 .into_iter()
                 .filter(|child| child.kind() == "delegation_specifier")
-                .filter_map(|spec| delegate_ref(cx, spec, abstraction))
+                .filter_map(|spec| delegate_ref(cx, spec, abstraction, is_generic))
                 .collect()
         });
     Some(TypeHead {
@@ -223,17 +237,17 @@ fn sibling_entry<'s>(
     if entry.kind() != "when_entry" || entry.id() == self_id {
         return;
     }
-    let Some(cond) = child_by_field(entry, "condition") else {
-        return;
-    };
-    if enum_condition(cx, cond) {
-        *variants = variants.saturating_add(1);
-    }
-    if matches!(
-        last_segment(text(cx, cond), &["."]),
-        "Some" | "None" | "Ok" | "Err"
-    ) {
-        *nullable = true;
+    let mut cursor = entry.walk();
+    for cond in entry.children_by_field_name("condition", &mut cursor) {
+        if enum_condition(cx, cond) {
+            *variants = variants.saturating_add(1);
+        }
+        if matches!(
+            last_segment(text(cx, cond), &["."]),
+            "Some" | "None" | "Ok" | "Err"
+        ) {
+            *nullable = true;
+        }
     }
 }
 
@@ -266,7 +280,7 @@ pub(crate) fn match_arm<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<WildcardArm>
     let (variant_count, has_nullable_ctor) = sibling_variants(cx, parent, n.id());
     Some(WildcardArm {
         pos: pos_of(n),
-        enum_like: variant_count >= 1,
+        enum_like: subject.is_some() && variant_count >= 2,
         scrutinee,
         variant_count,
         has_nullable_ctor,
@@ -307,21 +321,28 @@ fn ambient_write_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     }
 }
 
-fn is_top_level_var<'s>(cx: &Cx<'_, 's>, name: &str) -> bool {
+fn top_level_vars<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
     let Some(root) = cx.root() else {
-        return false;
+        return Vec::new();
     };
     if root.kind() != "source_file" {
-        return false;
+        return Vec::new();
     }
-    named_children(root).into_iter().any(|child| {
+    let mut out = Vec::new();
+    for child in named_children(root) {
         if child.kind() != "property_declaration" || !has_child_kind(child, "var") {
-            return false;
+            continue;
         }
         let mut names = Vec::new();
         variable_names(cx, child, &mut names);
-        names.iter().any(|(id, _)| *id == name)
-    })
+        out.extend(names.into_iter().map(|(id, _)| id));
+    }
+    out
+}
+
+fn is_top_level_var<'s>(cx: &Cx<'_, 's>, name: &str) -> bool {
+    cx.file_names(FileSetKind::Scope, || top_level_vars(cx))
+        .contains(&name)
 }
 
 pub(crate) fn ambient_sites<'s>(

@@ -437,6 +437,19 @@ fn audit_missing_handler_go() {
         "go return err is Rethrow, got {:?}",
         analysis.facts.handlers[0].stmts
     );
+    let commented = "package sample\nfunc load(p string) error {\n data, err := os.ReadFile(p)\n // keep going\n if err != nil { return err }\n return nil\n}\n";
+    let analysis = audit_analyze(Lang::Go, "commented.go", commented);
+    assert!(analysis.parse_error.is_none(), "go commented parses");
+    assert_eq!(
+        analysis.facts.handlers.len(),
+        1,
+        "a comment between the call and the err check keeps the handler"
+    );
+    assert!(
+        matches!(&analysis.facts.handlers[0].stmts[..], [Stmt::Rethrow]),
+        "the commented handler returns the bound error, got {:?}",
+        analysis.facts.handlers[0].stmts
+    );
     let recovery =
         "package sample\nfunc load() error { if err := g(); err != nil { return nil } }\n";
     let analysis = audit_analyze(Lang::Go, "recovery.go", recovery);

@@ -74,7 +74,7 @@ end
         expected(&[
             ("open_default", Visibility::Exported),
             ("closed_after_private", Visibility::Private),
-            ("closed_after_protected", Visibility::Private),
+            ("closed_after_protected", Visibility::Exported),
             ("open_after_public", Visibility::Exported),
             ("closed_after_second_private", Visibility::Private),
         ]),

@@ -7,12 +7,13 @@ use sloplint_core::facts::{
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Container, Cx, TypeHead, child_by_field, first_named_child, first_named_child_matching,
-    last_segment, named_children, pos_of, text,
+    Container, Cx, TypeHead, child_by_field, code_children, first_named_child,
+    first_named_child_matching, last_segment, named_children, pos_of, text,
 };
 
 use super::{
-    class_is_abstract, enclosing_class, enclosing_function, is_doc_expr, parent_dir, py_targets,
+    class_is_abstract, enclosing_class, enclosing_function, is_doc_expr, parent_dir,
+    py_callee_text, py_targets,
 };
 
 fn strip_as(value: &str) -> &str {
@@ -49,9 +50,11 @@ fn raise_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: &str) -> Stmt<'s> {
         return Stmt::Other;
     };
     if inner.kind() == "call" {
-        let callee = child_by_field(inner, "function").map_or("", |f| text(cx, f));
+        let Some(func) = child_by_field(inner, "function") else {
+            return Stmt::Other;
+        };
         return Stmt::Call {
-            callee,
+            callee: py_callee_text(cx, func),
             kind: CallKind::Plain,
         };
     }
@@ -68,6 +71,16 @@ fn arm_pattern(arm: Node<'_>) -> Option<Node<'_>> {
     } else {
         Some(pat)
     }
+}
+
+fn ctor_name<'s>(cx: &Cx<'_, 's>, p: Node<'_>) -> &'s str {
+    if p.kind() == "class_pattern" {
+        let Some(dotted) = first_named_child_matching(p, &["dotted_name"]) else {
+            return "";
+        };
+        return last_segment(text(cx, dotted), &["."]);
+    }
+    last_segment(text(cx, p), &["."])
 }
 
 fn under_type_checking<'s>(cx: &Cx<'_, 's>, _n: Node<'_>) -> bool {
@@ -184,8 +197,11 @@ pub(crate) fn push_match_arm(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm
     if text(cx, pat) != "_" {
         return None;
     }
-    let parent = cx.parent()?;
-    let scrutinee = match child_by_field(parent, "subject").map(|s| s.kind()) {
+    let stmt = cx
+        .ancestors()
+        .take(2)
+        .find(|a| a.kind() == "match_statement")?;
+    let scrutinee = match child_by_field(stmt, "subject").map(|s| s.kind()) {
         Some("identifier") => ScrutineeKind::Ident,
         Some("attribute") => ScrutineeKind::Field,
         Some("dotted_name") => ScrutineeKind::Path,
@@ -193,7 +209,7 @@ pub(crate) fn push_match_arm(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm
     };
     let mut variant_count = 0u32;
     let mut has_nullable_ctor = false;
-    if let Some(body) = child_by_field(parent, "body") {
+    if let Some(body) = child_by_field(stmt, "body") {
         for arm in named_children(body) {
             if arm.kind() != "case_clause" || arm.id() == n.id() {
                 continue;
@@ -204,15 +220,14 @@ pub(crate) fn push_match_arm(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm
             if p.kind() == "class_pattern" || p.kind() == "dotted_name" {
                 variant_count = variant_count.saturating_add(1);
             }
-            let seg = last_segment(text(cx, p), &["."]);
-            if matches!(seg, "Some" | "None" | "Ok" | "Err") {
+            if matches!(ctor_name(cx, p), "Some" | "None" | "Ok" | "Err") {
                 has_nullable_ctor = true;
             }
         }
     }
     Some(WildcardArm {
         pos: pos_of(n),
-        enum_like: variant_count >= 1,
+        enum_like: variant_count >= 2,
         scrutinee,
         variant_count,
         has_nullable_ctor,
@@ -226,7 +241,7 @@ pub(crate) fn push_handler<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'
     let binding = child_by_field(n, "alias").map_or("", |a| strip_as(text(cx, a)));
     let block = first_named_child_matching(n, &["block"])?;
     let mut stmts = Vec::new();
-    for s in named_children(block) {
+    for s in code_children(block) {
         if s.kind() == "pass_statement" {
             continue;
         }
@@ -243,7 +258,7 @@ pub(crate) fn push_handler<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'
         parent_try.is_some_and(|t| named_children(t).iter().any(|c| c.kind() == "else_clause"));
     let try_imports_only = parent_try.is_some_and(|t| {
         child_by_field(t, "body").is_some_and(|b| {
-            let kids = named_children(b);
+            let kids = code_children(b);
             !kids.is_empty()
                 && kids.iter().all(|k| {
                     matches!(
@@ -279,7 +294,7 @@ pub(crate) fn push_struct_lit<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FieldC
         return None;
     }
     let list = child_by_field(n, "arguments")?;
-    let args = named_children(list);
+    let args = code_children(list);
     if args.is_empty() {
         return None;
     }
@@ -342,19 +357,21 @@ fn is_module_assignment(cx: &Cx<'_, '_>, _n: Node<'_>) -> bool {
 }
 
 fn push_module_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
-    match n.kind() {
-        "identifier" => {
-            let name = text(cx, n);
-            if name != "_" {
-                out.push((AmbientKind::GlobalMutable, name, pos_of(n)));
+    let mut stack = vec![n];
+    while let Some(cur) = stack.pop() {
+        match cur.kind() {
+            "identifier" => {
+                let name = text(cx, cur);
+                if name != "_" {
+                    out.push((AmbientKind::GlobalMutable, name, pos_of(cur)));
+                }
             }
-        }
-        "tuple_pattern" | "pattern_list" | "list_pattern" | "tuple" | "list" => {
-            for child in named_children(n) {
-                push_module_names(cx, child, out);
+            "tuple_pattern" | "pattern_list" | "list_pattern" | "tuple" | "list" => {
+                let mut cursor = cur.walk();
+                stack.extend(cur.children(&mut cursor).filter(|child| child.is_named()));
             }
+            _ => {}
         }
-        _ => {}
     }
 }
 

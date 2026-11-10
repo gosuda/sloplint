@@ -1,1 +1,2 @@
 a.bzl:2 info grep/no-dynamic-symbol
+a.bzl:6 info grep/no-dynamic-symbol

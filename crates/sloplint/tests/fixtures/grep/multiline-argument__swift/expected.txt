@@ -1,2 +1,2 @@
 # Positive: Collection arg spans lines 7-23 (17 lines >= strict Minor(15)); return is not a binding initializer.
-src/lib.swift:6 minor grep/multiline-argument
+src/lib.swift:6 info grep/multiline-argument

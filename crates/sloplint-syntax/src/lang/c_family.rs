@@ -160,17 +160,27 @@ pub(crate) fn init_value(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
 
 pub(crate) fn primitive_kind_of(ty: Option<&str>) -> PrimitiveKind {
     let text = ty.unwrap_or("");
-    let pointer = text.bytes().any(|b| b == b'*' || b == b'&');
+    if text.bytes().any(|b| b == b'<') {
+        return PrimitiveKind::Other;
+    }
+    let stars = text.bytes().filter(|&b| b == b'*').count();
+    let pointer = stars > 0;
     let mut base = "";
+    let mut signed = false;
     for tok in text.split(|c: char| !c.is_ascii_alphanumeric() && c != '_') {
-        if !tok.is_empty() {
-            base = tok;
+        if tok.is_empty() {
+            continue;
         }
+        if tok == "unsigned" || tok == "signed" {
+            signed = true;
+        }
+        base = tok;
     }
     match base {
         "bool" | "_Bool" | "BOOL" if !pointer => PrimitiveKind::Bool,
-        "string" | "NSString" => PrimitiveKind::Str,
-        "char" if pointer => PrimitiveKind::Str,
+        "string" => PrimitiveKind::Str,
+        "NSString" if stars <= 1 => PrimitiveKind::Str,
+        "char" if pointer && stars == 1 && !signed => PrimitiveKind::Str,
         "short" | "int" | "long" | "signed" | "unsigned" | "size_t" | "ssize_t" | "NSInteger"
         | "NSUInteger" | "int8_t" | "int16_t" | "int32_t" | "int64_t" | "uint8_t" | "uint16_t"
         | "uint32_t" | "uint64_t"
@@ -180,6 +190,20 @@ pub(crate) fn primitive_kind_of(ty: Option<&str>) -> PrimitiveKind {
         }
         "float" | "double" | "CGFloat" if !pointer => PrimitiveKind::Float,
         _ => PrimitiveKind::Other,
+    }
+}
+
+pub(crate) fn is_simple_callee(n: Node<'_>) -> bool {
+    let mut current = n;
+    loop {
+        match current.kind() {
+            "identifier" => return true,
+            "field_expression" => match child_by_field(current, "argument") {
+                Some(argument) => current = argument,
+                None => return false,
+            },
+            _ => return false,
+        }
     }
 }
 
@@ -287,7 +311,9 @@ pub(crate) fn env_ambient<'s>(
     if raw.bytes().any(|b| b == b'(' || b == b')') {
         return;
     }
-    if envs.contains(&flat(raw).as_str()) {
+    if envs.contains(&raw)
+        || raw.bytes().any(|b| b.is_ascii_whitespace()) && envs.contains(&flat(raw).as_str())
+    {
         out.push((AmbientKind::EnvRead, raw, pos_of(n)));
     }
 }

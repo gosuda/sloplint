@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{OnceCell, RefCell};
 use std::collections::HashMap;
 use tree_sitter::Node;
 
@@ -51,6 +51,7 @@ pub(crate) enum Link<'n> {
 pub(crate) struct ChainRoots {
     known: RefCell<HashMap<(u8, usize), (usize, usize)>>,
     path: RefCell<Vec<usize>>,
+    literals: LiteralCache,
 }
 
 impl ChainRoots {
@@ -85,12 +86,69 @@ impl ChainRoots {
     }
 }
 
+#[derive(Default)]
+pub(crate) struct LiteralCache {
+    cached: RefCell<HashMap<usize, Vec<String>>>,
+}
+
+impl LiteralCache {
+    pub(crate) fn reuse<R>(
+        &self,
+        func: usize,
+        compute: impl FnOnce() -> Vec<String>,
+        with: impl FnOnce(&[String]) -> R,
+    ) -> R {
+        if let Some(names) = self.cached.borrow().get(&func) {
+            return with(names);
+        }
+        let names = compute();
+        let out = with(&names);
+        self.cached.borrow_mut().insert(func, names);
+        out
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum FileSetKind {
+    Scope,
+    Type,
+    Member,
+    Module,
+}
+
+impl FileSetKind {
+    fn index(self) -> usize {
+        match self {
+            FileSetKind::Scope => 0,
+            FileSetKind::Type => 1,
+            FileSetKind::Member => 2,
+            FileSetKind::Module => 3,
+        }
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct FileNameSets<'s> {
+    slots: [OnceCell<Vec<&'s str>>; 4],
+}
+
+impl<'s> FileNameSets<'s> {
+    pub(crate) fn for_kind(
+        &self,
+        kind: FileSetKind,
+        compute: impl FnOnce() -> Vec<&'s str>,
+    ) -> &[&'s str] {
+        self.slots[kind.index()].get_or_init(compute)
+    }
+}
+
 pub(crate) struct Cx<'t, 's> {
     pub src: &'s str,
     pub path: &'s str,
     pub lang: Lang,
     pub members: &'t MemberStates,
     chains: &'t ChainRoots,
+    name_sets: &'t FileNameSets<'s>,
     containers: &'t [Container],
     exports: &'t [&'s str],
     /// Per level, outermost first: earlier siblings in tree order, then the open ancestor; the innermost level ends at the visited node.
@@ -104,6 +162,7 @@ impl<'t, 's> Cx<'t, 's> {
         lang: Lang,
         members: &'t MemberStates,
         chains: &'t ChainRoots,
+        name_sets: &'t FileNameSets<'s>,
     ) -> Self {
         Self {
             src,
@@ -111,6 +170,7 @@ impl<'t, 's> Cx<'t, 's> {
             lang,
             members,
             chains,
+            name_sets,
             containers: &[],
             exports: &[],
             levels: &[],
@@ -179,6 +239,21 @@ impl<'s> Cx<'_, 's> {
         let (from, to) = self.chains.root(family, start, step);
         slice(self.src, from, to)
     }
+    pub(crate) fn file_names(
+        &self,
+        kind: FileSetKind,
+        compute: impl FnOnce() -> Vec<&'s str>,
+    ) -> &[&'s str] {
+        self.name_sets.for_kind(kind, compute)
+    }
+    pub(crate) fn literal_targets<R>(
+        &self,
+        func: usize,
+        compute: impl FnOnce() -> Vec<String>,
+        with: impl FnOnce(&[String]) -> R,
+    ) -> R {
+        self.chains.literals.reuse(func, compute, with)
+    }
 }
 
 impl Cx<'_, '_> {
@@ -199,13 +274,6 @@ impl Cx<'_, '_> {
     pub(crate) fn nearest_class_exported(&self) -> Option<bool> {
         self.containers.iter().rev().find_map(|c| match *c {
             Container::Class { exported, .. } => Some(exported),
-            _ => None,
-        })
-    }
-
-    pub(crate) fn nearest_impl_interface_bound(&self) -> Option<bool> {
-        self.containers.iter().rev().find_map(|c| match *c {
-            Container::Impl { interface_bound } => Some(interface_bound),
             _ => None,
         })
     }

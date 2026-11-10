@@ -1,4 +1,4 @@
-use sloplint_core::facts::{AssertShape, ImportKind, ImportScope, Visibility};
+use sloplint_core::facts::{AmbientKind, AssertShape, ImportKind, ImportScope, Visibility};
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
@@ -97,14 +97,19 @@ fn default_parameter_keeps_bool_default_with_default_primitive() {
         !params[0].3 && !params[0].4,
         "the plain parameter has no default, got {params:?}"
     );
+    assert_eq!(
+        params[0].2,
+        sloplint_core::facts::PrimitiveKind::Str,
+        "`string` maps to Str like the Rust shape, got {params:?}"
+    );
     assert!(
-        !params[1].3 && params[1].4,
-        "the `:= false` parameter keeps a false bool default, got {params:?}"
+        params[1].3 && params[1].4,
+        "the `:= false` parameter carries its default, got {params:?}"
     );
     for param in &params {
         assert_eq!(
-            (param.2, param.5, param.6),
-            (sloplint_core::facts::PrimitiveKind::Other, false, false),
+            (param.5, param.6),
+            (false, false),
             "new parameter facts stay at default, got {params:?}"
         );
     }
@@ -178,8 +183,8 @@ fn assert_comparison_keeps_default_shape() {
     );
     assert_eq!(
         compared,
-        (true, AssertShape::Other, false),
-        "relational assert keeps comparison with default shape, got {compared:?}"
+        (true, AssertShape::TopEqNe, false),
+        "relational assert reports TopEqNe like Rust, got {compared:?}"
     );
     let bare = with_facts(
         "plain.odin",
@@ -245,5 +250,291 @@ fn test_attribute_marks_function_without_forcing_signature() {
         found,
         (true, false, false),
         "`@(test)` marks in-test without entry or forced signature, got {found:?}"
+    );
+}
+
+#[test]
+fn chained_call_keeps_last_segment_callee() {
+    let calls = with_facts(
+        "chain.odin",
+        "package p\nrun :: proc(t: rawptr) {\n\twrap(reflect.struct_field_by_name(t, \"id\")).get(0, 1)\n}\n",
+        |facts| {
+            facts
+                .calls
+                .iter()
+                .map(|c| {
+                    (
+                        c.callee.to_owned(),
+                        c.callee_root.map(str::to_owned),
+                        c.is_simple_path,
+                    )
+                })
+                .collect::<Vec<_>>()
+        },
+    );
+    let outer = calls
+        .iter()
+        .find(|(callee, _, _)| *callee == "get" || callee.contains("get"))
+        .expect("outer chained call is recorded");
+    assert_eq!(
+        outer,
+        &(String::from("get"), None, false),
+        "call on a call result keeps the last segment only, got {outer:?}"
+    );
+    assert!(
+        calls.iter().all(|(callee, _, _)| {
+            callee == "reflect.struct_field_by_name" || !callee.contains("struct_field_by_name")
+        }),
+        "reflect text inside arguments must not leak into a callee, got {calls:?}"
+    );
+}
+
+#[test]
+fn procedure_parameter_shadow_stays_quiet() {
+    let ambient = with_facts(
+        "shadow.odin",
+        "package p\ncounter : int = 0\nbump :: proc(counter: int) {\n\tcounter = 1\n}\n",
+        |facts| {
+            facts
+                .ambient
+                .iter()
+                .map(|a| (a.kind, a.name.to_owned(), a.in_function.is_some()))
+                .collect::<Vec<_>>()
+        },
+    );
+    assert!(
+        ambient.contains(&(AmbientKind::GlobalMutable, String::from("counter"), false)),
+        "file-scope var is a global mutable, got {ambient:?}"
+    );
+    assert!(
+        !ambient
+            .iter()
+            .any(|(kind, name, _)| { *kind == AmbientKind::GlobalWrite && name == "counter" }),
+        "parameter shadow absorbs the write, got {ambient:?}"
+    );
+}
+
+#[test]
+fn walrus_local_shadow_stays_quiet() {
+    let ambient = with_facts(
+        "walrus.odin",
+        "package p\ncounter : int = 0\nrun :: proc() {\n\tcounter := 5\n\tcounter = 6\n}\n",
+        |facts| {
+            facts
+                .ambient
+                .iter()
+                .map(|a| (a.kind, a.name.to_owned(), a.in_function.is_some()))
+                .collect::<Vec<_>>()
+        },
+    );
+    assert!(
+        ambient.contains(&(AmbientKind::GlobalMutable, String::from("counter"), false)),
+        "file-scope var is a global mutable, got {ambient:?}"
+    );
+    assert!(
+        !ambient
+            .iter()
+            .any(|(kind, name, _)| { *kind == AmbientKind::GlobalWrite && name == "counter" }),
+        "walrus local absorbs the later write, got {ambient:?}"
+    );
+}
+
+#[test]
+fn multi_name_global_reports_each_name() {
+    let ambient = with_facts(
+        "multi.odin",
+        "package p\ncounter_a, counter_b: int\nrun :: proc() {\n\tcounter_b = 1\n}\n",
+        |facts| {
+            facts
+                .ambient
+                .iter()
+                .map(|a| (a.kind, a.name.to_owned(), a.in_function.is_some()))
+                .collect::<Vec<_>>()
+        },
+    );
+    assert!(
+        ambient.contains(&(AmbientKind::GlobalMutable, String::from("counter_a"), false)),
+        "first name in multi-name global is mutable, got {ambient:?}"
+    );
+    assert!(
+        ambient.contains(&(AmbientKind::GlobalMutable, String::from("counter_b"), false)),
+        "second name in multi-name global is mutable, got {ambient:?}"
+    );
+    assert!(
+        ambient
+            .iter()
+            .any(|(kind, name, _)| { *kind == AmbientKind::GlobalWrite && name == "counter_b" }),
+        "write to second name resolves against file scope, got {ambient:?}"
+    );
+}
+
+#[test]
+fn plain_write_to_file_global_reports_global_write() {
+    let ambient = with_facts(
+        "global_write.odin",
+        "package p\ncounter: int\nmain :: proc() {\n\tcounter = 1\n}\n",
+        |facts| {
+            facts
+                .ambient
+                .iter()
+                .map(|a| (a.kind, a.name.to_owned(), a.in_function.is_some()))
+                .collect::<Vec<_>>()
+        },
+    );
+    assert!(
+        ambient.contains(&(AmbientKind::GlobalMutable, String::from("counter"), false)),
+        "file-scope counter is a global mutable, got {ambient:?}"
+    );
+    let writes = ambient
+        .iter()
+        .filter(|(kind, name, _)| *kind == AmbientKind::GlobalWrite && name == "counter")
+        .collect::<Vec<_>>();
+    assert_eq!(
+        writes.len(),
+        1,
+        "plain in-proc write to the file global is one GlobalWrite, got {ambient:?}"
+    );
+    assert!(
+        writes[0].2,
+        "the GlobalWrite sits inside `main`, got {ambient:?}"
+    );
+    let local = with_facts(
+        "local.odin",
+        "package p\nrun :: proc() {\n\tx := 1\n\tx = 2\n}\n",
+        |facts| {
+            facts
+                .ambient
+                .iter()
+                .filter(|a| a.kind == AmbientKind::GlobalWrite)
+                .count()
+        },
+    );
+    assert_eq!(
+        local, 0,
+        "writes to a proc-local stay out of ambient, got {local:?}"
+    );
+}
+
+#[test]
+fn for_in_loop_var_shadow_stays_quiet() {
+    let ambient = with_facts(
+        "for_in.odin",
+        "package p\ncounter: int\nxs: []int\nrun :: proc() {\n\tfor counter in xs {\n\t\tcounter = 1\n\t}\n}\n",
+        |facts| {
+            facts
+                .ambient
+                .iter()
+                .map(|a| (a.kind, a.name.to_owned(), a.in_function.is_some()))
+                .collect::<Vec<_>>()
+        },
+    );
+    assert!(
+        ambient.contains(&(AmbientKind::GlobalMutable, String::from("counter"), false)),
+        "file-scope counter is a global mutable, got {ambient:?}"
+    );
+    assert!(
+        !ambient
+            .iter()
+            .any(|(kind, name, _)| { *kind == AmbientKind::GlobalWrite && name == "counter" }),
+        "for-in loop variable absorbs the inner write, got {ambient:?}"
+    );
+    let plain = with_facts(
+        "for_in_plain.odin",
+        "package p\ncounter: int\nrun :: proc() {\n\tcounter = 1\n}\n",
+        |facts| {
+            facts
+                .ambient
+                .iter()
+                .filter(|a| a.kind == AmbientKind::GlobalWrite && a.name == "counter")
+                .count()
+        },
+    );
+    assert_eq!(
+        plain, 1,
+        "same write without the loop variable is one GlobalWrite, got {plain:?}"
+    );
+}
+
+#[test]
+fn second_target_write_reports_global_write() {
+    let shadowed = with_facts(
+        "multi_shadow.odin",
+        "package p\ncounter: int\nrun :: proc() {\n\tcounter := 5\n\tx := 0\n\tx, counter = 1, 2\n}\n",
+        |facts| {
+            facts
+                .ambient
+                .iter()
+                .filter(|a| a.kind == AmbientKind::GlobalWrite && a.name == "counter")
+                .count()
+        },
+    );
+    assert_eq!(
+        shadowed, 0,
+        "local shadows the second target, got {shadowed:?}"
+    );
+    let plain = with_facts(
+        "multi_second.odin",
+        "package p\ncounter: int\nrun :: proc() {\n\tx := 0\n\tx, counter = 1, 2\n}\n",
+        |facts| {
+            facts
+                .ambient
+                .iter()
+                .filter(|a| a.kind == AmbientKind::GlobalWrite && a.name == "counter")
+                .count()
+        },
+    );
+    assert_eq!(
+        plain, 1,
+        "second target naming the file global is one GlobalWrite, got {plain:?}"
+    );
+}
+
+#[test]
+fn package_call_keeps_qualifier_call_receiver_collapses() {
+    let qualified = with_facts(
+        "job.odin",
+        "package p\nrun_job :: proc(x: int) {\n\tlog.info(\"x\")\n}\n",
+        |facts| {
+            facts
+                .calls
+                .iter()
+                .find(|c| c.callee.contains("info"))
+                .map(|c| {
+                    (
+                        c.callee.to_owned(),
+                        c.callee_root.map(str::to_owned),
+                        c.is_simple_path,
+                    )
+                })
+                .expect("the log call is recorded")
+        },
+    );
+    assert_eq!(
+        qualified,
+        (String::from("log.info"), Some(String::from("log")), true),
+        "a package call keeps its qualifier and root, got {qualified:?}"
+    );
+    let receiver = with_facts(
+        "view.odin",
+        "package p\nshow :: proc(x: int) {\n\tget(x).info(\"y\")\n}\n",
+        |facts| {
+            facts
+                .calls
+                .iter()
+                .find(|c| c.callee == "info")
+                .map(|c| {
+                    (
+                        c.callee.to_owned(),
+                        c.callee_root.map(str::to_owned),
+                        c.is_simple_path,
+                    )
+                })
+                .expect("the receiver call is recorded")
+        },
+    );
+    assert_eq!(
+        receiver,
+        (String::from("info"), None, false),
+        "a call on a call result keeps the last segment only, got {receiver:?}"
     );
 }

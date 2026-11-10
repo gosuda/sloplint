@@ -1,7 +1,7 @@
 use sloplint_core::facts::{AmbientKind, Assertion, FieldCopy, Handler, Import, Pos, WildcardArm};
 use tree_sitter::Node;
 
-use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, TypeHead};
+use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead};
 use crate::spec::Role;
 
 mod calls;
@@ -29,6 +29,10 @@ pub(crate) static HOOKS: SwiftHooks = SwiftHooks;
 pub(crate) struct SwiftHooks;
 
 impl LangHooks for SwiftHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         funcs::function_head(cx, n)
     }

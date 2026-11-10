@@ -1,54 +1,74 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use sloplint_core::facts::{
     AssertShape, Assertion, FieldCopy, Handler, ScrutineeKind, Stmt, WildcardArm,
 };
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, any_named_child, find_named_child, first_named_child, first_named_child_matching,
-    first_of_kind, last_named_child, named_children, narrow, pos_of, strip_quotes, text, trimmed,
+    Cx, find_named_child, first_named_child, first_named_child_matching, first_of_kind,
+    last_named_child, named_children, narrow, pos_of, strip_quotes, text, trimmed,
 };
 
 use super::calls::{ps_command_call, ps_invokation_call};
 use super::funcs::single_named;
 
-fn sibling_enum_like(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+fn switch_condition_variant<'s>(cx: &Cx<'_, 's>, cond: Node<'_>) -> Option<(&'s str, &'s str)> {
+    let mut stack = vec![cond];
+    while let Some(current) = stack.pop() {
+        if current.kind() == "member_access"
+            && let (Some(ty), Some(member)) = (
+                first_of_kind(current, &["type_literal"]),
+                first_of_kind(current, &["member_name"]),
+            )
+        {
+            return Some((text(cx, ty), text(cx, member)));
+        }
+        stack.extend(named_children(current));
+    }
+    None
+}
+
+fn switch_variant_facts<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> (bool, u32) {
     let Some(parent) = cx.parent() else {
-        return false;
+        return (false, 0);
     };
+    let mut by_type: BTreeMap<&'s str, BTreeSet<&'s str>> = BTreeMap::new();
     for sib in named_children(parent) {
         if sib.id() == n.id() || sib.kind() != "switch_clause" {
             continue;
         }
-        if let Some(cond) = first_of_kind(sib, &["switch_clause_condition"]) {
-            let member = any_named_child(cond, |c| c.kind() == "member_access");
-            let typed = any_named_child(cond, |c| c.kind() == "type_literal");
-            if member && typed {
-                return true;
-            }
+        let Some(cond) = first_of_kind(sib, &["switch_clause_condition"]) else {
+            continue;
+        };
+        if let Some((ty, variant)) = switch_condition_variant(cx, cond) {
+            by_type.entry(ty).or_default().insert(variant);
         }
     }
-    false
+    let best = by_type.values().map(|set| set.len()).max().unwrap_or(0);
+    (best >= 2, narrow(best))
 }
 
 pub(crate) fn ps_match_arm(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
     if n.kind() != "switch_clause" {
         return None;
     }
+    let arm = |enum_like: bool, variant_count: u32| WildcardArm {
+        pos: pos_of(n),
+        enum_like,
+        scrutinee: ScrutineeKind::Other,
+        variant_count,
+        has_nullable_ctor: false,
+    };
     match first_of_kind(n, &["switch_clause_condition"]) {
-        None => Some(WildcardArm {
-            pos: pos_of(n),
-            enum_like: sibling_enum_like(cx, n),
-            scrutinee: ScrutineeKind::Other,
-            variant_count: 0,
-            has_nullable_ctor: false,
-        }),
-        Some(cond) => (text(cx, cond) == "default").then_some(WildcardArm {
-            pos: pos_of(n),
-            enum_like: sibling_enum_like(cx, n),
-            scrutinee: ScrutineeKind::Other,
-            variant_count: 0,
-            has_nullable_ctor: false,
-        }),
+        None => Some(arm(false, 0)),
+        Some(cond) => {
+            if text(cx, cond) != "default" {
+                return None;
+            }
+            let (enum_like, variant_count) = switch_variant_facts(cx, n);
+            Some(arm(enum_like, variant_count))
+        }
     }
 }
 
@@ -88,19 +108,6 @@ fn ps_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>) -> Stmt<'s> {
         };
     }
     Stmt::Other
-}
-
-fn unwrap_pipeline(n: Node<'_>) -> Node<'_> {
-    let mut current = n;
-    loop {
-        if current.kind() != "pipeline" && current.kind() != "pipeline_chain" {
-            return current;
-        }
-        match single_named(current) {
-            Some(one) => current = one,
-            None => return current,
-        }
-    }
 }
 
 fn is_comparison_param(t: &str) -> bool {
@@ -144,19 +151,22 @@ pub(crate) fn ps_struct_lit<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FieldCop
     if n.kind() != "hash_literal_expression" {
         return None;
     }
-    let entries: Vec<Node<'_>> = named_children(n)
-        .into_iter()
-        .filter(|c| c.kind() == "hash_entry")
-        .collect();
+    let entries: Vec<Node<'_>> = match first_of_kind(n, &["hash_literal_body"]) {
+        Some(body) => named_children(body),
+        None => named_children(n),
+    }
+    .into_iter()
+    .filter(|c| c.kind() == "hash_entry")
+    .collect();
     if entries.is_empty() {
         return None;
     }
     let mut source: Option<&'s str> = None;
-    for entry in entries {
+    for &entry in &entries {
         let key = find_named_child(entry, |c| c.kind() == "key_expression")?;
         let value = find_named_child(entry, |c| c.kind() != "key_expression")?;
         let want = strip_quotes(text(cx, key));
-        let unwrapped = unwrap_pipeline(value);
+        let unwrapped = super::calls::ps_arg_value(value);
         if unwrapped.kind() != "member_access" {
             return None;
         }
@@ -176,7 +186,7 @@ pub(crate) fn ps_struct_lit<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FieldCop
     }
     Some(FieldCopy {
         pos: pos_of(n),
-        fields: narrow(n.named_child_count()),
+        fields: narrow(entries.len()),
         source,
     })
 }
@@ -186,7 +196,7 @@ pub(crate) fn ps_assertion(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {
         return None;
     }
     let name = first_named_child_matching(n, &["command_name", "command_name_expr"])?;
-    if text(cx, name) != "Should" {
+    if !text(cx, name).eq_ignore_ascii_case("Should") {
         return None;
     }
     let mut has_message = false;
@@ -207,11 +217,7 @@ pub(crate) fn ps_assertion(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {
             comparison = true;
         }
     }
-    let shape = if comparison {
-        AssertShape::TopEqNe
-    } else {
-        AssertShape::Other
-    };
+    let shape = AssertShape::Other;
     Some(Assertion {
         pos: pos_of(n),
         has_message,

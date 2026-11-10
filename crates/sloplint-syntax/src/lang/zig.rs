@@ -2,8 +2,8 @@ use sloplint_core::facts::{AmbientKind, Assertion, FieldCopy, Handler, Import, P
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, first_named_child,
-    first_named_child_matching, has_child_kind, pos_of, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, child_by_field,
+    first_named_child, has_child_kind, pos_of, text,
 };
 use crate::spec::Role;
 use sloplint_core::role::CodeRole;
@@ -26,7 +26,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("catch_expression", Role::Catch),
     ("call_expression", Role::Call),
     ("builtin_function", Role::MacroCall),
-    ("variable_declaration", Role::Decl),
+    ("variable_declaration", Role::Bind),
     ("assignment_expression", Role::Write),
     ("string", Role::Import),
     ("using_namespace_declaration", Role::Import),
@@ -69,6 +69,14 @@ pub(crate) fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, P
 }
 
 impl LangHooks for ZigHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
+    fn ambient_bind(&self) -> bool {
+        true
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         funcs::zig_function(n, cx)
     }
@@ -88,23 +96,74 @@ impl LangHooks for ZigHooks {
         false
     }
 
-    fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() != "variable_declaration" || !has_child_kind(n, "var") {
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        kind == "variable_declaration"
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        if n.kind() != "variable_declaration" || has_child_kind(n, "var") {
             return;
         }
-        if let Some(id) = first_named_child_matching(n, &["identifier"]) {
-            out.push((text(cx, id), pos_of(id)));
+        let mut headed = false;
+        let mut cursor = n.walk();
+        for child in n.children(&mut cursor) {
+            if !child.is_named() {
+                headed = child.kind() == "const";
+                continue;
+            }
+            if headed && child.kind() == "identifier" {
+                out.push(text(cx, child));
+            }
+        }
+    }
+
+    fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
+        if n.kind() != "variable_declaration" {
+            return;
+        }
+        let mut headed = false;
+        let mut cursor = n.walk();
+        for child in n.children(&mut cursor) {
+            if !child.is_named() {
+                headed = child.kind() == "var";
+                continue;
+            }
+            if headed && child.kind() == "identifier" {
+                out.push((text(cx, child), pos_of(child)));
+            }
         }
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() != "assignment_expression" {
+        if n.kind() == "assignment_expression" {
+            if let Some(left) = child_by_field(n, "left")
+                && let Some(root) = write_root(cx, left)
+            {
+                out.push(root);
+            }
             return;
         }
-        if let Some(left) = child_by_field(n, "left")
-            && let Some(root) = write_root(cx, left)
-        {
-            out.push(root);
+        if n.kind() != "variable_declaration" {
+            return;
+        }
+        let mut open = false;
+        let mut cursor = n.walk();
+        for child in n.children(&mut cursor) {
+            if !child.is_named() {
+                if child.kind() == "=" {
+                    return;
+                }
+                open = child.kind() == "var" || child.kind() == "const";
+                continue;
+            }
+            if open {
+                continue;
+            }
+            if let Some(root) = write_root(cx, child)
+                && root.0 != "_"
+            {
+                out.push(root);
+            }
         }
     }
 

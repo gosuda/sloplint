@@ -156,6 +156,7 @@ mod tests {
             is_decorated: false,
             is_trait_item: false,
             is_method: false,
+            receiver: None,
             end_line: 1,
             has_value_return: false,
             params: Vec::new(),

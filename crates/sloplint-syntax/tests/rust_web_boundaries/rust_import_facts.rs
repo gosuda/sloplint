@@ -1,9 +1,9 @@
 //! Rust import facts: scope, test marking, re-exports, and external roots.
 //!
 //! The adapter fills every `Import` field the fan-out and wildcard rules read. External
-//! roots are first path segments minus the standard and local prefixes, wildcard kind
-//! survives only at item scope outside preludes and local modules, and test-context
-//! imports mark `in_test` unless a wildcard exemption clears it.
+//! roots are first path segments minus the standard and local prefixes. Only the
+//! same-file child and private super exemptions rewrite wildcard kind at the adapter;
+//! function-local scope and prelude paths stay wildcards and the rule exempts them.
 
 use sloplint_core::facts::{ImportKind, ImportScope};
 use sloplint_core::lang::Lang;
@@ -142,13 +142,13 @@ fn test_module_imports_mark_in_test() {
 }
 
 #[test]
-fn prelude_globs_are_not_wildcards() {
+fn prelude_globs_stay_wildcards() {
     let source = "use foo::prelude::*;\nuse crate::alloc_prelude::*;\nuse std::io::*;\n";
     assert_eq!(
         imports(source),
         vec![
-            row("foo::prelude", "*", NAMED, plain(Some("foo"))),
-            row("crate::alloc_prelude", "*", NAMED, plain(None)),
+            row("foo::prelude", "*", WILD, plain(Some("foo"))),
+            row("crate::alloc_prelude", "*", WILD, plain(None)),
             row("std::io", "*", WILD, plain(None)),
         ]
     );

@@ -1,8 +1,11 @@
 mod custom;
 mod cx;
 mod emit;
+mod generated;
 mod hooks;
 mod lang;
+mod shadow;
+mod shapes;
 mod spec;
 mod walk;
 
@@ -18,6 +21,7 @@ use tree_sitter::{Node, Parser, Tree};
 
 use custom::CustomHits;
 pub use custom::CustomRules;
+pub use generated::is_generated;
 pub use lang::shadowed_sources;
 use spec::spec;
 

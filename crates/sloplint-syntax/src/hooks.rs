@@ -1,11 +1,20 @@
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import,
-    Param, Pos, TypeDef, Visibility, WildcardArm,
+    AmbientKind, Arg, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import, Param, Pos,
+    TypeDef, Visibility, WildcardArm,
 };
 use sloplint_core::role::{CodeRole, RoleRegion};
 use tree_sitter::Node;
 
-pub(crate) use crate::cx::{ChainRoots, Cx, Link, MemberStates};
+pub(crate) use crate::cx::{ChainRoots, Cx, FileNameSets, FileSetKind, Link, MemberStates};
+pub(crate) use crate::emit::{attributed_region, region_of};
+pub(crate) use crate::shapes::{binary_concat, string_arg_shape};
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ShadowKind {
+    None,
+    Decls,
+    DeclsAndBinds,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Container {
@@ -28,6 +37,8 @@ pub(crate) struct FunctionHead<'s> {
     pub is_trait_item: bool,
     pub region: Option<RoleRegion>,
     pub params: Vec<Param<'s>>,
+    pub shadow_params: Vec<&'s str>,
+    pub receiver: Option<&'s str>,
     pub return_type: Option<&'s str>,
     pub missing_annotations: Vec<&'s str>,
     pub doc: Vec<&'s str>,
@@ -71,6 +82,10 @@ pub(crate) trait LangHooks: Sync {
 
     fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
         parent.is_some_and(|p| p.kind() == "else_clause")
+    }
+
+    fn is_ternary_alternate(&self, _n: Node<'_>, _parent: Option<Node<'_>>) -> bool {
+        false
     }
 
     fn control_call(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
@@ -142,6 +157,43 @@ pub(crate) trait LangHooks: Sync {
         let _ = (n, cx, in_function, out);
     }
 
+    /// What the walker treats as shadowing an in-function `GlobalWrite`.
+    /// Only block-scoped declarations opt in; dynamic languages stay off.
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::None
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        let _ = kind;
+        false
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        let _ = (n, cx, out);
+    }
+
+    fn ambient_bind(&self) -> bool {
+        false
+    }
+
+    fn decl_visible_in_initializer(&self) -> bool {
+        true
+    }
+
+    fn decl_piece(&self, kind: &str) -> bool {
+        let _ = kind;
+        false
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        let _ = (node, cx);
+        depth.saturating_sub(1)
+    }
+
+    fn block_scoped_binds(&self) -> bool {
+        false
+    }
+
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
         let _ = (n, cx);
         None
@@ -162,28 +214,6 @@ pub(crate) trait LangHooks: Sync {
     }
 }
 
-pub(crate) fn region_of(n: Node<'_>, role: CodeRole) -> RoleRegion {
-    RoleRegion {
-        start_line: narrow(n.start_position().row) + 1,
-        end_line: narrow(n.end_position().row) + 1,
-        role,
-    }
-}
-pub(crate) fn attributed_region(
-    item: Node<'_>,
-    leading: Option<Node<'_>>,
-    role: CodeRole,
-) -> RoleRegion {
-    let mut start = item.start_position().row;
-    if let Some(extra) = leading {
-        start = start.min(extra.start_position().row);
-    }
-    RoleRegion {
-        start_line: narrow(start) + 1,
-        end_line: narrow(item.end_position().row) + 1,
-        role,
-    }
-}
 pub(crate) fn any_preceding(
     n: Node<'_>,
     target: &str,
@@ -460,36 +490,26 @@ pub(crate) fn ident_root<'s>(
     }
 }
 
-pub(crate) fn string_arg_shape<'s>(
-    cx: &Cx<'_, 's>,
-    n: Node<'_>,
-    fragment_kinds: &[&str],
-) -> ArgShape<'s> {
-    let mut segments: Vec<&'s str> = Vec::new();
-    let mut cursor = n.walk();
-    for child in n.children(&mut cursor) {
-        if fragment_kinds.contains(&child.kind()) {
-            segments.push(text(cx, child));
+pub(crate) fn spine_has_call(n: Node<'_>, object_field: &str, transparent: &[&str]) -> bool {
+    let mut current = n;
+    loop {
+        match current.kind() {
+            "call_expression" | "new_expression" => return true,
+            "member_expression" | "subscript_expression" | "selector_expression" => {
+                let Some(next) = child_by_field(current, object_field) else {
+                    return false;
+                };
+                current = next;
+            }
+            kind if transparent.contains(&kind) => {
+                let Some(next) = current.named_child(0) else {
+                    return false;
+                };
+                current = next;
+            }
+            _ => return false,
         }
     }
-    ArgShape::Str {
-        longest_static: sloplint_core::text::longest_static_chunk(&segments),
-    }
-}
-
-pub(crate) fn binary_concat<'s>(
-    cx: &Cx<'_, 's>,
-    n: Node<'_>,
-    op_text: &str,
-    string_kinds: &[&str],
-) -> bool {
-    let (Some(left), Some(op), Some(right)) = (n.child(0), n.child(1), n.child(2)) else {
-        return false;
-    };
-    if n.child_count() != 3 || text(cx, op) != op_text {
-        return false;
-    }
-    string_kinds.contains(&left.kind()) || string_kinds.contains(&right.kind())
 }
 
 pub(crate) fn is_directive_comment(text: &str) -> bool {

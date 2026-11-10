@@ -215,7 +215,8 @@ fn find_root(cwd: &Path) -> PathBuf {
 
 fn read_required(path: &Path) -> Result<String, RunError> {
     read_capped_string(path, MAX_CONFIG_FILE_BYTES, Links::Follow).map_err(|source| {
-        if source.kind() == io::ErrorKind::NotFound {
+        if source.kind() == io::ErrorKind::NotFound || source.kind() == io::ErrorKind::NotADirectory
+        {
             RunError::PathNotFound {
                 path: path.to_path_buf(),
             }
@@ -377,7 +378,13 @@ fn read_custom_root(
     builder
         .standard_filters(false)
         .require_git(false)
-        .follow_links(false);
+        .follow_links(false)
+        .filter_entry(|entry| {
+            entry
+                .path()
+                .file_name()
+                .is_none_or(|name| name != std::ffi::OsStr::new(".git"))
+        });
     for result in builder.build() {
         let entry = result.map_err(|error| discover::walk_error(root, error))?;
         let Some(kind) = entry.file_type() else {

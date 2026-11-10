@@ -61,8 +61,7 @@ fn set<const N: usize>(paths: [&str; N]) -> BTreeSet<String> {
 }
 #[cfg(unix)]
 fn name_is_unrepresentable(e: &std::io::Error) -> bool {
-    const EILSEQ: i32 = 92;
-    e.raw_os_error() == Some(EILSEQ)
+    e.raw_os_error() == Some(libc::EILSEQ)
 }
 
 /// Prints the capability skip, or fails when SLOPLINT_REQUIRE_FS_CAPS demands the capability,
@@ -303,5 +302,84 @@ fn the_generated_marker_window_is_the_first_2048_bytes() {
         reported(&report),
         set(["header_only.rs", "straddle.rs"]),
         "the marker straddling the window and a lone `Code generated` header are analyzed"
+    );
+}
+
+#[test]
+fn threshold_gate_fails_on_any_skip_only_when_opted_in() {
+    let (_tmp, root) = project();
+    put(
+        &root,
+        "sloplint.toml",
+        "[project]\nfail_on = \"never\"\nfail_on_skipped = true\n",
+    );
+    put(&root, "clean.rs", SAMPLE);
+    put(&root, "gen.rs", &format!("// do not edit\n{SAMPLE}"));
+    let gated =
+        sloplint::execute(&scoped(&root, vec![])).unwrap_or_else(|e| panic!("run failed: {e}"));
+    assert!(
+        gated.failed,
+        "a generated skip must fail the opted-in threshold gate"
+    );
+    assert_eq!(
+        gated.report.summary.skipped, 1,
+        "one file is skipped: {:?}",
+        gated.report.summary
+    );
+    assert_eq!(
+        gated
+            .report
+            .skipped_gate
+            .iter()
+            .map(|entry| entry.path.to_string())
+            .collect::<Vec<_>>(),
+        vec!["gen.rs".to_string()],
+        "the gate names the skipped file"
+    );
+    put(&root, "sloplint.toml", "[project]\nfail_on = \"never\"\n");
+    let passed =
+        sloplint::execute(&scoped(&root, vec![])).unwrap_or_else(|e| panic!("run failed: {e}"));
+    assert!(!passed.failed, "the same skip passes when the gate is off");
+    assert_eq!(
+        passed.report.summary.skipped, 1,
+        "the summary still counts the skip: {:?}",
+        passed.report.summary
+    );
+}
+
+#[test]
+fn ratchet_gate_fails_only_on_newly_skipped_paths() {
+    let (_tmp, root) = project();
+    put(&root, "a.rs", SAMPLE);
+    put(&root, "b.rs", SAMPLE);
+    let mut writing = scoped(&root, vec![]);
+    writing.mode = Some(Mode::Ratchet);
+    writing.fail_on_skipped = true;
+    writing.write_baseline = true;
+    sloplint::execute(&writing).unwrap_or_else(|e| panic!("baseline write failed: {e}"));
+    put(&root, "b.rs", &format!("// @generated\n{SAMPLE}"));
+    let mut gated = scoped(&root, vec![]);
+    gated.mode = Some(Mode::Ratchet);
+    gated.fail_on_skipped = true;
+    let failed = sloplint::execute(&gated).unwrap_or_else(|e| panic!("run failed: {e}"));
+    assert!(
+        failed.failed,
+        "a file that gained a marker since the baseline must fail the ratchet gate"
+    );
+    assert_eq!(
+        failed
+            .report
+            .skipped_gate
+            .iter()
+            .map(|entry| entry.path.to_string())
+            .collect::<Vec<_>>(),
+        vec!["b.rs".to_string()],
+        "the gate names the newly skipped file"
+    );
+    sloplint::execute(&writing).unwrap_or_else(|e| panic!("baseline rewrite failed: {e}"));
+    let settled = sloplint::execute(&gated).unwrap_or_else(|e| panic!("run failed: {e}"));
+    assert!(
+        !settled.failed,
+        "a long-standing generated file recorded in the baseline must not fail"
     );
 }

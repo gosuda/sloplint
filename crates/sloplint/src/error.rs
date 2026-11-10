@@ -14,6 +14,8 @@ pub enum RunError {
     PathOutsideRoot { path: PathBuf },
     #[error("path not found: {}", path.display())]
     PathNotFound { path: PathBuf },
+    #[error("project root is not a directory: {}", path.display())]
+    NotADirectory { path: PathBuf },
     #[error("baseline file not found: {}; run 'sloplint baseline'", path.display())]
     BaselineMissing { path: PathBuf },
     #[error("baseline path is outside the project root: {}", path.display())]

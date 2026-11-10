@@ -9,38 +9,67 @@ use crate::hooks::{
 use super::calls::{call_args, ruby_call_kind, ruby_callee};
 use super::field_text;
 
-pub(crate) fn has_constant_pattern(n: Node<'_>) -> bool {
-    let mut stack = vec![n];
-    while let Some(current) = stack.pop() {
-        let kind = current.kind();
-        if kind == "constant" || kind == "scope_resolution" {
-            return true;
-        }
-        stack.extend(named_children(current));
+fn sibling_patterns(sib: Node<'_>) -> Vec<Node<'_>> {
+    let mut cursor = sib.walk();
+    let found: Vec<Node<'_>> = sib.children_by_field_name("pattern", &mut cursor).collect();
+    if found.is_empty() {
+        named_children(sib)
+            .into_iter()
+            .filter(|c| c.kind() == "pattern")
+            .collect()
+    } else {
+        found
     }
-    false
 }
-pub(crate) fn sibling_has_constant(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+pub(crate) fn sibling_enum_like(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     let Some(parent) = cx.parent() else {
         return false;
     };
+    let mut scopes: Vec<(&str, Vec<&str>)> = Vec::new();
     for sib in named_children(parent) {
         if sib.id() == n.id() || (sib.kind() != "when" && sib.kind() != "in_clause") {
             continue;
         }
-        if let Some(pattern) = child_by_field(sib, "pattern") {
-            if has_constant_pattern(pattern) {
-                return true;
-            }
-            continue;
-        }
-        for child in named_children(sib) {
-            if child.kind() == "pattern" && has_constant_pattern(child) {
-                return true;
-            }
+        for pat in sibling_patterns(sib) {
+            collect_scoped_constants(cx, pat, &mut scopes);
         }
     }
-    false
+    scopes.iter().any(|(_, names)| names.len() >= 2)
+}
+fn collect_scoped_constants<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    out: &mut Vec<(&'s str, Vec<&'s str>)>,
+) {
+    let mut stack = vec![n];
+    while let Some(current) = stack.pop() {
+        if current.kind() == "scope_resolution" {
+            record_scoped_constant(cx, current, out);
+        } else {
+            stack.extend(named_children(current));
+        }
+    }
+}
+fn record_scoped_constant<'s>(
+    cx: &Cx<'_, 's>,
+    current: Node<'_>,
+    out: &mut Vec<(&'s str, Vec<&'s str>)>,
+) {
+    let scope = child_by_field(current, "scope")
+        .map(|s| text(cx, s))
+        .unwrap_or("");
+    if scope.is_empty() {
+        return;
+    }
+    let name = last_segment(text(cx, current), &["::"]);
+    match out.iter_mut().find(|(s, _)| *s == scope) {
+        Some((_, names)) => {
+            if !names.contains(&name) {
+                names.push(name);
+            }
+        }
+        None => out.push((scope, vec![name])),
+    }
 }
 pub(crate) fn strip_arrow(t: &str) -> &str {
     t.trim()
@@ -94,14 +123,8 @@ pub(crate) fn sibling_variant_count(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
         if sib.id() == n.id() || (sib.kind() != "when" && sib.kind() != "in_clause") {
             continue;
         }
-        if let Some(pattern) = child_by_field(sib, "pattern") {
-            collect_constant_names(cx, pattern, &mut names);
-            continue;
-        }
-        for child in named_children(sib) {
-            if child.kind() == "pattern" {
-                collect_constant_names(cx, child, &mut names);
-            }
+        for pat in sibling_patterns(sib) {
+            collect_constant_names(cx, pat, &mut names);
         }
     }
     narrow(names.len())
@@ -130,8 +153,8 @@ pub(crate) fn bare_assert_shape(cx: &Cx<'_, '_>, n: Node<'_>) -> AssertShape {
             }
         }
         "binary" => {
-            let op = text(cx, only);
-            if op.contains("==") || op.contains("!=") {
+            let op = only.child(1).map(|o| text(cx, o)).unwrap_or("");
+            if op == "==" || op == "!=" {
                 AssertShape::TopEqNe
             } else {
                 AssertShape::Other
@@ -174,6 +197,43 @@ pub(crate) fn ruby_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, binding: &str) -> S
             }
         }
     }
+}
+pub(crate) fn ruby_try_imports_only(cx: &Cx<'_, '_>) -> bool {
+    let Some(parent) = cx
+        .parent()
+        .filter(|p| p.kind() == "begin" || p.kind() == "body_statement")
+    else {
+        return false;
+    };
+    let mut seen = false;
+    for stmt in named_children(parent) {
+        match stmt.kind() {
+            "rescue" | "else" | "ensure" | "comment" | "empty_statement" => continue,
+            "call" => {
+                if child_by_field(stmt, "receiver").is_some() {
+                    return false;
+                }
+                if !matches!(
+                    field_text(cx, stmt, "method"),
+                    Some("require" | "require_relative")
+                ) {
+                    return false;
+                }
+                seen = true;
+            }
+            _ => return false,
+        }
+    }
+    seen
+}
+pub(crate) fn ruby_in_cleanup(cx: &Cx<'_, '_>) -> bool {
+    cx.ancestors()
+        .find(|a| matches!(a.kind(), "method" | "singleton_method" | "class" | "module"))
+        .is_some_and(|m| {
+            matches!(m.kind(), "method" | "singleton_method")
+                && child_by_field(m, "name")
+                    .is_some_and(|v| matches!(text(cx, v), "close" | "cleanup"))
+        })
 }
 pub(crate) fn pair_key<'s>(cx: &Cx<'_, 's>, key: Node<'_>) -> Option<&'s str> {
     match key.kind() {
@@ -228,6 +288,14 @@ pub(crate) fn hash_copy<'s>(
         fields: narrow(pairs.len()),
         source,
     })
+}
+pub(crate) fn flatten_hash_pairs<'a>(arg: Node<'a>, pairs: &mut Vec<Node<'a>>) {
+    let mut cursor = arg.walk();
+    for inner in arg.children(&mut cursor) {
+        if inner.is_named() && inner.kind() == "pair" {
+            pairs.push(inner);
+        }
+    }
 }
 pub(crate) fn is_assign_left(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     cx.parent_of(n)
@@ -296,4 +364,10 @@ pub(crate) fn rspec_assertion<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Assert
         in_typecheck: false,
         value_is_bool_literal: false,
     })
+}
+pub(crate) fn minitest_is_equality(method: &str) -> bool {
+    matches!(
+        method,
+        "assert_equal" | "refute_equal" | "assert_not_equal" | "refute_not_equal"
+    )
 }

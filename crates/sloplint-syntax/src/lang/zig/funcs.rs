@@ -98,7 +98,9 @@ pub(crate) fn zig_function<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionH
     }
     let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
     let name = text(cx, name_node);
+    let shadow_params: Vec<&str> = params.iter().map(|p| p.name).collect();
     Some(FunctionHead {
+        shadow_params,
         name,
         name_pos: pos_of(name_node),
         visibility: zig_visibility(n, cx),
@@ -110,6 +112,7 @@ pub(crate) fn zig_function<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionH
         is_decorated: false,
         is_trait_item: false,
         region: None,
+        receiver: None,
         params,
         return_type: crate::hooks::child_by_field(n, "type").map(|t| text(cx, t)),
         missing_annotations: Vec::new(),

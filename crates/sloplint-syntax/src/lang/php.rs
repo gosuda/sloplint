@@ -4,6 +4,7 @@ use tree_sitter::Node;
 use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, TypeHead};
 use crate::spec::Role;
 
+mod asserts;
 mod calls;
 mod funcs;
 mod imports;
@@ -105,6 +106,6 @@ impl LangHooks for PhpHooks {
         calls::dynamic_head(cx, n)
     }
     fn assertion(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {
-        calls::assertion_head(cx, n)
+        asserts::assertion_head(cx, n)
     }
 }

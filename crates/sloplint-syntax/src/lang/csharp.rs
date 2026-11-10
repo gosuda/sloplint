@@ -2,18 +2,25 @@ use sloplint_core::facts::{AmbientKind, Assertion, FieldCopy, Handler, Import, P
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field, trimmed,
+    CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, any_named_child, child_by_field,
+    trimmed,
 };
 use crate::spec::Role;
 
+mod arms;
 mod calls;
 mod funcs;
 mod items;
+mod shadow;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("method_declaration", Role::Function),
     ("constructor_declaration", Role::Function),
     ("local_function_statement", Role::Function),
+    ("accessor_declaration", Role::Function),
+    ("operator_declaration", Role::Function),
+    ("conversion_operator_declaration", Role::Function),
+    ("destructor_declaration", Role::Function),
     ("lambda_expression", Role::Closure),
     ("anonymous_method_expression", Role::Closure),
     ("if_statement", Role::If),
@@ -24,6 +31,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("while_statement", Role::Loop),
     ("do_statement", Role::Loop),
     ("catch_clause", Role::Catch),
+    ("return_statement", Role::Return),
     ("conditional_expression", Role::Ternary),
     ("invocation_expression", Role::Call),
     ("object_creation_expression", Role::NewCall),
@@ -104,8 +112,53 @@ pub(crate) fn seg_last(t: &str) -> &str {
     &base[start..end]
 }
 impl LangHooks for CSharpHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        if matches!(
+            node.kind(),
+            "foreach_statement" | "for_statement" | "if_statement"
+        ) {
+            return depth;
+        }
+        let _ = cx;
+        depth.saturating_sub(1)
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        matches!(
+            kind,
+            "foreach_statement"
+                | "for_statement"
+                | "if_statement"
+                | "declaration_expression"
+                | "declaration_pattern"
+                | "var_pattern"
+                | "recursive_pattern"
+                | "catch_declaration"
+        )
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        if n.kind() == "if_statement" {
+            shadow::if_condition_shadow_names(cx, n, out);
+        } else {
+            shadow::shadow_decl_names(cx, n, out);
+        }
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         funcs::function_head(cx, n)
+    }
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
+        funcs::closure_head(cx, n)
     }
     fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
         if n.kind() != "if_statement" {
@@ -134,7 +187,7 @@ impl LangHooks for CSharpHooks {
         items::typedef_head(cx, n)
     }
     fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
-        items::match_arm(cx, n)
+        arms::match_arm(cx, n)
     }
     fn handler<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'s>> {
         items::handler_site(cx, n)

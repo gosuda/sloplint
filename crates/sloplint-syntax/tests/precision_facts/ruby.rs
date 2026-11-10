@@ -83,7 +83,7 @@ end
 const CHAINED_INIT: &str = r#"x = foo(1).bar
 "#;
 
-fn with_facts(source: &str, mut check: impl FnMut(&Analysis<'_>)) {
+pub(crate) fn with_facts(source: &str, mut check: impl FnMut(&Analysis<'_>)) {
     let custom = match CustomRules::compile(&[]) {
         Ok(custom) => custom,
         Err(err) => panic!("empty custom rules compile: {err:?}"),
@@ -208,7 +208,7 @@ fn describe_block_emits_one_test_region() {
 }
 
 #[test]
-fn minitest_assertion_shape_stays_other() {
+fn minitest_comparison_assertion_is_top_eq_ne() {
     with_facts(ASSERTS, |analysis| {
         assert!(analysis.parse_error.is_none(), "parses assertions");
         assert_eq!(analysis.facts.assertions.len(), 2, "finds both assertions");
@@ -216,8 +216,8 @@ fn minitest_assertion_shape_stays_other() {
         assert!(equal.comparison, "assert_equal compares");
         assert_eq!(
             equal.shape,
-            AssertShape::Other,
-            "assert_equal shape stays Other"
+            AssertShape::TopEqNe,
+            "assert_equal compares at the top"
         );
         assert!(
             !equal.in_typecheck,
@@ -229,6 +229,11 @@ fn minitest_assertion_shape_stays_other() {
         );
         let bare = &analysis.facts.assertions[1];
         assert!(!bare.comparison, "bare assert does not compare");
+        assert_eq!(
+            bare.shape,
+            AssertShape::BareName,
+            "bare identifier assert is a bare name"
+        );
     });
 }
 
@@ -284,8 +289,8 @@ fn ruby_bare_calls_report_simple_paths() {
         assert_eq!(call.callee, "foo", "callee is the bare name");
         assert!(call.is_simple_path, "bare call is a simple path");
         assert!(
-            !call.initializes_binding,
-            "ruby initializer fact stays default"
+            call.initializes_binding,
+            "call on the right of an assignment initializes the binding"
         );
     });
     with_facts(CHAINED_INIT, |analysis| {
@@ -294,11 +299,65 @@ fn ruby_bare_calls_report_simple_paths() {
             .facts
             .calls
             .iter()
-            .find(|c| c.callee == "foo(1).bar")
+            .find(|c| c.callee == "bar")
             .expect("has chained call");
         assert!(
             !chained.is_simple_path,
             "call through an argument list is not a simple path"
         );
     });
+}
+
+#[test]
+fn ruby_receiver_root_is_none_through_an_argument_list() {
+    with_facts("foo(1).bar(x)\nsvc.run(x)\n", |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses chained calls");
+        let chained = analysis
+            .facts
+            .calls
+            .iter()
+            .find(|c| c.callee == "bar")
+            .expect("has chained call");
+        assert!(
+            chained.callee_root.is_none(),
+            "receiver-less call in the chain gives no bare root, got {:?}",
+            chained.callee_root
+        );
+        let direct = analysis
+            .facts
+            .calls
+            .iter()
+            .find(|c| c.callee == "svc.run")
+            .expect("has direct receiver call");
+        assert_eq!(
+            direct.callee_root,
+            Some("svc"),
+            "direct receiver keeps its bare root"
+        );
+    });
+}
+
+#[test]
+fn ruby_named_targets_initialize_a_binding() {
+    for (source, expected) in [
+        ("total = build(1)\n", true),
+        ("TABLE = build(1)\n", true),
+        ("@repo = build(1)\n", true),
+        ("cfg[:opts] = build(1)\n", false),
+        ("obj.attr = build(1)\n", false),
+    ] {
+        with_facts(source, |analysis| {
+            assert!(analysis.parse_error.is_none(), "parses {source}");
+            let build = analysis
+                .facts
+                .calls
+                .iter()
+                .find(|c| c.callee == "build")
+                .expect("has build call");
+            assert_eq!(
+                build.initializes_binding, expected,
+                "{source} initializes {expected}"
+            );
+        });
+    }
 }

@@ -47,7 +47,9 @@ pub struct CheckArgs {
     /// Lowest confidence counted toward the gate, overriding `project.min_confidence`.
     #[arg(long = "min-confidence", value_enum)]
     pub min_confidence: Option<ConfidenceArg>,
-    /// Report only findings of this rule id or family (`family/*`); repeatable.
+    /// Fail when skipped files would otherwise hide findings: any skip in threshold mode, newly skipped paths in ratchet mode.
+    #[arg(long = "fail-on-skipped")]
+    pub fail_on_skipped: bool,
     #[arg(long = "rule", value_name = "ID", value_parser = parse_rule)]
     pub rules: Vec<RulePattern>,
     /// Shared selection and cache options.
@@ -80,7 +82,10 @@ pub struct RulesArgs {
 /// Configuration selection shared by every command.
 #[derive(Debug, Args)]
 pub struct SelectArgs {
-    /// Configuration file; its directory becomes the project root.
+    /// Project root; without it, the config directory or the enclosing repository becomes the root.
+    #[arg(long = "root", value_name = "DIR")]
+    pub root: Option<PathBuf>,
+    /// Configuration file; without `--root` its directory becomes the project root, without `--config` the root's `sloplint.toml` applies.
     #[arg(short = 'c', long = "config", value_name = "FILE")]
     pub config: Option<PathBuf>,
     /// Strictness profile, overriding `project.strictness`.

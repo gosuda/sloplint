@@ -195,6 +195,7 @@ mod tests {
             abstractions,
             impls,
             barrel: None,
+            imports: Vec::new(),
         }
     }
 

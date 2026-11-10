@@ -5,8 +5,8 @@ use sloplint_core::role::CodeRole;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, FunctionHead, TypeHead, child_by_field, first_named_child, first_named_child_matching,
-    named_children, pos_of, preceding_comments, region_of, text,
+    Cx, FunctionHead, TypeHead, child_by_field, code_children, first_named_child,
+    first_named_child_matching, named_children, pos_of, preceding_comments, region_of, text,
 };
 
 pub(crate) fn go_is_test_file(path: &str) -> bool {
@@ -97,6 +97,49 @@ pub(crate) fn go_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param
     }
 }
 
+fn push_receiver_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    let Some(receiver) = child_by_field(n, "receiver") else {
+        return;
+    };
+    for child in named_children(receiver) {
+        if child.kind() != "parameter_declaration" {
+            continue;
+        }
+        for name in named_children(child) {
+            if name.kind() == "identifier" && text(cx, name) != "_" {
+                out.push(text(cx, name));
+            }
+        }
+    }
+}
+fn go_receiver<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
+    let mut names = Vec::new();
+    push_receiver_names(cx, n, &mut names);
+    names.into_iter().next()
+}
+
+pub(crate) fn go_shadow_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<&'s str> {
+    let mut out = Vec::new();
+    push_receiver_names(cx, n, &mut out);
+    let Some(result) = child_by_field(n, "result") else {
+        return out;
+    };
+    if result.kind() != "parameter_list" {
+        return out;
+    }
+    for child in named_children(result) {
+        if child.kind() != "parameter_declaration" {
+            continue;
+        }
+        for name in named_children(child) {
+            if name.kind() == "identifier" && text(cx, name) != "_" {
+                out.push(text(cx, name));
+            }
+        }
+    }
+    out
+}
+
 pub(crate) fn go_package_is_main(cx: &Cx<'_, '_>, _n: Node<'_>) -> bool {
     let Some(root) = cx.root() else {
         return false;
@@ -170,11 +213,21 @@ fn go_single_call(n: Node<'_>) -> Option<usize> {
 
 pub(crate) fn go_sole(body: Node<'_>) -> Option<usize> {
     let list = first_named_child_matching(body, &["statement_list"])?;
-    let only = list.named_child(0)?;
-    if list.named_child(1).is_some() {
+    let stmts = code_children(list);
+    let [only] = stmts.as_slice() else {
         return None;
-    }
-    go_single_call(only)
+    };
+    go_single_call(*only)
+}
+
+fn go_is_deprecated(line: &str) -> bool {
+    let text = line.trim();
+    let text = text.strip_prefix("//").unwrap_or(text);
+    let text = text.strip_prefix("/*").unwrap_or(text);
+    let text = text.strip_suffix("*/").unwrap_or(text);
+    let text = text.trim_start();
+    let text = text.strip_prefix('*').unwrap_or(text);
+    text.trim_start().starts_with("Deprecated:")
 }
 
 pub(crate) fn go_function_head<'s>(
@@ -187,6 +240,7 @@ pub(crate) fn go_function_head<'s>(
     let name = text(cx, name_node);
     let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
     FunctionHead {
+        shadow_params: go_shadow_params(cx, n),
         name,
         name_pos: pos_of(name_node),
         visibility: go_visibility(name),
@@ -196,10 +250,11 @@ pub(crate) fn go_function_head<'s>(
             && go_package_is_main(cx, n),
         in_test: go_is_test_file(cx.path) || marker.is_some(),
         is_overload: false,
-        is_deprecated: false,
+        is_deprecated: doc.iter().any(|line| go_is_deprecated(line)),
         is_decorated: false,
         is_trait_item: false,
         region: marker.map(|role| region_of(n, role)),
+        receiver: go_receiver(cx, n),
         params,
         return_type: child_by_field(n, "result").map(|t| text(cx, t)),
         missing_annotations: Vec::new(),
@@ -215,6 +270,7 @@ pub(crate) fn go_closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> FunctionHead<
         go_params(cx, list, &mut params);
     }
     FunctionHead {
+        shadow_params: go_shadow_params(cx, n),
         name: "",
         name_pos: pos_of(n),
         visibility: Visibility::Private,
@@ -227,6 +283,7 @@ pub(crate) fn go_closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> FunctionHead<
         is_trait_item: false,
         region: None,
         params,
+        receiver: None,
         return_type: child_by_field(n, "result").map(|t| text(cx, t)),
         missing_annotations: Vec::new(),
         doc: Vec::new(),

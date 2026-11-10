@@ -92,8 +92,18 @@ fn push_ps_param<'s>(cx: &Cx<'_, 's>, p: Node<'_>, out: &mut Vec<Param<'s>>) {
 
 fn collect_script_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>>) {
     for child in named_children(list) {
-        if child.kind() == "script_parameter" {
-            push_ps_param(cx, child, out);
+        if child.kind() == "script_parameter" || child.kind() == "class_method_parameter" {
+            push_ps_param(cx, child, &mut *out);
+        }
+    }
+}
+
+fn collect_block_params<'s>(cx: &Cx<'_, 's>, block: Node<'_>, out: &mut Vec<Param<'s>>) {
+    for sub in named_children(block) {
+        if sub.kind() == "param_block"
+            && let Some(list) = first_of_kind(sub, &["parameter_list"])
+        {
+            collect_script_params(cx, list, out);
         }
     }
 }
@@ -108,13 +118,7 @@ fn ps_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
                     collect_script_params(cx, list, &mut out);
                 }
             }
-            "script_block" => {
-                for sub in named_children(child) {
-                    if sub.kind() == "param_block" {
-                        collect_script_params(cx, sub, &mut out);
-                    }
-                }
-            }
+            "script_block" => collect_block_params(cx, child, &mut out),
             "function_name" | "simple_name" | "comment" | "class_attribute" => {}
             _ => {
                 if !matches!(
@@ -159,6 +163,28 @@ fn ps_sole_call(n: Node<'_>) -> Option<usize> {
     (stmt.kind() == "command" || stmt.kind() == "invokation_expression").then(|| node_id(stmt))
 }
 
+fn is_nested_function(cx: &Cx<'_, '_>) -> bool {
+    cx.ancestors()
+        .any(|a| a.kind() == "function_statement" || a.kind() == "class_method_definition")
+}
+
+fn ps_visibility(cx: &Cx<'_, '_>, n: Node<'_>, kind: &str) -> Visibility {
+    if is_nested_function(cx) {
+        return Visibility::Private;
+    }
+    if kind == "function_statement" {
+        return Visibility::Exported;
+    }
+    let hidden = any_named_child(n, |c| {
+        c.kind() == "class_attribute" && trimmed(cx, c) == "hidden"
+    });
+    if hidden {
+        Visibility::Private
+    } else {
+        Visibility::Exported
+    }
+}
+
 pub(crate) fn ps_function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     let kind = n.kind();
     if kind != "function_statement" && kind != "class_method_definition" {
@@ -171,13 +197,6 @@ pub(crate) fn ps_function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Funct
     };
     let name_node = first_of_kind(n, &[want])?;
     let name = text(cx, name_node);
-    let exported = if kind == "function_statement" {
-        true
-    } else {
-        !any_named_child(n, |c| {
-            c.kind() == "class_attribute" && trimmed(cx, c) == "hidden"
-        })
-    };
     let return_type = if kind == "class_method_definition" {
         first_of_kind(n, &["type_literal"]).map(|t| text(cx, t))
     } else {
@@ -196,13 +215,10 @@ pub(crate) fn ps_function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Funct
     }
     let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
     Some(FunctionHead {
+        shadow_params: Vec::new(),
         name,
         name_pos: pos_of(name_node),
-        visibility: if exported {
-            Visibility::Exported
-        } else {
-            Visibility::Private
-        },
+        visibility: ps_visibility(cx, n, kind),
         signature_forced: false,
         entry_point: false,
         in_test: false,
@@ -211,6 +227,7 @@ pub(crate) fn ps_function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Funct
         is_decorated: false,
         is_trait_item: false,
         region: None,
+        receiver: None,
         params,
         return_type,
         missing_annotations: missing,

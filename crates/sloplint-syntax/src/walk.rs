@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use sloplint_core::facts::FileFacts;
 use sloplint_core::finding::line_starts;
 use sloplint_core::lang::Lang;
@@ -7,7 +5,10 @@ use sloplint_core::role::{CodeRole, RoleRegion};
 use sloplint_core::suppress::CommentText;
 use tree_sitter::Node;
 
-use crate::hooks::{ChainRoots, Container, Cx, LangHooks, MemberStates, narrow, pos_of};
+use crate::hooks::{
+    ChainRoots, Container, Cx, FileNameSets, LangHooks, MemberStates, narrow, pos_of,
+};
+use crate::shadow::{FnFrame, Mark};
 use crate::spec::{LangSpec, Role};
 
 pub(crate) struct Walked<'s> {
@@ -57,8 +58,11 @@ impl LangSpec {
             exports: Vec::new(),
             members: MemberStates::default(),
             chains: ChainRoots::default(),
+            name_sets: FileNameSets::default(),
             levels: Vec::new(),
             depth: 0,
+            closure_depth: 0,
+            deferred: Vec::new(),
             #[cfg(debug_assertions)]
             entered: Vec::new(),
         };
@@ -82,7 +86,7 @@ pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>, lang: Lang) -> FileF
         regions: Vec::new(),
         line_count: line_count(input.source),
         package: String::new(),
-        is_generated: is_generated(input.source),
+        is_generated: crate::generated::is_generated(input.source.as_bytes()),
         functions: Vec::new(),
         calls: Vec::new(),
         bindings: Vec::new(),
@@ -100,43 +104,8 @@ pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>, lang: Lang) -> FileF
     }
 }
 
-pub(crate) fn is_generated(source: &str) -> bool {
-    let mut end = source.len().min(2048);
-    while !source.is_char_boundary(end) {
-        end -= 1;
-    }
-    let head = source[..end].to_lowercase();
-    head.contains("@generated")
-        || head.contains("do not edit")
-        || head.contains("automatically generated")
-}
-
 pub(crate) fn line_count(source: &str) -> u32 {
     narrow(source.lines().count())
-}
-
-pub(crate) struct FnFrame<'s> {
-    pub index: usize,
-    pub nest: u32,
-    pub depth: u32,
-    pub frames: u32,
-    pub decls: HashMap<&'s str, FrameDecl>,
-    pub sole_call: Option<usize>,
-    pub scored: Vec<bool>,
-}
-
-pub(crate) struct FrameDecl {
-    pub binding: usize,
-    pub frames_at_decl: u32,
-}
-
-#[derive(Clone, Copy)]
-pub(crate) enum Mark {
-    Nest,
-    Depth,
-    Frame,
-    Fn,
-    Container,
 }
 
 pub(crate) struct WalkState<'s, 'a, 't> {
@@ -155,8 +124,11 @@ pub(crate) struct WalkState<'s, 'a, 't> {
     pub exports: Vec<&'s str>,
     pub members: MemberStates,
     pub chains: ChainRoots,
+    pub name_sets: FileNameSets<'s>,
     pub levels: Vec<Vec<Node<'t>>>,
     pub depth: usize,
+    pub closure_depth: u32,
+    pub deferred: Vec<(usize, Role, usize)>,
     #[cfg(debug_assertions)]
     pub entered: Vec<usize>,
 }
@@ -220,6 +192,25 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             self.levels.resize_with(self.depth + 1, Vec::new);
         }
         self.levels[self.depth].push(node);
+        if self.collect_facts
+            && !self.fn_stack.is_empty()
+            && self.hooks.shadow_decl_kind(node.kind())
+        {
+            let mut names = Vec::new();
+            {
+                let cx = self.make_cx();
+                self.hooks.shadow_names(node, &cx, &mut names);
+            }
+            let parent = {
+                let cx = self.make_cx();
+                self.hooks.decl_scope_parent(self.depth, node, &cx)
+            };
+            if let Some(frame) = self.fn_stack.last_mut() {
+                for name in names {
+                    frame.shadow.register(name, parent);
+                }
+            }
+        }
         match role {
             Role::Function | Role::Closure => self.enter_function_like(role, node),
             Role::If
@@ -274,7 +265,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
         }
     }
 
-    fn visited_parent(&self) -> Option<Node<'t>> {
+    pub(crate) fn visited_parent(&self) -> Option<Node<'t>> {
         let above = self.depth.checked_sub(1)?;
         self.levels.get(above)?.last().copied()
     }
@@ -311,66 +302,12 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     fn enter_depth_only(&mut self, node: Node<'_>) {
-        if self.fn_stack.is_empty() {
+        let hooks = self.hooks;
+        if self.fn_stack.is_empty() || hooks.is_ternary_alternate(node, self.visited_parent()) {
             return;
         }
         let line = pos_of(node).line;
         self.open_depth(line, node.id());
-    }
-
-    fn enter_function_like(&mut self, role: Role, node: Node<'_>) {
-        let hooks = self.hooks;
-        let head = if role == Role::Function {
-            let cx = self.make_cx();
-            hooks.function(node, &cx)
-        } else {
-            let parent = self.visited_parent();
-            let cx = self.make_cx();
-            hooks.closure_as_function(node, parent, &cx)
-        };
-        if let Some(head) = head {
-            self.push_function(node, head);
-            let body = node
-                .child_by_field_name("body")
-                .or_else(|| Self::first_named_of_kind(node, "function_body"));
-            if let Some(body) = body {
-                let inner = if body.kind() == "function_body" {
-                    body.named_child(0)
-                } else {
-                    Some(body)
-                };
-                if let Some(inner) = inner
-                    && !matches!(
-                        inner.kind(),
-                        "statement_block" | "block" | "indented_block" | "compound_statement"
-                    )
-                {
-                    self.set_value_return();
-                }
-            }
-        }
-    }
-
-    fn first_named_of_kind<'n>(node: Node<'n>, kind: &str) -> Option<Node<'n>> {
-        node.children(&mut node.walk())
-            .find(|child| child.kind() == kind)
-    }
-
-    fn enter_return(&mut self, node: Node<'_>) {
-        if self.fn_stack.is_empty() {
-            return;
-        }
-        if node.named_child_count() > 0 {
-            self.set_value_return();
-        }
-    }
-
-    fn set_value_return(&mut self) {
-        let Some(frame) = self.fn_stack.last_mut() else {
-            return;
-        };
-        let index = frame.index;
-        self.facts.functions[index].has_value_return = true;
     }
 
     fn enter_call_site(&mut self, node: Node<'_>) {
@@ -403,7 +340,11 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
                 if self.fn_stack.is_empty() {
                     self.collect_ambient(node);
                 } else {
-                    self.push_decls(node);
+                    if self.hooks.decl_visible_in_initializer() {
+                        self.push_decls(node);
+                    } else {
+                        self.deferred.push((node.id(), role, self.depth));
+                    }
                     self.collect_ambient(node);
                 }
             }
@@ -411,7 +352,14 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
                 if self.fn_stack.is_empty() {
                     self.collect_ambient(node);
                 } else {
-                    self.apply_bind(node);
+                    if self.hooks.ambient_bind() {
+                        self.collect_ambient(node);
+                    }
+                    if self.hooks.decl_visible_in_initializer() {
+                        self.apply_bind(node);
+                    } else {
+                        self.deferred.push((node.id(), role, self.depth));
+                    }
                 }
             }
             Role::Write => {
@@ -425,6 +373,13 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     pub(crate) fn exit(&mut self, node: Node<'_>) {
         let id = node.id();
         self.close_node(id);
+        if !self.fn_stack.is_empty() && self.hooks.decl_piece(node.kind()) {
+            self.publish_piece(node);
+        }
+        self.publish_deferred(node);
+        if let Some(frame) = self.fn_stack.last_mut() {
+            frame.release(self.depth);
+        }
         while let Some(&(mark_node, mark)) = self.marks.last() {
             if mark_node != id {
                 break;
@@ -432,6 +387,36 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             self.marks.pop();
             self.apply_mark(mark);
         }
+    }
+
+    fn publish_deferred(&mut self, node: Node<'_>) {
+        let Some(&(id, role, _)) = self.deferred.last() else {
+            return;
+        };
+        if id != node.id() {
+            return;
+        }
+        self.deferred.pop();
+        match role {
+            Role::Decl => self.push_decls(node),
+            Role::Bind => self.apply_bind(node),
+            _ => {}
+        }
+    }
+
+    fn publish_piece(&mut self, node: Node<'_>) {
+        let scope = self
+            .deferred
+            .last()
+            .map_or(self.depth.saturating_sub(1), |&(_, _, depth)| {
+                depth.saturating_sub(1)
+            });
+        let mut names = Vec::new();
+        {
+            let cx = self.make_cx();
+            self.hooks.decl_names(node, &cx, &mut names);
+        }
+        self.insert_decls(names, scope);
     }
 
     #[cfg(debug_assertions)]
@@ -487,6 +472,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             Mark::Fn => {
                 self.fn_stack.pop();
             }
+            Mark::Closure => self.closure_depth = self.closure_depth.saturating_sub(1),
             Mark::Container => {
                 if self.containers.pop().is_some_and(|container| {
                     matches!(
@@ -514,7 +500,15 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     pub(crate) fn make_cx(&self) -> Cx<'_, 's> {
-        Cx::file(self.src, self.path, self.lang, &self.members, &self.chains).scoped(
+        Cx::file(
+            self.src,
+            self.path,
+            self.lang,
+            &self.members,
+            &self.chains,
+            &self.name_sets,
+        )
+        .scoped(
             &self.containers,
             &self.exports,
             &self.levels[..self.levels.len().min(self.depth + 1)],

@@ -5,9 +5,9 @@
 //! further control at the same nest costs 1. Match, switch, ternary, and R
 //! `switch()` calls cost nothing and open no cognitive nest but still open one
 //! control-depth level; `else if` costs nothing and opens none; a `with` block
-//! opens nothing; a nested function restarts at nest 0; a headed closure is its
-//! own function while a headless closure shell opens nothing and its inner
-//! controls count on the enclosing frame.
+//! opens nothing; a nested function restarts at nest 0; a closure bound by a
+//! declarator is its own function while a headless closure shell opens no
+//! nesting level, and the bound closure's inner controls never count above it.
 
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
@@ -151,12 +151,17 @@ fn headed_closures_are_their_own_function() {
 }
 
 #[test]
-fn headless_closure_shells_open_nothing_but_inner_controls_count() {
+fn bound_closure_scores_on_its_own_frame() {
     let source = "function host(n: number) {\n  const f = (m: number) => {\n    if (m) {\n      if (n) { run(m); }\n    }\n  };\n  f(n);\n}\n";
     assert_eq!(
         ts(source, "host"),
+        (0, 0),
+        "the bound closure's ifs no longer count on the enclosing frame"
+    );
+    assert_eq!(
+        ts(source, "f"),
         (2, 2),
-        "inner ifs count on the enclosing frame"
+        "the bound closure restarts at nest 0"
     );
 }
 
@@ -171,4 +176,49 @@ fn r_switch_call_opens_depth_without_scoring() {
     let held = "f <- function(x) {\n  if (x) {\n    switch(x, 1, 2)\n  }\n}\n";
     let got = metrics(Lang::R, "case.R", held, "f");
     assert_eq!(got, (0, 2), "if 0 plus switch depth, never doubled");
+}
+
+#[test]
+fn ternary_alternate_chain_shares_one_level() {
+    let chain = "function f(a, b, c, d, e, g) {\n  return a ? 1 : b ? 2 : c ? 3 : d ? 4 : e ? 5 : g ? 6 : 7;\n}\n";
+    assert_eq!(
+        metrics(Lang::JavaScript, "case.js", chain, "f"),
+        (0, 1),
+        "six alternate links share the first level"
+    );
+    assert_eq!(
+        ts(chain, "f"),
+        (0, 1),
+        "the TypeScript hook matches the JavaScript one"
+    );
+    assert_eq!(
+        metrics(Lang::Tsx, "case.tsx", chain, "f"),
+        (0, 1),
+        "TSX shares the TypeScript hook and field"
+    );
+    let consequence = "function f(a, b) {\n  return a ? (b ? 1 : 2) : 3;\n}\n";
+    assert_eq!(
+        metrics(Lang::JavaScript, "case.js", consequence, "f"),
+        (0, 2),
+        "a ternary in the consequence arm still nests"
+    );
+    let under_if =
+        "function f(a, b, c) {\n  if (a) {\n    return b ? 1 : c ? 2 : 3;\n  }\n  return 0;\n}\n";
+    assert_eq!(
+        metrics(Lang::JavaScript, "case.js", under_if, "f"),
+        (0, 2),
+        "if opens one and the chain under it adds one"
+    );
+    let if_in_arm =
+        "function f(a, b) {\n  return a ? (() => { if (b) { return 1; } return 0; })() : 3;\n}\n";
+    assert_eq!(
+        metrics(Lang::JavaScript, "case.js", if_in_arm, "f"),
+        (0, 1),
+        "the arm closure is its own function, the chain adds one"
+    );
+    assert_eq!(
+        metrics(Lang::JavaScript, "case.js", if_in_arm, ""),
+        (0, 1),
+        "an if at nest 0 in the arm closure is unchanged"
+    );
 }

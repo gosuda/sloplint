@@ -1,12 +1,9 @@
-use sloplint_core::facts::{
-    Arg, ArgShape, Assertion, CallKind, FieldCopy, Handler, Import, Pos, WildcardArm,
-};
+use sloplint_core::facts::{Assertion, CallKind, FieldCopy, Handler, Import, Pos, WildcardArm};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    first_named_child, last_segment, named_children, narrow, pos_of, preceding_comments,
-    string_arg_shape, text,
+    CallHead, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, code_children,
+    first_named_child, last_segment, named_children, pos_of, preceding_comments, text,
 };
 use crate::spec::Role;
 
@@ -14,6 +11,7 @@ mod dynamic;
 mod imports;
 mod items;
 mod params;
+mod shapes;
 
 use dynamic::{py_call_dynamic, py_subscript_dynamic};
 use imports::push_imports;
@@ -22,6 +20,7 @@ use items::{
     push_typedef,
 };
 use params::{function_flags, push_params};
+use shapes::py_call_args;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
@@ -111,7 +110,12 @@ pub(crate) fn is_test_path(path: &str) -> bool {
     if file == "conftest.py" || file.starts_with("test_") || file.ends_with("_test.py") {
         return true;
     }
-    path.contains("/tests/") || path.contains("/test/") || path.contains("/__tests__/")
+    path.starts_with("tests/")
+        || path.starts_with("test/")
+        || path.starts_with("__tests__/")
+        || path.contains("/tests/")
+        || path.contains("/test/")
+        || path.contains("/__tests__/")
 }
 
 pub(crate) fn class_is_abstract(cx: &Cx<'_, '_>, class: Node<'_>) -> bool {
@@ -172,16 +176,56 @@ fn py_single_call(n: Node<'_>) -> Option<usize> {
 }
 
 fn py_sole(body: Node<'_>) -> Option<usize> {
-    let first = body.named_child(0)?;
+    let code = code_children(body);
+    let first = *code.first()?;
     let (target, rest) = if is_doc_expr(first) {
-        (body.named_child(1)?, 2)
+        (*code.get(1)?, 2)
     } else {
         (first, 1)
     };
-    if body.named_child(rest).is_some() {
+    if code.get(rest).is_some() {
         return None;
     }
     py_single_call(target)
+}
+
+fn py_is_simple_path(n: Node<'_>) -> bool {
+    let mut cur = n;
+    loop {
+        match cur.kind() {
+            "identifier" => return true,
+            "attribute" => {
+                let Some(attr) = child_by_field(cur, "attribute") else {
+                    return false;
+                };
+                if attr.kind() != "identifier" {
+                    return false;
+                }
+                let Some(obj) = child_by_field(cur, "object") else {
+                    return false;
+                };
+                cur = obj;
+            }
+            _ => return false,
+        }
+    }
+}
+
+pub(crate) fn py_callee_text<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
+    match func.kind() {
+        "identifier" => text(cx, func),
+        "attribute" => {
+            if py_is_simple_path(func) {
+                return text(cx, func);
+            }
+            if let Some(attr) = child_by_field(func, "attribute") {
+                text(cx, attr)
+            } else {
+                "attribute"
+            }
+        }
+        _ => "call",
+    }
 }
 
 fn py_pat_names<'s>(cx: &Cx<'_, 's>, left: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
@@ -229,47 +273,10 @@ fn py_callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
             Some(next) => crate::hooks::Link::Next(next),
             None => crate::hooks::Link::Root(current),
         },
-        "subscript" => match child_by_field(current, "value") {
-            Some(next) => crate::hooks::Link::Next(next),
-            None => crate::hooks::Link::Root(current),
-        },
-        "call" => match child_by_field(current, "function") {
-            Some(next) => crate::hooks::Link::Next(next),
-            None => crate::hooks::Link::Root(current),
-        },
-        "parenthesized_expression" => match first_named_child(current) {
-            Some(next) => crate::hooks::Link::Next(next),
-            None => crate::hooks::Link::Root(current),
-        },
+        "subscript" | "call" | "parenthesized_expression" => crate::hooks::Link::Root(current),
         _ => crate::hooks::Link::Root(current),
     });
     is_chain_root(root).then_some(root)
-}
-
-fn py_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    match n.kind() {
-        "string" => string_arg_shape(cx, n, &["string_content"]),
-        "concatenated_string" => ArgShape::Concat,
-        "identifier" => ArgShape::Ident(text(cx, n)),
-        "list"
-        | "dictionary"
-        | "tuple"
-        | "set"
-        | "list_comprehension"
-        | "dictionary_comprehension"
-        | "set_comprehension" => ArgShape::Collection,
-        "lambda" => ArgShape::CodeBody,
-        _ if binary_concat(cx, n, "+", &["string"]) => ArgShape::Concat,
-        _ => ArgShape::Other,
-    }
-}
-
-fn py_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
-    Arg {
-        shape: py_shape(cx, n),
-        start_line: pos_of(n).line,
-        end_line: narrow(n.end_position().row) + 1,
-    }
 }
 
 fn is_binding_init(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
@@ -374,6 +381,7 @@ impl LangHooks for PythonHooks {
         }
         let body = child_by_field(n, "body")?;
         Some(FunctionHead {
+            shadow_params: Vec::new(),
             name,
             name_pos: pos_of(name_node),
             visibility: flags.visibility,
@@ -385,6 +393,7 @@ impl LangHooks for PythonHooks {
             is_decorated: flags.is_decorated,
             is_trait_item: flags.is_trait_item,
             region: None,
+            receiver: None,
             params: plist,
             return_type: ret,
             missing_annotations: missing,
@@ -435,21 +444,13 @@ impl LangHooks for PythonHooks {
         let func = child_by_field(n, "function")?;
         let mut args = Vec::new();
         if let Some(list) = child_by_field(n, "arguments") {
-            for c in named_children(list) {
-                if c.kind() == "keyword_argument" {
-                    if let Some(v) = child_by_field(c, "value") {
-                        args.push(py_arg(cx, v));
-                    }
-                } else {
-                    args.push(py_arg(cx, c));
-                }
-            }
+            py_call_args(cx, list, &mut args);
         }
         Some(CallHead {
-            callee: text(cx, func),
+            callee: py_callee_text(cx, func),
             kind: CallKind::Plain,
             callee_root: py_callee_root(cx, func),
-            is_simple_path: func.kind() == "identifier",
+            is_simple_path: py_is_simple_path(func),
             initializes_binding: is_binding_init(cx, n),
             args,
         })

@@ -161,3 +161,43 @@ fn an_explicit_config_overrides_discovery() {
         "the explicit root holds one source: {stdout}"
     );
 }
+
+#[test]
+fn an_explicit_root_pins_the_tree_when_config_lives_elsewhere() {
+    let (_tmp, base) = base();
+    put(&base, "elsewhere/sloplint.toml", GENERIC_OFF);
+    put(&base, "elsewhere/lib.rs", SAMPLE);
+    put(&base, "checkout/src/lib.rs", SAMPLE);
+    put(&base, "checkout/tests/other.rs", "fn helper() {}\n");
+    let config = base.join("elsewhere/sloplint.toml");
+    let root = base.join("checkout");
+    let out = cli(
+        &base,
+        &[
+            "check",
+            "--no-cache",
+            "--fail-on",
+            "never",
+            "--strictness",
+            "strict",
+            "--root",
+            &root.to_string_lossy(),
+            "-c",
+            &config.to_string_lossy(),
+        ],
+    );
+    assert!(out.status.success(), "stderr: {}", text(&out.stderr));
+    let stdout = text(&out.stdout);
+    assert!(
+        stdout.contains("files=2 "),
+        "the pinned root holds two sources: {stdout}"
+    );
+    assert!(
+        stdout.contains("src/lib.rs"),
+        "the checkout is linted: {stdout}"
+    );
+    assert!(
+        !stdout.contains("elsewhere"),
+        "the config dir is not linted: {stdout}"
+    );
+}

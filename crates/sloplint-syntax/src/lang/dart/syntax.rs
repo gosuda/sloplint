@@ -4,6 +4,8 @@ use crate::hooks::{
     Cx, child_by_field, first_named_child, first_named_child_matching, text, trimmed,
 };
 
+pub(crate) const COMMENTS: &[&str] = &["comment", "block_comment", "documentation_block_comment"];
+
 pub(crate) fn has_anon(n: Node<'_>, kind: &str) -> bool {
     (0..n.child_count())
         .filter_map(|i| n.child(i))

@@ -1,1 +1,1 @@
-calc.odin:1 info agent/colocated-tests
+src/service.odin:1 info agent/colocated-tests

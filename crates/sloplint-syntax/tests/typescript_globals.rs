@@ -152,6 +152,69 @@ fn function_assignment_to_top_let_is_global_write() {
 }
 
 #[test]
+fn plain_read_of_top_let_is_not_a_global_write() {
+    let source = "let counter = 0;\nfunction bump() {\n  return counter;\n}\n";
+    for lang in [Lang::JavaScript, Lang::TypeScript] {
+        with_harness(lang, "a.ts", source, |analysis| {
+            assert!(
+                !analysis
+                    .facts
+                    .ambient
+                    .iter()
+                    .any(|a| a.kind == AmbientKind::GlobalWrite && a.name == "counter"),
+                "{lang:?}: plain read of file-scope let inside a fn must not be a GlobalWrite"
+            );
+        });
+    }
+}
+
+#[test]
+fn in_function_writes_to_top_let_are_global_writes() {
+    for (label, stmt) in [
+        ("assign", "counter = 1;"),
+        ("augmented", "counter += 1;"),
+        ("update", "counter++;"),
+    ] {
+        let source = format!("let counter = 0;\nfunction bump() {{\n  {stmt}\n}}\n");
+        for lang in [Lang::JavaScript, Lang::TypeScript] {
+            with_harness(lang, "a.ts", &source, |analysis| {
+                assert!(
+                    analysis.facts.ambient.iter().any(|a| {
+                        a.kind == AmbientKind::GlobalWrite
+                            && a.name == "counter"
+                            && a.in_function.is_some()
+                    }),
+                    "{lang:?}: {label} to file-scope let inside a fn must be a GlobalWrite"
+                );
+            });
+        }
+    }
+}
+
+#[test]
+fn in_function_destructuring_writes_to_top_let_are_global_writes() {
+    for (label, stmt) in [
+        ("array", "[counter] = [1];"),
+        ("object", "({ counter } = obj);"),
+        ("parenthesized", "(counter) = 1;"),
+    ] {
+        let source = format!("let counter = 0;\nfunction reset() {{\n  {stmt}\n}}\n");
+        for lang in [Lang::JavaScript, Lang::TypeScript] {
+            with_harness(lang, "a.ts", &source, |analysis| {
+                assert!(
+                    analysis.facts.ambient.iter().any(|a| {
+                        a.kind == AmbientKind::GlobalWrite
+                            && a.name == "counter"
+                            && a.in_function.is_some()
+                    }),
+                    "{lang:?}: {label} to file-scope let inside a fn must be a GlobalWrite"
+                );
+            });
+        }
+    }
+}
+
+#[test]
 fn env_store_is_global_write_while_read_stays_read() {
     let source =
         "const mode = process.env.MODE;\nfunction f() {\n  process.env.TOKEN = \"x\";\n}\n";
@@ -310,4 +373,215 @@ fn ts_params_and_overloads() {
             "implementation must not be marked overload"
         );
     });
+}
+
+#[test]
+fn const_local_shadows_top_let_write() {
+    let plain = "let g = 0;\nfunction f() {\n  g = 2;\n}\n";
+    let shadowed = "let g = 0;\nfunction f() {\n  const g = 1;\n  g = 2;\n}\n";
+    for lang in [Lang::JavaScript, Lang::TypeScript] {
+        with_harness(lang, "a.ts", plain, |analysis| {
+            assert!(
+                analysis.facts.ambient.iter().any(|a| {
+                    a.kind == AmbientKind::GlobalWrite && a.name == "g" && a.in_function.is_some()
+                }),
+                "{lang:?}: assignment to file-scope let stays a GlobalWrite"
+            );
+        });
+        with_harness(lang, "a.ts", shadowed, |analysis| {
+            assert!(
+                !analysis.facts.ambient.iter().any(|a| {
+                    a.kind == AmbientKind::GlobalWrite && a.name == "g" && a.in_function.is_some()
+                }),
+                "{lang:?}: a write to a shadowing const local is no GlobalWrite"
+            );
+        });
+    }
+}
+
+#[test]
+fn destructured_param_shadows_top_let_write() {
+    let plain = "let a = 0;\nfunction f() {\n  a = 1;\n}\n";
+    let shadowed = "let a = 0;\nfunction f({a}) {\n  a = 1;\n}\n";
+    for lang in [Lang::JavaScript, Lang::TypeScript] {
+        with_harness(lang, "a.ts", plain, |analysis| {
+            assert!(
+                analysis.facts.ambient.iter().any(|a| {
+                    a.kind == AmbientKind::GlobalWrite && a.name == "a" && a.in_function.is_some()
+                }),
+                "{lang:?}: assignment to file-scope let stays a GlobalWrite"
+            );
+        });
+        with_harness(lang, "a.ts", shadowed, |analysis| {
+            assert!(
+                !analysis.facts.ambient.iter().any(|a| {
+                    a.kind == AmbientKind::GlobalWrite && a.name == "a" && a.in_function.is_some()
+                }),
+                "{lang:?}: a write to a destructured shadowing param is no GlobalWrite"
+            );
+        });
+    }
+}
+
+fn in_function_writes_to(analysis: &Analysis<'_>, name: &str) -> usize {
+    analysis
+        .facts
+        .ambient
+        .iter()
+        .filter(|a| a.kind == AmbientKind::GlobalWrite && a.name == name && a.in_function.is_some())
+        .count()
+}
+
+#[test]
+fn for_in_let_shadows_top_let_write() {
+    let bare =
+        "let counter = 0;\nfunction f(xs) {\n  for (counter of xs) {\n    counter = 1;\n  }\n}\n";
+    let shadowed = "let counter = 0;\nfunction f(xs) {\n  for (let counter of xs) {\n    counter = 1;\n  }\n}\n";
+    let hoisted =
+        "let counter = 0;\nfunction f(xs) {\n  counter = 1;\n  for (var counter of xs) {\n  }\n}\n";
+    for lang in [Lang::JavaScript, Lang::TypeScript] {
+        with_harness(lang, "a.ts", bare, |analysis| {
+            assert_eq!(
+                in_function_writes_to(&analysis, "counter"),
+                1,
+                "{lang:?}: a bare for-in write to file-scope let stays a GlobalWrite"
+            );
+        });
+        with_harness(lang, "a.ts", shadowed, |analysis| {
+            assert_eq!(
+                in_function_writes_to(&analysis, "counter"),
+                0,
+                "{lang:?}: a write to a for-in let binding is no GlobalWrite"
+            );
+        });
+        with_harness(lang, "a.ts", hoisted, |analysis| {
+            assert_eq!(
+                in_function_writes_to(&analysis, "counter"),
+                0,
+                "{lang:?}: a write before a hoisted for-in var is no GlobalWrite"
+            );
+        });
+    }
+}
+
+#[test]
+fn rest_param_shadows_top_let_write() {
+    let plain = "let counter = 0;\nfunction f() {\n  counter = 1;\n}\n";
+    let array_rest = "let counter = 0;\nfunction f(...[counter]) {\n  counter = 1;\n}\n";
+    let object_plain = "let counter = 0;\nfunction f({a}) {\n  counter = 1;\n}\n";
+    let object_rest = "let counter = 0;\nfunction f({a, ...counter}) {\n  counter = 1;\n}\n";
+    for lang in [Lang::JavaScript, Lang::TypeScript] {
+        with_harness(lang, "a.ts", plain, |analysis| {
+            assert_eq!(
+                in_function_writes_to(&analysis, "counter"),
+                1,
+                "{lang:?}: assignment to file-scope let stays a GlobalWrite"
+            );
+        });
+        with_harness(lang, "a.ts", array_rest, |analysis| {
+            assert_eq!(
+                in_function_writes_to(&analysis, "counter"),
+                0,
+                "{lang:?}: a write to a rest array param is no GlobalWrite"
+            );
+        });
+        with_harness(lang, "a.ts", object_plain, |analysis| {
+            assert_eq!(
+                in_function_writes_to(&analysis, "counter"),
+                1,
+                "{lang:?}: assignment to file-scope let stays a GlobalWrite"
+            );
+        });
+        with_harness(lang, "a.ts", object_rest, |analysis| {
+            assert_eq!(
+                in_function_writes_to(&analysis, "counter"),
+                0,
+                "{lang:?}: a write to an object rest param is no GlobalWrite"
+            );
+        });
+    }
+}
+
+#[test]
+fn member_write_to_top_let_object_is_global_write() {
+    let source = "let state = { n: 0 };\nfunction bump() {\n  state.n = 1;\n}\nfunction local() {\n  let state = { n: 0 };\n  state.n = 2;\n}\nfunction param(state) {\n  state.n = 3;\n}\n";
+    for lang in [Lang::JavaScript, Lang::TypeScript] {
+        with_harness(lang, "a.ts", source, |analysis| {
+            let writes: Vec<_> = analysis
+                .facts
+                .ambient
+                .iter()
+                .filter(|a| a.kind == AmbientKind::GlobalWrite)
+                .collect();
+            assert_eq!(
+                writes.len(),
+                1,
+                "{lang:?}: only the file-scope object write reports, got {:?}",
+                writes
+                    .iter()
+                    .map(|w| (w.name, w.pos.line))
+                    .collect::<Vec<_>>()
+            );
+            assert_eq!(
+                writes[0].name, "state",
+                "{lang:?}: the write keeps the object name"
+            );
+            assert!(
+                writes[0].in_function.is_some(),
+                "{lang:?}: the object write sits in a function"
+            );
+        });
+    }
+}
+
+#[test]
+fn every_top_let_name_stays_writable() {
+    let source = "let aaa = 0;\nlet bbb = 0;\nlet ccc = 0;\nlet ddd = 0;\nfunction f() {\n  aaa = 1;\n  bbb += 2;\n  ccc++;\n  ddd = 4;\n}\n";
+    for lang in [Lang::JavaScript, Lang::TypeScript] {
+        with_harness(lang, "a.ts", source, |analysis| {
+            for name in ["aaa", "bbb", "ccc", "ddd"] {
+                assert_eq!(
+                    in_function_writes_to(&analysis, name),
+                    1,
+                    "{lang:?}: in-function write to {name} stays a GlobalWrite"
+                );
+            }
+        });
+    }
+}
+
+#[test]
+fn write_before_var_decl_in_same_fn_is_local() {
+    let source = "let counter = 0;\nfunction f() {\n  counter = 1;\n  var counter = 2;\n}\nfunction g() {\n  counter = 3;\n}\n";
+    for lang in [Lang::JavaScript, Lang::TypeScript] {
+        with_harness(lang, "a.ts", source, |analysis| {
+            let writes: Vec<_> = analysis
+                .facts
+                .ambient
+                .iter()
+                .filter(|a| a.kind == AmbientKind::GlobalWrite)
+                .collect();
+            assert_eq!(
+                writes.len(),
+                1,
+                "{lang:?}: only the unshadowed write reports, got {:?}",
+                writes
+                    .iter()
+                    .map(|w| (w.name, w.pos.line))
+                    .collect::<Vec<_>>()
+            );
+            assert_eq!(
+                writes[0].name, "counter",
+                "{lang:?}: the write keeps the name"
+            );
+            assert_eq!(
+                writes[0].pos.line, 7,
+                "{lang:?}: the surviving write sits in g"
+            );
+            assert!(
+                writes[0].in_function.is_some(),
+                "{lang:?}: the surviving write sits in a function"
+            );
+        });
+    }
 }

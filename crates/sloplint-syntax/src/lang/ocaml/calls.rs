@@ -3,9 +3,8 @@ use tree_sitter::Node;
 
 use super::funcs::pattern_ident;
 use crate::hooks::{
-    CallHead, Cx, any_named_child, child_by_field, first_named_child, first_named_child_matching,
-    first_of_kind, has_child_kind, last_named_child, named_children, narrow, pos_of,
-    string_arg_shape, text, trimmed,
+    CallHead, Cx, any_named_child, child_by_field, first_of_kind, has_child_kind, last_named_child,
+    named_children, narrow, pos_of, string_arg_shape, text, trimmed,
 };
 
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
@@ -59,61 +58,195 @@ pub(crate) fn write_roots_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(
     if !is_incr(cx, n) {
         return;
     }
-    let Some(arg) = first_named_child_matching(n, &["argument"]) else {
+    let mut cursor = n.walk();
+    let Some(arg) = n.children_by_field_name("argument", &mut cursor).next() else {
         return;
     };
-    let target = first_named_child(arg).unwrap_or(arg);
-    if let Some(root) = write_root(cx, target) {
+    if let Some(root) = write_root(cx, arg) {
         out.push(root);
     }
 }
 
-fn make_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
+pub(crate) fn incr_write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
+    if n.kind() != "application_expression" || !is_incr(cx, n) {
+        return None;
+    }
+    let mut cursor = n.walk();
+    let arg = n.children_by_field_name("argument", &mut cursor).next()?;
+    write_root(cx, arg)
+}
+
+fn arg_at<'s>(n: Node<'_>, shape: ArgShape<'s>) -> Arg<'s> {
     Arg {
-        shape: arg_shape(cx, n),
+        shape,
         start_line: narrow(n.start_position().row) + 1,
         end_line: narrow(n.end_position().row) + 1,
     }
 }
 
+fn make_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
+    arg_at(n, arg_shape(cx, n))
+}
+
+fn is_concat_op(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    child_by_field(n, "operator")
+        .is_some_and(|op| op.kind() == "concat_operator" && text(cx, op) == "^")
+}
+
+fn concat_fragments<'s>(cx: &Cx<'_, 's>, n: Node<'_>, fragments: &mut Vec<&'s str>) {
+    let mut stack = vec![n];
+    while let Some(node) = stack.pop() {
+        match node.kind() {
+            "string" | "quoted_string" => {
+                let content = if node.kind() == "string" {
+                    "string_content"
+                } else {
+                    "quoted_string_content"
+                };
+                let mut cursor = node.walk();
+                for child in node.children(&mut cursor) {
+                    if child.kind() == content {
+                        fragments.push(text(cx, child));
+                    }
+                }
+            }
+            "parenthesized_expression" => {
+                if let Some(inner) = child_by_field(node, "expression") {
+                    stack.push(inner);
+                }
+            }
+            "infix_expression" => {
+                if !is_concat_op(cx, node) {
+                    continue;
+                }
+                if let Some(left) = child_by_field(node, "left") {
+                    stack.push(left);
+                }
+                if let Some(right) = child_by_field(node, "right") {
+                    stack.push(right);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 fn concat_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    let operator = child_by_field(n, "operator");
-    let caret = operator.is_some_and(|op| op.kind() == "concat_operator" && text(cx, op) == "^");
-    if !caret {
+    if !is_concat_op(cx, n) {
         return ArgShape::Other;
     }
-    let quoted = any_named_child(n, |c| c.kind() == "string" || c.kind() == "quoted_string");
-    if quoted {
-        ArgShape::Concat
-    } else {
-        ArgShape::Other
+    let mut fragments: Vec<&str> = Vec::new();
+    concat_fragments(cx, n, &mut fragments);
+    ArgShape::Concat {
+        longest_static: sloplint_core::text::longest_static_chunk(&fragments),
     }
 }
 
 fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    match n.kind() {
-        "string" => string_arg_shape(cx, n, &["string_content"]),
-        "quoted_string" => string_arg_shape(cx, n, &["quoted_string_content"]),
-        "infix_expression" => concat_shape(cx, n),
-        "value_path" => {
-            if has_child_kind(n, "module_path") {
-                ArgShape::Other
+    let mut current = n;
+    while current.kind() == "parenthesized_expression" {
+        let Some(next) = child_by_field(current, "expression") else {
+            return ArgShape::Other;
+        };
+        current = next;
+    }
+    match current.kind() {
+        "string" => string_arg_shape(cx, current, &["string_content"]),
+        "quoted_string" => string_arg_shape(cx, current, &["quoted_string_content"]),
+        "infix_expression" => concat_shape(cx, current),
+        "fun_expression"
+        | "function_expression"
+        | "match_expression"
+        | "if_expression"
+        | "let_expression" => ArgShape::CodeBody,
+        "list_expression" | "array_expression" | "tuple_expression" => {
+            if collection_has_closure(current) {
+                ArgShape::CodeBody
             } else {
-                ArgShape::Ident(text(cx, n))
+                ArgShape::Collection
             }
         }
+        "record_expression" => ArgShape::Other,
+        "value_path" | "value_name" => ArgShape::Ident(text(cx, current)),
         _ => ArgShape::Other,
     }
 }
 
-fn ocaml_is_simple_path(func: Node<'_>) -> bool {
-    if func.kind() == "identifier" || func.kind() == "value_name" {
-        return true;
+fn collection_has_closure(n: Node<'_>) -> bool {
+    let mut stack = vec![n];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "fun_expression" || node.kind() == "function_expression" {
+            return true;
+        }
+        stack.extend(named_children(node));
     }
-    if func.kind() != "value_path" {
+    false
+}
+
+fn path_root<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
+    let mut current = func;
+    loop {
+        match current.kind() {
+            "identifier" | "value_name" => return Some(text(cx, current)),
+            "value_path" => {
+                if has_child_kind(current, "parenthesized_operator") {
+                    return None;
+                }
+                return text(cx, current).split('.').next();
+            }
+            "field_get_expression" => {
+                current = child_by_field(current, "record")?;
+            }
+            _ => return None,
+        }
+    }
+}
+
+fn ocaml_is_simple_path(func: Node<'_>) -> bool {
+    let mut current = func;
+    loop {
+        match current.kind() {
+            "identifier" | "value_name" => return true,
+            "value_path" => return !has_child_kind(current, "parenthesized_operator"),
+            "field_get_expression" => {
+                let Some(next) = child_by_field(current, "record") else {
+                    return false;
+                };
+                current = next;
+            }
+            _ => return false,
+        }
+    }
+}
+
+fn initializes_binding(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    let Some(parent) = cx.parent() else {
+        return false;
+    };
+    if parent.kind() != "let_binding" {
         return false;
     }
-    !has_child_kind(func, "module_path")
+    if first_of_kind(parent, &["parameter"]).is_some() {
+        return false;
+    }
+    child_by_field(parent, "body").is_some_and(|body| body.id() == n.id())
+}
+
+fn fallback_callee<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
+    let mut current = func;
+    loop {
+        let next = match current.kind() {
+            "application_expression" => child_by_field(current, "function"),
+            "parenthesized_expression" | "prefix_expression" => {
+                child_by_field(current, "expression")
+            }
+            _ => None,
+        };
+        let Some(next) = next else {
+            return text(cx, current);
+        };
+        current = next;
+    }
 }
 
 pub(crate) fn call_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
@@ -124,7 +257,7 @@ pub(crate) fn call_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>
             kind: CallKind::New,
             callee_root: None,
             is_simple_path: false,
-            initializes_binding: false,
+            initializes_binding: initializes_binding(cx, n),
             args: Vec::new(),
         };
         return Some(created);
@@ -133,28 +266,43 @@ pub(crate) fn call_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>
         return None;
     }
     let func = child_by_field(n, "function")?;
-    let callee = trimmed(cx, func);
+    let (callee, callee_root) = match func.kind() {
+        "identifier" | "value_name" | "value_path" | "field_get_expression" => {
+            (text(cx, func), path_root(cx, func))
+        }
+        _ => (fallback_callee(cx, func), None),
+    };
     let mut cursor = n.walk();
     let mut args = Vec::new();
     for arg in n.children_by_field_name("argument", &mut cursor) {
-        if arg.kind() == "labeled_argument" {
-            match child_by_field(arg, "expression") {
-                Some(expr) => args.push(make_arg(cx, expr)),
-                None => args.push(make_arg(cx, arg)),
-            }
-        } else {
-            args.push(make_arg(cx, arg));
-        }
+        push_call_arg(cx, arg, &mut args);
     }
     Some(CallHead {
         callee,
         kind: CallKind::Plain,
-        callee_root: callee.split('.').next(),
+        callee_root,
         is_simple_path: ocaml_is_simple_path(func),
-        initializes_binding: false,
+        initializes_binding: initializes_binding(cx, n),
         args,
     })
 }
+
+fn push_call_arg<'s>(cx: &Cx<'_, 's>, arg: Node<'_>, args: &mut Vec<Arg<'s>>) {
+    if arg.kind() != "labeled_argument" {
+        args.push(make_arg(cx, arg));
+        return;
+    }
+    if let Some(expr) = child_by_field(arg, "expression") {
+        args.push(make_arg(cx, expr));
+        return;
+    }
+    let Some(label) = first_of_kind(arg, &["label_name"]) else {
+        args.push(make_arg(cx, arg));
+        return;
+    };
+    args.push(arg_at(arg, ArgShape::Ident(text(cx, label))));
+}
+
 fn is_rel_compare(cx: &Cx<'_, '_>, op: Node<'_>) -> bool {
     if op.kind() != "rel_operator" {
         return false;
@@ -170,10 +318,7 @@ fn is_raise(cx: &Cx<'_, '_>, func: Option<Node<'_>>) -> bool {
     })
 }
 
-pub(crate) fn case_stmt<'s>(cx: &Cx<'_, 's>, case: Node<'_>) -> Stmt<'s> {
-    let Some(body) = last_named_child(case) else {
-        return Stmt::Other;
-    };
+fn body_stmt<'s>(cx: &Cx<'_, 's>, case: Node<'_>, body: Node<'_>) -> Stmt<'s> {
     if body.kind() != "application_expression" {
         return Stmt::Other;
     }
@@ -185,10 +330,11 @@ pub(crate) fn case_stmt<'s>(cx: &Cx<'_, 's>, case: Node<'_>) -> Stmt<'s> {
             kind: CallKind::Plain,
         };
     }
-    let bound = child_by_field(case, "pattern")
+    let pat = child_by_field(case, "pattern");
+    let bound = pat
         .and_then(|p| pattern_ident(cx, p))
         .map(|(name, _)| name)
-        .unwrap_or("");
+        .unwrap_or_else(|| pat.map(|p| text(cx, p)).unwrap_or(""));
     for arg in named_children(body) {
         if Some(arg.id()) == func.map(|f| f.id()) {
             continue;
@@ -199,6 +345,29 @@ pub(crate) fn case_stmt<'s>(cx: &Cx<'_, 's>, case: Node<'_>) -> Stmt<'s> {
         return Stmt::Other;
     }
     Stmt::Other
+}
+
+pub(crate) fn case_stmts<'s>(cx: &Cx<'_, 's>, case: Node<'_>, out: &mut Vec<Stmt<'s>>) {
+    let Some(body) = last_named_child(case) else {
+        return;
+    };
+    let mut stack = vec![body];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "parenthesized_expression" {
+            if let Some(inner) = child_by_field(node, "expression") {
+                stack.push(inner);
+            }
+        } else if node.kind() == "sequence_expression" {
+            let mut kids: Vec<_> = named_children(node)
+                .into_iter()
+                .filter(|kid| kid.kind() != "attribute_id" && kid.kind() != "comment")
+                .collect();
+            kids.reverse();
+            stack.extend(kids);
+        } else if node.kind() != "unit" {
+            out.push(body_stmt(cx, case, node));
+        }
+    }
 }
 
 fn is_bare_assert_argument(n: Node<'_>) -> bool {
@@ -243,7 +412,9 @@ pub(crate) fn assertion_head(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> 
             pos: pos_of(n),
             has_message: false,
             comparison,
-            shape: if bare {
+            shape: if comparison {
+                AssertShape::TopEqNe
+            } else if bare {
                 AssertShape::BareName
             } else {
                 AssertShape::Other

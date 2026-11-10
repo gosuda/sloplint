@@ -1,1 +1,1 @@
-# near-miss: spec/service_spec.rb is the colocated counterpart.
+# near-miss: service_spec.rb is the colocated counterpart of service.rb.

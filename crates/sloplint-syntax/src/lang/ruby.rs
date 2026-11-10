@@ -17,19 +17,37 @@ mod funcs;
 mod items;
 
 use calls::{
-    call_args, ruby_args, ruby_call_kind, ruby_callee, ruby_is_simple_path, ruby_receiver_root,
+    call_args, canonical_root, ruby_args, ruby_call_kind, ruby_callee, ruby_is_simple_path,
+    ruby_new_callee, ruby_receiver_root,
 };
 use funcs::{
     is_protocol_method, ruby_in_test_class, ruby_params, ruby_public, ruby_sole_call,
     superclass_name,
 };
 use items::{
-    bare_assert_shape, case_scrutinee_kind, has_constant_pattern, hash_copy, is_assign_left,
-    minitest_arity, rspec_assertion, ruby_env_name, ruby_stmt, sibling_has_constant,
-    sibling_variant_count, strip_arrow,
+    bare_assert_shape, case_scrutinee_kind, flatten_hash_pairs, hash_copy, is_assign_left,
+    minitest_arity, minitest_is_equality, rspec_assertion, ruby_env_name, ruby_in_cleanup,
+    ruby_stmt, ruby_try_imports_only, sibling_enum_like, sibling_variant_count, strip_arrow,
 };
 fn field_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>, field: &str) -> Option<&'s str> {
     child_by_field(n, field).map(|v| text(cx, v))
+}
+fn initializes_binding(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    let Some(parent) = cx.parent() else {
+        return false;
+    };
+    if parent.kind() != "assignment" {
+        return false;
+    }
+    if !child_by_field(parent, "right").is_some_and(|right| right.id() == n.id()) {
+        return false;
+    }
+    child_by_field(parent, "left").is_some_and(|left| {
+        matches!(
+            left.kind(),
+            "identifier" | "constant" | "instance_variable" | "class_variable" | "global_variable"
+        )
+    })
 }
 
 pub(crate) static TABLE: crate::lang::Table = &[
@@ -122,6 +140,7 @@ impl LangHooks for RubyHooks {
         let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
         let tested = ruby_in_test_class(cx, n);
         Some(FunctionHead {
+            shadow_params: Vec::new(),
             name,
             name_pos: pos_of(name_node),
             visibility: if ruby_public(cx, n) {
@@ -137,6 +156,7 @@ impl LangHooks for RubyHooks {
             is_decorated: false,
             is_trait_item: false,
             region: tested.then(|| region_of(n, CodeRole::Test)),
+            receiver: None,
             params: ruby_params(cx, n),
             return_type: None,
             missing_annotations: Vec::new(),
@@ -174,23 +194,24 @@ impl LangHooks for RubyHooks {
             && let Some(recv) = receiver
         {
             return Some(CallHead {
-                callee: text(cx, recv),
+                callee: ruby_new_callee(cx, n, recv),
                 kind: CallKind::New,
-                callee_root: Some(ruby_receiver_root(cx, recv)),
-                is_simple_path: false,
-                initializes_binding: false,
+                callee_root: ruby_receiver_root(cx, recv),
+                is_simple_path: ruby_is_simple_path(cx, n),
+                initializes_binding: initializes_binding(cx, n),
                 args: ruby_args(cx, n),
             });
         }
-        let root = receiver
-            .map(|r| ruby_receiver_root(cx, r))
-            .filter(|root| !root.is_empty());
+        let root = match receiver {
+            Some(recv) => ruby_receiver_root(cx, recv).filter(|root| !root.is_empty()),
+            None => field_text(cx, n, "method").and_then(canonical_root),
+        };
         Some(CallHead {
             callee: ruby_callee(cx, n),
             kind: CallKind::Plain,
             callee_root: root,
             is_simple_path: ruby_is_simple_path(cx, n),
-            initializes_binding: false,
+            initializes_binding: initializes_binding(cx, n),
             args: ruby_args(cx, n),
         })
     }
@@ -235,7 +256,7 @@ impl LangHooks for RubyHooks {
                 let parent = cx.parent()?;
                 Some(WildcardArm {
                     pos: pos_of(n),
-                    enum_like: has_constant_pattern(pattern),
+                    enum_like: sibling_enum_like(cx, n),
                     scrutinee: case_scrutinee_kind(parent),
                     variant_count: sibling_variant_count(cx, n),
                     has_nullable_ctor: false,
@@ -247,7 +268,7 @@ impl LangHooks for RubyHooks {
                     .filter(|p| p.kind() == "case" || p.kind() == "case_match")?;
                 Some(WildcardArm {
                     pos: pos_of(n),
-                    enum_like: sibling_has_constant(cx, n),
+                    enum_like: sibling_enum_like(cx, n),
                     scrutinee: case_scrutinee_kind(parent),
                     variant_count: sibling_variant_count(cx, n),
                     has_nullable_ctor: false,
@@ -267,8 +288,8 @@ impl LangHooks for RubyHooks {
                         pos: pos_of(n),
                         stmts: Vec::new(),
                         has_else: false,
-                        try_imports_only: false,
-                        in_cleanup: false,
+                        try_imports_only: ruby_try_imports_only(cx),
+                        in_cleanup: ruby_in_cleanup(cx),
                     });
                 };
                 let then_body = body.kind() == "then" || body.kind() == "body_statement";
@@ -279,7 +300,7 @@ impl LangHooks for RubyHooks {
                 };
                 let mut stmts = Vec::new();
                 for stmt in kids {
-                    if stmt.kind() == "comment" {
+                    if stmt.kind() == "comment" || stmt.kind() == "nil" {
                         continue;
                     }
                     stmts.push(ruby_stmt(cx, stmt, binding));
@@ -288,8 +309,8 @@ impl LangHooks for RubyHooks {
                     pos: pos_of(n),
                     stmts,
                     has_else: false,
-                    try_imports_only: false,
-                    in_cleanup: false,
+                    try_imports_only: ruby_try_imports_only(cx),
+                    in_cleanup: ruby_in_cleanup(cx),
                 })
             }
             "rescue_modifier" => {
@@ -302,7 +323,7 @@ impl LangHooks for RubyHooks {
                 };
                 let mut stmts = Vec::new();
                 for stmt in kids {
-                    if stmt.kind() == "comment" {
+                    if stmt.kind() == "comment" || stmt.kind() == "nil" {
                         continue;
                     }
                     if stmt.kind() == "call" {
@@ -319,7 +340,7 @@ impl LangHooks for RubyHooks {
                     stmts,
                     has_else: false,
                     try_imports_only: false,
-                    in_cleanup: false,
+                    in_cleanup: ruby_in_cleanup(cx),
                 })
             }
             _ => None,
@@ -336,17 +357,21 @@ impl LangHooks for RubyHooks {
         if n.kind() != "call" {
             return None;
         }
+        if ruby_call_kind(cx, n) != CallKind::New && child_by_field(n, "receiver").is_some() {
+            return None;
+        }
+        let list = first_of_kind(n, &["argument_list"])?;
         let mut pairs = Vec::new();
-        for arg in call_args(n) {
-            if arg.kind() == "pair" {
+        let mut cursor = list.walk();
+        for arg in list.children(&mut cursor) {
+            if !arg.is_named() || arg.kind() == "comment" {
+                continue;
+            }
+            if arg.kind() == "hash" {
+                flatten_hash_pairs(arg, &mut pairs);
+            } else if arg.kind() == "pair" {
                 pairs.push(arg);
-            } else if arg.kind() == "hash" {
-                for inner in named_children(arg) {
-                    if inner.kind() == "pair" {
-                        pairs.push(inner);
-                    }
-                }
-            } else if arg.kind() != "comment" {
+            } else {
                 return None;
             }
         }
@@ -455,6 +480,8 @@ impl LangHooks for RubyHooks {
         });
         let shape = if method == "assert" || method == "refute" {
             bare_assert_shape(cx, n)
+        } else if minitest_is_equality(method) {
+            AssertShape::TopEqNe
         } else {
             AssertShape::Other
         };

@@ -1,158 +1,94 @@
 use std::borrow::Cow;
 
 use sloplint_core::facts::{
-    AmbientKind, Barrel, FieldCopy, Handler, Import, ImportKind, ImportScope, Pos, ScrutineeKind,
-    TypeDef, Visibility, WildcardArm,
+    Barrel, FieldCopy, Handler, Import, ImportKind, ImportScope, Pos, ScrutineeKind, TypeDef,
+    Visibility, WildcardArm,
 };
 use sloplint_core::lang::Lang;
 use tree_sitter::Node;
 
 use super::OcamlHooks;
-use super::calls::{case_stmt, infix_write_root};
+use super::calls::case_stmts;
 use super::funcs::pattern_ident;
-use super::params::{is_let_binding, is_parameter};
+use super::params::is_parameter;
 use crate::hooks::{
-    Container, Cx, TypeHead, any_named_child, child_by_field, has_child_kind, last_segment,
-    named_children, narrow, pos_of, text,
+    Container, Cx, TypeHead, child_by_field, first_of_kind, last_segment, named_children, narrow,
+    pos_of, text,
 };
 
 fn is_match_case(c: &Node<'_>) -> bool {
     c.kind() == "match_case"
 }
 
-fn is_ref_callee(cx: &Cx<'_, '_>, f: Node<'_>) -> bool {
-    if f.kind() != "value_path" {
-        return false;
-    }
-    text(cx, f) == "ref" || text(cx, f) == "Stdlib.ref"
-}
+const OCAML_STDLIB: &[&str] = &[
+    "Arg",
+    "Array",
+    "ArrayLabels",
+    "Atomic",
+    "Bigarray",
+    "Bool",
+    "Buffer",
+    "Bytes",
+    "BytesLabels",
+    "Callback",
+    "Char",
+    "Complex",
+    "Condition",
+    "Digest",
+    "Domain",
+    "Effect",
+    "Either",
+    "Ephemeron",
+    "Filename",
+    "Float",
+    "Format",
+    "Fun",
+    "Gc",
+    "Hashtbl",
+    "In_channel",
+    "Int",
+    "Int32",
+    "Int64",
+    "Lazy",
+    "Lexing",
+    "List",
+    "ListLabels",
+    "Map",
+    "Marshal",
+    "MoreLabels",
+    "Mutex",
+    "Nativeint",
+    "Oo",
+    "Option",
+    "Out_channel",
+    "Parsing",
+    "Printexc",
+    "Printf",
+    "Queue",
+    "Random",
+    "Result",
+    "Scanf",
+    "Semaphore",
+    "Seq",
+    "Set",
+    "Stack",
+    "StdLabels",
+    "Stdlib",
+    "Stream",
+    "String",
+    "StringLabels",
+    "Sys",
+    "Uchar",
+    "Unit",
+    "Weak",
+];
 
-fn is_ref_binding(cx: &Cx<'_, '_>, lb: Node<'_>) -> bool {
-    if any_named_child(lb, |c| is_parameter(&c)) {
-        return false;
+fn external_root_for(module: &str) -> Option<&str> {
+    let first = module.split('.').next().unwrap_or("");
+    if first.is_empty() || OCAML_STDLIB.contains(&first) {
+        return None;
     }
-    let body = child_by_field(lb, "body");
-    if !body.is_some_and(|b| b.kind() == "application_expression") {
-        return false;
-    }
-    body.and_then(|b| child_by_field(b, "function"))
-        .is_some_and(|f| is_ref_callee(cx, f))
-}
-
-pub(crate) fn decl_names_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-    if n.kind() != "value_definition" {
-        return;
-    }
-    let mutable = has_child_kind(n, "mutable");
-    let bindings: Vec<Node<'_>> = named_children(n)
-        .into_iter()
-        .filter(is_let_binding)
-        .collect();
-    for lb in bindings {
-        if !mutable && !is_ref_binding(cx, lb) {
-            continue;
-        }
-        if let Some(pat) = child_by_field(lb, "pattern")
-            && let Some(found) = pattern_ident(cx, pat)
-        {
-            out.push(found);
-        }
-    }
-}
-
-fn push_first_binding<'s>(
-    cx: &Cx<'_, 's>,
-    n: Node<'_>,
-    out: &mut Vec<(AmbientKind, &'s str, Pos)>,
-) {
-    for lb in named_children(n) {
-        if lb.kind() != "let_binding" {
-            continue;
-        }
-        if let Some(pat) = child_by_field(lb, "pattern")
-            && let Some((name, pos)) = pattern_ident(cx, pat)
-        {
-            let global = (AmbientKind::GlobalMutable, name, pos);
-            out.push(global);
-            return;
-        }
-    }
-}
-
-fn is_env_callee(callee: &str) -> bool {
-    callee == "Sys.getenv"
-        || callee == "Sys.getenv_opt"
-        || callee == "Unix.getenv"
-        || callee == "Unix.environment"
-}
-
-fn file_global_names<'s>(cx: &Cx<'_, 's>, _n: Node<'_>) -> Vec<&'s str> {
-    let Some(root) = cx.root() else {
-        return Vec::new();
-    };
-    let mut names = Vec::new();
-    for value in named_children(root) {
-        if value.kind() != "value_definition" {
-            continue;
-        }
-        let mutable = has_child_kind(value, "mutable");
-        for lb in named_children(value) {
-            if !is_let_binding(&lb) {
-                continue;
-            }
-            if !mutable && !is_ref_binding(cx, lb) {
-                continue;
-            }
-            if let Some(pattern) = child_by_field(lb, "pattern")
-                && let Some((name, _)) = pattern_ident(cx, pattern)
-            {
-                names.push(name);
-            }
-        }
-    }
-    names
-}
-
-pub(crate) fn ambient_head<'s>(
-    n: Node<'_>,
-    cx: &Cx<'_, 's>,
-    in_function: bool,
-    out: &mut Vec<(AmbientKind, &'s str, Pos)>,
-) {
-    if n.kind() == "value_definition" {
-        if in_function {
-            return;
-        }
-        let mutable = has_child_kind(n, "mutable");
-        let stored = any_named_child(n, |lb| is_let_binding(&lb) && is_ref_binding(cx, lb));
-        if mutable || stored {
-            push_first_binding(cx, n, out);
-        }
-        return;
-    }
-    if n.kind() == "infix_expression" {
-        if !in_function {
-            return;
-        }
-        if let Some((root, pos)) = infix_write_root(cx, n)
-            && root != "_"
-            && file_global_names(cx, n).contains(&root)
-        {
-            out.push((AmbientKind::GlobalWrite, root, pos));
-        }
-        return;
-    }
-    if n.kind() != "application_expression" {
-        return;
-    }
-    let Some(func) = child_by_field(n, "function") else {
-        return;
-    };
-    let callee = text(cx, func);
-    if is_env_callee(callee) {
-        let read = (AmbientKind::EnvRead, callee, pos_of(n));
-        out.push(read);
-    }
+    Some(first)
 }
 
 pub(crate) fn imports_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
@@ -161,7 +97,8 @@ pub(crate) fn imports_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Impor
         let Some(module) = child_by_field(n, "module") else {
             return;
         };
-        let module = Cow::Borrowed(text(cx, module));
+        let raw = text(cx, module);
+        let module = Cow::Borrowed(raw);
         let opened = Import {
             pos,
             module,
@@ -170,8 +107,8 @@ pub(crate) fn imports_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Impor
             kind: ImportKind::Wildcard,
             scope: ImportScope::Module,
             in_test: false,
-            is_reexport: false,
-            external_root: None,
+            is_reexport: n.kind() == "include_module",
+            external_root: external_root_for(raw),
         };
         out.push(opened);
         return;
@@ -182,12 +119,12 @@ pub(crate) fn imports_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Impor
     let Some(body) = child_by_field(n, "body") else {
         return;
     };
-    if body.kind() != "extended_module_path" {
+    if body.kind() != "extended_module_path" && body.kind() != "module_path" {
         return;
     }
     let path = text(cx, body);
     let name = last_segment(path, &["."]);
-    let found = child_by_field(n, "module_name").map(|m| text(cx, m));
+    let found = first_of_kind(n, &["module_name"]).map(|m| text(cx, m));
     let alias = match found {
         Some(candidate) if candidate != name => Some(candidate),
         _ => None,
@@ -202,7 +139,7 @@ pub(crate) fn imports_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Impor
         scope: ImportScope::Module,
         in_test: false,
         is_reexport: false,
-        external_root: None,
+        external_root: external_root_for(path),
     };
     out.push(aliased);
 }
@@ -265,24 +202,61 @@ pub(crate) fn container_head(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Container> 
     }
     let parent = cx.parent()?;
     if parent.kind() != "module_binding" {
-        return Some(Container::Impl {
-            interface_bound: false,
-        });
+        return None;
     }
-    let bound = child_by_field(parent, "module_type").is_some();
-    Some(Container::Impl {
-        interface_bound: bound,
-    })
+    let testy = first_of_kind(parent, &["module_name"])
+        .is_some_and(|name| matches!(text(cx, name), "Test" | "Tests"));
+    testy.then_some(Container::TestModule)
 }
 
-fn sibling_enum(parent: Node<'_>, skip: Node<'_>) -> bool {
-    any_named_child(parent, |s| {
-        if s.kind() != "match_case" || s.id() == skip.id() {
-            return false;
+fn is_nullable_ctor(name: &str) -> bool {
+    matches!(last_segment(name, &["."]), "Some" | "None" | "Ok" | "Error")
+}
+
+fn record_pattern_name<'s>(names: &mut Vec<&'s str>, nullable: &mut bool, name: &'s str) {
+    if !names.contains(&name) {
+        names.push(name);
+    }
+    if is_nullable_ctor(name) {
+        *nullable = true;
+    }
+}
+
+fn collect_pattern_names<'s>(
+    cx: &Cx<'_, 's>,
+    pat: Node<'_>,
+    names: &mut Vec<&'s str>,
+    nullable: &mut bool,
+) {
+    let mut stack = vec![pat];
+    while let Some(node) = stack.pop() {
+        match node.kind() {
+            "constructor_pattern" => {
+                if let Some(path) = first_of_kind(node, &["constructor_path"]) {
+                    record_pattern_name(names, nullable, text(cx, path));
+                }
+            }
+            "constructor_path" | "tag" | "polymorphic_variant_pattern" => {
+                record_pattern_name(names, nullable, text(cx, node));
+            }
+            _ => {}
         }
-        child_by_field(s, "pattern")
-            .is_some_and(|q| q.kind() == "constructor_pattern" || q.kind() == "tag_pattern")
-    })
+        stack.extend(named_children(node));
+    }
+}
+
+fn sibling_facts(cx: &Cx<'_, '_>, parent: Node<'_>, skip: Node<'_>) -> (bool, u32, bool) {
+    let mut names: Vec<&str> = Vec::new();
+    let mut nullable = false;
+    for sib in named_children(parent) {
+        if sib.kind() != "match_case" || sib.id() == skip.id() {
+            continue;
+        }
+        if let Some(pat) = child_by_field(sib, "pattern") {
+            collect_pattern_names(cx, pat, &mut names, &mut nullable);
+        }
+    }
+    (names.len() >= 2, narrow(names.len()), nullable)
 }
 
 pub(crate) fn match_arm_head(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
@@ -294,14 +268,54 @@ pub(crate) fn match_arm_head(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm
         return None;
     }
     let parent = cx.parent()?;
+    let (enum_like, variant_count, has_nullable_ctor) = sibling_facts(cx, parent, n);
+    let scrutinee = if parent.kind() != "match_expression" {
+        ScrutineeKind::Other
+    } else {
+        match child_by_field(parent, "expression").map(|e| e.kind()) {
+            Some("identifier") | Some("value_name") | Some("value_path") => ScrutineeKind::Ident,
+            Some("field_get_expression") => ScrutineeKind::Field,
+            _ => ScrutineeKind::Other,
+        }
+    };
     let arm = WildcardArm {
         pos: pos_of(n),
-        enum_like: sibling_enum(parent, n),
-        scrutinee: ScrutineeKind::Other,
-        variant_count: 0,
-        has_nullable_ctor: false,
+        enum_like,
+        scrutinee,
+        variant_count,
+        has_nullable_ctor,
     };
     Some(arm)
+}
+
+fn is_cleanup_name(name: &str) -> bool {
+    const MARKERS: &[&str] = &["close", "dispose", "cleanup", "release"];
+    MARKERS.iter().any(|marker| {
+        name == *marker
+            || name
+                .strip_prefix(*marker)
+                .is_some_and(|rest| rest.starts_with('_'))
+    })
+}
+
+fn enclosing_cleanup(cx: &Cx<'_, '_>) -> bool {
+    for ancestor in cx.ancestors() {
+        if ancestor.kind() != "let_binding" {
+            continue;
+        }
+        let is_func = named_children(ancestor)
+            .into_iter()
+            .any(|c| is_parameter(&c))
+            || child_by_field(ancestor, "body")
+                .is_some_and(|b| matches!(b.kind(), "fun_expression" | "function_expression"));
+        if !is_func {
+            continue;
+        }
+        return child_by_field(ancestor, "pattern")
+            .and_then(|p| pattern_ident(cx, p))
+            .is_some_and(|(name, _)| is_cleanup_name(name));
+    }
+    false
 }
 
 pub(crate) fn handler_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'s>> {
@@ -313,19 +327,20 @@ pub(crate) fn handler_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'
         if !is_match_case(&case) {
             continue;
         }
-        stmts.push(case_stmt(cx, case));
+        case_stmts(cx, case, &mut stmts);
     }
+    let in_cleanup = enclosing_cleanup(cx);
     Some(Handler {
         pos: pos_of(n),
         stmts,
         has_else: false,
         try_imports_only: false,
-        in_cleanup: false,
+        in_cleanup,
     })
 }
 
 fn field_source<'s>(cx: &Cx<'_, 's>, field: Node<'_>) -> Option<&'s str> {
-    let path = child_by_field(field, "field_path")?;
+    let path = first_of_kind(field, &["field_path"])?;
     let body = child_by_field(field, "body")?;
     if body.kind() != "field_get_expression" {
         return None;

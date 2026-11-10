@@ -16,7 +16,7 @@ const SOURCE: &str = "void f(id logger, id store, int count) {
 fn describe(shape: &ArgShape<'_>) -> String {
     match shape {
         ArgShape::Str { longest_static } => format!("str:{longest_static}"),
-        ArgShape::Concat => "concat".to_string(),
+        ArgShape::Concat { longest_static } => format!("concat:{longest_static}"),
         ArgShape::Ident(name) => format!("ident:{name}"),
         ArgShape::Collection => "collection".to_string(),
         ArgShape::CodeBody => "code".to_string(),

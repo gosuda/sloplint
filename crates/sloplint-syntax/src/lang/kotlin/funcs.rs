@@ -3,7 +3,7 @@ use sloplint_core::role::CodeRole;
 use tree_sitter::Node;
 
 use super::{
-    annotation_names, first_code, has_modifier_word, is_comment, is_nested_fn, modifiers_of,
+    annotation_names, first_code, has_modifier_word, is_comment, modifiers_of, stricter_visibility,
     type_after_colon, type_visibility,
 };
 use crate::hooks::{
@@ -90,6 +90,15 @@ fn build_param<'s>(cx: &Cx<'_, 's>, parameter: Node<'_>) -> Option<Param<'s>> {
 }
 
 pub(crate) fn function_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
+    if n.kind() == "primary_constructor" {
+        return first_of_kind(n, &["class_parameters"]).map_or_else(Vec::new, |list| {
+            named_children(list)
+                .into_iter()
+                .filter(|child| child.kind() == "class_parameter")
+                .filter_map(|parameter| build_param(cx, parameter))
+                .collect()
+        });
+    }
     let Some(list) = first_of_kind(n, &["function_value_parameters"]) else {
         return Vec::new();
     };
@@ -138,28 +147,37 @@ fn expression_body(n: Node<'_>) -> bool {
         .is_some_and(|inner| inner.kind() != "block")
 }
 
-fn enclosing_visibility(cx: &Cx<'_, '_>) -> Visibility {
+fn scope_flags(cx: &Cx<'_, '_>) -> (Visibility, bool) {
+    let mut cap = Visibility::Exported;
+    let mut nested = false;
     for p in cx.ancestors() {
-        if matches!(p.kind(), "class_declaration" | "object_declaration") {
-            return type_visibility(cx, p);
+        match p.kind() {
+            "object_literal" => cap = Visibility::Private,
+            "class_declaration" | "object_declaration" => {
+                cap = stricter_visibility(cap, type_visibility(cx, p));
+            }
+            "function_declaration"
+            | "secondary_constructor"
+            | "lambda_literal"
+            | "anonymous_function"
+            | "anonymous_initializer"
+            | "block"
+                if !nested =>
+            {
+                nested = true;
+            }
+            _ => {}
+        }
+        if cap == Visibility::Private && nested {
+            break;
         }
     }
-    Visibility::Exported
-}
-
-fn capped_visibility(own: Visibility, cap: Visibility) -> Visibility {
-    match (own, cap) {
-        (Visibility::Private, _) => Visibility::Private,
-        (_, Visibility::Private) => Visibility::Private,
-        (Visibility::Restricted, _) | (_, Visibility::Restricted) => Visibility::Restricted,
-        _ => Visibility::Exported,
-    }
+    (cap, nested)
 }
 
 pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     let (name, name_pos) = match n.kind() {
         "function_declaration" => {
-            first_of_kind(n, &["function_body"])?;
             let name = child_by_field(n, "name")?;
             (text(cx, name), pos_of(name))
         }
@@ -167,6 +185,7 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
             first_of_kind(n, &["block"])?;
             ("constructor", pos_of(n))
         }
+        "primary_constructor" => ("constructor", pos_of(n)),
         _ => return None,
     };
     let is_declaration = n.kind() == "function_declaration";
@@ -184,25 +203,27 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
         .iter()
         .any(|a| super::TEST_ANNOTATIONS.contains(a));
     let benched = !tested && annotations.contains(&"Benchmark");
-    let own = if has_visibility(cx, n, &["private"]) || is_nested_fn(cx) {
+    let (enclosing, nested) = scope_flags(cx);
+    let own = if has_visibility(cx, n, &["private"]) || nested {
         Visibility::Private
     } else if has_visibility(cx, n, &["internal"]) {
         Visibility::Restricted
     } else {
         Visibility::Exported
     };
-    let visibility = capped_visibility(own, enclosing_visibility(cx));
+    let visibility = stricter_visibility(own, enclosing);
     let in_trait = matches!(
         cx.innermost_container(),
         Some(crate::hooks::Container::Trait { .. })
     );
     let (doc, doc_pos) = preceding_comments(cx, n, COMMENTS, &[]);
     Some(FunctionHead {
+        shadow_params: Vec::new(),
         name,
         name_pos,
         visibility,
         signature_forced: has_modifier_word(cx, n, "override"),
-        entry_point: name == "main",
+        entry_point: name == "main" && cx.parent().is_some_and(|p| p.kind() == "source_file"),
         in_test: tested || benched,
         is_overload: false,
         is_deprecated: annotations.contains(&"Deprecated"),
@@ -211,6 +232,7 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
         region: tested
             .then(|| attributed_region(n, modifiers_of(n), CodeRole::Test))
             .or_else(|| benched.then(|| attributed_region(n, modifiers_of(n), CodeRole::Bench))),
+        receiver: None,
         params: function_params(cx, n),
         return_type,
         missing_annotations: missing,

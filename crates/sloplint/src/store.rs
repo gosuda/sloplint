@@ -2,11 +2,10 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
 
-use sloplint_core::Finding;
-use sloplint_core::baseline::{Baseline, MAX_BASELINE_ENTRIES};
-
 use crate::error::{RunError, io_error};
 use crate::{fileio, project};
+use sloplint_core::Finding;
+use sloplint_core::baseline::{Baseline, MAX_BASELINE_ENTRIES, SkippedEntry};
 
 pub(crate) fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunError> {
     let path = project::resolve_within_root(root, name)?;
@@ -48,13 +47,20 @@ pub fn read_source(path: &Path, max_bytes: u64) -> Result<String, RunError> {
     Ok(text)
 }
 
-pub(crate) fn record_baseline(path: &Path, findings: &[Finding]) -> Result<(), RunError> {
+pub(crate) fn record_baseline(
+    path: &Path,
+    findings: &[Finding],
+    skipped: &[SkippedEntry],
+) -> Result<(), RunError> {
     ensure_prior_baseline(path)?;
-    let baseline = Baseline::from_findings(findings);
+    let baseline = Baseline::from_findings_and_skipped(findings, skipped);
     let json = baseline.to_json();
     validate_baseline_limits(
         path,
-        baseline.entries.len(),
+        baseline
+            .entries
+            .len()
+            .saturating_add(baseline.skipped.len()),
         json.len(),
         MAX_BASELINE_ENTRIES,
         project::MAX_BASELINE_BYTES,
@@ -311,7 +317,7 @@ mod tests {
         };
         let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
         let path = tmp.path().join("baseline.json");
-        record_baseline(&path, &[finding.clone(), finding.clone()])
+        record_baseline(&path, &[finding.clone(), finding.clone()], &[])
             .unwrap_or_else(|e| panic!("record: {e}"));
         let stored = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read: {e}"));
         let parsed = Baseline::from_json(&stored)
@@ -322,7 +328,7 @@ mod tests {
             Baseline::from_findings(&[finding]),
             "the recorded document must roundtrip through the load parser"
         );
-        record_baseline(&path, &[]).unwrap_or_else(|e| panic!("re-record: {e}"));
+        record_baseline(&path, &[], &[]).unwrap_or_else(|e| panic!("re-record: {e}"));
         let replaced = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read: {e}"));
         assert!(
             Baseline::from_json(&replaced)

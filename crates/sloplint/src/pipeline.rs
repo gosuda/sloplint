@@ -1,6 +1,6 @@
 //! Per-file analysis, world facts, and the merge that produces the run's findings.
 
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::io;
 use std::path::Path;
 use std::sync::OnceLock;
@@ -9,7 +9,7 @@ use rayon::prelude::*;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 use sloplint_core::baseline::Baseline;
-use sloplint_core::facts::{WorldFacts, package_key};
+use sloplint_core::facts::{ManifestKind, WorldFacts, package_key};
 use sloplint_core::finding::{SourceText, line_context, line_starts};
 use sloplint_core::rules::{CATALOG, RuleSet, WorldFile};
 use sloplint_core::suppress::{self, RulePattern, Suppression};
@@ -23,8 +23,6 @@ use crate::roles::RoleSets;
 use crate::scopes::Scopes;
 use crate::store::read_source;
 
-const GENERATED_WINDOW: usize = 2048;
-
 pub(crate) struct Pipeline<'a> {
     pub(crate) rules: &'a RuleSet,
     pub(crate) custom: &'a CustomRules,
@@ -32,6 +30,7 @@ pub(crate) struct Pipeline<'a> {
     pub(crate) root: &'a Path,
     pub(crate) roles: &'a RoleSets,
     pub(crate) cache: &'a Loaded,
+    pub(crate) manifests: &'a BTreeSet<(ManifestKind, String)>,
     pub(crate) shadowed: &'a HashSet<String>,
     pub(crate) active_rules: OnceLock<ActiveRules>,
 }
@@ -80,7 +79,7 @@ fn build_active_rules(rules: &RuleSet, config: &Config) -> ActiveRules {
 }
 
 enum Outcome {
-    Skipped(String),
+    Skipped(String, &'static str),
     Analyzed(Box<Analyzed>),
 }
 
@@ -96,14 +95,14 @@ struct Probe<'a> {
     hash: [u8; 32],
 }
 
+pub(crate) type SkippedFile = (String, &'static str);
+
 pub(crate) fn run(
     entries: &[Entry],
     pipe: &Pipeline<'_>,
     pool: &rayon::ThreadPool,
-    scopes: &Scopes,
-) -> Result<(Vec<Analyzed>, u32), RunError> {
-    let outcomes = analyze_all(entries, pipe, pool)?;
-    Ok(split_outcomes(outcomes, scopes))
+) -> Result<(Vec<Analyzed>, Vec<SkippedFile>), RunError> {
+    Ok(split_outcomes(analyze_all(entries, pipe, pool)?))
 }
 
 fn analyze_all(
@@ -128,28 +127,34 @@ fn process(
     entry: &Entry,
     pipe: &Pipeline<'_>,
 ) -> Result<Outcome, RunError> {
-    let skipped = || Ok(Outcome::Skipped(entry.rel.clone()));
+    let skipped = |reason: &'static str| Ok(Outcome::Skipped(entry.rel.clone(), reason));
     let bytes = match read_capped(
         &entry.abs,
         pipe.config.project.max_file_bytes,
         Links::NoFollow,
     ) {
-        Err(source) if source.kind() == io::ErrorKind::NotFound => return skipped(),
+        Err(source)
+            if source.kind() == io::ErrorKind::NotFound
+                || source.kind() == io::ErrorKind::IsADirectory =>
+        {
+            return skipped("vanished");
+        }
         Err(source) => return Err(io_error(&entry.abs, source)),
         Ok(Capped::Bytes(bytes, _)) => bytes,
-        Ok(_) => return skipped(),
+        Ok(Capped::TooLarge(_)) => return skipped("oversize"),
+        Ok(Capped::NotRegular(_)) => return skipped("non-regular"),
     };
     let Ok(mut owned) = String::from_utf8(bytes) else {
-        return skipped();
+        return skipped("non-utf8");
     };
-    if is_generated(owned.as_bytes()) {
-        return skipped();
+    if sloplint_syntax::is_generated(owned.as_bytes()) {
+        return skipped("generated");
     }
     if owned.starts_with('\u{feff}') {
         owned.drain(..'\u{feff}'.len_utf8());
     }
     let hash = analyzed_hash(pipe.shadowed.contains(entry.rel.as_str()), owned.as_str());
-    let (output, from_cache) = {
+    let (mut output, from_cache) = {
         let probe = Probe {
             text: owned.as_str(),
             hash,
@@ -159,6 +164,7 @@ fn process(
             None => (analyze_file(parsers, entry, &probe, pipe), false),
         }
     };
+    output.world.package = package_key(entry.lang, entry.rel.as_str(), pipe.manifests);
     let source = (pipe.reports_unused() && !output.suppressions.is_empty()).then_some(owned);
     Ok(Outcome::Analyzed(Box::new(Analyzed {
         rel: entry.rel.clone(),
@@ -188,8 +194,7 @@ fn analyze_file(
         source: probe.text,
         role: pipe.roles.role(entry.rel.as_str()),
     };
-    let mut analysis = analyze(parsers, &input, pipe.custom);
-    analysis.facts.package = package_key(entry.lang, entry.rel.as_str());
+    let analysis = analyze(parsers, &input, pipe.custom);
     let world = WorldFacts::from_facts(&analysis.facts);
     let text = SourceText {
         path: entry.rel.as_str(),
@@ -228,13 +233,12 @@ fn rule_findings(pipe: &Pipeline<'_>, analysis: &Analysis<'_>) -> Vec<Finding> {
     );
     found
 }
-
-fn split_outcomes(outcomes: Vec<Outcome>, scopes: &Scopes) -> (Vec<Analyzed>, u32) {
+fn split_outcomes(outcomes: Vec<Outcome>) -> (Vec<Analyzed>, Vec<SkippedFile>) {
     let mut analyzed = Vec::with_capacity(outcomes.len());
-    let mut skipped = 0;
+    let mut skipped = Vec::new();
     for outcome in outcomes {
         match outcome {
-            Outcome::Skipped(rel) => skipped += u32::from(scopes.contains(Path::new(&rel))),
+            Outcome::Skipped(rel, reason) => skipped.push((rel, reason)),
             Outcome::Analyzed(file) => analyzed.push(*file),
         }
     }
@@ -377,6 +381,7 @@ fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Result<Vec<Finding>, RunErro
         ..
     } = file.output;
     suppress::apply(&mut findings, &mut suppressions);
+    pipe.rules.drop_shadowed_nesting(&mut findings);
     if parsed && pipe.reports_unused() {
         findings.extend(unused_findings(
             pipe,
@@ -433,25 +438,6 @@ fn unused_findings(
         .collect())
 }
 
-fn is_generated(bytes: &[u8]) -> bool {
-    let head = &bytes[..bytes.len().min(GENERATED_WINDOW)];
-    contains_insensitive(head, b"@generated")
-        || contains_insensitive(head, b"automatically generated")
-        || contains_insensitive(head, b"do not edit")
-}
-
-fn contains_insensitive(haystack: &[u8], needle: &[u8]) -> bool {
-    if needle.is_empty() || needle.len() > haystack.len() {
-        return needle.is_empty();
-    }
-    haystack.windows(needle.len()).any(|window| {
-        window
-            .iter()
-            .zip(needle.iter())
-            .all(|(h, n)| h.to_ascii_lowercase() == *n)
-    })
-}
-
 fn describe(patterns: &[&RulePattern]) -> String {
     patterns
         .iter()
@@ -465,7 +451,7 @@ fn describe(patterns: &[&RulePattern]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{contains_insensitive, fill_site_context, is_generated};
+    use super::fill_site_context;
     use sloplint_core::Severity;
     use sloplint_core::finding::Finding;
 
@@ -554,27 +540,5 @@ mod tests {
             &mut group,
         );
         assert_eq!(group[0].context.as_ref(), "");
-    }
-    #[test]
-    fn generated_markers_match_case_insensitively() {
-        assert!(is_generated(b"// @generated\nfn f() {}\n"));
-        assert!(is_generated(b"// @GENERATED\nfn f() {}\n"));
-        assert!(is_generated(b"// AUTOMATICALLY GENERATED\nfn f() {}\n"));
-        assert!(is_generated(b"// automatically generated\nfn f() {}\n"));
-        assert!(is_generated(b"// DO NOT EDIT\nfn f() {}\n"));
-        assert!(is_generated(b"// do not edit\nfn f() {}\n"));
-        assert!(is_generated(
-            b"// Code generated by tool. DO NOT EDIT.\nfn f() {}\n"
-        ));
-        assert!(!is_generated(b"// Code generated by hand.\nfn f() {}\n"));
-        assert!(!is_generated(b"fn f() {}\n"));
-    }
-
-    #[test]
-    fn generated_window_stays_at_2048_bytes() {
-        let mut far = vec![b'x'; 2048];
-        far.extend_from_slice(b"// do not edit\n");
-        assert!(!is_generated(&far));
-        assert!(!contains_insensitive(b"", b"do not edit"));
     }
 }

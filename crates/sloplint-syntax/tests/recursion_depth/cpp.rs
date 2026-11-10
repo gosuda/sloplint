@@ -2,7 +2,7 @@
 
 use sloplint_core::lang::Lang;
 
-use super::support::{DEPTH, on_default_stack, with_facts, within_linear_budget};
+use super::support::{on_default_stack, with_facts, within_linear_budget};
 
 /// A member-call chain keeps every call in linear adapter time.
 ///
@@ -12,10 +12,10 @@ use super::support::{DEPTH, on_default_stack, with_facts, within_linear_budget};
 #[test]
 fn call_chains_keep_every_call_in_linear_time() {
     on_default_stack(|| {
-        let source = "void g() {\n    a".to_owned() + &".b()".repeat(DEPTH) + ";\n}\n";
-        within_linear_budget(|| {
+        within_linear_budget(|depth| {
+            let source = "void g() {\n    a".to_owned() + &".b()".repeat(depth) + ";\n}\n";
             with_facts(Lang::Cpp, "chain.cpp", &source, |facts| {
-                assert_eq!(facts.calls.len(), DEPTH);
+                assert_eq!(facts.calls.len(), depth);
                 let inner = facts
                     .calls
                     .iter()

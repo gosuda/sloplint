@@ -49,6 +49,7 @@ pub fn function(name: &'static str, pos: Pos) -> Function<'static> {
         is_decorated: false,
         is_trait_item: false,
         is_method: false,
+        receiver: None,
         end_line: pos.line,
         has_value_return: false,
         params: Vec::new(),

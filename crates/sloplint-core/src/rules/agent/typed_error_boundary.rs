@@ -237,6 +237,7 @@ mod tests {
             is_decorated: false,
             is_trait_item: false,
             is_method: false,
+            receiver: None,
             params: Vec::new(),
             return_type,
             untyped_throws: false,

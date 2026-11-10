@@ -12,13 +12,13 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Grep,
     summary: "call arguments spanning many lines",
     why: "Long inline arguments split a call across lines, so line-based search shows no context.",
-    confidence: Confidence::Medium,
+    confidence: Confidence::Low,
     roles: RolePolicy {
         entry: Shift::Keep,
         test: Shift::Off,
         support: Shift::Lower1,
         bench: Shift::Off,
-        example: Shift::Lower1,
+        example: Shift::Off,
     },
     preset,
     build: Build::File(build),
@@ -35,18 +35,22 @@ struct MultilineArgument {
 }
 
 fn preset(strictness: Strictness) -> Preset {
+    let (level, min_span) = match strictness {
+        Strictness::Minimal | Strictness::Basic | Strictness::Standard => (Level::Off, 15),
+        Strictness::Strict => (Level::At(Severity::Info), 15),
+    };
     Preset {
-        level: match strictness {
-            Strictness::Strict => Level::At(Severity::Minor),
-            Strictness::Minimal | Strictness::Basic | Strictness::Standard => Level::Off,
-        },
-        options: fixed_options(),
+        level,
+        options: fixed_options(min_span),
     }
 }
 
-fn fixed_options() -> toml::Table {
+fn fixed_options(min_span: u32) -> toml::Table {
     let mut options = toml::Table::new();
-    options.insert("min_span".to_string(), toml::Value::Integer(15));
+    options.insert(
+        "min_span".to_string(),
+        toml::Value::Integer(i64::from(min_span)),
+    );
     options
 }
 
@@ -65,8 +69,12 @@ impl FileRule for MultilineArgument {
         if facts.is_generated {
             return;
         }
+        let bound = binding_arg_ranges(&facts.calls);
         for call in &facts.calls {
             if call.initializes_binding {
+                continue;
+            }
+            if inside_ranges(&bound, call.pos.line) {
                 continue;
             }
             let Some((index, span)) = widest_collection(call) else {
@@ -89,6 +97,32 @@ impl FileRule for MultilineArgument {
             ));
         }
     }
+}
+
+fn binding_arg_ranges(calls: &[Call<'_>]) -> Vec<(u32, u32)> {
+    let mut ranges: Vec<(u32, u32)> = calls
+        .iter()
+        .filter(|call| call.initializes_binding)
+        .flat_map(|call| call.args.iter().map(|arg| (arg.start_line, arg.end_line)))
+        .collect();
+    ranges.sort_unstable();
+    let mut merged: Vec<(u32, u32)> = Vec::with_capacity(ranges.len());
+    for (start, end) in ranges {
+        match merged.last_mut() {
+            Some(last) if start <= last.1.saturating_add(1) => {
+                if end > last.1 {
+                    last.1 = end;
+                }
+            }
+            _ => merged.push((start, end)),
+        }
+    }
+    merged
+}
+
+fn inside_ranges(ranges: &[(u32, u32)], line: u32) -> bool {
+    let index = ranges.partition_point(|range| range.0 <= line);
+    index > 0 && line <= ranges[index - 1].1
 }
 
 fn widest_collection(call: &Call<'_>) -> Option<(usize, u32)> {
@@ -172,6 +206,11 @@ mod tests {
         }
     }
 
+    fn at_line(mut made: Call<'static>, line: u32) -> Call<'static> {
+        made.pos.line = line;
+        made
+    }
+
     fn collection(start_line: u32, end_line: u32) -> Arg<'static> {
         Arg {
             shape: ArgShape::Collection,
@@ -190,7 +229,7 @@ mod tests {
 
     fn concat() -> Arg<'static> {
         Arg {
-            shape: ArgShape::Concat,
+            shape: ArgShape::Concat { longest_static: 0 },
             start_line: 1,
             end_line: 20,
         }
@@ -255,7 +294,17 @@ mod tests {
     }
 
     #[test]
-    fn strict_only_at_minor() {
+    fn off_at_standard_info_at_strict() {
+        assert_eq!(
+            preset(Strictness::Minimal).level,
+            Level::Off,
+            "minimal stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Basic).level,
+            Level::Off,
+            "basic stays off"
+        );
         assert_eq!(
             preset(Strictness::Standard).level,
             Level::Off,
@@ -263,13 +312,51 @@ mod tests {
         );
         assert_eq!(
             preset(Strictness::Strict).level,
-            Level::At(Severity::Minor),
-            "strict stays minor"
+            Level::At(Severity::Info),
+            "strict stays informational"
         );
+        assert_eq!(INFO.confidence, Confidence::Low, "confidence stays low");
         assert_eq!(
             preset(Strictness::Strict).options.get("min_span"),
             Some(&toml::Value::Integer(15)),
             "min_span stays 15 at strict"
+        );
+        let out = check(&rule(), vec![call(vec![collection(1, 15)])]);
+        assert_eq!(out.len(), 1, "strict flags a long collection once: {out:?}");
+    }
+
+    #[test]
+    fn nested_call_inside_binding_initializer_stays_silent() {
+        let outer = at_line(binding_initializer(vec![code_body(2, 30)]), 1);
+        let inner = at_line(call(vec![collection(5, 24)]), 5);
+        let out = check(&rule(), vec![outer, inner]);
+        assert!(
+            out.is_empty(),
+            "nested calls inside binding initializers stay silent: {out:?}"
+        );
+    }
+
+    #[test]
+    fn nested_call_inside_plain_call_still_flags() {
+        let outer = at_line(call(vec![code_body(2, 30)]), 1);
+        let inner = at_line(call(vec![collection(5, 24)]), 5);
+        let out = check(&rule(), vec![outer, inner]);
+        assert_eq!(
+            out.len(),
+            1,
+            "nesting inside a plain call still flags the inner call: {out:?}"
+        );
+    }
+
+    #[test]
+    fn call_after_binding_initializer_range_still_flags() {
+        let outer = at_line(binding_initializer(vec![code_body(2, 10)]), 1);
+        let later = at_line(call(vec![collection(11, 30)]), 11);
+        let out = check(&rule(), vec![outer, later]);
+        assert_eq!(
+            out.len(),
+            1,
+            "calls after the binding range still flag: {out:?}"
         );
     }
 }

@@ -1,7 +1,7 @@
 use sloplint_core::facts::{AmbientKind, Assertion, FieldCopy, Handler, Import, Pos, WildcardArm};
 use tree_sitter::Node;
 
-use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, TypeHead};
+use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead};
 use crate::spec::Role;
 
 mod calls;
@@ -37,6 +37,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("mixin_declaration", Role::TypeDef),
     ("enum_declaration", Role::TypeDef),
     ("extension_type_declaration", Role::TypeDef),
+    ("extension_declaration", Role::TypeDef),
     ("comment", Role::Comment),
     ("block_comment", Role::Comment),
     ("documentation_block_comment", Role::Comment),
@@ -53,8 +54,16 @@ pub(crate) static HOOKS: DartHooks = DartHooks;
 pub(crate) struct DartHooks;
 
 impl LangHooks for DartHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         funcs::function_head(cx, n)
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        funcs::closure_shadow_params(cx, n, out);
     }
 
     fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {

@@ -1,8 +1,9 @@
 //! Bindings, writes, and ambient state for JavaScript.
 
+use super::funcs::closure_shadow_params;
 use super::{first_code, top_level};
 use crate::hooks::{
-    Cx, child_by_field, code_children, find_named_child, named_children, pos_of, text,
+    Cx, FileSetKind, child_by_field, code_children, find_named_child, named_children, pos_of, text,
 };
 use sloplint_core::facts::{AmbientKind, Pos};
 use tree_sitter::Node;
@@ -63,6 +64,9 @@ fn expand_pattern<'s, 't>(
         "assignment_pattern" => {
             pending.extend(child_by_field(n, "left").map(PatternFrame::Pattern));
         }
+        "parenthesized_expression" => {
+            pending.extend(first_code(n).map(PatternFrame::Pattern));
+        }
         _ => {}
     }
 }
@@ -108,15 +112,63 @@ pub(crate) fn decl_names_for<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'
     }
 }
 
+pub(crate) fn pattern_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    let mut found = Vec::new();
+    collect_pattern(cx, n, &mut found);
+    out.extend(found.into_iter().map(|(name, _)| name));
+}
+
+pub(crate) fn shadow_kind_for(kind: &str) -> bool {
+    kind == "lexical_declaration" || kind == "for_in_statement"
+}
+
+pub(crate) fn shadow_names_for<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+    if n.kind() == "for_in_statement" {
+        shadow_for_in_names(cx, n, out);
+        return;
+    }
+    if is_fn_like(n.kind()) {
+        out.extend(closure_shadow_params(cx, n));
+        if let Some(body) = child_by_field(n, "body") {
+            hoisted_shadows_for(cx, body, out);
+        }
+        return;
+    }
+    if !child_by_field(n, "kind").is_some_and(|kind| text(cx, kind) == "const") {
+        return;
+    }
+    let mut found = Vec::new();
+    declared_names(cx, n, &mut found);
+    out.extend(found.into_iter().map(|(name, _)| name));
+}
+
+fn shadow_for_in_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    if !child_by_field(n, "kind").is_some_and(|kind| {
+        let keyword = text(cx, kind);
+        keyword == "let" || keyword == "const" || keyword == "var"
+    }) {
+        return;
+    }
+    if let Some(left) = child_by_field(n, "left") {
+        pattern_names(cx, left, out);
+    }
+}
+
 pub(crate) fn write_roots_for<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
     let target = match n.kind() {
         "assignment_expression" | "augmented_assignment_expression" => child_by_field(n, "left"),
         "update_expression" => child_by_field(n, "argument"),
         _ => None,
     };
-    if let Some(root) = target.and_then(|target| write_root(cx, target)) {
-        out.push(root);
+    let Some(target) = target else {
+        return;
+    };
+    let mut names = Vec::new();
+    collect_pattern(cx, target, &mut names);
+    if names.is_empty() {
+        names.extend(write_root(cx, target));
     }
+    out.extend(names);
 }
 
 fn is_write_target(parent: Option<Node<'_>>, n: Node<'_>) -> bool {
@@ -202,15 +254,18 @@ fn push_env_or_store<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKin
     }
 }
 
-fn file_mutables<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
-    let Some(root) = cx.root() else {
-        return Vec::new();
-    };
-    let mut out = Vec::new();
-    for stmt in code_children(root) {
-        collect_top_mutable(cx, stmt, &mut out);
-    }
-    out
+fn file_mutables<'a, 's>(cx: &'a Cx<'_, 's>) -> &'a [&'s str] {
+    cx.file_names(FileSetKind::Scope, || {
+        let mut out = Vec::new();
+        if let Some(root) = cx.root() {
+            for stmt in code_children(root) {
+                collect_top_mutable(cx, stmt, &mut out);
+            }
+        }
+        out.sort_unstable();
+        out.dedup();
+        out
+    })
 }
 
 fn collect_top_mutable<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, out: &mut Vec<&'s str>) {
@@ -235,7 +290,62 @@ fn collect_top_mutable<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, out: &mut Vec<&'s st
     declared_names(cx, decl, &mut names);
     out.extend(names.into_iter().map(|(name, _)| name));
 }
+fn is_file_mutable(cx: &Cx<'_, '_>, name: &str) -> bool {
+    file_mutables(cx).binary_search(&name).is_ok()
+}
 
+fn is_fn_like(kind: &str) -> bool {
+    matches!(
+        kind,
+        "function_declaration"
+            | "generator_function_declaration"
+            | "method_definition"
+            | "arrow_function"
+            | "function_expression"
+            | "generator_function"
+    )
+}
+
+pub(crate) fn hoisted_shadows_for<'s>(cx: &Cx<'_, 's>, body: Node<'_>, out: &mut Vec<&'s str>) {
+    let mut stack = vec![body];
+    while let Some(node) = stack.pop() {
+        for child in named_children(node) {
+            hoist_child(cx, child, &mut stack, out);
+        }
+    }
+}
+
+fn hoist_child<'s, 't>(
+    cx: &Cx<'_, 's>,
+    child: Node<'t>,
+    stack: &mut Vec<Node<'t>>,
+    out: &mut Vec<&'s str>,
+) {
+    if is_fn_like(child.kind()) {
+        return;
+    }
+    if child.kind() == "variable_declaration" {
+        let mut found = Vec::new();
+        declared_names(cx, child, &mut found);
+        out.extend(found.into_iter().map(|(name, _)| name));
+        return;
+    }
+    if child.kind() == "for_in_statement" {
+        hoist_for_in(cx, child, out);
+    }
+    if child.child_count() > 0 {
+        stack.push(child);
+    }
+}
+
+fn hoist_for_in<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    if !child_by_field(n, "kind").is_some_and(|kind| text(cx, kind) == "var") {
+        return;
+    }
+    if let Some(left) = child_by_field(n, "left") {
+        pattern_names(cx, left, out);
+    }
+}
 fn push_global_write<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
@@ -245,8 +355,23 @@ fn push_global_write<'s>(
     if !in_function {
         return;
     }
-    if file_mutables(cx).contains(&text(cx, n)) {
-        out.push((AmbientKind::GlobalWrite, text(cx, n), pos_of(n)));
+    let target = match n.kind() {
+        "assignment_expression" | "augmented_assignment_expression" => child_by_field(n, "left"),
+        "update_expression" => child_by_field(n, "argument"),
+        _ => None,
+    };
+    let Some(target) = target else {
+        return;
+    };
+    let mut names = Vec::new();
+    collect_pattern(cx, target, &mut names);
+    if names.is_empty() {
+        names.extend(write_root(cx, target));
+    }
+    for (name, pos) in names {
+        if is_file_mutable(cx, name) {
+            out.push((AmbientKind::GlobalWrite, name, pos));
+        }
     }
 }
 
@@ -295,7 +420,9 @@ pub(crate) fn ambient_sites<'s>(
         }
         "member_expression" => push_env_or_store(cx, n, out),
         "subscript_expression" => push_subscript_store(cx, n, out),
-        "identifier" => push_global_write(cx, n, in_function, out),
+        "assignment_expression" | "augmented_assignment_expression" | "update_expression" => {
+            push_global_write(cx, n, in_function, out);
+        }
         _ => {}
     }
 }

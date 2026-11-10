@@ -6,7 +6,7 @@ use sloplint_core::facts::{
 use sloplint_core::role::CodeRole;
 use tree_sitter::Node;
 
-use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, TypeHead, find_named_child};
+use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, find_named_child};
 use crate::spec::Role;
 
 pub(crate) mod ambient;
@@ -15,7 +15,7 @@ pub(crate) mod funcs;
 pub(crate) mod imports;
 pub(crate) mod items;
 
-use ambient::{ambient_sites, decl_names_for, write_roots_for};
+use ambient::{ambient_sites, decl_names_for, shadow_kind_for, shadow_names_for, write_roots_for};
 use calls::call_head;
 pub(crate) use calls::test_call_marker;
 use funcs::{closure_head, function_head};
@@ -99,6 +99,10 @@ pub(crate) fn top_level(cx: &Cx<'_, '_>) -> bool {
 }
 
 impl LangHooks for JavaScriptHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
     fn call_marker(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
         test_call_marker(cx, n)
     }
@@ -115,8 +119,33 @@ impl LangHooks for JavaScriptHooks {
         closure_head(n, parent, cx)
     }
 
+    fn is_ternary_alternate(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        n.kind() == "ternary_expression"
+            && parent.is_some_and(|p| {
+                p.kind() == "ternary_expression"
+                    && p.child_by_field_name("alternative")
+                        .is_some_and(|a| a.id() == n.id())
+            })
+    }
+
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         decl_names_for(n, cx, out);
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        if node.kind() == "for_in_statement" {
+            return depth;
+        }
+        let _ = (node, cx);
+        depth.saturating_sub(1)
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        shadow_kind_for(kind)
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        shadow_names_for(n, cx, out);
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

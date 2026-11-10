@@ -3,6 +3,7 @@
 use sloplint_core::facts::{Param, PrimitiveKind, Visibility};
 use tree_sitter::Node;
 
+use super::ambient::{hoisted_shadows_for, pattern_names};
 use super::imports::is_test_path;
 use super::{COMMENTS, first_code, header_of, parent_kind_is};
 use crate::hooks::{
@@ -25,14 +26,24 @@ pub(crate) fn declared_public(cx: &Cx<'_, '_>, decl: Node<'_>, name: Node<'_>) -
 }
 
 fn exported_class_member(cx: &Cx<'_, '_>, member: Node<'_>) -> bool {
-    let class = cx
-        .parent_of(member)
+    cx.parent_of(member)
         .filter(|body| body.kind() == "class_body")
         .and_then(|body| cx.parent_of(body))
-        .filter(|class| class.kind() == "class_declaration");
-    class.is_some_and(|class| {
-        child_by_field(class, "name").is_some_and(|name| declared_public(cx, class, name))
-    })
+        .filter(|class| matches!(class.kind(), "class_declaration" | "class"))
+        .is_some_and(|class| class_exported(cx, class))
+}
+
+fn class_exported(cx: &Cx<'_, '_>, class: Node<'_>) -> bool {
+    if class.kind() == "class_declaration" {
+        return child_by_field(class, "name").is_some_and(|name| declared_public(cx, class, name));
+    }
+    if cx
+        .parent_of(class)
+        .is_some_and(|parent| parent.kind() == "export_statement")
+    {
+        return true;
+    }
+    export_assignment(cx, class).is_some()
 }
 
 pub(crate) fn visibility_of(public: bool) -> Visibility {
@@ -94,6 +105,37 @@ pub(crate) fn formal_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>) -> Vec<Param<'s
         .collect()
 }
 
+fn shadow_formal_param<'s>(cx: &Cx<'_, 's>, param: Node<'_>, out: &mut Vec<&'s str>) {
+    match param.kind() {
+        "object_pattern" | "array_pattern" | "rest_pattern" => {
+            pattern_names(cx, param, out);
+        }
+        "assignment_pattern" => {
+            if let Some(left) = child_by_field(param, "left") {
+                shadow_formal_param(cx, left, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+pub(crate) fn shadow_param_names<'s>(cx: &Cx<'_, 's>, list: Node<'_>) -> Vec<&'s str> {
+    let mut out = Vec::new();
+    for param in code_children(list) {
+        shadow_formal_param(cx, param, &mut out);
+    }
+    out
+}
+
+pub(crate) fn closure_shadow_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<&'s str> {
+    if let Some(single) = child_by_field(n, "parameter") {
+        let mut out = Vec::new();
+        shadow_formal_param(cx, single, &mut out);
+        return out;
+    }
+    child_by_field(n, "parameters").map_or_else(Vec::new, |list| shadow_param_names(cx, list))
+}
+
 struct ClosureSite<'a> {
     name: Node<'a>,
     visibility: Visibility,
@@ -117,13 +159,16 @@ fn declarator_site<'a>(
         return None;
     }
     let scope = cx.parent_of(declaration)?;
-    let wrapped = match scope.kind() {
+    let public = match scope.kind() {
         "export_statement" => true,
-        "program" => false,
-        _ => return None,
+        "program" => cx.is_exported(text(cx, name)),
+        _ => false,
     };
-    let public = wrapped || cx.is_exported(text(cx, name));
-    let header = if wrapped { scope } else { declaration };
+    let header = if scope.kind() == "export_statement" {
+        scope
+    } else {
+        declaration
+    };
     Some(ClosureSite {
         name,
         visibility: visibility_of(public),
@@ -156,6 +201,76 @@ fn closure_site<'a>(
         _ => None,
     }
 }
+fn is_module_exports(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    n.kind() == "member_expression"
+        && child_by_field(n, "object")
+            .is_some_and(|object| object.kind() == "identifier" && text(cx, object) == "module")
+        && child_by_field(n, "property").is_some_and(|property| {
+            property.kind() == "property_identifier" && text(cx, property) == "exports"
+        })
+}
+
+fn export_property<'a>(cx: &Cx<'a, '_>, assignment: Node<'a>) -> Option<Node<'a>> {
+    let left =
+        child_by_field(assignment, "left").filter(|left| left.kind() == "member_expression")?;
+    if is_module_exports(cx, left) {
+        return None;
+    }
+    let object = child_by_field(left, "object")?;
+    if text(cx, object) != "exports" && !is_module_exports(cx, object) {
+        return None;
+    }
+    child_by_field(left, "property").filter(|property| property.kind() == "property_identifier")
+}
+
+fn export_assignment<'a>(cx: &Cx<'a, '_>, value: Node<'a>) -> Option<Node<'a>> {
+    let assignment = cx
+        .parent_of(value)
+        .filter(|parent| parent.kind() == "assignment_expression")?;
+    if child_by_field(assignment, "right").is_some_and(|right| right.id() != value.id()) {
+        return None;
+    }
+    let statement = cx
+        .parent_of(assignment)
+        .filter(|node| node.kind() == "expression_statement")?;
+    cx.parent_of(statement)
+        .filter(|node| node.kind() == "program")?;
+    let left = child_by_field(assignment, "left")?;
+    if !is_module_exports(cx, left) && export_property(cx, assignment).is_none() {
+        return None;
+    }
+    Some(assignment)
+}
+
+fn closure_export_name(n: Node<'_>) -> Option<Node<'_>> {
+    child_by_field(n, "name").filter(|name| name.kind() == "identifier")
+}
+
+fn exported_closure_head<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    header: Node<'_>,
+    name: Option<Node<'_>>,
+    body: Node<'_>,
+) -> FunctionHead<'s> {
+    if let Some(name) = name {
+        let site = HeadSite {
+            name,
+            node: n,
+            header,
+            visibility: Visibility::Exported,
+            body,
+        };
+        let mut head = head_for(cx, site, closure_params(cx, n));
+        head.shadow_params = closure_shadow_params(cx, n);
+        hoisted_shadows_for(cx, body, &mut head.shadow_params);
+        return head;
+    }
+    let mut head = anonymous_head(cx, n, body);
+    head.name = "default";
+    head.visibility = Visibility::Exported;
+    head
+}
 
 fn has_decorator(node: Node<'_>) -> bool {
     find_named_child(node, |child| child.kind() == "decorator").is_some()
@@ -177,6 +292,7 @@ pub(crate) fn head_for<'s>(
     let (doc, doc_pos) = preceding_comments(cx, site.header, COMMENTS, &[]);
     let deprecated = is_deprecated_named(site.node, &doc, cx);
     FunctionHead {
+        shadow_params: Vec::new(),
         name: text(cx, site.name),
         name_pos: pos_of(site.name),
         visibility: site.visibility,
@@ -188,6 +304,7 @@ pub(crate) fn head_for<'s>(
         is_decorated: has_decorator(site.node),
         is_trait_item: false,
         region: None,
+        receiver: None,
         params,
         return_type: None,
         missing_annotations: Vec::new(),
@@ -214,6 +331,8 @@ pub(crate) fn function_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Function
     };
     let params =
         child_by_field(n, "parameters").map_or_else(Vec::new, |list| formal_params(cx, list));
+    let shadow =
+        child_by_field(n, "parameters").map_or_else(Vec::new, |list| shadow_param_names(cx, list));
     let site = HeadSite {
         name,
         node: n,
@@ -221,7 +340,36 @@ pub(crate) fn function_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Function
         visibility: visibility_of(public),
         body,
     };
-    Some(head_for(cx, site, params))
+    let mut head = head_for(cx, site, params);
+    head.shadow_params = shadow;
+    hoisted_shadows_for(cx, body, &mut head.shadow_params);
+    Some(head)
+}
+
+fn anonymous_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>, body: Node<'_>) -> FunctionHead<'s> {
+    let mut shadow = closure_shadow_params(cx, n);
+    hoisted_shadows_for(cx, body, &mut shadow);
+    FunctionHead {
+        shadow_params: shadow,
+        name: "",
+        name_pos: pos_of(n),
+        visibility: Visibility::Private,
+        signature_forced: false,
+        entry_point: false,
+        in_test: is_test_path(cx.path),
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        region: None,
+        receiver: None,
+        params: closure_params(cx, n),
+        return_type: None,
+        missing_annotations: Vec::new(),
+        doc: Vec::new(),
+        doc_pos: None,
+        sole_call: sole_call_of(body),
+    }
 }
 
 pub(crate) fn closure_head<'s>(
@@ -229,14 +377,36 @@ pub(crate) fn closure_head<'s>(
     parent: Option<Node<'_>>,
     cx: &Cx<'_, 's>,
 ) -> Option<FunctionHead<'s>> {
-    let found = closure_site(cx, n, parent)?;
     let body = child_by_field(n, "body")?;
-    let site = HeadSite {
-        name: found.name,
-        node: n,
-        header: found.header,
-        visibility: found.visibility,
-        body,
-    };
-    Some(head_for(cx, site, closure_params(cx, n)))
+    if let Some(found) = closure_site(cx, n, parent) {
+        let site = HeadSite {
+            name: found.name,
+            node: n,
+            header: found.header,
+            visibility: found.visibility,
+            body,
+        };
+        let mut head = head_for(cx, site, closure_params(cx, n));
+        head.shadow_params = closure_shadow_params(cx, n);
+        hoisted_shadows_for(cx, body, &mut head.shadow_params);
+        if let Some(field) = parent.filter(|p| p.kind() == "field_definition") {
+            head.is_decorated = head.is_decorated || has_decorator(field);
+            head.is_deprecated = head.is_deprecated || is_deprecated_named(field, &head.doc, cx);
+        }
+        return Some(head);
+    }
+    if let Some(exported) = parent.filter(|parent| parent.kind() == "export_statement") {
+        let name = closure_export_name(n);
+        return Some(exported_closure_head(cx, n, exported, name, body));
+    }
+    if let Some(assignment) = export_assignment(cx, n) {
+        let name = closure_export_name(n).or_else(|| export_property(cx, assignment));
+        return Some(exported_closure_head(cx, n, assignment, name, body));
+    }
+    let bound = parent
+        .is_some_and(|parent| matches!(parent.kind(), "variable_declarator" | "field_definition"));
+    if bound {
+        return None;
+    }
+    Some(anonymous_head(cx, n, body))
 }

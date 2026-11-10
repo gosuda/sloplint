@@ -36,10 +36,10 @@ logger.info(`starting ${name}`, name);
 ";
 
 fn expected() -> Vec<(String, Vec<String>)> {
-    let template = "Str { longest_static: 9 }".to_string();
+    let template = "Concat { longest_static: 9 }".to_string();
     vec![
         ("logger.info".to_string(), vec![template.clone()]),
-        ("logger.info".to_string(), vec!["Concat".to_string()]),
+        ("logger.info".to_string(), vec![template.clone()]),
         (
             "logger.info".to_string(),
             vec![template, "Ident(\"name\")".to_string()],

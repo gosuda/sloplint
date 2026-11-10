@@ -147,6 +147,33 @@ pub(crate) fn params_from<'s>(cx: &Cx<'_, 's>, c: Node<'_>, out: &mut Vec<Param<
     }
 }
 
+fn is_entry_point<'s>(cx: &Cx<'_, 's>, n: Node<'_>, name: &'s str, params: &[Param<'s>]) -> bool {
+    if name != "main" || params.len() != 1 {
+        return false;
+    }
+    if !params[0]
+        .ty
+        .is_some_and(|t| t.replace(' ', "").contains("Array[String]"))
+    {
+        return false;
+    }
+    if is_nested_fn(cx, n) {
+        return false;
+    }
+    match cx.innermost_container() {
+        None => true,
+        Some(Container::Class { .. }) => cx
+            .ancestors()
+            .find_map(|a| match a.kind() {
+                "object_definition" => Some(true),
+                "class_definition" | "trait_definition" | "enum_definition" => Some(false),
+                _ => None,
+            })
+            .unwrap_or(false),
+        _ => false,
+    }
+}
+
 pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     if n.kind() != "function_definition" {
         return None;
@@ -177,26 +204,23 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
         vis
     };
     let vis = outer_vis(cx).unwrap_or(vis);
-    let forced = matches!(
-        cx.innermost_container(),
-        Some(Container::Class {
-            implements: true,
-            ..
-        })
-    ) && first_named_child_matching(n, &["modifiers"])
+    let forced = first_named_child_matching(n, &["modifiers"])
         .is_some_and(|m| has_child_kind(m, "override"));
+    let entry = is_entry_point(cx, n, name, &params);
     Some(FunctionHead {
+        shadow_params: params.iter().map(|p| p.name).collect(),
         name,
         name_pos: pos_of(name_node),
         visibility: vis,
         signature_forced: forced,
-        entry_point: false,
+        entry_point: entry,
         in_test: cx.inside_test_module(),
         is_overload: false,
         is_deprecated: false,
         is_decorated: false,
         is_trait_item: matches!(cx.innermost_container(), Some(Container::Trait { .. })),
         region: None,
+        receiver: None,
         params,
         return_type,
         missing_annotations: missing,

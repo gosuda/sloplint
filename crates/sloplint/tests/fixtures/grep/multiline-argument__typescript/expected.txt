@@ -1,2 +1,2 @@
-# Positive: Collection arg spans lines 2-18 (17 lines >= strict Minor(15)); statement call.
-src/mod.ts:2 minor grep/multiline-argument
+# Positive: array arg spans lines 2-18 (17 lines >= strict Info(15)); statement call.
+src/mod.ts:2 info grep/multiline-argument

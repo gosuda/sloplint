@@ -1,7 +1,7 @@
 use sloplint_core::facts::{AmbientKind, Assertion, FieldCopy, Handler, Import, Pos, WildcardArm};
 use tree_sitter::Node;
 
-use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, TypeHead};
+use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead};
 use crate::spec::Role;
 use sloplint_core::role::CodeRole;
 
@@ -25,6 +25,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("var_definition", Role::Decl),
     ("val_definition", Role::Decl),
     ("assignment_expression", Role::Write),
+    ("infix_expression", Role::Write),
     ("import_declaration", Role::Import),
     ("export_declaration", Role::Export),
     ("class_definition", Role::TypeDef),
@@ -44,6 +45,10 @@ pub(crate) static HOOKS: ScalaHooks = ScalaHooks;
 pub(crate) struct ScalaHooks;
 
 impl LangHooks for ScalaHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         funcs::function_head(cx, n)
     }

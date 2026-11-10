@@ -1,1 +1,1 @@
-# near-miss: get with a string literal name.
+# near-miss: get with a string literal name; match.fun over a function value is not a computed name.

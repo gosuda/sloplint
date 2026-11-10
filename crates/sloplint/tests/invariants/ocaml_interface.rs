@@ -9,8 +9,8 @@ use std::process::Command;
 
 use super::{fired, run_ok, standard, tempdir, write};
 
-const LIB_ML: &str = "let handle x = x\n";
-const LIB_MLI: &str = "val handle : 'a -> 'a\n";
+const LIB_ML: &str = "let handle x = x\nlet transfer_funds x = x\n";
+const LIB_MLI: &str = "val transfer_funds : 'a -> 'a\n";
 
 /// A project holding only `src/lib.ml`.
 fn lone_project() -> (tempfile::TempDir, PathBuf) {
