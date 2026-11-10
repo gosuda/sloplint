@@ -1,1 +1,1 @@
-src/wrap.py:1 minor slop/passthrough-wrapper
+src/wrap.py:1 info slop/passthrough-wrapper

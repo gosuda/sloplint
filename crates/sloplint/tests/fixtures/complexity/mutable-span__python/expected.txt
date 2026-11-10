@@ -1,1 +1,1 @@
-src/spread.py:2 major complexity/mutable-span
+src/spread.py:2 info complexity/mutable-span

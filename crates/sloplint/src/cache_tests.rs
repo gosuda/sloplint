@@ -60,3 +60,17 @@ fn rule_level_changes_the_cache_key() {
         "a rule level changes analysis and must invalidate the cache"
     );
 }
+
+#[test]
+fn support_globs_change_the_cache_key() {
+    let base = Config::default();
+    let mut changed = Config::default();
+    changed.project.support_globs = vec!["**/helpers/**".to_string()];
+    let custom_sources = vec![("rel".to_string(), "text".to_string())];
+    let uncut = config_key(&base, &custom_sources).unwrap();
+    let releveled = config_key(&changed, &custom_sources).unwrap();
+    assert_ne!(
+        uncut, releveled,
+        "support globs change file roles and must invalidate the cache"
+    );
+}

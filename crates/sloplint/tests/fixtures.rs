@@ -263,8 +263,6 @@ fn kind_problem(fixture: &Fixture, want: &BTreeSet<Key>) -> Option<String> {
     }
 }
 
-/// Contract data globs: the CLI never analyzes these paths, so the runner
-/// does not require them to show up as analyzed or skipped.
 fn is_data_path(rel: &str) -> bool {
     rel.split('/').any(|part| {
         matches!(
@@ -273,9 +271,20 @@ fn is_data_path(rel: &str) -> bool {
         )
     })
 }
-
-/// What is wrong with one fixture, as report lines; empty when its run matches `expected.txt`,
-/// its directory name agrees with what it proves, and every recognized source file was analyzed.
+fn is_generated_bytes(bytes: &[u8]) -> bool {
+    let head = &bytes[..bytes.len().min(2048)];
+    let lower = head.to_ascii_lowercase();
+    let needle = |pat: &[u8]| lower.windows(pat.len()).any(|w| w == pat);
+    needle(b"@generated") || needle(b"automatically generated") || needle(b"do not edit")
+}
+fn all_generated(dir: &Path, sources: &BTreeSet<String>) -> bool {
+    sources
+        .iter()
+        .all(|rel| match std::fs::read(dir.join(rel)) {
+            Ok(bytes) => is_generated_bytes(&bytes),
+            Err(_) => false,
+        })
+}
 fn problems(fixture: &Fixture) -> Vec<String> {
     let report = run_fixture(fixture);
     let want = expected(&fixture.dir);
@@ -308,7 +317,12 @@ fn problems(fixture: &Fixture) -> Vec<String> {
         .filter(|rel| is_data_path(rel))
         .count();
     let live = fixture.sources.len() - data;
-    if usize::try_from(summary.files).ok() != Some(live) {
+    let generated_only = want.is_empty()
+        && fixture.near_miss
+        && live > 0
+        && all_generated(&fixture.dir, &fixture.sources);
+    if usize::try_from(summary.files).ok() != Some(live) && !(generated_only && summary.files == 0)
+    {
         found.push(format!(
             "analyzed {} file(s) but the directory holds {} analyzable source file(s): {:?}",
             summary.files, live, fixture.sources
@@ -318,7 +332,8 @@ fn problems(fixture: &Fixture) -> Vec<String> {
         Ok(data) => summary.skipped == 0 || summary.skipped == data,
         Err(_) => false,
     };
-    if !skipped_ok {
+    let generated_skipped = generated_only && usize::try_from(summary.skipped).ok() == Some(live);
+    if !skipped_ok && !generated_skipped {
         found.push(format!("skipped {} file(s)", summary.skipped));
     }
     found

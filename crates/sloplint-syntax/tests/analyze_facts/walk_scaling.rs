@@ -10,6 +10,7 @@ use std::sync::mpsc::{RecvTimeoutError, channel};
 use std::thread;
 use std::time::Duration;
 
+use sloplint_core::facts::Visibility;
 use sloplint_core::lang::Lang;
 use sloplint_syntax::Analysis;
 
@@ -105,10 +106,15 @@ fn deepest_and_count(analysis: &Analysis<'_>) -> (u32, usize) {
     (max_depth, analysis.facts.functions.len())
 }
 
-/// `(function count, public count)` over the analysis.
-fn counts_by_publicity(analysis: &Analysis<'_>) -> (usize, usize) {
+/// `(function count, exported count)` over the analysis.
+fn counts_by_exported(analysis: &Analysis<'_>) -> (usize, usize) {
     let total = analysis.facts.functions.len();
-    let public = analysis.facts.functions.iter().filter(|f| f.public).count();
+    let public = analysis
+        .facts
+        .functions
+        .iter()
+        .filter(|f| f.visibility == Visibility::Exported)
+        .count();
     (total, public)
 }
 
@@ -142,9 +148,8 @@ fn nested_closure_exit_stays_linear_in_depth() {
     );
     assert_eq!(functions, 1, "one function, `top`");
     assert_eq!(
-        max_depth,
-        u32::try_from(depth).expect("depth fits u32"),
-        "every nested closure opens one nesting level"
+        max_depth, 0,
+        "headless closure shells open no nesting level"
     );
 }
 
@@ -156,7 +161,7 @@ fn ruby_method_visibility_stays_linear_in_methods() {
         Lang::Ruby,
         "case.rb",
         ruby_methods(count),
-        counts_by_publicity,
+        counts_by_exported,
     );
     assert_eq!(total, count, "every method is a function fact");
     assert_eq!(public, count / 2, "only the first half precedes `private`");
@@ -170,7 +175,7 @@ fn cpp_member_access_stays_linear_in_members() {
         Lang::Cpp,
         "case.cpp",
         cpp_members(count),
-        counts_by_publicity,
+        counts_by_exported,
     );
     assert_eq!(total, count, "every member is a function fact");
     assert_eq!(public, count / 2, "only the first half follows `public:`");

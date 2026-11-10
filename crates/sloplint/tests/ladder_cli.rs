@@ -201,7 +201,7 @@ fn agent_line_and_summary_match_the_contract() {
     );
     assert_eq!(
         lines[0],
-        "f.rs:1:8: minor/medium: `handle` is a generic name shared by unrelated code [grep/generic-name]",
+        "f.rs:1:8: minor/low: `handle` is a generic name shared by unrelated code [grep/generic-name]",
         "agent line format"
     );
     assert_eq!(lines[1], "  context: pub fn handle() {}", "context line");
@@ -241,7 +241,7 @@ fn agent_line_and_summary_match_the_contract() {
     }
     let doc: JsonDoc = sonic_rs::from_slice(&out.stdout).unwrap_or_else(|e| panic!("json: {e}"));
     assert_eq!(doc.findings[0].severity, "minor", "json severity rung");
-    assert_eq!(doc.findings[0].confidence, "medium", "json confidence");
+    assert_eq!(doc.findings[0].confidence, "low", "json confidence");
     assert_eq!(doc.summary.minor, 1, "json minor count");
     assert_eq!(doc.summary.blocker, 0, "json blocker count");
 }

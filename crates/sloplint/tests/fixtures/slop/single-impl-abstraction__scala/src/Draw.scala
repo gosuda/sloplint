@@ -1,3 +1,3 @@
-trait Draw {
+private trait Draw {
   def draw(): Unit
 }

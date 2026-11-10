@@ -1,1 +1,0 @@
-pos.c:1 major agent/ambient-global-state

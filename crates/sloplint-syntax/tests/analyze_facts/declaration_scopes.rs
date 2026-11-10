@@ -61,11 +61,17 @@ fn the_latest_declaration_of_a_name_receives_later_writes() {
     with_bindings(SHADOWED, |found| {
         assert_eq!(found.len(), 2, "each declaration is a binding: {found:?}");
         assert_eq!(
-            found[0].last_write_line, 2,
+            (found[0].last_write_line, found[0].write_lines),
+            (2, 0),
             "the shadowed declaration is never written again"
         );
         assert_eq!(
-            found[1].last_write_line, 4,
+            (
+                found[1].first_write_line,
+                found[1].write_lines,
+                found[1].last_write_line
+            ),
+            (4, 1, 4),
             "the write belongs to the latest declaration"
         );
     });
@@ -76,7 +82,12 @@ fn a_nested_function_writes_the_binding_it_closes_over() {
     with_bindings(CLOSED_OVER, |found| {
         assert_eq!(found.len(), 1, "inner declares nothing: {found:?}");
         assert_eq!(
-            found[0].last_write_line, 4,
+            (
+                found[0].first_write_line,
+                found[0].write_lines,
+                found[0].last_write_line
+            ),
+            (4, 1, 4),
             "the write inside inner reaches the binding declared in outer"
         );
     });
@@ -87,32 +98,35 @@ fn names_declared_in_an_exited_function_are_out_of_scope() {
     with_bindings(EXITED, |found| {
         assert_eq!(found.len(), 1, "only inner declares a name: {found:?}");
         assert_eq!(
-            found[0].last_write_line, 3,
+            (found[0].last_write_line, found[0].write_lines),
+            (3, 0),
             "a write after inner ends cannot reach inner's binding"
         );
     });
 }
 
 #[test]
-fn write_depth_counts_frames_opened_since_the_declaration() {
+fn write_depth_counts_loop_frames_open_since_the_declaration() {
     with_bindings(FRAME_DEPTH, |found| {
         let outer = named(found, "outer");
         assert_eq!(
-            outer.max_nested_depth, 1,
-            "outer is declared before the loop and written inside it"
+            (outer.loop_depth, outer.first_write_line, outer.write_lines),
+            (1, 5, 1),
+            "outer is declared before the loop and written once inside it"
         );
         assert_eq!(
-            outer.nested_write_pos.map(|pos| pos.line),
-            Some(5),
+            outer.last_write_line, 5,
             "the deepest write to outer is the += inside the loop"
         );
         let inner = named(found, "inner");
         assert_eq!(
-            inner.max_nested_depth, 0,
+            (inner.loop_depth, inner.write_lines),
+            (0, 1),
             "inner is declared and written in the same loop frame"
         );
         assert_eq!(
-            inner.last_write_line, 6,
+            (inner.first_write_line, inner.last_write_line),
+            (6, 6),
             "inner's write extends its mutable span"
         );
     });

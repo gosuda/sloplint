@@ -1,1 +1,1 @@
-a.odin:3 major complexity/cognitive-depth
+a.odin:3 info complexity/cognitive-depth

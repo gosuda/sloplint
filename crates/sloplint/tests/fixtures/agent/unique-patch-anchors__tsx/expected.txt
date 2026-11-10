@@ -1,1 +1,1 @@
-src/repeat.tsx:2 minor agent/unique-patch-anchors
+src/repeat.tsx:2 info agent/unique-patch-anchors

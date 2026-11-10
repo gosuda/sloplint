@@ -18,6 +18,8 @@ mod gitignore_boundary;
 mod header_fallbacks;
 #[path = "pipeline/implicit_scope.rs"]
 mod implicit_scope;
+#[path = "pipeline/init_default.rs"]
+mod init_default;
 #[path = "pipeline/init_failure.rs"]
 mod init_failure;
 #[path = "pipeline/nofollow_sources.rs"]
@@ -36,3 +38,5 @@ mod regular_inputs;
 mod root_resolution;
 #[path = "pipeline/skipped_names.rs"]
 mod skipped_names;
+#[path = "support/spawn.rs"]
+mod spawn;

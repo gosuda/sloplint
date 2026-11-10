@@ -1,2 +1,2 @@
 # Positive: 16 sequential ifs score cognitive 16 >= strict major_at 15.
-src/tangled.zig:1 major complexity/cognitive-depth
+src/tangled.zig:1 info complexity/cognitive-depth

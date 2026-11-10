@@ -1,2 +1,2 @@
 # Positive: 3 identical 6-line blocks (strict window=6).
-src/steps.scala:3 minor agent/unique-patch-anchors
+src/steps.scala:3 info agent/unique-patch-anchors

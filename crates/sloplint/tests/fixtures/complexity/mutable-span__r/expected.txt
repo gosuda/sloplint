@@ -1,1 +1,1 @@
-src/spread.R:2 major complexity/mutable-span
+src/spread.R:2 info complexity/mutable-span

@@ -344,6 +344,11 @@ fn boundary_output_bytes_stable() {
 #[test]
 fn boundary_deep_nesting_bounded() {
     let (_t, root) = tmp();
+    put(
+        &root,
+        "sloplint.toml",
+        "[rules.\"complexity/nesting-depth\"]\nlevel = \"major\"\n",
+    );
     let depth = 10_000usize;
     let mut src = String::from("fn deep() {\n");
     for i in 0..depth {
@@ -395,7 +400,7 @@ fn boundary_file_budget_line_thresholds() {
     put(
         &root,
         "sloplint.toml",
-        "[rules.\"agent/file-token-budget\"]\nminor_at = 8\nmajor_at = 10\ncritical_at = 15\nblocker_at = 20\n",
+        "[rules.\"agent/file-token-budget\"]\nlevel = \"major\"\nminor_at = 8\nmajor_at = 10\ncritical_at = 15\nblocker_at = 20\n",
     );
     for n in [7u32, 8, 9, 10, 11] {
         let repeat = usize::try_from(n).unwrap_or_else(|e| panic!("u32 fits usize: {e}"));
@@ -443,7 +448,7 @@ fn boundary_file_budget_empty_and_no_final_newline() {
     put(
         &root,
         "sloplint.toml",
-        "[rules.\"agent/file-token-budget\"]\nminor_at = 1\nmajor_at = 2\ncritical_at = 3\nblocker_at = 4\n",
+        "[rules.\"agent/file-token-budget\"]\nlevel = \"major\"\nminor_at = 1\nmajor_at = 2\ncritical_at = 3\nblocker_at = 4\n",
     );
     let r = run_ok(&RunOptions {
         strictness: Some(Strictness::Standard),

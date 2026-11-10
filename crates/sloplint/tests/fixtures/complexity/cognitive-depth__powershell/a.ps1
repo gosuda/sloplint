@@ -1,4 +1,6 @@
 function Invoke-Tangle($a) {
+  if ($a -ge 0) {
+  for ($i = 0; $i -lt $a; $i++) {
   if ($a -eq 1) { $x = 1 }
   if ($a -eq 2) { $x = 2 }
   if ($a -eq 3) { $x = 3 }
@@ -15,5 +17,7 @@ function Invoke-Tangle($a) {
   if ($a -eq 14) { $x = 14 }
   if ($a -eq 15) { $x = 15 }
   if ($a -eq 16) { $x = 16 }
+  }
+  }
   $x
 }

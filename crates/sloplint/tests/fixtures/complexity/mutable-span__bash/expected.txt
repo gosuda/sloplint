@@ -1,2 +1,2 @@
 # Positive: `total` stays mutable for 30 lines (strict major at 30).
-a.sh:2 major complexity/mutable-span
+a.sh:2 info complexity/mutable-span

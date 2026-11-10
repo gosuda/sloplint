@@ -1,1 +1,1 @@
-src/Checks.cs:5 major agent/informative-assertions
+src/Checks.cs:5 info agent/informative-assertions

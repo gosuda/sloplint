@@ -1,2 +1,2 @@
 # Positive: handler rethrows the error unchanged.
-src/loader.scala:6 major slop/zombie-catch
+src/loader.scala:6 info slop/zombie-catch

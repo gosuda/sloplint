@@ -1,1 +1,1 @@
-src/Orders.cs:4 major agent/stringly-api
+src/Orders.cs:4 info agent/stringly-api

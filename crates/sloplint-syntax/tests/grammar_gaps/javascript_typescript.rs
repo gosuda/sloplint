@@ -4,12 +4,12 @@
 //! `vendor/tree-sitter-typescript`) must parse it with no error node, keep the tree shapes
 //! the language adapters read, and still reject code that is invalid.
 
-use std::sync::LazyLock;
-
+use sloplint_core::facts::{AmbientKind, Visibility};
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_core::{Confidence, CustomRuleSpec, Severity};
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
+use std::sync::LazyLock;
 
 /// JavaScript, TypeScript and TSX: every grammar that parses a script.
 const SCRIPT_LANGS: [(Lang, &str); 3] = [
@@ -340,7 +340,7 @@ fn exported_names_skip_anonymous_keyword_exports() {
             .facts
             .functions
             .iter()
-            .map(|f| (f.name, f.public))
+            .map(|f| (f.name, f.visibility == Visibility::Exported))
             .collect();
         assert_eq!(
             names,
@@ -399,7 +399,13 @@ fn plain_declarations_keep_their_shapes() {
         let analysis = run_clean(lang, path, source);
         let names: Vec<_> = analysis.facts.functions.iter().map(|f| f.name).collect();
         assert_eq!(names, ["add"], "{lang:?}: function facts");
-        let globals: Vec<_> = analysis.facts.ambient.iter().map(|a| a.name).collect();
+        let globals: Vec<_> = analysis
+            .facts
+            .ambient
+            .iter()
+            .filter(|a| a.kind == AmbientKind::GlobalMutable)
+            .map(|a| a.name)
+            .collect();
         assert_eq!(
             globals,
             ["total"],

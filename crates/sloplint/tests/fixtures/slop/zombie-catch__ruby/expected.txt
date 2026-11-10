@@ -1,1 +1,1 @@
-a.rb:3 major slop/zombie-catch
+a.rb:3 info slop/zombie-catch

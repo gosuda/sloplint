@@ -1,10 +1,7 @@
-pub fn greet(name: &str, loud: bool) -> String {
-    return render_greeting(name, loud);
+pub fn greet(n: &str) -> String {
+    return render_greeting(n);
 }
 
-fn render_greeting(name: &str, loud: bool) -> String {
-    if loud {
-        return name.to_uppercase();
-    }
-    return name.to_string();
+fn render_greeting(n: &str) -> String {
+    return n.to_string();
 }

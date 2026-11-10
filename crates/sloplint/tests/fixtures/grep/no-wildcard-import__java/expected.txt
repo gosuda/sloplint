@@ -1,1 +1,1 @@
-src/Wild.java:1 minor grep/no-wildcard-import
+src/Wild.java:1 info grep/no-wildcard-import

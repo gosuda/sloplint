@@ -1,1 +1,1 @@
-a.bzl:1 major complexity/cognitive-depth
+a.bzl:1 info complexity/cognitive-depth

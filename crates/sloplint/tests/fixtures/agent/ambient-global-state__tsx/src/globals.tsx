@@ -1,5 +1,7 @@
 export let cache: string = "cold";
-export function getCache(): string {
-  return cache;
+export function bump(): void {
+  cache = "warm";
 }
-const apiKey = process.env.API_KEY;
+export function load(): void {
+  cache = process.env.API_KEY ?? "cold";
+}

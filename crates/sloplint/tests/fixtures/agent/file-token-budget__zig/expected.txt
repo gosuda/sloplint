@@ -1,2 +1,2 @@
 # Positive: 43 lines >= fixture major_at 30.
-src/big.zig:1 major agent/file-token-budget
+src/big.zig:1 info agent/file-token-budget

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class Shape(ABC):
+class _Shape(ABC):
     @abstractmethod
     def draw(self):
         pass

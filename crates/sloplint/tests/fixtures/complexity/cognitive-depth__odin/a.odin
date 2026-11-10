@@ -2,6 +2,8 @@ package probe
 
 tangled :: proc(a: int) -> int {
     x := a
+    if a >= 0 {
+    for i := 0; i < a; i += 1 {
     if a > 0 { x += 1 }
     if a > 1 { x += 2 }
     if a > 2 { x += 3 }
@@ -18,5 +20,7 @@ tangled :: proc(a: int) -> int {
     if a > 13 { x += 14 }
     if a > 14 { x += 15 }
     if a > 15 { x += 16 }
+    }
+    }
     return x
 }

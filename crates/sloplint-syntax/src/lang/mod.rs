@@ -119,15 +119,47 @@ pub(crate) fn spec_for(lang: Lang) -> LangSpec {
     LangSpec::new(lang, language, table, hooks)
 }
 
+pub fn shadowed_sources<'a>(paths: impl Iterator<Item = &'a str>) -> HashSet<String> {
+    let discovered: HashSet<&str> = paths.collect();
+    let mut shadowed = HashSet::new();
+    for path in &discovered {
+        if let Some(ml) = path.strip_suffix('i')
+            && ml.ends_with(".ml")
+            && discovered.contains(ml)
+        {
+            shadowed.insert(ml.to_string());
+        }
+    }
+    shadowed
+}
+
 pub(crate) fn hooks_for(
     lang: Lang,
     path: &str,
-    ocaml_interfaces: Option<&HashSet<String>>,
+    shadowed: Option<&HashSet<String>>,
 ) -> &'static dyn LangHooks {
-    let shadowed = ocaml_interfaces.is_some_and(|set| set.contains(path));
-    if lang == Lang::Ocaml && shadowed {
+    let is_shadowed = shadowed.is_some_and(|set| set.contains(path));
+    if lang == Lang::Ocaml && is_shadowed {
         &ocaml::SHADOWED_HOOKS
     } else {
         spec(lang).hooks
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::shadowed_sources;
+
+    #[test]
+    fn shadowed_sources_pairs_ml_with_a_discovered_mli() {
+        let paths = ["a.ml", "a.mli", "b.ml", "c.mli"];
+        let shadowed = shadowed_sources(paths.iter().copied());
+        assert!(
+            shadowed.contains("a.ml"),
+            "a.ml has a discovered sibling a.mli"
+        );
+        assert!(!shadowed.contains("b.ml"), "b.ml has no sibling b.mli");
+        assert!(!shadowed.contains("c.ml"), "a lone c.mli adds nothing");
+        assert_eq!(shadowed.len(), 1, "only a.ml is shadowed");
     }
 }

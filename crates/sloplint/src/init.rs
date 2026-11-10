@@ -6,7 +6,7 @@ use sloplint_core::config::{Config, Mode, ProjectConfig};
 use sloplint_core::finding::FailOn;
 use sloplint_core::lang::ALL_CONFIG_KEYS;
 
-use crate::RunError;
+use crate::error::RunError;
 use crate::project::CONFIG_FILE;
 
 const HEADER: &str = "# sloplint configuration. Every value shown is the default. Run 'sloplint rules' for the effective rule settings; override one rule with [rules.\"<id>\"].";

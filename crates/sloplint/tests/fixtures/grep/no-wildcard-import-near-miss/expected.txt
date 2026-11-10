@@ -1,1 +1,1 @@
-# Near-miss: prelude glob is exempt; `super::*` in the test module is silenced by the test role policy.
+# Near-miss: *_prelude globs are exempt, and cfg(all(test, ..)) marks the test module.

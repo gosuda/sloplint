@@ -1,3 +1,2 @@
-# Positive: top-level mutable var; sys.env read outside entry code.
-src/store.scala:1 major agent/ambient-global-state
-src/store.scala:4 major agent/ambient-global-state
+src/store.scala:1 info agent/ambient-global-state
+src/store.scala:8 info agent/ambient-global-state

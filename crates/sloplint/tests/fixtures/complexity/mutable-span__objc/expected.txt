@@ -1,1 +1,1 @@
-src/a.m:2 minor complexity/mutable-span
+src/a.m:2 info complexity/mutable-span

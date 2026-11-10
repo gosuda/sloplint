@@ -132,18 +132,16 @@ fn suppressed_duplicate_does_not_renumber_the_visible_fingerprint() {
     write(
         &with_duplicate,
         "src/lib.rs",
-        &format!(
-            "// sloplint-allow(complexity/boolean-params): flags are the contract\n{BOOL_FN}{BOOL_FN}"
-        ),
+        "// sloplint-allow(grep/generic-name): the name is the contract\npub fn handle() {}\npub fn handle() {}\n",
     );
     let (_tmp_alone, alone) = tempdir();
-    write(&alone, "src/lib.rs", BOOL_FN);
+    write(&alone, "src/lib.rs", "pub fn handle() {}\n");
 
     let visible = |report: &Report| -> Vec<String> {
         report
             .findings
             .iter()
-            .filter(|f| &*f.rule == "complexity/boolean-params")
+            .filter(|f| &*f.rule == "grep/generic-name")
             .map(|f| f.fingerprint.to_string())
             .collect()
     };

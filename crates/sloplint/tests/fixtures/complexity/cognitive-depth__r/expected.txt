@@ -1,1 +1,1 @@
-src/deep.R:1 major complexity/cognitive-depth
+src/deep.R:1 info complexity/cognitive-depth

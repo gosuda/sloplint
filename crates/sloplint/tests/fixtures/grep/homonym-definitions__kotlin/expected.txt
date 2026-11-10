@@ -1,1 +1,1 @@
-src/a.kt:1 minor grep/homonym-definitions
+src/a.kt:1 info grep/homonym-definitions

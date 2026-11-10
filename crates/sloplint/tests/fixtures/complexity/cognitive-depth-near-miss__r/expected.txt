@@ -1,1 +1,1 @@
-# near-miss: else-if chain of 9 arms scores 9 < strict minor_at 10.
+# near-miss: else-if adds 0 and nest-0 adds 0, so the chain scores 0 < strict minor_at 10.

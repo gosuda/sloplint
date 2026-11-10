@@ -1,6 +1,6 @@
-from shapes import Shape
+from shapes import _Shape
 
 
-class Circle(Shape):
+class Circle(_Shape):
     def draw(self):
         pass

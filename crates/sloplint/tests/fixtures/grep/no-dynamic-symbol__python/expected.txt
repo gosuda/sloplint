@@ -1,1 +1,2 @@
-src/dyn.py:2 minor grep/no-dynamic-symbol
+# Positive: getattr resolves a bare parameter, so the name is only known at runtime.
+src/dyn.py:5 info grep/no-dynamic-symbol

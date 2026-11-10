@@ -1,2 +1,2 @@
 # Positive: 43 lines (thresholds lowered to minor_at=20 major_at=30 for a small fixture).
-big.sh:1 major agent/file-token-budget
+big.sh:1 info agent/file-token-budget

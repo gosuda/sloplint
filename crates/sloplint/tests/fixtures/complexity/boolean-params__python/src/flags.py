@@ -1,7 +1,7 @@
-def render_table(header: bool, footer: bool):
+def confirm(abort: bool = False, err: bool = False):
     out = ""
-    if header:
-        out += "h"
-    if footer:
-        out += "f"
+    if abort:
+        out += "a"
+    if err:
+        out += "e"
     return out

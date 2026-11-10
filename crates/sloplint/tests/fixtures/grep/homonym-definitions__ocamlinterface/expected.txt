@@ -1,1 +1,1 @@
-f0.mli:1 minor grep/homonym-definitions
+f0.mli:1 info grep/homonym-definitions

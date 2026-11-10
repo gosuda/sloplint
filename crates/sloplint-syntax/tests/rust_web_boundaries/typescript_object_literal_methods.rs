@@ -2,11 +2,12 @@
 //! interface binding. A method of an object literal returned from a class method is neither
 //! public nor interface-bound, which is how the JavaScript adapter already reads it.
 
+use sloplint_core::facts::Visibility;
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
-type Row = (String, bool, bool);
+type Row = (String, Visibility, bool);
 
 fn methods(lang: Lang, path: &str, source: &str) -> Vec<Row> {
     let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
@@ -26,12 +27,12 @@ fn methods(lang: Lang, path: &str, source: &str) -> Vec<Row> {
         .facts
         .functions
         .iter()
-        .map(|f| (f.name.to_string(), f.public, f.interface_bound))
+        .map(|f| (f.name.to_string(), f.visibility, f.signature_forced))
         .collect()
 }
 
-fn row(name: &str, public: bool, interface_bound: bool) -> Row {
-    (name.to_string(), public, interface_bound)
+fn row(name: &str, visibility: Visibility, forced: bool) -> Row {
+    (name.to_string(), visibility, forced)
 }
 
 const TYPESCRIPT: &str = "export class Factory implements Maker {
@@ -54,14 +55,14 @@ export const Anonymous = class {
 ";
 
 #[test]
-fn object_literal_methods_do_not_inherit_the_enclosing_class() {
+fn object_literal_methods_stay_private_without_forced_signatures() {
     assert_eq!(
         methods(Lang::TypeScript, "factory.ts", TYPESCRIPT),
         vec![
-            row("make", true, true),
-            row("run", false, false),
-            row("stop", true, true),
-            row("keep", false, false),
+            row("make", Visibility::Exported, false),
+            row("run", Visibility::Private, false),
+            row("stop", Visibility::Exported, false),
+            row("keep", Visibility::Private, false),
         ],
         "class members keep their class; the literal's `run` and the class expression's `keep` do not"
     );
@@ -81,7 +82,10 @@ fn javascript_reads_the_same_shapes_the_same_way() {
 ";
     assert_eq!(
         methods(Lang::JavaScript, "factory.js", source),
-        vec![row("make", true, false), row("run", false, false)],
-        "JavaScript never binds to an interface and never exports literal methods"
+        vec![
+            row("make", Visibility::Exported, false),
+            row("run", Visibility::Private, false)
+        ],
+        "JavaScript never forces a signature and never exports literal methods"
     );
 }

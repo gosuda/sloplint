@@ -1,1 +1,1 @@
-src/a.cpp:1 minor grep/no-wildcard-import
+src/a.cpp:1 info grep/no-wildcard-import

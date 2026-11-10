@@ -3,12 +3,12 @@
 //! highest rung at or below the value.
 
 use proptest::prelude::*;
-use sloplint_core::facts::{DynamicSymbol, FileFacts, Function, WorldFacts};
+use sloplint_core::facts::{DynamicSymbol, FileFacts, Function, Visibility, WorldFacts};
 use sloplint_core::finding::{Confidence, Severity, SourceText};
 use sloplint_core::lang::Lang;
 use sloplint_core::role::{CodeRole, RoleRegion};
 use sloplint_core::rules::Thresholds;
-use sloplint_core::{Config, Pos, RuleFilter, RuleSet, WorldFile};
+use sloplint_core::{CATALOG, Config, Pos, RuleFilter, RuleSet, WorldFile};
 
 fn config_with_level(rule: &str, level: &str) -> Config {
     let mut table = toml::Table::new();
@@ -23,6 +23,7 @@ fn world_facts(barrel: Option<Vec<Vec<String>>>) -> WorldFacts {
         lang: Lang::TypeScript,
         role: CodeRole::Library,
         regions: Vec::new(),
+        package: "app".to_string(),
         has_inline_tests: false,
         public_functions: 0,
         definitions: Vec::new(),
@@ -41,6 +42,8 @@ fn file_facts(line_count: u32) -> FileFacts<'static> {
         role: CodeRole::Library,
         regions: Vec::new(),
         line_count,
+        package: "app".to_string(),
+        is_generated: false,
         functions: Vec::new(),
         calls: Vec::new(),
         bindings: Vec::new(),
@@ -128,14 +131,14 @@ fn meta_parse_error_with_level_major_reports_major() {
 fn threshold_rule_with_ceiling_major_keeps_grade_below_ceiling() {
     let config = config_with_level("agent/file-token-budget", "major");
     let rules = RuleSet::new(&config, &RuleFilter::default()).expect("rule resolves");
-    let minor_tier = rules.check_file(&file_facts(700));
+    let minor_tier = rules.check_file(&file_facts(1600));
     assert_eq!(minor_tier.len(), 1);
     assert_eq!(
         minor_tier[0].severity,
         Severity::Minor,
         "the minor tier keeps its own grade"
     );
-    let major_tier = rules.check_file(&file_facts(1200));
+    let major_tier = rules.check_file(&file_facts(3200));
     assert_eq!(major_tier.len(), 1);
     assert_eq!(major_tier[0].severity, Severity::Major);
 }
@@ -191,12 +194,21 @@ fn test_role_finding_lowers_one_rung() {
         }],
     );
     facts.functions = vec![Function {
-        name: "process_data",
+        name: "process_order",
         pos: Pos { line: 1, byte: 0 },
-        doc: vec!["process data"],
+        doc: vec!["process order"],
         doc_pos: None,
-        public: true,
-        interface_bound: false,
+        visibility: Visibility::Exported,
+        signature_forced: false,
+        entry_point: false,
+        in_test: false,
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        is_method: false,
+        end_line: 1,
+        has_value_return: false,
         params: Vec::new(),
         return_type: None,
         untyped_throws: false,
@@ -218,12 +230,17 @@ fn ceiling_never_raises_a_graded_finding() {
         let config = config_with_level("agent/file-token-budget", ceiling.as_str());
         let rules = RuleSet::new(&config, &RuleFilter::default()).expect("rule resolves");
         let found = rules.check_file(&file_facts(10_000));
+        let stamped = CATALOG
+            .iter()
+            .find(|info| info.id == "agent/file-token-budget")
+            .unwrap_or_else(|| panic!("file-token-budget stays in the catalog"))
+            .confidence;
         assert_eq!(found.len(), 1, "ten thousand lines always grades blocker");
         assert_eq!(
             found[0].severity, ceiling,
             "a blocker grade under ceiling {ceiling:?} settles at the ceiling"
         );
-        assert_eq!(found[0].confidence, Confidence::High);
+        assert_eq!(found[0].confidence, stamped);
     }
 }
 
@@ -238,7 +255,11 @@ fn single_severity_rule_takes_the_level_rung() {
             found[0].severity, rung,
             "a single-severity finding under level {rung:?} takes the rung"
         );
-        assert_eq!(found[0].confidence, Confidence::Medium);
+        assert_eq!(
+            found[0].confidence,
+            Confidence::Low,
+            "a pinned single-severity finding keeps the rule low confidence"
+        );
     }
 }
 

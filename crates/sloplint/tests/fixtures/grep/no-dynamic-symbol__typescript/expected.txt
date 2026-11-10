@@ -1,1 +1,1 @@
-src/mod.ts:2 minor grep/no-dynamic-symbol
+src/mod.ts:2 info grep/no-dynamic-symbol

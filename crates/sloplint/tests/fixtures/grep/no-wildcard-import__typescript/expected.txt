@@ -1,1 +1,1 @@
-src/mod.ts:1 minor grep/no-wildcard-import
+src/mod.ts:1 info grep/no-wildcard-import

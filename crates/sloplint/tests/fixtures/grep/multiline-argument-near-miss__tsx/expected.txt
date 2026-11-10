@@ -1,1 +1,1 @@
-# Near-miss: closure arg spans lines 2-6 (5 lines < strict minor_at=6).
+# Near-miss: closure arg spans lines 2-6 (5 lines < strict Minor(15)); a CodeBody never flags.

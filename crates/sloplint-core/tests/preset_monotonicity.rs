@@ -109,7 +109,7 @@ fn direction(key: &str) -> Loosening {
     match key {
         "min_len" => Loosening::Rising,
         "minor_at" | "major_at" | "critical_at" | "blocker_at" | "window" | "min_repeats"
-        | "min_files" | "min_fields" | "min_similarity" => Loosening::Falling,
+        | "min_files" | "min_fields" | "min_similarity" | "min_span" => Loosening::Falling,
         other => panic!(
             "numeric preset option `{other}` has no direction in preset_monotonicity::direction; \
              declare whether a larger value is stricter before shipping it"

@@ -1,3 +1,3 @@
-# Positive: 4-char literal run (line 2) and dynamic message (line 3); strict min_len=12, level major.
-a.sh:2 major grep/contiguous-log-literal
-a.sh:3 major grep/contiguous-log-literal
+# Positive: 4-char literal run (line 2) and dynamic message (line 3); strict min_len=8, level major.
+a.sh:2 info grep/contiguous-log-literal
+a.sh:3 info grep/contiguous-log-literal

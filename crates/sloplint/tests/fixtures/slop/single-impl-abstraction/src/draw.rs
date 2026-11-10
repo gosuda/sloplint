@@ -1,3 +1,3 @@
-pub trait Draw {
+trait Draw {
     fn draw(&self);
 }

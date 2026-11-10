@@ -1,1 +1,1 @@
-src/Calc.cs:1 minor grep/no-wildcard-import
+src/Calc.cs:1 info grep/no-wildcard-import

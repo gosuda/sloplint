@@ -13,7 +13,7 @@ use super::{custom_rule, mkdir, tempdir, write};
 mod planted_links;
 
 /// One generic-name finding, with a message that holds `GENERIC_TEXT` exactly once.
-const SAMPLE: &str = "pub fn handle(flag: bool) {}\n";
+const SAMPLE: &str = "pub fn handle(flag: bool, other: bool) {}\n";
 
 const GENERIC_TEXT: &str = "shared by unrelated code";
 
@@ -103,14 +103,14 @@ impl CacheHome {
     }
 }
 
-/// C++ that fails as C but parses as C++. Its forwarding method makes a finding that only the
-/// C++ analysis can report.
+/// C++ that fails as C but parses as C++. Its generic-named method makes a finding that only
+/// the C++ analysis can report.
 const CPP_HEADER: &str = "namespace ui {
 
 template <typename T>
 class Stack {
 public:
-    void push(const T& value) { items_.push_back(value); }
+    void process_data(const T& value) { store(value); }
 private:
     std::vector<T> items_;
 };
@@ -121,17 +121,17 @@ private:
 /// Plain C that parses as C.
 const C_HEADER: &str = "#include <string.h>
 
-unsigned long get_length(const char *s) {
+unsigned long process_data(const char *s) {
     return strlen(s);
 }
 ";
 
-/// Objective-C: it fails as C and as C++, and `NSLog` is a log call in the `objc` table only.
+/// Objective-C: it fails as C and as C++, and its exported generic name reports at standard.
 const OBJC_HEADER: &str = "@interface Counter : NSObject
 - (void)increment;
 @end
 
-static inline void LogCount(NSString *name) {
+void process_data(NSString *name) {
     NSLog(name);
 }
 ";
@@ -143,9 +143,9 @@ int x = ;
 ";
 
 /// The stored text of the C++ header's finding, and a same-length stand-in for it.
-const CPP_FINDING: &str = "only forwards its parameters to `items_.push_back`";
+const CPP_FINDING: &str = "`process_data` is a generic name";
 
-const CPP_PLANTED: &str = "only forwards its parameters to `items_.push_bacm`";
+const CPP_PLANTED: &str = "`process_data` is a generic neme";
 
 /// Rewrites the one stored occurrence of `from` in the shard payload with the same-length
 /// `to`, then re-digests the payload, so the forged shard stays decodable and self-consistent.
@@ -167,31 +167,6 @@ fn plant(file: &Path, from: &str, to: &str) {
     payload[spots[0]..spots[0] + to.len()].copy_from_slice(to.as_bytes());
     digest.copy_from_slice(blake3::hash(payload).as_bytes());
     std::fs::write(file, &bytes).unwrap_or_else(|e| panic!("plant rewrite failed: {e}"));
-}
-
-#[cfg(target_os = "linux")]
-/// Runs `spawn`, retrying while the freshly written executable is busy. Another test thread
-/// that forks while this test holds the file open for writing keeps a copy of that descriptor
-/// until its own `exec`, and `exec` of a file open for writing fails with `ETXTBSY` (os error
-/// 26). The retry is bounded to 5 s, so a genuinely busy binary still fails the test; any other
-/// error fails it at once.
-fn spawn_when_not_busy(spawn: impl Fn() -> io::Result<Output>) -> Output {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-    let mut last_busy = None;
-    while std::time::Instant::now() < deadline {
-        match spawn() {
-            Ok(out) => return out,
-            Err(e) if e.raw_os_error() == Some(26) => {
-                last_busy = Some(e);
-                std::thread::sleep(std::time::Duration::from_millis(50));
-            }
-            Err(e) => panic!("spawn altered executable: {e}"),
-        }
-    }
-    panic!(
-        "spawn stayed ETXTBSY for 5 s: {}",
-        last_busy.map_or("unknown".to_string(), |e| e.to_string())
-    )
 }
 
 /// A project holding [`SAMPLE`] and an empty configuration.
@@ -314,7 +289,7 @@ fn audit_filter_cache_stays_unfiltered() {
     write(
         &root,
         "sample.rs",
-        "pub fn handle(flag: bool, other: bool) {}\n",
+        "/// Handle.\npub fn handle(flag: bool) {}\n",
     );
     let home = CacheHome::new();
     let filtered = home.check(&root, &["--rule", "grep/generic-name"]);
@@ -323,7 +298,7 @@ fn audit_filter_cache_stays_unfiltered() {
         "the filtered run missed its rule"
     );
     assert!(
-        !filtered.contains("[complexity/boolean-params]"),
+        !filtered.contains("[slop/echo-comment]"),
         "the filter leaked another rule"
     );
     assert_eq!(
@@ -337,7 +312,7 @@ fn audit_filter_cache_stays_unfiltered() {
         "the full run after the filtered cache missed generic-name"
     );
     assert!(
-        full.contains("[complexity/boolean-params]"),
+        full.contains("[slop/echo-comment]"),
         "the filtered cache poisoned the later full run"
     );
 }
@@ -400,12 +375,16 @@ fn cache_follows_a_header_across_the_cpp_fallback() {
         stored.push(cold);
     }
     assert!(
-        stored[0].contains("get_length") && !stored[0].contains("[meta/parse-error]"),
+        stored[0].contains("process_data")
+            && stored[0].contains("a.h:3:")
+            && !stored[0].contains("[meta/parse-error]"),
         "plain C parses as C: {}",
         stored[0]
     );
     assert!(
-        stored[1].contains("`push`") && !stored[1].contains("[meta/parse-error]"),
+        stored[1].contains("process_data")
+            && stored[1].contains("a.h:6:")
+            && !stored[1].contains("[meta/parse-error]"),
         "the header parses as C++ and reports the C++ method: {}",
         stored[1]
     );
@@ -446,12 +425,16 @@ fn cache_follows_a_header_across_the_header_fallbacks() {
         stored.push(cold);
     }
     assert!(
-        stored[0].contains("get_length") && !stored[0].contains("[meta/parse-error]"),
+        stored[0].contains("process_data")
+            && stored[0].contains("a.h:3:")
+            && !stored[0].contains("[meta/parse-error]"),
         "plain C parses as C: {}",
         stored[0]
     );
     assert!(
-        stored[1].contains("`push`") && !stored[1].contains("[meta/parse-error]"),
+        stored[1].contains("process_data")
+            && stored[1].contains("a.h:6:")
+            && !stored[1].contains("[meta/parse-error]"),
         "the header parses as C++ and reports the C++ method: {}",
         stored[1]
     );
@@ -463,10 +446,11 @@ fn cache_follows_a_header_across_the_header_fallbacks() {
     assert_eq!(stored[3], stored[1], "the C++ outcome returns unchanged");
     assert_eq!(stored[4], stored[0], "the C outcome returns unchanged");
     assert!(
-        stored[5].contains("include/a.h:6:5")
-            && stored[5].contains("[grep/contiguous-log-literal]")
+        stored[5].contains("process_data")
+            && stored[5].contains("a.h:5:")
+            && stored[5].contains("[grep/generic-name]")
             && !stored[5].contains("[meta/parse-error]"),
-        "the header parses as Objective-C and reports the `NSLog` call: {}",
+        "the header parses as Objective-C and reports the exported generic name: {}",
         stored[5]
     );
     assert_eq!(
@@ -495,7 +479,9 @@ fn cache_keeps_the_same_bytes_apart_by_routed_path() {
         "the `.c` file is a C parse error: {cold}"
     );
     assert!(
-        !cold.contains("include/stack.h:3:1") && cold.contains("include/stack.h:6:"),
+        cold.contains("process_data")
+            && !cold.contains("include/stack.h:3:1")
+            && cold.contains("include/stack.h:6:"),
         "the `.h` file is analyzed as C++: {cold}"
     );
     assert_eq!(
@@ -560,7 +546,7 @@ fn a_different_executable_never_reuses_stored_header_outcomes() {
         .open(&other)
         .and_then(|mut file| file.write_all(&[0]))
         .unwrap_or_else(|e| panic!("append: {e}"));
-    let out = spawn_when_not_busy(|| home.output_of(&other, &root, &[]));
+    let out = crate::spawn::spawn_forgiving(|| home.output_of(&other, &root, &[]));
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(
         out.status.success() && out.stderr.is_empty(),

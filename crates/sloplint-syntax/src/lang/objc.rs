@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, CallKind, FieldCopy, Handler, Import, ImportKind, Param,
-    Pos, Stmt, TypeDef, WildcardArm,
+    AmbientKind, Arg, ArgShape, AssertShape, Assertion, CallKind, FieldCopy, Handler, Import,
+    ImportKind, ImportScope, Param, Pos, ScrutineeKind, Stmt, TypeDef, Visibility, WildcardArm,
 };
 use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
@@ -14,8 +14,8 @@ use crate::hooks::{
     preceding_comments, rfind_named_child, string_arg_shape, strip_quotes, text,
 };
 use crate::lang::c_family::{
-    self, C_DECLARATORS, angles, collect_fragments, flat, in_function, inner, pair_source,
-    plain_assert, root_of, span, word,
+    self, C_DECLARATORS, angles, collect_fragments, defaulted_param, flat, in_function, init_value,
+    inner, pair_source, plain_assert, root_of, span, word,
 };
 use crate::spec::Role;
 
@@ -91,6 +91,8 @@ impl LangHooks for ObjcHooks {
                     callee: text(cx, func),
                     kind: CallKind::Plain,
                     callee_root: root_of(cx, func).map(|(name, _)| name),
+                    is_simple_path: func.kind() == "identifier",
+                    initializes_binding: init_value(cx, n),
                     args: call_args(cx, args_node),
                 })
             }
@@ -109,10 +111,13 @@ impl LangHooks for ObjcHooks {
                     }
                     args.push(mk_arg(cx, c));
                 }
+                let callee_root = receiver.and_then(|r| msg_root(cx, r));
                 Some(CallHead {
                     callee,
                     kind: CallKind::Plain,
-                    callee_root: receiver.and_then(|r| msg_root(cx, r)),
+                    callee_root,
+                    is_simple_path: receiver.is_none() || callee_root.is_some(),
+                    initializes_binding: init_value(cx, n),
                     args,
                 })
             }
@@ -140,12 +145,12 @@ impl LangHooks for ObjcHooks {
             interface_bound: true,
         })
     }
-    fn match_arm(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<WildcardArm> {
+    fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
         if child_by_field(n, "value").is_some() {
             return None;
         }
         let mut enum_like = false;
-        if let Some(parent) = n.parent() {
+        if let Some(parent) = cx.parent() {
             for sib in named_children(parent) {
                 if sib.kind() == "case_statement"
                     && child_by_field(sib, "value").is_some_and(|v| v.kind() == "identifier")
@@ -158,6 +163,9 @@ impl LangHooks for ObjcHooks {
         Some(WildcardArm {
             pos: pos_of(n),
             enum_like,
+            scrutinee: ScrutineeKind::Other,
+            variant_count: 0,
+            has_nullable_ctor: false,
         })
     }
     fn handler<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'s>> {
@@ -176,6 +184,9 @@ impl LangHooks for ObjcHooks {
         Some(Handler {
             pos: pos_of(n),
             stmts,
+            has_else: false,
+            try_imports_only: false,
+            in_cleanup: false,
         })
     }
     fn struct_lit<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FieldCopy<'s>> {
@@ -286,6 +297,13 @@ impl LangHooks for ObjcHooks {
             pos: pos_of(n),
             has_message,
             comparison,
+            shape: if comparison {
+                AssertShape::TopEqNe
+            } else {
+                AssertShape::Other
+            },
+            in_typecheck: false,
+            value_is_bool_literal: false,
         })
     }
 }
@@ -293,11 +311,22 @@ fn c_function<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     let body = child_by_field(n, "body")?;
     let (fd, name_node) = c_family::func_parts(n, &C_DECLARATORS, &["identifier"])?;
     let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
+    let public = !word(cx, n, &["storage_class_specifier"], &["static"]);
     Some(FunctionHead {
         name: text(cx, name_node),
         name_pos: pos_of(name_node),
-        public: !word(cx, n, &["storage_class_specifier"], &["static"]),
-        interface_bound: false,
+        visibility: if public {
+            Visibility::Exported
+        } else {
+            Visibility::Private
+        },
+        signature_forced: false,
+        entry_point: false,
+        in_test: false,
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
         region: None,
         params: c_family::params(cx, fd, &C_DECLARATORS, &["parameter_declaration"]),
         return_type: c_return(cx, n, fd),
@@ -325,8 +354,14 @@ fn method<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     Some(FunctionHead {
         name: text(cx, name_node),
         name_pos: pos_of(name_node),
-        public: true,
-        interface_bound: true,
+        visibility: Visibility::Exported,
+        signature_forced: false,
+        entry_point: false,
+        in_test: false,
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
         region: None,
         params: method_params(cx, n),
         return_type: method_return(cx, n),
@@ -359,20 +394,12 @@ fn method_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
 fn keyword_param<'s>(cx: &Cx<'_, 's>, kd: Node<'_>) -> Option<Param<'s>> {
     let name_node = rfind_named_child(kd, |c| c.kind() == "identifier")?;
     let ty = first_named_child_matching(kd, &["method_type"]).map(|t| parens(text(cx, t)));
-    Some(Param {
-        name: text(cx, name_node),
-        ty,
-        bool_default: false,
-    })
+    Some(defaulted_param(cx, kd, text(cx, name_node), ty))
 }
 fn method_param<'s>(cx: &Cx<'_, 's>, mp: Node<'_>) -> Option<Param<'s>> {
     let name_node = first_named_child_matching(mp, &["identifier"])?;
     let ty = child_by_field(mp, "type").map(|t| text(cx, t));
-    Some(Param {
-        name: text(cx, name_node),
-        ty,
-        bool_default: false,
-    })
+    Some(defaulted_param(cx, mp, text(cx, name_node), ty))
 }
 fn method_return<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     first_named_child_matching(n, &["method_type"]).map(|t| parens(text(cx, t)))
@@ -444,6 +471,8 @@ fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         "concatenated_string" => concat_shape(cx, n),
         "binary_expression" if binary_concat(cx, n, "+", &["string_literal"]) => ArgShape::Concat,
         "identifier" => ArgShape::Ident(text(cx, n)),
+        "initializer_list" => ArgShape::Collection,
+        "block_literal" => ArgShape::CodeBody,
         _ => ArgShape::Other,
     }
 }
@@ -471,26 +500,28 @@ fn push_include<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
         "system_lib_string" => angles(text(cx, path)),
         _ => text(cx, path),
     };
-    out.push(Import {
-        pos: pos_of(n),
-        module: Cow::Borrowed(module),
-        name: "",
-        alias: None,
-        kind: ImportKind::SideEffect,
-    });
+    out.push(side_effect(n, Cow::Borrowed(module)));
 }
 fn push_module<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
     let raw = flat(text(cx, n));
     let inner_text = raw.strip_prefix("@import").unwrap_or(&raw);
     let module = inner_text.strip_suffix(';').unwrap_or(inner_text);
-    out.push(Import {
+    out.push(side_effect(n, Cow::Owned(module.to_string())));
+}
+fn side_effect<'s>(n: Node<'_>, module: Cow<'s, str>) -> Import<'s> {
+    Import {
         pos: pos_of(n),
-        module: Cow::Owned(module.to_string()),
+        module,
         name: "",
         alias: None,
         kind: ImportKind::SideEffect,
-    });
+        scope: ImportScope::Module,
+        in_test: false,
+        is_reexport: false,
+        external_root: None,
+    }
 }
+
 fn tag_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     child_by_field(n, "body")?;
     let name_node = child_by_field(n, "name")?;
@@ -498,7 +529,11 @@ fn tag_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
         def: Some(TypeDef {
             name: text(cx, name_node),
             pos: pos_of(name_node),
-            public: !in_function(n),
+            visibility: if !in_function(cx) {
+                Visibility::Exported
+            } else {
+                Visibility::Private
+            },
             abstraction: false,
         }),
         impls: Vec::new(),
@@ -513,7 +548,11 @@ fn alias_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
                 def: Some(TypeDef {
                     name: text(cx, current),
                     pos: pos_of(current),
-                    public: !in_function(n),
+                    visibility: if !in_function(cx) {
+                        Visibility::Exported
+                    } else {
+                        Visibility::Private
+                    },
                     abstraction: false,
                 }),
                 impls: Vec::new(),
@@ -536,7 +575,7 @@ fn class_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
         def: Some(TypeDef {
             name: text(cx, name_node),
             pos: pos_of(name_node),
-            public: true,
+            visibility: Visibility::Exported,
             abstraction: false,
         }),
         impls: Vec::new(),
@@ -549,7 +588,7 @@ fn protocol_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
         def: Some(TypeDef {
             name: text(cx, name_node),
             pos: pos_of(name_node),
-            public: true,
+            visibility: Visibility::Exported,
             abstraction: true,
         }),
         impls: Vec::new(),

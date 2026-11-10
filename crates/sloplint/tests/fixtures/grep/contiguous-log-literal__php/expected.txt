@@ -1,2 +1,2 @@
-src/load.php:3 major grep/contiguous-log-literal
-src/load.php:4 major grep/contiguous-log-literal
+src/load.php:3 info grep/contiguous-log-literal
+src/load.php:4 info grep/contiguous-log-literal

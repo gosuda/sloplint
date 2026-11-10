@@ -1,1 +1,2 @@
-# Near-miss: non-Str argument spans 4 lines, below strict minor_at 6.
+# Near-miss: non-Str argument spans 4 lines, below strict Minor(15).
+# Retired positive (retired_f.ml): match arg is a CodeBody, so it stays silent.

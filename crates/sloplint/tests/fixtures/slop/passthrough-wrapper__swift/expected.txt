@@ -1,1 +1,1 @@
-src/lib.swift:1 minor slop/passthrough-wrapper
+src/lib.swift:1 info slop/passthrough-wrapper

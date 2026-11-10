@@ -97,3 +97,13 @@ fn wildcards_and_plain_paths_keep_their_modules() {
         "wildcard and ungrouped imports are unchanged"
     );
 }
+
+#[test]
+fn single_segment_uses_keep_a_full_module_path() {
+    let source = "use serde;\n";
+    assert_eq!(
+        imports(source),
+        vec![named("serde", "serde", None)],
+        "a bare crate import names its own module instead of an empty sentinel"
+    );
+}

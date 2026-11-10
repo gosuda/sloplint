@@ -1,5 +1,7 @@
-function Invoke-Count($items) {
+$global:Total = 0
+function Bump-Count {
   $global:Total += 1
-  $home = $env:HOME
-  $items
+}
+function Import-Home {
+  $global:Total = $env:HOME.Length
 }

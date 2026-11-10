@@ -9,18 +9,19 @@ use rayon::prelude::*;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 use sloplint_core::baseline::Baseline;
-use sloplint_core::facts::WorldFacts;
+use sloplint_core::facts::{WorldFacts, package_key};
 use sloplint_core::finding::{SourceText, line_context, line_starts};
-use sloplint_core::rules::{CATALOG, RuleFilter, RuleSet, WorldFile};
+use sloplint_core::rules::{CATALOG, RuleSet, WorldFile};
 use sloplint_core::suppress::{self, RulePattern, Suppression};
 use sloplint_core::{Config, Finding};
 
-use crate::RunError;
 use crate::cache::{self, Cache, FileOutput, Loaded};
 use crate::discover::Entry;
-use crate::io_error;
-use crate::project;
-use crate::store::{read_source, read_within_limit};
+use crate::error::{RunError, io_error};
+use crate::fileio::{Capped, Links, read_capped};
+use crate::roles::RoleSets;
+use crate::scopes::Scopes;
+use crate::store::read_source;
 
 const GENERATED_WINDOW: usize = 2048;
 
@@ -29,17 +30,16 @@ pub(crate) struct Pipeline<'a> {
     pub(crate) custom: &'a CustomRules,
     pub(crate) config: &'a Config,
     pub(crate) root: &'a Path,
-    pub(crate) filter: &'a RuleFilter,
-    pub(crate) roles: &'a crate::project::RoleSets,
+    pub(crate) roles: &'a RoleSets,
     pub(crate) cache: &'a Loaded,
-    pub(crate) interfaces: &'a HashSet<String>,
+    pub(crate) shadowed: &'a HashSet<String>,
     pub(crate) active_rules: OnceLock<ActiveRules>,
 }
 
 impl Pipeline<'_> {
     fn active_rules(&self) -> &ActiveRules {
         self.active_rules
-            .get_or_init(|| build_active_rules(self.rules, self.config, self.filter))
+            .get_or_init(|| build_active_rules(self.rules, self.config))
     }
 
     fn is_operand_active(&self, pattern: &RulePattern) -> bool {
@@ -52,7 +52,7 @@ impl Pipeline<'_> {
 
     fn reports_unused(&self) -> bool {
         self.rules.is_active("meta/unused-suppression")
-            && self.filter.matches("meta/unused-suppression")
+            && self.rules.selects("meta/unused-suppression")
     }
 }
 
@@ -61,7 +61,7 @@ pub(crate) struct ActiveRules {
     families: HashSet<String>,
 }
 
-fn build_active_rules(rules: &RuleSet, config: &Config, filter: &RuleFilter) -> ActiveRules {
+fn build_active_rules(rules: &RuleSet, config: &Config) -> ActiveRules {
     let mut ids = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
     let mut families = HashSet::with_capacity(CATALOG.len() + config.custom_rules.len());
     for id in CATALOG
@@ -69,7 +69,7 @@ fn build_active_rules(rules: &RuleSet, config: &Config, filter: &RuleFilter) -> 
         .map(|info| info.id)
         .chain(config.custom_rules.iter().map(|spec| spec.id.as_str()))
     {
-        if rules.is_active(id) && filter.matches(id) {
+        if rules.is_active(id) && rules.selects(id) {
             for (at, _) in id.match_indices('/') {
                 families.insert(id[..at].to_string());
             }
@@ -100,7 +100,7 @@ pub(crate) fn run(
     entries: &[Entry],
     pipe: &Pipeline<'_>,
     pool: &rayon::ThreadPool,
-    scopes: &project::Scopes,
+    scopes: &Scopes,
 ) -> Result<(Vec<Analyzed>, u32), RunError> {
     let outcomes = analyze_all(entries, pipe, pool)?;
     Ok(split_outcomes(outcomes, scopes))
@@ -115,7 +115,7 @@ fn analyze_all(
         entries
             .par_iter()
             .map_init(
-                || Parsers::with_ocaml_interfaces(pipe.interfaces),
+                || Parsers::with_ocaml_interfaces(pipe.shadowed),
                 |parsers, entry| process(parsers, entry, pipe),
             )
             .collect()
@@ -129,11 +129,15 @@ fn process(
     pipe: &Pipeline<'_>,
 ) -> Result<Outcome, RunError> {
     let skipped = || Ok(Outcome::Skipped(entry.rel.clone()));
-    let bytes = match read_within_limit(&entry.abs, pipe.config.project.max_file_bytes) {
+    let bytes = match read_capped(
+        &entry.abs,
+        pipe.config.project.max_file_bytes,
+        Links::NoFollow,
+    ) {
         Err(source) if source.kind() == io::ErrorKind::NotFound => return skipped(),
         Err(source) => return Err(io_error(&entry.abs, source)),
-        Ok(None) => return skipped(),
-        Ok(Some(bytes)) => bytes,
+        Ok(Capped::Bytes(bytes, _)) => bytes,
+        Ok(_) => return skipped(),
     };
     let Ok(mut owned) = String::from_utf8(bytes) else {
         return skipped();
@@ -144,7 +148,7 @@ fn process(
     if owned.starts_with('\u{feff}') {
         owned.drain(..'\u{feff}'.len_utf8());
     }
-    let hash = analyzed_hash(pipe.interfaces.contains(entry.rel.as_str()), owned.as_str());
+    let hash = analyzed_hash(pipe.shadowed.contains(entry.rel.as_str()), owned.as_str());
     let (output, from_cache) = {
         let probe = Probe {
             text: owned.as_str(),
@@ -184,7 +188,8 @@ fn analyze_file(
         source: probe.text,
         role: pipe.roles.role(entry.rel.as_str()),
     };
-    let analysis = analyze(parsers, &input, pipe.custom);
+    let mut analysis = analyze(parsers, &input, pipe.custom);
+    analysis.facts.package = package_key(entry.lang, entry.rel.as_str());
     let world = WorldFacts::from_facts(&analysis.facts);
     let text = SourceText {
         path: entry.rel.as_str(),
@@ -224,7 +229,7 @@ fn rule_findings(pipe: &Pipeline<'_>, analysis: &Analysis<'_>) -> Vec<Finding> {
     found
 }
 
-fn split_outcomes(outcomes: Vec<Outcome>, scopes: &project::Scopes) -> (Vec<Analyzed>, u32) {
+fn split_outcomes(outcomes: Vec<Outcome>, scopes: &Scopes) -> (Vec<Analyzed>, u32) {
     let mut analyzed = Vec::with_capacity(outcomes.len());
     let mut skipped = 0;
     for outcome in outcomes {
@@ -236,7 +241,7 @@ fn split_outcomes(outcomes: Vec<Outcome>, scopes: &project::Scopes) -> (Vec<Anal
     (analyzed, skipped)
 }
 
-pub(crate) fn count_in_scope(analyzed: &[Analyzed], scopes: &project::Scopes) -> u32 {
+pub(crate) fn count_in_scope(analyzed: &[Analyzed], scopes: &Scopes) -> u32 {
     crate::count(
         analyzed
             .iter()
@@ -288,7 +293,7 @@ pub(crate) fn merge(
         all.extend(findings?);
     }
     all.extend(orphans);
-    all.retain(|finding| pipe.filter.matches(&finding.rule));
+    all.retain(|finding| pipe.rules.selects(&finding.rule));
     pool.install(|| all.par_sort_by(report_order));
     Ok(all)
 }
@@ -315,7 +320,7 @@ fn resolve_group_context(pipe: &Pipeline<'_>, analyzed: &[Analyzed], group: &mut
     fill_site_context(
         pipe.root,
         pipe.config.project.max_file_bytes,
-        pipe.interfaces.contains(&*group[0].path),
+        pipe.shadowed.contains(&*group[0].path),
         file.output.hash,
         group,
     );
@@ -429,8 +434,22 @@ fn unused_findings(
 }
 
 fn is_generated(bytes: &[u8]) -> bool {
-    let head = String::from_utf8_lossy(&bytes[..bytes.len().min(GENERATED_WINDOW)]);
-    head.contains("@generated") || (head.contains("Code generated") && head.contains("DO NOT EDIT"))
+    let head = &bytes[..bytes.len().min(GENERATED_WINDOW)];
+    contains_insensitive(head, b"@generated")
+        || contains_insensitive(head, b"automatically generated")
+        || contains_insensitive(head, b"do not edit")
+}
+
+fn contains_insensitive(haystack: &[u8], needle: &[u8]) -> bool {
+    if needle.is_empty() || needle.len() > haystack.len() {
+        return needle.is_empty();
+    }
+    haystack.windows(needle.len()).any(|window| {
+        window
+            .iter()
+            .zip(needle.iter())
+            .all(|(h, n)| h.to_ascii_lowercase() == *n)
+    })
 }
 
 fn describe(patterns: &[&RulePattern]) -> String {
@@ -446,7 +465,7 @@ fn describe(patterns: &[&RulePattern]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::fill_site_context;
+    use super::{contains_insensitive, fill_site_context, is_generated};
     use sloplint_core::Severity;
     use sloplint_core::finding::Finding;
 
@@ -535,5 +554,27 @@ mod tests {
             &mut group,
         );
         assert_eq!(group[0].context.as_ref(), "");
+    }
+    #[test]
+    fn generated_markers_match_case_insensitively() {
+        assert!(is_generated(b"// @generated\nfn f() {}\n"));
+        assert!(is_generated(b"// @GENERATED\nfn f() {}\n"));
+        assert!(is_generated(b"// AUTOMATICALLY GENERATED\nfn f() {}\n"));
+        assert!(is_generated(b"// automatically generated\nfn f() {}\n"));
+        assert!(is_generated(b"// DO NOT EDIT\nfn f() {}\n"));
+        assert!(is_generated(b"// do not edit\nfn f() {}\n"));
+        assert!(is_generated(
+            b"// Code generated by tool. DO NOT EDIT.\nfn f() {}\n"
+        ));
+        assert!(!is_generated(b"// Code generated by hand.\nfn f() {}\n"));
+        assert!(!is_generated(b"fn f() {}\n"));
+    }
+
+    #[test]
+    fn generated_window_stays_at_2048_bytes() {
+        let mut far = vec![b'x'; 2048];
+        far.extend_from_slice(b"// do not edit\n");
+        assert!(!is_generated(&far));
+        assert!(!contains_insensitive(b"", b"do not edit"));
     }
 }

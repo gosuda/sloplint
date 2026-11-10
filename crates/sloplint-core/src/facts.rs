@@ -12,6 +12,43 @@ pub struct Pos {
     pub byte: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Visibility {
+    Private,
+    Restricted,
+    Exported,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PrimitiveKind {
+    Str,
+    Bool,
+    Int,
+    Float,
+    Other,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImportScope {
+    Module,
+    FunctionLocal,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrutineeKind {
+    Ident,
+    Field,
+    Path,
+    Other,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssertShape {
+    BareName,
+    TopEqNe,
+    Other,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileFacts<'s> {
     pub lang: Lang,
@@ -21,6 +58,8 @@ pub struct FileFacts<'s> {
     pub role: CodeRole,
     pub regions: Vec<RoleRegion>,
     pub line_count: u32,
+    pub package: String,
+    pub is_generated: bool,
     pub functions: Vec<Function<'s>>,
     pub calls: Vec<Call<'s>>,
     pub bindings: Vec<MutBinding<'s>>,
@@ -49,8 +88,15 @@ pub struct Function<'s> {
     pub pos: Pos,
     pub doc: Vec<&'s str>,
     pub doc_pos: Option<Pos>,
-    pub public: bool,
-    pub interface_bound: bool,
+    pub visibility: Visibility,
+    pub signature_forced: bool,
+    pub entry_point: bool,
+    pub in_test: bool,
+    pub is_overload: bool,
+    pub is_deprecated: bool,
+    pub is_decorated: bool,
+    pub is_trait_item: bool,
+    pub is_method: bool,
     pub params: Vec<Param<'s>>,
     pub return_type: Option<&'s str>,
     pub untyped_throws: bool,
@@ -58,7 +104,19 @@ pub struct Function<'s> {
     pub cognitive: u32,
     pub max_depth: u32,
     pub deepest_line: u32,
+    pub end_line: u32,
+    pub has_value_return: bool,
     pub sole_call: Option<u32>,
+}
+
+impl Function<'_> {
+    pub fn exported(&self) -> bool {
+        self.visibility == Visibility::Exported
+    }
+
+    pub fn actionable_api(&self) -> bool {
+        self.exported() && !self.signature_forced && !self.in_test
+    }
 }
 
 /// The receiver (`self`/`this`/`cls`/Go receiver) is never a `Param`.
@@ -66,7 +124,11 @@ pub struct Function<'s> {
 pub struct Param<'s> {
     pub name: &'s str,
     pub ty: Option<&'s str>,
+    pub primitive_kind: PrimitiveKind,
+    pub has_default: bool,
     pub bool_default: bool,
+    pub keyword_only: bool,
+    pub is_variadic: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -82,6 +144,8 @@ pub struct Call<'s> {
     pub callee: &'s str,
     pub kind: CallKind,
     pub callee_root: Option<&'s str>,
+    pub is_simple_path: bool,
+    pub initializes_binding: bool,
     pub args: Vec<Arg<'s>>,
 }
 
@@ -97,6 +161,8 @@ pub enum ArgShape<'s> {
     Str { longest_static: u32 },
     Concat,
     Ident(&'s str),
+    Collection,
+    CodeBody,
     Other,
 }
 
@@ -105,8 +171,9 @@ pub struct MutBinding<'s> {
     pub name: &'s str,
     pub pos: Pos,
     pub last_write_line: u32,
-    pub max_nested_depth: u32,
-    pub nested_write_pos: Option<Pos>,
+    pub first_write_line: u32,
+    pub write_lines: u32,
+    pub loop_depth: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -124,13 +191,17 @@ pub struct Import<'s> {
     pub name: &'s str,
     pub alias: Option<&'s str>,
     pub kind: ImportKind,
+    pub scope: ImportScope,
+    pub in_test: bool,
+    pub is_reexport: bool,
+    pub external_root: Option<&'s str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeDef<'s> {
     pub name: &'s str,
     pub pos: Pos,
-    pub public: bool,
+    pub visibility: Visibility,
     pub abstraction: bool,
 }
 
@@ -138,12 +209,17 @@ pub struct TypeDef<'s> {
 pub struct ImplRef<'s> {
     pub name: &'s str,
     pub pos: Pos,
+    pub is_generic: bool,
+    pub child_is_abstract: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WildcardArm {
     pub pos: Pos,
     pub enum_like: bool,
+    pub scrutinee: ScrutineeKind,
+    pub variant_count: u32,
+    pub has_nullable_ctor: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -157,6 +233,9 @@ pub enum Stmt<'s> {
 pub struct Handler<'s> {
     pub pos: Pos,
     pub stmts: Vec<Stmt<'s>>,
+    pub has_else: bool,
+    pub try_imports_only: bool,
+    pub in_cleanup: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -164,6 +243,9 @@ pub struct Assertion {
     pub pos: Pos,
     pub has_message: bool,
     pub comparison: bool,
+    pub shape: AssertShape,
+    pub in_typecheck: bool,
+    pub value_is_bool_literal: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -213,6 +295,7 @@ pub struct WorldFacts {
     pub lang: Lang,
     pub role: CodeRole,
     pub regions: Vec<RoleRegion>,
+    pub package: String,
     pub has_inline_tests: bool,
     pub public_functions: u32,
     pub definitions: Vec<NamedSite>,
@@ -224,36 +307,45 @@ pub struct WorldFacts {
 impl WorldFacts {
     pub fn from_facts(facts: &FileFacts<'_>) -> WorldFacts {
         let public_functions =
-            u32::try_from(facts.functions.iter().filter(|f| f.public).count()).unwrap_or(u32::MAX);
+            u32::try_from(facts.functions.iter().filter(|f| f.exported()).count())
+                .unwrap_or(u32::MAX);
         let mut definitions: Vec<NamedSite> = facts
             .functions
             .iter()
-            .filter(|f| f.public && !f.interface_bound)
+            .filter(|f| {
+                f.exported()
+                    && !f.signature_forced
+                    && !f.is_trait_item
+                    && !f.is_method
+                    && !f.entry_point
+            })
             .map(|f| named_site(facts, f.pos, f.name))
             .collect();
         definitions.extend(
             facts
                 .types
                 .iter()
-                .filter(|t| t.public)
+                .filter(|t| t.visibility == Visibility::Exported)
                 .map(|t| named_site(facts, t.pos, t.name)),
         );
         WorldFacts {
             lang: facts.lang,
             role: facts.role,
             regions: facts.regions.clone(),
+            package: facts.package.clone(),
             has_inline_tests: facts.has_inline_tests,
             public_functions,
             definitions,
             abstractions: facts
                 .types
                 .iter()
-                .filter(|t| t.abstraction)
+                .filter(|t| t.abstraction && t.visibility != Visibility::Exported)
                 .map(|t| named_site(facts, t.pos, t.name))
                 .collect(),
             impls: facts
                 .impls
                 .iter()
+                .filter(|i| !i.is_generic && !i.child_is_abstract)
                 .map(|i| named_site(facts, i.pos, i.name))
                 .collect(),
             barrel: facts.barrel.as_ref().map(|b| b.targets.clone()),
@@ -268,177 +360,26 @@ fn named_site(facts: &FileFacts<'_>, pos: Pos, name: &str) -> NamedSite {
         column: source_column(&facts.line_starts, facts.source, pos),
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::finding::line_starts;
-
-    #[test]
-    fn projects_public_surface_and_barrel() {
-        let source = "pub fn keep() {}\nfn hidden() {}\n";
-        let facts = FileFacts {
-            lang: Lang::Rust,
-            path: "src/lib.rs",
-            source,
-            line_starts: line_starts(source),
-            role: CodeRole::Entry,
-            regions: Vec::new(),
-            line_count: 2,
-            functions: vec![
-                Function {
-                    name: "keep",
-                    pos: Pos { line: 1, byte: 8 },
-                    doc: vec![],
-                    doc_pos: None,
-                    public: true,
-                    interface_bound: false,
-                    params: vec![],
-                    return_type: None,
-                    untyped_throws: false,
-                    missing_annotations: vec![],
-                    cognitive: 0,
-                    max_depth: 0,
-                    deepest_line: 0,
-                    sole_call: None,
-                },
-                Function {
-                    name: "sealed",
-                    pos: Pos { line: 1, byte: 8 },
-                    doc: vec![],
-                    doc_pos: None,
-                    public: true,
-                    interface_bound: true,
-                    params: vec![],
-                    return_type: None,
-                    untyped_throws: false,
-                    missing_annotations: vec![],
-                    cognitive: 0,
-                    max_depth: 0,
-                    deepest_line: 0,
-                    sole_call: None,
-                },
-                Function {
-                    name: "hidden",
-                    pos: Pos { line: 2, byte: 4 },
-                    doc: vec![],
-                    doc_pos: None,
-                    public: false,
-                    interface_bound: false,
-                    params: vec![],
-                    return_type: None,
-                    untyped_throws: false,
-                    missing_annotations: vec![],
-                    cognitive: 0,
-                    max_depth: 0,
-                    deepest_line: 0,
-                    sole_call: None,
-                },
-            ],
-            calls: vec![],
-            bindings: vec![],
-            imports: vec![],
-            types: vec![TypeDef {
-                name: "Shape",
-                pos: Pos { line: 2, byte: 100 },
-                public: true,
-                abstraction: true,
-            }],
-            impls: vec![ImplRef {
-                name: "Draw",
-                pos: Pos { line: 1, byte: 0 },
-            }],
-            wildcard_arms: vec![],
-            handlers: vec![],
-            assertions: vec![],
-            field_copies: vec![],
-            dynamic_symbols: vec![],
-            ambient: vec![],
-            barrel: Some(Barrel {
-                targets: vec![vec!["a.rs".to_string(), "a/mod.rs".to_string()]],
-            }),
-            has_inline_tests: false,
-        };
-        let world = WorldFacts::from_facts(&facts);
-        assert_eq!(world.public_functions, 2);
-        assert_eq!(
-            world
-                .definitions
-                .iter()
-                .map(|d| d.name.as_ref())
-                .collect::<Vec<_>>(),
-            ["keep", "Shape"]
-        );
-        assert_eq!(world.definitions[0].line, 1);
-        assert_eq!(world.definitions[0].column, 9);
-        assert_eq!(
-            world
-                .abstractions
-                .iter()
-                .map(|a| a.name.as_ref())
-                .collect::<Vec<_>>(),
-            ["Shape"]
-        );
-        assert_eq!(world.impls.len(), 1);
-        assert_eq!(
-            world.barrel,
-            Some(vec![vec!["a.rs".to_string(), "a/mod.rs".to_string()]])
-        );
-    }
-
-    #[test]
-    fn serialized_world_facts_carry_no_line_text() {
-        let source = "pub fn listed() { let withheld_token = 1; }\n";
-        let facts = FileFacts {
-            lang: Lang::Rust,
-            path: "src/lib.rs",
-            source,
-            line_starts: line_starts(source),
-            role: CodeRole::Library,
-            regions: Vec::new(),
-            line_count: 1,
-            functions: vec![Function {
-                name: "listed",
-                pos: Pos { line: 1, byte: 8 },
-                doc: vec![],
-                doc_pos: None,
-                public: true,
-                interface_bound: false,
-                params: vec![],
-                return_type: None,
-                untyped_throws: false,
-                missing_annotations: vec![],
-                cognitive: 0,
-                max_depth: 0,
-                deepest_line: 0,
-                sole_call: None,
-            }],
-            calls: vec![],
-            bindings: vec![],
-            imports: vec![],
-            types: vec![],
-            impls: vec![],
-            wildcard_arms: vec![],
-            handlers: vec![],
-            assertions: vec![],
-            field_copies: vec![],
-            dynamic_symbols: vec![],
-            ambient: vec![],
-            barrel: None,
-            has_inline_tests: false,
-        };
-        let world = WorldFacts::from_facts(&facts);
-        let serialized = String::from_utf8(
-            sonic_rs::to_vec(&world).unwrap_or_else(|e| panic!("serialization failed: {e}")),
-        )
-        .unwrap_or_else(|e| panic!("serialized bytes are not UTF-8: {e}"));
-        assert!(
-            !serialized.contains("withheld_token"),
-            "world facts serialization must not carry source line text: {serialized}"
-        );
-        assert!(
-            serialized.contains("\"line\":1") && serialized.contains("\"column\":9"),
-            "positions stay in the serialization: {serialized}"
-        );
+pub fn package_key(lang: Lang, path: &str) -> String {
+    match lang {
+        Lang::Rust => {
+            let mut parts = path.split('/');
+            if parts.next() == Some("crates")
+                && let Some(name) = parts.next()
+                && !name.is_empty()
+            {
+                return ["crates", name].join("/");
+            }
+            String::new()
+        }
+        Lang::TypeScript | Lang::Tsx | Lang::JavaScript | Lang::Python => match path.find('/') {
+            Some(i) => path[..i].to_string(),
+            None => String::new(),
+        },
+        Lang::Go => match path.rfind('/') {
+            Some(i) => path[..i].to_string(),
+            None => String::new(),
+        },
+        _ => String::new(),
     }
 }

@@ -1,1 +1,1 @@
-src/reflect.kt:2 minor grep/no-dynamic-symbol
+src/reflect.kt:2 info grep/no-dynamic-symbol

@@ -1,11 +1,14 @@
-//! A `pub use self::m::...` re-export names the same child module as `pub use m::...`, so
-//! the barrel-file rule can chase `self::` re-exports to the file that defines them.
+//! Body-less `mod` items are not barrels, observed through `analyze` only.
+//!
+//! A file that only declares child modules and re-exports them is the idiomatic Rust
+//! module tree, not a barrel indirection, so it yields no barrel. A file of only
+//! `pub use` items still reads as a barrel, with no resolvable file candidates.
 
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
-fn targets(source: &str) -> Vec<Vec<String>> {
+fn barrel(source: &str) -> Option<Vec<Vec<String>>> {
     let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
     let input = FileInput {
         lang: Lang::Rust,
@@ -19,43 +22,44 @@ fn targets(source: &str) -> Vec<Vec<String>> {
         "barrel source parses, first syntax error at {:?}",
         analysis.parse_error
     );
-    analysis
-        .facts
-        .barrel
-        .expect("a file of only `mod` and `pub use` items is a barrel")
-        .targets
-}
-
-fn candidates(module: &str) -> Vec<String> {
-    vec![format!("src/{module}.rs"), format!("src/{module}/mod.rs")]
+    analysis.facts.barrel.map(|barrel| barrel.targets)
 }
 
 #[test]
-fn self_prefixed_paths_resolve_to_the_child_module() {
-    let source = "mod a;\nmod b;\nmod c;\npub use self::a::Thing;\npub use self::b::{One, Two};\npub use self::{c::Three};\n";
+fn body_less_mod_files_are_not_barrels() {
     assert_eq!(
-        targets(source),
-        vec![candidates("a"), candidates("b"), candidates("c")],
-        "`self::a::Thing`, `self::b::{{..}}`, and `self::{{c::..}}` all start at their module"
+        barrel(
+            "mod a;\nmod b;\nmod c;\npub use self::a::Thing;\npub use self::b::{One, Two};\npub use self::{c::Three};\n"
+        ),
+        None,
+        "a mod-tree re-export file is idiomatic, not a barrel"
+    );
+    assert_eq!(
+        barrel("mod a;\npub use a::Thing;\n"),
+        None,
+        "`self::` adds no candidates to a file the rule already skips"
     );
 }
 
 #[test]
-fn self_prefix_changes_nothing_about_the_candidates() {
-    let plain = targets("mod a;\npub use a::Thing;\n");
-    let prefixed = targets("mod a;\npub use self::a::Thing;\n");
+fn private_uses_and_mixed_files_are_not_barrels() {
     assert_eq!(
-        plain, prefixed,
-        "`self::` is optional in the re-export path"
+        barrel("mod a;\nuse a::Thing;\n"),
+        None,
+        "a non-re-export use is not a barrel either"
+    );
+    assert_eq!(
+        barrel("pub fn f() {}\npub use a::Thing;\n"),
+        None,
+        "code beside the re-exports is not a barrel"
     );
 }
 
 #[test]
-fn paths_to_undeclared_modules_have_no_candidates() {
-    let found = targets("mod a;\npub use self::missing::Thing;\n");
+fn pure_reexport_files_keep_empty_candidates() {
     assert_eq!(
-        found,
-        vec![Vec::<String>::new()],
-        "only modules declared in this file are candidates"
+        barrel("pub use a::Thing;\npub use b::{One, Two};\n"),
+        Some(vec![Vec::new(), Vec::new()]),
+        "with no child modules in the file nothing resolves to a file"
     );
 }

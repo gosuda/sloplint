@@ -1,1 +1,1 @@
-# Near-miss: depth 3 < strict minor_at 4.
+# Near-miss: depth 3 < strict minor_at 5.

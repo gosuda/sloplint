@@ -1,5 +1,5 @@
-use std::collections::*;
+pub use other_crate::*;
 
-pub fn make() -> HashMap<String, u64> {
-    HashMap::new()
+pub fn make() -> u64 {
+    1
 }

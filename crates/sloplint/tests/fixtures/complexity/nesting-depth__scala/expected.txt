@@ -1,2 +1,1 @@
-# Positive: nesting depth 5 >= strict major_at 5.
-src/nested.scala:2 major complexity/nesting-depth
+src/nested.scala:2 info complexity/nesting-depth

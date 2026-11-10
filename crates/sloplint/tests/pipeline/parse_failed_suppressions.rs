@@ -12,7 +12,7 @@ use sloplint_core::config::{Mode, Strictness};
 const PARSE_ERROR: &str = "meta/parse-error";
 const INVALID: &str = "meta/invalid-suppression";
 const UNUSED: &str = "meta/unused-suppression";
-const ALLOW: &str = "// sloplint-allow(complexity/nesting-depth): reviewed\n";
+const ALLOW: &str = "// sloplint-allow(grep/generic-name): reviewed\n";
 
 fn project() -> (tempfile::TempDir, PathBuf) {
     let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));

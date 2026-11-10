@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
-use std::io::{self, Read as _, Write as _};
+use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::SystemTime;
@@ -11,10 +11,10 @@ use sloplint_core::{
     Config, CustomRuleSpec, Finding, LanguageConfig, Strictness, Suppression, WorldFacts,
 };
 
-use crate::fileio::{open_regular, read_regular_nofollow};
+use crate::fileio::{Capped, Links, read_capped};
 use crate::terminal::TerminalText;
 
-const VERSION: u32 = 6;
+const VERSION: u32 = 7;
 const NAMESPACE: &str = "sloplint";
 const SHARD_DIR: &str = "cache-v2";
 
@@ -223,7 +223,8 @@ impl Cache {
         let mtime = stat_before_read
             .as_ref()
             .and_then(|meta| meta.modified().ok());
-        let Ok(bytes) = read_regular_nofollow(&path, MAX_SHARD_BYTES) else {
+        let Ok(Capped::Bytes(bytes, _)) = read_capped(&path, MAX_SHARD_BYTES, Links::NoFollow)
+        else {
             let len = stat_before_read
                 .as_ref()
                 .map(|meta| meta.len())
@@ -422,16 +423,17 @@ fn parse_shard_file_name(name: &std::ffi::OsStr) -> Option<u8> {
 }
 
 fn hash_regular_into(hasher: &mut blake3::Hasher, path: &Path) -> io::Result<()> {
-    let (file, len) = open_regular(path)?;
-    let mut reader = file.take(len.saturating_add(1));
-    hasher.update_reader(&mut reader)?;
-    if reader.limit() == 0 {
-        return Err(io::Error::new(
+    match read_capped(path, u64::MAX, Links::Follow)? {
+        Capped::Bytes(bytes, _) => {
+            hasher.update(&bytes);
+            Ok(())
+        }
+        Capped::TooLarge(_) => Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "file grew while being read",
-        ));
+        )),
+        Capped::NotRegular(source) => Err(source),
     }
-    Ok(())
 }
 
 #[derive(Serialize)]

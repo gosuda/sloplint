@@ -1,6 +1,6 @@
 import 'draw.dart';
 
-class Circle implements Draw {
+class Circle implements _Draw {
   @override
   void draw() {}
 }

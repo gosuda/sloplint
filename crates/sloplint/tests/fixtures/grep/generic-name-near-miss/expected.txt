@@ -1,1 +1,1 @@
-# Near-miss: qualified name is not generic; private `run` is not public.
+# Near-miss: `run` left the denylist and `pub(crate)` is not Exported.

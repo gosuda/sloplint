@@ -1,5 +1,1 @@
-# Positive: depth 5 is major in library, minor in test/bench regions, kept major in the example region.
-service_test.go:5 minor complexity/nesting-depth
-service_test.go:21 minor complexity/nesting-depth
-service_test.go:37 major complexity/nesting-depth
-src/lib.rs:1 major complexity/nesting-depth
+src/lib.rs:1 info complexity/nesting-depth

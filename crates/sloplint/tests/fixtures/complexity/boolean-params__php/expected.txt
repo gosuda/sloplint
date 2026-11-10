@@ -1,1 +1,1 @@
-src/render.php:2 major complexity/boolean-params
+src/render.php:2 info complexity/boolean-params

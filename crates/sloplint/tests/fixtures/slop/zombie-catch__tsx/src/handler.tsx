@@ -2,6 +2,7 @@ export function load(path: string): string {
   try {
     return read(path);
   } catch (e) {
+    console.error(e);
     throw e;
   }
 }

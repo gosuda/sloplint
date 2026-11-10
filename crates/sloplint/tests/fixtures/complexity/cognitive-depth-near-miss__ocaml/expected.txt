@@ -1,1 +1,1 @@
-# Near-miss: 9 chained if/else arms score cognitive 9, below strict minor_at 10.
+# Near-miss: chained else arms add 0 and nest-0 adds 0, so the chain scores 0 < strict minor_at 10.

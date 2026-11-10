@@ -4,11 +4,12 @@
 //! name are public too. Re-exports from another module, and same-named functions or classes
 //! in nested scopes, do not make anything local public.
 
+use sloplint_core::facts::Visibility;
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
-type Row = (String, bool);
+type Row = (String, Visibility);
 
 fn visibility(lang: Lang, path: &str, source: &str) -> Vec<Row> {
     let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
@@ -28,26 +29,26 @@ fn visibility(lang: Lang, path: &str, source: &str) -> Vec<Row> {
         .facts
         .functions
         .iter()
-        .map(|f| (f.name.to_string(), f.public))
+        .map(|f| (f.name.to_string(), f.visibility))
         .collect();
     rows.sort();
     rows
 }
 
-fn row(name: &str, public: bool) -> Row {
-    (name.to_string(), public)
+fn row(name: &str, visibility: Visibility) -> Row {
+    (name.to_string(), visibility)
 }
 
 fn expected() -> Vec<Row> {
     vec![
-        row("hidden", false),
-        row("late", true),
-        row("main", true),
-        row("other", false),
-        row("renamed", true),
-        row("run", false),
-        row("run", true),
-        row("wire", true),
+        row("hidden", Visibility::Private),
+        row("late", Visibility::Exported),
+        row("main", Visibility::Exported),
+        row("other", Visibility::Private),
+        row("renamed", Visibility::Exported),
+        row("run", Visibility::Private),
+        row("run", Visibility::Exported),
+        row("wire", Visibility::Exported),
     ]
 }
 
@@ -85,7 +86,8 @@ export default main;
 fn typescript_exports_made_by_name_are_public() {
     assert_eq!(
         visibility(Lang::TypeScript, "lib.ts", TYPESCRIPT),
-        expected()
+        expected(),
+        "named exports and default export surface as Exported"
     );
 }
 
@@ -93,7 +95,8 @@ fn typescript_exports_made_by_name_are_public() {
 fn javascript_exports_made_by_name_are_public() {
     assert_eq!(
         visibility(Lang::JavaScript, "lib.js", JAVASCRIPT),
-        expected()
+        expected(),
+        "named exports and default export surface as Exported"
     );
 }
 
@@ -130,17 +133,17 @@ export { Remote } from \"./remote\";
 
 fn class_members() -> Vec<Row> {
     vec![
-        row("call", false),
-        row("inner", false),
-        row("make", false),
-        row("run", true),
+        row("call", Visibility::Private),
+        row("inner", Visibility::Private),
+        row("make", Visibility::Private),
+        row("run", Visibility::Exported),
     ]
 }
 
 #[test]
 fn typescript_members_of_a_locally_exported_class_are_public() {
     let mut expected = class_members();
-    expected.insert(1, row("hidden", false));
+    expected.insert(1, row("hidden", Visibility::Private));
     assert_eq!(
         visibility(Lang::TypeScript, "service.ts", TYPESCRIPT_CLASSES),
         expected,
@@ -152,7 +155,8 @@ fn typescript_members_of_a_locally_exported_class_are_public() {
 fn javascript_members_of_a_locally_exported_class_are_public() {
     assert_eq!(
         visibility(Lang::JavaScript, "service.js", JAVASCRIPT_CLASSES),
-        class_members()
+        class_members(),
+        "only members of the exported class surface as Exported"
     );
 }
 
@@ -161,6 +165,10 @@ fn typescript_export_equals_makes_the_function_public() {
     let source = "function legacy(): void {}\nfunction local(): void {}\nexport = legacy;\n";
     assert_eq!(
         visibility(Lang::TypeScript, "legacy.ts", source),
-        vec![row("legacy", true), row("local", false)]
+        vec![
+            row("legacy", Visibility::Exported),
+            row("local", Visibility::Private)
+        ],
+        "`export =` surfaces the named function as Exported"
     );
 }

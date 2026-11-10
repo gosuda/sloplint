@@ -1,2 +1,2 @@
-src/log.R:2 major grep/contiguous-log-literal
-src/log.R:3 major grep/contiguous-log-literal
+src/log.R:2 info grep/contiguous-log-literal
+src/log.R:3 info grep/contiguous-log-literal

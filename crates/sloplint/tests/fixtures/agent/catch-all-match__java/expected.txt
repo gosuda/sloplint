@@ -1,1 +1,1 @@
-src/Classifier.java:10 minor agent/catch-all-match
+src/Classifier.java:10 info agent/catch-all-match

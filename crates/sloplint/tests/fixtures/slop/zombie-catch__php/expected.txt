@@ -1,1 +1,1 @@
-src/load.php:5 major slop/zombie-catch
+src/load.php:5 info slop/zombie-catch

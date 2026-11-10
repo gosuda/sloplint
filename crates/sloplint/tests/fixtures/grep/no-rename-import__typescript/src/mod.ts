@@ -1,5 +1,5 @@
-import { HashMap as Map } from "./map";
-import { Result as FmtResult } from "./result";
-export function lookup(map: Map): FmtResult | undefined {
+import { HashMap as Table } from "./map";
+import { Result as Outcome } from "./result";
+export function lookup(map: Table): Outcome | undefined {
   return undefined;
 }

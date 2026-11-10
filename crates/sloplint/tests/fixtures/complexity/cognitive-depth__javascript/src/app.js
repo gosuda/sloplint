@@ -1,5 +1,7 @@
 export function tangled(a) {
   let x = a;
+  if (a >= 0) {
+  for (let i = 0; i < a; i++) {
   if (a > 0) { x += 1; }
   if (a > 1) { x += 2; }
   if (a > 2) { x += 3; }
@@ -15,5 +17,7 @@ export function tangled(a) {
   if (a > 12) { x += 13; }
   if (a > 13) { x += 14; }
   if (a > 14) { x += 15; }
+  }
+  }
   return x;
 }

@@ -1,1 +1,1 @@
-a.rb:2 minor grep/no-dynamic-symbol
+a.rb:2 info grep/no-dynamic-symbol

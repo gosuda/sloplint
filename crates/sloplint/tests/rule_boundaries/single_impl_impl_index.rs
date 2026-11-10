@@ -10,7 +10,7 @@ const RULE: &str = "slop/single-impl-abstraction";
 fn interface(name: &str) -> (String, String) {
     (
         format!("src/{name}.java"),
-        format!("public interface {name} {{\n    void run();\n}}\n"),
+        format!("interface {name} {{\n    void run();\n}}\n"),
     )
 }
 

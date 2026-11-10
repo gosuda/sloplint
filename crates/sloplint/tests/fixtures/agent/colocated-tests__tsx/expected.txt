@@ -1,1 +1,1 @@
-src/service.tsx:1 minor agent/colocated-tests
+src/service.tsx:1 info agent/colocated-tests

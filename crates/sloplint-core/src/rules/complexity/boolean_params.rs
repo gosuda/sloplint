@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
-use crate::facts::FileFacts;
+use crate::facts::{FileFacts, Function, Param, PrimitiveKind};
 use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
@@ -12,7 +12,7 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Complexity,
     summary: "public functions taking boolean parameters",
     why: "Boolean arguments are unreadable at the call site and double the paths per flag.",
-    confidence: Confidence::High,
+    confidence: Confidence::Low,
     roles: RolePolicy {
         entry: Shift::Lower1,
         test: Shift::Off,
@@ -41,8 +41,8 @@ fn preset(strictness: Strictness) -> Preset {
     let (level, minor_at, major_at, critical_at, blocker_at) = match strictness {
         Strictness::Minimal => (Level::Off, 2, 3, 5, 6),
         Strictness::Basic => (Level::Off, 2, 3, 5, 6),
-        Strictness::Standard => (Level::At(Severity::Minor), 2, 3, 5, 6),
-        Strictness::Strict => (Level::At(Severity::Major), 1, 2, 3, 4),
+        Strictness::Standard => (Level::Off, 2, 3, 5, 6),
+        Strictness::Strict => (Level::At(Severity::Info), 2, 3, 5, 6),
     };
     Preset {
         level,
@@ -61,18 +61,30 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
     Ok(Box::new(BooleanParams { thresholds }))
 }
 
+fn counted(param: &Param<'_>) -> bool {
+    if param.is_variadic || param.keyword_only {
+        return false;
+    }
+    let untyped_flag = param.ty.is_none() && param.bool_default;
+    param.primitive_kind == PrimitiveKind::Bool || untyped_flag
+}
+
+fn flagged_params<'s>(function: &Function<'s>) -> Vec<&'s str> {
+    function
+        .params
+        .iter()
+        .filter(|param| counted(param))
+        .map(|param| param.name)
+        .collect()
+}
+
 impl FileRule for BooleanParams {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
         for function in &facts.functions {
-            if !function.public || function.interface_bound {
+            if !function.actionable_api() || function.is_overload {
                 continue;
             }
-            let flagged: Vec<&str> = function
-                .params
-                .iter()
-                .filter(|param| param.bool_default || param.ty.is_some_and(is_boolean_type))
-                .map(|param| param.name)
-                .collect();
+            let flagged = flagged_params(function);
             if flagged.is_empty() {
                 continue;
             }
@@ -104,11 +116,116 @@ impl FileRule for BooleanParams {
     }
 }
 
-fn is_boolean_type(ty: &str) -> bool {
-    let normalized: String = ty
-        .chars()
-        .filter(|c| *c != '&' && !c.is_whitespace())
-        .collect::<String>()
-        .to_lowercase();
-    matches!(normalized.as_str(), "bool" | "boolean" | "_bool" | "[bool]")
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::facts::{Function, Param, Pos, PrimitiveKind, Visibility};
+    use crate::finding::line_starts;
+    use crate::lang::Lang;
+    use crate::role::CodeRole;
+
+    fn severities(rule: &dyn FileRule, functions: Vec<Function<'_>>) -> Vec<Severity> {
+        let source = "fn f() {}\n";
+        let facts = FileFacts {
+            lang: Lang::Rust,
+            path: "src/lib.rs",
+            source,
+            line_starts: line_starts(source),
+            role: CodeRole::Library,
+            regions: Vec::new(),
+            line_count: 1,
+            package: String::new(),
+            is_generated: false,
+            functions,
+            calls: Vec::new(),
+            bindings: Vec::new(),
+            imports: Vec::new(),
+            types: Vec::new(),
+            impls: Vec::new(),
+            wildcard_arms: Vec::new(),
+            handlers: Vec::new(),
+            assertions: Vec::new(),
+            field_copies: Vec::new(),
+            dynamic_symbols: Vec::new(),
+            ambient: Vec::new(),
+            barrel: None,
+            has_inline_tests: false,
+        };
+        let mut out = Vec::new();
+        rule.check(&facts, &mut out);
+        out.into_iter().map(|finding| finding.severity).collect()
+    }
+
+    fn flag(name: &str) -> Param<'_> {
+        Param {
+            name,
+            ty: None,
+            primitive_kind: PrimitiveKind::Bool,
+            has_default: false,
+            bool_default: false,
+            keyword_only: false,
+            is_variadic: false,
+        }
+    }
+
+    fn with_flags(name: &str) -> Function<'_> {
+        Function {
+            name,
+            pos: Pos { line: 1, byte: 0 },
+            doc: Vec::new(),
+            doc_pos: None,
+            visibility: Visibility::Exported,
+            signature_forced: false,
+            entry_point: false,
+            in_test: false,
+            is_overload: false,
+            is_deprecated: false,
+            is_decorated: false,
+            is_trait_item: false,
+            is_method: false,
+            params: vec![flag("verbose"), flag("force")],
+            return_type: None,
+            untyped_throws: false,
+            missing_annotations: Vec::new(),
+            cognitive: 0,
+            max_depth: 0,
+            deepest_line: 1,
+            end_line: 3,
+            has_value_return: false,
+            sole_call: None,
+        }
+    }
+
+    #[test]
+    fn off_through_standard_then_info_at_strict() {
+        assert_eq!(
+            preset(Strictness::Minimal).level,
+            Level::Off,
+            "minimal stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Basic).level,
+            Level::Off,
+            "basic stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Standard).level,
+            Level::Off,
+            "standard stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Strict).level,
+            Level::At(Severity::Info),
+            "strict caps at info"
+        );
+        assert_eq!(INFO.confidence, Confidence::Low, "confidence stays low");
+        let strict_preset = preset(Strictness::Strict);
+        let rule =
+            build(strict_preset.options, &Settings::default()).expect("strict preset builds");
+        assert_eq!(
+            severities(rule.as_ref(), vec![with_flags("serve")]),
+            vec![Severity::Minor],
+            "strict still fires; the ruleset ceiling caps the graded rung to info"
+        );
+    }
 }

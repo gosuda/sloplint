@@ -1,1 +1,1 @@
-src/lib.ml:1 major agent/stringly-api
+src/lib.ml:1 info agent/stringly-api

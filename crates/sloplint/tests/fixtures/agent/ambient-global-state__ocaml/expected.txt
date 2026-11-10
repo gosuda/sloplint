@@ -1,1 +1,2 @@
-src/lib.ml:1 major agent/ambient-global-state
+src/lib.ml:1 info agent/ambient-global-state
+src/lib.ml:7 info agent/ambient-global-state

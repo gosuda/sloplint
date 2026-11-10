@@ -1,3 +1,3 @@
-interface Renderer {
+internal interface Renderer {
     fun render(): String
 }

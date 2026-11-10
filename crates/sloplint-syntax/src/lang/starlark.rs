@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
 use sloplint_core::facts::{
-    Arg, ArgShape, Assertion, CallKind, FieldCopy, Import, ImportKind, Param, Pos,
+    Arg, ArgShape, AssertShape, Assertion, CallKind, FieldCopy, Import, ImportKind, ImportScope,
+    Param, Pos, PrimitiveKind, Visibility,
 };
 use tree_sitter::Node;
 
@@ -50,8 +51,14 @@ impl LangHooks for StarlarkHooks {
         Some(FunctionHead {
             name,
             name_pos: pos_of(name_node),
-            public: !name.starts_with('_'),
-            interface_bound: false,
+            visibility: starlark_visibility(name),
+            signature_forced: false,
+            entry_point: false,
+            in_test: false,
+            is_overload: false,
+            is_deprecated: false,
+            is_decorated: false,
+            is_trait_item: false,
             region: None,
             params: params(cx, n),
             return_type: child_by_field(n, "return_type").map(|ty| trimmed(cx, ty)),
@@ -96,6 +103,8 @@ impl LangHooks for StarlarkHooks {
             callee: trimmed(cx, callee),
             kind: CallKind::Plain,
             callee_root: ident_root(cx, callee, &["object"]).map(|(name, _)| name),
+            is_simple_path: starlark_is_simple_path(callee),
+            initializes_binding: starlark_initializes_binding(cx, n),
             args: call_args(cx, n),
         })
     }
@@ -124,6 +133,10 @@ impl LangHooks for StarlarkHooks {
                 name: module,
                 alias: None,
                 kind: ImportKind::SideEffect,
+                scope: ImportScope::Module,
+                in_test: false,
+                is_reexport: false,
+                external_root: None,
             });
         } else {
             out.extend(symbols);
@@ -168,13 +181,24 @@ impl LangHooks for StarlarkHooks {
         if n.kind() != "assert_statement" {
             return None;
         }
+        let first = find_named_child(n, |c| !matches!(c.kind(), "assert_keyword" | "comment"));
+        let comparison = first.is_some_and(|found| found.kind() == "comparison_operator");
+        let shape = if comparison {
+            AssertShape::TopEqNe
+        } else if first.is_some_and(|found| found.kind() == "identifier") {
+            AssertShape::BareName
+        } else {
+            AssertShape::Other
+        };
         Some(Assertion {
             pos: pos_of(n),
             has_message: count_named_child(n, |c| {
                 !matches!(c.kind(), "assert_keyword" | "comment")
             }) >= 2,
-            comparison: find_named_child(n, |c| !matches!(c.kind(), "assert_keyword" | "comment"))
-                .is_some_and(|first| first.kind() == "comparison_operator"),
+            comparison,
+            shape,
+            in_typecheck: false,
+            value_is_bool_literal: false,
         })
     }
 }
@@ -227,38 +251,49 @@ fn params<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Vec<Param<'s>> {
 }
 
 fn param_of<'s>(cx: &Cx<'_, 's>, parameter: Node<'_>) -> Option<Param<'s>> {
-    let (name, ty, value) = match parameter.kind() {
+    let (name, ty, value, is_variadic) = match parameter.kind() {
         "identifier" => {
             return Some(Param {
                 name: trimmed(cx, parameter),
                 ty: None,
+                primitive_kind: PrimitiveKind::Other,
+                has_default: false,
                 bool_default: false,
+                keyword_only: false,
+                is_variadic: false,
             });
         }
         "default_parameter" => (
             field_text(cx, parameter, "name"),
             None,
             child_by_field(parameter, "value"),
+            false,
         ),
         "typed_parameter" => (
             first_identifier(cx, parameter)?,
             type_text(cx, parameter),
             None,
+            false,
         ),
         "typed_default_parameter" => (
             field_text(cx, parameter, "name"),
             type_text(cx, parameter),
             child_by_field(parameter, "value"),
+            false,
         ),
         "list_splat_pattern" | "dictionary_splat_pattern" => {
-            (first_identifier(cx, parameter)?, None, None)
+            (first_identifier(cx, parameter)?, None, None, true)
         }
         _ => return None,
     };
     Some(Param {
         name,
         ty,
+        primitive_kind: PrimitiveKind::Other,
+        has_default: value.is_some(),
         bool_default: value.is_some_and(|v| matches!(v.kind(), "true" | "false")),
+        keyword_only: false,
+        is_variadic,
     })
 }
 
@@ -340,6 +375,7 @@ fn shape_of<'s>(cx: &Cx<'_, 's>, value: Node<'_>) -> ArgShape<'s> {
             ArgShape::Concat
         }
         "identifier" => ArgShape::Ident(trimmed(cx, value)),
+        "list" | "tuple" | "dictionary" | "set" => ArgShape::Collection,
         _ => ArgShape::Other,
     }
 }
@@ -350,11 +386,13 @@ fn string_content<'s>(cx: &Cx<'_, 's>, string: Node<'_>) -> Option<&'s str> {
 
 fn is_top_level_load(cx: &Cx<'_, '_>, call: Node<'_>) -> bool {
     child_by_field(call, "function").is_some_and(|function| trimmed(cx, function) == "load")
-        && call
+        && cx
             .parent()
             .filter(|p| p.kind() == "expression_statement")
-            .and_then(|statement| statement.parent())
-            .is_some_and(|module| module.kind() == "module")
+            .is_some_and(|statement| {
+                cx.parent_of(statement)
+                    .is_some_and(|module| module.kind() == "module")
+            })
 }
 
 fn symbol_import<'s>(
@@ -379,6 +417,10 @@ fn symbol_import<'s>(
         name,
         alias,
         kind: ImportKind::Named,
+        scope: ImportScope::Module,
+        in_test: false,
+        is_reexport: false,
+        external_root: None,
     })
 }
 
@@ -391,4 +433,34 @@ fn keyword_source<'s>(cx: &Cx<'_, 's>, argument: Node<'_>) -> Option<&'s str> {
     let object = child_by_field(value, "object").filter(|o| o.kind() == "identifier")?;
     let member = trimmed(cx, child_by_field(value, "attribute")?);
     (member == label).then(|| text(cx, object))
+}
+fn starlark_visibility(name: &str) -> Visibility {
+    if name.starts_with('_') {
+        Visibility::Private
+    } else {
+        Visibility::Exported
+    }
+}
+
+fn starlark_is_simple_path(callee: Node<'_>) -> bool {
+    if callee.kind() == "identifier" {
+        return true;
+    }
+    if callee.kind() == "attribute" {
+        return child_by_field(callee, "object").is_some_and(|o| o.kind() == "identifier");
+    }
+    false
+}
+
+fn starlark_initializes_binding(cx: &Cx<'_, '_>, call: Node<'_>) -> bool {
+    let Some(parent) = cx.parent() else {
+        return false;
+    };
+    if parent.kind() != "assignment" {
+        return false;
+    }
+    if child_by_field(parent, "right").is_none_or(|right| right.id() != call.id()) {
+        return false;
+    }
+    child_by_field(parent, "left").is_some_and(|left| left.kind() == "identifier")
 }

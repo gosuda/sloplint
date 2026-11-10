@@ -211,9 +211,52 @@ fn proptest_macro_with_test_fn_marks_a_test_region() {
     );
     let analysis = analyze_with(CodeRole::Test, "proptest! {}\n");
     assert!(
-        analysis.facts.regions.is_empty(),
-        "an empty proptest block marks nothing, got {:?}",
+        analysis.facts.regions.iter().any(|region| {
+            region.role == CodeRole::Test && region.start_line == 1 && region.end_line == 1
+        }),
+        "an empty proptest block still marks its span, got {:?}",
         analysis.facts.regions
     );
     assert_eq!(analysis.facts.role, CodeRole::Test);
+}
+
+#[test]
+fn bare_proptest_and_quickcheck_blocks_open_test_regions() {
+    for source in [
+        "proptest! {}\n",
+        "quickcheck! {\n    fn prop(xs: Vec<u8>) -> bool {\n        xs.is_empty()\n    }\n}\n",
+    ] {
+        let analysis = analyze_with(CodeRole::Library, source);
+        assert!(
+            analysis.facts.regions.iter().any(|region| {
+                region.role == CodeRole::Test && region.start_line <= 1 && 1 <= region.end_line
+            }),
+            "a property macro opens a Test region with no inner test fn, got {:?}",
+            analysis.facts.regions
+        );
+        assert!(
+            analysis.facts.has_inline_tests,
+            "a Test region sets the inline marker"
+        );
+    }
+}
+
+#[test]
+fn test_marks_set_the_function_in_test_flag() {
+    let source = "#[test]\nfn checked() {}\nmod tests {\n    fn helper() {}\n}\nfn shipped() {}\n";
+    let analysis = analyze_with(CodeRole::Library, source);
+    let marks: Vec<(String, bool)> = analysis
+        .facts
+        .functions
+        .iter()
+        .map(|f| (f.name.to_owned(), f.in_test))
+        .collect();
+    assert_eq!(
+        marks,
+        [
+            ("checked".to_owned(), true),
+            ("helper".to_owned(), true),
+            ("shipped".to_owned(), false),
+        ]
+    );
 }

@@ -1,2 +1,0 @@
-# Positive: unquoted command substitution spans lines 2-9 (8 lines >= strict minor_at=6); finding at the call.
-a.sh:2 minor grep/multiline-argument

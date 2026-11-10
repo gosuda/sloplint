@@ -1,1 +1,1 @@
-a.rb:2 minor agent/unique-patch-anchors
+a.rb:2 info agent/unique-patch-anchors

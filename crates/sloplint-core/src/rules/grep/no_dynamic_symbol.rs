@@ -1,16 +1,16 @@
+use super::{EmptyOptions, parse_options};
 use crate::config::Strictness;
 use crate::facts::FileFacts;
 use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
-use crate::rules::{EmptyOptions, parse_options};
 
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "grep/no-dynamic-symbol",
     family: Family::Grep,
     summary: "symbols resolved by runtime-built names",
     why: "A name built at runtime appears nowhere in the source, so search and static analysis miss it.",
-    confidence: Confidence::Medium,
+    confidence: Confidence::Low,
     roles: RolePolicy {
         entry: Shift::Keep,
         test: Shift::Lower1,
@@ -27,10 +27,8 @@ struct NoDynamicSymbol;
 fn preset(strictness: Strictness) -> Preset {
     Preset {
         level: match strictness {
-            Strictness::Minimal => Level::Off,
-            Strictness::Basic | Strictness::Standard | Strictness::Strict => {
-                Level::At(Severity::Minor)
-            }
+            Strictness::Minimal | Strictness::Basic | Strictness::Standard => Level::Off,
+            Strictness::Strict => Level::At(Severity::Info),
         },
         options: toml::Table::new(),
     }
@@ -54,5 +52,77 @@ impl FileRule for NoDynamicSymbol {
                     .to_string(),
             ));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::facts::{DynamicSymbol, Pos};
+    use crate::lang::Lang;
+    use crate::role::CodeRole;
+
+    fn facts() -> FileFacts<'static> {
+        FileFacts {
+            lang: Lang::Python,
+            path: "pkg/mod.py",
+            source: "",
+            line_starts: vec![0],
+            role: CodeRole::Library,
+            regions: Vec::new(),
+            line_count: 1,
+            package: String::new(),
+            is_generated: false,
+            functions: Vec::new(),
+            calls: Vec::new(),
+            bindings: Vec::new(),
+            imports: Vec::new(),
+            types: Vec::new(),
+            impls: Vec::new(),
+            wildcard_arms: Vec::new(),
+            handlers: Vec::new(),
+            assertions: Vec::new(),
+            field_copies: Vec::new(),
+            dynamic_symbols: vec![DynamicSymbol {
+                pos: Pos { line: 1, byte: 0 },
+                what: "getattr",
+            }],
+            ambient: Vec::new(),
+            barrel: None,
+            has_inline_tests: false,
+        }
+    }
+
+    #[test]
+    fn off_at_standard_info_at_strict() {
+        assert_eq!(
+            preset(Strictness::Minimal).level,
+            Level::Off,
+            "minimal stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Basic).level,
+            Level::Off,
+            "basic stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Standard).level,
+            Level::Off,
+            "standard stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Strict).level,
+            Level::At(Severity::Info),
+            "strict stays informational"
+        );
+        assert_eq!(INFO.confidence, Confidence::Low, "confidence stays low");
+        let facts = facts();
+        let mut out = Vec::new();
+        NoDynamicSymbol.check(&facts, &mut out);
+        assert_eq!(
+            out.len(),
+            1,
+            "strict flags a runtime-built name once: {out:?}"
+        );
     }
 }

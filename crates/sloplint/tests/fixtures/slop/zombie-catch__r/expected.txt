@@ -1,1 +1,1 @@
-src/handler.R:4 major slop/zombie-catch
+src/handler.R:4 info slop/zombie-catch

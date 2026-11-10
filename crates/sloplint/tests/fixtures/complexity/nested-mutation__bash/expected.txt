@@ -1,2 +1,0 @@
-# Positive: `total` is written 3 loop levels deep (strict major at 3).
-a.sh:6 major complexity/nested-mutation

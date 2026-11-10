@@ -1,1 +1,1 @@
-pos.c:1 major complexity/nesting-depth
+pos.c:1 info complexity/nesting-depth

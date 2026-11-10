@@ -1,4 +1,4 @@
-pos.rs:2 major complexity/boolean-params
-pos.rs:14 major complexity/boolean-params
-pos.rs:25 major complexity/boolean-params
-pos.rs:31 major complexity/boolean-params
+pos.rs:2 info complexity/boolean-params
+pos.rs:14 info complexity/boolean-params
+pos.rs:25 info complexity/boolean-params
+pos.rs:31 info complexity/boolean-params

@@ -1,1 +1,2 @@
-# Argument spans 5 lines (minor at 6): no finding.
+# Argument spans 5 lines (Minor at 15): no finding.
+# Retired positive (build.php): the Collection call initializes a named binding, so it stays silent.

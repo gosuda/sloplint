@@ -8,8 +8,8 @@ use sloplint_core::Config;
 use sloplint_core::lang::Lang;
 use sloplint_core::text::normalize_rel_path;
 
-use crate::RunError;
-use crate::project::glob_set;
+use crate::error::RunError;
+use crate::globs::{Separators, glob_set};
 
 pub struct Entry {
     pub rel: String,
@@ -32,7 +32,7 @@ pub fn discover(root: &Path, config: &Config, threads: usize) -> Result<Discover
         .chain(&config.project.data_globs)
         .cloned()
         .collect();
-    let excludes = glob_set(&patterns, "project.exclude")?;
+    let excludes = glob_set(&patterns, "project.exclude", Separators::Any)?;
     let shared = Mutex::new(Found::default());
     walker(root, excludes)
         .threads(threads)

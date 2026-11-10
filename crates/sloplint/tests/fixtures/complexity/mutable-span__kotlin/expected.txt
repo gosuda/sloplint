@@ -1,1 +1,1 @@
-src/stretch.kt:2 minor complexity/mutable-span
+src/stretch.kt:2 info complexity/mutable-span

@@ -1,2 +1,2 @@
-a.go:4 major grep/contiguous-log-literal
-a.go:7 major grep/contiguous-log-literal
+# Positive: message-bearing log.Fatal with a non-literal message; strict rung major.
+a.go:4 info grep/contiguous-log-literal

@@ -394,47 +394,44 @@ fn default_languages() -> BTreeMap<String, LanguageConfig> {
 }
 
 const DEFAULT_LOG_CALLEES: [(&str, &str); 23] = [
-    (
-        "rust",
-        "trace!,debug!,info!,warn!,error!,anyhow!,bail!,eyre!,panic!",
-    ),
+    ("rust", "trace!,debug!,info!,warn!,error!"),
     (
         "typescript",
-        "console.log,console.info,console.warn,console.error,console.debug,logger.trace,logger.debug,logger.info,logger.warn,logger.error,new *Error",
+        "console.log,console.info,console.warn,console.error,console.debug,logger.trace,logger.debug,logger.info,logger.warn,logger.error",
     ),
     (
         "javascript",
-        "console.log,console.info,console.warn,console.error,console.debug,logger.trace,logger.debug,logger.info,logger.warn,logger.error,new *Error",
+        "console.log,console.info,console.warn,console.error,console.debug,logger.trace,logger.debug,logger.info,logger.warn,logger.error",
     ),
     (
         "python",
-        "logging.debug,logging.info,logging.warning,logging.error,logging.exception,logging.critical,logger.debug,logger.info,logger.warning,logger.error,logger.exception,logger.critical,*Error,*Exception",
+        "logging.debug,logging.info,logging.warning,logging.error,logging.exception,logging.critical,logger.debug,logger.info,logger.warning,logger.error,logger.exception,logger.critical",
     ),
     (
         "go",
-        "log.Print,log.Printf,log.Println,log.Fatal,log.Fatalf,log.Panicf,fmt.Errorf,errors.New,slog.Debug,slog.Info,slog.Warn,slog.Error",
+        "log.Print,log.Printf,log.Println,log.Fatal,log.Fatalf,log.Panicf,slog.Debug,slog.Info,slog.Warn,slog.Error",
     ),
     (
         "java",
-        "log.trace,log.debug,log.info,log.warn,log.error,log.fatal,logger.trace,logger.debug,logger.info,logger.warn,logger.error,logger.fatal,LOG.trace,LOG.debug,LOG.info,LOG.warn,LOG.error,LOG.fatal,System.err.println,System.out.println,printStackTrace",
+        "log.trace,log.debug,log.info,log.warn,log.error,log.fatal,logger.trace,logger.debug,logger.info,logger.warn,logger.error,logger.fatal,LOG.trace,LOG.debug,LOG.info,LOG.warn,LOG.error,LOG.fatal",
     ),
     (
         "kotlin",
-        "log.trace,log.debug,log.info,log.warn,log.error,logger.trace,logger.debug,logger.info,logger.warn,logger.error,LOG.trace,LOG.debug,LOG.info,LOG.warn,LOG.error,println,System.err.println,printStackTrace",
+        "log.trace,log.debug,log.info,log.warn,log.error,logger.trace,logger.debug,logger.info,logger.warn,logger.error,LOG.trace,LOG.debug,LOG.info,LOG.warn,LOG.error",
     ),
     (
         "csharp",
-        "Console.WriteLine,Console.Error.WriteLine,Debug.WriteLine,Trace.WriteLine,logger.LogTrace,logger.LogDebug,logger.LogInformation,logger.LogWarning,logger.LogError,logger.LogCritical,new *Exception",
+        "Console.WriteLine,Console.Error.WriteLine,Debug.WriteLine,Trace.WriteLine,logger.LogTrace,logger.LogDebug,logger.LogInformation,logger.LogWarning,logger.LogError,logger.LogCritical",
     ),
     ("c", "printf,puts,perror,warn,warnx"),
     (
         "cpp",
-        "printf,puts,perror,warn,warnx,spdlog::info,spdlog::warn,spdlog::error,spdlog::debug,spdlog::trace,spdlog::critical,*Error,*Exception,*_error",
+        "printf,puts,perror,warn,warnx,spdlog::info,spdlog::warn,spdlog::error,spdlog::debug,spdlog::trace,spdlog::critical",
     ),
     ("objc", "NSLog,NSLogv,printf,puts,perror,warn,warnx"),
     (
         "php",
-        "error_log,trigger_error,syslog,logger.debug,logger.info,logger.warning,logger.error,logger.critical,Log::debug,Log::info,Log::warning,Log::error,new *Exception",
+        "error_log,trigger_error,syslog,logger.debug,logger.info,logger.warning,logger.error,logger.critical,Log::debug,Log::info,Log::warning,Log::error",
     ),
     (
         "ruby",
@@ -452,30 +449,30 @@ const DEFAULT_LOG_CALLEES: [(&str, &str); 23] = [
     ("r", "message,warning,print,cat"),
     (
         "scala",
-        "logger.trace,logger.debug,logger.info,logger.warn,logger.error,log.debug,log.info,log.warn,log.error,println,new *Exception,new *Error",
+        "logger.trace,logger.debug,logger.info,logger.warn,logger.error,log.debug,log.info,log.warn,log.error,println",
     ),
     (
         "dart",
-        "print,debugPrint,log,logger.finest,logger.finer,logger.fine,logger.config,logger.info,logger.warning,logger.severe,logger.shout,logger.log,*Exception,*Error",
+        "print,debugPrint,log,logger.finest,logger.finer,logger.fine,logger.config,logger.info,logger.warning,logger.severe,logger.shout,logger.log",
     ),
     (
         "zig",
-        "std.log.err,std.log.warn,std.log.info,std.log.debug,log.err,log.warn,log.info,log.debug,panic!,compileError!",
+        "std.log.err,std.log.warn,std.log.info,std.log.debug,log.err,log.warn,log.info,log.debug",
     ),
     (
         "ocaml",
-        "Logs.debug,Logs.info,Logs.warn,Logs.err,Logs.app,Printf.eprintf,Format.eprintf,prerr_endline,failwith,invalid_arg",
+        "Logs.debug,Logs.info,Logs.warn,Logs.err,Logs.app,Printf.eprintf,Format.eprintf,prerr_endline",
     ),
     (
         "odin",
-        "log.debug,log.info,log.warn,log.error,log.fatal,log.panic,fmt.eprintln,fmt.eprintf,panic",
+        "log.debug,log.info,log.warn,log.error,log.fatal,log.panic,fmt.eprintln,fmt.eprintf",
     ),
-    ("starlark", "print,fail"),
+    ("starlark", "print"),
 ];
 
 const DEFAULT_EXCLUDE: &str = "**/node_modules/**,**/target/**,**/vendor/**,**/dist/**,**/build/**,**/.venv/**,**/venv/**,**/__pycache__/**,**/*.d.ts,**/.git/**,**/.sloplint/**";
 
-const DEFAULT_TEST_GLOBS: &str = "**/tests/**,**/test/**,**/__tests__/**,**/*_test.go,**/test_*.py,**/*_test.py,**/conftest.py,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*_test.c,**/test_*.c,**/*_test.cc,**/*_test.cpp,**/*_test.cxx,**/*_unittest.cc,**/test_*.cc,**/test_*.cpp,**/*Tests.m,**/*Tests.cs,**/*Test.cs,**/*.Tests/**,**/*_test.dart,**/*Spec.scala,**/*Test.scala,**/*Suite.scala,**/*.test.js,**/*.test.jsx,**/*.test.mjs,**/*.test.cjs,**/*.spec.js,**/*.spec.jsx,**/*.spec.mjs,**/*.spec.cjs,**/*Test.java,**/*Tests.java,**/*Test.kt,**/*Tests.kt,**/Tests/**,**/*Tests.swift,**/*Test.php,**/*_spec.rb,**/*_test.rb,**/spec/**,**/*.bats,**/test_*.sh,**/*_test.sh,**/tests/**/*.sh,**/*.Tests.ps1,**/*.tests.ps1,**/tests/**/*.ps1";
+const DEFAULT_TEST_GLOBS: &str = "**/tests/**,**/test/**,**/__tests__/**,**/*_test.go,**/test_*.py,**/*_test.py,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*_test.c,**/test_*.c,**/*_test.cc,**/*_test.cpp,**/*_test.cxx,**/*_unittest.cc,**/test_*.cc,**/test_*.cpp,**/*Tests.m,**/*Tests.cs,**/*Test.cs,**/*.Tests/**,**/*_test.dart,**/*Spec.scala,**/*Test.scala,**/*Suite.scala,**/*.test.js,**/*.test.jsx,**/*.test.mjs,**/*.test.cjs,**/*.spec.js,**/*.spec.jsx,**/*.spec.mjs,**/*.spec.cjs,**/*Test.java,**/*Tests.java,**/*Test.kt,**/*Tests.kt,**/Tests/**,**/*Tests.swift,**/*Test.php,**/*_spec.rb,**/*_test.rb,**/spec/**,**/*.bats,**/test_*.sh,**/*_test.sh,**/tests/**/*.sh,**/*.Tests.ps1,**/*.tests.ps1,**/tests/**/*.ps1";
 
 const DEFAULT_BENCH_GLOBS: &str = "**/benches/**,**/bench/**,**/benchmarks/**,**/benchmark/**,**/fuzz/**,**/fuzz_targets/**,**/*_bench.rs,**/*.bench.ts,**/*.bench.tsx,**/*.bench.js,**/*.bench.mjs,**/*_bench.py,**/bench_*.py,**/*_benchmark.cc,**/*_benchmark.cpp,**/*_bench.cc,**/*_bench.cpp,**/*_fuzzer.cc,**/*_fuzzer.cpp,**/src/jmh/**";
 
@@ -487,3 +484,110 @@ const DEFAULT_ENTRY_GLOBS: &str = "**/src/main.rs,**/src/bin/**,**/build.rs,**/m
 
 const DEFAULT_DATA_GLOBS: &str =
     "**/testdata/**,**/test-data/**,**/__fixtures__/**,**/__snapshots__/**";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn callees(language: &str) -> Vec<String> {
+        Config::default()
+            .languages
+            .get(language)
+            .unwrap_or_else(|| panic!("missing log-callee defaults for {language}"))
+            .log_callees
+            .clone()
+    }
+
+    fn assert_callees(language: &str, keep: &[&str], drop: &[&str]) {
+        let current = callees(language);
+        for name in keep {
+            assert!(
+                current.iter().any(|candidate| candidate.as_str() == *name),
+                "{language} defaults must still match {name}: {}",
+                current.join(",")
+            );
+        }
+        for name in drop {
+            assert!(
+                current.iter().all(|candidate| candidate.as_str() != *name),
+                "{language} defaults must not match {name}"
+            );
+        }
+    }
+
+    #[test]
+    fn default_log_callees_keep_message_bearers_only() {
+        assert_callees(
+            "rust",
+            &["trace!", "debug!", "info!", "warn!", "error!"],
+            &["anyhow!", "bail!", "eyre!", "panic!"],
+        );
+        assert_callees(
+            "typescript",
+            &["console.error", "logger.error"],
+            &["new *Error"],
+        );
+        assert_callees(
+            "javascript",
+            &["console.error", "logger.error"],
+            &["new *Error"],
+        );
+        assert_callees(
+            "python",
+            &["logging.error", "logger.exception"],
+            &["*Error", "*Exception"],
+        );
+        assert_callees(
+            "go",
+            &["log.Fatal", "slog.Error"],
+            &["fmt.Errorf", "errors.New"],
+        );
+        assert_callees(
+            "java",
+            &["logger.error", "LOG.fatal"],
+            &[
+                "printStackTrace",
+                "System.err.println",
+                "System.out.println",
+            ],
+        );
+        assert_callees(
+            "kotlin",
+            &["logger.error", "LOG.error"],
+            &["printStackTrace", "System.err.println", "println"],
+        );
+        assert_callees(
+            "csharp",
+            &["Console.WriteLine", "logger.LogError"],
+            &["new *Exception"],
+        );
+        assert_callees(
+            "cpp",
+            &["spdlog::error", "printf"],
+            &["*Error", "*Exception", "*_error"],
+        );
+        assert_callees("php", &["error_log", "Log::error"], &["new *Exception"]);
+        assert_callees(
+            "scala",
+            &["logger.error", "println"],
+            &["new *Exception", "new *Error"],
+        );
+        assert_callees(
+            "dart",
+            &["print", "logger.severe"],
+            &["*Exception", "*Error"],
+        );
+        assert_callees(
+            "zig",
+            &["std.log.err", "log.debug"],
+            &["panic!", "compileError!"],
+        );
+        assert_callees(
+            "ocaml",
+            &["Logs.err", "prerr_endline"],
+            &["failwith", "invalid_arg"],
+        );
+        assert_callees("odin", &["log.error", "fmt.eprintf"], &["panic"]);
+        assert_callees("starlark", &["print"], &["fail"]);
+    }
+}

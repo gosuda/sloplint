@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, CallKind, FieldCopy, Handler, ImplRef, Import,
-    ImportKind, Pos, Stmt, TypeDef, WildcardArm,
+    AmbientKind, Arg, ArgShape, AssertShape, Assertion, CallKind, FieldCopy, Handler, ImplRef,
+    Import, ImportKind, ImportScope, Pos, ScrutineeKind, Stmt, TypeDef, Visibility, WildcardArm,
 };
 use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
@@ -14,8 +14,8 @@ use crate::hooks::{
     trimmed,
 };
 use crate::lang::c_family::{
-    self, CPP_DECLARATORS, angles, bin_op, collect_fragments, first_arg, flat, in_function, inner,
-    pair_source, plain_assert, root_of, sole_call, span, word,
+    self, CPP_DECLARATORS, angles, bin_op, collect_fragments, first_arg, flat, in_function,
+    init_value, inner, pair_source, plain_assert, root_of, sole_call, span, word,
 };
 use crate::spec::Role;
 
@@ -69,16 +69,27 @@ impl LangHooks for CppHooks {
                 "operator_name",
             ],
         )?;
-        let header = n
+        let header = cx
             .parent()
             .filter(|p| p.kind() == "template_declaration")
             .unwrap_or(n);
         let (doc, doc_pos) = preceding_comments(cx, header, &["comment"], &[]);
+        let public = is_public(cx, n, member_list(cx, n));
         Some(FunctionHead {
             name: text(cx, name_node),
             name_pos: pos_of(name_node),
-            public: is_public(cx, n, member_list(n)),
-            interface_bound: name_node.kind() == "operator_name" || is_bound(n, fd),
+            visibility: if public {
+                Visibility::Exported
+            } else {
+                Visibility::Private
+            },
+            signature_forced: name_node.kind() == "operator_name" || is_bound(n, fd),
+            entry_point: false,
+            in_test: false,
+            is_overload: false,
+            is_deprecated: false,
+            is_decorated: false,
+            is_trait_item: false,
             region: None,
             params: c_family::params(
                 cx,
@@ -126,6 +137,8 @@ impl LangHooks for CppHooks {
                     callee: text(cx, func),
                     kind: CallKind::Plain,
                     callee_root: callee_root(cx, func),
+                    is_simple_path: func.kind() == "identifier",
+                    initializes_binding: init_value(cx, n),
                     args: call_args(cx, args_node),
                 })
             }
@@ -138,6 +151,8 @@ impl LangHooks for CppHooks {
                     callee: text(cx, ty),
                     kind: CallKind::New,
                     callee_root: None,
+                    is_simple_path: true,
+                    initializes_binding: init_value(cx, n),
                     args,
                 })
             }
@@ -163,12 +178,12 @@ impl LangHooks for CppHooks {
             _ => None,
         }
     }
-    fn match_arm(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<WildcardArm> {
+    fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
         if child_by_field(n, "value").is_some() {
             return None;
         }
         let mut enum_like = false;
-        if let Some(parent) = n.parent() {
+        if let Some(parent) = cx.parent() {
             for sib in named_children(parent) {
                 if sib.kind() == "case_statement"
                     && child_by_field(sib, "value").is_some_and(|v| {
@@ -183,6 +198,9 @@ impl LangHooks for CppHooks {
         Some(WildcardArm {
             pos: pos_of(n),
             enum_like,
+            scrutinee: ScrutineeKind::Other,
+            variant_count: 0,
+            has_nullable_ctor: false,
         })
     }
     fn handler<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'s>> {
@@ -201,6 +219,9 @@ impl LangHooks for CppHooks {
         Some(Handler {
             pos: pos_of(n),
             stmts,
+            has_else: false,
+            try_imports_only: false,
+            in_cleanup: false,
         })
     }
     fn struct_lit<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FieldCopy<'s>> {
@@ -271,6 +292,13 @@ impl LangHooks for CppHooks {
                 pos: pos_of(n),
                 has_message,
                 comparison: condition.is_some(),
+                shape: if condition.is_some() {
+                    AssertShape::TopEqNe
+                } else {
+                    AssertShape::Other
+                },
+                in_typecheck: false,
+                value_is_bool_literal: false,
             });
         }
         if n.kind() != "call_expression" {
@@ -291,47 +319,48 @@ impl LangHooks for CppHooks {
         .then(|| catch2_assert(cx, n))
     }
 }
-fn member_list(n: Node<'_>) -> Option<Node<'_>> {
-    let parent = n.parent()?;
+fn member_list<'t>(cx: &Cx<'t, '_>, n: Node<'_>) -> Option<Node<'t>> {
+    let parent = cx.parent_of(n)?;
     if parent.kind() == "field_declaration_list" {
         return Some(parent);
     }
     if parent.kind() == "template_declaration" {
-        return parent
-            .parent()
+        return cx
+            .parent_of(parent)
             .filter(|g| g.kind() == "field_declaration_list");
     }
     None
 }
 fn is_public<'s>(cx: &Cx<'_, 's>, n: Node<'_>, list: Option<Node<'_>>) -> bool {
-    if in_anonymous(n) {
+    if in_anonymous(cx) {
         return false;
     }
     let Some(items) = list else {
         return !word(cx, n, &["storage_class_specifier"], &["static"]);
     };
-    let anchor = n
+    let anchor = cx
         .parent()
         .filter(|p| p.kind() == "template_declaration")
         .unwrap_or(n);
     cx.members
         .state_before(items, anchor, |sib| access_marker(cx, sib))
         .unwrap_or_else(|| {
-            items
-                .parent()
+            cx.parent_of(items)
                 .is_some_and(|g| g.kind() == "struct_specifier")
         })
 }
 fn access_marker(cx: &Cx<'_, '_>, sib: Node<'_>) -> Option<bool> {
-    (sib.kind() == "access_specifier").then(|| trimmed(cx, sib).starts_with("public"))
+    (sib.kind() == "access_specifier")
+        .then(|| trimmed(cx, sib))
+        .map(|label| label.starts_with("public") || label.starts_with("protected"))
 }
-fn in_anonymous(n: Node<'_>) -> bool {
-    let mut parent = n.parent();
-    while let Some(found) = parent {
+fn in_anonymous(cx: &Cx<'_, '_>) -> bool {
+    let mut current = cx.parent();
+    while let Some(found) = current {
         if found.kind() == "namespace_definition" && child_by_field(found, "name").is_none() {
             return true;
         }
-        parent = found.parent();
+        current = cx.parent_of(found);
     }
     false
 }
@@ -362,6 +391,26 @@ fn callee_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
         }
     }
 }
+fn import_fact<'s>(
+    pos: Pos,
+    module: Cow<'s, str>,
+    name: &'s str,
+    alias: Option<&'s str>,
+    kind: ImportKind,
+) -> Import<'s> {
+    Import {
+        pos,
+        module,
+        name,
+        alias,
+        kind,
+        scope: ImportScope::Module,
+        in_test: false,
+        is_reexport: false,
+        external_root: None,
+    }
+}
+
 fn call_args<'s>(cx: &Cx<'_, 's>, args_node: Node<'_>) -> Vec<Arg<'s>> {
     c_family::call_args(cx, args_node, arg_shape)
 }
@@ -378,6 +427,8 @@ fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         "concatenated_string" => concat_shape(cx, n),
         "binary_expression" if binary_concat(cx, n, "+", &["string_literal"]) => ArgShape::Concat,
         "identifier" => ArgShape::Ident(text(cx, n)),
+        "initializer_list" => ArgShape::Collection,
+        "lambda_expression" => ArgShape::CodeBody,
         _ => ArgShape::Other,
     }
 }
@@ -410,13 +461,13 @@ fn push_include<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
         "system_lib_string" => angles(text(cx, path)),
         _ => text(cx, path),
     };
-    out.push(Import {
-        pos: pos_of(n),
-        module: Cow::Borrowed(module),
-        name: "",
-        alias: None,
-        kind: ImportKind::SideEffect,
-    });
+    out.push(import_fact(
+        pos_of(n),
+        Cow::Borrowed(module),
+        "",
+        None,
+        ImportKind::SideEffect,
+    ));
 }
 fn scope_of(path: &str) -> (&str, &str) {
     match path.rfind("::") {
@@ -430,33 +481,33 @@ fn push_using<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
         return;
     };
     if flat(text(cx, n)).starts_with("usingnamespace") {
-        out.push(Import {
-            pos: pos_of(n),
-            module: Cow::Borrowed(text(cx, target)),
-            name: "",
-            alias: None,
-            kind: ImportKind::Wildcard,
-        });
+        out.push(import_fact(
+            pos_of(n),
+            Cow::Borrowed(text(cx, target)),
+            "",
+            None,
+            ImportKind::Wildcard,
+        ));
         return;
     }
     if (0..n.child_count()).any(|i| n.child(i).is_some_and(|c| c.kind() == "enum")) {
-        out.push(Import {
-            pos: pos_of(n),
-            module: Cow::Borrowed(""),
-            name: text(cx, target),
-            alias: None,
-            kind: ImportKind::Named,
-        });
+        out.push(import_fact(
+            pos_of(n),
+            Cow::Borrowed(""),
+            text(cx, target),
+            None,
+            ImportKind::Named,
+        ));
         return;
     }
     let (module, name) = scope_of(text(cx, target));
-    out.push(Import {
-        pos: pos_of(n),
-        module: Cow::Borrowed(module),
+    out.push(import_fact(
+        pos_of(n),
+        Cow::Borrowed(module),
         name,
-        alias: None,
-        kind: ImportKind::Named,
-    });
+        None,
+        ImportKind::Named,
+    ));
 }
 fn push_alias<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) -> Option<()> {
     let alias_node = child_by_field(n, "name")?;
@@ -464,19 +515,19 @@ fn push_alias<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) -> Op
         c.kind() == "namespace_identifier" || c.kind() == "nested_namespace_specifier"
     })?;
     let (module, name) = scope_of(text(cx, target));
-    out.push(Import {
-        pos: pos_of(n),
-        module: Cow::Borrowed(module),
+    out.push(import_fact(
+        pos_of(n),
+        Cow::Borrowed(module),
         name,
-        alias: Some(text(cx, alias_node)),
-        kind: ImportKind::Named,
-    });
+        Some(text(cx, alias_node)),
+        ImportKind::Named,
+    ));
     Some(())
 }
 fn class_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     let body = child_by_field(n, "body")?;
     let name_node = child_by_field(n, "name")?;
-    let anon = in_anonymous(n);
+    let anon = in_anonymous(cx);
     let base = child_by_field(n, "base_class_clause");
     let mut impls = Vec::new();
     if let Some(clause) = base {
@@ -486,11 +537,16 @@ fn class_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
             }
         }
     }
+    let public = !anon && !in_function(cx);
     Some(TypeHead {
         def: Some(TypeDef {
             name: text(cx, name_node),
             pos: pos_of(name_node),
-            public: !anon && !in_function(n),
+            visibility: if public {
+                Visibility::Exported
+            } else {
+                Visibility::Private
+            },
             abstraction: is_abstract(cx, body),
         }),
         impls,
@@ -515,6 +571,8 @@ fn base_ref<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<ImplRef<'s>> {
     Some(ImplRef {
         name: scope_of(plain).1,
         pos: pos_of(n),
+        is_generic: plain != full,
+        child_is_abstract: false,
     })
 }
 fn is_abstract<'s>(cx: &Cx<'_, 's>, body: Node<'_>) -> bool {
@@ -539,11 +597,16 @@ fn named_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
         child_by_field(n, "body")?;
     }
     let name_node = child_by_field(n, "name")?;
+    let public = !in_anonymous(cx) && !in_function(cx);
     Some(TypeHead {
         def: Some(TypeDef {
             name: text(cx, name_node),
             pos: pos_of(name_node),
-            public: !in_anonymous(n) && !in_function(n),
+            visibility: if public {
+                Visibility::Exported
+            } else {
+                Visibility::Private
+            },
             abstraction: false,
         }),
         impls: Vec::new(),
@@ -554,11 +617,16 @@ fn alias_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     let mut current = child_by_field(n, "declarator")?;
     loop {
         if current.kind() == "type_identifier" || current.kind() == "identifier" {
+            let public = !in_anonymous(cx) && !in_function(cx);
             return Some(TypeHead {
                 def: Some(TypeDef {
                     name: text(cx, current),
                     pos: pos_of(current),
-                    public: !in_anonymous(n) && !in_function(n),
+                    visibility: if public {
+                        Visibility::Exported
+                    } else {
+                        Visibility::Private
+                    },
                     abstraction: false,
                 }),
                 impls: Vec::new(),
@@ -648,7 +716,7 @@ fn runtime_symbol_lookup(callee: &str) -> Option<&'static str> {
 }
 fn gtest_assert<'s>(cx: &Cx<'_, 's>, n: Node<'_>, callee: &'s str) -> Assertion {
     let mut has_message = false;
-    if let Some(parent) = n.parent()
+    if let Some(parent) = cx.parent()
         && parent.kind() == "binary_expression"
         && child_by_field(parent, "left").is_some_and(|l| l == n)
         && bin_op(cx, parent).is_some_and(|op| op == "<<")
@@ -664,6 +732,13 @@ fn gtest_assert<'s>(cx: &Cx<'_, 's>, n: Node<'_>, callee: &'s str) -> Assertion 
         pos: pos_of(n),
         has_message,
         comparison,
+        shape: if comparison {
+            AssertShape::TopEqNe
+        } else {
+            AssertShape::Other
+        },
+        in_typecheck: false,
+        value_is_bool_literal: false,
     }
 }
 fn catch2_assert<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Assertion {
@@ -677,5 +752,12 @@ fn catch2_assert<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Assertion {
         pos: pos_of(n),
         has_message: false,
         comparison,
+        shape: if comparison {
+            AssertShape::TopEqNe
+        } else {
+            AssertShape::Other
+        },
+        in_typecheck: false,
+        value_is_bool_literal: false,
     }
 }

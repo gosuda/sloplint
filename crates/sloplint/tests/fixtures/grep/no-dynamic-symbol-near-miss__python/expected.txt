@@ -1,0 +1,1 @@
+# Near-miss: getattr forwards __getattr__'s own name param, and the import walks a literal tuple.

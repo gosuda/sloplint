@@ -1,1 +1,1 @@
-src/errors.rs:5 minor agent/typed-error-boundary
+src/errors.rs:5 info agent/typed-error-boundary

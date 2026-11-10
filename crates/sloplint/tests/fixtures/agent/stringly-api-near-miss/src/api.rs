@@ -1,5 +1,3 @@
-pub struct OrderId(pub u64);
-
-pub fn process_order(id: OrderId, qty: u64) -> u64 {
-    qty
+pub fn process_order(a: &str, b: &str, c: u64) -> u64 {
+    c
 }

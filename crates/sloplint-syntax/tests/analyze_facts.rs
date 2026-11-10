@@ -6,10 +6,14 @@ mod declaration_scopes;
 mod directive_docs;
 #[path = "analyze_facts/else_if_chains.rs"]
 mod else_if_chains;
+#[path = "analyze_facts/has_value_return.rs"]
+mod has_value_return;
 #[path = "analyze_facts/header_comment_chains.rs"]
 mod header_comment_chains;
 #[path = "analyze_facts/header_fallbacks.rs"]
 mod header_fallbacks;
+#[path = "analyze_facts/is_method.rs"]
+mod is_method;
 #[path = "analyze_facts/parse_error_position.rs"]
 mod parse_error_position;
 #[path = "analyze_facts/sole_call_forwarding.rs"]

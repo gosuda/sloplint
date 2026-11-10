@@ -1,5 +1,7 @@
 pub fn tangled(a: i32) i32 {
     var x: i32 = a;
+    if (a >= 0) {
+    for (0..a) |i| {
     if (a > 0) {
         x += 1;
     }
@@ -47,6 +49,8 @@ pub fn tangled(a: i32) i32 {
     }
     if (a > 15) {
         x += 16;
+    }
+    }
     }
     return x;
 }

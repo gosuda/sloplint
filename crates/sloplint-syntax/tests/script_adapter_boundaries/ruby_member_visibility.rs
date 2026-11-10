@@ -6,12 +6,13 @@
 //! singleton class, block, top level) keeps its own sibling list, observed through
 //! `analyze` only.
 
+use sloplint_core::facts::Visibility;
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 /// `(name, public)` for every function in `source`, sorted by name.
-fn publicity(source: &str) -> Vec<(String, bool)> {
+fn publicity(source: &str) -> Vec<(String, Visibility)> {
     let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
     let input = FileInput {
         lang: Lang::Ruby,
@@ -21,21 +22,21 @@ fn publicity(source: &str) -> Vec<(String, bool)> {
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.rb parses cleanly");
-    let mut out: Vec<(String, bool)> = analysis
+    let mut out: Vec<(String, Visibility)> = analysis
         .facts
         .functions
         .iter()
-        .map(|f| (f.name.to_owned(), f.public))
+        .map(|f| (f.name.to_owned(), f.visibility))
         .collect();
     out.sort();
     out
 }
 
 /// The expected `(name, public)` pairs, sorted by name.
-fn expected(pairs: &[(&str, bool)]) -> Vec<(String, bool)> {
-    let mut out: Vec<(String, bool)> = pairs
+fn expected(pairs: &[(&str, Visibility)]) -> Vec<(String, Visibility)> {
+    let mut out: Vec<(String, Visibility)> = pairs
         .iter()
-        .map(|(name, public)| ((*name).to_owned(), *public))
+        .map(|(name, vis)| ((*name).to_owned(), *vis))
         .collect();
     out.sort();
     out
@@ -71,12 +72,13 @@ end
     assert_eq!(
         publicity(source),
         expected(&[
-            ("open_default", true),
-            ("closed_after_private", false),
-            ("closed_after_protected", false),
-            ("open_after_public", true),
-            ("closed_after_second_private", false),
-        ])
+            ("open_default", Visibility::Exported),
+            ("closed_after_private", Visibility::Private),
+            ("closed_after_protected", Visibility::Private),
+            ("open_after_public", Visibility::Exported),
+            ("closed_after_second_private", Visibility::Private),
+        ]),
+        "bare private, protected, and public markers set later sibling visibility"
     );
 }
 
@@ -113,13 +115,14 @@ end
     assert_eq!(
         publicity(source),
         expected(&[
-            ("helper_one", false),
-            ("closed_after_argument_call", false),
-            ("wrapped_private", false),
-            ("closed_after_wrapped", false),
-            ("wrapped_module_function", false),
-            ("wrapped_public", true),
-        ])
+            ("helper_one", Visibility::Private),
+            ("closed_after_argument_call", Visibility::Private),
+            ("wrapped_private", Visibility::Private),
+            ("closed_after_wrapped", Visibility::Private),
+            ("wrapped_module_function", Visibility::Private),
+            ("wrapped_public", Visibility::Exported),
+        ]),
+        "argument calls and wrapped definitions leave the marker state unchanged"
     );
 }
 
@@ -140,9 +143,10 @@ end
     assert_eq!(
         publicity(source),
         expected(&[
-            ("bare_module_function_stays_public", true),
-            ("closed_after_empty_call", false),
-        ])
+            ("bare_module_function_stays_public", Visibility::Exported),
+            ("closed_after_empty_call", Visibility::Private),
+        ]),
+        "bare module_function is not a marker but an empty call closes later siblings"
     );
 }
 
@@ -155,7 +159,11 @@ fn singleton_methods_are_public_even_after_private() {
   end
 end
 "#;
-    assert_eq!(publicity(source), expected(&[("open_singleton", true)]));
+    assert_eq!(
+        publicity(source),
+        expected(&[("open_singleton", Visibility::Exported)]),
+        "singleton methods stay Exported after private"
+    );
 }
 
 #[test]
@@ -180,10 +188,11 @@ end
     assert_eq!(
         publicity(source),
         expected(&[
-            ("open_in_sclass", true),
-            ("closed_in_sclass", false),
-            ("closed_after_sclass", false),
-        ])
+            ("open_in_sclass", Visibility::Exported),
+            ("closed_in_sclass", Visibility::Private),
+            ("closed_after_sclass", Visibility::Private),
+        ]),
+        "singleton-class bodies scope markers separately from the outer class"
     );
 }
 
@@ -200,7 +209,8 @@ end
 "#;
     assert_eq!(
         publicity(source),
-        expected(&[("closed_across_macros", false)])
+        expected(&[("closed_across_macros", Visibility::Private)]),
+        "macro calls between a marker and a method keep the Private state"
     );
 }
 
@@ -243,12 +253,13 @@ end
     assert_eq!(
         publicity(source),
         expected(&[
-            ("top_level_closed", false),
-            ("outer_open", true),
-            ("inner_open", true),
-            ("nested_open", true),
-            ("host_closed", false),
-            ("in_block_closed", false),
-        ])
+            ("top_level_closed", Visibility::Private),
+            ("outer_open", Visibility::Exported),
+            ("inner_open", Visibility::Exported),
+            ("nested_open", Visibility::Exported),
+            ("host_closed", Visibility::Private),
+            ("in_block_closed", Visibility::Private),
+        ]),
+        "each container and block judges its own methods under its own markers"
     );
 }

@@ -1,2 +1,1 @@
-# Positive: nesting depth 5 >= strict major_at 5.
-src/nested.zig:1 major complexity/nesting-depth
+src/nested.zig:1 info complexity/nesting-depth

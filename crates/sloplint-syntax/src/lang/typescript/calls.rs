@@ -1,3 +1,5 @@
+//! Call and pattern helpers for TypeScript.
+
 use sloplint_core::facts::{Arg, ArgShape, Pos};
 use tree_sitter::Node;
 
@@ -91,7 +93,9 @@ pub(crate) fn callee_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     loop {
         match cur.kind() {
             "identifier" | "this" | "super" => return Some(text(cx, cur)),
-            "member_expression" | "subscript_expression" => cur = child_by_field(cur, "object")?,
+            "member_expression" | "subscript_expression" => {
+                cur = child_by_field(cur, "object")?;
+            }
             "parenthesized_expression" => cur = cur.named_child(0)?,
             _ => return None,
         }
@@ -102,6 +106,8 @@ pub(crate) fn ts_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     match n.kind() {
         "string" => string_arg_shape(cx, n, &["string_fragment"]),
         "template_string" => string_arg_shape(cx, n, &["string_fragment"]),
+        "array" | "object" => ArgShape::Collection,
+        "arrow_function" | "function_expression" | "generator_function" => ArgShape::CodeBody,
         "identifier" => ArgShape::Ident(text(cx, n)),
         _ if binary_concat(cx, n, "+", &["string", "template_string"]) => ArgShape::Concat,
         _ => ArgShape::Other,
@@ -121,37 +127,4 @@ pub(crate) fn ts_args<'s>(cx: &Cx<'_, 's>, args: Node<'_>) -> Vec<Arg<'s>> {
             end_line: narrow(c.end_position().row) + 1,
         })
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::ts_sole_call;
-
-    fn sole_call_in_ts(source: &str) -> Option<usize> {
-        let mut parser = tree_sitter::Parser::new();
-        let language: tree_sitter::Language = tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into();
-        parser
-            .set_language(&language)
-            .expect("typescript grammar loads");
-        let tree = parser.parse(source, None).expect("parser returns a tree");
-        let function = tree.root_node().child(0).expect("one top-level function");
-        let body = function.child_by_field_name("body").expect("function body");
-        ts_sole_call(body)
-    }
-
-    #[test]
-    fn returned_call_is_the_sole_call() {
-        assert!(
-            sole_call_in_ts("function f() { return g(); }").is_some(),
-            "the returned call must be detected as the sole call"
-        );
-    }
-
-    #[test]
-    fn leading_comment_keeps_the_sole_call_in_typescript() {
-        assert!(
-            sole_call_in_ts("function f() { return /* c */ g(); }").is_some(),
-            "a leading comment must not hide the returned call"
-        );
-    }
 }

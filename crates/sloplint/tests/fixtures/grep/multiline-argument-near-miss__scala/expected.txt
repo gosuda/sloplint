@@ -1,1 +1,2 @@
-# Near-miss: 5-line closure arg < strict minor_at 6.
+# Near-miss: 5-line closure arg < strict Minor(15).
+# Retired positive (calls.scala): nested-call arg is not a Collection, so it stays silent.

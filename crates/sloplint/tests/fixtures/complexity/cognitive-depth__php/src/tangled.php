@@ -1,6 +1,8 @@
 <?php
 function tangled($a) {
     $x = $a;
+    if ($a >= 0) {
+    for ($i = 0; $i < $a; $i++) {
     if ($a > 0) { $x += 1; }
     if ($a > 1) { $x += 2; }
     if ($a > 2) { $x += 3; }
@@ -17,5 +19,7 @@ function tangled($a) {
     if ($a > 13) { $x += 14; }
     if ($a > 14) { $x += 15; }
     if ($a > 15) { $x += 16; }
+    }
+    }
     return $x;
 }

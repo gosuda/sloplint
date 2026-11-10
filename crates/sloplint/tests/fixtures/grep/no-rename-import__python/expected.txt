@@ -1,2 +1,3 @@
-src/alias.py:1 minor grep/no-rename-import
-src/alias.py:2 minor grep/no-rename-import
+# Positive: neither alias contains its original name, so both fire at info.
+src/alias.py:1 info grep/no-rename-import
+src/alias.py:2 info grep/no-rename-import

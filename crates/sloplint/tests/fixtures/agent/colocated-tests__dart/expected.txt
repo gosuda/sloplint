@@ -1,1 +1,1 @@
-lib/service.dart:1 minor agent/colocated-tests
+lib/service.dart:1 info agent/colocated-tests

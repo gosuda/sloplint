@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use sloplint_core::facts::{Ambient, Call, DynamicSymbol, Function, MutBinding, Pos};
+use sloplint_core::role::CodeRole;
 use sloplint_core::suppress::CommentText;
 
 use crate::hooks::{
@@ -88,13 +89,30 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             self.hooks.untyped_throws(node, &cx)
         };
         let index = self.facts.functions.len();
+        let is_method = self.method_depth > 0 || {
+            let cx = self.make_cx();
+            matches!(
+                self.hooks.container(node, &cx),
+                Some(Container::Impl { .. } | Container::Trait { .. } | Container::Class { .. })
+            )
+        };
+        let in_test = head.in_test
+            || matches!(head.region, Some(region) if matches!(region.role, CodeRole::Test | CodeRole::Bench));
         self.facts.functions.push(Function {
             name: head.name,
             pos: head.name_pos,
+            end_line: narrow(node.end_position().row) + 1,
             doc: head.doc,
             doc_pos: head.doc_pos,
-            public: head.public,
-            interface_bound: head.interface_bound,
+            visibility: head.visibility,
+            signature_forced: head.signature_forced,
+            entry_point: head.entry_point,
+            in_test,
+            is_overload: head.is_overload,
+            is_deprecated: head.is_deprecated,
+            is_decorated: head.is_decorated,
+            is_trait_item: head.is_trait_item,
+            is_method,
             params: head.params,
             return_type: head.return_type,
             untyped_throws,
@@ -102,6 +120,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             cognitive: 0,
             max_depth: 0,
             deepest_line: 0,
+            has_value_return: false,
             sole_call: None,
         });
         if let Some(region) = head.region {
@@ -110,9 +129,11 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
         self.fn_stack.push(FnFrame {
             index,
             nest: 0,
+            depth: 0,
             frames: 0,
             decls: HashMap::new(),
             sole_call: head.sole_call,
+            scored: vec![false],
         });
         self.assert_mark_entered(node.id());
         self.marks.push((node.id(), Mark::Fn));
@@ -138,6 +159,8 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             callee: head.callee,
             kind: head.kind,
             callee_root: head.callee_root,
+            is_simple_path: head.is_simple_path,
+            initializes_binding: head.initializes_binding,
             args: head.args,
         });
     }
@@ -243,8 +266,9 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
                 name,
                 pos,
                 last_write_line: pos.line,
-                max_nested_depth: 0,
-                nested_write_pos: None,
+                first_write_line: pos.line,
+                write_lines: 0,
+                loop_depth: 0,
             });
             if let Some(frame) = self.fn_stack.last_mut() {
                 frame.decls.insert(
@@ -265,15 +289,28 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             let cx = self.make_cx();
             hooks.decl_names(node, &cx, &mut names);
         }
+        let mut fresh: Vec<&str> = Vec::new();
         for (name, pos) in names {
-            self.write_or_declare(name, pos);
+            if self.write_or_declare(name, pos) {
+                fresh.push(name);
+            }
         }
-        self.apply_write_roots(node);
+        let mut roots = Vec::new();
+        {
+            let cx = self.make_cx();
+            self.hooks.write_roots(node, &cx, &mut roots);
+        }
+        for (name, pos) in roots {
+            if fresh.contains(&name) {
+                continue;
+            }
+            self.apply_write(name, pos);
+        }
     }
 
-    fn write_or_declare(&mut self, name: &'s str, pos: Pos) {
+    fn write_or_declare(&mut self, name: &'s str, pos: Pos) -> bool {
         let Some(frame) = self.fn_stack.last_mut() else {
-            return;
+            return false;
         };
         let found = frame
             .decls
@@ -285,8 +322,9 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
                 name,
                 pos,
                 last_write_line: pos.line,
-                max_nested_depth: 0,
-                nested_write_pos: None,
+                first_write_line: pos.line,
+                write_lines: 0,
+                loop_depth: 0,
             });
             let at_frames = frame.frames;
             frame.decls.insert(
@@ -296,10 +334,11 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
                     frames_at_decl: at_frames,
                 },
             );
-            return;
+            return true;
         };
         let depth = frame.frames.saturating_sub(frames_at_decl);
         self.record_write(binding, depth, pos);
+        false
     }
 
     fn apply_write(&mut self, name: &str, pos: Pos) {
@@ -320,14 +359,24 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
 
     fn record_write(&mut self, binding: usize, depth: u32, pos: Pos) {
         let record = &mut self.facts.bindings[binding];
-        record.last_write_line = record.last_write_line.max(pos.line);
-        if depth > record.max_nested_depth {
-            record.max_nested_depth = depth;
-            record.nested_write_pos = Some(pos);
+        let prev = record.last_write_line;
+        record.last_write_line = prev.max(pos.line);
+        if record.write_lines == 0 {
+            record.first_write_line = pos.line;
+            record.write_lines = 1;
+        } else if pos.line > prev {
+            record.write_lines += 1;
         }
+        record.loop_depth = record.loop_depth.max(depth);
     }
 
     fn push_container(&mut self, mark: usize, container: Container) {
+        if matches!(
+            container,
+            Container::Impl { .. } | Container::Trait { .. } | Container::Class { .. }
+        ) {
+            self.method_depth += 1;
+        }
         self.containers.push(container);
         self.assert_mark_entered(mark);
         self.marks.push((mark, Mark::Container));

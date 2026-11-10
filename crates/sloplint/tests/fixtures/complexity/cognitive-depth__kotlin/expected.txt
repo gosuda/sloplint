@@ -1,1 +1,1 @@
-src/tangled.kt:1 major complexity/cognitive-depth
+src/tangled.kt:1 info complexity/cognitive-depth

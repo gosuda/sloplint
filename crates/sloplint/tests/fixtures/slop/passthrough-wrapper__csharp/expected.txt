@@ -1,1 +1,1 @@
-src/Greeter.cs:2 minor slop/passthrough-wrapper
+src/Greeter.cs:2 info slop/passthrough-wrapper

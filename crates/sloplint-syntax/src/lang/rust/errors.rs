@@ -1,42 +1,8 @@
 use sloplint_core::facts::{CallKind, Stmt};
 use tree_sitter::Node;
 
-use crate::hooks::{
-    Cx, any_named_child, child_by_field, first_named_child, last_segment, named_children, text,
-};
+use crate::hooks::{Cx, child_by_field, first_named_child, last_segment, named_children, text};
 
-fn enum_pattern(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
-    let mut stack = vec![pat];
-    while let Some(node) = stack.pop() {
-        if node.kind() == "match_pattern" {
-            let guarded = child_by_field(node, "condition").map(|cond| cond.id());
-            stack.extend(
-                named_children(node)
-                    .into_iter()
-                    .filter(|child| Some(child.id()) != guarded),
-            );
-            continue;
-        }
-        match node.kind() {
-            "tuple_struct_pattern" | "struct_pattern" => return true,
-            "scoped_identifier" | "scoped_type_identifier" if text(cx, node).contains("::") => {
-                return true;
-            }
-            _ => {}
-        }
-        stack.extend(named_children(node));
-    }
-    false
-}
-pub(super) fn sibling_enum(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    n.parent().is_some_and(|parent| {
-        any_named_child(parent, |arm| {
-            arm.kind() == "match_arm"
-                && arm.id() != n.id()
-                && child_by_field(arm, "pattern").is_some_and(|p| enum_pattern(cx, p))
-        })
-    })
-}
 pub(super) fn err_bound<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<Option<&'s str>> {
     let pat = if pat.kind() == "match_pattern" {
         if child_by_field(pat, "condition").is_some() {
@@ -113,7 +79,7 @@ fn pattern_may_match_err(cx: &Cx<'_, '_>, pat: Node<'_>) -> bool {
     false
 }
 pub(super) fn has_err_selective_predecessor(cx: &Cx<'_, '_>, arm: Node<'_>) -> bool {
-    let Some(parent) = arm.parent() else {
+    let Some(parent) = cx.parent() else {
         return false;
     };
     let mut cursor = parent.walk();

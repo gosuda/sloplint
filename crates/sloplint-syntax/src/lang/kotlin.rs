@@ -1,19 +1,17 @@
-use std::borrow::Cow;
-
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, CallKind, FieldCopy, Handler, ImplRef, Import,
-    ImportKind, Param, Pos, Stmt, TypeDef, WildcardArm,
+    AmbientKind, Assertion, FieldCopy, Handler, Import, Pos, Visibility, WildcardArm,
 };
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, attributed_region,
-    binary_concat, child_by_field, find_named_child, first_of_kind, has_child_kind,
-    last_named_child, last_segment, named_children, narrow, only_named_child_matching, pos_of,
-    preceding_comments, rfind_named_child, string_arg_shape, text,
+    CallHead, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, first_of_kind,
+    named_children, text,
 };
 use crate::spec::Role;
-use sloplint_core::role::CodeRole;
+
+mod calls;
+mod funcs;
+mod items;
 
 pub(crate) static TABLE: &[(&str, Role)] = &[
     ("function_declaration", Role::Function),
@@ -43,16 +41,15 @@ pub(crate) static HOOKS: KotlinHooks = KotlinHooks;
 
 pub(crate) struct KotlinHooks;
 
-const COMMENTS: &[&str] = &["line_comment", "block_comment"];
-const TEST_ANNOTATIONS: &[&str] = &[
+pub(crate) const COMMENTS: &[&str] = &["line_comment", "block_comment"];
+pub(crate) const TEST_ANNOTATIONS: &[&str] = &[
     "Test",
     "ParameterizedTest",
     "RepeatedTest",
     "TestFactory",
     "TestTemplate",
 ];
-const RESTRICTED: &[&str] = &["private", "protected", "internal"];
-const TYPE_KINDS: &[&str] = &[
+pub(crate) const TYPE_KINDS: &[&str] = &[
     "user_type",
     "nullable_type",
     "function_type",
@@ -60,7 +57,7 @@ const TYPE_KINDS: &[&str] = &[
     "parenthesized_type",
     "dynamic",
 ];
-const REFLECTION: &[&str] = &[
+pub(crate) const REFLECTION: &[&str] = &[
     "getMethod",
     "getDeclaredMethod",
     "getField",
@@ -73,32 +70,24 @@ fn children_of(n: Node<'_>) -> Vec<Node<'_>> {
     (0..n.child_count()).filter_map(|i| n.child(i)).collect()
 }
 
-fn code_children(n: Node<'_>) -> Vec<Node<'_>> {
+pub(crate) fn code_children(n: Node<'_>) -> Vec<Node<'_>> {
     named_children(n)
         .into_iter()
         .filter(|child| child.kind() != "line_comment" && child.kind() != "block_comment")
         .collect()
 }
 
-fn first_code(n: Node<'_>) -> Option<Node<'_>> {
-    find_named_child(n, |child| {
+pub(crate) fn first_code(n: Node<'_>) -> Option<Node<'_>> {
+    crate::hooks::find_named_child(n, |child| {
         child.kind() != "line_comment" && child.kind() != "block_comment"
     })
 }
 
-fn modifiers_of(n: Node<'_>) -> Option<Node<'_>> {
+pub(crate) fn modifiers_of(n: Node<'_>) -> Option<Node<'_>> {
     first_of_kind(n, &["modifiers"])
 }
 
-fn is_restricted(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    modifiers_of(n).is_some_and(|modifiers| {
-        any_named_child(modifiers, |child| {
-            child.kind() == "visibility_modifier" && RESTRICTED.contains(&text(cx, child))
-        })
-    })
-}
-
-fn has_modifier_word(cx: &Cx<'_, '_>, n: Node<'_>, word: &str) -> bool {
+pub(crate) fn has_modifier_word(cx: &Cx<'_, '_>, n: Node<'_>, word: &str) -> bool {
     modifiers_of(n).is_some_and(|modifiers| {
         (0..modifiers.child_count())
             .filter_map(|i| modifiers.child(i))
@@ -106,7 +95,7 @@ fn has_modifier_word(cx: &Cx<'_, '_>, n: Node<'_>, word: &str) -> bool {
     })
 }
 
-fn annotation_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<&'s str> {
+pub(crate) fn annotation_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<&'s str> {
     let Some(modifiers) = modifiers_of(n) else {
         return Vec::new();
     };
@@ -115,12 +104,12 @@ fn annotation_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<&'s str> {
         .filter(|child| child.kind() == "annotation")
         .map(|child| {
             let bare = text(cx, child).trim_start_matches('@');
-            last_segment(bare.split('(').next().unwrap_or(""), &["."])
+            crate::hooks::last_segment(bare.split('(').next().unwrap_or(""), &["."])
         })
         .collect()
 }
 
-fn type_after_colon(n: Node<'_>) -> Option<Node<'_>> {
+pub(crate) fn type_after_colon(n: Node<'_>) -> Option<Node<'_>> {
     let mut seen_colon = false;
     for child in children_of(n) {
         if child.kind() == ":" {
@@ -132,122 +121,41 @@ fn type_after_colon(n: Node<'_>) -> Option<Node<'_>> {
     None
 }
 
-fn value_args(n: Node<'_>) -> Vec<Node<'_>> {
-    first_of_kind(n, &["value_arguments"]).map_or_else(Vec::new, |list| {
-        named_children(list)
-            .into_iter()
-            .filter(|child| child.kind() == "value_argument")
-            .collect()
-    })
-}
-
-fn is_named_arg(arg: Node<'_>) -> bool {
-    has_child_kind(arg, "=")
-}
-
-fn arg_value(arg: Node<'_>) -> Option<Node<'_>> {
-    last_named_child(arg)
-}
-
-fn callee_node(n: Node<'_>) -> Option<Node<'_>> {
-    find_named_child(n, |child| {
-        child.kind() != "line_comment"
-            && child.kind() != "block_comment"
-            && !matches!(
-                child.kind(),
-                "value_arguments" | "annotated_lambda" | "type_arguments"
-            )
-    })
-}
-
-fn span_arg<'s>(n: Node<'_>, shape: ArgShape<'s>) -> Arg<'s> {
-    Arg {
-        shape,
-        start_line: narrow(n.start_position().row).saturating_add(1),
-        end_line: narrow(n.end_position().row).saturating_add(1),
-    }
-}
-
-fn is_comment(n: Node<'_>) -> bool {
+pub(crate) fn is_comment(n: Node<'_>) -> bool {
     matches!(n.kind(), "line_comment" | "block_comment")
 }
 
-fn next_code_sibling(n: Node<'_>) -> Option<Node<'_>> {
-    let mut next = n.next_named_sibling();
-    while let Some(sibling) = next {
-        if !is_comment(sibling) {
+pub(crate) fn previous_code_sibling(n: Node<'_>) -> Option<Node<'_>> {
+    let mut previous = n.prev_sibling();
+    while let Some(sibling) = previous {
+        if !matches!(sibling.kind(), ";" | "line_comment" | "block_comment") {
             return Some(sibling);
         }
-        next = sibling.next_named_sibling();
+        previous = sibling.prev_sibling();
     }
     None
 }
 
-fn function_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
-    let Some(list) = first_of_kind(n, &["function_value_parameters"]) else {
-        return Vec::new();
-    };
-    named_children(list)
-        .into_iter()
-        .filter(|child| child.kind() == "parameter")
-        .filter_map(|parameter| {
-            let name = text(cx, first_of_kind(parameter, &["identifier"])?);
-            let bool_default = next_code_sibling(parameter).is_some_and(|default| {
-                default.kind() == "identifier" && matches!(text(cx, default), "true" | "false")
-            });
-            Some(Param {
-                name,
-                ty: type_after_colon(parameter).map(|ty| text(cx, ty)),
-                bool_default,
-            })
+fn has_visibility_word(cx: &Cx<'_, '_>, n: Node<'_>, words: &[&str]) -> bool {
+    modifiers_of(n).is_some_and(|modifiers| {
+        any_named_child(modifiers, |child| {
+            child.kind() == "visibility_modifier" && words.contains(&text(cx, child))
         })
-        .collect()
+    })
 }
 
-fn statement_call(statement: Node<'_>) -> Option<usize> {
-    match statement.kind() {
-        "call_expression" => Some(statement.id()),
-        "return_expression" => rfind_named_child(statement, |child| {
-            child.kind() != "line_comment" && child.kind() != "block_comment"
-        })
-        .filter(|inner| inner.kind() == "call_expression")
-        .map(|inner| inner.id()),
-        _ => None,
-    }
-}
-
-fn block_call(block: Node<'_>) -> Option<usize> {
-    let only = only_named_child_matching(block, |c| {
-        c.kind() != "line_comment" && c.kind() != "block_comment"
-    })?;
-    statement_call(only)
-}
-
-fn sole_call_of(n: Node<'_>) -> Option<usize> {
-    if n.kind() == "secondary_constructor" {
-        return first_of_kind(n, &["block"]).and_then(block_call);
-    }
-    let body = first_of_kind(n, &["function_body"])?;
-    let inner = first_code(body)?;
-    if inner.kind() == "block" {
-        block_call(inner)
+pub(crate) fn type_visibility(cx: &Cx<'_, '_>, n: Node<'_>) -> Visibility {
+    if has_visibility_word(cx, n, &["private"]) {
+        Visibility::Private
+    } else if has_visibility_word(cx, n, &["internal"]) {
+        Visibility::Restricted
     } else {
-        (inner.kind() == "call_expression").then(|| inner.id())
+        Visibility::Exported
     }
 }
 
-fn container_public(cx: &Cx<'_, '_>) -> bool {
-    match cx.innermost_container() {
-        None => true,
-        Some(Container::Class { exported, .. }) => exported,
-        Some(Container::Trait { public }) => public,
-        Some(_) => false,
-    }
-}
-
-fn is_nested_fn(n: Node<'_>) -> bool {
-    let mut current = n.parent();
-    while let Some(parent) = current {
+pub(crate) fn is_nested_fn(cx: &Cx<'_, '_>) -> bool {
+    for parent in cx.ancestors() {
         if matches!(
             parent.kind(),
             "function_declaration"
@@ -259,482 +167,51 @@ fn is_nested_fn(n: Node<'_>) -> bool {
         ) {
             return true;
         }
-        current = parent.parent();
     }
     false
 }
 
-fn expression_body(n: Node<'_>) -> bool {
-    first_of_kind(n, &["function_body"])
-        .and_then(first_code)
-        .is_some_and(|inner| inner.kind() != "block")
-}
-
-fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
-    let (name, name_pos) = match n.kind() {
-        "function_declaration" => {
-            first_of_kind(n, &["function_body"])?;
-            let name = child_by_field(n, "name")?;
-            (text(cx, name), pos_of(name))
-        }
-        "secondary_constructor" => {
-            first_of_kind(n, &["block"])?;
-            ("constructor", pos_of(n))
-        }
-        _ => return None,
-    };
-    let is_declaration = n.kind() == "function_declaration";
-    let return_type = if is_declaration {
-        type_after_colon(n).map(|ty| text(cx, ty))
-    } else {
-        None
-    };
-    let missing_annotations = if is_declaration && return_type.is_none() && expression_body(n) {
-        vec!["return"]
-    } else {
-        Vec::new()
-    };
-    let annotations = annotation_names(cx, n);
-    let tested = annotations.iter().any(|a| TEST_ANNOTATIONS.contains(a));
-    let benched = !tested && annotations.contains(&"Benchmark");
-    let public = !is_restricted(cx, n) && container_public(cx) && !is_nested_fn(n);
-    let (doc, doc_pos) = preceding_comments(cx, n, COMMENTS, &[]);
-    Some(FunctionHead {
-        name,
-        name_pos,
-        public,
-        interface_bound: has_modifier_word(cx, n, "override"),
-        region: tested
-            .then(|| attributed_region(n, modifiers_of(n), CodeRole::Test))
-            .or_else(|| benched.then(|| attributed_region(n, modifiers_of(n), CodeRole::Bench))),
-        params: function_params(cx, n),
-        return_type,
-        missing_annotations,
-        doc,
-        doc_pos,
-        sole_call: sole_call_of(n),
-    })
-}
-
-fn delegate_ref<'s>(cx: &Cx<'_, 's>, spec: Node<'_>) -> Option<ImplRef<'s>> {
-    let user = first_of_kind(spec, &["constructor_invocation"])
-        .and_then(|invocation| first_of_kind(invocation, &["user_type"]))
-        .or_else(|| first_of_kind(spec, &["user_type"]))?;
-    let last = rfind_named_child(user, |child| child.kind() == "identifier")?;
-    Some(ImplRef {
-        name: text(cx, last),
-        pos: pos_of(last),
-    })
-}
-
-fn typedef_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
-    let name = match n.kind() {
-        "type_alias" => child_by_field(n, "type")?,
-        "class_declaration" | "object_declaration" => child_by_field(n, "name")?,
-        _ => return None,
-    };
-    let public = !is_restricted(cx, n);
-    let is_class = n.kind() == "class_declaration";
-    let is_interface = is_class && has_child_kind(n, "interface");
-    let abstraction = is_class && (is_interface || has_modifier_word(cx, n, "abstract"));
-    let container = match n.kind() {
-        "type_alias" => None,
-        _ if is_interface => Some(Container::Trait { public }),
-        _ => Some(Container::Class {
-            exported: public,
-            implements: false,
-        }),
-    };
-    let impls: Vec<ImplRef<'s>> =
-        first_of_kind(n, &["delegation_specifiers"]).map_or_else(Vec::new, |list| {
-            named_children(list)
-                .into_iter()
-                .filter(|child| child.kind() == "delegation_specifier")
-                .filter_map(|spec| delegate_ref(cx, spec))
-                .collect()
-        });
-    Some(TypeHead {
-        def: Some(TypeDef {
-            name: text(cx, name),
-            pos: pos_of(name),
-            public,
-            abstraction,
-        }),
-        impls,
-        container,
-    })
-}
-
-fn import_fact<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Import<'s>> {
-    let pos = pos_of(n);
-    let qualified = first_of_kind(n, &["qualified_identifier"]);
-    let count = u32::try_from(n.named_child_count()).unwrap_or(u32::MAX);
-    let mut identifiers = (0..count)
-        .filter_map(|i| n.named_child(i))
-        .filter(|child| child.kind() == "identifier");
-    let (path, alias) = match qualified {
-        Some(qualified) => (
-            text(cx, qualified),
-            identifiers.next().map(|id| text(cx, id)),
-        ),
-        None => {
-            let first = identifiers.next()?;
-            (text(cx, first), identifiers.next().map(|id| text(cx, id)))
-        }
-    };
-    if has_child_kind(n, "*") {
-        return Some(Import {
-            pos,
-            module: Cow::Borrowed(path),
-            name: "*",
-            alias: None,
-            kind: ImportKind::Wildcard,
-        });
-    }
-    let (module, name) = path.rsplit_once('.').unwrap_or(("", path));
-    Some(Import {
-        pos,
-        module: Cow::Borrowed(module),
-        name,
-        alias,
-        kind: ImportKind::Named,
-    })
-}
-
-fn push_variable_name<'s>(cx: &Cx<'_, 's>, variable: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    if let Some(id) = first_of_kind(variable, &["identifier"]) {
-        out.push((text(cx, id), pos_of(id)));
-    }
-}
-
-fn variable_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    for child in named_children(n) {
-        if child.kind() == "variable_declaration" {
-            push_variable_name(cx, child, out);
-        } else if child.kind() == "multi_variable_declaration" {
-            for inner in named_children(child) {
-                if inner.kind() == "variable_declaration" {
-                    push_variable_name(cx, inner, out);
-                }
-            }
-        }
-    }
-}
-
-fn callee_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
-    let mut current = n;
-    loop {
-        current = match current.kind() {
-            "navigation_expression" => first_code(current)?,
-            "identifier" => return Some(text(cx, current)),
-            "this_expression" => return Some("this"),
-            "super_expression" => return Some("super"),
-            _ => return None,
-        };
-    }
-}
-
-fn value_shape<'s>(cx: &Cx<'_, 's>, value: Node<'_>) -> ArgShape<'s> {
-    match value.kind() {
-        "string_literal" | "multiline_string_literal" => {
-            string_arg_shape(cx, value, &["string_content"])
-        }
-        "binary_expression" if binary_concat(cx, value, "+", &["string_literal"]) => {
-            ArgShape::Concat
-        }
-        "identifier" => {
-            let name = text(cx, value);
-            if matches!(name, "true" | "false") {
-                ArgShape::Other
-            } else {
-                ArgShape::Ident(name)
-            }
-        }
-        _ => ArgShape::Other,
-    }
-}
-
-fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
-    if n.kind() != "call_expression" {
-        return None;
-    }
-    let callee = callee_node(n)?;
-    let mut args: Vec<Arg<'s>> = value_args(n)
-        .into_iter()
-        .filter_map(|arg| {
-            let value = arg_value(arg)?;
-            Some(span_arg(arg, value_shape(cx, value)))
-        })
-        .collect();
-    if let Some(lambda) = first_of_kind(n, &["annotated_lambda"]) {
-        args.push(span_arg(lambda, ArgShape::Other));
-    }
-    Some(CallHead {
-        callee: text(cx, callee),
-        kind: CallKind::Plain,
-        callee_root: callee_root(cx, callee),
-        args,
-    })
-}
-
-fn copy_source<'s>(cx: &Cx<'_, 's>, args: &[Node<'_>]) -> Option<&'s str> {
-    let mut found: Option<&'s str> = None;
-    for arg in args {
-        let label = text(cx, first_of_kind(*arg, &["identifier"])?);
-        let value = arg_value(*arg)?;
-        if value.kind() != "navigation_expression" {
-            return None;
-        }
-        let object = text(cx, first_code(value).filter(|o| o.kind() == "identifier")?);
-        let member = rfind_named_child(value, |child| child.kind() == "identifier")?;
-        if text(cx, member) != label || found.is_some_and(|known| known != object) {
-            return None;
-        }
-        found = Some(object);
-    }
-    found
-}
-
-fn struct_copy<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FieldCopy<'s>> {
-    if n.kind() != "call_expression" {
-        return None;
-    }
-    let args = value_args(n);
-    let named: Vec<Node<'_>> = args
-        .iter()
-        .copied()
-        .filter(|arg| is_named_arg(*arg))
-        .collect();
-    if named.is_empty() {
-        return None;
-    }
-    let source = if named.len() == args.len() {
-        copy_source(cx, &named)
-    } else {
-        None
-    };
-    Some(FieldCopy {
-        pos: pos_of(n),
-        fields: narrow(named.len()),
-        source,
-    })
-}
-
-fn handler_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, binding: Option<&str>) -> Stmt<'s> {
-    match stmt.kind() {
-        "call_expression" => match callee_node(stmt) {
-            Some(callee) => Stmt::Call {
-                callee: text(cx, callee),
-                kind: CallKind::Plain,
-            },
-            None => Stmt::Other,
-        },
-        "throw_expression" => {
-            let rethrows = first_code(stmt).is_some_and(|inner| {
-                inner.kind() == "identifier" && binding == Some(text(cx, inner))
-            });
-            if rethrows { Stmt::Rethrow } else { Stmt::Other }
-        }
-        _ => Stmt::Other,
-    }
-}
-
-fn handler_site<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Handler<'s>> {
-    if n.kind() != "catch_block" {
-        return None;
-    }
-    let binding = first_of_kind(n, &["identifier"]).map(|id| text(cx, id));
-    let body = first_of_kind(n, &["block"])?;
-    let stmts = code_children(body)
-        .into_iter()
-        .map(|stmt| handler_stmt(cx, stmt, binding))
-        .collect();
-    Some(Handler {
-        pos: pos_of(n),
-        stmts,
-    })
-}
-
-fn enum_condition(cx: &Cx<'_, '_>, condition: Node<'_>) -> bool {
-    match condition.kind() {
-        "navigation_expression" | "type_test" => true,
-        "identifier" => !matches!(text(cx, condition), "true" | "false"),
-        _ => false,
-    }
-}
-
-fn when_arm(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<WildcardArm> {
-    if n.kind() != "when_entry" || child_by_field(n, "condition").is_some() {
-        return None;
-    }
-    let parent = n.parent()?;
-    let has_subject = first_of_kind(parent, &["when_subject"]).is_some();
-    let enum_like = has_subject
-        && any_named_child(parent, |entry| {
-            entry.kind() == "when_entry"
-                && child_by_field(entry, "condition").is_some_and(|cond| enum_condition(cx, cond))
-        });
-    Some(WildcardArm {
-        pos: pos_of(n),
-        enum_like,
-    })
-}
-
-fn previous_code_sibling(n: Node<'_>) -> Option<Node<'_>> {
-    let mut previous = n.prev_sibling();
-    while let Some(sibling) = previous {
-        if !matches!(sibling.kind(), ";" | "line_comment" | "block_comment") {
-            return Some(sibling);
-        }
-        previous = sibling.prev_sibling();
-    }
-    None
-}
-
-fn is_else_if(n: Node<'_>, parent: Option<Node<'_>>) -> bool {
-    n.kind() == "if_expression"
-        && parent.is_some_and(|parent| parent.kind() == "if_expression")
-        && previous_code_sibling(n).is_some_and(|sibling| sibling.kind() == "else")
-}
-
-fn global_scope(n: Node<'_>) -> bool {
-    match n.parent() {
-        Some(parent) if parent.kind() == "source_file" => true,
-        Some(body) if body.kind() == "class_body" => body
-            .parent()
-            .is_some_and(|owner| matches!(owner.kind(), "object_declaration" | "companion_object")),
-        _ => false,
-    }
-}
-
-fn ambient_sites<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
-    match n.kind() {
-        "property_declaration" if global_scope(n) && has_child_kind(n, "var") => {
-            let mut names = Vec::new();
-            variable_names(cx, n, &mut names);
-            out.extend(
-                names
-                    .into_iter()
-                    .map(|(name, pos)| (AmbientKind::GlobalMutable, name, pos)),
-            );
-        }
-        "call_expression" => {
-            let callee = callee_node(n).map(|callee| text(cx, callee));
-            if let Some(callee) = callee.filter(|callee| *callee == "System.getenv") {
-                out.push((AmbientKind::EnvRead, callee, pos_of(n)));
-            }
-        }
-        _ => {}
-    }
-}
-
-fn dynamic_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
-    if n.kind() != "call_expression" {
-        return None;
-    }
-    let callee = text(cx, callee_node(n)?);
-    let last = last_segment(callee, &["."]);
-    let on_class = callee
-        .rsplit_once('.')
-        .is_some_and(|(qualifier, _)| last_segment(qualifier, &["."]) == "Class");
-    let reflective = REFLECTION.contains(&last) || (last == "forName" && on_class);
-    if !reflective {
-        return None;
-    }
-    let first = arg_value(value_args(n).into_iter().next()?)?;
-    (!matches!(first.kind(), "string_literal" | "multiline_string_literal"))
-        .then_some("reflection by name")
-}
-
-fn assertion_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<Assertion> {
-    if n.kind() != "call_expression" {
-        return None;
-    }
-    let callee = text(cx, callee_node(n)?);
-    let count = value_args(n).len() + usize::from(has_child_kind(n, "annotated_lambda"));
-    let (has_message, comparison) = match last_segment(callee, &["."]) {
-        "assertTrue" | "assertFalse" | "assertNull" | "assertNotNull" => (count > 1, false),
-        "assertEquals" | "assertNotEquals" | "assertSame" | "assertNotSame" => (count > 2, true),
-        "fail" => (count > 0, false),
-        _ => return None,
-    };
-    Some(Assertion {
-        pos: pos_of(n),
-        has_message,
-        comparison,
-    })
-}
-
-fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    let mut current = n;
-    loop {
-        current = match current.kind() {
-            "identifier" | "this_expression" => return Some((text(cx, current), pos_of(current))),
-            "navigation_expression" | "index_expression" | "parenthesized_expression" => {
-                first_code(current)?
-            }
-            _ => return None,
-        };
-    }
-}
-
-fn write_targets<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    let target = match n.kind() {
-        "assignment" => child_by_field(n, "left"),
-        "unary_expression"
-            if child_by_field(n, "operator")
-                .is_some_and(|op| matches!(text(cx, op), "++" | "--")) =>
-        {
-            child_by_field(n, "argument")
-        }
-        _ => None,
-    };
-    out.extend(target.and_then(|target| write_root(cx, target)));
-}
-
 impl LangHooks for KotlinHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
-        function_head(cx, n)
+        funcs::function_head(cx, n)
     }
 
     fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
-        is_else_if(n, parent)
+        items::is_else_if(n, parent)
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() == "property_declaration" && has_child_kind(n, "var") {
-            variable_names(cx, n, out);
-        }
+        items::decl_names(cx, n, out);
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        write_targets(cx, n, out);
+        items::write_targets(cx, n, out);
     }
 
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
-        call_head(cx, n)
+        calls::call_head(cx, n)
     }
 
     fn imports<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
         if n.kind() == "import" {
-            out.extend(import_fact(cx, n));
+            out.extend(items::import_fact(cx, n));
         }
     }
 
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {
-        typedef_head(cx, n)
+        items::typedef_head(cx, n)
     }
 
     fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
-        when_arm(cx, n)
+        items::match_arm(cx, n)
     }
 
     fn handler<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'s>> {
-        handler_site(cx, n)
+        items::handler_site(cx, n)
     }
 
     fn struct_lit<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FieldCopy<'s>> {
-        struct_copy(cx, n)
+        calls::struct_copy(cx, n)
     }
 
     fn ambient<'s>(
@@ -744,14 +221,14 @@ impl LangHooks for KotlinHooks {
         _in_function: bool,
         out: &mut Vec<(AmbientKind, &'s str, Pos)>,
     ) {
-        ambient_sites(cx, n, out);
+        items::ambient_sites(cx, n, out);
     }
 
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
-        dynamic_site(cx, n)
+        calls::dynamic_site(cx, n)
     }
 
     fn assertion(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {
-        assertion_site(cx, n)
+        calls::assertion_site(cx, n)
     }
 }

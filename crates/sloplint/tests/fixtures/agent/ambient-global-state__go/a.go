@@ -1,6 +1,9 @@
 package probe
 import "os"
 var Counter int
-func Use() string {
-	return os.Getenv("HOME")
+func Bump() {
+	Counter++
+}
+func Load() {
+	Counter = len(os.Getenv("HOME"))
 }

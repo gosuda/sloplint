@@ -1,9 +1,8 @@
 <?php
-function counter() {
-    static $count = 0;
-    $count++;
-    return $count;
+$GLOBALS["counter"] = 0;
+function bump() {
+    $GLOBALS["counter"]++;
 }
-function home_dir() {
-    return getenv("HOME");
+function load() {
+    $GLOBALS["counter"] = strlen(getenv("HOME") ?: "");
 }

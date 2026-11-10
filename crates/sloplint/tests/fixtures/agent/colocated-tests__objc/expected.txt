@@ -1,1 +1,1 @@
-src/Widget.m:1 minor agent/colocated-tests
+src/Widget.m:1 info agent/colocated-tests

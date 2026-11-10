@@ -1,1 +1,2 @@
 # Near-miss: the rule fires nothing here.
+# Retired positive (retired_configure.odin): the struct-literal call initializes a named binding, so it stays silent.

@@ -51,7 +51,7 @@ fn homonym_options(root: &Path) -> RunOptions {
     RunOptions {
         cwd: root.to_path_buf(),
         root: Some(root.to_path_buf()),
-        strictness: Some(Strictness::Standard),
+        strictness: Some(Strictness::Strict),
         mode: Some(Mode::Threshold),
         rule_filter: RuleFilter(vec![
             RulePattern::parse(HOMONYM).expect("homonym pattern parses"),

@@ -1,1 +1,1 @@
-src/lib.swift:2 major complexity/mutable-span
+src/lib.swift:2 info complexity/mutable-span

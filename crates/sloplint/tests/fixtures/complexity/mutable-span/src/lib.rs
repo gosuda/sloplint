@@ -28,6 +28,8 @@ pub fn spread(limit: i32) -> i32 {
     let z = w + x;
     let sum = x + y + z;
     let fin = sum + a;
+    let pad_a = fin + 1;
+    let pad_b = pad_a + 1;
     total += fin;
     total += limit;
     total

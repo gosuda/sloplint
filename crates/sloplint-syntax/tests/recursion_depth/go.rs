@@ -16,13 +16,24 @@ fn call_chains_keep_every_call_in_linear_time() {
         within_linear_budget(|| {
             with_facts(Lang::Go, "chain.go", &source, |facts| {
                 assert_eq!(facts.calls.len(), DEPTH);
-                assert!(
-                    facts.calls.iter().all(|call| call.callee_root.is_none()),
-                    "go records no callee roots"
+                let rooted: Vec<_> = facts
+                    .calls
+                    .iter()
+                    .filter(|call| call.callee_root.is_some())
+                    .collect();
+                assert_eq!(
+                    rooted.len(),
+                    1,
+                    "only the innermost call resolves a chain root"
                 );
-                assert!(
-                    facts.calls.iter().any(|call| call.callee == "a.B"),
+                assert_eq!(
+                    rooted[0].callee, "a.B",
                     "the innermost call keeps its short callee"
+                );
+                assert_eq!(
+                    rooted[0].callee_root,
+                    Some("a"),
+                    "the innermost call roots at the receiver"
                 );
             });
         });

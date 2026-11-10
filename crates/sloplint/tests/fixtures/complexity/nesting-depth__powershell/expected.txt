@@ -1,1 +1,1 @@
-a.ps1:1 major complexity/nesting-depth
+a.ps1:1 info complexity/nesting-depth

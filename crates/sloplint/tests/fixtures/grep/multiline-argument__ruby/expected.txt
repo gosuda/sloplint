@@ -1,1 +1,2 @@
+# Positive: Collection arg spans lines 3-19 (17 lines >= strict Minor(15)); statement call.
 a.rb:2 minor grep/multiline-argument

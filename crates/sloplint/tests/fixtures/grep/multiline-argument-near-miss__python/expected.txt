@@ -1,0 +1,1 @@
+# Near-miss: the long Collection call directly initializes a named binding, so it never flags.

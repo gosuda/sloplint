@@ -1,5 +1,7 @@
 fun tangled(a: Int): Int {
     var x = a
+    if (a >= 0) {
+    for (i in 0 until a) {
     if (a > 0) { x += 0 }
     if (a > 1) { x += 1 }
     if (a > 2) { x += 2 }
@@ -16,5 +18,7 @@ fun tangled(a: Int): Int {
     if (a > 13) { x += 13 }
     if (a > 14) { x += 14 }
     if (a > 15) { x += 15 }
+    }
+    }
     return x
 }

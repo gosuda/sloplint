@@ -1,6 +1,7 @@
 public class Spread {
     public int spread(int limit) {
         int total = 0;
+        total += limit;
         int a1 = 1;
         int a2 = 2;
         int a3 = 3;
@@ -29,8 +30,8 @@ public class Spread {
         int a26 = 26;
         int a27 = 27;
         int a28 = 28;
-        total += a1 + a28;
-        total += limit;
+        int a29 = 29;
+        total += a1;
         return total;
     }
 }

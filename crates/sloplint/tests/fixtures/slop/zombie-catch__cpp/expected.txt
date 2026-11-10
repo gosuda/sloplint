@@ -1,1 +1,1 @@
-src/a.cpp:3 major slop/zombie-catch
+src/a.cpp:3 info slop/zombie-catch

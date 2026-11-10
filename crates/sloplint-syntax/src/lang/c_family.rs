@@ -1,4 +1,6 @@
-use sloplint_core::facts::{AmbientKind, Arg, ArgShape, Assertion, Param, Pos};
+use sloplint_core::facts::{
+    AmbientKind, Arg, ArgShape, AssertShape, Assertion, Param, Pos, PrimitiveKind,
+};
 use tree_sitter::Node;
 
 use crate::hooks::{
@@ -149,6 +151,56 @@ pub(crate) fn params<'s>(
     out
 }
 
+pub(crate) fn init_value(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    cx.parent()
+        .filter(|parent| parent.kind() == "init_declarator")
+        .and_then(|parent| child_by_field(parent, "value"))
+        .is_some_and(|value| value.id() == n.id())
+}
+
+pub(crate) fn primitive_kind_of(ty: Option<&str>) -> PrimitiveKind {
+    let text = ty.unwrap_or("");
+    let pointer = text.bytes().any(|b| b == b'*' || b == b'&');
+    let mut base = "";
+    for tok in text.split(|c: char| !c.is_ascii_alphanumeric() && c != '_') {
+        if !tok.is_empty() {
+            base = tok;
+        }
+    }
+    match base {
+        "bool" | "_Bool" | "BOOL" if !pointer => PrimitiveKind::Bool,
+        "string" | "NSString" => PrimitiveKind::Str,
+        "char" if pointer => PrimitiveKind::Str,
+        "short" | "int" | "long" | "signed" | "unsigned" | "size_t" | "ssize_t" | "NSInteger"
+        | "NSUInteger" | "int8_t" | "int16_t" | "int32_t" | "int64_t" | "uint8_t" | "uint16_t"
+        | "uint32_t" | "uint64_t"
+            if !pointer =>
+        {
+            PrimitiveKind::Int
+        }
+        "float" | "double" | "CGFloat" if !pointer => PrimitiveKind::Float,
+        _ => PrimitiveKind::Other,
+    }
+}
+
+pub(crate) fn defaulted_param<'s>(
+    cx: &Cx<'_, 's>,
+    p: Node<'_>,
+    name: &'s str,
+    ty: Option<&'s str>,
+) -> Param<'s> {
+    Param {
+        name,
+        ty,
+        primitive_kind: primitive_kind_of(ty),
+        has_default: child_by_field(p, "default_value").is_some(),
+        bool_default: child_by_field(p, "default_value")
+            .is_some_and(|d| text(cx, d) == "true" || text(cx, d) == "false"),
+        keyword_only: false,
+        is_variadic: false,
+    }
+}
+
 pub(crate) fn param<'s>(cx: &Cx<'_, 's>, p: Node<'_>, decls: &CDeclarators) -> Option<Param<'s>> {
     let ty_node = child_by_field(p, "type")?;
     let declarator = child_by_field(p, "declarator");
@@ -162,13 +214,9 @@ pub(crate) fn param<'s>(cx: &Cx<'_, 's>, p: Node<'_>, decls: &CDeclarators) -> O
     if name.is_empty() && ty == "void" {
         return None;
     }
-    Some(Param {
-        name,
-        ty: Some(ty),
-        bool_default: child_by_field(p, "default_value")
-            .is_some_and(|d| text(cx, d) == "true" || text(cx, d) == "false"),
-    })
+    Some(defaulted_param(cx, p, name, Some(ty)))
 }
+
 pub(crate) fn const_pointer(cx: &Cx<'_, '_>, d: Node<'_>, wrap: &[&str]) -> bool {
     let mut current = match d.kind() {
         "init_declarator" => child_by_field(d, "declarator").unwrap_or(d),
@@ -236,6 +284,9 @@ pub(crate) fn env_ambient<'s>(
         return;
     };
     let raw = text(cx, func);
+    if raw.bytes().any(|b| b == b'(' || b == b')') {
+        return;
+    }
     if envs.contains(&flat(raw).as_str()) {
         out.push((AmbientKind::EnvRead, raw, pos_of(n)));
     }
@@ -250,10 +301,10 @@ pub(crate) fn first_arg(n: Node<'_>) -> Option<Node<'_>> {
     child_by_field(n, "arguments").and_then(|a| find_named_child(a, |c| c.kind() != "comment"))
 }
 pub(crate) fn plain_assert(cx: &Cx<'_, '_>, n: Node<'_>) -> Assertion {
-    let arg = first_arg(n).filter(|a| a.kind() == "binary_expression");
+    let first = first_arg(n);
     let mut has_message = false;
     let mut comparison = false;
-    if let Some(found) = arg {
+    if let Some(found) = first.filter(|a| a.kind() == "binary_expression") {
         let op = bin_op(cx, found).unwrap_or("");
         if op == "&&" {
             has_message =
@@ -261,10 +312,20 @@ pub(crate) fn plain_assert(cx: &Cx<'_, '_>, n: Node<'_>) -> Assertion {
         }
         comparison = op == "==" || op == "!=";
     }
+    let shape = if comparison {
+        AssertShape::TopEqNe
+    } else if first.is_some_and(|a| a.kind() == "identifier") {
+        AssertShape::BareName
+    } else {
+        AssertShape::Other
+    };
     Assertion {
         pos: pos_of(n),
         has_message,
         comparison,
+        shape,
+        in_typecheck: false,
+        value_is_bool_literal: false,
     }
 }
 pub(crate) fn pair_source<'s>(cx: &Cx<'_, 's>, pair: Node<'_>) -> Option<&'s str> {
@@ -298,15 +359,8 @@ pub(crate) fn designator_of<'s>(cx: &Cx<'_, 's>, pair: Node<'_>) -> Option<&'s s
     }
     None
 }
-pub(crate) fn in_function(n: Node<'_>) -> bool {
-    let mut parent = n.parent();
-    while let Some(found) = parent {
-        if found.kind() == "function_definition" {
-            return true;
-        }
-        parent = found.parent();
-    }
-    false
+pub(crate) fn in_function(cx: &Cx<'_, '_>) -> bool {
+    cx.ancestors().any(|a| a.kind() == "function_definition")
 }
 pub(crate) fn collect_fragments<'s>(
     cx: &Cx<'_, 's>,

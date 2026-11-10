@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, CallKind, Handler, Import, ImportKind, Param, Pos, Stmt,
+    AmbientKind, Arg, ArgShape, AssertShape, Assertion, CallKind, Handler, Import, ImportKind,
+    ImportScope, Param, Pos, PrimitiveKind, Stmt, Visibility,
 };
 use tree_sitter::Node;
 
@@ -12,7 +13,22 @@ use crate::hooks::{
 };
 use crate::spec::Role;
 
-pub(crate) struct RHooks;
+const R_STDLIB: &[&str] = &[
+    "base",
+    "compiler",
+    "datasets",
+    "graphics",
+    "grDevices",
+    "grid",
+    "methods",
+    "parallel",
+    "splines",
+    "stats",
+    "stats4",
+    "tcltk",
+    "tools",
+    "utils",
+];
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Closure),
@@ -25,6 +41,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("comment", Role::Comment),
     ("argument", Role::MatchArm),
 ];
+
+pub(crate) struct RHooks;
 
 pub(crate) static HOOKS: RHooks = RHooks;
 
@@ -46,8 +64,18 @@ impl LangHooks for RHooks {
         Some(FunctionHead {
             name,
             name_pos: pos_of(binary),
-            public: !name.starts_with('.'),
-            interface_bound: false,
+            visibility: if name.starts_with('.') {
+                Visibility::Private
+            } else {
+                Visibility::Exported
+            },
+            signature_forced: false,
+            entry_point: false,
+            in_test: false,
+            is_overload: false,
+            is_deprecated: false,
+            is_decorated: false,
+            is_trait_item: false,
             region: None,
             params: params(cx, n),
             return_type: None,
@@ -92,10 +120,13 @@ impl LangHooks for RHooks {
 
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
         let callee = child_by_field(n, "function")?;
+        let root = callee_root(cx, callee);
         Some(CallHead {
             callee: trimmed(cx, callee),
             kind: CallKind::Plain,
-            callee_root: callee_root(cx, callee),
+            callee_root: root,
+            is_simple_path: root.is_some(),
+            initializes_binding: false,
             args: call_args(cx, n),
         })
     }
@@ -117,12 +148,18 @@ impl LangHooks for RHooks {
         } else {
             trimmed(cx, first)
         };
+        let external_root =
+            (kind == ImportKind::Wildcard && !R_STDLIB.contains(&module)).then_some(module);
         out.push(Import {
             pos: pos_of(n),
             module: Cow::Borrowed(module),
             name: module,
             alias: None,
             kind,
+            scope: ImportScope::Module,
+            in_test: false,
+            is_reexport: false,
+            external_root,
         });
     }
 
@@ -132,7 +169,8 @@ impl LangHooks for RHooks {
         {
             return None;
         }
-        let call = n.parent()?.parent().filter(|c| c.kind() == "call")?;
+        let parent = cx.parent()?;
+        let call = cx.parent_of(parent).filter(|c| c.kind() == "call")?;
         let function = child_by_field(call, "function")?;
         if last_segment(trimmed(cx, function), &["::"]) != "tryCatch" {
             return None;
@@ -145,6 +183,9 @@ impl LangHooks for RHooks {
         Some(Handler {
             pos: pos_of(n),
             stmts: handler_statements(cx, handler_fn, binding),
+            has_else: false,
+            try_imports_only: false,
+            in_cleanup: false,
         })
     }
 
@@ -155,6 +196,10 @@ impl LangHooks for RHooks {
         in_function: bool,
         out: &mut Vec<(AmbientKind, &'s str, Pos)>,
     ) {
+        if n.kind() == "binary_operator" {
+            push_global_binding(cx, n, in_function, out);
+            return;
+        }
         if n.kind() != "call" {
             return;
         }
@@ -162,12 +207,18 @@ impl LangHooks for RHooks {
             return;
         };
         let name = trimmed(cx, function);
-        let kind = match last_segment(name, &["::"]) {
-            "Sys.getenv" => AmbientKind::EnvRead,
-            "options" | "Sys.setenv" | "Sys.unsetenv" if in_function => AmbientKind::GlobalWrite,
-            _ => return,
-        };
-        out.push((kind, name, pos_of(n)));
+        match last_segment(name, &["::"]) {
+            "Sys.getenv" => out.push((AmbientKind::EnvRead, name, pos_of(n))),
+            "assign" if in_function => {
+                if let Some(target) = global_assign_target(cx, n) {
+                    out.push((AmbientKind::GlobalWrite, target, pos_of(n)));
+                }
+            }
+            "options" | "Sys.setenv" | "Sys.unsetenv" if in_function => {
+                out.push((AmbientKind::GlobalWrite, "os.environ", pos_of(n)));
+            }
+            _ => {}
+        }
     }
 
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
@@ -196,16 +247,25 @@ impl LangHooks for RHooks {
                     .iter()
                     .any(|a| child_by_field(*a, "name").is_some()),
                 comparison: false,
+                shape: stopifnot_shape(cx, &arguments),
+                in_typecheck: false,
+                value_is_bool_literal: false,
             }),
             "expect_true" | "expect_false" => Some(Assertion {
                 pos,
                 has_message: has_message(cx, &arguments, 1),
                 comparison: first_is_comparison(cx, &arguments),
+                shape: AssertShape::Other,
+                in_typecheck: false,
+                value_is_bool_literal: false,
             }),
             "expect_equal" | "expect_identical" => Some(Assertion {
                 pos,
                 has_message: has_message(cx, &arguments, 2),
                 comparison: true,
+                shape: AssertShape::Other,
+                in_typecheck: false,
+                value_is_bool_literal: false,
             }),
             _ => None,
         }
@@ -216,8 +276,50 @@ fn operator_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
     child_by_field(n, "operator").map_or("", |op| trimmed(cx, op))
 }
 
-fn bound_function<'s, 'a>(cx: &Cx<'_, 's>, func: Node<'a>) -> Option<(&'s str, Node<'a>)> {
-    let binary = func.parent().filter(|p| p.kind() == "binary_operator")?;
+fn push_global_binding<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    in_function: bool,
+    out: &mut Vec<(AmbientKind, &'s str, Pos)>,
+) {
+    if in_function || !matches!(operator_text(cx, n), "<-" | "=" | ":=") {
+        return;
+    }
+    let Some(target) = child_by_field(n, "lhs").filter(|t| t.kind() == "identifier") else {
+        return;
+    };
+    if child_by_field(n, "rhs").is_some_and(|rhs| rhs.kind() == "function_definition") {
+        return;
+    }
+    out.push((AmbientKind::GlobalMutable, text(cx, target), pos_of(target)));
+}
+
+fn is_global_envir(cx: &Cx<'_, '_>, value: Node<'_>) -> bool {
+    if value.kind() == "identifier" {
+        return trimmed(cx, value) == ".GlobalEnv";
+    }
+    if value.kind() != "call" {
+        return false;
+    }
+    child_by_field(value, "function").is_some_and(|f| trimmed(cx, f) == "globalenv")
+}
+
+fn global_assign_target<'s>(cx: &Cx<'_, 's>, call: Node<'_>) -> Option<&'s str> {
+    let arguments = argument_nodes(call);
+    let first = arguments.first()?;
+    if child_by_field(*first, "name").is_some() {
+        return None;
+    }
+    let value = child_by_field(*first, "value").filter(|v| v.kind() == "string")?;
+    let global = arguments.iter().any(|argument| {
+        child_by_field(*argument, "name").is_some_and(|name| trimmed(cx, name) == "envir")
+            && child_by_field(*argument, "value").is_some_and(|target| is_global_envir(cx, target))
+    });
+    global.then(|| string_content(cx, value)).flatten()
+}
+
+fn bound_function<'s, 'a>(cx: &Cx<'a, 's>, func: Node<'a>) -> Option<(&'s str, Node<'a>)> {
+    let binary = cx.parent().filter(|p| p.kind() == "binary_operator")?;
     let op = operator_text(cx, binary);
     let lhs = child_by_field(binary, "lhs")?;
     let rhs = child_by_field(binary, "rhs")?;
@@ -239,6 +341,22 @@ fn bound_function<'s, 'a>(cx: &Cx<'_, 's>, func: Node<'a>) -> Option<(&'s str, N
     Some((name, binary))
 }
 
+fn stopifnot_shape(cx: &Cx<'_, '_>, arguments: &[Node<'_>]) -> AssertShape {
+    if arguments.len() != 1 || child_by_field(arguments[0], "name").is_some() {
+        return AssertShape::Other;
+    }
+    let Some(value) = child_by_field(arguments[0], "value") else {
+        return AssertShape::Other;
+    };
+    if value.kind() == "identifier" {
+        return AssertShape::BareName;
+    }
+    if value.kind() == "binary_operator" && matches!(operator_text(cx, value), "==" | "!=") {
+        return AssertShape::TopEqNe;
+    }
+    AssertShape::Other
+}
+
 fn argument_nodes(call: Node<'_>) -> Vec<Node<'_>> {
     child_by_field(call, "arguments").map_or_else(Vec::new, |list| {
         named_children(list)
@@ -257,17 +375,30 @@ fn param_name<'s>(cx: &Cx<'_, 's>, parameter: Node<'_>) -> &'s str {
         .map_or_else(|| trimmed(cx, parameter), |name| trimmed(cx, name))
 }
 
+fn r_param<'s>(cx: &Cx<'_, 's>, parameter: Node<'_>) -> Param<'s> {
+    let flag = child_by_field(parameter, "default")
+        .is_some_and(|value| matches!(trimmed(cx, value), "TRUE" | "FALSE"));
+    Param {
+        name: param_name(cx, parameter),
+        ty: None,
+        primitive_kind: if flag {
+            PrimitiveKind::Bool
+        } else {
+            PrimitiveKind::Other
+        },
+        has_default: false,
+        bool_default: flag,
+        keyword_only: false,
+        is_variadic: false,
+    }
+}
+
 fn params<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Vec<Param<'s>> {
     child_by_field(func, "parameters").map_or_else(Vec::new, |list| {
         named_children(list)
             .into_iter()
             .filter(|p| p.kind() == "parameter")
-            .map(|parameter| Param {
-                name: param_name(cx, parameter),
-                ty: None,
-                bool_default: child_by_field(parameter, "default")
-                    .is_some_and(|value| matches!(value.kind(), "true" | "false")),
-            })
+            .map(|parameter| r_param(cx, parameter))
             .collect()
     })
 }

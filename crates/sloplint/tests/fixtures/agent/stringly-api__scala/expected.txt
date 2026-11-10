@@ -1,2 +1,1 @@
-# Positive: 3 consecutive primitive params >= strict major_at 3.
-src/api.scala:2 major agent/stringly-api
+src/api.scala:2 info agent/stringly-api

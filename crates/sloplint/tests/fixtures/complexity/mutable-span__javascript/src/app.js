@@ -28,6 +28,7 @@ export function spread(limit) {
   const z = w + x;
   const sum = x + y + z;
   const fin = sum + a;
+  const snap = fin + b;
   total += fin;
   total += limit;
   return total;

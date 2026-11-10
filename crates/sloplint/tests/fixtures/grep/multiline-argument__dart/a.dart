@@ -6,6 +6,15 @@ void caller() {
     'delta',
     'epsilon',
     'zeta',
+    'eta',
+    'theta',
+    'iota',
+    'kappa',
+    'lambda',
+    'mu',
+    'nu',
+    'xi',
+    'omicron',
   ]);
 }
 

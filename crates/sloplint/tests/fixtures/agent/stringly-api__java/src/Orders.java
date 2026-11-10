@@ -1,5 +1,5 @@
 public class Orders {
-    public long processOrder(String id, String account, long qty) {
-        return qty;
+    public long processOrder(String a, String b, String c) {
+        return 0;
     }
 }

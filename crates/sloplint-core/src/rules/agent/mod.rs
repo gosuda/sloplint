@@ -7,3 +7,4 @@ pub(crate) mod informative_assertions;
 pub(crate) mod stringly_api;
 pub(crate) mod typed_error_boundary;
 pub(crate) mod unique_patch_anchors;
+pub(crate) mod unique_patch_lines;

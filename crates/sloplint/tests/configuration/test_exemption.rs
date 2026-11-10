@@ -2,13 +2,13 @@
 
 use std::collections::BTreeSet;
 
-use sloplint_core::config::Config;
+use sloplint_core::config::{Config, Strictness};
 use sloplint_core::lang::Lang;
 use sloplint_core::role::{CodeRole, Shift};
 use sloplint_core::{CATALOG, Finding, RuleFilter, RuleSet};
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
-const SOURCE: &str = "use std::collections::*;\n\npub fn handle(a: bool, b: bool) {\n    assert!(a);\n}\n\n#[test]\nfn rejects_empty() {\n    assert!(true, \"nonempty\");\n}\n";
+const SOURCE: &str = "use std::collections::*;\n\npub fn handle(a: bool, b: bool, c: bool, d: bool, e: bool) {\n    assert!(a);\n}\n\n#[test]\nfn rejects_empty() {\n    assert!(true, \"nonempty\");\n}\n";
 
 fn check_production_file(rules: &RuleSet) -> Vec<Finding> {
     check_with_role(rules, CodeRole::Library)
@@ -44,10 +44,16 @@ fn off_in_tests() -> BTreeSet<&'static str> {
         .collect()
 }
 
+fn strict_rules() -> RuleSet {
+    let mut config = Config::default();
+    config.project.strictness = Strictness::Strict;
+    RuleSet::new(&config, &RuleFilter::default())
+        .unwrap_or_else(|e| panic!("strict rules rejected: {e}"))
+}
+
 #[test]
 fn exempt_rules_report_nothing_in_test_files() {
-    let rules = RuleSet::new(&Config::default(), &RuleFilter::default())
-        .unwrap_or_else(|e| panic!("default rules rejected: {e}"));
+    let rules = strict_rules();
     let production = check_production_file(&rules);
     let production_ids = rule_ids(&production);
     for off in ["grep/no-wildcard-import", "complexity/boolean-params"] {
@@ -69,8 +75,7 @@ fn exempt_rules_report_nothing_in_test_files() {
 
 #[test]
 fn rules_without_the_exemption_report_the_same_in_test_files() {
-    let rules = RuleSet::new(&Config::default(), &RuleFilter::default())
-        .unwrap_or_else(|e| panic!("default rules rejected: {e}"));
+    let rules = strict_rules();
     let off_ids = off_in_tests();
     let kept = |findings: Vec<Finding>| -> Vec<Finding> {
         findings

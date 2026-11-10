@@ -1,1 +1,1 @@
-src/status.tsx:11 minor agent/catch-all-match
+src/status.tsx:11 info agent/catch-all-match

@@ -1,1 +1,1 @@
-src/Spread.java:3 major complexity/mutable-span
+src/Spread.java:3 info complexity/mutable-span

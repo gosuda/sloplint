@@ -1,1 +1,1 @@
-# Argument spans 5 lines, below strict minor_at=6.
+# Argument spans 5 lines, below strict Minor(15).

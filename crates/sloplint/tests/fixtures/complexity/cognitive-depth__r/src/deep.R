@@ -1,5 +1,7 @@
 tangled <- function(a) {
   x <- a
+  if (a >= 0) {
+    for (i in 1:a) {
   if (a > 0) { x <- x + 1 }
   if (a > 1) { x <- x + 2 }
   if (a > 2) { x <- x + 3 }
@@ -16,5 +18,7 @@ tangled <- function(a) {
   if (a > 13) { x <- x + 14 }
   if (a > 14) { x <- x + 15 }
   if (a > 15) { x <- x + 16 }
+    }
+  }
   x
 }

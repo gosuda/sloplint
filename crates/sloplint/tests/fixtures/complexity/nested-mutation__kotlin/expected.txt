@@ -1,1 +1,0 @@
-src/accumulate.kt:5 minor complexity/nested-mutation

@@ -1,1 +1,1 @@
-a.go:8 major slop/zombie-catch
+a.go:8 info slop/zombie-catch

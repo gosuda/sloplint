@@ -2,9 +2,8 @@
 //! unused directives are reported at their own line. Every oracle runs over [`SAMPLES`], one row
 //! per language and comment placement, so each grammar's comment syntax is exercised.
 
-use sloplint::Report;
-
 use super::{fired, run_ok, standard, tempdir, write};
+use sloplint::Report;
 
 /// One row of the oracle table: a sample file, the comment syntax its directives use, and the
 /// findings its bare source produces.
@@ -130,7 +129,7 @@ static SAMPLES: &[Sample] = &[
         comment: |d| format!("// {d}\n"),
         source: |d| {
             format!(
-                "class Sample {{\n    @Deprecated\n{d}    public void handle(boolean flag, boolean other) {{}}\n}}\n"
+                "public class Sample {{\n    @Deprecated\n{d}    public void handle(boolean flag, boolean other) {{}}\n}}\n"
             )
         },
         control: &[("complexity/boolean-params", 3), ("grep/generic-name", 3)],
@@ -249,14 +248,18 @@ fn assert_no_failures(failures: &[String]) {
     );
 }
 
+/// Re-enables the boolean-params trigger the oracles were written around now that it
+/// reports only at strict.
+const BOOLEAN_CONFIG: &str = "[rules.\"complexity/boolean-params\"]\nlevel = \"minor\"\n";
+
 #[test]
 fn suppressions_drop_only_their_findings() {
     let mut failures = Vec::new();
     for sample in SAMPLES {
-        let control = sample_report(sample, "", "");
+        let control = sample_report(sample, "", BOOLEAN_CONFIG);
         expect_lines(&mut failures, sample, "control", &control, sample.control);
         let exact = (sample.comment)(&directive("grep/generic-name", "the name is the contract"));
-        let exact_report = sample_report(sample, &exact, "");
+        let exact_report = sample_report(sample, &exact, BOOLEAN_CONFIG);
         expect_lines(
             &mut failures,
             sample,
@@ -265,7 +268,7 @@ fn suppressions_drop_only_their_findings() {
             sample.after_exact,
         );
         let family = (sample.comment)(&directive(sample.family, "the family is the contract"));
-        let family_report = sample_report(sample, &family, "");
+        let family_report = sample_report(sample, &family, BOOLEAN_CONFIG);
         expect_lines(
             &mut failures,
             sample,
@@ -278,10 +281,10 @@ fn suppressions_drop_only_their_findings() {
 }
 
 /// A doc comment that restates the function name.
-const DOC: &str = "/// Process the order.\n";
+const DOC: &str = "/// Process the data.\n";
 
-/// A function whose signature carries two more findings next to the echo-comment one.
-const ORDER_FN: &str = "pub fn process_order(id: &str, account: &str, qty: u64) -> Result<u64, Box<dyn std::error::Error>> {\n    Ok(0)\n}\n";
+/// A function with a generic name, so a second finding stands next to the echo-comment one.
+const ORDER_FN: &str = "pub fn process_data(id: &str) {}\n";
 
 // A035: a directive next to a doc comment must not become part of the doc text. Folded in, it
 // dilutes the restated name, so the echo finding never exists and the directive that should
@@ -292,18 +295,14 @@ fn directive_beside_a_restating_doc_removes_only_the_echo_finding() {
     let control = report_of("src/lib.rs", &format!("{DOC}{ORDER_FN}"), "");
     assert_eq!(
         rule_lines(&control),
-        [
-            ("slop/echo-comment", 1),
-            ("agent/stringly-api", 2),
-            ("agent/typed-error-boundary", 2),
-        ],
+        [("slop/echo-comment", 1), ("grep/generic-name", 2),],
         "control: the restating doc fires before any directive exists"
     );
     let directive = "// sloplint-allow(slop/echo-comment): the name is the contract\n";
     let suppressed = report_of("src/lib.rs", &format!("{directive}{DOC}{ORDER_FN}"), "");
     assert_eq!(
         rule_lines(&suppressed),
-        [("agent/stringly-api", 3), ("agent/typed-error-boundary", 3)],
+        [("grep/generic-name", 3)],
         "the directive above the doc removes only the echo finding and is not reported unused"
     );
 }

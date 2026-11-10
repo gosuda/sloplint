@@ -1,3 +1,2 @@
-# Positive: dynamic first arg (line 2) and 5-char literal run (line 3); strict min_len=12, level major.
-src/lib.rs:2 major grep/contiguous-log-literal
-src/lib.rs:3 major grep/contiguous-log-literal
+# Positive: message-bearing error! with 4-char static run < strict min_len=8; strict rung major.
+src/lib.rs:2 info grep/contiguous-log-literal

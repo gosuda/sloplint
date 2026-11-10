@@ -26,15 +26,27 @@ fn numbers(text: &str) -> Vec<u64> {
 }
 
 /// `(line, message)` of every finding for `source` written to `a.py`, in report order.
+/// Sources are wrapped in one function body: only copies inside a function count.
 fn reported(source: &str) -> Vec<(u32, String)> {
     reported_at(Strictness::Strict, source)
 }
 
-/// `reported` at an explicit strictness, for scenarios that need a window other than the
-/// strict one.
-fn reported_at(strictness: Strictness, source: &str) -> Vec<(u32, String)> {
+fn wrapped(source: &str) -> String {
+    let mut out = String::from("def f():\n");
+    for line in source.lines() {
+        if line.trim().is_empty() {
+            out.push('\n');
+        } else {
+            out.push_str("    ");
+            out.push_str(line);
+            out.push('\n');
+        }
+    }
+    out
+}
+fn findings_for(strictness: Strictness, ready: &str) -> Vec<(u32, String)> {
     let tmp = tempfile::tempdir().unwrap();
-    std::fs::write(tmp.path().join("a.py"), source).unwrap();
+    std::fs::write(tmp.path().join("a.py"), ready).unwrap();
     let execution = execute(&RunOptions {
         cwd: tmp.path().to_path_buf(),
         root: Some(tmp.path().to_path_buf()),
@@ -54,6 +66,10 @@ fn reported_at(strictness: Strictness, source: &str) -> Vec<(u32, String)> {
         .inspect(|finding| assert_eq!(&*finding.rule, RULE))
         .map(|finding| (finding.line, finding.message.clone()))
         .collect()
+}
+
+fn reported_at(strictness: Strictness, source: &str) -> Vec<(u32, String)> {
+    findings_for(strictness, &wrapped(source))
 }
 
 /// Six strong lines.
@@ -78,7 +94,7 @@ fn noise(tag: &str) -> String {
         .collect()
 }
 
-/// Three copies separated by two-line gaps: block lines 1, 9 and 17.
+/// Three copies separated by two-line gaps: block lines 2, 10 and 18 in the wrapped function.
 fn three_copies(copy: impl Fn(usize) -> String) -> String {
     format!(
         "{}{}{}{}{}",
@@ -90,8 +106,8 @@ fn three_copies(copy: impl Fn(usize) -> String) -> String {
     )
 }
 
-fn three_blocks_at_lines_1_9_17() -> Vec<(u32, String)> {
-    vec![(1, "3 identical 6-line blocks (lines 1, 9, 17)".to_string())]
+fn three_blocks_at_lines_2_10_18() -> Vec<(u32, String)> {
+    vec![(2, "3 identical 6-line blocks (lines 2, 10, 18)".to_string())]
 }
 
 /// Ten strong lines.
@@ -199,9 +215,9 @@ fn three_identical_blocks_are_reported_once() {
         "three identical blocks must produce one finding"
     );
     let (line, message) = &found[0];
-    assert_eq!(line, &1, "the finding must be anchored at the first block");
+    assert_eq!(line, &2, "the finding must be anchored at the first block");
     let found_numbers = numbers(message);
-    let expected = [1_u64, 9, 17];
+    let expected = [2_u64, 10, 18];
     let mut at = 0;
     for want in expected {
         let pos = found_numbers[at..]
@@ -219,6 +235,15 @@ fn two_identical_blocks_are_below_the_repeat_threshold() {
     assert!(
         found.is_empty(),
         "two copies are below min_repeats of 3, but got {found:?}"
+    );
+}
+
+#[test]
+fn module_level_repeats_stay_silent() {
+    let found = findings_for(Strictness::Strict, &three_copies(|_| block()));
+    assert!(
+        found.is_empty(),
+        "module-level repeats are outside any function body, but got {found:?}"
     );
 }
 
@@ -243,7 +268,7 @@ fn whitespace_differences_do_not_split_a_group() {
         noise("y"),
         padded
     );
-    assert_eq!(reported(&source), three_blocks_at_lines_1_9_17());
+    assert_eq!(reported(&source), three_blocks_at_lines_2_10_18());
 }
 
 #[test]
@@ -257,7 +282,7 @@ fn unicode_whitespace_does_not_split_a_group() {
     };
     let separators = [" ", "\u{a0}", " \u{3000} "];
     let source = three_copies(|index| labels(separators[index]));
-    assert_eq!(reported(&source), three_blocks_at_lines_1_9_17());
+    assert_eq!(reported(&source), three_blocks_at_lines_2_10_18());
 }
 
 #[test]
@@ -265,11 +290,11 @@ fn periodic_input_reports_its_region_once_with_non_overlapping_starts() {
     let period: String = (0..3)
         .map(|k| format!("first_line_{k} = call_site_{k}(alpha_argument)\n"))
         .collect();
-    let expected = vec![(1, "3 identical 6-line blocks (lines 1, 7, 13)".to_string())];
+    let expected = vec![(2, "3 identical 6-line blocks (lines 2, 8, 14)".to_string())];
     assert_eq!(
         reported(&period.repeat(7)),
         expected,
-        "lines 2 and 3 slide into one run with only two non-overlapping occurrences, so only line 1 is reported"
+        "lines 3 and 4 slide into one run with only two non-overlapping occurrences, so only line 2 is reported"
     );
 }
 
@@ -285,8 +310,8 @@ fn a_run_whose_coalesced_span_drops_below_min_repeats_keeps_a_qualifying_span() 
         .collect();
     let source = format!("{block}{block}{block}{head}");
     assert_eq!(
-        reported_at(Strictness::Standard, &source),
-        vec![(1, "3 identical 8-line blocks (lines 1, 9, 17)".to_string())],
+        reported_at(Strictness::Strict, &source),
+        vec![(2, "3 identical 8-line blocks (lines 2, 10, 18)".to_string())],
         "the coalesced span-10 run fits only two non-overlapping occurrences, so the run must \
          fall back to its span-8 window instead of suppressing three qualifying repeats"
     );
@@ -309,7 +334,7 @@ fn a_window_needs_three_strong_lines() {
     );
     assert_eq!(
         reported(&three_copies(|_| three_strong.clone())),
-        three_blocks_at_lines_1_9_17()
+        three_blocks_at_lines_2_10_18()
     );
     let found = reported(&three_copies(|_| two_strong.clone()));
     assert!(
@@ -327,17 +352,17 @@ fn a_fourth_block_with_an_altered_tail_is_not_reported_as_identical() {
         long_block(),
         long_block_with_variant_tail(),
     );
-    let found = reported_at(Strictness::Standard, &source);
+    let found = reported_at(Strictness::Strict, &source);
     assert_eq!(
         found,
         vec![(
-            1,
-            "3 identical 10-line blocks (lines 1, 12, 23)".to_string()
+            2,
+            "3 identical 10-line blocks (lines 2, 13, 24)".to_string()
         )],
         "the fourth block shares only its first eight lines with the others, so the run may \
          report only the occurrences its full span still covers"
     );
-    assert_reported_regions_are_identical_and_in_bounds(&source, &found);
+    assert_reported_regions_are_identical_and_in_bounds(&wrapped(&source), &found);
 }
 
 #[test]
@@ -354,15 +379,15 @@ fn a_fourth_block_truncated_by_the_file_end_is_not_claimed_past_it() {
         long_block(),
         head
     );
-    let found = reported_at(Strictness::Standard, &source);
+    let found = reported_at(Strictness::Strict, &source);
     assert_eq!(
         found,
         vec![(
-            1,
-            "3 identical 10-line blocks (lines 1, 12, 23)".to_string()
+            2,
+            "3 identical 10-line blocks (lines 2, 13, 24)".to_string()
         )],
         "the file ends eight lines into the fourth block, so no occurrence may be claimed past \
          the last kept line"
     );
-    assert_reported_regions_are_identical_and_in_bounds(&source, &found);
+    assert_reported_regions_are_identical_and_in_bounds(&wrapped(&source), &found);
 }

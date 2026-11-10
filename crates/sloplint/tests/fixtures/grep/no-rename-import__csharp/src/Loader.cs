@@ -1,7 +1,7 @@
-using J = System.Text.Json;
+using STJ = System.Text.Json;
 
 public class Loader {
     public string Dump(object value) {
-        return J.JsonSerializer.Serialize(value);
+        return STJ.JsonSerializer.Serialize(value);
     }
 }

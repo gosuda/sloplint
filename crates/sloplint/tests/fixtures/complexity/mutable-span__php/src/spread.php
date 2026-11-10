@@ -27,8 +27,11 @@ function spread($limit) {
     $x = $u + $v;
     $y = $v + $w;
     $z = $w + $x;
+    $zz = 27;
     $sum = $x + $y + $z;
     $fin = $sum + $a;
+    $pad1 = $fin + 1;
+    $pad2 = $pad1 + 1;
     $total += $fin;
     $total += $limit;
     return $total;

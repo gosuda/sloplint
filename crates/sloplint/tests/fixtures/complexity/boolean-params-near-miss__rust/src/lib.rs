@@ -13,3 +13,7 @@ mod tests {
 pub fn bench_either(enabled: bool) -> bool {
     enabled
 }
+
+pub(crate) fn file(f: bool) -> bool {
+    f
+}

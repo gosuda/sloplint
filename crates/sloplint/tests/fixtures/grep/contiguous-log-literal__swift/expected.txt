@@ -1,2 +1,2 @@
-src/lib.swift:2 major grep/contiguous-log-literal
-src/lib.swift:3 major grep/contiguous-log-literal
+src/lib.swift:2 info grep/contiguous-log-literal
+src/lib.swift:3 info grep/contiguous-log-literal

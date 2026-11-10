@@ -1,1 +1,1 @@
-# 9 sequential ifs score 9, below strict minor_at=10.
+# 9 top-level siblings add 0, so the ladder scores 0 < strict minor_at 10.

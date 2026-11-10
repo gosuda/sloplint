@@ -1,4 +1,4 @@
 fun greet(name: String): String {
-    println(name)
+    logger.info(name)
     return "hi $name"
 }

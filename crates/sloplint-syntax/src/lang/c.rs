@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, CallKind, FieldCopy, Import, ImportKind, Pos, TypeDef,
-    WildcardArm,
+    AmbientKind, Arg, ArgShape, Assertion, CallKind, FieldCopy, Import, ImportKind, ImportScope,
+    Pos, ScrutineeKind, TypeDef, Visibility, WildcardArm,
 };
 use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
@@ -13,8 +13,8 @@ use crate::hooks::{
     strip_quotes, text,
 };
 use crate::lang::c_family::{
-    self, C_DECLARATORS, angles, collect_fragments, flat, in_function, inner, pair_source,
-    plain_assert, root_of, sole_call, span, word,
+    self, C_DECLARATORS, angles, collect_fragments, flat, in_function, init_value, inner,
+    pair_source, plain_assert, root_of, sole_call, span, word,
 };
 use crate::spec::Role;
 
@@ -51,11 +51,22 @@ impl LangHooks for CHooks {
         let body = child_by_field(n, "body")?;
         let (fd, name_node) = c_family::func_parts(n, &C_DECLARATORS, &["identifier"])?;
         let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
+        let public = !word(cx, n, &["storage_class_specifier"], &["static"]);
         Some(FunctionHead {
             name: text(cx, name_node),
             name_pos: pos_of(name_node),
-            public: !word(cx, n, &["storage_class_specifier"], &["static"]),
-            interface_bound: false,
+            visibility: if public {
+                Visibility::Exported
+            } else {
+                Visibility::Private
+            },
+            signature_forced: false,
+            entry_point: false,
+            in_test: false,
+            is_overload: false,
+            is_deprecated: false,
+            is_decorated: false,
+            is_trait_item: false,
             region: None,
             params: c_family::params(cx, fd, &C_DECLARATORS, &["parameter_declaration"]),
             return_type: return_type(cx, n, fd),
@@ -94,6 +105,8 @@ impl LangHooks for CHooks {
             callee: text(cx, func),
             kind: CallKind::Plain,
             callee_root: root_of(cx, func).map(|(name, _)| name),
+            is_simple_path: func.kind() == "identifier",
+            initializes_binding: init_value(cx, n),
             args: call_args(cx, args_node),
         })
     }
@@ -115,6 +128,10 @@ impl LangHooks for CHooks {
             name: "",
             alias: None,
             kind: ImportKind::SideEffect,
+            scope: ImportScope::Module,
+            in_test: false,
+            is_reexport: false,
+            external_root: None,
         });
     }
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {
@@ -124,12 +141,12 @@ impl LangHooks for CHooks {
             _ => None,
         }
     }
-    fn match_arm(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<WildcardArm> {
+    fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
         if child_by_field(n, "value").is_some() {
             return None;
         }
         let mut enum_like = false;
-        if let Some(parent) = n.parent() {
+        if let Some(parent) = cx.parent() {
             for sib in named_children(parent) {
                 if sib.kind() == "case_statement"
                     && child_by_field(sib, "value").is_some_and(|v| v.kind() == "identifier")
@@ -142,6 +159,9 @@ impl LangHooks for CHooks {
         Some(WildcardArm {
             pos: pos_of(n),
             enum_like,
+            scrutinee: ScrutineeKind::Other,
+            variant_count: 0,
+            has_nullable_ctor: false,
         })
     }
     fn struct_lit<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FieldCopy<'s>> {
@@ -229,6 +249,7 @@ fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         "concatenated_string" => concat_shape(cx, n),
         "binary_expression" if binary_concat(cx, n, "+", &["string_literal"]) => ArgShape::Concat,
         "identifier" => ArgShape::Ident(text(cx, n)),
+        "initializer_list" => ArgShape::Collection,
         _ => ArgShape::Other,
     }
 }
@@ -250,11 +271,16 @@ fn concat_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
 fn tag_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     child_by_field(n, "body")?;
     let name_node = child_by_field(n, "name")?;
+    let public = !in_function(cx);
     Some(TypeHead {
         def: Some(TypeDef {
             name: text(cx, name_node),
             pos: pos_of(name_node),
-            public: !in_function(n),
+            visibility: if public {
+                Visibility::Exported
+            } else {
+                Visibility::Private
+            },
             abstraction: false,
         }),
         impls: Vec::new(),
@@ -265,11 +291,16 @@ fn alias_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     let mut current = child_by_field(n, "declarator")?;
     loop {
         if current.kind() == "type_identifier" || current.kind() == "identifier" {
+            let public = !in_function(cx);
             return Some(TypeHead {
                 def: Some(TypeDef {
                     name: text(cx, current),
                     pos: pos_of(current),
-                    public: !in_function(n),
+                    visibility: if public {
+                        Visibility::Exported
+                    } else {
+                        Visibility::Private
+                    },
                     abstraction: false,
                 }),
                 impls: Vec::new(),

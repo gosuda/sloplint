@@ -1,1 +1,1 @@
-src/Widget.cs:1 minor agent/colocated-tests
+src/Widget.cs:1 info agent/colocated-tests

@@ -1,34 +1,22 @@
 package probe
+
 import (
-	"bytes"
-	"context"
-	"crypto/sha256"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
-	"os"
-	"path/filepath"
-	"regexp"
-	"sort"
-	"strings"
-	"sync"
+	"github.com/spf13/cobra"
+	"gitlab.com/gitlab-org/api"
+	"gopkg.in/yaml.v3"
+	"golang.org/x/text"
+	"google.golang.org/grpc"
+	"k8s.io/apimachinery"
+	"sigs.k8s.io/yaml"
+	"go.uber.org/zap"
+	"go.opentelemetry.io/otel"
+	"gorm.io/gorm"
+	"go.mongodb.org/mongo-driver"
+	"bitbucket.org/foo/bar"
+	"sourcegraph.com/foo/bar"
+	"tidelift.com/foo/bar"
+	"pkg.go.dev/foo/bar"
+	"gitee.com/foo/bar"
 )
-var _ = bytes.MinRead
-var _ = context.Background
-var _ = sha256.Sum256
-var _ = json.Marshal
-var _ = errors.New
-var _ = fmt.Sprint
-var _ = io.Discard
-var _ = log.Default
-var _ = http.Get
-var _ = os.Getenv
-var _ = filepath.Base
-var _ = regexp.MatchString
-var _ = sort.Ints
-var _ = strings.Contains
-var _ = sync.Mutex{}
+
 func Use() {}

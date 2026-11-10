@@ -1,1 +1,1 @@
-src/deep.py:1 major complexity/cognitive-depth
+src/deep.py:1 info complexity/cognitive-depth

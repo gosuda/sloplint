@@ -1,0 +1,1 @@
+# Near-miss: retired positive (retired_render.kt) passes a Str plus a nested call, never a Collection, so it stays silent.

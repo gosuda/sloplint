@@ -4,16 +4,16 @@ use std::hash::BuildHasher;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use super::{parse_options, string_values};
 use crate::config::Strictness;
 use crate::facts::NamedSite;
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
-use crate::rules::{parse_options, string_values};
 
 const ALLOWED_NAMES: &[&str] = &[
-    "new", "default", "from", "into", "fmt", "drop", "clone", "eq", "hash", "main", "init",
-    "__init__", "setup", "teardown", "test", "String", "Error", "Result", "Config", "Options",
+    "setup", "teardown", "test", "String", "Error", "Result", "Config", "Options",
 ];
 
 pub(crate) const INFO: RuleInfo = RuleInfo {
@@ -53,9 +53,8 @@ struct HomonymDefinitions {
 
 fn preset(strictness: Strictness) -> Preset {
     let (level, min_files) = match strictness {
-        Strictness::Minimal | Strictness::Basic => (Level::Off, 8),
-        Strictness::Standard => (Level::At(Severity::Minor), 8),
-        Strictness::Strict => (Level::At(Severity::Minor), 5),
+        Strictness::Minimal | Strictness::Basic | Strictness::Standard => (Level::Off, 8),
+        Strictness::Strict => (Level::At(Severity::Info), 5),
     };
     Preset {
         level,
@@ -93,55 +92,77 @@ impl WorldRule for HomonymDefinitions {
         if reported.is_empty() {
             return;
         }
-        let mut flat: Vec<SiteRef<'_>> = Vec::new();
+        let mut flat: Vec<(Lang, &str, SiteRef<'_>)> = Vec::new();
         for file in files {
             add_definitions(file, &reported, &mut flat);
         }
-        flat.sort_by(|a, b| (a.name, a.path, a.site.line).cmp(&(b.name, b.path, b.site.line)));
-        for sites in flat.chunk_by(|a, b| a.name == b.name) {
-            self.report(sites, out);
+        flat.sort_by(|a, b| {
+            (a.0, a.1, a.2.name, a.2.path, a.2.site.line).cmp(&(
+                b.0,
+                b.1,
+                b.2.name,
+                b.2.path,
+                b.2.site.line,
+            ))
+        });
+        for group in flat.chunk_by(|a, b| a.0 == b.0 && a.1 == b.1 && a.2.name == b.2.name) {
+            Self::report(group, out);
         }
     }
 }
 
+type Bucket<'a> = Vec<(Lang, &'a str, &'a str, usize)>;
+
 fn add_definitions<'a>(
     file: &WorldFile<'a>,
-    reported: &HashSet<&'a str>,
-    flat: &mut Vec<SiteRef<'a>>,
+    reported: &HashSet<(Lang, &'a str, &'a str)>,
+    flat: &mut Vec<(Lang, &'a str, SiteRef<'a>)>,
 ) {
-    for site in &file.facts.definitions {
-        if reported.contains(site.name.as_ref()) {
-            flat.push(SiteRef {
-                name: &site.name,
-                path: file.path,
-                site,
-            });
+    let facts = file.facts;
+    let package = facts.package.as_str();
+    for site in &facts.definitions {
+        if reported.contains(&(facts.lang, package, site.name.as_ref())) {
+            flat.push((
+                facts.lang,
+                package,
+                SiteRef {
+                    name: &site.name,
+                    path: file.path,
+                    site,
+                },
+            ));
         }
     }
 }
 
 impl HomonymDefinitions {
-    fn reported_names<'a>(&self, files: &[WorldFile<'a>]) -> HashSet<&'a str> {
+    fn reported_names<'a>(&self, files: &[WorldFile<'a>]) -> HashSet<(Lang, &'a str, &'a str)> {
         const NAME_SHARDS: usize = 64;
         let state = std::hash::RandomState::new();
         let chunk = files
             .len()
             .div_ceil(rayon::current_num_threads() * 4)
             .max(1);
-        let buckets: Vec<[Vec<(&'a str, usize)>; NAME_SHARDS]> = files
+        let buckets: Vec<[Bucket<'a>; NAME_SHARDS]> = files
             .par_chunks(chunk)
             .enumerate()
             .map(|(chunk_index, chunk_files)| {
-                let mut buckets: [Vec<(&'a str, usize)>; NAME_SHARDS] =
-                    std::array::from_fn(|_| Vec::new());
+                let mut buckets: [Bucket<'a>; NAME_SHARDS] = std::array::from_fn(|_| Vec::new());
                 for (offset, file) in chunk_files.iter().enumerate() {
-                    for site in &file.facts.definitions {
+                    let facts = file.facts;
+                    let package = facts.package.as_str();
+                    for site in &facts.definitions {
                         if self.allow.contains(site.name.as_ref()) {
                             continue;
                         }
                         let shard =
                             usize::from(state.hash_one(&*site.name).to_le_bytes()[0]) % NAME_SHARDS;
-                        buckets[shard].push((&site.name, chunk_index * chunk + offset));
+                        buckets[shard].push((
+                            facts.lang,
+                            package,
+                            &site.name,
+                            chunk_index * chunk + offset,
+                        ));
                     }
                 }
                 buckets
@@ -150,10 +171,12 @@ impl HomonymDefinitions {
         (0..NAME_SHARDS)
             .into_par_iter()
             .flat_map(|shard| {
-                let mut counts: HashMap<&'a str, (usize, usize)> = HashMap::new();
+                let mut counts: HashMap<(Lang, &'a str, &'a str), (usize, usize)> = HashMap::new();
                 for bucket in &buckets {
-                    for &(name, index) in &bucket[shard] {
-                        let (count, last) = counts.entry(name).or_insert((0, usize::MAX));
+                    for &(lang, package, name, index) in &bucket[shard] {
+                        let (count, last) = counts
+                            .entry((lang, package, name))
+                            .or_insert((0, usize::MAX));
                         if *last != index {
                             *count += 1;
                             *last = index;
@@ -163,21 +186,21 @@ impl HomonymDefinitions {
                 counts
                     .into_iter()
                     .filter(|(_, (count, _))| *count >= self.min_files)
-                    .map(|(name, _)| name)
+                    .map(|(key, _)| key)
                     .collect::<Vec<_>>()
             })
             .collect()
     }
 
-    fn report(&self, sites: &[SiteRef<'_>], out: &mut Vec<Finding>) {
-        let Some(first) = sites.first() else {
+    fn report(group: &[(Lang, &str, SiteRef<'_>)], out: &mut Vec<Finding>) {
+        let Some((_, _, first)) = group.first() else {
             return;
         };
         let name = first.name;
-        let file_count = sites.chunk_by(|a, b| a.path == b.path).count();
+        let file_count = group.chunk_by(|a, b| a.2.path == b.2.path).count();
         let mut others = Vec::new();
-        for entry in sites.iter().skip(1).take(5) {
-            others.push(format!("{}:{}", entry.path, entry.site.line));
+        for entry in group.iter().skip(1).take(5) {
+            others.push(format!("{}:{}", entry.2.path, entry.2.site.line));
         }
         let joined = others.join(", ");
         out.push(Finding::at_site(
@@ -190,11 +213,12 @@ impl HomonymDefinitions {
         ));
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::facts::WorldFacts;
-    use crate::lang::Lang;
+    use crate::role::CodeRole;
     use std::collections::{BTreeMap, BTreeSet};
 
     use proptest::prelude::*;
@@ -208,10 +232,15 @@ mod tests {
     }
 
     fn facts(defs: Vec<NamedSite>) -> WorldFacts {
+        facts_in("crate", defs)
+    }
+
+    fn facts_in(package: &str, defs: Vec<NamedSite>) -> WorldFacts {
         WorldFacts {
             lang: Lang::Rust,
-            role: crate::role::CodeRole::Library,
+            role: CodeRole::Library,
             regions: Vec::new(),
+            package: package.to_string(),
             has_inline_tests: false,
             public_functions: 0,
             definitions: defs,
@@ -245,7 +274,11 @@ mod tests {
             .iter()
             .map(|finding| (finding.path.to_string(), finding.line))
             .collect();
-        assert_eq!(order, [("a.rs".to_string(), 3), ("a.rs".to_string(), 1)]);
+        assert_eq!(
+            order,
+            [("a.rs".to_string(), 3), ("a.rs".to_string(), 1)],
+            "groups emit in name order"
+        );
         assert!(
             out[0].message.contains("`alpha`"),
             "the first group must be `alpha`: {}",
@@ -301,6 +334,115 @@ mod tests {
         );
     }
 
+    #[test]
+    fn same_name_across_packages_stays_silent() {
+        let rule = HomonymDefinitions {
+            allow: HashSet::new(),
+            min_files: 5,
+        };
+        let left: Vec<WorldFacts> = (1u32..=4)
+            .map(|line| facts_in("left", vec![site("reconcile_ledger", line)]))
+            .collect();
+        let right: Vec<WorldFacts> = (1u32..=4)
+            .map(|line| facts_in("right", vec![site("reconcile_ledger", line)]))
+            .collect();
+        let owned: Vec<WorldFacts> = left.into_iter().chain(right).collect();
+        let files: Vec<WorldFile> = owned
+            .iter()
+            .enumerate()
+            .map(|(index, facts)| WorldFile {
+                path: if index < 4 { "left.rs" } else { "right.rs" },
+                facts,
+            })
+            .collect();
+        let mut out = Vec::new();
+        rule.check(&files, &mut out);
+        assert!(
+            out.is_empty(),
+            "four files in each of two packages must stay below five files: {out:?}"
+        );
+    }
+
+    #[test]
+    fn same_package_reaching_threshold_flags() {
+        let rule = HomonymDefinitions {
+            allow: HashSet::new(),
+            min_files: 5,
+        };
+        let owned: Vec<WorldFacts> = (1u32..=5)
+            .map(|line| facts_in("ledger", vec![site("reconcile_ledger", line)]))
+            .collect();
+        let files: Vec<WorldFile> = owned
+            .iter()
+            .enumerate()
+            .map(|(index, facts)| WorldFile {
+                path: ["a.rs", "b.rs", "c.rs", "d.rs", "e.rs"][index],
+                facts,
+            })
+            .collect();
+        let mut out = Vec::new();
+        rule.check(&files, &mut out);
+        assert_eq!(
+            out.len(),
+            1,
+            "five files in one package must report: {out:?}"
+        );
+        assert!(
+            out[0].message.contains("`reconcile_ledger`"),
+            "the finding names the repeated definition: {}",
+            out[0].message
+        );
+    }
+
+    #[test]
+    fn off_at_standard_info_at_strict() {
+        assert_eq!(
+            preset(Strictness::Minimal).level,
+            Level::Off,
+            "minimal stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Basic).level,
+            Level::Off,
+            "basic stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Standard).level,
+            Level::Off,
+            "standard stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Strict).level,
+            Level::At(Severity::Info),
+            "strict stays informational"
+        );
+        assert_eq!(INFO.confidence, Confidence::Low, "confidence stays low");
+        assert_eq!(
+            preset(Strictness::Strict).options.get("min_files"),
+            Some(&toml::Value::Integer(5)),
+            "strict keeps the five-file trigger"
+        );
+        let strict = build(preset(Strictness::Strict).options).expect("strict preset builds");
+        let owned: Vec<WorldFacts> = (1u32..=5)
+            .map(|line| facts_in("ledger", vec![site("reconcile_ledger", line)]))
+            .collect();
+        let files: Vec<WorldFile> = owned
+            .iter()
+            .enumerate()
+            .map(|(index, facts)| WorldFile {
+                path: ["a.rs", "b.rs", "c.rs", "d.rs", "e.rs"][index],
+                facts,
+            })
+            .collect();
+        let mut out = Vec::new();
+        strict.check(&files, &mut out);
+        assert_eq!(
+            out.len(),
+            1,
+            "strict flags five files sharing a name: {out:?}"
+        );
+    }
+
     proptest! {
         #[test]
         fn sharded_counts_match_a_sequential_reference(
@@ -334,23 +476,19 @@ mod tests {
                 allow: HashSet::from(["h".to_string()]),
                 min_files,
             };
-            let pool = rayon::ThreadPoolBuilder::new()
-                .num_threads(4)
-                .build()
-                .expect("the proptest pool must build");
-            let reported = pool.install(|| rule.reported_names(&world));
-            let mut reference: BTreeMap<&str, BTreeSet<usize>> = BTreeMap::new();
+            let reported = rule.reported_names(&world);
+            let mut reference: BTreeMap<(&str, &str), BTreeSet<usize>> = BTreeMap::new();
             for (index, defs) in files.iter().enumerate() {
                 for &name in defs {
                     if name != "h" {
-                        reference.entry(name).or_default().insert(index);
+                        reference.entry(("crate", name)).or_default().insert(index);
                     }
                 }
             }
-            let expected: HashSet<&str> = reference
+            let expected: HashSet<(Lang, &str, &str)> = reference
                 .into_iter()
                 .filter(|(_, indexes)| indexes.len() >= min_files)
-                .map(|(name, _)| name)
+                .map(|((package, name), _)| (Lang::Rust, package, name))
                 .collect();
             assert_eq!(
                 reported,

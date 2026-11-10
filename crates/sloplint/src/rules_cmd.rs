@@ -7,8 +7,8 @@ use sloplint_core::role::{RolePolicy, Shift};
 use sloplint_core::rules::custom::custom_level;
 use sloplint_core::{Config, ConfigError, Preset, RuleFilter, RuleSet, Strictness};
 
-use crate::RunError;
 use crate::cli::Format;
+use crate::error::RunError;
 use crate::project::{self, Overrides};
 
 const PROFILES: [Strictness; 4] = [

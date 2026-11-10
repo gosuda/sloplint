@@ -1,5 +1,5 @@
 class Greeter {
-  # Greet
+  # Greeting
   [string] Greet() {
     return "hi"
   }

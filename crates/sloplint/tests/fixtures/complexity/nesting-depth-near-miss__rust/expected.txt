@@ -1,0 +1,1 @@
+# near-miss: depth 4 < strict minor_at 5; the is_some_and closure adds no control.

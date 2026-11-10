@@ -23,7 +23,7 @@ const WORLD_RULES: [&str; 3] = [
 
 /// Root config of the synthetic corpus. The threshold only changes a result when the root
 /// `sloplint.toml` is honored: the preset needs two boolean parameters before it fires.
-const SYNTHETIC_CONFIG: &str = "[rules.\"complexity/boolean-params\"]\nminor_at = 1\n";
+const SYNTHETIC_CONFIG: &str = "[rules.\"complexity/boolean-params\"]\nlevel = \"minor\"\nminor_at = 1\n[rules.\"agent/file-token-budget\"]\nlevel = \"minor\"\n";
 
 /// A labelled corpus; the temp dir is held so the root outlives the test body.
 type Corpus = (&'static str, tempfile::TempDir, PathBuf);
@@ -62,6 +62,12 @@ fn numbered_functions(count: usize) -> String {
         .collect()
 }
 
+/// Thirty distinct external imports, so the graded fan-out rule reports minor at standard
+/// and major at strict.
+fn many_imports() -> String {
+    (0..30).map(|n| format!("use ext{n:02}::item;\n")).collect()
+}
+
 /// A small project for what the copied fixture tree cannot show: `src/big.rs` crosses the
 /// file-size thresholds of the profiles, and `src/flags.rs` is reported only through the root
 /// override.
@@ -69,13 +75,17 @@ fn synthetic_corpus() -> (tempfile::TempDir, PathBuf) {
     let (tmp, root) = tempdir();
     write(&root, "sloplint.toml", SYNTHETIC_CONFIG);
     write(&root, "src/flags.rs", "pub fn toggle(flag: bool) {}\n");
-    write(&root, "src/big.rs", &numbered_functions(811));
+    write(&root, "src/big.rs", &numbered_functions(1500));
+    write(&root, "src/imports.rs", &many_imports());
     (tmp, root)
 }
 
 /// The corpora every invariant here runs on.
+/// The copied tree gains one graded input outside any fixture directory, so the severity
+/// half of the monotone invariant has something to escalate.
 fn corpora() -> [Corpus; 2] {
     let (fixtures_tmp, fixtures) = copy_tree(&fixtures_root());
+    write(&fixtures, "escalation/imports.rs", &many_imports());
     let (synthetic_tmp, synthetic) = synthetic_corpus();
     [
         ("fixtures", fixtures_tmp, fixtures),
@@ -164,6 +174,7 @@ fn synthetic_corpus_exercises_root_config_and_file_size() {
         [
             ("agent/file-token-budget", "src/big.rs", 1),
             ("complexity/boolean-params", "src/flags.rs", 1),
+            ("complexity/import-fan-out", "src/imports.rs", 1),
         ],
         "the long file must cross the size threshold and the root override must reach one parameter"
     );
@@ -281,12 +292,24 @@ fn scope_limits_findings_without_changing_them() {
 }
 
 /// `(path, line, rule)` to severity for the findings outside the `meta/` family.
+/// `complexity/nesting-depth` and `complexity/cognitive-depth` share one key:
+/// the suppressor drops a nesting finding on a line where cognitive fires,
+/// so the pair counts as one depth signal for this invariant only.
 fn severities(report: &Report) -> BTreeMap<(String, u32, String), Severity> {
     report
         .findings
         .iter()
         .filter(|f| !f.rule.starts_with("meta/"))
-        .map(|f| ((f.path.to_string(), f.line, f.rule.to_string()), f.severity))
+        .map(|f| {
+            let rule = if &*f.rule == "complexity/nesting-depth"
+                || &*f.rule == "complexity/cognitive-depth"
+            {
+                "complexity/depth"
+            } else {
+                &f.rule
+            };
+            ((f.path.to_string(), f.line, rule.to_string()), f.severity)
+        })
         .collect()
 }
 

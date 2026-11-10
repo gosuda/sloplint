@@ -1,1 +1,1 @@
-src/app.js:3 minor slop/passthrough-wrapper
+src/app.js:3 info slop/passthrough-wrapper

@@ -1,4 +1,6 @@
-use sloplint_core::facts::{AmbientKind, Arg, ArgShape, CallKind, Pos, WildcardArm};
+use sloplint_core::facts::{
+    AmbientKind, Arg, ArgShape, CallKind, Pos, ScrutineeKind, Visibility, WildcardArm,
+};
 use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
@@ -60,6 +62,67 @@ fn push_assign_name<'s>(cx: &Cx<'_, 's>, name: Node<'_>, out: &mut Vec<(&'s str,
     }
 }
 
+fn is_bash_ident(s: &str) -> bool {
+    let mut chars = s.chars();
+    if !chars.next().is_some_and(|c| c == '_' || c.is_alphabetic()) {
+        return false;
+    }
+    chars.all(|c| c == '_' || c.is_alphanumeric())
+}
+
+fn word_target(word: &str) -> Option<&str> {
+    let (head, tail) = word.split_once('=')?;
+    if tail.starts_with('=') {
+        return None;
+    }
+    let head = head.strip_suffix(['+', '-', '*', '/', '%']).unwrap_or(head);
+    is_bash_ident(head).then_some(head)
+}
+
+fn top_declared<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
+    let Some(root) = cx.root() else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for child in named_children(root) {
+        if child.kind() != "declaration_command" {
+            continue;
+        }
+        for sub in named_children(child) {
+            if sub.kind() == "variable_assignment" {
+                if let Some(name) = child_by_field(sub, "name") {
+                    out.push(text(cx, name));
+                }
+            } else if sub.kind() == "variable_name" {
+                out.push(text(cx, sub));
+            }
+        }
+    }
+    out
+}
+
+fn push_let_write<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
+    let Some(name_node) = child_by_field(n, "name") else {
+        return;
+    };
+    if text(cx, name_node) != "let" {
+        return;
+    }
+    let declared = top_declared(cx);
+    if declared.is_empty() {
+        return;
+    }
+    for child in named_children(n) {
+        if child.id() == name_node.id() {
+            continue;
+        }
+        if let Some(target) = word_target(text(cx, child))
+            && declared.contains(&target)
+        {
+            out.push((AmbientKind::GlobalWrite, target, pos_of(child)));
+        }
+    }
+}
 fn bash_arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     match n.kind() {
         "word" => ArgShape::Str {
@@ -106,8 +169,14 @@ impl LangHooks for BashHooks {
         Some(FunctionHead {
             name: text(cx, name_node),
             name_pos: pos_of(name_node),
-            public: true,
-            interface_bound: false,
+            visibility: Visibility::Exported,
+            signature_forced: false,
+            entry_point: false,
+            in_test: false,
+            is_overload: false,
+            is_deprecated: false,
+            is_decorated: false,
+            is_trait_item: false,
             region: None,
             params: Vec::new(),
             return_type: None,
@@ -124,7 +193,7 @@ impl LangHooks for BashHooks {
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         if n.kind() == "variable_assignment" {
-            if let Some(parent) = n.parent() {
+            if let Some(parent) = cx.parent() {
                 let kind = parent.kind();
                 if kind == "declaration_command" || kind == "command" {
                     return;
@@ -187,6 +256,8 @@ impl LangHooks for BashHooks {
             callee: text(cx, name_node),
             kind: CallKind::Plain,
             callee_root: None,
+            is_simple_path: false,
+            initializes_binding: false,
             args: bash_call_args(cx, n),
         })
     }
@@ -202,6 +273,9 @@ impl LangHooks for BashHooks {
         wild.then_some(WildcardArm {
             pos: pos_of(n),
             enum_like: false,
+            scrutinee: ScrutineeKind::Other,
+            variant_count: 0,
+            has_nullable_ctor: false,
         })
     }
 
@@ -212,13 +286,16 @@ impl LangHooks for BashHooks {
         in_function: bool,
         out: &mut Vec<(AmbientKind, &'s str, Pos)>,
     ) {
-        if in_function || n.kind() != "declaration_command" {
+        if n.kind() == "declaration_command" && !in_function {
+            let mut names = Vec::new();
+            self.decl_names(n, cx, &mut names);
+            for (name, pos) in names {
+                out.push((AmbientKind::GlobalMutable, name, pos));
+            }
             return;
         }
-        let mut names = Vec::new();
-        self.decl_names(n, cx, &mut names);
-        for (name, pos) in names {
-            out.push((AmbientKind::GlobalMutable, name, pos));
+        if n.kind() == "command" && in_function {
+            push_let_write(cx, n, out);
         }
     }
 

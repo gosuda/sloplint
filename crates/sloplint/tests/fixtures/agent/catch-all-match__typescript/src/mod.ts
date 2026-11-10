@@ -6,6 +6,8 @@ export function name(c: Color): string {
   switch (c) {
     case Color.Red:
       return "red";
+    case Color.Blue:
+      return "blue";
     default:
       return "other";
   }

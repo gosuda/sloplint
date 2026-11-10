@@ -1,2 +1,1 @@
-# Positive: public function with 2 Boolean params >= strict major_at 2.
-src/render.scala:2 major complexity/boolean-params
+src/render.scala:2 info complexity/boolean-params

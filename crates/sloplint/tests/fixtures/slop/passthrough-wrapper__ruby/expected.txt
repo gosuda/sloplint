@@ -1,1 +1,1 @@
-a.rb:1 minor slop/passthrough-wrapper
+a.rb:1 info slop/passthrough-wrapper

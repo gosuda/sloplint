@@ -1,1 +1,1 @@
-pos.c:3 major complexity/boolean-params
+pos.c:3 info complexity/boolean-params

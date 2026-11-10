@@ -5,7 +5,7 @@
 
 use std::sync::LazyLock;
 
-use sloplint_core::facts::FileFacts;
+use sloplint_core::facts::{FileFacts, Visibility};
 use sloplint_core::lang::Lang;
 use sloplint_core::role::{CodeRole, RoleRegion};
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
@@ -292,10 +292,21 @@ fn scala_known_suite_bases_open_test_modules() {
         CodeRole::Library,
         source,
     );
-    assert!(
-        analysis.facts.regions.iter().any(|region| {
-            region.role == CodeRole::Test && region.start_line == 3 && region.end_line == 3
-        }),
+    let body_regions: Vec<_> = analysis
+        .facts
+        .regions
+        .iter()
+        .filter(|region| region.role == CodeRole::Test)
+        .collect();
+    assert_eq!(
+        body_regions.len(),
+        1,
+        "one Test region for the suite body, got {:?}",
+        analysis.facts.regions
+    );
+    assert_eq!(
+        (body_regions[0].start_line, body_regions[0].end_line),
+        (2, 4),
         "the Test region covers the suite body, got {:?}",
         analysis.facts.regions
     );
@@ -423,7 +434,10 @@ fn odin_private_attribute_marks_procedure_not_public() {
         .iter()
         .find(|f| f.name == "hide")
         .expect("the procedure is recorded");
-    assert!(!hide.public, "@(private) clears the public flag");
+    assert!(
+        hide.visibility != Visibility::Exported,
+        "@(private) clears the public flag"
+    );
     let source = "package p\nshow :: proc() {\n}\n";
     let analysis = analyze_as(Lang::Odin, "show.odin", CodeRole::Library, source);
     let show = analysis
@@ -432,8 +446,9 @@ fn odin_private_attribute_marks_procedure_not_public() {
         .iter()
         .find(|f| f.name == "show")
         .expect("the procedure is recorded");
-    assert!(
-        show.public,
+    assert_eq!(
+        show.visibility,
+        Visibility::Exported,
         "an undecorated top-level procedure stays public"
     );
 }

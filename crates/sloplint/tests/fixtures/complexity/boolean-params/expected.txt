@@ -1,1 +1,1 @@
-src/lib.rs:1 major complexity/boolean-params
+src/lib.rs:1 info complexity/boolean-params

@@ -1,1 +1,1 @@
-src/tangled.tsx:1 major complexity/cognitive-depth
+src/tangled.tsx:1 info complexity/cognitive-depth

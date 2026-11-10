@@ -1,1 +1,1 @@
-pos.c:1 major agent/stringly-api
+pos.c:1 info agent/stringly-api

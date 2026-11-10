@@ -1,1 +1,1 @@
-src/api.py:1 major agent/stringly-api
+src/api.py:1 info agent/stringly-api

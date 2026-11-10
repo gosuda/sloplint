@@ -1,22 +1,20 @@
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use globset::{Glob, GlobSet, GlobSetBuilder};
+use globset::GlobSet;
 use ignore::WalkBuilder;
 use serde::{Deserialize, Serialize};
 use sloplint_core::config::{Config, ConfigError, Mode, Strictness, parse_config};
 use sloplint_core::finding::Confidence;
-use sloplint_core::role::CodeRole;
 use sloplint_core::text::normalize_rel_path;
 use sloplint_core::{CustomRuleSpec, FailOn};
 
-use crate::RunError;
 use crate::discover;
-use crate::fileio::{
-    open_regular_nofollow, read_bounded, read_bounded_string, read_bounded_string_nofollow,
-};
+use crate::error::RunError;
+use crate::fileio::{Capped, Links, read_capped, read_capped_string};
+use crate::globs::{Separators, glob_set};
 
 /// Measured: this repository's own `sloplint.toml` is 65 bytes; the cap stops oversized hostile input at the read.
 pub const MAX_CONFIG_FILE_BYTES: u64 = 1_048_576;
@@ -100,7 +98,7 @@ pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunErro
         Some(path) => (read_required(path)?, origin_name(path)),
         None => {
             let path = location.root.join(CONFIG_FILE);
-            match read_bounded_string_nofollow(&path, MAX_CONFIG_FILE_BYTES) {
+            match read_capped_string(&path, MAX_CONFIG_FILE_BYTES, Links::NoFollow) {
                 Ok(text) => (text, origin_name(&path)),
                 Err(source) if source.kind() == io::ErrorKind::NotFound => {
                     match fs::symlink_metadata(&path) {
@@ -149,65 +147,6 @@ pub fn load(location: &Location, overrides: Overrides) -> Result<Loaded, RunErro
         config,
         custom_sources,
     })
-}
-
-#[derive(Debug, Default)]
-pub struct Scopes {
-    paths: HashSet<PathBuf>,
-}
-
-impl Scopes {
-    #[cfg(test)]
-    pub(crate) fn from_relative(paths: impl IntoIterator<Item = PathBuf>) -> Self {
-        Self {
-            paths: paths.into_iter().collect(),
-        }
-    }
-
-    pub fn contains(&self, path: &Path) -> bool {
-        self.paths.is_empty()
-            || path
-                .ancestors()
-                .any(|ancestor| self.paths.contains(ancestor))
-    }
-}
-
-pub fn scopes(root: &Path, cwd: &Path, paths: &[PathBuf]) -> Result<Scopes, RunError> {
-    let mut resolved: HashSet<PathBuf> = HashSet::new();
-    let mut whole_root = false;
-    for path in paths {
-        let absolute = if path.is_absolute() {
-            path.clone()
-        } else {
-            cwd.join(path)
-        };
-        let canonical = fs::canonicalize(&absolute).map_err(|source| {
-            if source.kind() == io::ErrorKind::NotFound {
-                RunError::PathNotFound { path: path.clone() }
-            } else {
-                RunError::Io {
-                    path: absolute.clone(),
-                    source,
-                }
-            }
-        })?;
-        let relative = canonical
-            .strip_prefix(root)
-            .map_err(|_| RunError::PathOutsideRoot { path: path.clone() })?;
-        let rel = normalize_rel_path(relative).ok_or_else(|| RunError::Io {
-            path: path.clone(),
-            source: io::Error::new(io::ErrorKind::InvalidData, "path is not UTF-8"),
-        })?;
-        if rel.is_empty() {
-            whole_root = true;
-        } else {
-            resolved.insert(relative.to_path_buf());
-        }
-    }
-    if whole_root {
-        resolved.clear();
-    }
-    Ok(Scopes { paths: resolved })
 }
 
 /// Symlink chains are canonicalized whole and rejected outside `root`; a dangling leaf is refused unfollowed; `root` must arrive canonical; creates nothing.
@@ -267,67 +206,6 @@ pub fn resolve_within_root(root: &Path, name: &str) -> Result<PathBuf, RunError>
     }
 }
 
-pub fn glob_set(patterns: &[String], key: &str) -> Result<GlobSet, ConfigError> {
-    let mut builder = GlobSetBuilder::new();
-    for pattern in patterns {
-        let glob = Glob::new(pattern).map_err(|error| ConfigError::Glob {
-            key: key.to_string(),
-            glob: pattern.clone(),
-            message: error.to_string(),
-        })?;
-        builder.add(glob);
-    }
-    builder.build().map_err(|error| ConfigError::Glob {
-        key: key.to_string(),
-        glob: patterns.join(", "),
-        message: error.to_string(),
-    })
-}
-
-pub struct RoleSets {
-    bench: GlobSet,
-    example: GlobSet,
-    support: GlobSet,
-    entry: GlobSet,
-    test: GlobSet,
-    data: GlobSet,
-}
-
-impl RoleSets {
-    pub fn from_config(config: &Config) -> Result<Self, ConfigError> {
-        Ok(Self {
-            bench: glob_set(&config.project.bench_globs, "project.bench_globs")?,
-            example: glob_set(&config.project.example_globs, "project.example_globs")?,
-            support: glob_set(&config.project.support_globs, "project.support_globs")?,
-            entry: glob_set(&config.project.entry_globs, "project.entry_globs")?,
-            test: glob_set(&config.project.test_globs, "project.test_globs")?,
-            data: glob_set(&config.project.data_globs, "project.data_globs")?,
-        })
-    }
-
-    pub fn role(&self, rel: &str) -> CodeRole {
-        if self.data.is_match(rel) {
-            return CodeRole::Library;
-        }
-        if self.bench.is_match(rel) {
-            return CodeRole::Bench;
-        }
-        if self.example.is_match(rel) {
-            return CodeRole::Example;
-        }
-        if self.support.is_match(rel) {
-            return CodeRole::Support;
-        }
-        if self.test.is_match(rel) {
-            return CodeRole::Test;
-        }
-        if self.entry.is_match(rel) {
-            return CodeRole::Entry;
-        }
-        CodeRole::Library
-    }
-}
-
 fn find_root(cwd: &Path) -> PathBuf {
     cwd.ancestors()
         .find(|dir| dir.join(CONFIG_FILE).is_file() || dir.join(".git").exists())
@@ -336,7 +214,7 @@ fn find_root(cwd: &Path) -> PathBuf {
 }
 
 fn read_required(path: &Path) -> Result<String, RunError> {
-    read_bounded_string(path, MAX_CONFIG_FILE_BYTES).map_err(|source| {
+    read_capped_string(path, MAX_CONFIG_FILE_BYTES, Links::Follow).map_err(|source| {
         if source.kind() == io::ErrorKind::NotFound {
             RunError::PathNotFound {
                 path: path.to_path_buf(),
@@ -372,7 +250,7 @@ fn read_custom_sources(
     if patterns.is_empty() {
         return Ok(Vec::new());
     }
-    let matcher = glob_set(patterns, "project.custom_rule_files")?;
+    let matcher = glob_set(patterns, "project.custom_rule_files", Separators::Any)?;
     let roots = custom_source_roots(root, patterns)?;
     let mut sources: BTreeMap<String, String> = BTreeMap::new();
     let mut total_bytes: u64 = 0;
@@ -520,19 +398,11 @@ fn read_custom_root(
         if kind.is_symlink() {
             return Err(RunError::Config(symlink_refusal(&rel)));
         }
-        let (file, len) = open_regular_nofollow(entry.path()).map_err(|source| RunError::Io {
+        let bytes = read_custom_file(entry.path()).map_err(|source| RunError::Io {
             path: entry.path().to_path_buf(),
             source,
         })?;
-        if len > MAX_CONFIG_FILE_BYTES {
-            return Err(RunError::Io {
-                path: entry.path().to_path_buf(),
-                source: io::Error::new(
-                    io::ErrorKind::FileTooLarge,
-                    format!("file of {len} bytes exceeds ceiling of {MAX_CONFIG_FILE_BYTES} bytes"),
-                ),
-            });
-        }
+        let len = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
         let next_total = total_bytes.saturating_add(len);
         if next_total > MAX_CUSTOM_RULES_TOTAL_BYTES {
             return Err(RunError::Io {
@@ -545,10 +415,6 @@ fn read_custom_root(
                 ),
             });
         }
-        let bytes = read_bounded(file, len).map_err(|source| RunError::Io {
-            path: entry.path().to_path_buf(),
-            source,
-        })?;
         let text = String::from_utf8(bytes).map_err(|_| RunError::Io {
             path: entry.path().to_path_buf(),
             source: io::Error::new(
@@ -594,226 +460,18 @@ fn combine(main: String, specs: &[CustomRuleSpec], origin: &str) -> Result<Strin
     })?;
     Ok(format!("{main}\n{fragment}"))
 }
-#[cfg(test)]
-mod tests {
-    use std::path::{Path, PathBuf};
 
-    use super::Scopes;
-
-    #[test]
-    fn non_utf8_skip_scope_membership_is_hermetic() {
-        let valid = Path::new("src/lib.rs");
-        let whole = Scopes::default();
-        let src = Scopes::from_relative([PathBuf::from("src")]);
-        let other = Scopes::from_relative([PathBuf::from("other")]);
-        assert!(
-            whole.contains(valid),
-            "the whole scope contains the valid path"
-        );
-        assert!(src.contains(valid), "the src scope contains the valid path");
-        assert!(
-            !other.contains(valid),
-            "the other scope excludes the valid path"
-        );
-        #[cfg(unix)]
-        {
-            use std::os::unix::ffi::OsStrExt;
-            let bad = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
-            assert!(
-                whole.contains(bad),
-                "the whole scope contains the non-utf8 path"
-            );
-            assert!(
-                !src.contains(bad),
-                "the src scope excludes the non-utf8 path"
-            );
-            assert!(
-                other.contains(bad),
-                "the other scope contains the non-utf8 path"
-            );
-        }
-        #[cfg(not(unix))]
-        {
-            let standin = Path::new("other/bad\u{FFFD}.rs");
-            assert!(
-                whole.contains(standin),
-                "the whole scope contains the standin path"
-            );
-            assert!(
-                !src.contains(standin),
-                "the src scope excludes the standin path"
-            );
-            assert!(
-                other.contains(standin),
-                "the other scope contains the standin path"
-            );
-        }
-    }
-
-    #[test]
-    fn lossy_equal_file_scope_is_hermetic() {
-        let valid = Path::new("other/bad\u{FFFD}.rs");
-        let link = Path::new("other/link.rs");
-        let whole = Scopes::default();
-        let explicit = Scopes::from_relative([valid.to_path_buf()]);
-        let parent = Scopes::from_relative([PathBuf::from("other")]);
-        assert!(
-            whole.contains(valid),
-            "the whole scope contains the valid path"
-        );
-        assert!(
-            whole.contains(link),
-            "the whole scope contains the link path"
-        );
-        assert!(
-            explicit.contains(valid),
-            "the explicit scope contains the valid path"
-        );
-        assert!(
-            !explicit.contains(link),
-            "the explicit scope excludes the link path"
-        );
-        assert!(
-            parent.contains(valid),
-            "the parent scope contains the valid path"
-        );
-        assert!(
-            parent.contains(link),
-            "the parent scope contains the link path"
-        );
-        #[cfg(unix)]
-        {
-            use std::os::unix::ffi::OsStrExt;
-            let invalid = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
-            assert_eq!(
-                invalid.to_string_lossy(),
-                valid.to_string_lossy(),
-                "the names are lossy-equal"
-            );
-            assert!(
-                whole.contains(invalid),
-                "the whole scope contains the lossy-equal path"
-            );
-            assert!(
-                !explicit.contains(invalid),
-                "lossy-equal names share no explicit file scope"
-            );
-            assert!(
-                parent.contains(invalid),
-                "the parent scope contains the lossy-equal path"
-            );
-        }
-    }
-
-    #[test]
-    fn lossy_equal_dir_scope_is_hermetic() {
-        let pipe = Path::new("parent/scope\u{FFFD}/pipe.rs");
-        let child = Path::new("parent/scope\u{FFFD}/b.rs");
-        let whole = Scopes::default();
-        let explicit = Scopes::from_relative([PathBuf::from("parent/scope\u{FFFD}")]);
-        let parent = Scopes::from_relative([PathBuf::from("parent")]);
-        assert!(
-            whole.contains(pipe),
-            "the whole scope contains the pipe path"
-        );
-        assert!(
-            explicit.contains(pipe),
-            "the explicit scope contains the pipe path"
-        );
-        assert!(
-            !explicit.contains(Path::new("parent/unrelated/b.rs")),
-            "the explicit scope excludes the unrelated path"
-        );
-        assert!(
-            parent.contains(pipe),
-            "the parent scope contains the pipe path"
-        );
-        assert!(
-            whole.contains(child),
-            "the whole scope contains the child path"
-        );
-        assert!(
-            explicit.contains(child),
-            "the explicit scope contains the child path"
-        );
-        assert!(
-            parent.contains(child),
-            "the parent scope contains the child path"
-        );
-        #[cfg(unix)]
-        {
-            use std::os::unix::ffi::OsStrExt;
-            let invalid_dir = Path::new(std::ffi::OsStr::from_bytes(b"parent/scope\xff"));
-            assert_eq!(
-                invalid_dir.to_string_lossy(),
-                "parent/scope\u{FFFD}",
-                "the directories are lossy-equal"
-            );
-            let invalid_child = Path::new(std::ffi::OsStr::from_bytes(b"parent/scope\xff/b.rs"));
-            assert!(
-                whole.contains(invalid_child),
-                "the whole scope contains the lossy child"
-            );
-            assert!(
-                !explicit.contains(invalid_child),
-                "lossy-equal directories share no explicit scope"
-            );
-            assert!(
-                parent.contains(invalid_child),
-                "the parent scope contains the lossy child"
-            );
-        }
-    }
-
-    #[test]
-    fn boundary_non_utf8_skip_scope_membership_is_hermetic() {
-        let valid = Path::new("src/bad\u{FFFD}.rs");
-        let whole = Scopes::default();
-        assert!(
-            whole.contains(valid),
-            "the whole scope contains the valid path"
-        );
-        let src = Scopes::from_relative([PathBuf::from("src")]);
-        assert!(src.contains(valid), "the src scope contains the valid path");
-        let other = Scopes::from_relative([PathBuf::from("other")]);
-        assert!(
-            !other.contains(valid),
-            "the other scope excludes the valid path"
-        );
-        #[cfg(unix)]
-        {
-            use std::os::unix::ffi::OsStrExt;
-            let bad = Path::new(std::ffi::OsStr::from_bytes(b"src/bad\xff.rs"));
-            assert!(
-                whole.contains(bad),
-                "the whole scope contains the non-utf8 path"
-            );
-            assert!(
-                src.contains(bad),
-                "the src scope contains the non-utf8 path"
-            );
-            assert!(
-                !other.contains(bad),
-                "the other scope excludes the non-utf8 path"
-            );
-            let explicit = Scopes::from_relative([valid.to_path_buf()]);
-            assert!(
-                explicit.contains(valid),
-                "the explicit scope contains the valid path"
-            );
-            assert!(
-                !explicit.contains(bad),
-                "lossy-equal names share no explicit file scope"
-            );
-        }
-        #[cfg(not(unix))]
-        {
-            let second = Path::new("src/other\u{FFFD}.rs");
-            let explicit = Scopes::from_relative([valid.to_path_buf()]);
-            assert!(
-                !explicit.contains(second),
-                "distinct replacement-character names share no explicit file scope"
-            );
-        }
+fn read_custom_file(path: &Path) -> io::Result<Vec<u8>> {
+    match read_capped(path, MAX_CONFIG_FILE_BYTES, Links::NoFollow) {
+        Ok(Capped::Bytes(bytes, _)) => Ok(bytes),
+        Ok(Capped::TooLarge(len)) if len > MAX_CONFIG_FILE_BYTES => Err(io::Error::new(
+            io::ErrorKind::FileTooLarge,
+            format!("file of {len} bytes exceeds ceiling of {MAX_CONFIG_FILE_BYTES} bytes"),
+        )),
+        Ok(Capped::TooLarge(_)) => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "file grew while being read",
+        )),
+        Ok(Capped::NotRegular(source)) | Err(source) => Err(source),
     }
 }

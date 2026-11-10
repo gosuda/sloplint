@@ -22,7 +22,7 @@ const LEVEL_LINES: [&str; 4] = [
     "level = \"major\"\n",
 ];
 
-const NESTED: &str = "complexity/nested-mutation";
+const SPAN: &str = "complexity/mutable-span";
 const PROJECT_TABLE: &str = "[project]\nstrictness = \"strict\"\n";
 const RULES_TABLE: &str = "[rules.\"grep/generic-name\"]\nlevel = \"off\"\n";
 
@@ -37,7 +37,7 @@ const CUT_CASES: [(u32, u32, u32, u32, bool); 8] = [
     (u32::MAX, u32::MAX, u32::MAX, u32::MAX, true),
 ];
 
-const FLOORS: [(&str, &str, &str, bool); 21] = [
+const FLOORS: [(&str, &str, &str, bool); 12] = [
     ("agent/unique-patch-anchors", "window", "1", true),
     ("agent/unique-patch-anchors", "window", "2", false),
     ("agent/unique-patch-anchors", "min_repeats", "1", true),
@@ -48,25 +48,16 @@ const FLOORS: [(&str, &str, &str, bool); 21] = [
     ("slop/field-copy", "min_fields", "2", false),
     ("grep/contiguous-log-literal", "min_len", "0", true),
     ("grep/contiguous-log-literal", "min_len", "1", false),
-    ("slop/echo-comment", "min_similarity", "0.0", true),
-    ("slop/echo-comment", "min_similarity", "1.5", true),
-    ("slop/echo-comment", "min_similarity", "nan", true),
-    ("slop/echo-comment", "min_similarity", "-0.0", true),
-    ("slop/echo-comment", "min_similarity", "-1.0", true),
-    ("slop/echo-comment", "min_similarity", "inf", true),
-    ("slop/echo-comment", "min_similarity", "-inf", true),
-    ("slop/echo-comment", "min_similarity", "0.5", false),
-    ("slop/echo-comment", "min_similarity", "1.0", false),
     ("agent/colocated-tests", "exclude", "[\"[\"]", true),
     ("agent/colocated-tests", "exclude", "[\"src/**\"]", false),
 ];
 
 const WRONG_TYPES: [(&str, &str, &str); 7] = [
-    (NESTED, "minor_at", "\"3\""),
-    (NESTED, "minor_at", "-1"),
-    (NESTED, "major_at", "1.5"),
-    (NESTED, "minor_at", "true"),
-    ("slop/echo-comment", "min_similarity", "\"high\""),
+    (SPAN, "minor_at", "\"3\""),
+    (SPAN, "minor_at", "-1"),
+    (SPAN, "major_at", "1.5"),
+    (SPAN, "minor_at", "true"),
+    ("agent/unique-patch-anchors", "window", "\"high\""),
     ("agent/colocated-tests", "exclude", "\"src/**\""),
     ("grep/homonym-definitions", "min_files", "[1]"),
 ];
@@ -306,7 +297,7 @@ fn audit_config_threshold_boundaries_hold_for_every_rule_profile_and_level() {
         .map(|info| info.id)
         .collect();
     assert!(
-        rules.len() >= 9 && rules.contains(NESTED),
+        rules.len() >= 7 && rules.contains(SPAN),
         "threshold rules vanished: {rules:?}"
     );
     for rule in rules {
@@ -333,31 +324,31 @@ fn audit_config_threshold_boundaries_hold_for_every_rule_profile_and_level() {
 #[test]
 fn audit_config_partial_threshold_overrides_validate_against_the_preset() {
     for (level, strictness) in level_profiles(&PROFILES) {
-        let minor = preset_int(NESTED, strictness, "minor_at");
-        let major = preset_int(NESTED, strictness, "major_at");
-        let critical = preset_int(NESTED, strictness, "critical_at");
-        let blocker = preset_int(NESTED, strictness, "blocker_at");
+        let minor = preset_int(SPAN, strictness, "minor_at");
+        let major = preset_int(SPAN, strictness, "major_at");
+        let critical = preset_int(SPAN, strictness, "critical_at");
+        let blocker = preset_int(SPAN, strictness, "blocker_at");
         let context =
             format!("preset {minor}/{major}/{critical}/{blocker} {level:?} {strictness:?}");
-        let high = table(NESTED, level, &format!("minor_at = {}\n", major + 1));
+        let high = table(SPAN, level, &format!("minor_at = {}\n", major + 1));
         let error = rejected(&high, strictness, &context);
-        rule_option(&error, NESTED, None, &context);
-        let low = table(NESTED, level, &format!("major_at = {}\n", minor - 1));
+        rule_option(&error, SPAN, None, &context);
+        let low = table(SPAN, level, &format!("major_at = {}\n", minor - 1));
         let error = rejected(&low, strictness, &context);
-        rule_option(&error, NESTED, None, &context);
+        rule_option(&error, SPAN, None, &context);
         let descending = table(
-            NESTED,
+            SPAN,
             level,
             &format!("critical_at = {minor}\nmajor_at = {critical}\n"),
         );
         let error = rejected(&descending, strictness, &context);
-        rule_option(&error, NESTED, None, &context);
-        let zero = table(NESTED, level, "blocker_at = 0\n");
+        rule_option(&error, SPAN, None, &context);
+        let zero = table(SPAN, level, "blocker_at = 0\n");
         let error = rejected(&zero, strictness, &context);
-        rule_option(&error, NESTED, None, &context);
-        let at_major = table(NESTED, level, &format!("minor_at = {major}\n"));
+        rule_option(&error, SPAN, None, &context);
+        let at_major = table(SPAN, level, &format!("minor_at = {major}\n"));
         accepted(&at_major, strictness, &context);
-        let at_minor = table(NESTED, level, &format!("major_at = {minor}\n"));
+        let at_minor = table(SPAN, level, &format!("major_at = {minor}\n"));
         accepted(&at_minor, strictness, &context);
     }
 }
@@ -395,9 +386,9 @@ fn audit_config_unknown_option_is_rejected_for_every_rule_profile_and_level() {
         Some("bogus"),
         "meta rule option",
     );
-    let typo = table(NESTED, "level = \"off\"\n", "minor_att = 2\n");
+    let typo = table(SPAN, "level = \"off\"\n", "minor_att = 2\n");
     let error = rejected(&typo, Strictness::Minimal, "misspelled key");
-    rule_option(&error, NESTED, Some("minor_att"), "misspelled key");
+    rule_option(&error, SPAN, Some("minor_att"), "misspelled key");
 }
 
 #[test]
@@ -415,10 +406,10 @@ fn audit_config_wrong_type_option_values_name_the_key() {
 #[test]
 fn audit_config_invalid_level_values_name_the_value() {
     for literal in ["\"fatal\"", "\"warn\"", "\"deny\"", "\"Warn\"", "3", "true"] {
-        let src = format!("[rules.\"{NESTED}\"]\nlevel = {literal}\n");
+        let src = format!("[rules.\"{SPAN}\"]\nlevel = {literal}\n");
         let error = parse_config(&src, "sloplint.toml").err();
         let error = error.unwrap_or_else(|| panic!("level = {literal} was accepted"));
-        rule_option(&error, NESTED, Some(literal.trim_matches('"')), literal);
+        rule_option(&error, SPAN, Some(literal.trim_matches('"')), literal);
     }
 }
 
@@ -426,14 +417,14 @@ fn audit_config_invalid_level_values_name_the_value() {
 fn audit_config_bad_rule_tables_fail_through_run_with_exit_two() {
     let cases = [
         (
-            NESTED,
+            SPAN,
             "minor_at = 9\nmajor_at = 1\ncritical_at = 2\nblocker_at = 3\n",
         ),
         (
-            NESTED,
+            SPAN,
             "minor_at = 0\nmajor_at = 4\ncritical_at = 5\nblocker_at = 6\n",
         ),
-        (NESTED, "bogus = 1\n"),
+        (SPAN, "bogus = 1\n"),
         ("meta/parse-error", "bogus = 1\n"),
         ("grep/homonym-definitions", "min_files = 1\n"),
         ("agent/colocated-tests", "exclude = [\"[\"]\n"),
@@ -453,9 +444,13 @@ fn audit_config_bad_rule_tables_fail_through_run_with_exit_two() {
 #[test]
 fn audit_config_rule_filter_does_not_hide_invalid_rule_tables() {
     let filter = selector("complexity/cognitive-depth");
-    let bad_src = table("grep/homonym-definitions", "", "min_files = 1\n");
+    let enabled = table("complexity/cognitive-depth", "level = \"minor\"\n", "");
+    let bad_src = format!(
+        "{enabled}{}",
+        table("grep/homonym-definitions", "", "min_files = 1\n")
+    );
     let mut bad = parse_config(&bad_src, "sloplint.toml").unwrap_or_else(|e| panic!("{e}"));
-    let mut good = parse_config("", "sloplint.toml").unwrap_or_else(|e| panic!("{e}"));
+    let mut good = parse_config(&enabled, "sloplint.toml").unwrap_or_else(|e| panic!("{e}"));
     for strictness in PROFILES {
         bad.project.strictness = strictness;
         good.project.strictness = strictness;
@@ -471,10 +466,17 @@ fn audit_config_rule_filter_does_not_hide_invalid_rule_tables() {
             set.is_active("complexity/cognitive-depth"),
             "{context}: selected rule off"
         );
-        assert!(
-            !set.is_active("complexity/nesting-depth"),
-            "{context}: filtered rule on"
-        );
+        if strictness == Strictness::Strict {
+            assert!(
+                !set.selects("complexity/nesting-depth"),
+                "{context}: filtered rule selected"
+            );
+        } else {
+            assert!(
+                !set.is_active("complexity/nesting-depth"),
+                "{context}: filtered rule on"
+            );
+        }
     }
 }
 
@@ -517,10 +519,11 @@ fn nesting_severities(config: &str) -> Vec<Severity> {
 #[test]
 fn audit_config_level_caps_and_disables_still_apply_after_validation() {
     let rule = "complexity/nesting-depth";
+    let enabled = table(rule, "level = \"major\"\n", "");
     assert_eq!(
-        nesting_severities(""),
+        nesting_severities(&enabled),
         [Severity::Major],
-        "preset reports major for depth 8"
+        "enabled reports major for depth 8"
     );
     let minor = table(rule, "level = \"minor\"\n", "");
     assert_eq!(
@@ -541,7 +544,7 @@ fn audit_config_level_caps_and_disables_still_apply_after_validation() {
     );
     let raised = table(
         rule,
-        "",
+        "level = \"major\"\n",
         "minor_at = 9\nmajor_at = 9\ncritical_at = 9\nblocker_at = 9\n",
     );
     assert!(
@@ -550,7 +553,7 @@ fn audit_config_level_caps_and_disables_still_apply_after_validation() {
     );
     let both = format!(
         "{off}{}",
-        table(NESTED, "level = \"off\"\n", "minor_at = 3\n")
+        table(SPAN, "level = \"off\"\n", "minor_at = 3\n")
     );
     assert!(
         nesting_severities(&both).is_empty(),
@@ -563,13 +566,18 @@ fn audit_config_level_caps_and_disables_still_apply_after_validation() {
     );
     assert!(!set.is_active(rule), "off nesting-depth must stay inactive");
     assert!(
-        !set.is_active(NESTED),
-        "off nested-mutation with minor_at override must stay inactive"
+        !set.is_active(SPAN),
+        "off mutable-span with minor_at override must stay inactive"
     );
-    let mut filtered_config = parse_config(&raised, "sloplint.toml")
+    let inactive = table(
+        rule,
+        "",
+        "minor_at = 9\nmajor_at = 9\ncritical_at = 9\nblocker_at = 9\n",
+    );
+    let mut filtered_config = parse_config(&inactive, "sloplint.toml")
         .unwrap_or_else(|e| panic!("valid override rejected: {e}"));
     filtered_config.project.strictness = Strictness::Standard;
-    let filtered = RuleSet::new(&filtered_config, &selector(NESTED))
+    let filtered = RuleSet::new(&filtered_config, &selector(SPAN))
         .unwrap_or_else(|e| panic!("filtered valid override rejected: {e}"));
     assert!(
         !filtered.is_active(rule),
@@ -700,13 +708,13 @@ fn audit_custom_rule_tables_accept_only_a_valid_level() {
 #[test]
 fn audit_config_rejects_legacy_severity_words() {
     for (src, token) in [
-        (table(NESTED, "level = \"warn\"\n", ""), "warn"),
-        (table(NESTED, "level = \"deny\"\n", ""), "deny"),
-        (table(NESTED, "", "warn_at = 2\n"), "warn_at"),
-        (table(NESTED, "", "deny_at = 2\n"), "deny_at"),
+        (table(SPAN, "level = \"warn\"\n", ""), "warn"),
+        (table(SPAN, "level = \"deny\"\n", ""), "deny"),
+        (table(SPAN, "", "warn_at = 2\n"), "warn_at"),
+        (table(SPAN, "", "deny_at = 2\n"), "deny_at"),
     ] {
         let error = rejected(&src, Strictness::Standard, &src);
-        rule_option(&error, NESTED, Some(token), &src);
+        rule_option(&error, SPAN, Some(token), &src);
     }
     for (src, token) in [
         (custom_rule(&[("severity", "warn")]), "warn"),

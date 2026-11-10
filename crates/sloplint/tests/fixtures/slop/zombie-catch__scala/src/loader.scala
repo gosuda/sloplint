@@ -3,7 +3,9 @@ object Loader {
     try {
       readFile(path)
     } catch {
-      case e: Exception => throw e
+      case e: Exception =>
+        println(e.getMessage)
+        throw e
     }
   }
 }

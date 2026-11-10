@@ -1,1 +1,1 @@
-src/service.swift:1 minor agent/colocated-tests
+src/service.swift:1 info agent/colocated-tests

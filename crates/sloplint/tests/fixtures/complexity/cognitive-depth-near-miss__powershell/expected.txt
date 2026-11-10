@@ -1,1 +1,1 @@
-# Near-miss: nine-arm else-if chain scores 9, below the strict minor threshold of 10.
+# Near-miss: else-if adds 0 and nest-0 adds 0, so the chain scores 0 < strict minor_at 10.

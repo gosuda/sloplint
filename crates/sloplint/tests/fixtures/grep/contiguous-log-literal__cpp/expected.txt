@@ -1,2 +1,2 @@
-src/a.cpp:3 major grep/contiguous-log-literal
-src/a.cpp:4 major grep/contiguous-log-literal
+src/a.cpp:3 info grep/contiguous-log-literal
+src/a.cpp:4 info grep/contiguous-log-literal

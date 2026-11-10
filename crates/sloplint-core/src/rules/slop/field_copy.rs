@@ -9,7 +9,7 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Slop,
     summary: "struct literals copying every field one-to-one from another value",
     why: "One-to-one field copying means two types carry the same data.",
-    confidence: Confidence::Medium,
+    confidence: Confidence::Low,
     roles: RolePolicy {
         entry: Shift::Keep,
         test: Shift::Off,

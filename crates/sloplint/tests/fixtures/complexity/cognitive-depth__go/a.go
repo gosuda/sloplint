@@ -1,6 +1,8 @@
 package probe
 func Tangled(a int) int {
 	x := a
+	if a >= 0 {
+		for i := 0; i < a; i++ {
 	if a > 0 {
 		x += 1
 	}
@@ -48,6 +50,8 @@ func Tangled(a int) int {
 	}
 	if a > 15 {
 		x += 16
+	}
+		}
 	}
 	return x
 }

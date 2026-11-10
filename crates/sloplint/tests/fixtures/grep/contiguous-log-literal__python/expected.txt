@@ -1,2 +1,2 @@
-src/logs.py:7 major grep/contiguous-log-literal
-src/logs.py:8 major grep/contiguous-log-literal
+src/logs.py:7 info grep/contiguous-log-literal
+src/logs.py:8 info grep/contiguous-log-literal

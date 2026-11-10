@@ -1,3 +1,3 @@
 <?php
-use App\Services\PaymentGateway as Gateway;
-use Other\Thing\Widget as W;
+use App\Services\PaymentGateway as PayGate;
+use Other\Thing\Widget as Q;

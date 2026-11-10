@@ -1,18 +1,17 @@
-use std::borrow::Cow;
-
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, CallKind, FieldCopy, Handler, Import, ImportKind, Param,
-    Pos, Stmt, TypeDef, WildcardArm,
+    AmbientKind, Assertion, CallKind, FieldCopy, Handler, Import, Pos, WildcardArm,
 };
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, TypeHead, binary_concat, child_by_field,
-    first_named_child, first_named_child_matching, last_named_child, named_children, narrow,
-    pos_of, preceding_comments, region_of, string_arg_shape, strip_quotes, text,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, text,
 };
 use crate::spec::Role;
-use sloplint_core::role::CodeRole;
+
+mod calls;
+mod funcs;
+mod imports;
+mod stmts;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_declaration", Role::Function),
@@ -40,412 +39,29 @@ pub(crate) struct GoHooks;
 
 pub(crate) static HOOKS: GoHooks = GoHooks;
 
-fn variadic_ty<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
-    text(cx, n).find("...").map_or("", |i| &text(cx, n)[i..])
-}
-
-fn go_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>>) {
-    for child in named_children(list) {
-        if child.kind() == "parameter_declaration" {
-            let ty = child_by_field(child, "type").map(|t| text(cx, t));
-            let mut any = false;
-            for name in named_children(child) {
-                if name.kind() != "identifier" {
-                    continue;
-                }
-                any = true;
-                out.push(Param {
-                    name: text(cx, name),
-                    ty,
-                    bool_default: false,
-                });
-            }
-            if !any {
-                out.push(Param {
-                    name: "",
-                    ty,
-                    bool_default: false,
-                });
-            }
-        } else if child.kind() == "variadic_parameter_declaration" {
-            out.push(Param {
-                name: child_by_field(child, "name").map_or("", |v| text(cx, v)),
-                ty: Some(variadic_ty(cx, child)),
-                bool_default: false,
-            });
-        }
-    }
-}
-
-fn go_return_expr(n: Node<'_>) -> Option<Node<'_>> {
-    let only = n.named_child(0)?;
-    if n.named_child(1).is_some() {
-        return None;
-    }
-    if only.kind() == "expression_list" {
-        let one = only.named_child(0)?;
-        if only.named_child(1).is_some() {
-            return None;
-        }
-        Some(one)
-    } else {
-        Some(only)
-    }
-}
-
-fn go_single_call(n: Node<'_>) -> Option<usize> {
-    match n.kind() {
-        "expression_statement" => {
-            let inner = first_named_child(n)?;
-            (inner.kind() == "call_expression").then_some(inner.id())
-        }
-        "return_statement" => {
-            let expr = go_return_expr(n)?;
-            (expr.kind() == "call_expression").then_some(expr.id())
-        }
-        _ => None,
-    }
-}
-
-fn go_sole(body: Node<'_>) -> Option<usize> {
-    let list = first_named_child_matching(body, &["statement_list"])?;
-    let only = list.named_child(0)?;
-    if list.named_child(1).is_some() {
-        return None;
-    }
-    go_single_call(only)
-}
-
-fn push_go_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    if let Some(root) = go_root(cx, n) {
-        out.push(root);
-    }
-}
-fn write_target<'s>(cx: &Cx<'_, 's>, c: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    if c.kind() == "expression_list" {
-        for e in named_children(c) {
-            push_go_root(cx, e, out);
-        }
-    } else {
-        push_go_root(cx, c, out);
-    }
-}
-fn go_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    let mut cur = n;
-    loop {
-        match cur.kind() {
-            "identifier" => return Some((text(cx, cur), pos_of(cur))),
-            "selector_expression" => cur = child_by_field(cur, "operand")?,
-            "index_expression" => cur = child_by_field(cur, "operand")?,
-            "unary_expression" => cur = child_by_field(cur, "operand")?,
-            "parenthesized_expression" => cur = first_named_child(cur)?,
-            _ => return None,
-        }
-    }
-}
-
-fn go_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    match n.kind() {
-        "interpreted_string_literal" => {
-            string_arg_shape(cx, n, &["interpreted_string_literal_content"])
-        }
-        "raw_string_literal" => string_arg_shape(cx, n, &["raw_string_literal_content"]),
-        "identifier" => ArgShape::Ident(text(cx, n)),
-        _ if binary_concat(
-            cx,
-            n,
-            "+",
-            &["interpreted_string_literal", "raw_string_literal"],
-        ) =>
-        {
-            ArgShape::Concat
-        }
-        _ => ArgShape::Other,
-    }
-}
-
-fn go_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
-    Arg {
-        shape: go_shape(cx, n),
-        start_line: pos_of(n).line,
-        end_line: narrow(n.end_position().row) + 1,
-    }
-}
-
-fn version_seg(module: &str) -> &str {
-    let last = module.rsplit('/').next().map_or("", |s| s);
-    let versioned =
-        last.len() > 1 && last.starts_with('v') && last[1..].bytes().all(|b| b.is_ascii_digit());
-    if !versioned {
-        return last;
-    }
-    let Some(cut) = module.len().checked_sub(last.len() + 1) else {
-        return last;
-    };
-    module[..cut].rsplit('/').next().map_or(last, |s| s)
-}
-
-fn spec_import<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<Import<'s>>) {
-    let module = child_by_field(spec, "path").map_or("", |p| strip_quotes(text(cx, p)));
-    let seg = version_seg(module);
-    let pos = pos_of(spec);
-    match child_by_field(spec, "name").map(|v| v.kind()) {
-        Some("dot") => out.push(Import {
-            pos,
-            module: Cow::Borrowed(module),
-            name: "*",
-            alias: None,
-            kind: ImportKind::Wildcard,
-        }),
-        Some("blank_identifier") => out.push(Import {
-            pos,
-            module: Cow::Borrowed(module),
-            name: "",
-            alias: None,
-            kind: ImportKind::SideEffect,
-        }),
-        Some(_) => out.push(Import {
-            pos,
-            module: Cow::Borrowed(module),
-            name: seg,
-            alias: child_by_field(spec, "name").map(|v| text(cx, v)),
-            kind: ImportKind::Named,
-        }),
-        None => out.push(Import {
-            pos,
-            module: Cow::Borrowed(module),
-            name: seg,
-            alias: None,
-            kind: ImportKind::Named,
-        }),
-    }
-}
-
-fn go_enum(_cx: &Cx<'_, '_>, sw: Node<'_>) -> bool {
-    let mut found = false;
-    for case in named_children(sw) {
-        if case.kind() != "expression_case" {
-            continue;
-        }
-        let Some(vals) = child_by_field(case, "value") else {
-            continue;
-        };
-        for v in named_children(vals) {
-            match v.kind() {
-                "identifier" | "selector_expression" => found = true,
-                "int_literal"
-                | "float_literal"
-                | "imaginary_literal"
-                | "rune_literal"
-                | "interpreted_string_literal"
-                | "raw_string_literal"
-                | "true"
-                | "false"
-                | "nil" => return false,
-                _ => {}
-            }
-        }
-    }
-    found
-}
-
-fn go_last_expr(n: Node<'_>) -> Option<Node<'_>> {
-    let mut cur = last_named_child(n)?;
-    loop {
-        if cur.kind() == "expression_list" {
-            cur = last_named_child(cur)?;
-        } else {
-            return Some(cur);
-        }
-    }
-}
-
-fn go_handler_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, bound: &str) -> Stmt<'s> {
-    if s.kind() == "expression_statement" {
-        if let Some(v) = first_named_child(s)
-            && v.kind() == "call_expression"
-        {
-            let callee = child_by_field(v, "function").map_or("", |f| text(cx, f));
-            return Stmt::Call {
-                callee,
-                kind: CallKind::Plain,
-            };
-        }
-        return Stmt::Other;
-    }
-    if s.kind() == "return_statement"
-        && go_last_expr(s).is_some_and(|e| e.kind() == "identifier" && text(cx, e) == bound)
-    {
-        return Stmt::Rethrow;
-    }
-    Stmt::Other
-}
-
-fn go_keyed<'s>(cx: &Cx<'_, 's>, el: Node<'_>) -> Option<&'s str> {
-    let key = unwrap_literal_element(child_by_field(el, "key")?);
-    if key.kind() != "identifier" {
-        return None;
-    }
-    let val = unwrap_literal_element(child_by_field(el, "value")?);
-    if val.kind() != "selector_expression" {
-        return None;
-    }
-    let obj = child_by_field(val, "operand")?;
-    if obj.kind() != "identifier" {
-        return None;
-    }
-    if child_by_field(val, "field").map_or("", |f| text(cx, f)) != text(cx, key) {
-        return None;
-    }
-    Some(text(cx, obj))
-}
-
-fn unwrap_literal_element(n: Node<'_>) -> Node<'_> {
-    if n.kind() == "literal_element" && n.named_child_count() == 1 {
-        return n.named_child(0).unwrap_or(n);
-    }
-    n
-}
-
-fn is_sentinel(cx: &Cx<'_, '_>, spec: Node<'_>) -> bool {
-    child_by_field(spec, "value").is_some_and(|v| {
-        let expr = if v.kind() == "expression_list" {
-            v.named_child(0).unwrap_or(v)
-        } else {
-            v
-        };
-        expr.kind() == "call_expression"
-            && child_by_field(expr, "function").is_some_and(|f| {
-                let t = text(cx, f);
-                t == "errors.New" || t == "fmt.Errorf"
-            })
-    })
-}
-
-fn go_last_segment(callee: &str) -> &str {
-    let bytes = callee.as_bytes();
-    let mut start = bytes.len();
-    for &b in bytes.iter().rev() {
-        start -= 1;
-        if b == b'.' || b == b'/' {
-            return &callee[start + 1..];
-        }
-    }
-    callee
-}
-
-fn tail_two(callee: &str) -> &str {
-    let mut seen = 0;
-    for (i, &b) in callee.as_bytes().iter().enumerate().rev() {
-        if b == b'.' || b == b'/' {
-            seen += 1;
-            if seen == 2 {
-                return &callee[i + 1..];
-            }
-        }
-    }
-    callee
-}
-
-fn go_var_specs(n: Node<'_>) -> Vec<Node<'_>> {
-    let mut specs = Vec::new();
-    for child in named_children(n) {
-        if child.kind() == "var_spec" {
-            specs.push(child);
-            continue;
-        }
-        specs.extend(
-            named_children(child)
-                .into_iter()
-                .filter(|s| s.kind() == "var_spec"),
-        );
-    }
-    specs
-}
-
-fn push_go_global<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
-    if is_sentinel(cx, spec) {
-        return;
-    }
-    for c in named_children(spec) {
-        if c.kind() != "identifier" {
-            continue;
-        }
-        out.push((AmbientKind::GlobalMutable, text(cx, c), pos_of(c)));
-    }
-}
-
-fn report_go_globals<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
-    for spec in go_var_specs(n) {
-        push_go_global(cx, spec, out);
-    }
-}
-
-fn report_go_env<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
-    let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
-    if callee != "os.Getenv" && callee != "os.LookupEnv" && callee != "os.Environ" {
-        return;
-    }
-    out.push((AmbientKind::EnvRead, callee, pos_of(n)));
-}
-
-fn go_is_test_file(path: &str) -> bool {
-    path.rsplit('/')
-        .next()
-        .unwrap_or(path)
-        .ends_with("_test.go")
-}
-fn go_name_ok(name: &str, prefix: &str) -> bool {
-    name.strip_prefix(prefix).is_some_and(|rest| {
-        rest.is_empty() || rest.chars().next().is_some_and(|c| !c.is_lowercase())
-    })
-}
-fn go_sig_ok(params: &[Param<'_>], want: &str) -> bool {
-    params.len() == 1 && params[0].ty.is_some_and(|ty| ty.trim() == want)
-}
-fn go_marker(name: &str, params: &[Param<'_>], path: &str) -> Option<CodeRole> {
-    if !go_is_test_file(path) {
-        return None;
-    }
-    if go_name_ok(name, "Test") && go_sig_ok(params, "*testing.T") {
-        return Some(CodeRole::Test);
-    }
-    if go_name_ok(name, "Benchmark") && go_sig_ok(params, "*testing.B") {
-        return Some(CodeRole::Bench);
-    }
-    if go_name_ok(name, "Fuzz") && go_sig_ok(params, "*testing.F") {
-        return Some(CodeRole::Bench);
-    }
-    if go_name_ok(name, "Example") && params.is_empty() {
-        return Some(CodeRole::Example);
-    }
-    None
-}
 impl LangHooks for GoHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let name_node = child_by_field(n, "name")?;
-        let name = text(cx, name_node);
         let mut params = Vec::new();
         if let Some(list) = child_by_field(n, "parameters") {
-            go_params(cx, list, &mut params);
+            funcs::go_params(cx, list, &mut params);
         }
-        let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
         let marker = (n.kind() == "function_declaration")
-            .then(|| go_marker(name, &params, cx.path))
+            .then(|| funcs::go_marker(text(cx, name_node), &params, cx.path))
             .flatten();
-        Some(FunctionHead {
-            name,
-            name_pos: pos_of(name_node),
-            public: name.chars().next().is_some_and(|c| c.is_uppercase()),
-            interface_bound: n.kind() == "method_declaration",
-            region: marker.map(|role| region_of(n, role)),
-            params,
-            return_type: child_by_field(n, "result").map(|t| text(cx, t)),
-            missing_annotations: Vec::new(),
-            doc,
-            doc_pos,
-            sole_call: go_sole(child_by_field(n, "body")?),
-        })
+        Some(funcs::go_function_head(cx, n, name_node, params, marker))
+    }
+
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
+        if n.kind() != "func_literal" {
+            return None;
+        }
+        Some(funcs::go_closure_head(cx, n))
     }
 
     fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
@@ -455,57 +71,11 @@ impl LangHooks for GoHooks {
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() == "var_declaration" {
-            let mut specs = Vec::new();
-            for child in named_children(n) {
-                if child.kind() == "var_spec" {
-                    specs.push(child);
-                } else {
-                    specs.extend(
-                        named_children(child)
-                            .into_iter()
-                            .filter(|s| s.kind() == "var_spec"),
-                    );
-                }
-            }
-            for spec in specs {
-                for c in named_children(spec) {
-                    if c.kind() == "identifier" && text(cx, c) != "_" {
-                        out.push((text(cx, c), pos_of(c)));
-                    }
-                }
-            }
-            return;
-        }
-        let Some(left) = child_by_field(n, "left") else {
-            return;
-        };
-        for id in named_children(left) {
-            if id.kind() == "identifier" && text(cx, id) != "_" {
-                out.push((text(cx, id), pos_of(id)));
-            }
-        }
-        if left.kind() == "identifier" && text(cx, left) != "_" {
-            out.push((text(cx, left), pos_of(left)));
-        }
+        stmts::go_decl_names(cx, n, out);
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() == "assignment_statement" {
-            let right = child_by_field(n, "right");
-            for c in named_children(n) {
-                if right.is_some_and(|r| r.id() == c.id()) {
-                    continue;
-                }
-                write_target(cx, c, out);
-            }
-            return;
-        }
-        if let Some(child) = first_named_child(n)
-            && let Some(root) = go_root(cx, child)
-        {
-            out.push(root);
-        }
+        stmts::go_write_roots(cx, n, out);
     }
 
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
@@ -513,128 +83,41 @@ impl LangHooks for GoHooks {
             return None;
         }
         let func = child_by_field(n, "function")?;
-        let args = child_by_field(n, "arguments").map_or(Vec::new(), |a| {
-            named_children(a)
-                .into_iter()
-                .map(|c| go_arg(cx, c))
-                .collect()
-        });
+        let args = calls::go_call_args(cx, n);
         Some(CallHead {
             callee: text(cx, func),
             kind: CallKind::Plain,
-            callee_root: None,
+            callee_root: calls::go_callee_root(cx, func),
+            is_simple_path: calls::go_is_simple_path(func),
+            initializes_binding: calls::go_initializes_binding(cx, n),
             args,
         })
     }
 
     fn imports<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
-        for child in named_children(n) {
-            if child.kind() == "import_spec" {
-                spec_import(cx, child, out);
-            } else {
-                for spec in named_children(child) {
-                    if spec.kind() == "import_spec" {
-                        spec_import(cx, spec, out);
-                    }
-                }
-            }
-        }
+        imports::go_imports(cx, n, out);
     }
 
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {
-        if n.kind() != "type_spec" {
-            return None;
-        }
-        let name_node = child_by_field(n, "name")?;
-        let name = text(cx, name_node);
-        Some(TypeHead {
-            def: Some(TypeDef {
-                name,
-                pos: pos_of(name_node),
-                public: name.chars().next().is_some_and(|c| c.is_uppercase()),
-                abstraction: child_by_field(n, "type")
-                    .is_some_and(|t| t.kind() == "interface_type"),
-            }),
-            impls: Vec::new(),
-            container: None,
+        funcs::go_typedef(cx, n)
+    }
+
+    fn container(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<Container> {
+        (n.kind() == "method_declaration").then_some(Container::Impl {
+            interface_bound: false,
         })
     }
 
-    fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
-        let parent = n.parent()?;
-        if parent.kind() != "expression_switch_statement" {
-            return None;
-        }
-        Some(WildcardArm {
-            pos: pos_of(n),
-            enum_like: go_enum(cx, parent),
-        })
+    fn match_arm(&self, _n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<WildcardArm> {
+        None
     }
 
     fn handler<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'s>> {
-        if n.kind() != "if_statement" {
-            return None;
-        }
-        let cond = child_by_field(n, "condition")?;
-        if cond.kind() != "binary_expression" {
-            return None;
-        }
-        let left = child_by_field(cond, "left")?;
-        if left.kind() != "identifier" {
-            return None;
-        }
-        if child_by_field(cond, "operator").map_or("", |o| text(cx, o)) != "!=" {
-            return None;
-        }
-        let right = child_by_field(cond, "right")?;
-        if right.kind() != "nil" {
-            return None;
-        }
-        let bound = text(cx, left);
-        let body = child_by_field(n, "consequence")?;
-        let mut stmts = Vec::new();
-        if let Some(list) = first_named_child_matching(body, &["statement_list"]) {
-            for s in named_children(list) {
-                if s.kind() == "comment" {
-                    continue;
-                }
-                stmts.push(go_handler_stmt(cx, s, bound));
-            }
-        }
-        Some(Handler {
-            pos: pos_of(n),
-            stmts,
-        })
+        stmts::go_handler(cx, n)
     }
 
     fn struct_lit<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FieldCopy<'s>> {
-        if n.kind() != "composite_literal" {
-            return None;
-        }
-        let body = child_by_field(n, "body")?;
-        let mut fields = 0u32;
-        let mut source: Option<&'s str> = None;
-        let mut poisoned = false;
-        for el in named_children(body) {
-            if el.kind() != "keyed_element" {
-                poisoned = true;
-                continue;
-            }
-            fields += 1;
-            match (source, go_keyed(cx, el)) {
-                (None, Some(s)) => source = Some(s),
-                (Some(a), Some(b)) if a == b => {}
-                _ => poisoned = true,
-            }
-        }
-        if fields == 0 {
-            return None;
-        }
-        Some(FieldCopy {
-            pos: pos_of(n),
-            fields,
-            source: if poisoned { None } else { source },
-        })
+        stmts::go_struct_lit(cx, n)
     }
 
     fn ambient<'s>(
@@ -644,58 +127,14 @@ impl LangHooks for GoHooks {
         in_function: bool,
         out: &mut Vec<(AmbientKind, &'s str, Pos)>,
     ) {
-        if n.kind() == "var_declaration" {
-            if in_function {
-                return;
-            }
-            if n.parent().is_some_and(|p| p.kind() != "source_file") {
-                return;
-            }
-            report_go_globals(cx, n, out);
-            return;
-        }
-        if n.kind() != "call_expression" {
-            return;
-        }
-        report_go_env(cx, n, out);
+        stmts::go_ambient(cx, n, in_function, out);
     }
 
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
-        if n.kind() != "call_expression" {
-            return None;
-        }
-        let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
-        let last = go_last_segment(callee);
-        if last != "MethodByName" && last != "FieldByName" {
-            return None;
-        }
-        let first = child_by_field(n, "arguments").and_then(first_named_child);
-        if first.is_some_and(|f| {
-            f.kind() == "interpreted_string_literal" || f.kind() == "raw_string_literal"
-        }) {
-            return None;
-        }
-        Some("reflection by name")
+        calls::go_dynamic(cx, n)
     }
 
     fn assertion(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {
-        if n.kind() != "call_expression" {
-            return None;
-        }
-        let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
-        let tail = tail_two(callee);
-        if tail != "assert.True"
-            && tail != "assert.False"
-            && tail != "require.True"
-            && tail != "require.False"
-        {
-            return None;
-        }
-        let count = child_by_field(n, "arguments").map_or(0, |a| a.named_child_count());
-        Some(Assertion {
-            pos: pos_of(n),
-            has_message: count >= 3,
-            comparison: false,
-        })
+        calls::go_assertion(cx, n)
     }
 }

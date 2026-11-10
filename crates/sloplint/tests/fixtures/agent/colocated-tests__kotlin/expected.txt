@@ -1,1 +1,1 @@
-src/Service.kt:1 minor agent/colocated-tests
+src/Service.kt:1 info agent/colocated-tests

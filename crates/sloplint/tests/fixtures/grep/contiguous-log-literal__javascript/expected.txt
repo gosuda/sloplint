@@ -1,2 +1,2 @@
-src/app.js:2 major grep/contiguous-log-literal
-src/app.js:3 major grep/contiguous-log-literal
+src/app.js:2 info grep/contiguous-log-literal
+src/app.js:3 info grep/contiguous-log-literal

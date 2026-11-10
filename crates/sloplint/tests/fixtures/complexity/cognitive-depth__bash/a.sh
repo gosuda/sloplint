@@ -1,4 +1,6 @@
 tangled() {
+  if true; then
+  for i in 1 2 3; do
   if true; then echo a; fi
   if true; then echo b; fi
   if true; then echo c; fi
@@ -15,4 +17,6 @@ tangled() {
   if true; then echo n; fi
   if true; then echo o; fi
   if true; then echo p; fi
+  done
+  fi
 }

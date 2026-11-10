@@ -1,1 +1,1 @@
-src/Spreader.cs:3 major complexity/mutable-span
+src/Spreader.cs:3 info complexity/mutable-span

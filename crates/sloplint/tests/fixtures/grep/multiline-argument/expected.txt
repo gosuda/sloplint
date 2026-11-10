@@ -1,2 +1,2 @@
-# Positive: non-Str arg spans lines 3-8 (6 lines >= strict minor_at=6); finding at the call.
+# Positive: Collection arg spans lines 2-18 (17 lines >= strict Minor(15)); statement call, finding at the call.
 src/lib.rs:2 minor grep/multiline-argument

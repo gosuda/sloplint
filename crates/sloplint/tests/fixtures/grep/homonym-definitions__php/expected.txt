@@ -1,1 +1,1 @@
-a.php:2 minor grep/homonym-definitions
+a.php:2 info grep/homonym-definitions

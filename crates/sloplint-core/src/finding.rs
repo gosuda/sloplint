@@ -362,11 +362,43 @@ fn clip_context(trimmed: &str) -> Cow<'_, str> {
 }
 
 fn context_of(line: &str) -> Cow<'_, str> {
-    if line.contains('\r') {
-        let cleaned = line.replace('\r', "");
-        Cow::Owned(clip_context(cleaned.trim()).into_owned())
-    } else {
-        clip_context(line.trim())
+    let rest = line.trim_start();
+    let mut buf = String::with_capacity(MAX_CONTEXT_CHARS + 3);
+    let mut count = 0usize;
+    let mut extra: Option<char> = None;
+    let mut end = rest.len();
+    for (at, c) in rest.char_indices() {
+        end = at + c.len_utf8();
+        if c == '\r' {
+            continue;
+        }
+        if count < MAX_CONTEXT_CHARS {
+            buf.push(c);
+            count += 1;
+        } else {
+            extra = Some(c);
+            break;
+        }
+    }
+    match extra {
+        Some(c) if !c.is_whitespace() => {
+            buf.push_str("...");
+            Cow::Owned(buf)
+        }
+        Some(c) => {
+            if rest[end..].chars().any(|next| !next.is_whitespace()) {
+                buf.push_str("...");
+                Cow::Owned(buf)
+            } else {
+                buf.push(c);
+                Cow::Owned(clip_context(buf.trim_end()).into_owned())
+            }
+        }
+        None => {
+            let keep = buf.trim_end().len();
+            buf.truncate(keep);
+            Cow::Owned(buf)
+        }
     }
 }
 
@@ -504,6 +536,27 @@ mod tests {
         assert!(
             from_site.context.is_empty() && from_site.context_pending,
             "a site finding defers its context to the merge step"
+        );
+    }
+    #[test]
+    fn carriage_return_outside_window_leaves_context_unchanged() {
+        let mut beyond = "a".repeat(100_000);
+        beyond.replace_range(90_000..90_001, "\r");
+        let (_, context) = source_site(&beyond, Pos { line: 1, byte: 0 });
+        let expected_beyond = "a".repeat(MAX_CONTEXT_CHARS) + "...";
+        assert_eq!(
+            context.as_ref(),
+            expected_beyond.as_str(),
+            "CR past the window must not reach context {context:?}"
+        );
+        let mut inside = "b".repeat(100_000);
+        inside.replace_range(100..101, "\r");
+        let (_, context) = source_site(&inside, Pos { line: 1, byte: 0 });
+        let expected_inside = "b".repeat(MAX_CONTEXT_CHARS) + "...";
+        assert_eq!(
+            context.as_ref(),
+            expected_inside.as_str(),
+            "CR inside the window must be stripped from context {context:?}"
         );
     }
 }

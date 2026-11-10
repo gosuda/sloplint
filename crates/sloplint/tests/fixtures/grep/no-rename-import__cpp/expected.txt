@@ -1,1 +1,2 @@
-src/a.cpp:1 minor grep/no-rename-import
+# Positive: the namespace alias shares nothing with the target; strict rung info.
+src/a.cpp:1 info grep/no-rename-import

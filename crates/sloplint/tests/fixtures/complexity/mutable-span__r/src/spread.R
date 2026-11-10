@@ -1,5 +1,6 @@
 spread <- function(limit) {
   total <- 0
+  total <- total + limit
   a <- 1
   b <- 2
   c <- 3
@@ -29,7 +30,6 @@ spread <- function(limit) {
   ab <- z + aa
   ac <- aa + ab
   ad <- ab + ac
-  total <- total + z
-  total <- total + limit
+  total <- total + a
   total
 }

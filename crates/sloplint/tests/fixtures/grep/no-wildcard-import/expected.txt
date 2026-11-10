@@ -1,2 +1,2 @@
-# Positive: one wildcard import at line 1.
-src/lib.rs:1 minor grep/no-wildcard-import
+# Positive: public glob of a non-prelude crate at module scope; strict rung minor.
+src/lib.rs:1 info grep/no-wildcard-import

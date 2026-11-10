@@ -37,9 +37,9 @@ pub enum BaselineError {
 }
 
 #[derive(Serialize)]
-struct BaselineFile {
+struct BaselineFile<'a> {
     version: u32,
-    findings: Vec<BaselineEntry>,
+    findings: &'a BTreeSet<BaselineEntry>,
 }
 
 #[derive(Deserialize)]
@@ -115,7 +115,7 @@ impl Baseline {
     pub fn to_json(&self) -> String {
         let doc = BaselineFile {
             version: 1,
-            findings: self.entries.iter().cloned().collect(),
+            findings: &self.entries,
         };
         let mut json =
             sonic_rs::to_string_pretty(&doc).expect("baseline serialization cannot fail");

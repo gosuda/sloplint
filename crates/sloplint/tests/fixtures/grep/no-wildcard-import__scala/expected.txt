@@ -1,2 +1,2 @@
 # Positive: one wildcard import at line 1.
-src/glob.scala:1 minor grep/no-wildcard-import
+src/glob.scala:1 info grep/no-wildcard-import

@@ -1,6 +1,6 @@
 //! Hand-built facts: the rules and the line index only read these public fields.
 
-use sloplint_core::facts::{FileFacts, Function, Pos};
+use sloplint_core::facts::{FileFacts, Function, Pos, Visibility};
 use sloplint_core::finding::line_starts;
 use sloplint_core::lang::Lang;
 
@@ -14,6 +14,8 @@ pub fn facts_for(lang: Lang, path: &'static str, source: &'static str) -> FileFa
         role: sloplint_core::role::CodeRole::Library,
         regions: Vec::new(),
         line_count: 0,
+        package: "app".to_string(),
+        is_generated: false,
         functions: Vec::new(),
         calls: Vec::new(),
         bindings: Vec::new(),
@@ -38,8 +40,17 @@ pub fn function(name: &'static str, pos: Pos) -> Function<'static> {
         pos,
         doc: Vec::new(),
         doc_pos: None,
-        public: true,
-        interface_bound: false,
+        visibility: Visibility::Exported,
+        signature_forced: false,
+        entry_point: false,
+        in_test: false,
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        is_method: false,
+        end_line: pos.line,
+        has_value_return: false,
         params: Vec::new(),
         return_type: None,
         untyped_throws: false,

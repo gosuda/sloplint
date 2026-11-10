@@ -133,7 +133,7 @@ fn generic_method_declaration_parses() {
     let analysis = run_clean("generic_method.go", source);
     assert_eq!(function_names(&analysis), ["G", "H", "Plain"]);
     let g = &analysis.facts.functions[0];
-    assert!(g.interface_bound, "a method declaration is interface bound");
+    assert!(!g.signature_forced, "a Go method is an ordinary function");
     assert_eq!(g.params.len(), 1, "G takes one parameter");
     assert_eq!(g.params[0].name, "u");
     assert_eq!(g.params[0].ty, Some("U"));

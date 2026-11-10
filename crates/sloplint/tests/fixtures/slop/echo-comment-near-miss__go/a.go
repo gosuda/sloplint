@@ -1,9 +1,5 @@
 package probe
-// ProcessOrder processes the order.
-//
-// # Errors
-//
-// Returns an error when the account is closed.
-func ProcessOrder(id uint64) uint64 {
-	return id
+// FormatFrame formats the given frame.
+func FormatFrame(frame uint64) uint64 {
+	return frame
 }

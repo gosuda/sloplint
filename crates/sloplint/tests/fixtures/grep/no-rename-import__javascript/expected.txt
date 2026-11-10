@@ -1,1 +1,2 @@
-src/app.js:1 minor grep/no-rename-import
+# Positive: the Table alias shares nothing with HashMap; strict rung info.
+src/app.js:1 info grep/no-rename-import

@@ -1,1 +1,1 @@
-a.go:4 major agent/informative-assertions
+a.go:4 info agent/informative-assertions

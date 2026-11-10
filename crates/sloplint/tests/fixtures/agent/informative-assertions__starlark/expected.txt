@@ -1,1 +1,1 @@
-a.bzl:2 major agent/informative-assertions
+a.bzl:2 info agent/informative-assertions

@@ -80,7 +80,7 @@ fn assert_each_finding_shows_its_source_line(output: &str, expected: &[(&str, u3
 fn crlf_file_without_a_final_newline_shows_the_right_lines() {
     let tmp = project(&[(
         "a.rs",
-        "pub fn handle() {}\r\n\r\npub fn process() {}\r\n\r\npub fn execute() {}",
+        "pub fn handle() {}\r\n\r\npub fn process() {}\r\n\r\npub fn process() {}",
     )]);
     let output = human(tmp.path(), "grep/generic-name");
     assert!(
@@ -92,20 +92,20 @@ fn crlf_file_without_a_final_newline_shows_the_right_lines() {
         &[
             ("a.rs", 1, "pub fn handle() {}"),
             ("a.rs", 3, "pub fn process() {}"),
-            ("a.rs", 5, "pub fn execute() {}"),
+            ("a.rs", 5, "pub fn process() {}"),
         ],
     );
 }
 
 #[test]
 fn lf_file_with_leading_blank_line_and_final_newline_shows_the_right_lines() {
-    let tmp = project(&[("a.rs", "\npub fn handle() {}\n\n\npub fn run() {}\n")]);
+    let tmp = project(&[("a.rs", "\npub fn handle() {}\n\n\npub fn process() {}\n")]);
     let output = human(tmp.path(), "grep/generic-name");
     assert_each_finding_shows_its_source_line(
         &output,
         &[
             ("a.rs", 2, "pub fn handle() {}"),
-            ("a.rs", 5, "pub fn run() {}"),
+            ("a.rs", 5, "pub fn process() {}"),
         ],
     );
 }
@@ -115,7 +115,7 @@ fn consecutive_files_each_show_their_own_source() {
     let tmp = project(&[
         ("a.rs", "pub fn handle() {}\n"),
         ("b.rs", "// padding\n\npub fn process() {}\n"),
-        ("c.rs", "pub fn execute() {}\npub fn run() {}\n"),
+        ("c.rs", "pub fn handle() {}\npub fn process() {}\n"),
     ]);
     let output = human(tmp.path(), "grep/generic-name");
     assert_each_finding_shows_its_source_line(
@@ -123,8 +123,8 @@ fn consecutive_files_each_show_their_own_source() {
         &[
             ("a.rs", 1, "pub fn handle() {}"),
             ("b.rs", 3, "pub fn process() {}"),
-            ("c.rs", 1, "pub fn execute() {}"),
-            ("c.rs", 2, "pub fn run() {}"),
+            ("c.rs", 1, "pub fn handle() {}"),
+            ("c.rs", 2, "pub fn process() {}"),
         ],
     );
 }
@@ -146,7 +146,7 @@ fn edge_case_line_endings_render_expected_snippets() {
         ("trailing_lf.rs", "pub fn handle() {}\n"),
         ("no_trailing_lf.rs", "pub fn handle() {}"),
         ("trailing_crlf.rs", "pub fn handle() {}\r\n"),
-        ("lone_cr.rs", "pub fn handle() {}\rpub fn run() {}\n"),
+        ("lone_cr.rs", "pub fn handle() {}\rpub fn process() {}\n"),
         ("empty.rs", ""),
     ]);
     let output = human(tmp.path(), "grep/generic-name");
@@ -158,7 +158,7 @@ fn edge_case_line_endings_render_expected_snippets() {
         &output,
         &[
             ("lone_cr.rs", 1, "pub fn handle() {}"),
-            ("lone_cr.rs", 1, "pub fn run() {}"),
+            ("lone_cr.rs", 1, "pub fn process() {}"),
             ("no_trailing_lf.rs", 1, "pub fn handle() {}"),
             ("trailing_crlf.rs", 1, "pub fn handle() {}"),
             ("trailing_lf.rs", 1, "pub fn handle() {}"),
@@ -169,7 +169,7 @@ fn edge_case_line_endings_render_expected_snippets() {
         .find(|block| block.contains("lone_cr.rs:1:"))
         .unwrap_or_else(|| panic!("missing lone_cr finding in:\n{output}"));
     assert!(
-        lone.contains("pub fn run() {}"),
+        lone.contains("pub fn process() {}"),
         "a lone carriage return must not split the line:\n{lone}"
     );
 }

@@ -181,7 +181,7 @@ fn agent_output_shows_controls_as_visible_escapes() {
     #[cfg(unix)]
     assert_contains(
         stdout,
-        "dir/\\x1b[2J\\u{9b}evil\\x07.rs:1:8: minor/medium:",
+        "dir/\\x1b[2J\\u{9b}evil\\x07.rs:1:8: minor/low:",
         "path with controls",
     );
 }

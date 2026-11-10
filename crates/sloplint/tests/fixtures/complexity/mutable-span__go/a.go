@@ -29,6 +29,8 @@ func Spread(limit int) int {
 	z := w + x
 	sum := x + y + z
 	fin := sum + a
+	padA := fin + 1
+	padB := padA + 1
 	total += fin
 	total += limit
 	return total

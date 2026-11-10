@@ -39,6 +39,7 @@ pub(crate) enum Role {
     Assert,
     Global,
     StaticItem,
+    Return,
 }
 
 pub struct LangSpec {

@@ -78,11 +78,11 @@ fn a_cpp_header_in_a_dot_h_file_is_analyzed_with_the_cpp_adapter() {
         "the facts carry the language of the grammar that produced them"
     );
     assert!(
-        function(facts, "~Widget").interface_bound,
+        function(facts, "~Widget").signature_forced,
         "a virtual destructor is a C++ adapter fact"
     );
     assert!(
-        !function(facts, "name").interface_bound,
+        !function(facts, "name").signature_forced,
         "a plain member is not interface-bound"
     );
     for member in ["push", "empty"] {
@@ -124,7 +124,7 @@ public:
         "the C++ table maps `class_specifier` to a type"
     );
     assert!(
-        function(facts, "area").interface_bound,
+        function(facts, "area").signature_forced,
         "C++ virtual dispatch marks the member interface-bound"
     );
 }
@@ -264,7 +264,7 @@ fn a_plain_c_header_keeps_its_c_facts() {
     assert_eq!(header.facts.calls, source.facts.calls);
     assert_eq!(header.facts.types, source.facts.types);
     let twice = function(&header.facts, "twice");
-    assert_eq!(twice.cognitive, 1, "one `if` at depth zero scores one");
+    assert_eq!(twice.cognitive, 0, "one `if` at depth zero scores zero");
     let length = function(&header.facts, "get_length");
     let forwarded = length.sole_call.expect("get_length forwards a single call");
     let forwarded = usize::try_from(forwarded).expect("call index fits usize");

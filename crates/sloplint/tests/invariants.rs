@@ -7,6 +7,8 @@ mod corpus_invariants;
 mod isolated_cache;
 #[path = "invariants/ocaml_interface.rs"]
 mod ocaml_interface;
+#[path = "support/spawn.rs"]
+mod spawn;
 #[path = "invariants/suppression_oracles.rs"]
 mod suppression_oracles;
 #[path = "invariants/suppression_usage.rs"]
@@ -72,27 +74,26 @@ fn rule_option_override_merges_with_preset() {
     write(
         &root,
         "sloplint.toml",
-        "[rules.\"complexity/cognitive-depth\"]\nminor_at = 12\nmajor_at = 13\ncritical_at = 19\nblocker_at = 26\n",
+        "[rules.\"complexity/cognitive-depth\"]\nlevel = \"major\"\nminor_at = 2\nmajor_at = 3\ncritical_at = 19\nblocker_at = 26\n",
     );
-    for (count, expected) in [(12, Severity::Minor), (13, Severity::Major)] {
-        let ifs: String = (0..count)
-            .map(|n| format!("    if v > {n} {{\n        return;\n    }}\n"))
-            .collect();
-        write(
-            &root,
-            "src/deep.rs",
-            &format!("fn deep(v: u8) {{\n{ifs}}}\n"),
-        );
+    for (count, expected) in [(2, Severity::Minor), (3, Severity::Major)] {
+        let mut src = String::from("fn deep(v: u8) {\n");
+        for n in 0..count {
+            src.push_str(&format!("if v > {n} {{\n"));
+        }
+        src.push_str(&"}\n".repeat(count));
+        src.push_str("}\n");
+        write(&root, "src/deep.rs", &src);
         let report = run_ok(&standard(&root));
         let cognitive: Vec<_> = report
             .findings
             .iter()
             .filter(|f| &*f.rule == "complexity/cognitive-depth")
             .collect();
-        assert_eq!(cognitive.len(), 1, "{count} ifs must fire once");
+        assert_eq!(cognitive.len(), 1, "{count} nested ifs must fire once");
         assert_eq!(
             cognitive[0].severity, expected,
-            "{count} ifs with major_at 13 must be {expected:?}"
+            "{count} nested ifs with major_at 3 must be {expected:?}"
         );
     }
 }
@@ -677,6 +678,6 @@ fn audit_file_budget_whole_file_ratchet_identity() {
     assert_eq!(after.findings[0].line, 1, "shifted finding stays on line 1");
     assert_eq!(
         after.findings[0].message,
-        "file has 811 lines (minor at 500, major at 800, critical at 1200, blocker at 1600)"
+        "file has 811 lines (minor at 600, major at 1000, critical at 1500, blocker at 2000)"
     );
 }

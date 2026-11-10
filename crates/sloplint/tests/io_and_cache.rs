@@ -622,7 +622,7 @@ fn baseline_duplicates_unknown_rules_and_extra_fields() {
 
 /// Malformed caches derived from a valid one: a 32-byte BLAKE3 digest, then a payload of a version byte, 32 key bytes, and a varint-prefixed entry sequence.
 fn corrupt_caches(valid: &[u8]) -> Vec<(&'static str, Vec<u8>)> {
-    assert!(valid.len() > 65 && valid[32] == 6, "layout changed");
+    assert!(valid.len() > 65 && valid[32] == 7, "layout changed");
     let payload = &valid[32..];
     let signed = |mut bytes: Vec<u8>| {
         let mut shard = blake3::hash(&bytes).as_bytes().to_vec();

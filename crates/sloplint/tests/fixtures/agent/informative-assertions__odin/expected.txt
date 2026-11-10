@@ -1,1 +1,1 @@
-a.odin:4 major agent/informative-assertions
+a.odin:4 info agent/informative-assertions

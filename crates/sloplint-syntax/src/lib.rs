@@ -1,4 +1,5 @@
 mod custom;
+mod cx;
 mod emit;
 mod hooks;
 mod lang;
@@ -17,6 +18,7 @@ use tree_sitter::{Node, Parser, Tree};
 
 use custom::CustomHits;
 pub use custom::CustomRules;
+pub use lang::shadowed_sources;
 use spec::spec;
 
 pub struct Parsers<'o> {

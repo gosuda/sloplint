@@ -1,1 +1,0 @@
-# Near-miss: the rule fires nothing here.

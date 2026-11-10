@@ -1,6 +1,7 @@
 public class Spreader {
     public int Spread(int limit) {
         int total = 0;
+        total += limit;
         int a01 = 1;
         int a02 = 2;
         int a03 = 3;
@@ -31,7 +32,7 @@ public class Spreader {
         int a28 = 28;
         int a29 = 29;
         int a30 = 30;
-        total += limit;
+        total += a01;
         return total;
     }
 }

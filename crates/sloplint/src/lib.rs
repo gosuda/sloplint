@@ -4,13 +4,18 @@ pub mod rules_cmd;
 
 mod cache;
 mod discover;
+mod error;
 mod fileio;
+mod globs;
 mod pipeline;
 mod project;
+mod roles;
+mod scopes;
 mod settings;
 mod store;
 mod terminal;
 
+pub use error::RunError;
 pub use store::read_source;
 pub use terminal::{TerminalText, next_control};
 
@@ -23,15 +28,16 @@ use std::sync::{Arc, OnceLock};
 
 use serde::Serialize;
 use sloplint_core::finding::{Confidence, Severity};
-use sloplint_core::lang::Lang;
 use sloplint_core::rules::{RuleFilter, RuleSet};
-use sloplint_core::{ConfigError, FailOn, Finding, Mode, Strictness};
-use sloplint_syntax::CustomRules;
-use thiserror::Error;
+use sloplint_core::{FailOn, Finding, Mode, Strictness};
+use sloplint_syntax::{CustomRules, shadowed_sources};
 
 use cache::Loaded;
+use error::io_error;
 use pipeline::Pipeline;
 use project::Overrides;
+use roles::RoleSets;
+use scopes::{Scopes, scopes};
 use store::{load_baseline, record_baseline};
 #[derive(Debug, Clone, Default)]
 pub struct RunOptions {
@@ -50,36 +56,6 @@ pub struct RunOptions {
     pub write_baseline: bool,
 }
 
-#[derive(Debug, Error)]
-pub enum RunError {
-    #[error(transparent)]
-    Config(#[from] ConfigError),
-    #[error("{}: {source}", path.display())]
-    Io { path: PathBuf, source: io::Error },
-    #[error("path is outside the project root: {}", path.display())]
-    PathOutsideRoot { path: PathBuf },
-    #[error("path not found: {}", path.display())]
-    PathNotFound { path: PathBuf },
-    #[error("baseline file not found: {}; run 'sloplint baseline'", path.display())]
-    BaselineMissing { path: PathBuf },
-    #[error("baseline path is outside the project root: {}", path.display())]
-    BaselineOutsideRoot { path: PathBuf },
-    #[error("baseline {}: {message}", path.display())]
-    BaselineCorrupt { path: PathBuf, message: String },
-    #[error("{} exists and is not a sloplint baseline; refusing to overwrite it (delete the file to record a new baseline)", path.display())]
-    NotABaseline { path: PathBuf },
-    #[error("{} already exists", path.display())]
-    ConfigExists { path: PathBuf },
-}
-
-impl RunError {
-    pub fn exit_code(&self) -> u8 {
-        match self {
-            RunError::Io { .. } => 3,
-            _ => 2,
-        }
-    }
-}
 #[derive(Debug, Clone, Serialize)]
 pub struct Summary {
     pub strictness: Strictness,
@@ -152,10 +128,9 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
         },
     )?;
     let config = loaded.config;
-    RuleSet::validate_filter(&config, &opts.rule_filter)?;
-    let rules = RuleSet::new(&config, &RuleFilter::default())?;
+    let rules = RuleSet::new(&config, &opts.rule_filter)?;
     let custom = CustomRules::compile(&config.custom_rules)?;
-    let scopes = project::scopes(&root, &opts.cwd, &opts.paths)?;
+    let scopes = scopes(&root, &opts.cwd, &opts.paths)?;
     let workers = jobs(opts.jobs);
     let pool = Arc::new(
         rayon::ThreadPoolBuilder::new()
@@ -177,22 +152,17 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
     let loaded = cache
         .as_ref()
         .map_or_else(Loaded::empty, |cache| pool.install(|| cache.load()));
-    let roles = project::RoleSets::from_config(&config)?;
-    let interfaces: HashSet<String> = discovery
-        .entries
-        .iter()
-        .filter(|entry| entry.lang == Lang::OcamlInterface)
-        .filter_map(|entry| entry.rel.strip_suffix('i').map(str::to_string))
-        .collect();
+    let roles = RoleSets::from_config(&config)?;
+    let shadowed: HashSet<String> =
+        shadowed_sources(discovery.entries.iter().map(|entry| entry.rel.as_str()));
     let pipe = Pipeline {
         rules: &rules,
         custom: &custom,
         config: &config,
         root: &root,
-        filter: &opts.rule_filter,
         roles: &roles,
         cache: &loaded,
-        interfaces: &interfaces,
+        shadowed: &shadowed,
         active_rules: OnceLock::new(),
     };
     let (analyzed, skipped_outcomes) = pipeline::run(&discovery.entries, &pipe, &pool, &scopes)?;
@@ -270,7 +240,7 @@ pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
 
 fn apply_gate(
     pipe: &Pipeline<'_>,
-    scopes: &project::Scopes,
+    scopes: &Scopes,
     all: Vec<Finding>,
 ) -> Result<(Vec<Finding>, u32, u32), RunError> {
     if pipe.config.project.mode != Mode::Ratchet {
@@ -279,7 +249,7 @@ fn apply_gate(
     let mut baseline = load_baseline(pipe.root, &pipe.config.project.baseline)?;
     baseline
         .entries
-        .retain(|entry| pipe.filter.matches(&entry.rule));
+        .retain(|entry| pipe.rules.selects(&entry.rule));
     Ok(baseline.filter(all, &|path: &str| scopes.contains(Path::new(path))))
 }
 
@@ -297,13 +267,6 @@ fn jobs(requested: usize) -> usize {
 
 fn count(value: usize) -> u32 {
     u32::try_from(value).unwrap_or(u32::MAX)
-}
-
-fn io_error(path: &Path, source: io::Error) -> RunError {
-    RunError::Io {
-        path: path.to_path_buf(),
-        source,
-    }
 }
 
 #[cfg(test)]

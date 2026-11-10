@@ -1,0 +1,1 @@
+# near-miss: `segments` is only extended with method calls inside one loop, never reassigned.

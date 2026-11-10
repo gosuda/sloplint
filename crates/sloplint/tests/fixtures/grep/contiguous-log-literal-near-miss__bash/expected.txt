@@ -1,1 +1,1 @@
-# Near-miss: 28-char static prefix >= strict min_len=12.
+# Near-miss: 28-char static prefix >= strict min_len=8.

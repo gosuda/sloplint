@@ -18,6 +18,8 @@ fn describe(shape: &ArgShape<'_>) -> String {
         ArgShape::Str { longest_static } => format!("str:{longest_static}"),
         ArgShape::Concat => "concat".to_string(),
         ArgShape::Ident(name) => format!("ident:{name}"),
+        ArgShape::Collection => "collection".to_string(),
+        ArgShape::CodeBody => "code".to_string(),
         ArgShape::Other => "other".to_string(),
     }
 }

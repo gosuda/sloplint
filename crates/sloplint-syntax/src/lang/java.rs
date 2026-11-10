@@ -1,8 +1,9 @@
 use std::borrow::Cow;
 
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, CallKind, Handler, ImplRef, Import, ImportKind, Param,
-    Pos, Stmt, TypeDef, WildcardArm,
+    AmbientKind, Arg, ArgShape, AssertShape, Assertion, CallKind, Handler, ImplRef, Import,
+    ImportKind, ImportScope, Param, Pos, PrimitiveKind, ScrutineeKind, Stmt, TypeDef, Visibility,
+    WildcardArm,
 };
 use tree_sitter::Node;
 
@@ -118,10 +119,22 @@ fn method_callee<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
 }
 
 fn numeric_literal(n: Node<'_>) -> bool {
-    NUMERIC_KINDS.contains(&n.kind())
-        || (n.kind() == "unary_expression"
-            && child_by_field(n, "operator").is_some_and(|op| op.kind() == "-")
-            && child_by_field(n, "operand").is_some_and(numeric_literal))
+    let mut current = n;
+    loop {
+        if NUMERIC_KINDS.contains(&current.kind()) {
+            return true;
+        }
+        if current.kind() != "unary_expression" {
+            return false;
+        }
+        if !child_by_field(current, "operator").is_some_and(|op| op.kind() == "-") {
+            return false;
+        }
+        match child_by_field(current, "operand") {
+            Some(next) => current = next,
+            None => return false,
+        }
+    }
 }
 
 fn span_arg<'s>(n: Node<'_>, shape: ArgShape<'s>) -> Arg<'s> {
@@ -129,6 +142,17 @@ fn span_arg<'s>(n: Node<'_>, shape: ArgShape<'s>) -> Arg<'s> {
         shape,
         start_line: narrow(n.start_position().row).saturating_add(1),
         end_line: narrow(n.end_position().row).saturating_add(1),
+    }
+}
+
+fn primitive_of(ty: &str) -> PrimitiveKind {
+    match ty.trim() {
+        "String" => PrimitiveKind::Str,
+        "boolean" | "Boolean" => PrimitiveKind::Bool,
+        "byte" | "short" | "int" | "long" | "char" | "Byte" | "Short" | "Integer" | "Long"
+        | "Character" => PrimitiveKind::Int,
+        "float" | "double" | "Float" | "Double" => PrimitiveKind::Float,
+        _ => PrimitiveKind::Other,
     }
 }
 
@@ -148,7 +172,11 @@ fn spread_param<'s>(cx: &Cx<'_, 's>, p: Node<'_>) -> Option<Param<'s>> {
     Some(Param {
         name,
         ty: Some(ty),
+        primitive_kind: primitive_of(ty),
+        has_default: false,
         bool_default: false,
+        keyword_only: false,
+        is_variadic: true,
     })
 }
 
@@ -164,14 +192,17 @@ fn formal_param<'s>(cx: &Cx<'_, 's>, p: Node<'_>) -> Option<Param<'s>> {
             Some(Param {
                 name,
                 ty: Some(ty),
+                primitive_kind: primitive_of(ty),
+                has_default: false,
                 bool_default: false,
+                keyword_only: false,
+                is_variadic: false,
             })
         }
         "spread_parameter" => spread_param(cx, p),
         _ => None,
     }
 }
-
 fn formal_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>) -> Vec<Param<'s>> {
     code_children(list)
         .into_iter()
@@ -202,19 +233,35 @@ fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
     let body = child_by_field(n, "body")?;
     let name = child_by_field(n, "name")?;
     let annotations = annotation_names(cx, n);
-    let in_trait = matches!(
-        cx.innermost_container(),
-        Some(Container::Trait { public: true })
-    );
-    let public = has_keyword(n, "public") || (in_trait && !has_keyword(n, "private"));
+    let in_trait = matches!(cx.innermost_container(), Some(Container::Trait { .. }));
+    let private = has_keyword(n, "private");
+    let visibility = if private {
+        Visibility::Private
+    } else if has_keyword(n, "public") || has_keyword(n, "protected") || in_trait {
+        Visibility::Exported
+    } else {
+        Visibility::Restricted
+    };
+    let visibility = if visibility == Visibility::Exported && !container_exports(cx) {
+        Visibility::Restricted
+    } else {
+        visibility
+    };
     let tested = annotations.iter().any(|a| TEST_ANNOTATIONS.contains(a));
     let benched = !tested && annotations.contains(&"Benchmark");
+    let name_text = text(cx, name);
     let (doc, doc_pos) = preceding_comments(cx, n, COMMENTS, &[]);
     Some(FunctionHead {
-        name: text(cx, name),
+        name: name_text,
         name_pos: pos_of(name),
-        public,
-        interface_bound: annotations.contains(&"Override"),
+        visibility,
+        signature_forced: annotations.contains(&"Override"),
+        entry_point: name_text == "main",
+        in_test: tested || benched,
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: in_trait,
         region: tested
             .then(|| attributed_region(n, modifiers_of(n), CodeRole::Test))
             .or_else(|| benched.then(|| attributed_region(n, modifiers_of(n), CodeRole::Bench))),
@@ -227,16 +274,32 @@ fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
         sole_call: sole_call_of(n, body),
     })
 }
+fn container_exports(cx: &Cx<'_, '_>) -> bool {
+    !matches!(
+        cx.innermost_container(),
+        Some(Container::Class {
+            exported: false,
+            ..
+        }) | Some(Container::Trait { public: false, .. })
+    )
+}
 
 fn type_name(n: Node<'_>) -> Option<Node<'_>> {
-    match n.kind() {
-        "type_identifier" => Some(n),
-        "generic_type" => {
-            first_named_child_matching(n, &["type_identifier", "scoped_type_identifier"])
-                .and_then(type_name)
+    let mut current = n;
+    loop {
+        match current.kind() {
+            "type_identifier" => return Some(current),
+            "generic_type" => {
+                current = first_named_child_matching(
+                    current,
+                    &["type_identifier", "scoped_type_identifier"],
+                )?;
+            }
+            "scoped_type_identifier" => {
+                return rfind_named_child(current, |child| child.kind() == "type_identifier");
+            }
+            _ => return None,
         }
-        "scoped_type_identifier" => rfind_named_child(n, |child| child.kind() == "type_identifier"),
-        _ => None,
     }
 }
 
@@ -245,6 +308,8 @@ fn push_type_ref<'s>(cx: &Cx<'_, 's>, ty: Node<'_>, refs: &mut Vec<ImplRef<'s>>)
         refs.push(ImplRef {
             name: text(cx, name),
             pos: pos_of(name),
+            is_generic: false,
+            child_is_abstract: false,
         });
     }
 }
@@ -279,15 +344,27 @@ fn typedef_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
         return None;
     }
     let name = child_by_field(n, "name")?;
-    let public = has_keyword(n, "public");
+    let visibility = if has_keyword(n, "private") {
+        Visibility::Private
+    } else if has_keyword(n, "public") || has_keyword(n, "protected") {
+        Visibility::Exported
+    } else {
+        Visibility::Restricted
+    };
+    let visibility = if visibility == Visibility::Exported && !container_exports(cx) {
+        Visibility::Restricted
+    } else {
+        visibility
+    };
+    let exported = visibility == Visibility::Exported;
     let is_interface = n.kind() == "interface_declaration";
     let abstraction =
         is_interface || (n.kind() == "class_declaration" && has_keyword(n, "abstract"));
     let container = if is_interface {
-        Container::Trait { public }
+        Container::Trait { public: exported }
     } else {
         Container::Class {
-            exported: public,
+            exported,
             implements: false,
         }
     };
@@ -295,7 +372,7 @@ fn typedef_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
         def: Some(TypeDef {
             name: text(cx, name),
             pos: pos_of(name),
-            public,
+            visibility,
             abstraction,
         }),
         impls: supertype_refs(cx, n),
@@ -313,6 +390,10 @@ fn import_fact<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Import<'s>> {
             name: "*",
             alias: None,
             kind: ImportKind::Wildcard,
+            scope: ImportScope::Module,
+            in_test: false,
+            is_reexport: false,
+            external_root: None,
         });
     }
     let (module, name) = match path.kind() {
@@ -328,6 +409,10 @@ fn import_fact<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Import<'s>> {
         name,
         alias: None,
         kind: ImportKind::Named,
+        scope: ImportScope::Module,
+        in_test: false,
+        is_reexport: false,
+        external_root: None,
     })
 }
 
@@ -362,6 +447,7 @@ fn arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         }
         "binary_expression" if binary_concat(cx, n, "+", &["string_literal"]) => ArgShape::Concat,
         "identifier" => ArgShape::Ident(text(cx, n)),
+        "lambda_expression" => ArgShape::CodeBody,
         _ => ArgShape::Other,
     }
 }
@@ -373,18 +459,28 @@ fn call_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
         .collect()
 }
 
+fn declares_value(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    cx.parent()
+        .filter(|parent| parent.kind() == "variable_declarator")
+        .and_then(|parent| child_by_field(parent, "value"))
+        .is_some_and(|value| value.id() == n.id())
+}
+
 fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     match n.kind() {
         "method_invocation" => {
             let name = child_by_field(n, "name")?;
-            let callee_root = match child_by_field(n, "object") {
-                Some(object) => receiver_root(cx, object),
+            let object = child_by_field(n, "object");
+            let callee_root = match object {
+                Some(found) => receiver_root(cx, found),
                 None => Some(text(cx, name)),
             };
             Some(CallHead {
                 callee: method_callee(cx, n)?,
                 kind: CallKind::Plain,
                 callee_root,
+                is_simple_path: object.is_none(),
+                initializes_binding: declares_value(cx, n),
                 args: call_args(cx, n),
             })
         }
@@ -394,6 +490,8 @@ fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
                 callee: text(cx, ty),
                 kind: CallKind::New,
                 callee_root: None,
+                is_simple_path: true,
+                initializes_binding: declares_value(cx, n),
                 args: call_args(cx, n),
             })
         }
@@ -474,14 +572,17 @@ fn handler_site<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Handler<'s>> {
     Some(Handler {
         pos: pos_of(n),
         stmts,
+        has_else: false,
+        try_imports_only: false,
+        in_cleanup: false,
     })
 }
 
-fn sibling_labels(n: Node<'_>) -> Vec<Node<'_>> {
-    let Some(group) = n.parent() else {
+fn sibling_labels<'t>(cx: &Cx<'t, '_>, n: Node<'_>) -> Vec<Node<'t>> {
+    let Some(group) = cx.parent_of(n) else {
         return Vec::new();
     };
-    let Some(block) = group.parent() else {
+    let Some(block) = cx.parent_of(group) else {
         return Vec::new();
     };
     let mut labels = Vec::new();
@@ -497,6 +598,33 @@ fn sibling_labels(n: Node<'_>) -> Vec<Node<'_>> {
         }
     }
     labels
+}
+
+fn switch_subject<'t>(cx: &Cx<'t, '_>, n: Node<'_>) -> Option<Node<'t>> {
+    let mut current = cx.parent_of(n);
+    while let Some(node) = current {
+        if node.kind() == "switch_expression" || node.kind() == "switch_statement" {
+            return Some(node);
+        }
+        current = cx.parent_of(node);
+    }
+    None
+}
+
+fn scrutinee_of(subject: Node<'_>) -> ScrutineeKind {
+    let cond = child_by_field(subject, "condition").and_then(|cond| {
+        if cond.kind() == "parenthesized_expression" {
+            first_code(cond)
+        } else {
+            Some(cond)
+        }
+    });
+    match cond.map(|selected| selected.kind()) {
+        Some("identifier") => ScrutineeKind::Ident,
+        Some("field_access") => ScrutineeKind::Field,
+        Some("scoped_identifier") => ScrutineeKind::Path,
+        _ => ScrutineeKind::Other,
+    }
 }
 
 fn label_is_enum(label: Node<'_>) -> bool {
@@ -517,13 +645,21 @@ fn switch_label_arm(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<WildcardArm> {
     if n.kind() != "switch_label" || n.named_child_count() != 0 || text(cx, n).trim() != "default" {
         return None;
     }
-    let enum_like = sibling_labels(n).into_iter().any(label_is_enum);
+    let subject = switch_subject(cx, n)?;
+    let variant_count = narrow(
+        sibling_labels(cx, n)
+            .iter()
+            .filter(|label| label_is_enum(**label))
+            .count(),
+    );
     Some(WildcardArm {
         pos: pos_of(n),
-        enum_like,
+        enum_like: variant_count >= 2,
+        scrutinee: scrutinee_of(subject),
+        variant_count,
+        has_nullable_ctor: false,
     })
 }
-
 fn dynamic_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
     if n.kind() != "method_invocation" {
         return None;
@@ -593,19 +729,37 @@ fn method_assertion(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<Assertion> {
         pos: pos_of(n),
         has_message,
         comparison,
+        shape: if comparison {
+            AssertShape::TopEqNe
+        } else {
+            AssertShape::Other
+        },
+        in_typecheck: false,
+        value_is_bool_literal: false,
     })
 }
 
 fn assert_statement(cx: &Cx<'_, '_>, n: Node<'_>) -> Assertion {
-    let comparison = find_named_child(n, |child| child.kind() != "comment").is_some_and(|first| {
-        first.kind() == "binary_expression"
-            && child_by_field(first, "operator")
+    let first = find_named_child(n, |child| child.kind() != "comment");
+    let comparison = first.is_some_and(|node| {
+        node.kind() == "binary_expression"
+            && child_by_field(node, "operator")
                 .is_some_and(|op| matches!(text(cx, op), "==" | "!="))
     });
+    let shape = if comparison {
+        AssertShape::TopEqNe
+    } else if first.is_some_and(|node| node.kind() == "identifier") {
+        AssertShape::BareName
+    } else {
+        AssertShape::Other
+    };
     Assertion {
         pos: pos_of(n),
         has_message: count_named_child(n, |child| child.kind() != "comment") >= 2,
         comparison,
+        shape,
+        in_typecheck: false,
+        value_is_bool_literal: false,
     }
 }
 
@@ -618,8 +772,8 @@ fn assertion_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<Assertion> {
 }
 
 fn static_globals<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
-    let in_interface = n
-        .parent()
+    let in_interface = cx
+        .parent_of(n)
         .is_some_and(|parent| parent.kind() == "interface_body");
     if in_interface || !has_keyword(n, "static") || has_keyword(n, "final") {
         return;
@@ -634,12 +788,68 @@ fn static_globals<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, 
     }
 }
 
+fn ambient_write_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
+    match n.kind() {
+        "assignment_expression" => {
+            let left = child_by_field(n, "left")?;
+            (left.kind() == "identifier").then_some(text(cx, left))
+        }
+        "update_expression" => {
+            let operand = first_code(n)?;
+            (operand.kind() == "identifier").then_some(text(cx, operand))
+        }
+        _ => None,
+    }
+}
+
+fn static_field_named(cx: &Cx<'_, '_>, field: Node<'_>, name: &str) -> bool {
+    if field.kind() != "field_declaration"
+        || !has_keyword(field, "static")
+        || has_keyword(field, "final")
+    {
+        return false;
+    }
+    named_children(field).into_iter().any(|decl| {
+        decl.kind() == "variable_declarator"
+            && child_by_field(decl, "name").is_some_and(|id| text(cx, id) == name)
+    })
+}
+
+fn in_static_scope<'s>(cx: &Cx<'_, 's>, n: Node<'_>, name: &str) -> bool {
+    let mut current = cx.parent_of(n);
+    while let Some(node) = current {
+        if matches!(
+            node.kind(),
+            "class_declaration"
+                | "interface_declaration"
+                | "enum_declaration"
+                | "record_declaration"
+                | "annotation_type_declaration"
+        ) {
+            return named_children(node).into_iter().any(|child| {
+                static_field_named(cx, child, name)
+                    || named_children(child)
+                        .into_iter()
+                        .any(|sub| static_field_named(cx, sub, name))
+            });
+        }
+        current = cx.parent_of(node);
+    }
+    false
+}
 fn ambient_sites<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
     match n.kind() {
         "field_declaration" => static_globals(cx, n, out),
         "method_invocation" => {
             if let Some(callee) = method_callee(cx, n).filter(|callee| *callee == "System.getenv") {
                 out.push((AmbientKind::EnvRead, callee, pos_of(n)));
+            }
+        }
+        "assignment_expression" | "update_expression" => {
+            if let Some(name) = ambient_write_name(cx, n)
+                && in_static_scope(cx, n, name)
+            {
+                out.push((AmbientKind::GlobalWrite, name, pos_of(n)));
             }
         }
         _ => {}

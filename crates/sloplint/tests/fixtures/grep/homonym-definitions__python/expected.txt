@@ -1,1 +1,1 @@
-a.py:1 minor grep/homonym-definitions
+a.py:1 info grep/homonym-definitions

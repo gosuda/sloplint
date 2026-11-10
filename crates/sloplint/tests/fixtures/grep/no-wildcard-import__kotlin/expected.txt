@@ -1,1 +1,1 @@
-src/imports.kt:1 minor grep/no-wildcard-import
+src/imports.kt:1 info grep/no-wildcard-import

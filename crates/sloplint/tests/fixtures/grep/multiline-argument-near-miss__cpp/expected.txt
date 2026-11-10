@@ -1,1 +1,2 @@
-# near-miss: arg spans 5 lines < strict minor_at=6.
+# near-miss: arg spans 5 lines < strict Minor(15).
+# Retired positive (retired_add.cpp): binary-operator arg is not a Collection, so it stays silent.

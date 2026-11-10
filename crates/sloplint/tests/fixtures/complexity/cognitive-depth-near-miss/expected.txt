@@ -1,1 +1,1 @@
-# near-miss: 1 if + 8 else-if = cognitive 9 < strict minor_at 10; early returns add nothing.
+# near-miss: else-if adds 0 and nest-0 adds 0, so the chain scores 0 < strict minor_at 10.

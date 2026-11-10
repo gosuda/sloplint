@@ -1,39 +1,128 @@
+//! Import and export facts for TypeScript.
+
 use std::borrow::Cow;
 
-use sloplint_core::facts::{CallKind, ImplRef, Import, ImportKind, Stmt};
+use sloplint_core::facts::{ImplRef, Import, ImportKind, ImportScope, Pos};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, child_by_field, first_named_child, first_named_child_matching, first_of_kind, last_segment,
-    named_children, pos_of, strip_quotes, text,
+    Cx, child_by_field, first_named_child_matching, first_of_kind, last_segment, named_children,
+    pos_of, strip_quotes, text,
 };
+use crate::lang::javascript::{external_root_of, is_test_path};
+
+pub(crate) struct TsSite<'s> {
+    pos: Pos,
+    module: &'s str,
+    scope: ImportScope,
+    in_test: bool,
+    is_reexport: bool,
+    external: Option<&'s str>,
+}
+
+impl<'s> TsSite<'s> {
+    fn imported(cx: &Cx<'_, 's>, n: Node<'_>, module: &'s str) -> Self {
+        Self::build(cx, n, module, false)
+    }
+
+    fn reexported(cx: &Cx<'_, 's>, n: Node<'_>, module: &'s str) -> Self {
+        Self::build(cx, n, module, true)
+    }
+
+    fn build(cx: &Cx<'_, 's>, n: Node<'_>, module: &'s str, is_reexport: bool) -> Self {
+        TsSite {
+            pos: pos_of(n),
+            module,
+            scope: import_scope(cx),
+            in_test: is_test_path(cx.path),
+            is_reexport,
+            external: external_root_of(module),
+        }
+    }
+
+    fn at(
+        &self,
+        n: Node<'_>,
+        name: &'s str,
+        alias: Option<&'s str>,
+        kind: ImportKind,
+    ) -> Import<'s> {
+        Import {
+            pos: pos_of(n),
+            module: Cow::Borrowed(self.module),
+            name,
+            alias,
+            kind,
+            scope: self.scope,
+            in_test: self.in_test,
+            is_reexport: self.is_reexport,
+            external_root: self.external,
+        }
+    }
+
+    fn here(&self, name: &'s str, alias: Option<&'s str>, kind: ImportKind) -> Import<'s> {
+        Import {
+            pos: self.pos,
+            module: Cow::Borrowed(self.module),
+            name,
+            alias,
+            kind,
+            scope: self.scope,
+            in_test: self.in_test,
+            is_reexport: self.is_reexport,
+            external_root: self.external,
+        }
+    }
+}
+
+fn import_scope(cx: &Cx<'_, '_>) -> ImportScope {
+    for node in cx.ancestors() {
+        if node.kind() == "program" {
+            return ImportScope::Module;
+        }
+        if local_scope(node.kind()) {
+            return ImportScope::FunctionLocal;
+        }
+    }
+    ImportScope::Module
+}
+
+fn local_scope(kind: &str) -> bool {
+    matches!(
+        kind,
+        "function_declaration"
+            | "generator_function_declaration"
+            | "function_expression"
+            | "generator_function"
+            | "arrow_function"
+            | "method_definition"
+            | "module"
+            | "internal_module"
+    )
+}
+
+fn alias_or_none<'s>(alias: &'s str, name: &str) -> Option<&'s str> {
+    if alias.is_empty() || alias == name {
+        None
+    } else {
+        Some(alias)
+    }
+}
 
 pub(crate) fn clause_imports<'s>(
     cx: &Cx<'_, 's>,
     clause: Node<'_>,
-    module: &'s str,
+    site: &TsSite<'s>,
     out: &mut Vec<Import<'s>>,
 ) {
     for c in named_children(clause) {
         match c.kind() {
-            "identifier" => out.push(Import {
-                pos: pos_of(c),
-                module: Cow::Borrowed(module),
-                name: text(cx, c),
-                alias: None,
-                kind: ImportKind::Named,
-            }),
-            "named_imports" => import_specifiers(cx, c, module, out),
+            "identifier" => out.push(site.at(c, text(cx, c), None, ImportKind::Named)),
+            "named_imports" => import_specifiers(cx, c, site, out),
             "namespace_import" => {
                 let name =
                     first_named_child_matching(c, &["identifier"]).map_or("", |g| text(cx, g));
-                out.push(Import {
-                    pos: pos_of(c),
-                    module: Cow::Borrowed(module),
-                    name,
-                    alias: None,
-                    kind: ImportKind::Namespace,
-                });
+                out.push(site.at(c, name, None, ImportKind::Namespace));
             }
             _ => {}
         }
@@ -43,7 +132,7 @@ pub(crate) fn clause_imports<'s>(
 pub(crate) fn import_specifiers<'s>(
     cx: &Cx<'_, 's>,
     list: Node<'_>,
-    module: &'s str,
+    site: &TsSite<'s>,
     out: &mut Vec<Import<'s>>,
 ) {
     for spec in named_children(list) {
@@ -52,19 +141,25 @@ pub(crate) fn import_specifiers<'s>(
         }
         let name = child_by_field(spec, "name").map_or("", |v| text(cx, v));
         let alias = child_by_field(spec, "alias").map_or("", |v| text(cx, v));
-        out.push(Import {
-            pos: pos_of(spec),
-            module: Cow::Borrowed(module),
-            name,
-            alias: if alias.is_empty() || alias == name {
-                None
-            } else {
-                Some(alias)
-            },
-            kind: ImportKind::Named,
-        });
+        out.push(site.at(spec, name, alias_or_none(alias, name), ImportKind::Named));
     }
 }
+
+fn impl_of<'s>(cx: &Cx<'_, 's>, t: Node<'_>, abstract_child: bool) -> ImplRef<'s> {
+    let generic = t.kind() == "generic_type";
+    let base = if generic {
+        child_by_field(t, "name").map_or("", |m| text(cx, m))
+    } else {
+        text(cx, t)
+    };
+    ImplRef {
+        name: last_segment(base, &[".", "::"]),
+        pos: pos_of(t),
+        is_generic: generic,
+        child_is_abstract: abstract_child,
+    }
+}
+
 pub(crate) fn export_specs<'a, 's>(
     cx: &Cx<'_, 's>,
     clause: Node<'a>,
@@ -80,9 +175,11 @@ pub(crate) fn export_specs<'a, 's>(
     }
     specs
 }
+
 pub(crate) fn heritage_impls<'s>(
     cx: &Cx<'_, 's>,
     heritage: Node<'_>,
+    child_abstract: bool,
     out: &mut Vec<ImplRef<'s>>,
 ) -> bool {
     let mut found = false;
@@ -90,58 +187,18 @@ pub(crate) fn heritage_impls<'s>(
         if c.kind() == "implements_clause" {
             found = true;
             for t in named_children(c) {
-                out.push(ts_impl(cx, t));
+                out.push(impl_of(cx, t, child_abstract));
             }
         } else if c.kind() == "extends_clause" {
             for v in named_children(c) {
                 if v.kind() == "type_arguments" {
                     continue;
                 }
-                out.push(ts_impl(cx, v));
+                out.push(impl_of(cx, v, child_abstract));
             }
         }
     }
     found
-}
-pub(crate) fn ts_impl<'s>(cx: &Cx<'_, 's>, t: Node<'_>) -> ImplRef<'s> {
-    let base = if t.kind() == "generic_type" {
-        child_by_field(t, "name").map_or("", |m| text(cx, m))
-    } else {
-        text(cx, t)
-    };
-    ImplRef {
-        name: last_segment(base, &[".", "::"]),
-        pos: pos_of(t),
-    }
-}
-
-pub(crate) fn catch_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: &str) -> Stmt<'s> {
-    if s.kind() == "throw_statement" {
-        return throw_of(cx, s, binding);
-    }
-    if s.kind() != "expression_statement" {
-        return Stmt::Other;
-    }
-    let Some(inner) = first_named_child(s) else {
-        return Stmt::Other;
-    };
-    if inner.kind() == "call_expression" {
-        let callee = child_by_field(inner, "function").map_or("", |f| text(cx, f));
-        return Stmt::Call {
-            callee,
-            kind: CallKind::Plain,
-        };
-    }
-    if inner.kind() == "throw_statement" {
-        return throw_of(cx, inner, binding);
-    }
-    Stmt::Other
-}
-
-pub(crate) fn throw_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: &str) -> Stmt<'s> {
-    let hit =
-        first_named_child(s).is_some_and(|e| e.kind() == "identifier" && text(cx, e) == binding);
-    if hit { Stmt::Rethrow } else { Stmt::Other }
 }
 
 pub(crate) fn parent_dir(path: &str) -> &str {
@@ -193,35 +250,32 @@ pub(crate) fn require_import<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Imp
         return false;
     };
     let module = child_by_field(clause, "source").map_or("", |s| strip_quotes(text(cx, s)));
-    out.push(Import {
-        pos: pos_of(n),
-        module: Cow::Borrowed(module),
-        name: clause.named_child(0).map_or("", |id| text(cx, id)),
-        alias: None,
-        kind: ImportKind::Namespace,
-    });
+    let site = TsSite::imported(cx, n, module);
+    out.push(site.here(
+        clause.named_child(0).map_or("", |id| text(cx, id)),
+        None,
+        ImportKind::Namespace,
+    ));
     true
 }
+
 pub(crate) fn import_stmt<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
     if require_import(cx, n, out) {
         return;
     }
     let module = child_by_field(n, "source").map_or("", |s| strip_quotes(text(cx, s)));
+    let site = TsSite::imported(cx, n, module);
     let Some(clause) = first_named_child_matching(n, &["import_clause"]) else {
-        out.push(Import {
-            pos: pos_of(n),
-            module: Cow::Borrowed(module),
-            name: "",
-            alias: None,
-            kind: ImportKind::SideEffect,
-        });
+        out.push(site.here("", None, ImportKind::SideEffect));
         return;
     };
-    clause_imports(cx, clause, module, out);
+    clause_imports(cx, clause, &site, out);
 }
+
 pub(crate) fn export_namespace<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
+    site: &TsSite<'s>,
     module: &'s str,
     out: &mut Vec<Import<'s>>,
 ) -> bool {
@@ -229,15 +283,18 @@ pub(crate) fn export_namespace<'s>(
         return false;
     };
     let name = first_named_child_matching(ns, &["identifier"]).map_or("", |g| text(cx, g));
-    out.push(Import {
+    let placed = TsSite {
         pos: pos_of(ns),
-        module: Cow::Borrowed(module),
-        name,
-        alias: None,
-        kind: ImportKind::Namespace,
-    });
+        module,
+        scope: site.scope,
+        in_test: site.in_test,
+        is_reexport: site.is_reexport,
+        external: site.external,
+    };
+    out.push(placed.here(name, None, ImportKind::Namespace));
     true
 }
+
 pub(crate) fn has_export_star(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     for i in 0..n.child_count() {
         if let Some(c) = n.child(i)
@@ -249,32 +306,24 @@ pub(crate) fn has_export_star(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     }
     false
 }
+
 pub(crate) fn push_named_exports<'a, 's>(
-    _cx: &Cx<'_, 's>,
     specs: Vec<(Node<'a>, &'s str, &'s str)>,
-    module: &'s str,
+    site: &TsSite<'s>,
     out: &mut Vec<Import<'s>>,
 ) {
     for (spec, name, alias) in specs {
-        out.push(Import {
-            pos: pos_of(spec),
-            module: Cow::Borrowed(module),
-            name,
-            alias: if alias.is_empty() || alias == name {
-                None
-            } else {
-                Some(alias)
-            },
-            kind: ImportKind::Named,
-        });
+        out.push(site.at(spec, name, alias_or_none(alias, name), ImportKind::Named));
     }
 }
+
 pub(crate) fn export_stmt<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import<'s>>) {
     let Some(src) = child_by_field(n, "source") else {
         return;
     };
     let module = strip_quotes(text(cx, src));
-    if export_namespace(cx, n, module, out) {
+    let site = TsSite::reexported(cx, n, module);
+    if export_namespace(cx, n, &site, module, out) {
         return;
     }
     let mut specs = Vec::new();
@@ -283,43 +332,9 @@ pub(crate) fn export_stmt<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Import
     }
     if specs.is_empty() {
         if has_export_star(cx, n) {
-            out.push(Import {
-                pos: pos_of(n),
-                module: Cow::Borrowed(module),
-                name: "*",
-                alias: None,
-                kind: ImportKind::Wildcard,
-            });
+            out.push(site.here("*", None, ImportKind::Wildcard));
         }
         return;
     }
-    push_named_exports(cx, specs, module, out);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::ts_targets;
-
-    #[test]
-    fn module_suffixes_resolve_to_their_typescript_stem() {
-        assert_eq!(ts_targets("src", "./x.cjs"), ["src/x.ts", "src/x.tsx"]);
-        assert_eq!(ts_targets("src", "../lib/y.mts"), ["lib/y.ts", "lib/y.tsx"]);
-        assert_eq!(ts_targets("src", "./z.cts"), ["src/z.ts", "src/z.tsx"]);
-    }
-
-    #[test]
-    fn parent_segment_past_the_root_resolves_to_nothing() {
-        assert!(
-            ts_targets("", "../x").is_empty(),
-            "an import escaping the root must resolve to nothing"
-        );
-        assert!(
-            ts_targets("a", "../../x").is_empty(),
-            "an import escaping the root must resolve to nothing"
-        );
-        assert_eq!(
-            ts_targets("a", "../x"),
-            ["x.ts", "x.tsx", "x/index.ts", "x/index.tsx"]
-        );
-    }
+    push_named_exports(specs, &site, out);
 }

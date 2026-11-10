@@ -1,1 +1,1 @@
-src/table.R:1 major complexity/boolean-params
+src/table.R:1 info complexity/boolean-params

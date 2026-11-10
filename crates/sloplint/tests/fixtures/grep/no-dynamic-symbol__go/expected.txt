@@ -1,1 +1,1 @@
-a.go:4 minor grep/no-dynamic-symbol
+a.go:4 info grep/no-dynamic-symbol

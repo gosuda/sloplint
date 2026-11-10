@@ -5,7 +5,8 @@ public class Loader {
     public string Load(string path) {
         try {
             return Read(path);
-        } catch (IOException) {
+        } catch (IOException e) {
+            logger.LogError("load failed");
             throw;
         }
     }

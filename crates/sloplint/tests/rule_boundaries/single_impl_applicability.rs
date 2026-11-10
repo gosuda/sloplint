@@ -27,7 +27,7 @@ const PHP_INTERFACE: [(&str, &str); 2] = [
 const JAVA_SHAPE: [(&str, &str); 2] = [
     (
         "src/Shape.java",
-        "public interface Shape {\n    double area();\n}\n",
+        "interface Shape {\n    double area();\n}\n",
     ),
     (
         "src/Circle.java",
@@ -105,11 +105,30 @@ fn go_interface_does_not_hide_an_applicable_abstraction_of_the_same_name() {
 }
 
 #[test]
+fn public_trait_with_one_implementer_is_not_reported() {
+    let files = [
+        (
+            "src/Shape.java",
+            "public interface Shape {\n    double area();\n}\n",
+        ),
+        (
+            "src/Circle.java",
+            "public class Circle implements Shape {\n    @Override\n    public double area() {\n        return 1.0;\n    }\n}\n",
+        ),
+    ];
+    let found = reported(&files);
+    assert!(
+        found.is_empty(),
+        "a public trait is outside the rule, but got {found:?}"
+    );
+}
+
+#[test]
 fn ruby_include_is_not_a_second_implementation_of_an_applicable_abstraction() {
     let files = [
         (
             "src/Greeter.java",
-            "public interface Greeter {\n    void greet();\n}\n",
+            "interface Greeter {\n    void greet();\n}\n",
         ),
         (
             "src/Friendly.java",
@@ -132,22 +151,22 @@ fn applicable_languages_still_report_beside_non_applicable_ones() {
     let mut files = RUBY_MIXIN.to_vec();
     files.extend(PHP_INTERFACE);
     files.extend([
-        ("src/Drawable.java", "public interface Drawable {\n    void draw();\n}\n"),
+        ("src/Drawable.java", "interface Drawable {\n    void draw();\n}\n"),
         (
             "src/Ring.java",
             "public class Ring implements Drawable {\n    @Override\n    public void draw() {\n    }\n}\n",
         ),
-        ("lib/draw.dart", "abstract class Draw {\n  void draw();\n}\n"),
+        ("lib/draw.dart", "abstract class _Draw {\n  void draw();\n}\n"),
         (
             "lib/circle.dart",
-            "import 'draw.dart';\n\nclass Circle implements Draw {\n  @override\n  void draw() {}\n}\n",
+            "import 'draw.dart';\n\nclass Circle implements _Draw {\n  @override\n  void draw() {}\n}\n",
         ),
-        ("src/render.rs", "pub trait Render {\n    fn render(&self);\n}\n"),
+        ("src/render.rs", "trait Render {\n    fn render(&self);\n}\n"),
         (
             "src/pane.rs",
             "use crate::render::Render;\n\npub struct Pane;\n\nimpl Render for Pane {\n    fn render(&self) {}\n}\n",
         ),
-        ("src/widget.tsx", "export interface Widget {\n  show(): void;\n}\n"),
+        ("src/widget.tsx", "interface Widget {\n  show(): void;\n}\n"),
         (
             "src/panel.tsx",
             "import { Widget } from \"./widget\";\nexport class Panel implements Widget {\n  show(): void {\n  }\n}\n",

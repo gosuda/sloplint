@@ -1,1 +1,1 @@
-a.rb:2 major grep/contiguous-log-literal
+a.rb:2 info grep/contiguous-log-literal

@@ -1,19 +1,12 @@
-use std::borrow::Cow;
-
-use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, CallKind, FieldCopy, Import, ImportKind, Param, Pos,
-    TypeDef, WildcardArm,
-};
+use sloplint_core::facts::{AmbientKind, Assertion, FieldCopy, Import, Pos, WildcardArm};
 use tree_sitter::Node;
 
-use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, attributed_region,
-    child_by_field, find_named_child, first_named_child, first_named_child_matching, first_of_kind,
-    named_children, narrow, only_named_child_matching, pos_of, preceding_comments, slice,
-    string_arg_shape, strip_quotes, text, trimmed,
-};
+use crate::hooks::{CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, text};
 use crate::spec::Role;
-use sloplint_core::role::CodeRole;
+
+mod calls;
+mod funcs;
+mod items;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("procedure", Role::Closure),
@@ -45,299 +38,16 @@ pub(crate) static HOOKS: OdinHooks = OdinHooks;
 
 pub(crate) struct OdinHooks;
 
-fn is_anon_text(cx: &Cx<'_, '_>, c: Node<'_>, want: &str) -> bool {
+pub(crate) fn is_anon_text(cx: &Cx<'_, '_>, c: Node<'_>, want: &str) -> bool {
     !c.is_named() && text(cx, c) == want
 }
 
-fn has_operator(n: Node<'_>, cx: &Cx<'_, '_>, op: &str) -> bool {
+pub(crate) fn has_operator(n: Node<'_>, cx: &Cx<'_, '_>, op: &str) -> bool {
     (0..n.child_count()).any(|i| n.child(i).is_some_and(|c| is_anon_text(cx, c, op)))
 }
 
-fn odin_attributes<'a>(decl: Node<'a>) -> Option<Node<'a>> {
-    first_named_child_matching(decl, &["attributes"])
-}
-fn attr_has(cx: &Cx<'_, '_>, decl: Node<'_>, wanted: &str) -> bool {
-    let Some(attrs) = odin_attributes(decl) else {
-        return false;
-    };
-    let mut stack = vec![attrs];
-    while let Some(node) = stack.pop() {
-        if node.kind() == "identifier" && text(cx, node) == wanted {
-            return true;
-        }
-        for child in named_children(node) {
-            stack.push(child);
-        }
-    }
-    false
-}
-fn parent_test_attr<'a>(cx: &Cx<'_, '_>, decl: Node<'a>) -> Option<Node<'a>> {
-    let attrs = odin_attributes(decl)?;
-    let mut stack = vec![attrs];
-    while let Some(node) = stack.pop() {
-        if node.kind() == "attribute" && any_named_child(node, |c| is_test_ident(cx, c)) {
-            return Some(node);
-        }
-        stack.extend(named_children(node));
-    }
-    None
-}
-
-fn is_identifier(c: &Node<'_>) -> bool {
-    c.kind() == "identifier"
-}
-
-fn names_before_sep<'a>(cx: &Cx<'_, '_>, parent: Node<'a>, seps: &[&str]) -> Vec<Node<'a>> {
-    let mut out = Vec::new();
-    for i in 0..parent.child_count() {
-        let Some(child) = parent.child(i) else {
-            continue;
-        };
-        if child.is_named() {
-            if is_identifier(&child) {
-                out.push(child);
-            }
-        } else if seps.iter().any(|sep| text(cx, child) == *sep) {
-            break;
-        }
-    }
-    out
-}
-
-fn odin_params<'s>(cx: &Cx<'_, 's>, holder: Option<Node<'_>>) -> (Vec<Param<'s>>, Vec<&'s str>) {
-    let mut params = Vec::new();
-    let mut missing = Vec::new();
-    let Some(holder) = holder else {
-        return (params, missing);
-    };
-    for child in named_children(holder) {
-        if child.kind() == "parameter" {
-            let ty = first_of_kind(child, &["type"]).map(|t| text(cx, t));
-            for name_node in names_before_sep(cx, child, &[":"]) {
-                let param = Param {
-                    name: text(cx, name_node),
-                    ty,
-                    bool_default: false,
-                };
-                params.push(param);
-            }
-        } else if child.kind() == "default_parameter" {
-            let name = find_named_child(child, |c| is_identifier(&c))
-                .map(|c| text(cx, c))
-                .unwrap_or("");
-            let value = find_named_child(child, |c| !is_identifier(&c))
-                .map(|e| text(cx, e))
-                .unwrap_or("");
-            let defaulted = value == "true" || value == "false";
-            params.push(Param {
-                name,
-                ty: None,
-                bool_default: defaulted,
-            });
-            if !name.is_empty() {
-                missing.push(name);
-            }
-        }
-    }
-    (params, missing)
-}
-
-fn odin_is_code(child: Node<'_>) -> bool {
-    child.kind() != "comment" && child.kind() != "block_comment"
-}
-
-fn odin_sole(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
-    if body.kind() != "block" {
-        return None;
-    }
-    let mut node = only_named_child_matching(body, odin_is_code)?;
-    if node.kind() == "statement" {
-        node = find_named_child(node, odin_is_code)?;
-    }
-    if node.kind() == "return_statement" {
-        node = find_named_child(node, odin_is_code)?;
-    }
-    (node.kind() == "call_expression").then_some(node.id())
-}
-
-fn odin_lhs(n: Node<'_>) -> Vec<Node<'_>> {
-    let mut out = Vec::new();
-    for i in 0..n.child_count() {
-        let Some(child) = n.child(i) else { continue };
-        if child.is_named() {
-            out.push(child);
-        } else {
-            break;
-        }
-    }
-    out
-}
-
-fn odin_write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    let mut current = n;
-    loop {
-        let kind = current.kind();
-        if kind == "identifier" {
-            return Some((text(cx, current), pos_of(current)));
-        }
-        if kind == "member_expression" && current.named_child_count() == 2 {
-            current = current.named_child(0)?;
-        } else if kind == "index_expression" {
-            current = first_named_child(current)?;
-        } else if kind == "parenthesized_expression" {
-            current = child_by_field(current, "expression")?;
-        } else {
-            return None;
-        }
-    }
-}
-
-fn push_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    for target in odin_lhs(n) {
-        if let Some(root) = odin_write_root(cx, target) {
-            out.push(root);
-        }
-    }
-}
-
-fn make_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
-    let shape = match n.kind() {
-        "string" => string_arg_shape(cx, n, &["string_content"]),
-        "identifier" => ArgShape::Ident(text(cx, n)),
-        _ => ArgShape::Other,
-    };
-    Arg {
-        shape,
-        start_line: narrow(n.start_position().row) + 1,
-        end_line: narrow(n.end_position().row) + 1,
-    }
-}
-
-fn positional_nodes<'a>(n: Node<'a>, func: Node<'a>) -> Vec<Node<'a>> {
-    let mut out = Vec::new();
-    for child in named_children(n) {
-        if child.id() == func.id() || matches!(child.kind(), "comment" | "block_comment") {
-            continue;
-        }
-        out.push(child);
-    }
-    out
-}
-
-fn qualified_callee<'s>(cx: &Cx<'_, 's>, call: Node<'_>, func: Node<'_>) -> &'s str {
-    if let Some(parent) = call.parent()
-        && parent.kind() == "member_expression"
-        && parent
-            .child(parent.child_count().saturating_sub(1))
-            .is_some_and(|last| last.id() == call.id())
-    {
-        return slice(cx.src, parent.start_byte(), func.end_byte()).trim();
-    }
-    trimmed(cx, func)
-}
-
-fn odin_callee_root<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
-    let mut current = func;
-    loop {
-        if current.kind() == "identifier" {
-            return Some(text(cx, current));
-        }
-        current = first_named_child(current)?;
-    }
-}
-
-fn last_path_segment(path: &str) -> &str {
-    let colon = path.rfind(':').map(|at| at + 1).unwrap_or(0);
-    let slash = path.rfind('/').map(|at| at + 1).unwrap_or(0);
-    &path[colon.max(slash).min(path.len())..]
-}
-
-fn odin_field_source<'s>(cx: &Cx<'_, 's>, field: Node<'_>) -> Option<&'s str> {
-    let assigned =
-        (0..field.child_count()).any(|i| field.child(i).is_some_and(|c| is_anon_text(cx, c, "=")));
-    if !assigned {
-        return None;
-    }
-    if field.named_child_count() != 2 {
-        return None;
-    }
-    let (Some(first), Some(member)) = (field.named_child(0), field.named_child(1)) else {
-        return None;
-    };
-    if member.kind() != "member_expression" || member.named_child_count() != 2 {
-        return None;
-    }
-    let (Some(part), Some(other)) = (member.named_child(0), member.named_child(1)) else {
-        return None;
-    };
-    if !is_identifier(&part) {
-        return None;
-    }
-    if text(cx, other) != text(cx, first) {
-        return None;
-    }
-    Some(text(cx, part))
-}
-
-fn odin_is_compare(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    if n.kind() != "binary_expression" {
-        return false;
-    }
-    let equal = |c: Node<'_>| text(cx, c) == "==" || text(cx, c) == "!=";
-    (0..n.child_count()).any(|i| n.child(i).is_some_and(equal))
-}
-
-fn is_implicit_selector(c: Node<'_>) -> bool {
-    c.kind() == "member_expression" && c.named_child_count() == 1
-}
-
-fn sibling_enum(n: Node<'_>) -> bool {
-    let Some(parent) = n.parent() else {
-        return false;
-    };
-    any_named_child(parent, |s| {
-        s.kind() == "switch_case"
-            && s.id() != n.id()
-            && child_by_field(s, "condition").is_some_and(is_implicit_selector)
-    })
-}
-
-fn is_test_ident(cx: &Cx<'_, '_>, c: Node<'_>) -> bool {
+pub(crate) fn is_test_ident(cx: &Cx<'_, '_>, c: Node<'_>) -> bool {
     c.kind() == "identifier" && text(cx, c) == "test"
-}
-
-fn typedef_at(name: &str, pos: Pos, public: bool) -> TypeDef<'_> {
-    TypeDef {
-        name,
-        pos,
-        public,
-        abstraction: false,
-    }
-}
-
-fn is_env_callee(callee: &str) -> bool {
-    callee == "os.get_env"
-        || callee == "os.lookup_env"
-        || callee == "os2.get_env"
-        || callee == "os2.lookup_env"
-}
-
-fn is_reflect_callee(callee: &str) -> bool {
-    callee.contains(".struct_field_by_name") || callee.ends_with("reflect.enum_from_name")
-}
-
-fn is_formatted_assert(callee: &str) -> bool {
-    callee == "fmt.assertf"
-        || callee == "fmt.ensuref"
-        || callee.ends_with(".assertf")
-        || callee.ends_with(".ensuref")
-}
-
-fn is_plain_assert(callee: &str) -> bool {
-    callee == "assert"
-        || callee == "ensure"
-        || callee.ends_with(".assert")
-        || callee.ends_with(".ensure")
 }
 
 impl LangHooks for OdinHooks {
@@ -352,47 +62,7 @@ impl LangHooks for OdinHooks {
         _parent: Option<Node<'_>>,
         cx: &Cx<'_, 's>,
     ) -> Option<FunctionHead<'s>> {
-        if n.kind() != "procedure" {
-            return None;
-        }
-        let parent = n.parent()?;
-        let name_node = match parent.kind() {
-            "procedure_declaration" | "const_declaration" | "variable_declaration" => {
-                first_named_child_matching(parent, &["expression", "identifier"])?
-            }
-            "assignment_statement" => {
-                if !has_operator(parent, cx, ":=") {
-                    return None;
-                }
-                let first = first_named_child(parent)?;
-                if !is_identifier(&first) {
-                    return None;
-                }
-                first
-            }
-            _ => return None,
-        };
-        let holder = first_of_kind(n, &["parameters"]);
-        let (params, missing_annotations) = odin_params(cx, holder);
-        let return_type = first_of_kind(n, &["type", "named_type"]).map(|t| text(cx, t));
-        let (doc, doc_pos) = preceding_comments(cx, parent, &["comment", "block_comment"], &[]);
-        let top = parent.parent().is_some_and(|g| g.kind() == "source_file");
-        let public = top && !attr_has(cx, parent, "private");
-        let test_attr = parent_test_attr(cx, parent);
-        let body = first_of_kind(n, &["block"]);
-        Some(FunctionHead {
-            name: text(cx, name_node),
-            name_pos: pos_of(name_node),
-            public,
-            interface_bound: false,
-            region: test_attr.map(|attr| attributed_region(n, Some(attr), CodeRole::Test)),
-            params,
-            return_type,
-            missing_annotations,
-            doc,
-            doc_pos,
-            sole_call: body.and_then(|b| odin_sole(cx, b)),
-        })
+        funcs::closure_head(n, _parent, cx)
     }
 
     fn is_else_if(&self, _n: Node<'_>, _parent: Option<Node<'_>>) -> bool {
@@ -400,143 +70,35 @@ impl LangHooks for OdinHooks {
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() != "var_declaration" && n.kind() != "variable_declaration" {
-            return;
-        }
-        for name_node in names_before_sep(cx, n, &[":", ":="]) {
-            out.push((text(cx, name_node), pos_of(name_node)));
-        }
+        items::decl_names_head(n, cx, out);
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() == "update_statement"
-            || (n.kind() == "assignment_statement" && has_operator(n, cx, "="))
-        {
-            push_roots(cx, n, out);
-        }
+        items::write_roots_head(n, cx, out);
     }
 
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
-        if n.kind() != "call_expression" {
-            return None;
-        }
-        let func = child_by_field(n, "function").or_else(|| first_named_child(n))?;
-        let args = positional_nodes(n, func)
-            .into_iter()
-            .map(|a| make_arg(cx, a))
-            .collect();
-        let callee = qualified_callee(cx, n, func);
-        Some(CallHead {
-            callee,
-            kind: CallKind::Plain,
-            callee_root: odin_callee_root(cx, func),
-            args,
-        })
+        calls::call_head(n, cx)
     }
 
     fn imports<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
-        if n.kind() != "import_declaration" {
-            return;
-        }
-        let pos = pos_of(n);
-        let raw = first_named_child_matching(n, &["string"])
-            .map(|s| text(cx, s))
-            .unwrap_or("");
-        let module = Cow::Borrowed(strip_quotes(raw));
-        let alias = child_by_field(n, "alias").map(|a| text(cx, a));
-        let foreign = (0..n.child_count())
-            .any(|i| n.child(i).is_some_and(|c| is_anon_text(cx, c, "foreign")));
-        if foreign {
-            let side = Import {
-                pos,
-                module,
-                name: "",
-                alias: None,
-                kind: ImportKind::SideEffect,
-            };
-            out.push(side);
-            return;
-        }
-        let inner = strip_quotes(raw);
-        let name = alias.unwrap_or_else(|| last_path_segment(inner));
-        let namespaced = Import {
-            pos,
-            module,
-            name,
-            alias,
-            kind: ImportKind::Namespace,
-        };
-        out.push(namespaced);
+        items::imports_head(n, cx, out);
     }
 
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {
-        match n.kind() {
-            "struct_declaration" | "enum_declaration" | "union_declaration" => {}
-            _ => return None,
-        }
-        let name_node = first_named_child_matching(n, &["expression"])?;
-        let top = n.parent().is_some_and(|p| p.kind() == "source_file");
-        let public = top && !attr_has(cx, n, "private");
-        let def = typedef_at(text(cx, name_node), pos_of(name_node), public);
-        Some(TypeHead {
-            def: Some(def),
-            impls: Vec::new(),
-            container: None,
-        })
+        items::typedef_head(n, cx)
     }
 
     fn container(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Container> {
-        if n.kind() != "attribute" {
-            return None;
-        }
-        let tested = any_named_child(n, |c| is_test_ident(cx, c));
-        tested.then_some(Container::TestModule)
+        items::container_head(n, cx)
     }
 
-    fn match_arm(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<WildcardArm> {
-        if n.kind() != "switch_case" {
-            return None;
-        }
-        if child_by_field(n, "condition").is_some() {
-            return None;
-        }
-        let arm = WildcardArm {
-            pos: pos_of(n),
-            enum_like: sibling_enum(n),
-        };
-        Some(arm)
+    fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
+        items::match_arm_head(n, cx)
     }
 
     fn struct_lit<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FieldCopy<'s>> {
-        if n.kind() != "struct" {
-            return None;
-        }
-        let fields: Vec<Node<'_>> = named_children(n)
-            .into_iter()
-            .filter(|c| c.kind() == "struct_field")
-            .collect();
-        if fields.is_empty() {
-            return None;
-        }
-        let mut source: Option<&'s str> = None;
-        let mut complete = true;
-        for field in &fields {
-            match odin_field_source(cx, *field) {
-                Some(current) if source.is_none_or(|prev| prev == current) => {
-                    source = Some(current);
-                }
-                _ => {
-                    complete = false;
-                    break;
-                }
-            }
-        }
-        let source = if complete { source } else { None };
-        Some(FieldCopy {
-            pos: pos_of(n),
-            fields: narrow(fields.len()),
-            source,
-        })
+        items::struct_lit_head(n, cx)
     }
 
     fn ambient<'s>(
@@ -546,111 +108,14 @@ impl LangHooks for OdinHooks {
         in_function: bool,
         out: &mut Vec<(AmbientKind, &'s str, Pos)>,
     ) {
-        if n.kind() == "var_declaration" || n.kind() == "variable_declaration" {
-            if in_function {
-                return;
-            }
-            let found = find_named_child(n, |c| is_identifier(&c));
-            if let Some(id) = found {
-                let global = (AmbientKind::GlobalMutable, text(cx, id), pos_of(id));
-                out.push(global);
-            }
-            return;
-        }
-        if n.kind() != "call_expression" {
-            return;
-        }
-        let callee = child_by_field(n, "function")
-            .or_else(|| first_named_child(n))
-            .map(|f| qualified_callee(cx, n, f))
-            .unwrap_or("");
-        if is_env_callee(callee) {
-            let read = (AmbientKind::EnvRead, callee, pos_of(n));
-            out.push(read);
-        }
+        items::ambient_head(n, cx, in_function, out);
     }
 
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
-        if n.kind() != "call_expression" {
-            return None;
-        }
-        let func = child_by_field(n, "function").or_else(|| first_named_child(n))?;
-        if !is_reflect_callee(qualified_callee(cx, n, func)) {
-            return None;
-        }
-        let args = positional_nodes(n, func);
-        if args.len() < 2 {
-            return None;
-        }
-        (args[1].kind() != "string").then_some("runtime name lookup (reflect)")
+        calls::dynamic_head(n, cx)
     }
 
     fn assertion(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {
-        if n.kind() != "call_expression" {
-            return None;
-        }
-        let func = child_by_field(n, "function").or_else(|| first_named_child(n))?;
-        let callee = qualified_callee(cx, n, func);
-        if is_formatted_assert(callee) {
-            let messaged = Assertion {
-                pos: pos_of(n),
-                has_message: true,
-                comparison: false,
-            };
-            return Some(messaged);
-        }
-        if !is_plain_assert(callee) {
-            return None;
-        }
-        let args = positional_nodes(n, func);
-        let first = args.first().copied();
-        let comparison = first.is_some_and(|a| odin_is_compare(cx, a));
-        let arity = args.len() >= 2;
-        Some(Assertion {
-            pos: pos_of(n),
-            has_message: arity,
-            comparison,
-        })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::positional_nodes;
-
-    fn call_in(source: &str) -> (tree_sitter::Tree, usize, usize) {
-        let mut parser = tree_sitter::Parser::new();
-        let language: tree_sitter::Language = tree_sitter_odin::LANGUAGE.into();
-        parser.set_language(&language).expect("odin grammar loads");
-        let tree = parser.parse(source, None).expect("parser returns a tree");
-        fn find_call(n: tree_sitter::Node<'_>) -> Option<(usize, usize)> {
-            if n.kind() == "call_expression" {
-                return Some((n.start_byte(), n.end_byte()));
-            }
-            (0..n.named_child_count())
-                .find_map(|i| n.named_child(u32::try_from(i).ok()?).and_then(find_call))
-        }
-        let range = find_call(tree.root_node()).expect("a call_expression in the tree");
-        (tree, range.0, range.1)
-    }
-
-    #[test]
-    fn comment_between_arguments_is_not_an_argument() {
-        let (tree, start, end) = call_in("main :: proc() {\n\tf(a, /* c */ b)\n}\n");
-        let root = tree.root_node();
-        let call = root.descendant_for_byte_range(start, end).unwrap();
-        assert_eq!(call.kind(), "call_expression");
-        let func = call
-            .child_by_field_name("function")
-            .expect("a function field");
-        let kinds: Vec<&str> = positional_nodes(call, func)
-            .iter()
-            .map(|n| n.kind())
-            .collect();
-        assert_eq!(
-            kinds,
-            vec!["identifier", "identifier"],
-            "a comment inside the call must not become an argument"
-        );
+        calls::assertion_head(n, cx)
     }
 }

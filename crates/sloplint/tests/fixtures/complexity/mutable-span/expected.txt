@@ -1,1 +1,1 @@
-src/lib.rs:2 major complexity/mutable-span
+src/lib.rs:2 info complexity/mutable-span

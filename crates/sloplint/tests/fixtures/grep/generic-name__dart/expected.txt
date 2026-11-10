@@ -1,1 +1,2 @@
+# Positive: `handle` stays on the denylist; `run` no longer flags.
 a.dart:1 minor grep/generic-name

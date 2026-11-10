@@ -1,1 +1,2 @@
+# Positive: Collection arg spans lines 2-18 (17 lines >= strict Minor(15)); statement call.
 a.dart:2 minor grep/multiline-argument

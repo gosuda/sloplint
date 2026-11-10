@@ -1,1 +1,1 @@
-src/Orders.java:2 major agent/stringly-api
+src/Orders.java:2 info agent/stringly-api
