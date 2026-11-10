@@ -94,7 +94,7 @@ Role shifts lower findings by role (K = keep, L1 = lower one rung, L2 = lower tw
 | grep/generic-name | Off | Off | minor | minor | low | L1 | O | K | O | O | Flags exported fns named from the generic denylist |
 | grep/homonym-definitions | Off | Off | Off | info | low | K | O | K | O | O | Flags free fn or type names defined in >= 8 files (5 strict) of one package |
 | grep/multiline-argument | Off | Off | Off | info | low | K | O | L1 | O | O | Strict-only: flags collection args spanning >= 15 lines outside tests, generated files, and binding initializers |
-| grep/no-dynamic-symbol | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags runtime-built symbols except proxy forwarding, literal-table loops, and string module imports |
+| grep/no-dynamic-symbol | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags runtime-built symbols except proxy forwarding, string module imports, and, in Python, JS, and TS, names that come from a literal table in the same file: a loop over it, a name bound once to it, or a const ternary of string literals |
 | grep/no-rename-import | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags `import x as y` renames |
 | grep/no-wildcard-import | Off | Off | Off | info | low | K | O | L1 | O | L1 | Flags `*` imports binding open names into non-test module scope; preludes and same-file children exempt |
 | slop/barrel-file | Off | Off | minor | minor | low | K | O | K | O | O | Flags barrels re-exporting from another barrel with resolvable local candidates |
