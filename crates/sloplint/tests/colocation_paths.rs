@@ -312,7 +312,7 @@ fn typescript_alias_prefix_does_not_cover() {
         ("src/other.ts", "export function g(): void {}\n"),
         (
             "src/dummy.test.ts",
-            "import { f } from \"@/tag\";\n\nexport const t = 1;\n",
+            "import { f } from \"@scope/tag\";\n\nexport const t = 1;\n",
         ),
     ]);
     assert_eq!(
@@ -372,4 +372,68 @@ fn python_three_segment_import_needs_full_suffix() {
             "legacy/services/user.py".to_string()
         ]
     );
+}
+
+#[test]
+fn rust_root_crate_test_name_differs_from_module_covers() {
+    let tmp = tmp_with(&[
+        (
+            "crates/app/src/store.rs",
+            "pub struct Store;\nimpl Store {\n    pub fn load() -> u32 {\n        1\n    }\n}\n",
+        ),
+        (
+            "crates/app/src/other.rs",
+            "pub struct Other;\nimpl Other {\n    pub fn load() -> u32 {\n        2\n    }\n}\n",
+        ),
+        (
+            "crates/app/tests/x.rs",
+            "use app::store::Store;\n\n#[test]\nfn loads() {\n    assert_eq!(Store::load(), 1);\n}\n",
+        ),
+    ]);
+    assert_eq!(
+        reported_files(tmp.path()),
+        ["crates/app/src/other.rs".to_string()]
+    );
+}
+
+#[test]
+fn csharp_sibling_test_project_covers_library() {
+    let tmp = tmp_with(&[
+        (
+            "src/Company.Lib/Widget.cs",
+            "namespace Company.Lib {\n    public class Widget {\n        public int Size() {\n            return 1;\n        }\n    }\n}\n",
+        ),
+        (
+            "src/Company.Lib/Other.cs",
+            "namespace Company.Lib {\n    public class Other {\n        public int Size() {\n            return 2;\n        }\n    }\n}\n",
+        ),
+        (
+            "src/Company.Lib.Tests/WidgetTests.cs",
+            "using Company.Lib;\nnamespace Company.Lib.Tests {\n    public class WidgetTests {\n        [Fact]\n        public void Size() {\n        }\n    }\n}\n",
+        ),
+    ]);
+    assert_eq!(
+        reported_files(tmp.path()),
+        ["src/Company.Lib/Other.cs".to_string()]
+    );
+}
+
+#[test]
+fn tsx_shares_typescript_evidence_gate() {
+    let tmp = tmp_with(&[
+        ("package.json", "{}\n"),
+        (
+            "src/format.ts",
+            "export function format(n: number): string {\n    return n.toFixed(2);\n}\n",
+        ),
+        (
+            "src/format.test.ts",
+            "import { format } from \"./format\";\n\nexport const t = format;\n",
+        ),
+        (
+            "src/Card.tsx",
+            "export function Card(): string {\n    return \"x\";\n}\n",
+        ),
+    ]);
+    assert_eq!(reported_files(tmp.path()), ["src/Card.tsx".to_string()]);
 }

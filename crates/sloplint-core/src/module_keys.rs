@@ -11,7 +11,33 @@ pub fn library_keys(lang: Lang, path: &str) -> Vec<String> {
 
 pub fn test_keys(lang: Lang, path: &str) -> Vec<String> {
     let (dir, base) = split_dir(path);
+    if lang == Lang::CSharp {
+        return csharp_test_keys(dir, strip_test_affix(stem_of(base)));
+    }
     keys_for(lang, dir, strip_test_affix(stem_of(base)))
+}
+
+fn csharp_test_keys(dir: &str, stem: &str) -> Vec<String> {
+    let mut segs = Vec::new();
+    for part in dir_segments(dir) {
+        push_segment(&mut segs, strip_csharp_test_dir(part));
+    }
+    push_segment(&mut segs, stem);
+    suffix_keys(&segs)
+}
+
+fn strip_csharp_test_dir(seg: &str) -> &str {
+    if let Some(rest) = seg.strip_suffix(".Tests")
+        && !rest.is_empty()
+    {
+        return rest;
+    }
+    if let Some(rest) = seg.strip_suffix(".Test")
+        && !rest.is_empty()
+    {
+        return rest;
+    }
+    seg
 }
 
 fn keys_for(lang: Lang, dir: &str, stem: &str) -> Vec<String> {
@@ -63,14 +89,114 @@ fn keys_for(lang: Lang, dir: &str, stem: &str) -> Vec<String> {
 }
 
 pub fn import_keys(lang: Lang, importer: &str, spec: &str) -> Vec<String> {
-    let mut segs = Vec::new();
     match lang {
-        Lang::Python => python_segments(importer, spec, &mut segs),
-        Lang::Rust => tail_segments(spec, &[':', '/'], &mut segs),
-        Lang::TypeScript | Lang::Tsx | Lang::JavaScript => ts_segments(importer, spec, &mut segs),
-        _ => generic_segments(importer, spec, &mut segs),
+        Lang::Python => {
+            let mut segs = Vec::new();
+            python_segments(importer, spec, &mut segs);
+            suffix_keys(&segs)
+        }
+        Lang::Rust => rust_import_keys(importer, spec),
+        Lang::TypeScript | Lang::Tsx | Lang::JavaScript => {
+            let mut segs = Vec::new();
+            ts_segments(importer, spec, &mut segs);
+            suffix_keys(&segs)
+        }
+        Lang::Java | Lang::Kotlin | Lang::Scala | Lang::CSharp => {
+            let mut segs = Vec::new();
+            dotted_segments(spec, &mut segs);
+            suffix_keys(&segs)
+        }
+        _ => {
+            let mut segs = Vec::new();
+            generic_segments(importer, spec, &mut segs);
+            suffix_keys(&segs)
+        }
     }
-    suffix_keys(&segs)
+}
+
+fn rust_import_keys(importer: &str, spec: &str) -> Vec<String> {
+    let mut full = Vec::new();
+    tail_segments(spec, &[':', '/'], &mut full);
+    if full.len() < 2 {
+        return suffix_keys(&full);
+    }
+    if let Some(keys) = rust_crate_mapped_keys(importer, spec, &full) {
+        return keys;
+    }
+    if !rust_drop_allowed(importer, spec, &full) {
+        return suffix_keys(&full);
+    }
+    let mut keys = suffix_keys(&full);
+    for key in suffix_keys(&full[1..]) {
+        if !keys.contains(&key) {
+            keys.push(key);
+        }
+    }
+    if full.len() > 2 && !keys.contains(&full[1]) {
+        keys.push(full[1].clone());
+    }
+    keys
+}
+fn rust_crate_mapped_keys(importer: &str, spec: &str, full: &[String]) -> Option<Vec<String>> {
+    if rust_root_of(spec) != "crate" {
+        return None;
+    }
+    let crate_name = rust_crate_of(importer)?;
+    if rust_seg_count(spec) != full.len() || full[0].as_str() != "crate" {
+        return None;
+    }
+    let mut replaced = full.to_vec();
+    replaced[0] = crate_name.replace('-', "_");
+    let mut keys = suffix_keys(&replaced);
+    for key in suffix_keys(&replaced[1..]) {
+        if !keys.contains(&key) {
+            keys.push(key);
+        }
+    }
+    if replaced.len() > 2 && !keys.contains(&replaced[1]) {
+        keys.push(replaced[1].clone());
+    }
+    Some(keys)
+}
+fn rust_drop_allowed(importer: &str, spec: &str, full: &[String]) -> bool {
+    let root = rust_root_of(spec);
+    if root == "crate" {
+        return rust_seg_count(spec) == full.len();
+    }
+    if root.is_empty() || matches!(root, "std" | "core" | "alloc" | "super" | "self") {
+        return false;
+    }
+    if rust_seg_count(spec) != full.len() {
+        return false;
+    }
+    rust_crate_of(importer).is_some_and(|name| rust_names_equal(root, name))
+}
+fn rust_root_of(spec: &str) -> &str {
+    spec.trim_start_matches(':')
+        .split([':', '/'])
+        .next()
+        .unwrap_or("")
+}
+fn rust_crate_of(importer: &str) -> Option<&str> {
+    let rest = importer.strip_prefix("crates/")?;
+    let name = rest.split('/').next()?;
+    if name.is_empty() {
+        return None;
+    }
+    Some(name)
+}
+fn rust_names_equal(a: &str, b: &str) -> bool {
+    a.len() == b.len()
+        && a.bytes()
+            .zip(b.bytes())
+            .all(|(x, y)| x == y || x == b'-' && y == b'_' || x == b'_' && y == b'-')
+}
+fn rust_seg_count(spec: &str) -> usize {
+    spec.split([':', '/']).filter(|s| !s.is_empty()).count()
+}
+
+fn dotted_segments(spec: &str, segs: &mut Vec<String>) {
+    tail_segments(spec, &['.', '/'], segs);
 }
 
 fn suffix_keys(segs: &[String]) -> Vec<String> {
@@ -130,9 +256,9 @@ fn stem_of(base: &str) -> &str {
     }
 }
 
-const TEST_SUFFIXES: [&str; 11] = [
+const TEST_SUFFIXES: [&str; 12] = [
     "_tests", "_test", "-test", ".test", ".Tests", "_spec", "-spec", ".spec", "Tests", "Test",
-    "Spec",
+    "Spec", "IT",
 ];
 
 const TEST_PREFIXES: [&str; 2] = ["test_", "test-"];
@@ -141,7 +267,7 @@ fn strip_test_affix(stem: &str) -> &str {
     let mut stem = stem;
     for suffix in TEST_SUFFIXES {
         if let Some(rest) = stem.strip_suffix(suffix) {
-            if !rest.is_empty() {
+            if should_strip_suffix(suffix, rest) {
                 stem = rest;
             }
             break;
@@ -149,13 +275,27 @@ fn strip_test_affix(stem: &str) -> &str {
     }
     for prefix in TEST_PREFIXES {
         if let Some(rest) = stem.strip_prefix(prefix) {
-            if !rest.is_empty() {
+            if should_strip_prefix(prefix, rest) {
                 stem = rest;
             }
             break;
         }
     }
     stem
+}
+
+fn should_strip_suffix(suffix: &str, rest: &str) -> bool {
+    if rest.is_empty() {
+        return false;
+    }
+    if suffix == "IT" {
+        return rest.bytes().last().is_some_and(|b| b.is_ascii_lowercase());
+    }
+    true
+}
+
+fn should_strip_prefix(_prefix: &str, rest: &str) -> bool {
+    !rest.is_empty()
 }
 
 fn dir_segments(dir: &str) -> Vec<&str> {
@@ -202,6 +342,18 @@ fn strip_generic_extension(seg: Option<&mut String>) {
 
 fn ts_segments(importer: &str, spec: &str, segs: &mut Vec<String>) {
     if !spec.starts_with('.') {
+        if spec == "@" || spec == "~" {
+            return;
+        }
+        if let Some(rest) = spec.strip_prefix("@/").or_else(|| spec.strip_prefix("~/")) {
+            if rest.is_empty() {
+                return;
+            }
+            let mut aliased = String::from("src/");
+            aliased.push_str(rest);
+            tail_segments(&aliased, &['/'], segs);
+            return;
+        }
         tail_segments(spec, &['/'], segs);
         return;
     }
@@ -246,145 +398,5 @@ fn tail_segments(spec: &str, seps: &[char], segs: &mut Vec<String>) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn shared(lang: Lang, path: &str, spec: &str) -> bool {
-        let lib = library_keys(lang, path);
-        let imp = import_keys(lang, path, spec);
-        lib.iter().any(|key| imp.contains(key))
-    }
-
-    #[test]
-    fn huge_spec_yields_at_most_k_keys() {
-        let spec = vec!["a"; 20_000].join(".");
-        let keys = import_keys(Lang::Python, "tests/test_big.py", &spec);
-        assert_eq!(keys.len(), MAX_KEY_SEGMENTS - 1);
-    }
-
-    #[test]
-    fn deep_library_yields_at_most_k_keys() {
-        let path = format!("{}/deep.py", vec!["d"; 2_000].join("/"));
-        assert!(library_keys(Lang::Python, &path).len() <= MAX_KEY_SEGMENTS);
-    }
-
-    #[test]
-    fn hyphen_and_underscore_segments_are_equal() {
-        assert!(shared(
-            Lang::Rust,
-            "crates/log-core/src/tag.rs",
-            "log_core::tag"
-        ));
-    }
-
-    #[test]
-    fn nested_rust_module_matches_its_import() {
-        assert!(shared(
-            Lang::Rust,
-            "crates/parser/src/rules/lexer.rs",
-            "parser::rules::lexer"
-        ));
-    }
-
-    #[test]
-    fn python_double_dot_resolves_against_importer_dir() {
-        assert_eq!(
-            import_keys(Lang::Python, "tests/unit/test_x.py", "..core"),
-            ["core"]
-        );
-    }
-
-    #[test]
-    fn bare_import_covers_only_top_level_modules() {
-        assert_eq!(import_keys(Lang::Python, "a/b/c.py", "utils"), ["utils"]);
-        assert_eq!(
-            library_keys(Lang::Python, "billing/utils.py"),
-            ["billing/utils"]
-        );
-        assert!(!shared(Lang::Python, "billing/utils.py", "utils"));
-    }
-
-    #[test]
-    fn python_src_layout_module_drops_the_src_root() {
-        assert_eq!(library_keys(Lang::Python, "src/tag.py"), ["tag"]);
-        assert!(shared(Lang::Python, "src/tag.py", "tag"));
-        assert!(shared(Lang::Python, "src/app/user.py", "app.user"));
-        assert!(!shared(Lang::Python, "vendor/src/tag.py", "tag"));
-    }
-
-    #[test]
-    fn dotted_ts_basename_stays_one_segment() {
-        assert!(
-            library_keys(Lang::TypeScript, "src/app/user.service.ts")
-                .contains(&"src/app/user.service".to_string())
-        );
-        assert!(shared(
-            Lang::TypeScript,
-            "src/app/user.service.ts",
-            "../src/app/user.service"
-        ));
-    }
-
-    #[test]
-    fn package_marker_files_key_their_directory() {
-        assert_eq!(library_keys(Lang::Python, "pkg/__init__.py"), ["pkg"]);
-        assert_eq!(
-            library_keys(Lang::Rust, "crates/x/src/foo/mod.rs"),
-            ["x/foo"]
-        );
-        assert_eq!(
-            library_keys(Lang::TypeScript, "src/ui/index.ts"),
-            ["src/ui"]
-        );
-    }
-
-    #[test]
-    fn go_import_suffix_covers_nested_package() {
-        let lib = library_keys(Lang::Go, "internal/tag/add.go");
-        let imp = import_keys(
-            Lang::Go,
-            "cmd/app/app_test.go",
-            "example.com/m/internal/tag",
-        );
-        assert_eq!(lib, ["internal/tag"]);
-        assert!(imp.contains(&"internal/tag".to_string()));
-    }
-
-    #[test]
-    fn test_keys_strip_each_affix_form() {
-        let cases = [
-            (Lang::CSharp, "src/WidgetTests.cs", "src/Widget"),
-            (Lang::Java, "src/ServiceTest.java", "src/Service"),
-            (Lang::Scala, "src/serviceSpec.scala", "src/service"),
-            (Lang::Rust, "widget_tests.rs", "widget"),
-            (Lang::Rust, "widget_test.rs", "widget"),
-            (Lang::Bash, "widget-test.sh", "widget"),
-            (Lang::JavaScript, "src/service.test.js", "src/service"),
-            (Lang::TypeScript, "src/service.spec.ts", "src/service"),
-            (Lang::Ocaml, "src/service.test.ml", "src/service"),
-            (Lang::PowerShell, "Deploy.Tests.ps1", "Deploy"),
-            (Lang::Ruby, "widget_spec.rb", "widget"),
-            (Lang::Bash, "widget-spec.sh", "widget"),
-            (Lang::Python, "pkg/test_widget.py", "pkg/widget"),
-            (Lang::R, "test-service.R", "service"),
-        ];
-        for (lang, path, want) in cases {
-            assert_eq!(test_keys(lang, path), [want], "affix in {path}");
-        }
-    }
-
-    #[test]
-    fn test_keys_never_strip_to_an_empty_stem() {
-        assert_eq!(test_keys(Lang::Java, "Test.java"), ["Test"]);
-        assert_eq!(test_keys(Lang::Python, "pkg/tests.py"), ["pkg/tests"]);
-    }
-
-    #[test]
-    fn library_keys_keep_test_like_stems() {
-        assert_eq!(library_keys(Lang::Scala, "src/Spec.scala"), ["src/Spec"]);
-        assert_eq!(
-            library_keys(Lang::Java, "src/ServiceTest.java"),
-            ["src/ServiceTest"]
-        );
-    }
-}
+#[path = "module_keys_tests.rs"]
+mod tests;

@@ -71,17 +71,17 @@ fn build(options: toml::Table) -> Result<Box<dyn WorldRule>, String> {
 impl WorldRule for ColocatedTests {
     fn check(&self, files: &[WorldFile<'_>], out: &mut Vec<Finding>) {
         let imported = import_covered(files);
-        let mut evidenced: HashSet<(Lang, &str)> = HashSet::new();
+        let mut evidenced: HashSet<(&str, &str)> = HashSet::new();
         for file in files {
             if is_evidence(file) {
-                evidenced.insert((file.facts.lang, file.facts.package.as_str()));
+                evidenced.insert((file.facts.lang.config_key(), file.facts.package.as_str()));
             }
         }
         for file in files {
             if self.skipped(file) {
                 continue;
             }
-            if !evidenced.contains(&(file.facts.lang, file.facts.package.as_str())) {
+            if !evidenced.contains(&(file.facts.lang.config_key(), file.facts.package.as_str())) {
                 continue;
             }
             if imported.contains(file.path) {
