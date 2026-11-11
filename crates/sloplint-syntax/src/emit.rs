@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use sloplint_core::facts::{Ambient, AmbientKind, Call, DynamicSymbol, Function, Pos};
+use sloplint_core::lang::Lang;
 use sloplint_core::role::{CodeRole, RoleRegion};
 use sloplint_core::suppress::CommentText;
 
@@ -367,17 +368,26 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
                 } else {
                     Some(body)
                 };
-                if let Some(inner) = inner
-                    && !matches!(
-                        inner.kind(),
-                        "statement_block" | "block" | "indented_block" | "compound_statement"
-                    )
-                {
+                if self.body_marks_value(inner) {
                     self.mark_value_return(self.closure_depth);
                 }
             }
         }
     }
+
+    fn body_marks_value(&self, inner: Option<tree_sitter::Node<'_>>) -> bool {
+        let Some(inner) = inner else {
+            return false;
+        };
+        if !matches!(
+            inner.kind(),
+            "statement_block" | "block" | "indented_block" | "compound_statement"
+        ) {
+            return true;
+        }
+        self.lang == Lang::Scala && crate::lang::scala::block_tails_value(inner)
+    }
+
     fn shadow_closure_params(&mut self, node: tree_sitter::Node<'_>) {
         if self.fn_stack.is_empty() {
             return;

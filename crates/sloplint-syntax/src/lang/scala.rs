@@ -1,7 +1,9 @@
 use sloplint_core::facts::{AmbientKind, Assertion, FieldCopy, Handler, Import, Pos, WildcardArm};
 use tree_sitter::Node;
 
-use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead};
+use crate::hooks::{
+    CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, rfind_named_child,
+};
 use crate::spec::Role;
 use sloplint_core::role::CodeRole;
 
@@ -142,3 +144,34 @@ impl LangHooks for ScalaHooks {
         items::shadow_names(cx, n, out);
     }
 }
+
+pub(crate) fn block_tails_value(body: Node<'_>) -> bool {
+    let Some(last) = rfind_named_child(body, |c| !matches!(c.kind(), "comment" | "block_comment"))
+    else {
+        return false;
+    };
+    if VALUE_TAIL_KINDS.contains(&last.kind()) {
+        return true;
+    }
+    last.kind() == "if_expression" && last.child_by_field_name("alternative").is_some()
+}
+
+const VALUE_TAIL_KINDS: &[&str] = &[
+    "boolean_literal",
+    "character_literal",
+    "field_expression",
+    "floating_point_literal",
+    "identifier",
+    "instance_expression",
+    "integer_literal",
+    "interpolated_string_expression",
+    "infix_expression",
+    "lambda_expression",
+    "match_expression",
+    "method_value",
+    "null_literal",
+    "postfix_expression",
+    "prefix_expression",
+    "string",
+    "tuple_expression",
+];

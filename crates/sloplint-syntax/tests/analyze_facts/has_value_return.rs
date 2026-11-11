@@ -2,6 +2,8 @@
 //!
 //! A return statement carrying a value, an expression body, and any `yield`
 //! all mark `has_value_return`; a bare return or a print-only body does not.
+//! A Scala block body whose last statement is plainly a value marks it too;
+//! a call, assignment, definition, or empty tail does not.
 
 use sloplint_core::lang::Lang;
 
@@ -268,5 +270,93 @@ fn a_yield_inside_a_nested_function_marks_only_the_inner_function() {
     assert!(
         has_value_return(Lang::Python, "nest.py", source, "inner"),
         "the yield marks the function that contains it"
+    );
+}
+
+#[test]
+fn scala_block_tails_mark_the_fact() {
+    assert!(
+        has_value_return(
+            Lang::Scala,
+            "block.scala",
+            "def count() = { 42 }\n",
+            "count"
+        ),
+        "a Scala block tailing in a literal is a value return"
+    );
+    assert!(
+        has_value_return(
+            Lang::Scala,
+            "indent.scala",
+            "def count() =\n  42\n",
+            "count"
+        ),
+        "an indented Scala block tailing in a literal is a value return"
+    );
+    assert!(
+        has_value_return(
+            Lang::Scala,
+            "alt.scala",
+            "def pick(x: Int) = { if (x > 0) 1 else 0 }\n",
+            "pick"
+        ),
+        "a Scala block tailing in an if with else is a value return"
+    );
+    assert!(
+        has_value_return(
+            Lang::Scala,
+            "arms.scala",
+            "def describe(x: Int) = {\n  x match {\n    case 0 => 0\n    case _ => 1\n  }\n}\n",
+            "describe"
+        ),
+        "a Scala block tailing in a match is a value return"
+    );
+    assert!(
+        has_value_return(Lang::Scala, "expr.scala", "def count() = 42\n", "count"),
+        "the expression body keeps marking the fact"
+    );
+}
+
+#[test]
+fn scala_unit_tails_keep_the_valueless_fact() {
+    assert!(
+        !has_value_return(
+            Lang::Scala,
+            "log.scala",
+            "def log() = { println(1) }\n",
+            "log"
+        ),
+        "a call tail may be Unit, so it is no value return"
+    );
+    assert!(
+        !has_value_return(
+            Lang::Scala,
+            "assign.scala",
+            "class C {\n  var field = 0\n  def set(x: Int) = { field = x }\n}\n",
+            "set"
+        ),
+        "an assignment tail is no value return"
+    );
+    assert!(
+        !has_value_return(
+            Lang::Scala,
+            "maybe.scala",
+            "def maybe(x: Int) = { if (x > 0) 1 }\n",
+            "maybe"
+        ),
+        "an if without else may be Unit, so it is no value return"
+    );
+    assert!(
+        !has_value_return(Lang::Scala, "noop.scala", "def noop() = {}\n", "noop"),
+        "an empty block is no value return"
+    );
+    let source = "def outer() = { def inner() = { 1 }; println(inner()) }\n";
+    assert!(
+        !has_value_return(Lang::Scala, "nest.scala", source, "outer"),
+        "a definition-and-call tail is no value return for the outer block"
+    );
+    assert!(
+        has_value_return(Lang::Scala, "nest.scala", source, "inner"),
+        "the nested block tail marks only the inner function"
     );
 }
