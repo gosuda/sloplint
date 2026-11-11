@@ -305,7 +305,8 @@ impl RuleSet {
             } else {
                 finding.severity = ceiling;
             }
-            let role = if finding.file_wide {
+            let file_wide = std::mem::take(&mut finding.file_wide);
+            let role = if file_wide {
                 facts.role
             } else {
                 facts.role_at(finding.line)
@@ -343,8 +344,9 @@ impl RuleSet {
             } else {
                 finding.severity = ceiling;
             }
+            let file_wide = std::mem::take(&mut finding.file_wide);
             let role = match index.get(&*finding.path) {
-                Some(facts) if finding.file_wide => facts.role,
+                Some(facts) if file_wide => facts.role,
                 Some(facts) => role_at(facts.role, &facts.regions, finding.line),
                 None => CodeRole::Library,
             };

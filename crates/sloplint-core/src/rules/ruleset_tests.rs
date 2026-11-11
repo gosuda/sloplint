@@ -236,6 +236,7 @@ fn nesting_pair(line: u32, cog_col: u32, nest_col: u32) -> Vec<Finding> {
     );
     cognitive.line = line;
     cognitive.column = cog_col;
+    cognitive.file_wide = false;
     let mut nesting = Finding::at_file(
         "src/ledger.rs",
         "complexity/nesting-depth",
@@ -245,6 +246,7 @@ fn nesting_pair(line: u32, cog_col: u32, nest_col: u32) -> Vec<Finding> {
     );
     nesting.line = line;
     nesting.column = nest_col;
+    nesting.file_wide = false;
     vec![cognitive, nesting]
 }
 
@@ -332,5 +334,45 @@ fn file_budget_still_drops_for_whole_test_files() {
     assert!(
         budget_findings(&rules, &facts).is_empty(),
         "a file whose role is test keeps its budget silence"
+    );
+}
+
+#[test]
+fn barrel_finding_survives_a_leading_test_region() {
+    let mut library = world_facts(CodeRole::Library);
+    library.regions = vec![RoleRegion {
+        start_line: 1,
+        end_line: 3,
+        role: CodeRole::Test,
+    }];
+    library.barrel = Some(vec![vec!["src/prelude.rs".to_string()]]);
+    let mut prelude = world_facts(CodeRole::Library);
+    prelude.barrel = Some(vec![vec!["external".to_string()]]);
+    let files = [
+        WorldFile {
+            path: "src/lib.rs",
+            facts: &library,
+        },
+        WorldFile {
+            path: "src/prelude.rs",
+            facts: &prelude,
+        },
+    ];
+    let rules = strict_rules();
+    let mut found = rules.check_world(&files);
+    found.retain(|finding| finding.rule.as_ref() == "slop/barrel-file");
+    assert_eq!(
+        found.len(),
+        1,
+        "a test region at line 1 cannot hide the chained-barrel finding"
+    );
+    assert_eq!(
+        found[0].severity,
+        Severity::Minor,
+        "the library barrel keeps its minor severity"
+    );
+    assert!(
+        !found[0].file_wide,
+        "graded findings leave the ruleset without the file-wide marker"
     );
 }
