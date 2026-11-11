@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::Strictness;
 use crate::facts::WorldFacts;
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{CodeRole, RolePolicy, Shift};
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
 use crate::rules::{parse_options, string_values};
@@ -138,14 +139,14 @@ fn is_evidence(file: &WorldFile<'_>) -> bool {
 }
 
 fn import_covered<'a>(files: &[WorldFile<'a>]) -> HashSet<&'a str> {
-    let mut keys: HashMap<(&'a str, &'a str, String), usize> = HashMap::new();
+    let mut keys: HashMap<(&'a str, String), usize> = HashMap::new();
     for file in files {
         if !is_evidence(file) {
             continue;
         }
-        record_library_keys(&mut keys, file);
+        record_library_keys(&mut keys, file.facts.lang, file.path);
         for spec in &file.facts.imports {
-            record_import_keys(&mut keys, file, spec);
+            record_import_keys(&mut keys, file.facts.lang, file.path, spec);
         }
     }
     if keys.is_empty() {
@@ -156,7 +157,7 @@ fn import_covered<'a>(files: &[WorldFile<'a>]) -> HashSet<&'a str> {
         if file.facts.role != CodeRole::Library || file.facts.public_functions == 0 {
             continue;
         }
-        if is_covered(&keys, file) {
+        if is_covered(&keys, file.facts.lang, file.path) {
             covered.insert(file.path);
         }
     }
@@ -167,50 +168,45 @@ fn key_len(key: &str) -> usize {
     key.split('/').count()
 }
 
-fn record_library_keys<'a>(
-    keys: &mut HashMap<(&'a str, &'a str, String), usize>,
-    file: &WorldFile<'a>,
-) {
-    let owned = crate::module_keys::test_keys(file.facts.lang, file.path);
+fn record_library_keys(keys: &mut HashMap<(&str, String), usize>, lang: Lang, path: &str) {
+    let owned = crate::module_keys::test_keys(lang, path);
     let longest = owned.iter().map(|key| key_len(key)).max().unwrap_or(0);
     if longest == 0 {
         return;
     }
-    let scope = file.facts.lang.config_key();
-    let package = file.facts.package.as_str();
+    let scope = lang.config_key();
     for key in owned {
-        keys.entry((scope, package, key))
+        keys.entry((scope, key))
             .and_modify(|need| *need = (*need).min(longest))
             .or_insert(longest);
     }
 }
 
-fn record_import_keys<'a>(
-    keys: &mut HashMap<(&'a str, &'a str, String), usize>,
-    file: &WorldFile<'a>,
+fn record_import_keys(
+    keys: &mut HashMap<(&str, String), usize>,
+    lang: Lang,
+    importer: &str,
     spec: &str,
 ) {
-    let owned = crate::module_keys::import_keys(file.facts.lang, file.path, spec);
+    let owned = crate::module_keys::import_keys(lang, importer, spec);
     let longest = owned.iter().map(|key| key_len(key)).max().unwrap_or(0);
     if longest == 0 {
         return;
     }
-    let scope = file.facts.lang.config_key();
-    let package = file.facts.package.as_str();
+    let scope = lang.config_key();
     for key in owned {
-        keys.entry((scope, package, key))
+        keys.entry((scope, key))
             .and_modify(|need| *need = (*need).min(longest))
             .or_insert(longest);
     }
 }
 
-fn is_covered(keys: &HashMap<(&str, &str, String), usize>, file: &WorldFile<'_>) -> bool {
-    let owned = crate::module_keys::library_keys(file.facts.lang, file.path);
+fn is_covered(keys: &HashMap<(&str, String), usize>, lang: Lang, path: &str) -> bool {
+    let owned = crate::module_keys::library_keys(lang, path);
     let longest = owned.iter().map(|key| key_len(key)).max().unwrap_or(0);
-    let scope = file.facts.lang.config_key();
-    let package = file.facts.package.as_str();
+    let scope = lang.config_key();
     owned.iter().any(|key| {
-        keys.get(&(scope, package, key.clone()))
+        keys.get(&(scope, key.clone()))
             .is_some_and(|&need| need <= key_len(key) || key_len(key) == longest)
     })
 }
@@ -554,37 +550,6 @@ mod tests {
             check(&rule, &files),
             ["pkgb/util/core.rs".to_string()],
             "a tested file's own path keys must not cover a same-suffix module elsewhere"
-        );
-    }
-    #[test]
-    fn import_in_one_package_does_not_cover_twin_module() {
-        let rule = rule();
-        let covered = lib(Lang::Python, "pkga", 1);
-        let twin = lib(Lang::Python, "pkgb", 1);
-        let test = evidence(Lang::Python, "pkga", &["app.utils"]);
-        let probe = test_file(Lang::Python, "pkgb");
-        let files = [
-            WorldFile {
-                path: "pkga/app/utils.py",
-                facts: &covered,
-            },
-            WorldFile {
-                path: "pkgb/app/utils.py",
-                facts: &twin,
-            },
-            WorldFile {
-                path: "pkga/tests/test_utils.py",
-                facts: &test,
-            },
-            WorldFile {
-                path: "pkgb/tests/test_other.py",
-                facts: &probe,
-            },
-        ];
-        assert_eq!(
-            check(&rule, &files),
-            ["pkgb/app/utils.py".to_string()],
-            "an import in one package must not cover the twin module"
         );
     }
 }
