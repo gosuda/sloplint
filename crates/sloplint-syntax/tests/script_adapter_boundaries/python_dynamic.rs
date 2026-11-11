@@ -430,3 +430,45 @@ const EAGER_COMPREHENSION: &str = "def load(mod):\n    for name in ('a', 'b'):\n
 fn eager_comprehension_in_literal_loop_stays_silent() {
     assert_eq!(dynamics(EAGER_COMPREHENSION), Vec::<String>::new());
 }
+
+#[test]
+fn a_reassigned_proxy_name_flags() {
+    let source = "class Lazy:\n    def __getattr__(self, name):\n        name = 'get_' + name\n        return getattr(self._target, name)\n";
+    assert_eq!(dynamics(source).len(), 1);
+}
+
+#[test]
+fn an_augmented_proxy_name_flags() {
+    let source = "class Lazy:\n    def __getattr__(self, name):\n        name += '_x'\n        return getattr(self._target, name)\n";
+    assert_eq!(dynamics(source).len(), 1);
+}
+
+#[test]
+fn a_guarded_proxy_forward_stays_silent() {
+    let source = "class Lazy:\n    def __getattr__(self, name):\n        if name.startswith('_'):\n            raise AttributeError(name)\n        return getattr(self._target, name)\n";
+    assert_eq!(dynamics(source), Vec::<String>::new());
+}
+
+#[test]
+fn a_loop_name_rebound_beside_a_subscript_target_flags() {
+    let source = "def load(obj, d, dyn):\n    for k in ('a', 'b'):\n        k, d[0] = dyn\n        getattr(obj, k)\n";
+    assert_eq!(dynamics(source).len(), 1);
+}
+
+#[test]
+fn a_subscript_write_alone_keeps_the_literal_loop() {
+    let source = "def load(obj, d):\n    for k in ('a', 'b'):\n        d[0] = 1\n        getattr(obj, k)\n";
+    assert_eq!(dynamics(source), Vec::<String>::new());
+}
+
+#[test]
+fn a_module_name_passed_by_keyword_flags() {
+    let source = "import importlib\n\n\ndef load(mod):\n    return importlib.import_module(name=mod)\n";
+    assert_eq!(dynamics(source).len(), 1);
+}
+
+#[test]
+fn a_literal_module_name_passed_by_keyword_stays_silent() {
+    let source = "import importlib\n\n\ndef load():\n    return importlib.import_module(name='json', package=None)\n";
+    assert_eq!(dynamics(source), Vec::<String>::new());
+}

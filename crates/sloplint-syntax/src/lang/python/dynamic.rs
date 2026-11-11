@@ -106,12 +106,16 @@ fn fallback_label(which: &str) -> &'static str {
 }
 
 fn import_name(n: Node<'_>, cx: &Cx<'_, '_>, label: &'static str) -> Option<&'static str> {
-    let args = positional(n);
-    if has_splat_before(&args, 0) {
-        return Some(label);
-    }
-    let mut it = args.into_iter();
-    let first = it.next()?;
+    let first = match keyword_value(n, cx, "name") {
+        Some(value) => value,
+        None => {
+            let args = positional(n);
+            if has_splat_before(&args, 0) {
+                return Some(label);
+            }
+            args.into_iter().next()?
+        }
+    };
     if is_plain_value(first, cx) {
         return None;
     }
@@ -122,6 +126,15 @@ fn import_name(n: Node<'_>, cx: &Cx<'_, '_>, label: &'static str) -> Option<&'st
         return None;
     }
     Some(label)
+}
+
+fn keyword_value<'t>(n: Node<'t>, cx: &Cx<'_, '_>, key: &str) -> Option<Node<'t>> {
+    child_by_field(n, "arguments")
+        .map_or(Vec::new(), code_children)
+        .into_iter()
+        .filter(|a| a.kind() == "keyword_argument")
+        .find(|a| child_by_field(*a, "name").is_some_and(|k| text(cx, k) == key))
+        .and_then(|a| child_by_field(a, "value"))
 }
 
 fn proxy_forwarded(call: Node<'_>, cx: &Cx<'_, '_>, arg: Node<'_>) -> bool {
@@ -138,6 +151,7 @@ fn proxy_forwarded(call: Node<'_>, cx: &Cx<'_, '_>, arg: Node<'_>) -> bool {
         return false;
     }
     second_param(cx, func).is_some_and(|p| p == want)
+        && child_by_field(func, "body").is_some_and(|body| !body_rebinds(cx, body, want, arg))
 }
 
 fn second_param<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
@@ -350,8 +364,6 @@ fn targets_include(cx: &Cx<'_, '_>, left: Node<'_>, name: &str) -> bool {
             }
         } else if is_target_pattern(cur) {
             stack.extend(named_children(cur));
-        } else {
-            return false;
         }
     }
     false
