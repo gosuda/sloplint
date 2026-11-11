@@ -60,12 +60,21 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for NoRenameImport {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
-        let mut name_counts: HashMap<&str, u32> = HashMap::new();
+        let mut everywhere: HashMap<&str, u32> = HashMap::new();
+        let mut production: HashMap<&str, u32> = HashMap::new();
         for import in &facts.imports {
-            *name_counts.entry(import.name).or_insert(0) += 1;
+            *everywhere.entry(import.name).or_insert(0) += 1;
+            if !import.in_test {
+                *production.entry(import.name).or_insert(0) += 1;
+            }
         }
         for import in &facts.imports {
             let Some(alias) = import.alias else { continue };
+            let visible = if import.in_test {
+                &everywhere
+            } else {
+                &production
+            };
             if import.kind != ImportKind::Named {
                 continue;
             }
@@ -74,7 +83,7 @@ impl FileRule for NoRenameImport {
                 || !valid_ident(import.name)
                 || alias.contains(import.name)
                 || import.name.contains(alias)
-                || name_counts.get(import.name).is_some_and(|count| *count > 1)
+                || visible.get(import.name).is_some_and(|count| *count > 1)
                 || self.allowed(import, alias)
             {
                 continue;
@@ -196,6 +205,29 @@ mod tests {
         let mut out = Vec::new();
         rule.check(&facts, &mut out);
         out
+    }
+
+    fn in_test(mut import: Import<'static>) -> Import<'static> {
+        import.in_test = true;
+        import
+    }
+
+    #[test]
+    fn a_test_import_of_the_same_name_does_not_excuse_a_production_alias() {
+        let imports = vec![
+            import("crate::parser", "Parser", Some("Analyzer")),
+            in_test(import("crate::fixtures", "Parser", None)),
+        ];
+        assert_eq!(check(&rule(), imports).len(), 1);
+    }
+
+    #[test]
+    fn a_test_alias_beside_a_production_import_of_the_name_stays_silent() {
+        let imports = vec![
+            import("crate::parser", "Parser", None),
+            in_test(import("crate::fixtures", "Parser", Some("Fake"))),
+        ];
+        assert_eq!(check(&rule(), imports).len(), 0);
     }
 
     #[test]
