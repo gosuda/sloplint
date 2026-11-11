@@ -409,3 +409,66 @@ const FSTRING_ITERABLE: &str =
 fn fstring_element_in_iterable_still_flags() {
     assert_eq!(dynamics(FSTRING_ITERABLE).len(), 1);
 }
+
+const PAIR_ROWS_COMP: &str = r#"import hashlib
+
+HASHFUNC_MAP = {length: getattr(hashlib, algorithm, None) for length, algorithm in ((32, "md5"), (40, "sha1"), (64, "sha256"))}
+"#;
+
+#[test]
+fn pair_rows_loop_stays_silent() {
+    assert_eq!(dynamics(PAIR_ROWS_COMP), Vec::<String>::new());
+}
+
+const PAIR_ROWS_NON_LITERAL: &str = r#"import hashlib
+
+
+def build(other):
+    return {n: getattr(hashlib, a, None) for n, a in ((32, "md5"), (40, other))}
+"#;
+
+#[test]
+fn pair_rows_non_literal_still_flags() {
+    assert_eq!(dynamics(PAIR_ROWS_NON_LITERAL).len(), 1);
+}
+
+const PAIR_ROWS_NUMBER_AT_NAME: &str = r#"import hashlib
+
+
+def build():
+    return {n: getattr(hashlib, a, None) for n, a in ((32, "md5"), (40, 64))}
+"#;
+
+#[test]
+fn pair_rows_number_at_name_still_flags() {
+    assert_eq!(dynamics(PAIR_ROWS_NUMBER_AT_NAME).len(), 1);
+}
+
+const MODULE_STRING_CONST: &str = "_GIBBERISH = \"aihwer\"\n\n\ndef check(renderable):\n    return hasattr(renderable, _GIBBERISH)\n";
+
+#[test]
+fn module_string_const_stays_silent() {
+    assert_eq!(dynamics(MODULE_STRING_CONST), Vec::<String>::new());
+}
+
+const MODULE_STRING_CONST_TWICE: &str = "_TOKEN = \"abc\"\n_TOKEN = \"def\"\n\n\ndef check(renderable):\n    return hasattr(renderable, _TOKEN)\n";
+
+#[test]
+fn module_string_const_reassigned_still_flags() {
+    assert_eq!(dynamics(MODULE_STRING_CONST_TWICE).len(), 1);
+}
+
+const MODULE_STRING_CONST_PARAM: &str = "_TOKEN = \"abc\"\n\n\ndef check(renderable, _TOKEN):\n    return hasattr(renderable, _TOKEN)\n";
+
+#[test]
+fn module_string_const_param_shadow_still_flags() {
+    assert_eq!(dynamics(MODULE_STRING_CONST_PARAM).len(), 1);
+}
+
+const MODULE_STRING_CONST_NESTED: &str =
+    "def check(renderable):\n    _TOKEN = \"abc\"\n    return hasattr(renderable, _TOKEN)\n";
+
+#[test]
+fn module_string_const_nested_def_still_flags() {
+    assert_eq!(dynamics(MODULE_STRING_CONST_NESTED).len(), 1);
+}

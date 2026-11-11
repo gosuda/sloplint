@@ -2,6 +2,7 @@ use tree_sitter::Node;
 
 use crate::hooks::{Cx, child_by_field, code_children, last_segment, named_children, text};
 
+use super::dynamic_consts::{is_module_string_const, pair_table_ok};
 use super::enclosing_function;
 
 pub(crate) fn py_call_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
@@ -185,15 +186,18 @@ fn name_from_literals(cx: &Cx<'_, '_>, arg: Node<'_>) -> bool {
     if arg.kind() != "identifier" {
         return false;
     }
-    bound_by_inline_loop(cx, text(cx, arg), arg)
+    if bound_by_inline_loop(cx, text(cx, arg), arg) {
+        return true;
+    }
+    is_module_string_const(cx, arg)
 }
 
-fn is_plain_value(n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+pub(crate) fn is_plain_value(n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
     let _ = cx;
     is_plain_string(n) || is_plain_concat(n)
 }
 
-fn is_plain_string(n: Node<'_>) -> bool {
+pub(crate) fn is_plain_string(n: Node<'_>) -> bool {
     if n.kind() != "string" {
         return false;
     }
@@ -261,17 +265,17 @@ fn for_allows(cx: &Cx<'_, '_>, lp: Node<'_>, name: &str, arg: Node<'_>) -> bool 
     if !targets_include(cx, left, name) {
         return false;
     }
-    if !iterable_allows(cx, left, right) {
+    if !iterable_allows(cx, left, right, name) {
         return false;
     }
     !body_rebinds(cx, body, name)
 }
 
-fn iterable_allows(cx: &Cx<'_, '_>, left: Node<'_>, right: Node<'_>) -> bool {
-    if left.kind() != "identifier" {
-        return false;
+fn iterable_allows(cx: &Cx<'_, '_>, left: Node<'_>, right: Node<'_>, name: &str) -> bool {
+    if left.kind() == "identifier" {
+        return single_table_ok(cx, right);
     }
-    single_table_ok(cx, right)
+    pair_table_ok(cx, left, right, name)
 }
 
 fn single_table_ok(cx: &Cx<'_, '_>, right: Node<'_>) -> bool {
@@ -314,18 +318,18 @@ fn comp_allows(cx: &Cx<'_, '_>, comp: Node<'_>, name: &str, arg: Node<'_>) -> bo
         if !targets_include(cx, left, name) {
             continue;
         }
-        if !clause_allows(cx, clause, left) {
+        if !clause_allows(cx, clause, left, name) {
             return false;
         }
     }
     !body_rebinds(cx, body, name)
 }
 
-fn clause_allows(cx: &Cx<'_, '_>, clause: Node<'_>, left: Node<'_>) -> bool {
+fn clause_allows(cx: &Cx<'_, '_>, clause: Node<'_>, left: Node<'_>, name: &str) -> bool {
     let Some(right) = clause_right(clause, left) else {
         return false;
     };
-    iterable_allows(cx, left, right)
+    iterable_allows(cx, left, right, name)
 }
 
 fn clause_right<'t>(clause: Node<'t>, left: Node<'_>) -> Option<Node<'t>> {
