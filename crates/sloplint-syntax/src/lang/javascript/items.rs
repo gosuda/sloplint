@@ -278,36 +278,38 @@ pub(crate) fn struct_lit_of<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FieldCop
     })
 }
 
-const CALLEE_WRAPPERS: &[&str] = &[
+const EXPRESSION_WRAPPERS: &[&str] = &[
     "parenthesized_expression",
     "non_null_expression",
     "as_expression",
     "satisfies_expression",
 ];
 
-const CALLEE_UNWRAP_CAP: usize = 16;
+const UNWRAP_CAP: usize = 16;
 
-fn unwrap_callee(mut function: Node<'_>) -> Option<Node<'_>> {
-    for _ in 0..CALLEE_UNWRAP_CAP {
-        if !CALLEE_WRAPPERS.contains(&function.kind()) {
-            return Some(function);
+fn unwrap_expression(mut node: Node<'_>) -> Option<Node<'_>> {
+    for _ in 0..UNWRAP_CAP {
+        if !EXPRESSION_WRAPPERS.contains(&node.kind()) {
+            return Some(node);
         }
-        let Some(inner) = first_code(function) else {
-            return Some(function);
+        let Some(inner) = first_code(node) else {
+            return Some(node);
         };
-        function = inner;
+        node = inner;
     }
     None
 }
 
 fn subscript_call(cx: &Cx<'_, '_>, function: Node<'_>) -> Option<&'static str> {
-    let index = child_by_field(function, "index")?;
+    let Some(index) = unwrap_expression(child_by_field(function, "index")?) else {
+        return Some("computed method call");
+    };
     (!matches!(index.kind(), "string" | "number") && !closed_name(cx, index))
         .then_some("computed method call")
 }
 
 fn call_dynamic(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
-    let Some(function) = unwrap_callee(child_by_field(n, "function")?) else {
+    let Some(function) = unwrap_expression(child_by_field(n, "function")?) else {
         return Some("computed method call");
     };
     match function.kind() {
@@ -339,6 +341,7 @@ fn function_constructor(cx: &Cx<'_, '_>, constructor: Node<'_>) -> bool {
         "identifier" => text(cx, constructor) == "Function",
         "member_expression" => {
             child_by_field(constructor, "object")
+                .and_then(unwrap_expression)
                 .is_some_and(|object| FUNCTION_HOSTS.contains(&text(cx, object)))
                 && child_by_field(constructor, "property")
                     .is_some_and(|property| text(cx, property) == "Function")

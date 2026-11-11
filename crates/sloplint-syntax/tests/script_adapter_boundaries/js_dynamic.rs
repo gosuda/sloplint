@@ -267,6 +267,16 @@ fn parenthesized_literal_key_stays_silent() {
     assert_eq!(dynamics(PAREN_LITERAL_KEY), Vec::<String>::new());
 }
 
+const PAREN_LITERAL_INDEX: &str = r#"export function run(handlers, payload) {
+  handlers[("save")](payload);
+}
+"#;
+
+#[test]
+fn parenthesized_literal_index_stays_silent() {
+    assert_eq!(dynamics(PAREN_LITERAL_INDEX), Vec::<String>::new());
+}
+
 const PAREN_PLAIN_CALLEE: &str = r#"export function run(fn, payload) {
   (fn)(payload);
 }
@@ -295,6 +305,29 @@ const WINDOW_FUNCTION_CTOR: &str = r#"export function build(source) {
 #[test]
 fn window_function_ctor_still_flags() {
     assert_eq!(dynamics(WINDOW_FUNCTION_CTOR).len(), 1);
+}
+
+const PAREN_HOST_FUNCTION_CTOR: &str = r#"export function build(source) {
+  return new (globalThis).Function(source);
+}
+"#;
+
+#[test]
+fn parenthesized_host_function_ctor_still_flags() {
+    assert_eq!(dynamics(PAREN_HOST_FUNCTION_CTOR).len(), 1);
+}
+
+const TS_CAST_HOST_FUNCTION_CTOR: &str = r#"export function build(source: string): unknown {
+  return new (globalThis as any).Function(source);
+}
+"#;
+
+#[test]
+fn typescript_cast_host_function_ctor_still_flags() {
+    assert_eq!(
+        typed(TS_CAST_HOST_FUNCTION_CTOR, Lang::TypeScript, "case.ts").len(),
+        1
+    );
 }
 
 const OWN_FUNCTION_CTOR: &str = r#"export function build(source, my) {
