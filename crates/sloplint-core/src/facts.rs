@@ -411,10 +411,6 @@ fn manifest_kind_for(lang: Lang) -> Option<ManifestKind> {
     }
 }
 
-pub fn package_key(lang: Lang, path: &str, manifests: &BTreeSet<(ManifestKind, String)>) -> String {
-    package_scope(lang, path, manifests).0
-}
-
 pub fn package_scope(
     lang: Lang,
     path: &str,

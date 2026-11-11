@@ -404,3 +404,57 @@ fn unmanifested_packages_keep_the_cross_package_suffix_match() {
         "without manifests a test import still covers another directory's module"
     );
 }
+
+#[test]
+fn manifest_module_stays_covered_by_fallback_test_import() {
+    let rule = rule();
+    let module = manifest(lib(Lang::Python, "pkga", 1));
+    let gate = manifest(test_file(Lang::Python, "pkga"));
+    let probe = evidence(Lang::Python, "tests", &["src.common"]);
+    let files = [
+        WorldFile {
+            path: "pkga/src/common.py",
+            facts: &module,
+        },
+        WorldFile {
+            path: "pkga/tests/test_gate.py",
+            facts: &gate,
+        },
+        WorldFile {
+            path: "tests/test_common.py",
+            facts: &probe,
+        },
+    ];
+    assert_eq!(
+        check(&rule, &files),
+        Vec::<String>::new(),
+        "a fallback test's import still covers a manifest package's module"
+    );
+}
+
+#[test]
+fn fallback_module_stays_covered_by_manifest_test_import() {
+    let rule = rule();
+    let module = lib(Lang::Python, "pkg", 1);
+    let helper = test_file(Lang::Python, "pkg");
+    let probe = manifest(evidence(Lang::Python, "pkgb", &["pkg.common"]));
+    let files = [
+        WorldFile {
+            path: "pkg/common.py",
+            facts: &module,
+        },
+        WorldFile {
+            path: "pkg/test_helper.py",
+            facts: &helper,
+        },
+        WorldFile {
+            path: "pkgb/tests/test_common.py",
+            facts: &probe,
+        },
+    ];
+    assert_eq!(
+        check(&rule, &files),
+        Vec::<String>::new(),
+        "a manifest package's import still covers a fallback module"
+    );
+}

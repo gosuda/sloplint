@@ -379,76 +379,88 @@ fn manifests(dirs: &[(&str, ManifestKind)]) -> BTreeSet<(ManifestKind, String)> 
 }
 
 #[test]
-fn package_key_prefers_the_nearest_manifest_directory() {
+fn package_scope_prefers_the_nearest_manifest_directory() {
     let found = manifests(&[
         ("packages", ManifestKind::JavaScript),
         ("packages/ui", ManifestKind::JavaScript),
     ]);
     assert_eq!(
-        package_key(Lang::TypeScript, "packages/ui/src/button.ts", &found),
+        package_scope(Lang::TypeScript, "packages/ui/src/button.ts", &found).0,
         "packages/ui",
         "the nearest manifest directory names the package"
     );
     assert_eq!(
-        package_key(Lang::TypeScript, "packages/api/src/client.ts", &found),
+        package_scope(Lang::TypeScript, "packages/api/src/client.ts", &found).0,
         "packages",
         "a file outside the nested manifest falls back to the outer manifest"
+    );
+    assert!(
+        package_scope(Lang::TypeScript, "packages/ui/src/button.ts", &found).1,
+        "a manifest-defined package reports its manifest origin"
     );
 }
 
 #[test]
-fn package_key_without_manifests_uses_the_first_path_segment() {
+fn package_scope_without_manifests_uses_the_first_path_segment() {
     let empty = manifests(&[]);
     assert_eq!(
-        package_key(Lang::Bash, "deploy/probe.sh", &empty),
+        package_scope(Lang::Bash, "deploy/probe.sh", &empty).0,
         "deploy",
         "a manifest-less file groups by its top-level directory"
     );
     assert_eq!(
-        package_key(Lang::Python, "main.py", &empty),
+        package_scope(Lang::Python, "main.py", &empty).0,
         "",
         "a root file with no manifest belongs to the empty package"
     );
     assert_eq!(
-        package_key(Lang::Rust, "crates/ledger/src/lib.rs", &empty),
+        package_scope(Lang::Rust, "crates/ledger/src/lib.rs", &empty).0,
         "crates/ledger",
         "the Rust workspace layout survives without manifests"
     );
     assert_eq!(
-        package_key(Lang::Go, "internal/tag/add.go", &empty),
+        package_scope(Lang::Go, "internal/tag/add.go", &empty).0,
         "internal/tag",
         "the Go directory layout survives without manifests"
     );
     assert_eq!(
-        package_key(Lang::Rust, "crates/util.rs", &empty),
+        package_scope(Lang::Rust, "crates/util.rs", &empty).0,
         "",
         "a file directly under crates is not its own package"
     );
     assert_eq!(
-        package_key(Lang::Rust, "crates/tests/util.rs", &empty),
+        package_scope(Lang::Rust, "crates/tests/util.rs", &empty).0,
         "crates/tests",
         "a crate directory under crates still resolves"
+    );
+    assert!(
+        !package_scope(Lang::Bash, "deploy/probe.sh", &empty).1,
+        "a fallback package reports no manifest origin"
     );
 }
 
 #[test]
-fn package_key_at_the_root_manifest_covers_its_ecosystem() {
+fn package_scope_at_the_root_manifest_covers_its_ecosystem() {
     let root = manifests(&[("", ManifestKind::JavaScript)]);
     assert_eq!(
-        package_key(Lang::TypeScript, "src/app.ts", &root),
+        package_scope(Lang::TypeScript, "src/app.ts", &root).0,
         "",
         "a root manifest puts every file of its ecosystem in the empty package"
     );
     assert_eq!(
-        package_key(Lang::TypeScript, "deploy/probe.ts", &root),
+        package_scope(Lang::TypeScript, "deploy/probe.ts", &root).0,
         "",
         "a root manifest covers nested directories too"
     );
     let python = manifests(&[("", ManifestKind::Python)]);
     assert_eq!(
-        package_key(Lang::Python, "src/app.py", &python),
+        package_scope(Lang::Python, "src/app.py", &python).0,
         "",
         "a root python manifest covers python files"
+    );
+    assert!(
+        package_scope(Lang::Python, "src/app.py", &python).1,
+        "a root manifest still reports manifest origin"
     );
 }
 
@@ -456,24 +468,28 @@ fn package_key_at_the_root_manifest_covers_its_ecosystem() {
 fn manifests_apply_only_to_their_ecosystem() {
     let js = manifests(&[("", ManifestKind::JavaScript)]);
     assert_eq!(
-        package_key(Lang::Bash, "deploy/probe.sh", &js),
+        package_scope(Lang::Bash, "deploy/probe.sh", &js).0,
         "deploy",
         "a shell file ignores a javascript manifest"
     );
     assert_eq!(
-        package_key(Lang::Go, "internal/tag/add.go", &js),
+        package_scope(Lang::Go, "internal/tag/add.go", &js).0,
         "internal/tag",
         "a go file ignores a javascript manifest"
     );
     assert_eq!(
-        package_key(Lang::Rust, "crates/ledger/src/lib.rs", &js),
+        package_scope(Lang::Rust, "crates/ledger/src/lib.rs", &js).0,
         "crates/ledger",
         "a rust file ignores a javascript manifest"
     );
     let py = manifests(&[("", ManifestKind::Python)]);
     assert_eq!(
-        package_key(Lang::JavaScript, "src/app.js", &py),
+        package_scope(Lang::JavaScript, "src/app.js", &py).0,
         "src",
         "a javascript file ignores a python manifest"
+    );
+    assert!(
+        !package_scope(Lang::JavaScript, "src/app.js", &py).1,
+        "a foreign ecosystem's manifest does not report manifest origin"
     );
 }
