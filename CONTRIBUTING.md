@@ -79,10 +79,11 @@ Go and Dart count imports of their own module as one external root. Ruby records
 - In function-scoped languages a loop target is the function variable.
 - A reassigned JS or TS `for (let ...)` loop variable records no write.
 - A Swift `if var` or Rust `if let Some(mut x)` binder also receives a write to an outer variable of the same name in the `else` branch.
+- A Rust `let x` without `mut` that shadows a `let mut x` of the same block does not hide it: a field write through the new `x` is recorded on the old one.
 - A literal name passed to `dlsym`, `GetProcAddress` or `NSSelectorFromString` is not a dynamic lookup; a variable or a built string is.
 - In JS and TS a write before the `var` declaration of the same name records nothing.
 - A Ruby name first assigned inside one block shares a binding with the same name first assigned inside a sibling block.
-- A Python assignment in a class body inside a function is recorded on the function.
+- A Python assignment in a class body inside a function records no binding.
 - In agent/colocated-tests a test import covers every module with the same path suffix, also in another package.
 
 ## Commit and pull request conventions
