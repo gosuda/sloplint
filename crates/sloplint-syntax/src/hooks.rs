@@ -208,6 +208,11 @@ pub(crate) trait LangHooks: Sync {
         false
     }
 
+    fn forked_scope_kind(&self, kind: &str) -> bool {
+        let _ = kind;
+        false
+    }
+
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
         let _ = (n, cx);
         None

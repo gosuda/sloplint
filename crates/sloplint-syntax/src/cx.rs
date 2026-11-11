@@ -151,6 +151,7 @@ pub(crate) struct Cx<'t, 's> {
     name_sets: &'t FileNameSets<'s>,
     containers: &'t [Container],
     exports: &'t [&'s str],
+    pub(crate) forked_depth: u32,
     /// Per level, outermost first: earlier siblings in tree order, then the open ancestor; the innermost level ends at the visited node.
     pub(crate) levels: &'t [Vec<Node<'t>>],
 }
@@ -173,6 +174,7 @@ impl<'t, 's> Cx<'t, 's> {
             name_sets,
             containers: &[],
             exports: &[],
+            forked_depth: 0,
             levels: &[],
         }
     }
@@ -257,6 +259,10 @@ impl<'s> Cx<'_, 's> {
 }
 
 impl Cx<'_, '_> {
+    pub(crate) fn in_forked_scope(&self) -> bool {
+        self.forked_depth > 0
+    }
+
     pub(crate) fn is_exported(&self, name: &str) -> bool {
         self.exports
             .binary_search_by(|probe| (*probe).cmp(name))

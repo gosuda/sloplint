@@ -62,19 +62,8 @@ fn push_assign_name<'s>(cx: &Cx<'_, 's>, name: Node<'_>, out: &mut Vec<(&'s str,
     }
 }
 
-fn in_forked_scope(cx: &Cx<'_, '_>) -> bool {
-    for ancestor in cx.ancestors() {
-        match ancestor.kind() {
-            "function_definition" => return false,
-            "subshell" | "command_substitution" => return true,
-            _ => {}
-        }
-    }
-    false
-}
-
 fn push_for_variable<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    if in_forked_scope(cx) {
+    if cx.in_forked_scope() {
         return;
     }
     let Some(var) = child_by_field(n, "variable") else {
@@ -297,6 +286,10 @@ impl LangHooks for BashHooks {
         ShadowKind::Decls
     }
 
+    fn forked_scope_kind(&self, kind: &str) -> bool {
+        matches!(kind, "subshell" | "command_substitution")
+    }
+
     fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
         if node.kind() != "declaration_command" {
             return depth.saturating_sub(1);
@@ -363,7 +356,7 @@ impl LangHooks for BashHooks {
                     return;
                 }
             }
-            if in_forked_scope(cx) {
+            if cx.in_forked_scope() {
                 return;
             }
             if let Some(name) = child_by_field(n, "name") {

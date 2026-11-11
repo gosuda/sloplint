@@ -62,6 +62,7 @@ impl LangSpec {
             levels: Vec::new(),
             depth: 0,
             closure_depth: 0,
+            forked_depth: 0,
             deferred: Vec::new(),
             #[cfg(debug_assertions)]
             entered: Vec::new(),
@@ -128,6 +129,7 @@ pub(crate) struct WalkState<'s, 'a, 't> {
     pub levels: Vec<Vec<Node<'t>>>,
     pub depth: usize,
     pub closure_depth: u32,
+    pub forked_depth: u32,
     pub deferred: Vec<(usize, Role, usize)>,
     #[cfg(debug_assertions)]
     pub entered: Vec<usize>,
@@ -181,6 +183,9 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
 
     fn enter(&mut self, node: Node<'t>) {
         self.open_node(node);
+        self.forked_depth = self
+            .forked_depth
+            .saturating_add(u32::from(self.hooks.forked_scope_kind(node.kind())));
         let role = self.spec.role_for(node.kind_id());
         if !self.collect_facts {
             if role == Role::Comment {
@@ -375,6 +380,9 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     pub(crate) fn exit(&mut self, node: Node<'_>) {
         let id = node.id();
         self.close_node(id);
+        self.forked_depth = self
+            .forked_depth
+            .saturating_sub(u32::from(self.hooks.forked_scope_kind(node.kind())));
         if !self.fn_stack.is_empty() && self.hooks.decl_piece(node.kind()) {
             self.publish_piece(node);
         }
@@ -502,7 +510,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     pub(crate) fn make_cx(&self) -> Cx<'_, 's> {
-        Cx::file(
+        let mut cx = Cx::file(
             self.src,
             self.path,
             self.lang,
@@ -514,7 +522,9 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             &self.containers,
             &self.exports,
             &self.levels[..self.levels.len().min(self.depth + 1)],
-        )
+        );
+        cx.forked_depth = self.forked_depth;
+        cx
     }
 
     fn score_first(&mut self) {

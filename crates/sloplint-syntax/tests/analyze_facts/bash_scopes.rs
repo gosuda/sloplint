@@ -148,3 +148,39 @@ fn prefixed_assignment_still_skipped() {
         );
     });
 }
+
+#[test]
+fn deeply_nested_substitutions_leave_outer_write_count_unchanged() {
+    let depth = 200;
+    let mut source = String::from("f() {\n  x=1\n  y=$(x=2");
+    for n in 3..=(depth + 1) {
+        source.push_str(&format!("; echo $(x={n}"));
+    }
+    for _ in 0..depth {
+        source.push(')');
+    }
+    source.push_str("\n  x=999\n}\n");
+    with_bash_bindings(&source, |found| {
+        let targets = named_all(found, "x");
+        assert_eq!(
+            targets.len(),
+            1,
+            "nested substitutions hold no function-level binding of their own: {found:?}"
+        );
+        assert_eq!(
+            (
+                targets[0].write_lines,
+                targets[0].first_write_line,
+                targets[0].last_write_line
+            ),
+            (1, 4, 4),
+            "only the line 4 write counts, all nested writes stay fork-local: {found:?}"
+        );
+        let outer = named_all(found, "y");
+        assert_eq!(
+            (outer.len(), outer[0].write_lines),
+            (1, 0),
+            "the outermost substitution target still declares at line 3: {found:?}"
+        );
+    });
+}
