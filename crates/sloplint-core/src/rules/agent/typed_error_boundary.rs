@@ -115,6 +115,10 @@ fn rust_untyped(imports: &[Import<'_>], return_type: &str) -> bool {
     if top_level_commas(inner) != 0 {
         return false;
     }
+    let head = match head.strip_prefix("self::") {
+        Some(name) if !name.contains("::") => name,
+        _ => head,
+    };
     if head.contains("::") {
         return is_untyped_qualified_head(head);
     }
@@ -439,6 +443,32 @@ mod tests {
         assert_eq!(found.len(), 2);
         assert!(found.iter().any(|m| m.contains("`save`")));
         assert!(found.iter().any(|m| m.contains("`run`")));
+    }
+
+    #[test]
+    fn self_qualified_head_resolves_through_imports() {
+        let rule = TypedErrorBoundary;
+        let found = lines(
+            &rule,
+            Lang::Rust,
+            vec![function(
+                "run",
+                Visibility::Exported,
+                Some("self::Result<()>"),
+            )],
+            vec![import("anyhow", "Result", None)],
+        );
+        assert_eq!(found.len(), 1);
+        let silent = lines(
+            &rule,
+            Lang::Rust,
+            vec![
+                function("load", Visibility::Exported, Some("domain::Result<Config>")),
+                function("walk", Visibility::Exported, Some("self::sub::Result<()>")),
+            ],
+            vec![import("anyhow", "Result", None)],
+        );
+        assert!(silent.is_empty());
     }
 
     #[test]
