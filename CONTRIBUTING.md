@@ -43,7 +43,7 @@ sloplint check crates --format agent --strictness standard --mode threshold --fa
 cargo run --locked -p sloplint -- check crates --format agent --strictness standard --mode threshold --fail-on minor
 ```
 
-Every file in `crates/` must pass `sloplint` under the default `standard` profile (the root `sloplint.toml` pins `agent/file-token-budget` thresholds to 600/1000/1500/2000).
+Every file in `crates/` must pass `sloplint` under the default `standard` profile. The root `sloplint.toml` sets `[rules."agent/file-token-budget"]` to `level = "minor"` with cut points 600/1000/1500/2000, so a file with 600 or more non-test lines fails the `--fail-on minor` gate.
 
 ## Adding a rule
 
@@ -66,7 +66,7 @@ Every rule has a fixture directory at `crates/sloplint/tests/fixtures/<family>/<
 Expectations live in `expected.txt` rather than inline comments so test markers never alter line counts, comments, or syntax trees in the analyzed source.
 
 Fixture paths decide file roles through the `test_globs`, `bench_globs`, `example_globs`, `support_globs`, `entry_globs`, and `data_globs` project lists (full defaults in README.md). `support_globs` covers test helpers such as `conftest.py`, `tests/common/`, `tests/support/`, and `__mocks__/`. Role shifts apply by path alone; content never changes the file role.
-For `agent/colocated-tests`, add the manifest that defines each package. The rule reads the nearest `package.json`, `pyproject.toml`, or `setup.py`. Without a manifest it uses the first path segment.
+For `agent/colocated-tests`, add the manifest that defines each package. The rule reads the nearest `package.json`, `pyproject.toml`, or `setup.py` of its own ecosystem. Without a manifest a Rust file under `crates/` keys as `crates/<name>`, any other Rust file keys as the empty package, a Go file keys as its parent directory, and other files key as the top-level directory.
 
 ## Adapter notes
 

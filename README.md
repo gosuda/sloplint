@@ -105,9 +105,9 @@ Role shifts lower findings by role (K = keep, L1 = lower one rung, L2 = lower tw
 | slop/zombie-catch | Off | Off | Off | info | low | K | L1 | K | L1 | K | Strict-only: flags empty handlers at Info; log-and-rethrow arms reported, bare rethrows dropped |
 | agent/ambient-global-state | Off | Off | Off | info | low | O | O | L1 | O | O | Flags package mutables assigned in functions and env reads stored or written through the env object; a write to a shadowing local or parameter is not reported. In R, `<<-` and `->>` in a function count as global writes, and `options()` does not count as an environment write |
 | agent/catch-all-match | Off | Off | Off | info | low | K | L1 | K | L1 | L1 | Flags bare wildcards on Ident, Field, or Path scrutinees with no Some, None, Ok, or Err sibling |
-| agent/colocated-tests | Off | Off | Off | info | low | O | O | O | O | O | Strict-only: stays silent when a language has no test evidence; flags library files with public functions when no same-language test in the package covers them and no same-language test import covers the file; package is the nearest manifest dir, else the first path segment; import keys use the last 4 segments (2 or more, single segment only for a top-level module; Python `src/` roots map to the package); relative imports resolve against the importing file; TS @/ aliases, Java wildcards, and non-suffix Go module prefixes do not cover; `-`/`_` match. A test in the same package that exercises a module without sharing its name or importing it does not count as coverage |
+| agent/colocated-tests | Off | Off | Off | info | low | O | O | O | O | O | Strict-only: stays silent when a language has no test evidence; flags library files with public functions when no same-language test in the package covers them and no same-language test import covers the file; package is the nearest manifest dir of its own ecosystem, else `crates/<name>` for Rust under `crates/`, the empty package for other Rust files, the parent directory for Go, or the top-level directory for other languages; import keys use the last 4 segments (2 or more, single segment only for a top-level module; Python `src/` roots map to the package); relative imports resolve against the importing file; TS @/ aliases, Java wildcards, and non-suffix Go module prefixes do not cover; `-`/`_` match. A test in the same package that exercises a module without sharing its name or importing it does not count as coverage |
 | agent/explicit-boundary-types | Off | minor | minor | minor | medium | L1 | O | L1 | O | O | Flags exported fns in TS, Python, Kotlin, Scala, and Dart with missing annotations |
-| agent/file-token-budget | Off | Off | Off | info | low | K | O | O | L1 | L1 | Strict-only: flags files with >= 600 lines; generated files skipped |
+| agent/file-token-budget | Off | Off | Off | info | low | K | O | O | L1 | L1 | Strict-only: flags files with >= 600 lines outside inline test regions; generated files skipped |
 | agent/informative-assertions | Off | Off | Off | info | low | K | K | K | O | L1 | Flags bare-name or top ==/!= asserts (Rust), Name or Attr (Python), and bool-literal True/False (Go) |
 | agent/stringly-api | Off | Off | Off | info | low | L1 | O | L1 | O | O | Flags runs of >= 3 same-kind stringly params (4 to deny); runs break on kind change or defaulted params |
 | agent/typed-error-boundary | Off | Off | Off | info | low | O | O | O | O | O | Flags exported fns whose error slot is anyhow, eyre, Box dyn Error, or an untyped throw |
@@ -120,7 +120,7 @@ Role shifts lower findings by role (K = keep, L1 = lower one rung, L2 = lower tw
 
 ## Packages
 
-A file belongs to the nearest ancestor directory holding a manifest of its own ecosystem: `package.json` names JavaScript and TypeScript packages, while `pyproject.toml` and `setup.py` name Python packages; files of other languages ignore manifests. Without such an ancestor a file groups by its top-level directory, or by `crates/<name>` for Rust and by the parent directory for Go; a root-level file forms the empty package. Only manifests at or below the project root count, so the same file can key differently under a narrower `--root`. A manifest hidden by `project.exclude` does not define a package. Manifest files stay in the lint set, so `setup.py` is still linted as Python, and a cached run re-stamps the key when a manifest appears or disappears.
+A file belongs to the nearest ancestor directory holding a manifest of its own ecosystem: `package.json` names JavaScript and TypeScript packages, while `pyproject.toml` and `setup.py` name Python packages; files of other languages ignore manifests. Without such an ancestor a Rust file under `crates/` groups by `crates/<name>` while any other Rust file forms the empty package; a Go file groups by its parent directory; files in other languages group by the top-level directory; a root-level file forms the empty package. Only manifests at or below the project root count, so the same file can key differently under a narrower `--root`. A manifest hidden by `project.exclude` does not define a package. Manifest files stay in the lint set, so `setup.py` is still linted as Python, and a cached run re-stamps the key when a manifest appears or disappears.
 
 ## Precision
 
@@ -171,16 +171,16 @@ A finding is true when a senior reviewer would ask for a change. Each rule was m
 
 `check` flags: `--format agent|human|json`, `--strictness`, `--mode threshold|ratchet`, `--fail-on info|minor|major|critical|blocker|never`, `--min-confidence low|medium|high`, `--fail-on-skipped`, `--rule ID` (repeatable, `family/*` allowed), `--root DIR`, `--config FILE`, `--no-cache`, `--jobs N`.
 
-Unknown `--rule` selectors fail with exit 2 listing the valid rule ids. `--root DIR` pins the project root for every command; the baseline file and custom rule files still resolve under that root. Without `--root`, the config directory becomes the root when `--config` names a file, else the enclosing repository (or the current directory) does. CI should pass `--root` with a trusted `--config` so a checkout cannot redirect the lint at another tree; without the pin, a `check` from a checkout that carries its own `sloplint.toml` lints that checkout under its own rules.
+Unknown `--rule` selectors fail with exit 2 listing the valid rule ids. `--root DIR` pins the project root for every command; the baseline file and custom rule files still resolve under that root. Without `--root`, the config directory becomes the root when `--config` names a file, else the nearest ancestor holding `sloplint.toml` or `.git` (or the current directory) does. CI should pass `--root` with a trusted `--config` so a checkout cannot redirect the lint at another tree; without the pin, a `check` from a checkout that carries its own `sloplint.toml` lints that checkout under its own rules.
 
-Every run analyzes the project root. `PATHS` only filters reported findings. Hidden files are skipped. `.gitignore` applies up to the enclosing repository; `.ignore` applies from every ancestor directory.
+Every run analyzes the project root. With no `PATHS`, only findings under the current directory are reported and gated. With `PATHS`, only findings under those paths are reported and gated. Hidden files are skipped. `.gitignore` applies up to the enclosing repository; `.ignore` applies from every ancestor directory.
 
 ### Configuration
 
 `--config FILE` names a file that must exist; without `--config`, the root's `sloplint.toml` applies when present and defaults apply otherwise. Configuration and custom rule files are capped at 1 MiB per file (16 MiB total for custom rules); baselines are capped at 512 MiB and 1,000,000 entries total across findings and skipped paths.
 
 Rule option names and values are validated even when a rule is disabled or filtered out. An invalid threshold or unknown option fails with exit `2`; changing strictness cannot hide the error.
-Project keys: `strictness`, `languages`, `mode`, `baseline`, `fail_on` (rung or `never`), `min_confidence` (`low|medium|high`), `fail_on_skipped` (default `false`), `exclude`, `extend_exclude`, `test_globs`, `bench_globs`, `example_globs`, `support_globs`, `entry_globs`, `data_globs`, `max_file_bytes`, `custom_rule_files`. Rule tables accept `level = "off"` or a rung plus graded cut points `minor_at`, `major_at`, `critical_at`, `blocker_at` (each at least 1, non-decreasing in rung order). Custom rules accept `severity` as a rung and optional `confidence` (default `medium`).
+Project keys: `strictness`, `languages`, `mode`, `baseline`, `fail_on` (rung or `never`), `min_confidence` (`low|medium|high`), `fail_on_skipped` (default `false`), `exclude`, `extend_exclude`, `test_globs`, `bench_globs`, `example_globs`, `support_globs`, `entry_globs`, `data_globs`, `max_file_bytes`, `custom_rule_files`. Rule tables accept `level = "off"` or a rung, graded cut points `minor_at`, `major_at`, `critical_at`, `blocker_at` (each at least 1, non-decreasing in rung order), and every other option key of that rule's preset. For example, `[rules."grep/generic-name"]` accepts `names` to replace the built-in denylist. Custom rules accept `severity` as a rung and optional `confidence` (default `medium`).
 Keep `max_file_bytes` at or below 16777216. The default is 2097152. A larger value fails with exit `2` and names the ceiling.
 
 ```toml
@@ -195,6 +195,8 @@ major_at = 18                          # minor_at still comes from the preset
 [rules."agent/colocated-tests"]
 level = "minor"                       # enables a rule the standard profile leaves off
 ```
+
+A `[languages.<key>]` table sets `log_callees`, the call names the language treats as log calls. `grep/contiguous-log-literal` and `slop/zombie-catch` read it. `sloplint init` writes one such table per language with the default names.
 
 ### Ratchet mode
 

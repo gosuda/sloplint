@@ -32,7 +32,7 @@ pub enum Command {
 /// Arguments of `check`.
 #[derive(Debug, Args)]
 pub struct CheckArgs {
-    /// Paths whose findings are reported; every run analyzes the whole project root.
+    /// Paths whose findings are reported; every run analyzes the whole project root, but with no PATHS only findings under the current directory are reported.
     #[arg(value_name = "PATHS")]
     pub paths: Vec<PathBuf>,
     /// Output format.
@@ -82,7 +82,7 @@ pub struct RulesArgs {
 /// Configuration selection shared by every command.
 #[derive(Debug, Args)]
 pub struct SelectArgs {
-    /// Project root; without it, the config directory or the enclosing repository becomes the root.
+    /// Project root; without it, the config directory or the nearest ancestor holding sloplint.toml or .git becomes the root.
     #[arg(long = "root", value_name = "DIR")]
     pub root: Option<PathBuf>,
     /// Configuration file; without `--root` its directory becomes the project root, without `--config` the root's `sloplint.toml` applies.
@@ -122,13 +122,13 @@ pub enum Format {
 /// Strictness profile names accepted on the command line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum StrictnessArg {
-    /// Gates only egregious complexity, giant files, and swallowed errors.
+    /// Reports only syntax, query cap, and suppression findings.
     Minimal,
-    /// Adds precise greppability and agent rules at minor.
+    /// Adds missing type annotations on exported functions.
     Basic,
-    /// Enables every heuristic rule with moderate thresholds.
+    /// Adds naming, import, and small structure checks.
     Standard,
-    /// The full posture.
+    /// Runs every rule with strict thresholds.
     Strict,
 }
 
