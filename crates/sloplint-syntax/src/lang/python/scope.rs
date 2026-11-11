@@ -4,15 +4,19 @@ use sloplint_core::facts::Pos;
 
 use crate::hooks::{Cx, FileSetKind, child_by_field, named_children, pos_of, text};
 
-use super::{enclosing_function, py_pat_names, py_root, py_with_targets};
+use super::{py_pat_names, py_root, py_with_targets};
 
-fn stmt_declares(cx: &Cx<'_, '_>, stmt: Node<'_>, kind: &str, want: &str) -> bool {
-    if stmt.kind() != kind {
-        return false;
+fn push_outer_tags(cx: &Cx<'_, '_>, stmt: Node<'_>, out: &mut Vec<String>) {
+    let prefix = match stmt.kind() {
+        "nonlocal_statement" => "n:",
+        "global_statement" => "g:",
+        _ => return,
+    };
+    for cand in named_children(stmt) {
+        if cand.kind() == "identifier" {
+            out.push(format!("{prefix}{}", text(cx, cand)));
+        }
     }
-    named_children(stmt)
-        .iter()
-        .any(|cand| cand.kind() == "identifier" && text(cx, *cand) == want)
 }
 
 fn collect_outer_names<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, out: &mut Vec<&'s str>) {
@@ -43,12 +47,10 @@ fn file_outer_names<'a, 's>(cx: &'a Cx<'_, 's>) -> &'a [&'s str] {
     })
 }
 
-fn body_declares(cx: &Cx<'_, '_>, func: Node<'_>, kind: &str, want: &str) -> bool {
-    if !file_outer_names(cx).contains(&want) {
-        return false;
-    }
+fn func_outer_names(cx: &Cx<'_, '_>, func: Node<'_>) -> Vec<String> {
+    let mut out = Vec::new();
     let Some(body) = child_by_field(func, "body") else {
-        return false;
+        return out;
     };
     let mut stack = vec![body];
     while let Some(cur) = stack.pop() {
@@ -58,16 +60,48 @@ fn body_declares(cx: &Cx<'_, '_>, func: Node<'_>, kind: &str, want: &str) -> boo
         ) {
             continue;
         }
-        if stmt_declares(cx, cur, kind, want) {
-            return true;
-        }
+        push_outer_tags(cx, cur, &mut out);
         stack.extend(named_children(cur));
     }
-    false
+    out.sort_unstable();
+    out.dedup();
+    out
+}
+
+fn body_declares(cx: &Cx<'_, '_>, func: Node<'_>, kind: &str, want: &str) -> bool {
+    if !file_outer_names(cx).contains(&want) {
+        return false;
+    }
+    let prefix = if kind == "nonlocal_statement" {
+        "n:"
+    } else {
+        "g:"
+    };
+    cx.literal_targets(
+        func.id(),
+        || func_outer_names(cx, func),
+        |names| {
+            names
+                .iter()
+                .any(|entry| entry.strip_prefix(prefix).is_some_and(|rest| rest == want))
+        },
+    )
+}
+
+fn routable_function<'t>(cx: &Cx<'t, '_>) -> Option<Node<'t>> {
+    for ancestor in cx.ancestors() {
+        if ancestor.kind() == "function_definition" {
+            return Some(ancestor);
+        }
+        if matches!(ancestor.kind(), "class_definition" | "lambda") {
+            return None;
+        }
+    }
+    None
 }
 
 fn enclosing_declares(cx: &Cx<'_, '_>, kind: &str, want: &str) -> bool {
-    enclosing_function(cx).is_some_and(|func| body_declares(cx, func, kind, want))
+    routable_function(cx).is_some_and(|func| body_declares(cx, func, kind, want))
 }
 
 pub(crate) fn nonlocal_target(cx: &Cx<'_, '_>, want: &str) -> bool {
@@ -78,11 +112,26 @@ pub(crate) fn global_target(cx: &Cx<'_, '_>, want: &str) -> bool {
     enclosing_declares(cx, "global_statement", want)
 }
 
+fn inside_class_body(cx: &Cx<'_, '_>) -> bool {
+    for ancestor in cx.ancestors() {
+        if ancestor.kind() == "class_definition" {
+            return true;
+        }
+        if matches!(ancestor.kind(), "function_definition" | "lambda") {
+            return false;
+        }
+    }
+    false
+}
+
 fn keep_local(cx: &Cx<'_, '_>, want: &str) -> bool {
     !nonlocal_target(cx, want) && !global_target(cx, want)
 }
 
 fn push_locals<'s>(cx: &Cx<'_, 's>, names: Vec<(&'s str, Pos)>, out: &mut Vec<(&'s str, Pos)>) {
+    if inside_class_body(cx) {
+        return;
+    }
     for (name, pos) in names {
         if keep_local(cx, name) {
             out.push((name, pos));
@@ -121,6 +170,9 @@ pub(crate) fn decl_with<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str
 }
 
 pub(crate) fn decl_walrus<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    if inside_class_body(cx) {
+        return;
+    }
     let Some(name) = child_by_field(n, "name") else {
         return;
     };

@@ -271,3 +271,49 @@ fn nested_nonlocal_does_not_capture_the_outer_assignment() {
         );
     });
 }
+
+#[test]
+fn nonlocal_class_body_does_not_write_the_outer_binding() {
+    let source = "def outer():\n    total = 0\n    def inner():\n        nonlocal total\n        class C:\n            total = 2\n        total = 1\n    return total\n";
+    with_python_bindings(source, |found| {
+        let targets = named_all(found, "total");
+        assert_eq!(
+            targets.len(),
+            1,
+            "class-body total binds nothing instead of capturing later writes, was 2 with a shadowing total at line 6 when the class body declared a function local: {found:?}"
+        );
+        assert_eq!(
+            (
+                targets[0].pos.line,
+                targets[0].write_lines,
+                targets[0].first_write_line,
+                targets[0].last_write_line
+            ),
+            (2, 1, 7, 7),
+            "outer total absorbs only the direct write, was (2, 2, 6, 7) when the class-body write routed outward: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn nonlocal_direct_write_still_reaches_the_outer_binding() {
+    let source = "def outer():\n    total = 0\n    def inner():\n        nonlocal total\n        total = 1\n    return total\n";
+    with_python_bindings(source, |found| {
+        let targets = named_all(found, "total");
+        assert_eq!(
+            targets.len(),
+            1,
+            "direct write keeps routing to the outer binding: {found:?}"
+        );
+        assert_eq!(
+            (
+                targets[0].pos.line,
+                targets[0].write_lines,
+                targets[0].first_write_line,
+                targets[0].last_write_line
+            ),
+            (2, 1, 5, 5),
+            "outer total absorbs the direct closure write, was (2, 0, 2, 2) when the direct write declared a shadowing local: {found:?}"
+        );
+    });
+}

@@ -526,3 +526,34 @@ fn many_sites_share_one_literal_walk() {
         "300 sites share the loop targets"
     );
 }
+
+#[test]
+fn nonlocal_writes_share_one_outer_name_walk() {
+    let mut source =
+        String::from("def outer():\n    total = 0\n    def inner():\n        nonlocal total\n");
+    for i in 0..400 {
+        source.push_str(&format!("        total = {i}\n"));
+    }
+    for i in 0..400 {
+        source.push_str(&format!("        pad{i} = {i}\n"));
+    }
+    source.push_str("    return total\n");
+    let facts = facts_of(&source, "case.py");
+    let Some(outer) = facts
+        .bindings
+        .iter()
+        .find(|binding| binding.name == "total" && binding.pos.line == 2)
+    else {
+        panic!("outer total at line 2 is missing: {:?}", facts.bindings);
+    };
+    assert_eq!(
+        (
+            outer.write_lines,
+            outer.first_write_line,
+            outer.last_write_line
+        ),
+        (400, 5, 404),
+        "400 closure writes share one cached outer-name walk: {:?}",
+        facts.bindings
+    );
+}
