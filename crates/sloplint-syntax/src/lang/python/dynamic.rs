@@ -264,7 +264,7 @@ fn for_allows(cx: &Cx<'_, '_>, lp: Node<'_>, name: &str, arg: Node<'_>) -> bool 
     if !iterable_allows(cx, left, right) {
         return false;
     }
-    !body_rebinds(cx, body, name)
+    !body_rebinds(cx, body, name, arg)
 }
 
 fn iterable_allows(cx: &Cx<'_, '_>, left: Node<'_>, right: Node<'_>) -> bool {
@@ -318,7 +318,7 @@ fn comp_allows(cx: &Cx<'_, '_>, comp: Node<'_>, name: &str, arg: Node<'_>) -> bo
             return false;
         }
     }
-    !body_rebinds(cx, body, name)
+    !body_rebinds(cx, body, name, arg)
 }
 
 fn clause_allows(cx: &Cx<'_, '_>, clause: Node<'_>, left: Node<'_>) -> bool {
@@ -378,7 +378,7 @@ fn contains_range(outer: Node<'_>, inner: Node<'_>) -> bool {
 
 const BODY_CAP: usize = 10000;
 
-fn body_rebinds(cx: &Cx<'_, '_>, body: Node<'_>, name: &str) -> bool {
+fn body_rebinds(cx: &Cx<'_, '_>, body: Node<'_>, name: &str, arg: Node<'_>) -> bool {
     let mut stack = vec![body];
     let mut visits = 0usize;
     while let Some(cur) = stack.pop() {
@@ -386,12 +386,29 @@ fn body_rebinds(cx: &Cx<'_, '_>, body: Node<'_>, name: &str) -> bool {
         if visits > BODY_CAP {
             return true;
         }
-        if binds_here(cx, cur, name) {
+        if binds_here(cx, cur, name) || defers(cur, arg) || import_here(cx, cur, name) {
             return true;
         }
         stack.extend(named_children(cur));
     }
     false
+}
+
+fn defers(cur: Node<'_>, arg: Node<'_>) -> bool {
+    matches!(
+        cur.kind(),
+        "lambda" | "function_definition" | "generator_expression"
+    ) && contains_range(cur, arg)
+}
+
+fn import_here(cx: &Cx<'_, '_>, cur: Node<'_>, name: &str) -> bool {
+    match cur.kind() {
+        "wildcard_import" => true,
+        "import_statement" | "import_from_statement" | "type_alias_statement" => {
+            params_hold(cx, cur, name)
+        }
+        _ => false,
+    }
 }
 
 fn binds_here(cx: &Cx<'_, '_>, cur: Node<'_>, name: &str) -> bool {

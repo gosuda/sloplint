@@ -299,8 +299,8 @@ fn pd12_nested_loops_stay_silent() {
     assert_eq!(dynamics(PD12A), Vec::<String>::new());
 }
 #[test]
-fn pd12_closure_over_loop_stays_silent() {
-    assert_eq!(dynamics(PD12B), Vec::<String>::new());
+fn pd12_closure_over_loop_still_flags() {
+    assert_eq!(dynamics(PD12B).len(), 1);
 }
 #[test]
 fn pd09_many_constants_complete() {
@@ -408,4 +408,25 @@ const FSTRING_ITERABLE: &str =
 #[test]
 fn fstring_element_in_iterable_still_flags() {
     assert_eq!(dynamics(FSTRING_ITERABLE).len(), 1);
+}
+
+const DEFERRED_LOOKUP: &str = "def load(mod, late):\n    fns = []\n    for name in ('a', 'b'):\n        fns.append(lambda: getattr(mod, name))\n    name = late\n    return fns\n";
+
+#[test]
+fn lookup_deferred_past_the_loop_still_flags() {
+    assert_eq!(dynamics(DEFERRED_LOOKUP).len(), 1);
+}
+
+const IMPORT_IN_BODY: &str = "import os\n\ndef load(mod):\n    for name in ('a', 'b'):\n        from os import sep as name\n        getattr(mod, name)\n";
+
+#[test]
+fn loop_variable_rebound_by_import_still_flags() {
+    assert_eq!(dynamics(IMPORT_IN_BODY).len(), 1);
+}
+
+const EAGER_COMPREHENSION: &str = "def load(mod):\n    for name in ('a', 'b'):\n        print([getattr(mod, name) for _ in range(2)])\n";
+
+#[test]
+fn eager_comprehension_in_literal_loop_stays_silent() {
+    assert_eq!(dynamics(EAGER_COMPREHENSION), Vec::<String>::new());
 }
