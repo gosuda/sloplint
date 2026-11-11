@@ -289,7 +289,7 @@ const UNWRAP_CAP: usize = 16;
 
 fn wrapped_expression(node: Node<'_>) -> Option<Node<'_>> {
     match node.kind() {
-        "sequence_expression" => code_children(node).pop(),
+        "sequence_expression" | "type_assertion" => code_children(node).pop(),
         kind if EXPRESSION_WRAPPERS.contains(&kind) => first_code(node),
         _ => None,
     }
@@ -305,12 +305,30 @@ pub(super) fn unwrap_expression(mut node: Node<'_>) -> Option<Node<'_>> {
     None
 }
 
+fn literal_text(node: Node<'_>) -> bool {
+    match node.kind() {
+        "string" => true,
+        "template_string" => {
+            find_named_child(node, |kid| kid.kind() == "template_substitution").is_none()
+        }
+        _ => false,
+    }
+}
+
 fn subscript_call(cx: &Cx<'_, '_>, function: Node<'_>) -> Option<&'static str> {
     let Some(index) = unwrap_expression(child_by_field(function, "index")?) else {
         return Some("computed method call");
     };
-    (!matches!(index.kind(), "string" | "number") && !closed_name(cx, index))
+    (!literal_text(index) && index.kind() != "number" && !closed_name(cx, index))
         .then_some("computed method call")
+}
+
+fn import_call(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
+    let first = child_by_field(n, "arguments").and_then(first_code)?;
+    let Some(path) = unwrap_expression(first) else {
+        return Some("dynamic import");
+    };
+    (!literal_text(path) && !closed_name(cx, path)).then_some("dynamic import")
 }
 
 fn call_dynamic(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
@@ -321,10 +339,7 @@ fn call_dynamic(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
         "subscript_expression" => subscript_call(cx, function),
         "identifier" => (text(cx, function) == "eval").then_some("eval"),
         "member_expression" => host_member(cx, function, "eval").then_some("eval"),
-        "import" => {
-            let first = child_by_field(n, "arguments").and_then(first_code)?;
-            (first.kind() != "string" && !closed_name(cx, first)).then_some("dynamic import")
-        }
+        "import" => import_call(cx, n),
         _ => None,
     }
 }
@@ -343,13 +358,17 @@ pub(crate) fn dynamic_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str>
 const GLOBAL_HOSTS: &[&str] = &["globalThis", "window", "self", "global"];
 
 fn host_member(cx: &Cx<'_, '_>, member: Node<'_>, name: &str) -> bool {
-    child_by_field(member, "object")
-        .and_then(unwrap_expression)
-        .is_some_and(|object| GLOBAL_HOSTS.contains(&text(cx, object)))
-        && child_by_field(member, "property").is_some_and(|property| text(cx, property) == name)
+    let Some(object) = child_by_field(member, "object") else {
+        return false;
+    };
+    child_by_field(member, "property").is_some_and(|property| text(cx, property) == name)
+        && unwrap_expression(object).is_none_or(|object| GLOBAL_HOSTS.contains(&text(cx, object)))
 }
 
 fn function_constructor(cx: &Cx<'_, '_>, constructor: Node<'_>) -> bool {
+    let Some(constructor) = unwrap_expression(constructor) else {
+        return true;
+    };
     match constructor.kind() {
         "identifier" => text(cx, constructor) == "Function",
         "member_expression" => host_member(cx, constructor, "Function"),

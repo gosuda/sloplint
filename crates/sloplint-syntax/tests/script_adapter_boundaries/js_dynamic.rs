@@ -433,3 +433,130 @@ const OWN_EVAL: &str = r#"export function run(source, parser) {
 fn own_namespace_eval_stays_silent() {
     assert_eq!(dynamics(OWN_EVAL), Vec::<String>::new());
 }
+
+const PAREN_STATIC_IMPORT: &str = r#"export async function load() {
+  return import(("./a.js"));
+}
+"#;
+
+#[test]
+fn parenthesized_static_import_stays_silent() {
+    assert_eq!(dynamics(PAREN_STATIC_IMPORT), Vec::<String>::new());
+}
+
+const PAREN_IMPORT_LOOP: &str = r#"export async function load() {
+  for (const n of ['./a.js', './b.js']) {
+    await import((n));
+  }
+}
+"#;
+
+#[test]
+fn parenthesized_import_in_literal_loop_stays_silent() {
+    assert_eq!(dynamics(PAREN_IMPORT_LOOP), Vec::<String>::new());
+}
+
+const PAREN_FREE_IMPORT: &str = r#"export async function load(name) {
+  return import((name));
+}
+"#;
+
+#[test]
+fn parenthesized_free_import_still_flags() {
+    assert_eq!(dynamics(PAREN_FREE_IMPORT), ["dynamic import"]);
+}
+
+const PLAIN_TEMPLATE_KEY: &str = r#"export function run(handlers, x) {
+  handlers[`save`](x);
+  return import(`./a.js`);
+}
+"#;
+
+#[test]
+fn plain_template_key_and_import_stay_silent() {
+    assert_eq!(dynamics(PLAIN_TEMPLATE_KEY), Vec::<String>::new());
+}
+
+const SUBSTITUTED_TEMPLATE_KEY: &str = r#"export function run(handlers, x, name) {
+  handlers[`on${name}`](x);
+  return import(`./${name}.js`);
+}
+"#;
+
+#[test]
+fn substituted_template_key_and_import_still_flag() {
+    assert_eq!(
+        dynamics(SUBSTITUTED_TEMPLATE_KEY),
+        ["computed method call", "dynamic import"]
+    );
+}
+
+const TS_ANGLE_CAST_CALLEE: &str = r#"type Handler = (n: number) => void;
+export function run(handlers: Record<string, Handler>, name: string): void {
+  (<Handler>handlers[name])(1);
+}
+"#;
+
+#[test]
+fn typescript_angle_cast_callee_still_flags() {
+    assert_eq!(
+        typed(TS_ANGLE_CAST_CALLEE, Lang::TypeScript, "case.ts"),
+        ["computed method call"]
+    );
+}
+
+const TS_ANGLE_CAST_LITERAL_KEY: &str = r#"type Handler = (n: number) => void;
+export function run(handlers: Record<string, Handler>): void {
+  (<Handler>handlers["save"])(1);
+}
+"#;
+
+#[test]
+fn typescript_angle_cast_literal_key_stays_silent() {
+    assert_eq!(
+        typed(TS_ANGLE_CAST_LITERAL_KEY, Lang::TypeScript, "case.ts"),
+        Vec::<String>::new()
+    );
+}
+
+const PAREN_FUNCTION_CTOR: &str = r#"export function build(source) {
+  return new (window.Function)(source);
+}
+"#;
+
+#[test]
+fn parenthesized_function_ctor_still_flags() {
+    assert_eq!(dynamics(PAREN_FUNCTION_CTOR), ["Function constructor"]);
+}
+
+const PAREN_OWN_FUNCTION_CTOR: &str = r#"export function build(source, my) {
+  return new (my.Function)(source);
+}
+"#;
+
+#[test]
+fn parenthesized_own_function_ctor_stays_silent() {
+    assert_eq!(dynamics(PAREN_OWN_FUNCTION_CTOR), Vec::<String>::new());
+}
+
+fn deep_parens(inner: &str) -> String {
+    format!("{}{inner}{}", "(".repeat(20), ")".repeat(20))
+}
+
+#[test]
+fn deeply_wrapped_ctor_flags() {
+    let source = format!(
+        "export function build(source) {{\n  return new {}(source);\n}}\n",
+        deep_parens("make")
+    );
+    assert_eq!(dynamics(&source), ["Function constructor"]);
+}
+
+#[test]
+fn deeply_wrapped_ctor_host_flags() {
+    let source = format!(
+        "export function build(source) {{\n  return new {}.Function(source);\n}}\n",
+        deep_parens("make")
+    );
+    assert_eq!(dynamics(&source), ["Function constructor"]);
+}
