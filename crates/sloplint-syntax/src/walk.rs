@@ -523,7 +523,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             &self.exports,
             &self.levels[..self.levels.len().min(self.depth + 1)],
         );
-        cx.forked_depth = self.forked_depth;
+        cx.forked_depth = self.forked_in_frame();
         cx
     }
 

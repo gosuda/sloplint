@@ -184,3 +184,16 @@ fn deeply_nested_substitutions_leave_outer_write_count_unchanged() {
         );
     });
 }
+
+#[test]
+fn function_defined_inside_a_fork_keeps_its_own_writes() {
+    let source = "out=$(\n  f() {\n    acc=0\n    acc=1\n    acc=2\n  }\n  f\n)\n";
+    with_bash_bindings(source, |found| {
+        let targets = named_all(found, "acc");
+        assert_eq!(
+            (targets.len(), targets[0].write_lines),
+            (1, 2),
+            "a fork around the function does not hide writes inside it: {found:?}"
+        );
+    });
+}

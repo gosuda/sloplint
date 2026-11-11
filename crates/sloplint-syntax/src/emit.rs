@@ -151,6 +151,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             only: ScopedShadow::new(),
             top: self.depth.saturating_add(2),
             closure_base: self.closure_depth,
+            forked_base: self.forked_depth,
             rebound: Default::default(),
             params,
             sole_call: head.sole_call,
@@ -159,6 +160,11 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
         });
         self.assert_mark_entered(node.id());
         self.marks.push((node.id(), Mark::Fn));
+    }
+
+    pub(crate) fn forked_in_frame(&self) -> u32 {
+        let base = self.fn_stack.last().map_or(0, |frame| frame.forked_base);
+        self.forked_depth.saturating_sub(base)
     }
 
     pub(crate) fn push_call(&mut self, node: tree_sitter::Node<'_>) {

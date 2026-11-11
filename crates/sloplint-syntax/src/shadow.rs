@@ -69,6 +69,7 @@ pub(crate) struct FnFrame<'s> {
     pub only: ScopedShadow<'s>,
     pub top: usize,
     pub closure_base: u32,
+    pub forked_base: u32,
     pub rebound: HashSet<&'s str>,
     pub params: HashSet<&'s str>,
     pub sole_call: Option<usize>,
