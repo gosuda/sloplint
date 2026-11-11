@@ -241,7 +241,8 @@ fn literal_loop_holds(cx: &Cx<'_, '_>, lp: Node<'_>, name: Node<'_>, wanted: &st
     if !matches!(right.kind(), "list" | "tuple") {
         return false;
     }
-    let items = named_children(right);
+    let mut items = named_children(right);
+    items.retain(|item| !is_comment(item.kind()));
     if items.is_empty() || !items.into_iter().all(is_static_name) {
         return false;
     }
@@ -315,7 +316,10 @@ fn push_loop_target(for_node: Node<'_>, cx: &Cx<'_, '_>, out: &mut Vec<String>) 
     }
     let mut cursor = right.walk();
     let mut count = 0;
-    for child in right.children(&mut cursor).filter(|c| c.is_named()) {
+    for child in right
+        .children(&mut cursor)
+        .filter(|c| c.is_named() && !is_comment(c.kind()))
+    {
         count += 1;
         if !is_static_name(child) {
             return;

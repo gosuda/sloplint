@@ -106,6 +106,14 @@ fn a_literal_loop_name_is_static_until_something_rebinds_it() {
 }
 
 #[test]
+fn a_comment_inside_the_literal_list_keeps_the_loop_name_static() {
+    let commented = "def f(obj):\n    for k in [\n        \"a\",  # first\n        \"b\",\n    ]:\n        getattr(obj, k)\n";
+    let computed = "def f(obj, n):\n    for k in [\n        \"a\",  # first\n        n,\n    ]:\n        getattr(obj, k)\n";
+    assert_eq!(computed_names(commented), 0, "a comment is not an item");
+    assert_eq!(computed_names(computed), 1, "a name item is still computed");
+}
+
+#[test]
 fn deep_plus_chain_marks_concat_without_recursion() {
     const OPERANDS: usize = 20_000;
     let tail = (0..OPERANDS - 1).map(|_| "x + ").collect::<String>();
