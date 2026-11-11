@@ -1,0 +1,1 @@
+# No throws clause, so there is no untyped error boundary.

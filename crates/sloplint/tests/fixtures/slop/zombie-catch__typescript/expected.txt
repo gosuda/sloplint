@@ -1,1 +1,1 @@
-src/mod.ts:4 deny slop/zombie-catch
+src/mod.ts:4 info slop/zombie-catch

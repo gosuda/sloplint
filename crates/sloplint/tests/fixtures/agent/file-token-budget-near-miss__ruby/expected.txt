@@ -1,1 +1,1 @@
-# near-miss: 19 lines < warn_at 20.
+# near-miss: 19 lines < minor_at 20.

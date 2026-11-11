@@ -4,15 +4,16 @@
 use super::numbers;
 use sloplint_core::config::parse_config;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_core::rules::custom::{PlaceholderError, message_placeholders};
-use sloplint_core::{ConfigError, CustomRuleSpec, RuleFilter, RuleSet, Severity};
+use sloplint_core::{Confidence, ConfigError, CustomRuleSpec, RuleFilter, RuleSet, Severity};
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 const QUERY: &str = "(call_expression function: (identifier) @m) @match";
 
 fn rule_src(message: &str) -> String {
     format!(
-        "[[custom_rules]]\nid = \"custom/x\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = {message:?}\nwhy = \"w\"\nfix = \"f\"\nquery = {QUERY:?}\n"
+        "[[custom_rules]]\nid = \"custom/x\"\nlanguage = \"rust\"\nseverity = \"minor\"\nmessage = {message:?}\nwhy = \"w\"\nfix = \"f\"\nquery = {QUERY:?}\n"
     )
 }
 
@@ -20,7 +21,8 @@ fn spec(message: &str) -> CustomRuleSpec {
     CustomRuleSpec {
         id: "custom/x".to_string(),
         language: "rust".to_string(),
-        severity: Severity::Warn,
+        severity: Severity::Minor,
+        confidence: Confidence::Medium,
         message: message.to_string(),
         why: "w".to_string(),
         fix: "f".to_string(),
@@ -115,7 +117,7 @@ fn render(message: &str, source: &str) -> Vec<String> {
         lang: Lang::Rust,
         path: "src/a.rs",
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut parsers, &input, &custom);
     rules

@@ -4,10 +4,11 @@
 //! grammar in `vendor/tree-sitter-go` must parse it. The controls pin the facts the
 //! Go adapter reads, so a shape regression in the grammar patch shows up here.
 
+use sloplint_core::facts::{AmbientKind, Stmt};
 use std::sync::LazyLock;
 
-use sloplint_core::facts::Stmt;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 static NO_CUSTOM: LazyLock<CustomRules> =
@@ -18,7 +19,7 @@ fn run<'s>(path: &'s str, source: &'s str) -> Analysis<'s> {
         lang: Lang::Go,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     analyze(&mut Parsers::new(), &input, &NO_CUSTOM)
 }
@@ -132,7 +133,7 @@ fn generic_method_declaration_parses() {
     let analysis = run_clean("generic_method.go", source);
     assert_eq!(function_names(&analysis), ["G", "H", "Plain"]);
     let g = &analysis.facts.functions[0];
-    assert!(g.interface_bound, "a method declaration is interface bound");
+    assert!(!g.signature_forced, "a Go method is an ordinary function");
     assert_eq!(g.params.len(), 1, "G takes one parameter");
     assert_eq!(g.params[0].name, "u");
     assert_eq!(g.params[0].ty, Some("U"));
@@ -309,4 +310,36 @@ fn invalid_go_still_reports_a_parse_error() {
             "{path} yields no facts once the parse fails"
         );
     }
+}
+
+fn ambient_kinds(analysis: &Analysis<'_>) -> Vec<(AmbientKind, String)> {
+    analysis
+        .facts
+        .ambient
+        .iter()
+        .map(|a| (a.kind, a.name.to_string()))
+        .collect()
+}
+
+#[test]
+fn in_function_write_to_a_package_var_is_a_global_write() {
+    let source = "package p\nvar counter int\nfunc bump() { counter = 1 }\n";
+    let analysis = run_clean("package_write.go", source);
+    assert_eq!(
+        ambient_kinds(&analysis),
+        vec![
+            (AmbientKind::GlobalMutable, "counter".to_string()),
+            (AmbientKind::GlobalWrite, "counter".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn shadowed_package_var_write_stays_local() {
+    let source = "package p\nvar counter int\nfunc f() { counter := 0; counter = 1 }\n";
+    let analysis = run_clean("shadowed_write.go", source);
+    assert_eq!(
+        ambient_kinds(&analysis),
+        vec![(AmbientKind::GlobalMutable, "counter".to_string())]
+    );
 }

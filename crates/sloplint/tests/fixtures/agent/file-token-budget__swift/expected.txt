@@ -1,1 +1,1 @@
-src/big.swift:1 deny agent/file-token-budget
+src/big.swift:1 info agent/file-token-budget

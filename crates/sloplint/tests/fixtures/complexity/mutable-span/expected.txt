@@ -1,1 +1,3 @@
-src/lib.rs:2 deny complexity/mutable-span
+src/lib.rs:2 info complexity/mutable-span
+# outer-from-closure.rs: binding line 2, writes lines 3 and 33 (span 30 >= strict major_at 30); the last write sits inside a for_each closure with no shadowing.
+src/outer-from-closure.rs:2 info complexity/mutable-span

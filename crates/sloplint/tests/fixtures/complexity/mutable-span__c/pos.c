@@ -1,5 +1,6 @@
 int accumulate(int n) {
     int total = 0;
+    total += 1;
     int pad01 = 1;
     int pad02 = 2;
     int pad03 = 3;

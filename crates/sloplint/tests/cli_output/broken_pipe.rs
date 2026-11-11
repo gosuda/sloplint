@@ -7,14 +7,14 @@ use std::fs;
 use std::path::Path;
 use std::process::{Command, Output, Stdio};
 
-const GENERIC_DENY_CONFIG: &str = "[rules.\"grep/generic-name\"]\nlevel = \"deny\"\n";
+const GENERIC_MAJOR_CONFIG: &str = "[rules.\"grep/generic-name\"]\nlevel = \"major\"\n";
 const GENERIC_HANDLE_FN: &str = "pub fn handle() {}\n";
 const CLEAN_FN: &str = "pub fn specialized_worker() {}\n";
 const MANY_FINDINGS: usize = 800;
 
-fn deny_project(files: usize) -> tempfile::TempDir {
+fn major_project(files: usize) -> tempfile::TempDir {
     let tmp = tempfile::tempdir().expect("tempdir");
-    fs::write(tmp.path().join("sloplint.toml"), GENERIC_DENY_CONFIG).expect("write config");
+    fs::write(tmp.path().join("sloplint.toml"), GENERIC_MAJOR_CONFIG).expect("write config");
     for index in 0..files {
         fs::write(
             tmp.path().join(format!("f{index:04}.rs")),
@@ -45,13 +45,13 @@ fn spawn_closed_stdout(cwd: &Path, args: &[&str]) -> Output {
 }
 
 #[test]
-fn check_with_deny_findings_and_closed_stdout_exits_one_without_stderr() {
-    let project = deny_project(MANY_FINDINGS);
+fn check_with_major_findings_and_closed_stdout_exits_one_without_stderr() {
+    let project = major_project(MANY_FINDINGS);
     let output = spawn_closed_stdout(project.path(), &["check", "--no-cache"]);
     assert_eq!(
         output.status.code(),
         Some(1),
-        "a closed stdout must keep the deny verdict"
+        "a closed stdout must keep the major verdict"
     );
     assert!(
         output.stderr.is_empty(),

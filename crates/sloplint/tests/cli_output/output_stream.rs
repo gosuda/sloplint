@@ -14,7 +14,7 @@ const BUFFER_BYTES: usize = 64 * 1024;
 const RULE: &str = "grep/generic-name";
 const SUMMARY_MANY: &str = concat!(
     "summary: strictness=standard files=1500 findings=1500 ",
-    "deny=0 warn=1500 baselined=0 stale=0 skipped=0"
+    "blocker=0 critical=0 major=0 minor=1500 info=0 baselined=0 stale=0 skipped=0"
 );
 
 #[derive(Deserialize)]
@@ -26,8 +26,11 @@ struct Row {
 struct Summary {
     files: usize,
     findings: usize,
-    deny: usize,
-    warn: usize,
+    blocker: usize,
+    critical: usize,
+    major: usize,
+    minor: usize,
+    info: usize,
     baselined: usize,
     stale: usize,
     skipped: usize,
@@ -87,8 +90,11 @@ fn json_output_larger_than_the_buffer_arrives_whole() {
         sonic_rs::from_slice(&out.stdout).unwrap_or_else(|e| panic!("stdout is not JSON: {e}"));
     assert_eq!(doc.summary.files, MANY, "summary file count");
     assert_eq!(doc.summary.findings, MANY, "summary finding count");
-    assert_eq!(doc.summary.deny, 0, "summary deny count");
-    assert_eq!(doc.summary.warn, MANY, "summary warn count");
+    assert_eq!(doc.summary.blocker, 0, "summary blocker count");
+    assert_eq!(doc.summary.critical, 0, "summary critical count");
+    assert_eq!(doc.summary.major, 0, "summary major count");
+    assert_eq!(doc.summary.minor, MANY, "summary minor count");
+    assert_eq!(doc.summary.info, 0, "summary info count");
     assert_eq!(doc.summary.baselined, 0, "summary baselined count");
     assert_eq!(doc.summary.stale, 0, "summary stale count");
     assert_eq!(doc.summary.skipped, 0, "summary skipped count");
@@ -106,12 +112,12 @@ fn agent_output_larger_than_the_buffer_is_complete_and_ordered() {
     let tmp = project(MANY);
     let out = sloplint(
         tmp.path(),
-        &["check", "--no-cache", "--fail-on", "warn", "--rule", RULE],
+        &["check", "--no-cache", "--fail-on", "minor", "--rule", RULE],
     );
     assert_eq!(
         out.status.code(),
         Some(1),
-        "warn findings must fail under --fail-on warn"
+        "minor findings must fail under --fail-on minor"
     );
     assert!(
         out.stdout.len() > 4 * BUFFER_BYTES,
@@ -124,8 +130,13 @@ fn agent_output_larger_than_the_buffer_is_complete_and_ordered() {
     assert_eq!(lines.len(), 3 * MANY + 4, "line count");
     for index in 0..MANY {
         let header = lines[3 * index];
-        let prefix = format!("f{index:04}.rs:1:8: warn: ");
+        let prefix = format!("f{index:04}.rs:1:8: minor/");
         assert!(header.starts_with(&prefix), "finding {index}: {header}");
+        let rest = &header[prefix.len()..];
+        assert!(
+            rest.starts_with("low: ") || rest.starts_with("medium: ") || rest.starts_with("high: "),
+            "finding {index} lacks confidence: {header}"
+        );
         assert_eq!(
             lines[3 * index + 1],
             "  context: pub fn handle() {}",
@@ -166,7 +177,7 @@ fn human_output_larger_than_the_buffer_ends_with_the_summary() {
         out.stdout.len()
     );
     let stdout = text(&out.stdout);
-    let marker = format!("warning[{RULE}]");
+    let marker = format!("note[{RULE}]");
     assert_eq!(
         stdout.matches(marker.as_str()).count(),
         MANY,

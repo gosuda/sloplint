@@ -1,5 +1,7 @@
 int Classify(int n) {
     int r = 0;
+    if (n >= 0) {
+    for (int i = 0; i < n; i++) {
     if (n == 0) { r += 1; }
     if (n == 1) { r += 2; }
     if (n == 2) { r += 3; }
@@ -11,5 +13,7 @@ int Classify(int n) {
     if (n == 8) { r += 9; }
     if (n == 9) { r += 10; }
     if (n == 10) { r += 11; }
+    }
+    }
     return r;
 }

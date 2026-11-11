@@ -1,4 +1,4 @@
-//! Rust colocated-test lookup: a `tests/` directory file named `<stem>.rs` or `<stem>_*` counts.
+//! Rust colocated-test lookup: a test file covers only modules it shares a key with.
 
 use sloplint::{RunOptions, execute};
 use sloplint_core::config::{Mode, Strictness};
@@ -9,7 +9,6 @@ const RULE: &str = "agent/colocated-tests";
 const WIDGET: &str = "pub fn widget() {}\n";
 const PRIVATE_ONLY: &str = "fn helper() {}\n";
 
-/// Paths the rule reports for a project made of `files`, in report order.
 fn reported(files: &[(&str, &str)]) -> Vec<String> {
     let tmp = tempfile::tempdir().unwrap();
     for (rel, contents) in files {
@@ -37,7 +36,6 @@ fn reported(files: &[(&str, &str)]) -> Vec<String> {
         .collect()
 }
 
-/// `src/widget.rs` plus `extra`.
 fn with_widget(extra: &[(&str, &str)]) -> Vec<String> {
     let mut files = vec![("src/widget.rs", WIDGET)];
     files.extend_from_slice(extra);
@@ -46,11 +44,19 @@ fn with_widget(extra: &[(&str, &str)]) -> Vec<String> {
 
 #[test]
 fn module_without_tests_is_reported() {
-    assert_eq!(with_widget(&[]), ["src/widget.rs"]);
+    assert_eq!(
+        with_widget(&[("tests/unrelated.rs", PRIVATE_ONLY)]),
+        ["src/widget.rs"]
+    );
 }
 
 #[test]
-fn tests_dir_file_with_the_stem_name_suppresses() {
+fn package_without_evidence_stays_silent() {
+    assert_eq!(with_widget(&[]), Vec::<String>::new());
+}
+
+#[test]
+fn tests_dir_file_in_the_package_suppresses() {
     let found = with_widget(&[("tests/widget.rs", PRIVATE_ONLY)]);
     assert!(
         found.is_empty(),
@@ -59,20 +65,23 @@ fn tests_dir_file_with_the_stem_name_suppresses() {
 }
 
 #[test]
-fn tests_dir_file_with_the_stem_prefix_suppresses() {
-    let found = with_widget(&[("tests/widget_extra.rs", PRIVATE_ONLY)]);
-    assert!(
-        found.is_empty(),
-        "tests/widget_extra.rs must cover src/widget.rs by prefix, but the rule reported {found:?}"
+fn any_tests_file_in_the_package_suppresses_regardless_of_stem() {
+    let found = with_widget(&[("tests/unrelated.rs", PRIVATE_ONLY)]);
+    assert_eq!(
+        found,
+        ["src/widget.rs"],
+        "a different stem shares no key, so widget stays flagged"
     );
 }
 
 #[test]
-fn tests_dir_in_another_crate_suppresses() {
-    let found = with_widget(&[("crates/other/tests/widget.rs", PRIVATE_ONLY)]);
-    assert!(
-        found.is_empty(),
-        "crates/other/tests/widget.rs must cover src/widget.rs, but the rule reported {found:?}"
+fn tests_dir_in_another_package_does_not_suppress() {
+    assert_eq!(
+        with_widget(&[
+            ("tests/unrelated.rs", PRIVATE_ONLY),
+            ("crates/other/tests/widget.rs", PRIVATE_ONLY)
+        ]),
+        ["src/widget.rs"]
     );
 }
 
@@ -86,40 +95,23 @@ fn tests_dir_under_src_suppresses() {
 }
 
 #[test]
-fn stem_must_be_the_whole_name_or_a_leading_prefix() {
-    let extra = [
-        ("tests/widgets.rs", PRIVATE_ONLY),
-        ("tests/gadget_widget.rs", PRIVATE_ONLY),
-    ];
-    assert_eq!(with_widget(&extra), ["src/widget.rs"]);
-}
-
-#[test]
-fn directory_segment_must_be_exactly_tests() {
-    let extra = [
-        ("attests/widget.rs", PRIVATE_ONLY),
-        ("tests_extra/widget_x.rs", PRIVATE_ONLY),
-    ];
-    assert_eq!(with_widget(&extra), ["src/widget.rs"]);
-}
-
-#[test]
-fn one_tests_file_covers_every_module_with_that_stem() {
+fn one_tests_file_covers_every_module_in_the_package() {
     let files = [
+        ("src/widget.rs", "pub fn widget() {}\n"),
         ("src/a/widget.rs", "pub fn a_widget() {}\n"),
-        ("src/b/widget.rs", "pub fn b_widget() {}\n"),
         ("tests/widget.rs", PRIVATE_ONLY),
     ];
     let found = reported(&files);
-    assert!(
-        found.is_empty(),
-        "one tests/widget.rs must cover every module with stem widget, but the rule reported {found:?}"
+    assert_eq!(
+        found,
+        ["src/a/widget.rs"],
+        "tests/widget.rs covers the module it shares a key with, the other stays flagged"
     );
 }
 
 #[test]
-fn numbered_stems_do_not_cover_each_other() {
-    let modules: Vec<(String, String)> = (0..200)
+fn many_modules_without_tests_are_all_reported() {
+    let modules: Vec<(String, String)> = (0..60)
         .map(|index| {
             (
                 format!("src/m{index}.rs"),
@@ -131,24 +123,18 @@ fn numbered_stems_do_not_cover_each_other() {
         .iter()
         .map(|(rel, contents)| (rel.as_str(), contents.as_str()))
         .collect();
-    files.push(("tests/m1_extra.rs", PRIVATE_ONLY));
-    files.push(("tests/m10.rs", PRIVATE_ONLY));
-    let uncovered = reported(&files);
-    assert_eq!(uncovered.len(), 198);
-    assert!(
-        !uncovered.iter().any(|path| path == "src/m1.rs"),
-        "m1_extra covers m1"
+    files.push(("tests/only.rs", PRIVATE_ONLY));
+    assert_eq!(
+        reported(&files).len(),
+        60,
+        "evidence without shared keys leaves all sixty modules flagged"
     );
+    let bare: Vec<(&str, &str)> = modules
+        .iter()
+        .map(|(rel, contents)| (rel.as_str(), contents.as_str()))
+        .collect();
     assert!(
-        !uncovered.iter().any(|path| path == "src/m10.rs"),
-        "m10 covers m10"
-    );
-    assert!(
-        uncovered.iter().any(|path| path == "src/m100.rs"),
-        "m10 must not cover m100"
-    );
-    assert!(
-        uncovered.iter().any(|path| path == "src/m11.rs"),
-        "m1_extra must not cover m11"
+        reported(&bare).is_empty(),
+        "a package without evidence stays silent"
     );
 }

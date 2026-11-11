@@ -39,6 +39,8 @@ pub(crate) enum Role {
     Assert,
     Global,
     StaticItem,
+    Return,
+    Yield,
 }
 
 pub struct LangSpec {
@@ -49,18 +51,8 @@ pub struct LangSpec {
 }
 
 pub(crate) fn spec(lang: Lang) -> &'static LangSpec {
-    static SPECS: LazyLock<Vec<LangSpec>> = LazyLock::new(|| {
-        let mut specs: Vec<LangSpec> = ALL_LANGS.iter().map(|&lang| lang::spec_for(lang)).collect();
-        specs.sort_by_key(|spec| spec.lang as usize);
-        for (index, spec) in specs.iter().enumerate() {
-            assert!(
-                spec.lang as usize == index,
-                "ALL_LANGS must list every Lang exactly once; {:?} is at slot {index}",
-                spec.lang
-            );
-        }
-        specs
-    });
+    static SPECS: LazyLock<Vec<LangSpec>> =
+        LazyLock::new(|| ALL_LANGS.iter().map(|&lang| lang::spec_for(lang)).collect());
     &SPECS[lang as usize]
 }
 

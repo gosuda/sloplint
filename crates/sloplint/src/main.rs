@@ -9,9 +9,11 @@ use clap::Parser;
 use rayon::prelude::*;
 use sloplint::cli::{BaselineArgs, CheckArgs, Cli, Command, Format, RulesArgs};
 use sloplint::rules_cmd::{self, RulesRequest};
-use sloplint::{Execution, Report, RunError, RunOptions, Summary, TerminalText, init};
+use sloplint::{
+    Execution, Report, RunError, RunOptions, Summary, TerminalText, init, next_control,
+};
 use sloplint_core::finding::line_starts;
-use sloplint_core::{Finding, RuleFilter, Severity};
+use sloplint_core::{Finding, RuleFilter};
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
@@ -33,9 +35,10 @@ fn main() -> ExitCode {
 
 /// Exits in-scope so the run's heap stays reachable for LeakSanitizer; output is flushed first, so bytes match a return.
 fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
+    let root = args.run.select.root.as_deref();
     let config = args.run.select.config.as_deref();
     let paths = if args.paths.is_empty() {
-        match sloplint::implicit_scope(cwd, None, config) {
+        match sloplint::implicit_scope(cwd, root, config) {
             Ok(scope) => scope,
             Err(error) => return report_error(&error),
         }
@@ -44,13 +47,16 @@ fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
     };
     let options = RunOptions {
         cwd: cwd.to_path_buf(),
-        root: None,
+        root: args.run.select.root.clone(),
         config: args.run.select.config.clone(),
         paths,
         strictness: args.run.select.strictness.map(Into::into),
         mode: args.mode.map(Into::into),
         fail_on: args.fail_on.map(Into::into),
+        min_confidence: args.min_confidence.map(Into::into),
+        fail_on_skipped: args.fail_on_skipped,
         rule_filter: RuleFilter(args.rules.clone()),
+        cache_root: sloplint::settings::cache_base(),
         use_cache: !args.run.no_cache,
         jobs: args.run.jobs.unwrap_or(0),
         write_baseline: false,
@@ -64,17 +70,19 @@ fn check(cwd: &Path, args: &CheckArgs) -> ExitCode {
         Err(error) => report_error(&error),
     }
 }
-
 fn baseline(cwd: &Path, args: &BaselineArgs) -> ExitCode {
     let options = RunOptions {
         cwd: cwd.to_path_buf(),
-        root: None,
+        root: args.run.select.root.clone(),
         config: args.run.select.config.clone(),
         paths: Vec::new(),
         strictness: args.run.select.strictness.map(Into::into),
         mode: None,
         fail_on: None,
+        min_confidence: None,
+        fail_on_skipped: false,
         rule_filter: RuleFilter::default(),
+        cache_root: sloplint::settings::cache_base(),
         use_cache: !args.run.no_cache,
         jobs: args.run.jobs.unwrap_or(0),
         write_baseline: true,
@@ -103,10 +111,10 @@ enum TextKind {
     Plain,
     Json,
 }
-
 fn rules(cwd: &Path, args: &RulesArgs) -> ExitCode {
     let request = RulesRequest {
         cwd: cwd.to_path_buf(),
+        root: args.select.root.clone(),
         config: args.select.config.clone(),
         strictness: args.select.strictness.map(Into::into),
         id: args.id.clone(),
@@ -187,7 +195,23 @@ fn write_agent(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
             )?;
         }
     }
-    writeln!(out, "{}", summary_line(&report.summary))
+    writeln!(out, "{}", summary_line(&report.summary))?;
+    write_skipped_gate(&report.skipped_gate, out)
+}
+
+fn write_skipped_gate(
+    gate: &[sloplint_core::baseline::SkippedEntry],
+    out: &mut dyn Write,
+) -> io::Result<()> {
+    for entry in gate {
+        writeln!(
+            out,
+            "skipped: {} ({})",
+            TerminalText::line(&entry.path),
+            TerminalText::line(&entry.reason),
+        )?;
+    }
+    Ok(())
 }
 
 fn render_findings(findings: &[Finding]) -> io::Result<Vec<u8>> {
@@ -200,7 +224,9 @@ fn render_findings(findings: &[Finding]) -> io::Result<Vec<u8>> {
         buffer.write_all(b":")?;
         buffer.write_all(digits.format(finding.column).as_bytes())?;
         buffer.write_all(b": ")?;
-        buffer.write_all(severity_name(finding.severity).as_bytes())?;
+        buffer.write_all(finding.severity.as_str().as_bytes())?;
+        buffer.write_all(b"/")?;
+        buffer.write_all(finding.confidence.as_str().as_bytes())?;
         buffer.write_all(b": ")?;
         TerminalText::line(&finding.message).write_escaped(&mut buffer)?;
         buffer.write_all(b" [")?;
@@ -227,6 +253,10 @@ fn write_json(report: &Report, out: &mut dyn Write) -> io::Result<()> {
     write_record(out, &mut record, &report.rules_fired)?;
     out.write_all(b",\n \"summary\":")?;
     write_record(out, &mut record, &report.summary)?;
+    if !report.skipped_gate.is_empty() {
+        out.write_all(b",\n \"skipped_gate\":")?;
+        write_record(out, &mut record, &report.skipped_gate)?;
+    }
     out.write_all(b"}\n")
 }
 
@@ -239,28 +269,18 @@ where
     write_guarded(out, record)
 }
 
-fn write_guarded(out: &mut dyn Write, mut json: &[u8]) -> io::Result<()> {
-    while let Some((at, width, code)) = find_control(json) {
-        out.write_all(&json[..at])?;
-        write!(out, "\\u{code:04x}")?;
-        json = &json[at + width..];
-    }
-    out.write_all(json)
-}
-
-fn find_control(json: &[u8]) -> Option<(usize, usize, u8)> {
+fn write_guarded(out: &mut dyn Write, json: &[u8]) -> io::Result<()> {
+    let mut run = 0;
     let mut at = 0;
-    while at < json.len() {
-        match json[at] {
-            0x7f => return Some((at, 1, 0x7f)),
-            0xc2 => match json.get(at + 1) {
-                Some(&next) if (0x80..=0x9f).contains(&next) => return Some((at, 2, next)),
-                _ => at += 2,
-            },
-            _ => at += 1,
+    while let Some((off, width, code)) = next_control(json, at) {
+        if code != 0x0a {
+            out.write_all(&json[run..off])?;
+            write!(out, "\\u{code:04x}")?;
+            run = off + width;
         }
+        at = off + width;
     }
-    None
+    out.write_all(&json[run..])
 }
 
 fn write_human(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
@@ -275,7 +295,8 @@ fn write_human(execution: &Execution, out: &mut dyn Write) -> io::Result<()> {
         writeln!(out, "{}", rendered.trim_end())?;
         writeln!(out)?;
     }
-    writeln!(out, "{}", summary_line(&execution.report.summary))
+    writeln!(out, "{}", summary_line(&execution.report.summary))?;
+    write_skipped_gate(&execution.report.skipped_gate, out)
 }
 
 struct Source {
@@ -330,15 +351,24 @@ fn render_finding(
     let start = span_for(raw, finding.column).start;
     let span = TerminalText::line(&raw[..start]).into_text().len()..text.len();
     let level = match finding.severity {
-        Severity::Deny => Level::ERROR,
-        Severity::Warn => Level::WARNING,
+        sloplint_core::finding::Severity::Blocker => Level::ERROR,
+        sloplint_core::finding::Severity::Critical => Level::WARNING,
+        sloplint_core::finding::Severity::Major => Level::INFO,
+        sloplint_core::finding::Severity::Minor => Level::NOTE,
+        sloplint_core::finding::Severity::Info => Level::HELP,
     };
     let why = report
         .rules_fired
         .get(&*finding.rule)
         .map_or("", String::as_str);
+    let head = format!(
+        "{}/{}: {}",
+        finding.severity.as_str(),
+        finding.confidence.as_str(),
+        finding.message
+    );
     let title = level
-        .primary_title(TerminalText::line(&finding.message).into_text())
+        .primary_title(TerminalText::line(&head).into_text())
         .id(TerminalText::line(&finding.rule).into_text());
     let snippet = Snippet::source(text)
         .line_start(usize::try_from(finding.line).unwrap_or(usize::MAX))
@@ -369,23 +399,19 @@ fn span_for(text: &str, column: u32) -> Range<usize> {
 
 fn summary_line(summary: &Summary) -> String {
     format!(
-        "summary: strictness={} files={} findings={} deny={} warn={} baselined={} stale={} skipped={}",
+        "summary: strictness={} files={} findings={} blocker={} critical={} major={} minor={} info={} baselined={} stale={} skipped={}",
         summary.strictness.as_str(),
         summary.files,
         summary.findings,
-        summary.deny,
-        summary.warn,
+        summary.blocker,
+        summary.critical,
+        summary.major,
+        summary.minor,
+        summary.info,
         summary.baselined,
         summary.stale,
         summary.skipped
     )
-}
-
-fn severity_name(severity: Severity) -> &'static str {
-    match severity {
-        Severity::Warn => "warn",
-        Severity::Deny => "deny",
-    }
 }
 
 fn print_text_status(text: &str, kind: TextKind) -> u8 {
@@ -416,7 +442,7 @@ fn emit_error(message: &str) {
     let _ = writeln!(
         io::stderr(),
         "sloplint: error: {}",
-        TerminalText::block(message)
+        TerminalText::line(message)
     );
 }
 

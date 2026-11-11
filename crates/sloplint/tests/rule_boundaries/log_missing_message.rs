@@ -72,7 +72,7 @@ fn rust_zero_argument_macro_reports_no_message() {
 }
 
 #[test]
-fn java_zero_argument_call_reports_no_message() {
+fn java_print_stack_trace_and_stdio_stay_silent() {
     let source = "class D {\n    void f(Exception e, String message) {\n        e.printStackTrace();\n        System.out.println(message);\n        System.out.println(\"failed to open the configuration file\");\n    }\n}\n";
-    assert_zero_argument_call_reports_no_message("D.java", source, (3, 4, 5));
+    assert_eq!(findings_in("D.java", source), Vec::<u32>::new());
 }

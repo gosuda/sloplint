@@ -1,3 +1,3 @@
 object Api {
-  def processOrder(id: String, account: String, qty: Long): Long = qty
+  def processOrder(a: String, b: String, c: String): String = a
 }

@@ -1,1 +1,1 @@
-src/lib.ml:2 warn slop/passthrough-wrapper
+src/lib.ml:2 info slop/passthrough-wrapper

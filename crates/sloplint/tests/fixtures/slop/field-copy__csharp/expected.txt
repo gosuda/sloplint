@@ -1,1 +1,1 @@
-src/Converter.cs:3 warn slop/field-copy
+src/Converter.cs:3 minor slop/field-copy

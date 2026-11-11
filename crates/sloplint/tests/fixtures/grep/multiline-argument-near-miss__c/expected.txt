@@ -1,1 +1,2 @@
 # Near-miss: multi-line concatenated string is Str, excluded from the metric.
+# Retired positive (retired_sum.c): binary-operator arg is not a Collection, so it stays silent.

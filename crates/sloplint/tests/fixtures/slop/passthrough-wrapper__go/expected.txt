@@ -1,1 +1,1 @@
-a.go:2 warn slop/passthrough-wrapper
+a.go:2 info slop/passthrough-wrapper

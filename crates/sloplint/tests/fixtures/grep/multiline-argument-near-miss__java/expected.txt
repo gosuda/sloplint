@@ -1,1 +1,2 @@
-# near-miss: argument spans 5 lines < strict warn_at 6.
+# near-miss: argument spans 5 lines < strict Minor(15).
+# Retired positive (CalcRetired.java): binary-operator arg is not a Collection, so it stays silent.

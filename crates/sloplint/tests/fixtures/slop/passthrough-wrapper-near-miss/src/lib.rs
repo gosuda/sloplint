@@ -19,3 +19,12 @@ fn place(x: i64, y: i64) -> i64 {
 pub fn fresh() -> Vec<i64> {
     return Vec::new();
 }
+
+#[deprecated]
+pub fn parse(text: &str) -> String {
+    return parse_inner(text);
+}
+
+fn parse_inner(text: &str) -> String {
+    return text.to_string();
+}

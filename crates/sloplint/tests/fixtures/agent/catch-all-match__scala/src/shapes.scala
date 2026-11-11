@@ -5,6 +5,7 @@ object Shapes {
 
   def area(h: Shape): Double = h match {
     case Circle(r) => r * r * 3.14
+    case Square(s) => s * s
     case _ => 0.0
   }
 }

@@ -1,5 +1,5 @@
 package probe
-import myfmt "fmt"
+import rx "regexp"
 func Use() string {
-	return myfmt.Sprint("hi")
+	return rx.QuoteMeta("hi")
 }

@@ -1,0 +1,1 @@
+src/pick.zig:5 info grep/no-dynamic-symbol

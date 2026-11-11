@@ -1,1 +1,2 @@
-src/spread.R:2 deny complexity/mutable-span
+src/spread.R:2 info complexity/mutable-span
+src/spread_loop.R:2 info complexity/mutable-span

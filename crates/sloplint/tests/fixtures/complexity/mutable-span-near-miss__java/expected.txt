@@ -1,1 +1,2 @@
 # near-miss: `fixed` is never reassigned after declaration; `doubled` is final.
+# ShadowedLambda.java: `spread`'s `total` is written once on line 6; the line-25 write targets `tally`'s lambda parameter (Java forbids shadowing in one method), so cross-method misattribution would span 19 and fire.

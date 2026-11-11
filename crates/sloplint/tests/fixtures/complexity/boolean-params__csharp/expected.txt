@@ -1,1 +1,1 @@
-src/Tables.cs:2 deny complexity/boolean-params
+src/Tables.cs:2 info complexity/boolean-params

@@ -1,0 +1,1 @@
+# Near-miss: testdata/ paths are never analyzed, so the generic name stays silent.

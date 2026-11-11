@@ -1,17 +1,55 @@
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, CallKind, FieldCopy, Handler, ImplRef, Param, Pos, Stmt,
-    TypeDef, WildcardArm,
+    AmbientKind, AssertShape, Assertion, CallKind, FieldCopy, Handler, ImplRef, Pos, Stmt, TypeDef,
+    Visibility, WildcardArm,
 };
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, Link, TypeHead, binary_concat,
-    child_by_field, count_named_child, find_named_child, first_named_child,
-    first_named_child_matching, first_of_kind, has_child_kind, last_segment, named_children,
-    narrow, only_named_child_matching, pos_of, preceding_comments, rfind_named_child, slice,
-    string_arg_shape, strip_quotes, text, trimmed,
+    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, count_named_child,
+    first_of_kind, last_segment, named_children, pos_of, preceding_comments, region_of,
+    rfind_named_child, text,
 };
 use crate::spec::Role;
+use sloplint_core::role::CodeRole;
+
+mod blocks;
+mod calls;
+mod funcs;
+mod items;
+
+use calls::{
+    call_args, canonical_root, ruby_args, ruby_call_kind, ruby_callee, ruby_is_simple_path,
+    ruby_new_callee, ruby_receiver_root,
+};
+use funcs::{
+    is_protocol_method, ruby_in_test_class, ruby_params, ruby_public, ruby_sole_call,
+    superclass_name,
+};
+use items::{
+    bare_assert_shape, case_scrutinee_kind, flatten_hash_pairs, hash_copy, is_assign_left,
+    minitest_arity, minitest_is_equality, rspec_assertion, ruby_env_name, ruby_in_cleanup,
+    ruby_stmt, ruby_try_imports_only, sibling_enum_like, sibling_variant_count, strip_arrow,
+};
+pub(crate) fn field_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>, field: &str) -> Option<&'s str> {
+    child_by_field(n, field).map(|v| text(cx, v))
+}
+fn initializes_binding(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    let Some(parent) = cx.parent() else {
+        return false;
+    };
+    if parent.kind() != "assignment" {
+        return false;
+    }
+    if !child_by_field(parent, "right").is_some_and(|right| right.id() == n.id()) {
+        return false;
+    }
+    child_by_field(parent, "left").is_some_and(|left| {
+        matches!(
+            left.kind(),
+            "identifier" | "constant" | "instance_variable" | "class_variable" | "global_variable"
+        )
+    })
+}
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("method", Role::Function),
@@ -35,7 +73,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("conditional", Role::Ternary),
     ("call", Role::Call),
     ("assignment", Role::Bind),
-    ("operator_assignment", Role::Bind),
+    ("operator_assignment", Role::Write),
     ("class", Role::TypeDef),
     ("module", Role::TypeDef),
     ("comment", Role::Comment),
@@ -52,257 +90,6 @@ pub(crate) static HOOKS: RubyHooks = RubyHooks;
 
 pub(crate) struct RubyHooks;
 
-fn node_id(n: Node<'_>) -> usize {
-    n.id()
-}
-fn field_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>, field: &str) -> Option<&'s str> {
-    child_by_field(n, field).map(|v| text(cx, v))
-}
-fn bare_marker_call<'s>(cx: &Cx<'_, 's>, sib: Node<'_>) -> Option<bool> {
-    let method = field_text(cx, sib, "method")?;
-    if child_by_field(sib, "receiver").is_some() {
-        return None;
-    }
-    if let Some(list) = first_of_kind(sib, &["argument_list"])
-        && list.named_child_count() != 0
-    {
-        return None;
-    }
-    match method {
-        "private" | "protected" | "module_function" => Some(false),
-        "public" => Some(true),
-        _ => None,
-    }
-}
-fn wrapped_by_marker<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
-    let Some(parent) = n.parent() else {
-        return false;
-    };
-    if parent.kind() != "argument_list" {
-        return false;
-    }
-    let Some(grand) = parent.parent() else {
-        return false;
-    };
-    if grand.kind() != "call" {
-        return false;
-    }
-    field_text(cx, grand, "method")
-        .is_some_and(|m| matches!(m, "private" | "protected" | "module_function"))
-}
-fn ruby_visibility_marker(cx: &Cx<'_, '_>, sib: Node<'_>) -> Option<bool> {
-    if sib.kind() == "identifier" {
-        return match text(cx, sib) {
-            "private" | "protected" => Some(false),
-            "public" => Some(true),
-            _ => None,
-        };
-    }
-    if sib.kind() == "call" {
-        return bare_marker_call(cx, sib);
-    }
-    None
-}
-fn ruby_public<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
-    if n.kind() == "singleton_method" {
-        return true;
-    }
-    if wrapped_by_marker(cx, n) {
-        return false;
-    }
-    let Some(container) = n.parent() else {
-        return true;
-    };
-    cx.members
-        .state_before(container, n, |sib| ruby_visibility_marker(cx, sib))
-        .unwrap_or(true)
-}
-fn is_protocol_method(name: &str) -> bool {
-    matches!(
-        name,
-        "initialize"
-            | "to_s"
-            | "to_str"
-            | "to_i"
-            | "to_a"
-            | "to_h"
-            | "inspect"
-            | "hash"
-            | "eql?"
-            | "=="
-            | "!="
-            | "<=>"
-            | "<"
-            | ">"
-            | "<="
-            | ">="
-            | "each"
-            | "call"
-            | "[]"
-            | "[]="
-            | "<<"
-            | "+"
-            | "-"
-            | "*"
-            | "/"
-            | "%"
-            | "succ"
-            | "next"
-            | "length"
-            | "size"
-            | "empty?"
-            | "coerce"
-            | "method_missing"
-            | "respond_to_missing?"
-    )
-}
-fn superclass_name<'s>(cx: &Cx<'_, 's>, class: Node<'_>) -> Option<(&'s str, Pos)> {
-    let sup = child_by_field(class, "superclass")?;
-    let base = first_named_child(sup)?;
-    Some((last_segment(text(cx, base), &["::"]), pos_of(sup)))
-}
-fn ruby_in_test<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
-    if cx.is_test_file {
-        return true;
-    }
-    let mut current = n.parent();
-    while let Some(parent) = current {
-        if parent.kind() == "class" {
-            return superclass_name(cx, parent)
-                .is_some_and(|(name, _)| matches!(name, "Test" | "TestCase"));
-        }
-        current = parent.parent();
-    }
-    false
-}
-fn push_plain_param<'s>(cx: &Cx<'_, 's>, child: Node<'_>, out: &mut Vec<Param<'s>>) {
-    let name = field_text(cx, child, "name").unwrap_or_else(|| text(cx, child));
-    out.push(Param {
-        name,
-        ty: None,
-        bool_default: false,
-    });
-}
-fn ruby_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
-    let mut out = Vec::new();
-    let params = first_named_child_matching(n, &["method_parameters"]);
-    let Some(params) = params else {
-        return out;
-    };
-    for child in named_children(params) {
-        match child.kind() {
-            "identifier" => out.push(Param {
-                name: text(cx, child),
-                ty: None,
-                bool_default: false,
-            }),
-            "optional_parameter" | "keyword_parameter" => {
-                let name = field_text(cx, child, "name").unwrap_or("");
-                let default = child_by_field(child, "value")
-                    .map(|v| trimmed(cx, v))
-                    .unwrap_or("");
-                out.push(Param {
-                    name,
-                    ty: None,
-                    bool_default: default == "true" || default == "false",
-                });
-            }
-            "destructured_parameter" | "forward_parameter" => {
-                out.push(Param {
-                    name: text(cx, child),
-                    ty: None,
-                    bool_default: false,
-                });
-            }
-            _ => push_plain_param(cx, child, &mut out),
-        }
-    }
-    out
-}
-fn ruby_sole_call(n: Node<'_>) -> Option<usize> {
-    let body = child_by_field(n, "body")?;
-    if body.kind() == "rescue_modifier" {
-        return None;
-    }
-    let mut stmt = if body.kind() == "body_statement" {
-        only_named_child_matching(body, |c| c.kind() != "comment")?
-    } else {
-        body
-    };
-    if stmt.kind() == "return" {
-        stmt = only_named_child_matching(stmt, |_| true)?;
-    }
-    if stmt.kind() != "call" {
-        return None;
-    }
-    if has_child_kind(stmt, "block") || has_child_kind(stmt, "do_block") {
-        return None;
-    }
-    Some(node_id(stmt))
-}
-fn ruby_callee<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
-    match (child_by_field(n, "receiver"), child_by_field(n, "method")) {
-        (Some(recv), Some(method)) => slice(cx.src, recv.start_byte(), method.end_byte()),
-        (None, Some(method)) => text(cx, method),
-        _ => "",
-    }
-}
-fn ruby_call_kind<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> CallKind {
-    let method = field_text(cx, n, "method").unwrap_or("");
-    if method == "new" && child_by_field(n, "receiver").is_some() {
-        CallKind::New
-    } else {
-        CallKind::Plain
-    }
-}
-const RECEIVER_CHAIN: u8 = 0;
-
-fn ruby_receiver_root<'s>(cx: &Cx<'_, 's>, recv: Node<'_>) -> &'s str {
-    cx.chain_root(RECEIVER_CHAIN, recv, |current| {
-        if current.kind() != "call" {
-            return Link::Root(current);
-        }
-        match child_by_field(current, "receiver") {
-            Some(next) => Link::Next(next),
-            None => Link::Root(current),
-        }
-    })
-}
-fn call_args(n: Node<'_>) -> Vec<Node<'_>> {
-    match first_of_kind(n, &["argument_list"]) {
-        Some(list) => named_children(list)
-            .into_iter()
-            .filter(|c| c.kind() != "comment")
-            .collect(),
-        None => Vec::new(),
-    }
-}
-fn ruby_arg_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    match n.kind() {
-        "string" => string_arg_shape(cx, n, &["string_content"]),
-        "heredoc_body" => string_arg_shape(cx, n, &["heredoc_content"]),
-        "chained_string" => ArgShape::Concat,
-        "binary" => {
-            if binary_concat(cx, n, "+", &["string", "heredoc_body", "chained_string"]) {
-                ArgShape::Concat
-            } else {
-                ArgShape::Other
-            }
-        }
-        "identifier" => ArgShape::Ident(text(cx, n)),
-        _ => ArgShape::Other,
-    }
-}
-fn ruby_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
-    call_args(n)
-        .into_iter()
-        .map(|arg| Arg {
-            shape: ruby_arg_shape(cx, arg),
-            start_line: narrow(arg.start_position().row) + 1,
-            end_line: narrow(arg.end_position().row) + 1,
-        })
-        .collect()
-}
 fn push_ruby_target<'s>(cx: &Cx<'_, 's>, node: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     if matches!(
         node.kind(),
@@ -336,198 +123,12 @@ fn collect_mixins<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<ImplRef<'s>>) 
                 out.push(ImplRef {
                     name: last_segment(text(cx, arg), &["::"]),
                     pos: pos_of(arg),
+                    is_generic: false,
+                    child_is_abstract: false,
                 });
             }
         }
     }
-}
-fn has_constant_pattern(n: Node<'_>) -> bool {
-    let mut stack = vec![n];
-    while let Some(current) = stack.pop() {
-        let kind = current.kind();
-        if kind == "constant" || kind == "scope_resolution" {
-            return true;
-        }
-        stack.extend(named_children(current));
-    }
-    false
-}
-fn sibling_has_constant(n: Node<'_>) -> bool {
-    let Some(parent) = n.parent() else {
-        return false;
-    };
-    for sib in named_children(parent) {
-        if sib.id() == n.id() || (sib.kind() != "when" && sib.kind() != "in_clause") {
-            continue;
-        }
-        if let Some(pattern) = child_by_field(sib, "pattern") {
-            if has_constant_pattern(pattern) {
-                return true;
-            }
-            continue;
-        }
-        for child in named_children(sib) {
-            if child.kind() == "pattern" && has_constant_pattern(child) {
-                return true;
-            }
-        }
-    }
-    false
-}
-fn strip_arrow(t: &str) -> &str {
-    t.trim()
-        .strip_prefix("=>")
-        .map(str::trim)
-        .unwrap_or(t.trim())
-}
-fn ruby_stmt<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, binding: &str) -> Stmt<'s> {
-    if stmt.kind() == "identifier" && text(cx, stmt) == "raise" {
-        return Stmt::Rethrow;
-    }
-    if stmt.kind() != "call" {
-        return Stmt::Other;
-    }
-    let method = field_text(cx, stmt, "method").unwrap_or("");
-    if method != "raise" {
-        return Stmt::Call {
-            callee: ruby_callee(cx, stmt),
-            kind: ruby_call_kind(cx, stmt),
-        };
-    }
-    match first_of_kind(stmt, &["argument_list"]) {
-        None => Stmt::Rethrow,
-        Some(list) => {
-            let count = u32::try_from(list.named_child_count()).unwrap_or(u32::MAX);
-            let mut rest = (0..count)
-                .filter_map(|i| list.named_child(i))
-                .filter(|c| c.kind() != "comment");
-            let Some(one) = rest.next() else {
-                return Stmt::Rethrow;
-            };
-            if rest.next().is_none() && !binding.is_empty() && text(cx, one) == binding {
-                return Stmt::Rethrow;
-            }
-            Stmt::Call {
-                callee: ruby_callee(cx, stmt),
-                kind: CallKind::Plain,
-            }
-        }
-    }
-}
-fn pair_key<'s>(cx: &Cx<'_, 's>, key: Node<'_>) -> Option<&'s str> {
-    match key.kind() {
-        "hash_key_symbol" => Some(text(cx, key)),
-        "simple_symbol" => text(cx, key).strip_prefix(':'),
-        "string" => Some(strip_quotes(text(cx, key))),
-        _ => None,
-    }
-}
-fn pair_source<'s>(cx: &Cx<'_, 's>, value: Node<'_>, key: &str) -> Option<&'s str> {
-    if value.kind() != "call" {
-        return None;
-    }
-    let recv = child_by_field(value, "receiver")?;
-    if recv.kind() != "identifier" || field_text(cx, value, "method") != Some(key) {
-        return None;
-    }
-    if let Some(list) = first_of_kind(value, &["argument_list"])
-        && list.named_child_count() != 0
-    {
-        return None;
-    }
-    if has_child_kind(value, "block") || has_child_kind(value, "do_block") {
-        return None;
-    }
-    Some(text(cx, recv))
-}
-fn hash_copy<'s>(cx: &Cx<'_, 's>, scope: Node<'_>, pairs: &[Node<'_>]) -> Option<FieldCopy<'s>> {
-    if pairs.is_empty() {
-        return None;
-    }
-    let mut source: Option<&'s str> = None;
-    for pair in pairs {
-        if pair.named_child_count() != 2 {
-            return None;
-        }
-        let (Some(key_node), Some(val_node)) = (pair.named_child(0), pair.named_child(1)) else {
-            return None;
-        };
-        let found = pair_source(cx, val_node, pair_key(cx, key_node)?)?;
-        if source.is_some_and(|s| s != found) {
-            return None;
-        }
-        source = Some(found);
-    }
-    Some(FieldCopy {
-        pos: pos_of(scope),
-        fields: narrow(pairs.len()),
-        source,
-    })
-}
-fn is_assign_left(n: Node<'_>) -> bool {
-    n.parent()
-        .is_some_and(|p| p.kind() == "assignment" || p.kind() == "operator_assignment")
-}
-fn ruby_env_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
-    for child in named_children(n) {
-        if matches!(
-            child.kind(),
-            "string" | "simple_symbol" | "identifier" | "constant"
-        ) {
-            return text(cx, child);
-        }
-    }
-    "ENV"
-}
-fn minitest_arity(method: &str) -> Option<usize> {
-    let rest = method
-        .strip_prefix("assert")
-        .or_else(|| method.strip_prefix("refute"))?;
-    if !rest.is_empty() && !rest.starts_with('_') {
-        return None;
-    }
-    let base = method
-        .strip_prefix("assert_")
-        .or_else(|| method.strip_prefix("refute_"))
-        .unwrap_or(method);
-    Some(match base {
-        "operator" | "compare" => 3,
-        "equal" | "not_equal" | "same" | "not_same" | "includes" | "not_includes" | "match"
-        | "no_match" | "in_delta" | "in_epsilon" | "kind_of" | "not_kind_of" | "instance_of"
-        | "not_instance_of" | "respond_to" | "not_respond_to" | "predicate" | "not_predicate" => 2,
-        _ => 1,
-    })
-}
-fn rspec_assertion<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Assertion> {
-    let recv = child_by_field(n, "receiver")?;
-    if recv.kind() != "call" || field_text(cx, recv, "method") != Some("expect") {
-        return None;
-    }
-    let list = first_of_kind(n, &["argument_list"])?;
-    let first = find_named_child(list, |c| c.kind() != "comment")?;
-    let matcher = if first.kind() == "call" {
-        field_text(cx, first, "method").unwrap_or("")
-    } else {
-        ""
-    };
-    let last_str = rfind_named_child(list, |c| c.kind() != "comment")
-        .is_some_and(|a| a.kind() == "string" || a.kind() == "heredoc_body");
-    Some(Assertion {
-        pos: pos_of(n),
-        has_message: count_named_child(list, |c| c.kind() != "comment") >= 2 && last_str,
-        comparison: matches!(
-            matcher,
-            "eq" | "eql"
-                | "equal"
-                | "be"
-                | "be_within"
-                | "include"
-                | "match"
-                | "contain_exactly"
-                | "start_with"
-                | "end_with"
-        ),
-    })
 }
 impl LangHooks for RubyHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
@@ -538,12 +139,25 @@ impl LangHooks for RubyHooks {
         let name_node = child_by_field(n, "name")?;
         let name = text(cx, name_node);
         let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
+        let tested = ruby_in_test_class(cx, n);
         Some(FunctionHead {
+            shadow_params: Vec::new(),
             name,
             name_pos: pos_of(name_node),
-            public: ruby_public(cx, n),
-            interface_bound: is_protocol_method(name),
-            in_test: ruby_in_test(cx, n),
+            visibility: if ruby_public(cx, n) {
+                Visibility::Exported
+            } else {
+                Visibility::Private
+            },
+            signature_forced: is_protocol_method(name),
+            entry_point: false,
+            in_test: tested,
+            is_overload: false,
+            is_deprecated: false,
+            is_decorated: false,
+            is_trait_item: false,
+            region: tested.then(|| region_of(n, CodeRole::Test)),
+            receiver: None,
             params: ruby_params(cx, n),
             return_type: None,
             missing_annotations: Vec::new(),
@@ -555,21 +169,36 @@ impl LangHooks for RubyHooks {
     fn is_else_if(&self, _n: Node<'_>, _parent: Option<Node<'_>>) -> bool {
         false
     }
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        matches!(kind, "for" | "rescue")
+    }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        let kind = n.kind();
-        if kind != "assignment" && kind != "operator_assignment" {
-            return;
-        }
-        let Some(left) = child_by_field(n, "left") else {
-            return;
-        };
-        if left.kind() == "left_assignment_list" {
-            for child in named_children(left) {
-                push_ruby_target(cx, child, out);
+        if n.kind() == "assignment" {
+            let Some(left) = child_by_field(n, "left") else {
+                return;
+            };
+            let mut names = Vec::new();
+            if left.kind() == "left_assignment_list" {
+                for child in named_children(left) {
+                    push_ruby_target(cx, child, &mut names);
+                }
+            } else {
+                push_ruby_target(cx, left, &mut names);
             }
-        } else {
-            push_ruby_target(cx, left, out);
+            for (name, pos) in names {
+                if !blocks::is_block_shadowed(cx, name) {
+                    out.push((name, pos));
+                }
+            }
+            return;
         }
+        blocks::flow_target_names(cx, n, out);
+    }
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        blocks::block_shadow_names(cx, n, out);
+    }
+    fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
+        blocks::op_write_target(cx, n, out);
     }
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
         if n.kind() != "call" {
@@ -581,16 +210,24 @@ impl LangHooks for RubyHooks {
             && let Some(recv) = receiver
         {
             return Some(CallHead {
-                callee: text(cx, recv),
+                callee: ruby_new_callee(cx, n, recv),
                 kind: CallKind::New,
-                callee_root: Some(ruby_receiver_root(cx, recv)),
+                callee_root: ruby_receiver_root(cx, recv),
+                is_simple_path: ruby_is_simple_path(cx, n),
+                initializes_binding: initializes_binding(cx, n),
                 args: ruby_args(cx, n),
             });
         }
+        let root = match receiver {
+            Some(recv) => ruby_receiver_root(cx, recv).filter(|root| !root.is_empty()),
+            None => field_text(cx, n, "method").and_then(canonical_root),
+        };
         Some(CallHead {
             callee: ruby_callee(cx, n),
             kind: CallKind::Plain,
-            callee_root: receiver.map(|r| ruby_receiver_root(cx, r)),
+            callee_root: root,
+            is_simple_path: ruby_is_simple_path(cx, n),
+            initializes_binding: initializes_binding(cx, n),
             args: ruby_args(cx, n),
         })
     }
@@ -602,14 +239,19 @@ impl LangHooks for RubyHooks {
         let name_node = child_by_field(n, "name")?;
         let mut impls = Vec::new();
         if let Some((name, pos)) = superclass_name(cx, n) {
-            impls.push(ImplRef { name, pos });
+            impls.push(ImplRef {
+                name,
+                pos,
+                is_generic: false,
+                child_is_abstract: false,
+            });
         }
         collect_mixins(cx, n, &mut impls);
         Some(TypeHead {
             def: Some(TypeDef {
                 name: last_segment(text(cx, name_node), &["::"]),
                 pos: pos_of(name_node),
-                public: true,
+                visibility: Visibility::Exported,
                 abstraction: kind == "module",
             }),
             impls,
@@ -627,21 +269,25 @@ impl LangHooks for RubyHooks {
                 if text(cx, pattern) != "_" || child_by_field(n, "guard").is_some() {
                     return None;
                 }
+                let parent = cx.parent()?;
                 Some(WildcardArm {
                     pos: pos_of(n),
-                    enum_like: has_constant_pattern(pattern),
+                    enum_like: sibling_enum_like(cx, n),
+                    scrutinee: case_scrutinee_kind(parent),
+                    variant_count: sibling_variant_count(cx, n),
+                    has_nullable_ctor: false,
                 })
             }
             "else" => {
-                let wild = n
+                let parent = cx
                     .parent()
-                    .is_some_and(|p| p.kind() == "case" || p.kind() == "case_match");
-                if !wild {
-                    return None;
-                }
+                    .filter(|p| p.kind() == "case" || p.kind() == "case_match")?;
                 Some(WildcardArm {
                     pos: pos_of(n),
-                    enum_like: sibling_has_constant(n),
+                    enum_like: sibling_enum_like(cx, n),
+                    scrutinee: case_scrutinee_kind(parent),
+                    variant_count: sibling_variant_count(cx, n),
+                    has_nullable_ctor: false,
                 })
             }
             _ => None,
@@ -657,6 +303,9 @@ impl LangHooks for RubyHooks {
                     return Some(Handler {
                         pos: pos_of(n),
                         stmts: Vec::new(),
+                        has_else: false,
+                        try_imports_only: ruby_try_imports_only(cx),
+                        in_cleanup: ruby_in_cleanup(cx),
                     });
                 };
                 let then_body = body.kind() == "then" || body.kind() == "body_statement";
@@ -667,7 +316,7 @@ impl LangHooks for RubyHooks {
                 };
                 let mut stmts = Vec::new();
                 for stmt in kids {
-                    if stmt.kind() == "comment" {
+                    if stmt.kind() == "comment" || stmt.kind() == "nil" {
                         continue;
                     }
                     stmts.push(ruby_stmt(cx, stmt, binding));
@@ -675,6 +324,9 @@ impl LangHooks for RubyHooks {
                 Some(Handler {
                     pos: pos_of(n),
                     stmts,
+                    has_else: false,
+                    try_imports_only: ruby_try_imports_only(cx),
+                    in_cleanup: ruby_in_cleanup(cx),
                 })
             }
             "rescue_modifier" => {
@@ -687,7 +339,7 @@ impl LangHooks for RubyHooks {
                 };
                 let mut stmts = Vec::new();
                 for stmt in kids {
-                    if stmt.kind() == "comment" {
+                    if stmt.kind() == "comment" || stmt.kind() == "nil" {
                         continue;
                     }
                     if stmt.kind() == "call" {
@@ -702,6 +354,9 @@ impl LangHooks for RubyHooks {
                 Some(Handler {
                     pos: pos_of(n),
                     stmts,
+                    has_else: false,
+                    try_imports_only: false,
+                    in_cleanup: ruby_in_cleanup(cx),
                 })
             }
             _ => None,
@@ -718,17 +373,21 @@ impl LangHooks for RubyHooks {
         if n.kind() != "call" {
             return None;
         }
+        if ruby_call_kind(cx, n) != CallKind::New && child_by_field(n, "receiver").is_some() {
+            return None;
+        }
+        let list = first_of_kind(n, &["argument_list"])?;
         let mut pairs = Vec::new();
-        for arg in call_args(n) {
-            if arg.kind() == "pair" {
+        let mut cursor = list.walk();
+        for arg in list.children(&mut cursor) {
+            if !arg.is_named() || arg.kind() == "comment" {
+                continue;
+            }
+            if arg.kind() == "hash" {
+                flatten_hash_pairs(arg, &mut pairs);
+            } else if arg.kind() == "pair" {
                 pairs.push(arg);
-            } else if arg.kind() == "hash" {
-                for inner in named_children(arg) {
-                    if inner.kind() == "pair" {
-                        pairs.push(inner);
-                    }
-                }
-            } else if arg.kind() != "comment" {
+            } else {
                 return None;
             }
         }
@@ -770,7 +429,7 @@ impl LangHooks for RubyHooks {
         if n.kind() != "global_variable" && n.kind() != "class_variable" {
             return;
         }
-        if !is_assign_left(n) {
+        if !is_assign_left(cx, n) {
             return;
         }
         let kind = if in_function {
@@ -779,6 +438,23 @@ impl LangHooks for RubyHooks {
             AmbientKind::GlobalMutable
         };
         out.push((kind, text(cx, n), pos_of(n)));
+    }
+    fn call_marker(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        if n.kind() != "call" {
+            return None;
+        }
+        if !matches!(
+            field_text(cx, n, "method").unwrap_or(""),
+            "it" | "specify" | "example" | "describe" | "context"
+        ) {
+            return None;
+        }
+        if let Some(recv) = child_by_field(n, "receiver")
+            && text(cx, recv) != "RSpec"
+        {
+            return None;
+        }
+        Some(CodeRole::Test)
     }
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
         if n.kind() != "call" {
@@ -818,10 +494,20 @@ impl LangHooks for RubyHooks {
                 .is_some_and(|a| a.kind() == "string" || a.kind() == "heredoc_body");
             count_named_child(list, |c| c.kind() != "comment") > arity && last_str
         });
+        let shape = if method == "assert" || method == "refute" {
+            bare_assert_shape(cx, n)
+        } else if minitest_is_equality(method) {
+            AssertShape::TopEqNe
+        } else {
+            AssertShape::Other
+        };
         Some(Assertion {
             pos: pos_of(n),
             has_message,
             comparison: arity > 1,
+            shape,
+            in_typecheck: false,
+            value_is_bool_literal: false,
         })
     }
 }

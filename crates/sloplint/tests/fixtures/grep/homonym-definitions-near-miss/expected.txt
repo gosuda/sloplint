@@ -1,1 +1,1 @@
-# Near-miss: only 4 files define the name (strict min_files=5).
+# Near-miss: 6 files hold the name but every definition is Restricted, never Exported.

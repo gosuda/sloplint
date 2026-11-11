@@ -1,7 +1,13 @@
+mod binds;
 mod custom;
+mod cx;
 mod emit;
+mod generated;
+mod header_comments;
 mod hooks;
 mod lang;
+mod shadow;
+mod shapes;
 mod spec;
 mod walk;
 
@@ -11,10 +17,14 @@ use std::collections::hash_map::Entry;
 
 use sloplint_core::facts::FileFacts;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_core::{CommentText, CustomHit, Pos};
 use tree_sitter::{Node, Parser, Tree};
 
+use custom::CustomHits;
 pub use custom::CustomRules;
+pub use generated::is_generated;
+pub use lang::shadowed_sources;
 use spec::spec;
 
 pub struct Parsers<'o> {
@@ -66,7 +76,7 @@ pub struct FileInput<'s> {
     /// The path relative to the project root, `/`-separated.
     pub path: &'s str,
     pub source: &'s str,
-    pub is_test_file: bool,
+    pub role: CodeRole,
 }
 
 pub struct Analysis<'s> {
@@ -74,6 +84,7 @@ pub struct Analysis<'s> {
     pub comments: Vec<CommentText<'s>>,
     pub parse_error: Option<Pos>,
     pub custom_hits: Vec<CustomHit<'s>>,
+    pub custom_capped: Vec<&'s str>,
 }
 
 pub fn analyze<'s>(
@@ -99,6 +110,7 @@ pub fn analyze<'s>(
         comments,
         parse_error: Some(first_error_pos(root).unwrap_or_else(|| root_end_pos(root))),
         custom_hits: Vec::new(),
+        custom_capped: Vec::new(),
     }
 }
 
@@ -111,12 +123,13 @@ fn clean_analysis<'s>(
 ) -> Analysis<'s> {
     let hooks = lang::hooks_for(parsed_as, input.path, parsers.ocaml_interfaces);
     let walked = spec(parsed_as).walk(hooks, input, tree.root_node());
-    let custom_hits = custom.run(tree, input.source, parsed_as);
+    let CustomHits { hits, capped } = custom.run(tree, input.source, parsed_as);
     Analysis {
         facts: walked.facts,
         comments: walked.comments,
         parse_error: None,
-        custom_hits,
+        custom_hits: hits,
+        custom_capped: capped,
     }
 }
 

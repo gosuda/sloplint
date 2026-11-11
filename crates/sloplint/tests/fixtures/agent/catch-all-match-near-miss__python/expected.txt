@@ -1,0 +1,1 @@
+# near-miss: wildcard over integer literals is not enum-like.

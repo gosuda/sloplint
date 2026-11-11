@@ -1,1 +1,1 @@
-a.go:2 deny complexity/nesting-depth
+a.go:2 info complexity/nesting-depth

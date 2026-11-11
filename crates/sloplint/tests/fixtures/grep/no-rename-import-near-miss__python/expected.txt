@@ -1,0 +1,1 @@
+# Near-miss: dec_floor contains floor, `_` is not an alias, and path as path hides nothing.

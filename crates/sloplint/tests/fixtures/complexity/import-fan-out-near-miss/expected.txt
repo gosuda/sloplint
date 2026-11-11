@@ -1,1 +1,1 @@
-# near-miss: 9 distinct modules < strict warn_at 10.
+# near-miss: std-only imports are excluded, and 9 modules < strict minor_at 15.

@@ -1,1 +1,1 @@
-# Near-miss: distinct newtype plus one primitive.
+# Near-miss: distinct newtype plus one primitive; number and bigint never join.

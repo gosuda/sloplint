@@ -1,4 +1,4 @@
-/* Near-miss: large file comfortably under the default strict budget of 500/800. */
+/* Near-miss: large file comfortably under the default strict budget of 600/1000. */
 int value_01(void) {
     return 1;
 }

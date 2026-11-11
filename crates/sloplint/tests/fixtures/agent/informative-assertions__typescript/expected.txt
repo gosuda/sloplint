@@ -1,1 +1,1 @@
-src/mod.ts:3 deny agent/informative-assertions
+src/mod.ts:3 info agent/informative-assertions

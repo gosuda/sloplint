@@ -1,1 +1,1 @@
-pos.c:1 warn slop/echo-comment
+pos.c:1 minor slop/echo-comment

@@ -28,8 +28,11 @@ object Spread {
     val x = 24
     val y = 25
     val z = 26
+    val zz = 27
     val sum = x + y + z
     val fin = sum + a
+    val qq1 = 1
+    val qq2 = qq1 + 1
     total = fin + limit
     total
   }

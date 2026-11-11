@@ -4,27 +4,67 @@ use std::time::{Duration, Instant};
 
 use sloplint_core::facts::{FileFacts, Function, MutBinding};
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 /// Nesting depth for every case: deep enough to overflow a 2 MiB stack under recursion.
 pub const DEPTH: usize = 20_000;
 
-/// Wall-clock budget for analyzing one source at [`DEPTH`].
+/// Wall-clock cap for a full-depth analysis when the quarter-depth sample is too fast to scale.
 ///
 /// Linear analysis takes well under a second in a debug build. A pass that rescans the nodes
-/// below every node costs minutes at this depth, so the budget separates the two shapes with a
-/// wide margin on a slow machine.
+/// below every node costs minutes at this depth, so the cap still separates the two shapes with
+/// a wide margin on a slow machine.
 pub const LINEAR_BUDGET: Duration = Duration::from_secs(30);
 
-/// Runs `check` and requires that it finishes within [`LINEAR_BUDGET`].
-pub fn within_linear_budget<T>(check: impl FnOnce() -> T) -> T {
+/// Scaling bound: time at [`DEPTH`] must stay within this multiple of time at `DEPTH / 4`.
+///
+/// Linear work grows about 4x across that step and quadratic work about 16x, so 10 separates
+/// the two shapes with margin on either side while load swings shared by both samples cancel.
+pub const LINEAR_RATIO: u32 = 10;
+
+/// Minimum quarter-depth time worth scaling: below this timer noise dominates the ratio,
+/// so the check falls back to [`LINEAR_BUDGET`].
+pub const MIN_SAMPLE: Duration = Duration::from_millis(5);
+
+/// Samples per depth: each depth runs this many times and keeps the fastest time.
+const SAMPLES: usize = 3;
+
+/// The macOS Intel runner measured 10.4x to 11.3x on linear analysis, so there the ratio cannot
+/// separate linear from quadratic work and only [`LINEAR_BUDGET`] applies.
+const RATIO_SEPARATES: bool = !cfg!(all(target_os = "macos", target_arch = "x86_64"));
+
+/// Requires linear scaling: runs `check` at `DEPTH / 4` and at [`DEPTH`], keeps the fastest
+/// time at each depth, and requires the full depth to cost at most [`LINEAR_RATIO`] times the
+/// quarter depth. When the quarter depth is faster than [`MIN_SAMPLE`], the ratio is noise, so
+/// the full depth must instead finish within [`LINEAR_BUDGET`].
+pub fn within_linear_budget<T>(mut check: impl FnMut(usize) -> T) -> T {
+    let mut small = Duration::MAX;
+    for _ in 0..SAMPLES {
+        let started = Instant::now();
+        check(DEPTH / 4);
+        small = small.min(started.elapsed());
+    }
     let started = Instant::now();
-    let value = check();
-    let took = started.elapsed();
-    assert!(
-        took < LINEAR_BUDGET,
-        "analysis took {took:?} at depth {DEPTH}, so it is no longer linear in depth"
-    );
+    let mut value = check(DEPTH);
+    let mut full = started.elapsed();
+    for _ in 1..SAMPLES {
+        let started = Instant::now();
+        value = check(DEPTH);
+        full = full.min(started.elapsed());
+    }
+    if small < MIN_SAMPLE || !RATIO_SEPARATES {
+        assert!(
+            full < LINEAR_BUDGET,
+            "analysis took {full:?} at depth {DEPTH}, so it is no longer linear in depth"
+        );
+    } else {
+        assert!(
+            full <= small * LINEAR_RATIO,
+            "analysis took {full:?} at depth {DEPTH} versus {small:?} at depth {}, above {LINEAR_RATIO}x, so it is no longer linear in depth",
+            DEPTH / 4
+        );
+    }
     value
 }
 
@@ -51,7 +91,7 @@ pub fn with_facts<R>(
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "{path} parses cleanly");

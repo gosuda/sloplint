@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::sync::LazyLock;
 
 use sloplint_core::lang::Lang;
 
@@ -33,183 +32,134 @@ pub(crate) mod zig;
 
 pub(crate) type Table = &'static [(&'static str, Role)];
 
-struct Grammar {
-    lang: Lang,
-    language: tree_sitter::Language,
-    table: Table,
-    hooks: &'static dyn LangHooks,
-}
-
-static GRAMMARS: LazyLock<Vec<Grammar>> = LazyLock::new(|| {
-    vec![
-        grammar(
-            Lang::Rust,
-            tree_sitter_rust::LANGUAGE,
-            rust::TABLE,
-            &rust::HOOKS,
-        ),
-        grammar(
-            Lang::TypeScript,
-            tree_sitter_typescript::LANGUAGE_TYPESCRIPT,
+fn grammar(lang: Lang) -> (tree_sitter::Language, Table, &'static dyn LangHooks) {
+    match lang {
+        Lang::Rust => (tree_sitter_rust::LANGUAGE.into(), rust::TABLE, &rust::HOOKS),
+        Lang::TypeScript => (
+            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
             typescript::TABLE,
             &typescript::HOOKS,
         ),
-        grammar(
-            Lang::Tsx,
-            tree_sitter_typescript::LANGUAGE_TSX,
+        Lang::Tsx => (
+            tree_sitter_typescript::LANGUAGE_TSX.into(),
             typescript::TABLE,
             &typescript::HOOKS,
         ),
-        grammar(
-            Lang::JavaScript,
-            tree_sitter_javascript::LANGUAGE,
+        Lang::JavaScript => (
+            tree_sitter_javascript::LANGUAGE.into(),
             javascript::TABLE,
             &javascript::HOOKS,
         ),
-        grammar(
-            Lang::Python,
-            tree_sitter_python::LANGUAGE,
+        Lang::Python => (
+            tree_sitter_python::LANGUAGE.into(),
             python::TABLE,
             &python::HOOKS,
         ),
-        grammar(Lang::Go, tree_sitter_go::LANGUAGE, go::TABLE, &go::HOOKS),
-        grammar(
-            Lang::Java,
-            tree_sitter_java::LANGUAGE,
-            java::TABLE,
-            &java::HOOKS,
-        ),
-        grammar(
-            Lang::Kotlin,
-            tree_sitter_kotlin_ng::LANGUAGE,
+        Lang::Go => (tree_sitter_go::LANGUAGE.into(), go::TABLE, &go::HOOKS),
+        Lang::Java => (tree_sitter_java::LANGUAGE.into(), java::TABLE, &java::HOOKS),
+        Lang::Kotlin => (
+            tree_sitter_kotlin_ng::LANGUAGE.into(),
             kotlin::TABLE,
             &kotlin::HOOKS,
         ),
-        grammar(
-            Lang::CSharp,
-            tree_sitter_c_sharp::LANGUAGE,
+        Lang::CSharp => (
+            tree_sitter_c_sharp::LANGUAGE.into(),
             csharp::TABLE,
             &csharp::HOOKS,
         ),
-        grammar(Lang::C, tree_sitter_c::LANGUAGE, c::TABLE, &c::HOOKS),
-        grammar(
-            Lang::Cpp,
-            tree_sitter_cpp::LANGUAGE,
-            cpp::TABLE,
-            &cpp::HOOKS,
-        ),
-        grammar(
-            Lang::ObjC,
-            tree_sitter_objc::LANGUAGE,
-            objc::TABLE,
-            &objc::HOOKS,
-        ),
-        grammar(
-            Lang::Php,
-            tree_sitter_php::LANGUAGE_PHP,
+        Lang::C => (tree_sitter_c::LANGUAGE.into(), c::TABLE, &c::HOOKS),
+        Lang::Cpp => (tree_sitter_cpp::LANGUAGE.into(), cpp::TABLE, &cpp::HOOKS),
+        Lang::ObjC => (tree_sitter_objc::LANGUAGE.into(), objc::TABLE, &objc::HOOKS),
+        Lang::Php => (
+            tree_sitter_php::LANGUAGE_PHP.into(),
             php::TABLE,
             &php::HOOKS,
         ),
-        grammar(
-            Lang::Ruby,
-            tree_sitter_ruby::LANGUAGE,
-            ruby::TABLE,
-            &ruby::HOOKS,
-        ),
-        grammar(
-            Lang::Bash,
-            tree_sitter_bash::LANGUAGE,
-            bash::TABLE,
-            &bash::HOOKS,
-        ),
-        grammar(
-            Lang::PowerShell,
-            tree_sitter_powershell::LANGUAGE,
+        Lang::Ruby => (tree_sitter_ruby::LANGUAGE.into(), ruby::TABLE, &ruby::HOOKS),
+        Lang::Bash => (tree_sitter_bash::LANGUAGE.into(), bash::TABLE, &bash::HOOKS),
+        Lang::PowerShell => (
+            tree_sitter_powershell::LANGUAGE.into(),
             powershell::TABLE,
             &powershell::HOOKS,
         ),
-        grammar(
-            Lang::Swift,
-            tree_sitter_swift::LANGUAGE,
+        Lang::Swift => (
+            tree_sitter_swift::LANGUAGE.into(),
             swift::TABLE,
             &swift::HOOKS,
         ),
-        grammar(Lang::R, tree_sitter_r::LANGUAGE, r::TABLE, &r::HOOKS),
-        grammar(
-            Lang::Scala,
-            tree_sitter_scala::LANGUAGE,
+        Lang::R => (tree_sitter_r::LANGUAGE.into(), r::TABLE, &r::HOOKS),
+        Lang::Scala => (
+            tree_sitter_scala::LANGUAGE.into(),
             scala::TABLE,
             &scala::HOOKS,
         ),
-        grammar(
-            Lang::Dart,
-            tree_sitter_dart::LANGUAGE,
-            dart::TABLE,
-            &dart::HOOKS,
-        ),
-        grammar(
-            Lang::Zig,
-            tree_sitter_zig::LANGUAGE,
-            zig::TABLE,
-            &zig::HOOKS,
-        ),
-        grammar(
-            Lang::Ocaml,
-            tree_sitter_ocaml::LANGUAGE_OCAML,
+        Lang::Dart => (tree_sitter_dart::LANGUAGE.into(), dart::TABLE, &dart::HOOKS),
+        Lang::Zig => (tree_sitter_zig::LANGUAGE.into(), zig::TABLE, &zig::HOOKS),
+        Lang::Ocaml => (
+            tree_sitter_ocaml::LANGUAGE_OCAML.into(),
             ocaml::TABLE,
             &ocaml::HOOKS,
         ),
-        grammar(
-            Lang::OcamlInterface,
-            tree_sitter_ocaml::LANGUAGE_OCAML_INTERFACE,
+        Lang::OcamlInterface => (
+            tree_sitter_ocaml::LANGUAGE_OCAML_INTERFACE.into(),
             ocaml::TABLE,
             &ocaml::HOOKS,
         ),
-        grammar(
-            Lang::Odin,
-            tree_sitter_odin::LANGUAGE,
-            odin::TABLE,
-            &odin::HOOKS,
-        ),
-        grammar(
-            Lang::Starlark,
-            tree_sitter_starlark::LANGUAGE,
+        Lang::Odin => (tree_sitter_odin::LANGUAGE.into(), odin::TABLE, &odin::HOOKS),
+        Lang::Starlark => (
+            tree_sitter_starlark::LANGUAGE.into(),
             starlark::TABLE,
             &starlark::HOOKS,
         ),
-    ]
-});
-
-fn grammar(
-    lang: Lang,
-    language: impl Into<tree_sitter::Language>,
-    table: Table,
-    hooks: &'static dyn LangHooks,
-) -> Grammar {
-    Grammar {
-        lang,
-        language: language.into(),
-        table,
-        hooks,
     }
 }
 
 pub(crate) fn spec_for(lang: Lang) -> LangSpec {
-    let Some(entry) = GRAMMARS.iter().find(|grammar| grammar.lang == lang) else {
-        panic!("no grammar wired for {lang:?}");
-    };
-    LangSpec::new(lang, entry.language.clone(), entry.table, entry.hooks)
+    let (language, table, hooks) = grammar(lang);
+    LangSpec::new(lang, language, table, hooks)
+}
+
+pub fn shadowed_sources<'a>(paths: impl Iterator<Item = &'a str>) -> HashSet<String> {
+    let discovered: HashSet<&str> = paths.collect();
+    let mut shadowed = HashSet::new();
+    for path in &discovered {
+        if let Some(ml) = path.strip_suffix('i')
+            && ml.ends_with(".ml")
+            && discovered.contains(ml)
+        {
+            shadowed.insert(ml.to_string());
+        }
+    }
+    shadowed
 }
 
 pub(crate) fn hooks_for(
     lang: Lang,
     path: &str,
-    ocaml_interfaces: Option<&HashSet<String>>,
+    shadowed: Option<&HashSet<String>>,
 ) -> &'static dyn LangHooks {
-    let shadowed = ocaml_interfaces.is_some_and(|set| set.contains(path));
-    if lang == Lang::Ocaml && shadowed {
+    let is_shadowed = shadowed.is_some_and(|set| set.contains(path));
+    if lang == Lang::Ocaml && is_shadowed {
         &ocaml::SHADOWED_HOOKS
     } else {
         spec(lang).hooks
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::shadowed_sources;
+
+    #[test]
+    fn shadowed_sources_pairs_ml_with_a_discovered_mli() {
+        let paths = ["a.ml", "a.mli", "b.ml", "c.mli"];
+        let shadowed = shadowed_sources(paths.iter().copied());
+        assert!(
+            shadowed.contains("a.ml"),
+            "a.ml has a discovered sibling a.mli"
+        );
+        assert!(!shadowed.contains("b.ml"), "b.ml has no sibling b.mli");
+        assert!(!shadowed.contains("c.ml"), "a lone c.mli adds nothing");
+        assert_eq!(shadowed.len(), 1, "only a.ml is shadowed");
     }
 }

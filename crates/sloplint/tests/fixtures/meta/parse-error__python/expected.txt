@@ -1,1 +1,1 @@
-src/broken.py:1 warn meta/parse-error
+src/broken.py:1 minor meta/parse-error

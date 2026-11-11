@@ -1,21 +1,23 @@
 use std::fs;
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 use std::path::Path;
 
+use crate::error::{RunError, io_error};
+use crate::{fileio, project};
 use sloplint_core::Finding;
-use sloplint_core::baseline::{Baseline, MAX_BASELINE_ENTRIES};
-
-use crate::{RunError, fileio, io_error, project};
+use sloplint_core::baseline::{Baseline, MAX_BASELINE_ENTRIES, SkippedEntry};
 
 pub(crate) fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunError> {
     let path = project::resolve_within_root(root, name)?;
-    let mut text = match fileio::read_bounded_string(&path, project::MAX_BASELINE_BYTES) {
-        Ok(text) => text,
-        Err(source) if source.kind() == io::ErrorKind::NotFound => {
-            return Err(RunError::BaselineMissing { path });
-        }
-        Err(source) => return Err(RunError::Io { path, source }),
-    };
+    let mut text =
+        match fileio::read_capped_string(&path, project::MAX_BASELINE_BYTES, fileio::Links::Follow)
+        {
+            Ok(text) => text,
+            Err(source) if source.kind() == io::ErrorKind::NotFound => {
+                return Err(RunError::BaselineMissing { path });
+            }
+            Err(source) => return Err(RunError::Io { path, source }),
+        };
     if text.starts_with('\u{feff}') {
         text.drain(..'\u{feff}'.len_utf8());
     }
@@ -25,36 +27,18 @@ pub(crate) fn load_baseline(root: &Path, name: &str) -> Result<Baseline, RunErro
     })
 }
 
-pub(crate) fn read_within_limit(path: &Path, max_bytes: u64) -> io::Result<Option<Vec<u8>>> {
-    let (file, len) = match fileio::open_regular_nofollow(path) {
-        Ok(opened) => opened,
-        Err(source) if fileio::refused_without_following(path, &source) => return Ok(None),
-        Err(source) => return Err(source),
-    };
-    if len > max_bytes {
-        return Ok(None);
-    }
-    let cap = usize::try_from(len.min(max_bytes.saturating_add(1))).unwrap_or(usize::MAX);
-    let mut bytes = Vec::new();
-    bytes.try_reserve_exact(cap).map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::OutOfMemory,
-            format!("file of {len} bytes does not fit in memory"),
-        )
-    })?;
-    file.take(max_bytes.saturating_add(1))
-        .read_to_end(&mut bytes)?;
-    Ok((u64::try_from(bytes.len()).unwrap_or(u64::MAX) <= max_bytes).then_some(bytes))
-}
-
 pub fn read_source(path: &Path, max_bytes: u64) -> Result<String, RunError> {
     let invalid =
         |message: &'static str| io_error(path, io::Error::new(io::ErrorKind::InvalidData, message));
-    let bytes = read_within_limit(path, max_bytes)
-        .map_err(|source| io_error(path, source))?
-        .ok_or_else(|| {
-            invalid("file is not regular, or grew past max_file_bytes while being linted")
-        })?;
+    let bytes = match fileio::read_capped(path, max_bytes, fileio::Links::NoFollow) {
+        Ok(fileio::Capped::Bytes(bytes, _)) => bytes,
+        Ok(_) => {
+            return Err(invalid(
+                "file is not regular, or grew past max_file_bytes while being linted",
+            ));
+        }
+        Err(source) => return Err(io_error(path, source)),
+    };
     let mut text =
         String::from_utf8(bytes).map_err(|_| invalid("stream did not contain valid UTF-8"))?;
     if text.starts_with('\u{feff}') {
@@ -63,13 +47,20 @@ pub fn read_source(path: &Path, max_bytes: u64) -> Result<String, RunError> {
     Ok(text)
 }
 
-pub(crate) fn record_baseline(path: &Path, findings: &[Finding]) -> Result<(), RunError> {
+pub(crate) fn record_baseline(
+    path: &Path,
+    findings: &[Finding],
+    skipped: &[SkippedEntry],
+) -> Result<(), RunError> {
     ensure_prior_baseline(path)?;
-    let baseline = Baseline::from_findings(findings);
+    let baseline = Baseline::from_findings_and_skipped(findings, skipped);
     let json = baseline.to_json();
     validate_baseline_limits(
         path,
-        baseline.entries.len(),
+        baseline
+            .entries
+            .len()
+            .saturating_add(baseline.skipped.len()),
         json.len(),
         MAX_BASELINE_ENTRIES,
         project::MAX_BASELINE_BYTES,
@@ -118,9 +109,12 @@ fn ensure_prior_baseline(path: &Path) -> Result<(), RunError> {
     let refused = || RunError::NotABaseline {
         path: path.to_path_buf(),
     };
-    let bytes = read_within_limit(path, project::MAX_BASELINE_BYTES)
-        .map_err(|source| io_error(path, source))?
-        .ok_or_else(refused)?;
+    let bytes =
+        match fileio::read_capped(path, project::MAX_BASELINE_BYTES, fileio::Links::NoFollow) {
+            Ok(fileio::Capped::Bytes(bytes, _)) => bytes,
+            Ok(_) => return Err(refused()),
+            Err(source) => return Err(io_error(path, source)),
+        };
     let parses = std::str::from_utf8(&bytes)
         .map(|text| text.strip_prefix('\u{feff}').unwrap_or(text))
         .is_ok_and(|text| Baseline::from_json(text).is_ok());
@@ -198,18 +192,18 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn a_symlink_at_a_source_path_is_a_skip_and_its_target_is_never_read() {
-        use super::read_within_limit;
+        use crate::fileio::{Capped, Links, read_capped};
         let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
         let outside = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
         let target = outside.path().join("target.rs");
         std::fs::write(&target, "pub fn outside() {}\n").unwrap_or_else(|e| panic!("write: {e}"));
         let link = tmp.path().join("link.rs");
         std::os::unix::fs::symlink(&target, &link).unwrap_or_else(|e| panic!("symlink: {e}"));
-        let refused = read_within_limit(&link, 4096).unwrap_or_else(|e| {
+        let refused = read_capped(&link, 4096, Links::NoFollow).unwrap_or_else(|e| {
             panic!("a symlink at a source path must be a counted skip, not an IO error: {e}")
         });
-        assert_eq!(
-            refused, None,
+        assert!(
+            matches!(refused, Capped::NotRegular(_)),
             "a symlink must never be followed to the outside file's bytes"
         );
     }
@@ -217,7 +211,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn a_fifo_at_a_source_path_is_a_skip() {
-        use super::read_within_limit;
+        use crate::fileio::{Capped, Links, read_capped};
         let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
         let fifo = tmp.path().join("pipe.rs");
         let status = std::process::Command::new("mkfifo")
@@ -229,11 +223,11 @@ mod tests {
             "mkfifo {} failed: {status}",
             fifo.display()
         );
-        let refused = read_within_limit(&fifo, 4096).unwrap_or_else(|e| {
+        let refused = read_capped(&fifo, 4096, Links::NoFollow).unwrap_or_else(|e| {
             panic!("a FIFO at a source path must be a counted skip, not an IO error: {e}")
         });
-        assert_eq!(
-            refused, None,
+        assert!(
+            matches!(refused, Capped::NotRegular(_)),
             "a FIFO at a source path must be skipped, never read"
         );
     }
@@ -241,12 +235,12 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn a_directory_at_a_source_path_keeps_its_platform_error() {
-        use super::read_within_limit;
+        use crate::fileio::{Links, read_capped};
         let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
         let dir = tmp.path().join("dir.rs");
         std::fs::create_dir(&dir).unwrap_or_else(|e| panic!("mkdir: {e}"));
         assert!(
-            read_within_limit(&dir, 4096).is_err(),
+            read_capped(&dir, 4096, Links::NoFollow).is_err(),
             "a directory keeps the platform's own error, not a counted skip"
         );
     }
@@ -254,11 +248,11 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn a_path_the_opener_cannot_name_keeps_its_error() {
-        use super::read_within_limit;
+        use crate::fileio::{Links, read_capped};
         use std::os::unix::ffi::OsStrExt;
         let unnamable = std::path::Path::new(std::ffi::OsStr::from_bytes(b"bad\0name.rs"));
         assert!(
-            read_within_limit(unnamable, 4096).is_err(),
+            read_capped(unnamable, 4096, Links::NoFollow).is_err(),
             "a path the opener cannot name is an invalid-input error, not a counted skip"
         );
     }
@@ -266,15 +260,17 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn a_regular_source_at_a_source_path_is_read_in_full() {
-        use super::read_within_limit;
+        use crate::fileio::{Capped, Links, read_capped};
         let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
         let file = tmp.path().join("inside.rs");
         std::fs::write(&file, "pub fn inside() {}\n").unwrap_or_else(|e| panic!("write: {e}"));
-        let read = read_within_limit(&file, 4096)
+        let read = read_capped(&file, 4096, Links::NoFollow)
             .unwrap_or_else(|e| panic!("a regular source must still read: {e}"));
+        let Capped::Bytes(bytes, _) = read else {
+            panic!("a regular source must still read in full");
+        };
         assert_eq!(
-            read.as_deref(),
-            Some(&b"pub fn inside() {}\n"[..]),
+            bytes, b"pub fn inside() {}\n",
             "the regular file must be read in full"
         );
     }
@@ -305,10 +301,11 @@ mod tests {
     #[test]
     fn a_recorded_baseline_roundtrips_through_the_load_parser_and_deduplicates() {
         use super::{Baseline, record_baseline};
-        use sloplint_core::finding::{Finding, Severity};
+        use sloplint_core::finding::{Confidence, Finding, Severity};
         let finding = Finding {
             rule: "generic-name".into(),
-            severity: Severity::Warn,
+            severity: Severity::Minor,
+            confidence: Confidence::Medium,
             path: "first.rs".into(),
             line: 1,
             column: 7,
@@ -316,10 +313,12 @@ mod tests {
             fix: String::new(),
             context: "fn handle".into(),
             fingerprint: "0123456789abcdef0123456789abcdef".into(),
+            context_pending: false,
+            file_wide: false,
         };
         let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
         let path = tmp.path().join("baseline.json");
-        record_baseline(&path, &[finding.clone(), finding.clone()])
+        record_baseline(&path, &[finding.clone(), finding.clone()], &[])
             .unwrap_or_else(|e| panic!("record: {e}"));
         let stored = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read: {e}"));
         let parsed = Baseline::from_json(&stored)
@@ -330,7 +329,7 @@ mod tests {
             Baseline::from_findings(&[finding]),
             "the recorded document must roundtrip through the load parser"
         );
-        record_baseline(&path, &[]).unwrap_or_else(|e| panic!("re-record: {e}"));
+        record_baseline(&path, &[], &[]).unwrap_or_else(|e| panic!("re-record: {e}"));
         let replaced = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read: {e}"));
         assert!(
             Baseline::from_json(&replaced)

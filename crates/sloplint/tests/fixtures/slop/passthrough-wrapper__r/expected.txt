@@ -1,1 +1,1 @@
-src/wrap.R:1 warn slop/passthrough-wrapper
+src/wrap.R:1 info slop/passthrough-wrapper

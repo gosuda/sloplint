@@ -3,6 +3,7 @@
 //! same way `:a =>` and `"b" =>` keys carry theirs.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 const SOURCE: &str = r#"class Builder
@@ -31,7 +32,7 @@ fn keyword_and_rocket_pairs_report_one_to_one_copies() {
         lang: Lang::Ruby,
         path: "case.rb",
         source: SOURCE,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.rb parses");

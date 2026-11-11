@@ -1,0 +1,1 @@
+src/table.zig:1 info complexity/boolean-params

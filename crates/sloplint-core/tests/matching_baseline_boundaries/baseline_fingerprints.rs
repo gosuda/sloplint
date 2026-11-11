@@ -1,12 +1,13 @@
 use std::collections::{BTreeSet, HashMap};
 
 use proptest::prelude::*;
-use sloplint_core::{Baseline, BaselineEntry, Finding, Severity};
+use sloplint_core::{Baseline, BaselineEntry, Confidence, Finding, Severity};
 
 fn finding(rule: &str, path: &str, line: u32, context: &str) -> Finding {
     Finding {
         rule: rule.into(),
-        severity: Severity::Warn,
+        severity: Severity::Minor,
+        confidence: Confidence::Medium,
         path: path.into(),
         line,
         column: 1,
@@ -14,6 +15,8 @@ fn finding(rule: &str, path: &str, line: u32, context: &str) -> Finding {
         fix: String::new(),
         context: context.into(),
         fingerprint: Box::from(""),
+        context_pending: false,
+        file_wide: false,
     }
 }
 
@@ -208,6 +211,7 @@ fn filter_counts_duplicates_and_stale_entries_by_scope() {
             entry("src/b.rs", "r/one", "aa"),
             entry("other/c.rs", "r/one", "aa"),
         ]),
+        skipped: BTreeSet::new(),
     };
     let findings = vec![
         with_fingerprint(finding("r/one", "src/a.rs", 1, "x"), "aa"),
@@ -234,6 +238,7 @@ fn filter_counts_duplicates_and_stale_entries_by_scope() {
 fn filter_requires_every_identity_component_to_match() {
     let baseline = Baseline {
         entries: BTreeSet::from([entry("src/a.rs", "r/one", "aa")]),
+        skipped: BTreeSet::new(),
     };
     let findings = vec![
         with_fingerprint(finding("r/one", "src/a.rs", 1, ""), "aa"),
@@ -256,6 +261,7 @@ fn filter_requires_every_identity_component_to_match() {
 fn filter_handles_empty_baseline_and_empty_findings() {
     let empty = Baseline {
         entries: BTreeSet::new(),
+        skipped: BTreeSet::new(),
     };
     let findings = vec![with_fingerprint(finding("r", "p", 1, ""), "aa")];
     let (kept, baselined, stale) = empty.filter(findings.clone(), &|_| true);
@@ -263,6 +269,7 @@ fn filter_handles_empty_baseline_and_empty_findings() {
 
     let one = Baseline {
         entries: BTreeSet::from([entry("p", "r", "aa")]),
+        skipped: BTreeSet::new(),
     };
     let (kept, baselined, stale) = one.filter(Vec::new(), &|_| true);
     assert_eq!((kept.len(), baselined, stale), (0, 0, 1));
@@ -303,7 +310,10 @@ proptest! {
         probes in proptest::collection::vec(small_entry(), 0..24),
         scope in prop::sample::select(vec!["src/a", "src/", "z", "nothing"]),
     ) {
-        let baseline = Baseline { entries: entries.iter().cloned().collect() };
+        let baseline = Baseline {
+            entries: entries.iter().cloned().collect(),
+            skipped: BTreeSet::new(),
+        };
         let findings: Vec<Finding> = probes
             .iter()
             .enumerate()

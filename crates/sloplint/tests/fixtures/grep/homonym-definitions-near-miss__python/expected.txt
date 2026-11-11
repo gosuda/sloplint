@@ -1,0 +1,1 @@
+# Near-miss: `close` repeats in 5 files but only as a Protocol member, never a free function or type.

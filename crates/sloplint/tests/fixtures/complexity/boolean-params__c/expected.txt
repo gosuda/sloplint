@@ -1,1 +1,1 @@
-pos.c:3 deny complexity/boolean-params
+pos.c:3 info complexity/boolean-params

@@ -1,1 +1,2 @@
-a.go:10 warn grep/multiline-argument
+# Positive: Collection arg spans lines 11-27 (17 lines >= strict Minor(15)); finding at the call.
+a.go:10 info grep/multiline-argument

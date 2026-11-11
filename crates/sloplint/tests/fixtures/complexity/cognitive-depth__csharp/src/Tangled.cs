@@ -1,6 +1,8 @@
 public class Classifier {
     public string Classify(int n) {
         int r = 0;
+    if (n >= 0) {
+        for (int i = 0; i < n; i++) {
         if (n == 0) { r += 1; }
         if (n == 1) { r += 2; }
         if (n == 2) { r += 3; }
@@ -17,6 +19,8 @@ public class Classifier {
         if (n == 13) { r += 14; }
         if (n == 14) { r += 15; }
         if (n == 15) { r += 16; }
+        }
+    }
         return r.ToString();
     }
 }

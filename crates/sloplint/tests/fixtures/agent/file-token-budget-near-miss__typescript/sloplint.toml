@@ -1,3 +1,3 @@
 [rules."agent/file-token-budget"]
-warn_at = 10
-deny_at = 20
+minor_at = 10
+major_at = 20

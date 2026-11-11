@@ -1,1 +1,1 @@
-# Reordered args and zero-param factory never fire.
+# Near-miss: TestMain in a test region never fires.

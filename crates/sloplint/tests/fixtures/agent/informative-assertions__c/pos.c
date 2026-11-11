@@ -1,6 +1,6 @@
 #include <assert.h>
 
 int positive(int n) {
-    assert(n > 0);
+    assert(n);
     return n;
 }

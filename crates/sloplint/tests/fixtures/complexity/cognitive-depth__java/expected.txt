@@ -1,1 +1,1 @@
-src/Tangled.java:2 deny complexity/cognitive-depth
+src/Tangled.java:2 info complexity/cognitive-depth

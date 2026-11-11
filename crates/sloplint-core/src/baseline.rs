@@ -16,6 +16,14 @@ pub const MAX_BASELINE_ENTRIES: usize = 1_000_000;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Baseline {
     pub entries: BTreeSet<BaselineEntry>,
+    pub skipped: BTreeSet<SkippedEntry>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct SkippedEntry {
+    /// Repo-relative path with `/` separators.
+    pub path: Box<str>,
+    pub reason: Box<str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -37,9 +45,11 @@ pub enum BaselineError {
 }
 
 #[derive(Serialize)]
-struct BaselineFile {
+struct BaselineFile<'a> {
     version: u32,
-    findings: Vec<BaselineEntry>,
+    findings: &'a BTreeSet<BaselineEntry>,
+    #[serde(skip_serializing_if = "BTreeSet::is_empty")]
+    skipped: &'a BTreeSet<SkippedEntry>,
 }
 
 #[derive(Deserialize)]
@@ -47,11 +57,24 @@ struct BaselineDocument {
     version: u32,
     #[serde(deserialize_with = "capped_findings")]
     findings: Findings,
+    #[serde(default, deserialize_with = "capped_skipped")]
+    skipped: SkippedList,
 }
 
 enum Findings {
     Within(Vec<BaselineEntry>),
     Over(usize),
+}
+
+enum SkippedList {
+    Within(Vec<SkippedEntry>),
+    Over(usize),
+}
+
+impl Default for SkippedList {
+    fn default() -> SkippedList {
+        SkippedList::Within(Vec::new())
+    }
 }
 
 /// Past the ceiling, remaining elements are counted but not kept, so the stored baseline holds at most the entry limit.
@@ -94,6 +117,45 @@ where
     deserializer.deserialize_seq(Capped)
 }
 
+fn capped_skipped<'de, D>(deserializer: D) -> Result<SkippedList, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct CappedSkipped;
+
+    impl<'de> Visitor<'de> for CappedSkipped {
+        type Value = SkippedList;
+
+        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("a list of skipped paths")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<SkippedList, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut entries = Vec::new();
+            while entries.len() < MAX_BASELINE_ENTRIES {
+                let Some(entry) = seq.next_element::<SkippedEntry>()? else {
+                    return Ok(SkippedList::Within(entries));
+                };
+                entries.push(entry);
+            }
+            let mut extra = 0usize;
+            while seq.next_element::<IgnoredAny>()?.is_some() {
+                extra += 1;
+            }
+            Ok(if extra == 0 {
+                SkippedList::Within(entries)
+            } else {
+                SkippedList::Over(MAX_BASELINE_ENTRIES + extra)
+            })
+        }
+    }
+
+    deserializer.deserialize_seq(CappedSkipped)
+}
+
 impl Baseline {
     pub fn from_json(s: &str) -> Result<Baseline, BaselineError> {
         let doc: BaselineDocument =
@@ -101,21 +163,65 @@ impl Baseline {
         if doc.version != 1 {
             return Err(BaselineError::Version(doc.version));
         }
-        match doc.findings {
-            Findings::Within(entries) => Ok(Baseline {
-                entries: entries.into_iter().collect(),
-            }),
-            Findings::Over(count) => Err(BaselineError::TooManyEntries {
-                count,
+        let entries = match doc.findings {
+            Findings::Within(entries) => entries,
+            Findings::Over(count) => {
+                return Err(BaselineError::TooManyEntries {
+                    count,
+                    limit: MAX_BASELINE_ENTRIES,
+                });
+            }
+        };
+        let skipped = match doc.skipped {
+            SkippedList::Within(entries) => entries,
+            SkippedList::Over(count) => {
+                return Err(BaselineError::TooManyEntries {
+                    count,
+                    limit: MAX_BASELINE_ENTRIES,
+                });
+            }
+        };
+        if !Baseline::entries_within_limit(entries.len(), skipped.len()) {
+            return Err(BaselineError::TooManyEntries {
+                count: entries.len().saturating_add(skipped.len()),
                 limit: MAX_BASELINE_ENTRIES,
-            }),
+            });
+        }
+        Ok(Baseline {
+            entries: entries.into_iter().collect(),
+            skipped: skipped.into_iter().collect(),
+        })
+    }
+
+    pub fn entries_within_limit(findings: usize, skipped: usize) -> bool {
+        findings <= MAX_BASELINE_ENTRIES
+            && skipped <= MAX_BASELINE_ENTRIES
+            && findings.saturating_add(skipped) <= MAX_BASELINE_ENTRIES
+    }
+
+    pub fn newly_skipped(&self, current: &[SkippedEntry]) -> Vec<SkippedEntry> {
+        let known: BTreeSet<&str> = self.skipped.iter().map(|entry| &*entry.path).collect();
+        let mut out: Vec<SkippedEntry> = current
+            .iter()
+            .filter(|entry| !known.contains(&*entry.path))
+            .cloned()
+            .collect();
+        out.sort();
+        out
+    }
+
+    pub fn empty() -> Baseline {
+        Baseline {
+            entries: BTreeSet::new(),
+            skipped: BTreeSet::new(),
         }
     }
 
     pub fn to_json(&self) -> String {
         let doc = BaselineFile {
             version: 1,
-            findings: self.entries.iter().cloned().collect(),
+            findings: &self.entries,
+            skipped: &self.skipped,
         };
         let mut json =
             sonic_rs::to_string_pretty(&doc).expect("baseline serialization cannot fail");
@@ -124,6 +230,10 @@ impl Baseline {
     }
 
     pub fn from_findings(findings: &[Finding]) -> Baseline {
+        Baseline::from_findings_and_skipped(findings, &[])
+    }
+
+    pub fn from_findings_and_skipped(findings: &[Finding], skipped: &[SkippedEntry]) -> Baseline {
         Baseline {
             entries: findings
                 .iter()
@@ -133,6 +243,7 @@ impl Baseline {
                     fingerprint: finding.fingerprint.clone(),
                 })
                 .collect(),
+            skipped: skipped.iter().cloned().collect(),
         }
     }
 
@@ -253,11 +364,11 @@ fn fingerprint(rule: &str, path: &str, normalized: &str, occurrence: u32) -> Box
 
 #[cfg(test)]
 mod tests {
-    use crate::finding::{Finding, Severity};
+    use crate::finding::{Confidence, Finding, Severity};
     use proptest::prelude::*;
     use proptest::string::string_regex;
 
-    use super::{Baseline, fingerprint};
+    use super::{Baseline, MAX_BASELINE_ENTRIES, fingerprint};
 
     fn finding_strategy() -> impl Strategy<Value = Finding> {
         (
@@ -268,7 +379,8 @@ mod tests {
         )
             .prop_map(|(rule, path, context, line)| Finding {
                 rule: rule.into_boxed_str(),
-                severity: Severity::Warn,
+                severity: Severity::Minor,
+                confidence: Confidence::Medium,
                 path: path.into_boxed_str(),
                 line,
                 column: 1,
@@ -276,6 +388,8 @@ mod tests {
                 fix: String::new(),
                 context: context.into_boxed_str(),
                 fingerprint: Box::from(""),
+                context_pending: false,
+                file_wide: false,
             })
     }
 
@@ -332,5 +446,29 @@ mod tests {
             prop_assert_eq!(baselined, count);
             prop_assert_eq!(stale, 0);
         }
+    }
+
+    #[test]
+    fn entry_budget_counts_findings_and_skipped_together() {
+        assert!(
+            Baseline::entries_within_limit(MAX_BASELINE_ENTRIES, 0),
+            "findings alone may fill the budget"
+        );
+        assert!(
+            Baseline::entries_within_limit(0, MAX_BASELINE_ENTRIES),
+            "skipped paths alone may fill the budget"
+        );
+        assert!(
+            !Baseline::entries_within_limit(MAX_BASELINE_ENTRIES, 1),
+            "one entry past a full findings budget is refused"
+        );
+        assert!(
+            !Baseline::entries_within_limit(1, MAX_BASELINE_ENTRIES),
+            "one entry past a full skipped budget is refused"
+        );
+        assert!(
+            !Baseline::entries_within_limit(usize::MAX, 1),
+            "the total never wraps past the ceiling"
+        );
     }
 }

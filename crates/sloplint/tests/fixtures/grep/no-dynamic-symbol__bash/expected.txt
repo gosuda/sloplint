@@ -1,2 +1,2 @@
 # Positive: eval builds a name at runtime.
-a.sh:2 warn grep/no-dynamic-symbol
+a.sh:2 info grep/no-dynamic-symbol

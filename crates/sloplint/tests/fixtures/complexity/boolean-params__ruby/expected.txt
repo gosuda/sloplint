@@ -1,1 +1,1 @@
-a.rb:1 warn complexity/boolean-params
+a.rb:1 info complexity/boolean-params

@@ -1,1 +1,1 @@
-a.odin:3 warn grep/generic-name
+a.odin:3 minor grep/generic-name

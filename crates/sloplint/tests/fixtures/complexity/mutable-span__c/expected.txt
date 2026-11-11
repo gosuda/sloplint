@@ -1,1 +1,3 @@
-pos.c:2 deny complexity/mutable-span
+# outer-from-block.c: binding line 2, writes lines 3, 35 and 36 (span 33); far writes sit in a bare block with no shadowing.
+outer-from-block.c:2 info complexity/mutable-span
+pos.c:2 info complexity/mutable-span

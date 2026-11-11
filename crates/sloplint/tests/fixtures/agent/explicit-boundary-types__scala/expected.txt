@@ -1,2 +1,3 @@
-# Positive: public function missing the return annotation.
-src/api.scala:2 warn agent/explicit-boundary-types
+# Positive: public function missing the return annotation; a block body tailing in a value returns it too.
+src/api.scala:2 minor agent/explicit-boundary-types
+src/api.scala:4 minor agent/explicit-boundary-types

@@ -1,17 +1,27 @@
-use std::borrow::Cow;
-
-use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import,
-    ImportKind, Param, Pos, Stmt, TypeDef, WildcardArm,
-};
+use sloplint_core::facts::{Assertion, CallKind, FieldCopy, Handler, Import, Pos, WildcardArm};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, Link, TypeHead, any_named_child,
-    binary_concat, child_by_field, first_named_child, first_named_child_matching, last_segment,
-    named_children, narrow, pos_of, preceding_comments, string_arg_shape, text,
+    CallHead, Cx, FunctionHead, LangHooks, TypeHead, child_by_field, code_children,
+    first_named_child, last_segment, named_children, pos_of, preceding_comments, text,
 };
 use crate::spec::Role;
+
+mod dynamic;
+mod imports;
+mod items;
+mod params;
+mod scope;
+mod shapes;
+
+use dynamic::{py_call_dynamic, py_subscript_dynamic};
+use imports::push_imports;
+use items::{
+    push_ambient, push_assertion, push_barrel, push_handler, push_match_arm, push_struct_lit,
+    push_typedef,
+};
+use params::{function_flags, push_params};
+use shapes::py_call_args;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
@@ -27,6 +37,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("call", Role::Call),
     ("assignment", Role::Bind),
     ("augmented_assignment", Role::Write),
+    ("named_expression", Role::Bind),
     ("import_statement", Role::Import),
     ("import_from_statement", Role::Import),
     ("class_definition", Role::TypeDef),
@@ -36,27 +47,24 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("attribute", Role::Member),
     ("assert_statement", Role::Assert),
     ("global_statement", Role::Global),
+    ("return_statement", Role::Return),
+    ("yield", Role::Yield),
 ];
 
 pub(crate) struct PythonHooks;
 
 pub(crate) static HOOKS: PythonHooks = PythonHooks;
 
-fn enclosing_exported(cx: &Cx<'_, '_>) -> bool {
-    cx.nearest_class_exported().unwrap_or(true)
+pub(crate) struct Placement {
+    pub class_member: bool,
+    pub local: bool,
 }
 
-struct Placement {
-    class_member: bool,
-    local: bool,
-}
-
-fn placement(n: Node<'_>) -> Placement {
+pub(crate) fn placement(cx: &Cx<'_, '_>) -> Placement {
     let mut class_member = None;
     let mut local = false;
-    let mut cur = n.parent();
-    while let Some(parent) = cur {
-        match parent.kind() {
+    for ancestor in cx.ancestors() {
+        match ancestor.kind() {
             "function_definition" => {
                 local = true;
                 class_member.get_or_insert(false);
@@ -66,7 +74,6 @@ fn placement(n: Node<'_>) -> Placement {
             }
             _ => {}
         }
-        cur = parent.parent();
     }
     Placement {
         class_member: class_member.unwrap_or(false),
@@ -74,63 +81,70 @@ fn placement(n: Node<'_>) -> Placement {
     }
 }
 
-fn py_one_param<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Param<'s>>) {
-    match n.kind() {
-        "identifier" => out.push(Param {
-            name: text(cx, n),
-            ty: None,
-            bool_default: false,
-        }),
-        "typed_parameter" => {
-            let name = first_named_child_matching(n, &["identifier"]).map_or("", |c| text(cx, c));
-            out.push(Param {
-                name,
-                ty: child_by_field(n, "type").map(|t| text(cx, t)),
-                bool_default: false,
-            });
+pub(crate) fn inside_function(cx: &Cx<'_, '_>) -> bool {
+    for ancestor in cx.ancestors() {
+        match ancestor.kind() {
+            "function_definition" | "lambda" => return true,
+            "class_definition" => return false,
+            _ => {}
         }
-        "default_parameter" => {
-            let name = child_by_field(n, "name").map_or("", |v| text(cx, v));
-            let def =
-                child_by_field(n, "value").is_some_and(|v| matches!(v.kind(), "true" | "false"));
-            out.push(Param {
-                name,
-                ty: None,
-                bool_default: def,
-            });
-        }
-        "typed_default_parameter" => {
-            let name = child_by_field(n, "name").map_or("", |v| text(cx, v));
-            let def =
-                child_by_field(n, "value").is_some_and(|v| matches!(v.kind(), "true" | "false"));
-            out.push(Param {
-                name,
-                ty: child_by_field(n, "type").map(|t| text(cx, t)),
-                bool_default: def,
-            });
-        }
-        "list_splat_pattern" | "dictionary_splat_pattern" => {
-            let name = first_named_child_matching(n, &["identifier"]).map_or("", |c| text(cx, c));
-            out.push(Param {
-                name,
-                ty: None,
-                bool_default: false,
-            });
-        }
-        _ => {}
     }
+    false
 }
 
-fn py_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>>) {
-    for child in named_children(list) {
-        if child.kind() == "parameter" {
-            for sub in named_children(child) {
-                py_one_param(cx, sub, out);
-            }
-        } else {
-            py_one_param(cx, child, out);
+pub(crate) fn enclosing_function<'t>(cx: &Cx<'t, '_>) -> Option<Node<'t>> {
+    cx.ancestors()
+        .find(|ancestor| ancestor.kind() == "function_definition")
+}
+
+pub(crate) fn enclosing_class<'t>(cx: &Cx<'t, '_>) -> Option<Node<'t>> {
+    for ancestor in cx.ancestors() {
+        match ancestor.kind() {
+            "class_definition" => return Some(ancestor),
+            "function_definition" => return None,
+            _ => {}
         }
     }
+    None
+}
+
+pub(crate) fn is_test_path(path: &str) -> bool {
+    let file = path.rsplit('/').next().unwrap_or(path);
+    if file == "conftest.py" || file.starts_with("test_") || file.ends_with("_test.py") {
+        return true;
+    }
+    path.starts_with("tests/")
+        || path.starts_with("test/")
+        || path.starts_with("__tests__/")
+        || path.contains("/tests/")
+        || path.contains("/test/")
+        || path.contains("/__tests__/")
+}
+
+pub(crate) fn class_is_abstract(cx: &Cx<'_, '_>, class: Node<'_>) -> bool {
+    let Some(sup) = child_by_field(class, "superclasses") else {
+        return false;
+    };
+    for base in named_children(sup) {
+        if base.kind() == "keyword_argument" {
+            let meta = child_by_field(base, "name").map_or("", |v| text(cx, v));
+            let val = child_by_field(base, "value").map_or("", |v| text(cx, v));
+            if meta == "metaclass" && last_segment(val, &["."]) == "ABCMeta" {
+                return true;
+            }
+            continue;
+        }
+        let raw = if base.kind() == "subscript" {
+            child_by_field(base, "value").map_or("", |v| text(cx, v))
+        } else {
+            text(cx, base)
+        };
+        let seg = last_segment(raw, &["."]);
+        if seg == "Protocol" || seg == "ABC" {
+            return true;
+        }
+    }
+    false
 }
 
 fn docstring(n: Node<'_>) -> Option<Node<'_>> {
@@ -147,7 +161,7 @@ fn docstring(n: Node<'_>) -> Option<Node<'_>> {
     first_named_child(first)
 }
 
-fn is_doc_expr(n: Node<'_>) -> bool {
+pub(crate) fn is_doc_expr(n: Node<'_>) -> bool {
     if n.kind() != "expression_statement" {
         return false;
     }
@@ -165,24 +179,69 @@ fn py_single_call(n: Node<'_>) -> Option<usize> {
 }
 
 fn py_sole(body: Node<'_>) -> Option<usize> {
-    let first = body.named_child(0)?;
+    let code = code_children(body);
+    let first = *code.first()?;
     let (target, rest) = if is_doc_expr(first) {
-        (body.named_child(1)?, 2)
+        (*code.get(1)?, 2)
     } else {
         (first, 1)
     };
-    if body.named_child(rest).is_some() {
+    if code.get(rest).is_some() {
         return None;
     }
     py_single_call(target)
 }
 
-fn py_pat_names<'s>(cx: &Cx<'_, 's>, left: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+fn py_is_simple_path(n: Node<'_>) -> bool {
+    let mut cur = n;
+    loop {
+        match cur.kind() {
+            "identifier" => return true,
+            "attribute" => {
+                let Some(attr) = child_by_field(cur, "attribute") else {
+                    return false;
+                };
+                if attr.kind() != "identifier" {
+                    return false;
+                }
+                let Some(obj) = child_by_field(cur, "object") else {
+                    return false;
+                };
+                cur = obj;
+            }
+            _ => return false,
+        }
+    }
+}
+
+pub(crate) fn py_callee_text<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
+    match func.kind() {
+        "identifier" => text(cx, func),
+        "attribute" => {
+            if py_is_simple_path(func) {
+                return text(cx, func);
+            }
+            if let Some(attr) = child_by_field(func, "attribute") {
+                text(cx, attr)
+            } else {
+                "attribute"
+            }
+        }
+        _ => "call",
+    }
+}
+pub(crate) fn py_pat_names<'s>(cx: &Cx<'_, 's>, left: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     let mut stack = vec![left];
     while let Some(cur) = stack.pop() {
         match cur.kind() {
             "identifier" => out.push((text(cx, cur), pos_of(cur))),
-            "pattern_list" | "tuple_pattern" | "list_pattern" => {
+            "pattern_list"
+            | "tuple_pattern"
+            | "list_pattern"
+            | "splat_pattern"
+            | "as_pattern_target"
+            | "list_splat_pattern"
+            | "dictionary_splat_pattern" => {
                 stack.extend(named_children(cur));
             }
             _ => {}
@@ -190,7 +249,27 @@ fn py_pat_names<'s>(cx: &Cx<'_, 's>, left: Node<'_>, out: &mut Vec<(&'s str, Pos
     }
 }
 
-fn py_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
+fn py_with_item_target<'s>(cx: &Cx<'_, 's>, item: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    let value = child_by_field(item, "value").filter(|v| v.kind() == "as_pattern");
+    if let Some(target) = value.and_then(|v| child_by_field(v, "alias")) {
+        py_pat_names(cx, target, out);
+    }
+}
+
+pub(crate) fn py_with_targets<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    for clause in named_children(n) {
+        if clause.kind() != "with_clause" {
+            continue;
+        }
+        for item in named_children(clause) {
+            if item.kind() == "with_item" {
+                py_with_item_target(cx, item, out);
+            }
+        }
+    }
+}
+
+pub(crate) fn py_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     let mut cur = n;
     loop {
         match cur.kind() {
@@ -219,116 +298,32 @@ fn py_callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
     }
     let root = cx.chain_root(CALLEE_CHAIN, callee, |current| match current.kind() {
         "attribute" => match child_by_field(current, "object") {
-            Some(next) => Link::Next(next),
-            None => Link::Root(current),
+            Some(next) => crate::hooks::Link::Next(next),
+            None => crate::hooks::Link::Root(current),
         },
-        "subscript" => match child_by_field(current, "value") {
-            Some(next) => Link::Next(next),
-            None => Link::Root(current),
-        },
-        "call" => match child_by_field(current, "function") {
-            Some(next) => Link::Next(next),
-            None => Link::Root(current),
-        },
-        "parenthesized_expression" => match first_named_child(current) {
-            Some(next) => Link::Next(next),
-            None => Link::Root(current),
-        },
-        _ => Link::Root(current),
+        "subscript" | "call" | "parenthesized_expression" => crate::hooks::Link::Root(current),
+        _ => crate::hooks::Link::Root(current),
     });
     is_chain_root(root).then_some(root)
 }
 
-fn py_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-    match n.kind() {
-        "string" => string_arg_shape(cx, n, &["string_content"]),
-        "concatenated_string" => ArgShape::Concat,
-        "identifier" => ArgShape::Ident(text(cx, n)),
-        _ if binary_concat(cx, n, "+", &["string"]) => ArgShape::Concat,
-        _ => ArgShape::Other,
-    }
-}
-
-fn py_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
-    Arg {
-        shape: py_shape(cx, n),
-        start_line: pos_of(n).line,
-        end_line: narrow(n.end_position().row) + 1,
-    }
-}
-
-fn plain_import<'s>(
-    cx: &Cx<'_, 's>,
-    imp: (Node<'_>, &'s str, &'s str, Option<&'s str>),
-    out: &mut Vec<Import<'s>>,
-) {
-    let (node, module, name, alias) = imp;
-    out.push(Import {
-        pos: pos_of(node),
-        module: Cow::Borrowed(module),
-        name,
-        alias,
-        kind: ImportKind::Named,
-        in_test: cx.is_test_file,
-    });
-}
-
-fn strip_as(value: &str) -> &str {
-    let rest = value.trim_start();
-    if rest.len() > 2 && rest.starts_with("as") && rest[2..].starts_with(char::is_whitespace) {
-        rest[2..].trim_start()
-    } else {
-        value
-    }
-}
-
-fn py_raise<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: &str) -> Stmt<'s> {
-    let Some(first) = s.named_child(0) else {
-        return Stmt::Rethrow;
+fn is_binding_init(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    let Some(parent) = cx.parent() else {
+        return false;
     };
-    if s.named_child(1).is_some() {
-        return Stmt::Other;
+    if parent.kind() != "assignment" {
+        return false;
     }
-    if first.kind() == "identifier" && text(cx, first) == binding {
-        Stmt::Rethrow
-    } else {
-        Stmt::Other
-    }
+    let right_ok = child_by_field(parent, "right").is_some_and(|r| r.id() == n.id());
+    let left_ok = child_by_field(parent, "left").is_some_and(|l| l.kind() == "identifier");
+    right_ok && left_ok
 }
 
-fn raise_stmt<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: &str) -> Stmt<'s> {
-    if s.kind() == "raise_statement" {
-        return py_raise(cx, s, binding);
-    }
-    if s.kind() != "expression_statement" {
-        return Stmt::Other;
-    }
-    let Some(inner) = first_named_child(s) else {
-        return Stmt::Other;
-    };
-    if inner.kind() == "call" {
-        let callee = child_by_field(inner, "function").map_or("", |f| text(cx, f));
-        return Stmt::Call {
-            callee,
-            kind: CallKind::Plain,
-        };
-    }
-    if inner.kind() == "raise_statement" {
-        return py_raise(cx, inner, binding);
-    }
-    Stmt::Other
-}
-
-fn is_meta_abc(cx: &Cx<'_, '_>, base: Node<'_>) -> bool {
-    let meta = child_by_field(base, "name").map_or("", |v| text(cx, v));
-    let val = child_by_field(base, "value").map_or("", |v| text(cx, v));
-    meta == "metaclass" && last_segment(val, &["."]) == "ABCMeta"
-}
-fn parent_dir(path: &str) -> &str {
+pub(crate) fn parent_dir(path: &str) -> &str {
     path.rfind('/').map_or("", |i| &path[..i])
 }
 
-fn join_path(base: &str, rest: String) -> String {
+pub(crate) fn join_path(base: &str, rest: String) -> String {
     if base.is_empty() {
         rest
     } else {
@@ -336,7 +331,7 @@ fn join_path(base: &str, rest: String) -> String {
     }
 }
 
-fn py_targets(cx: &Cx<'_, '_>, dir: &str, n: Node<'_>) -> Vec<String> {
+pub(crate) fn py_targets(cx: &Cx<'_, '_>, dir: &str, n: Node<'_>) -> Vec<String> {
     let module = child_by_field(n, "module_name").map_or("", |m| text(cx, m));
     let dots = module.bytes().take_while(|b| *b == b'.').count();
     if dots == 0 {
@@ -374,97 +369,34 @@ fn py_targets(cx: &Cx<'_, '_>, dir: &str, n: Node<'_>) -> Vec<String> {
     ]
 }
 
-fn py_positional(n: Node<'_>) -> Vec<Node<'_>> {
-    child_by_field(n, "arguments")
-        .map_or(Vec::new(), named_children)
-        .into_iter()
-        .filter(|a| a.kind() != "keyword_argument")
-        .collect()
-}
-
-fn computed_attr_name(last: &str, second: Option<Node<'_>>) -> Option<&'static str> {
-    if second.is_some_and(|s| s.kind() != "string") {
-        return match last {
-            "getattr" => Some("getattr with computed name"),
-            "setattr" => Some("setattr with computed name"),
-            "hasattr" => Some("hasattr with computed name"),
-            _ => Some("delattr with computed name"),
-        };
-    }
-    None
-}
-
-fn py_call_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
-    let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
-    let last = last_segment(callee, &["."]);
-    if last == "getattr" || last == "setattr" || last == "hasattr" || last == "delattr" {
-        if let Some(hit) = computed_attr_name(last, py_positional(n).into_iter().nth(1)) {
-            return Some(hit);
-        }
-        return None;
-    }
-    if last == "eval" {
-        return Some("eval");
-    }
-    if last == "exec" {
-        return Some("exec");
-    }
-    if last == "__import__" {
-        return Some("__import__");
-    }
-    if callee != "importlib.import_module" {
-        return None;
-    }
-    py_positional(n)
-        .into_iter()
-        .next()
-        .is_some_and(|f| f.kind() != "string")
-        .then_some("dynamic import")
-}
-
-fn py_subscript_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
-    let v = child_by_field(n, "value")?;
-    if v.kind() != "call" {
-        return None;
-    }
-    let f = child_by_field(v, "function").map_or("", |x| text(cx, x));
-    let last = last_segment(f, &["."]);
-    if last != "globals" && last != "locals" {
-        return None;
-    }
-    Some("globals() lookup")
-}
-
 impl LangHooks for PythonHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let name_node = child_by_field(n, "name")?;
         let name = text(cx, name_node);
-        let place = placement(n);
-        let method = place.class_member;
-        let dunder = name.len() > 4 && name.starts_with("__") && name.ends_with("__");
-        let public = !place.local
-            && (dunder || (!name.starts_with('_') && (!method || enclosing_exported(cx))));
-        let mut params = Vec::new();
+        let place = placement(cx);
+        let flags = function_flags(cx, n, name, &place);
+        let mut plist = Vec::new();
         if let Some(list) = child_by_field(n, "parameters") {
-            py_params(cx, list, &mut params);
+            push_params(cx, list, &mut plist);
         }
-        if method
-            && params
+        if place.class_member {
+            let drops_receiver = plist
                 .first()
-                .is_some_and(|p| p.name == "self" || p.name == "cls")
-        {
-            params.remove(0);
+                .is_some_and(|p| p.name == "self" || p.name == "cls");
+            if drops_receiver {
+                plist.remove(0);
+            }
         }
         let ret = child_by_field(n, "return_type").map(|t| text(cx, t));
-        let mut missing: Vec<&'s str> = params
+        let mut missing: Vec<&'s str> = plist
             .iter()
             .filter(|p| p.ty.is_none())
             .map(|p| p.name)
             .collect();
-        if ret.is_none() && name != "__init__" {
+        if ret.is_none() && name != "__init__" && name != "__new__" {
             missing.push("return");
         }
-        let anchor = n
+        let anchor = cx
             .parent()
             .filter(|p| p.kind() == "decorated_definition")
             .unwrap_or(n);
@@ -477,12 +409,20 @@ impl LangHooks for PythonHooks {
         }
         let body = child_by_field(n, "body")?;
         Some(FunctionHead {
+            shadow_params: Vec::new(),
             name,
             name_pos: pos_of(name_node),
-            public,
-            interface_bound: dunder,
-            in_test: cx.is_test_file && name.starts_with("test"),
-            params,
+            visibility: flags.visibility,
+            signature_forced: flags.signature_forced,
+            entry_point: flags.entry_point,
+            in_test: flags.in_test,
+            is_overload: flags.is_overload,
+            is_deprecated: flags.is_deprecated,
+            is_decorated: flags.is_decorated,
+            is_trait_item: flags.is_trait_item,
+            region: None,
+            receiver: None,
+            params: plist,
             return_type: ret,
             missing_annotations: missing,
             doc,
@@ -496,32 +436,27 @@ impl LangHooks for PythonHooks {
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() != "assignment" {
-            return;
-        }
-        if let Some(left) = child_by_field(n, "left") {
-            py_pat_names(cx, left, out);
+        match n.kind() {
+            "assignment" | "for_statement" => scope::decl_targets(cx, n, out),
+            "with_statement" => scope::decl_with(cx, n, out),
+            "except_clause" => scope::decl_except(cx, n, out),
+            "named_expression" => scope::decl_walrus(cx, n, out),
+            _ => {}
         }
     }
 
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        matches!(kind, "for_statement" | "with_statement" | "except_clause")
+    }
+
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() != "assignment" && n.kind() != "augmented_assignment" {
-            return;
-        }
-        let Some(left) = child_by_field(n, "left") else {
-            return;
-        };
-        if n.kind() == "augmented_assignment" || left.kind() != "identifier" {
-            let plain = left.kind() == "identifier" || left.kind() == "attribute";
-            if plain || left.kind() == "subscript" {
-                if let Some(root) = py_root(cx, left) {
-                    out.push(root);
-                }
-            } else if n.kind() == "augmented_assignment"
-                && let Some(root) = py_root(cx, left)
-            {
-                out.push(root);
-            }
+        match n.kind() {
+            "assignment" => scope::write_assignment(cx, n, out),
+            "augmented_assignment" => scope::write_augmented(cx, n, out),
+            "named_expression" => scope::write_walrus(cx, n, out),
+            "for_statement" => scope::write_loop(cx, n, out),
+            "with_statement" => scope::write_with(cx, n, out),
+            _ => {}
         }
     }
 
@@ -532,221 +467,36 @@ impl LangHooks for PythonHooks {
         let func = child_by_field(n, "function")?;
         let mut args = Vec::new();
         if let Some(list) = child_by_field(n, "arguments") {
-            for c in named_children(list) {
-                if c.kind() == "keyword_argument" {
-                    if let Some(v) = child_by_field(c, "value") {
-                        args.push(py_arg(cx, v));
-                    }
-                } else {
-                    args.push(py_arg(cx, c));
-                }
-            }
+            py_call_args(cx, list, &mut args);
         }
         Some(CallHead {
-            callee: text(cx, func),
+            callee: py_callee_text(cx, func),
             kind: CallKind::Plain,
             callee_root: py_callee_root(cx, func),
+            is_simple_path: py_is_simple_path(func),
+            initializes_binding: is_binding_init(cx, n),
             args,
         })
     }
 
     fn imports<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
-        if n.kind() == "import_statement" {
-            for c in named_children(n) {
-                if c.kind() == "dotted_name" {
-                    let full = text(cx, c);
-                    plain_import(cx, (c, full, last_segment(full, &["."]), None), out);
-                } else if c.kind() == "aliased_import" {
-                    let path = child_by_field(c, "name").map_or("", |v| text(cx, v));
-                    let alias = child_by_field(c, "alias").map_or("", |v| text(cx, v));
-                    let named = (c, path, last_segment(path, &["."]), Some(alias));
-                    plain_import(cx, named, out);
-                }
-            }
-            return;
-        }
-        if n.kind() == "import_from_statement" {
-            let module = child_by_field(n, "module_name").map_or("", |m| text(cx, m));
-            let mod_id = child_by_field(n, "module_name").map(|m| m.id());
-            for c in named_children(n) {
-                if Some(c.id()) == mod_id {
-                    continue;
-                }
-                if c.kind() == "wildcard_import" {
-                    out.push(Import {
-                        pos: pos_of(c),
-                        module: Cow::Borrowed(module),
-                        name: "*",
-                        alias: None,
-                        kind: ImportKind::Wildcard,
-                        in_test: cx.is_test_file,
-                    });
-                } else if c.kind() == "aliased_import" {
-                    let path = child_by_field(c, "name").map_or("", |v| text(cx, v));
-                    let alias = child_by_field(c, "alias").map_or("", |v| text(cx, v));
-                    let named = (c, module, last_segment(path, &["."]), Some(alias));
-                    plain_import(cx, named, out);
-                } else if c.kind() == "dotted_name" {
-                    let nm = text(cx, c);
-                    plain_import(cx, (c, module, last_segment(nm, &["."]), None), out);
-                }
-            }
-        }
+        push_imports(n, cx, out);
     }
 
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {
-        if n.kind() != "class_definition" {
-            return None;
-        }
-        let name_node = child_by_field(n, "name")?;
-        let name = text(cx, name_node);
-        let public = !name.starts_with('_');
-        let mut abstraction = false;
-        let mut impls = Vec::new();
-        if let Some(sup) = child_by_field(n, "superclasses") {
-            for base in named_children(sup) {
-                if base.kind() == "keyword_argument" {
-                    abstraction = abstraction || is_meta_abc(cx, base);
-                    continue;
-                }
-                let raw = if base.kind() == "subscript" {
-                    child_by_field(base, "value").map_or("", |v| text(cx, v))
-                } else {
-                    text(cx, base)
-                };
-                let seg = last_segment(raw, &["."]);
-                if seg == "Protocol" || seg == "ABC" {
-                    abstraction = true;
-                } else if seg != "object" && seg != "Generic" {
-                    impls.push(ImplRef {
-                        name: seg,
-                        pos: pos_of(base),
-                    });
-                }
-            }
-        }
-        Some(TypeHead {
-            def: Some(TypeDef {
-                name,
-                pos: pos_of(name_node),
-                public,
-                abstraction,
-            }),
-            impls,
-            container: Some(Container::Class {
-                exported: public,
-                implements: false,
-            }),
-        })
+        push_typedef(n, cx)
     }
 
     fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
-        if n.kind() != "case_clause" {
-            return None;
-        }
-        if child_by_field(n, "guard").is_some() {
-            return None;
-        }
-        let pat = first_named_child(n)?;
-        if text(cx, pat) != "_" {
-            return None;
-        }
-        let enum_like = n.parent().is_some_and(|p| {
-            any_named_child(p, |arm| {
-                if arm.kind() != "case_clause" || arm.id() == n.id() {
-                    return false;
-                }
-                first_named_child(arm)
-                    .and_then(|pat| {
-                        if pat.kind() == "case_pattern" {
-                            first_named_child(pat)
-                        } else {
-                            Some(pat)
-                        }
-                    })
-                    .is_some_and(|q| {
-                        (q.kind() == "dotted_name" && q.named_child_count() >= 2)
-                            || q.kind() == "class_pattern"
-                    })
-            })
-        });
-        Some(WildcardArm {
-            pos: pos_of(n),
-            enum_like,
-        })
+        push_match_arm(n, cx)
     }
 
     fn handler<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'s>> {
-        if n.kind() != "except_clause" {
-            return None;
-        }
-        let binding = child_by_field(n, "alias").map_or("", |a| strip_as(text(cx, a)));
-        let block = first_named_child_matching(n, &["block"])?;
-        let mut stmts = Vec::new();
-        for s in named_children(block) {
-            if s.kind() == "pass_statement" {
-                continue;
-            }
-            if s.kind() == "expression_statement" {
-                let inner = first_named_child(s);
-                if inner.is_some_and(|v| v.kind() == "ellipsis") {
-                    continue;
-                }
-            }
-            stmts.push(raise_stmt(cx, s, binding));
-        }
-        Some(Handler {
-            pos: pos_of(n),
-            stmts,
-        })
+        push_handler(n, cx)
     }
 
     fn struct_lit<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FieldCopy<'s>> {
-        if n.kind() != "call" {
-            return None;
-        }
-        let list = child_by_field(n, "arguments")?;
-        let args = named_children(list);
-        if args.is_empty() {
-            return None;
-        }
-        let mut fields = 0u32;
-        let mut source: Option<&'s str> = None;
-        let mut poisoned = false;
-        for a in &args {
-            if a.kind() != "keyword_argument" {
-                poisoned = true;
-                continue;
-            }
-            fields += 1;
-            let want = child_by_field(*a, "name").map_or("", |x| text(cx, x));
-            let cand = child_by_field(*a, "value").and_then(|v| {
-                if v.kind() != "attribute" {
-                    return None;
-                }
-                let obj = child_by_field(v, "object")?;
-                if obj.kind() != "identifier" {
-                    return None;
-                }
-                if child_by_field(v, "attribute").map_or("", |x| text(cx, x)) != want {
-                    return None;
-                }
-                Some(text(cx, obj))
-            });
-            match (source, cand) {
-                (None, Some(s)) => source = Some(s),
-                (Some(a), Some(b)) if a == b => {}
-                _ => poisoned = true,
-            }
-        }
-        if fields == 0 {
-            return None;
-        }
-        Some(FieldCopy {
-            pos: pos_of(n),
-            fields,
-            source: if poisoned { None } else { source },
-        })
+        push_struct_lit(n, cx)
     }
 
     fn ambient<'s>(
@@ -754,33 +504,9 @@ impl LangHooks for PythonHooks {
         n: Node<'_>,
         cx: &Cx<'_, 's>,
         in_function: bool,
-        out: &mut Vec<(AmbientKind, &'s str, Pos)>,
+        out: &mut Vec<(sloplint_core::facts::AmbientKind, &'s str, Pos)>,
     ) {
-        if n.kind() == "global_statement" {
-            if !in_function {
-                return;
-            }
-            for c in named_children(n) {
-                if c.kind() == "identifier" {
-                    out.push((AmbientKind::GlobalWrite, text(cx, c), pos_of(c)));
-                }
-            }
-            return;
-        }
-        if n.kind() == "attribute" {
-            let obj = child_by_field(n, "object").map_or("", |o| text(cx, o));
-            let attr = child_by_field(n, "attribute").map_or("", |a| text(cx, a));
-            if obj == "os" && attr == "environ" {
-                out.push((AmbientKind::EnvRead, "os.environ", pos_of(n)));
-            }
-            return;
-        }
-        if n.kind() == "call" {
-            let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
-            if callee == "os.getenv" || callee == "getenv" {
-                out.push((AmbientKind::EnvRead, "os.getenv", pos_of(n)));
-            }
-        }
+        push_ambient(n, cx, in_function, out);
     }
 
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
@@ -793,53 +519,11 @@ impl LangHooks for PythonHooks {
         py_subscript_dynamic(n, cx)
     }
 
-    fn assertion(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<Assertion> {
-        if n.kind() != "assert_statement" {
-            return None;
-        }
-        Some(Assertion {
-            pos: pos_of(n),
-            has_message: n.named_child_count() >= 2,
-            comparison: first_named_child(n).is_some_and(|f| f.kind() == "comparison_operator"),
-        })
+    fn assertion(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {
+        push_assertion(n, cx)
     }
 
-    fn barrel(&self, root: Node<'_>, cx: &Cx<'_, '_>) -> Option<Barrel> {
-        if !cx.path.ends_with("__init__.py") {
-            return None;
-        }
-        if root.kind() != "module" {
-            return None;
-        }
-        let mut found_import = false;
-        for child in named_children(root) {
-            match child.kind() {
-                "comment" => {}
-                "import_from_statement" => found_import = true,
-                "expression_statement" => {
-                    if !is_doc_expr(child) {
-                        return None;
-                    }
-                }
-                "assignment" => {
-                    if child_by_field(child, "left").map_or("", |l| text(cx, l)) != "__all__" {
-                        return None;
-                    }
-                }
-                _ => return None,
-            }
-        }
-        if !found_import {
-            return None;
-        }
-        let dir = parent_dir(cx.path);
-        let mut targets = Vec::new();
-        for child in named_children(root) {
-            if child.kind() != "import_from_statement" {
-                continue;
-            }
-            targets.push(py_targets(cx, dir, child));
-        }
-        Some(Barrel { targets })
+    fn barrel(&self, root: Node<'_>, cx: &Cx<'_, '_>) -> Option<sloplint_core::facts::Barrel> {
+        push_barrel(root, cx)
     }
 }

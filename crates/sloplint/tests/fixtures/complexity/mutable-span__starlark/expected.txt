@@ -1,1 +1,2 @@
-a.bzl:2 deny complexity/mutable-span
+a.bzl:2 info complexity/mutable-span
+loop_target.bzl:2 info complexity/mutable-span

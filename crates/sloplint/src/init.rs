@@ -2,11 +2,11 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::Path;
 
-use sloplint_core::config::Config;
+use sloplint_core::config::{Config, Mode, ProjectConfig};
+use sloplint_core::finding::FailOn;
 use sloplint_core::lang::ALL_CONFIG_KEYS;
-use sloplint_core::{FailOn, Mode};
 
-use crate::RunError;
+use crate::error::RunError;
 use crate::project::CONFIG_FILE;
 
 const HEADER: &str = "# sloplint configuration. Every value shown is the default. Run 'sloplint rules' for the effective rule settings; override one rule with [rules.\"<id>\"].";
@@ -49,8 +49,15 @@ fn write_new(path: &Path, bytes: &[u8]) -> io::Result<()> {
 }
 
 fn default_text(config: &Config) -> String {
-    let project = &config.project;
-    let mut lines = vec![
+    let mut sections = project_lines(&config.project);
+    sections.extend(language_lines(config));
+    let mut text = sections.join("\n");
+    text.push('\n');
+    text
+}
+
+fn project_lines(project: &ProjectConfig) -> Vec<String> {
+    vec![
         HEADER.to_string(),
         String::new(),
         "[project]".to_string(),
@@ -66,24 +73,38 @@ fn default_text(config: &Config) -> String {
         format!("baseline = {}", quote(&project.baseline)),
         commented(
             &format!("fail_on = {}", quote(fail_on_name(project.fail_on))),
-            "# \"warn\" | \"deny\" | \"never\"",
+            "# \"info\" | \"minor\" | \"major\" | \"critical\" | \"blocker\" | \"never\"",
+        ),
+        commented(
+            &format!(
+                "min_confidence = {}",
+                quote(project.min_confidence.as_str())
+            ),
+            "# \"low\" | \"medium\" | \"high\"",
         ),
         format!("exclude = {}", array(&project.exclude)),
         format!("extend_exclude = {}", array(&project.extend_exclude)),
         format!("test_globs = {}", array(&project.test_globs)),
+        format!("bench_globs = {}", array(&project.bench_globs)),
+        format!("example_globs = {}", array(&project.example_globs)),
+        format!("support_globs = {}", array(&project.support_globs)),
+        format!("entry_globs = {}", array(&project.entry_globs)),
+        format!("data_globs = {}", array(&project.data_globs)),
         format!("max_file_bytes = {}", project.max_file_bytes),
         format!("custom_rule_files = {}", array(&project.custom_rule_files)),
         String::new(),
-    ];
+    ]
+}
+
+fn language_lines(config: &Config) -> Vec<String> {
+    let mut lines = Vec::new();
     for key in ALL_CONFIG_KEYS {
         if let Some(language) = config.languages.get(*key) {
             lines.push(format!("[languages.{key}]"));
             lines.push(format!("log_callees = {}", array(&language.log_callees)));
         }
     }
-    let mut text = lines.join("\n");
-    text.push('\n');
-    text
+    lines
 }
 
 fn commented(assignment: &str, comment: &str) -> String {
@@ -108,8 +129,7 @@ fn mode_name(mode: Mode) -> &'static str {
 
 fn fail_on_name(fail_on: FailOn) -> &'static str {
     match fail_on {
-        FailOn::Warn => "warn",
-        FailOn::Deny => "deny",
+        FailOn::At(severity) => severity.as_str(),
         FailOn::Never => "never",
     }
 }

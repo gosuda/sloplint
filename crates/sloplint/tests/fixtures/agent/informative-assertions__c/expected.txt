@@ -1,1 +1,1 @@
-pos.c:4 deny agent/informative-assertions
+pos.c:4 info agent/informative-assertions

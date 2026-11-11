@@ -29,8 +29,10 @@ const LINES: [&str; 18] = [
 fn describe(shape: &ArgShape<'_>) -> String {
     match shape {
         ArgShape::Str { longest_static } => format!("str:{longest_static}"),
-        ArgShape::Concat => "concat".to_string(),
+        ArgShape::Concat { longest_static } => format!("concat:{longest_static}"),
         ArgShape::Ident(name) => format!("ident:{name}"),
+        ArgShape::Collection => "collection".to_string(),
+        ArgShape::CodeBody => "codebody".to_string(),
         ArgShape::Other => "other".to_string(),
     }
 }
@@ -55,7 +57,7 @@ fn args_of_call_on(line: u32) -> Vec<(String, u32, u32)> {
 fn a_brace_block_is_one_argument_spanning_the_whole_block() {
     assert_eq!(
         args_of_call_on(3),
-        [("other".to_string(), 3u32, 10u32)],
+        [("codebody".to_string(), 3u32, 10u32)],
         "`Future {{ ... }}` is one argument, not one per statement"
     );
 }
@@ -64,7 +66,7 @@ fn a_brace_block_is_one_argument_spanning_the_whole_block() {
 fn a_case_block_is_one_argument_spanning_every_clause() {
     assert_eq!(
         args_of_call_on(11),
-        [("other".to_string(), 11u32, 14u32)],
+        [("codebody".to_string(), 11u32, 14u32)],
         "`xs.map {{ case ... }}` is one argument, not one per clause"
     );
 }

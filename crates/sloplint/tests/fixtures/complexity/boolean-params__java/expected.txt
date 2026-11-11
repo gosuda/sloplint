@@ -1,1 +1,1 @@
-src/Options.java:2 deny complexity/boolean-params
+src/Options.java:2 info complexity/boolean-params

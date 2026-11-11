@@ -1,14 +1,24 @@
+use std::collections::HashMap;
+
 use crate::config::Strictness;
-use crate::facts::NamedSite;
-use crate::finding::{Finding, Level, Severity};
+use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
+use crate::rules::{EmptyOptions, parse_options};
 
 pub(crate) const INFO: RuleInfo = RuleInfo {
     id: "slop/barrel-file",
     family: Family::Slop,
     summary: "barrel files re-exporting from other barrel files",
     why: "Chained re-exports add hops between a name and its definition.",
-    exempt_tests: false,
+    confidence: Confidence::Low,
+    roles: RolePolicy {
+        entry: Shift::Keep,
+        test: Shift::Off,
+        support: Shift::Keep,
+        bench: Shift::Off,
+        example: Shift::Off,
+    },
     preset,
     build: Build::World(build),
 };
@@ -16,7 +26,7 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
 fn preset(strictness: Strictness) -> Preset {
     let level = match strictness {
         Strictness::Minimal | Strictness::Basic => Level::Off,
-        Strictness::Standard | Strictness::Strict => Level::Warn,
+        Strictness::Standard | Strictness::Strict => Level::At(Severity::Minor),
     };
     Preset {
         level,
@@ -24,7 +34,8 @@ fn preset(strictness: Strictness) -> Preset {
     }
 }
 
-fn build(_options: toml::Table) -> Result<Box<dyn WorldRule>, String> {
+fn build(options: toml::Table) -> Result<Box<dyn WorldRule>, String> {
+    parse_options::<EmptyOptions>(options)?;
     Ok(Box::new(BarrelFile))
 }
 
@@ -43,24 +54,26 @@ impl WorldRule for BarrelFile {
             .map(|file| file.path)
             .collect();
         barrels.sort_unstable();
+        let index: HashMap<&str, &[Vec<String>]> = files
+            .iter()
+            .filter_map(|file| {
+                file.facts
+                    .barrel
+                    .as_ref()
+                    .map(|barrel| (file.path, barrel.as_slice()))
+            })
+            .collect();
         for file in files {
             let Some(targets) = &file.facts.barrel else {
                 continue;
             };
-            let Some(target) = chain_target(&paths, &barrels, targets) else {
+            let Some(target) = chain_target(&paths, &barrels, &index, targets) else {
                 continue;
             };
-            let site = NamedSite {
-                name: "".into(),
-                line: 1,
-                column: 1,
-                context: "".into(),
-            };
-            out.push(Finding::at_site(
+            out.push(Finding::at_file(
                 file.path,
-                &site,
                 INFO.id,
-                Severity::Warn,
+                Severity::Minor,
                 format!("barrel file re-exports from another barrel `{target}`"),
                 "import from the defining module directly and delete the pass-through re-exports"
                     .to_string(),
@@ -72,6 +85,7 @@ impl WorldRule for BarrelFile {
 fn chain_target<'a>(
     paths: &[&str],
     barrels: &[&str],
+    index: &HashMap<&str, &[Vec<String>]>,
     targets: &'a [Vec<String>],
 ) -> Option<&'a str> {
     for candidates in targets {
@@ -80,7 +94,13 @@ fn chain_target<'a>(
             if paths.binary_search(&path).is_err() {
                 continue;
             }
-            if barrels.binary_search(&path).is_ok() {
+            if barrels.binary_search(&path).is_err() {
+                break;
+            }
+            let live = index
+                .get(path)
+                .is_some_and(|lists| lists.iter().any(|list| !list.is_empty()));
+            if live {
                 return Some(path);
             }
             break;
@@ -98,14 +118,17 @@ mod tests {
     fn facts(barrel: Option<Vec<Vec<String>>>) -> WorldFacts {
         WorldFacts {
             lang: Lang::TypeScript,
-            is_test_file: false,
-            is_entry_file: false,
+            role: crate::role::CodeRole::Library,
+            regions: Vec::new(),
+            package: String::new(),
+            package_from_manifest: false,
             has_inline_tests: false,
             public_functions: 0,
             definitions: Vec::new(),
             abstractions: Vec::new(),
             impls: Vec::new(),
             barrel,
+            imports: Vec::new(),
         }
     }
 
@@ -120,7 +143,7 @@ mod tests {
             vec!["leaf.ts".to_string()],
             vec!["b.ts".to_string()],
         ]));
-        let bee = facts(Some(Vec::new()));
+        let bee = facts(Some(vec![vec!["leaf.ts".to_string()]]));
         let leaf = facts(None);
         let files = [
             WorldFile {
@@ -169,6 +192,29 @@ mod tests {
         assert!(
             out.is_empty(),
             "a tree without barrels must report nothing: {out:?}"
+        );
+    }
+
+    #[test]
+    fn package_only_barrel_target_stays_silent() {
+        let rule = BarrelFile;
+        let top = facts(Some(vec![vec!["b.ts".to_string()]]));
+        let package_only = facts(Some(vec![Vec::new()]));
+        let files = [
+            WorldFile {
+                path: "a.ts",
+                facts: &top,
+            },
+            WorldFile {
+                path: "b.ts",
+                facts: &package_only,
+            },
+        ];
+        let mut out = Vec::new();
+        rule.check(&files, &mut out);
+        assert!(
+            out.is_empty(),
+            "a barrel that only re-exports a package specifier hides no local module: {out:?}"
         );
     }
 }

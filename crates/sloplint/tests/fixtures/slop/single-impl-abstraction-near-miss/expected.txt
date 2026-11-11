@@ -1,1 +1,1 @@
-# two impls of Draw plus an allow-listed *Ext trait: no finding
+# Near-miss: pub traits, two impls, and a generic blanket impl never fire.

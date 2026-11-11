@@ -1,4 +1,4 @@
-def classify(n):
+def guess_json_utf(n):
     if n == 0:
         return "zero"
     elif n == 1:

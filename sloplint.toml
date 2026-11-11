@@ -1,2 +1,9 @@
 [project]
 extend_exclude = ["crates/sloplint/tests/fixtures/**"]
+
+[rules."agent/file-token-budget"]
+level = "minor"
+minor_at = 600
+major_at = 1000
+critical_at = 1500
+blocker_at = 2000

@@ -1,1 +1,1 @@
-src/order.kt:1 deny agent/stringly-api
+src/order.kt:1 info agent/stringly-api

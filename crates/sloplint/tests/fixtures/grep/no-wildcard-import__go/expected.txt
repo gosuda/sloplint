@@ -1,1 +1,1 @@
-a.go:2 warn grep/no-wildcard-import
+a.go:2 info grep/no-wildcard-import

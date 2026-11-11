@@ -1,1 +1,1 @@
-let process_order (id : string) (account : string) (qty : int) : int = qty
+let process_order (a : string) (b : string) (c : string) : string = a

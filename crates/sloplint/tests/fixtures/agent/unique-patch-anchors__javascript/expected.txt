@@ -1,1 +1,1 @@
-src/app.js:2 warn agent/unique-patch-anchors
+src/app.js:2 info agent/unique-patch-anchors

@@ -1,4 +1,6 @@
-use sloplint_core::facts::{AmbientKind, Arg, ArgShape, Assertion, Pos};
+use sloplint_core::facts::{
+    AmbientKind, Arg, ArgShape, AssertShape, Assertion, Param, Pos, PrimitiveKind,
+};
 use tree_sitter::Node;
 
 use crate::hooks::{
@@ -73,6 +75,172 @@ pub(crate) fn param_target<'n>(d: Node<'n>, wrap: &[&str]) -> (Option<Node<'n>>,
         callable,
     )
 }
+
+pub(crate) struct CDeclarators {
+    pub(crate) wrap: &'static [&'static str],
+    pub(crate) envs: &'static [&'static str],
+}
+
+pub(crate) static C_DECLARATORS: CDeclarators = CDeclarators {
+    wrap: &[
+        "pointer_declarator",
+        "array_declarator",
+        "parenthesized_declarator",
+        "attributed_declarator",
+    ],
+    envs: &["getenv", "secure_getenv", "_dupenv_s"],
+};
+
+pub(crate) static CPP_DECLARATORS: CDeclarators = CDeclarators {
+    wrap: &[
+        "reference_declarator",
+        "pointer_declarator",
+        "array_declarator",
+        "parenthesized_declarator",
+        "attributed_declarator",
+    ],
+    envs: &[
+        "getenv",
+        "std::getenv",
+        "::getenv",
+        "secure_getenv",
+        "_dupenv_s",
+    ],
+};
+
+pub(crate) fn func_parts<'n>(
+    n: Node<'n>,
+    decls: &CDeclarators,
+    name_kinds: &[&str],
+) -> Option<(Node<'n>, Node<'n>)> {
+    let fd = unwrap(child_by_field(n, "declarator")?, decls.wrap);
+    if fd.kind() != "function_declarator" {
+        return None;
+    }
+    let name = unwrap(child_by_field(fd, "declarator")?, decls.wrap);
+    let kind = name.kind();
+    if name_kinds.contains(&kind) {
+        return Some((fd, name));
+    }
+    match kind {
+        "qualified_identifier" | "template_function" | "template_method" => {
+            Some((fd, child_by_field(name, "name")?))
+        }
+        _ => None,
+    }
+}
+
+pub(crate) fn params<'s>(
+    cx: &Cx<'_, 's>,
+    fd: Node<'_>,
+    decls: &CDeclarators,
+    decl_kinds: &[&str],
+) -> Vec<Param<'s>> {
+    let mut out = Vec::new();
+    let Some(list) = child_by_field(fd, "parameters") else {
+        return out;
+    };
+    for c in named_children(list) {
+        if !decl_kinds.contains(&c.kind()) {
+            continue;
+        }
+        if let Some(found) = param(cx, c, decls) {
+            out.push(found);
+        }
+    }
+    out
+}
+
+pub(crate) fn init_value(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    cx.parent()
+        .filter(|parent| parent.kind() == "init_declarator")
+        .and_then(|parent| child_by_field(parent, "value"))
+        .is_some_and(|value| value.id() == n.id())
+}
+
+pub(crate) fn primitive_kind_of(ty: Option<&str>) -> PrimitiveKind {
+    let text = ty.unwrap_or("");
+    if text.bytes().any(|b| b == b'<') {
+        return PrimitiveKind::Other;
+    }
+    let stars = text.bytes().filter(|&b| b == b'*').count();
+    let pointer = stars > 0;
+    let mut base = "";
+    let mut signed = false;
+    for tok in text.split(|c: char| !c.is_ascii_alphanumeric() && c != '_') {
+        if tok.is_empty() {
+            continue;
+        }
+        if tok == "unsigned" || tok == "signed" {
+            signed = true;
+        }
+        base = tok;
+    }
+    match base {
+        "bool" | "_Bool" | "BOOL" if !pointer => PrimitiveKind::Bool,
+        "string" => PrimitiveKind::Str,
+        "NSString" if stars <= 1 => PrimitiveKind::Str,
+        "char" if pointer && stars == 1 && !signed => PrimitiveKind::Str,
+        "short" | "int" | "long" | "signed" | "unsigned" | "size_t" | "ssize_t" | "NSInteger"
+        | "NSUInteger" | "int8_t" | "int16_t" | "int32_t" | "int64_t" | "uint8_t" | "uint16_t"
+        | "uint32_t" | "uint64_t"
+            if !pointer =>
+        {
+            PrimitiveKind::Int
+        }
+        "float" | "double" | "CGFloat" if !pointer => PrimitiveKind::Float,
+        _ => PrimitiveKind::Other,
+    }
+}
+
+pub(crate) fn is_simple_callee(n: Node<'_>) -> bool {
+    let mut current = n;
+    loop {
+        match current.kind() {
+            "identifier" => return true,
+            "field_expression" => match child_by_field(current, "argument") {
+                Some(argument) => current = argument,
+                None => return false,
+            },
+            _ => return false,
+        }
+    }
+}
+
+pub(crate) fn defaulted_param<'s>(
+    cx: &Cx<'_, 's>,
+    p: Node<'_>,
+    name: &'s str,
+    ty: Option<&'s str>,
+) -> Param<'s> {
+    Param {
+        name,
+        ty,
+        primitive_kind: primitive_kind_of(ty),
+        has_default: child_by_field(p, "default_value").is_some(),
+        bool_default: child_by_field(p, "default_value")
+            .is_some_and(|d| text(cx, d) == "true" || text(cx, d) == "false"),
+        keyword_only: false,
+        is_variadic: false,
+    }
+}
+
+pub(crate) fn param<'s>(cx: &Cx<'_, 's>, p: Node<'_>, decls: &CDeclarators) -> Option<Param<'s>> {
+    let ty_node = child_by_field(p, "type")?;
+    let declarator = child_by_field(p, "declarator");
+    let (named, callable) = declarator.map_or((None, false), |d| param_target(d, decls.wrap));
+    let name = named.map(|l| text(cx, l)).unwrap_or("");
+    let ty = match (named, declarator) {
+        (Some(found), _) if !callable => span(cx, ty_node, found),
+        (_, Some(d)) => slice(cx.src, p.start_byte(), d.end_byte()),
+        (_, None) => text(cx, ty_node),
+    };
+    if name.is_empty() && ty == "void" {
+        return None;
+    }
+    Some(defaulted_param(cx, p, name, Some(ty)))
+}
+
 pub(crate) fn const_pointer(cx: &Cx<'_, '_>, d: Node<'_>, wrap: &[&str]) -> bool {
     let mut current = match d.kind() {
         "init_declarator" => child_by_field(d, "declarator").unwrap_or(d),
@@ -92,6 +260,13 @@ pub(crate) fn const_pointer(cx: &Cx<'_, '_>, d: Node<'_>, wrap: &[&str]) -> bool
     }
     innermost_const
 }
+fn push_structured_binding<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    for id in named_children(n) {
+        if id.kind() == "identifier" {
+            out.push((text(cx, id), pos_of(id)));
+        }
+    }
+}
 pub(crate) fn decl_info<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
@@ -109,6 +284,8 @@ pub(crate) fn decl_info<'s>(
             func = true;
         } else if found.kind() == "identifier" && !const_pointer(cx, d, wrap) {
             out.push((text(cx, found), pos_of(found)));
+        } else if found.kind() == "structured_binding_declarator" {
+            push_structured_binding(cx, found, &mut out);
         }
     }
     (out, func)
@@ -140,7 +317,12 @@ pub(crate) fn env_ambient<'s>(
         return;
     };
     let raw = text(cx, func);
-    if envs.contains(&flat(raw).as_str()) {
+    if raw.bytes().any(|b| b == b'(' || b == b')') {
+        return;
+    }
+    if envs.contains(&raw)
+        || raw.bytes().any(|b| b.is_ascii_whitespace()) && envs.contains(&flat(raw).as_str())
+    {
         out.push((AmbientKind::EnvRead, raw, pos_of(n)));
     }
 }
@@ -154,10 +336,10 @@ pub(crate) fn first_arg(n: Node<'_>) -> Option<Node<'_>> {
     child_by_field(n, "arguments").and_then(|a| find_named_child(a, |c| c.kind() != "comment"))
 }
 pub(crate) fn plain_assert(cx: &Cx<'_, '_>, n: Node<'_>) -> Assertion {
-    let arg = first_arg(n).filter(|a| a.kind() == "binary_expression");
+    let first = first_arg(n);
     let mut has_message = false;
     let mut comparison = false;
-    if let Some(found) = arg {
+    if let Some(found) = first.filter(|a| a.kind() == "binary_expression") {
         let op = bin_op(cx, found).unwrap_or("");
         if op == "&&" {
             has_message =
@@ -165,10 +347,20 @@ pub(crate) fn plain_assert(cx: &Cx<'_, '_>, n: Node<'_>) -> Assertion {
         }
         comparison = op == "==" || op == "!=";
     }
+    let shape = if comparison {
+        AssertShape::TopEqNe
+    } else if first.is_some_and(|a| a.kind() == "identifier") {
+        AssertShape::BareName
+    } else {
+        AssertShape::Other
+    };
     Assertion {
         pos: pos_of(n),
         has_message,
         comparison,
+        shape,
+        in_typecheck: false,
+        value_is_bool_literal: false,
     }
 }
 pub(crate) fn pair_source<'s>(cx: &Cx<'_, 's>, pair: Node<'_>) -> Option<&'s str> {
@@ -202,15 +394,8 @@ pub(crate) fn designator_of<'s>(cx: &Cx<'_, 's>, pair: Node<'_>) -> Option<&'s s
     }
     None
 }
-pub(crate) fn in_function(n: Node<'_>) -> bool {
-    let mut parent = n.parent();
-    while let Some(found) = parent {
-        if found.kind() == "function_definition" {
-            return true;
-        }
-        parent = found.parent();
-    }
-    false
+pub(crate) fn in_function(cx: &Cx<'_, '_>) -> bool {
+    cx.ancestors().any(|a| a.kind() == "function_definition")
 }
 pub(crate) fn collect_fragments<'s>(
     cx: &Cx<'_, 's>,
@@ -254,4 +439,63 @@ pub(crate) fn call_args<'s>(
         });
     }
     args
+}
+pub(crate) fn dynamic_name_argument(n: Node<'_>, index: usize) -> Option<Node<'_>> {
+    let args = child_by_field(n, "arguments")?;
+    let mut position = 0;
+    for c in named_children(args) {
+        if c.kind() == "comment" {
+            continue;
+        }
+        if position == index {
+            return Some(c);
+        }
+        position += 1;
+    }
+    None
+}
+pub(crate) fn is_plain_dynamic_name(n: Node<'_>) -> bool {
+    let target = strip_parens(n);
+    if matches!(target.kind(), "string_literal" | "raw_string_literal") {
+        return true;
+    }
+    if boxed_string(target) {
+        return true;
+    }
+    if target.kind() != "concatenated_string" {
+        return false;
+    }
+    let mut found = false;
+    for c in named_children(target) {
+        if c.kind() == "comment" {
+            continue;
+        }
+        let inner = strip_parens(c);
+        if matches!(inner.kind(), "string_literal" | "raw_string_literal") {
+            found = true;
+            continue;
+        }
+        if boxed_string(inner) {
+            found = true;
+            continue;
+        }
+        return false;
+    }
+    found
+}
+fn strip_parens(n: Node<'_>) -> Node<'_> {
+    let mut current = n;
+    while current.kind() == "parenthesized_expression" {
+        let Some(next) = first_named_child(current) else {
+            break;
+        };
+        current = next;
+    }
+    current
+}
+fn boxed_string(n: Node<'_>) -> bool {
+    if n.kind() != "at_expression" {
+        return false;
+    }
+    first_named_child(n).is_some_and(|inner| inner.kind() == "string_literal")
 }

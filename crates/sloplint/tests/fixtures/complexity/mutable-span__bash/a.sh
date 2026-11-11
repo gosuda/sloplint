@@ -1,5 +1,6 @@
 spread() {
   total=0
+  total=1
   filler_1=x
   filler_2=x
   filler_3=x
@@ -29,6 +30,7 @@ spread() {
   filler_27=x
   filler_28=x
   filler_29=x
+  filler_30=x
   total=99
   echo "$total"
 }

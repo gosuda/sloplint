@@ -4,8 +4,9 @@
 //! JSON summary; it needs `symlink(2)`, so it is unix-only. Discovery already refuses links, so
 //! it pins the shared skip accounting. `read_source`, the re-read the renderer uses, is refused
 //! directly: that case plants its link with `symlink(2)` on unix and `symlink_file` on Windows,
-//! where an account without the link privilege prints a skip instead of failing. A unix socket
-//! at a source path cannot be opened at all, so its refusal is pinned too.
+//! where an account without the link privilege skips unless SLOPLINT_REQUIRE_FS_CAPS demands
+//! the capability. A unix socket at a source path cannot be opened at all, so its refusal is
+//! pinned too.
 
 use std::path::{Path, PathBuf};
 
@@ -44,13 +45,24 @@ fn project() -> (tempfile::TempDir, PathBuf) {
 fn put(root: &Path, rel: &str, body: &str) {
     let path = root.join(rel);
     if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir).unwrap_or_else(|e| panic!("mkdir {}: {e}", dir.display()));
+        std::fs::create_dir_all(dir)
+            .unwrap_or_else(|e| panic!("mkdir failed {}: {e}", dir.display()));
     }
-    std::fs::write(&path, body).unwrap_or_else(|e| panic!("write {rel}: {e}"));
+    std::fs::write(&path, body).unwrap_or_else(|e| panic!("write failed {rel}: {e}"));
+}
+
+/// Prints the capability skip, or fails when SLOPLINT_REQUIRE_FS_CAPS demands the capability,
+/// so a runner that silently drops the capability coverage turns red in CI.
+fn skip_unless_fs_caps_required(context: &str, error: &std::io::Error) {
+    if std::env::var_os("SLOPLINT_REQUIRE_FS_CAPS").is_some_and(|value| !value.is_empty()) {
+        panic!("SLOPLINT_REQUIRE_FS_CAPS is set but the capability is missing: {context}: {error}");
+    }
+    eprintln!("SKIP (capability unavailable) {context}: {error}");
 }
 
 /// Plants a file symlink at `link` pointing to `target`; Windows needs a link privilege
-/// the runner may lack, and the caller prints that skip, never silently.
+/// the runner may lack, and the caller hands that skip to [`skip_unless_fs_caps_required`],
+/// never silently.
 #[cfg(unix)]
 fn plant_link(target: &Path, link: &Path) -> std::io::Result<()> {
     use std::os::unix::fs::symlink;
@@ -64,7 +76,7 @@ fn plant_link(target: &Path, link: &Path) -> std::io::Result<()> {
 }
 
 /// Whether `plant_link` failed only because the account cannot create symlinks; the
-/// caller prints that skip, never silently.
+/// caller hands that skip to [`skip_unless_fs_caps_required`], never silently.
 #[cfg(unix)]
 fn link_privilege_missing(_error: &std::io::Error) -> bool {
     false
@@ -150,9 +162,9 @@ fn read_source_refuses_a_symlink_to_outside_content_and_reads_a_regular_file() {
         .unwrap_or_else(|e| panic!("write outside: {e}"));
     if let Err(error) = plant_link(&target, &root.join("link.rs")) {
         if link_privilege_missing(&error) {
-            eprintln!(
-                "SKIP read_source_refuses_a_symlink_to_outside_content_and_reads_a_regular_file: \
-                 this account cannot create symlinks: {error}"
+            skip_unless_fs_caps_required(
+                "read_source_refuses_a_symlink_to_outside_content_and_reads_a_regular_file: this account cannot create symlinks",
+                &error,
             );
             return;
         }

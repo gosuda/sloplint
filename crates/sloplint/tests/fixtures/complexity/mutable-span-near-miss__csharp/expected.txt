@@ -1,1 +1,2 @@
 # binding never reassigned after declaration: no finding.
+# ShadowedLocal.cs: `Spread`'s `total` is written once on line 4; the line-25 write targets `Tally`'s own local (C# forbids shadowing in one method), so misattribution would span 21 and fire.

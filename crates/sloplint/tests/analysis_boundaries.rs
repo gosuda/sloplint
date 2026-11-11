@@ -1,3 +1,5 @@
+#[path = "analysis_boundaries/boundary_caps.rs"]
+mod boundary_caps;
 #[path = "analysis_boundaries/cli_contract.rs"]
 mod cli_contract;
 
@@ -18,9 +20,9 @@ fn tmp() -> (tempfile::TempDir, PathBuf) {
 fn put(root: &Path, rel: &str, text: &str) {
     let p = root.join(rel);
     if let Some(d) = p.parent() {
-        std::fs::create_dir_all(d).unwrap_or_else(|e| panic!("mkdir: {e}"));
+        std::fs::create_dir_all(d).unwrap_or_else(|e| panic!("mkdir failed: {e}"));
     }
-    std::fs::write(&p, text).unwrap_or_else(|e| panic!("write {rel}: {e}"));
+    std::fs::write(&p, text).unwrap_or_else(|e| panic!("write failed {rel}: {e}"));
 }
 
 fn base(root: &Path) -> RunOptions {
@@ -35,9 +37,21 @@ fn base(root: &Path) -> RunOptions {
 fn filt(ids: &[&str]) -> RuleFilter {
     RuleFilter(
         ids.iter()
-            .map(|s| RulePattern::parse(s).unwrap_or_else(|e| panic!("filter {s}: {e}")))
+            .map(|s| {
+                RulePattern::parse(s).unwrap_or_else(|e| panic!("filter parse failed: {s}: {e}"))
+            })
             .collect(),
     )
+}
+
+/// Prints the capability skip, or fails when SLOPLINT_REQUIRE_FS_CAPS demands the capability,
+/// so a runner that silently drops the capability coverage turns red in CI.
+#[cfg(unix)]
+fn skip_unless_fs_caps_required(context: &str, error: &std::io::Error) {
+    if std::env::var_os("SLOPLINT_REQUIRE_FS_CAPS").is_some_and(|value| !value.is_empty()) {
+        panic!("SLOPLINT_REQUIRE_FS_CAPS is set but the capability is missing: {context}: {error}");
+    }
+    eprintln!("SKIP (capability unavailable) {context}: {error}");
 }
 
 fn bin_cold(root: &Path, home: &Path, format: &str, jobs: usize) -> Vec<u8> {
@@ -54,7 +68,7 @@ fn bin_warm(root: &Path, home: &Path, format: &str, jobs: usize) -> Vec<u8> {
 /// `home`, so concurrent tests never share a cache and none touches the runner's real one.
 fn bin_in(root: &Path, home: &Path, args: &[&str]) -> Vec<u8> {
     for name in ["xdg", "home", "local"] {
-        std::fs::create_dir_all(home.join(name)).unwrap_or_else(|e| panic!("mkdir: {e}"));
+        std::fs::create_dir_all(home.join(name)).unwrap_or_else(|e| panic!("mkdir failed: {e}"));
     }
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_sloplint"))
         .current_dir(root)
@@ -64,7 +78,7 @@ fn bin_in(root: &Path, home: &Path, args: &[&str]) -> Vec<u8> {
         .env("HOME", home.join("home"))
         .env("LOCALAPPDATA", home.join("local"))
         .output()
-        .unwrap_or_else(|e| panic!("bin: {e}"));
+        .unwrap_or_else(|e| panic!("binary run failed: {e}"));
     assert!(
         out.status.success(),
         "bin failed: {:?}\nstderr:\n{}",
@@ -75,129 +89,10 @@ fn bin_in(root: &Path, home: &Path, args: &[&str]) -> Vec<u8> {
 }
 
 fn run_ok(o: &RunOptions) -> Report {
-    run(o).unwrap_or_else(|e| panic!("run {o:?}: {e}"))
+    run(o).unwrap_or_else(|e| panic!("run failed: {o:?}: {e}"))
 }
 
-// AA-I11, AA-R1: limit-1 skipped, limit and limit+1 analyzed.
-#[test]
-fn boundary_byte_cap_limit_boundaries() {
-    let (_t, root) = tmp();
-    let body = "pub fn handle() {}\n";
-    put(&root, "src/a.rs", body);
-    let len = std::fs::metadata(root.join("src/a.rs"))
-        .unwrap_or_else(|e| panic!("meta: {e}"))
-        .len();
-    for (limit, files, skipped, hits) in [(len - 1, 0, 1, 0), (len, 1, 0, 1), (len + 1, 1, 0, 1)] {
-        put(
-            &root,
-            "sloplint.toml",
-            &format!("[project]\nmax_file_bytes = {limit}\n"),
-        );
-        let r = run_ok(&RunOptions {
-            strictness: Some(Strictness::Standard),
-            mode: Some(Mode::Threshold),
-            rule_filter: filt(&["grep/generic-name", "meta/*"]),
-            ..base(&root)
-        });
-        assert_eq!(r.summary.files, files, "files at limit {limit}");
-        assert_eq!(r.summary.skipped, skipped, "skipped at limit {limit}");
-        let g: Vec<_> = r
-            .findings
-            .iter()
-            .filter(|f| &*f.rule == "grep/generic-name")
-            .collect();
-        assert_eq!(g.len(), hits, "generic-name count at limit {limit}");
-        if hits == 1 {
-            assert_eq!(&*g[0].path, "src/a.rs");
-            assert_eq!(g[0].line, 1);
-            assert_eq!(g[0].severity, Severity::Warn);
-        }
-    }
-}
-
-// AA-I12, AA-R1: zero cap disables analysis; non-UTF8 content is a counted skip.
-#[test]
-fn boundary_zero_cap_and_non_utf8_skip() {
-    let (_t, root) = tmp();
-    put(&root, "src/a.rs", "pub fn handle() {}\n");
-    put(&root, "sloplint.toml", "[project]\nmax_file_bytes = 0\n");
-    let r = run_ok(&RunOptions {
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        rule_filter: filt(&["grep/generic-name", "meta/*"]),
-        ..base(&root)
-    });
-    assert_eq!(r.summary.files, 0, "zero cap analyzes nothing");
-    assert_eq!(r.summary.skipped, 1, "zero cap counts the skip");
-    assert!(r.findings.is_empty(), "zero cap reports nothing");
-    let (_t2, root2) = tmp();
-    put(&root2, "src/a.rs", "pub fn handle() {}\n");
-    std::fs::write(root2.join("src/bad.rs"), [0xffu8, 0xfe, 0x41]).unwrap();
-    let r2 = run_ok(&RunOptions {
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        rule_filter: filt(&["grep/generic-name", "meta/*"]),
-        ..base(&root2)
-    });
-    assert_eq!(r2.summary.files, 1, "only the valid file is analyzed");
-    assert_eq!(r2.summary.skipped, 1, "non-UTF8 content is a counted skip");
-    assert!(
-        r2.findings.iter().all(|f| &*f.path != "src/bad.rs"),
-        "non-UTF8 file reports nothing"
-    );
-    assert!(
-        r2.findings
-            .iter()
-            .any(|f| &*f.rule == "grep/generic-name" && &*f.path == "src/a.rs" && f.line == 1),
-        "valid file still reports"
-    );
-}
-
-// AA-I15: a non-UTF-8 file name is a counted skip; the valid sibling still reports.
-#[cfg(unix)]
-#[test]
-fn boundary_non_utf8_filename_is_skipped() {
-    use std::os::unix::ffi::OsStrExt;
-
-    let (_t, root) = tmp();
-    put(&root, "src/a.rs", "pub fn handle() {}\n");
-    let raw = std::ffi::OsStr::from_bytes(b"src/bad\xff.rs");
-    if let Err(e) = std::fs::write(root.join(raw), b"pub fn handle() {}\n") {
-        const EILSEQ: i32 = 92;
-        assert_eq!(e.raw_os_error(), Some(EILSEQ), "write non-UTF-8 name: {e}");
-        eprintln!(
-            "SKIP boundary_non_utf8_filename_is_skipped: filesystem cannot represent the 0xFF name: {e}"
-        );
-        return;
-    }
-    let r = run_ok(&RunOptions {
-        strictness: Some(Strictness::Standard),
-        mode: Some(Mode::Threshold),
-        rule_filter: filt(&["grep/generic-name", "meta/*"]),
-        ..base(&root)
-    });
-    assert_eq!(r.summary.files, 1, "only the valid file is analyzed");
-    assert_eq!(r.summary.skipped, 1, "non-UTF-8 name is a counted skip");
-    let generic: Vec<_> = r
-        .findings
-        .iter()
-        .filter(|f| &*f.rule == "grep/generic-name")
-        .collect();
-    assert_eq!(generic.len(), 1, "exactly one generic-name finding");
-    assert_eq!(
-        &*generic[0].path, "src/a.rs",
-        "finding cites the valid path"
-    );
-    assert_eq!(generic[0].line, 1);
-    assert_eq!(generic[0].severity, Severity::Warn);
-    assert!(
-        r.findings.iter().all(|f| &*f.path == "src/a.rs"),
-        "no finding may cite the unnamed file: {:?}",
-        r.findings.iter().map(|f| &*f.path).collect::<Vec<_>>()
-    );
-}
-
-// AA-I14, AA-X9: component boundary, root scope, nonexistent and symlink-escape errors.
+// AA-S5: line extent start/end/end+1/end+2 and file-level suppression.
 #[test]
 fn boundary_scope_component_and_path_errors() {
     let (_tmpd, bx) = tmp();
@@ -396,7 +291,7 @@ fn boundary_output_bytes_stable() {
     put(
         &root,
         "sloplint.toml",
-        "[[custom_rules]]\nid = \"custom/order-hit\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"order hit\"\nwhy = \"determinism probe\"\nfix = \"none\"\nquery = \"(call_expression) @match\"\n",
+        "[[custom_rules]]\nid = \"custom/order-hit\"\nlanguage = \"rust\"\nseverity = \"minor\"\nmessage = \"order hit\"\nwhy = \"determinism probe\"\nfix = \"none\"\nquery = \"(call_expression) @match\"\n",
     );
     put(
         &root,
@@ -421,7 +316,8 @@ fn boundary_output_bytes_stable() {
     let j2 = bin_cold(&root, &home, "json", 2);
     let j8 = bin_cold(&root, &home, "json", 8);
     for (bytes, what) in [(&a1, "agent"), (&j1, "json")] {
-        let text = String::from_utf8(bytes.clone()).unwrap_or_else(|e| panic!("utf8: {e}"));
+        let text =
+            String::from_utf8(bytes.clone()).unwrap_or_else(|e| panic!("utf8 decode failed: {e}"));
         assert!(
             text.contains("custom/order-hit"),
             "{what} lacks custom ordering"
@@ -448,6 +344,11 @@ fn boundary_output_bytes_stable() {
 #[test]
 fn boundary_deep_nesting_bounded() {
     let (_t, root) = tmp();
+    put(
+        &root,
+        "sloplint.toml",
+        "[rules.\"complexity/nesting-depth\"]\nlevel = \"major\"\n",
+    );
     let depth = 10_000usize;
     let mut src = String::from("fn deep() {\n");
     for i in 0..depth {
@@ -460,7 +361,7 @@ fn boundary_deep_nesting_bounded() {
     src.push_str("}\n");
     put(&root, "src/deep.rs", &src);
     let bytes = std::fs::metadata(root.join("src/deep.rs"))
-        .unwrap_or_else(|e| panic!("meta: {e}"))
+        .unwrap_or_else(|e| panic!("metadata failed: {e}"))
         .len();
     assert!(
         bytes < 2_097_152,
@@ -481,7 +382,7 @@ fn boundary_deep_nesting_bounded() {
     {
         assert_eq!(&*n.path, "src/deep.rs");
         assert_eq!(n.line, 1);
-        assert_eq!(n.severity, Severity::Deny);
+        assert_eq!(n.severity, Severity::Major);
     } else {
         let pe = r
             .findings
@@ -492,14 +393,14 @@ fn boundary_deep_nesting_bounded() {
     }
 }
 
-// AA-R5: warn_at/deny_at line boundaries N-1/N/N+1 with real option keys.
+// AA-R5: minor_at/major_at/critical_at/blocker_at line boundaries with real option keys.
 #[test]
 fn boundary_file_budget_line_thresholds() {
     let (_t, root) = tmp();
     put(
         &root,
         "sloplint.toml",
-        "[rules.\"agent/file-token-budget\"]\nwarn_at = 8\ndeny_at = 10\n",
+        "[rules.\"agent/file-token-budget\"]\nlevel = \"major\"\nminor_at = 8\nmajor_at = 10\ncritical_at = 15\nblocker_at = 20\n",
     );
     for n in [7u32, 8, 9, 10, 11] {
         let repeat = usize::try_from(n).unwrap_or_else(|e| panic!("u32 fits usize: {e}"));
@@ -521,11 +422,11 @@ fn boundary_file_budget_line_thresholds() {
             .find(|f| *f.path == format!("src/a{n}.rs"))
             .map(|f| f.severity)
     };
-    assert_eq!(sev(7), None, "7 lines below warn_at reports nothing");
-    assert_eq!(sev(8), Some(Severity::Warn), "8 lines hits warn_at");
-    assert_eq!(sev(9), Some(Severity::Warn), "9 lines stays warn");
-    assert_eq!(sev(10), Some(Severity::Deny), "10 lines hits deny_at");
-    assert_eq!(sev(11), Some(Severity::Deny), "11 lines stays deny");
+    assert_eq!(sev(7), None, "7 lines below minor_at reports nothing");
+    assert_eq!(sev(8), Some(Severity::Minor), "8 lines hits minor_at");
+    assert_eq!(sev(9), Some(Severity::Minor), "9 lines stays minor");
+    assert_eq!(sev(10), Some(Severity::Major), "10 lines hits major_at");
+    assert_eq!(sev(11), Some(Severity::Major), "11 lines stays major");
     for n in [8u32, 9, 10, 11] {
         let f = r
             .findings
@@ -547,7 +448,7 @@ fn boundary_file_budget_empty_and_no_final_newline() {
     put(
         &root,
         "sloplint.toml",
-        "[rules.\"agent/file-token-budget\"]\nwarn_at = 1\ndeny_at = 2\n",
+        "[rules.\"agent/file-token-budget\"]\nlevel = \"major\"\nminor_at = 1\nmajor_at = 2\ncritical_at = 3\nblocker_at = 4\n",
     );
     let r = run_ok(&RunOptions {
         strictness: Some(Strictness::Standard),
@@ -565,7 +466,7 @@ fn boundary_file_budget_empty_and_no_final_newline() {
         .iter()
         .find(|f| &*f.path == "one.rs")
         .unwrap_or_else(|| panic!("one.rs must report"));
-    assert_eq!(one.severity, Severity::Warn, "1 line hits warn_at");
+    assert_eq!(one.severity, Severity::Minor, "1 line hits minor_at");
     assert_eq!(one.line, 1);
     assert_eq!(one.column, 1);
     let two = r
@@ -573,7 +474,7 @@ fn boundary_file_budget_empty_and_no_final_newline() {
         .iter()
         .find(|f| &*f.path == "two.rs")
         .unwrap_or_else(|| panic!("two.rs must report"));
-    assert_eq!(two.severity, Severity::Deny, "2 lines hit deny_at");
+    assert_eq!(two.severity, Severity::Major, "2 lines hit major_at");
     assert_eq!(two.line, 1);
     assert_eq!(two.column, 1);
 }
@@ -581,7 +482,8 @@ fn boundary_file_budget_empty_and_no_final_newline() {
 #[test]
 fn boundary_cli_jobs_parsing() {
     let jobs_of = |args: &[&str]| -> Option<usize> {
-        let cli = Cli::try_parse_from(args).unwrap_or_else(|e| panic!("parse {args:?}: {e}"));
+        let cli =
+            Cli::try_parse_from(args).unwrap_or_else(|e| panic!("cli parse failed {args:?}: {e}"));
         match cli.command {
             Some(Command::Check(c)) => c.run.jobs,
             Some(_) => panic!("unexpected subcommand for {args:?}"),
@@ -631,4 +533,54 @@ fn boundary_concurrent_cache_runs_match_cold() {
     });
     let warm = bin_warm(&root, &home, "agent", 2);
     assert_eq!(warm, control, "post-race warm shipped agent bytes");
+}
+
+/// A capability skip must fail when SLOPLINT_REQUIRE_FS_CAPS demands the capability, and stay
+/// a printed skip otherwise, so a runner that silently drops the coverage turns red in CI.
+#[cfg(unix)]
+#[test]
+fn fs_capability_skip_fails_when_required() {
+    let exe = std::env::current_exe().unwrap_or_else(|e| panic!("current_exe failed: {e}"));
+    let probe = |required: bool| {
+        let mut command = std::process::Command::new(&exe);
+        command
+            .args([
+                "fs_capability_gate_probe",
+                "--exact",
+                "--ignored",
+                "--test-threads=1",
+            ])
+            .env_remove("SLOPLINT_REQUIRE_FS_CAPS");
+        if required {
+            command.env("SLOPLINT_REQUIRE_FS_CAPS", "1");
+        }
+        command
+            .output()
+            .unwrap_or_else(|e| panic!("probe spawn failed: {e}"))
+    };
+    let required = probe(true);
+    assert!(
+        !required.status.success(),
+        "a missing filesystem capability must fail when SLOPLINT_REQUIRE_FS_CAPS is set: {:?}: {}",
+        required.status,
+        String::from_utf8_lossy(&required.stderr)
+    );
+    let tolerated = probe(false);
+    assert!(
+        tolerated.status.success(),
+        "without SLOPLINT_REQUIRE_FS_CAPS the capability skip must stay graceful: {:?}: {}",
+        tolerated.status,
+        String::from_utf8_lossy(&tolerated.stderr)
+    );
+}
+
+/// The gate probe behind [`fs_capability_skip_fails_when_required`]: the capability is absent,
+/// so the gate must skip unless the environment demands the capability. Ignored so the armed
+/// gate only runs through the regression harness, never in the suite with CI's env set.
+#[cfg(unix)]
+#[test]
+#[ignore = "runs via fs_capability_skip_fails_when_required"]
+fn fs_capability_gate_probe() {
+    let error = std::io::Error::from_raw_os_error(92);
+    skip_unless_fs_caps_required("filesystem cannot represent the 0xFF name", &error);
 }

@@ -1,1 +1,1 @@
-src/draw.swift:1 warn slop/single-impl-abstraction
+src/draw.swift:1 minor slop/single-impl-abstraction

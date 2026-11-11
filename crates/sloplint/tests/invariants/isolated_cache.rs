@@ -9,20 +9,23 @@ use std::process::{Command, Output};
 
 use super::{custom_rule, mkdir, tempdir, write};
 
-/// One generic-name finding, with a message that holds `GENERIC_TEXT` exactly once.
-const SAMPLE: &str = "pub fn handle(flag: bool) {}\n";
+#[path = "isolated_cache/planted_links.rs"]
+mod planted_links;
 
-const GENERIC_TEXT: &str = "shared by unrelated code";
+/// One generic-name finding, with a message that holds `GENERIC_TEXT` exactly once.
+const SAMPLE: &str = "pub fn handle(flag: bool, other: bool) {}\n";
+
+pub(super) const GENERIC_TEXT: &str = "shared by unrelated code";
 
 /// Temp dirs standing in for the user's cache and home directories.
-struct CacheHome {
+pub(super) struct CacheHome {
     /// Keeps the directories alive for the test's lifetime.
     _tmp: tempfile::TempDir,
     base: PathBuf,
 }
 
 impl CacheHome {
-    fn new() -> CacheHome {
+    pub(super) fn new() -> CacheHome {
         let (tmp, base) = tempdir();
         for name in ["xdg", "home", "local"] {
             mkdir(&base.join(name));
@@ -31,7 +34,7 @@ impl CacheHome {
     }
 
     /// Points the child's per-user cache and home directories at this test's temp dirs.
-    fn isolate<'c>(&self, command: &'c mut Command) -> &'c mut Command {
+    pub(super) fn isolate<'c>(&self, command: &'c mut Command) -> &'c mut Command {
         command
             .env("XDG_CACHE_HOME", self.base.join("xdg"))
             .env("HOME", self.base.join("home"))
@@ -55,7 +58,7 @@ impl CacheHome {
     }
 
     /// Runs `sloplint check` in `root` and returns stdout; a stderr warning fails the test.
-    fn check(&self, root: &Path, extra: &[&str]) -> String {
+    pub(super) fn check(&self, root: &Path, extra: &[&str]) -> String {
         let out = self.output(root, extra);
         let stderr = String::from_utf8_lossy(&out.stderr);
         assert!(
@@ -67,14 +70,16 @@ impl CacheHome {
     }
 
     /// Every stored cache file, `<xdg>/sloplint/<key>/cache-v2/shard-<NN>.bin`.
-    fn cache_files(&self) -> Vec<PathBuf> {
+    pub(super) fn cache_files(&self) -> Vec<PathBuf> {
         let namespace = self.base.join("xdg").join("sloplint");
         let Ok(keys) = std::fs::read_dir(&namespace) else {
             return Vec::new();
         };
         let mut files = Vec::new();
         for key in keys {
-            let key = key.unwrap_or_else(|e| panic!("{}: {e}", namespace.display()));
+            let key = key.unwrap_or_else(|e| {
+                panic!("cache key listing failed {}: {e}", namespace.display())
+            });
             let Ok(shards) = std::fs::read_dir(key.path().join("cache-v2")) else {
                 continue;
             };
@@ -98,14 +103,14 @@ impl CacheHome {
     }
 }
 
-/// C++ that fails as C but parses as C++. Its forwarding method makes a finding that only the
-/// C++ analysis can report.
+/// C++ that fails as C but parses as C++. Its generic-named method makes a finding that only
+/// the C++ analysis can report.
 const CPP_HEADER: &str = "namespace ui {
 
 template <typename T>
 class Stack {
 public:
-    void push(const T& value) { items_.push_back(value); }
+    void process_data(const T& value) { store(value); }
 private:
     std::vector<T> items_;
 };
@@ -116,17 +121,17 @@ private:
 /// Plain C that parses as C.
 const C_HEADER: &str = "#include <string.h>
 
-unsigned long get_length(const char *s) {
+unsigned long process_data(const char *s) {
     return strlen(s);
 }
 ";
 
-/// Objective-C: it fails as C and as C++, and `NSLog` is a log call in the `objc` table only.
+/// Objective-C: it fails as C and as C++, and its exported generic name reports at standard.
 const OBJC_HEADER: &str = "@interface Counter : NSObject
 - (void)increment;
 @end
 
-static inline void LogCount(NSString *name) {
+void process_data(NSString *name) {
     NSLog(name);
 }
 ";
@@ -138,9 +143,9 @@ int x = ;
 ";
 
 /// The stored text of the C++ header's finding, and a same-length stand-in for it.
-const CPP_FINDING: &str = "only forwards its parameters to `items_.push_back`";
+const CPP_FINDING: &str = "`process_data` is a generic name";
 
-const CPP_PLANTED: &str = "only forwards its parameters to `items_.push_bacm`";
+const CPP_PLANTED: &str = "`process_data` is a generic neme";
 
 /// Rewrites the one stored occurrence of `from` in the shard payload with the same-length
 /// `to`, then re-digests the payload, so the forged shard stays decodable and self-consistent.
@@ -161,40 +166,37 @@ fn plant(file: &Path, from: &str, to: &str) {
     let (digest, payload) = bytes.split_at_mut(32);
     payload[spots[0]..spots[0] + to.len()].copy_from_slice(to.as_bytes());
     digest.copy_from_slice(blake3::hash(payload).as_bytes());
-    std::fs::write(file, &bytes).unwrap_or_else(|e| panic!("plant: {e}"));
-}
-
-#[cfg(target_os = "linux")]
-/// Runs `spawn`, retrying while the freshly written executable is busy. Another test thread
-/// that forks while this test holds the file open for writing keeps a copy of that descriptor
-/// until its own `exec`, and `exec` of a file open for writing fails with `ETXTBSY` (os error
-/// 26). The retry is bounded to 5 s, so a genuinely busy binary still fails the test; any other
-/// error fails it at once.
-fn spawn_when_not_busy(spawn: impl Fn() -> io::Result<Output>) -> Output {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-    let mut last_busy = None;
-    while std::time::Instant::now() < deadline {
-        match spawn() {
-            Ok(out) => return out,
-            Err(e) if e.raw_os_error() == Some(26) => {
-                last_busy = Some(e);
-                std::thread::sleep(std::time::Duration::from_millis(50));
-            }
-            Err(e) => panic!("spawn altered executable: {e}"),
-        }
-    }
-    panic!(
-        "spawn stayed ETXTBSY for 5 s: {}",
-        last_busy.map_or("unknown".to_string(), |e| e.to_string())
-    )
+    std::fs::write(file, &bytes).unwrap_or_else(|e| panic!("plant rewrite failed: {e}"));
 }
 
 /// A project holding [`SAMPLE`] and an empty configuration.
-fn sample_project() -> (tempfile::TempDir, PathBuf) {
+pub(super) fn sample_project() -> (tempfile::TempDir, PathBuf) {
     let (tmp, root) = tempdir();
     write(&root, "sloplint.toml", "");
     write(&root, "sample.rs", SAMPLE);
     (tmp, root)
+}
+
+/// Cold-runs one project and returns its stdout plus its single stored shard file.
+fn cold_shard(home: &CacheHome, root: &Path) -> (String, Vec<PathBuf>) {
+    let cold = home.check(root, &[]);
+    let files = home.cache_files();
+    assert_eq!(
+        files.len(),
+        1,
+        "one project stores one cache file: {files:?}"
+    );
+    (cold, files)
+}
+
+/// Prints the capability skip, or fails when SLOPLINT_REQUIRE_FS_CAPS demands the capability,
+/// so a runner that silently drops the capability coverage turns red in CI.
+#[cfg(windows)]
+fn skip_unless_fs_caps_required(context: &str, error: &std::io::Error) {
+    if std::env::var_os("SLOPLINT_REQUIRE_FS_CAPS").is_some_and(|value| !value.is_empty()) {
+        panic!("SLOPLINT_REQUIRE_FS_CAPS is set but the capability is missing: {context}: {error}");
+    }
+    eprintln!("SKIP (capability unavailable) {context}: {error}");
 }
 
 /// The stored findings are reused, not recomputed: a same-length change planted inside the
@@ -204,15 +206,10 @@ fn warm_cache_reuses_stored_findings() {
     let (_tmp, root) = sample_project();
     let home = CacheHome::new();
     let planted = GENERIC_TEXT.replace("code", "mode");
+    let (cold, files) = cold_shard(&home, &root);
     assert!(
-        home.check(&root, &[]).contains(GENERIC_TEXT),
+        cold.contains(GENERIC_TEXT),
         "the cold run lost the generic-name finding"
-    );
-    let files = home.cache_files();
-    assert_eq!(
-        files.len(),
-        1,
-        "one project stores one cache file: {files:?}"
     );
     plant(&files[0], GENERIC_TEXT, &planted);
     let warm = home.check(&root, &[]);
@@ -263,7 +260,7 @@ fn a_flipped_byte_inside_a_decodable_shard_is_not_served() {
     };
     assert_eq!(bytes[at], b'h', "the flip must land on the h of handle");
     bytes[at] = b'j';
-    std::fs::write(&files[0], &bytes).unwrap_or_else(|e| panic!("plant: {e}"));
+    std::fs::write(&files[0], &bytes).unwrap_or_else(|e| panic!("plant rewrite failed: {e}"));
     let warm = run(&[]);
     let fresh = run(&["--no-cache"]);
     assert_eq!(
@@ -279,44 +276,8 @@ fn a_flipped_byte_inside_a_decodable_shard_is_not_served() {
     );
     assert!(
         warm.stderr.is_empty(),
-        "the reanalysis must not warn on stderr: {}",
+        "the reanalysis must stay silent on stderr: {}",
         String::from_utf8_lossy(&warm.stderr)
-    );
-}
-
-/// A cache populated by a `--rule` run must not hide rules from the next unfiltered run.
-#[test]
-fn audit_filter_cache_stays_unfiltered() {
-    let (_tmp, root) = tempdir();
-    write(&root, "sloplint.toml", "");
-    write(
-        &root,
-        "sample.rs",
-        "pub fn handle(flag: bool, other: bool) {}\n",
-    );
-    let home = CacheHome::new();
-    let filtered = home.check(&root, &["--rule", "grep/generic-name"]);
-    assert!(
-        filtered.contains("[grep/generic-name]"),
-        "the filtered run missed its rule"
-    );
-    assert!(
-        !filtered.contains("[complexity/boolean-params]"),
-        "the filter leaked another rule"
-    );
-    assert_eq!(
-        home.cache_files().len(),
-        1,
-        "the filtered run stored no cache, so the full run would pass cold"
-    );
-    let full = home.check(&root, &[]);
-    assert!(
-        full.contains("[grep/generic-name]"),
-        "the full run after the filtered cache missed generic-name"
-    );
-    assert!(
-        full.contains("[complexity/boolean-params]"),
-        "the filtered cache poisoned the later full run"
     );
 }
 
@@ -353,131 +314,6 @@ fn cache_follows_config_and_custom_rule_file_edits() {
     );
 }
 
-/// A symlink planted at the cache file's own name must neither be read nor written through.
-/// A valid cache planted behind the link must not be reused; the run must still succeed with
-/// the cold findings. Whether the link is kept or replaced is not part of the contract.
-#[cfg(unix)]
-#[test]
-fn planted_cache_symlink_is_never_written_through() {
-    let (_tmp, root) = sample_project();
-    let home = CacheHome::new();
-    let cold = home.check(&root, &[]);
-    let files = home.cache_files();
-    assert_eq!(
-        files.len(),
-        1,
-        "one project stores one cache file: {files:?}"
-    );
-    let planted = GENERIC_TEXT.replace("code", "mode");
-    let (_outside, base) = tempdir();
-    let planted_path = base.join("forged.bin");
-    std::fs::copy(&files[0], &planted_path).unwrap_or_else(|e| panic!("plant: {e}"));
-    plant(&planted_path, GENERIC_TEXT, &planted);
-    let forged = std::fs::read(&planted_path).unwrap_or_else(|e| panic!("read forged: {e}"));
-    std::fs::remove_file(&files[0]).unwrap_or_else(|e| panic!("remove cache: {e}"));
-    std::os::unix::fs::symlink(&planted_path, &files[0]).unwrap_or_else(|e| panic!("symlink: {e}"));
-    let out = home.output(&root, &[]);
-    assert!(
-        out.status.success(),
-        "a planted link failed the run: {:?}",
-        out.status
-    );
-    assert_eq!(
-        String::from_utf8_lossy(&out.stdout),
-        cold,
-        "the cache load followed a symlinked cache file"
-    );
-    assert!(
-        !String::from_utf8_lossy(&out.stdout).contains(&planted),
-        "a forged cache behind a symlink was reused: {}",
-        String::from_utf8_lossy(&out.stdout)
-    );
-    let after = std::fs::read(&planted_path).unwrap_or_else(|e| panic!("read planted: {e}"));
-    assert_eq!(
-        after, forged,
-        "the cache store wrote through a planted symlink"
-    );
-}
-
-/// A symlink planted at the temporary file's name must be left alone and never written through.
-/// The temporary name carries the child's pid, so a shell plants the link and then `exec`s the
-/// binary: the shell's `$$` is the pid the binary keeps. The stored cache is removed first: a
-/// warm hit stores nothing, so only a run that stores reaches the temporary file.
-#[cfg(unix)]
-#[test]
-fn planted_temp_symlink_is_preserved_and_never_written_through() {
-    let (_tmp, root) = sample_project();
-    let home = CacheHome::new();
-    let cold = home.check(&root, &[]);
-    let files = home.cache_files();
-    assert_eq!(
-        files.len(),
-        1,
-        "one project stores one cache file: {files:?}"
-    );
-    let shard_dir = files[0]
-        .parent()
-        .unwrap_or_else(|| panic!("{} has no directory", files[0].display()))
-        .to_path_buf();
-    std::fs::remove_file(&files[0]).unwrap_or_else(|e| panic!("remove cache: {e}"));
-    let (_outside, base) = tempdir();
-    write(&base, "sentinel.txt", "sentinel");
-    let marker = base.join("sentinel.txt");
-    let shard = files[0]
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or_else(|| panic!("{} has no file name", files[0].display()))
-        .to_string();
-    let script = r#"ln -s "$1" "$2/$3.$$.tmp" && shift 3 && exec "$@""#;
-    let mut command = Command::new("sh");
-    command
-        .current_dir(&root)
-        .args(["-c", script, "sh"])
-        .arg(&marker)
-        .arg(&shard_dir)
-        .arg(&shard)
-        .arg(env!("CARGO_BIN_EXE_sloplint"))
-        .args(["check", "--strictness", "standard", "--fail-on", "never"]);
-    let out = home
-        .isolate(&mut command)
-        .output()
-        .unwrap_or_else(|e| panic!("spawn sh: {e}"));
-    assert!(
-        out.status.success(),
-        "a planted temp link failed the run: {:?}",
-        out.status
-    );
-    assert_eq!(
-        String::from_utf8_lossy(&out.stdout),
-        cold,
-        "a planted temp link changed the findings"
-    );
-    let planted: Vec<PathBuf> = std::fs::read_dir(&shard_dir)
-        .unwrap_or_else(|e| panic!("{}: {e}", shard_dir.display()))
-        .map(|entry| entry.unwrap_or_else(|e| panic!("entry: {e}")).path())
-        .filter(|path| {
-            let name = path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or("");
-            name.starts_with("shard-") && name.ends_with(".tmp")
-        })
-        .collect();
-    assert_eq!(
-        planted.len(),
-        1,
-        "the planted temp link must remain: {planted:?}"
-    );
-    let target = std::fs::read_link(&planted[0])
-        .unwrap_or_else(|e| panic!("{} is not a symlink: {e}", planted[0].display()));
-    assert_eq!(target, marker, "the planted temp link was replaced");
-    let after = std::fs::read_to_string(&marker).unwrap_or_else(|e| panic!("read sentinel: {e}"));
-    assert_eq!(
-        after, "sentinel",
-        "the cache store wrote through a planted temp link"
-    );
-}
-
 /// One `.h` path whose bytes move between plain C, C++, and invalid input. Every cached run
 /// must equal an uncached run of the same bytes, so an entry stored for one outcome is never
 /// served for another.
@@ -503,12 +339,16 @@ fn cache_follows_a_header_across_the_cpp_fallback() {
         stored.push(cold);
     }
     assert!(
-        stored[0].contains("get_length") && !stored[0].contains("[meta/parse-error]"),
+        stored[0].contains("process_data")
+            && stored[0].contains("a.h:3:")
+            && !stored[0].contains("[meta/parse-error]"),
         "plain C parses as C: {}",
         stored[0]
     );
     assert!(
-        stored[1].contains("`push`") && !stored[1].contains("[meta/parse-error]"),
+        stored[1].contains("process_data")
+            && stored[1].contains("a.h:6:")
+            && !stored[1].contains("[meta/parse-error]"),
         "the header parses as C++ and reports the C++ method: {}",
         stored[1]
     );
@@ -549,12 +389,16 @@ fn cache_follows_a_header_across_the_header_fallbacks() {
         stored.push(cold);
     }
     assert!(
-        stored[0].contains("get_length") && !stored[0].contains("[meta/parse-error]"),
+        stored[0].contains("process_data")
+            && stored[0].contains("a.h:3:")
+            && !stored[0].contains("[meta/parse-error]"),
         "plain C parses as C: {}",
         stored[0]
     );
     assert!(
-        stored[1].contains("`push`") && !stored[1].contains("[meta/parse-error]"),
+        stored[1].contains("process_data")
+            && stored[1].contains("a.h:6:")
+            && !stored[1].contains("[meta/parse-error]"),
         "the header parses as C++ and reports the C++ method: {}",
         stored[1]
     );
@@ -566,10 +410,11 @@ fn cache_follows_a_header_across_the_header_fallbacks() {
     assert_eq!(stored[3], stored[1], "the C++ outcome returns unchanged");
     assert_eq!(stored[4], stored[0], "the C outcome returns unchanged");
     assert!(
-        stored[5].contains("include/a.h:6:5")
-            && stored[5].contains("[grep/contiguous-log-literal]")
+        stored[5].contains("process_data")
+            && stored[5].contains("a.h:5:")
+            && stored[5].contains("[grep/generic-name]")
             && !stored[5].contains("[meta/parse-error]"),
-        "the header parses as Objective-C and reports the `NSLog` call: {}",
+        "the header parses as Objective-C and reports the exported generic name: {}",
         stored[5]
     );
     assert_eq!(
@@ -598,7 +443,9 @@ fn cache_keeps_the_same_bytes_apart_by_routed_path() {
         "the `.c` file is a C parse error: {cold}"
     );
     assert!(
-        !cold.contains("include/stack.h:3:1") && cold.contains("include/stack.h:6:"),
+        cold.contains("process_data")
+            && !cold.contains("include/stack.h:3:1")
+            && cold.contains("include/stack.h:6:"),
         "the `.h` file is analyzed as C++: {cold}"
     );
     assert_eq!(
@@ -643,16 +490,10 @@ fn a_different_executable_never_reuses_stored_header_outcomes() {
     write(&root, "sloplint.toml", "");
     write(&root, "include/stack.h", CPP_HEADER);
     let home = CacheHome::new();
-    let genuine = home.check(&root, &[]);
+    let (genuine, files) = cold_shard(&home, &root);
     assert!(
         genuine.contains(CPP_FINDING),
         "the header is analyzed as C++: {genuine}"
-    );
-    let files = home.cache_files();
-    assert_eq!(
-        files.len(),
-        1,
-        "one project stores one cache file: {files:?}"
     );
     plant(&files[0], CPP_FINDING, CPP_PLANTED);
     assert!(
@@ -669,7 +510,7 @@ fn a_different_executable_never_reuses_stored_header_outcomes() {
         .open(&other)
         .and_then(|mut file| file.write_all(&[0]))
         .unwrap_or_else(|e| panic!("append: {e}"));
-    let out = spawn_when_not_busy(|| home.output_of(&other, &root, &[]));
+    let out = crate::spawn::spawn_forgiving(|| home.output_of(&other, &root, &[]));
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(
         out.status.success() && out.stderr.is_empty(),
@@ -681,125 +522,4 @@ fn a_different_executable_never_reuses_stored_header_outcomes() {
         stdout.contains(CPP_FINDING) && !stdout.contains(CPP_PLANTED),
         "a different executable served an entry stored by another one: {stdout}"
     );
-}
-
-/// A reparse point planted at the cache file's own name must neither be read nor written
-/// through. Mirrors [`planted_cache_symlink_is_never_written_through`] against the Windows
-/// reparse-point refusal in `open_for_read_nofollow`. Creating a file symlink needs a
-/// privilege the runner may lack; that skip is printed, never silent.
-#[cfg(windows)]
-#[test]
-fn planted_reparse_cache_is_never_read_or_written_through() {
-    let (_tmp, root) = sample_project();
-    let home = CacheHome::new();
-    let cold = home.check(&root, &[]);
-    let files = home.cache_files();
-    assert_eq!(
-        files.len(),
-        1,
-        "one project stores one cache file: {files:?}"
-    );
-    let planted_marker = GENERIC_TEXT.replace("code", "mode");
-    let (_outside, base) = tempdir();
-    let planted_path = base.join("forged.bin");
-    std::fs::copy(&files[0], &planted_path).unwrap_or_else(|e| panic!("plant: {e}"));
-    plant(&planted_path, GENERIC_TEXT, &planted_marker);
-    let forged = std::fs::read(&planted_path).unwrap_or_else(|e| panic!("read forged: {e}"));
-    std::fs::remove_file(&files[0]).unwrap_or_else(|e| panic!("remove cache: {e}"));
-    match std::os::windows::fs::symlink_file(&planted_path, &files[0]) {
-        Ok(()) => {}
-        Err(error) if error.raw_os_error() == Some(1314) => {
-            eprintln!(
-                "SKIP planted_reparse_cache_is_never_read_or_written_through: \
-                 this account cannot create symlinks: {error}"
-            );
-            return;
-        }
-        Err(error) => panic!("symlink: {error}"),
-    }
-    let out = home.output(&root, &[]);
-    assert!(
-        out.status.success(),
-        "a planted link failed the run: {:?}",
-        out.status
-    );
-    assert_eq!(
-        String::from_utf8_lossy(&out.stdout),
-        cold,
-        "the cache load followed a symlinked cache file"
-    );
-    assert!(
-        !String::from_utf8_lossy(&out.stdout).contains(&planted_marker),
-        "a forged cache behind a symlink was reused: {}",
-        String::from_utf8_lossy(&out.stdout)
-    );
-    let after = std::fs::read(&planted_path).unwrap_or_else(|e| panic!("read planted: {e}"));
-    assert_eq!(
-        after, forged,
-        "the cache store wrote through a planted symlink"
-    );
-}
-
-/// A directory junction planted at the shard directory must yield an empty cache: the load
-/// never follows a reparse point to attacker-controlled shard bytes, and the store never
-/// writes through it. Junctions need no privilege to create.
-#[cfg(windows)]
-#[test]
-fn planted_junction_shard_dir_yields_empty_cache() {
-    let (_tmp, root) = sample_project();
-    let home = CacheHome::new();
-    let cold = home.check(&root, &[]);
-    let files = home.cache_files();
-    assert_eq!(
-        files.len(),
-        1,
-        "one project stores one cache file: {files:?}"
-    );
-    let planted_marker = GENERIC_TEXT.replace("code", "mode");
-    let shard_dir = files[0]
-        .parent()
-        .unwrap_or_else(|| panic!("{} has no directory", files[0].display()))
-        .to_path_buf();
-    let shard_name = files[0]
-        .file_name()
-        .unwrap_or_else(|| panic!("{} has no file name", files[0].display()))
-        .to_os_string();
-    let (_outside, base) = tempdir();
-    let target = base.join("attacker");
-    mkdir(&target);
-    let planted_path = target.join(&shard_name);
-    std::fs::copy(&files[0], &planted_path).unwrap_or_else(|e| panic!("plant forged shard: {e}"));
-    plant(&planted_path, GENERIC_TEXT, &planted_marker);
-    let forged = std::fs::read(&planted_path).unwrap_or_else(|e| panic!("read forged: {e}"));
-    std::fs::remove_dir_all(&shard_dir).unwrap_or_else(|e| panic!("remove shards: {e}"));
-    let link = std::process::Command::new("cmd")
-        .args(["/c", "mklink", "/J"])
-        .arg(&shard_dir)
-        .arg(&target)
-        .output()
-        .unwrap_or_else(|e| panic!("spawn mklink: {e}"));
-    assert!(
-        link.status.success(),
-        "mklink junction: {}",
-        String::from_utf8_lossy(&link.stderr)
-    );
-    let out = home.output(&root, &[]);
-    assert!(
-        out.status.success(),
-        "a junction at the shard directory failed the run: {:?}",
-        out.status
-    );
-    assert_eq!(
-        String::from_utf8_lossy(&out.stdout),
-        cold,
-        "the cache load followed a junctioned shard directory"
-    );
-    assert!(
-        !String::from_utf8_lossy(&out.stdout).contains(&planted_marker),
-        "a forged cache behind a junction was reused: {}",
-        String::from_utf8_lossy(&out.stdout)
-    );
-    let after =
-        std::fs::read(target.join(&shard_name)).unwrap_or_else(|e| panic!("read planted: {e}"));
-    assert_eq!(after, forged, "the cache store wrote through the junction");
 }

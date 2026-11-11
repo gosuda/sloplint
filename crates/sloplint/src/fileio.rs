@@ -2,12 +2,90 @@ use std::fs;
 use std::io::{self, Read};
 use std::path::Path;
 
-/// On unix the open is non-blocking, so a planted FIFO cannot stall it or adopt a terminal; other platforms can stall.
-pub fn open_regular(path: &Path) -> io::Result<(fs::File, u64)> {
-    let file = open_for_read(path)?;
+#[derive(Clone, Copy)]
+pub(crate) enum Links {
+    Follow,
+    NoFollow,
+}
+
+pub(crate) enum Capped {
+    Bytes(Vec<u8>, u64),
+    TooLarge(u64),
+    NotRegular(io::Error),
+}
+
+pub(crate) fn read_capped(path: &Path, max: u64, links: Links) -> io::Result<Capped> {
+    let (file, len) = match open_checked(path, links)? {
+        Ok(opened) => opened,
+        Err(source) => return Ok(Capped::NotRegular(source)),
+    };
+    if len > max {
+        return Ok(Capped::TooLarge(len));
+    }
+    let cap = usize::try_from(len.min(max.saturating_add(1))).unwrap_or(usize::MAX);
+    let mut bytes = Vec::new();
+    bytes.try_reserve_exact(cap).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::OutOfMemory,
+            format!("file of {len} bytes does not fit in memory"),
+        )
+    })?;
+    file.take(max.saturating_add(1)).read_to_end(&mut bytes)?;
+    if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > max {
+        return Ok(Capped::TooLarge(len));
+    }
+    Ok(Capped::Bytes(bytes, len))
+}
+
+pub(crate) fn read_capped_string(path: &Path, max: u64, links: Links) -> io::Result<String> {
+    let (bytes, len) = match read_capped(path, max, links)? {
+        Capped::Bytes(bytes, len) => (bytes, len),
+        Capped::TooLarge(len) if len > max => {
+            return Err(io::Error::new(
+                io::ErrorKind::FileTooLarge,
+                format!("file of {len} bytes exceeds ceiling of {max} bytes"),
+            ));
+        }
+        Capped::TooLarge(_) => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "file grew while being read",
+            ));
+        }
+        Capped::NotRegular(source) => return Err(source),
+    };
+    if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > len {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "file grew while being read",
+        ));
+    }
+    String::from_utf8(bytes).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "stream did not contain valid UTF-8",
+        )
+    })
+}
+
+fn open_checked(path: &Path, links: Links) -> io::Result<Result<(fs::File, u64), io::Error>> {
+    let opened = match links {
+        Links::Follow => open_for_read(path),
+        Links::NoFollow => open_for_read_nofollow(path),
+    };
+    let file = match opened {
+        Ok(file) => file,
+        Err(source) if refused_without_following(path, &source) => return Ok(Err(source)),
+        Err(source) => return Err(source),
+    };
     let meta = file.metadata()?;
-    require_regular(&file, &meta)?;
-    Ok((file, meta.len()))
+    if let Err(source) = require_regular(&file, &meta) {
+        if refused_without_following(path, &source) {
+            return Ok(Err(source));
+        }
+        return Err(source);
+    }
+    Ok(Ok((file, meta.len())))
 }
 
 #[cfg(unix)]
@@ -22,13 +100,6 @@ fn open_for_read(path: &Path) -> io::Result<fs::File> {
 #[cfg(not(unix))]
 fn open_for_read(path: &Path) -> io::Result<fs::File> {
     fs::File::open(path)
-}
-
-pub fn open_regular_nofollow(path: &Path) -> io::Result<(fs::File, u64)> {
-    let file = open_for_read_nofollow(path)?;
-    let meta = file.metadata()?;
-    require_regular(&file, &meta)?;
-    Ok((file, meta.len()))
 }
 
 #[cfg(unix)]
@@ -77,7 +148,7 @@ fn open_for_read_nofollow(path: &Path) -> io::Result<fs::File> {
     fs::File::open(path)
 }
 
-pub fn refused_without_following(path: &Path, error: &io::Error) -> bool {
+fn refused_without_following(path: &Path, error: &io::Error) -> bool {
     if is_symlink_loop(error) {
         return true;
     }
@@ -129,7 +200,6 @@ fn require_regular(file: &fs::File, meta: &fs::Metadata) -> io::Result<()> {
         return Ok(());
     }
     if meta.is_dir() {
-        // One read makes a directory fail with the platform's own error instead of a generic refusal.
         let mut probe = file;
         let mut byte = [0u8; 1];
         let _ = probe.read(&mut byte)?;
@@ -138,55 +208,6 @@ fn require_regular(file: &fs::File, meta: &fs::Metadata) -> io::Result<()> {
         io::ErrorKind::InvalidInput,
         "not a regular file",
     ))
-}
-
-pub fn read_regular_nofollow(path: &Path, max_len: u64) -> io::Result<Vec<u8>> {
-    let (file, len) = open_regular_nofollow(path)?;
-    if len > max_len {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("file of {len} bytes exceeds the {max_len}-byte cap"),
-        ));
-    }
-    read_bounded(file, len)
-}
-
-/// `len` is the size at open time; the read stops there, so a file that grows while being read is refused.
-pub fn read_bounded(file: fs::File, len: u64) -> io::Result<Vec<u8>> {
-    let mut bytes = Vec::new();
-    bytes
-        .try_reserve_exact(usize::try_from(len).unwrap_or(usize::MAX))
-        .map_err(|_| {
-            io::Error::new(
-                io::ErrorKind::OutOfMemory,
-                format!("file of {len} bytes does not fit in memory"),
-            )
-        })?;
-    file.take(len.saturating_add(1)).read_to_end(&mut bytes)?;
-    if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > len {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "file grew while being read",
-        ));
-    }
-    Ok(bytes)
-}
-
-pub fn read_bounded_string(path: &Path, max_bytes: u64) -> io::Result<String> {
-    let (file, len) = open_regular(path)?;
-    if len > max_bytes {
-        return Err(io::Error::new(
-            io::ErrorKind::FileTooLarge,
-            format!("file of {len} bytes exceeds ceiling of {max_bytes} bytes"),
-        ));
-    }
-    let bytes = read_bounded(file, len)?;
-    String::from_utf8(bytes).map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            "stream did not contain valid UTF-8",
-        )
-    })
 }
 
 #[cfg(all(test, unix))]

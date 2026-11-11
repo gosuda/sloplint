@@ -1,14 +1,53 @@
 use std::borrow::Cow;
+use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::finding::source_site_indexed;
+use crate::finding::source_column;
 use crate::lang::Lang;
+use crate::role::{CodeRole, RoleRegion, role_at};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Pos {
     pub line: u32,
     pub byte: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Visibility {
+    Private,
+    Restricted,
+    Exported,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PrimitiveKind {
+    Str,
+    Bool,
+    Int,
+    Float,
+    Other,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImportScope {
+    Module,
+    FunctionLocal,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrutineeKind {
+    Ident,
+    Field,
+    Path,
+    Other,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssertShape {
+    BareName,
+    TopEqNe,
+    Other,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,9 +56,11 @@ pub struct FileFacts<'s> {
     pub path: &'s str,
     pub source: &'s str,
     pub line_starts: Vec<u32>,
-    pub is_test_file: bool,
-    pub is_entry_file: bool,
+    pub role: CodeRole,
+    pub regions: Vec<RoleRegion>,
     pub line_count: u32,
+    pub package: String,
+    pub is_generated: bool,
     pub functions: Vec<Function<'s>>,
     pub calls: Vec<Call<'s>>,
     pub bindings: Vec<MutBinding<'s>>,
@@ -36,15 +77,28 @@ pub struct FileFacts<'s> {
     pub has_inline_tests: bool,
 }
 
+impl<'s> FileFacts<'s> {
+    pub fn role_at(&self, line: u32) -> CodeRole {
+        role_at(self.role, &self.regions, line)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Function<'s> {
     pub name: &'s str,
     pub pos: Pos,
     pub doc: Vec<&'s str>,
     pub doc_pos: Option<Pos>,
-    pub public: bool,
-    pub interface_bound: bool,
+    pub visibility: Visibility,
+    pub signature_forced: bool,
+    pub entry_point: bool,
     pub in_test: bool,
+    pub is_overload: bool,
+    pub is_deprecated: bool,
+    pub is_decorated: bool,
+    pub is_trait_item: bool,
+    pub is_method: bool,
+    pub receiver: Option<&'s str>,
     pub params: Vec<Param<'s>>,
     pub return_type: Option<&'s str>,
     pub untyped_throws: bool,
@@ -52,7 +106,19 @@ pub struct Function<'s> {
     pub cognitive: u32,
     pub max_depth: u32,
     pub deepest_line: u32,
+    pub end_line: u32,
+    pub has_value_return: bool,
     pub sole_call: Option<u32>,
+}
+
+impl Function<'_> {
+    pub fn exported(&self) -> bool {
+        self.visibility == Visibility::Exported
+    }
+
+    pub fn actionable_api(&self) -> bool {
+        self.exported() && !self.signature_forced && !self.in_test
+    }
 }
 
 /// The receiver (`self`/`this`/`cls`/Go receiver) is never a `Param`.
@@ -60,7 +126,11 @@ pub struct Function<'s> {
 pub struct Param<'s> {
     pub name: &'s str,
     pub ty: Option<&'s str>,
+    pub primitive_kind: PrimitiveKind,
+    pub has_default: bool,
     pub bool_default: bool,
+    pub keyword_only: bool,
+    pub is_variadic: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -76,6 +146,8 @@ pub struct Call<'s> {
     pub callee: &'s str,
     pub kind: CallKind,
     pub callee_root: Option<&'s str>,
+    pub is_simple_path: bool,
+    pub initializes_binding: bool,
     pub args: Vec<Arg<'s>>,
 }
 
@@ -89,8 +161,10 @@ pub struct Arg<'s> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgShape<'s> {
     Str { longest_static: u32 },
-    Concat,
+    Concat { longest_static: u32 },
     Ident(&'s str),
+    Collection,
+    CodeBody,
     Other,
 }
 
@@ -99,8 +173,9 @@ pub struct MutBinding<'s> {
     pub name: &'s str,
     pub pos: Pos,
     pub last_write_line: u32,
-    pub max_nested_depth: u32,
-    pub nested_write_pos: Option<Pos>,
+    pub first_write_line: u32,
+    pub write_lines: u32,
+    pub loop_depth: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -118,14 +193,17 @@ pub struct Import<'s> {
     pub name: &'s str,
     pub alias: Option<&'s str>,
     pub kind: ImportKind,
+    pub scope: ImportScope,
     pub in_test: bool,
+    pub is_reexport: bool,
+    pub external_root: Option<&'s str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeDef<'s> {
     pub name: &'s str,
     pub pos: Pos,
-    pub public: bool,
+    pub visibility: Visibility,
     pub abstraction: bool,
 }
 
@@ -133,12 +211,17 @@ pub struct TypeDef<'s> {
 pub struct ImplRef<'s> {
     pub name: &'s str,
     pub pos: Pos,
+    pub is_generic: bool,
+    pub child_is_abstract: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WildcardArm {
     pub pos: Pos,
     pub enum_like: bool,
+    pub scrutinee: ScrutineeKind,
+    pub variant_count: u32,
+    pub has_nullable_ctor: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -152,6 +235,9 @@ pub enum Stmt<'s> {
 pub struct Handler<'s> {
     pub pos: Pos,
     pub stmts: Vec<Stmt<'s>>,
+    pub has_else: bool,
+    pub try_imports_only: bool,
+    pub in_cleanup: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -159,6 +245,9 @@ pub struct Assertion {
     pub pos: Pos,
     pub has_message: bool,
     pub comparison: bool,
+    pub shape: AssertShape,
+    pub in_typecheck: bool,
+    pub value_is_bool_literal: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -201,190 +290,178 @@ pub struct NamedSite {
     pub name: Box<str>,
     pub line: u32,
     pub column: u32,
-    pub context: Box<str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorldFacts {
     pub lang: Lang,
-    pub is_test_file: bool,
-    pub is_entry_file: bool,
+    pub role: CodeRole,
+    pub regions: Vec<RoleRegion>,
+    #[serde(skip)]
+    pub package: String,
+    #[serde(skip)]
+    pub package_from_manifest: bool,
     pub has_inline_tests: bool,
     pub public_functions: u32,
     pub definitions: Vec<NamedSite>,
     pub abstractions: Vec<NamedSite>,
     pub impls: Vec<NamedSite>,
     pub barrel: Option<Vec<Vec<String>>>,
+    pub imports: Vec<Box<str>>,
 }
 
 impl WorldFacts {
     pub fn from_facts(facts: &FileFacts<'_>) -> WorldFacts {
         let public_functions =
-            u32::try_from(facts.functions.iter().filter(|f| f.public).count()).unwrap_or(u32::MAX);
+            u32::try_from(facts.functions.iter().filter(|f| f.exported()).count())
+                .unwrap_or(u32::MAX);
         let mut definitions: Vec<NamedSite> = facts
             .functions
             .iter()
-            .filter(|f| f.public && !f.interface_bound)
+            .filter(|f| {
+                f.exported()
+                    && !f.signature_forced
+                    && !f.is_trait_item
+                    && !f.is_method
+                    && !f.entry_point
+            })
             .map(|f| named_site(facts, f.pos, f.name))
             .collect();
         definitions.extend(
             facts
                 .types
                 .iter()
-                .filter(|t| t.public)
+                .filter(|t| t.visibility == Visibility::Exported)
                 .map(|t| named_site(facts, t.pos, t.name)),
         );
         WorldFacts {
             lang: facts.lang,
-            is_test_file: facts.is_test_file,
-            is_entry_file: facts.is_entry_file,
+            role: facts.role,
+            regions: facts.regions.clone(),
+            package: facts.package.clone(),
+            package_from_manifest: false,
             has_inline_tests: facts.has_inline_tests,
             public_functions,
             definitions,
             abstractions: facts
                 .types
                 .iter()
-                .filter(|t| t.abstraction)
+                .filter(|t| t.abstraction && t.visibility != Visibility::Exported)
                 .map(|t| named_site(facts, t.pos, t.name))
                 .collect(),
             impls: facts
                 .impls
                 .iter()
+                .filter(|i| !i.is_generic && !i.child_is_abstract)
                 .map(|i| named_site(facts, i.pos, i.name))
                 .collect(),
             barrel: facts.barrel.as_ref().map(|b| b.targets.clone()),
+            imports: import_targets(facts),
         }
     }
 }
+fn import_targets(facts: &FileFacts<'_>) -> Vec<Box<str>> {
+    let file_test = matches!(facts.role, CodeRole::Test | CodeRole::Bench);
+    let mut targets = Vec::new();
+    for import in &facts.imports {
+        if !import.in_test && !file_test {
+            continue;
+        }
+        let module: &str = &import.module;
+        if module.is_empty() {
+            continue;
+        }
+        if facts.lang == Lang::Go && is_single_segment(module) {
+            continue;
+        }
+        targets.push(Box::<str>::from(module));
+        let bound = module.rsplit(['/', '.']).next() != Some(import.name);
+        if !import.name.is_empty() && import.name != "*" && bound {
+            targets.push(Box::<str>::from(format!("{module}/{}", import.name)));
+        }
+    }
+    targets
+}
+fn is_single_segment(module: &str) -> bool {
+    !module.starts_with('.')
+        && !module.contains('/')
+        && !module.contains('.')
+        && !module.contains(':')
+}
 
 fn named_site(facts: &FileFacts<'_>, pos: Pos, name: &str) -> NamedSite {
-    let (column, context) = source_site_indexed(&facts.line_starts, facts.source, pos);
     NamedSite {
         name: name.to_owned().into_boxed_str(),
         line: pos.line,
-        column,
-        context,
+        column: source_column(&facts.line_starts, facts.source, pos),
+    }
+}
+/// Which ecosystem a manifest file belongs to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ManifestKind {
+    JavaScript,
+    Python,
+}
+
+fn manifest_kind_for(lang: Lang) -> Option<ManifestKind> {
+    match lang {
+        Lang::TypeScript | Lang::Tsx | Lang::JavaScript => Some(ManifestKind::JavaScript),
+        Lang::Python => Some(ManifestKind::Python),
+        _ => None,
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::finding::line_starts;
+pub fn package_scope(
+    lang: Lang,
+    path: &str,
+    manifests: &BTreeSet<(ManifestKind, String)>,
+) -> (String, bool) {
+    if let Some(kind) = manifest_kind_for(lang)
+        && let Some(key) = nearest_manifest(path, manifests, kind)
+    {
+        return (key, true);
+    }
+    (legacy_package_key(lang, path), false)
+}
 
-    #[test]
-    fn projects_public_surface_and_barrel() {
-        let source = "pub fn keep() {}\nfn hidden() {}\n";
-        let facts = FileFacts {
-            lang: Lang::Rust,
-            path: "src/lib.rs",
-            source,
-            line_starts: line_starts(source),
-            is_test_file: false,
-            is_entry_file: true,
-            line_count: 2,
-            functions: vec![
-                Function {
-                    name: "keep",
-                    pos: Pos { line: 1, byte: 8 },
-                    doc: vec![],
-                    doc_pos: None,
-                    public: true,
-                    interface_bound: false,
-                    in_test: false,
-                    params: vec![],
-                    return_type: None,
-                    untyped_throws: false,
-                    missing_annotations: vec![],
-                    cognitive: 0,
-                    max_depth: 0,
-                    deepest_line: 0,
-                    sole_call: None,
-                },
-                Function {
-                    name: "sealed",
-                    pos: Pos { line: 1, byte: 8 },
-                    doc: vec![],
-                    doc_pos: None,
-                    public: true,
-                    interface_bound: true,
-                    in_test: false,
-                    params: vec![],
-                    return_type: None,
-                    untyped_throws: false,
-                    missing_annotations: vec![],
-                    cognitive: 0,
-                    max_depth: 0,
-                    deepest_line: 0,
-                    sole_call: None,
-                },
-                Function {
-                    name: "hidden",
-                    pos: Pos { line: 2, byte: 4 },
-                    doc: vec![],
-                    doc_pos: None,
-                    public: false,
-                    interface_bound: false,
-                    in_test: false,
-                    params: vec![],
-                    return_type: None,
-                    untyped_throws: false,
-                    missing_annotations: vec![],
-                    cognitive: 0,
-                    max_depth: 0,
-                    deepest_line: 0,
-                    sole_call: None,
-                },
-            ],
-            calls: vec![],
-            bindings: vec![],
-            imports: vec![],
-            types: vec![TypeDef {
-                name: "Shape",
-                pos: Pos { line: 2, byte: 100 },
-                public: true,
-                abstraction: true,
-            }],
-            impls: vec![ImplRef {
-                name: "Draw",
-                pos: Pos { line: 1, byte: 0 },
-            }],
-            wildcard_arms: vec![],
-            handlers: vec![],
-            assertions: vec![],
-            field_copies: vec![],
-            dynamic_symbols: vec![],
-            ambient: vec![],
-            barrel: Some(Barrel {
-                targets: vec![vec!["a.rs".to_string(), "a/mod.rs".to_string()]],
-            }),
-            has_inline_tests: false,
-        };
-        let world = WorldFacts::from_facts(&facts);
-        assert_eq!(world.public_functions, 2);
-        assert_eq!(
-            world
-                .definitions
-                .iter()
-                .map(|d| d.name.as_ref())
-                .collect::<Vec<_>>(),
-            ["keep", "Shape"]
-        );
-        assert_eq!(world.definitions[0].line, 1);
-        assert_eq!(world.definitions[0].column, 9);
-        assert_eq!(world.definitions[0].context.as_ref(), "pub fn keep() {}");
-        assert_eq!(
-            world
-                .abstractions
-                .iter()
-                .map(|a| a.name.as_ref())
-                .collect::<Vec<_>>(),
-            ["Shape"]
-        );
-        assert_eq!(world.impls.len(), 1);
-        assert_eq!(
-            world.barrel,
-            Some(vec![vec!["a.rs".to_string(), "a/mod.rs".to_string()]])
-        );
+fn nearest_manifest(
+    path: &str,
+    manifests: &BTreeSet<(ManifestKind, String)>,
+    kind: ManifestKind,
+) -> Option<String> {
+    let mut prefix = path;
+    while let Some(i) = prefix.rfind('/') {
+        prefix = &prefix[..i];
+        if manifests.contains(&(kind, prefix.to_string())) {
+            return Some(prefix.to_string());
+        }
+    }
+    if manifests.contains(&(kind, String::new())) {
+        return Some(String::new());
+    }
+    None
+}
+
+fn legacy_package_key(lang: Lang, path: &str) -> String {
+    match lang {
+        Lang::Rust => {
+            let mut parts = path.split('/');
+            if parts.next() == Some("crates")
+                && let Some(name) = parts.next()
+                && !name.is_empty()
+                && parts.next().is_some()
+            {
+                return ["crates", name].join("/");
+            }
+            String::new()
+        }
+        Lang::Go => match path.rfind('/') {
+            Some(i) => path[..i].to_string(),
+            None => String::new(),
+        },
+        _ => match path.find('/') {
+            Some(i) => path[..i].to_string(),
+            None => String::new(),
+        },
     }
 }

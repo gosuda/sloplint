@@ -1,1 +1,1 @@
-src/lib.swift:1 deny complexity/cognitive-depth
+src/lib.swift:1 info complexity/cognitive-depth

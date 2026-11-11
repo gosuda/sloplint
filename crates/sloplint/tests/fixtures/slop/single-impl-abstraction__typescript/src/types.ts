@@ -1,3 +1,3 @@
-export interface Shape {
+interface Shape {
   area(): number;
 }

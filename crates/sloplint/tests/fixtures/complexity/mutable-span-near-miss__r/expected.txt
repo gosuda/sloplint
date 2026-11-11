@@ -1,1 +1,2 @@
 # near-miss: binding never reassigned after declaration.
+# shadowed_param.R: outer `total` is written once on line 3; the line-25 write targets the anonymous-function parameter, so misattribution would span 22 and fire.

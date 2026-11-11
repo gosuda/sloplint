@@ -1,1 +1,1 @@
-src/lib.rs:1 deny complexity/nesting-depth
+src/lib.rs:1 info complexity/nesting-depth

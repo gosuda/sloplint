@@ -1,1 +1,1 @@
-src/load.kt:4 deny slop/zombie-catch
+src/load.kt:4 info slop/zombie-catch

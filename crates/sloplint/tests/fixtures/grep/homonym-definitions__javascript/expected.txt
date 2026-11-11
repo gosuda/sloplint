@@ -1,1 +1,1 @@
-src/a.js:1 warn grep/homonym-definitions
+src/a.js:1 info grep/homonym-definitions

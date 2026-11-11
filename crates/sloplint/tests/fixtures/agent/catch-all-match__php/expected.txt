@@ -1,1 +1,1 @@
-src/describe.php:10 warn agent/catch-all-match
+src/describe.php:13 info agent/catch-all-match

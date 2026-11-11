@@ -1,193 +1,116 @@
+//! TypeScript facts for sloplint.
+
 use sloplint_core::facts::{
-    AmbientKind, Assertion, Barrel, CallKind, FieldCopy, Handler, Import, Param, Pos, TypeDef,
-    WildcardArm,
+    AmbientKind, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import, Pos,
+    ScrutineeKind, TypeDef, Visibility, WildcardArm,
 };
+use sloplint_core::role::CodeRole;
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Container, Cx, FunctionHead, LangHooks, TypeHead, any_named_child, child_by_field,
-    first_named_child, first_named_child_matching, has_child_kind, named_children, pos_of,
-    preceding_comments, strip_quotes, text,
+    CallHead, Container, Cx, FileSetKind, FunctionHead, LangHooks, ShadowKind, TypeHead,
+    child_by_field, code_children, find_named_child, first_named_child_matching, named_children,
+    pos_of, strip_quotes, text,
 };
-pub(crate) mod calls;
-pub(crate) mod imports;
-
-use self::calls::{callee_root, ts_args, ts_declared, ts_root, ts_sole_call};
-use self::imports::{
-    catch_stmt, export_specs, export_stmt, heritage_impls, import_stmt, parent_dir, ts_targets,
-};
+use crate::lang::javascript::test_call_marker;
+use crate::lang::javascript::{calls as js_calls, is_test_path, items as js_items, js_table};
 use crate::spec::Role;
-
-pub(crate) static TABLE: crate::lang::Table = &[
-    ("function_declaration", Role::Function),
-    ("generator_function_declaration", Role::Function),
-    ("method_definition", Role::Function),
-    ("arrow_function", Role::Closure),
-    ("function_expression", Role::Closure),
-    ("generator_function", Role::Closure),
-    ("if_statement", Role::If),
-    ("else_clause", Role::ElseClause),
-    ("switch_statement", Role::Match),
-    ("for_statement", Role::Loop),
-    ("for_in_statement", Role::Loop),
-    ("while_statement", Role::Loop),
-    ("do_statement", Role::Loop),
-    ("catch_clause", Role::Catch),
-    ("ternary_expression", Role::Ternary),
-    ("call_expression", Role::Call),
-    ("new_expression", Role::NewCall),
-    ("lexical_declaration", Role::Decl),
-    ("variable_declaration", Role::Decl),
-    ("using_declaration", Role::Decl),
-    ("assignment_expression", Role::Write),
-    ("augmented_assignment_expression", Role::Write),
-    ("update_expression", Role::Write),
-    ("import_statement", Role::Import),
-    ("export_statement", Role::Export),
-    ("class_declaration", Role::TypeDef),
+pub(crate) mod ambient;
+pub(crate) mod calls;
+pub(crate) mod funcs;
+pub(crate) mod imports;
+use ambient::{
+    ambient_sites, decl_names_for, function_body_depth, hoisted_shadows_for, shadow_kind_for,
+    shadow_names_for, write_roots_for,
+};
+use calls::{callee_root, collapsed_callee, ts_args, ts_sole_call};
+use funcs::{
+    TsHead, closure_params, closure_shadow_params, doc_anchor, exported as ts_exported,
+    function_head, has_decorator, has_override, head_for, is_deprecated_named, member_public,
+    missing_of, visibility_of,
+};
+use imports::{export_stmt, heritage_impls, import_stmt, parent_dir, ts_targets};
+pub(crate) static TABLE: crate::lang::Table = js_table!(
     ("abstract_class_declaration", Role::TypeDef),
     ("interface_declaration", Role::TypeDef),
     ("type_alias_declaration", Role::TypeDef),
     ("enum_declaration", Role::TypeDef),
-    ("comment", Role::Comment),
-    ("switch_default", Role::MatchArm),
-    ("object", Role::StructLit),
-    ("member_expression", Role::Member),
-];
+    ("function_signature", Role::Function),
+    ("return_statement", Role::Return),
+);
 
 pub(crate) struct TypeScriptHooks;
 
 pub(crate) static HOOKS: TypeScriptHooks = TypeScriptHooks;
 
-fn class_member(member: Node<'_>) -> bool {
-    let Some(body) = member.parent().filter(|b| b.kind() == "class_body") else {
-        return false;
-    };
-    body.parent().is_some_and(|class| {
-        matches!(
-            class.kind(),
-            "class_declaration" | "abstract_class_declaration"
-        )
+fn file_enums<'c, 's>(cx: &'c Cx<'_, 's>) -> &'c [&'s str] {
+    cx.file_names(FileSetKind::Type, || {
+        let Some(root) = cx.root() else {
+            return Vec::new();
+        };
+        let mut out = Vec::new();
+        for stmt in code_children(root) {
+            let decl = if stmt.kind() == "export_statement" {
+                find_enum(stmt)
+            } else if stmt.kind() == "enum_declaration" {
+                Some(stmt)
+            } else {
+                None
+            };
+            out.extend(
+                decl.and_then(|d| child_by_field(d, "name"))
+                    .map(|name| text(cx, name)),
+            );
+        }
+        out
     })
 }
 
-fn member_public(cx: &Cx<'_, '_>, n: Node<'_>, name_kind: &str) -> bool {
-    if name_kind == "private_property_identifier" {
+fn find_enum(n: Node<'_>) -> Option<Node<'_>> {
+    find_named_child(n, |child| child.kind() == "enum_declaration")
+}
+
+fn switch_enum_info<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    enums: &[&'s str],
+) -> (bool, u32, ScrutineeKind) {
+    let scrutinee = js_items::switch_scrutinee(cx, n);
+    let Some(body) = cx.parent() else {
+        return (false, 0, scrutinee);
+    };
+    let mut count = 0u32;
+    let mut cursor = body.walk();
+    for sibling in body.children(&mut cursor) {
+        if !sibling.is_named() || sibling.kind() != "switch_case" || sibling.id() == n.id() {
+            continue;
+        }
+        if case_enum_object(cx, sibling, enums) {
+            count += 1;
+        }
+    }
+    (count >= 2, count, scrutinee)
+}
+
+fn case_enum_object<'s>(cx: &Cx<'_, 's>, case: Node<'_>, enums: &[&'s str]) -> bool {
+    let value = child_by_field(case, "value").filter(|v| v.kind() == "member_expression");
+    let Some(value) = value else {
         return false;
-    }
-    if any_named_child(n, |c| {
-        c.kind() == "accessibility_modifier"
-            && (text(cx, c) == "private" || text(cx, c) == "protected")
-    }) {
-        return false;
-    }
-    class_member(n) && cx.nearest_class_exported().unwrap_or(false)
-}
-
-fn exported(cx: &Cx<'_, '_>, decl: Node<'_>, name: &str) -> bool {
-    match decl.parent().map(|p| p.kind()) {
-        Some("export_statement") => true,
-        Some("program") => cx.is_exported(name),
-        _ => false,
-    }
-}
-
-fn strip_ty(ty: &str) -> &str {
-    ty.trim_start_matches([':', ' ', '\t'])
-}
-
-fn ts_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>>) {
-    for child in named_children(list) {
-        if child.kind() != "required_parameter" && child.kind() != "optional_parameter" {
-            continue;
-        }
-        let Some(pat) = child_by_field(child, "pattern") else {
-            continue;
-        };
-        if pat.kind() == "this" {
-            continue;
-        }
-        out.push(Param {
-            name: text(cx, pat),
-            ty: child_by_field(child, "type").map(|t| strip_ty(text(cx, t))),
-            bool_default: false,
-        });
-    }
-}
-
-fn closure_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Param<'s>>) {
-    if let Some(list) = child_by_field(n, "parameters") {
-        ts_params(cx, list, out);
-    } else if let Some(single) = child_by_field(n, "parameter") {
-        out.push(Param {
-            name: text(cx, single),
-            ty: None,
-            bool_default: false,
-        });
-    }
-}
-
-fn missing_of<'s>(params: &[Param<'s>], ret: Option<&'s str>, name: &str) -> Vec<&'s str> {
-    let mut missing: Vec<&'s str> = params
-        .iter()
-        .filter(|p| p.ty.is_none())
-        .map(|p| p.name)
-        .collect();
-    if ret.is_none() && name != "constructor" {
-        missing.push("return");
-    }
-    missing
-}
-
-fn top_level(n: Node<'_>) -> bool {
-    matches!(
-        n.parent().map(|parent| parent.kind()),
-        Some("program" | "export_statement")
-    )
-}
-
-fn doc_anchor(n: Node<'_>) -> Node<'_> {
-    let mut anchor = n;
-    while let Some(p) = anchor.parent() {
-        if p.kind() == "export_statement" || p.kind() == "lexical_declaration" {
-            anchor = p;
-        } else {
-            break;
-        }
-    }
-    anchor
+    };
+    let object = child_by_field(value, "object").filter(|o| o.kind() == "identifier");
+    object.is_some_and(|name| enums.contains(&text(cx, name)))
 }
 
 impl LangHooks for TypeScriptHooks {
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::DeclsAndBinds
+    }
+
+    fn call_marker(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        test_call_marker(cx, n)
+    }
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
-        let body = child_by_field(n, "body")?;
-        let name_node = child_by_field(n, "name")?;
-        let public = if n.kind() == "method_definition" {
-            member_public(cx, n, name_node.kind())
-        } else {
-            exported(cx, n, text(cx, name_node))
-        };
-        let mut params = Vec::new();
-        if let Some(list) = child_by_field(n, "parameters") {
-            ts_params(cx, list, &mut params);
-        }
-        let ret = child_by_field(n, "return_type").map(|t| text(cx, t));
-        let name = text(cx, name_node);
-        let missing = missing_of(&params, ret, name);
-        let (doc, doc_pos) = preceding_comments(cx, doc_anchor(n), &["comment"], &["decorator"]);
-        Some(FunctionHead {
-            name,
-            name_pos: pos_of(name_node),
-            public,
-            interface_bound: class_member(n) && cx.nearest_class_implements().unwrap_or(false),
-            in_test: cx.is_test_file,
-            params,
-            return_type: ret,
-            missing_annotations: missing,
-            doc,
-            doc_pos,
-            sole_call: ts_sole_call(body),
-        })
+        function_head(n, cx)
     }
 
     fn closure_as_function<'s>(
@@ -196,127 +119,82 @@ impl LangHooks for TypeScriptHooks {
         parent: Option<Node<'_>>,
         cx: &Cx<'_, 's>,
     ) -> Option<FunctionHead<'s>> {
-        let parent = parent?;
-        if parent.kind() == "variable_declarator" {
-            if child_by_field(parent, "value").is_some_and(|v| v.id() != n.id()) {
-                return None;
-            }
-            let decl = parent.parent()?;
-            let grand = decl.parent()?;
-            if grand.kind() != "program" && grand.kind() != "export_statement" {
-                return None;
-            }
-            let name_node = child_by_field(parent, "name")?;
-            if name_node.kind() != "identifier" {
-                return None;
-            }
-            let public = exported(cx, decl, text(cx, name_node));
-            let mut params = Vec::new();
-            closure_params(cx, n, &mut params);
-            let body = child_by_field(n, "body")?;
-            let ret = child_by_field(n, "return_type").map(|t| text(cx, t));
-            let name = text(cx, name_node);
-            let missing = missing_of(&params, ret, name);
-            let anchor = if decl
-                .parent()
-                .is_some_and(|p| p.kind() == "export_statement")
-            {
-                decl.parent().unwrap_or(decl)
-            } else {
-                decl
-            };
-            let (doc, doc_pos) = preceding_comments(cx, anchor, &["comment"], &["decorator"]);
-            return Some(FunctionHead {
-                name,
-                name_pos: pos_of(name_node),
-                public,
-                interface_bound: false,
-                in_test: cx.is_test_file,
-                params,
-                return_type: ret,
-                missing_annotations: missing,
-                doc,
-                doc_pos,
-                sole_call: ts_sole_call(body),
-            });
-        }
-        if parent.kind() == "public_field_definition" {
-            if child_by_field(parent, "value").is_some_and(|v| v.id() != n.id()) {
-                return None;
-            }
-            let name_node = child_by_field(parent, "name")?;
-            let mut params = Vec::new();
-            closure_params(cx, n, &mut params);
-            let body = child_by_field(n, "body")?;
-            let ret = child_by_field(n, "return_type").map(|t| text(cx, t));
-            let name = text(cx, name_node);
-            let missing = missing_of(&params, ret, name);
-            let (doc, doc_pos) =
-                preceding_comments(cx, doc_anchor(parent), &["comment"], &["decorator"]);
-            return Some(FunctionHead {
-                name,
-                name_pos: pos_of(name_node),
-                public: member_public(cx, parent, name_node.kind()),
-                interface_bound: class_member(parent)
-                    && cx.nearest_class_implements().unwrap_or(false),
-                in_test: cx.is_test_file,
-                params,
-                return_type: ret,
-                missing_annotations: missing,
-                doc,
-                doc_pos,
-                sole_call: ts_sole_call(body),
-            });
-        }
-        None
+        closure_from_parent(n, parent, cx)
     }
 
-    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
-        parent.is_some_and(|p| p.kind() == "else_clause")
+    fn is_ternary_alternate(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        n.kind() == "ternary_expression"
+            && parent.is_some_and(|p| {
+                p.kind() == "ternary_expression"
+                    && p.child_by_field_name("alternative")
+                        .is_some_and(|a| a.id() == n.id())
+            })
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() == "lexical_declaration"
-            && !child_by_field(n, "kind").is_some_and(|k| text(cx, k) == "let")
+        decl_names_for(n, cx, out);
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        if node.kind() == "catch_clause" {
+            return depth;
+        }
+        if node.kind() == "for_in_statement" {
+            if child_by_field(node, "kind").is_some_and(|kind| text(cx, kind) == "var") {
+                return function_body_depth(depth, cx);
+            }
+            return depth;
+        }
+        if node.kind() == "lexical_declaration"
+            && cx.parent_of(node).is_some_and(|parent| {
+                parent.kind() == "switch_case" || parent.kind() == "switch_default"
+            })
         {
-            return;
+            return depth.saturating_sub(2);
         }
-        if n.kind() == "using_declaration" {
-            return;
+        if node.kind() == "variable_declaration"
+            || matches!(
+                node.kind(),
+                "function_declaration" | "generator_function_declaration"
+            )
+        {
+            return function_body_depth(depth, cx);
         }
-        out.extend(ts_declared(cx, n));
+        depth.saturating_sub(1)
+    }
+
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        kind == "for_in_statement"
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        shadow_kind_for(kind)
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        shadow_names_for(n, cx, out);
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        let target = if n.kind() == "update_expression" {
-            child_by_field(n, "argument")
-        } else {
-            child_by_field(n, "left")
-        };
-        if let Some(t) = target
-            && let Some(root) = ts_root(cx, t)
-        {
-            out.push(root);
-        }
+        write_roots_for(n, cx, out);
     }
 
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
         if n.kind() == "new_expression" {
-            let ctor = child_by_field(n, "constructor")?;
-            let args = child_by_field(n, "arguments").map_or(Vec::new(), |a| ts_args(cx, a));
-            return Some(CallHead {
-                callee: text(cx, ctor),
-                kind: CallKind::New,
-                callee_root: None,
-                args,
-            });
+            return ts_new_call(cx, n);
         }
         let func = child_by_field(n, "function")?;
         let args = child_by_field(n, "arguments").map_or(Vec::new(), |a| ts_args(cx, a));
         Some(CallHead {
-            callee: text(cx, func),
+            callee: collapsed_callee(cx, func).unwrap_or_else(|| text(cx, func)),
             kind: CallKind::Plain,
             callee_root: callee_root(cx, func),
+            is_simple_path: js_calls::simple_path(func),
+            initializes_binding: js_calls::initializes_binding(cx, n),
             args,
         })
     }
@@ -332,140 +210,34 @@ impl LangHooks for TypeScriptHooks {
     }
 
     fn exported_names<'s>(&self, root: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
-        for stmt in named_children(root) {
-            if stmt.kind() != "export_statement"
-                || child_by_field(stmt, "source").is_some()
-                || has_child_kind(stmt, "as")
-            {
-                continue;
-            }
-            for part in named_children(stmt) {
-                match part.kind() {
-                    "identifier" => out.push(text(cx, part)),
-                    "export_clause" => out.extend(
-                        export_specs(cx, part)
-                            .iter()
-                            .map(|s| s.1)
-                            .filter(|name| !name.is_empty()),
-                    ),
-                    _ => {}
-                }
-            }
-        }
+        crate::lang::javascript::imports::exported_names_of(root, cx, out);
     }
 
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {
-        let kind = n.kind();
-        let public = n.parent().is_some_and(|p| p.kind() == "export_statement");
-        let abstraction = kind == "interface_declaration" || kind == "abstract_class_declaration";
-        let name_node = child_by_field(n, "name")?;
-        let mut impls = Vec::new();
-        let mut container = None;
-        if kind == "class_declaration" || kind == "abstract_class_declaration" {
-            let mut has_impl = false;
-            if let Some(heritage) = first_named_child_matching(n, &["class_heritage"]) {
-                has_impl = heritage_impls(cx, heritage, &mut impls);
-            }
-            container = Some(Container::Class {
-                exported: exported(cx, n, text(cx, name_node)),
-                implements: has_impl,
-            });
-        }
-        Some(TypeHead {
-            def: Some(TypeDef {
-                name: text(cx, name_node),
-                pos: pos_of(name_node),
-                public,
-                abstraction,
-            }),
-            impls,
-            container,
-        })
+        ts_typedef(cx, n)
     }
 
-    fn match_arm(&self, n: Node<'_>, _cx: &Cx<'_, '_>) -> Option<WildcardArm> {
-        let enum_like = n.parent().is_some_and(|p| {
-            any_named_child(p, |c| {
-                c.kind() == "switch_case"
-                    && c.id() != n.id()
-                    && child_by_field(c, "value").is_some_and(|v| v.kind() == "member_expression")
-            })
-        });
+    fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
+        if n.kind() != "switch_default" {
+            return None;
+        }
+        let enums = file_enums(cx);
+        let (enum_like, variant_count, scrutinee) = switch_enum_info(cx, n, enums);
         Some(WildcardArm {
             pos: pos_of(n),
             enum_like,
+            scrutinee,
+            variant_count,
+            has_nullable_ctor: false,
         })
     }
 
     fn handler<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<Handler<'s>> {
-        if n.kind() != "catch_clause" {
-            return None;
-        }
-        let binding = child_by_field(n, "parameter").map_or("", |p| {
-            if p.kind() == "identifier" {
-                text(cx, p)
-            } else {
-                ""
-            }
-        });
-        let body = child_by_field(n, "body")?;
-        let mut stmts = Vec::new();
-        for s in named_children(body) {
-            if s.kind() == "comment" {
-                continue;
-            }
-            stmts.push(catch_stmt(cx, s, binding));
-        }
-        Some(Handler {
-            pos: pos_of(n),
-            stmts,
-        })
+        js_items::handler_site(cx, n)
     }
 
     fn struct_lit<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FieldCopy<'s>> {
-        if n.kind() != "object" {
-            return None;
-        }
-        let mut fields = 0u32;
-        let mut source: Option<&'s str> = None;
-        let mut poisoned = false;
-        for child in named_children(n) {
-            if child.kind() == "spread_element" {
-                continue;
-            }
-            if child.kind() != "pair" {
-                poisoned = true;
-                continue;
-            }
-            fields += 1;
-            let key = child_by_field(child, "key").map_or("", |k| text(cx, k));
-            let cand = child_by_field(child, "value").and_then(|v| {
-                if v.kind() != "member_expression" {
-                    return None;
-                }
-                let obj = child_by_field(v, "object")?;
-                if obj.kind() != "identifier" {
-                    return None;
-                }
-                if child_by_field(v, "property").map_or("", |p| text(cx, p)) != key {
-                    return None;
-                }
-                Some(text(cx, obj))
-            });
-            match (source, cand) {
-                (None, Some(s)) => source = Some(s),
-                (Some(a), Some(b)) if a == b => {}
-                _ => poisoned = true,
-            }
-        }
-        if fields == 0 {
-            return None;
-        }
-        Some(FieldCopy {
-            pos: pos_of(n),
-            fields,
-            source: if poisoned { None } else { source },
-        })
+        js_items::struct_lit_of(cx, n)
     }
 
     fn ambient<'s>(
@@ -475,102 +247,217 @@ impl LangHooks for TypeScriptHooks {
         in_function: bool,
         out: &mut Vec<(AmbientKind, &'s str, Pos)>,
     ) {
-        if n.kind() == "member_expression" {
-            let obj = child_by_field(n, "object").map_or("", |o| text(cx, o));
-            let prop = child_by_field(n, "property").map_or("", |p| text(cx, p));
-            if prop == "env" && (obj == "process" || obj == "import.meta") {
-                out.push((AmbientKind::EnvRead, text(cx, n), pos_of(n)));
-            }
-            return;
-        }
-        if in_function || !top_level(n) {
-            return;
-        }
-        if n.kind() == "lexical_declaration" || n.kind() == "variable_declaration" {
-            let mutable = n.kind() == "variable_declaration"
-                || child_by_field(n, "kind").is_some_and(|k| text(cx, k) == "let");
-            if mutable {
-                for (name, pos) in ts_declared(cx, n) {
-                    out.push((AmbientKind::GlobalMutable, name, pos));
-                }
-            }
-        }
+        ambient_sites(cx, n, in_function, out);
     }
 
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
-        if n.kind() == "new_expression" {
-            if child_by_field(n, "constructor").map_or("", |c| text(cx, c)) == "Function" {
-                return Some("Function constructor");
-            }
-            return None;
-        }
-        if n.kind() != "call_expression" {
-            return None;
-        }
-        let func = child_by_field(n, "function")?;
-        if func.kind() == "subscript_expression" {
-            let idx = child_by_field(func, "index").map_or("", |i| i.kind());
-            if idx != "string" && idx != "number" {
-                return Some("computed method call");
-            }
-            return None;
-        }
-        if text(cx, func) == "eval" {
-            return Some("eval");
-        }
-        None
+        js_items::dynamic_site(cx, n)
     }
 
     fn assertion(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {
-        if n.kind() != "call_expression" {
-            return None;
-        }
-        let callee = child_by_field(n, "function").map_or("", |f| text(cx, f));
-        if callee != "assert" && callee != "assert.ok" && callee != "console.assert" {
-            return None;
-        }
-        let args = child_by_field(n, "arguments");
-        let comparison = args.and_then(first_named_child).is_some_and(|a| {
-            a.kind() == "binary_expression"
-                && child_by_field(a, "operator").is_some_and(|o| {
-                    matches!(
-                        text(cx, o),
-                        "==" | "===" | "!=" | "!==" | "<" | ">" | "<=" | ">="
-                    )
-                })
-        });
-        Some(Assertion {
-            pos: pos_of(n),
-            has_message: args.is_some_and(|a| a.named_child_count() >= 2),
-            comparison,
-        })
+        js_items::assertion_site(cx, n)
     }
 
     fn barrel(&self, root: Node<'_>, cx: &Cx<'_, '_>) -> Option<Barrel> {
-        if root.kind() != "program" {
-            return None;
-        }
-        let mut sources = Vec::new();
-        for child in named_children(root) {
-            if child.kind() == "comment" {
-                continue;
-            }
-            if child.kind() == "export_statement" && child_by_field(child, "source").is_some() {
-                sources.push(
-                    child_by_field(child, "source").map_or("", |s| strip_quotes(text(cx, s))),
-                );
-                continue;
-            }
-            return None;
-        }
-        if sources.is_empty() {
-            return None;
-        }
-        let dir = parent_dir(cx.path);
-        let mut targets = Vec::new();
-        for src in sources {
-            targets.push(ts_targets(dir, src));
-        }
-        Some(Barrel { targets })
+        ts_barrel(root, cx)
     }
+}
+
+fn ts_new_call<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
+    let ctor = child_by_field(n, "constructor")?;
+    let args = child_by_field(n, "arguments").map_or(Vec::new(), |a| ts_args(cx, a));
+    Some(CallHead {
+        callee: collapsed_callee(cx, ctor).unwrap_or_else(|| text(cx, ctor)),
+        kind: CallKind::New,
+        callee_root: callee_root(cx, ctor),
+        is_simple_path: js_calls::simple_path(ctor),
+        initializes_binding: js_calls::initializes_binding(cx, n),
+        args,
+    })
+}
+
+fn anonymous_closure<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
+    closure_head(n, cx, Visibility::Private)
+}
+
+fn exported_closure<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
+    closure_head(n, cx, Visibility::Exported)
+}
+
+fn closure_head<'s>(
+    n: Node<'_>,
+    cx: &Cx<'_, 's>,
+    visibility: Visibility,
+) -> Option<FunctionHead<'s>> {
+    let body = child_by_field(n, "body")?;
+    let mut params = Vec::new();
+    closure_params(cx, n, &mut params);
+    let ret = child_by_field(n, "return_type").map(|t| text(cx, t));
+    let missing = missing_of(&params, ret, "");
+    let mut shadow = closure_shadow_params(cx, n);
+    hoisted_shadows_for(cx, body, &mut shadow);
+    Some(FunctionHead {
+        shadow_params: shadow,
+        name: "",
+        name_pos: pos_of(n),
+        visibility,
+        signature_forced: false,
+        entry_point: false,
+        in_test: is_test_path(cx.path),
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        region: None,
+        receiver: None,
+        params,
+        return_type: ret,
+        missing_annotations: missing,
+        doc: Vec::new(),
+        doc_pos: None,
+        sole_call: ts_sole_call(body),
+    })
+}
+
+fn closure_from_parent<'s>(
+    n: Node<'_>,
+    parent: Option<Node<'_>>,
+    cx: &Cx<'_, 's>,
+) -> Option<FunctionHead<'s>> {
+    let parent = parent?;
+    if parent.kind() == "variable_declarator" {
+        return declarator_closure(n, parent, cx);
+    }
+    if parent.kind() == "public_field_definition" {
+        return field_closure(n, parent, cx);
+    }
+    if parent.kind() == "export_statement" {
+        return exported_closure(n, cx);
+    }
+    anonymous_closure(n, cx)
+}
+
+fn declarator_closure<'s>(
+    n: Node<'_>,
+    parent: Node<'_>,
+    cx: &Cx<'_, 's>,
+) -> Option<FunctionHead<'s>> {
+    if child_by_field(parent, "value").is_some_and(|v| v.id() != n.id()) {
+        return anonymous_closure(n, cx);
+    }
+    let Some(decl) = cx.parent_of(parent) else {
+        return anonymous_closure(n, cx);
+    };
+    let Some(name_node) = child_by_field(parent, "name") else {
+        return anonymous_closure(n, cx);
+    };
+    if name_node.kind() != "identifier" {
+        return anonymous_closure(n, cx);
+    }
+    let public = ts_exported(cx, decl, text(cx, name_node));
+    let mut params = Vec::new();
+    closure_params(cx, n, &mut params);
+    let site = TsHead {
+        name: name_node,
+        node: n,
+        header: closure_header(cx, decl),
+        visibility: visibility_of(public),
+        forced: false,
+        overload: false,
+        body: child_by_field(n, "body"),
+    };
+    let mut head = head_for(cx, site, params);
+    head.shadow_params = closure_shadow_params(cx, n);
+    if let Some(body) = child_by_field(n, "body") {
+        hoisted_shadows_for(cx, body, &mut head.shadow_params);
+    }
+    Some(head)
+}
+
+fn closure_header<'t>(cx: &Cx<'t, '_>, decl: Node<'t>) -> Node<'t> {
+    cx.parent_of(decl)
+        .filter(|p| p.kind() == "export_statement")
+        .unwrap_or(decl)
+}
+
+fn field_closure<'s>(n: Node<'_>, parent: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
+    if child_by_field(parent, "value").is_some_and(|v| v.id() != n.id()) {
+        return None;
+    }
+    let name_node = child_by_field(parent, "name")?;
+    let mut params = Vec::new();
+    closure_params(cx, n, &mut params);
+    let site = TsHead {
+        name: name_node,
+        node: n,
+        header: doc_anchor(cx, parent),
+        visibility: visibility_of(member_public(cx, parent, name_node.kind())),
+        forced: has_override(parent),
+        overload: false,
+        body: child_by_field(n, "body"),
+    };
+    let mut head = head_for(cx, site, params);
+    head.shadow_params = closure_shadow_params(cx, n);
+    if let Some(body) = child_by_field(n, "body") {
+        hoisted_shadows_for(cx, body, &mut head.shadow_params);
+    }
+    head.is_decorated = head.is_decorated || has_decorator(parent);
+    head.is_deprecated = head.is_deprecated || is_deprecated_named(parent, &head.doc, cx);
+    Some(head)
+}
+
+fn ts_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
+    let kind = n.kind();
+    let abstraction = kind == "interface_declaration" || kind == "abstract_class_declaration";
+    let name_node = child_by_field(n, "name")?;
+    let name = text(cx, name_node);
+    let public = ts_exported(cx, n, name);
+    let mut impls: Vec<ImplRef<'s>> = Vec::new();
+    let mut container = None;
+    if kind == "class_declaration" || kind == "abstract_class_declaration" {
+        let mut has_impl = false;
+        if let Some(heritage) = first_named_child_matching(n, &["class_heritage"]) {
+            has_impl = heritage_impls(cx, heritage, abstraction, &mut impls);
+        }
+        container = Some(Container::Class {
+            exported: ts_exported(cx, n, text(cx, name_node)),
+            implements: has_impl,
+        });
+    }
+    Some(TypeHead {
+        def: Some(TypeDef {
+            name: text(cx, name_node),
+            pos: pos_of(name_node),
+            visibility: visibility_of(public),
+            abstraction,
+        }),
+        impls,
+        container,
+    })
+}
+
+fn ts_barrel(root: Node<'_>, cx: &Cx<'_, '_>) -> Option<Barrel> {
+    if root.kind() != "program" {
+        return None;
+    }
+    let mut sources = Vec::new();
+    for child in named_children(root) {
+        if child.kind() == "comment" {
+            continue;
+        }
+        if child.kind() == "export_statement" && child_by_field(child, "source").is_some() {
+            sources.push(child_by_field(child, "source").map_or("", |s| strip_quotes(text(cx, s))));
+            continue;
+        }
+        return None;
+    }
+    if sources.is_empty() {
+        return None;
+    }
+    let dir = parent_dir(cx.path);
+    let mut targets = Vec::new();
+    for src in sources {
+        targets.push(ts_targets(dir, src));
+    }
+    Some(Barrel { targets })
 }

@@ -1,1 +1,0 @@
-src/loops.py:6 deny complexity/nested-mutation

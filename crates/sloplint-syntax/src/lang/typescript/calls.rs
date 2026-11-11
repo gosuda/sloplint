@@ -1,14 +1,19 @@
+//! Call and pattern helpers for TypeScript.
+
 use sloplint_core::facts::{Arg, ArgShape, Pos};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, binary_concat, child_by_field, first_named_child, named_children, narrow,
-    only_named_child_matching, pos_of, sole_call_id, string_arg_shape, text,
+    Cx, binary_concat, child_by_field, code_children, find_named_child, first_named_child,
+    named_children, narrow, only_named_child_matching, pos_of, sole_call_id, spine_has_call,
+    string_arg_shape, text,
 };
 
 pub(crate) fn ts_call_stmt(n: Node<'_>) -> Option<usize> {
     let inner = match n.kind() {
-        "return_statement" | "expression_statement" => first_named_child(n)?,
+        "return_statement" | "expression_statement" => {
+            find_named_child(n, |child| child.kind() != "comment")?
+        }
         _ => return None,
     };
     let mut cur = inner;
@@ -17,7 +22,7 @@ pub(crate) fn ts_call_stmt(n: Node<'_>) -> Option<usize> {
             return Some(cur.id());
         }
         if cur.kind() == "await_expression" {
-            cur = first_named_child(cur)?;
+            cur = find_named_child(cur, |child| child.kind() != "comment")?;
         } else {
             return None;
         }
@@ -88,27 +93,100 @@ pub(crate) fn callee_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
     loop {
         match cur.kind() {
             "identifier" | "this" | "super" => return Some(text(cx, cur)),
-            "member_expression" | "subscript_expression" => cur = child_by_field(cur, "object")?,
-            "parenthesized_expression" => cur = cur.named_child(0)?,
+            "member_expression" | "subscript_expression" => {
+                cur = child_by_field(cur, "object")?;
+            }
+            "parenthesized_expression"
+            | "non_null_expression"
+            | "as_expression"
+            | "satisfies_expression" => cur = cur.named_child(0)?,
             _ => return None,
         }
     }
 }
 
+pub(crate) fn collapsed_callee<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Option<&'s str> {
+    if func.kind() != "member_expression" {
+        return None;
+    }
+    let property = child_by_field(func, "property")?;
+    if !matches!(
+        property.kind(),
+        "identifier" | "property_identifier" | "private_property_identifier"
+    ) {
+        return None;
+    }
+    spine_has_call(
+        func,
+        "object",
+        &[
+            "parenthesized_expression",
+            "non_null_expression",
+            "as_expression",
+            "satisfies_expression",
+        ],
+    )
+    .then_some(text(cx, property))
+}
+
 pub(crate) fn ts_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     match n.kind() {
         "string" => string_arg_shape(cx, n, &["string_fragment"]),
-        "template_string" => string_arg_shape(cx, n, &["string_fragment"]),
+        "template_string" => concat_shape(cx, n),
+        "array" => array_shape(n),
+        "object" => ArgShape::Other,
+        "arrow_function" | "function_expression" | "generator_function" => ArgShape::CodeBody,
         "identifier" => ArgShape::Ident(text(cx, n)),
-        _ if binary_concat(cx, n, "+", &["string", "template_string"]) => ArgShape::Concat,
+        _ if binary_concat(cx, n, "+", &["string", "template_string"]) => concat_shape(cx, n),
         _ => ArgShape::Other,
     }
+}
+
+fn concat_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
+    let mut best = 0u32;
+    let mut stack = vec![n];
+    while let Some(cur) = stack.pop() {
+        match cur.kind() {
+            "binary_expression" => {
+                if cur.child(1).is_some_and(|op| text(cx, op) == "+") {
+                    stack.extend([cur.child(0), cur.child(2)].into_iter().flatten());
+                }
+            }
+            "parenthesized_expression" => {
+                stack.extend(cur.named_child(0));
+            }
+            "string" | "template_string" => {
+                if let ArgShape::Str { longest_static } =
+                    string_arg_shape(cx, cur, &["string_fragment"])
+                {
+                    best = best.max(longest_static);
+                }
+            }
+            _ => {}
+        }
+    }
+    ArgShape::Concat {
+        longest_static: best,
+    }
+}
+
+fn array_shape(n: Node<'_>) -> ArgShape<'static> {
+    let mut cursor = n.walk();
+    for child in n.children(&mut cursor) {
+        if matches!(
+            child.kind(),
+            "arrow_function" | "function_expression" | "generator_function" | "statement_block"
+        ) {
+            return ArgShape::CodeBody;
+        }
+    }
+    ArgShape::Collection
 }
 
 pub(crate) fn ts_args<'s>(cx: &Cx<'_, 's>, args: Node<'_>) -> Vec<Arg<'s>> {
     let items = match args.kind() {
         "template_string" => vec![args],
-        _ => named_children(args),
+        _ => code_children(args),
     };
     items
         .into_iter()
@@ -118,39 +196,4 @@ pub(crate) fn ts_args<'s>(cx: &Cx<'_, 's>, args: Node<'_>) -> Vec<Arg<'s>> {
             end_line: narrow(c.end_position().row) + 1,
         })
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::ts_sole_call;
-
-    fn sole_call_in_ts(source: &str) -> Option<usize> {
-        let mut parser = tree_sitter::Parser::new();
-        let language: tree_sitter::Language = tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into();
-        parser
-            .set_language(&language)
-            .expect("typescript grammar loads");
-        let tree = parser.parse(source, None).expect("parser returns a tree");
-        let function = tree.root_node().child(0).expect("one top-level function");
-        let body = function.child_by_field_name("body").expect("function body");
-        ts_sole_call(body)
-    }
-
-    #[test]
-    fn returned_call_is_the_sole_call() {
-        assert!(
-            sole_call_in_ts("function f() { return g(); }").is_some(),
-            "the returned call must be detected as the sole call"
-        );
-    }
-
-    // Adapter drift, pinned: the JavaScript adapter skips a leading comment before
-    // the returned expression; the TypeScript adapter does not.
-    #[test]
-    fn leading_comment_hides_the_sole_call_in_typescript() {
-        assert_eq!(
-            sole_call_in_ts("function f() { return /* c */ g(); }"),
-            None
-        );
-    }
 }

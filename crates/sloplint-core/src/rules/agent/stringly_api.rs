@@ -1,111 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
-use crate::facts::{FileFacts, Param};
-use crate::finding::{Finding, Level};
-use crate::lang::Lang;
+use crate::facts::{FileFacts, Param, PrimitiveKind};
+use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
-
-use crate::rules::threshold_options;
-
-const RUST: &[&str] = &[
-    "str", "String", "i8", "i16", "i32", "i64", "i128", "isize", "u8", "u16", "u32", "u64", "u128",
-    "usize",
-];
-const WEB: &[&str] = &["string", "number"];
-const GO: &[&str] = &[
-    "string", "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32",
-    "uint64", "uintptr",
-];
-const DUCK: &[&str] = &["str", "int"];
-const JVM: &[&str] = &[
-    "String", "int", "long", "short", "byte", "double", "float", "boolean", "Integer", "Long",
-    "Short", "Byte", "Double", "Float", "Boolean", "char", "Char",
-];
-const SWIFT_TYPES: &[&str] = &[
-    "String", "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32",
-    "UInt64", "Double", "Float",
-];
-const DART: &[&str] = &["String", "int", "double", "bool", "num"];
-const C: &[&str] = &[
-    "char*",
-    "bool",
-    "_Bool",
-    "int",
-    "unsignedint",
-    "unsigned",
-    "long",
-    "unsignedlong",
-    "longlong",
-    "unsignedlonglong",
-    "short",
-    "unsignedshort",
-    "float",
-    "double",
-    "size_t",
-    "ssize_t",
-    "int8_t",
-    "int16_t",
-    "int32_t",
-    "int64_t",
-    "uint8_t",
-    "uint16_t",
-    "uint32_t",
-    "uint64_t",
-];
-const CPP: &[&str] = &[
-    "char*",
-    "bool",
-    "_Bool",
-    "int",
-    "unsignedint",
-    "unsigned",
-    "long",
-    "unsignedlong",
-    "longlong",
-    "unsignedlonglong",
-    "short",
-    "unsignedshort",
-    "float",
-    "double",
-    "size_t",
-    "ssize_t",
-    "int8_t",
-    "int16_t",
-    "int32_t",
-    "int64_t",
-    "uint8_t",
-    "uint16_t",
-    "uint32_t",
-    "uint64_t",
-    "std::size_t",
-    "std::string",
-    "std::string_view",
-    "std::int32_t",
-    "std::int64_t",
-    "std::uint32_t",
-    "std::uint64_t",
-];
-const ZIG: &[&str] = &[
-    "[]constu8",
-    "i8",
-    "i16",
-    "i32",
-    "i64",
-    "u8",
-    "u16",
-    "u32",
-    "u64",
-    "usize",
-    "f32",
-    "f64",
-    "bool",
-];
-const ODIN: &[&str] = &[
-    "string", "int", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64", "bool",
-    "rune",
-];
-const OCAML: &[&str] = &["string", "int", "int64", "float", "bool", "char"];
+use crate::rules::{parse_options, threshold_options};
 
 const FIX: &str = "wrap these parameters in distinct newtypes or one named struct";
 
@@ -114,7 +14,14 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
     family: Family::Agent,
     summary: "runs of consecutive primitive parameters of swappable types",
     why: "Adjacent primitive parameters of one type can be swapped without a compile error.",
-    exempt_tests: true,
+    confidence: Confidence::Low,
+    roles: RolePolicy {
+        entry: Shift::Lower1,
+        test: Shift::Off,
+        support: Shift::Lower1,
+        bench: Shift::Off,
+        example: Shift::Off,
+    },
     preset,
     build: Build::File(build),
 };
@@ -122,8 +29,10 @@ pub(crate) const INFO: RuleInfo = RuleInfo {
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Options {
-    warn_at: u32,
-    deny_at: u32,
+    minor_at: u32,
+    major_at: u32,
+    critical_at: u32,
+    blocker_at: u32,
 }
 
 struct StringlyApi {
@@ -131,34 +40,36 @@ struct StringlyApi {
 }
 
 fn preset(strictness: Strictness) -> Preset {
-    let (level, warn_at, deny_at) = match strictness {
-        Strictness::Minimal => (Level::Off, 3, 4),
-        Strictness::Basic => (Level::Off, 3, 4),
-        Strictness::Standard => (Level::Warn, 3, 4),
-        Strictness::Strict => (Level::Deny, 2, 3),
+    let (level, minor_at, major_at, critical_at, blocker_at) = match strictness {
+        Strictness::Minimal => (Level::Off, 3, 4, 6, 8),
+        Strictness::Basic => (Level::Off, 3, 4, 6, 8),
+        Strictness::Standard => (Level::Off, 3, 4, 6, 8),
+        Strictness::Strict => (Level::At(Severity::Info), 3, 4, 6, 8),
     };
     Preset {
         level,
-        options: threshold_options(warn_at, deny_at),
+        options: threshold_options(minor_at, major_at, critical_at, blocker_at),
     }
 }
 
 fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>, String> {
-    let parsed: Options = toml::Value::Table(options)
-        .try_into()
-        .map_err(|error| error.to_string())?;
-    let thresholds = Thresholds::new(parsed.warn_at, parsed.deny_at)?;
+    let parsed: Options = parse_options(options)?;
+    let thresholds = Thresholds::new(
+        parsed.minor_at,
+        parsed.major_at,
+        parsed.critical_at,
+        parsed.blocker_at,
+    )?;
     Ok(Box::new(StringlyApi { thresholds }))
 }
 
 impl FileRule for StringlyApi {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
-        let primitives = primitives(facts.lang);
         for function in &facts.functions {
-            if !function.public || function.in_test {
+            if !function.actionable_api() || function.is_overload {
                 continue;
             }
-            let Some((start, len)) = longest_run(&function.params, primitives) else {
+            let Some((start, len)) = longest_run(&function.params) else {
                 continue;
             };
             let Some(severity) = self
@@ -173,8 +84,12 @@ impl FileRule for StringlyApi {
                 .collect::<Vec<_>>()
                 .join(", ");
             let name = function.name;
+            let minor_at = self.thresholds.minor_at;
+            let major_at = self.thresholds.major_at;
+            let critical_at = self.thresholds.critical_at;
+            let blocker_at = self.thresholds.blocker_at;
             let message = format!(
-                "`{name}` takes {len} consecutive primitive parameters ({names}) that callers can swap"
+                "`{name}` takes {len} consecutive primitive parameters ({names}) that callers can swap (minor at {minor_at}, major at {major_at}, critical at {critical_at}, blocker at {blocker_at})"
             );
             out.push(Finding::at(
                 facts,
@@ -188,40 +103,36 @@ impl FileRule for StringlyApi {
     }
 }
 
-fn primitives(lang: Lang) -> &'static [&'static str] {
-    match lang {
-        Lang::Rust => RUST,
-        Lang::TypeScript | Lang::Tsx | Lang::JavaScript => WEB,
-        Lang::Go => GO,
-        Lang::Python | Lang::Starlark => DUCK,
-        Lang::Java | Lang::Kotlin | Lang::Scala | Lang::CSharp => JVM,
-        Lang::Swift => SWIFT_TYPES,
-        Lang::Dart => DART,
-        Lang::Cpp => CPP,
-        Lang::C | Lang::ObjC => C,
-        Lang::Zig => ZIG,
-        Lang::Odin => ODIN,
-        Lang::Ocaml | Lang::OcamlInterface => OCAML,
-        _ => &[],
-    }
-}
-
-fn longest_run(params: &[Param<'_>], primitives: &[&str]) -> Option<(usize, usize)> {
+fn longest_run(params: &[Param<'_>]) -> Option<(usize, usize)> {
     let mut best = (0usize, 0usize);
-    let mut open: Option<usize> = None;
+    let mut start = 0usize;
+    let mut kind = PrimitiveKind::Other;
+    let mut ty: Option<&str> = None;
+    let mut open = false;
     for (index, param) in params.iter().enumerate() {
-        if is_primitive(param, primitives) {
-            if open.is_none() {
-                open = Some(index);
-            }
-        } else if let Some(begin) = open.take() {
-            best = longer(best, (begin, index - begin));
+        if open && joins_run(param, kind, ty) {
+            continue;
+        }
+        if open {
+            best = longer(best, (start, index - start));
+        }
+        if counts(param) {
+            start = index;
+            kind = param.primitive_kind;
+            ty = param.ty;
+            open = true;
+        } else {
+            open = false;
         }
     }
-    if let Some(begin) = open {
-        best = longer(best, (begin, params.len() - begin));
+    if open {
+        best = longer(best, (start, params.len() - start));
     }
     (best.1 > 0).then_some(best)
+}
+
+fn joins_run(param: &Param<'_>, kind: PrimitiveKind, ty: Option<&str>) -> bool {
+    counts(param) && param.primitive_kind == kind && param.ty == ty
 }
 
 fn longer(current: (usize, usize), candidate: (usize, usize)) -> (usize, usize) {
@@ -232,20 +143,254 @@ fn longer(current: (usize, usize), candidate: (usize, usize)) -> (usize, usize) 
     }
 }
 
-fn is_primitive(param: &Param<'_>, primitives: &[&str]) -> bool {
-    param
-        .ty
-        .is_some_and(|ty| primitives.contains(&normalize(ty).as_str()))
+fn counts(param: &Param<'_>) -> bool {
+    !param.is_variadic
+        && !param.keyword_only
+        && !param.has_default
+        && param.primitive_kind != PrimitiveKind::Other
 }
 
-fn normalize(ty: &str) -> String {
-    let mut normalized = String::with_capacity(ty.len());
-    for word in ty.split_whitespace() {
-        let word = word.trim_start_matches('&');
-        if word.starts_with('\'') || word == "mut" || word == "const" {
-            continue;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::facts::{Function, Pos, Visibility};
+    use crate::finding::line_starts;
+    use crate::lang::Lang;
+
+    fn param(
+        name: &str,
+        primitive_kind: PrimitiveKind,
+        has_default: bool,
+        keyword_only: bool,
+        is_variadic: bool,
+    ) -> Param<'_> {
+        Param {
+            name,
+            ty: None,
+            primitive_kind,
+            has_default,
+            bool_default: has_default,
+            keyword_only,
+            is_variadic,
         }
-        normalized.push_str(word);
     }
-    normalized
+
+    fn plain(name: &str, primitive_kind: PrimitiveKind) -> Param<'_> {
+        param(name, primitive_kind, false, false, false)
+    }
+
+    fn typed(
+        name: &'static str,
+        primitive_kind: PrimitiveKind,
+        ty: &'static str,
+    ) -> Param<'static> {
+        Param {
+            name,
+            ty: Some(ty),
+            primitive_kind,
+            has_default: false,
+            bool_default: false,
+            keyword_only: false,
+            is_variadic: false,
+        }
+    }
+
+    fn function<'s>(name: &'s str, params: Vec<Param<'s>>) -> Function<'s> {
+        Function {
+            name,
+            pos: Pos { line: 9, byte: 0 },
+            doc: Vec::new(),
+            doc_pos: None,
+            visibility: Visibility::Exported,
+            signature_forced: false,
+            entry_point: false,
+            in_test: false,
+            is_overload: false,
+            is_deprecated: false,
+            is_decorated: false,
+            is_trait_item: false,
+            is_method: false,
+            receiver: None,
+            params,
+            return_type: None,
+            untyped_throws: false,
+            has_value_return: false,
+            missing_annotations: Vec::new(),
+            cognitive: 0,
+            max_depth: 0,
+            deepest_line: 12,
+            end_line: 12,
+            sole_call: None,
+        }
+    }
+
+    fn strict() -> Box<dyn FileRule> {
+        let preset = preset(Strictness::Strict);
+        build(preset.options, &Settings::default()).expect("strict preset builds")
+    }
+
+    fn names(rule: &dyn FileRule, functions: Vec<Function<'_>>) -> Vec<String> {
+        let source = "fn f() {}\n";
+        let facts = FileFacts {
+            lang: Lang::Rust,
+            path: "src/lib.rs",
+            source,
+            line_starts: line_starts(source),
+            role: crate::role::CodeRole::Library,
+            regions: Vec::new(),
+            line_count: 0,
+            package: String::new(),
+            is_generated: false,
+            functions,
+            calls: Vec::new(),
+            bindings: Vec::new(),
+            imports: Vec::new(),
+            types: Vec::new(),
+            impls: Vec::new(),
+            wildcard_arms: Vec::new(),
+            handlers: Vec::new(),
+            assertions: Vec::new(),
+            field_copies: Vec::new(),
+            dynamic_symbols: Vec::new(),
+            ambient: Vec::new(),
+            barrel: None,
+            has_inline_tests: false,
+        };
+        let mut out = Vec::new();
+        rule.check(&facts, &mut out);
+        out.into_iter().map(|finding| finding.message).collect()
+    }
+
+    fn triple() -> Vec<Param<'static>> {
+        vec![
+            plain("a", PrimitiveKind::Int),
+            plain("b", PrimitiveKind::Int),
+            plain("c", PrimitiveKind::Int),
+        ]
+    }
+
+    #[test]
+    fn same_kind_triple_flags_while_mixed_and_pairs_stay_silent() {
+        let rule = strict();
+        let found = names(
+            rule.as_ref(),
+            vec![
+                function(
+                    "mixed",
+                    vec![
+                        plain("a", PrimitiveKind::Str),
+                        plain("b", PrimitiveKind::Str),
+                        plain("c", PrimitiveKind::Int),
+                    ],
+                ),
+                function(
+                    "pair",
+                    vec![
+                        plain("message", PrimitiveKind::Str),
+                        plain("fix", PrimitiveKind::Str),
+                    ],
+                ),
+                function("triple", triple()),
+            ],
+        );
+        assert_eq!(found.len(), 1);
+        assert!(found[0].starts_with("`triple` takes 3 consecutive"));
+    }
+
+    #[test]
+    fn bigint_and_rust_widths_break_the_run_while_identical_text_joins() {
+        let rule = strict();
+        let mixed = names(
+            rule.as_ref(),
+            vec![
+                function(
+                    "ts_mixed",
+                    vec![
+                        typed("a", PrimitiveKind::Int, "number"),
+                        typed("b", PrimitiveKind::Int, "bigint"),
+                        typed("c", PrimitiveKind::Int, "number"),
+                    ],
+                ),
+                function(
+                    "rust_mixed",
+                    vec![
+                        typed("a", PrimitiveKind::Int, "i32"),
+                        typed("b", PrimitiveKind::Int, "u64"),
+                        typed("c", PrimitiveKind::Int, "i32"),
+                    ],
+                ),
+            ],
+        );
+        assert!(mixed.is_empty());
+        let found = names(
+            rule.as_ref(),
+            vec![function(
+                "same_text",
+                vec![
+                    typed("a", PrimitiveKind::Int, "number"),
+                    typed("b", PrimitiveKind::Int, "number"),
+                    typed("c", PrimitiveKind::Int, "number"),
+                ],
+            )],
+        );
+        assert_eq!(found.len(), 1);
+        assert!(found[0].starts_with("`same_text` takes 3 consecutive"));
+    }
+
+    #[test]
+    fn defaulted_keyword_and_overload_params_break_the_run() {
+        let rule = strict();
+        let mut defaulted: Vec<Param<'_>> = vec![plain("prog", PrimitiveKind::Str)];
+        defaulted.push(param("var", PrimitiveKind::Str, true, false, false));
+        defaulted.push(param("instruction", PrimitiveKind::Str, true, false, false));
+        let mut keyword: Vec<Param<'_>> = vec![plain("a", PrimitiveKind::Str)];
+        keyword.push(param("b", PrimitiveKind::Str, false, true, false));
+        keyword.push(param("c", PrimitiveKind::Str, false, true, false));
+        let mut overloaded = function("overloaded", triple());
+        overloaded.is_overload = true;
+        let found = names(
+            rule.as_ref(),
+            vec![
+                function("defaulted", defaulted),
+                function("keyword", keyword),
+                overloaded,
+            ],
+        );
+        assert!(found.is_empty());
+    }
+    #[test]
+    fn preset_pins_off_at_standard_and_info_at_strict() {
+        assert_eq!(
+            INFO.confidence,
+            Confidence::Low,
+            "stringly-api ships at low confidence"
+        );
+        assert_eq!(
+            preset(Strictness::Minimal).level,
+            Level::Off,
+            "minimal stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Basic).level,
+            Level::Off,
+            "basic stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Standard).level,
+            Level::Off,
+            "standard stays off"
+        );
+        assert_eq!(
+            preset(Strictness::Strict).level,
+            Level::At(Severity::Info),
+            "strict reports at info"
+        );
+        let rule = strict();
+        let found = names(rule.as_ref(), vec![function("triple", triple())]);
+        assert_eq!(
+            found.len(),
+            1,
+            "strict flags the triple on a positive input"
+        );
+    }
 }

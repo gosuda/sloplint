@@ -1,1 +1,2 @@
-a.dart:2 warn grep/multiline-argument
+# Positive: Collection arg spans lines 2-18 (17 lines >= strict Minor(15)); statement call.
+a.dart:2 info grep/multiline-argument

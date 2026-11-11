@@ -1,3 +1,3 @@
-void run() {
-  print('running scheduled task now');
+void handle() {
+  print('handling scheduled task now');
 }

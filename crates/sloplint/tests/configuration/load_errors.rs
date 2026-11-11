@@ -1,7 +1,7 @@
 //! `parse_config` error variants and the documented key set that must load.
 
 use sloplint_core::config::{Mode, Strictness, parse_config};
-use sloplint_core::{ConfigError, FailOn, RuleFilter, RuleSet};
+use sloplint_core::{ConfigError, FailOn, RuleFilter, RuleSet, Severity};
 
 fn rejected(src: &str) -> ConfigError {
     match parse_config(src, "sloplint.toml") {
@@ -140,7 +140,7 @@ strictness = "strict"
 languages = ["rust", "typescript"]
 mode = "ratchet"
 baseline = "base.json"
-fail_on = "warn"
+fail_on = "minor"
 exclude = ["**/gen/**"]
 extend_exclude = ["**/vendored/**"]
 test_globs = ["**/it/**"]
@@ -151,15 +151,15 @@ custom_rule_files = ["rules/*.toml"]
 log_callees = ["trace!", "new *Error"]
 
 [rules."complexity/cognitive-depth"]
-deny_at = 18
+major_at = 18
 
 [rules."agent/colocated-tests"]
-level = "warn"
+level = "minor"
 
 [[custom_rules]]
 id = "custom/no-unwrap"
 language = "rust"
-severity = "deny"
+severity = "major"
 message = "`{method}()` in library code"
 why = "unwrap panics on the error path"
 fix = "propagate with ?"
@@ -179,7 +179,7 @@ fn every_documented_key_loads() {
     let project = &config.project;
     assert_eq!(project.strictness, Strictness::Strict);
     assert_eq!(project.mode, Mode::Ratchet);
-    assert_eq!(project.fail_on, FailOn::Warn);
+    assert_eq!(project.fail_on, FailOn::At(Severity::Minor));
     assert_eq!(project.languages, ["rust", "typescript"]);
     assert_eq!(project.baseline, "base.json");
     assert_eq!(project.exclude, ["**/gen/**"]);

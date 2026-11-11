@@ -1,0 +1,1 @@
+src/lib.rs:1 info complexity/cognitive-depth

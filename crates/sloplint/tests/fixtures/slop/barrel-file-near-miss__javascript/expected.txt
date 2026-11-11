@@ -1,1 +1,1 @@
-# Near-miss: every re-export target is a defining module, not a barrel.
+# Near-miss: mid re-exports package-only "react", so top has no relative barrel target.

@@ -1,2 +1,2 @@
 # Positive: doc comment restates the name (similarity 1.00).
-src/orders.scala:2 warn slop/echo-comment
+src/orders.scala:2 minor slop/echo-comment

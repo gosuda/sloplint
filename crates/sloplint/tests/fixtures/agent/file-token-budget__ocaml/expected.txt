@@ -1,1 +1,1 @@
-src/big.ml:1 deny agent/file-token-budget
+src/big.ml:1 info agent/file-token-budget

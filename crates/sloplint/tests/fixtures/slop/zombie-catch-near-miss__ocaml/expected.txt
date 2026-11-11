@@ -1,0 +1,1 @@
+# Near-miss: bare rethrow with no log call, so the handler neither swallows nor double-reports.

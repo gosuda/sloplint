@@ -1,9 +1,9 @@
-//! Else-if chains cost one per arm and open no nest, observed through `analyze` only.
+//! Else-if chains cost nothing and open no nest, observed through `analyze` only.
 //!
 //! Go `else if`, Java `else if`, and Bash `elif` share the walker rule with
-//! Rust and Python: the chained arm adds one to cognitive complexity without
-//! opening a nesting level. Each language pairs a flat chain with a nested
-//! control that shows the chained arm still costs one inside a nest.
+//! Rust and Python: the chained arm adds nothing and opens no nesting level.
+//! Each language pairs a flat chain with a nested control that shows the
+//! chained arm still costs nothing inside a nest.
 
 use sloplint_core::lang::Lang;
 
@@ -34,43 +34,43 @@ const BASH_CHAIN: &str = "classify() {\n\tif [ \"$1\" = a ]; then\n\t\techo a\n\
 const BASH_INNER: &str = "outer() {\n\tif true; then\n\t\tif true; then\n\t\t\techo a\n\t\telif true; then\n\t\t\techo b\n\t\tfi\n\tfi\n}\n";
 
 #[test]
-fn go_else_if_chain_costs_one_per_arm() {
+fn go_else_if_chain_costs_nothing_per_arm() {
     assert_eq!(
         metrics(Lang::Go, "chain.go", GO_CHAIN, "Chain"),
-        (3, 1),
-        "if 1 plus two else-if arms at 1"
+        (0, 1),
+        "if 0 plus two else-if arms at 0"
     );
     assert_eq!(
         metrics(Lang::Go, "chain.go", GO_INNER, "Inner"),
-        (4, 2),
-        "outer if 1 plus nested if 2 plus else-if 1"
+        (2, 2),
+        "outer if 0 plus nested if 2 plus else-if 0"
     );
 }
 
 #[test]
-fn java_else_if_chain_costs_one_per_arm() {
+fn java_else_if_chain_costs_nothing_per_arm() {
     assert_eq!(
         metrics(Lang::Java, "Chain.java", JAVA_CHAIN, "chain"),
-        (3, 1),
-        "if 1 plus two else-if arms at 1"
+        (0, 1),
+        "if 0 plus two else-if arms at 0"
     );
     assert_eq!(
         metrics(Lang::Java, "Chain.java", JAVA_INNER, "inner"),
-        (4, 2),
-        "outer if 1 plus nested if 2 plus else-if 1"
+        (2, 2),
+        "outer if 0 plus nested if 2 plus else-if 0"
     );
 }
 
 #[test]
-fn bash_elif_chain_costs_one_per_arm() {
+fn bash_elif_chain_costs_nothing_per_arm() {
     assert_eq!(
         metrics(Lang::Bash, "chain.sh", BASH_CHAIN, "classify"),
-        (3, 1),
-        "if 1 plus two elif arms at 1"
+        (0, 1),
+        "if 0 plus two elif arms at 0"
     );
     assert_eq!(
         metrics(Lang::Bash, "chain.sh", BASH_INNER, "outer"),
-        (4, 2),
-        "outer if 1 plus nested if 2 plus elif 1"
+        (2, 2),
+        "outer if 0 plus nested if 2 plus elif 0"
     );
 }

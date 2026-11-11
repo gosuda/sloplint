@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::callee::CalleePattern;
-use crate::finding::FailOn;
+use crate::finding::{Confidence, FailOn, Severity};
 use crate::lang::ALL_CONFIG_KEYS;
 use crate::rules::CATALOG;
 use crate::rules::custom::{CustomRuleSpec, validate_custom_rule_spec};
@@ -52,13 +52,22 @@ pub struct ProjectConfig {
     pub mode: Mode,
     pub baseline: String,
     pub fail_on: FailOn,
+    pub min_confidence: Confidence,
+    pub fail_on_skipped: bool,
     pub exclude: Vec<String>,
     pub extend_exclude: Vec<String>,
     pub test_globs: Vec<String>,
-    /// TOML values must fit `0..=u32::MAX` to match parser byte positions.
+    pub bench_globs: Vec<String>,
+    pub example_globs: Vec<String>,
+    pub support_globs: Vec<String>,
+    pub entry_globs: Vec<String>,
+    pub data_globs: Vec<String>,
+    /// Values above `MAX_SOURCE_FILE_BYTES` are rejected to bound per-file memory.
     pub max_file_bytes: u64,
     pub custom_rule_files: Vec<String>,
 }
+
+pub const MAX_SOURCE_FILE_BYTES: u64 = 16_777_216;
 
 impl Default for ProjectConfig {
     fn default() -> Self {
@@ -67,10 +76,17 @@ impl Default for ProjectConfig {
             languages: owned(ALL_CONFIG_KEYS),
             mode: Mode::Threshold,
             baseline: "sloplint-baseline.json".to_string(),
-            fail_on: FailOn::Deny,
+            fail_on: FailOn::At(Severity::Major),
+            min_confidence: Confidence::Low,
+            fail_on_skipped: false,
             exclude: split_csv(DEFAULT_EXCLUDE),
             extend_exclude: Vec::new(),
             test_globs: split_csv(DEFAULT_TEST_GLOBS),
+            bench_globs: split_csv(DEFAULT_BENCH_GLOBS),
+            example_globs: split_csv(DEFAULT_EXAMPLE_GLOBS),
+            support_globs: split_csv(DEFAULT_SUPPORT_GLOBS),
+            entry_globs: split_csv(DEFAULT_ENTRY_GLOBS),
+            data_globs: split_csv(DEFAULT_DATA_GLOBS),
             max_file_bytes: 2_097_152,
             custom_rule_files: Vec::new(),
         }
@@ -110,12 +126,6 @@ pub enum ConfigError {
     UnknownRule { id: String, valid: Vec<String> },
     #[error("{rule}: {message}")]
     RuleOption { rule: String, message: String },
-    #[error("{rule}: warn_at {warn_at} must be at least 1 and at most deny_at {deny_at}")]
-    Threshold {
-        rule: String,
-        warn_at: u32,
-        deny_at: u32,
-    },
     #[error("{key}: invalid glob `{glob}`: {message}")]
     Glob {
         key: String,
@@ -166,10 +176,17 @@ struct RawProject {
     mode: Option<Mode>,
     baseline: Option<String>,
     fail_on: Option<FailOn>,
+    min_confidence: Option<Confidence>,
+    fail_on_skipped: Option<bool>,
     exclude: Option<Vec<String>>,
     extend_exclude: Option<Vec<String>>,
     test_globs: Option<Vec<String>>,
-    max_file_bytes: Option<u32>,
+    bench_globs: Option<Vec<String>>,
+    example_globs: Option<Vec<String>>,
+    support_globs: Option<Vec<String>>,
+    entry_globs: Option<Vec<String>>,
+    data_globs: Option<Vec<String>>,
+    max_file_bytes: Option<i64>,
     custom_rule_files: Option<Vec<String>>,
 }
 
@@ -193,7 +210,7 @@ pub fn parse_config(toml_src: &str, origin: &str) -> Result<Config, ConfigError>
         .map_err(|error| ConfigError::from_toml(origin, toml_src, &error))?;
     let mut config = Config::default();
     if let Some(project) = raw.project {
-        merge_project(&mut config, project)?;
+        merge_project(&mut config, project, origin)?;
     }
     if let Some(languages) = raw.languages {
         merge_languages(&mut config, languages)?;
@@ -204,46 +221,62 @@ pub fn parse_config(toml_src: &str, origin: &str) -> Result<Config, ConfigError>
     if let Some(custom_rules) = raw.custom_rules {
         config.custom_rules = custom_rules;
     }
-    validate(&config)?;
+    validate(&config, origin)?;
     Ok(config)
 }
 
-fn merge_project(config: &mut Config, project: RawProject) -> Result<(), ConfigError> {
-    let target = &mut config.project;
-    if let Some(strictness) = project.strictness {
-        target.strictness = strictness;
+fn max_file_bytes_error(origin: &str, limit: i64) -> ConfigError {
+    ConfigError::Toml {
+        origin: origin.to_string(),
+        message: format!("max_file_bytes {limit} exceeds ceiling of {MAX_SOURCE_FILE_BYTES} bytes"),
     }
+}
+fn merge_project(
+    config: &mut Config,
+    project: RawProject,
+    origin: &str,
+) -> Result<(), ConfigError> {
+    let target = &mut config.project;
+    overwrite(&mut target.strictness, project.strictness);
     if let Some(languages) = project.languages {
-        for key in &languages {
-            if static_language_key(key).is_none() {
-                return Err(ConfigError::UnknownLanguage { value: key.clone() });
-            }
-        }
+        validate_language_keys(&languages)?;
         target.languages = languages;
     }
-    if let Some(mode) = project.mode {
-        target.mode = mode;
+    overwrite(&mut target.mode, project.mode);
+    overwrite(&mut target.baseline, project.baseline);
+    overwrite(&mut target.fail_on, project.fail_on);
+    overwrite(&mut target.min_confidence, project.min_confidence);
+    overwrite(&mut target.fail_on_skipped, project.fail_on_skipped);
+    overwrite(&mut target.exclude, project.exclude);
+    overwrite(&mut target.extend_exclude, project.extend_exclude);
+    overwrite(&mut target.test_globs, project.test_globs);
+    overwrite(&mut target.bench_globs, project.bench_globs);
+    overwrite(&mut target.example_globs, project.example_globs);
+    overwrite(&mut target.support_globs, project.support_globs);
+    overwrite(&mut target.entry_globs, project.entry_globs);
+    overwrite(&mut target.data_globs, project.data_globs);
+    if let Some(limit) = project.max_file_bytes {
+        let bytes = u64::try_from(limit).map_err(|_| max_file_bytes_error(origin, limit))?;
+        if bytes > MAX_SOURCE_FILE_BYTES {
+            return Err(max_file_bytes_error(origin, limit));
+        }
+        target.max_file_bytes = bytes;
     }
-    if let Some(baseline) = project.baseline {
-        target.baseline = baseline;
+    overwrite(&mut target.custom_rule_files, project.custom_rule_files);
+    Ok(())
+}
+
+fn overwrite<T>(target: &mut T, source: Option<T>) {
+    if let Some(value) = source {
+        *target = value;
     }
-    if let Some(fail_on) = project.fail_on {
-        target.fail_on = fail_on;
-    }
-    if let Some(exclude) = project.exclude {
-        target.exclude = exclude;
-    }
-    if let Some(extend_exclude) = project.extend_exclude {
-        target.extend_exclude = extend_exclude;
-    }
-    if let Some(test_globs) = project.test_globs {
-        target.test_globs = test_globs;
-    }
-    if let Some(max_file_bytes) = project.max_file_bytes {
-        target.max_file_bytes = u64::from(max_file_bytes);
-    }
-    if let Some(custom_rule_files) = project.custom_rule_files {
-        target.custom_rule_files = custom_rule_files;
+}
+
+fn validate_language_keys(languages: &[String]) -> Result<(), ConfigError> {
+    for key in languages {
+        if static_language_key(key).is_none() {
+            return Err(ConfigError::UnknownLanguage { value: key.clone() });
+        }
     }
     Ok(())
 }
@@ -265,11 +298,25 @@ fn merge_languages(
     Ok(())
 }
 
-fn validate(config: &Config) -> Result<(), ConfigError> {
+fn validate(config: &Config, origin: &str) -> Result<(), ConfigError> {
+    validate_max_file_bytes(config, origin)?;
     validate_globs(config)?;
     validate_log_callees(config)?;
     validate_rules_table(config)?;
     validate_custom_rules(config)
+}
+
+fn validate_max_file_bytes(config: &Config, origin: &str) -> Result<(), ConfigError> {
+    let limit = config.project.max_file_bytes;
+    if limit > MAX_SOURCE_FILE_BYTES {
+        return Err(ConfigError::Toml {
+            origin: origin.to_string(),
+            message: format!(
+                "max_file_bytes {limit} exceeds ceiling of {MAX_SOURCE_FILE_BYTES} bytes"
+            ),
+        });
+    }
+    Ok(())
 }
 
 fn validate_globs(config: &Config) -> Result<(), ConfigError> {
@@ -277,6 +324,11 @@ fn validate_globs(config: &Config) -> Result<(), ConfigError> {
         ("project.exclude", &config.project.exclude),
         ("project.extend_exclude", &config.project.extend_exclude),
         ("project.test_globs", &config.project.test_globs),
+        ("project.bench_globs", &config.project.bench_globs),
+        ("project.example_globs", &config.project.example_globs),
+        ("project.support_globs", &config.project.support_globs),
+        ("project.entry_globs", &config.project.entry_globs),
+        ("project.data_globs", &config.project.data_globs),
         (
             "project.custom_rule_files",
             &config.project.custom_rule_files,
@@ -323,7 +375,9 @@ fn validate_rules_table(config: &Config) -> Result<(), ConfigError> {
                 if value.as_str().and_then(crate::rules::parse_level).is_none() {
                     return Err(ConfigError::RuleOption {
                         rule: id.clone(),
-                        message: format!("invalid level {value}; use off, warn, or deny"),
+                        message: format!(
+                            "invalid level {value}; use off, info, minor, major, critical, or blocker"
+                        ),
                     });
                 }
             } else if custom {
@@ -373,47 +427,44 @@ fn default_languages() -> BTreeMap<String, LanguageConfig> {
 }
 
 const DEFAULT_LOG_CALLEES: [(&str, &str); 23] = [
-    (
-        "rust",
-        "trace!,debug!,info!,warn!,error!,anyhow!,bail!,eyre!,panic!",
-    ),
+    ("rust", "trace!,debug!,info!,warn!,error!"),
     (
         "typescript",
-        "console.log,console.info,console.warn,console.error,console.debug,logger.trace,logger.debug,logger.info,logger.warn,logger.error,new *Error",
+        "console.log,console.info,console.warn,console.error,console.debug,logger.trace,logger.debug,logger.info,logger.warn,logger.error",
     ),
     (
         "javascript",
-        "console.log,console.info,console.warn,console.error,console.debug,logger.trace,logger.debug,logger.info,logger.warn,logger.error,new *Error",
+        "console.log,console.info,console.warn,console.error,console.debug,logger.trace,logger.debug,logger.info,logger.warn,logger.error",
     ),
     (
         "python",
-        "logging.debug,logging.info,logging.warning,logging.error,logging.exception,logging.critical,logger.debug,logger.info,logger.warning,logger.error,logger.exception,logger.critical,*Error,*Exception",
+        "logging.debug,logging.info,logging.warning,logging.error,logging.exception,logging.critical,logger.debug,logger.info,logger.warning,logger.error,logger.exception,logger.critical",
     ),
     (
         "go",
-        "log.Print,log.Printf,log.Println,log.Fatal,log.Fatalf,log.Panicf,fmt.Errorf,errors.New,slog.Debug,slog.Info,slog.Warn,slog.Error",
+        "log.Print,log.Printf,log.Println,log.Fatal,log.Fatalf,log.Panicf,slog.Debug,slog.Info,slog.Warn,slog.Error",
     ),
     (
         "java",
-        "log.trace,log.debug,log.info,log.warn,log.error,log.fatal,logger.trace,logger.debug,logger.info,logger.warn,logger.error,logger.fatal,LOG.trace,LOG.debug,LOG.info,LOG.warn,LOG.error,LOG.fatal,System.err.println,System.out.println,printStackTrace",
+        "log.trace,log.debug,log.info,log.warn,log.error,log.fatal,logger.trace,logger.debug,logger.info,logger.warn,logger.error,logger.fatal,LOG.trace,LOG.debug,LOG.info,LOG.warn,LOG.error,LOG.fatal",
     ),
     (
         "kotlin",
-        "log.trace,log.debug,log.info,log.warn,log.error,logger.trace,logger.debug,logger.info,logger.warn,logger.error,LOG.trace,LOG.debug,LOG.info,LOG.warn,LOG.error,println,System.err.println,printStackTrace",
+        "log.trace,log.debug,log.info,log.warn,log.error,logger.trace,logger.debug,logger.info,logger.warn,logger.error,LOG.trace,LOG.debug,LOG.info,LOG.warn,LOG.error",
     ),
     (
         "csharp",
-        "Console.WriteLine,Console.Error.WriteLine,Debug.WriteLine,Trace.WriteLine,logger.LogTrace,logger.LogDebug,logger.LogInformation,logger.LogWarning,logger.LogError,logger.LogCritical,new *Exception",
+        "Console.WriteLine,Console.Error.WriteLine,Debug.WriteLine,Trace.WriteLine,logger.LogTrace,logger.LogDebug,logger.LogInformation,logger.LogWarning,logger.LogError,logger.LogCritical",
     ),
     ("c", "printf,puts,perror,warn,warnx"),
     (
         "cpp",
-        "printf,puts,perror,warn,warnx,spdlog::info,spdlog::warn,spdlog::error,spdlog::debug,spdlog::trace,spdlog::critical,*Error,*Exception,*_error",
+        "printf,puts,perror,warn,warnx,spdlog::info,spdlog::warn,spdlog::error,spdlog::debug,spdlog::trace,spdlog::critical",
     ),
     ("objc", "NSLog,NSLogv,printf,puts,perror,warn,warnx"),
     (
         "php",
-        "error_log,trigger_error,syslog,logger.debug,logger.info,logger.warning,logger.error,logger.critical,Log::debug,Log::info,Log::warning,Log::error,new *Exception",
+        "error_log,trigger_error,syslog,logger.debug,logger.info,logger.warning,logger.error,logger.critical,Log::debug,Log::info,Log::warning,Log::error",
     ),
     (
         "ruby",
@@ -431,27 +482,42 @@ const DEFAULT_LOG_CALLEES: [(&str, &str); 23] = [
     ("r", "message,warning,print,cat"),
     (
         "scala",
-        "logger.trace,logger.debug,logger.info,logger.warn,logger.error,log.debug,log.info,log.warn,log.error,println,new *Exception,new *Error",
+        "logger.trace,logger.debug,logger.info,logger.warn,logger.error,log.debug,log.info,log.warn,log.error,println",
     ),
     (
         "dart",
-        "print,debugPrint,log,logger.finest,logger.finer,logger.fine,logger.config,logger.info,logger.warning,logger.severe,logger.shout,logger.log,*Exception,*Error",
+        "print,debugPrint,log,logger.finest,logger.finer,logger.fine,logger.config,logger.info,logger.warning,logger.severe,logger.shout,logger.log",
     ),
     (
         "zig",
-        "std.log.err,std.log.warn,std.log.info,std.log.debug,log.err,log.warn,log.info,log.debug,panic!,compileError!",
+        "std.log.err,std.log.warn,std.log.info,std.log.debug,log.err,log.warn,log.info,log.debug",
     ),
     (
         "ocaml",
-        "Logs.debug,Logs.info,Logs.warn,Logs.err,Logs.app,Printf.eprintf,Format.eprintf,prerr_endline,failwith,invalid_arg",
+        "Logs.debug,Logs.info,Logs.warn,Logs.err,Logs.app,Printf.eprintf,Format.eprintf,prerr_endline",
     ),
     (
         "odin",
-        "log.debug,log.info,log.warn,log.error,log.fatal,log.panic,fmt.eprintln,fmt.eprintf,panic",
+        "log.debug,log.info,log.warn,log.error,log.fatal,log.panic,fmt.eprintln,fmt.eprintf",
     ),
-    ("starlark", "print,fail"),
+    ("starlark", "print"),
 ];
 
 const DEFAULT_EXCLUDE: &str = "**/node_modules/**,**/target/**,**/vendor/**,**/dist/**,**/build/**,**/.venv/**,**/venv/**,**/__pycache__/**,**/*.d.ts,**/.git/**,**/.sloplint/**";
 
-const DEFAULT_TEST_GLOBS: &str = "**/tests/**,**/test/**,**/__tests__/**,**/testdata/**,**/benches/**,**/*_test.go,**/test_*.py,**/*_test.py,**/conftest.py,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*_test.c,**/test_*.c,**/*_test.cc,**/*_test.cpp,**/*_test.cxx,**/*_unittest.cc,**/test_*.cc,**/test_*.cpp,**/*Tests.m,**/*Tests.cs,**/*Test.cs,**/*.Tests/**,**/*_test.dart,**/*Spec.scala,**/*Test.scala,**/*Suite.scala,**/*.test.js,**/*.test.jsx,**/*.test.mjs,**/*.test.cjs,**/*.spec.js,**/*.spec.jsx,**/*.spec.mjs,**/*.spec.cjs,**/*Test.java,**/*Tests.java,**/*Test.kt,**/*Tests.kt,**/Tests/**,**/*Tests.swift,**/*Test.php,**/*_spec.rb,**/*_test.rb,**/spec/**,**/*.bats,**/test_*.sh,**/*_test.sh,**/tests/**/*.sh,**/*.Tests.ps1,**/*.tests.ps1,**/tests/**/*.ps1";
+const DEFAULT_TEST_GLOBS: &str = "**/tests/**,**/test/**,**/__tests__/**,**/*_test.go,**/test_*.py,**/*_test.py,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*_test.c,**/test_*.c,**/*_test.cc,**/*_test.cpp,**/*_test.cxx,**/*_unittest.cc,**/test_*.cc,**/test_*.cpp,**/*Tests.m,**/*Tests.cs,**/*Test.cs,**/*.Tests/**,**/*_test.dart,**/*Spec.scala,**/*Test.scala,**/*Suite.scala,**/*.test.js,**/*.test.jsx,**/*.test.mjs,**/*.test.cjs,**/*.spec.js,**/*.spec.jsx,**/*.spec.mjs,**/*.spec.cjs,**/*Test.java,**/*Tests.java,**/*Test.kt,**/*Tests.kt,**/Tests/**,**/*Tests.swift,**/*Test.php,**/*_spec.rb,**/*_test.rb,**/spec/**,**/*.bats,**/test_*.sh,**/*_test.sh,**/tests/**/*.sh,**/*.Tests.ps1,**/*.tests.ps1,**/tests/**/*.ps1";
+
+const DEFAULT_BENCH_GLOBS: &str = "**/benches/**,**/bench/**,**/benchmarks/**,**/benchmark/**,**/fuzz/**,**/fuzz_targets/**,**/*_bench.rs,**/*.bench.ts,**/*.bench.tsx,**/*.bench.js,**/*.bench.mjs,**/*_bench.py,**/bench_*.py,**/*_benchmark.cc,**/*_benchmark.cpp,**/*_bench.cc,**/*_bench.cpp,**/*_fuzzer.cc,**/*_fuzzer.cpp,**/src/jmh/**";
+
+const DEFAULT_EXAMPLE_GLOBS: &str = "**/examples/**,**/example/**,**/_examples/**";
+
+const DEFAULT_SUPPORT_GLOBS: &str = "**/conftest.py,**/testutil/**,**/testutils/**,**/test_util/**,**/test_utils/**,**/test_helpers/**,**/test_support/**,**/testing/**,**/tests/common/**,**/tests/support/**,**/spec/support/**,**/__mocks__/**";
+
+const DEFAULT_ENTRY_GLOBS: &str = "**/src/main.rs,**/src/bin/**,**/build.rs,**/main.go,**/cmd/**,**/__main__.py,**/manage.py,**/scripts/**";
+
+const DEFAULT_DATA_GLOBS: &str =
+    "**/testdata/**,**/test-data/**,**/__fixtures__/**,**/__snapshots__/**";
+
+#[cfg(test)]
+#[path = "config_tests.rs"]
+mod tests;

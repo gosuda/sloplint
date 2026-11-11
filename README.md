@@ -12,18 +12,18 @@
 sloplint finds code patterns that make changes harder to review and apply: deep nesting, names hidden from search, redundant wrappers, and repeated blocks that make edits ambiguous. It gives developers and coding agents a source location, an explanation, and a suggested fix for each finding, using one CLI across 23 languages.
 
 - **23 languages**: Rust, TypeScript/TSX, JavaScript/JSX, Python, Go, Java, Kotlin, C#, C, C++, Objective-C, PHP, Ruby, Bash, PowerShell, Swift, R, Scala, Dart, Zig, OCaml, Odin, Starlark.
-- **28 builtin rules** in four families (`complexity/`, `grep/`, `slop/`, `agent/`), plus custom tree-sitter queries under `custom/`.
+- **27 builtin rules** in four families (`complexity/`, `grep/`, `slop/`, `agent/`), plus custom tree-sitter queries under `custom/`.
 - **4 strictness profiles** (`minimal`, `basic`, `standard`, `strict`), each monotone in coverage and thresholds.
 - **Ratchet mode** freezes today's findings into a baseline, so only new debt fails the build.
 - **Fix instructions** on every finding: not just what is wrong, but the shape of the change that resolves it.
 
-sloplint works from syntax alone: tree-sitter parses each file and per-language heuristics lower the tree into facts, so results are approximate by design. It is not a typechecker or a security analyzer, and it applies no patches itself; every finding carries a `fix:` line describing the change a human or agent should make.
+sloplint works from syntax alone: tree-sitter parses each file and per-language heuristics lower the tree into facts, so results are approximate by design. It is not a typechecker or a security analyzer, and it applies no patches itself; every finding carries a `fix:` line describing the change a human or agent should make. In C#, property accessors, operators, conversion operators, and destructors count as functions.
 
 ## Install
 
 Install from source with the command below. Registry installation is not supported.
 
-Release archives cover x86_64 and aarch64 on Linux, macOS, and Windows; no release has been published yet. Linux binaries link glibc dynamically and need glibc 2.39 or newer. They do not run on musl systems such as Alpine. Each release holds the archives, one `.sha256` file per archive that detects a corrupted download, and one CycloneDX SBOM per target named `sloplint-<tag>-<target>.cdx.json`. To verify provenance, run `gh attestation verify <archive> --repo gosuda/sloplint --signer-workflow gosuda/sloplint/.github/workflows/release.yml`.
+Release archives cover x86_64 and aarch64 on Linux, macOS, and Windows; no release has been published yet. Linux binaries link glibc dynamically and need glibc 2.39 or newer. They do not run on musl systems such as Alpine. Each release holds the archives, one `.sha256` file per archive that detects a corrupted download, and one CycloneDX SBOM per target named `sloplint-<tag>-<target>.cdx.json`. To verify provenance, run `gh attestation verify <archive> --repo gosuda/sloplint --signer-workflow gosuda/sloplint/.github/workflows/release.yml --source-ref refs/tags/<tag> --source-digest <commit>`, where `<commit>` is the commit that `git rev-parse <tag>^{commit}` prints in a clone you trust. Without `--source-ref` and `--source-digest`, an archive built by the release workflow from any tag or commit passes the check.
 
 Prerequisites: Git, [rustup](https://rustup.rs/), and a C/C++ toolchain for the target platform (the tree-sitter parsers and scanners compile native sources). The checked-in `rust-toolchain.toml` pins Rust 1.99.1, which `cargo` selects automatically.
 
@@ -43,24 +43,120 @@ sloplint init
 mkdir src
 printf 'pub fn handle(flag: bool) {}\n' > src/lib.rs
 sloplint check --strictness standard
-# src/lib.rs:1:8: warn: `handle` is a generic name shared by unrelated code [grep/generic-name]
+# src/lib.rs:1:8: minor/low: `handle` is a generic name shared by unrelated code [grep/generic-name]
 ```
 
 In an existing project, run `sloplint init` once to write the default configuration, then run `sloplint check`.
 
-Exit code `0` means the gate passed: the run can still list `warn` findings below `fail_on` (default `deny`). `1` means at least one reported finding is at or above `fail_on`; `2` means usage or config error; `3` means an I/O error stopped the run.
+Exit code `0` means the gate passed: the run can still list below-`fail_on` findings (default `major`). `1` means at least one reported finding is at or above `fail_on` and at or above `min_confidence`, or the `--fail-on-skipped` gate tripped; `2` means usage or config error; `3` means an I/O error stopped the run.
 
-An unreadable source file stops the run with exit `3` and reports its path and cause. Oversized, generated, and non-UTF-8 source files remain counted skips.
+An unreadable source file stops the run with exit `3` and reports its path and cause. You see skipped files only as `skipped=N` in the summary. By default they never change the exit status. The run skips oversized files, non-UTF-8 files, vanished files, symlinks, non-regular files, files with non-UTF-8 names, and generated files. A file counts as generated when a marker phrase appears in a comment of its header, which is the leading run of blank and comment lines in the first 2048 bytes. Code that follows the end of a block comment is not read. A `#` line counts as a comment in Python, Ruby, Bash, PowerShell, R, Starlark, and PHP; in the other languages only a `#!` interpreter line does. The marker phrases are `@generated`, `automatically generated`, `auto generated`, `auto-generated`, `autogenerated`, `do not edit`, and `do not modify by hand`. Pass `--fail-on-skipped` (or set `project.fail_on_skipped = true`) to fail with exit `1` instead: threshold mode fails on any skipped file, ratchet mode fails only on files newly skipped since the baseline, and the run names each gating file after the summary.
 
 ## Features
 
-- **complexity/**: nesting-weighted cognitive depth, nesting depth, mutable-statement spans, nested mutation, boolean params, import fan-out.
+- **complexity/**: nesting-weighted cognitive depth, nesting depth, mutable-statement spans, boolean params, import fan-out.
 - **grep/**: generic names, homonym definitions across files, renamed and wildcard imports, runtime-built symbols, non-literal log messages, multiline arguments.
 - **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors, single-implementation abstractions, barrel files, field-copy literals.
 - **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
-- **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs.
+- **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs. Each rule is bounded per file at 16,384 in-progress matches and 1,024 reported hits: a query that exceeds either cap reports `meta/custom-cap` for rules that are enabled and whose globs match the file, instead of returning partial results silently.
 
-`meta/parse-error` is Warn in every profile, so a default `deny` gate does not fail on it. Set the rule to Deny or pass `--fail-on warn`. An empty `project.languages` list analyzes nothing.
+`meta/parse-error` is Minor in every profile, so a default `major` gate does not fail on it. Set the rule to a higher rung or pass `--fail-on minor`. `meta/custom-cap` is Major in every profile: a capped query's results are partial, so a default `major` gate fails until the query is anchored; the cap uses the same eligibility as the rule's own findings, so turning a rule off or excluding the file silences its cap too. An empty `project.languages` list analyzes nothing.
+
+## Severity ladder
+
+Findings use five rungs, ordered `info < minor < major < critical < blocker`. Each graded rule sets four cut points (`minor_at`, `major_at`, `critical_at`, `blocker_at`); the highest cut point at or below the measured value wins. Each single-severity rule reports its level rung. `project.fail_on` names the lowest failing rung (`info|minor|major|critical|blocker|never`, default `major`). `[rules."<id>"] level` is `off` or a rung; for graded rules the level is a ceiling.
+
+## Confidence
+
+Each finding carries `low < medium < high`. `project.min_confidence` (default `low`) sets the lowest confidence counted toward the gate; `--min-confidence low|medium|high` overrides it. Low confidence findings still print, they only stop failing the run.
+
+## Code roles
+
+Files are `library`, `entry`, `test`, `support`, `bench`, or `example`; `data` paths are excluded from analysis. The file role comes from path globs alone, resolved with precedence `data > bench > example > support > test > entry > library`. Language adapters additionally mark inline `test` and `bench` regions inside a file (test functions, `cfg(test)` modules, bench functions), and Go `Example*` functions as `example` regions; a file with at least one inline test region reports `has_inline_tests`. Defaults:
+
+- `bench`: `**/benches/**,**/bench/**,**/benchmarks/**,**/benchmark/**,**/fuzz/**,**/fuzz_targets/**,**/*_bench.rs,**/*.bench.ts,**/*.bench.tsx,**/*.bench.js,**/*.bench.mjs,**/*_bench.py,**/bench_*.py,**/*_benchmark.cc,**/*_benchmark.cpp,**/*_bench.cc,**/*_bench.cpp,**/*_fuzzer.cc,**/*_fuzzer.cpp,**/src/jmh/**`
+- `example`: `**/examples/**,**/example/**,**/_examples/**`
+- `support`: `**/conftest.py,**/testutil/**,**/testutils/**,**/test_util/**,**/test_utils/**,**/test_helpers/**,**/test_support/**,**/testing/**,**/tests/common/**,**/tests/support/**,**/spec/support/**,**/__mocks__/**`
+- `entry`: `**/src/main.rs,**/src/bin/**,**/build.rs,**/main.go,**/cmd/**,**/__main__.py,**/manage.py,**/scripts/**`
+- `data`: `**/testdata/**,**/test-data/**,**/__fixtures__/**,**/__snapshots__/**`
+- `test`: `**/tests/**,**/test/**,**/__tests__/**,**/*_test.go,**/test_*.py,**/*_test.py,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*_test.c,**/test_*.c,**/*_test.cc,**/*_test.cpp,**/*_test.cxx,**/*_unittest.cc,**/test_*.cc,**/test_*.cpp,**/*Tests.m,**/*Tests.cs,**/*Test.cs,**/*.Tests/**,**/*_test.dart,**/*Spec.scala,**/*Test.scala,**/*Suite.scala,**/*.test.js,**/*.test.jsx,**/*.test.mjs,**/*.test.cjs,**/*.spec.js,**/*.spec.jsx,**/*.spec.mjs,**/*.spec.cjs,**/*Test.java,**/*Tests.java,**/*Test.kt,**/*Tests.kt,**/Tests/**,**/*Tests.swift,**/*Test.php,**/*_spec.rb,**/*_test.rb,**/spec/**,**/*.bats,**/test_*.sh,**/*_test.sh,**/tests/**/*.sh,**/*.Tests.ps1,**/*.tests.ps1,**/tests/**/*.ps1`
+
+Role shifts lower findings by role (K = keep, L1 = lower one rung, L2 = lower two rungs, O = off):
+
+| Rule | minimal | basic | standard | strict | conf | entry | test | support | bench | example | Predicate |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| complexity/cognitive-depth | Off | Off | Off | info | low | K | L1 | K | L1 | K | Scores if/loop/catch with depth weight; flags iff score >= cut and max depth >= 2; JS and TS closures bound to a name score as their own function, and unbound callbacks score as unnamed functions |
+| complexity/nesting-depth | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags control nesting depth >= cut; JS and TS closures bound to a name score as their own function, and unbound callbacks score as unnamed functions |
+| complexity/mutable-span | Off | Off | Off | info | low | K | L1 | K | O | L1 | Flags bindings written on 2+ lines spanning >= cut lines. Writes count on the innermost binding of a name |
+| complexity/boolean-params | Off | Off | Off | info | low | L1 | O | L1 | O | O | Flags exported fns with >= 2 Bool or bool-defaulted params, skipping variadic, keyword-only, and overloads |
+| complexity/import-fan-out | Off | Off | minor | major | medium | L1 | L1 | K | L1 | L1 | Counts distinct third-party package roots of module-scope imports; barrel reexport-only files skipped |
+| grep/contiguous-log-literal | Off | Off | Off | info | low | K | O | L1 | O | O | Flags message-bearing log calls with missing, dynamic, or short static messages; a literal, template, interpolation, or concatenation passes only when its longest static run reaches 8 chars. In Bash, option words such as `-n` are arguments like any other word |
+| grep/generic-name | Off | Off | minor | minor | low | L1 | O | K | O | O | Flags exported fns named from the generic denylist |
+| grep/homonym-definitions | Off | Off | Off | info | low | K | O | K | O | O | Flags free fn or type names defined in >= 8 files (5 strict) of one package; definition sites in test, bench or example code are not counted |
+| grep/multiline-argument | Off | Off | Off | info | low | K | O | L1 | O | O | Strict-only: flags collection args spanning >= 15 lines outside tests, generated files, and binding initializers |
+| grep/no-dynamic-symbol | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags runtime-built symbols except proxy forwarding and string module imports. In Python, JS, TS and Starlark a lookup inside a loop over an inline literal list of strings is exempt |
+| grep/no-rename-import | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags `import x as y` renames |
+| grep/no-wildcard-import | Off | Off | Off | info | low | K | O | L1 | O | L1 | Flags `*` imports binding open names into non-test module scope; preludes and same-file children exempt |
+| slop/barrel-file | Off | Off | minor | minor | low | K | O | K | O | O | Flags barrels re-exporting from another barrel with resolvable local candidates |
+| slop/echo-comment | Off | Off | minor | minor | medium | K | L1 | K | L1 | K | Flags comments whose stemmed word set exactly equals the function name set |
+| slop/field-copy | Off | Off | minor | minor | low | K | O | L1 | O | L1 | Flags constructions copying >= 6 fields (4 strict) from one source; method callees, kwargs bags, same-type rebuilds, and copies from the own receiver are excluded |
+| slop/passthrough-wrapper | Off | Off | Off | info | low | K | O | K | O | L1 | Flags sole-call wrappers to simple-path callees outside the receiver, params, deprecated, trait, test, and referenced uses. The receiver includes `self`, `this`, `cls`, `super`, `base`, `parent`, `static`, and the Go named receiver |
+| slop/single-impl-abstraction | Off | Off | minor | minor | medium | K | O | K | O | O | Flags private traits or interfaces with exactly one concrete same-package implementation |
+| slop/zombie-catch | Off | Off | Off | info | low | K | L1 | K | L1 | K | Strict-only: flags empty handlers at Info; log-and-rethrow arms reported, bare rethrows dropped |
+| agent/ambient-global-state | Off | Off | Off | info | low | O | O | L1 | O | O | Flags package mutables assigned in functions and env reads stored or written through the env object; a write to a shadowing local or parameter is not reported. In R, `<<-` and `->>` in a function count as global writes, and `options()` does not count as an environment write |
+| agent/catch-all-match | Off | Off | Off | info | low | K | L1 | K | L1 | L1 | Flags bare wildcards on Ident, Field, or Path scrutinees with no Some, None, Ok, or Err sibling |
+| agent/colocated-tests | Off | Off | Off | info | low | O | O | O | O | O | Strict-only: stays silent when a language has no test evidence; flags library files with public functions when no same-language test in the package covers them and no same-language test import covers the file; package is the nearest manifest dir of its own ecosystem, else `crates/<name>` for Rust under `crates/`, the empty package for other Rust files, the parent directory for Go, or the top-level directory for other languages; import keys use the last 4 segments (2 or more, single segment only for a top-level module; Python `src/` roots map to the package); relative imports resolve against the importing file; `@/` and `~/` map to `src/`, `@scope/` stays scoped, Java wildcards and non-suffix Go module prefixes do not cover; `-`/`_` match. A test in the same package that exercises a module without sharing its name or importing it does not count as coverage |
+| agent/explicit-boundary-types | Off | minor | minor | minor | medium | L1 | O | L1 | O | O | Flags exported fns in TS, Python, Kotlin, Scala, and Dart with missing annotations |
+| agent/file-token-budget | Off | Off | Off | info | low | K | O | O | L1 | L1 | Strict-only: flags files with >= 600 lines outside inline test regions; generated files skipped |
+| agent/informative-assertions | Off | Off | Off | info | low | K | K | K | O | L1 | Flags bare-name or top ==/!= asserts (Rust), Name or Attr (Python), and bool-literal True/False (Go) |
+| agent/stringly-api | Off | Off | Off | info | low | L1 | O | L1 | O | O | Flags runs of >= 3 same-kind stringly params (4 to deny); runs break on kind change or defaulted params |
+| agent/typed-error-boundary | Off | Off | Off | info | low | O | O | O | O | O | Flags exported fns whose error slot is anyhow, eyre, Box dyn Error, or an untyped throw |
+| agent/unique-patch-anchors | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags 8-line (6 strict) blocks repeated >= 3 times inside function bodies |
+| meta/parse-error | minor | minor | minor | minor | high | K | K | K | K | K | Syntax errors that stop analysis of a file |
+| meta/custom-cap | major | major | major | major | high | K | K | K | K | K | Custom-query hits over the per-file work cap; results are partial |
+| meta/invalid-suppression | major | major | major | major | high | K | K | K | K | K | Suppression directives that name unknown rules or lack a reason |
+| meta/unused-suppression | minor | minor | minor | minor | high | K | K | K | K | K | Suppression directives that match nothing |
+| custom/* | spec | spec | spec | spec | spec | K | K | K | K | K | Tree-sitter queries from configuration with per-rule severity |
+
+## Packages
+
+A file belongs to the nearest ancestor directory holding a manifest of its own ecosystem: `package.json` names JavaScript and TypeScript packages, while `pyproject.toml` and `setup.py` name Python packages; files of other languages ignore manifests. Without such an ancestor a Rust file under `crates/` groups by `crates/<name>` while any other Rust file forms the empty package; a Go file groups by its parent directory; files in other languages group by the top-level directory; a root-level file forms the empty package. Only manifests at or below the project root count, so the same file can key differently under a narrower `--root`. A manifest hidden by `project.exclude` does not define a package. Manifest files stay in the lint set, so `setup.py` is still linted as Python, and a cached run re-stamps the key when a manifest appears or disappears.
+
+## Precision
+
+A finding is true when a senior reviewer would ask for a change. Each rule was measured on the same 15 corpora of real open-source code: a sample of its findings was counted as true, noise, or wrong. A rule stays on at `standard` only when at least 80 percent of its sampled findings are true after tightening. A rule below that bar is `Off` at minimal, basic, and standard and runs only at strict, at `info` with `low` confidence. `--min-confidence` and `--fail-on` decide what gates. Counts below are the pre-tightening samples from the per-rule reports.
+
+| Rule | Sampled | True | Noise | Wrong |
+|---|---|---|---|---|
+| complexity/boolean-params | 43 | 7 | 28 | 8 |
+| complexity/cognitive-depth | 43 | 12 | 29 | 2 |
+| complexity/import-fan-out | 41 | 7 | 30 | 4 |
+| complexity/mutable-span | 56 | 0 | 52 | 4 |
+| complexity/nesting-depth | 45 | 6 | 37 | 2 |
+| grep/contiguous-log-literal | 41 | 7 | 24 | 10 |
+| grep/generic-name | 5 | 0 | 5 | 0 |
+| grep/homonym-definitions | 8 | 0 | 5 | 3 |
+| grep/multiline-argument | 42 | 1 | 39 | 2 |
+| grep/no-dynamic-symbol | 42 | 4 | 38 | 0 |
+| grep/no-rename-import | 128 | 0 | 55 | 73 |
+| grep/no-wildcard-import | 43 | 1 | 39 | 3 |
+| slop/barrel-file | 1 | 0 | 1 | 0 |
+| slop/echo-comment | 45 | 6 | 38 | 1 |
+| slop/field-copy | 2 | 0 | 1 | 1 |
+| slop/passthrough-wrapper | 42 | 0 | 20 | 22 |
+| slop/single-impl-abstraction | 32 | 0 | 31 | 1 |
+| slop/zombie-catch | 51 | 1 | 50 | 0 |
+| agent/ambient-global-state | 48 | 0 | 32 | 16 |
+| agent/catch-all-match | 50 | 4 | 46 | 0 |
+| agent/colocated-tests | 42 | 0 | 33 | 9 |
+| agent/explicit-boundary-types | 2 | 0 | 2 | 0 |
+| agent/file-token-budget | 42 | 10 | 32 | 0 |
+| agent/informative-assertions | 44 | 2 | 39 | 3 |
+| agent/stringly-api | 65 | 4 | 55 | 5 |
+| agent/typed-error-boundary | 0 | 0 | 0 | 0 |
+| agent/unique-patch-anchors | 42 | 1 | 41 | 0 |
+
+`grep/no-rename-import` (0 of 128) and `agent/colocated-tests` (0 of 42) run only at strict, at `info` with `low` confidence. `slop/zombie-catch` (1 of 51) runs only at strict, at `info` with `low` confidence. Zero-true tightenings are redefined predicates and are re-sampled; a re-sample below 80 percent true flips the rule to `Off` or `info` without further review.
 
 ## Usage
 
@@ -73,28 +169,34 @@ An unreadable source file stops the run with exit `3` and reports its path and c
 | `sloplint rules [ID]` | Show effective rule settings for the active profile |
 | `sloplint init` | Write a starter `sloplint.toml`; use `sloplint rules` for effective rule settings |
 
-`check` flags: `--format agent|human|json`, `--strictness`, `--mode threshold|ratchet`, `--fail-on warn|deny|never`, `--rule ID` (repeatable, `family/*` allowed), `--config FILE`, `--no-cache`, `--jobs N`.
+`check` flags: `--format agent|human|json`, `--strictness`, `--mode threshold|ratchet`, `--fail-on info|minor|major|critical|blocker|never`, `--min-confidence low|medium|high`, `--fail-on-skipped`, `--rule ID` (repeatable, `family/*` allowed), `--root DIR`, `--config FILE`, `--no-cache`, `--jobs N`.
 
-Unknown `--rule` selectors fail with exit 2 listing the valid rule ids.
+Unknown `--rule` selectors fail with exit 2 listing the valid rule ids. `--root DIR` pins the project root for every command; the baseline file and custom rule files still resolve under that root. Without `--root`, the config directory becomes the root when `--config` names a file, else the nearest ancestor holding `sloplint.toml` or `.git` (or the current directory) does. CI should pass `--root` with a trusted `--config` so a checkout cannot redirect the lint at another tree; without the pin, a `check` from a checkout that carries its own `sloplint.toml` lints that checkout under its own rules.
 
-Every run analyzes the project root. `PATHS` only filters reported findings. Hidden files are skipped. `.gitignore` applies up to the enclosing repository; `.ignore` applies from every ancestor directory.
+Every run analyzes the project root. With no `PATHS`, only findings under the current directory are reported and gated; when the current directory is outside the root, the whole root is reported. With `PATHS`, only findings under those paths are reported and gated. Hidden files are skipped. `.gitignore` applies up to the enclosing repository; `.ignore` applies from every ancestor directory.
 
 ### Configuration
 
-`--config FILE` names a file that must exist; without `--config`, a missing `sloplint.toml` falls back to defaults. Configuration and custom rule files are capped at 1 MiB per file (16 MiB total for custom rules); baselines are capped at 512 MiB and 1,000,000 entries.
+`--config FILE` names a file that must exist; without `--config`, the root's `sloplint.toml` applies when present and defaults apply otherwise. Configuration and custom rule files are capped at 1 MiB per file (16 MiB total for custom rules); baselines are capped at 512 MiB and 1,000,000 entries total across findings and skipped paths.
 
 Rule option names and values are validated even when a rule is disabled or filtered out. An invalid threshold or unknown option fails with exit `2`; changing strictness cannot hide the error.
+Project keys: `strictness`, `languages`, `mode`, `baseline`, `fail_on` (rung or `never`), `min_confidence` (`low|medium|high`), `fail_on_skipped` (default `false`), `exclude`, `extend_exclude`, `test_globs`, `bench_globs`, `example_globs`, `support_globs`, `entry_globs`, `data_globs`, `max_file_bytes`, `custom_rule_files`. Rule tables accept `level = "off"` or a rung, graded cut points `minor_at`, `major_at`, `critical_at`, `blocker_at` (each at least 1, non-decreasing in rung order), and every other option key of that rule's preset. For example, `[rules."grep/generic-name"]` accepts `names` to replace the built-in denylist. Custom rules accept `severity` as a rung and optional `confidence` (default `medium`).
+Keep `max_file_bytes` at or below 16777216. The default is 2097152. A larger value fails with exit `2` and names the ceiling.
 
 ```toml
 [project]
 strictness = "standard"
+fail_on = "major"
+min_confidence = "low"
 
 [rules."complexity/cognitive-depth"]
-deny_at = 18                          # warn_at still comes from the preset
+major_at = 18                          # minor_at still comes from the preset
 
 [rules."agent/colocated-tests"]
-level = "warn"                        # enables a rule the standard profile leaves off
+level = "minor"                       # enables a rule the standard profile leaves off
 ```
+
+A `[languages.<key>]` table sets `log_callees`, the call names the language treats as log calls. `grep/contiguous-log-literal` and `slop/zombie-catch` read it. `sloplint init` writes one such table per language with the default names.
 
 ### Ratchet mode
 
@@ -103,23 +205,22 @@ sloplint baseline               # writes sloplint-baseline.json
 sloplint check --mode ratchet   # reports only findings absent from the baseline
 ```
 
-`project.baseline` is relative to the project root. Paths that resolve outside the root are rejected.
+`project.baseline` is relative to the project root. Paths that resolve outside the root are rejected. A baseline written before the skipped set existed records no skipped paths, so enabling `fail_on_skipped` with such a baseline reports every skipped file as newly skipped until `sloplint baseline` is rerun. The recorded skipped set is a snapshot like the findings: a path stays known until the baseline is rewritten, even if the file was analyzed in between.
 
 `sloplint baseline` refuses to replace an existing regular file that is not a sloplint baseline, such as `sloplint.toml` or a source file: it exits 2 and leaves the file untouched; delete the file to record a baseline there.
 
-The cache is per-user and never stored in the checkout. It lives in `sloplint/<hash of the project root>/cache-v2/` under `$XDG_CACHE_HOME` when that is absolute, else under `~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`. `--no-cache` skips it. A damaged or mismatched cache falls back to a fresh analysis.
+The cache is per-user and never stored in the checkout. It lives in `sloplint/<hash of the project root>/cache-v2/` under `$XDG_CACHE_HOME` when that is absolute, else under `~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`. The key includes a hash of the running executable. `--no-cache` skips it. A damaged or mismatched cache falls back to a fresh analysis.
 
 sloplint warns and runs without the cache when the cache directory is a symlink, is not a directory, is writable by group or others, or sits inside the project root, when no home directory is set, or when the running executable cannot be read.
 
 Older releases left a `cache-v1.bin` file in the per-user cache directory, and the oldest kept a `.sloplint` directory in the checkout. sloplint never reads or removes either; delete them by hand to reclaim the space.
 
-### Custom rules
-
 ```toml
 [[custom_rules]]
 id = "custom/no-unwrap-in-lib"
 language = "rust"
-severity = "deny"
+severity = "major"
+confidence = "medium"
 message = "`{method}()` in library code"
 why = "unwrap panics on the error path and hides the failure from callers"
 fix = "propagate with ? and return a typed error"
@@ -130,7 +231,7 @@ query = '''
 '''
 ```
 
-Files named by `project.custom_rule_files` load even when hidden or gitignored. An absolute pattern, a pattern containing `..`, or a symlinked rule file is a configuration error.
+Files named by `project.custom_rule_files` load even when hidden or gitignored. `project.exclude` and `project.extend_exclude` do not apply to custom rule files, and files under `.git/` are never loaded. An unreadable directory inside the selection fails the run. An absolute pattern, a pattern containing `..`, or a symlinked rule file is a configuration error.
 
 ### Suppressions
 
@@ -142,13 +243,21 @@ Suppress inline only where you cannot fix the code yet. A reason is required. A 
 
 A directive covers its own comment and the next line. `sloplint-allow-file(rule): reason` covers the whole file.
 
+When `complexity/cognitive-depth` and `complexity/nesting-depth` report the same function, only the cognitive-depth finding is kept. Suppressing one of the two rules leaves the other in place.
+
 ### Output formats
 
 `--format agent` (default, stable machine-parseable text), `--format human` (annotated snippets with color), `--format json` (one document: findings, rules fired, summary).
 
+Agent lines read `path:line:col: <rung>/<confidence>: message [rule]`, followed by `context:` and `fix:` lines. The summary reads `summary: strictness=S files=N findings=N blocker=N critical=N major=N minor=N info=N baselined=N stale=N skipped=N`. JSON findings carry `"severity"` and `"confidence"`; the JSON summary carries one count per rung. Human output uses one color per rung. `sloplint rules` shows `level`, `confidence`, `roles=entry:..,test:..,support:..,bench:..,example:..`, and cut points for graded rules.
+
 ## Development
 
-Build, test, and self-lint commands are in [CONTRIBUTING.md](CONTRIBUTING.md).
+Build, test, and lint commands are in [CONTRIBUTING.md](CONTRIBUTING.md). CI runs the self-lint gate below from the release binary. Run the same command locally:
+
+```bash
+sloplint check crates --format agent --strictness standard --mode threshold --fail-on minor
+```
 
 ## Contributing
 

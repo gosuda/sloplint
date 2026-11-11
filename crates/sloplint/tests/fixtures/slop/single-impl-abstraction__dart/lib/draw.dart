@@ -1,3 +1,3 @@
-abstract class Draw {
+abstract class _Draw {
   void draw();
 }

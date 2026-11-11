@@ -2,7 +2,7 @@
 
 use sloplint_core::lang::Lang;
 
-use super::support::{DEPTH, on_default_stack, with_facts, within_linear_budget};
+use super::support::{on_default_stack, with_facts, within_linear_budget};
 
 /// A substitution nested at every level parses cleanly on a default stack, yields one call per
 /// level, and analyzes within the linear budget.
@@ -13,10 +13,10 @@ use super::support::{DEPTH, on_default_stack, with_facts, within_linear_budget};
 #[test]
 fn nested_command_substitutions_yield_one_call_per_level() {
     on_default_stack(|| {
-        let source = format!("echo {}true{}\n", "$(".repeat(DEPTH), ")".repeat(DEPTH));
-        within_linear_budget(|| {
+        within_linear_budget(|depth| {
+            let source = format!("echo {}true{}\n", "$(".repeat(depth), ")".repeat(depth));
             with_facts(Lang::Bash, "deep.sh", &source, |facts| {
-                assert_eq!(facts.calls.len(), DEPTH + 1);
+                assert_eq!(facts.calls.len(), depth + 1);
             });
         });
     });

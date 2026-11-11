@@ -1,1 +1,1 @@
-src/lib.rs:1 deny complexity/boolean-params
+src/lib.rs:1 info complexity/boolean-params

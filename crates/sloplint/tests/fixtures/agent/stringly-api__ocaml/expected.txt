@@ -1,1 +1,1 @@
-src/lib.ml:1 deny agent/stringly-api
+src/lib.ml:1 info agent/stringly-api

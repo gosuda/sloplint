@@ -1,1 +1,1 @@
-src/lib.ml:1 warn grep/generic-name
+src/lib.ml:1 minor grep/generic-name

@@ -1,1 +1,1 @@
-pos.c:2 warn agent/unique-patch-anchors
+pos.c:2 info agent/unique-patch-anchors

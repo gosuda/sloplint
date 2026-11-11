@@ -1,1 +1,1 @@
-src/service.rs:1 warn agent/colocated-tests
+src/service.rs:1 info agent/colocated-tests

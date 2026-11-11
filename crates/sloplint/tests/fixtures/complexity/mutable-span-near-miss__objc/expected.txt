@@ -1,0 +1,1 @@
+# shadowed-block.m: outer `total` is written once on line 3; the line-24 write targets the block parameter, so misattribution would span 21 and fire.

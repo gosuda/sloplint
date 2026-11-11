@@ -1,1 +1,1 @@
-a.rb:3 deny slop/zombie-catch
+a.rb:3 info slop/zombie-catch

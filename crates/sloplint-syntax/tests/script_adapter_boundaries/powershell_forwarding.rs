@@ -7,6 +7,7 @@
 
 use sloplint_core::facts::{ArgShape, FileFacts};
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 const FORWARD: &str = "function Forward($x) {\n  Render-Greeting $x\n}\n";
@@ -19,7 +20,7 @@ fn observe<R>(source: &str, read: impl FnOnce(&FileFacts<'_>) -> R) -> R {
         lang: Lang::PowerShell,
         path: "a.ps1",
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "a.ps1 parses cleanly");

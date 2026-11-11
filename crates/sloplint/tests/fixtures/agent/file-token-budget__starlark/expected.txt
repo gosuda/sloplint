@@ -1,1 +1,1 @@
-a.bzl:1 deny agent/file-token-budget
+a.bzl:1 info agent/file-token-budget

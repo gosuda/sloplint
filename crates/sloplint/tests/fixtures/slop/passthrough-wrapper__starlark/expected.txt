@@ -1,1 +1,1 @@
-a.bzl:4 warn slop/passthrough-wrapper
+a.bzl:4 info slop/passthrough-wrapper

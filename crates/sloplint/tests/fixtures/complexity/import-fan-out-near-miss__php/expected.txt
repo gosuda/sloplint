@@ -1,1 +1,1 @@
-# 9 modules (warn at 10): no finding.
+# 9 modules (minor at 10): no finding.

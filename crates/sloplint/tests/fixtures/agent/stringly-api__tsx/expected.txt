@@ -1,1 +1,1 @@
-src/order.tsx:1 deny agent/stringly-api
+src/order.tsx:1 info agent/stringly-api

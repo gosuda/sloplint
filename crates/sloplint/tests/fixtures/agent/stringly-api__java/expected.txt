@@ -1,1 +1,1 @@
-src/Orders.java:2 deny agent/stringly-api
+src/Orders.java:2 info agent/stringly-api

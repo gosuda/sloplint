@@ -1,11 +1,13 @@
-import logging
+try:
+    import optional_dep
+    HAS_OPT = True
+except ImportError:
+    HAS_OPT = False
 
-logger = logging.getLogger(__name__)
 
-
-def load(path):
-    try:
-        return open(path).read()
-    except OSError:
-        logger.error("load failed")
-        return None
+class Resource:
+    def __del__(self):
+        try:
+            self.close()
+        except OSError:
+            pass

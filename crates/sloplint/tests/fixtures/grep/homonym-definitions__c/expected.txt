@@ -1,1 +1,1 @@
-a.c:1 warn grep/homonym-definitions
+a.c:1 info grep/homonym-definitions

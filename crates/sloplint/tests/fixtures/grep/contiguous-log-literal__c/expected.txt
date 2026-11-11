@@ -1,2 +1,2 @@
-pos.c:4 deny grep/contiguous-log-literal
-pos.c:5 deny grep/contiguous-log-literal
+pos.c:4 info grep/contiguous-log-literal
+pos.c:5 info grep/contiguous-log-literal

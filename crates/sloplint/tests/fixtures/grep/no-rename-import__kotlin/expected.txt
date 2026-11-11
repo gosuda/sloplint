@@ -1,2 +1,3 @@
-src/imports.kt:1 warn grep/no-rename-import
-src/imports.kt:2 warn grep/no-rename-import
+# Positive: two aliased imports, each fires once; strict rung info.
+src/imports.kt:1 info grep/no-rename-import
+src/imports.kt:2 info grep/no-rename-import

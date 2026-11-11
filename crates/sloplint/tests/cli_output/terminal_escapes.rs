@@ -5,13 +5,11 @@
 //! defect stays invisible. Controls are C0 (except tab and the line feed that ends a line),
 //! DEL, and C1; everything else, including valid non-ASCII text, must come through unchanged.
 
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::{Command, Output};
 
 use serde::Deserialize;
-use sloplint::TerminalText;
 
 const HOSTILE_LINE: &str = "pub fn handle() {} // \u{1b}]52;c;Zm9v\u{7} \u{9b}2J \u{7f} end";
 const HOSTILE_LINE_VISIBLE: &str = "pub fn handle() {} // \\x1b]52;c;Zm9v\\x07 \\u{9b}2J \\x7f end";
@@ -22,7 +20,7 @@ const CUSTOM_RULE: &str = "custom/no-dbg-macro";
 const CONFIG: &str = r#"[[custom_rules]]
 id = "custom/no-dbg-macro"
 language = "rust"
-severity = "warn"
+severity = "minor"
 message = "bad \u001b]0;pwn\u0007 macro {m}"
 why = "why \u001b[2K\u009b"
 fix = "fix \u001b[1A\u007f"
@@ -169,7 +167,7 @@ fn agent_output_shows_controls_as_visible_escapes() {
     );
     assert_contains(
         stdout,
-        &format!("warn: {MESSAGE_VISIBLE} [{CUSTOM_RULE}]\n"),
+        &format!("minor/medium: {MESSAGE_VISIBLE} [{CUSTOM_RULE}]\n"),
         "message",
     );
     assert_contains(stdout, &format!("  fix: {FIX_VISIBLE}\n"), "fix");
@@ -181,7 +179,7 @@ fn agent_output_shows_controls_as_visible_escapes() {
     #[cfg(unix)]
     assert_contains(
         stdout,
-        "dir/\\x1b[2J\\u{9b}evil\\x07.rs:1:8: warn:",
+        "dir/\\x1b[2J\\u{9b}evil\\x07.rs:1:8: minor/low:",
         "path with controls",
     );
 }
@@ -291,7 +289,9 @@ fn rules_command_escapes_text_and_keeps_json_lossless() {
     assert_inert(&agent.stdout, "rules stdout");
     assert_contains(
         text(&agent.stdout),
-        &format!("{CUSTOM_RULE} level=warn | bad \\x1b]0;pwn\\x07 macro {{m}}\n"),
+        &format!(
+            "{CUSTOM_RULE} level=minor confidence=medium roles=entry:keep,test:keep,support:keep,bench:keep,example:keep | bad \\x1b]0;pwn\\x07 macro {{m}}\n"
+        ),
         "rules summary line",
     );
     assert_contains(
@@ -323,7 +323,7 @@ fn rules_command_escapes_text_and_keeps_json_lossless() {
 fn error_text_shows_controls_as_visible_escapes() {
     let tmp = project(&[(
         "sloplint.toml",
-        "[rules.\"bad\\u001b]0;x\\u0007\"]\nlevel = \"warn\"\n",
+        "[rules.\"bad\\u001b]0;x\\u0007\"]\nlevel = \"minor\"\n",
     )]);
     let out = sloplint(tmp.path(), &["check", "--no-cache"]);
     assert_eq!(out.status.code(), Some(2), "config error exit code");
@@ -336,119 +336,55 @@ fn error_text_shows_controls_as_visible_escapes() {
     assert!(out.stdout.is_empty(), "stdout must stay empty on error");
 }
 
-// A027: the shared formatter escapes the documented controls and nothing around them.
+// F17: a line feed in a repository id must not forge a workflow command on stderr.
 #[test]
-fn terminal_text_escapes_exactly_the_documented_controls() {
-    let controls = "\u{0}\u{1}\u{7}\u{1b}\u{1f}\u{7f}\u{80}\u{9b}\u{9f}";
-    assert_eq!(
-        TerminalText::line(controls).to_string(),
-        "\\x00\\x01\\x07\\x1b\\x1f\\x7f\\u{80}\\u{9b}\\u{9f}",
-        "C0, DEL, and C1 must each show as an escape"
-    );
-    let untouched = concat!(
-        "tab\t space ~ quote\" backslash\\ ",
-        "\u{a0}\u{a1}\u{e9}\u{200d}\u{202f}\u{1f980}"
-    );
-    assert_eq!(
-        TerminalText::line(untouched).to_string(),
-        untouched,
-        "line mode must not change tabs, quotes, or non-control Unicode"
-    );
-    assert_eq!(
-        TerminalText::block(untouched).to_string(),
-        untouched,
-        "block mode must not change tabs, quotes, or non-control Unicode"
-    );
-}
-
-// The scanner skips 16-byte blocks that hold no control byte, so every control kind must be
-// found at every offset around a block edge, in both renderings, with the same escapes as a
-// character-by-character reference.
-#[test]
-fn terminal_text_finds_controls_at_every_offset_around_block_edges() {
-    fn reference(text: &str, keep_newlines: bool) -> String {
-        let mut shown = String::new();
-        for c in text.chars() {
-            match c {
-                '\t' => shown.push(c),
-                '\n' if keep_newlines => shown.push(c),
-                '\0'..='\u{1f}' | '\u{7f}' => shown.push_str(&format!("\\x{:02x}", u32::from(c))),
-                '\u{80}'..='\u{9f}'
-                | '\u{61c}'
-                | '\u{200e}'
-                | '\u{200f}'
-                | '\u{202a}'..='\u{202e}'
-                | '\u{2066}'..='\u{2069}' => shown.push_str(&format!("\\u{{{:x}}}", u32::from(c))),
-                _ => shown.push(c),
-            }
-        }
-        shown
-    }
-    let controls = [
-        '\u{0}', '\n', '\u{1b}', '\u{1f}', '\u{7f}', '\u{80}', '\u{9b}', '\u{9f}', '\u{a0}',
-        '\u{61c}', '\u{202e}', '\u{2069}',
-    ];
-    let texts = controls.iter().flat_map(|control| {
-        ["a", "\u{e9}", "\t"].into_iter().flat_map(move |filler| {
-            (0..40)
-                .map(move |pad| format!("{}{control}{}", filler.repeat(pad), "z".repeat(pad % 17)))
-        })
-    });
-    for text in texts {
-        for (shown, keep_newlines) in [
-            (TerminalText::line(&text), false),
-            (TerminalText::block(&text), true),
-        ] {
-            let expected = reference(&text, keep_newlines);
-            let mut written = Vec::new();
-            shown
-                .write_escaped(&mut written)
-                .unwrap_or_else(|e| panic!("write to a Vec: {e}"));
-            assert_eq!(shown.to_string(), expected, "Display of {text:?}");
-            assert_eq!(written, expected.as_bytes(), "write_escaped of {text:?}");
-            assert_eq!(shown.into_text(), expected, "into_text of {text:?}");
-        }
-    }
-}
-
-// A027: a field stays on one output line, while block text keeps its line feeds.
-#[test]
-fn terminal_text_line_escapes_line_breaks_and_block_keeps_line_feeds() {
-    assert_eq!(
-        TerminalText::line("a\nb\rc").to_string(),
-        "a\\x0ab\\x0dc",
-        "line mode must escape both the line feed and the carriage return"
-    );
-    assert_eq!(
-        TerminalText::block("a\nb\rc").to_string(),
-        "a\nb\\x0dc",
-        "block mode must keep the line feed and escape the carriage return"
-    );
-}
-
-// A027: clean text is borrowed, and escaping already-escaped text changes nothing.
-#[test]
-fn terminal_text_borrows_clean_text_and_escaping_is_idempotent() {
-    let clean = "no controls \u{e9}\t";
+fn error_text_never_starts_a_line_with_a_workflow_command() {
+    let tmp = project(&[(
+        "sloplint.toml",
+        "[rules.\"x\\u000a::warning file=a::forged\"]\nlevel = \"minor\"\n",
+    )]);
+    let out = sloplint(tmp.path(), &["check", "--no-cache"]);
+    assert_eq!(out.status.code(), Some(2), "config error exit code");
+    let stderr = text(&out.stderr);
     assert!(
-        matches!(TerminalText::line(clean).into_text(), Cow::Borrowed(text) if text == clean),
-        "clean text was copied"
+        !stderr.contains("\n::warning"),
+        "stderr forges a workflow command:\n{stderr}"
     );
-    let once = TerminalText::line("a\u{1b}[2J\u{9b}")
-        .into_text()
-        .into_owned();
-    assert_eq!(
-        once, "a\\x1b[2J\\u{9b}",
-        "ESC and the C1 character must show as escapes"
+    assert_contains(
+        stderr,
+        "\\x0a::warning file=a::forged",
+        "escaped line feed in stderr",
     );
+    assert!(out.stdout.is_empty(), "stdout must stay empty on error");
+}
+
+// F17: block text keeps structural line feeds, so line-start field values must be defused.
+#[test]
+fn rules_listing_defuses_workflow_commands_at_line_starts() {
+    let config = concat!(
+        "[[custom_rules]]\n",
+        "id = \"custom/hostile-line\"\n",
+        "language = \"rust\"\n",
+        "severity = \"minor\"\n",
+        "message = \"bad\\n::warning file=a::forged\"\n",
+        "why = \"why the rule exists\"\n",
+        "fix = \"remove the call\"\n",
+        "query = '''\n",
+        "(macro_invocation macro: (identifier) @m (#eq? @m \"dbg\")) @match\n",
+        "'''\n",
+    );
+    let tmp = project(&[("sloplint.toml", config), ("a.rs", "fn c() { dbg!(1); }\n")]);
+    let out = sloplint(tmp.path(), &["rules"]);
+    assert_eq!(out.status.code(), Some(0), "rules exit code");
+    let stdout = text(&out.stdout);
     assert!(
-        matches!(TerminalText::line(&once).into_text(), Cow::Borrowed(_)),
-        "escaped text still holds a control character"
+        !stdout.contains("\n::warning"),
+        "rules listing forges a workflow command:\n{stdout}"
     );
-    assert_eq!(
-        TerminalText::line(&once).to_string(),
-        once,
-        "escaping already-escaped text must not change it"
+    assert_contains(
+        stdout,
+        "\\x3a:warning file=a::forged",
+        "defused line start in rules listing",
     );
 }
 
@@ -487,25 +423,11 @@ fn valid_unicode_and_tabs_pass_through_unchanged() {
     assert_contains(text(&plain), "\u{e9} \u{a9}\u{a0}\u{ff}", "human snippet");
 }
 
-const BIDI_CONTROLS: &str = "\u{61c}\u{200e}\u{200f}\u{202a}\u{202b}\u{202c}\u{202d}\u{202e}\u{2066}\u{2067}\u{2068}\u{2069}";
-const BIDI_CONTROLS_VISIBLE: &str = "\\u{61c}\\u{200e}\\u{200f}\\u{202a}\\u{202b}\\u{202c}\\u{202d}\\u{202e}\\u{2066}\\u{2067}\\u{2068}\\u{2069}";
+pub(super) const BIDI_CONTROLS: &str = "\u{61c}\u{200e}\u{200f}\u{202a}\u{202b}\u{202c}\u{202d}\u{202e}\u{2066}\u{2067}\u{2068}\u{2069}";
+pub(super) const BIDI_CONTROLS_VISIBLE: &str = "\\u{61c}\\u{200e}\\u{200f}\\u{202a}\\u{202b}\\u{202c}\\u{202d}\\u{202e}\\u{2066}\\u{2067}\\u{2068}\\u{2069}";
 
 #[test]
-fn terminal_text_escapes_unicode_bidi_controls() {
-    assert_eq!(
-        TerminalText::line(BIDI_CONTROLS).to_string(),
-        BIDI_CONTROLS_VISIBLE,
-        "Unicode bidi controls must each show as an escape"
-    );
-    assert_eq!(
-        TerminalText::block(BIDI_CONTROLS).to_string(),
-        BIDI_CONTROLS_VISIBLE,
-        "Unicode bidi controls in block mode must each show as an escape"
-    );
-}
-
-#[test]
-fn bidi_controls_render_escaped_in_terminal_output_and_raw_in_json() {
+fn bidi_controls_render_escaped_in_terminal_output_and_json() {
     let bidi_source = format!("pub fn handle() {{}} // {BIDI_CONTROLS}\n");
     let tmp = project(&[("sloplint.toml", ""), ("a.rs", &bidi_source)]);
     #[cfg(unix)]
@@ -548,6 +470,30 @@ fn bidi_controls_render_escaped_in_terminal_output_and_raw_in_json() {
 
     let json = sloplint(tmp.path(), &["check", "--no-cache", "--format", "json"]);
     assert_eq!(json.status.code(), Some(0), "json exit code");
+    let json_text = text(&json.stdout);
+    for (control, visible) in [
+        ("\u{61c}", "\\u061c"),
+        ("\u{200e}", "\\u200e"),
+        ("\u{200f}", "\\u200f"),
+        ("\u{202a}", "\\u202a"),
+        ("\u{202b}", "\\u202b"),
+        ("\u{202c}", "\\u202c"),
+        ("\u{202d}", "\\u202d"),
+        ("\u{202e}", "\\u202e"),
+        ("\u{2066}", "\\u2066"),
+        ("\u{2067}", "\\u2067"),
+        ("\u{2068}", "\\u2068"),
+        ("\u{2069}", "\\u2069"),
+    ] {
+        assert!(
+            json_text.contains(visible),
+            "json stdout must escape {visible} instead of the raw control:\n{json_text}"
+        );
+        assert!(
+            !json_text.contains(control),
+            "json stdout must not carry the raw {visible} control:\n{json_text}"
+        );
+    }
     let doc: Document =
         sonic_rs::from_slice(&json.stdout).unwrap_or_else(|e| panic!("stdout is not JSON: {e}"));
     let a_finding = doc
@@ -558,13 +504,13 @@ fn bidi_controls_render_escaped_in_terminal_output_and_raw_in_json() {
     assert_eq!(
         a_finding.context,
         format!("pub fn handle() {{}} // {BIDI_CONTROLS}"),
-        "JSON context must keep raw bidi controls"
+        "JSON context must round-trip the bidi controls"
     );
     #[cfg(unix)]
     assert!(
         doc.findings
             .iter()
             .any(|row| row.path == "dir/\u{202e}evil\u{202c}.rs"),
-        "JSON path must keep raw bidi controls"
+        "JSON path must round-trip the bidi controls"
     );
 }

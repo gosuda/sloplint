@@ -1,1 +1,1 @@
-# Doc adds an Errors section: similarity below 0.65.
+# Near-miss: comment first ident equals the function name.

@@ -1,1 +1,2 @@
-src/Runner.cs:5 warn grep/multiline-argument
+# Positive: Collection arg spans lines 6-22 (17 lines >= strict Minor(15)); statement call.
+src/Runner.cs:5 info grep/multiline-argument

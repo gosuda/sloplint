@@ -1,4 +1,4 @@
-public class KeeperB {
-    public void ReconcileLedger() {
+public class ReconcileLedger {
+    public void Apply() {
     }
 }

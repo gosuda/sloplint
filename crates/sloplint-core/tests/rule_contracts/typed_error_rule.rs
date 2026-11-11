@@ -3,7 +3,7 @@
 
 use sloplint_core::lang::Lang;
 use sloplint_core::suppress::RulePattern;
-use sloplint_core::{Config, FileFacts, Finding, RuleFilter, RuleSet};
+use sloplint_core::{Config, FileFacts, Finding, RuleFilter, RuleSet, Strictness};
 
 use crate::support::{facts_for, function, pos_of};
 
@@ -18,7 +18,9 @@ const RUST: &str = "pub fn run() {}\n";
 fn boundary_findings(facts: &FileFacts<'_>) -> Vec<Finding> {
     let exact = RulePattern::Exact("agent/typed-error-boundary".into());
     let filter = RuleFilter(vec![exact]);
-    let rules = RuleSet::new(&Config::default(), &filter).expect("the catalog rule resolves");
+    let mut config = Config::default();
+    config.project.strictness = Strictness::Strict;
+    let rules = RuleSet::new(&config, &filter).expect("the catalog rule resolves");
     rules.check_file(facts)
 }
 

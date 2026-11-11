@@ -26,31 +26,51 @@ fn shipped(root: &Path, args: &[&str]) -> (Option<i32>, String, String) {
 #[test]
 fn boundary_cli_exit_codes() {
     let (_t, root) = tmp();
-    put(&root, "sloplint.toml", "");
-    put(&root, "src/lib.rs", "pub fn handle(a: bool, b: bool) {}\n");
+    put(
+        &root,
+        "sloplint.toml",
+        "[rules.\"complexity/import-fan-out\"]\nminor_at = 2\nmajor_at = 3\ncritical_at = 4\nblocker_at = 5\n",
+    );
+    put(
+        &root,
+        "src/lib.rs",
+        "use alpha::item;\nuse beta::item;\nuse gamma::item;\n",
+    );
     let strict = ["check", "--no-cache", "--strictness", "strict"];
     let (code, stdout, _) = shipped(&root, &strict);
-    assert_eq!(code, Some(1), "a deny finding fails the default gate");
+    assert_eq!(code, Some(1), "a major finding fails the default gate");
     assert!(
-        stdout.contains("[complexity/boolean-params]"),
-        "the deny finding is reported: {stdout}"
+        stdout.contains("[complexity/import-fan-out]"),
+        "the major finding is reported: {stdout}"
     );
     let never = [strict.as_slice(), &["--fail-on", "never"]].concat();
     assert_eq!(shipped(&root, &never).0, Some(0), "--fail-on never passes");
-    let warn_only = shipped(&root, &["check", "--no-cache"]);
-    assert_eq!(warn_only.0, Some(0), "warn findings pass the default gate");
+    let minor_only = shipped(&root, &["check", "--no-cache"]);
+    assert_eq!(
+        minor_only.0,
+        Some(0),
+        "minor findings pass the default gate"
+    );
     let (code, stdout, _) = shipped(&root, &["check", "--bogus-flag"]);
     assert_eq!(code, Some(2), "a usage error exits 2");
     assert!(stdout.is_empty(), "a usage error prints nothing on stdout");
 }
 
-// A047: the baseline suppresses the denies it records, and `init` with and without a
+// A047: the baseline suppresses the majors it records, and `init` with and without a
 // configuration already present.
 #[test]
 fn boundary_cli_baseline_and_init_commands() {
     let (_t, root) = tmp();
-    put(&root, "sloplint.toml", "");
-    put(&root, "src/lib.rs", "pub fn handle(a: bool, b: bool) {}\n");
+    put(
+        &root,
+        "sloplint.toml",
+        "[rules.\"complexity/import-fan-out\"]\nminor_at = 2\nmajor_at = 3\ncritical_at = 4\nblocker_at = 5\n",
+    );
+    put(
+        &root,
+        "src/lib.rs",
+        "use alpha::item;\nuse beta::item;\nuse gamma::item;\n",
+    );
     let strict = ["check", "--no-cache", "--strictness", "strict"];
     assert_eq!(
         shipped(&root, &strict).0,
@@ -66,14 +86,17 @@ fn boundary_cli_baseline_and_init_commands() {
     assert_eq!(
         shipped(&root, &ratchet).0,
         Some(0),
-        "the baseline suppresses the denies it recorded"
+        "the baseline suppresses the major findings it recorded"
     );
     let (code, stdout, _) = shipped(&root, &["init"]);
     assert_eq!(code, Some(2), "init refuses to overwrite a configuration");
     assert!(stdout.is_empty(), "a refused init prints nothing on stdout");
     let kept = std::fs::read_to_string(root.join("sloplint.toml"))
         .unwrap_or_else(|e| panic!("read config: {e}"));
-    assert_eq!(kept, "", "a refused init leaves the configuration alone");
+    assert!(
+        kept.contains("[rules.\"complexity/import-fan-out\"]"),
+        "a refused init leaves the configuration alone: {kept:?}"
+    );
     let (_fresh, empty) = tmp();
     assert_eq!(
         shipped(&empty, &["init"]).0,

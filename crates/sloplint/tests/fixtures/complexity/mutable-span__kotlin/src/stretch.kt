@@ -1,20 +1,21 @@
 fun stretch(input: Int): Int {
     var total = input
+    total += 1
     val a = total + 1
-    val b = a + 1
-    val c = b + 1
-    val d = c + 1
-    val e = d + 1
-    val f = e + 1
-    val g = f + 1
-    val h = g + 1
-    val i = h + 1
-    val j = i + 1
-    val k = j + 1
-    val m = k + 1
-    val n = m + 1
-    val o = n + 1
-    val p = o + 1
-    total += p
+    val b = total + 2
+    val c = total + 3
+    val d = total + 4
+    val e = total + 5
+    val f = total + 6
+    val g = total + 7
+    val h = total + 8
+    val i = total + 9
+    val j = total + 10
+    val k = total + 11
+    val m = total + 12
+    val n = total + 13
+    val o = total + 14
+    val p = total + 15
+    total += a
     return total
 }

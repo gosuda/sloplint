@@ -5,11 +5,11 @@
 //! rustc rejects are asserted as still-errors, so the grammar cannot drift
 //! toward accepting invalid code.
 
-use std::sync::LazyLock;
-
-use sloplint_core::facts::CallKind;
+use sloplint_core::facts::{CallKind, Visibility};
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
+use std::sync::LazyLock;
 
 static NO_CUSTOM: LazyLock<CustomRules> =
     LazyLock::new(|| CustomRules::compile(&[]).expect("empty custom rules compile"));
@@ -19,7 +19,7 @@ fn run<'s>(path: &'s str, source: &'s str) -> Analysis<'s> {
         lang: Lang::Rust,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     analyze(&mut Parsers::new(), &input, &NO_CUSTOM)
 }
@@ -79,7 +79,10 @@ fn extern_block_pub_type_parses() {
     // Existing behavior: a top-level type alias still yields a typedef fact.
     let a = run_clean("top_type_alias.rs", "pub type A = u8;\n");
     assert!(
-        a.facts.types.iter().any(|t| t.name == "A" && t.public),
+        a.facts
+            .types
+            .iter()
+            .any(|t| t.name == "A" && t.visibility == Visibility::Exported),
         "public type alias A recorded: {:?}",
         a.facts.types
     );

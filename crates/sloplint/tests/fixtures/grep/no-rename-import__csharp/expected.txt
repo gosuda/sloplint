@@ -1,1 +1,2 @@
-src/Loader.cs:1 warn grep/no-rename-import
+# Positive: the alias shares nothing with Json; strict rung info.
+src/Loader.cs:1 info grep/no-rename-import

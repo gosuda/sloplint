@@ -1,18 +1,23 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
-use std::io::{self, Read as _, Write as _};
+use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::SystemTime;
 
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use sloplint_core::{Config, Finding, Suppression, WorldFacts};
+use sloplint_core::{
+    Config, CustomRuleSpec, Finding, LanguageConfig, Strictness, Suppression, WorldFacts,
+};
 
-use crate::fileio::{open_regular, read_regular_nofollow};
+use crate::fileio::{Capped, Links, read_capped};
 use crate::terminal::TerminalText;
+#[path = "cache_dirs.rs"]
+mod dirs;
+use dirs::{create_private, unsafe_dir, vet_existing};
 
-const VERSION: u32 = 4;
+const VERSION: u32 = 8;
 const NAMESPACE: &str = "sloplint";
 const SHARD_DIR: &str = "cache-v2";
 
@@ -114,10 +119,7 @@ pub fn source_hash(text: &str) -> [u8; 32] {
 }
 
 pub fn interface_hash(text: &str) -> [u8; 32] {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(text.as_bytes());
-    hasher.update(b"\0interface");
-    *hasher.finalize().as_bytes()
+    blake3::derive_key("sloplint interface-shadowed source", text.as_bytes())
 }
 
 /// Per-user cache for one project root; repo contents are attacker-controlled and this key is derivable from public inputs, so a cache file inside a checkout is never trusted.
@@ -133,10 +135,7 @@ pub fn open(
     custom_sources: &[(String, String)],
 ) -> Option<Cache> {
     let Some(base) = base else {
-        warn(
-            "cache disabled: no per-user cache directory (set an absolute XDG_CACHE_HOME, or HOME / LOCALAPPDATA)"
-                .to_string(),
-        );
+        warn("cache disabled: no per-user cache directory was given".to_string());
         return None;
     };
     let namespace = base.join(NAMESPACE);
@@ -221,7 +220,8 @@ impl Cache {
         let mtime = stat_before_read
             .as_ref()
             .and_then(|meta| meta.modified().ok());
-        let Ok(bytes) = read_regular_nofollow(&path, MAX_SHARD_BYTES) else {
+        let Ok(Capped::Bytes(bytes, _)) = read_capped(&path, MAX_SHARD_BYTES, Links::NoFollow)
+        else {
             let len = stat_before_read
                 .as_ref()
                 .map(|meta| meta.len())
@@ -304,26 +304,30 @@ impl Cache {
         vet_existing(&self.dir).map_err(unsafe_dir)?;
         create_private(shards)?;
         vet_existing(shards).map_err(unsafe_dir)?;
-        let mut first_error: Option<io::Error> = None;
-        for &byte in dirty {
-            let path = shards.join(shard_file(byte));
-            let result = match fresh.get(&byte) {
-                Some(entries) => self.write_shard(&path, entries),
-                None => fs::remove_file(&path).or_else(|error| {
-                    if error.kind() == io::ErrorKind::NotFound {
-                        Ok(())
-                    } else {
-                        Err(error)
-                    }
-                }),
-            };
-            if let Err(error) = result
-                && first_error.is_none()
-            {
-                first_error = Some(error);
-            }
+        let errors = dirty
+            .par_iter()
+            .filter_map(|&byte| self.write_dirty_shard(shards, fresh, byte).err())
+            .collect::<Vec<io::Error>>();
+        errors.into_iter().next().map_or(Ok(()), Err)
+    }
+
+    fn write_dirty_shard(
+        &self,
+        shards: &Path,
+        fresh: &HashMap<u8, Vec<(&str, &FileOutput)>>,
+        byte: u8,
+    ) -> io::Result<()> {
+        let path = shards.join(shard_file(byte));
+        match fresh.get(&byte) {
+            Some(entries) => self.write_shard(&path, entries),
+            None => fs::remove_file(&path).or_else(|error| {
+                if error.kind() == io::ErrorKind::NotFound {
+                    Ok(())
+                } else {
+                    Err(error)
+                }
+            }),
         }
-        first_error.map_or(Ok(()), Err)
     }
 
     /// A link swapped into a directory after its creation is re-vetted away before any write.
@@ -363,11 +367,7 @@ impl Cache {
                 }
                 other => other?,
             };
-            if let Err(error) = file
-                .write_all(blake3::hash(&bytes).as_bytes())
-                .and_then(|()| file.write_all(&bytes))
-                .and_then(|()| file.sync_all())
-            {
+            if let Err(error) = stamp_and_sync(&mut file, &bytes) {
                 drop(file);
                 let _ = fs::remove_file(&tmp);
                 return Err(error);
@@ -377,6 +377,12 @@ impl Cache {
             let _ = fs::remove_file(&tmp);
         })
     }
+}
+
+fn stamp_and_sync(file: &mut fs::File, bytes: &[u8]) -> io::Result<()> {
+    file.write_all(blake3::hash(bytes).as_bytes())
+        .and_then(|()| file.write_all(bytes))
+        .and_then(|()| file.sync_all())
 }
 
 /// Leaves a shard a concurrent writer replaced: an identical-length, identical-mtime swap costs one cold rebuild, never a wrong result.
@@ -400,41 +406,63 @@ fn shard_file(byte: u8) -> String {
 }
 
 fn parse_shard_file_name(name: &std::ffi::OsStr) -> Option<u8> {
-    let s = name.to_str()?;
-    let hex = s.strip_prefix("shard-")?.strip_suffix(".bin")?;
-    if hex.len() == 2
+    let hex = name
+        .to_str()?
+        .strip_prefix("shard-")?
+        .strip_suffix(".bin")?;
+    (hex.len() == 2
         && hex
             .bytes()
-            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-    {
-        u8::from_str_radix(hex, 16).ok()
-    } else {
-        None
-    }
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+    .then(|| u8::from_str_radix(hex, 16).ok())?
 }
 
-fn hash_regular_into(hasher: &mut blake3::Hasher, path: &Path) -> io::Result<()> {
-    let (file, len) = open_regular(path)?;
-    let mut reader = file.take(len.saturating_add(1));
-    hasher.update_reader(&mut reader)?;
-    if reader.limit() == 0 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "file grew while being read",
-        ));
-    }
-    Ok(())
+#[derive(Serialize)]
+struct AnalysisKey<'a> {
+    strictness: Strictness,
+    languages: &'a [String],
+    language_tables: &'a BTreeMap<String, LanguageConfig>,
+    exclude: &'a [String],
+    extend_exclude: &'a [String],
+    test_globs: &'a [String],
+    bench_globs: &'a [String],
+    example_globs: &'a [String],
+    support_globs: &'a [String],
+    entry_globs: &'a [String],
+    data_globs: &'a [String],
+    max_file_bytes: u64,
+    rules: &'a BTreeMap<String, toml::Table>,
+    custom_rules: &'a [CustomRuleSpec],
 }
 
+fn analysis_key(config: &Config) -> AnalysisKey<'_> {
+    let project = &config.project;
+    AnalysisKey {
+        strictness: project.strictness,
+        languages: &project.languages,
+        language_tables: &config.languages,
+        exclude: &project.exclude,
+        extend_exclude: &project.extend_exclude,
+        test_globs: &project.test_globs,
+        bench_globs: &project.bench_globs,
+        example_globs: &project.example_globs,
+        support_globs: &project.support_globs,
+        entry_globs: &project.entry_globs,
+        data_globs: &project.data_globs,
+        max_file_bytes: project.max_file_bytes,
+        rules: &config.rules,
+        custom_rules: &config.custom_rules,
+    }
+}
 fn config_key(config: &Config, custom_sources: &[(String, String)]) -> io::Result<[u8; 32]> {
     let mut hasher = blake3::Hasher::new();
-    let exe = std::env::current_exe()?;
-    hash_regular_into(&mut hasher, &exe)?;
-    hasher.update(&sonic_rs::to_vec(config).map_err(io::Error::other)?);
+    hasher.update_mmap_rayon(std::env::current_exe()?)?;
+    hasher.update(&sonic_rs::to_vec(&analysis_key(config)).map_err(io::Error::other)?);
     for (rel, text) in custom_sources {
-        hasher.update(rel.as_bytes());
-        hasher.update(&[0u8]);
-        hasher.update(text.as_bytes());
+        for part in [rel, text] {
+            hasher.update(&u64::try_from(part.len()).unwrap_or(u64::MAX).to_le_bytes());
+            hasher.update(part.as_bytes());
+        }
     }
     Ok(*hasher.finalize().as_bytes())
 }
@@ -472,72 +500,6 @@ fn inside(dir: &Path, root: &Path) -> bool {
     }
 }
 
-/// Refuses a directory another party could have planted or can modify, so no other user can substitute a cache.
-fn vet_existing(dir: &Path) -> Result<(), String> {
-    let meta = match fs::symlink_metadata(dir) {
-        Ok(meta) => meta,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => return Err(format!("cannot inspect it: {error}")),
-    };
-    if meta.file_type().is_symlink() {
-        return Err("it is a symlink".to_string());
-    }
-    if !meta.is_dir() {
-        return Err("it is not a directory".to_string());
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        if meta.permissions().mode() & 0o022 != 0 {
-            return Err("it is writable by group or others".to_string());
-        }
-        probe_writable(dir)?;
-    }
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::MetadataExt;
-        const REPARSE_POINT: u32 = 0x400;
-        if meta.file_attributes() & REPARSE_POINT != 0 {
-            return Err("it is a reparse point".to_string());
-        }
-    }
-    Ok(())
-}
-
-#[cfg(unix)]
-fn probe_writable(dir: &Path) -> Result<(), String> {
-    let probe = dir.join(format!(".probe.{}.tmp", std::process::id()));
-    match fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&probe)
-    {
-        Ok(file) => {
-            drop(file);
-            let _ = fs::remove_file(&probe);
-            Ok(())
-        }
-        Err(error) => Err(format!("it is not writable by this user: {error}")),
-    }
-}
-
-fn create_private(dir: &Path) -> io::Result<()> {
-    let mut builder = fs::DirBuilder::new();
-    builder.recursive(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::DirBuilderExt;
-        builder.mode(0o700);
-    }
-    builder.create(dir)
-}
-
-fn unsafe_dir(reason: String) -> io::Error {
-    io::Error::other(format!(
-        "refusing to use an unsafe cache directory: {reason}"
-    ))
-}
-
 /// Warning text embeds untrusted paths and OS errors, so the whole line is escaped for the terminal.
 fn warn(message: String) {
     let _ = writeln!(
@@ -548,63 +510,5 @@ fn warn(message: String) {
 }
 
 #[cfg(test)]
-mod config_key_tests {
-    use super::*;
-    use crate::fileio::{open_regular, read_bounded};
-
-    fn pseudo_random(len: usize) -> Vec<u8> {
-        let mut state = 0x2545f4914f6cdd1du64;
-        (0..len)
-            .map(|_| {
-                state ^= state << 13;
-                state ^= state >> 7;
-                state ^= state << 17;
-                u8::try_from(state & 0xff).unwrap()
-            })
-            .collect()
-    }
-
-    #[test]
-    fn streamed_file_hash_matches_a_one_shot_read() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("blob");
-        std::fs::write(&path, pseudo_random(5 * 1024 * 1024 + 7)).unwrap();
-        let mut streamed = blake3::Hasher::new();
-        hash_regular_into(&mut streamed, &path).unwrap();
-        let one_shot = blake3::hash(&std::fs::read(&path).unwrap());
-        assert_eq!(
-            streamed.finalize(),
-            one_shot,
-            "streamed digest must equal the one-shot read digest"
-        );
-    }
-
-    fn materialized_config_key(
-        config: &Config,
-        custom_sources: &[(String, String)],
-    ) -> io::Result<[u8; 32]> {
-        let mut hasher = blake3::Hasher::new();
-        let exe = std::env::current_exe()?;
-        let (file, len) = open_regular(&exe)?;
-        hasher.update(&read_bounded(file, len)?);
-        hasher.update(&sonic_rs::to_vec(config).map_err(io::Error::other)?);
-        for (rel, text) in custom_sources {
-            hasher.update(rel.as_bytes());
-            hasher.update(&[0u8]);
-            hasher.update(text.as_bytes());
-        }
-        Ok(*hasher.finalize().as_bytes())
-    }
-
-    #[test]
-    fn config_key_matches_the_materialized_original() {
-        let config = Config::default();
-        let custom_sources = vec![("rel".to_string(), "text".to_string())];
-        let streamed = config_key(&config, &custom_sources).unwrap();
-        let materialized = materialized_config_key(&config, &custom_sources).unwrap();
-        assert_eq!(
-            streamed, materialized,
-            "config_key must equal the pre-change materialized key on this executable"
-        );
-    }
-}
+#[path = "cache_tests.rs"]
+mod tests;

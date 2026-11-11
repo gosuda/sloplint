@@ -6,6 +6,7 @@
 
 use sloplint_core::facts::ImportKind;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 type Row = (String, String, Option<String>, ImportKind);
@@ -16,7 +17,7 @@ fn imports(source: &str) -> Vec<Row> {
         lang: Lang::Rust,
         path: "src/lib.rs",
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(
@@ -94,5 +95,15 @@ fn wildcards_and_plain_paths_keep_their_modules() {
             named("std::io", "Write", None),
         ],
         "wildcard and ungrouped imports are unchanged"
+    );
+}
+
+#[test]
+fn single_segment_uses_keep_a_full_module_path() {
+    let source = "use serde;\n";
+    assert_eq!(
+        imports(source),
+        vec![named("serde", "serde", None)],
+        "a bare crate import names its own module instead of an empty sentinel"
     );
 }

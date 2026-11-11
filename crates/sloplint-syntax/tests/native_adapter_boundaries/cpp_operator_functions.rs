@@ -1,8 +1,8 @@
 //! C++ operator overloads are functions: they get complexity metrics, and because the
-//! language fixes their names and signatures they are interface-bound.
+//! language fixes their names and signatures their signatures are forced.
 //!
-//! The metric formula is the one in `cognitive_depth.rs`: an `if` costs `1 + nest` and
-//! opens a level, so an `if` nested in an `if` scores `1 + 2` at depth `2`.
+//! The metric formula is the one in `cognitive_depth.rs`: a top-level `if` costs `0`
+//! and opens a level, so an `if` nested in an `if` scores `0 + 2` at depth `2`.
 
 use crate::support::with_facts;
 use sloplint_core::lang::Lang;
@@ -46,7 +46,7 @@ bool plain(const T& o) {
 }
 ";
 
-/// `(name, cognitive, max_depth, interface_bound)` of every function in `SOURCE`.
+/// `(name, cognitive, max_depth, signature_forced)` of every function in `SOURCE`.
 fn functions() -> Vec<(String, u32, u32, bool)> {
     with_facts(Lang::Cpp, "case.cpp", SOURCE, |facts| {
         facts
@@ -57,7 +57,7 @@ fn functions() -> Vec<(String, u32, u32, bool)> {
                     f.name.to_string(),
                     f.cognitive,
                     f.max_depth,
-                    f.interface_bound,
+                    f.signature_forced,
                 )
             })
             .collect()
@@ -96,28 +96,28 @@ fn operator_bodies_are_scored_like_any_other_function() {
     for name in ["operator==", "operator<"] {
         assert_eq!(
             (find(&all, name).0, find(&all, name).1),
-            (3, 2),
+            (2, 2),
             "{name} holds an `if` inside an `if`"
         );
     }
     assert_eq!(
         (find(&all, "plain").0, find(&all, "plain").1),
-        (3, 2),
+        (2, 2),
         "the same body in a plain function is the control"
     );
 }
 
 #[test]
-fn operators_are_interface_bound_and_plain_functions_are_not() {
+fn operators_have_forced_signatures_and_plain_functions_do_not() {
     let all = functions();
     for name in ["operator==", "operator[]", "operator<", "operator!="] {
         assert!(
             find(&all, name).2,
-            "{name} is dictated by the operator protocol"
+            "{name} has a forced signature: the operator protocol dictates it"
         );
     }
     assert!(
         !find(&all, "plain").2,
-        "a free function is not interface-bound"
+        "a free function has no forced signature"
     );
 }

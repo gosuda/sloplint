@@ -1,1 +1,1 @@
-# Near-miss: depth 3 passes.
+# Near-miss: depth 3 passes (strict minor_at 5).

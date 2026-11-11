@@ -1,1 +1,1 @@
-export * from "./mid";
+export * from "./ui/button";

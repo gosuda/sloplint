@@ -1,0 +1,1 @@
+# Near-miss: doc adds failure info the name cannot say (similarity below 0.65).

@@ -1,1 +1,2 @@
 # Near-miss: `$total` is never reassigned after declaration, so the span is 0.
+# shadowed-param.ps1: outer `$total` is written once on line 3; the line-26 write targets the script-block `param($total)`, so misattribution would span 23 and fire.

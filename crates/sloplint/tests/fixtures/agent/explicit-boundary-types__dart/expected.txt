@@ -1,1 +1,2 @@
-a.dart:1 warn agent/explicit-boundary-types
+a.dart:1 minor agent/explicit-boundary-types
+a.dart:5 minor agent/explicit-boundary-types

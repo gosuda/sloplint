@@ -4,11 +4,12 @@
 //! `vendor/tree-sitter-typescript`) must parse it with no error node, keep the tree shapes
 //! the language adapters read, and still reject code that is invalid.
 
-use std::sync::LazyLock;
-
+use sloplint_core::facts::{AmbientKind, Visibility};
 use sloplint_core::lang::Lang;
-use sloplint_core::{CustomRuleSpec, Severity};
+use sloplint_core::role::CodeRole;
+use sloplint_core::{Confidence, CustomRuleSpec, Severity};
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
+use std::sync::LazyLock;
 
 /// JavaScript, TypeScript and TSX: every grammar that parses a script.
 const SCRIPT_LANGS: [(Lang, &str); 3] = [
@@ -33,7 +34,7 @@ fn analyze_with<'s>(
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     analyze(&mut Parsers::new(), &input, custom)
 }
@@ -88,7 +89,8 @@ fn query_spec(language: &str, query: &str) -> CustomRuleSpec {
     CustomRuleSpec {
         id: "custom/probe".to_string(),
         language: language.to_string(),
-        severity: Severity::Warn,
+        severity: Severity::Minor,
+        confidence: Confidence::Medium,
         message: "probe".to_string(),
         why: "probe".to_string(),
         fix: "probe".to_string(),
@@ -338,7 +340,7 @@ fn exported_names_skip_anonymous_keyword_exports() {
             .facts
             .functions
             .iter()
-            .map(|f| (f.name, f.public))
+            .map(|f| (f.name, f.visibility == Visibility::Exported))
             .collect();
         assert_eq!(
             names,
@@ -397,11 +399,55 @@ fn plain_declarations_keep_their_shapes() {
         let analysis = run_clean(lang, path, source);
         let names: Vec<_> = analysis.facts.functions.iter().map(|f| f.name).collect();
         assert_eq!(names, ["add"], "{lang:?}: function facts");
-        let globals: Vec<_> = analysis.facts.ambient.iter().map(|a| a.name).collect();
+        let globals: Vec<_> = analysis
+            .facts
+            .ambient
+            .iter()
+            .filter(|a| a.kind == AmbientKind::GlobalMutable)
+            .map(|a| a.name)
+            .collect();
         assert_eq!(
             globals,
             ["total"],
             "{lang:?}: `let` is the only mutable global"
+        );
+    }
+}
+
+#[test]
+fn environment_writes_normalize_to_the_environment_object() {
+    let cases = [
+        ("dot", "process.env.TOKEN = 'x';\n"),
+        ("bracket", "process.env['TOKEN'] = 'x';\n"),
+        ("import_meta", "import.meta.env.VAR = 'x';\n"),
+    ];
+    for (lang, path) in SCRIPT_LANGS {
+        for (shape, source) in cases {
+            let analysis = run_clean(lang, path, source);
+            let writes: Vec<_> = analysis
+                .facts
+                .ambient
+                .iter()
+                .filter(|a| a.kind == AmbientKind::GlobalWrite)
+                .map(|a| a.name)
+                .collect();
+            assert_eq!(
+                writes,
+                ["process.env"],
+                "{lang:?}: {shape} write reports the environment object"
+            );
+        }
+    }
+}
+
+#[test]
+fn env_shaped_target_that_is_not_the_environment_stays_silent() {
+    let source = "config.env.TOKEN = 'x';\n";
+    for (lang, path) in SCRIPT_LANGS {
+        let analysis = run_clean(lang, path, source);
+        assert!(
+            analysis.facts.ambient.is_empty(),
+            "{lang:?}: `config.env` is not an environment object"
         );
     }
 }

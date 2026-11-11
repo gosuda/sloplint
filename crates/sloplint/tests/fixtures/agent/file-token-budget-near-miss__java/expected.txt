@@ -1,1 +1,1 @@
-# near-miss: 19 lines < warn_at 20 from the fixture sloplint.toml.
+# near-miss: 19 lines < minor_at 20 from the fixture sloplint.toml.

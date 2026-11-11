@@ -1,2 +1,2 @@
-src/names.py:1 warn grep/generic-name
-src/names.py:5 warn grep/generic-name
+src/names.py:1 minor grep/generic-name
+src/names.py:5 minor grep/generic-name

@@ -1,1 +1,1 @@
-src/greet.php:2 warn slop/passthrough-wrapper
+src/greet.php:2 info slop/passthrough-wrapper

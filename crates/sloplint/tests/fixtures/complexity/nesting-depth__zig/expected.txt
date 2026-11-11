@@ -1,2 +1,1 @@
-# Positive: nesting depth 5 >= strict deny_at 5.
-src/nested.zig:1 deny complexity/nesting-depth
+src/nested.zig:1 info complexity/nesting-depth

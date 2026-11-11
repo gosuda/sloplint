@@ -1,1 +1,2 @@
-a.bzl:1 warn grep/no-rename-import
+# Positive: the load alias shares nothing with the original name; strict rung info.
+a.bzl:1 info grep/no-rename-import

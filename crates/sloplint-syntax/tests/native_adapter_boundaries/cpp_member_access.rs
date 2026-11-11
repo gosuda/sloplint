@@ -6,6 +6,7 @@
 //! and nested classes, observed through `analyze` only.
 
 use crate::support::with_facts;
+use sloplint_core::facts::Visibility;
 use sloplint_core::lang::Lang;
 
 /// `(name, public)` for every function in `source`, sorted by name.
@@ -14,7 +15,7 @@ fn publicity(source: &str) -> Vec<(String, bool)> {
         let mut out: Vec<(String, bool)> = facts
             .functions
             .iter()
-            .map(|f| (f.name.to_owned(), f.public))
+            .map(|f| (f.name.to_owned(), f.visibility == Visibility::Exported))
             .collect();
         out.sort();
         out
@@ -42,7 +43,8 @@ class Hidden {
 "#;
     assert_eq!(
         publicity(source),
-        expected(&[("default_struct", true), ("default_class", false)])
+        expected(&[("default_struct", true), ("default_class", false)]),
+        "struct members default to exported and class members to private",
     );
 }
 
@@ -64,9 +66,10 @@ public:
         expected(&[
             ("first_public", true),
             ("after_private", false),
-            ("after_protected", false),
+            ("after_protected", true),
             ("after_second_public", true),
-        ])
+        ]),
+        "each access label governs the members after it; protected still exports",
     );
 }
 
@@ -80,7 +83,8 @@ private:
 "#;
     assert_eq!(
         publicity(source),
-        expected(&[("open_struct", true), ("closed_struct", false)])
+        expected(&[("open_struct", true), ("closed_struct", false)]),
+        "a private label hides the struct members after it",
     );
 }
 
@@ -97,7 +101,8 @@ private:
 "#;
     assert_eq!(
         publicity(source),
-        expected(&[("open_template", true), ("closed_template", false)])
+        expected(&[("open_template", true), ("closed_template", false)]),
+        "template members take their declaration's access",
     );
 }
 
@@ -114,7 +119,8 @@ private:
 "#;
     assert_eq!(
         publicity(source),
-        expected(&[("after_macro_public", true), ("after_macro_private", false),])
+        expected(&[("after_macro_public", true), ("after_macro_private", false),]),
+        "macro defines between members keep the label state",
     );
 }
 
@@ -127,7 +133,11 @@ private:
 #endif
 };
 "#;
-    assert_eq!(publicity(source), expected(&[("in_ifdef", true)]));
+    assert_eq!(
+        publicity(source),
+        expected(&[("in_ifdef", true)]),
+        "members in a conditional block ignore the class label",
+    );
 }
 
 #[test]
@@ -148,7 +158,8 @@ public:
             ("free_open", true),
             ("static_private_member", false),
             ("static_public_member", true),
-        ])
+        ]),
+        "statics follow class labels and free static stays private",
     );
 }
 
@@ -167,7 +178,8 @@ void outside_namespace(bool a) { (void)a; }
         expected(&[
             ("in_anonymous_namespace", false),
             ("outside_namespace", true),
-        ])
+        ]),
+        "members in an anonymous namespace are never exported",
     );
 }
 
@@ -183,6 +195,34 @@ public:
 "#;
     assert_eq!(
         publicity(source),
-        expected(&[("inner_default", false), ("outer_public", true)])
+        expected(&[("inner_default", false), ("outer_public", true)]),
+        "nested class members use their own field list",
+    );
+}
+
+#[test]
+fn nested_namespaces_keep_anonymous_hidden_and_named_public() {
+    let source = r#"namespace Outer {
+namespace {
+struct Hidden {
+public:
+    void nested_anonymous_member(bool a) { (void)a; }
+};
+}
+struct Shown {
+public:
+    void nested_named_member(bool a) { (void)a; }
+};
+}
+void top_level(bool a) { (void)a; }
+"#;
+    assert_eq!(
+        publicity(source),
+        expected(&[
+            ("nested_anonymous_member", false),
+            ("nested_named_member", true),
+            ("top_level", true),
+        ]),
+        "anonymous stays hidden inside a named namespace and named members stay public",
     );
 }

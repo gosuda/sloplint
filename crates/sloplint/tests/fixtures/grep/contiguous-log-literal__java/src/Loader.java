@@ -1,6 +1,6 @@
 public class Loader {
     public void load(String path) {
-        System.out.println(path);
-        System.out.println("oops");
+        logger.info(path);
+        logger.info("oops");
     }
 }

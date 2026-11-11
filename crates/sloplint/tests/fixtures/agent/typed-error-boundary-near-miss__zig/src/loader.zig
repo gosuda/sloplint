@@ -1,4 +1,4 @@
-pub fn load_typed(path: []const u8) !u64 {
+pub fn load_typed(path: []const u8) LoadError!u64 {
     _ = path;
     return 1;
 }

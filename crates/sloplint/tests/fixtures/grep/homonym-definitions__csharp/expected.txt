@@ -1,1 +1,2 @@
-a.cs:2 warn grep/homonym-definitions
+# Positive: `ReconcileLedger` type defined in 5 files (strict min_files=5); one finding at first site.
+a.cs:1 info grep/homonym-definitions

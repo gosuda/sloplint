@@ -1,1 +1,1 @@
-a.rb:2 deny grep/contiguous-log-literal
+a.rb:2 info grep/contiguous-log-literal

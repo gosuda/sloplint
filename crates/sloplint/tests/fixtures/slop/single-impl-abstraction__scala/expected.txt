@@ -1,2 +1,2 @@
 # Positive: trait Draw has exactly one implementation.
-src/Draw.scala:1 warn slop/single-impl-abstraction
+src/Draw.scala:1 minor slop/single-impl-abstraction

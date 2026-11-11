@@ -3,16 +3,34 @@
 //! One child module per mechanism, so each fix lands with its own case module and
 //! one declaration here, while the crate links a single integration-test executable.
 
+#[path = "rust_web_boundaries/rust_assert_shapes.rs"]
+mod rust_assert_shapes;
+#[path = "rust_web_boundaries/rust_binding_calls.rs"]
+mod rust_binding_calls;
+#[path = "rust_web_boundaries/rust_borrow_write.rs"]
+mod rust_borrow_write;
+#[path = "rust_web_boundaries/rust_closure_scope.rs"]
+mod rust_closure_scope;
 #[path = "rust_web_boundaries/rust_enum_like_match.rs"]
 mod rust_enum_like_match;
+#[path = "rust_web_boundaries/rust_global_write.rs"]
+mod rust_global_write;
 #[path = "rust_web_boundaries/rust_grouped_use_modules.rs"]
 mod rust_grouped_use_modules;
 #[path = "rust_web_boundaries/rust_impl_container_pop.rs"]
 mod rust_impl_container_pop;
+#[path = "rust_web_boundaries/rust_import_facts.rs"]
+mod rust_import_facts;
+#[path = "rust_web_boundaries/rust_param_kinds.rs"]
+mod rust_param_kinds;
 #[path = "rust_web_boundaries/rust_self_barrel.rs"]
 mod rust_self_barrel;
+#[path = "rust_web_boundaries/rust_test_attributes.rs"]
+mod rust_test_attributes;
 #[path = "rust_web_boundaries/rust_thread_local_name.rs"]
 mod rust_thread_local_name;
+#[path = "rust_web_boundaries/rust_visibility.rs"]
+mod rust_visibility;
 #[path = "rust_web_boundaries/typescript_callee_root.rs"]
 mod typescript_callee_root;
 #[path = "rust_web_boundaries/typescript_import_require.rs"]

@@ -1,3 +1,3 @@
-public interface IShape {
+internal interface IShape {
     void Draw();
 }

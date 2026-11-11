@@ -1,1 +1,2 @@
 # near-miss: binding never reassigned after declaration.
+# shadowed-lambda.cpp: outer `total` is written once on line 3; the line-18 write targets the lambda parameter, so misattribution would span 15 and fire.

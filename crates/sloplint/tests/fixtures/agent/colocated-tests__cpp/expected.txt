@@ -1,1 +1,1 @@
-src/service.cpp:1 warn agent/colocated-tests
+src/service.cpp:1 info agent/colocated-tests

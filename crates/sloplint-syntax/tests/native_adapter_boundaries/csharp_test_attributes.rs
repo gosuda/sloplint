@@ -1,11 +1,13 @@
-//! C# test exemptions: one child module per mechanism, so each fix lands with
+//! C# test markers: one child module per mechanism, so each fix lands with
 //! its own case module while the crate links a single integration-test executable.
 //!
-//! A method is a test when its own attribute list names a test attribute, and every
-//! member of a `[TestClass]`/`[TestFixture]` class is a test through module containment.
+//! A method is a test case when its own attribute list names a test attribute,
+//! and every member of a `[TestClass]`/`[TestFixture]` class is a test case
+//! through module containment.
 
 use crate::support::with_facts;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 
 const ATTRIBUTED: &str = "public class Widget\n{\n    [Test]\n    public void Flag() { }\n    [TestMethod]\n    public void Check() { }\n    [TestCase]\n    public void Case() { }\n    [TestCaseSource]\n    public void Sourced() { }\n    [DataTestMethod]\n    public void Data() { }\n    [Fact]\n    public void Fact() { }\n    [Theory]\n    public void Theory() { }\n    [SetUp]\n    public void Setup() { }\n    [TearDown]\n    public void Teardown() { }\n    public void Helper() { }\n}\n";
 
@@ -16,7 +18,14 @@ fn flags(source: &str) -> Vec<(String, bool)> {
         facts
             .functions
             .iter()
-            .map(|f| (f.name.to_owned(), f.in_test))
+            .map(|f| {
+                let marked = facts.regions.iter().any(|region| {
+                    region.role == CodeRole::Test
+                        && region.start_line <= f.pos.line
+                        && f.pos.line <= region.end_line
+                });
+                (f.name.to_owned(), marked)
+            })
             .collect()
     })
 }
@@ -38,13 +47,13 @@ fn every_test_attribute_marks_only_its_method() {
             ("Helper", false),
         ]
         .into_iter()
-        .map(|(name, in_test)| (name.to_owned(), in_test))
+        .map(|(name, marked)| (name.to_owned(), marked))
         .collect::<Vec<_>>(),
     );
 }
 
 #[test]
-fn test_class_and_fixture_members_are_in_test() {
+fn test_class_and_fixture_members_are_marked() {
     assert_eq!(
         flags(CONTAINED),
         [
@@ -54,7 +63,7 @@ fn test_class_and_fixture_members_are_in_test() {
             ("Run", false),
         ]
         .into_iter()
-        .map(|(name, in_test)| (name.to_owned(), in_test))
+        .map(|(name, marked)| (name.to_owned(), marked))
         .collect::<Vec<_>>(),
     );
 }

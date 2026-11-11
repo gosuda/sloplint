@@ -1,13 +1,8 @@
 import os
-
-
+COUNTER = 0
 def bump():
     global COUNTER
     COUNTER += 1
-
-
-COUNTER = 0
-
-
-def service_home():
-    return os.getenv("HOME")
+def load():
+    global COUNTER
+    COUNTER = len(os.getenv("HOME") or "")

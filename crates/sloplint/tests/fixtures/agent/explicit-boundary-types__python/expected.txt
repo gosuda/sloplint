@@ -1,1 +1,2 @@
-src/untyped.py:1 warn agent/explicit-boundary-types
+src/untyped.py:1 minor agent/explicit-boundary-types
+src/untyped.py:5 minor agent/explicit-boundary-types

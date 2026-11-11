@@ -1,1 +1,1 @@
-src/copies.py:10 warn slop/field-copy
+src/copies.py:12 minor slop/field-copy

@@ -1,1 +1,1 @@
-src/repeat.php:3 warn agent/unique-patch-anchors
+src/repeat.php:3 info agent/unique-patch-anchors

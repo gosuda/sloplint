@@ -6,4 +6,8 @@ def main():
     print(home)
 
 
+def fetch():
+    return os.getenv("HOME")
+
+
 main()

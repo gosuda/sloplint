@@ -1,1 +1,2 @@
-a.odin:4 deny grep/contiguous-log-literal
+# Positive: message-bearing log.info with 1-char static run < strict min_len=8; strict rung major.
+a.odin:4 info grep/contiguous-log-literal

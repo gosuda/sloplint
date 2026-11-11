@@ -1,1 +1,2 @@
-src/app.js:1 deny agent/ambient-global-state
+src/app.js:1 info agent/ambient-global-state
+src/app.js:9 info agent/ambient-global-state

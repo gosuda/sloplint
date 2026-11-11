@@ -2,14 +2,15 @@
 //! container propagation, and nested function restrictions.
 
 use crate::support::with_facts;
+use sloplint_core::facts::Visibility;
 use sloplint_core::lang::Lang;
 
-fn visibilities(source: &str) -> Vec<(String, bool)> {
+fn visibilities(source: &str) -> Vec<(String, Visibility)> {
     with_facts(Lang::Kotlin, "case.kt", source, |facts| {
         facts
             .functions
             .iter()
-            .map(|f| (f.name.to_owned(), f.public))
+            .map(|f| (f.name.to_owned(), f.visibility))
             .collect()
     })
 }
@@ -20,15 +21,16 @@ fn top_level_visibility_modifiers() {
     assert_eq!(
         visibilities(source),
         [
-            ("top_default", true),
-            ("top_public", true),
-            ("top_private", false),
-            ("top_protected", false),
-            ("top_internal", false),
+            ("top_default", Visibility::Exported),
+            ("top_public", Visibility::Exported),
+            ("top_private", Visibility::Private),
+            ("top_protected", Visibility::Exported),
+            ("top_internal", Visibility::Restricted),
         ]
         .into_iter()
-        .map(|(name, public)| (name.to_owned(), public))
+        .map(|(name, visibility)| (name.to_owned(), visibility))
         .collect::<Vec<_>>(),
+        "default, public, and protected export; private hides; internal restricts",
     );
 }
 
@@ -38,17 +40,18 @@ fn container_and_nested_visibility() {
     assert_eq!(
         visibilities(source),
         [
-            ("open_member", true),
-            ("hidden_member", false),
-            ("outer", true),
-            ("nested", false),
-            ("inside_hidden", false),
-            ("inside_scoped", false),
-            ("action", true),
-            ("action", false),
+            ("open_member", Visibility::Exported),
+            ("hidden_member", Visibility::Private),
+            ("outer", Visibility::Exported),
+            ("nested", Visibility::Private),
+            ("inside_hidden", Visibility::Private),
+            ("inside_scoped", Visibility::Restricted),
+            ("action", Visibility::Exported),
+            ("action", Visibility::Private),
         ]
         .into_iter()
-        .map(|(name, public)| (name.to_owned(), public))
+        .map(|(name, visibility)| (name.to_owned(), visibility))
         .collect::<Vec<_>>(),
+        "containers cap member visibility and nested functions stay private",
     );
 }

@@ -1,190 +1,20 @@
 use sloplint_core::facts::{
-    AmbientKind, Arg, ArgShape, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import,
-    Param, Pos, TypeDef, WildcardArm,
+    AmbientKind, Arg, Assertion, Barrel, CallKind, FieldCopy, Handler, ImplRef, Import, Param, Pos,
+    TypeDef, Visibility, WildcardArm,
 };
-use std::cell::RefCell;
-use std::collections::HashMap;
-
-use sloplint_core::lang::Lang;
+use sloplint_core::role::{CodeRole, RoleRegion};
 use tree_sitter::Node;
 
-#[derive(Default)]
-pub(crate) struct MemberStates {
-    before: RefCell<HashMap<usize, Option<bool>>>,
-}
+pub(crate) use crate::cx::{ChainRoots, Cx, FileNameSets, FileSetKind, Link, MemberStates};
+pub(crate) use crate::emit::{attributed_region, region_of};
+pub(crate) use crate::header_comments::{is_directive_comment, preceding_comments};
+pub(crate) use crate::shapes::{binary_concat, string_arg_shape};
 
-impl MemberStates {
-    pub(crate) fn state_before(
-        &self,
-        container: Node<'_>,
-        member: Node<'_>,
-        marker: impl Fn(Node<'_>) -> Option<bool>,
-    ) -> Option<bool> {
-        let known = self.before.borrow().contains_key(&member.id());
-        if !known {
-            self.record(container, marker);
-        }
-        let before = self.before.borrow();
-        let state = before.get(&member.id());
-        debug_assert!(state.is_some(), "a member is a child of its container");
-        state.copied().flatten()
-    }
-
-    fn record(&self, container: Node<'_>, marker: impl Fn(Node<'_>) -> Option<bool>) {
-        let mut state = None;
-        let mut pass = Vec::new();
-        let mut cursor = container.walk();
-        for child in container.children(&mut cursor) {
-            pass.push((child.id(), state));
-            if let Some(set) = marker(child) {
-                state = Some(set);
-            }
-        }
-        self.before.borrow_mut().extend(pass);
-    }
-}
-
-pub(crate) enum Link<'n> {
-    Next(Node<'n>),
-    Root(Node<'n>),
-}
-
-#[derive(Default)]
-pub(crate) struct ChainRoots {
-    known: RefCell<HashMap<(u8, usize), (usize, usize)>>,
-    path: RefCell<Vec<usize>>,
-}
-
-impl ChainRoots {
-    fn root<'n>(
-        &self,
-        family: u8,
-        start: Node<'n>,
-        step: impl Fn(Node<'n>) -> Link<'n>,
-    ) -> (usize, usize) {
-        let mut path = std::mem::take(&mut *self.path.borrow_mut());
-        path.clear();
-        let mut current = start;
-        let found = loop {
-            let next = match step(current) {
-                Link::Next(next) => next,
-                Link::Root(root) => break (root.start_byte(), root.end_byte()),
-            };
-            path.push(current.id());
-            let known = self.known.borrow().get(&(family, next.id())).copied();
-            if let Some(known) = known {
-                break known;
-            }
-            current = next;
-        };
-        if !path.is_empty() {
-            self.known
-                .borrow_mut()
-                .extend(path.drain(..).map(|id| ((family, id), found)));
-        }
-        *self.path.borrow_mut() = path;
-        found
-    }
-}
-
-pub(crate) struct Cx<'t, 's> {
-    pub src: &'s str,
-    pub path: &'s str,
-    pub lang: Lang,
-    pub is_test_file: bool,
-    pub members: &'t MemberStates,
-    chains: &'t ChainRoots,
-    containers: &'t [Container],
-    exports: &'t [&'s str],
-    /// Per level, outermost first: earlier siblings in tree order, then the open ancestor; the innermost level ends at the visited node.
-    levels: &'t [Vec<Node<'t>>],
-}
-
-impl<'t, 's> Cx<'t, 's> {
-    pub(crate) fn file(
-        src: &'s str,
-        path: &'s str,
-        lang: Lang,
-        is_test_file: bool,
-        members: &'t MemberStates,
-        chains: &'t ChainRoots,
-    ) -> Self {
-        Self {
-            src,
-            path,
-            lang,
-            is_test_file,
-            members,
-            chains,
-            containers: &[],
-            exports: &[],
-            levels: &[],
-        }
-    }
-
-    pub(crate) fn scoped(
-        self,
-        containers: &'t [Container],
-        exports: &'t [&'s str],
-        levels: &'t [Vec<Node<'t>>],
-    ) -> Self {
-        Self {
-            containers,
-            exports,
-            levels,
-            ..self
-        }
-    }
-}
-
-impl<'s> Cx<'_, 's> {
-    /// Roots are memoized per `family`: each `step` function needs its own id and one fixed answer per node.
-    pub(crate) fn chain_root<'n>(
-        &self,
-        family: u8,
-        start: Node<'n>,
-        step: impl Fn(Node<'n>) -> Link<'n>,
-    ) -> &'s str {
-        let (from, to) = self.chains.root(family, start, step);
-        slice(self.src, from, to)
-    }
-}
-
-impl Cx<'_, '_> {
-    pub(crate) fn is_exported(&self, name: &str) -> bool {
-        self.exports
-            .binary_search_by(|probe| (*probe).cmp(name))
-            .is_ok()
-    }
-
-    pub(crate) fn innermost_container(&self) -> Option<Container> {
-        self.containers.last().copied()
-    }
-
-    pub(crate) fn in_test_module(&self) -> bool {
-        self.containers.contains(&Container::TestModule)
-    }
-
-    pub(crate) fn nearest_class_exported(&self) -> Option<bool> {
-        self.containers.iter().rev().find_map(|c| match *c {
-            Container::Class { exported, .. } => Some(exported),
-            _ => None,
-        })
-    }
-
-    pub(crate) fn nearest_class_implements(&self) -> Option<bool> {
-        self.containers.iter().rev().find_map(|c| match *c {
-            Container::Class { implements, .. } => Some(implements),
-            _ => None,
-        })
-    }
-
-    pub(crate) fn nearest_impl_interface_bound(&self) -> Option<bool> {
-        self.containers.iter().rev().find_map(|c| match *c {
-            Container::Impl { interface_bound } => Some(interface_bound),
-            _ => None,
-        })
-    }
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ShadowKind {
+    None,
+    Decls,
+    DeclsAndBinds,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -198,10 +28,18 @@ pub(crate) enum Container {
 pub(crate) struct FunctionHead<'s> {
     pub name: &'s str,
     pub name_pos: Pos,
-    pub public: bool,
-    pub interface_bound: bool,
+    pub visibility: Visibility,
+    pub signature_forced: bool,
+    pub entry_point: bool,
     pub in_test: bool,
+    pub is_overload: bool,
+    pub is_deprecated: bool,
+    pub is_decorated: bool,
+    pub is_trait_item: bool,
+    pub region: Option<RoleRegion>,
     pub params: Vec<Param<'s>>,
+    pub shadow_params: Vec<&'s str>,
+    pub receiver: Option<&'s str>,
     pub return_type: Option<&'s str>,
     pub missing_annotations: Vec<&'s str>,
     pub doc: Vec<&'s str>,
@@ -213,6 +51,8 @@ pub(crate) struct CallHead<'s> {
     pub callee: &'s str,
     pub kind: CallKind,
     pub callee_root: Option<&'s str>,
+    pub is_simple_path: bool,
+    pub initializes_binding: bool,
     pub args: Vec<Arg<'s>>,
 }
 
@@ -241,7 +81,13 @@ pub(crate) trait LangHooks: Sync {
         false
     }
 
-    fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool;
+    fn is_else_if(&self, _n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        parent.is_some_and(|p| p.kind() == "else_clause")
+    }
+
+    fn is_ternary_alternate(&self, _n: Node<'_>, _parent: Option<Node<'_>>) -> bool {
+        false
+    }
 
     fn control_call(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
         let _ = (n, cx);
@@ -272,6 +118,21 @@ pub(crate) trait LangHooks: Sync {
         None
     }
 
+    fn call_marker(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        let _ = (n, cx);
+        None
+    }
+
+    fn module_region(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<CodeRole> {
+        let _ = (n, cx);
+        None
+    }
+
+    fn module_leading<'t>(&self, n: Node<'t>, cx: &Cx<'_, '_>) -> Option<Node<'t>> {
+        let _ = (n, cx);
+        None
+    }
+
     fn match_arm(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<WildcardArm> {
         let _ = (n, cx);
         None
@@ -297,6 +158,61 @@ pub(crate) trait LangHooks: Sync {
         let _ = (n, cx, in_function, out);
     }
 
+    /// What the walker treats as shadowing an in-function `GlobalWrite`.
+    /// Only block-scoped declarations opt in; dynamic languages stay off.
+    fn shadow_filter(&self) -> ShadowKind {
+        ShadowKind::None
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        let _ = kind;
+        false
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        let _ = (n, cx, out);
+    }
+
+    fn ambient_bind(&self) -> bool {
+        false
+    }
+
+    fn decl_visible_in_initializer(&self) -> bool {
+        true
+    }
+
+    fn decl_piece(&self, kind: &str) -> bool {
+        let _ = kind;
+        false
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        let _ = (node, cx);
+        depth.saturating_sub(1)
+    }
+
+    fn block_scoped_binds(&self) -> bool {
+        false
+    }
+
+    /// True when a declaration ends with the block that holds it.
+    fn block_scoped_decls(&self) -> bool {
+        self.block_scoped_binds()
+    }
+
+    /// True for a loop, `with`, or handler node kind whose targets are variables of the
+    /// enclosing function. The walker then binds `decl_names` of that node on entry:
+    /// each name is declared when the function has no binding for it, else written once.
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        let _ = kind;
+        false
+    }
+
+    fn forked_scope_kind(&self, kind: &str) -> bool {
+        let _ = kind;
+        false
+    }
+
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
         let _ = (n, cx);
         None
@@ -317,6 +233,38 @@ pub(crate) trait LangHooks: Sync {
     }
 }
 
+pub(crate) fn any_preceding(
+    n: Node<'_>,
+    target: &str,
+    skip: &[&str],
+    mut hit: impl FnMut(Node<'_>) -> bool,
+) -> bool {
+    let mut cur = n.prev_sibling();
+    while let Some(sib) = cur {
+        if sib.kind() == target {
+            if hit(sib) {
+                return true;
+            }
+        } else if !skip.contains(&sib.kind()) {
+            break;
+        }
+        cur = sib.prev_sibling();
+    }
+    false
+}
+pub(crate) fn earliest_preceding<'a>(n: Node<'a>, target: &str, skip: &[&str]) -> Option<Node<'a>> {
+    let mut cur = n.prev_sibling();
+    let mut found = None;
+    while let Some(sib) = cur {
+        if sib.kind() == target {
+            found = Some(sib);
+        } else if !skip.contains(&sib.kind()) {
+            break;
+        }
+        cur = sib.prev_sibling();
+    }
+    found
+}
 /// Files are capped at `max_file_bytes` (2 MiB), so a real position never exceeds `u32::MAX`.
 pub(crate) fn narrow(value: usize) -> u32 {
     u32::try_from(value).unwrap_or(u32::MAX)
@@ -340,6 +288,13 @@ pub(crate) fn trimmed<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
 pub(crate) fn named_children(n: Node<'_>) -> Vec<Node<'_>> {
     let mut cursor = n.walk();
     n.named_children(&mut cursor).collect()
+}
+
+pub(crate) fn code_children(n: Node<'_>) -> Vec<Node<'_>> {
+    named_children(n)
+        .into_iter()
+        .filter(|child| child.kind() != "comment")
+        .collect()
 }
 
 pub(crate) fn first_named_child<'a>(n: Node<'a>) -> Option<Node<'a>> {
@@ -554,90 +509,26 @@ pub(crate) fn ident_root<'s>(
     }
 }
 
-pub(crate) fn string_arg_shape<'s>(
-    cx: &Cx<'_, 's>,
-    n: Node<'_>,
-    fragment_kinds: &[&str],
-) -> ArgShape<'s> {
-    let mut segments: Vec<&'s str> = Vec::new();
-    let mut cursor = n.walk();
-    for child in n.children(&mut cursor) {
-        if fragment_kinds.contains(&child.kind()) {
-            segments.push(text(cx, child));
+pub(crate) fn spine_has_call(n: Node<'_>, object_field: &str, transparent: &[&str]) -> bool {
+    let mut current = n;
+    loop {
+        match current.kind() {
+            "call_expression" | "new_expression" => return true,
+            "member_expression" | "subscript_expression" | "selector_expression" => {
+                let Some(next) = child_by_field(current, object_field) else {
+                    return false;
+                };
+                current = next;
+            }
+            kind if transparent.contains(&kind) => {
+                let Some(next) = current.named_child(0) else {
+                    return false;
+                };
+                current = next;
+            }
+            _ => return false,
         }
     }
-    ArgShape::Str {
-        longest_static: sloplint_core::text::longest_static_chunk(&segments),
-    }
-}
-
-pub(crate) fn binary_concat<'s>(
-    cx: &Cx<'_, 's>,
-    n: Node<'_>,
-    op_text: &str,
-    string_kinds: &[&str],
-) -> bool {
-    let (Some(left), Some(op), Some(right)) = (n.child(0), n.child(1), n.child(2)) else {
-        return false;
-    };
-    if n.child_count() != 3 || text(cx, op) != op_text {
-        return false;
-    }
-    string_kinds.contains(&left.kind()) || string_kinds.contains(&right.kind())
-}
-
-pub(crate) fn is_directive_comment(text: &str) -> bool {
-    if !text.contains("sloplint-allow") {
-        return false;
-    }
-    let head = text.trim_start();
-    !["///", "//!", "/**", "/*!", "(**", "(*!"]
-        .iter()
-        .any(|prefix| head.starts_with(prefix))
-}
-
-pub(crate) fn preceding_comments<'s>(
-    cx: &Cx<'_, 's>,
-    n: Node<'_>,
-    comment_kinds: &[&str],
-    skip_kinds: &[&str],
-) -> (Vec<&'s str>, Option<Pos>) {
-    let (anchor, earlier) = cx
-        .levels
-        .iter()
-        .rev()
-        .filter_map(|level| level.split_last())
-        .find(|(last, _)| last.id() == n.id())
-        .expect("a header anchor is the visited node or one of its ancestors");
-    let mut doc: Vec<&'s str> = Vec::new();
-    let mut doc_pos = None;
-    let mut header_row = anchor.start_position().row;
-    for &sibling in earlier.iter().rev() {
-        let kind = sibling.kind();
-        if comment_kinds.contains(&kind) {
-            let end = sibling.end_position();
-            let last_row = if end.column == 0 {
-                end.row.saturating_sub(1)
-            } else {
-                end.row
-            };
-            if last_row + 1 != header_row {
-                break;
-            }
-            let comment = text(cx, sibling);
-            if !is_directive_comment(comment) {
-                doc.push(comment);
-                doc_pos = Some(pos_of(sibling));
-            }
-            header_row = sibling.start_position().row;
-        } else if skip_kinds.contains(&kind) {
-            header_row = sibling.start_position().row;
-        } else {
-            break;
-        }
-    }
-    doc.reverse();
-    (doc, doc_pos)
 }
 
 pub(crate) fn sole_call_id(

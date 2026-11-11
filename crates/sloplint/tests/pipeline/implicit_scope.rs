@@ -103,19 +103,69 @@ fn it_loads_no_configuration_and_discovers_no_sources() {
 }
 
 #[test]
-fn an_unresolvable_root_is_an_io_error() {
+fn an_explicit_missing_root_is_a_usage_error() {
     let (_tmp, root) = temp();
     let missing = root.join("no-such-root");
 
     let error = implicit_scope(&root, Some(&missing), None).expect_err("a missing root must fail");
     assert!(
-        matches!(&error, RunError::Io { path, .. } if *path == missing),
+        matches!(&error, RunError::PathNotFound { path } if *path == missing),
         "{error:?}"
     );
     assert_eq!(
         error.exit_code(),
-        3,
-        "an unresolvable root is an I/O error: {error:?}"
+        2,
+        "an explicit missing root is a usage error: {error:?}"
+    );
+
+    let error = implicit_scope(&root, None, Some(&missing.join("sloplint.toml")))
+        .expect_err("a missing config parent must fail");
+    assert!(matches!(&error, RunError::PathNotFound { .. }), "{error:?}");
+    assert_eq!(
+        error.exit_code(),
+        2,
+        "a missing config parent is a usage error: {error:?}"
+    );
+}
+
+#[test]
+fn a_blocked_parent_and_a_file_root_are_usage_errors() {
+    let (_tmp, root) = temp();
+    put(&root, "file.txt", "x");
+
+    let error = implicit_scope(&root, Some(&root.join("file.txt/nope")), None)
+        .expect_err("a root through a file must fail");
+    assert!(matches!(&error, RunError::PathNotFound { .. }), "{error:?}");
+    assert_eq!(
+        error.exit_code(),
+        2,
+        "a root blocked by a file is a usage error: {error:?}"
+    );
+
+    let error = run(&RunOptions {
+        cwd: root.clone(),
+        root: None,
+        config: Some(root.join("file.txt/sloplint.toml")),
+        ..RunOptions::default()
+    })
+    .expect_err("a config through a file must fail");
+    assert!(matches!(&error, RunError::PathNotFound { .. }), "{error:?}");
+    assert_eq!(
+        error.exit_code(),
+        2,
+        "a config blocked by a file is a usage error: {error:?}"
+    );
+
+    let error = implicit_scope(&root, Some(&root.join("file.txt")), None)
+        .expect_err("a file root must fail");
+    assert!(
+        matches!(&error, RunError::NotADirectory { path } if *path == root.join("file.txt")),
+        "{error:?}"
+    );
+    assert_eq!(
+        error.exit_code(),
+        2,
+        "a file root is a usage error: {error:?}"
     );
 }
 

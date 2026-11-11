@@ -1,1 +1,3 @@
-src/spread.php:3 deny complexity/mutable-span
+src/outer_from_closure.php:3 info complexity/mutable-span
+# outer_from_closure.php: binding line 3, writes lines 4 and 35 (span 31); the last write sits inside a `use (&$total)` closure with no shadowing.
+src/spread.php:3 info complexity/mutable-span

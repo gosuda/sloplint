@@ -1,2 +1,2 @@
-src/state.py:5 deny agent/ambient-global-state
-src/state.py:13 deny agent/ambient-global-state
+src/state.py:2 info agent/ambient-global-state
+src/state.py:8 info agent/ambient-global-state

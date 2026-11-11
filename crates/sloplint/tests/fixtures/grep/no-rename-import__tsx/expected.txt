@@ -1,2 +1,3 @@
-src/aliases.tsx:1 warn grep/no-rename-import
-src/aliases.tsx:2 warn grep/no-rename-import
+# Positive: neither alias contains its original name, so each fires once at info.
+src/aliases.tsx:1 info grep/no-rename-import
+src/aliases.tsx:2 info grep/no-rename-import

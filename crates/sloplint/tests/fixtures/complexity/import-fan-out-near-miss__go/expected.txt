@@ -1,1 +1,1 @@
-# 9 modules below strict warn_at=10.
+# 9 stdlib modules below strict minor_at=15.

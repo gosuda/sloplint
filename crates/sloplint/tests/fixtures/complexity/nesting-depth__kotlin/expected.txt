@@ -1,1 +1,1 @@
-src/deep.kt:1 deny complexity/nesting-depth
+src/deep.kt:1 info complexity/nesting-depth

@@ -191,8 +191,8 @@ fn expected(dir: &Path) -> BTreeSet<Key> {
             .parse()
             .unwrap_or_else(|e| panic!("{}:{}: {e}", dir.display(), i + 1));
         assert!(
-            sev == "warn" || sev == "deny",
-            "{}:{}: bad severity {sev}",
+            matches!(sev, "info" | "minor" | "major" | "critical" | "blocker"),
+            "{}:{}: bad severity {sev}, expected a ladder rung",
             dir.display(),
             i + 1
         );
@@ -232,8 +232,11 @@ fn run_fixture(fixture: &Fixture) -> sloplint::Report {
 
 fn severity_name(severity: Severity) -> &'static str {
     match severity {
-        Severity::Warn => "warn",
-        Severity::Deny => "deny",
+        Severity::Info => "info",
+        Severity::Minor => "minor",
+        Severity::Major => "major",
+        Severity::Critical => "critical",
+        Severity::Blocker => "blocker",
     }
 }
 
@@ -260,8 +263,28 @@ fn kind_problem(fixture: &Fixture, want: &BTreeSet<Key>) -> Option<String> {
     }
 }
 
-/// What is wrong with one fixture, as report lines; empty when its run matches `expected.txt`,
-/// its directory name agrees with what it proves, and every recognized source file was analyzed.
+fn is_data_path(rel: &str) -> bool {
+    rel.split('/').any(|part| {
+        matches!(
+            part,
+            "testdata" | "test-data" | "__fixtures__" | "__snapshots__"
+        )
+    })
+}
+fn is_generated_bytes(bytes: &[u8]) -> bool {
+    let head = &bytes[..bytes.len().min(2048)];
+    let lower = head.to_ascii_lowercase();
+    let needle = |pat: &[u8]| lower.windows(pat.len()).any(|w| w == pat);
+    needle(b"@generated") || needle(b"automatically generated") || needle(b"do not edit")
+}
+fn all_generated(dir: &Path, sources: &BTreeSet<String>) -> bool {
+    sources
+        .iter()
+        .all(|rel| match std::fs::read(dir.join(rel)) {
+            Ok(bytes) => is_generated_bytes(&bytes),
+            Err(_) => false,
+        })
+}
 fn problems(fixture: &Fixture) -> Vec<String> {
     let report = run_fixture(fixture);
     let want = expected(&fixture.dir);
@@ -288,15 +311,29 @@ fn problems(fixture: &Fixture) -> Vec<String> {
     );
     found.extend(kind_problem(fixture, &want));
     let summary = &report.summary;
-    if usize::try_from(summary.files).ok() != Some(fixture.sources.len()) {
+    let data = fixture
+        .sources
+        .iter()
+        .filter(|rel| is_data_path(rel))
+        .count();
+    let live = fixture.sources.len() - data;
+    let generated_only = want.is_empty()
+        && fixture.near_miss
+        && live > 0
+        && all_generated(&fixture.dir, &fixture.sources);
+    if usize::try_from(summary.files).ok() != Some(live) && !(generated_only && summary.files == 0)
+    {
         found.push(format!(
-            "analyzed {} file(s) but the directory holds {} recognized source file(s): {:?}",
-            summary.files,
-            fixture.sources.len(),
-            fixture.sources
+            "analyzed {} file(s) but the directory holds {} analyzable source file(s): {:?}",
+            summary.files, live, fixture.sources
         ));
     }
-    if summary.skipped != 0 {
+    let skipped_ok = match u32::try_from(data) {
+        Ok(data) => summary.skipped == 0 || summary.skipped == data,
+        Err(_) => false,
+    };
+    let generated_skipped = generated_only && usize::try_from(summary.skipped).ok() == Some(live);
+    if !skipped_ok && !generated_skipped {
         found.push(format!("skipped {} file(s)", summary.skipped));
     }
     found

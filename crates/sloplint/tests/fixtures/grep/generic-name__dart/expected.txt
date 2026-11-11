@@ -1,1 +1,2 @@
-a.dart:1 warn grep/generic-name
+# Positive: `handle` stays on the denylist; `run` no longer flags.
+a.dart:1 minor grep/generic-name

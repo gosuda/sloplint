@@ -31,7 +31,9 @@ fn project() -> tempfile::TempDir {
     let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
     let mut source = String::new();
     for i in 0..FINDINGS {
-        source.push_str(&format!("pub fn f{i}(flag: bool) {{}}\n"));
+        source.push_str(&format!(
+            "pub fn f{i}(a: bool, b: bool, c: bool, d: bool, e: bool, f: bool) {{}}\n"
+        ));
     }
     write(tmp.path(), "sloplint.toml", "");
     write(tmp.path(), "src/lib.rs", &source);

@@ -1,3 +1,3 @@
-public protocol Drawable {
+protocol Drawable {
     func draw() -> String
 }

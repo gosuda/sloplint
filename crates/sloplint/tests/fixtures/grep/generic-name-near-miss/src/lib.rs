@@ -1,3 +1,3 @@
-pub fn process_settlement_batch() {}
+pub fn run() {}
 
-fn run() {}
+pub(crate) fn handle() {}

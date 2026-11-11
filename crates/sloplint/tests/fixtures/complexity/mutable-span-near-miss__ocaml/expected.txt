@@ -1,0 +1,1 @@
+# Near-miss: two writes one line apart, so the mutable span stays below the threshold.

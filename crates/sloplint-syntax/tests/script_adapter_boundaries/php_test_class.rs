@@ -1,14 +1,15 @@
-//! PHP test detection: a method is a test when its enclosing class extends `TestCase`.
+//! PHP test detection: a method is a test case when its enclosing class extends `TestCase`.
 //!
 //! `base_clause` is a child of `class_declaration`, a sibling of the class body, so
 //! the lookup must start from the enclosing class and read its base names; the
 //! clause text itself starts with the `extends` keyword and is never a class name.
 
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 #[test]
-fn methods_of_a_test_case_subclass_are_in_test() {
+fn methods_of_a_testclass_subclass_are_marked() {
     let source = r#"<?php
 class WidgetSupport extends TestCase
 {
@@ -39,7 +40,7 @@ function helper(bool $on): void
         lang: Lang::Php,
         path: "case.php",
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.php parses");
@@ -47,7 +48,14 @@ function helper(bool $on): void
         .facts
         .functions
         .iter()
-        .map(|f| (f.name.to_owned(), f.in_test))
+        .map(|f| {
+            let marked = analysis.facts.regions.iter().any(|region| {
+                region.role == CodeRole::Test
+                    && region.start_line <= f.pos.line
+                    && f.pos.line <= region.end_line
+            });
+            (f.name.to_owned(), marked)
+        })
         .collect();
     let expected: Vec<(String, bool)> = [
         ("testFlag", true),
@@ -56,7 +64,7 @@ function helper(bool $on): void
         ("helper", false),
     ]
     .into_iter()
-    .map(|(name, in_test)| (name.to_owned(), in_test))
+    .map(|(name, marked)| (name.to_owned(), marked))
     .collect();
     assert_eq!(flags, expected);
 }

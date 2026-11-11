@@ -298,7 +298,7 @@ fn custom_rule_glob_matching_symlink_rejected() {
 
 #[test]
 fn custom_rule_glob_regular_file_still_loads() {
-    let rule_content = "[[custom_rules]]\nid = \"custom/test-rule\"\nlanguage = \"rust\"\nseverity = \"warn\"\nmessage = \"test\"\nwhy = \"test\"\nfix = \"test\"\nquery = \"(function_item) @match\"\n";
+    let rule_content = "[[custom_rules]]\nid = \"custom/test-rule\"\nlanguage = \"rust\"\nseverity = \"minor\"\nmessage = \"test\"\nwhy = \"test\"\nfix = \"test\"\nquery = \"(function_item) @match\"\n";
     let (_tmp, root) = project("[project]\ncustom_rule_files = [\"rules/*.toml\"]\n");
     let rules_dir = root.join("rules");
     fs::create_dir_all(&rules_dir).expect("create rules dir");
@@ -373,6 +373,64 @@ fn dangling_implicit_config_symlink_rejected() {
     assert_eq!(error.exit_code(), 3);
     let RunError::Io { path, .. } = error else {
         panic!("expected RunError::Io, got: {error:?}");
+    };
+    assert_eq!(path, link_path);
+}
+
+#[cfg(unix)]
+#[test]
+fn implicit_config_symlink_to_outside_target_rejected() {
+    let outside = tempfile::tempdir().expect("tempdir");
+    let target = outside.path().join("elsewhere.toml");
+    fs::write(&target, "[rules.\"grep/generic-name\"]\nlevel = \"off\"\n")
+        .expect("write outside target");
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let root = tmp.path().to_path_buf();
+    let src = root.join("src");
+    fs::create_dir_all(&src).expect("create src");
+    fs::write(src.join("lib.rs"), "pub fn handle() {}\n").expect("write lib.rs");
+
+    let link_path = root.join("sloplint.toml");
+    std::os::unix::fs::symlink(&target, &link_path).expect("symlink");
+
+    let opts = options(&root);
+    let Err(error) = run(&opts) else {
+        panic!("implicit sloplint.toml symlink to an outside file must be rejected, not followed");
+    };
+    assert_eq!(error.exit_code(), 3);
+    let RunError::Io { path, .. } = error else {
+        panic!("the linked config must never be parsed, got: {error:?}");
+    };
+    assert_eq!(path, link_path);
+}
+
+#[cfg(unix)]
+#[test]
+fn implicit_config_symlink_to_inside_target_rejected() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let root = tmp.path().to_path_buf();
+    let src = root.join("src");
+    fs::create_dir_all(&src).expect("create src");
+    fs::write(src.join("lib.rs"), "pub fn handle() {}\n").expect("write lib.rs");
+    fs::write(
+        root.join("real.toml"),
+        "[rules.\"grep/generic-name\"]\nlevel = \"off\"\n",
+    )
+    .expect("write inside target");
+
+    let link_path = root.join("sloplint.toml");
+    std::os::unix::fs::symlink(root.join("real.toml"), &link_path).expect("symlink");
+
+    let opts = options(&root);
+    let Err(error) = run(&opts) else {
+        panic!(
+            "implicit sloplint.toml symlink must be rejected like a custom rule file symlink, not followed"
+        );
+    };
+    assert_eq!(error.exit_code(), 3);
+    let RunError::Io { path, .. } = error else {
+        panic!("the linked config must never be parsed, got: {error:?}");
     };
     assert_eq!(path, link_path);
 }

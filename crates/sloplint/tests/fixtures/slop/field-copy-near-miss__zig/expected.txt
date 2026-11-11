@@ -1,0 +1,1 @@
+# Near-miss: three copied fields, below the threshold of four.

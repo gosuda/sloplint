@@ -3,8 +3,12 @@ int Deep(int a) {
     for (int i = 0; i < a; i++) {
         if (i > 0) {
             while (r < i) {
-                if (r > 5) {
-                    r += 1;
+                switch (r) {
+                default:
+                    if (r > 5) {
+                        r += 1;
+                    }
+                    break;
                 }
                 r += 1;
             }

@@ -1,0 +1,1 @@
+# Near-miss: boolean params in `#[cfg(test)]` and `#[bench]` fns are Off in test/bench roles.

@@ -4,6 +4,7 @@ use std::sync::LazyLock;
 
 use sloplint_core::facts::Stmt;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 static EMPTY_CUSTOM: LazyLock<CustomRules> =
@@ -15,10 +16,15 @@ fn audit_analyze<'s>(lang: Lang, path: &'s str, source: &'s str) -> Analysis<'s>
         lang,
         path,
         source,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     analyze(&mut parsers, &input, &EMPTY_CUSTOM)
 }
+
+#[path = "handler_facts/bindings.rs"]
+mod bindings;
+#[path = "handler_facts/visibility.rs"]
+mod visibility;
 
 #[test]
 fn audit_propagation_error_bubble_emits_no_handler() {
@@ -431,6 +437,19 @@ fn audit_missing_handler_go() {
         "go return err is Rethrow, got {:?}",
         analysis.facts.handlers[0].stmts
     );
+    let commented = "package sample\nfunc load(p string) error {\n data, err := os.ReadFile(p)\n // keep going\n if err != nil { return err }\n return nil\n}\n";
+    let analysis = audit_analyze(Lang::Go, "commented.go", commented);
+    assert!(analysis.parse_error.is_none(), "go commented parses");
+    assert_eq!(
+        analysis.facts.handlers.len(),
+        1,
+        "a comment between the call and the err check keeps the handler"
+    );
+    assert!(
+        matches!(&analysis.facts.handlers[0].stmts[..], [Stmt::Rethrow]),
+        "the commented handler returns the bound error, got {:?}",
+        analysis.facts.handlers[0].stmts
+    );
     let recovery =
         "package sample\nfunc load() error { if err := g(); err != nil { return nil } }\n";
     let analysis = audit_analyze(Lang::Go, "recovery.go", recovery);
@@ -573,253 +592,4 @@ fn audit_missing_handler_typescript() {
         "ts recovery stays Other, got {:?}",
         analysis.facts.handlers[0].stmts
     );
-}
-
-#[test]
-fn audit_dart_write_assignment_advances_span() {
-    for write in ["total = 1", "total += 2", "total.value = 1", "total[0] = 1"] {
-        let src = format!("void f() {{\n var total = value();\n {write};\n}}\n");
-        let a = audit_analyze(Lang::Dart, "w.dart", &src);
-        assert!(a.parse_error.is_none(), "{write} parses");
-        let b = a
-            .facts
-            .bindings
-            .iter()
-            .find(|b| b.name == "total")
-            .expect("total binding exists");
-        assert_eq!(b.last_write_line, 3, "{write} updates its root binding");
-        assert_eq!(b.max_nested_depth, 0, "{write} stays at depth 0");
-    }
-}
-
-#[test]
-fn audit_dart_write_increments_advance_span() {
-    for write in ["total++", "++total"] {
-        let src = format!("void f() {{\n var total = 0;\n {write};\n}}\n");
-        let a = audit_analyze(Lang::Dart, "w.dart", &src);
-        assert!(a.parse_error.is_none(), "{write} parses");
-        let b = a
-            .facts
-            .bindings
-            .iter()
-            .find(|b| b.name == "total")
-            .expect("total binding exists");
-        assert_eq!(b.last_write_line, 3, "{write} updates its root binding");
-        assert_eq!(b.max_nested_depth, 0, "{write} stays at depth 0");
-    }
-}
-
-#[test]
-fn audit_dart_write_nested_loop_and_read_control() {
-    let src = "void f() {\n var total = 0;\n for (var i = 0; i < 2; i++) {\n for (var j = 0; j < 2; j++) {\n total += j;\n }\n }\n}\n";
-    let a = audit_analyze(Lang::Dart, "w.dart", src);
-    assert!(a.parse_error.is_none(), "dart nested source parses");
-    let b = a
-        .facts
-        .bindings
-        .iter()
-        .find(|b| b.name == "total")
-        .expect("total binding exists");
-    assert_eq!(b.last_write_line, 5, "nested += advances span to line 5");
-    assert_eq!(b.max_nested_depth, 2, "doubly nested write has depth 2");
-    assert!(
-        b.nested_write_pos.is_some_and(|p| p.line == 5),
-        "nested write pos is line 5"
-    );
-    let src = "void f() {\n var total = 0;\n print(total);\n}\n";
-    let a = audit_analyze(Lang::Dart, "r.dart", src);
-    assert!(a.parse_error.is_none(), "dart read-only source parses");
-    let b = a
-        .facts
-        .bindings
-        .iter()
-        .find(|b| b.name == "total")
-        .expect("total binding exists");
-    assert_eq!(
-        b.last_write_line, 2,
-        "read-only call leaves span at decl line 2"
-    );
-    assert_eq!(b.max_nested_depth, 0, "read-only call keeps depth 0");
-}
-
-#[test]
-fn audit_java_reflection_arity() {
-    let cases = [
-        ("noarg", "Object r = request.getMethod();", 0, ""),
-        (
-            "comments",
-            "Object r = request.getMethod(/* name */);",
-            0,
-            "",
-        ),
-        ("constructor", "Object r = cls.getConstructor();", 0, ""),
-        (
-            "commented literal",
-            "Object r = Class.forName(/* type */ \"java.lang.String\");",
-            0,
-            "",
-        ),
-        (
-            "literal",
-            "Object r = Class.forName(\"java.lang.String\");",
-            0,
-            "",
-        ),
-        (
-            "dynamic",
-            "Object a = Class.forName(/* type */ name); Object b = request.getMethod(name);",
-            2,
-            "reflection by name",
-        ),
-    ];
-    for (label, statement, count, kind) in cases {
-        let source = format!("void probe(String name) {{ {statement} }}\n");
-        let analysis = audit_analyze(Lang::Java, "reflect.java", &source);
-        assert!(analysis.parse_error.is_none(), "{label} source parses");
-        let sites = &analysis.facts.dynamic_symbols;
-        assert_eq!(sites.len(), count, "{label} dynamic symbol count");
-        assert!(
-            sites.iter().all(|site| site.what == kind),
-            "{label} reports {kind}"
-        );
-    }
-}
-
-#[test]
-fn audit_local_function_visibility() {
-    let nested = [
-        (
-            Lang::Kotlin,
-            "a.kt",
-            "fun total(xs: List<Int>): Int {\n fun twice(x: Int) = x * 2\n return xs.sumOf { twice(it) }\n}\n",
-        ),
-        (
-            Lang::Scala,
-            "A.scala",
-            "object Calc {\n def total(xs: List[Int]): Int = {\n def twice(x: Int) = x * 2\n xs.map(twice).sum\n }\n}\n",
-        ),
-    ];
-    for (lang, path, source) in nested {
-        let a = audit_analyze(lang, path, source);
-        assert!(
-            a.parse_error.is_none(),
-            "{path} local-function repro parses"
-        );
-        let total = a
-            .facts
-            .functions
-            .iter()
-            .find(|f| f.name == "total")
-            .unwrap_or_else(|| panic!("{path} has total"));
-        assert!(total.public, "{path} total stays public");
-        let twice = a
-            .facts
-            .functions
-            .iter()
-            .find(|f| f.name == "twice")
-            .unwrap_or_else(|| panic!("{path} has twice"));
-        assert!(!twice.public, "{path} local twice is not public");
-    }
-    let members = [
-        (
-            Lang::Kotlin,
-            "C.kt",
-            "class C {\n fun total(): Int = 1\n}\n",
-            "total",
-            true,
-        ),
-        (
-            Lang::Kotlin,
-            "P.kt",
-            "class C {\n private fun twice(): Int = 1\n}\n",
-            "twice",
-            false,
-        ),
-        (
-            Lang::Scala,
-            "C.scala",
-            "object Calc {\n def total(): Int = 1\n}\n",
-            "total",
-            true,
-        ),
-        (
-            Lang::Scala,
-            "P.scala",
-            "class C {\n private def twice(): Int = 1\n}\n",
-            "twice",
-            false,
-        ),
-    ];
-    for (lang, path, source, name, want) in members {
-        let a = audit_analyze(lang, path, source);
-        assert!(a.parse_error.is_none(), "{path} member parses");
-        let f = a
-            .facts
-            .functions
-            .iter()
-            .find(|f| f.name == name)
-            .unwrap_or_else(|| panic!("{path} has {name}"));
-        assert_eq!(f.public, want, "{path} {name} public is {want}");
-    }
-    let block_locals = [
-        (
-            Lang::Kotlin,
-            "I.kt",
-            "class C {\n init {\n fun twice(x: Int) = x * 2\n }\n}\n",
-            "twice",
-        ),
-        (
-            Lang::Scala,
-            "V.scala",
-            "object C {\n val k = {\n def twice(x: Int) = x * 2\n twice(1)\n }\n}\n",
-            "twice",
-        ),
-        (
-            Lang::Kotlin,
-            "L.kt",
-            "fun total(): Int {\n val f = { fun twice(x: Int) = x * 2\n twice(1) }\n return 1\n}\n",
-            "twice",
-        ),
-        (
-            Lang::Kotlin,
-            "N.kt",
-            "fun total(): Int {\n class Local {\n fun twice(): Int = 1\n }\n return 1\n}\n",
-            "twice",
-        ),
-        (
-            Lang::Scala,
-            "W.scala",
-            "object C {\n val f = (x: Int) => {\n def twice(y: Int) = y * 2\n twice(x)\n }\n}\n",
-            "twice",
-        ),
-        (
-            Lang::Scala,
-            "F.scala",
-            "object C {\n def total(): Int = {\n class Local {\n def twice(): Int = 1\n }\n 1\n }\n}\n",
-            "twice",
-        ),
-        (
-            Lang::Kotlin,
-            "O.kt",
-            "fun total(): Int {\n object Local {\n fun twice(): Int = 1\n }\n return 1\n}\n",
-            "twice",
-        ),
-        (
-            Lang::Scala,
-            "G.scala",
-            "object C {\n def total(): Int = {\n object Local {\n def twice(): Int = 1\n }\n 1\n }\n}\n",
-            "twice",
-        ),
-    ];
-    for (lang, path, source, name) in block_locals {
-        let a = audit_analyze(lang, path, source);
-        assert!(a.parse_error.is_none(), "{path} block-local repro parses");
-        let f = a
-            .facts
-            .functions
-            .iter()
-            .find(|f| f.name == name)
-            .unwrap_or_else(|| panic!("{path} has {name}"));
-        assert!(!f.public, "{path} block-local {name} is not public");
-    }
 }

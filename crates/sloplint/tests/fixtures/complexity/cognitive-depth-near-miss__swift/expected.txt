@@ -1,1 +1,1 @@
-# else-if chain scores 9 arms: below deny_at=15.
+# else-if adds 0 and nest-0 adds 0, so the chain scores 0 < strict minor_at 10: no finding.

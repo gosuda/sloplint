@@ -1,1 +1,1 @@
-src/lib.rs:1 warn meta/unused-suppression
+src/lib.rs:1 minor meta/unused-suppression

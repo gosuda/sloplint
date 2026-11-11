@@ -1,1 +1,4 @@
 # Near-miss: the log call takes its message from the pipeline, which the adapter exposes as its first argument for the rule to grade.
+# b.ps1: parenthesized format template measures 20 static chars, so the run passes the minimum.
+# c.ps1: parenthesized concatenation measures 17 static chars, so the run passes the minimum.
+# d.ps1: the bare word after -ForegroundColor is that parameter's value, so the quoted 31-char message is the first string.

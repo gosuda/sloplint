@@ -1,2 +1,1 @@
-# Positive: module with public functions and no tests.
-src/service.scala:1 warn agent/colocated-tests
+src/service.scala:1 info agent/colocated-tests

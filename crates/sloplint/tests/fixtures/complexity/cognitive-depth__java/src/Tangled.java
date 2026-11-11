@@ -1,6 +1,8 @@
 public class Tangled {
     public int tangled(int a) {
         int x = a;
+    if (a >= 0) {
+        for (int i = 0; i < a; i++) {
         if (a > 0) { x += 1; }
         if (a > 1) { x += 2; }
         if (a > 2) { x += 3; }
@@ -17,6 +19,8 @@ public class Tangled {
         if (a > 13) { x += 14; }
         if (a > 14) { x += 15; }
         if (a > 15) { x += 16; }
+        }
+    }
         return x;
     }
 }

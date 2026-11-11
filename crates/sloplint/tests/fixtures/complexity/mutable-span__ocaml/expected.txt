@@ -1,0 +1,3 @@
+src/lib.ml:2 info complexity/mutable-span
+# outer-from-block.ml: binding line 2, writes lines 3, 35 and 36 (span 33); far writes sit in a begin block with no shadowing.
+src/outer-from-block.ml:2 info complexity/mutable-span

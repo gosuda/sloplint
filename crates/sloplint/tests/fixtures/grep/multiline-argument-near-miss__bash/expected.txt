@@ -1,1 +1,2 @@
-# Near-miss: the substitution spans 5 lines < strict warn_at=6.
+# Near-miss: the substitution spans 5 lines < strict Minor(15).
+# Retired positive (retired_cmd.sh): command-substitution arg below the span threshold stays silent.

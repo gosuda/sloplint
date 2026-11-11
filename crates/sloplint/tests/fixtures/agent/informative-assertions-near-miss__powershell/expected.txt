@@ -1,1 +1,2 @@
 # Near-miss: `-Because` supplies the failure message naming the violated invariant.
+# Near-miss: named Should comparisons map to Other, so no message is required.

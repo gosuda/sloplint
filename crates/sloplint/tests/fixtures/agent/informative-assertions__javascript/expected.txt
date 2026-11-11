@@ -1,1 +1,1 @@
-src/app.js:2 deny agent/informative-assertions
+src/app.js:2 info agent/informative-assertions

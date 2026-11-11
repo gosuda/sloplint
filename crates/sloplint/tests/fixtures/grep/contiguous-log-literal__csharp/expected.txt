@@ -1,2 +1,2 @@
-src/Loader.cs:5 deny grep/contiguous-log-literal
-src/Loader.cs:6 deny grep/contiguous-log-literal
+src/Loader.cs:5 info grep/contiguous-log-literal
+src/Loader.cs:6 info grep/contiguous-log-literal

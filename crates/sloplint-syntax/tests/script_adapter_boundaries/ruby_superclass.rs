@@ -4,6 +4,7 @@
 
 use sloplint_core::facts::FileFacts;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::CodeRole;
 use sloplint_syntax::{CustomRules, FileInput, Parsers, analyze};
 
 const SOURCE: &str = r#"class WidgetTest < TestCase
@@ -45,7 +46,7 @@ fn observe<R>(read: impl FnOnce(&FileFacts<'_>) -> R) -> R {
         lang: Lang::Ruby,
         path: "case.rb",
         source: SOURCE,
-        is_test_file: false,
+        role: CodeRole::Library,
     };
     let analysis = analyze(&mut Parsers::new(), &input, &custom);
     assert!(analysis.parse_error.is_none(), "case.rb parses");
@@ -53,12 +54,19 @@ fn observe<R>(read: impl FnOnce(&FileFacts<'_>) -> R) -> R {
 }
 
 #[test]
-fn methods_of_test_case_subclasses_are_in_test() {
+fn methods_of_testclass_subclasses_are_marked() {
     let flags: Vec<(u32, bool)> = observe(|facts| {
         facts
             .functions
             .iter()
-            .map(|f| (f.pos.line, f.in_test))
+            .map(|f| {
+                let marked = facts.regions.iter().any(|region| {
+                    region.role == CodeRole::Test
+                        && region.start_line <= f.pos.line
+                        && f.pos.line <= region.end_line
+                });
+                (f.pos.line, marked)
+            })
             .collect()
     });
     assert_eq!(

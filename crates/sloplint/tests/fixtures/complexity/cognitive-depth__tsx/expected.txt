@@ -1,1 +1,1 @@
-src/tangled.tsx:1 deny complexity/cognitive-depth
+src/tangled.tsx:1 info complexity/cognitive-depth

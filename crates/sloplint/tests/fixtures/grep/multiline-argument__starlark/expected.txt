@@ -1,1 +1,2 @@
-a.bzl:2 warn grep/multiline-argument
+# Positive: Collection arg spans lines 4-20 (17 lines >= strict Minor(15)); statement call.
+a.bzl:2 info grep/multiline-argument

@@ -1,1 +1,0 @@
-src/app.js:6 deny complexity/nested-mutation

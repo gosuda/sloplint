@@ -1,2 +1,1 @@
-# Positive: `reconcileLedger` defined in 5 files (strict min_files=5); one finding at first site.
-src/A.java:2 warn grep/homonym-definitions
+src/a/LedgerStore.java:1 info grep/homonym-definitions

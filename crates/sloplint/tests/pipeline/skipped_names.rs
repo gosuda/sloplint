@@ -25,9 +25,10 @@ fn project() -> (tempfile::TempDir, PathBuf) {
 fn put(root: &Path, rel: &str, body: &str) {
     let path = root.join(rel);
     if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir).unwrap_or_else(|e| panic!("mkdir {}: {e}", dir.display()));
+        std::fs::create_dir_all(dir)
+            .unwrap_or_else(|e| panic!("mkdir failed {}: {e}", dir.display()));
     }
-    std::fs::write(&path, body).unwrap_or_else(|e| panic!("write {rel}: {e}"));
+    std::fs::write(&path, body).unwrap_or_else(|e| panic!("write failed {rel}: {e}"));
 }
 
 fn scoped(root: &Path, paths: Vec<PathBuf>) -> RunOptions {
@@ -60,8 +61,17 @@ fn set<const N: usize>(paths: [&str; N]) -> BTreeSet<String> {
 }
 #[cfg(unix)]
 fn name_is_unrepresentable(e: &std::io::Error) -> bool {
-    const EILSEQ: i32 = 92;
-    e.raw_os_error() == Some(EILSEQ)
+    e.raw_os_error() == Some(libc::EILSEQ)
+}
+
+/// Prints the capability skip, or fails when SLOPLINT_REQUIRE_FS_CAPS demands the capability,
+/// so a runner that silently drops the capability coverage turns red in CI.
+#[cfg(unix)]
+fn skip_unless_fs_caps_required(context: &str, error: &std::io::Error) {
+    if std::env::var_os("SLOPLINT_REQUIRE_FS_CAPS").is_some_and(|value| !value.is_empty()) {
+        panic!("SLOPLINT_REQUIRE_FS_CAPS is set but the capability is missing: {context}: {error}");
+    }
+    eprintln!("SKIP (capability unavailable) {context}: {error}");
 }
 
 /// A line comment whose `@generated` marker ends `shift` bytes after the window edge.
@@ -77,14 +87,15 @@ fn a_non_utf8_name_outside_the_scope_is_not_counted() {
     use std::os::unix::ffi::OsStrExt;
     let (_tmp, root) = project();
     put(&root, "src/lib.rs", SAMPLE);
-    std::fs::create_dir_all(root.join("other")).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    std::fs::create_dir_all(root.join("other")).unwrap_or_else(|e| panic!("mkdir failed: {e}"));
     let bad = root
         .join("other")
         .join(std::ffi::OsStr::from_bytes(b"bad\xff.rs"));
     if let Err(e) = std::fs::write(&bad, SAMPLE) {
         assert!(name_is_unrepresentable(&e), "write non-UTF-8 name: {e}");
-        eprintln!(
-            "SKIP a_non_utf8_name_outside_the_scope_is_not_counted: filesystem cannot represent the 0xFF name: {e}"
+        skip_unless_fs_caps_required(
+            "a_non_utf8_name_outside_the_scope_is_not_counted: filesystem cannot represent the 0xFF name",
+            &e,
         );
         return;
     }
@@ -118,12 +129,14 @@ fn lossy_equal_file_names_do_not_share_an_explicit_scope() {
         .join(std::ffi::OsStr::from_bytes(b"bad\xff.rs"));
     if let Err(e) = std::fs::write(&invalid, SAMPLE) {
         assert!(name_is_unrepresentable(&e), "write non-UTF-8 name: {e}");
-        eprintln!(
-            "SKIP lossy_equal_file_names_do_not_share_an_explicit_scope: filesystem cannot represent the 0xFF name: {e}"
+        skip_unless_fs_caps_required(
+            "lossy_equal_file_names_do_not_share_an_explicit_scope: filesystem cannot represent the 0xFF name",
+            &e,
         );
         return;
     }
-    symlink("bad\u{FFFD}.rs", root.join("other/link.rs")).unwrap_or_else(|e| panic!("link: {e}"));
+    symlink("bad\u{FFFD}.rs", root.join("other/link.rs"))
+        .unwrap_or_else(|e| panic!("symlink failed: {e}"));
 
     assert_eq!(
         counts(&run_ok(&scoped(&root, vec![]))),
@@ -166,8 +179,9 @@ fn lossy_equal_dir_names_do_not_share_an_explicit_scope() {
         .join(std::ffi::OsStr::from_bytes(b"scope\xff"));
     if let Err(e) = std::fs::create_dir_all(&invalid_dir) {
         assert!(name_is_unrepresentable(&e), "mkdir: {e}");
-        eprintln!(
-            "SKIP lossy_equal_dir_names_do_not_share_an_explicit_scope: filesystem cannot represent the 0xFF name: {e}"
+        skip_unless_fs_caps_required(
+            "lossy_equal_dir_names_do_not_share_an_explicit_scope: filesystem cannot represent the 0xFF name",
+            &e,
         );
         return;
     }
@@ -200,10 +214,12 @@ fn a_symlinked_source_is_a_counted_skip_and_never_followed() {
     use std::os::unix::fs::symlink;
     let (_tmp, root) = project();
     put(&root, "shared/lib.rs", SAMPLE);
-    std::fs::create_dir_all(root.join("src")).unwrap_or_else(|e| panic!("mkdir: {e}"));
-    symlink("../shared/lib.rs", root.join("src/lib.rs")).unwrap_or_else(|e| panic!("link: {e}"));
-    symlink("missing.rs", root.join("src/dangling.rs")).unwrap_or_else(|e| panic!("link: {e}"));
-    symlink("shared", root.join("alias")).unwrap_or_else(|e| panic!("link: {e}"));
+    std::fs::create_dir_all(root.join("src")).unwrap_or_else(|e| panic!("mkdir failed: {e}"));
+    symlink("../shared/lib.rs", root.join("src/lib.rs"))
+        .unwrap_or_else(|e| panic!("symlink failed: {e}"));
+    symlink("missing.rs", root.join("src/dangling.rs"))
+        .unwrap_or_else(|e| panic!("symlink failed: {e}"));
+    symlink("shared", root.join("alias")).unwrap_or_else(|e| panic!("symlink failed: {e}"));
 
     let whole = run_ok(&scoped(&root, vec![]));
     assert_eq!(
@@ -286,5 +302,84 @@ fn the_generated_marker_window_is_the_first_2048_bytes() {
         reported(&report),
         set(["header_only.rs", "straddle.rs"]),
         "the marker straddling the window and a lone `Code generated` header are analyzed"
+    );
+}
+
+#[test]
+fn threshold_gate_fails_on_any_skip_only_when_opted_in() {
+    let (_tmp, root) = project();
+    put(
+        &root,
+        "sloplint.toml",
+        "[project]\nfail_on = \"never\"\nfail_on_skipped = true\n",
+    );
+    put(&root, "clean.rs", SAMPLE);
+    put(&root, "gen.rs", &format!("// do not edit\n{SAMPLE}"));
+    let gated =
+        sloplint::execute(&scoped(&root, vec![])).unwrap_or_else(|e| panic!("run failed: {e}"));
+    assert!(
+        gated.failed,
+        "a generated skip must fail the opted-in threshold gate"
+    );
+    assert_eq!(
+        gated.report.summary.skipped, 1,
+        "one file is skipped: {:?}",
+        gated.report.summary
+    );
+    assert_eq!(
+        gated
+            .report
+            .skipped_gate
+            .iter()
+            .map(|entry| entry.path.to_string())
+            .collect::<Vec<_>>(),
+        vec!["gen.rs".to_string()],
+        "the gate names the skipped file"
+    );
+    put(&root, "sloplint.toml", "[project]\nfail_on = \"never\"\n");
+    let passed =
+        sloplint::execute(&scoped(&root, vec![])).unwrap_or_else(|e| panic!("run failed: {e}"));
+    assert!(!passed.failed, "the same skip passes when the gate is off");
+    assert_eq!(
+        passed.report.summary.skipped, 1,
+        "the summary still counts the skip: {:?}",
+        passed.report.summary
+    );
+}
+
+#[test]
+fn ratchet_gate_fails_only_on_newly_skipped_paths() {
+    let (_tmp, root) = project();
+    put(&root, "a.rs", SAMPLE);
+    put(&root, "b.rs", SAMPLE);
+    let mut writing = scoped(&root, vec![]);
+    writing.mode = Some(Mode::Ratchet);
+    writing.fail_on_skipped = true;
+    writing.write_baseline = true;
+    sloplint::execute(&writing).unwrap_or_else(|e| panic!("baseline write failed: {e}"));
+    put(&root, "b.rs", &format!("// @generated\n{SAMPLE}"));
+    let mut gated = scoped(&root, vec![]);
+    gated.mode = Some(Mode::Ratchet);
+    gated.fail_on_skipped = true;
+    let failed = sloplint::execute(&gated).unwrap_or_else(|e| panic!("run failed: {e}"));
+    assert!(
+        failed.failed,
+        "a file that gained a marker since the baseline must fail the ratchet gate"
+    );
+    assert_eq!(
+        failed
+            .report
+            .skipped_gate
+            .iter()
+            .map(|entry| entry.path.to_string())
+            .collect::<Vec<_>>(),
+        vec!["b.rs".to_string()],
+        "the gate names the newly skipped file"
+    );
+    sloplint::execute(&writing).unwrap_or_else(|e| panic!("baseline rewrite failed: {e}"));
+    let settled = sloplint::execute(&gated).unwrap_or_else(|e| panic!("run failed: {e}"));
+    assert!(
+        !settled.failed,
+        "a long-standing generated file recorded in the baseline must not fail"
     );
 }

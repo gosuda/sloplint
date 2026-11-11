@@ -6,8 +6,22 @@ use tree_sitter::{Query, QueryCursor, StreamingIterator, Tree};
 use crate::hooks::{narrow, pos_of, slice};
 use crate::spec::spec;
 
+const MATCH_LIMIT: u32 = 16_384;
+const MAX_HITS_PER_RULE: usize = 1_024;
+
 pub struct CustomRules {
-    entries: Vec<(Lang, u32, Query)>,
+    entries: Vec<(Lang, CompiledQuery)>,
+}
+
+struct CompiledQuery {
+    rule: u32,
+    id: Box<str>,
+    query: Query,
+}
+
+pub(crate) struct CustomHits<'s> {
+    pub(crate) hits: Vec<CustomHit<'s>>,
+    pub(crate) capped: Vec<&'s str>,
 }
 
 impl CustomRules {
@@ -22,39 +36,63 @@ impl CustomRules {
             }
             for lang in langs {
                 let query = compile_query(lang, rule)?;
-                entries.push((lang, narrow(index), query));
+                entries.push((
+                    lang,
+                    CompiledQuery {
+                        rule: narrow(index),
+                        id: rule.id.as_str().into(),
+                        query,
+                    },
+                ));
             }
         }
         Ok(CustomRules { entries })
     }
 
-    pub(crate) fn run<'s>(
-        &'s self,
-        tree: &Tree,
-        source: &'s str,
-        lang: Lang,
-    ) -> Vec<CustomHit<'s>> {
+    pub(crate) fn run<'s>(&'s self, tree: &Tree, source: &'s str, lang: Lang) -> CustomHits<'s> {
         let mut queries = self
             .entries
             .iter()
-            .filter(|(entry_lang, _, _)| *entry_lang == lang)
+            .filter(|(entry_lang, _)| *entry_lang == lang)
+            .map(|(_, entry)| entry)
             .peekable();
         if queries.peek().is_none() {
-            return Vec::new();
+            return CustomHits {
+                hits: Vec::new(),
+                capped: Vec::new(),
+            };
         }
         let mut hits = Vec::new();
-        let mut cursor = QueryCursor::new();
-        for (_, rule, query) in queries {
-            let names = query.capture_names();
-            let mut matches = cursor.matches(query, tree.root_node(), source.as_bytes());
-            while let Some(found) = matches.next() {
-                if let Some(hit) = hit_from_match(names, found.captures(), *rule, source) {
-                    hits.push(hit);
-                }
+        let mut capped = Vec::new();
+        for entry in queries {
+            if capped_hits(entry, tree, source, &mut hits) {
+                capped.push(&*entry.id);
             }
         }
-        hits
+        CustomHits { hits, capped }
     }
+}
+
+fn capped_hits<'s>(
+    entry: &'s CompiledQuery,
+    tree: &Tree,
+    source: &'s str,
+    hits: &mut Vec<CustomHit<'s>>,
+) -> bool {
+    let names = entry.query.capture_names();
+    let start = hits.len();
+    let mut cursor = QueryCursor::new();
+    cursor.set_match_limit(MATCH_LIMIT);
+    let mut matches = cursor.matches(&entry.query, tree.root_node(), source.as_bytes());
+    while hits.len() - start <= MAX_HITS_PER_RULE {
+        let Some(found) = matches.next() else { break };
+        if let Some(hit) = hit_from_match(names, found.captures(), entry.rule, source) {
+            hits.push(hit);
+        }
+    }
+    let over_hit_cap = hits.len() - start > MAX_HITS_PER_RULE;
+    hits.truncate(start + MAX_HITS_PER_RULE);
+    over_hit_cap || cursor.did_exceed_match_limit()
 }
 
 fn langs_for_key(key: &str) -> Vec<Lang> {

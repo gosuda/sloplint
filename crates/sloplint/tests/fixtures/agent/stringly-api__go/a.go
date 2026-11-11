@@ -1,4 +1,4 @@
 package probe
-func ProcessOrder(id string, account string, qty int) int {
-	return len(id) + len(account) + qty
+func ProcessOrder(a int, b int, c int) int {
+	return a + b + c
 }

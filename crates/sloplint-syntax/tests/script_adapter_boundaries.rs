@@ -2,6 +2,10 @@
 //!
 //! One child module per mechanism, so each fix lands with its own case module and
 //! one declaration here, while the crate links a single integration-test executable.
+#[path = "script_adapter_boundaries/js_dynamic.rs"]
+mod js_dynamic;
+#[path = "script_adapter_boundaries/native_dynamic.rs"]
+mod native_dynamic;
 #[path = "script_adapter_boundaries/php_callee_matching.rs"]
 mod php_callee_matching;
 
@@ -17,8 +21,20 @@ mod powershell_pipeline_input;
 mod python_boolean_defaults;
 #[path = "script_adapter_boundaries/python_callee_root.rs"]
 mod python_callee_root;
+#[path = "script_adapter_boundaries/python_calls.rs"]
+mod python_calls;
+#[path = "script_adapter_boundaries/python_dynamic.rs"]
+mod python_dynamic;
+#[path = "script_adapter_boundaries/python_handlers.rs"]
+mod python_handlers;
+#[path = "script_adapter_boundaries/python_imports.rs"]
+mod python_imports;
 #[path = "script_adapter_boundaries/python_nested_def.rs"]
 mod python_nested_def;
+#[path = "script_adapter_boundaries/python_params.rs"]
+mod python_params;
+#[path = "script_adapter_boundaries/python_visibility.rs"]
+mod python_visibility;
 #[path = "script_adapter_boundaries/ruby_assertion_arity.rs"]
 mod ruby_assertion_arity;
 #[path = "script_adapter_boundaries/ruby_hash_keys.rs"]

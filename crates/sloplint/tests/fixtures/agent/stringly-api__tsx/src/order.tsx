@@ -1,3 +1,3 @@
-export function processOrder(id: string, account: string, qty: number): number {
-  return qty;
+export function processOrder(a: string, b: string, c: string): string {
+  return a;
 }

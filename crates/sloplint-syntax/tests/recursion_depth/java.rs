@@ -23,35 +23,43 @@ fn field_receiver_chains_keep_their_receiver_root() {
     });
 }
 
-/// Every call in a 20,000-link method chain roots at the leftmost identifier, in linear time.
+/// Only the innermost link of a 20,000-link method chain roots at the leftmost identifier, in linear time.
 ///
-/// Each call finds its root by following the receivers below it, so an unmemoized walk
-/// costs the sum of the chain lengths and blows the budget at this depth.
+/// Each link whose receiver is itself a call has no root per Ruling 17, so only the
+/// innermost `a.m()` keeps `a`. An unmemoized walk costs the sum of the chain lengths
+/// and blows the budget at this depth.
 #[test]
 fn method_chains_keep_their_receiver_root_in_linear_time() {
     on_default_stack(|| {
-        let source = format!(
-            "class C {{\n    void g() {{\n        x = a{};\n    }}\n}}\n",
-            ".m()".repeat(DEPTH)
-        );
-        within_linear_budget(|| {
+        within_linear_budget(|depth| {
+            let source = format!(
+                "class C {{\n    void g() {{\n        x = a{};\n    }}\n}}\n",
+                ".m()".repeat(depth)
+            );
             with_facts(Lang::Java, "C.java", &source, |facts| {
-                assert_eq!(facts.calls.len(), DEPTH, "one call per link");
+                assert_eq!(facts.calls.len(), depth, "one call per link");
                 assert!(
-                    facts.calls.iter().all(|c| c.callee_root == Some("a")),
-                    "every link roots at a: {:?}",
+                    facts.calls[..depth - 1]
+                        .iter()
+                        .all(|c| c.callee_root.is_none()),
+                    "chained links have no root: {:?}",
                     facts
                         .calls
                         .iter()
                         .map(|c| c.callee_root)
                         .collect::<Vec<_>>()
                 );
+                assert_eq!(
+                    facts.calls[depth - 1].callee_root,
+                    Some("a"),
+                    "innermost link roots at a"
+                );
             });
         });
     });
 }
 
-/// Every call in a short method chain roots at the receiver's leftmost identifier.
+/// Only the innermost call in a short method chain roots at the receiver's leftmost identifier.
 #[test]
 fn method_chains_keep_their_receiver_root() {
     with_facts(
@@ -61,12 +69,29 @@ fn method_chains_keep_their_receiver_root() {
         |facts| {
             assert_eq!(facts.calls.len(), 3, "one call per link");
             assert!(
-                facts.calls.iter().all(|c| c.callee_root == Some("a")),
-                "every link roots at a: {:?}",
+                facts.calls[..2].iter().all(|c| c.callee_root.is_none()),
+                "chained links have no root: {:?}",
                 facts
                     .calls
                     .iter()
                     .map(|c| c.callee_root)
+                    .collect::<Vec<_>>()
+            );
+            assert_eq!(
+                facts.calls[2].callee_root,
+                Some("a"),
+                "innermost link roots at a"
+            );
+            assert_eq!(facts.calls[2].callee, "a.m", "innermost keeps its path");
+            assert!(
+                facts.calls[..2]
+                    .iter()
+                    .all(|c| c.callee == "m" && !c.is_simple_path),
+                "chained links keep the bare member: {:?}",
+                facts
+                    .calls
+                    .iter()
+                    .map(|c| (c.callee, c.is_simple_path))
                     .collect::<Vec<_>>()
             );
         },

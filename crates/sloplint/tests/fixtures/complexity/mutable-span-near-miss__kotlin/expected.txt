@@ -1,0 +1,1 @@
+# shadowed-lambda.kt: outer `total` is written once on line 3; the line-26 write targets the inner `run` block's own `total` under the forEach lambda parameter, so misattribution would span 23 and fire.

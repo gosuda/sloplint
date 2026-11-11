@@ -1,0 +1,1 @@
+# Near-miss: pub(crate)-only, no unrestricted Exported fn, so no finding.

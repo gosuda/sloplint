@@ -1,19 +1,24 @@
 fun render(): String {
     return format(
-        "title",
-        combine(
-            "a",
-            "b",
-            "c",
-            "d"
-        )
+        [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+        ],
     )
 }
-
-fun format(title: String, body: String): String {
-    return title + body
-}
-
-fun combine(a: String, b: String): String {
-    return a + b
+fun format(body: List<Int>): String {
+    return "ok"
 }

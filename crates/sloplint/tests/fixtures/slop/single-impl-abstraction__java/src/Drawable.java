@@ -1,3 +1,3 @@
-public interface Drawable {
+interface Drawable {
     void draw();
 }

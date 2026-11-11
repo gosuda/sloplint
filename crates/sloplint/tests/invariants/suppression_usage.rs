@@ -132,18 +132,16 @@ fn suppressed_duplicate_does_not_renumber_the_visible_fingerprint() {
     write(
         &with_duplicate,
         "src/lib.rs",
-        &format!(
-            "// sloplint-allow(complexity/boolean-params): flags are the contract\n{BOOL_FN}{BOOL_FN}"
-        ),
+        "// sloplint-allow(grep/generic-name): the name is the contract\npub fn handle() {}\npub fn handle() {}\n",
     );
     let (_tmp_alone, alone) = tempdir();
-    write(&alone, "src/lib.rs", BOOL_FN);
+    write(&alone, "src/lib.rs", "pub fn handle() {}\n");
 
     let visible = |report: &Report| -> Vec<String> {
         report
             .findings
             .iter()
-            .filter(|f| &*f.rule == "complexity/boolean-params")
+            .filter(|f| &*f.rule == "grep/generic-name")
             .map(|f| f.fingerprint.to_string())
             .collect()
     };
@@ -157,5 +155,75 @@ fn suppressed_duplicate_does_not_renumber_the_visible_fingerprint() {
     assert_eq!(
         with, without,
         "a visible finding keeps its fingerprint when a suppressed duplicate is deleted"
+    );
+}
+
+const DEEP_FN: &str = "pub fn reconcile_ledger(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32) -> i32 {\n    if a > 0 {\n        if b > 0 {\n            if c > 0 {\n                if d > 0 {\n                    if e > 0 {\n                        if f > 0 {\n                            return 1;\n                        }\n                    }\n                }\n            }\n        }\n    }\n    0\n}\n";
+
+const DEPTH_LEVELS: &str = "[rules.\"complexity/cognitive-depth\"]\nlevel = \"minor\"\n[rules.\"complexity/nesting-depth\"]\nlevel = \"minor\"\n";
+
+#[test]
+fn allow_nesting_keeps_cognitive_without_unused() {
+    let (_tmp, root) = tempdir();
+    write(&root, "sloplint.toml", DEPTH_LEVELS);
+    write(
+        &root,
+        "src/lib.rs",
+        &format!("// sloplint-allow(complexity/nesting-depth): nesting is reviewed\n{DEEP_FN}"),
+    );
+    let report = run_ok(&standard(&root));
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|f| &*f.rule == "complexity/cognitive-depth"),
+        "allowing nesting keeps the cognitive finding: {:?}",
+        report.findings
+    );
+    assert!(
+        report
+            .findings
+            .iter()
+            .all(|f| &*f.rule != "complexity/nesting-depth"),
+        "the allowed nesting finding stays suppressed: {:?}",
+        report.findings
+    );
+    assert!(
+        unused_messages(&report).is_empty(),
+        "the used nesting operand reports no unused: {:?}",
+        unused_messages(&report)
+    );
+}
+
+#[test]
+fn allow_cognitive_keeps_nesting() {
+    let (_tmp, root) = tempdir();
+    write(&root, "sloplint.toml", DEPTH_LEVELS);
+    write(
+        &root,
+        "src/lib.rs",
+        &format!("// sloplint-allow(complexity/cognitive-depth): cognitive is reviewed\n{DEEP_FN}"),
+    );
+    let report = run_ok(&standard(&root));
+    assert!(
+        report
+            .findings
+            .iter()
+            .any(|f| &*f.rule == "complexity/nesting-depth"),
+        "allowing cognitive keeps the nesting finding: {:?}",
+        report.findings
+    );
+    assert!(
+        report
+            .findings
+            .iter()
+            .all(|f| &*f.rule != "complexity/cognitive-depth"),
+        "the allowed cognitive finding stays suppressed: {:?}",
+        report.findings
+    );
+    assert!(
+        unused_messages(&report).is_empty(),
+        "the used cognitive operand reports no unused: {:?}",
+        unused_messages(&report)
     );
 }

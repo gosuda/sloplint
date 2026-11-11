@@ -5,6 +5,9 @@ export function nested(a) {
         switch (a) {
           default:
             if (a) {
+              if (a) {
+                break;
+              }
               break;
             }
             break;

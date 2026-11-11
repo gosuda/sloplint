@@ -1,1 +1,1 @@
-a.go:2 deny agent/stringly-api
+a.go:2 info agent/stringly-api

@@ -1,1 +1,1 @@
-src/Nester.cs:2 deny complexity/nesting-depth
+src/Nester.cs:2 info complexity/nesting-depth

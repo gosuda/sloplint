@@ -1,1 +1,1 @@
-src/lib.swift:1 deny complexity/import-fan-out
+src/lib.swift:1 minor complexity/import-fan-out

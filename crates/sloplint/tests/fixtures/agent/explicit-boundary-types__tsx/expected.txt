@@ -1,1 +1,2 @@
-src/mod.tsx:1 warn agent/explicit-boundary-types
+src/mod.tsx:1 minor agent/explicit-boundary-types
+src/mod.tsx:5 minor agent/explicit-boundary-types

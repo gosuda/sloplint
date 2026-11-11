@@ -1,12 +1,21 @@
 export function setup(): void {
-  configure({
-    alpha: 1,
-    beta: 2,
-    gamma: 3,
-    delta: 4,
-    epsilon: 5,
-    zeta: 6,
-  });
+  configure([
+    "alpha",
+    "beta",
+    "gamma",
+    "delta",
+    "epsilon",
+    "zeta",
+    "eta",
+    "theta",
+    "iota",
+    "kappa",
+    "lambda",
+    "mu",
+    "nu",
+    "xi",
+    "omicron",
+  ]);
 }
-function configure(opts: object): void {
+function configure(opts: string[]): void {
 }

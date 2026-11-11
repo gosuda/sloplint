@@ -1,1 +1,1 @@
-# Near-miss: 9 sequential branches score cognitive 9 < strict warn_at 10.
+# Near-miss: top-level siblings add 0, so the ladder scores 0 < strict minor_at 10.

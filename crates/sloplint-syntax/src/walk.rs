@@ -1,12 +1,14 @@
-use std::collections::HashMap;
-
 use sloplint_core::facts::FileFacts;
 use sloplint_core::finding::line_starts;
 use sloplint_core::lang::Lang;
+use sloplint_core::role::{CodeRole, RoleRegion};
 use sloplint_core::suppress::CommentText;
 use tree_sitter::Node;
 
-use crate::hooks::{ChainRoots, Container, Cx, LangHooks, MemberStates, narrow, pos_of};
+use crate::hooks::{
+    ChainRoots, Container, Cx, FileNameSets, LangHooks, MemberStates, narrow, pos_of,
+};
+use crate::shadow::{FnFrame, Mark};
 use crate::spec::{LangSpec, Role};
 
 pub(crate) struct Walked<'s> {
@@ -46,22 +48,27 @@ impl LangSpec {
             src: input.source,
             path: input.path,
             lang: self.lang,
-            is_test_file: input.is_test_file,
             collect_facts,
             facts: empty_facts(input, self.lang),
             comments: Vec::new(),
             fn_stack: Vec::new(),
             marks: Vec::new(),
             containers: Vec::new(),
+            method_depth: 0,
             exports: Vec::new(),
             members: MemberStates::default(),
             chains: ChainRoots::default(),
+            name_sets: FileNameSets::default(),
             levels: Vec::new(),
             depth: 0,
+            closure_depth: 0,
+            forked_depth: 0,
+            deferred: Vec::new(),
             #[cfg(debug_assertions)]
             entered: Vec::new(),
         };
         state.run(root);
+        state.finish();
         Walked {
             facts: state.facts,
             comments: state.comments,
@@ -69,16 +76,18 @@ impl LangSpec {
     }
 }
 
-/// The `lang` field is the grammar that produced the facts; `is_entry_file` follows the routed `input.lang`.
+/// The `lang` field is the grammar that produced the facts.
 pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>, lang: Lang) -> FileFacts<'s> {
     FileFacts {
         lang,
         path: input.path,
         source: input.source,
         line_starts: line_starts(input.source),
-        is_test_file: input.is_test_file,
-        is_entry_file: input.lang.is_entry_file(input.path),
+        role: input.role,
+        regions: Vec::new(),
         line_count: line_count(input.source),
+        package: String::new(),
+        is_generated: crate::generated::is_generated(input.source.as_bytes(), lang),
         functions: Vec::new(),
         calls: Vec::new(),
         bindings: Vec::new(),
@@ -100,45 +109,28 @@ pub(crate) fn line_count(source: &str) -> u32 {
     narrow(source.lines().count())
 }
 
-pub(crate) struct FnFrame<'s> {
-    pub index: usize,
-    pub nest: u32,
-    pub frames: u32,
-    pub decls: HashMap<&'s str, FrameDecl>,
-    pub sole_call: Option<usize>,
-}
-
-pub(crate) struct FrameDecl {
-    pub binding: usize,
-    pub frames_at_decl: u32,
-}
-
-#[derive(Clone, Copy)]
-pub(crate) enum Mark {
-    Nest,
-    Frame,
-    Fn,
-    Container,
-}
-
 pub(crate) struct WalkState<'s, 'a, 't> {
     pub spec: &'a LangSpec,
     pub hooks: &'static dyn LangHooks,
     pub src: &'s str,
     pub path: &'s str,
     pub lang: Lang,
-    pub is_test_file: bool,
     pub collect_facts: bool,
     pub facts: FileFacts<'s>,
     pub comments: Vec<CommentText<'s>>,
     pub fn_stack: Vec<FnFrame<'s>>,
     pub marks: Vec<(usize, Mark)>,
     pub containers: Vec<Container>,
+    pub method_depth: u32,
     pub exports: Vec<&'s str>,
     pub members: MemberStates,
     pub chains: ChainRoots,
+    pub name_sets: FileNameSets<'s>,
     pub levels: Vec<Vec<Node<'t>>>,
     pub depth: usize,
+    pub closure_depth: u32,
+    pub forked_depth: u32,
+    pub deferred: Vec<(usize, Role, usize)>,
     #[cfg(debug_assertions)]
     pub entered: Vec<usize>,
 }
@@ -191,6 +183,9 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
 
     fn enter(&mut self, node: Node<'t>) {
         self.open_node(node);
+        self.forked_depth = self
+            .forked_depth
+            .saturating_add(u32::from(self.hooks.forked_scope_kind(node.kind())));
         let role = self.spec.role_for(node.kind_id());
         if !self.collect_facts {
             if role == Role::Comment {
@@ -202,6 +197,26 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             self.levels.resize_with(self.depth + 1, Vec::new);
         }
         self.levels[self.depth].push(node);
+        if self.collect_facts
+            && !self.fn_stack.is_empty()
+            && self.hooks.shadow_decl_kind(node.kind())
+        {
+            let mut names = Vec::new();
+            {
+                let cx = self.make_cx();
+                self.hooks.shadow_names(node, &cx, &mut names);
+            }
+            let parent = {
+                let cx = self.make_cx();
+                self.hooks.decl_scope_parent(self.depth, node, &cx)
+            };
+            if let Some(frame) = self.fn_stack.last_mut() {
+                for name in names {
+                    frame.shadow.register(name, parent);
+                    frame.only.register(name, parent);
+                }
+            }
+        }
         match role {
             Role::Function | Role::Closure => self.enter_function_like(role, node),
             Role::If
@@ -211,9 +226,11 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             | Role::Catch
             | Role::Ternary
             | Role::With => {
+                self.bind_flow_targets(node);
                 self.enter_flow(role, node);
             }
             Role::Call | Role::MacroCall | Role::NewCall => self.enter_call_site(node),
+            Role::Return | Role::Yield => self.enter_return(role, node),
             _ => self.enter_other(role, node),
         }
     }
@@ -246,33 +263,27 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     fn enter_flow(&mut self, role: Role, node: Node<'_>) {
         match role {
             Role::If => self.enter_if(node),
-            Role::ElseIf => self.score_top(1),
+            Role::ElseIf => {}
             Role::Loop => self.enter_loop(node),
-            Role::Match | Role::Ternary => self.score_nested(node),
-            Role::With => {
-                if !self.fn_stack.is_empty() {
-                    let line = pos_of(node).line;
-                    self.bump_nest(node.id(), line);
-                }
-            }
+            Role::Match | Role::Ternary => self.enter_depth_only(node),
+            Role::With => {}
             Role::Catch => self.enter_catch(node),
             _ => {}
         }
     }
 
-    fn visited_parent(&self) -> Option<Node<'t>> {
+    pub(crate) fn visited_parent(&self) -> Option<Node<'t>> {
         let above = self.depth.checked_sub(1)?;
         self.levels.get(above)?.last().copied()
     }
 
     fn enter_if(&mut self, node: Node<'_>) {
-        let hooks = self.hooks;
         if !self.fn_stack.is_empty() {
-            if hooks.is_else_if(node, self.visited_parent()) {
-                self.score_top(1);
-            } else {
+            let hooks = self.hooks;
+            if !hooks.is_else_if(node, self.visited_parent()) {
                 let line = pos_of(node).line;
-                self.score_and_nest(1, line, node.id());
+                self.score_first();
+                self.open_nest(line, node.id());
             }
         }
         self.push_handler(node);
@@ -283,51 +294,43 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             return;
         }
         let line = pos_of(node).line;
-        self.score_and_nest(1, line, node.id());
+        self.score_first();
+        self.open_nest(line, node.id());
         self.bump_frames(node.id());
     }
 
     fn enter_catch(&mut self, node: Node<'_>) {
-        self.score_nested(node);
+        if !self.fn_stack.is_empty() {
+            let line = pos_of(node).line;
+            self.score_first();
+            self.open_nest(line, node.id());
+        }
         self.push_handler(node);
     }
 
-    fn score_nested(&mut self, node: Node<'_>) {
-        if self.fn_stack.is_empty() {
+    fn enter_depth_only(&mut self, node: Node<'_>) {
+        let hooks = self.hooks;
+        if self.fn_stack.is_empty() || hooks.is_ternary_alternate(node, self.visited_parent()) {
             return;
         }
         let line = pos_of(node).line;
-        self.score_and_nest(1, line, node.id());
-    }
-
-    fn enter_function_like(&mut self, role: Role, node: Node<'_>) {
-        let hooks = self.hooks;
-        let head = if role == Role::Function {
-            let cx = self.make_cx();
-            hooks.function(node, &cx)
-        } else {
-            let parent = self.visited_parent();
-            let cx = self.make_cx();
-            hooks.closure_as_function(node, parent, &cx)
-        };
-        match head {
-            Some(head) => self.push_function(node, head),
-            None => {
-                if role == Role::Closure && !self.fn_stack.is_empty() {
-                    let line = pos_of(node).line;
-                    self.bump_nest(node.id(), line);
-                    self.bump_frames(node.id());
-                }
-            }
-        }
+        self.open_depth(line, node.id());
     }
 
     fn enter_call_site(&mut self, node: Node<'_>) {
-        {
+        let controls = {
             let cx = self.make_cx();
-            if self.hooks.control_call(node, &cx) {
-                self.score_nested(node);
-            }
+            self.hooks.control_call(node, &cx)
+        };
+        if controls {
+            self.enter_depth_only(node);
+        }
+        let marker = {
+            let cx = self.make_cx();
+            self.hooks.call_marker(node, &cx)
+        };
+        if let Some(role) = marker {
+            self.push_region(crate::hooks::region_of(node, role));
         }
         self.push_call(node);
         self.push_imports(node);
@@ -344,17 +347,32 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
                 if self.fn_stack.is_empty() {
                     self.collect_ambient(node);
                 } else {
-                    self.push_decls(node);
+                    if self.hooks.decl_visible_in_initializer() {
+                        self.push_decls(node);
+                    } else {
+                        self.deferred.push((node.id(), role, self.depth));
+                    }
+                    self.collect_ambient(node);
                 }
             }
             Role::Bind => {
                 if self.fn_stack.is_empty() {
                     self.collect_ambient(node);
                 } else {
-                    self.apply_bind(node);
+                    if self.hooks.ambient_bind() {
+                        self.collect_ambient(node);
+                    }
+                    if self.hooks.decl_visible_in_initializer() {
+                        self.apply_bind(node);
+                    } else {
+                        self.deferred.push((node.id(), role, self.depth));
+                    }
                 }
             }
-            Role::Write => self.apply_write_roots(node),
+            Role::Write => {
+                self.apply_write_roots(node);
+                self.collect_ambient(node);
+            }
             _ => {}
         }
     }
@@ -362,6 +380,16 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     pub(crate) fn exit(&mut self, node: Node<'_>) {
         let id = node.id();
         self.close_node(id);
+        self.forked_depth = self
+            .forked_depth
+            .saturating_sub(u32::from(self.hooks.forked_scope_kind(node.kind())));
+        if !self.fn_stack.is_empty() && self.hooks.decl_piece(node.kind()) {
+            self.publish_piece(node);
+        }
+        self.publish_deferred(node);
+        if let Some(frame) = self.fn_stack.last_mut() {
+            frame.release(self.depth);
+        }
         while let Some(&(mark_node, mark)) = self.marks.last() {
             if mark_node != id {
                 break;
@@ -369,6 +397,36 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             self.marks.pop();
             self.apply_mark(mark);
         }
+    }
+
+    fn publish_deferred(&mut self, node: Node<'_>) {
+        let Some(&(id, role, _)) = self.deferred.last() else {
+            return;
+        };
+        if id != node.id() {
+            return;
+        }
+        self.deferred.pop();
+        match role {
+            Role::Decl => self.push_decls(node),
+            Role::Bind => self.apply_bind(node),
+            _ => {}
+        }
+    }
+
+    fn publish_piece(&mut self, node: Node<'_>) {
+        let scope = self
+            .deferred
+            .last()
+            .map_or(self.depth.saturating_sub(1), |&(_, _, depth)| {
+                depth.saturating_sub(1)
+            });
+        let mut names = Vec::new();
+        {
+            let cx = self.make_cx();
+            self.hooks.decl_names(node, &cx, &mut names);
+        }
+        self.insert_decls(names, scope);
     }
 
     #[cfg(debug_assertions)]
@@ -408,6 +466,12 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             Mark::Nest => {
                 if let Some(frame) = self.fn_stack.last_mut() {
                     frame.nest -= 1;
+                    frame.scored.pop();
+                }
+            }
+            Mark::Depth => {
+                if let Some(frame) = self.fn_stack.last_mut() {
+                    frame.depth -= 1;
                 }
             }
             Mark::Frame => {
@@ -418,54 +482,107 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             Mark::Fn => {
                 self.fn_stack.pop();
             }
+            Mark::Closure => self.closure_depth = self.closure_depth.saturating_sub(1),
             Mark::Container => {
-                self.containers.pop();
+                if self.containers.pop().is_some_and(|container| {
+                    matches!(
+                        container,
+                        Container::Impl { .. } | Container::Trait { .. } | Container::Class { .. }
+                    )
+                }) {
+                    self.method_depth -= 1;
+                }
             }
         }
     }
 
+    pub(crate) fn finish(&mut self) {
+        self.facts.regions.sort_by_key(|region| region.start_line);
+        self.facts.has_inline_tests = self
+            .facts
+            .regions
+            .iter()
+            .any(|region| region.role == CodeRole::Test);
+    }
+
+    pub(crate) fn push_region(&mut self, region: RoleRegion) {
+        self.facts.regions.push(region);
+    }
+
     pub(crate) fn make_cx(&self) -> Cx<'_, 's> {
-        Cx::file(
+        let mut cx = Cx::file(
             self.src,
             self.path,
             self.lang,
-            self.is_test_file,
             &self.members,
             &self.chains,
+            &self.name_sets,
         )
         .scoped(
             &self.containers,
             &self.exports,
             &self.levels[..self.levels.len().min(self.depth + 1)],
-        )
+        );
+        cx.forked_depth = self.forked_in_frame();
+        cx
     }
 
-    fn score_top(&mut self, delta: u32) {
-        let Some(frame) = self.fn_stack.last() else {
-            return;
+    fn score_first(&mut self) {
+        let (index, nest, first) = match self.fn_stack.last_mut() {
+            None => return,
+            Some(frame) => {
+                let nest = frame.nest;
+                let first = nest > 0 && !frame.scored.last().copied().unwrap_or(true);
+                if nest > 0
+                    && let Some(slot) = frame.scored.last_mut()
+                {
+                    *slot = true;
+                }
+                (frame.index, nest, first)
+            }
         };
-        let index = frame.index;
-        let function = &mut self.facts.functions[index];
-        function.cognitive = function.cognitive.saturating_add(delta);
+        let delta = if nest == 0 {
+            0
+        } else if first {
+            1 + nest
+        } else {
+            1
+        };
+        if delta > 0 {
+            let function = &mut self.facts.functions[index];
+            function.cognitive = function.cognitive.saturating_add(delta);
+        }
     }
 
-    fn score_and_nest(&mut self, delta: u32, line: u32, mark: usize) {
-        let nest = self.fn_stack.last().map_or(0, |frame| frame.nest);
-        self.score_top(delta.saturating_add(nest));
-        self.bump_nest(mark, line);
-    }
-
-    fn bump_nest(&mut self, mark: usize, line: u32) {
+    fn open_nest(&mut self, line: u32, mark: usize) {
         self.assert_mark_entered(mark);
         let Some(frame) = self.fn_stack.last_mut() else {
             return;
         };
         frame.nest += 1;
-        let (index, nest) = (frame.index, frame.nest);
+        frame.scored.push(false);
+        frame.depth += 1;
+        let (index, depth) = (frame.index, frame.depth);
         self.marks.push((mark, Mark::Nest));
+        self.marks.push((mark, Mark::Depth));
+        self.note_depth(index, depth, line);
+    }
+
+    fn open_depth(&mut self, line: u32, mark: usize) {
+        self.assert_mark_entered(mark);
+        let Some(frame) = self.fn_stack.last_mut() else {
+            return;
+        };
+        frame.depth += 1;
+        let (index, depth) = (frame.index, frame.depth);
+        self.marks.push((mark, Mark::Depth));
+        self.note_depth(index, depth, line);
+    }
+
+    fn note_depth(&mut self, index: usize, depth: u32, line: u32) {
         let function = &mut self.facts.functions[index];
-        if nest > function.max_depth {
-            function.max_depth = nest;
+        if depth > function.max_depth {
+            function.max_depth = depth;
             function.deepest_line = line;
         }
     }

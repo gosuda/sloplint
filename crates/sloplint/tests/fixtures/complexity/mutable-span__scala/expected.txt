@@ -1,2 +1,4 @@
-# Positive: var declared line 3, last write line 33, span 30 >= strict deny_at 30.
-src/spread.scala:3 deny complexity/mutable-span
+# outer-from-closure.scala: binding line 3, writes lines 4 and 34 (span 30 >= strict major_at 30); the last write sits inside a foreach closure with no shadowing.
+src/outer-from-closure.scala:3 info complexity/mutable-span
+# Positive: var declared line 3, last write line 36, span 33 >= strict major_at 30.
+src/spread.scala:3 info complexity/mutable-span

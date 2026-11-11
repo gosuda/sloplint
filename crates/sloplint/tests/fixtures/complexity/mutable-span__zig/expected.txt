@@ -1,0 +1,3 @@
+# outer-from-block.zig: binding line 2, writes lines 3, 35 and 36 (span 33); far writes sit in an if body with no shadowing.
+src/outer-from-block.zig:2 info complexity/mutable-span
+src/stretch.zig:2 info complexity/mutable-span

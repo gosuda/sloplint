@@ -1,4 +1,4 @@
-//! Rust use trees, `self` barrels, and left-nested or-patterns at 20,000 levels.
+//! Rust use trees, `self` chains, and left-nested or-patterns at 20,000 levels.
 
 use sloplint_core::lang::Lang;
 
@@ -21,27 +21,28 @@ fn use_trees_report_every_leaf() {
 }
 
 /// A `pub use self::` chain nested at every level resolves to the module named at its innermost
-/// identifier.
+/// identifier, in time linear in the depth.
 #[test]
 fn self_use_chains_find_their_module() {
     on_default_stack(|| {
-        let source = format!(
-            "mod a;\npub use self::{}a{};\n",
-            "{self::".repeat(DEPTH),
-            "}".repeat(DEPTH)
-        );
-        with_facts(Lang::Rust, "case.rs", &source, |facts| {
-            let barrel = facts
-                .barrel
-                .as_ref()
-                .expect("a file of mods and pub uses is a barrel");
-            assert_eq!(barrel.targets.len(), 1, "one use declaration");
-            assert_eq!(barrel.targets[0].len(), 2, "a.rs and a/mod.rs");
-            assert!(
-                barrel.targets[0][0].ends_with("a.rs"),
-                "{:?}",
-                barrel.targets
+        within_linear_budget(|depth| {
+            let source = format!(
+                "mod a;\npub use self::{}a{};\n",
+                "{self::".repeat(depth),
+                "}".repeat(depth)
             );
+            with_facts(Lang::Rust, "case.rs", &source, |facts| {
+                assert!(
+                    facts.barrel.is_none(),
+                    "a mod-tree re-export file is idiomatic, not a barrel"
+                );
+                let names: Vec<&str> = facts.imports.iter().map(|i| i.name).collect();
+                assert_eq!(
+                    names,
+                    ["a"],
+                    "the self chain resolves to its innermost module"
+                );
+            });
         });
     });
 }
@@ -77,10 +78,10 @@ fn or_pattern_predecessors_match_their_shallow_form() {
 #[test]
 fn call_chains_keep_every_call_in_linear_time() {
     on_default_stack(|| {
-        let source = "fn g() {\n    a".to_owned() + &".b()".repeat(DEPTH) + ";\n}\n";
-        within_linear_budget(|| {
+        within_linear_budget(|depth| {
+            let source = "fn g() {\n    a".to_owned() + &".b()".repeat(depth) + ";\n}\n";
             with_facts(Lang::Rust, "chain.rs", &source, |facts| {
-                assert_eq!(facts.calls.len(), DEPTH);
+                assert_eq!(facts.calls.len(), depth);
                 let inner = facts
                     .calls
                     .iter()

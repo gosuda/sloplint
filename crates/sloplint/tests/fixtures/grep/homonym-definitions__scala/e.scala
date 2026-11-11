@@ -1,3 +1,2 @@
-object He {
-  def reconcileLedger(): Unit = {}
-}
+// shared ledger helper
+def reconcileLedger(): Unit = {}

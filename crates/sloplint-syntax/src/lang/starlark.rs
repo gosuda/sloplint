@@ -1,16 +1,21 @@
 use std::borrow::Cow;
 
 use sloplint_core::facts::{
-    Arg, ArgShape, Assertion, CallKind, FieldCopy, Import, ImportKind, Param, Pos,
+    AssertShape, Assertion, CallKind, FieldCopy, Import, ImportKind, ImportScope, Param, Pos,
+    PrimitiveKind, Visibility,
 };
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, binary_concat, child_by_field, count_named_child,
-    find_named_child, first_named_child_matching, ident_root, named_children, narrow, pos_of,
-    preceding_comments, string_arg_shape, text, trimmed,
+    CallHead, Cx, FunctionHead, LangHooks, child_by_field, count_named_child, find_named_child,
+    first_named_child_matching, ident_root, named_children, narrow, pos_of, preceding_comments,
+    text, trimmed,
 };
 use crate::spec::Role;
+
+mod shapes;
+
+use shapes::{argument_nodes, call_args, is_static_name, name_from_literal_loop};
 
 pub(crate) struct StarlarkHooks;
 
@@ -48,11 +53,19 @@ impl LangHooks for StarlarkHooks {
         doc.extend(docstring.map(|string| trimmed(cx, string)));
         let name = trimmed(cx, name_node);
         Some(FunctionHead {
+            shadow_params: Vec::new(),
             name,
             name_pos: pos_of(name_node),
-            public: !name.starts_with('_'),
-            interface_bound: false,
-            in_test: cx.is_test_file,
+            visibility: starlark_visibility(name),
+            signature_forced: false,
+            entry_point: false,
+            in_test: is_starlark_test_path(cx.path),
+            is_overload: false,
+            is_deprecated: false,
+            is_decorated: false,
+            is_trait_item: false,
+            region: None,
+            receiver: None,
             params: params(cx, n),
             return_type: child_by_field(n, "return_type").map(|ty| trimmed(cx, ty)),
             missing_annotations: Vec::new(),
@@ -90,12 +103,18 @@ impl LangHooks for StarlarkHooks {
         }
     }
 
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        kind == "for_statement"
+    }
+
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
         let callee = child_by_field(n, "function")?;
         Some(CallHead {
-            callee: trimmed(cx, callee),
+            callee: starlark_callee(cx, callee),
             kind: CallKind::Plain,
-            callee_root: ident_root(cx, callee, &["object"]).map(|(name, _)| name),
+            callee_root: starlark_callee_root(cx, callee),
+            is_simple_path: starlark_is_simple_path(callee),
+            initializes_binding: starlark_initializes_binding(cx, n),
             args: call_args(cx, n),
         })
     }
@@ -124,7 +143,10 @@ impl LangHooks for StarlarkHooks {
                 name: module,
                 alias: None,
                 kind: ImportKind::SideEffect,
-                in_test: cx.is_test_file,
+                scope: ImportScope::Module,
+                in_test: false,
+                is_reexport: false,
+                external_root: starlark_external_root(module),
             });
         } else {
             out.extend(symbols);
@@ -154,8 +176,28 @@ impl LangHooks for StarlarkHooks {
 
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
         let callee = trimmed(cx, child_by_field(n, "function")?);
-        let second = argument_nodes(n).get(1).copied()?;
-        if second.kind() == "string" {
+        if !matches!(callee, "getattr" | "hasattr") {
+            return None;
+        }
+        let arguments = child_by_field(n, "arguments")?;
+        let mut seen = 0;
+        let mut cursor = arguments.walk();
+        let mut second = None;
+        for child in arguments.children(&mut cursor) {
+            if !child.is_named() || is_comment(child.kind()) {
+                continue;
+            }
+            if seen == 1 {
+                second = Some(child);
+                break;
+            }
+            seen += 1;
+        }
+        let second = second?;
+        if is_static_name(second) {
+            return None;
+        }
+        if second.kind() == "identifier" && name_from_literal_loop(cx, second) {
             return None;
         }
         match callee {
@@ -169,17 +211,37 @@ impl LangHooks for StarlarkHooks {
         if n.kind() != "assert_statement" {
             return None;
         }
+        let first = find_named_child(n, |c| !matches!(c.kind(), "assert_keyword" | "comment"));
+        let comparison = first.is_some_and(|found| found.kind() == "comparison_operator");
+        let shape = if comparison {
+            if first.is_some_and(has_equality_operator) {
+                AssertShape::TopEqNe
+            } else {
+                AssertShape::Other
+            }
+        } else if first.is_some_and(|found| found.kind() == "identifier") {
+            AssertShape::BareName
+        } else {
+            AssertShape::Other
+        };
         Some(Assertion {
             pos: pos_of(n),
             has_message: count_named_child(n, |c| {
                 !matches!(c.kind(), "assert_keyword" | "comment")
             }) >= 2,
-            comparison: find_named_child(n, |c| !matches!(c.kind(), "assert_keyword" | "comment"))
-                .is_some_and(|first| first.kind() == "comparison_operator"),
+            comparison,
+            shape,
+            in_typecheck: false,
+            value_is_bool_literal: false,
         })
     }
 }
 
+fn has_equality_operator(node: Node<'_>) -> bool {
+    let mut cursor = node.walk();
+    node.children(&mut cursor)
+        .any(|child| matches!(child.kind(), "==" | "!="))
+}
 fn is_comment(kind: &str) -> bool {
     kind == "comment"
 }
@@ -220,46 +282,98 @@ fn sole_call(body: Option<Node<'_>>) -> Option<usize> {
 
 fn params<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> Vec<Param<'s>> {
     child_by_field(func, "parameters").map_or_else(Vec::new, |list| {
-        named_children(list)
-            .into_iter()
-            .filter_map(|parameter| param_of(cx, parameter))
-            .collect()
+        let mut out = Vec::new();
+        let mut keyword_only = false;
+        for parameter in named_children(list) {
+            if parameter.kind() == "keyword_separator" {
+                keyword_only = true;
+                continue;
+            }
+            if parameter.kind() == "positional_separator" {
+                keyword_only = false;
+                continue;
+            }
+            if let Some(param) = param_of(cx, parameter, keyword_only) {
+                let star = is_star_variadic(parameter);
+                out.push(param);
+                if star {
+                    keyword_only = true;
+                }
+            }
+        }
+        out
     })
 }
 
-fn param_of<'s>(cx: &Cx<'_, 's>, parameter: Node<'_>) -> Option<Param<'s>> {
-    let (name, ty, value) = match parameter.kind() {
-        "identifier" => {
-            return Some(Param {
-                name: trimmed(cx, parameter),
-                ty: None,
-                bool_default: false,
-            });
-        }
+fn is_star_variadic(parameter: Node<'_>) -> bool {
+    if parameter.kind() == "list_splat_pattern" {
+        return true;
+    }
+    if parameter.kind() == "typed_parameter" {
+        return find_named_child(parameter, |c| c.kind() == "list_splat_pattern").is_some();
+    }
+    false
+}
+
+fn param_of<'s>(cx: &Cx<'_, 's>, parameter: Node<'_>, keyword_only: bool) -> Option<Param<'s>> {
+    if parameter.kind() == "identifier" {
+        return Some(Param {
+            name: trimmed(cx, parameter),
+            ty: None,
+            primitive_kind: PrimitiveKind::Other,
+            has_default: false,
+            bool_default: false,
+            keyword_only,
+            is_variadic: false,
+        });
+    }
+    if parameter.kind() == "typed_parameter"
+        && let Some(pat) = find_named_child(parameter, |c| {
+            c.kind() == "list_splat_pattern" || c.kind() == "dictionary_splat_pattern"
+        })
+    {
+        return Some(Param {
+            name: first_identifier(cx, pat).unwrap_or(""),
+            ty: type_text(cx, parameter),
+            primitive_kind: PrimitiveKind::Other,
+            has_default: false,
+            bool_default: false,
+            keyword_only,
+            is_variadic: true,
+        });
+    }
+    let (name, ty, value, is_variadic) = match parameter.kind() {
         "default_parameter" => (
             field_text(cx, parameter, "name"),
             None,
             child_by_field(parameter, "value"),
+            false,
         ),
         "typed_parameter" => (
             first_identifier(cx, parameter)?,
             type_text(cx, parameter),
             None,
+            false,
         ),
         "typed_default_parameter" => (
             field_text(cx, parameter, "name"),
             type_text(cx, parameter),
             child_by_field(parameter, "value"),
+            false,
         ),
         "list_splat_pattern" | "dictionary_splat_pattern" => {
-            (first_identifier(cx, parameter)?, None, None)
+            (first_identifier(cx, parameter)?, None, None, true)
         }
         _ => return None,
     };
     Some(Param {
         name,
         ty,
+        primitive_kind: PrimitiveKind::Other,
+        has_default: value.is_some(),
         bool_default: value.is_some_and(|v| matches!(v.kind(), "true" | "false")),
+        keyword_only,
+        is_variadic,
     })
 }
 
@@ -299,65 +413,20 @@ fn write_targets(left: Node<'_>) -> Vec<Node<'_>> {
     }
 }
 
-fn argument_nodes(call: Node<'_>) -> Vec<Node<'_>> {
-    child_by_field(call, "arguments").map_or_else(Vec::new, |list| {
-        named_children(list)
-            .into_iter()
-            .filter(|c| !is_comment(c.kind()))
-            .collect()
-    })
-}
-
-fn call_args<'s>(cx: &Cx<'_, 's>, call: Node<'_>) -> Vec<Arg<'s>> {
-    argument_nodes(call)
-        .into_iter()
-        .map(|argument| {
-            let value = if argument.kind() == "keyword_argument" {
-                child_by_field(argument, "value")
-            } else {
-                Some(argument)
-            };
-            match value {
-                Some(value) => arg(shape_of(cx, value), value),
-                None => arg(ArgShape::Other, argument),
-            }
-        })
-        .collect()
-}
-
-fn arg<'s>(shape: ArgShape<'s>, n: Node<'_>) -> Arg<'s> {
-    Arg {
-        shape,
-        start_line: pos_of(n).line,
-        end_line: narrow(n.end_position().row) + 1,
-    }
-}
-
-fn shape_of<'s>(cx: &Cx<'_, 's>, value: Node<'_>) -> ArgShape<'s> {
-    match value.kind() {
-        "string" => string_arg_shape(cx, value, &["string_content"]),
-        "concatenated_string" => ArgShape::Concat,
-        "binary_operator" if binary_concat(cx, value, "+", &["string", "concatenated_string"]) => {
-            ArgShape::Concat
-        }
-        "identifier" => ArgShape::Ident(trimmed(cx, value)),
-        _ => ArgShape::Other,
-    }
-}
-
 fn string_content<'s>(cx: &Cx<'_, 's>, string: Node<'_>) -> Option<&'s str> {
     first_named_child_matching(string, &["string_content"]).map(|content| text(cx, content))
 }
 
 fn is_top_level_load(cx: &Cx<'_, '_>, call: Node<'_>) -> bool {
     child_by_field(call, "function").is_some_and(|function| trimmed(cx, function) == "load")
-        && call
+        && cx
             .parent()
             .filter(|p| p.kind() == "expression_statement")
-            .and_then(|statement| statement.parent())
-            .is_some_and(|module| module.kind() == "module")
+            .is_some_and(|statement| {
+                cx.parent_of(statement)
+                    .is_some_and(|module| module.kind() == "module")
+            })
 }
-
 fn symbol_import<'s>(
     cx: &Cx<'_, 's>,
     module: &'s str,
@@ -380,7 +449,10 @@ fn symbol_import<'s>(
         name,
         alias,
         kind: ImportKind::Named,
-        in_test: cx.is_test_file,
+        scope: ImportScope::Module,
+        in_test: false,
+        is_reexport: false,
+        external_root: starlark_external_root(module),
     })
 }
 
@@ -393,4 +465,73 @@ fn keyword_source<'s>(cx: &Cx<'_, 's>, argument: Node<'_>) -> Option<&'s str> {
     let object = child_by_field(value, "object").filter(|o| o.kind() == "identifier")?;
     let member = trimmed(cx, child_by_field(value, "attribute")?);
     (member == label).then(|| text(cx, object))
+}
+fn starlark_visibility(name: &str) -> Visibility {
+    if name.starts_with('_') {
+        Visibility::Private
+    } else {
+        Visibility::Exported
+    }
+}
+
+fn starlark_is_simple_path(callee: Node<'_>) -> bool {
+    let mut current = callee;
+    loop {
+        match current.kind() {
+            "identifier" => return true,
+            "attribute" => match child_by_field(current, "object") {
+                Some(next) => current = next,
+                None => return false,
+            },
+            _ => return false,
+        }
+    }
+}
+
+fn starlark_callee<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> &'s str {
+    if starlark_is_simple_path(callee) {
+        return trimmed(cx, callee);
+    }
+    if callee.kind() == "attribute" {
+        return child_by_field(callee, "attribute").map_or("", |name| trimmed(cx, name));
+    }
+    ""
+}
+
+fn starlark_callee_root<'s>(cx: &Cx<'_, 's>, callee: Node<'_>) -> Option<&'s str> {
+    if !starlark_is_simple_path(callee) {
+        return None;
+    }
+    ident_root(cx, callee, &["object"]).map(|(name, _)| name)
+}
+fn starlark_external_root(module: &str) -> Option<&str> {
+    let rest = module
+        .strip_prefix("@@")
+        .or_else(|| module.strip_prefix('@'))?;
+    let end = rest.find('/').unwrap_or(rest.len());
+    let repo = &rest[..end];
+    (!repo.is_empty()).then_some(repo)
+}
+
+fn is_starlark_test_path(path: &str) -> bool {
+    path.split('/')
+        .any(|segment| segment == "test" || segment == "tests" || segment == "__tests__")
+        || path
+            .rsplit('/')
+            .next()
+            .unwrap_or(path)
+            .ends_with("_test.bzl")
+}
+
+fn starlark_initializes_binding(cx: &Cx<'_, '_>, call: Node<'_>) -> bool {
+    let Some(parent) = cx.parent() else {
+        return false;
+    };
+    if parent.kind() != "assignment" {
+        return false;
+    }
+    if child_by_field(parent, "right").is_none_or(|right| right.id() != call.id()) {
+        return false;
+    }
+    child_by_field(parent, "left").is_some_and(|left| left.kind() == "identifier")
 }

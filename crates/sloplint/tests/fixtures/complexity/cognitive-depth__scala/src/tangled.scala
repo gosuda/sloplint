@@ -1,6 +1,8 @@
 object Tangled {
   def tangled(a: Int): Int = {
     var x = a
+    if (a >= 0) {
+    for (i <- 0 until a) {
     if (a > 0) { x = x + 0 }
     if (a > 1) { x = x + 1 }
     if (a > 2) { x = x + 2 }
@@ -17,6 +19,8 @@ object Tangled {
     if (a > 13) { x = x + 13 }
     if (a > 14) { x = x + 14 }
     if (a > 15) { x = x + 15 }
+    }
+    }
     x
   }
 }

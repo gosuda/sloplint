@@ -1,1 +1,1 @@
-src/lib.rs:1 warn slop/passthrough-wrapper
+src/lib.rs:1 info slop/passthrough-wrapper
