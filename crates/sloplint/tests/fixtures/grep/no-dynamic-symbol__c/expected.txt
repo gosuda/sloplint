@@ -1,1 +1,2 @@
+lookup.c:2 info grep/no-dynamic-symbol
 pos.c:1 info grep/no-dynamic-symbol

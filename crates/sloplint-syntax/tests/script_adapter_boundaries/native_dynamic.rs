@@ -80,3 +80,59 @@ fn objc_variable_selector_still_flags() {
         1
     );
 }
+const C_LITERAL: &str = r#"#include <dlfcn.h>
+void* load(void* h) { return dlsym(h, "symbol_name"); }
+"#;
+const C_VARIABLE: &str = r#"#include <dlfcn.h>
+void* load(void* h, const char* name) { return dlsym(h, name); }
+"#;
+const C_ADJACENT: &str = r#"#include <dlfcn.h>
+void* load(void* h) { return dlsym(h, "sym" "bol_name"); }
+"#;
+const CPP_ADJACENT: &str = r#"#include <dlfcn.h>
+void* load(void* h) { return dlsym(h, "sym" "bol_name"); }
+"#;
+const C_MACRO_NAME: &str = r#"#include <dlfcn.h>
+#define SYM "symbol_name"
+void* load(void* h) { return dlsym(h, SYM); }
+"#;
+#[test]
+fn c_literal_stays_silent() {
+    assert_eq!(
+        symbols(C_LITERAL, Lang::C, "case.c"),
+        Vec::<String>::new(),
+        "C literal reported 1 before fix"
+    );
+}
+#[test]
+fn c_variable_still_flags() {
+    assert_eq!(
+        symbols(C_VARIABLE, Lang::C, "case.c").len(),
+        1,
+        "C variable keeps 1 dynamic symbol"
+    );
+}
+#[test]
+fn c_adjacent_stays_silent() {
+    assert_eq!(
+        symbols(C_ADJACENT, Lang::C, "case.c"),
+        Vec::<String>::new(),
+        "C adjacent literals reported 1 before fix"
+    );
+}
+#[test]
+fn cpp_adjacent_stays_silent() {
+    assert_eq!(
+        symbols(CPP_ADJACENT, Lang::Cpp, "case.cpp"),
+        Vec::<String>::new(),
+        "C++ adjacent literals reported 1 before fix"
+    );
+}
+#[test]
+fn macro_identifier_still_flags() {
+    assert_eq!(
+        symbols(C_MACRO_NAME, Lang::C, "case.c").len(),
+        1,
+        "macro identifier keeps 1 dynamic symbol"
+    );
+}

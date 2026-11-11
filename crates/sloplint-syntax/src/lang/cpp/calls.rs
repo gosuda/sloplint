@@ -292,27 +292,10 @@ pub(crate) fn runtime_symbol_lookup(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'st
         "GetProcAddress" => "runtime symbol lookup (GetProcAddress)",
         _ => return None,
     };
-    match name_argument(n, 1) {
-        Some(found) if plain_name(found) => None,
+    match c_family::dynamic_name_argument(n, 1) {
+        Some(found) if c_family::is_plain_dynamic_name(found) => None,
         _ => Some(message),
     }
-}
-fn name_argument(n: Node<'_>, index: usize) -> Option<Node<'_>> {
-    let args = child_by_field(n, "arguments")?;
-    let mut position = 0;
-    for c in named_children(args) {
-        if c.kind() == "comment" {
-            continue;
-        }
-        if position == index {
-            return Some(c);
-        }
-        position += 1;
-    }
-    None
-}
-fn plain_name(n: Node<'_>) -> bool {
-    matches!(n.kind(), "string_literal" | "raw_string_literal")
 }
 
 pub(crate) fn gtest_assert<'s>(cx: &Cx<'_, 's>, n: Node<'_>, callee: &'s str) -> Assertion {

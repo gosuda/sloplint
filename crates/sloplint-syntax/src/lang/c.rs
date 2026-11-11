@@ -245,10 +245,14 @@ impl LangHooks for CHooks {
             }
             "call_expression" => {
                 let func = child_by_field(n, "function")?;
-                match text(cx, func) {
-                    "dlsym" | "dlvsym" => Some("runtime symbol lookup (dlsym)"),
-                    "GetProcAddress" => Some("runtime symbol lookup (GetProcAddress)"),
-                    _ => None,
+                let message = match text(cx, func) {
+                    "dlsym" | "dlvsym" => "runtime symbol lookup (dlsym)",
+                    "GetProcAddress" => "runtime symbol lookup (GetProcAddress)",
+                    _ => return None,
+                };
+                match c_family::dynamic_name_argument(n, 1) {
+                    Some(found) if c_family::is_plain_dynamic_name(found) => None,
+                    _ => Some(message),
                 }
             }
             _ => None,

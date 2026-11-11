@@ -440,3 +440,62 @@ pub(crate) fn call_args<'s>(
     }
     args
 }
+pub(crate) fn dynamic_name_argument(n: Node<'_>, index: usize) -> Option<Node<'_>> {
+    let args = child_by_field(n, "arguments")?;
+    let mut position = 0;
+    for c in named_children(args) {
+        if c.kind() == "comment" {
+            continue;
+        }
+        if position == index {
+            return Some(c);
+        }
+        position += 1;
+    }
+    None
+}
+pub(crate) fn is_plain_dynamic_name(n: Node<'_>) -> bool {
+    let target = strip_parens(n);
+    if matches!(target.kind(), "string_literal" | "raw_string_literal") {
+        return true;
+    }
+    if boxed_string(target) {
+        return true;
+    }
+    if target.kind() != "concatenated_string" {
+        return false;
+    }
+    let mut found = false;
+    for c in named_children(target) {
+        if c.kind() == "comment" {
+            continue;
+        }
+        let inner = strip_parens(c);
+        if matches!(inner.kind(), "string_literal" | "raw_string_literal") {
+            found = true;
+            continue;
+        }
+        if boxed_string(inner) {
+            found = true;
+            continue;
+        }
+        return false;
+    }
+    found
+}
+fn strip_parens(n: Node<'_>) -> Node<'_> {
+    let mut current = n;
+    while current.kind() == "parenthesized_expression" {
+        let Some(next) = first_named_child(current) else {
+            break;
+        };
+        current = next;
+    }
+    current
+}
+fn boxed_string(n: Node<'_>) -> bool {
+    if n.kind() != "at_expression" {
+        return false;
+    }
+    first_named_child(n).is_some_and(|inner| inner.kind() == "string_literal")
+}
