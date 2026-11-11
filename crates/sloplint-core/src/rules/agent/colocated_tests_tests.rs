@@ -514,6 +514,33 @@ fn javascript_module_is_covered_by_typescript_test_import() {
 }
 
 #[test]
+fn tsx_module_is_covered_by_typescript_test_import() {
+    let rule = rule();
+    let view = manifest(lib(Lang::Tsx, "app", 1));
+    let view_test = manifest(evidence(Lang::TypeScript, "app", &["./view"]));
+    let other_test = manifest(test_file(Lang::Tsx, "app"));
+    let files = [
+        WorldFile {
+            path: "src/view.tsx",
+            facts: &view,
+        },
+        WorldFile {
+            path: "src/view.test.ts",
+            facts: &view_test,
+        },
+        WorldFile {
+            path: "src/other.test.tsx",
+            facts: &other_test,
+        },
+    ];
+    assert_eq!(
+        check(&rule, &files),
+        Vec::<String>::new(),
+        "a TypeScript test importing ./view covers view.tsx in the same package"
+    );
+}
+
+#[test]
 fn python_module_is_not_covered_by_matching_javascript_test() {
     let rule = rule();
     let util = lib(Lang::Python, "pkg", 1);
