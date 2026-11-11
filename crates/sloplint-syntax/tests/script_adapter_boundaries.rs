@@ -4,6 +4,8 @@
 //! one declaration here, while the crate links a single integration-test executable.
 #[path = "script_adapter_boundaries/js_dynamic.rs"]
 mod js_dynamic;
+#[path = "script_adapter_boundaries/native_dynamic.rs"]
+mod native_dynamic;
 #[path = "script_adapter_boundaries/php_callee_matching.rs"]
 mod php_callee_matching;
 

@@ -272,7 +272,7 @@ fn abstract_mid_counts_as_abstract_child() {
 #[test]
 fn runtime_lookup_matches_bare_names() {
     with_facts(
-        "#include <dlfcn.h>\nvoid *load(void *h) { return dlsym(h, \"sym\"); }\nvoid logx() { printf(\"x\"); }\n",
+        "#include <dlfcn.h>\nvoid *load(void *h, const char *sym) { return dlsym(h, sym); }\nvoid logx() { printf(\"x\"); }\n",
         |facts| {
             assert!(
                 facts

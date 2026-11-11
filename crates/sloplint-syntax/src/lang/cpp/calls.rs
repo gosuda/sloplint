@@ -285,12 +285,34 @@ fn init_shape<'s>(n: Node<'_>) -> ArgShape<'s> {
     }
 }
 
-pub(crate) fn runtime_symbol_lookup(callee: &str) -> Option<&'static str> {
-    match callee {
-        "dlsym" | "dlvsym" => Some("runtime symbol lookup (dlsym)"),
-        "GetProcAddress" => Some("runtime symbol lookup (GetProcAddress)"),
-        _ => None,
+pub(crate) fn runtime_symbol_lookup(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
+    let func = child_by_field(n, "function")?;
+    let message = match text(cx, func) {
+        "dlsym" | "dlvsym" => "runtime symbol lookup (dlsym)",
+        "GetProcAddress" => "runtime symbol lookup (GetProcAddress)",
+        _ => return None,
+    };
+    match name_argument(n, 1) {
+        Some(found) if plain_name(found) => None,
+        _ => Some(message),
     }
+}
+fn name_argument(n: Node<'_>, index: usize) -> Option<Node<'_>> {
+    let args = child_by_field(n, "arguments")?;
+    let mut position = 0;
+    for c in named_children(args) {
+        if c.kind() == "comment" {
+            continue;
+        }
+        if position == index {
+            return Some(c);
+        }
+        position += 1;
+    }
+    None
+}
+fn plain_name(n: Node<'_>) -> bool {
+    matches!(n.kind(), "string_literal" | "raw_string_literal")
 }
 
 pub(crate) fn gtest_assert<'s>(cx: &Cx<'_, 's>, n: Node<'_>, callee: &'s str) -> Assertion {

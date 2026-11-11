@@ -282,16 +282,18 @@ impl LangHooks for ObjcHooks {
             }
             "call_expression" => {
                 let func = child_by_field(n, "function")?;
-                match flat(text(cx, func)).as_str() {
-                    "dlsym" | "dlvsym" => Some("runtime symbol lookup (dlsym)"),
-                    "NSClassFromString" => Some("runtime class lookup (NSClassFromString)"),
-                    "NSSelectorFromString" => {
-                        Some("runtime selector lookup (NSSelectorFromString)")
-                    }
+                let (message, name_index) = match flat(text(cx, func)).as_str() {
+                    "dlsym" | "dlvsym" => ("runtime symbol lookup (dlsym)", 1),
+                    "NSClassFromString" => ("runtime class lookup (NSClassFromString)", 0),
+                    "NSSelectorFromString" => ("runtime selector lookup (NSSelectorFromString)", 0),
                     "objc_getClass" | "objc_getProtocol" => {
-                        Some("runtime class lookup (objc_getClass)")
+                        ("runtime class lookup (objc_getClass)", 0)
                     }
-                    _ => None,
+                    _ => return None,
+                };
+                match name_argument(n, name_index) {
+                    Some(found) if plain_name(found) => None,
+                    _ => Some(message),
                 }
             }
             "message_expression" => calls::first_selector(cx, n)
@@ -405,4 +407,27 @@ fn is_loop_header_field(n: Node<'_>, child: Node<'_>) -> bool {
     ]
     .into_iter()
     .any(|found| found.is_some_and(|slot| slot.id() == child.id()))
+}
+fn name_argument(n: Node<'_>, index: usize) -> Option<Node<'_>> {
+    let args = child_by_field(n, "arguments")?;
+    let mut position = 0;
+    for c in named_children(args) {
+        if c.kind() == "comment" {
+            continue;
+        }
+        if position == index {
+            return Some(c);
+        }
+        position += 1;
+    }
+    None
+}
+fn plain_name(n: Node<'_>) -> bool {
+    if n.kind() == "string_literal" {
+        return true;
+    }
+    if n.kind() != "at_expression" {
+        return false;
+    }
+    first_named_child(n).is_some_and(|inner| inner.kind() == "string_literal")
 }

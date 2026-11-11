@@ -366,10 +366,7 @@ impl LangHooks for CppHooks {
                     .contains("##")
                     .then_some("token-pasting macro")
             }
-            "call_expression" => {
-                let func = child_by_field(n, "function")?;
-                calls::runtime_symbol_lookup(text(cx, func))
-            }
+            "call_expression" => calls::runtime_symbol_lookup(cx, n),
             _ => None,
         }
     }
