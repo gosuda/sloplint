@@ -107,9 +107,10 @@ fn longest_run(params: &[Param<'_>]) -> Option<(usize, usize)> {
     let mut best = (0usize, 0usize);
     let mut start = 0usize;
     let mut kind = PrimitiveKind::Other;
+    let mut ty: Option<&str> = None;
     let mut open = false;
     for (index, param) in params.iter().enumerate() {
-        if counts(param) && open && param.primitive_kind == kind {
+        if open && joins_run(param, kind, ty) {
             continue;
         }
         if open {
@@ -118,6 +119,7 @@ fn longest_run(params: &[Param<'_>]) -> Option<(usize, usize)> {
         if counts(param) {
             start = index;
             kind = param.primitive_kind;
+            ty = param.ty;
             open = true;
         } else {
             open = false;
@@ -127,6 +129,10 @@ fn longest_run(params: &[Param<'_>]) -> Option<(usize, usize)> {
         best = longer(best, (start, params.len() - start));
     }
     (best.1 > 0).then_some(best)
+}
+
+fn joins_run(param: &Param<'_>, kind: PrimitiveKind, ty: Option<&str>) -> bool {
+    counts(param) && param.primitive_kind == kind && param.ty == ty
 }
 
 fn longer(current: (usize, usize), candidate: (usize, usize)) -> (usize, usize) {
@@ -171,6 +177,22 @@ mod tests {
 
     fn plain(name: &str, primitive_kind: PrimitiveKind) -> Param<'_> {
         param(name, primitive_kind, false, false, false)
+    }
+
+    fn typed(
+        name: &'static str,
+        primitive_kind: PrimitiveKind,
+        ty: &'static str,
+    ) -> Param<'static> {
+        Param {
+            name,
+            ty: Some(ty),
+            primitive_kind,
+            has_default: false,
+            bool_default: false,
+            keyword_only: false,
+            is_variadic: false,
+        }
     }
 
     fn function<'s>(name: &'s str, params: Vec<Param<'s>>) -> Function<'s> {
@@ -273,6 +295,46 @@ mod tests {
         );
         assert_eq!(found.len(), 1);
         assert!(found[0].starts_with("`triple` takes 3 consecutive"));
+    }
+
+    #[test]
+    fn bigint_and_rust_widths_break_the_run_while_identical_text_joins() {
+        let rule = strict();
+        let mixed = names(
+            rule.as_ref(),
+            vec![
+                function(
+                    "ts_mixed",
+                    vec![
+                        typed("a", PrimitiveKind::Int, "number"),
+                        typed("b", PrimitiveKind::Int, "bigint"),
+                        typed("c", PrimitiveKind::Int, "number"),
+                    ],
+                ),
+                function(
+                    "rust_mixed",
+                    vec![
+                        typed("a", PrimitiveKind::Int, "i32"),
+                        typed("b", PrimitiveKind::Int, "u64"),
+                        typed("c", PrimitiveKind::Int, "i32"),
+                    ],
+                ),
+            ],
+        );
+        assert!(mixed.is_empty());
+        let found = names(
+            rule.as_ref(),
+            vec![function(
+                "same_text",
+                vec![
+                    typed("a", PrimitiveKind::Int, "number"),
+                    typed("b", PrimitiveKind::Int, "number"),
+                    typed("c", PrimitiveKind::Int, "number"),
+                ],
+            )],
+        );
+        assert_eq!(found.len(), 1);
+        assert!(found[0].starts_with("`same_text` takes 3 consecutive"));
     }
 
     #[test]
