@@ -3,7 +3,7 @@ use crate::facts::WorldFacts;
 use crate::lang::Lang;
 use globset::GlobSetBuilder;
 
-fn lib(lang: Lang, package: &str, public_functions: u32) -> WorldFacts {
+pub(super) fn lib(lang: Lang, package: &str, public_functions: u32) -> WorldFacts {
     WorldFacts {
         lang,
         role: CodeRole::Library,
@@ -31,7 +31,8 @@ fn support(lang: Lang, package: &str) -> WorldFacts {
     facts.role = CodeRole::Support;
     facts
 }
-fn evidence(lang: Lang, package: &str, imports: &[&str]) -> WorldFacts {
+
+pub(super) fn evidence(lang: Lang, package: &str, imports: &[&str]) -> WorldFacts {
     WorldFacts {
         lang,
         role: CodeRole::Test,
@@ -47,7 +48,8 @@ fn evidence(lang: Lang, package: &str, imports: &[&str]) -> WorldFacts {
         imports: imports.iter().map(|spec| Box::<str>::from(*spec)).collect(),
     }
 }
-fn test_file(lang: Lang, package: &str) -> WorldFacts {
+
+pub(super) fn test_file(lang: Lang, package: &str) -> WorldFacts {
     WorldFacts {
         lang,
         role: CodeRole::Test,
@@ -64,13 +66,13 @@ fn test_file(lang: Lang, package: &str) -> WorldFacts {
     }
 }
 
-fn rule() -> ColocatedTests {
+pub(super) fn rule() -> ColocatedTests {
     ColocatedTests {
         exclude: GlobSetBuilder::new().build().unwrap(),
     }
 }
 
-fn check(rule: &ColocatedTests, files: &[WorldFile<'_>]) -> Vec<String> {
+pub(super) fn check(rule: &ColocatedTests, files: &[WorldFile<'_>]) -> Vec<String> {
     let mut out = Vec::new();
     rule.check(files, &mut out);
     out.into_iter()
@@ -341,228 +343,7 @@ fn evidence_path_keys_do_not_cover_twin_modules() {
     );
 }
 
-fn manifest(mut facts: WorldFacts) -> WorldFacts {
+pub(super) fn manifest(mut facts: WorldFacts) -> WorldFacts {
     facts.package_from_manifest = true;
     facts
-}
-
-#[test]
-fn manifest_packages_scope_import_coverage_to_their_own_modules() {
-    let rule = rule();
-    let in_a = manifest(lib(Lang::Python, "pkga", 1));
-    let in_b = manifest(lib(Lang::Python, "pkgb", 1));
-    let probe_a = manifest(evidence(Lang::Python, "pkga", &["src.common"]));
-    let probe_b = manifest(evidence(Lang::Python, "pkgb", &["pkgb/other"]));
-    let files = [
-        WorldFile {
-            path: "pkga/src/common.py",
-            facts: &in_a,
-        },
-        WorldFile {
-            path: "pkgb/src/common.py",
-            facts: &in_b,
-        },
-        WorldFile {
-            path: "pkga/tests/test_common.py",
-            facts: &probe_a,
-        },
-        WorldFile {
-            path: "pkgb/tests/test_other.py",
-            facts: &probe_b,
-        },
-    ];
-    assert_eq!(
-        check(&rule, &files),
-        ["pkgb/src/common.py".to_string()],
-        "package A's test import covers A's module while B's twin stays reported"
-    );
-}
-
-#[test]
-fn unmanifested_packages_keep_the_cross_package_suffix_match() {
-    let rule = rule();
-    let module = lib(Lang::Python, "src", 1);
-    let helper = test_file(Lang::Python, "src");
-    let probe = evidence(Lang::Python, "tests", &["x"]);
-    let files = [
-        WorldFile {
-            path: "src/x.py",
-            facts: &module,
-        },
-        WorldFile {
-            path: "src/test_helper.py",
-            facts: &helper,
-        },
-        WorldFile {
-            path: "tests/test_x.py",
-            facts: &probe,
-        },
-    ];
-    assert_eq!(
-        check(&rule, &files),
-        Vec::<String>::new(),
-        "without manifests a test import still covers another directory's module"
-    );
-}
-
-#[test]
-fn manifest_module_stays_covered_by_fallback_test_import() {
-    let rule = rule();
-    let module = manifest(lib(Lang::Python, "pkga", 1));
-    let gate = manifest(test_file(Lang::Python, "pkga"));
-    let probe = evidence(Lang::Python, "tests", &["src.common"]);
-    let files = [
-        WorldFile {
-            path: "pkga/src/common.py",
-            facts: &module,
-        },
-        WorldFile {
-            path: "pkga/tests/test_gate.py",
-            facts: &gate,
-        },
-        WorldFile {
-            path: "tests/test_common.py",
-            facts: &probe,
-        },
-    ];
-    assert_eq!(
-        check(&rule, &files),
-        Vec::<String>::new(),
-        "a fallback test's import still covers a manifest package's module"
-    );
-}
-
-#[test]
-fn fallback_module_stays_covered_by_manifest_test_import() {
-    let rule = rule();
-    let module = lib(Lang::Python, "pkg", 1);
-    let helper = test_file(Lang::Python, "pkg");
-    let probe = manifest(evidence(Lang::Python, "pkgb", &["pkg.common"]));
-    let files = [
-        WorldFile {
-            path: "pkg/common.py",
-            facts: &module,
-        },
-        WorldFile {
-            path: "pkg/test_helper.py",
-            facts: &helper,
-        },
-        WorldFile {
-            path: "pkgb/tests/test_common.py",
-            facts: &probe,
-        },
-    ];
-    assert_eq!(
-        check(&rule, &files),
-        Vec::<String>::new(),
-        "a manifest package's import still covers a fallback module"
-    );
-}
-
-#[test]
-fn typescript_module_is_covered_by_javascript_test_import() {
-    let rule = rule();
-    let foo = manifest(lib(Lang::TypeScript, "app", 1));
-    let foo_test = manifest(evidence(Lang::JavaScript, "app", &["./foo"]));
-    let other_test = manifest(test_file(Lang::TypeScript, "app"));
-    let files = [
-        WorldFile {
-            path: "src/foo.ts",
-            facts: &foo,
-        },
-        WorldFile {
-            path: "src/foo.test.js",
-            facts: &foo_test,
-        },
-        WorldFile {
-            path: "src/other.test.ts",
-            facts: &other_test,
-        },
-    ];
-    assert_eq!(
-        check(&rule, &files),
-        Vec::<String>::new(),
-        "a JavaScript test importing ./foo covers foo.ts in the same package"
-    );
-}
-
-#[test]
-fn javascript_module_is_covered_by_typescript_test_import() {
-    let rule = rule();
-    let bar = manifest(lib(Lang::JavaScript, "app", 1));
-    let bar_test = manifest(evidence(Lang::TypeScript, "app", &["./bar"]));
-    let other_test = manifest(test_file(Lang::JavaScript, "app"));
-    let files = [
-        WorldFile {
-            path: "src/bar.js",
-            facts: &bar,
-        },
-        WorldFile {
-            path: "src/bar.test.ts",
-            facts: &bar_test,
-        },
-        WorldFile {
-            path: "src/other.test.js",
-            facts: &other_test,
-        },
-    ];
-    assert_eq!(
-        check(&rule, &files),
-        Vec::<String>::new(),
-        "a TypeScript test importing ./bar covers bar.js in the same package"
-    );
-}
-
-#[test]
-fn tsx_module_is_covered_by_typescript_test_import() {
-    let rule = rule();
-    let view = manifest(lib(Lang::Tsx, "app", 1));
-    let view_test = manifest(evidence(Lang::TypeScript, "app", &["./view"]));
-    let other_test = manifest(test_file(Lang::Tsx, "app"));
-    let files = [
-        WorldFile {
-            path: "src/view.tsx",
-            facts: &view,
-        },
-        WorldFile {
-            path: "src/view.test.ts",
-            facts: &view_test,
-        },
-        WorldFile {
-            path: "src/other.test.tsx",
-            facts: &other_test,
-        },
-    ];
-    assert_eq!(
-        check(&rule, &files),
-        Vec::<String>::new(),
-        "a TypeScript test importing ./view covers view.tsx in the same package"
-    );
-}
-
-#[test]
-fn python_module_is_not_covered_by_matching_javascript_test() {
-    let rule = rule();
-    let util = lib(Lang::Python, "pkg", 1);
-    let util_test = evidence(Lang::JavaScript, "pkg", &["./util"]);
-    let gate = test_file(Lang::Python, "pkg");
-    let files = [
-        WorldFile {
-            path: "src/util.py",
-            facts: &util,
-        },
-        WorldFile {
-            path: "src/util.test.js",
-            facts: &util_test,
-        },
-        WorldFile {
-            path: "src/other_test.py",
-            facts: &gate,
-        },
-    ];
-    assert_eq!(
-        check(&rule, &files),
-        ["src/util.py".to_string()],
-        "a same-stem JavaScript test does not cover a Python module"
-    );
 }

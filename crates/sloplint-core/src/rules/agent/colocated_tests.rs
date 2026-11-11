@@ -269,3 +269,7 @@ fn is_covered<'a>(
 #[cfg(test)]
 #[path = "colocated_tests_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "colocated_tests_scope_tests.rs"]
+mod scope_tests;

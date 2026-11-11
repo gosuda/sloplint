@@ -76,9 +76,8 @@ fn keys_for(lang: Lang, dir: &str, stem: &str) -> Vec<String> {
         }
         Lang::TypeScript | Lang::Tsx | Lang::JavaScript => {
             push_all(&mut segs, &dir_segments(dir));
-            if stem != "index" {
-                push_segment(&mut segs, stem);
-            }
+            push_segment(&mut segs, stem);
+            drop_trailing_index(&mut segs);
         }
         _ => {
             push_lang_dirs(&mut segs, lang, dir);
@@ -99,6 +98,7 @@ pub fn import_keys(lang: Lang, importer: &str, spec: &str) -> Vec<String> {
         Lang::TypeScript | Lang::Tsx | Lang::JavaScript => {
             let mut segs = Vec::new();
             ts_segments(importer, spec, &mut segs);
+            drop_trailing_index(&mut segs);
             suffix_keys(&segs)
         }
         Lang::Java | Lang::Kotlin | Lang::Scala | Lang::CSharp => {
@@ -228,6 +228,12 @@ fn suffix_keys(segs: &[String]) -> Vec<String> {
 fn push_all(segs: &mut Vec<String>, parts: &[&str]) {
     for part in parts {
         push_segment(segs, part);
+    }
+}
+
+fn drop_trailing_index(segs: &mut Vec<String>) {
+    if segs.last().is_some_and(|seg| seg == "index") {
+        segs.pop();
     }
 }
 

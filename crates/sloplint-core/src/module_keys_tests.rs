@@ -255,3 +255,49 @@ fn twin_python_modules_share_only_short_suffix() {
         "other.utils"
     ));
 }
+#[test]
+fn explicit_index_imports_normalize_to_directory_keys() {
+    let lib = library_keys(Lang::TypeScript, "src/widget/index.ts");
+    assert_eq!(lib, ["src/widget"]);
+    for spec in [
+        "../src/widget/index",
+        "../src/widget/index.js",
+        "../src/widget/index.ts",
+    ] {
+        assert!(
+            import_keys(Lang::TypeScript, "tests/widget.test.ts", spec)
+                .contains(&"src/widget".to_string()),
+            "spec {spec}"
+        );
+    }
+}
+#[test]
+fn bare_relative_index_import_covers_root_index_module() {
+    assert_eq!(library_keys(Lang::TypeScript, "src/index.ts"), ["src"]);
+    assert_eq!(
+        import_keys(Lang::TypeScript, "src/app.test.ts", "./index"),
+        ["src"]
+    );
+}
+#[test]
+fn index_import_keys_never_cover_a_sibling_module() {
+    let imp = import_keys(
+        Lang::TypeScript,
+        "tests/widget.test.ts",
+        "../src/widget/index",
+    );
+    let other = library_keys(Lang::TypeScript, "src/widget/other.ts");
+    assert_eq!(other, ["widget/other", "src/widget/other"]);
+    assert!(!imp.iter().any(|key| other.contains(key)));
+}
+#[test]
+fn python_and_rust_marker_imports_already_match() {
+    assert!(shared(Lang::Python, "pkg/__init__.py", "pkg"));
+    assert!(shared(Lang::Rust, "crates/x/src/foo/mod.rs", "crate::foo"));
+}
+#[test]
+fn generic_imports_keep_trailing_index_segment() {
+    assert!(
+        import_keys(Lang::Go, "cmd/app/app_test.go", "./x/index").contains(&"x/index".to_string())
+    );
+}
