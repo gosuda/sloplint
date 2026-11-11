@@ -40,6 +40,7 @@ pub(crate) enum Role {
     Global,
     StaticItem,
     Return,
+    Yield,
 }
 
 pub struct LangSpec {

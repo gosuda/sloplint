@@ -1,7 +1,7 @@
 //! Value-return facts observed through `analyze` only.
 //!
-//! A return statement carrying a value and an expression body both mark
-//! `has_value_return`; a bare return or a print-only body does not.
+//! A return statement carrying a value, an expression body, and any `yield`
+//! all mark `has_value_return`; a bare return or a print-only body does not.
 
 use sloplint_core::lang::Lang;
 
@@ -103,5 +103,170 @@ fn return_inside_a_frameless_closure_marks_no_value() {
     assert!(
         has_value_return(Lang::Dart, "plain.dart", "f() { return 1; }\n", "f"),
         "a plain return 1 is a value return"
+    );
+}
+
+#[test]
+fn a_yield_marks_the_enclosing_function_as_returning() {
+    assert!(
+        has_value_return(
+            Lang::Python,
+            "gen.py",
+            "def values():\n    yield 1\n",
+            "values"
+        ),
+        "a generator body is a value return"
+    );
+    assert!(
+        has_value_return(
+            Lang::Python,
+            "bare.py",
+            "def values():\n    yield\n",
+            "values"
+        ),
+        "a bare yield still returns a generator"
+    );
+    assert!(
+        has_value_return(
+            Lang::Python,
+            "from.py",
+            "def values():\n    yield from xs\n",
+            "values"
+        ),
+        "yield from still returns a generator"
+    );
+    assert!(
+        has_value_return(
+            Lang::TypeScript,
+            "gen.ts",
+            "export function* values() {\n    yield 1;\n}\n",
+            "values"
+        ),
+        "a TS generator body is a value return"
+    );
+    assert!(
+        has_value_return(
+            Lang::TypeScript,
+            "bare.ts",
+            "function* values() {\n    yield;\n}\n",
+            "values"
+        ),
+        "a bare JS yield still returns a generator"
+    );
+    assert!(
+        has_value_return(
+            Lang::Dart,
+            "sync.dart",
+            "values() sync* {\n  yield 1;\n}\n",
+            "values"
+        ),
+        "a Dart sync* body is a value return"
+    );
+    assert!(
+        has_value_return(
+            Lang::Dart,
+            "each.dart",
+            "values() sync* {\n  yield* xs;\n}\n",
+            "values"
+        ),
+        "a Dart yield* body is a value return"
+    );
+    assert!(
+        has_value_return(
+            Lang::CSharp,
+            "gen.cs",
+            "class C {\n    IEnumerable<int> Values() {\n        yield return 1;\n    }\n}\n",
+            "Values"
+        ),
+        "a C# yield return marks the iterator contract"
+    );
+    assert!(
+        has_value_return(
+            Lang::CSharp,
+            "stop.cs",
+            "class C {\n    IEnumerable<int> Values() {\n        yield break;\n    }\n}\n",
+            "Values"
+        ),
+        "a C# yield break still returns an iterator"
+    );
+    assert!(
+        has_value_return(
+            Lang::Php,
+            "gen.php",
+            "<?php\nfunction values() {\n    yield 1;\n}\n",
+            "values"
+        ),
+        "a PHP yield body is a value return"
+    );
+}
+
+#[test]
+fn generator_near_misses_keep_the_valueless_fact() {
+    assert!(
+        !has_value_return(
+            Lang::Python,
+            "log.py",
+            "def log(msg):\n    print(msg)\n",
+            "log"
+        ),
+        "a print-only body is no value return"
+    );
+    assert!(
+        !has_value_return(
+            Lang::Python,
+            "fetch.py",
+            "async def fetch():\n    await g()\n",
+            "fetch"
+        ),
+        "an await-only coroutine body is no value return"
+    );
+    assert!(
+        !has_value_return(
+            Lang::TypeScript,
+            "void.ts",
+            "function log(msg: string): void {\n    console.log(msg);\n}\n",
+            "log"
+        ),
+        "a void TS body is no value return"
+    );
+    assert!(
+        !has_value_return(
+            Lang::Dart,
+            "void.dart",
+            "deliver(String address) {\n  print(address);\n}\n",
+            "deliver"
+        ),
+        "a print-only Dart body is no value return"
+    );
+    assert!(
+        !has_value_return(
+            Lang::CSharp,
+            "void.cs",
+            "class C {\n    void Log(string msg) {\n        System.Console.WriteLine(msg);\n    }\n}\n",
+            "Log"
+        ),
+        "a void C# body is no value return"
+    );
+    assert!(
+        !has_value_return(
+            Lang::Php,
+            "log.php",
+            "<?php\nfunction log($msg) {\n    echo $msg;\n}\n",
+            "log"
+        ),
+        "an echo-only PHP body is no value return"
+    );
+}
+
+#[test]
+fn a_yield_inside_a_nested_function_marks_only_the_inner_function() {
+    let source = "def outer():\n    def inner():\n        yield 1\n    inner()\n";
+    assert!(
+        !has_value_return(Lang::Python, "nest.py", source, "outer"),
+        "the inner generator's yield does not mark the outer function"
+    );
+    assert!(
+        has_value_return(Lang::Python, "nest.py", source, "inner"),
+        "the yield marks the function that contains it"
     );
 }

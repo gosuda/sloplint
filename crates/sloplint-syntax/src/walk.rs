@@ -230,7 +230,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
                 self.enter_flow(role, node);
             }
             Role::Call | Role::MacroCall | Role::NewCall => self.enter_call_site(node),
-            Role::Return => self.enter_return(node),
+            Role::Return | Role::Yield => self.enter_return(role, node),
             _ => self.enter_other(role, node),
         }
     }

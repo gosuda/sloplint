@@ -15,3 +15,14 @@ class Url:
         obj = super().__new__(cls)
         obj.host = host
         return obj
+
+
+def logged(msg: str):
+    print(msg)
+
+
+def outer():
+    def inner():
+        yield 1
+
+    inner()

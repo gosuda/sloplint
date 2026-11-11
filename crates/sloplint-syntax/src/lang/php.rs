@@ -55,6 +55,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("dynamic_variable_name", Role::Global),
     ("global_declaration", Role::Global),
     ("return_statement", Role::Return),
+    ("yield_expression", Role::Yield),
     ("function_static_declaration", Role::StaticItem),
     ("property_declaration", Role::StaticItem),
 ];

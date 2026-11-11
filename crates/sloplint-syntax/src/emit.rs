@@ -407,8 +407,8 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             .find(|child| child.kind() == kind)
     }
 
-    pub(crate) fn enter_return(&mut self, node: tree_sitter::Node<'_>) {
-        if node.named_child_count() == 0 {
+    pub(crate) fn enter_return(&mut self, role: Role, node: tree_sitter::Node<'_>) {
+        if role != Role::Yield && node.named_child_count() == 0 {
             return;
         }
         self.mark_value_return(self.closure_depth);

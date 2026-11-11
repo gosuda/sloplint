@@ -48,6 +48,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("assert_statement", Role::Assert),
     ("global_statement", Role::Global),
     ("return_statement", Role::Return),
+    ("yield", Role::Yield),
 ];
 
 pub(crate) struct PythonHooks;

@@ -179,4 +179,36 @@ mod tests {
             ["public `process` lacks type annotations for: data, count, return".to_string()]
         );
     }
+
+    #[test]
+    fn generator_body_enforces_the_return_annotation() {
+        let rule = ExplicitBoundaryTypes;
+        let source = "def values():\n    yield 1\n";
+        let mut out = Vec::new();
+        rule.check(
+            &facts(source, vec![valued("values", vec!["return"])]),
+            &mut out,
+        );
+        let found: Vec<String> = out.into_iter().map(|finding| finding.message).collect();
+        assert_eq!(
+            found,
+            ["public `values` lacks type annotations for: return".to_string()]
+        );
+    }
+
+    #[test]
+    fn valueless_body_exempts_only_the_return_annotation() {
+        let rule = ExplicitBoundaryTypes;
+        let source = "def log(msg):\n    print(msg)\n";
+        let mut out = Vec::new();
+        rule.check(
+            &facts(source, vec![voided("log", vec!["msg", "return"])]),
+            &mut out,
+        );
+        let found: Vec<String> = out.into_iter().map(|finding| finding.message).collect();
+        assert_eq!(
+            found,
+            ["public `log` lacks type annotations for: msg".to_string()]
+        );
+    }
 }

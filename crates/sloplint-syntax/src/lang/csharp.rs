@@ -33,6 +33,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("do_statement", Role::Loop),
     ("catch_clause", Role::Catch),
     ("return_statement", Role::Return),
+    ("yield_statement", Role::Yield),
     ("conditional_expression", Role::Ternary),
     ("invocation_expression", Role::Call),
     ("object_creation_expression", Role::NewCall),

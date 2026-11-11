@@ -48,6 +48,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("member_expression", Role::Member),
     ("assert_statement", Role::Assert),
     ("return_statement", Role::Return),
+    ("yield_statement", Role::Yield),
+    ("yield_each_statement", Role::Yield),
 ];
 
 pub(crate) static HOOKS: DartHooks = DartHooks;

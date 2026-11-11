@@ -66,6 +66,7 @@ macro_rules! js_table {
             ("comment", Role::Comment),
             ("switch_default", Role::MatchArm),
             ("return_statement", Role::Return),
+            ("yield_expression", Role::Yield),
             ("object", Role::StructLit),
             ("member_expression", Role::Member),
             ("subscript_expression", Role::Subscript),
