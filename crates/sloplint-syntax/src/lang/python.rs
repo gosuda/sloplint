@@ -8,6 +8,8 @@ use crate::hooks::{
 use crate::spec::Role;
 
 mod dynamic;
+mod dynamic_mutation;
+mod dynamic_tables;
 mod imports;
 mod items;
 mod params;

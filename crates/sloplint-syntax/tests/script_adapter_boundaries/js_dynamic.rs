@@ -186,3 +186,78 @@ fn typescript_table_loop_stays_silent() {
 fn typescript_open_ternary_still_flags() {
     assert_eq!(typed(TS_OPEN_TERNARY, Lang::TypeScript, "case.ts").len(), 1);
 }
+const JSD01_SHADOWED_CONST: &str = r#"const key = ['a', 'b']
+export function run(obj, key) {
+  return obj[key]()
+}
+"#;
+
+#[test]
+fn jsd01_shadowed_const_still_flags() {
+    assert_eq!(dynamics(JSD01_SHADOWED_CONST).len(), 1);
+}
+
+const JSD02_CROSS_FUNCTION_LOOP: &str = r#"export function a() {
+  for (const key of ['x', 'y']) use(key)
+}
+export function b(obj, key) {
+  return obj[key]()
+}
+"#;
+
+#[test]
+fn jsd02_cross_function_loop_still_flags() {
+    assert_eq!(dynamics(JSD02_CROSS_FUNCTION_LOOP).len(), 1);
+}
+
+const JSD03_LET_REASSIGNED_LOOP: &str = r#"export function run(obj, input) {
+  for (let k of ['a', 'b']) {
+    k = input
+    obj[k]()
+  }
+}
+"#;
+
+#[test]
+fn jsd03_let_reassigned_loop_still_flags() {
+    assert_eq!(dynamics(JSD03_LET_REASSIGNED_LOOP).len(), 1);
+}
+
+const JSD04_MUTATED_TABLE_LOOP: &str = r#"const roles = ['admin', 'user']
+export function grant(r) {
+  roles.push(r)
+}
+export function run(obj) {
+  for (const role of roles) {
+    obj[role]()
+  }
+}
+"#;
+
+#[test]
+fn jsd04_mutated_table_loop_still_flags() {
+    assert_eq!(dynamics(JSD04_MUTATED_TABLE_LOOP).len(), 1);
+}
+
+const JSD05_SHORTHAND_TABLE_VALUES: &str = r#"export function run(obj, userKey) {
+  const table = { a: 'x', userKey }
+  for (const v of Object.values(table)) {
+    obj[v]()
+  }
+}
+"#;
+
+#[test]
+fn jsd05_shorthand_table_values_still_flags() {
+    assert_eq!(dynamics(JSD05_SHORTHAND_TABLE_VALUES).len(), 1);
+}
+
+#[test]
+fn jsd06_many_consts_complete() {
+    let mut source = String::new();
+    for i in 0..20000 {
+        source.push_str(&format!("const K{i} = 'v{i}'\n"));
+    }
+    source.push_str("export function run(obj, k) {\n  return obj[k]()\n}\n");
+    assert_eq!(dynamics(&source).len(), 1);
+}

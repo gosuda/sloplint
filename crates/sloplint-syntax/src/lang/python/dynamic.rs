@@ -1,11 +1,11 @@
-//! Python dynamic-symbol classification with measured-noise suppression.
-
 use tree_sitter::Node;
 
-use crate::hooks::{
-    Cx, FileSetKind, child_by_field, code_children, last_segment, named_children, text,
-};
+use crate::hooks::{Cx, child_by_field, code_children, last_segment, named_children, text};
 
+use super::dynamic_tables::{
+    file_attr_member, file_non_loop_member, file_table_member, is_literal_collection,
+    is_plain_value, push_pattern_names,
+};
 use super::enclosing_function;
 
 pub(crate) fn py_call_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
@@ -15,13 +15,8 @@ pub(crate) fn py_call_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static s
     if is_attr_fallback(last) {
         return fallback_name(n, cx, last);
     }
-    if func.kind() == "identifier" {
-        if last == "eval" {
-            return Some("eval");
-        }
-        if last == "exec" {
-            return Some("exec");
-        }
+    if func.kind() == "identifier" && (last == "eval" || last == "exec") {
+        return Some(if last == "eval" { "eval" } else { "exec" });
     }
     if last == "__import__" {
         return import_name(n, cx, "__import__");
@@ -32,13 +27,40 @@ pub(crate) fn py_call_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static s
     import_name(n, cx, "dynamic import")
 }
 
+pub(crate) fn py_subscript_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
+    let v = child_by_field(n, "value")?;
+    if v.kind() != "call" {
+        return None;
+    }
+    let f = child_by_field(v, "function").map_or("", |x| text(cx, x));
+    let last = last_segment(f, &["."]);
+    if last != "globals" && last != "locals" {
+        return None;
+    }
+    let idx = child_by_field(n, "subscript")?;
+    subscript_decision(idx, cx)
+}
+
+fn subscript_decision(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
+    if is_plain_value(n, cx) {
+        return None;
+    }
+    if n.kind() == "string" || n.kind() == "concatenated_string" {
+        return Some("globals() lookup");
+    }
+    if n.kind() == "identifier" && name_from_literals(cx, n) {
+        return None;
+    }
+    Some("globals() lookup")
+}
+
 fn is_attr_fallback(last: &str) -> bool {
     matches!(last, "getattr" | "setattr" | "hasattr" | "delattr")
 }
 
 fn positional(n: Node<'_>) -> Vec<Node<'_>> {
     child_by_field(n, "arguments")
-        .map_or(Vec::new(), named_children)
+        .map_or(Vec::new(), code_children)
         .into_iter()
         .filter(|a| a.kind() != "keyword_argument")
         .collect()
@@ -47,16 +69,16 @@ fn positional(n: Node<'_>) -> Vec<Node<'_>> {
 fn fallback_name(n: Node<'_>, cx: &Cx<'_, '_>, which: &str) -> Option<&'static str> {
     let args = positional(n);
     let name_arg = args.into_iter().nth(1)?;
-    if name_arg.kind() == "string" {
+    if is_plain_value(name_arg, cx) {
         return None;
     }
-    if is_name_attr(cx, name_arg) {
-        return None;
+    if name_arg.kind() == "string" || name_arg.kind() == "concatenated_string" {
+        return Some(fallback_label(which));
     }
     if proxy_forwarded(n, cx, name_arg) {
         return None;
     }
-    if name_from_literals(name_arg, cx) {
+    if name_from_literals(cx, name_arg) {
         return None;
     }
     Some(fallback_label(which))
@@ -74,43 +96,20 @@ fn fallback_label(which: &str) -> &'static str {
 fn import_name(n: Node<'_>, cx: &Cx<'_, '_>, label: &'static str) -> Option<&'static str> {
     let mut args = positional(n).into_iter();
     let first = args.next()?;
-    if first.kind() == "string" {
+    if is_plain_value(first, cx) {
         return None;
     }
-    if first.kind() == "identifier" && name_from_literals(first, cx) {
+    if first.kind() == "string" || first.kind() == "concatenated_string" {
+        return Some(label);
+    }
+    if first.kind() == "identifier" && name_from_literals(cx, first) {
         return None;
     }
     Some(label)
 }
 
-pub(crate) fn py_subscript_dynamic(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
-    let v = child_by_field(n, "value")?;
-    if v.kind() != "call" {
-        return None;
-    }
-    let f = child_by_field(v, "function").map_or("", |x| text(cx, x));
-    let last = last_segment(f, &["."]);
-    if last != "globals" && last != "locals" {
-        return None;
-    }
-    let idx = child_by_field(n, "subscript")?;
-    if idx.kind() == "string" {
-        return None;
-    }
-    if idx.kind() == "identifier" && name_from_literals(idx, cx) {
-        return None;
-    }
-    Some("globals() lookup")
-}
-
-fn is_name_attr(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    if n.kind() != "attribute" {
-        return false;
-    }
-    child_by_field(n, "attribute").is_some_and(|a| text(cx, a) == "name")
-}
-
-fn proxy_forwarded(_call: Node<'_>, cx: &Cx<'_, '_>, arg: Node<'_>) -> bool {
+fn proxy_forwarded(call: Node<'_>, cx: &Cx<'_, '_>, arg: Node<'_>) -> bool {
+    let _ = call;
     if arg.kind() != "identifier" {
         return false;
     }
@@ -138,17 +137,7 @@ fn param_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
     match n.kind() {
         "identifier" => out.push(text(cx, n)),
         "typed_parameter" | "default_parameter" | "typed_default_parameter" => {
-            let key = if n.kind() == "typed_parameter" {
-                named_children(n)
-                    .into_iter()
-                    .find(|c| c.kind() == "identifier")
-                    .map_or("", |c| text(cx, c))
-            } else {
-                child_by_field(n, "name").map_or("", |v| text(cx, v))
-            };
-            if !key.is_empty() {
-                out.push(key);
-            }
+            push_typed_param(cx, n, out);
         }
         "parameter" => {
             for sub in named_children(n) {
@@ -159,45 +148,69 @@ fn param_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
     }
 }
 
-fn name_from_literals(arg: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+fn push_typed_param<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    let key = if n.kind() == "typed_parameter" {
+        named_children(n)
+            .into_iter()
+            .find(|c| c.kind() == "identifier")
+            .map_or("", |c| text(cx, c))
+    } else {
+        child_by_field(n, "name").map_or("", |v| text(cx, v))
+    };
+    if !key.is_empty() {
+        out.push(key);
+    }
+}
+
+fn name_from_literals(cx: &Cx<'_, '_>, arg: Node<'_>) -> bool {
+    if is_plain_value(arg, cx) {
+        return true;
+    }
+    if arg.kind() == "string" || arg.kind() == "concatenated_string" {
+        return false;
+    }
+    if arg.kind() == "attribute" {
+        return attr_literal(cx, arg);
+    }
+    ident_names_closed(cx, arg)
+}
+
+fn attr_literal(cx: &Cx<'_, '_>, arg: Node<'_>) -> bool {
+    let attr = child_by_field(arg, "attribute").map_or("", |a| text(cx, a));
+    if attr.is_empty() {
+        return false;
+    }
+    file_attr_member(cx, attr)
+}
+
+fn ident_names_closed(cx: &Cx<'_, '_>, arg: Node<'_>) -> bool {
     let mut ids = Vec::new();
     collect_idents(arg, cx, &mut ids);
     if ids.is_empty() {
         return false;
     }
-    let mut chain = Vec::new();
     if let Some(object) = zero_arg_call_object(arg) {
+        let mut chain = Vec::new();
         collect_idents(object, cx, &mut chain);
-    }
-    let check: &[String] = if chain.is_empty() { &ids } else { &chain };
-    let closed = |targets: &[String]| ids_closed(check, targets);
-    if let Some(func) = enclosing_function(cx) {
-        if cx.literal_targets(func.id(), || scope_targets(func, cx), closed) {
-            return true;
+        if chain.is_empty() {
+            return false;
         }
-        return check.iter().all(|id| file_table_member(id, cx));
+        return chain
+            .iter()
+            .all(|id| is_loop_bound(cx, id, arg) || file_table_member(cx, id));
     }
-    let Some(root) = cx.root() else {
-        return false;
-    };
-    let scope = cx
-        .ancestors()
-        .find(|ancestor| ancestor.kind() == "for_statement")
-        .unwrap_or(root);
-    if cx.literal_targets(scope.id(), || scope_targets(scope, cx), closed) {
-        return true;
-    }
-    check.iter().all(|id| file_table_member(id, cx))
+    ids.iter()
+        .all(|id| is_loop_bound(cx, id, arg) || file_table_member(cx, id))
 }
 
-fn zero_arg_call_object(arg: Node<'_>) -> Option<Node<'_>> {
+fn zero_arg_call_object<'t>(arg: Node<'t>) -> Option<Node<'t>> {
     let mut cur = arg;
     loop {
         if cur.kind() != "call" {
             return None;
         }
         let args = child_by_field(cur, "arguments")?;
-        if !named_children(args).is_empty() {
+        if !code_children(args).is_empty() {
             return None;
         }
         let func = child_by_field(cur, "function")?;
@@ -213,232 +226,196 @@ fn zero_arg_call_object(arg: Node<'_>) -> Option<Node<'_>> {
     }
 }
 
-fn ids_closed(ids: &[String], targets: &[String]) -> bool {
-    !targets.is_empty() && ids.iter().all(|id| targets.iter().any(|t| t == id))
-}
-
-fn collect_idents(n: Node<'_>, cx: &Cx<'_, '_>, out: &mut Vec<String>) {
+fn collect_idents<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
     let mut stack = vec![n];
     while let Some(cur) = stack.pop() {
         if cur.kind() == "identifier" {
-            out.push(text(cx, cur).to_owned());
+            out.push(text(cx, cur));
         }
         let mut cursor = cur.walk();
         stack.extend(cur.children(&mut cursor).filter(|child| child.is_named()));
     }
 }
 
-fn scope_targets(scope: Node<'_>, cx: &Cx<'_, '_>) -> Vec<String> {
-    let mut out = Vec::new();
-    let mut queue = vec![scope];
-    let mut head = 0usize;
-    while head < queue.len() {
-        let cur = queue[head];
-        head += 1;
-        if cur.id() != scope.id()
-            && matches!(
-                cur.kind(),
-                "function_definition" | "lambda" | "class_definition"
-            )
-        {
-            continue;
-        }
-        match cur.kind() {
-            "for_statement" => push_for_targets(cur, cx, &mut out),
-            "list_comprehension"
-            | "set_comprehension"
-            | "dictionary_comprehension"
-            | "generator_expression" => push_comprehension_targets(cur, cx, &mut out),
-            _ => {}
-        }
-        push_children(&mut queue, cur);
+fn contains_range(outer: Node<'_>, inner: Node<'_>) -> bool {
+    outer.start_byte() <= inner.start_byte() && inner.end_byte() <= outer.end_byte()
+}
+
+fn is_loop_bound(cx: &Cx<'_, '_>, id: &str, arg: Node<'_>) -> bool {
+    if file_non_loop_member(cx, id) {
+        return false;
     }
-    out
+    let loops = ancestor_loops(cx, arg);
+    if loops.is_empty() {
+        return false;
+    }
+    let mut proven: Vec<&str> = Vec::new();
+    for lp in loops {
+        extend_proven(cx, lp, &mut proven);
+    }
+    proven.contains(&id)
 }
 
-fn push_children<'t>(queue: &mut Vec<Node<'t>>, n: Node<'t>) {
-    let mut kids = named_children(n);
-    kids.reverse();
-    queue.extend(kids);
+fn ancestor_loops<'t>(cx: &Cx<'t, '_>, arg: Node<'t>) -> Vec<Node<'t>> {
+    let mut loops = Vec::new();
+    for a in cx.ancestors().collect::<Vec<_>>().into_iter().rev() {
+        if a.kind() == "for_statement" {
+            if child_by_field(a, "body").is_some_and(|b| contains_range(b, arg)) {
+                loops.push(a);
+            }
+        } else if matches!(
+            a.kind(),
+            "list_comprehension"
+                | "set_comprehension"
+                | "dictionary_comprehension"
+                | "generator_expression"
+        ) && child_by_field(a, "body").is_some_and(|b| contains_range(b, arg))
+        {
+            loops.push(a);
+        }
+    }
+    loops
 }
 
-fn push_comprehension_targets(comp: Node<'_>, cx: &Cx<'_, '_>, out: &mut Vec<String>) {
-    for clause in named_children(comp) {
+fn extend_proven<'s>(cx: &Cx<'_, 's>, lp: Node<'_>, proven: &mut Vec<&'s str>) {
+    if lp.kind() == "for_statement" {
+        apply_for_loop(lp, cx, proven);
+    } else {
+        apply_comp_loop(lp, cx, proven);
+    }
+}
+
+fn apply_for_loop<'s>(lp: Node<'_>, cx: &Cx<'_, 's>, proven: &mut Vec<&'s str>) {
+    let Some(left) = child_by_field(lp, "left") else {
+        return;
+    };
+    let Some(right) = child_by_field(lp, "right") else {
+        return;
+    };
+    let mut targets = Vec::new();
+    push_pattern_names(left, cx, &mut targets);
+    proven.retain(|t| !targets.iter().any(|x| x == t));
+    if closed_iterable(cx, right, proven) {
+        proven.extend(targets);
+    }
+}
+
+fn apply_comp_loop<'s>(comp: Node<'_>, cx: &Cx<'_, 's>, proven: &mut Vec<&'s str>) {
+    for clause in code_children(comp) {
         if clause.kind() != "for_in_clause" {
             continue;
         }
-        let Some(left) = child_by_field(clause, "left") else {
+        apply_for_in_clause(clause, cx, proven);
+    }
+}
+
+fn apply_for_in_clause<'s>(clause: Node<'_>, cx: &Cx<'_, 's>, proven: &mut Vec<&'s str>) {
+    let Some(left) = child_by_field(clause, "left") else {
+        return;
+    };
+    let Some(right) = clause_right(clause, left) else {
+        return;
+    };
+    let mut targets = Vec::new();
+    push_pattern_names(left, cx, &mut targets);
+    proven.retain(|t| !targets.iter().any(|x| x == t));
+    if closed_iterable(cx, right, proven) {
+        proven.extend(targets);
+    }
+}
+
+fn clause_right<'t>(clause: Node<'t>, left: Node<'t>) -> Option<Node<'t>> {
+    let mut found: Option<Node<'t>> = None;
+    let mut count = 0usize;
+    for c in code_children(clause) {
+        if c.id() == left.id() || c.kind() == "if_clause" {
             continue;
-        };
-        let rights: Vec<Node<'_>> = named_children(clause)
-            .into_iter()
-            .filter(|child| child.id() != left.id() && child.kind() != "if_clause")
-            .collect();
-        if rights.len() == 1 && closed_iterable(rights[0], cx, out) {
-            bind_names(left, cx, out);
         }
+        count += 1;
+        found = Some(c);
     }
+    if count == 1 { found } else { None }
 }
 
-fn push_for_targets(for_node: Node<'_>, cx: &Cx<'_, '_>, out: &mut Vec<String>) {
-    let Some(left) = child_by_field(for_node, "left") else {
-        return;
-    };
-    let Some(right) = child_by_field(for_node, "right") else {
-        return;
-    };
-    if closed_iterable(right, cx, out) {
-        bind_names(left, cx, out);
-    }
-}
-
-fn closed_iterable(right: Node<'_>, cx: &Cx<'_, '_>, bound: &[String]) -> bool {
-    if is_literal_collection(right) || alias_ref(right, cx) {
+fn closed_iterable(cx: &Cx<'_, '_>, right: Node<'_>, proven: &[&str]) -> bool {
+    if is_literal_collection(right, cx) {
         return true;
     }
-    if right.kind() == "call" {
-        return wrapped_literal(right, cx);
+    if right.kind() == "identifier" || right.kind() == "attribute" {
+        return is_closed_ref(cx, right, proven);
     }
-    if right.kind() == "identifier" {
-        return bound.iter().any(|t| t == text(cx, right));
+    if right.kind() == "call" {
+        return wrapped_literal(cx, right, proven);
     }
     false
 }
 
-fn alias_ref(n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
-    let name = match n.kind() {
-        "identifier" => text(cx, n),
-        "attribute" => child_by_field(n, "attribute")
-            .map(|attr| text(cx, attr))
-            .unwrap_or(""),
-        _ => "",
-    };
-    !name.is_empty() && file_table_member(name, cx)
+fn is_closed_ref(cx: &Cx<'_, '_>, n: Node<'_>, proven: &[&str]) -> bool {
+    if n.kind() == "identifier" {
+        let name = text(cx, n);
+        if proven.contains(&name) {
+            return true;
+        }
+        return file_table_member(cx, name);
+    }
+    if n.kind() == "attribute" {
+        let attr = child_by_field(n, "attribute").map_or("", |a| text(cx, a));
+        if attr.is_empty() {
+            return false;
+        }
+        return file_attr_member(cx, attr);
+    }
+    false
 }
 
-fn wrapped_literal(call_node: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+fn wrapped_literal(cx: &Cx<'_, '_>, call_node: Node<'_>, proven: &[&str]) -> bool {
     let Some(func) = child_by_field(call_node, "function") else {
         return false;
     };
-    let args = child_by_field(call_node, "arguments").map_or(Vec::new(), named_children);
+    let args = child_by_field(call_node, "arguments").map_or(Vec::new(), code_children);
     if func.kind() == "identifier" {
-        return args.len() == 1
-            && matches!(text(cx, func), "sorted" | "list" | "reversed")
-            && (is_literal_collection(args[0]) || alias_ref(args[0], cx));
+        return wrapped_sorted(cx, func, &args, proven);
     }
     if func.kind() == "attribute" {
-        let method = child_by_field(func, "attribute")
-            .map(|attr| text(cx, attr))
-            .unwrap_or("");
-        return args.is_empty()
-            && matches!(method, "keys" | "items" | "values")
-            && child_by_field(func, "object").is_some_and(|object| alias_ref(object, cx));
+        return wrapped_keys(cx, func, call_node, &args, proven);
     }
     false
 }
 
-fn bind_names(n: Node<'_>, cx: &Cx<'_, '_>, out: &mut Vec<String>) {
-    let mut stack = vec![n];
-    while let Some(cur) = stack.pop() {
-        match cur.kind() {
-            "identifier" => out.push(text(cx, cur).to_owned()),
-            "pattern_list" | "tuple_pattern" | "list_pattern" => {
-                stack.extend(named_children(cur).into_iter().rev());
-            }
-            _ => {}
-        }
+fn wrapped_sorted(cx: &Cx<'_, '_>, func: Node<'_>, args: &[Node<'_>], proven: &[&str]) -> bool {
+    if args.len() != 1 {
+        return false;
     }
+    if !matches!(text(cx, func), "sorted" | "list" | "reversed") {
+        return false;
+    }
+    let a = args[0];
+    if is_literal_collection(a, cx) {
+        return true;
+    }
+    is_closed_ref(cx, a, proven)
 }
 
-fn file_table_member(name: &str, cx: &Cx<'_, '_>) -> bool {
-    cx.file_names(FileSetKind::Literal, || file_tables(cx))
-        .binary_search(&name)
-        .is_ok()
-}
-
-fn file_tables<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
-    let Some(root) = cx.root() else {
-        return Vec::new();
+fn wrapped_keys(
+    cx: &Cx<'_, '_>,
+    func: Node<'_>,
+    call_node: Node<'_>,
+    args: &[Node<'_>],
+    proven: &[&str],
+) -> bool {
+    let _ = call_node;
+    if !args.is_empty() {
+        return false;
+    }
+    let method = child_by_field(func, "attribute").map_or("", |a| text(cx, a));
+    if !matches!(method, "keys" | "items" | "values") {
+        return false;
+    }
+    let Some(object) = child_by_field(func, "object") else {
+        return false;
     };
-    let mut assigned: Vec<&'s str> = Vec::new();
-    let mut closed: Vec<&'s str> = Vec::new();
-    let mut queue = vec![root];
-    let mut head = 0usize;
-    while head < queue.len() {
-        let cur = queue[head];
-        head += 1;
-        if cur.id() != root.id() && matches!(cur.kind(), "function_definition" | "lambda") {
-            continue;
-        }
-        if cur.kind() == "assignment" {
-            record_module_assignment(cur, cx, &mut assigned, &mut closed);
-        }
-        push_children(&mut queue, cur);
+    if object.kind() == "call" {
+        return false;
     }
-    let mut keep: Vec<&'s str> = closed
-        .into_iter()
-        .filter(|name| assigned.iter().filter(|other| *other == name).count() == 1)
-        .collect();
-    keep.sort_unstable();
-    keep.dedup();
-    keep
-}
-
-fn record_module_assignment<'s>(
-    assignment: Node<'_>,
-    cx: &Cx<'_, 's>,
-    assigned: &mut Vec<&'s str>,
-    closed: &mut Vec<&'s str>,
-) {
-    let (Some(left), Some(right)) = (
-        child_by_field(assignment, "left"),
-        child_by_field(assignment, "right"),
-    ) else {
-        return;
-    };
-    if left.kind() != "identifier" {
-        return;
-    }
-    let name = text(cx, left);
-    assigned.push(name);
-    if is_literal_collection(right) || right.kind() == "string" {
-        closed.push(name);
-    }
-}
-
-fn is_literal_collection(n: Node<'_>) -> bool {
-    let mut stack = vec![n];
-    let mut visits = 0usize;
-    while let Some(cur) = stack.pop() {
-        visits += 1;
-        if visits > 256 {
-            return false;
-        }
-        match cur.kind() {
-            "string" | "integer" | "float" | "true" | "false" | "none" => {}
-            "list" | "tuple" | "set" => {
-                let kids = code_children(cur);
-                if kids.is_empty() {
-                    return false;
-                }
-                stack.extend(kids);
-            }
-            "dictionary" => {
-                for kid in code_children(cur) {
-                    if kid.kind() != "pair" {
-                        return false;
-                    }
-                    match (child_by_field(kid, "key"), child_by_field(kid, "value")) {
-                        (Some(key), Some(value)) => {
-                            stack.push(key);
-                            stack.push(value);
-                        }
-                        _ => return false,
-                    }
-                }
-            }
-            _ => return false,
-        }
-    }
-    true
+    is_closed_ref(cx, object, proven)
 }

@@ -103,8 +103,8 @@ fn literal_dunder_import_stays_silent() {
 }
 
 #[test]
-fn field_name_walk_stays_silent() {
-    assert_eq!(dynamics(NAME_WALK), Vec::<String>::new());
+fn field_name_walk_still_flags() {
+    assert_eq!(dynamics(NAME_WALK).len(), 1);
 }
 
 #[test]
@@ -345,4 +345,75 @@ fn attribute_field_of_loop_target_still_flags() {
 #[test]
 fn attribute_call_with_arguments_still_flags() {
     assert_eq!(dynamics(CALL_WITH_ARGS).len(), 1);
+}
+const PD01: &str = "def get(obj, attr):\n    return getattr(obj, f'get_{attr}')\n";
+const PD02: &str = "name = 'default'\n\ndef fetch(obj, name):\n    return getattr(obj, name)\n";
+const PD03: &str = "class Config:\n    fields = ('id', 'name')\n\nclass Serializer:\n    def dump(self, obj, fields):\n        return {f: getattr(obj, f) for f in fields}\n";
+const PD04: &str = "FIELDS = ['id', 'name']\n\ndef register(extra):\n    FIELDS.append(extra)\n\ndef dump(obj):\n    for k in FIELDS:\n        getattr(obj, k)\n";
+const PD05: &str = "MODE = 'fast'\n\ndef set_mode(value):\n    global MODE\n    MODE = value\n\ndef run(obj):\n    return getattr(obj, MODE)\n";
+const PD06: &str =
+    "import sys\nname = 'default'\nfor name in request_fields:\n    print(getattr(sys, name))\n";
+const PD07: &str = "def probe(obj, rows):\n    for n in ('a', 'b'):\n        print(n)\n    n = rows[0]\n    return getattr(obj, n)\n";
+const PD08: &str = "class Form:\n    fields = ('name', 'email')\n\n    def __init__(self, fields):\n        self.fields = fields\n\n    def dump(self, obj):\n        for f in self.fields:\n            getattr(obj, f)\n";
+const PD13: &str = "CACHE = {}\n\ndef put(k, v):\n    CACHE[k] = v\n\ndef get(obj):\n    return getattr(obj, CACHE['x'])\n";
+const PD10_SRC: &str =
+    "def load(obj):\n    return getattr(obj,  # field\n                   'id')\n";
+const PD12A: &str = "for name in ('a', 'b'):\n    for obj in objs:\n        getattr(obj, name)\n";
+const PD12B: &str = "def outer(objs):\n    for name in ('a', 'b'):\n        def inner(o):\n            return getattr(o, name)\n";
+#[test]
+fn pd01_fstring_still_flags() {
+    assert_eq!(dynamics(PD01).len(), 1);
+}
+#[test]
+fn pd02_param_shadows_table_still_flags() {
+    assert_eq!(dynamics(PD02).len(), 1);
+}
+#[test]
+fn pd03_param_shadows_class_table_still_flags() {
+    assert_eq!(dynamics(PD03).len(), 1);
+}
+#[test]
+fn pd04_mutated_table_still_flags() {
+    assert_eq!(dynamics(PD04).len(), 1);
+}
+#[test]
+fn pd05_global_rebinding_still_flags() {
+    assert_eq!(dynamics(PD05).len(), 1);
+}
+#[test]
+fn pd06_for_rebinds_const_still_flags() {
+    assert_eq!(dynamics(PD06).len(), 1);
+}
+#[test]
+fn pd07_reassigned_loop_var_still_flags() {
+    assert_eq!(dynamics(PD07).len(), 1);
+}
+#[test]
+fn pd08_instance_store_still_flags() {
+    assert_eq!(dynamics(PD08).len(), 1);
+}
+#[test]
+fn pd13_empty_dict_still_flags() {
+    assert_eq!(dynamics(PD13).len(), 1);
+}
+#[test]
+fn pd10_comment_in_args_stays_silent() {
+    assert_eq!(dynamics(PD10_SRC), Vec::<String>::new());
+}
+#[test]
+fn pd12_nested_loops_stay_silent() {
+    assert_eq!(dynamics(PD12A), Vec::<String>::new());
+}
+#[test]
+fn pd12_closure_over_loop_stays_silent() {
+    assert_eq!(dynamics(PD12B), Vec::<String>::new());
+}
+#[test]
+fn pd09_many_constants_complete() {
+    let mut source = String::new();
+    for i in 0..10000 {
+        source.push_str(&format!("C{i} = {i}\n"));
+    }
+    source.push_str("def f(o, x):\n    return getattr(o, x)\n");
+    assert_eq!(dynamics(&source).len(), 1);
 }

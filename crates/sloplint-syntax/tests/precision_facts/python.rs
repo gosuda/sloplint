@@ -425,18 +425,18 @@ fn sole_call_survives_a_leading_comment() {
 
 #[test]
 fn late_literal_loop_still_suppresses_dynamic() {
-    let mut source = String::from("def f(mod, name):\n");
+    let mut source = String::from("def f(mod):\n");
     for _ in 0..800 {
         source.push_str("    x = 1\n");
     }
-    source.push_str("    for name in ('a', 'b'):\n        pass\n    return getattr(mod, name)\n");
+    source.push_str("    for name in ('a', 'b'):\n        getattr(mod, name)\n");
     let facts = facts_of(&source, "case.py");
     assert!(
         facts.dynamic_symbols.is_empty(),
         "loop past the old budget still suppresses"
     );
     let loud = facts_of(
-        "def f(mod, name):\n    for name in other:\n        pass\n    return getattr(mod, name)\n",
+        "def f(mod, other):\n    for name in other:\n        getattr(mod, name)\n",
         "case.py",
     );
     assert_eq!(
@@ -516,14 +516,13 @@ fn backslash_continuation_keeps_full_callee_path() {
 
 #[test]
 fn many_sites_share_one_literal_walk() {
-    let mut source = String::from("def f(mod, name):\n");
+    let mut source = String::from("def f(mod):\n    for name in ('a', 'b'):\n");
     for i in 0..300 {
-        source.push_str(&format!("    v{i} = getattr(mod, name)\n"));
+        source.push_str(&format!("        v{i} = getattr(mod, name)\n"));
     }
-    source.push_str("    for name in ('a', 'b'):\n        pass\n    return getattr(mod, name)\n");
     let facts = facts_of(&source, "case.py");
     assert!(
         facts.dynamic_symbols.is_empty(),
-        "300 sites share the late loop targets"
+        "300 sites share the loop targets"
     );
 }
