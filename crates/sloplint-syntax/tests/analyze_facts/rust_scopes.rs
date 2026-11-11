@@ -295,3 +295,103 @@ fn match_non_mut_index_write_leaves_outer_alone() {
         );
     });
 }
+#[test]
+fn struct_field_shorthand_binds_in_both_walkers() {
+    let source = "fn f(p: P, q: Q) -> i32 {\n    let mut x = 0;\n    let mut y = 0;\n    if let P { mut x, .. } = p {\n        x.a = 1;\n        x.b = 2;\n    }\n    if let Q { y, .. } = q {\n        y.a = 1;\n    }\n    x.a = 3;\n    y.a = 4;\n    x.a\n}\n";
+    with_rust_bindings(source, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(
+            xs.len(),
+            2,
+            "the mut shorthand pattern declares its own binding, was 1 when shorthand binders were skipped: {found:?}"
+        );
+        assert_eq!(
+            (
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (1, 11, 11),
+            "only the post-if write reaches the outer binding, was 3 when both arm writes leaked out: {found:?}"
+        );
+        assert_eq!(
+            (
+                xs[1].write_lines,
+                xs[1].first_write_line,
+                xs[1].last_write_line
+            ),
+            (2, 5, 6),
+            "both arm writes land on the shorthand pattern binding, was missing when shorthand binders were skipped: {found:?}"
+        );
+        let ys = named_all(found, "y");
+        assert_eq!(
+            ys.len(),
+            1,
+            "the non-mut shorthand binder stays shadow-only: {found:?}"
+        );
+        assert_eq!(
+            (
+                ys[0].write_lines,
+                ys[0].first_write_line,
+                ys[0].last_write_line
+            ),
+            (1, 12, 12),
+            "arm-body write vanishes through the shadow, was 2 when it leaked out: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn tuple_struct_path_segments_are_not_binders() {
+    let source = "fn f(s: S) -> i32 {\n    let mut shapes = 0;\n    if let shapes::Circle(mut r) = s {\n        r += 1;\n        shapes += 1;\n    }\n    shapes += 2;\n    shapes\n}\n";
+    with_rust_bindings(source, |found| {
+        let targets = named_all(found, "shapes");
+        assert_eq!(
+            targets.len(),
+            1,
+            "the path segment declares no shadow of its own: {found:?}"
+        );
+        assert_eq!(
+            (
+                targets[0].write_lines,
+                targets[0].first_write_line,
+                targets[0].last_write_line
+            ),
+            (2, 5, 7),
+            "arm and post-if writes both reach the outer binding, was 1 when the path segment shadowed it: {found:?}"
+        );
+        let rs = named_all(found, "r");
+        assert_eq!(
+            (rs.len(), rs[0].write_lines, rs[0].first_write_line),
+            (1, 1, 4),
+            "the mut payload binder still declares its own binding: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn plain_let_then_let_mut_redeclares() {
+    let source = "fn f() -> i32 {\n    let mut n = 0;\n    let n = 1;\n    let mut n = 2;\n    n += 3;\n    n\n}\n";
+    with_rust_bindings(source, |found| {
+        let ns = named_all(found, "n");
+        assert_eq!(
+            ns.len(),
+            2,
+            "the middle plain let shadows without declaring: {found:?}"
+        );
+        assert_eq!(
+            (ns[0].write_lines, ns[0].first_write_line),
+            (0, 2),
+            "the outer binding keeps no writes: {found:?}"
+        );
+        assert_eq!(
+            (
+                ns[1].write_lines,
+                ns[1].first_write_line,
+                ns[1].last_write_line
+            ),
+            (1, 5, 5),
+            "the redeclared let mut takes the later write: {found:?}"
+        );
+    });
+}

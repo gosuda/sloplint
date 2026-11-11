@@ -3,26 +3,51 @@ use tree_sitter::Node;
 
 use crate::hooks::{Cx, child_by_field, has_child_kind, named_children, pos_of, text};
 
-pub(super) fn push_ident_tree<'a>(root: Node<'a>, out: &mut Vec<Node<'a>>) {
+pub(super) fn push_ident_tree<'a>(cx: &Cx<'_, '_>, root: Node<'a>, out: &mut Vec<Node<'a>>) {
     let mut stack = vec![root];
     while let Some(cur) = stack.pop() {
-        if cur.kind() == "identifier" {
-            out.push(cur);
+        if cur.kind() == "identifier" || cur.kind() == "shorthand_field_identifier" {
+            if is_pat_binding(text(cx, cur)) {
+                out.push(cur);
+            }
         } else {
-            stack.extend(named_children(cur));
+            push_pattern_kids(cur, &mut stack);
         }
     }
 }
 
-pub(super) fn push_mut_idents<'a>(root: Node<'a>, out: &mut Vec<Node<'a>>) {
+pub(super) fn push_mut_idents<'a>(cx: &Cx<'_, '_>, root: Node<'a>, out: &mut Vec<Node<'a>>) {
     let mut stack = vec![root];
     while let Some(cur) = stack.pop() {
         if cur.kind() == "mut_pattern" {
-            push_ident_tree(cur, out);
+            push_ident_tree(cx, cur, out);
         } else {
-            stack.extend(named_children(cur));
+            push_pattern_kids(cur, &mut stack);
         }
     }
+}
+
+fn is_pat_binding(name: &str) -> bool {
+    name.chars()
+        .next()
+        .is_none_or(|first| !first.is_ascii_uppercase())
+}
+
+fn push_pattern_kids<'a>(cur: Node<'a>, stack: &mut Vec<Node<'a>>) {
+    if cur.kind() == "scoped_identifier" {
+        return;
+    }
+    if cur.kind() == "tuple_struct_pattern" || cur.kind() == "struct_pattern" {
+        let skip = child_by_field(cur, "type").map(|node| node.id());
+        for child in named_children(cur) {
+            if skip.is_some_and(|id| id == child.id()) {
+                continue;
+            }
+            stack.push(child);
+        }
+        return;
+    }
+    stack.extend(named_children(cur));
 }
 
 fn strip_ref_prefix(rest: &str) -> Option<&str> {
@@ -101,7 +126,7 @@ fn push_pattern_params<'s>(
     out: &mut Vec<Param<'s>>,
 ) {
     let mut ids = Vec::new();
-    push_ident_tree(pattern, &mut ids);
+    push_ident_tree(cx, pattern, &mut ids);
     if ids.is_empty() {
         out.push(typed_param("", ty));
     }
@@ -151,9 +176,9 @@ pub(super) fn decl_names<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s st
             };
             let mut found = Vec::new();
             if has_child_kind(n, "mutable_specifier") {
-                push_ident_tree(pat, &mut found);
+                push_ident_tree(cx, pat, &mut found);
             } else {
-                push_mut_idents(pat, &mut found);
+                push_mut_idents(cx, pat, &mut found);
             }
             for id in found {
                 out.push((text(cx, id), pos_of(id)));
@@ -237,14 +262,16 @@ fn then_block_scope(depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
 fn push_flow_binder_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     let mut stack = vec![root];
     while let Some(cur) = stack.pop() {
-        if cur.kind() == "mut_pattern" {
+        if cur.kind() == "mut_pattern"
+            || cur.kind() == "field_pattern" && has_child_kind(cur, "mutable_specifier")
+        {
             let mut found = Vec::new();
-            push_ident_tree(cur, &mut found);
+            push_ident_tree(cx, cur, &mut found);
             for id in found {
                 out.push((text(cx, id), pos_of(id)));
             }
         } else {
-            stack.extend(named_children(cur));
+            push_pattern_kids(cur, &mut stack);
         }
     }
 }
@@ -261,17 +288,21 @@ fn push_let_condition_names<'s>(cx: &Cx<'_, 's>, cond: Node<'_>, out: &mut Vec<(
         }
     }
 }
-
 fn push_shadow_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str>) {
     let mut stack = vec![root];
     while let Some(cur) = stack.pop() {
-        if cur.kind() == "mut_pattern" {
+        if cur.kind() == "mut_pattern"
+            || cur.kind() == "field_pattern" && has_child_kind(cur, "mutable_specifier")
+        {
             continue;
         }
-        if cur.kind() == "identifier" {
-            out.push(text(cx, cur));
+        if cur.kind() == "identifier" || cur.kind() == "shorthand_field_identifier" {
+            let name = text(cx, cur);
+            if is_pat_binding(name) {
+                out.push(name);
+            }
         } else {
-            stack.extend(named_children(cur));
+            push_pattern_kids(cur, &mut stack);
         }
     }
 }
