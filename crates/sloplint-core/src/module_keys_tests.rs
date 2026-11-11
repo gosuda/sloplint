@@ -74,6 +74,15 @@ fn dotted_ts_basename_stays_one_segment() {
     ));
 }
 #[test]
+fn typescript_module_extension_import_covers_the_module() {
+    for (path, spec) in [
+        ("src/widget.mts", "./widget.mts"),
+        ("src/widget.cts", "./widget.cts"),
+    ] {
+        assert!(shared(Lang::TypeScript, path, spec), "{spec}");
+    }
+}
+#[test]
 fn package_marker_files_key_their_directory() {
     assert_eq!(library_keys(Lang::Python, "pkg/__init__.py"), ["pkg"]);
     assert_eq!(
