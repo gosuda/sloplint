@@ -1,5 +1,5 @@
-//! Generated-file detection: a marker on a comment line in the file header.
-//! A marker anywhere in the header counts, even in license prose.
+//! Generated-file detection: a marker inside a comment of the file header.
+//! A marker anywhere in a header comment counts, even in license prose.
 
 const WINDOW: usize = 2048;
 
@@ -25,7 +25,13 @@ const BLOCKS: [(&[u8], &[u8]); 5] = [
     (b"'''", b"'''"),
 ];
 
-/// True when a header line in the first 2048 bytes carries a generated-file marker, in any letter case.
+enum Header {
+    Marked,
+    Ended,
+    Continues(Option<&'static [u8]>),
+}
+
+/// True when a header comment in the first 2048 bytes carries a generated-file marker, in any letter case.
 pub fn is_generated(bytes: &[u8]) -> bool {
     let text = if bytes.len() >= BOM.len() && &bytes[..BOM.len()] == BOM {
         &bytes[BOM.len()..]
@@ -37,26 +43,46 @@ pub fn is_generated(bytes: &[u8]) -> bool {
     } else {
         text
     };
-    let mut closer: Option<&[u8]> = None;
+    let mut closer = None;
     for line in after_opener(head).split(|byte| *byte == b'\n') {
-        let trimmed = line.trim_ascii_start();
-        if let Some(end) = closer {
-            if carries_marker(trimmed) {
-                return true;
-            }
-            if contains(trimmed, end) {
-                closer = None;
-            }
-        } else if is_header(trimmed) {
-            if carries_marker(trimmed) {
-                return true;
-            }
-            closer = unclosed_block(trimmed);
-        } else {
-            break;
+        match scan_line(line, closer) {
+            Header::Marked => return true,
+            Header::Ended => return false,
+            Header::Continues(open) => closer = open,
         }
     }
     false
+}
+
+fn scan_line(line: &[u8], mut closer: Option<&'static [u8]>) -> Header {
+    let mut rest = line.trim_ascii_start();
+    loop {
+        let entered = closer.map_or_else(|| enter_comment(rest), |end| Some((rest, Some(end))));
+        let Some((body, end)) = entered else {
+            return Header::Ended;
+        };
+        let (comment, after) = end
+            .and_then(|end| split_at(body, end))
+            .map_or((body, None), |(comment, after)| (comment, Some(after)));
+        if carries_marker(comment) {
+            return Header::Marked;
+        }
+        let Some(after) = after else {
+            return Header::Continues(end);
+        };
+        closer = None;
+        rest = after.trim_ascii_start();
+    }
+}
+
+fn enter_comment(line: &[u8]) -> Option<(&[u8], Option<&'static [u8]>)> {
+    if !is_header(line) {
+        return None;
+    }
+    let block = BLOCKS
+        .iter()
+        .find_map(|(open, close)| Some((line.strip_prefix(*open)?, Some(*close))));
+    Some(block.unwrap_or((line, None)))
 }
 
 fn after_opener(head: &[u8]) -> &[u8] {
@@ -95,25 +121,11 @@ fn carries_marker(line: &[u8]) -> bool {
     })
 }
 
-fn contains(haystack: &[u8], needle: &[u8]) -> bool {
-    if needle.is_empty() || haystack.len() < needle.len() {
-        return false;
-    }
-    haystack.windows(needle.len()).any(|w| w == needle)
-}
-
-fn unclosed_block(line: &[u8]) -> Option<&'static [u8]> {
-    for (open, close) in BLOCKS {
-        if opens_without_close(line, open, close) {
-            return Some(close);
-        }
-    }
-    None
-}
-
-fn opens_without_close(line: &[u8], open: &[u8], close: &[u8]) -> bool {
-    line.strip_prefix(open)
-        .is_some_and(|rest| !contains(rest, close))
+fn split_at<'a>(haystack: &'a [u8], needle: &[u8]) -> Option<(&'a [u8], &'a [u8])> {
+    let at = haystack
+        .windows(needle.len())
+        .position(|window| window == needle)?;
+    Some((&haystack[..at], &haystack[at + needle.len()..]))
 }
 
 #[cfg(test)]
@@ -166,6 +178,28 @@ mod tests {
             b"// see src/*.go\npackage x\n// @generated\n",
         ] {
             assert!(!is_generated(head), "{}", String::from_utf8_lossy(head));
+        }
+    }
+
+    #[test]
+    fn marker_in_code_after_a_block_closer_does_not_count() {
+        for head in [
+            &b"/* license */ const HELP: &str = \"do not edit\";\n"[..],
+            b"/*\n * license\n */ const HELP: &str = \"do not edit\";\n",
+            b"(* license *) let help = \"auto-generated\"\n",
+            b"\"\"\"Docs.\"\"\"; HELP = \"do not edit\"\n",
+        ] {
+            assert!(!is_generated(head), "{}", String::from_utf8_lossy(head));
+        }
+    }
+
+    #[test]
+    fn marker_in_a_comment_after_a_block_closer_counts() {
+        for head in [
+            &b"/* license */ // @generated\nfn f() {}\n"[..],
+            b"/*\n * license\n */ /* do not edit */\nint x;\n",
+        ] {
+            assert!(is_generated(head), "{}", String::from_utf8_lossy(head));
         }
     }
 
