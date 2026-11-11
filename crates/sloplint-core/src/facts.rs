@@ -299,6 +299,8 @@ pub struct WorldFacts {
     pub regions: Vec<RoleRegion>,
     #[serde(skip)]
     pub package: String,
+    #[serde(skip)]
+    pub package_from_manifest: bool,
     pub has_inline_tests: bool,
     pub public_functions: u32,
     pub definitions: Vec<NamedSite>,
@@ -337,6 +339,7 @@ impl WorldFacts {
             role: facts.role,
             regions: facts.regions.clone(),
             package: facts.package.clone(),
+            package_from_manifest: false,
             has_inline_tests: facts.has_inline_tests,
             public_functions,
             definitions,
@@ -409,12 +412,20 @@ fn manifest_kind_for(lang: Lang) -> Option<ManifestKind> {
 }
 
 pub fn package_key(lang: Lang, path: &str, manifests: &BTreeSet<(ManifestKind, String)>) -> String {
+    package_scope(lang, path, manifests).0
+}
+
+pub fn package_scope(
+    lang: Lang,
+    path: &str,
+    manifests: &BTreeSet<(ManifestKind, String)>,
+) -> (String, bool) {
     if let Some(kind) = manifest_kind_for(lang)
         && let Some(key) = nearest_manifest(path, manifests, kind)
     {
-        return key;
+        return (key, true);
     }
-    legacy_package_key(lang, path)
+    (legacy_package_key(lang, path), false)
 }
 
 fn nearest_manifest(

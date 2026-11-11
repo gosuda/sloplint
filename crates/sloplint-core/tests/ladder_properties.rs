@@ -24,6 +24,7 @@ fn world_facts(barrel: Option<Vec<Vec<String>>>) -> WorldFacts {
         role: CodeRole::Library,
         regions: Vec::new(),
         package: "app".to_string(),
+        package_from_manifest: false,
         has_inline_tests: false,
         public_functions: 0,
         definitions: Vec::new(),

@@ -9,7 +9,7 @@ use rayon::prelude::*;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 use sloplint_core::baseline::Baseline;
-use sloplint_core::facts::{ManifestKind, WorldFacts, package_key};
+use sloplint_core::facts::{ManifestKind, WorldFacts, package_scope};
 use sloplint_core::finding::{SourceText, line_context, line_starts};
 use sloplint_core::rules::{CATALOG, RuleSet, WorldFile};
 use sloplint_core::suppress::{self, RulePattern, Suppression};
@@ -164,7 +164,9 @@ fn process(
             None => (analyze_file(parsers, entry, &probe, pipe), false),
         }
     };
-    output.world.package = package_key(entry.lang, entry.rel.as_str(), pipe.manifests);
+    let (package, from_manifest) = package_scope(entry.lang, entry.rel.as_str(), pipe.manifests);
+    output.world.package = package;
+    output.world.package_from_manifest = from_manifest;
     let source = (pipe.reports_unused() && !output.suppressions.is_empty()).then_some(owned);
     Ok(Outcome::Analyzed(Box::new(Analyzed {
         rel: entry.rel.clone(),

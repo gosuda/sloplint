@@ -250,6 +250,7 @@ mod tests {
             role,
             regions: Vec::new(),
             package: package.to_string(),
+            package_from_manifest: false,
             has_inline_tests: false,
             public_functions: 0,
             definitions: defs,
@@ -403,6 +404,7 @@ mod tests {
             out[0].message
         );
     }
+
     #[test]
     fn bench_first_site_does_not_suppress_libraries_meeting_threshold() {
         let rule = HomonymDefinitions {
@@ -480,7 +482,6 @@ mod tests {
             "four library files stay below five files: {out:?}"
         );
     }
-
 
     #[test]
     fn off_at_standard_info_at_strict() {

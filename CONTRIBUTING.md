@@ -84,7 +84,7 @@ Go and Dart count imports of their own module as one external root. Ruby records
 - In JS and TS a write before the `var` declaration of the same name records nothing.
 - A Ruby name first assigned inside one block shares a binding with the same name first assigned inside a sibling block.
 - A Python assignment in a class body inside a function records no binding.
-- In agent/colocated-tests a test import covers every module with the same path suffix, also in another package.
+- In agent/colocated-tests a test import covers every module with the same path suffix, also in another package; when a manifest defines both files' packages, coverage stays inside that package.
 
 ## Commit and pull request conventions
 

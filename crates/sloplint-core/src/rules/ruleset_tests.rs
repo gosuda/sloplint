@@ -10,6 +10,7 @@ fn world_facts(role: CodeRole) -> WorldFacts {
         role,
         regions: Vec::new(),
         package: "ledger".to_string(),
+        package_from_manifest: false,
         has_inline_tests: false,
         public_functions: 0,
         definitions: Vec::new(),
