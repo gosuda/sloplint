@@ -115,17 +115,30 @@ fn rust_untyped(imports: &[Import<'_>], return_type: &str) -> bool {
     if top_level_commas(inner) != 0 {
         return false;
     }
+    if head.contains("::") {
+        return is_untyped_qualified_head(head);
+    }
     resolves_anyhow_result(imports, head)
 }
 
 fn split_head(compact: &str) -> Option<(&str, &str)> {
     let (head, rest) = compact.split_once('<')?;
     let inner = rest.strip_suffix('>')?;
-    let head = head.rsplit("::").next()?;
-    if head.is_empty() || !head.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_') {
+    if head.is_empty()
+        || !head.split("::").all(|segment| {
+            !segment.is_empty()
+                && segment
+                    .bytes()
+                    .all(|c| c.is_ascii_alphanumeric() || c == b'_')
+        })
+    {
         return None;
     }
     Some((head, inner))
+}
+
+fn is_untyped_qualified_head(head: &str) -> bool {
+    head == "anyhow::Result" || head == "eyre::Result"
 }
 
 fn resolves_anyhow_result(imports: &[Import<'_>], head: &str) -> bool {
@@ -388,6 +401,44 @@ mod tests {
             }],
         );
         assert_eq!(found.len(), 1);
+    }
+
+    #[test]
+    fn qualified_typed_head_ignores_anyhow_import() {
+        let rule = TypedErrorBoundary;
+        let anyhow = import("anyhow", "Result", None);
+        let mut out = Vec::new();
+        rule.check(
+            &facts(
+                Lang::Rust,
+                "fn f() {}\n",
+                vec![function(
+                    "load",
+                    Visibility::Exported,
+                    Some("domain::Result<Config>"),
+                )],
+                vec![anyhow],
+            ),
+            &mut out,
+        );
+        assert!(out.is_empty());
+        let found = lines(
+            &rule,
+            Lang::Rust,
+            vec![
+                function("save", Visibility::Exported, Some("Result<()>")),
+                function("run", Visibility::Exported, Some("anyhow::Result<()>")),
+                function(
+                    "boxed",
+                    Visibility::Exported,
+                    Some("std::io::Result<String>"),
+                ),
+            ],
+            vec![import("anyhow", "Result", None)],
+        );
+        assert_eq!(found.len(), 2);
+        assert!(found.iter().any(|m| m.contains("`save`")));
+        assert!(found.iter().any(|m| m.contains("`run`")));
     }
 
     #[test]
