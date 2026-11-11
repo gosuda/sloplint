@@ -405,6 +405,20 @@ fn dynamic_names_follow_interpolation() {
 }
 
 #[test]
+fn a_raw_string_name_is_dynamic_only_when_it_interpolates() {
+    let analysis = run(
+        "case.swift",
+        "func f(verb: String) {\nNSSelectorFromString(#\"\\#(verb)Action\"#)\nNSSelectorFromString(#\"doAction\"#)\nNSSelectorFromString(#\"\\(verb)Action\"#)\n}\n",
+    );
+    assert!(analysis.parse_error.is_none(), "parses");
+    assert_eq!(
+        analysis.facts.dynamic_symbols.len(),
+        1,
+        "only the raw string with a pound interpolation is dynamic"
+    );
+}
+
+#[test]
 fn dotted_imports_share_the_first_segment() {
     let analysis = run(
         "case.swift",

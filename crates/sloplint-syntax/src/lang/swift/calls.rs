@@ -284,10 +284,9 @@ pub(crate) fn dynamic(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
         _ => return None,
     };
     let is_dynamic = match first.kind() {
-        "line_string_literal" | "multi_line_string_literal" => {
+        "line_string_literal" | "multi_line_string_literal" | "raw_string_literal" => {
             child_by_field(first, "interpolation").is_some()
         }
-        "raw_string_literal" => false,
         _ => true,
     };
     is_dynamic.then_some(message)
