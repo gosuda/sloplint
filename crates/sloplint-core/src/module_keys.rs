@@ -20,7 +20,7 @@ pub fn test_keys(lang: Lang, path: &str) -> Vec<String> {
 fn csharp_test_keys(dir: &str, stem: &str) -> Vec<String> {
     let mut segs = Vec::new();
     for part in dir_segments(dir) {
-        push_segment(&mut segs, strip_csharp_test_dir(part));
+        push_dotted_segment(&mut segs, strip_csharp_test_dir(part));
     }
     push_segment(&mut segs, stem);
     suffix_keys(&segs)
@@ -81,7 +81,7 @@ fn keys_for(lang: Lang, dir: &str, stem: &str) -> Vec<String> {
             }
         }
         _ => {
-            push_all(&mut segs, &dir_segments(dir));
+            push_lang_dirs(&mut segs, lang, dir);
             push_segment(&mut segs, stem);
         }
     }
@@ -239,6 +239,22 @@ fn push_segment(segs: &mut Vec<String>, seg: &str) {
         segs.push(seg.replace('-', "_"));
     } else {
         segs.push(seg.to_string());
+    }
+}
+fn push_lang_dirs(segs: &mut Vec<String>, lang: Lang, dir: &str) {
+    match lang {
+        Lang::Java | Lang::Kotlin | Lang::Scala | Lang::CSharp => push_dotted_dirs(segs, dir),
+        _ => push_all(segs, &dir_segments(dir)),
+    }
+}
+fn push_dotted_dirs(segs: &mut Vec<String>, dir: &str) {
+    for part in dir_segments(dir) {
+        push_dotted_segment(segs, part);
+    }
+}
+fn push_dotted_segment(segs: &mut Vec<String>, seg: &str) {
+    for part in seg.split('.') {
+        push_segment(segs, part);
     }
 }
 

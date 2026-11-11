@@ -233,3 +233,25 @@ fn java_affix_it_suffix_only() {
     );
     assert_eq!(test_keys(Lang::Java, "src/FOOIT.java"), ["src/FOOIT"]);
 }
+#[test]
+fn csharp_dotted_dir_matches_dotted_import() {
+    assert!(shared(
+        Lang::CSharp,
+        "src/Company.Lib/Widget.cs",
+        "Company.Lib/Widget"
+    ));
+    assert!(!shared(
+        Lang::CSharp,
+        "src/Company.Lib/Other.cs",
+        "Company.Lib/Widget"
+    ));
+}
+#[test]
+fn twin_python_modules_share_only_short_suffix() {
+    assert!(shared(Lang::Python, "services/b/app/utils.py", "app.utils"));
+    assert!(!shared(
+        Lang::Python,
+        "services/b/app/utils.py",
+        "other.utils"
+    ));
+}
