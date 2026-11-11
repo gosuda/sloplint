@@ -8,7 +8,6 @@ use crate::hooks::{
 use crate::spec::Role;
 
 mod dynamic;
-mod dynamic_consts;
 mod imports;
 mod items;
 mod params;
