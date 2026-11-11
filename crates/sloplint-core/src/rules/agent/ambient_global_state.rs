@@ -369,6 +369,32 @@ mod tests {
         );
     }
     #[test]
+    fn js_env_write_flags_under_the_shared_environment_name() {
+        let source = "import os\n";
+        let found = messages(
+            &rule(),
+            source,
+            vec![site(AmbientKind::GlobalWrite, "process.env", 8, Some(0))],
+        );
+        assert_eq!(
+            found,
+            ["writes shared environment `process.env`".to_string()]
+        );
+    }
+    #[test]
+    fn env_shaped_targets_that_are_not_the_object_stay_silent() {
+        let source = "import os\n";
+        let found = messages(
+            &rule(),
+            source,
+            vec![
+                site(AmbientKind::GlobalWrite, "config.env.TOKEN", 8, Some(0)),
+                site(AmbientKind::GlobalWrite, "process.env.TOKEN", 9, Some(0)),
+            ],
+        );
+        assert!(found.is_empty());
+    }
+    #[test]
     fn preset_pins_off_at_standard_and_info_at_strict() {
         assert_eq!(
             INFO.confidence,

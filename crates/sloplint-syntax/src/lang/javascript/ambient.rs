@@ -8,6 +8,8 @@ use crate::hooks::{
 use sloplint_core::facts::{AmbientKind, Pos};
 use tree_sitter::Node;
 
+const ENV_OBJECT: &str = "process.env";
+
 enum PatternFrame<'t> {
     Pattern(Node<'t>),
     Member(Node<'t>),
@@ -277,7 +279,7 @@ fn push_env_or_store<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKin
         return;
     }
     if is_write_target(cx.parent(), n) && env_rooted(cx, n) {
-        out.push((AmbientKind::GlobalWrite, text(cx, n), pos_of(n)));
+        out.push((AmbientKind::GlobalWrite, ENV_OBJECT, pos_of(n)));
     }
 }
 
@@ -409,7 +411,7 @@ fn push_subscript_store<'s>(
     out: &mut Vec<(AmbientKind, &'s str, Pos)>,
 ) {
     if n.kind() == "subscript_expression" && is_write_target(cx.parent(), n) && env_rooted(cx, n) {
-        out.push((AmbientKind::GlobalWrite, text(cx, n), pos_of(n)));
+        out.push((AmbientKind::GlobalWrite, ENV_OBJECT, pos_of(n)));
     }
 }
 

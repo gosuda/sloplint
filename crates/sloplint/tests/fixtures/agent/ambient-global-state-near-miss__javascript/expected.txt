@@ -1,1 +1,1 @@
-# Near-miss: top-level `const` is immutable, so no ambient fact is emitted.
+# Near-miss: top-level `const` is immutable and `config.env.TOKEN` is not an environment object, so no ambient fact is emitted.

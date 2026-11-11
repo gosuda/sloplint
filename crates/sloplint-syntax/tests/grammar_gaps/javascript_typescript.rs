@@ -415,6 +415,44 @@ fn plain_declarations_keep_their_shapes() {
 }
 
 #[test]
+fn environment_writes_normalize_to_the_environment_object() {
+    let cases = [
+        ("dot", "process.env.TOKEN = 'x';\n"),
+        ("bracket", "process.env['TOKEN'] = 'x';\n"),
+        ("import_meta", "import.meta.env.VAR = 'x';\n"),
+    ];
+    for (lang, path) in SCRIPT_LANGS {
+        for (shape, source) in cases {
+            let analysis = run_clean(lang, path, source);
+            let writes: Vec<_> = analysis
+                .facts
+                .ambient
+                .iter()
+                .filter(|a| a.kind == AmbientKind::GlobalWrite)
+                .map(|a| a.name)
+                .collect();
+            assert_eq!(
+                writes,
+                ["process.env"],
+                "{lang:?}: {shape} write reports the environment object"
+            );
+        }
+    }
+}
+
+#[test]
+fn env_shaped_target_that_is_not_the_environment_stays_silent() {
+    let source = "config.env.TOKEN = 'x';\n";
+    for (lang, path) in SCRIPT_LANGS {
+        let analysis = run_clean(lang, path, source);
+        assert!(
+            analysis.facts.ambient.is_empty(),
+            "{lang:?}: `config.env` is not an environment object"
+        );
+    }
+}
+
+#[test]
 fn invalid_code_still_reports_a_parse_error() {
     for (lang, path) in SCRIPT_LANGS {
         assert_parse_error(lang, path, "function (\n");

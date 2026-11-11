@@ -10,6 +10,8 @@ use crate::hooks::{
     Cx, FileSetKind, child_by_field, code_children, find_named_child, named_children, pos_of, text,
 };
 
+const ENV_OBJECT: &str = "process.env";
+
 fn is_write_target(parent: Option<Node<'_>>, n: Node<'_>) -> bool {
     let Some(parent) = parent else {
         return false;
@@ -292,7 +294,7 @@ pub(crate) fn ambient_sites<'s>(
         "member_expression" => push_env_or_store(cx, n, out),
         "subscript_expression" => {
             if is_write_target(cx.parent(), n) && env_rooted(cx, n) {
-                out.push((AmbientKind::GlobalWrite, text(cx, n), pos_of(n)));
+                out.push((AmbientKind::GlobalWrite, ENV_OBJECT, pos_of(n)));
             }
         }
         "assignment_expression" | "augmented_assignment_expression" | "update_expression"
@@ -357,6 +359,6 @@ fn push_env_or_store<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKin
         return;
     }
     if is_write_target(cx.parent(), n) && env_rooted(cx, n) {
-        out.push((AmbientKind::GlobalWrite, text(cx, n), pos_of(n)));
+        out.push((AmbientKind::GlobalWrite, ENV_OBJECT, pos_of(n)));
     }
 }
