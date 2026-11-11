@@ -344,3 +344,17 @@ fn a_fully_qualified_call_user_func_is_dynamic() {
         "the global function is dynamic, a namespaced homonym is not"
     );
 }
+
+#[test]
+fn a_user_function_with_a_call_user_func_prefix_is_not_dynamic() {
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let mut parsers = Parsers::new();
+    let source = "<?php\ncall_user_function_helper($x);\ncall_user_func_array($cb, $xs);\n";
+    let analysis = analyze_src(&mut parsers, &custom, source, "case.php");
+    assert!(analysis.parse_error.is_none(), "parses");
+    assert_eq!(
+        analysis.facts.dynamic_symbols.len(),
+        1,
+        "only the built-in dispatcher is dynamic"
+    );
+}

@@ -455,7 +455,13 @@ pub(crate) fn dynamic_head(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str>
         if callee == "eval" {
             return Some("eval");
         }
-        if callee.starts_with("call_user_func") || callee.starts_with("forward_static_call") {
+        if matches!(
+            callee,
+            "call_user_func"
+                | "call_user_func_array"
+                | "forward_static_call"
+                | "forward_static_call_array"
+        ) {
             return Some("call_user_func");
         }
         return None;
