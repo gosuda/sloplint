@@ -14,10 +14,10 @@ use sloplint_core::suppress::RulePattern;
 const CAP: &str = "meta/custom-cap";
 const PAIRS: &str = "((identifier) @match (identifier) @other)";
 
-fn project() -> (tempfile::TempDir, PathBuf) {
+fn project(config: &str) -> (tempfile::TempDir, PathBuf) {
     let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
     let root = std::fs::canonicalize(tmp.path()).unwrap_or_else(|e| panic!("canonicalize: {e}"));
-    put(&root, "sloplint.toml", &pair_rule());
+    put(&root, "sloplint.toml", config);
     (tmp, root)
 }
 
@@ -30,9 +30,9 @@ fn put(root: &Path, rel: &str, body: &str) {
     std::fs::write(&path, body).unwrap_or_else(|e| panic!("could not write fixture {rel}: {e}"));
 }
 
-fn pair_rule() -> String {
+fn pair_rule(extras: &str) -> String {
     format!(
-        "[[custom_rules]]\nid = \"custom/pair-flood\"\nlanguage = \"rust\"\nseverity = \"minor\"\nmessage = \"pair\"\nwhy = \"unbounded sibling combination\"\nfix = \"anchor the query\"\nquery = \"{PAIRS}\"\n"
+        "[[custom_rules]]\nid = \"custom/pair-flood\"\nlanguage = \"rust\"\nseverity = \"minor\"\nmessage = \"pair\"\nwhy = \"unbounded sibling combination\"\nfix = \"anchor the query\"\nquery = \"{PAIRS}\"\n{extras}"
     )
 }
 
@@ -80,7 +80,7 @@ fn reported(report: &Report) -> Vec<(String, u32, &'static str, String)> {
 
 #[test]
 fn a_sibling_combination_query_is_capped_and_names_the_rule() {
-    let (_tmp, root) = project();
+    let (_tmp, root) = project(&pair_rule(""));
     put(&root, "src/main.rs", &use_list(60));
 
     let report = run(&options(&root, &["meta/*"])).unwrap_or_else(|e| panic!("run failed: {e}"));
@@ -96,7 +96,7 @@ fn a_sibling_combination_query_is_capped_and_names_the_rule() {
 
 #[test]
 fn a_query_under_the_cap_reports_its_pairs_without_a_cap_finding() {
-    let (_tmp, root) = project();
+    let (_tmp, root) = project(&pair_rule(""));
     put(&root, "src/main.rs", &use_list(5));
 
     let report =
@@ -111,4 +111,27 @@ fn a_query_under_the_cap_reports_its_pairs_without_a_cap_finding() {
     assert_eq!(findings.len(), 10, "{findings:#?}");
     assert_eq!(report.summary.findings, 10);
     assert_eq!(report.summary.major, 0);
+}
+
+#[test]
+fn a_capped_query_from_an_off_rule_reports_no_cap() {
+    let (_tmp, root) = project(&format!(
+        "{}[rules.\"custom/pair-flood\"]\nlevel = \"off\"\n",
+        pair_rule("")
+    ));
+    put(&root, "src/main.rs", &use_list(60));
+
+    let report = run(&options(&root, &["meta/*"])).unwrap_or_else(|e| panic!("run failed: {e}"));
+    assert_eq!(reported(&report), vec![], "{:#?}", report.findings);
+    assert_eq!(report.summary.findings, 0);
+}
+
+#[test]
+fn a_capped_query_excluded_from_the_file_reports_no_cap() {
+    let (_tmp, root) = project(&pair_rule("exclude = [\"**/main.rs\"]\n"));
+    put(&root, "src/main.rs", &use_list(60));
+
+    let report = run(&options(&root, &["meta/*"])).unwrap_or_else(|e| panic!("run failed: {e}"));
+    assert_eq!(reported(&report), vec![], "{:#?}", report.findings);
+    assert_eq!(report.summary.findings, 0);
 }

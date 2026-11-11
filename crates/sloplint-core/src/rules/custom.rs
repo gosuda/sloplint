@@ -197,6 +197,13 @@ impl CustomEntry {
                 .as_ref()
                 .is_none_or(|set| !set.is_match(rel_path))
     }
+
+    pub(crate) fn severity_at(&self, rel_path: &str) -> Option<Severity> {
+        if !self.matches_path(rel_path) {
+            return None;
+        }
+        self.level.rung()
+    }
 }
 
 pub(crate) fn entries(config: &Config) -> Result<Vec<CustomEntry>, ConfigError> {

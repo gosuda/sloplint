@@ -189,10 +189,7 @@ impl RuleSet {
             else {
                 continue;
             };
-            if !entry.matches_path(facts.path) {
-                continue;
-            }
-            let Some(severity) = entry.level.rung() else {
+            let Some(severity) = entry.severity_at(facts.path) else {
                 continue;
             };
             let message = custom::interpolate(&entry.message, &hit.captures);
@@ -226,6 +223,12 @@ impl RuleSet {
         }
         let mut findings: Vec<Finding> = capped
             .iter()
+            .copied()
+            .filter(|rule| {
+                self.custom
+                    .iter()
+                    .any(|entry| &*entry.id == *rule && entry.severity_at(facts.path).is_some())
+            })
             .map(|rule| {
                 Finding::at(
                     facts,
