@@ -372,7 +372,7 @@ impl LangHooks for BashHooks {
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         let kind = n.kind();
-        if kind != "postfix_expression" && kind != "unary_expression" {
+        if cx.in_forked_scope() || (kind != "postfix_expression" && kind != "unary_expression") {
             return;
         }
         let own = trimmed(cx, n);

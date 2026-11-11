@@ -197,3 +197,20 @@ fn function_defined_inside_a_fork_keeps_its_own_writes() {
         );
     });
 }
+
+#[test]
+fn increment_inside_a_fork_does_not_reach_the_function() {
+    let source = "f() {\n  local n=0\n  n=1\n  out=$( (( n++ )) )\n  (( n++ ))\n}\n";
+    with_bash_bindings(source, |found| {
+        let targets = named_all(found, "n");
+        assert_eq!(
+            (
+                targets.len(),
+                targets[0].write_lines,
+                targets[0].last_write_line
+            ),
+            (1, 2, 5),
+            "the line 4 increment runs in a fork, was 3 write lines: {found:?}"
+        );
+    });
+}
