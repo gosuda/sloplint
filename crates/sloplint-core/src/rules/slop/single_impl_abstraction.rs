@@ -120,7 +120,7 @@ fn abstraction_sites<'a>(files: &[WorldFile<'a>]) -> Sites<'a> {
                 continue;
             }
             sites.push((
-                file.facts.lang,
+                file.facts.lang.namespace(),
                 file.facts.package.as_str(),
                 site.name.as_ref(),
                 file.path,
@@ -145,7 +145,7 @@ fn impl_index<'a>(files: &[WorldFile<'a>]) -> Impls<'a> {
         for site in &file.facts.impls {
             index
                 .entry((
-                    file.facts.lang,
+                    file.facts.lang.namespace(),
                     file.facts.package.as_str(),
                     site.name.as_ref(),
                 ))
@@ -300,6 +300,55 @@ mod tests {
             out.len(),
             2,
             "each package has its own sole implementation: {out:?}"
+        );
+    }
+
+    fn in_lang(lang: Lang, abstractions: Vec<NamedSite>, impls: Vec<NamedSite>) -> WorldFacts {
+        let mut file = same_package(abstractions, impls);
+        file.lang = lang;
+        file
+    }
+
+    #[test]
+    fn a_second_implementation_in_tsx_counts_for_a_typescript_interface() {
+        let script = in_lang(Lang::TypeScript, vec![named("Shape")], vec![named("Shape")]);
+        let view = in_lang(Lang::Tsx, Vec::new(), vec![named("Shape")]);
+        let files = [
+            WorldFile {
+                path: "shape.ts",
+                facts: &script,
+            },
+            WorldFile {
+                path: "square.tsx",
+                facts: &view,
+            },
+        ];
+        let out = reported(&files);
+        assert!(
+            out.is_empty(),
+            "TypeScript and TSX share one namespace: {out:?}"
+        );
+    }
+
+    #[test]
+    fn an_implementation_in_an_unrelated_language_is_not_a_second_one() {
+        let script = in_lang(Lang::TypeScript, vec![named("Shape")], vec![named("Shape")]);
+        let other = in_lang(Lang::Python, Vec::new(), vec![named("Shape")]);
+        let files = [
+            WorldFile {
+                path: "shape.ts",
+                facts: &script,
+            },
+            WorldFile {
+                path: "shape.py",
+                facts: &other,
+            },
+        ];
+        let out = reported(&files);
+        assert_eq!(
+            out.len(),
+            1,
+            "a Python class cannot implement a TypeScript interface: {out:?}"
         );
     }
 

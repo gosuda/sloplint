@@ -197,6 +197,15 @@ impl Lang {
         self.identity().key
     }
 
+    pub fn namespace(self) -> Lang {
+        match self {
+            Lang::JavaScript | Lang::TypeScript | Lang::Tsx => Lang::JavaScript,
+            Lang::Java | Lang::Kotlin | Lang::Scala => Lang::Java,
+            Lang::C | Lang::Cpp | Lang::ObjC => Lang::C,
+            other => other,
+        }
+    }
+
     pub fn from_config_key(key: &str) -> Option<Lang> {
         ALL_LANGS
             .iter()
