@@ -30,6 +30,10 @@ pub const MIN_SAMPLE: Duration = Duration::from_millis(5);
 /// Samples per depth: each depth runs this many times and keeps the fastest time.
 const SAMPLES: usize = 3;
 
+/// The macOS Intel runner measured 10.4x to 11.3x on linear analysis, so there the ratio cannot
+/// separate linear from quadratic work and only [`LINEAR_BUDGET`] applies.
+const RATIO_SEPARATES: bool = !cfg!(all(target_os = "macos", target_arch = "x86_64"));
+
 /// Requires linear scaling: runs `check` at `DEPTH / 4` and at [`DEPTH`], keeps the fastest
 /// time at each depth, and requires the full depth to cost at most [`LINEAR_RATIO`] times the
 /// quarter depth. When the quarter depth is faster than [`MIN_SAMPLE`], the ratio is noise, so
@@ -49,7 +53,7 @@ pub fn within_linear_budget<T>(mut check: impl FnMut(usize) -> T) -> T {
         value = check(DEPTH);
         full = full.min(started.elapsed());
     }
-    if small < MIN_SAMPLE {
+    if small < MIN_SAMPLE || !RATIO_SEPARATES {
         assert!(
             full < LINEAR_BUDGET,
             "analysis took {full:?} at depth {DEPTH}, so it is no longer linear in depth"
