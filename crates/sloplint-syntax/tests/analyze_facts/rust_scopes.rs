@@ -44,13 +44,13 @@ fn nested_block_let_declares_a_fresh_binding() {
 
 #[test]
 fn if_let_mut_pattern_write_stays_local() {
-    let source = "fn f(o: Option<i32>) -> i32 {\n    let mut x = 0;\n    if let Some(mut x) = o {\n        x += 1;\n    }\n    x += 2;\n    x\n}\n";
+    let source = "fn f(o: Option<i32>) -> i32 {\n    let mut x = 0;\n    if let Some(mut x) = o {\n        x += 1;\n        x = 0;\n    }\n    x += 2;\n    x\n}\n";
     with_rust_bindings(source, |found| {
         let xs = named_all(found, "x");
         assert_eq!(
             xs.len(),
-            1,
-            "the if-let pattern binds no outer-visible name: {found:?}"
+            2,
+            "the if-let pattern declares its own binding, was 1 when mut binders were shadow-only: {found:?}"
         );
         assert_eq!(
             (
@@ -58,8 +58,72 @@ fn if_let_mut_pattern_write_stays_local() {
                 xs[0].first_write_line,
                 xs[0].last_write_line
             ),
-            (1, 6, 6),
-            "only the post-if write reaches the outer binding, was 2 when the arm write leaked out: {found:?}"
+            (1, 7, 7),
+            "only the post-if write reaches the outer binding, was 3 when both arm writes leaked out: {found:?}"
+        );
+        assert_eq!(
+            (
+                xs[1].write_lines,
+                xs[1].first_write_line,
+                xs[1].last_write_line
+            ),
+            (2, 4, 5),
+            "both arm writes land on the pattern binding, was missing when mut binders were shadow-only: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn for_mut_pattern_write_stays_local() {
+    let source = "fn f() -> i32 {\n    let mut x = 0;\n    for mut x in 0..3 {\n        x += 1;\n        x = 0;\n    }\n    x += 2;\n    x\n}\n";
+    with_rust_bindings(source, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(
+            xs.len(),
+            2,
+            "the for pattern declares its own binding, was 1 when mut binders were shadow-only: {found:?}"
+        );
+        assert_eq!(
+            (
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (1, 7, 7),
+            "only the post-loop write reaches the outer binding, was 3 when both body writes leaked out: {found:?}"
+        );
+        assert_eq!(
+            (
+                xs[1].write_lines,
+                xs[1].first_write_line,
+                xs[1].last_write_line
+            ),
+            (2, 4, 5),
+            "both body writes land on the pattern binding, was missing when mut binders were shadow-only: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn if_let_body_write_to_other_name_reaches_outer_binding() {
+    let source = "fn f(o: Option<i32>) -> i32 {\n    let mut y = 0;\n    if let Some(mut n) = o {\n        y += 1;\n    }\n    y += 2;\n    y\n}\n";
+    with_rust_bindings(source, |found| {
+        let ys = named_all(found, "y");
+        assert_eq!(ys.len(), 1, "no inner declaration hides y: {found:?}");
+        assert_eq!(
+            (
+                ys[0].write_lines,
+                ys[0].first_write_line,
+                ys[0].last_write_line
+            ),
+            (2, 4, 6),
+            "both writes still reach the single outer binding: {found:?}"
+        );
+        let ns = named_all(found, "n");
+        assert_eq!(
+            (ns.len(), ns[0].write_lines),
+            (1, 0),
+            "the untouched pattern binder still declares a binding: {found:?}"
         );
     });
 }

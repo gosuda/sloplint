@@ -184,11 +184,14 @@ impl LangHooks for CSharpHooks {
         true
     }
 
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        kind == "for_statement"
+    }
+
     fn shadow_decl_kind(&self, kind: &str) -> bool {
         matches!(
             kind,
             "foreach_statement"
-                | "for_statement"
                 | "using_statement"
                 | "if_statement"
                 | "declaration_expression"

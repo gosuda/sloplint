@@ -168,6 +168,10 @@ pub(crate) fn is_else_if(n: Node<'_>, parent: Option<Node<'_>>) -> bool {
 }
 
 pub(crate) fn local_declared<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    if n.kind() == "enhanced_for_statement" {
+        push_enhanced_for_decl(cx, n, out);
+        return;
+    }
     if n.kind() != "local_variable_declaration" || has_keyword(n, "final") {
         return;
     }
@@ -181,6 +185,16 @@ pub(crate) fn local_declared<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'
         if name.kind() == "identifier" {
             out.push((text(cx, name), pos_of(name)));
         }
+    }
+}
+fn push_enhanced_for_decl<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    if has_keyword(n, "final") {
+        return;
+    }
+    if let Some(name) = child_by_field(n, "name")
+        && name.kind() == "identifier"
+    {
+        out.push((text(cx, name), pos_of(name)));
     }
 }
 fn push_final_local_shadows<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
@@ -251,8 +265,14 @@ pub(crate) fn shadow_statement_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut
         "resource" => push_single_name(cx, n, out),
         "switch_block_statement_group" | "switch_rule" => push_label_patterns(cx, n, out),
         "if_statement" | "while_statement" | "for_statement" => push_guard_patterns(cx, n, out),
-        "enhanced_for_statement" | "catch_formal_parameter" => push_single_name(cx, n, out),
+        "enhanced_for_statement" => push_final_enhanced_shadow(cx, n, out),
+        "catch_formal_parameter" => push_single_name(cx, n, out),
         _ => {}
+    }
+}
+fn push_final_enhanced_shadow<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    if has_keyword(n, "final") {
+        push_single_name(cx, n, out);
     }
 }
 

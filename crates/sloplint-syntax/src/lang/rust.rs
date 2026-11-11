@@ -56,6 +56,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("line_comment", Role::Comment),
     ("block_comment", Role::Comment),
     ("match_arm", Role::MatchArm),
+    ("match_pattern", Role::Decl),
     ("struct_expression", Role::StructLit),
     ("static_item", Role::StaticItem),
 ];
@@ -169,20 +170,19 @@ impl LangHooks for RustHooks {
     fn block_scoped_decls(&self) -> bool {
         true
     }
+    fn block_scoped_binds(&self) -> bool {
+        true
+    }
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        matches!(
+            kind,
+            "if_expression" | "while_expression" | "for_expression"
+        )
+    }
     fn decl_visible_in_initializer(&self) -> bool {
         false
     }
     fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
-        let _ = cx;
-        if params::shadow_decl_kind(node.kind()) {
-            return depth;
-        }
-        depth.saturating_sub(1)
-    }
-    fn shadow_decl_kind(&self, kind: &str) -> bool {
-        params::shadow_decl_kind(kind)
-    }
-    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
-        params::shadow_names(n, cx, out);
+        params::decl_scope_parent(depth, node, cx)
     }
 }

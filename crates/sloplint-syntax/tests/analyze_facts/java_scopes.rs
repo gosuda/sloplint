@@ -204,3 +204,41 @@ fn arrow_rule_block_local_does_not_capture_a_later_rule_write() {
         );
     });
 }
+#[test]
+fn enhanced_for_variable_declares_a_loop_scoped_binding() {
+    let source = "class A {\nvoid m(java.util.List<String> xs) {\nfor (String s : xs) {\ns = s.trim();\ns = \"other\";\n}\n}\n}\n";
+    with_java_bindings(source, |found| {
+        let ss = named_all(found, "s");
+        assert_eq!(ss.len(), 1, "wrong-before held no binding for s: {found:?}");
+        assert_eq!(
+            ss[0].pos.line, 3,
+            "the s binding starts at the loop header: {found:?}"
+        );
+        assert_eq!(
+            (
+                ss[0].write_lines,
+                ss[0].first_write_line,
+                ss[0].last_write_line
+            ),
+            (2, 4, 5),
+            "wrong-before dropped both body writes and kept (0, 3, 3): {found:?}"
+        );
+    });
+}
+#[test]
+fn enhanced_for_body_write_still_reaches_an_outer_local() {
+    let source = "class A {\nvoid m(java.util.List<String> xs) {\nint total = 0;\nfor (String s : xs) {\ntotal = total + 1;\n}\ntotal = 2;\n}\n}\n";
+    with_java_bindings(source, |found| {
+        let totals = named_all(found, "total");
+        assert_eq!(
+            totals.len(),
+            1,
+            "no inner total shadows the outer total: {found:?}"
+        );
+        assert_eq!(
+            (totals[0].write_lines, totals[0].last_write_line),
+            (2, 7),
+            "the total = total + 1 inside the loop must still reach the outer total: {found:?}"
+        );
+    });
+}

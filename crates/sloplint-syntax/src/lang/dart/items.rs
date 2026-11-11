@@ -13,6 +13,10 @@ use super::funcs::{closure_shadow_params, visibility_of};
 use super::syntax::{COMMENTS, has_anon, label_text, last_ident};
 
 pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    if n.kind() == "for_statement" {
+        super::shadow::push_for_in_decl(cx, n, out);
+        return;
+    }
     if n.kind() != "local_variable_declaration" {
         return;
     }

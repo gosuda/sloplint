@@ -11,6 +11,7 @@ mod dynamic;
 mod imports;
 mod items;
 mod params;
+mod scope;
 mod shapes;
 
 use dynamic::{py_call_dynamic, py_subscript_dynamic};
@@ -228,7 +229,7 @@ pub(crate) fn py_callee_text<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
         _ => "call",
     }
 }
-fn py_pat_names<'s>(cx: &Cx<'_, 's>, left: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+pub(crate) fn py_pat_names<'s>(cx: &Cx<'_, 's>, left: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     let mut stack = vec![left];
     while let Some(cur) = stack.pop() {
         match cur.kind() {
@@ -254,7 +255,7 @@ fn py_with_item_target<'s>(cx: &Cx<'_, 's>, item: Node<'_>, out: &mut Vec<(&'s s
     }
 }
 
-fn py_with_targets<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+pub(crate) fn py_with_targets<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     for clause in named_children(n) {
         if clause.kind() != "with_clause" {
             continue;
@@ -267,7 +268,7 @@ fn py_with_targets<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos
     }
 }
 
-fn py_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
+pub(crate) fn py_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     let mut cur = n;
     loop {
         match cur.kind() {
@@ -435,24 +436,14 @@ impl LangHooks for PythonHooks {
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         match n.kind() {
-            "assignment" | "for_statement" => {
-                if let Some(left) = child_by_field(n, "left") {
-                    py_pat_names(cx, left, out);
-                }
-            }
-            "with_statement" => py_with_targets(cx, n, out),
+            "assignment" | "for_statement" => scope::decl_targets(cx, n, out),
+            "with_statement" => scope::decl_with(cx, n, out),
             "except_clause" => {
                 if let Some(alias) = child_by_field(n, "alias") {
                     py_pat_names(cx, alias, out);
                 }
             }
-            "named_expression" => {
-                if let Some(name) = child_by_field(n, "name")
-                    && name.kind() == "identifier"
-                {
-                    out.push((text(cx, name), pos_of(name)));
-                }
-            }
+            "named_expression" => scope::decl_walrus(cx, n, out),
             _ => {}
         }
     }
@@ -462,23 +453,13 @@ impl LangHooks for PythonHooks {
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() != "assignment" && n.kind() != "augmented_assignment" {
-            return;
-        }
-        let Some(left) = child_by_field(n, "left") else {
-            return;
-        };
-        if n.kind() == "augmented_assignment" || left.kind() != "identifier" {
-            let plain = left.kind() == "identifier" || left.kind() == "attribute";
-            if plain || left.kind() == "subscript" {
-                if let Some(root) = py_root(cx, left) {
-                    out.push(root);
-                }
-            } else if n.kind() == "augmented_assignment"
-                && let Some(root) = py_root(cx, left)
-            {
-                out.push(root);
-            }
+        match n.kind() {
+            "assignment" => scope::write_assignment(cx, n, out),
+            "augmented_assignment" => scope::write_augmented(cx, n, out),
+            "named_expression" => scope::write_walrus(cx, n, out),
+            "for_statement" => scope::write_loop(cx, n, out),
+            "with_statement" => scope::write_with(cx, n, out),
+            _ => {}
         }
     }
 

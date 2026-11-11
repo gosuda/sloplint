@@ -13,14 +13,44 @@ struct Binder<'s> {
 pub(crate) fn shadow_kind_for(kind: &str) -> bool {
     matches!(
         kind,
-        "if_statement" | "guard_statement" | "for_statement" | "switch_entry"
+        "guard_statement" | "for_statement" | "while_statement" | "switch_entry" | "statements"
     )
 }
 
 pub(crate) fn shadow_names_for<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    if n.kind() == "statements" {
+        push_then_names(cx, n, out);
+        return;
+    }
     let mut found = Vec::new();
     collect_statement(cx, n, &mut found);
     out.extend(found.into_iter().map(|binder| binder.name));
+}
+
+fn first_statements_child(node: Node<'_>) -> Option<Node<'_>> {
+    named_children(node)
+        .into_iter()
+        .find(|child| child.kind() == "statements")
+}
+
+fn push_then_names<'s>(cx: &Cx<'_, 's>, body: Node<'_>, out: &mut Vec<&'s str>) {
+    let Some(parent) = cx.parent_of(body) else {
+        return;
+    };
+    if parent.kind() != "if_statement" {
+        return;
+    }
+    if first_statements_child(parent).is_some_and(|first| first.id() != body.id()) {
+        return;
+    }
+    let mut found = Vec::new();
+    push_condition_names(cx, parent, &mut found);
+    out.extend(
+        found
+            .into_iter()
+            .filter(|binder| !binder.is_var)
+            .map(|binder| binder.name),
+    );
 }
 
 pub(crate) fn decl_names_for<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
@@ -45,17 +75,32 @@ pub(crate) fn decl_names_for<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'
 
 pub(crate) fn scope_parent(depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
     match node.kind() {
-        "if_statement" | "for_statement" | "switch_entry" => depth,
+        "for_statement" | "while_statement" | "switch_entry" => depth,
         "guard_statement" => depth.saturating_sub(1),
         "value_binding_pattern" => binder_scope(depth, cx),
+        "statements" => then_scope(depth, node, cx),
         _ => depth.saturating_sub(1),
+    }
+}
+
+fn then_scope(depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+    let Some(parent) = cx.parent_of(node) else {
+        return depth.saturating_sub(1);
+    };
+    if parent.kind() != "if_statement" {
+        return depth.saturating_sub(1);
+    }
+    if first_statements_child(parent).is_some_and(|first| first.id() == node.id()) {
+        depth
+    } else {
+        depth.saturating_sub(1)
     }
 }
 
 fn binder_scope(depth: usize, cx: &Cx<'_, '_>) -> usize {
     for (up, ancestor) in cx.ancestors().enumerate() {
         match ancestor.kind() {
-            "if_statement" | "for_statement" | "switch_entry" => {
+            "if_statement" | "for_statement" | "while_statement" | "switch_entry" => {
                 return depth.saturating_sub(up + 1);
             }
             "guard_statement" => return depth.saturating_sub(up + 2),
@@ -71,7 +116,7 @@ fn is_var_binding(cx: &Cx<'_, '_>, node: Node<'_>) -> bool {
 
 fn collect_statement<'s>(cx: &Cx<'_, 's>, node: Node<'_>, out: &mut Vec<Binder<'s>>) {
     match node.kind() {
-        "if_statement" | "guard_statement" => push_condition_names(cx, node, out),
+        "guard_statement" | "while_statement" => push_condition_names(cx, node, out),
         "for_statement" => {
             if let Some(item) = child_by_field(node, "item") {
                 push_pattern_names(cx, item, None, out);
@@ -91,7 +136,9 @@ fn collect_statement<'s>(cx: &Cx<'_, 's>, node: Node<'_>, out: &mut Vec<Binder<'
 fn collect_vbp<'s>(cx: &Cx<'_, 's>, parent: Node<'_>, vbp: Node<'_>, out: &mut Vec<Binder<'s>>) {
     match parent.kind() {
         "pattern" | "switch_pattern" => push_pattern_names(cx, parent, None, out),
-        "if_statement" | "guard_statement" => push_sibling_names(cx, parent, vbp, out),
+        "if_statement" | "guard_statement" | "while_statement" => {
+            push_sibling_names(cx, parent, vbp, out);
+        }
         _ => {}
     }
 }

@@ -143,6 +143,9 @@ impl LangHooks for JavaHooks {
     fn block_scoped_decls(&self) -> bool {
         true
     }
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        kind == "enhanced_for_statement"
+    }
 
     fn closure_as_function<'s>(
         &self,

@@ -144,75 +144,79 @@ pub(super) fn closure_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Par
 }
 
 pub(super) fn decl_names<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-    let Some(pat) = child_by_field(n, "pattern") else {
-        return;
-    };
-    let mut found = Vec::new();
-    if has_child_kind(n, "mutable_specifier") {
-        push_ident_tree(pat, &mut found);
-    } else {
-        push_mut_idents(pat, &mut found);
-    }
-    for id in found {
-        out.push((text(cx, id), pos_of(id)));
-    }
-}
-
-pub(super) fn shadow_decl_kind(kind: &str) -> bool {
-    matches!(
-        kind,
-        "if_expression" | "while_expression" | "for_expression" | "match_arm"
-    )
-}
-
-fn push_shadow_idents<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str>) {
-    let mut found = Vec::new();
-    push_mut_idents(root, &mut found);
-    for id in found {
-        out.push(text(cx, id));
-    }
-}
-
-fn push_condition_idents<'s>(cx: &Cx<'_, 's>, cond: Node<'_>, out: &mut Vec<&'s str>) {
-    let mut stack = vec![cond];
-    while let Some(cur) = stack.pop() {
-        if cur.kind() == "let_condition" {
-            if let Some(pat) = child_by_field(cur, "pattern") {
-                push_shadow_idents(cx, pat, out);
+    match n.kind() {
+        "let_declaration" => {
+            let Some(pat) = child_by_field(n, "pattern") else {
+                return;
+            };
+            let mut found = Vec::new();
+            if has_child_kind(n, "mutable_specifier") {
+                push_ident_tree(pat, &mut found);
+            } else {
+                push_mut_idents(pat, &mut found);
             }
-        } else if cur.kind() == "let_chain" {
+            for id in found {
+                out.push((text(cx, id), pos_of(id)));
+            }
+        }
+        "for_expression" => {
+            if let Some(pat) = child_by_field(n, "pattern") {
+                push_flow_binder_names(cx, pat, out);
+            }
+        }
+        "if_expression" | "while_expression" => {
+            if let Some(cond) = child_by_field(n, "condition") {
+                push_let_condition_names(cx, cond, out);
+            }
+        }
+        "match_pattern" => {
+            let guard = child_by_field(n, "condition").map(|node| node.id());
+            for child in named_children(n) {
+                if guard.is_some_and(|id| id == child.id()) {
+                    continue;
+                }
+                push_flow_binder_names(cx, child, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+pub(super) fn decl_scope_parent(depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+    let _ = cx;
+    if matches!(
+        node.kind(),
+        "if_expression" | "while_expression" | "for_expression"
+    ) {
+        return depth;
+    }
+    depth.saturating_sub(1)
+}
+
+fn push_flow_binder_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    let mut stack = vec![root];
+    while let Some(cur) = stack.pop() {
+        if cur.kind() == "mut_pattern" {
+            let mut found = Vec::new();
+            push_ident_tree(cur, &mut found);
+            for id in found {
+                out.push((text(cx, id), pos_of(id)));
+            }
+        } else {
             stack.extend(named_children(cur));
         }
     }
 }
 
-fn push_arm_idents<'s>(cx: &Cx<'_, 's>, pat: Node<'_>, out: &mut Vec<&'s str>) {
-    let guard = child_by_field(pat, "condition").map(|node| node.id());
-    for child in named_children(pat) {
-        if guard.is_some_and(|id| id == child.id()) {
-            continue;
-        }
-        push_shadow_idents(cx, child, out);
-    }
-}
-
-pub(super) fn shadow_names<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
-    match n.kind() {
-        "for_expression" => {
-            if let Some(pat) = child_by_field(n, "pattern") {
-                push_shadow_idents(cx, pat, out);
+fn push_let_condition_names<'s>(cx: &Cx<'_, 's>, cond: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    let mut stack = vec![cond];
+    while let Some(cur) = stack.pop() {
+        if cur.kind() == "let_condition" {
+            if let Some(pat) = child_by_field(cur, "pattern") {
+                push_flow_binder_names(cx, pat, out);
             }
+        } else if cur.kind() == "let_chain" {
+            stack.extend(named_children(cur));
         }
-        "match_arm" => {
-            if let Some(pat) = child_by_field(n, "pattern") {
-                push_arm_idents(cx, pat, out);
-            }
-        }
-        "if_expression" | "while_expression" => {
-            if let Some(cond) = child_by_field(n, "condition") {
-                push_condition_idents(cx, cond, out);
-            }
-        }
-        _ => {}
     }
 }

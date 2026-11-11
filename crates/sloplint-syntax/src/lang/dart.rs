@@ -76,7 +76,7 @@ impl LangHooks for DartHooks {
     }
 
     fn shadow_decl_kind(&self, kind: &str) -> bool {
-        matches!(kind, "for_statement" | "catch_clause" | "if_statement")
+        matches!(kind, "for_statement" | "block" | "if_statement")
     }
 
     fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
@@ -87,6 +87,9 @@ impl LangHooks for DartHooks {
         if matches!(node.kind(), "for_statement" | "if_statement") {
             return depth;
         }
+        if node.kind() == "block" && shadow::is_catch_body(node) {
+            return depth;
+        }
         if node.kind() == "local_variable_declaration" && shadow::switch_case_decl(cx, node) {
             return depth.saturating_sub(3);
         }
@@ -95,6 +98,14 @@ impl LangHooks for DartHooks {
 
     fn block_scoped_decls(&self) -> bool {
         true
+    }
+
+    fn block_scoped_binds(&self) -> bool {
+        true
+    }
+
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        kind == "for_statement"
     }
 
     fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {

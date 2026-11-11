@@ -133,3 +133,53 @@ fn compound_and_plain_assignment_still_write() {
         );
     });
 }
+
+#[test]
+fn extractor_head_is_not_a_binder() {
+    let source = "def f(v: Any): Int = {\n  var Foo = 0\n  v match {\n    case Foo(x) => x += 1\n  }\n  Foo += 10\n  Foo\n}\n";
+    with_scala_bindings(source, |found| {
+        let foos = named_all(found, "Foo");
+        assert_eq!(
+            foos.len(),
+            1,
+            "the extractor head binds no outer-visible name: {found:?}"
+        );
+        assert_eq!(
+            (
+                foos[0].write_lines,
+                foos[0].first_write_line,
+                foos[0].last_write_line
+            ),
+            (1, 6, 6),
+            "the write on line 6 reaches the outer binding, was 0 when the head shadowed it: {found:?}"
+        );
+        let xs = named_all(found, "x");
+        assert_eq!(
+            xs.len(),
+            0,
+            "the arm binder creates no binding of its own: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn extractor_argument_still_shadows_outer_write() {
+    let source = "def f(v: Any): Int = {\n  var y = 0\n  v match {\n    case Foo(y) => y += 1\n  }\n  y += 10\n  y\n}\n";
+    with_scala_bindings(source, |found| {
+        let ys = named_all(found, "y");
+        assert_eq!(
+            ys.len(),
+            1,
+            "the arm pattern binds no outer-visible name: {found:?}"
+        );
+        assert_eq!(
+            (
+                ys[0].write_lines,
+                ys[0].first_write_line,
+                ys[0].last_write_line
+            ),
+            (1, 6, 6),
+            "only the post-match write reaches the outer binding, was 2 when the arm write leaked out: {found:?}"
+        );
+    });
+}

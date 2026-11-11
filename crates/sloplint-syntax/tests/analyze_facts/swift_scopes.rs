@@ -253,3 +253,140 @@ fn plain_declaration_span_is_unchanged() {
         );
     });
 }
+
+const IF_LET_ELSE_BODY: &str = "\
+func f(o: Int?) {
+    var x = 0
+    if let x = o {
+        print(x)
+    } else {
+        x = 1
+    }
+    x = 2
+}";
+
+#[test]
+fn if_let_else_write_reaches_the_outer_var() {
+    with_swift_bindings(IF_LET_ELSE_BODY, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(
+            xs.len(),
+            1,
+            "the else write targets the outer var, it was recorded against a second binding: {found:?}"
+        );
+        assert_eq!(
+            (
+                xs[0].pos.line,
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (2, 2, 6, 8),
+            "the else write on line 6 reaches the outer var, it was dropped with write_lines 1: {found:?}"
+        );
+    });
+}
+
+const IF_LET_BODY_WRITE: &str = "\
+func f(o: Int?) {
+    var x = 0
+    if let x = o {
+        x = 1
+    }
+    x = 2
+}";
+
+#[test]
+fn if_let_body_write_to_the_binder_name_stays_dropped() {
+    with_swift_bindings(IF_LET_BODY_WRITE, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(
+            xs.len(),
+            1,
+            "the body write targets the let binder, it leaked onto a second binding: {found:?}"
+        );
+        assert_eq!(
+            (
+                xs[0].pos.line,
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (2, 1, 6, 6),
+            "the body write on line 4 stays dropped, only the write on line 6 reaches the outer var: {found:?}"
+        );
+    });
+}
+
+const WHILE_VAR_BINDER: &str = "\
+func f(o: Int?) {
+    var x = 0
+    while var x = o {
+        x += 1
+    }
+    x += 10
+}";
+
+#[test]
+fn while_var_binder_shadows_the_outer_var() {
+    with_swift_bindings(WHILE_VAR_BINDER, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(
+            xs.len(),
+            2,
+            "the loop binds its own x, it was never registered and both writes hit the outer var: {found:?}"
+        );
+        assert_eq!(
+            (
+                xs[0].pos.line,
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (2, 1, 6, 6),
+            "the outer var keeps only the write on line 6, it had 2 when the loop write leaked out: {found:?}"
+        );
+        assert_eq!(
+            (
+                xs[1].pos.line,
+                xs[1].first_write_line,
+                xs[1].last_write_line,
+                xs[1].write_lines,
+                xs[1].loop_depth
+            ),
+            (3, 4, 4, 1, 0),
+            "the loop binder owns the write on line 4: {found:?}"
+        );
+    });
+}
+
+const WHILE_LET_BODY: &str = "\
+func f(o: Int?) {
+    var x = 0
+    while let x = o {
+        x += 1
+    }
+    x += 10
+}";
+
+#[test]
+fn while_let_body_write_stays_dropped() {
+    with_swift_bindings(WHILE_LET_BODY, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(
+            xs.len(),
+            1,
+            "the loop binds no outer-visible name: {found:?}"
+        );
+        assert_eq!(
+            (
+                xs[0].pos.line,
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (2, 1, 6, 6),
+            "only the post-loop write reaches the outer binding, was 2 when the body write leaked out: {found:?}"
+        );
+    });
+}

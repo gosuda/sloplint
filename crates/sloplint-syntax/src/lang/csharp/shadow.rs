@@ -56,28 +56,6 @@ fn designation_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
     }
 }
 
-fn declarator_name<'s>(cx: &Cx<'_, 's>, d: Node<'_>, out: &mut Vec<&'s str>) {
-    if d.kind() != "variable_declarator" {
-        return;
-    }
-    if let Some(nm) = child_by_field(d, "name")
-        && nm.kind() == "identifier"
-    {
-        out.push(text(cx, nm));
-    }
-}
-
-fn for_init_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
-    for init in named_children(n) {
-        if init.kind() != "variable_declaration" {
-            continue;
-        }
-        for d in named_children(init) {
-            declarator_name(cx, d, out);
-        }
-    }
-}
-
 pub(crate) fn shadow_decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
     match n.kind() {
         "foreach_statement" => {
@@ -89,7 +67,6 @@ pub(crate) fn shadow_decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<
                 }
             }
         }
-        "for_statement" => for_init_names(cx, n, out),
         "declaration_expression" | "catch_declaration" => {
             if let Some(nm) = child_by_field(n, "name")
                 && nm.kind() == "identifier"

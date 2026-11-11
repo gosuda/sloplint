@@ -68,13 +68,22 @@ fn for_in_var_write_does_not_reach_the_outer_var() {
         let outer = named_all(found, "x");
         assert_eq!(
             outer.len(),
-            1,
-            "the for-in x is shadow-only so only the outer x is a binding"
+            2,
+            "the var for-in x is a loop binding plus the outer x"
         );
         assert_eq!(
             (outer[0].write_lines, outer[0].last_write_line),
             (0, 2),
             "wrong-before recorded the loop x = 1 on the outer x"
+        );
+        assert_eq!(
+            (
+                outer[1].write_lines,
+                outer[1].first_write_line,
+                outer[1].last_write_line
+            ),
+            (1, 3, 3),
+            "the loop x = 1 stays on the loop x"
         );
     });
 }
@@ -93,6 +102,47 @@ fn catch_param_write_does_not_reach_the_outer_var() {
             (outer[0].write_lines, outer[0].last_write_line),
             (0, 2),
             "wrong-before recorded the catch e = 1 on the outer e"
+        );
+    });
+}
+
+#[test]
+fn catch_finally_write_reaches_the_outer_var() {
+    let source =
+        "void f() {\nvar e = 0;\ntry { f(); } catch (e, s) { print(s); }\nfinally { e = 1; }\n}\n";
+    with_dart_bindings(source, |found| {
+        let outer = named_all(found, "e");
+        assert_eq!(
+            outer.len(),
+            1,
+            "the catch e is scoped to its body so the outer e is the only e binding"
+        );
+        assert_eq!(
+            (
+                outer[0].write_lines,
+                outer[0].first_write_line,
+                outer[0].last_write_line
+            ),
+            (1, 4, 4),
+            "wrong-before dropped the finally e = 1 leaving the outer e unwritten"
+        );
+    });
+}
+
+#[test]
+fn for_final_in_creates_no_binding() {
+    let source = "void f(List<int> xs) {\nvar x = 0;\nfor (final x in xs) { x = 1; }\n}\n";
+    with_dart_bindings(source, |found| {
+        let outer = named_all(found, "x");
+        assert_eq!(
+            outer.len(),
+            1,
+            "the final for-in x is shadow-only so only the outer x is a binding"
+        );
+        assert_eq!(
+            (outer[0].write_lines, outer[0].last_write_line),
+            (0, 2),
+            "the loop x = 1 must not reach the outer x"
         );
     });
 }

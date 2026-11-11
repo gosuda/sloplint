@@ -11,10 +11,24 @@ pub(crate) fn shadow_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s s
     match n.kind() {
         "function_expression" => closure_shadow_params(cx, n, out),
         "for_statement" => for_in_shadow_names(cx, n, out),
-        "catch_clause" => catch_shadow_names(cx, n, out),
+        "block" => catch_body_shadow_names(cx, n, out),
         "if_statement" => if_case_shadow_names(cx, n, out),
         _ => {}
     }
+}
+
+pub(crate) fn is_catch_body(n: Node<'_>) -> bool {
+    if n.kind() != "block" {
+        return false;
+    }
+    let mut sib = n.prev_sibling();
+    while let Some(cur) = sib {
+        if cur.is_named() {
+            return cur.kind() == "catch_clause";
+        }
+        sib = cur.prev_sibling();
+    }
+    false
 }
 
 pub(crate) fn switch_case_decl(cx: &Cx<'_, '_>, node: Node<'_>) -> bool {
@@ -90,14 +104,37 @@ fn for_in_shadow_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>)
     let Some(value) = child_by_field(n, "value") else {
         return;
     };
+    if !has_anon(n, "final") && !has_anon(n, "const") {
+        return;
+    }
+    push_for_in_seed(cx, n, value, out);
+}
+
+pub(crate) fn push_for_in_decl<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    let Some(value) = child_by_field(n, "value") else {
+        return;
+    };
+    if has_anon(n, "final") || has_anon(n, "const") {
+        return;
+    }
     if !has_anon(n, "var")
-        && !has_anon(n, "final")
         && !named_children(n)
             .into_iter()
             .any(|c| matches!(c.kind(), "type" | "function_type"))
     {
         return;
     }
+    let mut seed = Vec::new();
+    let body = child_by_field(n, "body").map(|v| v.id());
+    for c in named_children(n) {
+        if c.id() != value.id() && Some(c.id()) != body {
+            seed.push(c);
+        }
+    }
+    push_pattern_names(cx, seed, out);
+}
+
+fn push_for_in_seed<'s>(cx: &Cx<'_, 's>, n: Node<'_>, value: Node<'_>, out: &mut Vec<&'s str>) {
     let mut seed = Vec::new();
     let body = child_by_field(n, "body").map(|v| v.id());
     for c in named_children(n) {
@@ -112,12 +149,25 @@ fn for_in_shadow_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>)
     }
 }
 
-fn catch_shadow_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
-    if let Some(e) = child_by_field(n, "exception") {
-        out.push(text(cx, e));
+fn catch_body_shadow_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    if !is_catch_body(n) {
+        return;
     }
-    if let Some(s) = child_by_field(n, "stack_trace") {
-        out.push(text(cx, s));
+    let mut cur = n.prev_sibling();
+    while let Some(sib) = cur {
+        if sib.is_named() {
+            if sib.kind() != "catch_clause" {
+                return;
+            }
+            if let Some(e) = child_by_field(sib, "exception") {
+                out.push(text(cx, e));
+            }
+            if let Some(st) = child_by_field(sib, "stack_trace") {
+                out.push(text(cx, st));
+            }
+            return;
+        }
+        cur = sib.prev_sibling();
     }
 }
 

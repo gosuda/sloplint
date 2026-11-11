@@ -126,3 +126,56 @@ fn nested_with_alias_binds_once_on_its_own_line() {
         );
     });
 }
+
+#[test]
+fn nonlocal_assignment_writes_the_enclosing_binding() {
+    let source = "def outer():\n    total = 0\n    def inner(x):\n        nonlocal total\n        total = total + x\n        total = total + 1\n    return total\n";
+    with_python_bindings(source, |found| {
+        let targets = named_all(found, "total");
+        assert_eq!(
+            targets.len(),
+            1,
+            "nonlocal assignment writes the enclosing binding instead of declaring a nested local, was 2 with a shadowing total at line 5: {found:?}"
+        );
+        assert_eq!(
+            (
+                targets[0].pos.line,
+                targets[0].write_lines,
+                targets[0].first_write_line,
+                targets[0].last_write_line
+            ),
+            (2, 2, 5, 6),
+            "outer total absorbs both closure writes, was (2, 0, 2, 2) when the nested assignment declared a shadowing local: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn nested_assignment_without_nonlocal_stays_a_nested_local() {
+    let source = "def outer():\n    total = 0\n    def inner(x):\n        total = total + x\n    return total\n";
+    with_python_bindings(source, |found| {
+        let targets = named_all(found, "total");
+        assert_eq!(
+            targets.len(),
+            2,
+            "without nonlocal the nested assignment stays a local of the nested function: {found:?}"
+        );
+        let mut lines: Vec<(u32, u32, u32, u32)> = targets
+            .iter()
+            .map(|binding| {
+                (
+                    binding.pos.line,
+                    binding.write_lines,
+                    binding.first_write_line,
+                    binding.last_write_line,
+                )
+            })
+            .collect();
+        lines.sort_unstable();
+        assert_eq!(
+            lines,
+            vec![(2, 0, 2, 2), (4, 0, 4, 4)],
+            "each function keeps its own total binding: {found:?}"
+        );
+    });
+}

@@ -128,11 +128,32 @@ fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str
     let mut pending = vec![root];
     while let Some(node) = pending.pop() {
         if node.kind() == "identifier" {
-            out.push(text(cx, node));
+            if is_pattern_binder(cx, node) {
+                out.push(text(cx, node));
+            }
         } else if node.kind() != "wildcard" {
             pending.extend(named_children(node).into_iter().rev());
         }
     }
+}
+
+fn is_pattern_binder(cx: &Cx<'_, '_>, node: Node<'_>) -> bool {
+    let name = text(cx, node);
+    if name.starts_with('`')
+        || !name
+            .chars()
+            .next()
+            .is_some_and(|first| first.is_lowercase())
+    {
+        return false;
+    }
+    let Some(parent) = cx.parent_of(node) else {
+        return true;
+    };
+    !matches!(
+        parent.kind(),
+        "type_identifier" | "stable_identifier" | "stable_type_identifier"
+    )
 }
 
 fn push_generator_pattern<'s>(cx: &Cx<'_, 's>, enumerator: Node<'_>, out: &mut Vec<&'s str>) {

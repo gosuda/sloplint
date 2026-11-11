@@ -41,13 +41,23 @@ fn sibling_for_init_does_not_extend_the_if_block_span() {
         let is = named_all(found, "i");
         assert_eq!(
             is.len(),
-            1,
-            "the for init holds no binding of its own: {found:?}"
+            2,
+            "wrong-before held a single binding for the if-block int i: {found:?}"
         );
         assert_eq!(
             (is[0].write_lines, is[0].last_write_line),
             (0, 3),
-            "wrong-before recorded the for i++ on the if-block int i: {found:?}"
+            "if-block int i keeps no writes: {found:?}"
+        );
+        assert_eq!(
+            (
+                is[1].pos.line,
+                is[1].write_lines,
+                is[1].first_write_line,
+                is[1].last_write_line
+            ),
+            (4, 1, 4, 4),
+            "for init i owns the header i++ on line 4: {found:?}"
         );
     });
 }
@@ -110,6 +120,45 @@ fn loop_write_without_inner_shadow_still_reaches_the_outer_binding() {
             (vs[0].write_lines, vs[0].last_write_line),
             (1, 4),
             "the loop v = 1 must still reach the outer v: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn for_init_declares_mutable_counter_with_body_writes() {
+    let source = "class A {\nvoid F(int n, bool skip) {\nfor (int i = 0; i < n;) {\nif (skip) { i = i + 2; }\ni = 0;\n}\n}\n}\n";
+    with_csharp_bindings(source, |found| {
+        let is = named_all(found, "i");
+        assert_eq!(
+            is.len(),
+            1,
+            "wrong-before dropped the for init i without a binding: {found:?}"
+        );
+        assert_eq!(
+            is[0].pos.line, 3,
+            "wrong-before had no header binding for i: {found:?}"
+        );
+        assert_eq!(
+            (
+                is[0].write_lines,
+                is[0].first_write_line,
+                is[0].last_write_line
+            ),
+            (2, 4, 5),
+            "wrong-before lost the two body writes on lines 4 and 5: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn foreach_variable_stays_shadow_only() {
+    let source = "class A {\nvoid F(System.Collections.Generic.List<int> xs) {\nforeach (var x in xs) {\nx = 1;\n}\n}\n}\n";
+    with_csharp_bindings(source, |found| {
+        let found_x = named_all(found, "x");
+        assert_eq!(
+            found_x.len(),
+            0,
+            "foreach iteration variable stays read-only with no binding: {found:?}"
         );
     });
 }

@@ -11,7 +11,27 @@ pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s st
             collect_designation(cx, n, out);
         }
         "local_declaration_statement" => push_local_names(cx, n, out),
+        "for_statement" => push_for_init_names(cx, n, out),
         _ => {}
+    }
+}
+fn push_for_init_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    for init in named_children(n) {
+        if init.kind() != "variable_declaration" {
+            continue;
+        }
+        for d in named_children(init) {
+            if d.kind() != "variable_declarator" {
+                continue;
+            }
+            let Some(nm) = child_by_field(d, "name") else {
+                continue;
+            };
+            if nm.kind() != "identifier" {
+                continue;
+            }
+            out.push((text(cx, nm), pos_of(nm)));
+        }
     }
 }
 fn push_out_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
