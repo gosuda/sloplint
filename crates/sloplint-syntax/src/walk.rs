@@ -87,7 +87,7 @@ pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>, lang: Lang) -> FileF
         regions: Vec::new(),
         line_count: line_count(input.source),
         package: String::new(),
-        is_generated: crate::generated::is_generated(input.source.as_bytes()),
+        is_generated: crate::generated::is_generated(input.source.as_bytes(), lang),
         functions: Vec::new(),
         calls: Vec::new(),
         bindings: Vec::new(),

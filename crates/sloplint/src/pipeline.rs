@@ -147,7 +147,7 @@ fn process(
     let Ok(mut owned) = String::from_utf8(bytes) else {
         return skipped("non-utf8");
     };
-    if sloplint_syntax::is_generated(owned.as_bytes()) {
+    if sloplint_syntax::is_generated(owned.as_bytes(), entry.lang) {
         return skipped("generated");
     }
     if owned.starts_with('\u{feff}') {
