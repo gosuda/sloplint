@@ -102,7 +102,9 @@ impl FileRule for ImportFanOut {
         );
         let fix = "split orchestration from domain logic: move code that needs only some of these packages into its own module"
             .to_string();
-        out.push(Finding::at(facts, pos, INFO.id, severity, message, fix));
+        let mut finding = Finding::at(facts, pos, INFO.id, severity, message, fix);
+        finding.file_wide = true;
+        out.push(finding);
     }
 }
 #[cfg(test)]

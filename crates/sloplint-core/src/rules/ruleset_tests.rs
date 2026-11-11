@@ -376,3 +376,49 @@ fn barrel_finding_survives_a_leading_test_region() {
         "graded findings leave the ruleset without the file-wide marker"
     );
 }
+
+fn fan_out_severity(role: CodeRole, regions: Vec<RoleRegion>) -> Option<Severity> {
+    use crate::facts::{Import, ImportKind, ImportScope, Pos};
+    let roots: Vec<String> = (0..25).map(|index| format!("dep{index}")).collect();
+    let mut facts = oversized_facts("use dep0::item;\n", role, regions);
+    facts.imports = roots
+        .iter()
+        .map(|root| Import {
+            pos: Pos { line: 1, byte: 0 },
+            module: std::borrow::Cow::Borrowed(root.as_str()),
+            name: "item",
+            alias: None,
+            kind: ImportKind::Named,
+            scope: ImportScope::Module,
+            in_test: false,
+            is_reexport: false,
+            external_root: Some(root.as_str()),
+        })
+        .collect();
+    strict_rules()
+        .check_file(&facts)
+        .into_iter()
+        .find(|finding| finding.rule.as_ref() == "complexity/import-fan-out")
+        .map(|finding| finding.severity)
+}
+
+#[test]
+fn import_fan_out_is_graded_by_the_role_of_the_file() {
+    let leading_test = vec![RoleRegion {
+        start_line: 1,
+        end_line: 1,
+        role: CodeRole::Test,
+    }];
+    let plain = fan_out_severity(CodeRole::Library, Vec::new());
+    assert!(plain.is_some(), "25 packages are reported in a library");
+    assert_eq!(
+        fan_out_severity(CodeRole::Library, leading_test),
+        plain,
+        "a test region around the first import cannot lower the file total"
+    );
+    assert_ne!(
+        fan_out_severity(CodeRole::Test, Vec::new()),
+        plain,
+        "a file whose role is test is still graded as test code"
+    );
+}
