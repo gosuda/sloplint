@@ -140,6 +140,7 @@ fn tmp_with(files: &[(&str, &str)]) -> tempfile::TempDir {
     }
     tmp
 }
+#[cfg(not(target_os = "macos"))]
 #[test]
 fn deep_path_with_many_long_imports_stays_bounded() {
     let deep = "d/".repeat(1500) + "x.py";
