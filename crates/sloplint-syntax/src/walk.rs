@@ -208,6 +208,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             if let Some(frame) = self.fn_stack.last_mut() {
                 for name in names {
                     frame.shadow.register(name, parent);
+                    frame.only.register(name, parent);
                 }
             }
         }

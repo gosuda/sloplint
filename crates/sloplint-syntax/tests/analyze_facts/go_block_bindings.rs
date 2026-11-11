@@ -155,3 +155,81 @@ fn same_scope_short_redeclaration_still_writes_the_shared_name() {
         );
     });
 }
+#[test]
+fn range_variable_write_does_not_reach_the_outer_binding() {
+    let source = "package p\n\nfunc f(xs []int) int {\nv := 0\n_ = v\nfor _, v := range xs {\nv = v + 1\n}\nreturn v\n}\n";
+    with_go_bindings(source, |found| {
+        let outer = named_all(found, "v");
+        assert_eq!(
+            outer.len(),
+            1,
+            "range v is shadow-only so only the outer v is a binding: {found:?}"
+        );
+        assert_eq!(
+            (outer[0].write_lines, outer[0].last_write_line),
+            (0, 4),
+            "wrong-before recorded the loop v = on the outer v: {found:?}"
+        );
+    });
+}
+#[test]
+fn loop_write_without_inner_shadow_still_reaches_the_outer_binding() {
+    let source = "package p\n\nfunc f(xs []int) int {\nv := 0\n_ = v\nfor _, x := range xs {\nv = x\n}\nreturn v\n}\n";
+    with_go_bindings(source, |found| {
+        let outer = named_all(found, "v");
+        assert_eq!(outer.len(), 1, "no inner v shadows the outer v: {found:?}");
+        assert_eq!(
+            (outer[0].write_lines, outer[0].last_write_line),
+            (1, 7),
+            "the loop v = x must reach the outer v: {found:?}"
+        );
+    });
+}
+#[test]
+fn short_declaration_at_top_with_param_err_creates_no_err_binding() {
+    let source = "package p\n\nfunc g() (int, int) {\nreturn 1, 2\n}\nfunc f(err int) int {\nx, err := g()\n_ = x\n_ = err\nreturn x\n}\n";
+    with_go_bindings(source, |found| {
+        let errs = named_all(found, "err");
+        assert_eq!(
+            errs.len(),
+            0,
+            "wrong-before created a fresh err binding for x, err := with param err: {found:?}"
+        );
+        let xs = named_all(found, "x");
+        assert_eq!(xs.len(), 1, "x is still a new binding: {found:?}");
+    });
+}
+#[test]
+fn short_declaration_in_inner_block_with_param_err_declares_a_fresh_binding() {
+    let source = "package p\n\nfunc g() (int, int) {\nreturn 1, 2\n}\nfunc f(err int) int {\nx := 1\n_ = x\nif true {\ny, err := g()\n_ = y\n_ = err\n}\nreturn x\n}\n";
+    with_go_bindings(source, |found| {
+        let errs = named_all(found, "err");
+        assert_eq!(
+            errs.len(),
+            1,
+            "inner blocks still declare a new err: {found:?}"
+        );
+        assert_eq!(
+            errs[0].pos.line, 10,
+            "the fresh err lives in the if body: {found:?}"
+        );
+    });
+}
+#[test]
+fn starlark_tuple_with_two_thousand_mixed_targets_completes() {
+    let mut left = String::new();
+    for i in 0..1000 {
+        if i > 0 {
+            left.push_str(", ");
+        }
+        left.push_str(&format!("a{i}, o.b{i}"));
+    }
+    let source = format!("def f():\n    {left} = 0\n    return a0\n");
+    let analysis = run_clean(Lang::Starlark, "case.star", &source);
+    assert_eq!(
+        analysis.facts.bindings.len(),
+        1000,
+        "only the identifiers become bindings: {:?}",
+        analysis.facts.bindings.len()
+    );
+}

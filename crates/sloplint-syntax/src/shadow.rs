@@ -2,18 +2,21 @@ use std::collections::{HashMap, HashSet};
 pub(crate) struct ScopedShadow<'s> {
     counts: HashMap<&'s str, u32>,
     stack: Vec<(usize, &'s str)>,
+    tops: HashMap<&'s str, Vec<usize>>,
 }
 impl<'s> ScopedShadow<'s> {
     pub(crate) fn new() -> Self {
         Self {
             counts: HashMap::new(),
             stack: Vec::new(),
+            tops: HashMap::new(),
         }
     }
     pub(crate) fn register(&mut self, name: &'s str, parent: usize) {
         let slot = self.counts.entry(name).or_insert(0);
         *slot = slot.saturating_add(1);
         self.stack.push((parent, name));
+        self.tops.entry(name).or_default().push(parent);
     }
     pub(crate) fn release(&mut self, depth: usize) -> Vec<&'s str> {
         let mut freed = Vec::new();
@@ -23,6 +26,12 @@ impl<'s> ScopedShadow<'s> {
             }
             self.stack.pop();
             freed.push(name);
+            if let Some(vec) = self.tops.get_mut(name) {
+                vec.pop();
+                if vec.is_empty() {
+                    self.tops.remove(name);
+                }
+            }
             let empty = if let Some(slot) = self.counts.get_mut(name) {
                 *slot = slot.saturating_sub(1);
                 *slot == 0
@@ -38,6 +47,9 @@ impl<'s> ScopedShadow<'s> {
     pub(crate) fn contains(&self, name: &str) -> bool {
         self.counts.contains_key(name)
     }
+    pub(crate) fn top_scope(&self, name: &str) -> Option<usize> {
+        self.tops.get(name).and_then(|vec| vec.last().copied())
+    }
 }
 pub(crate) struct FrameDecl {
     pub binding: usize,
@@ -51,6 +63,8 @@ pub(crate) struct FnFrame<'s> {
     pub frames: u32,
     pub decls: HashMap<&'s str, Vec<FrameDecl>>,
     pub shadow: ScopedShadow<'s>,
+    pub only: ScopedShadow<'s>,
+    pub top: usize,
     pub closure_base: u32,
     pub rebound: HashSet<&'s str>,
     pub params: HashSet<&'s str>,
@@ -61,6 +75,7 @@ pub(crate) struct FnFrame<'s> {
 impl<'s> FnFrame<'s> {
     pub(crate) fn release(&mut self, depth: usize) {
         let freed = self.shadow.release(depth);
+        self.only.release(depth);
         if self.block_scoped {
             self.pop_decl_scopes(depth, &freed);
         }

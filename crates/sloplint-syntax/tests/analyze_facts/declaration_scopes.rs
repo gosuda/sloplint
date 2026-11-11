@@ -131,3 +131,81 @@ fn write_depth_counts_loop_frames_open_since_the_declaration() {
         );
     });
 }
+fn with_py_bindings<R>(source: &str, read: impl FnOnce(&[MutBinding<'_>]) -> R) -> R {
+    let analysis = run_clean(Lang::Python, "case.py", source);
+    read(&analysis.facts.bindings)
+}
+#[test]
+fn for_in_const_write_does_not_reach_the_outer_let() {
+    let source = "function f(o) {\nlet k = 0;\nfor (const k in o) {\nk = 1;\n}\nreturn k;\n}\n";
+    with_bindings(source, |found| {
+        let outer = named(found, "k");
+        assert_eq!(
+            (outer.write_lines, outer.last_write_line),
+            (0, 2),
+            "wrong-before recorded the loop k = on the outer k: {found:?}"
+        );
+    });
+}
+#[test]
+fn for_in_write_without_inner_shadow_still_reaches_the_outer_let() {
+    let source = "function f(o) {\nlet k = 0;\nfor (const j in o) {\nk = 1;\n}\nreturn k;\n}\n";
+    with_bindings(source, |found| {
+        let outer = named(found, "k");
+        assert_eq!(
+            (outer.write_lines, outer.last_write_line),
+            (1, 4),
+            "the loop k = must reach the outer k: {found:?}"
+        );
+    });
+}
+#[test]
+fn arrow_param_write_does_not_reach_the_outer_let() {
+    let source = "function outer() {\nlet v = 0;\n[1].map((v) => {\nv = 1;\n});\nreturn v;\n}\n";
+    with_bindings(source, |found| {
+        let outer = named(found, "v");
+        assert_eq!(
+            (outer.write_lines, outer.last_write_line),
+            (0, 2),
+            "wrong-before recorded the arrow v = on the outer v: {found:?}"
+        );
+    });
+}
+#[test]
+fn arrow_write_without_shadowing_still_reaches_the_outer_let() {
+    let source = "function outer() {\nlet v = 0;\n[1].map(() => {\nv = 1;\n});\nreturn v;\n}\n";
+    with_bindings(source, |found| {
+        let outer = named(found, "v");
+        assert_eq!(
+            (outer.write_lines, outer.last_write_line),
+            (1, 4),
+            "the closure v = must reach the outer v: {found:?}"
+        );
+    });
+}
+#[test]
+fn nested_def_param_augment_does_not_reach_the_outer_local() {
+    let source =
+        "def outer():\n    v = 0\n    def inner(v):\n        v += 1\n    inner(1)\n    return v\n";
+    with_py_bindings(source, |found| {
+        let outer = named(found, "v");
+        assert_eq!(
+            (outer.write_lines, outer.last_write_line),
+            (0, 2),
+            "wrong-before recorded the nested v += on the outer v: {found:?}"
+        );
+    });
+}
+#[test]
+fn nested_augment_without_shadowing_still_reaches_the_outer_local() {
+    let source =
+        "def outer():\n    v = 0\n    def inner():\n        v += 1\n    inner()\n    return v\n";
+    with_py_bindings(source, |found| {
+        let outer = named(found, "v");
+        assert_eq!(
+            (outer.write_lines, outer.last_write_line),
+            (1, 4),
+            "the nested v += must reach the outer v: {found:?}"
+        );
+    });
+}
