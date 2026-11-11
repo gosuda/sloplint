@@ -206,7 +206,7 @@ fn body_has_test(cx: &Cx<'_, '_>, body: Node<'_>) -> bool {
 
 fn main_test_region(cx: &Cx<'_, '_>, n: Node<'_>, body: Node<'_>) -> Option<RoleRegion> {
     if is_main_root(cx, n) && body_has_test(cx, body) {
-        Some(region_of(body, CodeRole::Test))
+        Some(region_of(n, CodeRole::Test))
     } else {
         None
     }

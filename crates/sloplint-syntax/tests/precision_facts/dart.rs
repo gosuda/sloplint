@@ -89,6 +89,32 @@ fn main_with_a_test_call_inside_try_gets_a_test_region() {
 }
 
 #[test]
+fn the_test_region_of_main_covers_a_multi_line_signature() {
+    let analysis = run(
+        "case.dart",
+        "void main(\n  List<String> args,\n) {\n  test('parses', () {});\n}\n",
+    );
+    assert!(analysis.parse_error.is_none(), "parses");
+    let main = analysis
+        .facts
+        .functions
+        .iter()
+        .find(|f| f.name == "main")
+        .expect("has main");
+    assert_eq!(main.pos.line, 1, "main is reported on its name line");
+    assert_eq!(
+        analysis.facts.role_at(main.pos.line),
+        CodeRole::Test,
+        "a finding on main is graded as test code"
+    );
+    assert_eq!(
+        analysis.facts.role_at(5),
+        CodeRole::Test,
+        "the region still reaches the closing brace"
+    );
+}
+
+#[test]
 fn main_without_test_calls_gets_no_test_region() {
     let analysis = run("case.dart", "void main() {\n  print('hi');\n}\n");
     assert!(analysis.parse_error.is_none(), "parses");
