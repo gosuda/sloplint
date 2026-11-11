@@ -17,25 +17,68 @@ const MARKERS: [&[u8]; 7] = [
 
 const BOM: &[u8] = b"\xEF\xBB\xBF";
 
-const COMMENT_LEADERS: [&[u8]; 6] = [b"//", b"/*", b"(*", b"<#", b"\"\"\"", b"'''"];
+type Block = (&'static [u8], &'static [u8]);
 
-const BLOCKS: [(&[u8], &[u8]); 5] = [
-    (b"/*", b"*/"),
-    (b"(*", b"*)"),
-    (b"<#", b"#>"),
-    (b"\"\"\"", b"\"\"\""),
-    (b"'''", b"'''"),
-];
+struct CommentSyntax {
+    lines: &'static [&'static [u8]],
+    blocks: &'static [Block],
+    code: &'static [&'static [u8]],
+}
 
-const HASH_COMMENT_LANGS: [Lang; 7] = [
-    Lang::Python,
-    Lang::Ruby,
-    Lang::Bash,
-    Lang::PowerShell,
-    Lang::R,
-    Lang::Starlark,
-    Lang::Php,
-];
+const SLASH: CommentSyntax = CommentSyntax {
+    lines: &[b"//"],
+    blocks: &[(b"/*", b"*/")],
+    code: &[],
+};
+
+const HASH: CommentSyntax = CommentSyntax {
+    lines: &[b"#"],
+    blocks: &[],
+    code: &[],
+};
+
+fn comment_syntax(lang: Lang) -> CommentSyntax {
+    match lang {
+        Lang::Rust
+        | Lang::TypeScript
+        | Lang::Tsx
+        | Lang::JavaScript
+        | Lang::Go
+        | Lang::Java
+        | Lang::Kotlin
+        | Lang::CSharp
+        | Lang::C
+        | Lang::Cpp
+        | Lang::ObjC
+        | Lang::Swift
+        | Lang::Scala
+        | Lang::Dart
+        | Lang::Odin => SLASH,
+        Lang::Zig => CommentSyntax {
+            blocks: &[],
+            ..SLASH
+        },
+        Lang::Php => CommentSyntax {
+            lines: &[b"//", b"#"],
+            code: &[b"#["],
+            ..SLASH
+        },
+        Lang::Ruby | Lang::Bash | Lang::R => HASH,
+        Lang::Python | Lang::Starlark => CommentSyntax {
+            blocks: &[(b"\"\"\"", b"\"\"\""), (b"'''", b"'''")],
+            ..HASH
+        },
+        Lang::PowerShell => CommentSyntax {
+            blocks: &[(b"<#", b"#>")],
+            ..HASH
+        },
+        Lang::Ocaml | Lang::OcamlInterface => CommentSyntax {
+            lines: &[],
+            blocks: &[(b"(*", b"*)")],
+            code: &[],
+        },
+    }
+}
 
 enum Header {
     Marked,
@@ -44,7 +87,7 @@ enum Header {
 }
 
 /// True when a header comment in the first 2048 bytes carries a generated-file marker, in any letter case.
-/// A `#` line is a comment only in a language with hash comments; elsewhere only a `#!` interpreter line is.
+/// Each language opens comments only with its own line and block comment syntax; a `#!` interpreter line is a header line in every language.
 pub fn is_generated(bytes: &[u8], lang: Lang) -> bool {
     let text = if bytes.len() >= BOM.len() && &bytes[..BOM.len()] == BOM {
         &bytes[BOM.len()..]
@@ -56,14 +99,15 @@ pub fn is_generated(bytes: &[u8], lang: Lang) -> bool {
     } else {
         text
     };
+    let syntax = comment_syntax(lang);
     let (opener, body) = split_opener(head);
-    let mut closer = match scan_line(opener, None, lang) {
+    let mut closer = match scan_line(opener, None, &syntax) {
         Header::Marked => return true,
         Header::Ended => None,
         Header::Continues(open) => open,
     };
     for line in body.split(|byte| *byte == b'\n') {
-        match scan_line(line, closer, lang) {
+        match scan_line(line, closer, &syntax) {
             Header::Marked => return true,
             Header::Ended => return false,
             Header::Continues(open) => closer = open,
@@ -72,11 +116,13 @@ pub fn is_generated(bytes: &[u8], lang: Lang) -> bool {
     false
 }
 
-fn scan_line(line: &[u8], mut closer: Option<&'static [u8]>, lang: Lang) -> Header {
+fn scan_line(line: &[u8], mut closer: Option<&'static [u8]>, syntax: &CommentSyntax) -> Header {
     let mut rest = line.trim_ascii_start();
     loop {
-        let entered =
-            closer.map_or_else(|| enter_comment(rest, lang), |end| Some((rest, Some(end))));
+        let entered = closer.map_or_else(
+            || enter_comment(rest, syntax),
+            |end| Some((rest, Some(end))),
+        );
         let Some((body, end)) = entered else {
             return Header::Ended;
         };
@@ -94,14 +140,15 @@ fn scan_line(line: &[u8], mut closer: Option<&'static [u8]>, lang: Lang) -> Head
     }
 }
 
-fn enter_comment(line: &[u8], lang: Lang) -> Option<(&[u8], Option<&'static [u8]>)> {
-    if !is_header(line, lang) {
-        return None;
-    }
-    let block = BLOCKS
+fn enter_comment<'a>(
+    line: &'a [u8],
+    syntax: &CommentSyntax,
+) -> Option<(&'a [u8], Option<&'static [u8]>)> {
+    let block = syntax
+        .blocks
         .iter()
         .find_map(|(open, close)| Some((line.strip_prefix(*open)?, Some(*close))));
-    Some(block.unwrap_or((line, None)))
+    block.or_else(|| is_line_comment(line, syntax).then_some((line, None)))
 }
 
 fn split_opener(head: &[u8]) -> (&[u8], &[u8]) {
@@ -119,24 +166,11 @@ fn split_opener(head: &[u8]) -> (&[u8], &[u8]) {
     (after_tag, body)
 }
 
-fn is_header(line: &[u8], lang: Lang) -> bool {
-    if line.is_empty() || is_hash_comment(line, lang) {
-        return true;
-    }
-    COMMENT_LEADERS
-        .iter()
-        .any(|leader| line.starts_with(leader))
-}
-
-fn is_hash_comment(line: &[u8], lang: Lang) -> bool {
-    let Some(rest) = line.strip_prefix(b"#") else {
-        return false;
-    };
-    if HASH_COMMENT_LANGS.contains(&lang) {
-        !rest.starts_with(b"[")
-    } else {
-        matches!(rest, [b'!', b'/' | b' ', ..])
-    }
+fn is_line_comment(line: &[u8], syntax: &CommentSyntax) -> bool {
+    let opens = |leaders: &[&[u8]]| leaders.iter().any(|leader| line.starts_with(leader));
+    line.is_empty()
+        || matches!(line, [b'#', b'!', b'/' | b' ', ..])
+        || (opens(syntax.lines) && !opens(syntax.code))
 }
 
 fn carries_marker(line: &[u8]) -> bool {
@@ -157,94 +191,168 @@ fn split_at<'a>(haystack: &'a [u8], needle: &[u8]) -> Option<(&'a [u8], &'a [u8]
 mod tests {
     use super::{Lang, is_generated};
 
-    fn generated_go(head: &[u8]) -> bool {
-        is_generated(head, Lang::Go)
+    fn assert_generated(cases: &[(Lang, &[u8])]) {
+        for (lang, head) in cases {
+            assert!(
+                is_generated(head, *lang),
+                "{}",
+                String::from_utf8_lossy(head)
+            );
+        }
+    }
+
+    fn assert_not_generated(cases: &[(Lang, &[u8])]) {
+        for (lang, head) in cases {
+            assert!(
+                !is_generated(head, *lang),
+                "{}",
+                String::from_utf8_lossy(head)
+            );
+        }
     }
 
     #[test]
     fn markers_on_comment_lines_match_in_any_letter_case() {
-        for head in [
-            &b"// @generated\nfn f() {}\n"[..],
-            b"// @GENERATED\nfn f() {}\n",
-            b"  // AUTOMATICALLY GENERATED\nfn f() {}\n",
-            b"// Code generated by tool. DO NOT EDIT.\nfn f() {}\n",
-            b"/* Autogenerated */\nint x;\n",
-            b"/*\n * auto-generated file\n */\nint x;\n",
-            b"(* do not edit *)\nlet x = 1\n",
-            b"\"\"\"Autogenerated module.\"\"\"\nX = 1\n",
-            b"\xEF\xBB\xBF// @generated\nclass C {}\n",
-            b"// GENERATED CODE - DO NOT MODIFY BY HAND\npart of 'a.dart';\n",
-        ] {
-            assert!(generated_go(head), "{}", String::from_utf8_lossy(head));
-        }
+        assert_generated(&[
+            (Lang::Rust, b"// @generated\nfn f() {}\n"),
+            (Lang::Rust, b"// @GENERATED\nfn f() {}\n"),
+            (Lang::Rust, b"  // AUTOMATICALLY GENERATED\nfn f() {}\n"),
+            (
+                Lang::Rust,
+                b"// Code generated by tool. DO NOT EDIT.\nfn f() {}\n",
+            ),
+            (Lang::C, b"/* Autogenerated */\nint x;\n"),
+            (Lang::C, b"/*\n * auto-generated file\n */\nint x;\n"),
+            (Lang::Ocaml, b"(* do not edit *)\nlet x = 1\n"),
+            (Lang::Python, b"\"\"\"Autogenerated module.\"\"\"\nX = 1\n"),
+            (Lang::CSharp, b"\xEF\xBB\xBF// @generated\nclass C {}\n"),
+            (
+                Lang::Dart,
+                b"// GENERATED CODE - DO NOT MODIFY BY HAND\npart of 'a.dart';\n",
+            ),
+        ]);
     }
 
     #[test]
     fn markers_in_code_or_strings_do_not_count() {
-        for head in [
-            &b"HEADER = \"# Auto generated by this tool\"\n"[..],
-            b"const MARKERS: [&str; 1] = [\"do not edit\"];\n",
-            b"print('@generated')\n",
-            b"// Code generated by hand.\nfn f() {}\n",
-            b"fn f() {}\n",
-            b"",
-        ] {
-            assert!(!generated_go(head), "{}", String::from_utf8_lossy(head));
-        }
+        assert_not_generated(&[
+            (
+                Lang::Python,
+                b"HEADER = \"# Auto generated by this tool\"\n",
+            ),
+            (
+                Lang::Rust,
+                b"const MARKERS: [&str; 1] = [\"do not edit\"];\n",
+            ),
+            (Lang::Python, b"print('@generated')\n"),
+            (Lang::Rust, b"// Code generated by hand.\nfn f() {}\n"),
+            (Lang::Rust, b"fn f() {}\n"),
+            (Lang::Go, b""),
+        ]);
     }
 
     #[test]
     fn marker_after_first_code_line_does_not_count() {
-        for head in [
-            &b"fn f() {}\n// @generated\n"[..],
-            b"package main\n// Code generated by protoc-gen-go. DO NOT EDIT.\n",
-            b"<?php\n$x = 1;\n// @generated\n",
-            b"// license\nfn f() {}\n// Callers must not edit: do not edit the returned slice\n",
-            b"// see src/*.go\npackage x\n// @generated\n",
-            b"<?xml version=\"1.0\"?><!-- do not edit -->\n<a/>\n",
-        ] {
-            assert!(!generated_go(head), "{}", String::from_utf8_lossy(head));
-        }
+        assert_not_generated(&[
+            (Lang::Rust, b"fn f() {}\n// @generated\n"),
+            (
+                Lang::Go,
+                b"package main\n// Code generated by protoc-gen-go. DO NOT EDIT.\n",
+            ),
+            (Lang::Php, b"<?php\n$x = 1;\n// @generated\n"),
+            (
+                Lang::Rust,
+                b"// license\nfn f() {}\n// Callers must not edit: do not edit the returned slice\n",
+            ),
+            (Lang::Go, b"// see src/*.go\npackage x\n// @generated\n"),
+            (
+                Lang::Php,
+                b"<?xml version=\"1.0\"?><!-- do not edit -->\n<a/>\n",
+            ),
+        ]);
     }
 
     #[test]
     fn marker_in_code_after_a_block_closer_does_not_count() {
-        for head in [
-            &b"/* license */ const HELP: &str = \"do not edit\";\n"[..],
-            b"/*\n * license\n */ const HELP: &str = \"do not edit\";\n",
-            b"(* license *) let help = \"auto-generated\"\n",
-            b"\"\"\"Docs.\"\"\"; HELP = \"do not edit\"\n",
-            b"<?php /* license\n */ $x = \"do not edit\";\n",
-        ] {
-            assert!(!generated_go(head), "{}", String::from_utf8_lossy(head));
-        }
+        assert_not_generated(&[
+            (
+                Lang::Rust,
+                b"/* license */ const HELP: &str = \"do not edit\";\n",
+            ),
+            (
+                Lang::Rust,
+                b"/*\n * license\n */ const HELP: &str = \"do not edit\";\n",
+            ),
+            (
+                Lang::Ocaml,
+                b"(* license *) let help = \"auto-generated\"\n",
+            ),
+            (Lang::Python, b"\"\"\"Docs.\"\"\"; HELP = \"do not edit\"\n"),
+            (Lang::Php, b"<?php /* license\n */ $x = \"do not edit\";\n"),
+        ]);
     }
 
     #[test]
     fn marker_in_a_comment_after_a_block_closer_counts() {
-        for head in [
-            &b"/* license */ // @generated\nfn f() {}\n"[..],
-            b"/*\n * license\n */ /* do not edit */\nint x;\n",
-        ] {
-            assert!(generated_go(head), "{}", String::from_utf8_lossy(head));
-        }
+        assert_generated(&[
+            (Lang::Rust, b"/* license */ // @generated\nfn f() {}\n"),
+            (Lang::C, b"/*\n * license\n */ /* do not edit */\nint x;\n"),
+        ]);
     }
 
     #[test]
     fn marker_in_header_counts() {
-        for head in [
-            &b"// @generated\nfn f() {}\n"[..],
-            b"/*\nauto-generated file\n*/\nint x;\n",
-            b"(*\nauto-generated\n*)\nlet x = 1\n",
-            b"\"\"\"\nauto-generated docs\n\"\"\"\nX = 1\n",
-            b"<?php\n// @generated\n$x = 1;\n",
-            b"<?php /* @generated */\n$x = 1;\n",
-            b"<?php // @generated\n$x = 1;\n",
-            b"<?php declare(strict_types=1);\n// @generated\n$x = 1;\n",
-            b"// Code generated by protoc-gen-go. DO NOT EDIT.\n\npackage x\n",
-        ] {
-            assert!(generated_go(head), "{}", String::from_utf8_lossy(head));
-        }
+        assert_generated(&[
+            (Lang::Rust, b"// @generated\nfn f() {}\n"),
+            (Lang::C, b"/*\nauto-generated file\n*/\nint x;\n"),
+            (Lang::Ocaml, b"(*\nauto-generated\n*)\nlet x = 1\n"),
+            (
+                Lang::Python,
+                b"\"\"\"\nauto-generated docs\n\"\"\"\nX = 1\n",
+            ),
+            (Lang::Php, b"<?php\n// @generated\n$x = 1;\n"),
+            (Lang::Php, b"<?php /* @generated */\n$x = 1;\n"),
+            (Lang::Php, b"<?php // @generated\n$x = 1;\n"),
+            (
+                Lang::Php,
+                b"<?php declare(strict_types=1);\n// @generated\n$x = 1;\n",
+            ),
+            (
+                Lang::Go,
+                b"// Code generated by protoc-gen-go. DO NOT EDIT.\n\npackage x\n",
+            ),
+        ]);
+    }
+
+    #[test]
+    fn bracket_hash_lines_are_comments_outside_php() {
+        assert_generated(&[
+            (Lang::Ruby, b"#[generated by rake gen] do not edit\nX = 1\n"),
+            (Lang::Python, b"#[section]\n# @generated\nX = 1\n"),
+            (Lang::Bash, b"#[shellcheck] auto-generated\nx=1\n"),
+            (Lang::PowerShell, b"#[ordered] @generated\n$x = 1\n"),
+            (Lang::R, b"#[export] @generated\nx <- 1\n"),
+            (Lang::Starlark, b"#[rules] do not edit\nX = 1\n"),
+        ]);
+    }
+
+    #[test]
+    fn another_languages_comment_opener_is_code() {
+        assert_not_generated(&[
+            (
+                Lang::Kotlin,
+                b"\"\"\"\nusage: gen.main.kts\n\"\"\"\n// @generated\nprintln(1)\n",
+            ),
+            (
+                Lang::Scala,
+                b"\"\"\"\nusage: gen.sc\n\"\"\"\n// @generated\nprintln(1)\n",
+            ),
+            (Lang::Python, b"(*a, b) = range(3)\n# @generated\nX = 1\n"),
+            (
+                Lang::PowerShell,
+                b"\"\"\"quoted\"\"\"\n# do not edit\n$x = 1\n",
+            ),
+        ]);
     }
 
     #[test]
@@ -330,18 +438,18 @@ mod tests {
         let mut far = b"// ".to_vec();
         far.extend(vec![b'x'; 2048]);
         far.extend_from_slice(b"\n// do not edit\n");
-        assert!(!generated_go(&far));
+        assert!(!is_generated(&far, Lang::Go));
         let mut near = b"// ".to_vec();
         near.extend(vec![b'x'; 1024]);
         near.extend_from_slice(b"\n// do not edit\n");
-        assert!(generated_go(&near));
+        assert!(is_generated(&near, Lang::Go));
     }
 
     #[test]
     fn unterminated_block_at_window_end_does_not_panic() {
         let mut open_only = b"/*\n".to_vec();
         open_only.extend(vec![b'x'; 2048]);
-        assert!(!generated_go(&open_only));
+        assert!(!is_generated(&open_only, Lang::Go));
         let mut open_marker = b"/* do not edit\n".to_vec();
         open_marker.extend(vec![b'x'; 2048]);
         assert!(is_generated(&open_marker, Lang::Go));
