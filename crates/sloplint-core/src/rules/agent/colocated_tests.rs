@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::Strictness;
 use crate::facts::WorldFacts;
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{CodeRole, RolePolicy, Shift};
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
 use crate::rules::{parse_options, string_values};
@@ -73,14 +74,15 @@ impl WorldRule for ColocatedTests {
         let mut evidenced: HashSet<(&str, &str)> = HashSet::new();
         for file in files {
             if is_evidence(file) {
-                evidenced.insert((file.facts.lang.config_key(), file.facts.package.as_str()));
+                evidenced.insert((coverage_scope(file.facts.lang), file.facts.package.as_str()));
             }
         }
         for file in files {
             if self.skipped(file) {
                 continue;
             }
-            if !evidenced.contains(&(file.facts.lang.config_key(), file.facts.package.as_str())) {
+            let scope = (coverage_scope(file.facts.lang), file.facts.package.as_str());
+            if !evidenced.contains(&scope) {
                 continue;
             }
             if imported.contains(file.path) {
@@ -188,6 +190,13 @@ fn key_len(key: &str) -> usize {
     key.split('/').count()
 }
 
+fn coverage_scope(lang: Lang) -> &'static str {
+    match lang {
+        Lang::JavaScript | Lang::TypeScript | Lang::Tsx => "javascript",
+        _ => lang.config_key(),
+    }
+}
+
 fn scoped_package<'a>(file: &WorldFile<'a>) -> Option<&'a str> {
     if file.facts.package_from_manifest {
         Some(file.facts.package.as_str())
@@ -228,7 +237,7 @@ fn record<'a>(
     if longest == 0 {
         return;
     }
-    let scope = file.facts.lang.config_key();
+    let scope = coverage_scope(file.facts.lang);
     let package = scoped_package(file);
     for key in owned {
         let slot = keys.entry((scope, key)).or_default();
@@ -249,7 +258,7 @@ fn is_covered<'a>(
 ) -> bool {
     let owned = crate::module_keys::library_keys(file.facts.lang, file.path);
     let longest = owned.iter().map(|key| key_len(key)).max().unwrap_or(0);
-    let scope = file.facts.lang.config_key();
+    let scope = coverage_scope(file.facts.lang);
     let package = scoped_package(file);
     owned.iter().any(|key| {
         keys.get(&(scope, key.clone()))

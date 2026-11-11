@@ -458,3 +458,84 @@ fn fallback_module_stays_covered_by_manifest_test_import() {
         "a manifest package's import still covers a fallback module"
     );
 }
+
+#[test]
+fn typescript_module_is_covered_by_javascript_test_import() {
+    let rule = rule();
+    let foo = manifest(lib(Lang::TypeScript, "app", 1));
+    let foo_test = manifest(evidence(Lang::JavaScript, "app", &["./foo"]));
+    let other_test = manifest(test_file(Lang::TypeScript, "app"));
+    let files = [
+        WorldFile {
+            path: "src/foo.ts",
+            facts: &foo,
+        },
+        WorldFile {
+            path: "src/foo.test.js",
+            facts: &foo_test,
+        },
+        WorldFile {
+            path: "src/other.test.ts",
+            facts: &other_test,
+        },
+    ];
+    assert_eq!(
+        check(&rule, &files),
+        Vec::<String>::new(),
+        "a JavaScript test importing ./foo covers foo.ts in the same package"
+    );
+}
+
+#[test]
+fn javascript_module_is_covered_by_typescript_test_import() {
+    let rule = rule();
+    let bar = manifest(lib(Lang::JavaScript, "app", 1));
+    let bar_test = manifest(evidence(Lang::TypeScript, "app", &["./bar"]));
+    let other_test = manifest(test_file(Lang::JavaScript, "app"));
+    let files = [
+        WorldFile {
+            path: "src/bar.js",
+            facts: &bar,
+        },
+        WorldFile {
+            path: "src/bar.test.ts",
+            facts: &bar_test,
+        },
+        WorldFile {
+            path: "src/other.test.js",
+            facts: &other_test,
+        },
+    ];
+    assert_eq!(
+        check(&rule, &files),
+        Vec::<String>::new(),
+        "a TypeScript test importing ./bar covers bar.js in the same package"
+    );
+}
+
+#[test]
+fn python_module_is_not_covered_by_matching_javascript_test() {
+    let rule = rule();
+    let util = lib(Lang::Python, "pkg", 1);
+    let util_test = evidence(Lang::JavaScript, "pkg", &["./util"]);
+    let gate = test_file(Lang::Python, "pkg");
+    let files = [
+        WorldFile {
+            path: "src/util.py",
+            facts: &util,
+        },
+        WorldFile {
+            path: "src/util.test.js",
+            facts: &util_test,
+        },
+        WorldFile {
+            path: "src/other_test.py",
+            facts: &gate,
+        },
+    ];
+    assert_eq!(
+        check(&rule, &files),
+        ["src/util.py".to_string()],
+        "a same-stem JavaScript test does not cover a Python module"
+    );
+}
