@@ -80,6 +80,30 @@ fn computed_getattr_reports_dynamic_symbol() {
     );
 }
 
+fn computed_names(source: &str) -> usize {
+    let analysis = facts_of(source);
+    assert!(
+        analysis.parse_error.is_none(),
+        "parses, got {:?}",
+        analysis.parse_error
+    );
+    analysis.facts.dynamic_symbols.len()
+}
+
+#[test]
+fn a_literal_loop_name_is_static_until_something_rebinds_it() {
+    let plain = "def f(obj):\n    for k in [\"a\", \"b\"]:\n        getattr(obj, k)\n";
+    let subscript = "def f(obj, d):\n    for k in [\"a\", \"b\"]:\n        d[k] = 1\n        getattr(obj, k)\n";
+    let assigned = "def f(obj, dyn):\n    for k in [\"a\", \"b\"]:\n        k = dyn\n        getattr(obj, k)\n";
+    let inner_loop = "def f(obj, pairs):\n    for k in [\"a\", \"b\"]:\n        for k, v in pairs:\n            getattr(obj, k)\n";
+    let comprehension = "def f(obj, names):\n    for k in [\"a\", \"b\"]:\n        out = [getattr(obj, k) for k in names]\n";
+    assert_eq!(computed_names(plain), 0, "the loop name is a literal");
+    assert_eq!(computed_names(subscript), 0, "a keyed write binds nothing");
+    assert_eq!(computed_names(assigned), 1, "an assignment rebinds it");
+    assert_eq!(computed_names(inner_loop), 1, "a tuple target rebinds it");
+    assert_eq!(computed_names(comprehension), 1, "a clause rebinds it");
+}
+
 #[test]
 fn deep_plus_chain_marks_concat_without_recursion() {
     const OPERANDS: usize = 20_000;

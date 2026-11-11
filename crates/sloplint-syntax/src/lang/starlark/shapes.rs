@@ -213,38 +213,79 @@ pub(crate) fn name_from_literal_loop(cx: &Cx<'_, '_>, name: Node<'_>) -> bool {
     }
 
     for a in cx.ancestors() {
-        if matches!(a.kind(), "function_definition" | "lambda") {
-            return false;
+        if let Some(verdict) = binder_verdict(cx, a, name, wanted) {
+            return verdict;
         }
-        if a.kind() != "for_statement" {
-            continue;
-        }
-        let Some(left) = child_by_field(a, "left") else {
-            continue;
-        };
-        if left.kind() != "identifier" || text(cx, left) != wanted {
-            continue;
-        }
-        let Some(right) = child_by_field(a, "right") else {
-            return false;
-        };
-        if !matches!(right.kind(), "list" | "tuple") {
-            return false;
-        }
-        let mut cursor = right.walk();
-        let mut count = 0;
-        for child in right.children(&mut cursor).filter(|c| c.is_named()) {
-            count += 1;
-            if !is_static_name(child) {
-                return false;
+    }
+    false
+}
+
+fn binder_verdict(cx: &Cx<'_, '_>, a: Node<'_>, name: Node<'_>, wanted: &str) -> Option<bool> {
+    match a.kind() {
+        "function_definition" | "lambda" => Some(false),
+        "for_statement" => {
+            let left = child_by_field(a, "left")?;
+            if left.kind() != "identifier" || text(cx, left) != wanted {
+                return None;
             }
+            Some(literal_loop_holds(cx, a, name, wanted))
         }
-        if count == 0 {
-            return false;
+        _ => None,
+    }
+}
+
+fn literal_loop_holds(cx: &Cx<'_, '_>, lp: Node<'_>, name: Node<'_>, wanted: &str) -> bool {
+    let Some(right) = child_by_field(lp, "right") else {
+        return false;
+    };
+    if !matches!(right.kind(), "list" | "tuple") {
+        return false;
+    }
+    let items = named_children(right);
+    if items.is_empty() || !items.into_iter().all(is_static_name) {
+        return false;
+    }
+    child_by_field(lp, "body").is_some_and(|body| {
+        body.start_byte() <= name.start_byte()
+            && name.end_byte() <= body.end_byte()
+            && !body_rebinds(cx, body, wanted)
+    })
+}
+
+const LOOP_BODY_CAP: usize = 10_000;
+
+fn body_rebinds(cx: &Cx<'_, '_>, body: Node<'_>, wanted: &str) -> bool {
+    let mut pending = vec![body];
+    let mut visits = 0usize;
+    while let Some(next) = pending.pop() {
+        visits += 1;
+        if visits > LOOP_BODY_CAP || rebinds_here(cx, next, wanted) {
+            return true;
         }
-        return child_by_field(a, "body").is_some_and(|body| {
-            body.start_byte() <= name.start_byte() && name.end_byte() <= body.end_byte()
-        });
+        pending.extend(named_children(next));
+    }
+    false
+}
+
+fn rebinds_here(cx: &Cx<'_, '_>, n: Node<'_>, wanted: &str) -> bool {
+    let target = match n.kind() {
+        "assignment" | "augmented_assignment" | "for_statement" | "for_in_clause" => {
+            child_by_field(n, "left")
+        }
+        "function_definition" => child_by_field(n, "name"),
+        _ => None,
+    };
+    target.is_some_and(|target| binds(cx, target, wanted))
+}
+
+fn binds(cx: &Cx<'_, '_>, target: Node<'_>, wanted: &str) -> bool {
+    let mut pending = vec![target];
+    while let Some(next) = pending.pop() {
+        match next.kind() {
+            "identifier" if text(cx, next) == wanted => return true,
+            "subscript" | "attribute" | "call" => {}
+            _ => pending.extend(named_children(next)),
+        }
     }
     false
 }
