@@ -246,3 +246,112 @@ const WITH_IN_BODY: &str = "function load(obj, scope) {\n  for (const name of ['
 fn with_statement_in_literal_loop_still_flags() {
     assert_eq!(dynamics(WITH_IN_BODY).len(), 1);
 }
+
+const PAREN_COMPUTED_CALLEE: &str = r#"export function run(handlers, payload, name) {
+  (handlers[name])(payload);
+}
+"#;
+
+#[test]
+fn parenthesized_computed_callee_still_flags() {
+    assert_eq!(dynamics(PAREN_COMPUTED_CALLEE).len(), 1);
+}
+
+const PAREN_LITERAL_KEY: &str = r#"export function run(handlers, payload) {
+  (handlers["save"])(payload);
+}
+"#;
+
+#[test]
+fn parenthesized_literal_key_stays_silent() {
+    assert_eq!(dynamics(PAREN_LITERAL_KEY), Vec::<String>::new());
+}
+
+const PAREN_PLAIN_CALLEE: &str = r#"export function run(fn, payload) {
+  (fn)(payload);
+}
+"#;
+
+#[test]
+fn parenthesized_plain_callee_stays_silent() {
+    assert_eq!(dynamics(PAREN_PLAIN_CALLEE), Vec::<String>::new());
+}
+
+const GLOBAL_FUNCTION_CTOR: &str = r#"export function build(source) {
+  return new globalThis.Function(source);
+}
+"#;
+
+#[test]
+fn global_this_function_ctor_still_flags() {
+    assert_eq!(dynamics(GLOBAL_FUNCTION_CTOR).len(), 1);
+}
+
+const WINDOW_FUNCTION_CTOR: &str = r#"export function build(source) {
+  return new window.Function(source);
+}
+"#;
+
+#[test]
+fn window_function_ctor_still_flags() {
+    assert_eq!(dynamics(WINDOW_FUNCTION_CTOR).len(), 1);
+}
+
+const OWN_FUNCTION_CTOR: &str = r#"export function build(source, my) {
+  return new my.Function(source);
+}
+"#;
+
+#[test]
+fn own_namespace_function_ctor_stays_silent() {
+    assert_eq!(dynamics(OWN_FUNCTION_CTOR), Vec::<String>::new());
+}
+
+const TS_NON_NULL_CALLEE: &str = r#"export function run(handlers: Record<string, (n: number) => void>, name: string): void {
+  handlers[name]!(1);
+}
+"#;
+
+#[test]
+fn typescript_non_null_callee_still_flags() {
+    assert_eq!(
+        typed(TS_NON_NULL_CALLEE, Lang::TypeScript, "case.ts").len(),
+        1
+    );
+}
+
+const TS_AS_CALLEE: &str = r#"export function run(handlers: Record<string, (n: number) => void>, name: string): void {
+  (handlers[name] as (n: number) => void)(1);
+}
+"#;
+
+#[test]
+fn typescript_as_callee_still_flags() {
+    assert_eq!(typed(TS_AS_CALLEE, Lang::TypeScript, "case.ts").len(), 1);
+}
+
+const TS_SATISFIES_CALLEE: &str = r#"export function run(handlers: Record<string, (n: number) => void>, name: string): void {
+  (handlers[name] satisfies (n: number) => void)(1);
+}
+"#;
+
+#[test]
+fn typescript_satisfies_callee_still_flags() {
+    assert_eq!(
+        typed(TS_SATISFIES_CALLEE, Lang::TypeScript, "case.ts").len(),
+        1
+    );
+}
+
+const TS_PAREN_LITERAL_KEY: &str = r#"export function run(handlers: Record<string, (n: number) => void>): void {
+  (handlers["save"])(1);
+}
+"#;
+
+#[test]
+fn typescript_parenthesized_literal_key_stays_silent() {
+    assert_eq!(
+        typed(TS_PAREN_LITERAL_KEY, Lang::TypeScript, "case.ts"),
+        Vec::<String>::new()
+    );
+}
