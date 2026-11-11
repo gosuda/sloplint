@@ -38,5 +38,6 @@ mod root_resolution;
 mod skipped_baseline;
 #[path = "pipeline/skipped_names.rs"]
 mod skipped_names;
+#[cfg(unix)]
 #[path = "support/spawn.rs"]
 mod spawn;

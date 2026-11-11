@@ -1,12 +1,12 @@
 //! Unreadable sources and directories, plus counted skips, through the public API and the CLI.
 
-use super::{
-    BASELINE, GENERIC, SAMPLE, assert_cli_failure, assert_failed, assert_io, cache_files,
-    cache_home, cause_of, cli_in, fired, io_failure, json_args, opts, project, put, quiet_stdout,
-    run_ok, str_of, text, tweak,
-};
 #[cfg(unix)]
-use super::{DENIED, assert_denied, lock, lock_dir};
+use super::{
+    BASELINE, DENIED, assert_cli_failure, assert_denied, assert_failed, assert_io, cache_files,
+    cache_home, cause_of, cli_in, io_failure, json_args, lock, lock_dir, quiet_stdout, str_of,
+    text, tweak,
+};
+use super::{GENERIC, SAMPLE, fired, opts, project, put, run_ok};
 #[cfg(unix)]
 use sloplint::run;
 

@@ -1,5 +1,6 @@
 //! Skip gates and ratchet baselines: opted-in gate failures, true skip reasons, and distinct invalid-byte names.
 
+#[cfg(unix)]
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 

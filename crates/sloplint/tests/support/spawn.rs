@@ -3,7 +3,6 @@ use std::io;
 use std::process::Output;
 use std::time::Duration;
 
-#[cfg(unix)]
 pub fn spawn_forgiving(mut spawn: impl FnMut() -> io::Result<Output>) -> Output {
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
     let mut last_busy = None;

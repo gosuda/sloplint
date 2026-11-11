@@ -19,6 +19,7 @@ mod persistence;
 mod ratchet_identity;
 #[path = "invariants/rule_filters.rs"]
 mod rule_filters;
+#[cfg(target_os = "linux")]
 #[path = "support/spawn.rs"]
 mod spawn;
 #[path = "invariants/suppression_oracles.rs"]

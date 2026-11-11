@@ -2,6 +2,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
+#[cfg(unix)]
 pub(super) fn owner_ok(dir_uid: u32, probe_uid: u32) -> bool {
     dir_uid == probe_uid
 }

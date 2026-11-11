@@ -1,11 +1,13 @@
 //! Custom rule files: explicit selection loads hidden and ignored files.
 
+#[cfg(unix)]
 use sloplint::{RunError, run};
+#[cfg(unix)]
 use sloplint_core::ConfigError;
 
+use super::{custom_rule, run_ok, standard, tempdir, write};
 #[cfg(unix)]
-use super::symlink;
-use super::{custom_rule, mkdir, run_ok, standard, tempdir, write};
+use super::{mkdir, symlink};
 
 #[test]
 fn audit_custom_files_hidden_and_ignored_are_loaded() {

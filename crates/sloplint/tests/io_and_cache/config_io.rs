@@ -1,10 +1,8 @@
 //! Explicit and implicit configuration path failures: directories and unreadable files.
 
 #[cfg(unix)]
-use super::{DENIED, assert_denied, lock};
-use super::{
-    assert_cli_failure, assert_io, cause_of, io_failure, mkdir, opts, project, put, str_of, tweak,
-};
+use super::{DENIED, assert_denied, assert_io, lock, put};
+use super::{assert_cli_failure, cause_of, io_failure, mkdir, opts, project, str_of, tweak};
 use sloplint::run;
 use std::io::ErrorKind::NotFound;
 
