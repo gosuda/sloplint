@@ -77,12 +77,13 @@ Go and Dart count imports of their own module as one external root. Ruby records
 - A Java anonymous class field write can land on an enclosing method local of the same name.
 - R `<<-` records no write.
 - In function-scoped languages a loop target is the function variable.
-- A reassigned loop or pattern variable records no write in Java enhanced `for`, C# `for` initializers, JS and TS `for (let ...)`, Dart `for (var ...)`, and Rust `mut` pattern binders.
-- A Swift `if let` binder also hides an outer variable of the same name in the `else` branch, and a Dart `catch` variable does so in `finally`.
-- A Scala constructor pattern `case Foo(x)` registers `Foo` as a binder as well as `x`.
+- A reassigned JS or TS `for (let ...)` loop variable records no write.
+- A Swift `if var` binder also receives a write to an outer variable of the same name in the `else` branch.
+- A literal name passed to `dlsym`, `GetProcAddress` or `NSSelectorFromString` is not a dynamic lookup; a variable or a built string is.
 - In JS and TS a write before the `var` declaration of the same name records nothing.
 - A Ruby name first assigned inside one block shares a binding with the same name first assigned inside a sibling block.
-- A Python `nonlocal` name assigned inside a nested function is recorded as a local of that function.
+- A Python `nonlocal` statement is read only at the top level of the nested function body.
+- agent/colocated-tests matches a module only against tests in its own package.
 
 ## Commit and pull request conventions
 
