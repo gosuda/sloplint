@@ -385,7 +385,11 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
         ) {
             return true;
         }
-        self.lang == Lang::Scala && crate::lang::scala::block_tails_value(inner)
+        if self.lang != Lang::Scala {
+            return false;
+        }
+        let cx = self.make_cx();
+        crate::lang::scala::block_tails_value(&cx, inner)
     }
 
     fn shadow_closure_params(&mut self, node: tree_sitter::Node<'_>) {

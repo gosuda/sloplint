@@ -1,2 +1,2 @@
 # Near-miss: private function without a return annotation; fully typed public function.
-# Near-miss: a block body tailing in a call or in a nested def plus a call keeps its valueless fact.
+# Near-miss: a block body tailing in a call, an assignment, a match, or a nested def keeps its valueless fact.

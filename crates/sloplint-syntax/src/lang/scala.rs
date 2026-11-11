@@ -2,7 +2,7 @@ use sloplint_core::facts::{AmbientKind, Assertion, FieldCopy, Handler, Import, P
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, rfind_named_child,
+    CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, rfind_named_child, text,
 };
 use crate::spec::Role;
 use sloplint_core::role::CodeRole;
@@ -145,15 +145,18 @@ impl LangHooks for ScalaHooks {
     }
 }
 
-pub(crate) fn block_tails_value(body: Node<'_>) -> bool {
+pub(crate) fn block_tails_value(cx: &Cx<'_, '_>, body: Node<'_>) -> bool {
+    if !has_body_equals(body) {
+        return false;
+    }
     let Some(last) = rfind_named_child(body, |c| !matches!(c.kind(), "comment" | "block_comment"))
     else {
         return false;
     };
-    if VALUE_TAIL_KINDS.contains(&last.kind()) {
-        return true;
+    if last.kind() == "infix_expression" {
+        return infix_is_value(cx, last);
     }
-    last.kind() == "if_expression" && last.child_by_field_name("alternative").is_some()
+    VALUE_TAIL_KINDS.contains(&last.kind())
 }
 
 const VALUE_TAIL_KINDS: &[&str] = &[
@@ -165,9 +168,7 @@ const VALUE_TAIL_KINDS: &[&str] = &[
     "instance_expression",
     "integer_literal",
     "interpolated_string_expression",
-    "infix_expression",
     "lambda_expression",
-    "match_expression",
     "method_value",
     "null_literal",
     "postfix_expression",
@@ -175,3 +176,33 @@ const VALUE_TAIL_KINDS: &[&str] = &[
     "string",
     "tuple_expression",
 ];
+
+fn has_body_equals(body: Node<'_>) -> bool {
+    let Some(def) = body.parent() else {
+        return false;
+    };
+    let mut cursor = def.walk();
+    if !cursor.goto_first_child() {
+        return false;
+    }
+    loop {
+        let child = cursor.node();
+        if !child.is_named() && child.kind() == "=" {
+            return true;
+        }
+        if !cursor.goto_next_sibling() {
+            return false;
+        }
+    }
+}
+
+fn infix_is_value<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
+    let Some(op) = n.child_by_field_name("operator") else {
+        return false;
+    };
+    if op.kind() != "operator_identifier" {
+        return false;
+    }
+    let op = text(cx, op);
+    !op.ends_with('=') || matches!(op, "==" | "!=" | "<=" | ">=")
+}

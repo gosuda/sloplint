@@ -3,7 +3,7 @@
 //! A return statement carrying a value, an expression body, and any `yield`
 //! all mark `has_value_return`; a bare return or a print-only body does not.
 //! A Scala block body whose last statement is plainly a value marks it too;
-//! a call, assignment, definition, or empty tail does not.
+//! a call, assignment, letter-operator, if, match, or procedure tail does not.
 
 use sloplint_core::lang::Lang;
 
@@ -296,20 +296,11 @@ fn scala_block_tails_mark_the_fact() {
     assert!(
         has_value_return(
             Lang::Scala,
-            "alt.scala",
-            "def pick(x: Int) = { if (x > 0) 1 else 0 }\n",
-            "pick"
+            "sum.scala",
+            "def sum(a: Int, b: Int) = { a + b }\n",
+            "sum"
         ),
-        "a Scala block tailing in an if with else is a value return"
-    );
-    assert!(
-        has_value_return(
-            Lang::Scala,
-            "arms.scala",
-            "def describe(x: Int) = {\n  x match {\n    case 0 => 0\n    case _ => 1\n  }\n}\n",
-            "describe"
-        ),
-        "a Scala block tailing in a match is a value return"
+        "a block tailing in a symbolic infix expression is a value return"
     );
     assert!(
         has_value_return(Lang::Scala, "expr.scala", "def count() = 42\n", "count"),
@@ -340,6 +331,42 @@ fn scala_unit_tails_keep_the_valueless_fact() {
     assert!(
         !has_value_return(
             Lang::Scala,
+            "bump.scala",
+            "def bump(count: Int) = { count += 1 }\n",
+            "bump"
+        ),
+        "an assignment-operator infix tail is no value return"
+    );
+    assert!(
+        !has_value_return(
+            Lang::Scala,
+            "run.scala",
+            "def run() = { xs foreach println }\n",
+            "run"
+        ),
+        "a letter-operator infix tail may be Unit, so it is no value return"
+    );
+    assert!(
+        !has_value_return(
+            Lang::Scala,
+            "arms.scala",
+            "def run(x: Int) = {\n  x match {\n    case 0 => println(0)\n    case _ => println(1)\n  }\n}\n",
+            "run"
+        ),
+        "a match tail over Unit arms is no value return"
+    );
+    assert!(
+        !has_value_return(
+            Lang::Scala,
+            "branch.scala",
+            "def run(x: Int) = { if (x > 0) println(1) else println(2) }\n",
+            "run"
+        ),
+        "an if with else over Unit branches is no value return"
+    );
+    assert!(
+        !has_value_return(
+            Lang::Scala,
             "maybe.scala",
             "def maybe(x: Int) = { if (x > 0) 1 }\n",
             "maybe"
@@ -349,6 +376,10 @@ fn scala_unit_tails_keep_the_valueless_fact() {
     assert!(
         !has_value_return(Lang::Scala, "noop.scala", "def noop() = {}\n", "noop"),
         "an empty block is no value return"
+    );
+    assert!(
+        !has_value_return(Lang::Scala, "proc.scala", "def show() { 42 }\n", "show"),
+        "a procedure body without = returns Unit, so it is no value return"
     );
     let source = "def outer() = { def inner() = { 1 }; println(inner()) }\n";
     assert!(
