@@ -388,3 +388,48 @@ fn typescript_parenthesized_literal_key_stays_silent() {
         Vec::<String>::new()
     );
 }
+
+const TS_CONST_LIST_LOOP: &str = r#"export function run(handlers: Record<string, () => void>): void {
+  for (const key of ["open", "close"] as const) {
+    handlers[key]();
+  }
+}
+"#;
+
+#[test]
+fn typescript_const_asserted_list_loop_stays_silent() {
+    assert_eq!(
+        typed(TS_CONST_LIST_LOOP, Lang::TypeScript, "case.ts"),
+        Vec::<String>::new()
+    );
+}
+
+const INDIRECT_EVAL: &str = r#"export function run(source) {
+  return (0, eval)(source);
+}
+"#;
+
+#[test]
+fn indirect_eval_still_flags() {
+    assert_eq!(dynamics(INDIRECT_EVAL), ["eval"]);
+}
+
+const HOST_EVAL: &str = r#"export function run(source) {
+  return globalThis.eval(source);
+}
+"#;
+
+#[test]
+fn host_qualified_eval_still_flags() {
+    assert_eq!(dynamics(HOST_EVAL), ["eval"]);
+}
+
+const OWN_EVAL: &str = r#"export function run(source, parser) {
+  return (0, parser.eval)(source);
+}
+"#;
+
+#[test]
+fn own_namespace_eval_stays_silent() {
+    assert_eq!(dynamics(OWN_EVAL), Vec::<String>::new());
+}

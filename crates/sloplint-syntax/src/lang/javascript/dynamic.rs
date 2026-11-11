@@ -1,5 +1,6 @@
 use tree_sitter::Node;
 
+use super::items::unwrap_expression;
 use crate::hooks::{Cx, child_by_field, code_children, named_children, text};
 
 pub(crate) fn closed_name(cx: &Cx<'_, '_>, expr: Node<'_>) -> bool {
@@ -80,10 +81,10 @@ fn head_binds_want(cx: &Cx<'_, '_>, loop_node: Node<'_>, want: &str) -> bool {
 }
 
 fn inline_string_array(right: Node<'_>) -> bool {
-    if right.kind() != "array" {
+    let Some(list) = unwrap_expression(right).filter(|list| list.kind() == "array") else {
         return false;
-    }
-    let kids = code_children(right);
+    };
+    let kids = code_children(list);
     if kids.is_empty() {
         return false;
     }

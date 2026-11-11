@@ -287,12 +287,17 @@ const EXPRESSION_WRAPPERS: &[&str] = &[
 
 const UNWRAP_CAP: usize = 16;
 
-fn unwrap_expression(mut node: Node<'_>) -> Option<Node<'_>> {
+fn wrapped_expression(node: Node<'_>) -> Option<Node<'_>> {
+    match node.kind() {
+        "sequence_expression" => code_children(node).pop(),
+        kind if EXPRESSION_WRAPPERS.contains(&kind) => first_code(node),
+        _ => None,
+    }
+}
+
+pub(super) fn unwrap_expression(mut node: Node<'_>) -> Option<Node<'_>> {
     for _ in 0..UNWRAP_CAP {
-        if !EXPRESSION_WRAPPERS.contains(&node.kind()) {
-            return Some(node);
-        }
-        let Some(inner) = first_code(node) else {
+        let Some(inner) = wrapped_expression(node) else {
             return Some(node);
         };
         node = inner;
@@ -315,6 +320,7 @@ fn call_dynamic(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str> {
     match function.kind() {
         "subscript_expression" => subscript_call(cx, function),
         "identifier" => (text(cx, function) == "eval").then_some("eval"),
+        "member_expression" => host_member(cx, function, "eval").then_some("eval"),
         "import" => {
             let first = child_by_field(n, "arguments").and_then(first_code)?;
             (first.kind() != "string" && !closed_name(cx, first)).then_some("dynamic import")
@@ -334,18 +340,19 @@ pub(crate) fn dynamic_site(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str>
     }
 }
 
-const FUNCTION_HOSTS: &[&str] = &["globalThis", "window", "self", "global"];
+const GLOBAL_HOSTS: &[&str] = &["globalThis", "window", "self", "global"];
+
+fn host_member(cx: &Cx<'_, '_>, member: Node<'_>, name: &str) -> bool {
+    child_by_field(member, "object")
+        .and_then(unwrap_expression)
+        .is_some_and(|object| GLOBAL_HOSTS.contains(&text(cx, object)))
+        && child_by_field(member, "property").is_some_and(|property| text(cx, property) == name)
+}
 
 fn function_constructor(cx: &Cx<'_, '_>, constructor: Node<'_>) -> bool {
     match constructor.kind() {
         "identifier" => text(cx, constructor) == "Function",
-        "member_expression" => {
-            child_by_field(constructor, "object")
-                .and_then(unwrap_expression)
-                .is_some_and(|object| FUNCTION_HOSTS.contains(&text(cx, object)))
-                && child_by_field(constructor, "property")
-                    .is_some_and(|property| text(cx, property) == "Function")
-        }
+        "member_expression" => host_member(cx, constructor, "Function"),
         _ => false,
     }
 }
