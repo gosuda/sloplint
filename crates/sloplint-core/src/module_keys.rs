@@ -387,6 +387,7 @@ fn ts_segments(importer: &str, spec: &str, segs: &mut Vec<String>) {
             let mut aliased = String::from("src/");
             aliased.push_str(rest);
             tail_segments(&aliased, &['/'], segs);
+            strip_js_extension(segs.last_mut());
             return;
         }
         tail_segments(spec, &['/'], segs);

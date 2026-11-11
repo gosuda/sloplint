@@ -172,6 +172,18 @@ fn ts_alias_prefix_covers_src_root() {
         !shared(Lang::TypeScript, "src/foo.ts", "@scope/foo"),
         "@scope must not cover"
     );
+    for spec in ["@/widget.ts", "~/widget.js"] {
+        assert_eq!(
+            import_keys(Lang::TypeScript, "test/widget.test.ts", spec),
+            ["src/widget"],
+            "extension in {spec}"
+        );
+    }
+    assert_eq!(
+        import_keys(Lang::TypeScript, "test/widget.test.ts", "@/widget.data"),
+        ["src/widget.data"],
+        "a dotted basename keeps its last part"
+    );
 }
 #[test]
 fn dotted_import_splits_for_jvm_langs() {
