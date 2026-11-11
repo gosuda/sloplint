@@ -395,3 +395,72 @@ fn plain_let_then_let_mut_redeclares() {
         );
     });
 }
+
+#[test]
+fn plain_let_struct_mut_field_declares() {
+    let source =
+        "fn f(s: S) -> i32 {\n    let S { mut x, .. } = s;\n    x += 1;\n    x += 2;\n    x\n}\n";
+    with_rust_bindings(source, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(
+            xs.len(),
+            1,
+            "the mut field of a plain let declares its binding, was 0 when the mut walker skipped field patterns: {found:?}"
+        );
+        assert_eq!(
+            (
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (2, 3, 4),
+            "both writes land on the field binding: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn uppercase_mut_let_keeps_its_binding() {
+    let source = "fn f() -> i32 {\n    let mut N = 0;\n    N += 1;\n    N += 2;\n    N\n}\n";
+    with_rust_bindings(source, |found| {
+        let ns = named_all(found, "N");
+        assert_eq!(
+            ns.len(),
+            1,
+            "a mut-bound name is a binder at any case, was 0 when the path filter ran on direct mut bindings: {found:?}"
+        );
+        assert_eq!(
+            (
+                ns[0].write_lines,
+                ns[0].first_write_line,
+                ns[0].last_write_line
+            ),
+            (2, 3, 4),
+            "both writes land on the N binding: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn uppercase_const_pattern_registers_nothing() {
+    let source = "fn f(o: Option<i32>) -> i32 {\n    let mut n = 0;\n    if let Some(MAX) = o {\n        n += 1;\n    }\n    n += 2;\n    n\n}\n";
+    with_rust_bindings(source, |found| {
+        let consts = named_all(found, "MAX");
+        assert_eq!(
+            consts.len(),
+            0,
+            "a constant pattern binds nothing: {found:?}"
+        );
+        let ns = named_all(found, "n");
+        assert_eq!(ns.len(), 1, "no inner declaration hides n: {found:?}");
+        assert_eq!(
+            (
+                ns[0].write_lines,
+                ns[0].first_write_line,
+                ns[0].last_write_line
+            ),
+            (2, 4, 6),
+            "both writes still reach the single outer binding: {found:?}"
+        );
+    });
+}

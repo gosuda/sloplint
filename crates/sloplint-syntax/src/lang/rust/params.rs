@@ -3,24 +3,24 @@ use tree_sitter::Node;
 
 use crate::hooks::{Cx, child_by_field, has_child_kind, named_children, pos_of, text};
 
-pub(super) fn push_ident_tree<'a>(cx: &Cx<'_, '_>, root: Node<'a>, out: &mut Vec<Node<'a>>) {
+pub(super) fn push_ident_tree<'a>(root: Node<'a>, out: &mut Vec<Node<'a>>) {
     let mut stack = vec![root];
     while let Some(cur) = stack.pop() {
         if cur.kind() == "identifier" || cur.kind() == "shorthand_field_identifier" {
-            if is_pat_binding(text(cx, cur)) {
-                out.push(cur);
-            }
+            out.push(cur);
         } else {
             push_pattern_kids(cur, &mut stack);
         }
     }
 }
 
-pub(super) fn push_mut_idents<'a>(cx: &Cx<'_, '_>, root: Node<'a>, out: &mut Vec<Node<'a>>) {
+pub(super) fn push_mut_idents<'a>(root: Node<'a>, out: &mut Vec<Node<'a>>) {
     let mut stack = vec![root];
     while let Some(cur) = stack.pop() {
-        if cur.kind() == "mut_pattern" {
-            push_ident_tree(cx, cur, out);
+        if cur.kind() == "mut_pattern"
+            || cur.kind() == "field_pattern" && has_child_kind(cur, "mutable_specifier")
+        {
+            push_ident_tree(cur, out);
         } else {
             push_pattern_kids(cur, &mut stack);
         }
@@ -126,7 +126,7 @@ fn push_pattern_params<'s>(
     out: &mut Vec<Param<'s>>,
 ) {
     let mut ids = Vec::new();
-    push_ident_tree(cx, pattern, &mut ids);
+    push_ident_tree(pattern, &mut ids);
     if ids.is_empty() {
         out.push(typed_param("", ty));
     }
@@ -176,9 +176,9 @@ pub(super) fn decl_names<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s st
             };
             let mut found = Vec::new();
             if has_child_kind(n, "mutable_specifier") {
-                push_ident_tree(cx, pat, &mut found);
+                push_ident_tree(pat, &mut found);
             } else {
-                push_mut_idents(cx, pat, &mut found);
+                push_mut_idents(pat, &mut found);
             }
             for id in found {
                 out.push((text(cx, id), pos_of(id)));
@@ -266,7 +266,7 @@ fn push_flow_binder_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<(&'
             || cur.kind() == "field_pattern" && has_child_kind(cur, "mutable_specifier")
         {
             let mut found = Vec::new();
-            push_ident_tree(cx, cur, &mut found);
+            push_ident_tree(cur, &mut found);
             for id in found {
                 out.push((text(cx, id), pos_of(id)));
             }
