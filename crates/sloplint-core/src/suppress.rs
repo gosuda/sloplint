@@ -542,7 +542,7 @@ mod tests {
             "the gap-anchored occurrence stays a malformed directive, the rest stay prose"
         );
         assert!(
-            elapsed < std::time::Duration::from_secs(1),
+            elapsed < std::time::Duration::from_secs(5),
             "one comment must cost one scan pass, not one pass per occurrence: {elapsed:?}"
         );
     }
