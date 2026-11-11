@@ -75,7 +75,7 @@ struct ForwardIndex<'a> {
 
 fn forward_index<'a>(facts: &'a FileFacts<'_>) -> ForwardIndex<'a> {
     let mut twins: HashMap<&str, u32> = HashMap::new();
-    for function in &facts.functions {
+    for function in facts.functions.iter().filter(|function| !function.in_test) {
         *twins.entry(function.name).or_insert(0) += 1;
     }
     let mut valued: HashSet<&str> = HashSet::new();
@@ -384,6 +384,15 @@ mod tests {
         let (mut functions, calls) = forward_facts();
         functions.push(fun("greet", vec![param("name")], None));
         assert_eq!(flagged("fn greet() {}\n", functions, calls), 0);
+    }
+
+    #[test]
+    fn twin_name_in_a_test_does_not_hide_the_wrapper() {
+        let (mut functions, calls) = forward_facts();
+        let mut test_twin = fun("greet", vec![param("name")], None);
+        test_twin.in_test = true;
+        functions.push(test_twin);
+        assert_eq!(flagged("fn greet() {}\n", functions, calls), 1);
     }
     #[test]
     fn unnamed_callback_stays_silent() {
