@@ -6,10 +6,10 @@ use serde::{Deserialize, Serialize};
 
 use super::{parse_options, string_values};
 use crate::config::Strictness;
-use crate::facts::NamedSite;
+use crate::facts::{NamedSite, WorldFacts};
 use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::lang::Lang;
-use crate::role::{RolePolicy, Shift};
+use crate::role::{RolePolicy, Shift, role_at};
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
 
 const ALLOWED_NAMES: &[&str] = &[
@@ -113,6 +113,10 @@ impl WorldRule for HomonymDefinitions {
 
 type Bucket<'a> = Vec<(Lang, &'a str, &'a str, usize)>;
 
+fn eligible(facts: &WorldFacts, line: u32) -> bool {
+    INFO.roles.shift(role_at(facts.role, &facts.regions, line)) != Shift::Off
+}
+
 fn add_definitions<'a>(
     file: &WorldFile<'a>,
     reported: &HashSet<(Lang, &'a str, &'a str)>,
@@ -121,7 +125,9 @@ fn add_definitions<'a>(
     let facts = file.facts;
     let package = facts.package.as_str();
     for site in &facts.definitions {
-        if reported.contains(&(facts.lang, package, site.name.as_ref())) {
+        if eligible(facts, site.line)
+            && reported.contains(&(facts.lang, package, site.name.as_ref()))
+        {
             flat.push((
                 facts.lang,
                 package,
@@ -152,7 +158,7 @@ impl HomonymDefinitions {
                     let facts = file.facts;
                     let package = facts.package.as_str();
                     for site in &facts.definitions {
-                        if self.allow.contains(site.name.as_ref()) {
+                        if self.allow.contains(site.name.as_ref()) || !eligible(facts, site.line) {
                             continue;
                         }
                         let shard =
@@ -217,7 +223,6 @@ impl HomonymDefinitions {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::facts::WorldFacts;
     use crate::role::CodeRole;
     use std::collections::{BTreeMap, BTreeSet};
 
@@ -236,9 +241,13 @@ mod tests {
     }
 
     fn facts_in(package: &str, defs: Vec<NamedSite>) -> WorldFacts {
+        facts_with_role(CodeRole::Library, package, defs)
+    }
+
+    fn facts_with_role(role: CodeRole, package: &str, defs: Vec<NamedSite>) -> WorldFacts {
         WorldFacts {
             lang: Lang::Rust,
-            role: CodeRole::Library,
+            role,
             regions: Vec::new(),
             package: package.to_string(),
             has_inline_tests: false,
@@ -394,6 +403,84 @@ mod tests {
             out[0].message
         );
     }
+    #[test]
+    fn bench_first_site_does_not_suppress_libraries_meeting_threshold() {
+        let rule = HomonymDefinitions {
+            allow: HashSet::new(),
+            min_files: 5,
+        };
+        let bench = facts_with_role(CodeRole::Bench, "ledger", vec![site("reconcile_ledger", 1)]);
+        let owned: Vec<WorldFacts> = (1u32..=5)
+            .map(|line| facts_in("ledger", vec![site("reconcile_ledger", line)]))
+            .collect();
+        let mut owned = owned;
+        owned.insert(0, bench);
+        let paths = [
+            "benches/a.rs",
+            "lib_a.rs",
+            "lib_b.rs",
+            "lib_c.rs",
+            "lib_d.rs",
+            "lib_e.rs",
+        ];
+        let files: Vec<WorldFile> = owned
+            .iter()
+            .enumerate()
+            .map(|(index, facts)| WorldFile {
+                path: paths[index],
+                facts,
+            })
+            .collect();
+        let mut out = Vec::new();
+        rule.check(&files, &mut out);
+        assert_eq!(
+            out.len(),
+            1,
+            "five library files must still report once: {out:?}"
+        );
+        assert_eq!(
+            &*out[0].path, "lib_a.rs",
+            "the finding must sit on the first library site: {}",
+            out[0].path
+        );
+        assert!(
+            out[0].message.contains("defined in 5 files"),
+            "the bench file must not inflate the count: {}",
+            out[0].message
+        );
+    }
+
+    #[test]
+    fn exempt_files_do_not_push_libraries_over_threshold() {
+        let rule = HomonymDefinitions {
+            allow: HashSet::new(),
+            min_files: 5,
+        };
+        let bench = facts_with_role(CodeRole::Bench, "ledger", vec![site("reconcile_ledger", 1)]);
+        let tests = facts_with_role(CodeRole::Test, "ledger", vec![site("reconcile_ledger", 2)]);
+        let owned: Vec<WorldFacts> = (1u32..=4)
+            .map(|line| facts_in("ledger", vec![site("reconcile_ledger", line)]))
+            .collect();
+        let mut owned = owned;
+        owned.push(bench);
+        owned.push(tests);
+        let paths = ["a.rs", "b.rs", "c.rs", "d.rs", "benches/a.rs", "tests/t.rs"];
+        let files: Vec<WorldFile> = owned
+            .iter()
+            .enumerate()
+            .map(|(index, facts)| WorldFile {
+                path: paths[index],
+                facts,
+            })
+            .collect();
+        let mut out = Vec::new();
+        rule.check(&files, &mut out);
+        assert!(
+            out.is_empty(),
+            "four library files stay below five files: {out:?}"
+        );
+    }
+
 
     #[test]
     fn off_at_standard_info_at_strict() {

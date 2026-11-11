@@ -92,7 +92,7 @@ Role shifts lower findings by role (K = keep, L1 = lower one rung, L2 = lower tw
 | complexity/import-fan-out | Off | Off | minor | major | medium | L1 | L1 | K | L1 | L1 | Counts distinct third-party package roots of module-scope imports; barrel reexport-only files skipped |
 | grep/contiguous-log-literal | Off | Off | Off | info | low | K | O | L1 | O | O | Flags message-bearing log calls with missing, dynamic, or short static messages; a literal, template, interpolation, or concatenation passes only when its longest static run reaches 8 chars. In Bash, option words such as `-n` are arguments like any other word |
 | grep/generic-name | Off | Off | minor | minor | low | L1 | O | K | O | O | Flags exported fns named from the generic denylist |
-| grep/homonym-definitions | Off | Off | Off | info | low | K | O | K | O | O | Flags free fn or type names defined in >= 8 files (5 strict) of one package |
+| grep/homonym-definitions | Off | Off | Off | info | low | K | O | K | O | O | Flags free fn or type names defined in >= 8 files (5 strict) of one package, counting only files whose role shift is not Off |
 | grep/multiline-argument | Off | Off | Off | info | low | K | O | L1 | O | O | Strict-only: flags collection args spanning >= 15 lines outside tests, generated files, and binding initializers |
 | grep/no-dynamic-symbol | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags runtime-built symbols except proxy forwarding and string module imports. In Python, JS, TS and Starlark a lookup inside a loop over an inline literal list of strings is exempt |
 | grep/no-rename-import | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags `import x as y` renames |
