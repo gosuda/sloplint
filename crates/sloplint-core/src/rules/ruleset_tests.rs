@@ -2,7 +2,7 @@ use super::*;
 use crate::facts::{Function, Visibility};
 use crate::finding::line_starts;
 use crate::lang::Lang;
-use crate::role::Shift;
+use crate::role::{RoleRegion, Shift};
 
 fn world_facts(role: CodeRole) -> WorldFacts {
     WorldFacts {
@@ -246,4 +246,91 @@ fn nesting_pair(line: u32, cog_col: u32, nest_col: u32) -> Vec<Finding> {
     nesting.line = line;
     nesting.column = nest_col;
     vec![cognitive, nesting]
+}
+
+fn oversized_facts(source: &str, role: CodeRole, regions: Vec<RoleRegion>) -> FileFacts<'_> {
+    FileFacts {
+        lang: Lang::Rust,
+        path: "src/ledger.rs",
+        source,
+        line_starts: line_starts(source),
+        role,
+        regions,
+        line_count: u32::try_from(source.lines().count()).expect("lines fit u32"),
+        package: "ledger".to_string(),
+        is_generated: false,
+        functions: vec![],
+        calls: vec![],
+        bindings: vec![],
+        imports: vec![],
+        types: vec![],
+        impls: vec![],
+        wildcard_arms: vec![],
+        handlers: vec![],
+        assertions: vec![],
+        field_copies: vec![],
+        dynamic_symbols: vec![],
+        ambient: vec![],
+        barrel: None,
+        has_inline_tests: false,
+    }
+}
+
+fn strict_rules() -> RuleSet {
+    let mut config = Config::default();
+    config.project.strictness = Strictness::Strict;
+    RuleSet::new(&config, &RuleFilter::default()).expect("the catalog rules resolve")
+}
+
+fn budget_findings(rules: &RuleSet, facts: &FileFacts<'_>) -> Vec<Finding> {
+    rules
+        .check_file(facts)
+        .into_iter()
+        .filter(|finding| finding.rule.as_ref() == "agent/file-token-budget")
+        .collect()
+}
+
+#[test]
+fn file_budget_survives_a_leading_test_region() {
+    let mut source = String::from("#[test]\nfn smoke() {}\n}\n");
+    source.push_str(&"fn filler_line() {}\n".repeat(608));
+    let leading_test = oversized_facts(
+        &source,
+        CodeRole::Library,
+        vec![RoleRegion {
+            start_line: 1,
+            end_line: 3,
+            role: CodeRole::Test,
+        }],
+    );
+    let plain = oversized_facts(&source, CodeRole::Library, Vec::new());
+    let rules = strict_rules();
+    let reported = budget_findings(&rules, &leading_test);
+    let normal = budget_findings(&rules, &plain);
+    assert_eq!(
+        reported.len(),
+        1,
+        "a test region at line 1 cannot hide the library budget"
+    );
+    assert_eq!(
+        normal.len(),
+        1,
+        "the same source without the region keeps reporting"
+    );
+    assert_eq!(
+        reported[0].severity, normal[0].severity,
+        "the file-wide budget keeps the severity a library file earns"
+    );
+}
+
+#[test]
+fn file_budget_still_drops_for_whole_test_files() {
+    let mut source = String::from("#[test]\nfn smoke() {}\n}\n");
+    source.push_str(&"fn filler_line() {}\n".repeat(608));
+    let facts = oversized_facts(&source, CodeRole::Test, Vec::new());
+    let rules = strict_rules();
+    assert!(
+        budget_findings(&rules, &facts).is_empty(),
+        "a file whose role is test keeps its budget silence"
+    );
 }

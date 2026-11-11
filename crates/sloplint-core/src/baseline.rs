@@ -389,6 +389,7 @@ mod tests {
                 context: context.into_boxed_str(),
                 fingerprint: Box::from(""),
                 context_pending: false,
+                file_wide: false,
             })
     }
 

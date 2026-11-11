@@ -171,6 +171,8 @@ pub struct Finding {
     pub fingerprint: Box<str>,
     #[serde(skip)]
     pub context_pending: bool,
+    #[serde(skip)]
+    pub file_wide: bool,
 }
 
 const MAX_CONTEXT_CHARS: usize = 160;
@@ -217,6 +219,7 @@ impl Finding {
         finding.line = site.line;
         finding.column = site.column;
         finding.context_pending = true;
+        finding.file_wide = false;
         finding
     }
 
@@ -239,6 +242,7 @@ impl Finding {
             context: Box::from(""),
             fingerprint: Box::from(""),
             context_pending: false,
+            file_wide: true,
         }
     }
 
@@ -263,6 +267,7 @@ impl Finding {
             context,
             fingerprint: Box::from(""),
             context_pending: false,
+            file_wide: false,
         }
     }
 }

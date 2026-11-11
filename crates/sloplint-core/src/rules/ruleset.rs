@@ -305,7 +305,12 @@ impl RuleSet {
             } else {
                 finding.severity = ceiling;
             }
-            let shift = info.roles.shift(facts.role_at(finding.line));
+            let role = if finding.file_wide {
+                facts.role
+            } else {
+                facts.role_at(finding.line)
+            };
+            let shift = info.roles.shift(role);
             match shift.apply(finding.severity) {
                 Some(severity) => {
                     finding.severity = severity;
@@ -338,10 +343,11 @@ impl RuleSet {
             } else {
                 finding.severity = ceiling;
             }
-            let role = index
-                .get(&*finding.path)
-                .map(|facts| role_at(facts.role, &facts.regions, finding.line))
-                .unwrap_or(CodeRole::Library);
+            let role = match index.get(&*finding.path) {
+                Some(facts) if finding.file_wide => facts.role,
+                Some(facts) => role_at(facts.role, &facts.regions, finding.line),
+                None => CodeRole::Library,
+            };
             match info.roles.shift(role).apply(finding.severity) {
                 Some(severity) => {
                     finding.severity = severity;

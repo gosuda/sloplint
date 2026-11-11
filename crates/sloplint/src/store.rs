@@ -314,6 +314,7 @@ mod tests {
             context: "fn handle".into(),
             fingerprint: "0123456789abcdef0123456789abcdef".into(),
             context_pending: false,
+            file_wide: false,
         };
         let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
         let path = tmp.path().join("baseline.json");
