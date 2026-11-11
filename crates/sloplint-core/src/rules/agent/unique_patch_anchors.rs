@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::cmp::Reverse;
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -7,7 +8,7 @@ use super::unique_patch_lines::{is_comment_line, is_strong_line, is_substantive,
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Function, Pos};
 use crate::finding::{Confidence, Finding, Level, Severity};
-use crate::role::{RolePolicy, Shift};
+use crate::role::{RolePolicy, Shift, role_at};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, parse_options};
 
 const MIN_STRONG_LINES: usize = 3;
@@ -208,31 +209,39 @@ impl UniquePatchAnchors {
         run: &Run,
         out: &mut Vec<Finding>,
     ) {
-        let accepted: Vec<Occ> = non_overlapping(&run.starts, run.span)
+        let starts: Vec<u32> = non_overlapping(&run.starts, run.span)
             .into_iter()
             .filter(|occ| {
                 let first = segments[occ.seg][occ.at].line;
                 let last = segments[occ.seg][occ.at + run.span - 1].line;
                 body_contains(&facts.functions, first, last)
             })
+            .map(|occ| segments[occ.seg][occ.at].line)
             .collect();
-        if accepted.len() < self.min_repeats {
+        if starts.len() < self.min_repeats {
             return;
         }
-        let lines = accepted
+        let Some(least_lowered) = starts
             .iter()
-            .map(|occ| segments[occ.seg][occ.at].line.to_string())
+            .copied()
+            .min_by_key(|&line| Reverse(severity_at(facts, line)))
+        else {
+            return;
+        };
+        let lines = starts
+            .iter()
+            .map(u32::to_string)
             .collect::<Vec<_>>()
             .join(", ");
         let message = format!(
             "{} identical {}-line blocks (lines {lines})",
-            accepted.len(),
+            starts.len(),
             run.span
         );
         out.push(Finding::at(
             facts,
             Pos {
-                line: segments[accepted[0].seg][accepted[0].at].line,
+                line: least_lowered,
                 byte: 0,
             },
             INFO.id,
@@ -241,6 +250,12 @@ impl UniquePatchAnchors {
             FIX.to_string(),
         ));
     }
+}
+
+fn severity_at(facts: &FileFacts<'_>, line: u32) -> Option<Severity> {
+    INFO.roles
+        .shift(role_at(facts.role, &facts.regions, line))
+        .apply(Severity::Minor)
 }
 
 fn shifted(occ: Occ) -> Occ {
@@ -332,256 +347,5 @@ fn kept_segments(source: &str) -> Vec<Vec<Entry<'_>>> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::facts::Visibility;
-    use crate::finding::line_starts;
-    use crate::lang::Lang;
-
-    const BLOCK: [&str; 8] = [
-        "let alpha_value = compute_first(input);",
-        "let beta_value = compute_second(alpha_value);",
-        "let gamma_value = compute_third(beta_value);",
-        "let delta_value = compute_fourth(gamma_value);",
-        "let epsilon_value = compute_fifth(delta_value);",
-        "let zeta_value = compute_sixth(epsilon_value);",
-        "let eta_value = compute_seventh(zeta_value);",
-        "let theta_value = compute_eighth(eta_value);",
-    ];
-
-    const TAIL: [&str; 8] = [
-        "name: alpha,",
-        "value: compute_alpha(input),",
-        "mode: Mode::Fast,",
-        "limit: 4096,",
-        "retry: policy.retry,",
-        "label: make_label(name),",
-        "flags: flags | Flags::EXTRA,",
-        "owner: current_owner(),",
-    ];
-
-    fn function(name: &str, first: u32, last: u32) -> Function<'_> {
-        Function {
-            name,
-            pos: Pos {
-                line: first,
-                byte: 0,
-            },
-            doc: Vec::new(),
-            doc_pos: None,
-            visibility: Visibility::Private,
-            signature_forced: false,
-            entry_point: false,
-            in_test: false,
-            is_overload: false,
-            is_deprecated: false,
-            is_decorated: false,
-            is_trait_item: false,
-            is_method: false,
-            receiver: None,
-            params: Vec::new(),
-            return_type: None,
-            untyped_throws: false,
-            missing_annotations: Vec::new(),
-            has_value_return: true,
-            cognitive: 0,
-            max_depth: 0,
-            deepest_line: last,
-            end_line: last,
-            sole_call: None,
-        }
-    }
-
-    fn facts<'s>(source: &'s str, functions: Vec<Function<'s>>) -> FileFacts<'s> {
-        FileFacts {
-            lang: Lang::Rust,
-            path: "src/lib.rs",
-            source,
-            line_starts: line_starts(source),
-            role: crate::role::CodeRole::Library,
-            regions: Vec::new(),
-            line_count: 0,
-            package: String::new(),
-            is_generated: false,
-            functions,
-            calls: Vec::new(),
-            bindings: Vec::new(),
-            imports: Vec::new(),
-            types: Vec::new(),
-            impls: Vec::new(),
-            wildcard_arms: Vec::new(),
-            handlers: Vec::new(),
-            assertions: Vec::new(),
-            field_copies: Vec::new(),
-            dynamic_symbols: Vec::new(),
-            ambient: Vec::new(),
-            barrel: None,
-            has_inline_tests: false,
-        }
-    }
-
-    fn check(source: &str, functions: Vec<Function<'_>>) -> Vec<String> {
-        let rule = UniquePatchAnchors {
-            window: 8,
-            min_repeats: 3,
-        };
-        let mut out = Vec::new();
-        rule.check(&facts(source, functions), &mut out);
-        out.into_iter().map(|finding| finding.message).collect()
-    }
-
-    fn bannered_block_source() -> (String, Vec<Function<'static>>) {
-        let mut source = String::new();
-        for name in ["doc_a", "doc_b", "doc_c"] {
-            for index in 0..8 {
-                source.push_str(&format!("// banner {name} line {index} filler text here\n"));
-            }
-            source.push('\n');
-        }
-        let mut functions = Vec::new();
-        for name in ["alpha", "beta", "gamma"] {
-            let first = u32::try_from(source.lines().count() + 1).unwrap_or(u32::MAX);
-            source.push_str(&format!("fn {name}() {{\n"));
-            for line in BLOCK {
-                source.push_str(line);
-                source.push('\n');
-            }
-            source.push_str("}\n\n");
-            let last = u32::try_from(source.lines().count()).unwrap_or(u32::MAX);
-            functions.push(function(name, first, last));
-        }
-        (source, functions)
-    }
-
-    #[test]
-    fn rustdoc_banners_stay_silent_while_shared_block_flags() {
-        let (source, functions) = bannered_block_source();
-        let found = check(&source, functions);
-        assert_eq!(found.len(), 1);
-        assert!(found[0].starts_with("3 identical 9-line blocks"));
-    }
-
-    #[test]
-    fn blank_split_copies_stay_silent() {
-        let mut source = String::new();
-        let mut functions = Vec::new();
-        for name in ["alpha", "beta", "gamma"] {
-            let first = u32::try_from(source.lines().count() + 1).unwrap_or(u32::MAX);
-            source.push_str(&format!("fn {name}() {{\n"));
-            for line in &BLOCK[..3] {
-                source.push_str(line);
-                source.push('\n');
-            }
-            source.push('\n');
-            for line in &BLOCK[3..6] {
-                source.push_str(line);
-                source.push('\n');
-            }
-            source.push_str("}\n\n");
-            let last = u32::try_from(source.lines().count()).unwrap_or(u32::MAX);
-            functions.push(function(name, first, last));
-        }
-        assert!(check(&source, functions).is_empty());
-    }
-
-    #[test]
-    fn struct_tails_without_executable_lines_stay_silent() {
-        let mut source = String::new();
-        let mut functions = Vec::new();
-        for name in ["alpha", "beta", "gamma"] {
-            let first = u32::try_from(source.lines().count() + 1).unwrap_or(u32::MAX);
-            source.push_str(&format!("fn {name}() {{\n"));
-            source.push_str(&format!("let rendered_{name} = Widget {{\n"));
-            for line in TAIL {
-                source.push_str(line);
-                source.push('\n');
-            }
-            source.push_str("};\n}\n\n");
-            let last = u32::try_from(source.lines().count()).unwrap_or(u32::MAX);
-            functions.push(function(name, first, last));
-        }
-        assert!(check(&source, functions).is_empty());
-    }
-
-    #[test]
-    fn shared_attribute_line_keeps_copies_distinguishable() {
-        const STEPS: [&str; 7] = [
-            "let step_zero = begin_phase(zero_input);",
-            "let step_one = advance_phase(step_zero);",
-            "let step_two = advance_phase(step_one);",
-            "let step_three = advance_phase(step_two);",
-            "let step_four = advance_phase(step_three);",
-            "let step_five = advance_phase(step_four);",
-            "let step_six = finish_phase(step_five);",
-        ];
-        let mut source = String::new();
-        let mut functions = Vec::new();
-        for name in ["alpha", "beta", "gamma"] {
-            let first = u32::try_from(source.lines().count() + 1).unwrap_or(u32::MAX);
-            source.push_str(&format!("fn {name}() {{\n"));
-            source.push_str("#[must_use]\n");
-            for line in STEPS {
-                source.push_str(line);
-                source.push('\n');
-            }
-            source.push_str("}\n\n");
-            let last = u32::try_from(source.lines().count()).unwrap_or(u32::MAX);
-            functions.push(function(name, first, last));
-        }
-        let found = check(&source, functions);
-        assert_eq!(found.len(), 1);
-        assert!(found[0].starts_with("3 identical 9-line blocks"));
-    }
-
-    #[test]
-    fn top_level_runs_without_functions_stay_silent() {
-        let mut source = String::new();
-        for _ in 0..3 {
-            for line in BLOCK {
-                source.push_str(line);
-                source.push('\n');
-            }
-            source.push('\n');
-        }
-        assert!(check(&source, Vec::new()).is_empty());
-    }
-    #[test]
-    fn preset_pins_off_at_standard_and_info_at_strict() {
-        assert_eq!(
-            INFO.confidence,
-            Confidence::Low,
-            "unique-patch-anchors ships at low confidence"
-        );
-        assert_eq!(
-            preset(Strictness::Minimal).level,
-            Level::Off,
-            "minimal stays off"
-        );
-        assert_eq!(
-            preset(Strictness::Basic).level,
-            Level::Off,
-            "basic stays off"
-        );
-        assert_eq!(
-            preset(Strictness::Standard).level,
-            Level::Off,
-            "standard stays off"
-        );
-        let strict_preset = preset(Strictness::Strict);
-        assert_eq!(
-            strict_preset.level,
-            Level::At(Severity::Info),
-            "strict reports at info"
-        );
-        let rule =
-            build(strict_preset.options, &Settings::default()).expect("strict preset builds");
-        let (source, functions) = bannered_block_source();
-        let mut out = Vec::new();
-        rule.check(&facts(&source, functions), &mut out);
-        assert_eq!(
-            out.len(),
-            1,
-            "strict flags the shared block on a positive input"
-        );
-    }
-}
+#[path = "unique_patch_anchors_tests.rs"]
+mod tests;
