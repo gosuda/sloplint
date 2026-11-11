@@ -522,7 +522,9 @@ fn lookup_formal(short: &str) -> Option<&'static str> {
 
 fn lookup_value<'s>(cx: &Cx<'_, '_>, call: Node<'s>, formal: &str) -> Option<Node<'s>> {
     let list = child_by_field(call, "arguments")?;
-    let named = find_named_child(list, |c| c.kind() == "argument" && arg_name_is(cx, c, formal));
+    let named = find_named_child(list, |c| {
+        c.kind() == "argument" && arg_name_is(cx, c, formal)
+    });
     let positional = find_named_child(list, |c| {
         c.kind() == "argument"
             && child_by_field(c, "name").is_none()

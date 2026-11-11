@@ -457,13 +457,15 @@ fn a_loop_name_rebound_beside_a_subscript_target_flags() {
 
 #[test]
 fn a_subscript_write_alone_keeps_the_literal_loop() {
-    let source = "def load(obj, d):\n    for k in ('a', 'b'):\n        d[0] = 1\n        getattr(obj, k)\n";
+    let source =
+        "def load(obj, d):\n    for k in ('a', 'b'):\n        d[0] = 1\n        getattr(obj, k)\n";
     assert_eq!(dynamics(source), Vec::<String>::new());
 }
 
 #[test]
 fn a_module_name_passed_by_keyword_flags() {
-    let source = "import importlib\n\n\ndef load(mod):\n    return importlib.import_module(name=mod)\n";
+    let source =
+        "import importlib\n\n\ndef load(mod):\n    return importlib.import_module(name=mod)\n";
     assert_eq!(dynamics(source).len(), 1);
 }
 

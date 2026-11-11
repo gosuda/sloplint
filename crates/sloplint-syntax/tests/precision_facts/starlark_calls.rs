@@ -93,7 +93,8 @@ fn computed_names(source: &str) -> usize {
 #[test]
 fn a_literal_loop_name_is_static_until_something_rebinds_it() {
     let plain = "def f(obj):\n    for k in [\"a\", \"b\"]:\n        getattr(obj, k)\n";
-    let subscript = "def f(obj, d):\n    for k in [\"a\", \"b\"]:\n        d[k] = 1\n        getattr(obj, k)\n";
+    let subscript =
+        "def f(obj, d):\n    for k in [\"a\", \"b\"]:\n        d[k] = 1\n        getattr(obj, k)\n";
     let assigned = "def f(obj, dyn):\n    for k in [\"a\", \"b\"]:\n        k = dyn\n        getattr(obj, k)\n";
     let inner_loop = "def f(obj, pairs):\n    for k in [\"a\", \"b\"]:\n        for k, v in pairs:\n            getattr(obj, k)\n";
     let comprehension = "def f(obj, names):\n    for k in [\"a\", \"b\"]:\n        out = [getattr(obj, k) for k in names]\n";
