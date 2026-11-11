@@ -1,2 +1,2 @@
-# 18 lines below minor_at=20.
+# Near-miss: decode.go (585 lines) is 15 lines under the default strict budget of 600/1000.
 # decode_test.go (700 lines) stays silent because test-role files are exempt, not because of its size.

@@ -1,3 +1,0 @@
-[rules."agent/file-token-budget"]
-minor_at = 20
-major_at = 30
