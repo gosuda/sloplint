@@ -185,4 +185,10 @@ impl LangHooks for RustHooks {
     fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
         params::decl_scope_parent(depth, node, cx)
     }
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        params::shadow_decl_kind(kind)
+    }
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        params::shadow_names(n, cx, out);
+    }
 }

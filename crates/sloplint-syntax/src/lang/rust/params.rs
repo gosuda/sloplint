@@ -183,14 +183,55 @@ pub(super) fn decl_names<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s st
 }
 
 pub(super) fn decl_scope_parent(depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
-    let _ = cx;
-    if matches!(
-        node.kind(),
-        "if_expression" | "while_expression" | "for_expression"
-    ) {
-        return depth;
+    match node.kind() {
+        "if_expression" | "while_expression" | "for_expression" | "match_arm" => depth,
+        "block" => then_block_scope(depth, node, cx),
+        _ => depth.saturating_sub(1),
     }
-    depth.saturating_sub(1)
+}
+
+pub(super) fn shadow_decl_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "for_expression" | "while_expression" | "match_arm" | "block"
+    )
+}
+
+pub(super) fn shadow_names<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+    match n.kind() {
+        "for_expression" => {
+            if let Some(pat) = child_by_field(n, "pattern") {
+                push_shadow_pattern_names(cx, pat, out);
+            }
+        }
+        "while_expression" => {
+            if let Some(cond) = child_by_field(n, "condition") {
+                push_shadow_condition_names(cx, cond, out);
+            }
+        }
+        "match_arm" => {
+            if let Some(pat) = child_by_field(n, "pattern") {
+                push_shadow_arm_names(cx, pat, out);
+            }
+        }
+        "block" => {
+            push_then_block_names(cx, n, out);
+        }
+        _ => {}
+    }
+}
+
+fn then_block_scope(depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+    let Some(parent) = cx.parent_of(node) else {
+        return depth.saturating_sub(1);
+    };
+    if parent.kind() == "if_expression"
+        && child_by_field(parent, "consequence").is_some_and(|first| first.id() == node.id())
+    {
+        depth
+    } else {
+        depth.saturating_sub(1)
+    }
 }
 
 fn push_flow_binder_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
@@ -219,4 +260,57 @@ fn push_let_condition_names<'s>(cx: &Cx<'_, 's>, cond: Node<'_>, out: &mut Vec<(
             stack.extend(named_children(cur));
         }
     }
+}
+
+fn push_shadow_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str>) {
+    let mut stack = vec![root];
+    while let Some(cur) = stack.pop() {
+        if cur.kind() == "mut_pattern" {
+            continue;
+        }
+        if cur.kind() == "identifier" {
+            out.push(text(cx, cur));
+        } else {
+            stack.extend(named_children(cur));
+        }
+    }
+}
+
+fn push_shadow_condition_names<'s>(cx: &Cx<'_, 's>, cond: Node<'_>, out: &mut Vec<&'s str>) {
+    let mut stack = vec![cond];
+    while let Some(cur) = stack.pop() {
+        if cur.kind() == "let_condition"
+            && let Some(pat) = child_by_field(cur, "pattern")
+        {
+            push_shadow_pattern_names(cx, pat, out);
+        } else if cur.kind() == "let_chain" {
+            stack.extend(named_children(cur));
+        }
+    }
+}
+
+fn push_shadow_arm_names<'s>(cx: &Cx<'_, 's>, pat: Node<'_>, out: &mut Vec<&'s str>) {
+    let guard = child_by_field(pat, "condition").map(|node| node.id());
+    for child in named_children(pat) {
+        if guard.is_some_and(|id| id == child.id()) {
+            continue;
+        }
+        push_shadow_pattern_names(cx, child, out);
+    }
+}
+
+fn push_then_block_names<'s>(cx: &Cx<'_, 's>, body: Node<'_>, out: &mut Vec<&'s str>) {
+    let Some(parent) = cx.parent_of(body) else {
+        return;
+    };
+    if parent.kind() != "if_expression" {
+        return;
+    }
+    if child_by_field(parent, "consequence").is_none_or(|first| first.id() != body.id()) {
+        return;
+    }
+    let Some(cond) = child_by_field(parent, "condition") else {
+        return;
+    };
+    push_shadow_condition_names(cx, cond, out);
 }

@@ -207,3 +207,91 @@ fn nested_block_write_without_inner_shadow_still_reaches_the_outer_binding() {
         assert_eq!(xs[0].loop_depth, 0, "no loop frames involved: {found:?}");
     });
 }
+
+#[test]
+fn if_let_non_mut_field_writes_leave_outer_alone() {
+    let source = "fn f(o: Option<i32>) -> i32 {\n    let mut n = 0;\n    if let Some(n) = o {\n        n.count = 1;\n        n.total = 2;\n    }\n    n.count = 3;\n    n.count\n}\n";
+    with_rust_bindings(source, |found| {
+        let ns = named_all(found, "n");
+        assert_eq!(
+            ns.len(),
+            1,
+            "the non-mut binder stays shadow-only: {found:?}"
+        );
+        assert_eq!(
+            (
+                ns[0].write_lines,
+                ns[0].first_write_line,
+                ns[0].last_write_line
+            ),
+            (1, 7, 7),
+            "then-body writes vanish through the shadow, was 3 when they leaked out: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn for_non_mut_field_writes_leave_outer_alone() {
+    let source = "fn f(xs: &[i32]) -> i32 {\n    let mut n = 0;\n    for n in xs.iter_mut() {\n        n.x = 1;\n        n.y = 2;\n    }\n    n.x = 3;\n    n.x\n}\n";
+    with_rust_bindings(source, |found| {
+        let ns = named_all(found, "n");
+        assert_eq!(
+            ns.len(),
+            1,
+            "the non-mut binder stays shadow-only: {found:?}"
+        );
+        assert_eq!(
+            (
+                ns[0].write_lines,
+                ns[0].first_write_line,
+                ns[0].last_write_line
+            ),
+            (1, 7, 7),
+            "loop-body writes vanish through the shadow, was 3 when they leaked out: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn if_let_non_mut_else_write_reaches_outer_binding() {
+    let source = "fn f(o: Option<i32>) -> i32 {\n    let mut n = 0;\n    if let Some(n) = o {\n        n.count = 1;\n    } else {\n        n = 2;\n    }\n    n.count = 3;\n    n.count\n}\n";
+    with_rust_bindings(source, |found| {
+        let ns = named_all(found, "n");
+        assert_eq!(
+            ns.len(),
+            1,
+            "the non-mut binder stays shadow-only: {found:?}"
+        );
+        assert_eq!(
+            (
+                ns[0].write_lines,
+                ns[0].first_write_line,
+                ns[0].last_write_line
+            ),
+            (2, 6, 8),
+            "only the else and post-if writes reach the outer binding, was 3 when then-body writes leaked out: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn match_non_mut_index_write_leaves_outer_alone() {
+    let source = "fn f(v: Option<i32>) -> i32 {\n    let mut n = 0;\n    match v {\n        Some(n) => {\n            n[0] = 1;\n        }\n        None => {}\n    }\n    n[0] = 2;\n    n[0]\n}\n";
+    with_rust_bindings(source, |found| {
+        let ns = named_all(found, "n");
+        assert_eq!(
+            ns.len(),
+            1,
+            "the non-mut arm binder stays shadow-only: {found:?}"
+        );
+        assert_eq!(
+            (
+                ns[0].write_lines,
+                ns[0].first_write_line,
+                ns[0].last_write_line
+            ),
+            (1, 9, 9),
+            "arm-body write vanishes through the shadow, was 2 when it leaked out: {found:?}"
+        );
+    });
+}
