@@ -2,7 +2,7 @@ use crate::lang::Lang;
 
 pub const MAX_KEY_SEGMENTS: usize = 4;
 
-const JS_EXTENSIONS: [&str; 6] = ["ts", "tsx", "js", "jsx", "mjs", "cjs"];
+const JS_EXTENSIONS: [&str; 8] = ["ts", "tsx", "mts", "cts", "js", "jsx", "mjs", "cjs"];
 
 pub fn library_keys(lang: Lang, path: &str) -> Vec<String> {
     let (dir, base) = split_dir(path);
