@@ -450,7 +450,8 @@ pub(crate) fn dynamic_head(cx: &Cx<'_, '_>, n: Node<'_>) -> Option<&'static str>
         ) {
             return Some("variable function");
         }
-        let callee = text(cx, fun);
+        let qualified = text(cx, fun);
+        let callee = qualified.strip_prefix('\\').unwrap_or(qualified);
         if callee == "eval" {
             return Some("eval");
         }

@@ -330,3 +330,17 @@ fn chained_call_behind_a_property_fetch_is_not_a_simple_path() {
         "pure property chain stays a simple path"
     );
 }
+
+#[test]
+fn a_fully_qualified_call_user_func_is_dynamic() {
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let mut parsers = Parsers::new();
+    let source = "<?php\n\\call_user_func($cb, $x);\n\\App\\call_user_func($cb, $x);\n";
+    let analysis = analyze_src(&mut parsers, &custom, source, "case.php");
+    assert!(analysis.parse_error.is_none(), "parses");
+    assert_eq!(
+        analysis.facts.dynamic_symbols.len(),
+        1,
+        "the global function is dynamic, a namespaced homonym is not"
+    );
+}
