@@ -98,6 +98,9 @@ pub fn import_keys(lang: Lang, importer: &str, spec: &str) -> Vec<String> {
         Lang::TypeScript | Lang::Tsx | Lang::JavaScript => {
             let mut segs = Vec::new();
             ts_segments(importer, spec, &mut segs);
+            if has_package_subpath(spec) {
+                strip_js_extension(segs.last_mut());
+            }
             drop_trailing_index(&mut segs);
             suffix_keys(&segs)
         }
@@ -406,6 +409,14 @@ fn ts_segments(importer: &str, spec: &str, segs: &mut Vec<String>) {
     let start = parts.len().saturating_sub(MAX_KEY_SEGMENTS);
     push_all(segs, &parts[start..]);
     strip_js_extension(segs.last_mut());
+}
+
+fn has_package_subpath(spec: &str) -> bool {
+    if spec.starts_with('.') || spec.starts_with("@/") || spec.starts_with("~/") {
+        return false;
+    }
+    let name_parts = if spec.starts_with('@') { 2 } else { 1 };
+    spec.split('/').filter(|part| !part.is_empty()).count() > name_parts
 }
 
 fn strip_js_extension(seg: Option<&mut String>) {

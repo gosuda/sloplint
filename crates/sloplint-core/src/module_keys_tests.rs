@@ -325,3 +325,27 @@ fn generic_imports_keep_trailing_index_segment() {
         import_keys(Lang::Go, "cmd/app/app_test.go", "./x/index").contains(&"x/index".to_string())
     );
 }
+#[test]
+fn package_subpath_import_drops_source_extension() {
+    assert_eq!(
+        import_keys(Lang::TypeScript, "test/a.test.ts", "lib/widget.js"),
+        ["lib/widget"]
+    );
+    assert!(shared(Lang::TypeScript, "lib/widget.ts", "lib/widget.js"));
+    assert!(shared(
+        Lang::TypeScript,
+        "pkg/file.ts",
+        "@scope/pkg/file.js"
+    ));
+}
+#[test]
+fn bare_package_name_keeps_its_last_part() {
+    assert_eq!(
+        import_keys(Lang::TypeScript, "test/a.test.ts", "chart.js"),
+        ["chart.js"]
+    );
+    assert_eq!(
+        import_keys(Lang::TypeScript, "test/a.test.ts", "@scope/chart.js"),
+        ["@scope/chart.js"]
+    );
+}
