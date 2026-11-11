@@ -43,7 +43,7 @@ sloplint check crates --format agent --strictness standard --mode threshold --fa
 cargo run --locked -p sloplint -- check crates --format agent --strictness standard --mode threshold --fail-on minor
 ```
 
-Every file in `crates/` must pass `sloplint` under the default `standard` profile. The root `sloplint.toml` sets `[rules."agent/file-token-budget"]` to `level = "minor"` with cut points 600/1000/1500/2000, so a file with 600 or more non-test lines fails the `--fail-on minor` gate.
+Every file in `crates/` must pass `sloplint` under the default `standard` profile. The root `sloplint.toml` sets `[rules."agent/file-token-budget"]` to `level = "minor"` with cut points 600/1000/1500/2000, so a library or entry file with 600 or more lines outside inline test regions fails the `--fail-on minor` gate. The rule does not gate files in test or support paths, and bench and example files only reach `info`. Keep those under 600 lines too; the file-size check in the verifier covers them.
 
 ## Adding a rule
 
@@ -71,6 +71,18 @@ For `agent/colocated-tests`, add the manifest that defines each package. The rul
 ## Adapter notes
 
 Go and Dart count imports of their own module as one external root. Ruby records no import facts. In C++, an out-of-line definition whose class is declared in another file counts as an exported free function.
+
+- A loop over a named table, or over `sorted(...)`, `.keys()` or `Object.keys(...)` of one, is reported; only an inline literal in the loop header is recognised.
+- A lookup after the loop ends, or after the loop variable is reassigned, is reported.
+- A Java anonymous class field write can land on an enclosing method local of the same name.
+- R `<<-` records no write.
+- In function-scoped languages a loop target is the function variable.
+- A reassigned loop or pattern variable records no write in Java enhanced `for`, C# `for` initializers, JS and TS `for (let ...)`, Dart `for (var ...)`, and Rust `mut` pattern binders.
+- A Swift `if let` binder also hides an outer variable of the same name in the `else` branch, and a Dart `catch` variable does so in `finally`.
+- A Scala constructor pattern `case Foo(x)` registers `Foo` as a binder as well as `x`.
+- In JS and TS a write before the `var` declaration of the same name records nothing.
+- A Ruby name first assigned inside one block shares a binding with the same name first assigned inside a sibling block.
+- A Python `nonlocal` name assigned inside a nested function is recorded as a local of that function.
 
 ## Commit and pull request conventions
 
