@@ -112,6 +112,9 @@ fn body_clean(cx: &Cx<'_, '_>, body: Node<'_>, want: &str) -> bool {
 }
 
 fn visit_body<'t>(cx: &Cx<'_, '_>, cur: Node<'t>, want: &str, stack: &mut Vec<Node<'t>>) -> bool {
+    if decl_binds(cx, cur, want) {
+        return false;
+    }
     match cur.kind() {
         "assignment_expression" | "augmented_assignment_expression" => {
             if assigns_target(cx, cur, want) {
@@ -121,12 +124,6 @@ fn visit_body<'t>(cx: &Cx<'_, '_>, cur: Node<'t>, want: &str, stack: &mut Vec<No
         }
         "update_expression" => {
             if updates_name(cx, cur, want) {
-                return false;
-            }
-            push_kids(stack, cur);
-        }
-        "for_in_statement" => {
-            if undeclared_head_binds(cx, cur, want) {
                 return false;
             }
             push_kids(stack, cur);
@@ -142,14 +139,7 @@ fn assigns_target(cx: &Cx<'_, '_>, cur: Node<'_>, want: &str) -> bool {
 
 fn updates_name(cx: &Cx<'_, '_>, cur: Node<'_>, want: &str) -> bool {
     child_by_field(cur, "argument")
-        .is_some_and(|arg| arg.kind() == "identifier" && text(cx, arg) == want)
-}
-
-fn undeclared_head_binds(cx: &Cx<'_, '_>, loop_node: Node<'_>, want: &str) -> bool {
-    if child_by_field(loop_node, "kind").is_some() {
-        return false;
-    }
-    child_by_field(loop_node, "left").is_some_and(|left| binds_name(cx, left, want))
+        .is_some_and(|arg| arg.kind() == "identifier" && binds_text(cx, arg, want))
 }
 
 fn assigns_root(cx: &Cx<'_, '_>, mut cur: Node<'_>, want: &str) -> bool {
@@ -160,7 +150,7 @@ fn assigns_root(cx: &Cx<'_, '_>, mut cur: Node<'_>, want: &str) -> bool {
             return true;
         }
         if cur.kind() == "identifier" {
-            return text(cx, cur) == want;
+            return binds_text(cx, cur, want);
         }
         if cur.kind() == "member_expression" || cur.kind() == "subscript_expression" {
             let Some(obj) = child_by_field(cur, "object") else {
@@ -171,6 +161,70 @@ fn assigns_root(cx: &Cx<'_, '_>, mut cur: Node<'_>, want: &str) -> bool {
         }
         return binds_name(cx, cur, want);
     }
+}
+
+fn binds_text(cx: &Cx<'_, '_>, n: Node<'_>, want: &str) -> bool {
+    let raw = text(cx, n);
+    raw.contains('\\') || raw == want
+}
+
+fn decl_binds(cx: &Cx<'_, '_>, cur: Node<'_>, want: &str) -> bool {
+    match cur.kind() {
+        "variable_declarator" => pattern_binds(cx, cur, "name", want),
+        "catch_clause" => pattern_binds(cx, cur, "parameter", want),
+        "for_in_statement" => pattern_binds(cx, cur, "left", want),
+        "internal_module" => pattern_binds(cx, cur, "name", want),
+        "import_statement" => import_binds(cx, cur, want),
+        "function_declaration"
+        | "generator_function_declaration"
+        | "function_expression"
+        | "generator_function"
+        | "class_declaration"
+        | "class"
+        | "abstract_class_declaration"
+        | "enum_declaration"
+        | "type_alias_declaration" => named_decl_binds(cx, cur, want),
+        _ => false,
+    }
+}
+
+fn pattern_binds(cx: &Cx<'_, '_>, cur: Node<'_>, field: &str, want: &str) -> bool {
+    child_by_field(cur, field).is_some_and(|pat| binds_name(cx, pat, want))
+}
+
+fn named_decl_binds(cx: &Cx<'_, '_>, cur: Node<'_>, want: &str) -> bool {
+    named_children(cur).into_iter().any(|kid| {
+        matches!(kid.kind(), "identifier" | "type_identifier") && binds_text(cx, kid, want)
+    })
+}
+
+fn import_binds(cx: &Cx<'_, '_>, stmt: Node<'_>, want: &str) -> bool {
+    named_children(stmt)
+        .into_iter()
+        .filter(|kid| kid.kind() == "import_clause")
+        .any(|clause| {
+            named_children(clause)
+                .into_iter()
+                .any(|spec| match spec.kind() {
+                    "identifier" => binds_text(cx, spec, want),
+                    "import_specifier" => specifier_binds(cx, spec, want),
+                    "named_imports" => named_children(spec)
+                        .into_iter()
+                        .any(|s| specifier_binds(cx, s, want)),
+                    "namespace_import" => named_children(spec)
+                        .into_iter()
+                        .any(|kid| kid.kind() == "identifier" && binds_text(cx, kid, want)),
+                    _ => false,
+                })
+        })
+}
+
+fn specifier_binds(cx: &Cx<'_, '_>, spec: Node<'_>, want: &str) -> bool {
+    if let Some(alias) = child_by_field(spec, "alias") {
+        return binds_text(cx, alias, want);
+    }
+    child_by_field(spec, "name")
+        .is_some_and(|name| name.kind() != "string" && binds_text(cx, name, want))
 }
 
 fn is_func_like(kind: &str) -> bool {
@@ -212,7 +266,7 @@ fn binds_name(cx: &Cx<'_, '_>, pat: Node<'_>, want: &str) -> bool {
         }
         match cur.kind() {
             "identifier" | "shorthand_property_identifier_pattern" => {
-                if text(cx, cur) == want {
+                if binds_text(cx, cur, want) {
                     return true;
                 }
             }
@@ -238,6 +292,9 @@ fn binds_name(cx: &Cx<'_, '_>, pat: Node<'_>, want: &str) -> bool {
                 } else {
                     stack.extend(named_children(cur));
                 }
+            }
+            "namespace_name" | "nested_identifier" => {
+                stack.extend(named_children(cur));
             }
             "parenthesized_expression" => {
                 stack.extend(named_children(cur));

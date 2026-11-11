@@ -104,6 +104,52 @@ const NON_STRING_ELEMENT: &str = r#"export function run(obj) {
 }
 "#;
 
+const SHADOWED_DECL: &str = r#"export function run(obj, getName) {
+  for (const name of ['fixed']) {
+    {
+      const name = getName()
+      obj[name]()
+    }
+  }
+}
+"#;
+
+const TS_SHADOWED_DECL: &str = r#"export function run(obj: Record<string, () => void>, getName: () => string): void {
+  for (const name of ['fixed']) {
+    {
+      const name = getName()
+      obj[name]()
+    }
+  }
+}
+"#;
+
+const SHADOWED_FUNC_DECL: &str = r#"export function run(obj) {
+  for (const name of ['a', 'b']) {
+    function name() {}
+    obj[name]()
+  }
+}
+"#;
+
+const UNRELATED_DECL: &str = r#"export function run(obj) {
+  for (const name of ['a', 'b']) {
+    const other = 1
+    obj[name]()
+  }
+}
+"#;
+
+const ESCAPED_DECL: &str = r#"export function run(obj, getName) {
+  for (const name of ['a']) {
+    {
+      const n\u0061me = getName()
+      obj[name]()
+    }
+  }
+}
+"#;
+
 #[test]
 fn inline_array_const_loop_stays_silent() {
     assert_eq!(dynamics(INLINE_LOOP), Vec::<String>::new());
@@ -161,4 +207,28 @@ fn many_lookups_complete() {
     }
     source.push_str("  }\n}\n");
     assert_eq!(dynamics(&source), Vec::<String>::new());
+}
+
+#[test]
+fn shadowed_local_declaration_still_flags() {
+    assert_eq!(dynamics(SHADOWED_DECL).len(), 1);
+    assert_eq!(
+        typed(TS_SHADOWED_DECL, Lang::TypeScript, "case.ts").len(),
+        1
+    );
+}
+
+#[test]
+fn shadowed_function_declaration_still_flags() {
+    assert_eq!(dynamics(SHADOWED_FUNC_DECL).len(), 1);
+}
+
+#[test]
+fn unrelated_local_declaration_stays_silent() {
+    assert_eq!(dynamics(UNRELATED_DECL), Vec::<String>::new());
+}
+
+#[test]
+fn escaped_local_declaration_still_flags() {
+    assert_eq!(dynamics(ESCAPED_DECL).len(), 1);
 }
