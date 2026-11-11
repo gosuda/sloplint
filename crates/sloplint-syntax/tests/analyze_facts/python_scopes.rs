@@ -179,3 +179,95 @@ fn nested_assignment_without_nonlocal_stays_a_nested_local() {
         );
     });
 }
+
+#[test]
+fn nonlocal_nested_in_a_branch_still_routes_the_assignment() {
+    let source = "def outer():\n    total = 0\n    def g():\n        if c:\n            nonlocal total\n        total = 1\n    return total\n";
+    with_python_bindings(source, |found| {
+        let targets = named_all(found, "total");
+        assert_eq!(
+            targets.len(),
+            1,
+            "nonlocal inside a branch applies to the whole function body, was 2 with a shadowing total at line 6: {found:?}"
+        );
+        assert_eq!(
+            (
+                targets[0].pos.line,
+                targets[0].write_lines,
+                targets[0].first_write_line,
+                targets[0].last_write_line
+            ),
+            (2, 1, 6, 6),
+            "outer total absorbs the closure write, was (2, 0, 2, 2) when the nested nonlocal was missed: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn global_subscript_and_attribute_writes_bind_nothing() {
+    let source = "def outer():\n    cfg = {}\n    def inner():\n        global cfg\n        cfg[\"k\"] = 1\n        cfg.attr = 2\n    return cfg\n";
+    with_python_bindings(source, |found| {
+        let targets = named_all(found, "cfg");
+        assert_eq!(
+            targets.len(),
+            1,
+            "global element writes declare no local: {found:?}"
+        );
+        assert_eq!(
+            (
+                targets[0].pos.line,
+                targets[0].write_lines,
+                targets[0].first_write_line,
+                targets[0].last_write_line
+            ),
+            (2, 0, 2, 2),
+            "global element writes record nothing, was (2, 2, 5, 6) when the root leaked onto the enclosing local: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn except_alias_with_nonlocal_declares_no_nested_local() {
+    let source = "def outer():\n    total = 0\n    def inner():\n        nonlocal total\n        try:\n            pass\n        except ValueError as total:\n            pass\n    return total\n";
+    with_python_bindings(source, |found| {
+        let targets = named_all(found, "total");
+        assert_eq!(
+            targets.len(),
+            1,
+            "except alias with nonlocal declares no nested local, was 2 with a shadowing total at line 7: {found:?}"
+        );
+        assert_eq!(
+            (
+                targets[0].pos.line,
+                targets[0].write_lines,
+                targets[0].first_write_line,
+                targets[0].last_write_line
+            ),
+            (2, 0, 2, 2),
+            "the walker records no write for a handler alias, so the outer total keeps its declaration state: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn nested_nonlocal_does_not_capture_the_outer_assignment() {
+    let source = "def outer():\n    total = 0\n    def inner():\n        nonlocal total\n        total = 1\n    total = 2\n";
+    with_python_bindings(source, |found| {
+        let targets = named_all(found, "total");
+        assert_eq!(
+            targets.len(),
+            1,
+            "a nonlocal in a nested def leaves the outer assignment alone, was 0 when the nested nonlocal leaked into the outer scan: {found:?}"
+        );
+        assert_eq!(
+            (
+                targets[0].pos.line,
+                targets[0].write_lines,
+                targets[0].first_write_line,
+                targets[0].last_write_line
+            ),
+            (2, 2, 5, 6),
+            "outer total absorbs the closure write and its own rewrite: {found:?}"
+        );
+    });
+}

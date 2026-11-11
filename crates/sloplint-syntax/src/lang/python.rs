@@ -438,11 +438,7 @@ impl LangHooks for PythonHooks {
         match n.kind() {
             "assignment" | "for_statement" => scope::decl_targets(cx, n, out),
             "with_statement" => scope::decl_with(cx, n, out),
-            "except_clause" => {
-                if let Some(alias) = child_by_field(n, "alias") {
-                    py_pat_names(cx, alias, out);
-                }
-            }
+            "except_clause" => scope::decl_except(cx, n, out),
             "named_expression" => scope::decl_walrus(cx, n, out),
             _ => {}
         }
