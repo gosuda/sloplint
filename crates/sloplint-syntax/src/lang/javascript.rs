@@ -6,7 +6,10 @@ use sloplint_core::facts::{
 use sloplint_core::role::CodeRole;
 use tree_sitter::Node;
 
-use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, find_named_child};
+use crate::hooks::{
+    CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, child_by_field, find_named_child,
+    text,
+};
 use crate::spec::Role;
 
 pub(crate) mod ambient;
@@ -16,7 +19,10 @@ pub(crate) mod funcs;
 pub(crate) mod imports;
 pub(crate) mod items;
 
-use ambient::{ambient_sites, decl_names_for, shadow_kind_for, shadow_names_for, write_roots_for};
+use ambient::{
+    ambient_sites, decl_names_for, function_body_depth, shadow_kind_for, shadow_names_for,
+    write_roots_for,
+};
 use calls::call_head;
 pub(crate) use calls::test_call_marker;
 use funcs::{closure_head, function_head};
@@ -49,7 +55,7 @@ macro_rules! js_table {
             ("call_expression", Role::Call),
             ("new_expression", Role::NewCall),
             ("lexical_declaration", Role::Decl),
-            ("variable_declaration", Role::Decl),
+            ("variable_declaration", Role::Bind),
             ("using_declaration", Role::Decl),
             ("assignment_expression", Role::Write),
             ("augmented_assignment_expression", Role::Write),
@@ -132,13 +138,40 @@ impl LangHooks for JavaScriptHooks {
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         decl_names_for(n, cx, out);
     }
-
     fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
-        if node.kind() == "for_in_statement" {
+        if node.kind() == "catch_clause" {
             return depth;
         }
-        let _ = (node, cx);
+        if node.kind() == "for_in_statement" {
+            if child_by_field(node, "kind").is_some_and(|kind| text(cx, kind) == "var") {
+                return function_body_depth(depth, cx);
+            }
+            return depth;
+        }
+        if node.kind() == "lexical_declaration"
+            && cx.parent_of(node).is_some_and(|parent| {
+                parent.kind() == "switch_case" || parent.kind() == "switch_default"
+            })
+        {
+            return depth.saturating_sub(2);
+        }
+        if node.kind() == "variable_declaration"
+            || matches!(
+                node.kind(),
+                "function_declaration" | "generator_function_declaration"
+            )
+        {
+            return function_body_depth(depth, cx);
+        }
         depth.saturating_sub(1)
+    }
+
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        kind == "for_in_statement"
     }
 
     fn shadow_decl_kind(&self, kind: &str) -> bool {

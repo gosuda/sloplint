@@ -1,1 +1,2 @@
 # `fixed` is never reassigned after declaration.
+# shadowed-closure.swift: outer `total` is written once on line 3; the line-25 write targets the closure body's own `total`, so misattribution would span 22 and fire.

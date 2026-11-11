@@ -221,6 +221,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             | Role::Catch
             | Role::Ternary
             | Role::With => {
+                self.bind_flow_targets(node);
                 self.enter_flow(role, node);
             }
             Role::Call | Role::MacroCall | Role::NewCall => self.enter_call_site(node),

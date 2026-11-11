@@ -1,0 +1,1 @@
+# shadowed_local.bzl: Starlark has no nested functions, so the second top-level function owns the line-28 `total`; the outer `total` is written once on line 3 and misattribution would span 25 and fire.

@@ -62,6 +62,29 @@ fn push_assign_name<'s>(cx: &Cx<'_, 's>, name: Node<'_>, out: &mut Vec<(&'s str,
     }
 }
 
+fn in_forked_scope(cx: &Cx<'_, '_>) -> bool {
+    for ancestor in cx.ancestors() {
+        match ancestor.kind() {
+            "function_definition" => return false,
+            "subshell" | "command_substitution" => return true,
+            _ => {}
+        }
+    }
+    false
+}
+
+fn push_for_variable<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    if in_forked_scope(cx) {
+        return;
+    }
+    let Some(var) = child_by_field(n, "variable") else {
+        return;
+    };
+    if var.kind() == "variable_name" {
+        out.push((text(cx, var), pos_of(var)));
+    }
+}
+
 fn is_bash_ident(s: &str) -> bool {
     let mut chars = s.chars();
     if !chars.next().is_some_and(|c| c == '_' || c.is_alphabetic()) {
@@ -324,13 +347,24 @@ impl LangHooks for BashHooks {
         false
     }
 
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        kind == "for_statement"
+    }
+
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
+        if n.kind() == "for_statement" {
+            push_for_variable(cx, n, out);
+            return;
+        }
         if n.kind() == "variable_assignment" {
             if let Some(parent) = cx.parent() {
                 let kind = parent.kind();
                 if kind == "declaration_command" || kind == "command" {
                     return;
                 }
+            }
+            if in_forked_scope(cx) {
+                return;
             }
             if let Some(name) = child_by_field(n, "name") {
                 push_assign_name(cx, name, out);

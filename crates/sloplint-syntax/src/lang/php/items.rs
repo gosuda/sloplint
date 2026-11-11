@@ -25,6 +25,16 @@ fn var_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<(&'s str, Pos)>)
 }
 
 pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    if n.kind() == "foreach_statement" || n.kind() == "catch_clause" {
+        let mut targets = Vec::new();
+        super::binds::flow_targets(cx, n, &mut targets);
+        for (name, pos) in targets {
+            if !super::binds::captured_by_outer_ref(cx, name) {
+                out.push((name, pos));
+            }
+        }
+        return;
+    }
     if !matches!(
         n.kind(),
         "assignment_expression"
@@ -38,7 +48,10 @@ pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s st
     };
     if left.kind() == "variable_name" {
         let t = text(cx, left);
-        out.push((t.strip_prefix('$').unwrap_or(t), pos_of(left)));
+        let name = t.strip_prefix('$').unwrap_or(t);
+        if !super::binds::captured_by_outer_ref(cx, name) {
+            out.push((name, pos_of(left)));
+        }
     } else if left.kind() == "list_literal" {
         var_names(cx, left, out);
     }
@@ -61,7 +74,37 @@ fn descend<'s, 'c>(
 }
 
 pub(crate) fn write_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    if n.kind() == "foreach_statement" || n.kind() == "catch_clause" {
+        let mut targets = Vec::new();
+        super::binds::flow_targets(cx, n, &mut targets);
+        for (name, pos) in targets {
+            if super::binds::captured_by_outer_ref(cx, name) {
+                out.push((name, pos));
+            }
+        }
+        return;
+    }
+    if matches!(
+        n.kind(),
+        "assignment_expression"
+            | "augmented_assignment_expression"
+            | "reference_assignment_expression"
+    ) {
+        if let Some(left) = child_by_field(n, "left")
+            && left.kind() == "variable_name"
+        {
+            let t = text(cx, left);
+            let name = t.strip_prefix('$').unwrap_or(t);
+            if super::binds::captured_by_outer_ref(cx, name) {
+                out.push((name, pos_of(left)));
+            }
+        }
+        return;
+    }
     if n.kind() != "update_expression" {
+        return;
+    }
+    if super::binds::inside_arrow(cx) {
         return;
     }
     let Some(mut current) = child_by_field(n, "argument") else {

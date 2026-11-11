@@ -1,14 +1,15 @@
 use crate::hooks::{
-    Container, Cx, FileSetKind, TypeHead, any_named_child, child_by_field, find_map_named_child,
-    first_named_child, has_child_kind, named_children, narrow, pos_of, text, trimmed,
+    Container, Cx, FileSetKind, FunctionHead, TypeHead, any_named_child, child_by_field,
+    find_map_named_child, first_named_child, has_child_kind, named_children, narrow, pos_of, text,
+    trimmed,
 };
 use sloplint_core::facts::{
     AmbientKind, CallKind, FieldCopy, Handler, ImplRef, Pos, ScrutineeKind, Stmt, TypeDef,
-    WildcardArm,
+    Visibility, WildcardArm,
 };
 use tree_sitter::Node;
 
-use super::funcs::visibility_of;
+use super::funcs::{closure_shadow_params, visibility_of};
 use super::syntax::{COMMENTS, has_anon, label_text, last_ident};
 
 pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
@@ -31,6 +32,7 @@ pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s st
             }
         }
     }
+    declare_pattern_decls(cx, n, out);
 }
 
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
@@ -500,4 +502,55 @@ pub(crate) fn ambient<'s>(
     {
         report_global_write(cx, n, out);
     }
+}
+
+pub(crate) fn closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> FunctionHead<'s> {
+    let mut shadow = Vec::new();
+    closure_shadow_params(cx, n, &mut shadow);
+    super::shadow::closure_bare_params(cx, n, &mut shadow);
+    FunctionHead {
+        shadow_params: shadow,
+        name: "",
+        name_pos: pos_of(n),
+        visibility: Visibility::Private,
+        signature_forced: false,
+        entry_point: false,
+        in_test: false,
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        region: None,
+        receiver: None,
+        params: Vec::new(),
+        return_type: None,
+        missing_annotations: Vec::new(),
+        doc: Vec::new(),
+        doc_pos: None,
+        sole_call: None,
+    }
+}
+
+fn declare_pattern_decls<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    for c in named_children(n) {
+        if c.kind() == "pattern_variable_declaration" && !has_anon(c, "final") {
+            let mut names = Vec::new();
+            super::shadow::push_pattern_names(cx, pattern_seed(c), &mut names);
+            out.extend(names);
+        }
+    }
+}
+
+fn pattern_seed(n: Node<'_>) -> Vec<Node<'_>> {
+    let mut seed = Vec::new();
+    for kid in (0..n.child_count()).filter_map(|i| n.child(i)) {
+        if !kid.is_named() {
+            if kid.kind() == "=" {
+                break;
+            }
+        } else {
+            seed.push(kid);
+        }
+    }
+    seed
 }

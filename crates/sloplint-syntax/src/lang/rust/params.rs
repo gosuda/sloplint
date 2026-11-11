@@ -82,10 +82,7 @@ pub(super) fn primitive_kind_of(ty: Option<&str>) -> PrimitiveKind {
     }
 }
 
-fn typed_param<'s>(cx: &Cx<'_, 's>, pattern: Node<'_>, ty: Option<&'s str>) -> Param<'s> {
-    let mut ids = Vec::new();
-    push_ident_tree(pattern, &mut ids);
-    let name = ids.first().map_or("", |id| text(cx, *id));
+fn typed_param<'s>(name: &'s str, ty: Option<&'s str>) -> Param<'s> {
     Param {
         name,
         ty,
@@ -97,18 +94,19 @@ fn typed_param<'s>(cx: &Cx<'_, 's>, pattern: Node<'_>, ty: Option<&'s str>) -> P
     }
 }
 
-fn untyped_param<'s>(cx: &Cx<'_, 's>, pattern: Node<'_>) -> Param<'s> {
+fn push_pattern_params<'s>(
+    cx: &Cx<'_, 's>,
+    pattern: Node<'_>,
+    ty: Option<&'s str>,
+    out: &mut Vec<Param<'s>>,
+) {
     let mut ids = Vec::new();
     push_ident_tree(pattern, &mut ids);
-    let name = ids.first().map_or("", |id| text(cx, *id));
-    Param {
-        name,
-        ty: None,
-        primitive_kind: PrimitiveKind::Other,
-        has_default: false,
-        bool_default: false,
-        keyword_only: false,
-        is_variadic: false,
+    if ids.is_empty() {
+        out.push(typed_param("", ty));
+    }
+    for id in ids {
+        out.push(typed_param(text(cx, id), ty));
     }
 }
 
@@ -124,7 +122,7 @@ pub(super) fn rust_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Param<
             continue;
         };
         let ty = child_by_field(child, "type").map(|t| text(cx, t));
-        out.push(typed_param(cx, pattern, ty));
+        push_pattern_params(cx, pattern, ty, out);
     }
 }
 
@@ -138,9 +136,9 @@ pub(super) fn closure_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Par
                 continue;
             };
             let ty = child_by_field(child, "type").map(|t| text(cx, t));
-            out.push(typed_param(cx, pattern, ty));
+            push_pattern_params(cx, pattern, ty, out);
         } else if child.kind() != "attribute_item" {
-            out.push(untyped_param(cx, child));
+            push_pattern_params(cx, child, None, out);
         }
     }
 }
@@ -157,5 +155,64 @@ pub(super) fn decl_names<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s st
     }
     for id in found {
         out.push((text(cx, id), pos_of(id)));
+    }
+}
+
+pub(super) fn shadow_decl_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "if_expression" | "while_expression" | "for_expression" | "match_arm"
+    )
+}
+
+fn push_shadow_idents<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str>) {
+    let mut found = Vec::new();
+    push_mut_idents(root, &mut found);
+    for id in found {
+        out.push(text(cx, id));
+    }
+}
+
+fn push_condition_idents<'s>(cx: &Cx<'_, 's>, cond: Node<'_>, out: &mut Vec<&'s str>) {
+    let mut stack = vec![cond];
+    while let Some(cur) = stack.pop() {
+        if cur.kind() == "let_condition" {
+            if let Some(pat) = child_by_field(cur, "pattern") {
+                push_shadow_idents(cx, pat, out);
+            }
+        } else if cur.kind() == "let_chain" {
+            stack.extend(named_children(cur));
+        }
+    }
+}
+
+fn push_arm_idents<'s>(cx: &Cx<'_, 's>, pat: Node<'_>, out: &mut Vec<&'s str>) {
+    let guard = child_by_field(pat, "condition").map(|node| node.id());
+    for child in named_children(pat) {
+        if guard.is_some_and(|id| id == child.id()) {
+            continue;
+        }
+        push_shadow_idents(cx, child, out);
+    }
+}
+
+pub(super) fn shadow_names<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+    match n.kind() {
+        "for_expression" => {
+            if let Some(pat) = child_by_field(n, "pattern") {
+                push_shadow_idents(cx, pat, out);
+            }
+        }
+        "match_arm" => {
+            if let Some(pat) = child_by_field(n, "pattern") {
+                push_arm_idents(cx, pat, out);
+            }
+        }
+        "if_expression" | "while_expression" => {
+            if let Some(cond) = child_by_field(n, "condition") {
+                push_condition_idents(cx, cond, out);
+            }
+        }
+        _ => {}
     }
 }

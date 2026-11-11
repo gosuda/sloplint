@@ -15,8 +15,11 @@ impl<'s> ScopedShadow<'s> {
     pub(crate) fn register(&mut self, name: &'s str, parent: usize) {
         let slot = self.counts.entry(name).or_insert(0);
         *slot = slot.saturating_add(1);
-        self.stack.push((parent, name));
-        self.tops.entry(name).or_default().push(parent);
+        let at = self.stack.partition_point(|(open, _)| *open <= parent);
+        self.stack.insert(at, (parent, name));
+        let scopes = self.tops.entry(name).or_default();
+        let at = scopes.partition_point(|open| *open <= parent);
+        scopes.insert(at, parent);
     }
     pub(crate) fn release(&mut self, depth: usize) -> Vec<&'s str> {
         let mut freed = Vec::new();

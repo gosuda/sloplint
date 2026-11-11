@@ -91,6 +91,10 @@ impl LangHooks for OcamlHooks {
         depth.saturating_sub(1)
     }
 
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         funcs::function_head(self, n, cx)
     }

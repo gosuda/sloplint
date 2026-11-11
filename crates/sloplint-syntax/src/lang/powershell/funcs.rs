@@ -237,6 +237,51 @@ pub(crate) fn ps_function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Funct
     })
 }
 
+pub(crate) fn ps_script_block_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
+    if n.kind() != "script_block_expression" {
+        return None;
+    }
+    let mut params = Vec::new();
+    for child in named_children(n) {
+        let block = if child.kind() == "param_block" {
+            Some(child)
+        } else if child.kind() == "script_block" {
+            first_of_kind(child, &["param_block"])
+        } else {
+            None
+        };
+        if let Some(block) = block
+            && let Some(list) = first_of_kind(block, &["parameter_list"])
+        {
+            collect_script_params(cx, list, &mut params);
+        }
+    }
+    if params.is_empty() {
+        return None;
+    }
+    Some(FunctionHead {
+        shadow_params: Vec::new(),
+        name: "",
+        name_pos: pos_of(n),
+        visibility: Visibility::Private,
+        signature_forced: false,
+        entry_point: false,
+        in_test: false,
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        region: None,
+        receiver: None,
+        params,
+        return_type: None,
+        missing_annotations: Vec::new(),
+        doc: Vec::new(),
+        doc_pos: None,
+        sole_call: ps_sole_call(n),
+    })
+}
+
 pub(crate) fn ps_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     let kind = n.kind();
     if kind != "class_statement" && kind != "enum_statement" {

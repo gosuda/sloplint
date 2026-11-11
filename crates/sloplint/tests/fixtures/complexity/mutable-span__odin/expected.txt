@@ -1,1 +1,3 @@
 a.odin:4 info complexity/mutable-span
+# outer-from-block.odin: binding line 4, writes lines 5, 37 and 38 (span 33); far writes sit in an if true body with no shadowing.
+outer-from-block.odin:4 info complexity/mutable-span

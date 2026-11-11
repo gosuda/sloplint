@@ -6,7 +6,7 @@ use super::OcamlHooks;
 use super::params::{is_let_binding, is_parameter, missing_of, ocaml_params, spec_signature};
 use crate::hooks::{
     Cx, FunctionHead, any_named_child, child_by_field, find_named_child, first_named_child,
-    first_of_kind, pos_of, preceding_comments, text,
+    first_of_kind, named_children, pos_of, preceding_comments, text,
 };
 
 fn module_constrained(cx: &Cx<'_, '_>) -> bool {
@@ -18,21 +18,59 @@ fn module_constrained(cx: &Cx<'_, '_>) -> bool {
     false
 }
 
+fn push_pattern_name<'s>(cx: &Cx<'_, 's>, node: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    let name = text(cx, node);
+    if out.iter().any(|(found, _)| *found == name) {
+        return;
+    }
+    out.push((name, pos_of(node)));
+}
+
+pub(crate) fn pattern_names<'s>(cx: &Cx<'_, 's>, pat: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    let mut stack = vec![pat];
+    while let Some(node) = stack.pop() {
+        let kind = node.kind();
+        if kind == "typed_pattern" {
+            if let Some(inner) = child_by_field(node, "pattern") {
+                stack.push(inner);
+            }
+            continue;
+        }
+        if kind == "field_pattern" {
+            if let Some(inner) = child_by_field(node, "pattern") {
+                stack.push(inner);
+            }
+            continue;
+        }
+        if matches!(kind, "value_pattern" | "value_name") {
+            if node.named_child_count() == 0 {
+                push_pattern_name(cx, node, out);
+            } else {
+                stack.extend(named_children(node).into_iter().rev());
+            }
+            continue;
+        }
+        if kind == "identifier" {
+            push_pattern_name(cx, node, out);
+            continue;
+        }
+        if matches!(
+            kind,
+            "constructor_path" | "tag" | "field_path" | "module_path"
+        ) {
+            continue;
+        }
+        stack.extend(named_children(node).into_iter().rev());
+    }
+}
+
 pub(crate) fn pattern_ident<'s>(cx: &Cx<'_, 's>, pat: Node<'_>) -> Option<(&'s str, Pos)> {
     if matches!(pat.kind(), "identifier" | "value_name") {
         return Some((text(cx, pat), pos_of(pat)));
     }
-    let target = if pat.kind() == "value_pattern" {
-        pat
-    } else {
-        first_of_kind(pat, &["value_pattern"])?
-    };
-    let id = find_named_child(target, |c| matches!(c.kind(), "identifier" | "value_name"));
-    match id {
-        Some(id) => Some((text(cx, id), pos_of(id))),
-        None if target.named_child_count() == 0 => Some((text(cx, target), pos_of(target))),
-        None => None,
-    }
+    let mut found = Vec::new();
+    pattern_names(cx, pat, &mut found);
+    found.into_iter().next()
 }
 
 fn ocaml_header<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> (Vec<&'s str>, Option<Pos>) {
@@ -176,6 +214,61 @@ pub(crate) fn function_head<'s>(
     }
 }
 
+fn anonymous_closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
+    if n.kind() == "function_expression" {
+        return Some(FunctionHead {
+            shadow_params: Vec::new(),
+            name: "",
+            name_pos: pos_of(n),
+            visibility: Visibility::Private,
+            signature_forced: false,
+            entry_point: false,
+            in_test: cx.inside_test_module(),
+            is_overload: false,
+            is_deprecated: false,
+            is_decorated: false,
+            is_trait_item: false,
+            region: None,
+            receiver: None,
+            params: Vec::new(),
+            return_type: None,
+            missing_annotations: Vec::new(),
+            doc: Vec::new(),
+            doc_pos: None,
+            sole_call: None,
+        });
+    }
+    let body = child_by_field(n, "body")?;
+    let params = ocaml_params(cx, n);
+    let missing = missing_of(&params, None);
+    let shadow = params
+        .iter()
+        .map(|p| p.name)
+        .filter(|name| !name.is_empty())
+        .collect();
+    Some(FunctionHead {
+        shadow_params: shadow,
+        name: "",
+        name_pos: pos_of(n),
+        visibility: Visibility::Private,
+        signature_forced: false,
+        entry_point: false,
+        in_test: cx.inside_test_module(),
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        region: None,
+        receiver: None,
+        params,
+        return_type: None,
+        missing_annotations: missing,
+        doc: Vec::new(),
+        doc_pos: None,
+        sole_call: ocaml_sole(cx, body),
+    })
+}
+
 pub(crate) fn closure_head<'s>(
     hooks: &OcamlHooks,
     n: Node<'_>,
@@ -184,34 +277,32 @@ pub(crate) fn closure_head<'s>(
     if n.kind() != "fun_expression" && n.kind() != "function_expression" {
         return None;
     }
-    let parent = cx.parent()?;
-    if parent.kind() != "let_binding" {
-        return None;
+    if let Some(parent) = cx.parent()
+        && parent.kind() == "let_binding"
+        && child_by_field(parent, "body").is_some_and(|b| b.id() == n.id())
+    {
+        if n.kind() == "function_expression" {
+            return Some(let_head(
+                cx,
+                parent,
+                parent,
+                n,
+                hooks.visibility_at(cx, parent),
+            ));
+        }
+        let fun_body = child_by_field(n, "body")?;
+        let mut head = let_head(cx, parent, n, fun_body, hooks.visibility_at(cx, parent));
+        let mut params = ocaml_params(cx, parent);
+        params.append(&mut head.params);
+        head.params = params;
+        head.missing_annotations = missing_of(&head.params, head.return_type);
+        head.shadow_params = head
+            .params
+            .iter()
+            .map(|p| p.name)
+            .filter(|name| !name.is_empty())
+            .collect();
+        return Some(head);
     }
-    let body = child_by_field(parent, "body");
-    if body.is_some_and(|b| b.id() != n.id()) {
-        return None;
-    }
-    if n.kind() == "function_expression" {
-        return Some(let_head(
-            cx,
-            parent,
-            parent,
-            n,
-            hooks.visibility_at(cx, parent),
-        ));
-    }
-    let fun_body = child_by_field(n, "body")?;
-    let mut head = let_head(cx, parent, n, fun_body, hooks.visibility_at(cx, parent));
-    let mut params = ocaml_params(cx, parent);
-    params.append(&mut head.params);
-    head.params = params;
-    head.missing_annotations = missing_of(&head.params, head.return_type);
-    head.shadow_params = head
-        .params
-        .iter()
-        .map(|p| p.name)
-        .filter(|name| !name.is_empty())
-        .collect();
-    Some(head)
+    anonymous_closure_head(cx, n)
 }

@@ -1,1 +1,2 @@
 # Binding never reassigned after declaration.
+# range-var.go: outer `total` is written once on line 5; the line-20 write targets the `for range` variable, so misattribution would span 15 and fire.

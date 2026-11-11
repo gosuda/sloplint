@@ -51,6 +51,10 @@ impl LangHooks for CHooks {
         ShadowKind::DeclsAndBinds
     }
 
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let body = child_by_field(n, "body")?;
         let (fd, name_node) = c_family::func_parts(n, &C_DECLARATORS, &["identifier"])?;
@@ -95,6 +99,18 @@ impl LangHooks for CHooks {
             return;
         }
         out.extend(c_family::decl_info(cx, n, C_DECLARATORS.wrap).0);
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        if node.kind() == "declaration"
+            && cx
+                .parent_of(node)
+                .is_some_and(|parent| parent.kind() == "case_statement")
+        {
+            depth.saturating_sub(2)
+        } else {
+            depth.saturating_sub(1)
+        }
     }
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         let target = match n.kind() {

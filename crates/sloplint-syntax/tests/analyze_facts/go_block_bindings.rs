@@ -233,3 +233,24 @@ fn starlark_tuple_with_two_thousand_mixed_targets_completes() {
         analysis.facts.bindings.len()
     );
 }
+
+#[test]
+fn calling_a_local_closure_is_not_a_write() {
+    let mut source = String::from(
+        "package p\n\nfunc f() int {\n\tadd := func(a, b int) int { return a + b }\n\tx := add(1, 2)\n\tx++\n",
+    );
+    for _ in 0..14 {
+        source.push_str("\t_ = x\n");
+    }
+    source.push_str("\ty := add(x, 3)\n\treturn y\n}\n");
+    with_go_bindings(&source, |found| {
+        let adds = named_all(found, "add");
+        assert_eq!(adds.len(), 1, "one add binding: {found:?}");
+        assert_eq!(
+            adds[0].write_lines, 0,
+            "calls on lines 5 and 21 were recorded as writes to add: {found:?}"
+        );
+        let xs = named_all(found, "x");
+        assert_eq!(xs[0].write_lines, 1, "x++ still writes x: {found:?}");
+    });
+}

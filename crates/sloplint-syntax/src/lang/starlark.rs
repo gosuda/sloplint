@@ -103,6 +103,10 @@ impl LangHooks for StarlarkHooks {
         }
     }
 
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        kind == "for_statement"
+    }
+
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
         let callee = child_by_field(n, "function")?;
         Some(CallHead {

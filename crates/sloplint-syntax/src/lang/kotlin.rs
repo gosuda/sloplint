@@ -173,6 +173,36 @@ impl LangHooks for KotlinHooks {
         funcs::function_head(cx, n)
     }
 
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
+        let _ = parent;
+        funcs::closure_head(cx, n)
+    }
+
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        let _ = cx;
+        if matches!(node.kind(), "for_statement" | "when_expression") {
+            return depth;
+        }
+        depth.saturating_sub(1)
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        matches!(kind, "for_statement" | "when_expression")
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        items::shadow_names(cx, n, out);
+    }
+
     fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
         items::is_else_if(n, parent)
     }

@@ -260,6 +260,13 @@ pub(crate) fn const_pointer(cx: &Cx<'_, '_>, d: Node<'_>, wrap: &[&str]) -> bool
     }
     innermost_const
 }
+fn push_structured_binding<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    for id in named_children(n) {
+        if id.kind() == "identifier" {
+            out.push((text(cx, id), pos_of(id)));
+        }
+    }
+}
 pub(crate) fn decl_info<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
@@ -277,6 +284,8 @@ pub(crate) fn decl_info<'s>(
             func = true;
         } else if found.kind() == "identifier" && !const_pointer(cx, d, wrap) {
             out.push((text(cx, found), pos_of(found)));
+        } else if found.kind() == "structured_binding_declarator" {
+            push_structured_binding(cx, found, &mut out);
         }
     }
     (out, func)

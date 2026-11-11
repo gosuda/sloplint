@@ -288,6 +288,18 @@ fn closure_param<'s>(cx: &Cx<'_, 's>, pl: Node<'_>, out: &mut Vec<Param<'s>>) {
         params_from_list(cx, pl, out);
         return;
     }
+    if pl.kind() == "implicit_parameter" {
+        out.push(Param {
+            name: text(cx, pl),
+            ty: None,
+            primitive_kind: PrimitiveKind::Other,
+            has_default: false,
+            bool_default: false,
+            keyword_only: false,
+            is_variadic: false,
+        });
+        return;
+    }
     let Some(id) = child_by_field(pl, "name").or_else(|| first_named_child(pl)) else {
         return;
     };

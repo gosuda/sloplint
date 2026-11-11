@@ -196,19 +196,63 @@ fn push_final_local_shadows<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s 
         }
     }
 }
-pub(crate) fn shadow_statement_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
-    if n.kind() == "local_variable_declaration" {
-        push_final_local_shadows(cx, n, out);
-        return;
-    }
-    let name = match n.kind() {
-        "enhanced_for_statement" | "catch_formal_parameter" => child_by_field(n, "name"),
-        _ => None,
-    };
-    if let Some(name) = name
+fn push_single_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    if let Some(name) = child_by_field(n, "name")
         && name.kind() == "identifier"
     {
         out.push(text(cx, name));
+    }
+}
+
+fn push_pattern_ident<'s>(cx: &Cx<'_, 's>, cur: Node<'_>, out: &mut Vec<&'s str>) {
+    for child in named_children(cur) {
+        if child.kind() == "identifier" {
+            out.push(text(cx, child));
+        }
+    }
+}
+
+fn push_condition_patterns<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str>) {
+    let mut stack = vec![root];
+    while let Some(cur) = stack.pop() {
+        let kind = cur.kind();
+        if matches!(
+            kind,
+            "lambda_expression" | "object_creation_expression" | "switch_expression"
+        ) {
+            continue;
+        }
+        if kind == "instanceof_expression" {
+            push_single_name(cx, cur, out);
+        } else if kind == "type_pattern" || kind == "record_pattern_component" {
+            push_pattern_ident(cx, cur, out);
+        }
+        stack.extend(named_children(cur));
+    }
+}
+
+fn push_guard_patterns<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    if let Some(condition) = child_by_field(n, "condition") {
+        push_condition_patterns(cx, condition, out);
+    }
+}
+
+fn push_label_patterns<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    for child in named_children(n) {
+        if child.kind() == "switch_label" {
+            push_condition_patterns(cx, child, out);
+        }
+    }
+}
+
+pub(crate) fn shadow_statement_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    match n.kind() {
+        "local_variable_declaration" => push_final_local_shadows(cx, n, out),
+        "resource" => push_single_name(cx, n, out),
+        "switch_block_statement_group" | "switch_rule" => push_label_patterns(cx, n, out),
+        "if_statement" | "while_statement" | "for_statement" => push_guard_patterns(cx, n, out),
+        "enhanced_for_statement" | "catch_formal_parameter" => push_single_name(cx, n, out),
+        _ => {}
     }
 }
 

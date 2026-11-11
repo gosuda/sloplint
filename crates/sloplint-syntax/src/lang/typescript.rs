@@ -20,8 +20,8 @@ pub(crate) mod calls;
 pub(crate) mod funcs;
 pub(crate) mod imports;
 use ambient::{
-    ambient_sites, decl_names_for, hoisted_shadows_for, shadow_kind_for, shadow_names_for,
-    write_roots_for,
+    ambient_sites, decl_names_for, function_body_depth, hoisted_shadows_for, shadow_kind_for,
+    shadow_names_for, write_roots_for,
 };
 use calls::{callee_root, collapsed_callee, ts_args, ts_sole_call};
 use funcs::{
@@ -136,11 +136,39 @@ impl LangHooks for TypeScriptHooks {
     }
 
     fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
-        if node.kind() == "for_in_statement" {
+        if node.kind() == "catch_clause" {
             return depth;
         }
-        let _ = (node, cx);
+        if node.kind() == "for_in_statement" {
+            if child_by_field(node, "kind").is_some_and(|kind| text(cx, kind) == "var") {
+                return function_body_depth(depth, cx);
+            }
+            return depth;
+        }
+        if node.kind() == "lexical_declaration"
+            && cx.parent_of(node).is_some_and(|parent| {
+                parent.kind() == "switch_case" || parent.kind() == "switch_default"
+            })
+        {
+            return depth.saturating_sub(2);
+        }
+        if node.kind() == "variable_declaration"
+            || matches!(
+                node.kind(),
+                "function_declaration" | "generator_function_declaration"
+            )
+        {
+            return function_body_depth(depth, cx);
+        }
         depth.saturating_sub(1)
+    }
+
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        kind == "for_in_statement"
     }
 
     fn shadow_decl_kind(&self, kind: &str) -> bool {

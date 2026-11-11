@@ -114,7 +114,6 @@ pub(crate) enum FileSetKind {
     Type,
     Member,
     Module,
-    Literal,
 }
 
 impl FileSetKind {
@@ -124,14 +123,13 @@ impl FileSetKind {
             FileSetKind::Type => 1,
             FileSetKind::Member => 2,
             FileSetKind::Module => 3,
-            FileSetKind::Literal => 4,
         }
     }
 }
 
 #[derive(Default)]
 pub(crate) struct FileNameSets<'s> {
-    slots: [OnceCell<Vec<&'s str>>; 5],
+    slots: [OnceCell<Vec<&'s str>>; 4],
 }
 
 impl<'s> FileNameSets<'s> {

@@ -12,6 +12,7 @@ use crate::hooks::{
 use crate::spec::Role;
 use sloplint_core::role::CodeRole;
 
+mod blocks;
 mod calls;
 mod funcs;
 mod items;
@@ -29,7 +30,7 @@ use items::{
     minitest_arity, minitest_is_equality, rspec_assertion, ruby_env_name, ruby_in_cleanup,
     ruby_stmt, ruby_try_imports_only, sibling_enum_like, sibling_variant_count, strip_arrow,
 };
-fn field_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>, field: &str) -> Option<&'s str> {
+pub(crate) fn field_text<'s>(cx: &Cx<'_, 's>, n: Node<'_>, field: &str) -> Option<&'s str> {
     child_by_field(n, field).map(|v| text(cx, v))
 }
 fn initializes_binding(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
@@ -72,7 +73,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("conditional", Role::Ternary),
     ("call", Role::Call),
     ("assignment", Role::Bind),
-    ("operator_assignment", Role::Bind),
+    ("operator_assignment", Role::Write),
     ("class", Role::TypeDef),
     ("module", Role::TypeDef),
     ("comment", Role::Comment),
@@ -168,21 +169,36 @@ impl LangHooks for RubyHooks {
     fn is_else_if(&self, _n: Node<'_>, _parent: Option<Node<'_>>) -> bool {
         false
     }
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        matches!(kind, "for" | "rescue")
+    }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        let kind = n.kind();
-        if kind != "assignment" && kind != "operator_assignment" {
-            return;
-        }
-        let Some(left) = child_by_field(n, "left") else {
-            return;
-        };
-        if left.kind() == "left_assignment_list" {
-            for child in named_children(left) {
-                push_ruby_target(cx, child, out);
+        if n.kind() == "assignment" {
+            let Some(left) = child_by_field(n, "left") else {
+                return;
+            };
+            let mut names = Vec::new();
+            if left.kind() == "left_assignment_list" {
+                for child in named_children(left) {
+                    push_ruby_target(cx, child, &mut names);
+                }
+            } else {
+                push_ruby_target(cx, left, &mut names);
             }
-        } else {
-            push_ruby_target(cx, left, out);
+            for (name, pos) in names {
+                if !blocks::is_block_shadowed(cx, name) {
+                    out.push((name, pos));
+                }
+            }
+            return;
         }
+        blocks::flow_target_names(cx, n, out);
+    }
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        blocks::block_shadow_names(cx, n, out);
+    }
+    fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
+        blocks::op_write_target(cx, n, out);
     }
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
         if n.kind() != "call" {

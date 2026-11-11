@@ -5,6 +5,7 @@ use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, TypeHead};
 use crate::spec::Role;
 
 mod asserts;
+mod binds;
 mod calls;
 mod funcs;
 mod imports;
@@ -66,6 +67,14 @@ impl LangHooks for PhpHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         funcs::function_head(cx, n)
     }
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
+        funcs::closure_head(cx, n)
+    }
     fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
         n.kind() == "if_statement" && parent.is_some_and(|p| p.kind() == "else_clause")
     }
@@ -74,6 +83,9 @@ impl LangHooks for PhpHooks {
     }
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         items::write_roots(cx, n, out);
+    }
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        matches!(kind, "foreach_statement" | "catch_clause")
     }
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
         calls::call_head(cx, n)

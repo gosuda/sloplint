@@ -67,17 +67,24 @@ impl LangHooks for RHooks {
         _parent: Option<Node<'_>>,
         cx: &Cx<'_, 's>,
     ) -> Option<FunctionHead<'s>> {
-        let (name, binary) = bound_function(cx, n)?;
-        let (doc, doc_pos) = preceding_comments(cx, binary, COMMENT_KINDS, &[]);
+        let bound = bound_function(cx, n);
+        let (name, name_pos, visibility, doc, doc_pos) = match bound {
+            Some((name, binary)) => {
+                let (doc, doc_pos) = preceding_comments(cx, binary, COMMENT_KINDS, &[]);
+                let visibility = if nested_function(cx) || name.starts_with('.') {
+                    Visibility::Private
+                } else {
+                    Visibility::Exported
+                };
+                (name, pos_of(binary), visibility, doc, doc_pos)
+            }
+            None => ("", pos_of(n), Visibility::Private, Vec::new(), None),
+        };
         Some(FunctionHead {
             shadow_params: Vec::new(),
             name,
-            name_pos: pos_of(binary),
-            visibility: if nested_function(cx) || name.starts_with('.') {
-                Visibility::Private
-            } else {
-                Visibility::Exported
-            },
+            name_pos,
+            visibility,
             signature_forced: false,
             entry_point: false,
             in_test: false,
@@ -121,8 +128,6 @@ impl LangHooks for RHooks {
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         let target = match operator_text(cx, n) {
             "<-" | "=" | ":=" => child_by_field(n, "lhs").filter(|lhs| lhs.kind() != "identifier"),
-            "<<-" => child_by_field(n, "lhs"),
-            "->>" => child_by_field(n, "rhs"),
             _ => None,
         };
         out.extend(target.and_then(|node| write_root(cx, node)));

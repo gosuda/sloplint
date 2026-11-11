@@ -110,6 +110,7 @@ fn is_fn_like(kind: &str) -> bool {
             | "arrow_function"
             | "function_expression"
             | "generator_function"
+            | "class_static_block"
     )
 }
 
@@ -176,6 +177,10 @@ fn collect_top_mutable<'s>(cx: &Cx<'_, 's>, stmt: Node<'_>, out: &mut Vec<&'s st
 }
 
 pub(crate) fn decl_names_for<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
+    if n.kind() == "for_in_statement" {
+        for_in_var_names(cx, n, out);
+        return;
+    }
     if n.kind() == "lexical_declaration"
         && !child_by_field(n, "kind").is_some_and(|k| text(cx, k) == "let")
     {
@@ -187,11 +192,39 @@ pub(crate) fn decl_names_for<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'
     out.extend(ts_declared(cx, n));
 }
 
+fn for_in_var_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    if !child_by_field(n, "kind").is_some_and(|kind| text(cx, kind) == "var") {
+        return;
+    }
+    if let Some(left) = child_by_field(n, "left") {
+        ts_pat(cx, left, out);
+    }
+}
+
 pub(crate) fn shadow_kind_for(kind: &str) -> bool {
-    kind == "lexical_declaration" || kind == "for_in_statement"
+    kind == "lexical_declaration" || kind == "for_in_statement" || kind == "catch_clause"
+}
+
+pub(crate) fn function_body_depth(depth: usize, cx: &Cx<'_, '_>) -> usize {
+    let mut parent = depth;
+    for ancestor in cx.ancestors() {
+        parent = parent.saturating_sub(1);
+        if is_fn_like(ancestor.kind()) {
+            return parent.saturating_add(1);
+        }
+    }
+    depth.saturating_sub(1)
 }
 
 pub(crate) fn shadow_names_for<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+    if n.kind() == "catch_clause" {
+        if let Some(param) = child_by_field(n, "parameter") {
+            let mut found = Vec::new();
+            ts_pat(cx, param, &mut found);
+            out.extend(found.into_iter().map(|(name, _)| name));
+        }
+        return;
+    }
     if n.kind() == "for_in_statement" {
         shadow_for_in_names(cx, n, out);
         return;
@@ -212,7 +245,7 @@ pub(crate) fn shadow_names_for<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&
 fn shadow_for_in_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
     if !child_by_field(n, "kind").is_some_and(|kind| {
         let keyword = text(cx, kind);
-        keyword == "let" || keyword == "const" || keyword == "var"
+        keyword == "let" || keyword == "const"
     }) {
         return;
     }
@@ -229,11 +262,21 @@ pub(crate) fn write_roots_for<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&
     } else {
         child_by_field(n, "left")
     };
-    if let Some(t) = target
-        && let Some(root) = super::calls::ts_root(cx, t)
-    {
-        out.push(root);
+    let Some(mut current) = target else {
+        return;
+    };
+    while current.kind() == "parenthesized_expression" {
+        let Some(inner) = find_named_child(current, |child| child.kind() != "comment") else {
+            return;
+        };
+        current = inner;
     }
+    let mut names = Vec::new();
+    ts_pat(cx, current, &mut names);
+    if names.is_empty() {
+        names.extend(ts_root(cx, current));
+    }
+    out.extend(names);
 }
 
 pub(crate) fn ambient_sites<'s>(

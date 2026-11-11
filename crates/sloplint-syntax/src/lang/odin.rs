@@ -89,6 +89,14 @@ impl LangHooks for OdinHooks {
         depth.saturating_sub(1)
     }
 
+    fn block_scoped_binds(&self) -> bool {
+        true
+    }
+
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+
     fn shadow_decl_kind(&self, kind: &str) -> bool {
         matches!(kind, "for_statement")
     }

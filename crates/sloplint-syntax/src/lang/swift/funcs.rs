@@ -4,8 +4,8 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     Cx, FunctionHead, any_named_child, attributed_region, child_by_field,
-    first_named_child_matching, first_of_kind, only_named_child_matching, pos_of,
-    preceding_comments, slice, trimmed,
+    first_named_child_matching, first_of_kind, named_children, only_named_child_matching, pos_of,
+    preceding_comments, slice, text, trimmed,
 };
 
 use super::syntax::{BOUNDARY, COMMENT_KINDS, PUBLIC_WORDS};
@@ -259,4 +259,80 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
         doc_pos,
         sole_call: sole_call(body),
     })
+}
+
+pub(crate) fn closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
+    if n.kind() != "lambda_literal" {
+        return None;
+    }
+    let statements = first_named_child_matching(n, &["statements"]);
+    Some(FunctionHead {
+        shadow_params: Vec::new(),
+        name: "",
+        name_pos: pos_of(n),
+        visibility: Visibility::Private,
+        signature_forced: false,
+        entry_point: false,
+        in_test: false,
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        region: None,
+        params: closure_params(cx, n),
+        receiver: None,
+        return_type: None,
+        missing_annotations: Vec::new(),
+        doc: Vec::new(),
+        doc_pos: None,
+        sole_call: statements.and_then(|body| closure_sole_call(body)),
+    })
+}
+
+fn closure_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
+    let Some(ty) = child_by_field(n, "type") else {
+        return Vec::new();
+    };
+    let Some(list) = first_named_child_matching(ty, &["lambda_function_type_parameters"]) else {
+        return Vec::new();
+    };
+    named_children(list)
+        .into_iter()
+        .filter(|child| child.kind() == "lambda_parameter")
+        .map(|param| closure_param(cx, param))
+        .collect()
+}
+
+fn closure_param<'s>(cx: &Cx<'_, 's>, param: Node<'_>) -> Param<'s> {
+    let mut name = "";
+    let mut ty = None;
+    for index in 0..param.child_count() {
+        let field = param.field_name_for_child(index);
+        let Some(child) = param.child(index) else {
+            continue;
+        };
+        if !child.is_named() {
+            continue;
+        }
+        if child.kind() == "simple_identifier" && field == Some("name") && name.is_empty() {
+            name = text(cx, child);
+        } else if ty.is_none() && matches!(field, Some("name") | Some("type")) {
+            ty = Some(trimmed(cx, child));
+        }
+    }
+    Param {
+        name,
+        ty,
+        primitive_kind: swift_primitive(ty),
+        has_default: false,
+        bool_default: false,
+        keyword_only: false,
+        is_variadic: false,
+    }
+}
+
+fn closure_sole_call(statements: Node<'_>) -> Option<usize> {
+    let only = only_named_child_matching(statements, |c| !COMMENT_KINDS.contains(&c.kind()))?;
+    let call = unwrap_statement(only)?;
+    (call.kind() == "call_expression" && !super::calls::is_subscript(call)).then(|| call.id())
 }

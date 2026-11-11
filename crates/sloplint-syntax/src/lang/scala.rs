@@ -120,4 +120,25 @@ impl LangHooks for ScalaHooks {
     fn assertion(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Assertion> {
         calls::assertion_head(cx, n)
     }
+
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        let _ = cx;
+        if items::shadow_decl_kind(node.kind()) {
+            depth
+        } else {
+            depth.saturating_sub(1)
+        }
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        items::shadow_decl_kind(kind)
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        items::shadow_names(cx, n, out);
+    }
 }

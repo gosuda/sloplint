@@ -1,2 +1,5 @@
 # Positive: getattr resolves a bare parameter, so the name is only known at runtime.
+src/after_loop.py:8 info grep/no-dynamic-symbol
+src/after_loop.py:9 info grep/no-dynamic-symbol
 src/dyn.py:5 info grep/no-dynamic-symbol
+src/named_table.py:8 info grep/no-dynamic-symbol

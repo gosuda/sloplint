@@ -126,6 +126,47 @@ impl LangHooks for CppHooks {
             sole_call: sole_call(body),
         })
     }
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
+        if n.kind() != "lambda_expression" {
+            return None;
+        }
+        let body = child_by_field(n, "body");
+        let mut params = Vec::new();
+        if let Some(declarator) = child_by_field(n, "declarator") {
+            params = c_family::params(
+                cx,
+                declarator,
+                &CPP_DECLARATORS,
+                &["parameter_declaration", "optional_parameter_declaration"],
+            );
+        }
+        Some(FunctionHead {
+            shadow_params: Vec::new(),
+            name: "",
+            name_pos: pos_of(n),
+            visibility: Visibility::Private,
+            signature_forced: false,
+            entry_point: false,
+            in_test: false,
+            is_overload: false,
+            is_deprecated: false,
+            is_decorated: false,
+            is_trait_item: false,
+            region: None,
+            params,
+            receiver: None,
+            return_type: None,
+            missing_annotations: Vec::new(),
+            doc: Vec::new(),
+            doc_pos: None,
+            sole_call: body.and_then(c_family::sole_call),
+        })
+    }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         if n.kind() != "declaration" {
             return;
@@ -139,6 +180,30 @@ impl LangHooks for CppHooks {
             return;
         }
         out.extend(c_family::decl_info(cx, n, CPP_DECLARATORS.wrap).0);
+    }
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, _cx: &Cx<'_, '_>) -> usize {
+        match node.kind() {
+            "for_range_loop" | "catch_clause" => depth,
+            "declaration" => statement_scope(depth, node),
+            _ => depth.saturating_sub(1),
+        }
+    }
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        matches!(kind, "for_range_loop" | "catch_clause")
+    }
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        match n.kind() {
+            "for_range_loop" => range_names(cx, n, out),
+            "catch_clause" => {
+                if let Some(name) = handlers::catch_binding(cx, n) {
+                    out.push(name);
+                }
+            }
+            _ => {}
+        }
     }
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         let target = match n.kind() {
@@ -344,5 +409,46 @@ impl LangHooks for CppHooks {
             "REQUIRE" | "CHECK" | "REQUIRE_FALSE" | "CHECK_FALSE"
         )
         .then(|| calls::catch2_assert(cx, n))
+    }
+}
+
+fn statement_scope(depth: usize, node: Node<'_>) -> usize {
+    if node
+        .parent()
+        .is_some_and(|parent| parent.kind() == "case_statement")
+    {
+        return depth.saturating_sub(2);
+    }
+    let mut levels = 1;
+    let mut current = node.parent();
+    while let Some(outer) = current {
+        if matches!(
+            outer.kind(),
+            "if_statement" | "while_statement" | "switch_statement" | "for_range_loop"
+        ) {
+            return depth.saturating_sub(levels);
+        }
+        if !matches!(outer.kind(), "condition_clause" | "init_statement") {
+            break;
+        }
+        levels += 1;
+        current = outer.parent();
+    }
+    depth.saturating_sub(1)
+}
+
+fn range_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    let Some(declarator) = child_by_field(n, "declarator") else {
+        return;
+    };
+    let found = c_family::leaf(declarator, CPP_DECLARATORS.wrap);
+    if found.kind() == "identifier" {
+        out.push(text(cx, found));
+    } else if found.kind() == "structured_binding_declarator" {
+        for id in named_children(found) {
+            if id.kind() == "identifier" {
+                out.push(text(cx, id));
+            }
+        }
     }
 }

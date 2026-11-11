@@ -109,6 +109,105 @@ pub(crate) fn function_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>
         .collect()
 }
 
+fn lambda_param<'s>(cx: &Cx<'_, 's>, decl: Node<'_>) -> Option<Param<'s>> {
+    let name = text(cx, first_of_kind(decl, &["identifier"])?);
+    let ty = first_of_kind(decl, &["type"]).map(|ty| text(cx, ty));
+    Some(Param {
+        name,
+        ty,
+        primitive_kind: primitive_of(ty.unwrap_or("")),
+        has_default: false,
+        bool_default: false,
+        keyword_only: false,
+        is_variadic: false,
+    })
+}
+
+fn push_lambda_multi<'s>(cx: &Cx<'_, 's>, params: &mut Vec<Param<'s>>, n: Node<'_>) {
+    for inner in named_children(n) {
+        if inner.kind() == "variable_declaration" {
+            params.extend(lambda_param(cx, inner));
+        }
+    }
+}
+
+fn push_lambda_child<'s>(cx: &Cx<'_, 's>, params: &mut Vec<Param<'s>>, child: Node<'_>) {
+    if child.kind() == "variable_declaration" {
+        params.extend(lambda_param(cx, child));
+    } else if child.kind() == "multi_variable_declaration" {
+        push_lambda_multi(cx, params, child);
+    }
+}
+
+fn lambda_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
+    let Some(list) = first_of_kind(n, &["lambda_parameters"]) else {
+        return Vec::new();
+    };
+    let mut params = Vec::new();
+    for child in named_children(list) {
+        push_lambda_child(cx, &mut params, child);
+    }
+    params
+}
+
+fn lambda_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> FunctionHead<'s> {
+    let params = lambda_params(cx, n);
+    let implicit = params.is_empty();
+    FunctionHead {
+        shadow_params: implicit.then_some("it").into_iter().collect(),
+        name: "",
+        name_pos: pos_of(n),
+        visibility: Visibility::Private,
+        signature_forced: false,
+        entry_point: false,
+        in_test: false,
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        region: None,
+        params,
+        receiver: None,
+        return_type: None,
+        missing_annotations: Vec::new(),
+        doc: Vec::new(),
+        doc_pos: None,
+        sole_call: None,
+    }
+}
+
+fn fun_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> FunctionHead<'s> {
+    FunctionHead {
+        shadow_params: Vec::new(),
+        name: "",
+        name_pos: pos_of(n),
+        visibility: Visibility::Private,
+        signature_forced: false,
+        entry_point: false,
+        in_test: false,
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        region: None,
+        params: function_params(cx, n),
+        receiver: None,
+        return_type: None,
+        missing_annotations: Vec::new(),
+        doc: Vec::new(),
+        doc_pos: None,
+        sole_call: None,
+    }
+}
+
+pub(crate) fn closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
+    match n.kind() {
+        "lambda_literal" => Some(lambda_head(cx, n)),
+        "anonymous_function" => Some(fun_head(cx, n)),
+        _ => None,
+    }
+}
+
 fn statement_call(statement: Node<'_>) -> Option<usize> {
     match statement.kind() {
         "call_expression" => Some(statement.id()),

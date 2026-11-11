@@ -1,8 +1,8 @@
-use sloplint_core::facts::{Param, PrimitiveKind, Visibility};
-use sloplint_core::role::CodeRole;
+use sloplint_core::facts::{Param, Pos, PrimitiveKind, Visibility};
+use sloplint_core::role::{CodeRole, RoleRegion};
 use tree_sitter::Node;
 
-use super::{has_operator, is_test_ident};
+use super::is_test_ident;
 use crate::hooks::{
     Cx, FunctionHead, any_named_child, attributed_region, find_named_child, first_named_child,
     first_named_child_matching, first_of_kind, last_named_child, named_children,
@@ -193,6 +193,66 @@ fn odin_sole(_cx: &Cx<'_, '_>, body: Node<'_>) -> Option<usize> {
     (node.kind() == "call_expression").then_some(node.id())
 }
 
+struct ClosureMeta<'s> {
+    name: &'s str,
+    pos: Pos,
+    visibility: Visibility,
+    forced: bool,
+    entry: bool,
+    region: Option<RoleRegion>,
+    doc: Vec<&'s str>,
+    doc_pos: Option<Pos>,
+}
+
+fn closure_name_node<'a>(parent: Node<'a>) -> Option<Node<'a>> {
+    match parent.kind() {
+        "procedure_declaration" | "const_declaration" | "variable_declaration" => {
+            first_named_child_matching(parent, &["expression", "identifier"])
+        }
+        "assignment_statement" => {
+            let first = first_named_child(parent)?;
+            is_identifier(&first).then_some(first)
+        }
+        _ => None,
+    }
+}
+
+fn closure_meta<'s>(cx: &Cx<'_, 's>, n: Node<'_>, parent: Node<'_>) -> ClosureMeta<'s> {
+    let Some(name_node) = closure_name_node(parent) else {
+        return ClosureMeta {
+            name: "",
+            pos: pos_of(n),
+            visibility: Visibility::Private,
+            forced: false,
+            entry: false,
+            region: None,
+            doc: Vec::new(),
+            doc_pos: None,
+        };
+    };
+    let (doc, doc_pos) = preceding_comments(cx, parent, &["comment", "block_comment"], &[]);
+    let visibility = if odin_top_level(cx, parent) && !attr_has(cx, parent, "private") {
+        Visibility::Exported
+    } else {
+        Visibility::Private
+    };
+    let forced = attr_has(cx, parent, "export")
+        || attr_has(cx, parent, "link_name")
+        || odin_in_foreign(cx, parent);
+    let name = text(cx, name_node);
+    ClosureMeta {
+        name,
+        pos: pos_of(name_node),
+        visibility,
+        forced,
+        entry: name == "main" && odin_package_is_main(cx),
+        region: parent_test_attr(cx, parent)
+            .map(|attr| attributed_region(n, Some(attr), CodeRole::Test)),
+        doc,
+        doc_pos,
+    }
+}
+
 pub(crate) fn closure_head<'s>(
     n: Node<'_>,
     _parent: Option<Node<'_>>,
@@ -202,56 +262,30 @@ pub(crate) fn closure_head<'s>(
         return None;
     }
     let parent = cx.parent()?;
-    let name_node = match parent.kind() {
-        "procedure_declaration" | "const_declaration" | "variable_declaration" => {
-            first_named_child_matching(parent, &["expression", "identifier"])?
-        }
-        "assignment_statement" => {
-            if !has_operator(parent, cx, ":=") {
-                return None;
-            }
-            let first = first_named_child(parent)?;
-            if !is_identifier(&first) {
-                return None;
-            }
-            first
-        }
-        _ => return None,
-    };
     let holder = first_of_kind(n, &["parameters"]);
     let (params, missing_annotations) = odin_params(cx, holder);
     let return_type = first_of_kind(n, &["type", "named_type"]).map(|t| text(cx, t));
-    let (doc, doc_pos) = preceding_comments(cx, parent, &["comment", "block_comment"], &[]);
-    let name = text(cx, name_node);
-    let visibility = if odin_top_level(cx, parent) && !attr_has(cx, parent, "private") {
-        Visibility::Exported
-    } else {
-        Visibility::Private
-    };
-    let forced = attr_has(cx, parent, "export")
-        || attr_has(cx, parent, "link_name")
-        || odin_in_foreign(cx, parent);
-    let test_attr = parent_test_attr(cx, parent);
+    let meta = closure_meta(cx, n, parent);
     let body = first_of_kind(n, &["block"]);
     Some(FunctionHead {
         shadow_params: Vec::new(),
-        name,
-        name_pos: pos_of(name_node),
-        visibility,
-        signature_forced: forced,
-        entry_point: name == "main" && odin_package_is_main(cx),
+        name: meta.name,
+        name_pos: meta.pos,
+        visibility: meta.visibility,
+        signature_forced: meta.forced,
+        entry_point: meta.entry,
         in_test: false,
         is_overload: false,
         is_deprecated: false,
         is_decorated: false,
         is_trait_item: false,
-        region: test_attr.map(|attr| attributed_region(n, Some(attr), CodeRole::Test)),
+        region: meta.region,
         receiver: None,
         params,
         return_type,
         missing_annotations,
-        doc,
-        doc_pos,
+        doc: meta.doc,
+        doc_pos: meta.doc_pos,
         sole_call: body.and_then(|b| odin_sole(cx, b)),
     })
 }

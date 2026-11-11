@@ -204,11 +204,49 @@ pub(crate) fn name_from_literal_loop(cx: &Cx<'_, '_>, name: Node<'_>) -> bool {
     let Some(func) = cx.ancestors().find(|a| a.kind() == "function_definition") else {
         return false;
     };
-    cx.literal_targets(
+    if !cx.literal_targets(
         func.id(),
         || literal_loop_targets(func, cx),
         |targets| targets.iter().any(|t| t.as_str() == wanted),
-    )
+    ) {
+        return false;
+    }
+
+    for a in cx.ancestors() {
+        if matches!(a.kind(), "function_definition" | "lambda") {
+            return false;
+        }
+        if a.kind() != "for_statement" {
+            continue;
+        }
+        let Some(left) = child_by_field(a, "left") else {
+            continue;
+        };
+        if left.kind() != "identifier" || text(cx, left) != wanted {
+            continue;
+        }
+        let Some(right) = child_by_field(a, "right") else {
+            return false;
+        };
+        if !matches!(right.kind(), "list" | "tuple") {
+            return false;
+        }
+        let mut cursor = right.walk();
+        let mut count = 0;
+        for child in right.children(&mut cursor).filter(|c| c.is_named()) {
+            count += 1;
+            if !is_static_name(child) {
+                return false;
+            }
+        }
+        if count == 0 {
+            return false;
+        }
+        return child_by_field(a, "body").is_some_and(|body| {
+            body.start_byte() <= name.start_byte() && name.end_byte() <= body.end_byte()
+        });
+    }
+    false
 }
 
 fn literal_loop_targets(func: Node<'_>, cx: &Cx<'_, '_>) -> Vec<String> {

@@ -45,6 +45,17 @@ impl LangHooks for PowerShellHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         funcs::ps_function_head(cx, n)
     }
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
+        funcs::ps_script_block_head(cx, n)
+    }
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        kind == "foreach_statement"
+    }
     fn is_else_if(&self, _n: Node<'_>, _parent: Option<Node<'_>>) -> bool {
         false
     }

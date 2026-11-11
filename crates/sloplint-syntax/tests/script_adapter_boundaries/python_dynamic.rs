@@ -122,11 +122,6 @@ const BARE_EXEC: &str = r#"def run(code):
     exec(code)
 "#;
 
-const DICT_LOOP: &str = r#"def load(mod):
-    for k in {"a": 1, "b": 2}:
-        getattr(mod, k)
-"#;
-
 const COMMENT_TUPLE: &str =
     "def load(mod):\n    for n in (\"a\",  # first\n        \"b\"):\n        getattr(mod, n)\n";
 
@@ -150,15 +145,6 @@ fn bare_exec_still_flags() {
         dynamics(BARE_EXEC),
         vec!["exec".to_owned()],
         "bare exec keeps its symbol"
-    );
-}
-
-#[test]
-fn dict_key_loop_stays_silent() {
-    assert_eq!(
-        dynamics(DICT_LOOP),
-        Vec::<String>::new(),
-        "string dict keys count as literal"
     );
 }
 
@@ -206,13 +192,6 @@ for package in ("urllib3", "idna"):
     locals()[package] = __import__(package)
 "#;
 
-const PAIR_COMPREHENSION: &str = r#"import hashlib
-MAP = {
-    n: getattr(hashlib, a, None)
-    for n, a in ((1, "md5"), (2, "sha1"))
-}
-"#;
-
 const CALL_COMPREHENSION: &str = r#"import hashlib
 
 def pairs():
@@ -221,99 +200,14 @@ def pairs():
 MAP = {n: getattr(hashlib, a, None) for n, a in pairs()}
 "#;
 
-const CLASS_ATTR_TABLE: &str = r#"class Response:
-    __attrs__: list[str] = ["a", "b"]
-
-    def state(self):
-        return {attr: getattr(self, attr, None) for attr in self.__attrs__}
-"#;
-
-const CODES_TABLE: &str = r#"import types
-
-_codes = {404: ("not_found",), 418: ("im_a_teapot",)}
-codes = types.SimpleNamespace()
-
-def init():
-    for code, titles in _codes.items():
-        for title in titles:
-            setattr(codes, title, code)
-            setattr(codes, title.upper(), code)
-"#;
-
-const DOUBLE_TABLE: &str = r#"import types
-
-_codes = {404: ("not_found",)}
-_codes = {}
-
-def init():
-    for code, titles in _codes.items():
-        setattr(codes, title, code)
-"#;
-
-const SORTED_TABLE: &str = r#"import box as box
-
-BOXES = ["A", "B"]
-
-for name in sorted(BOXES):
-    print(getattr(box, name))
-"#;
-
-const CONST_NAME: &str = r#"GIBBERISH = "aihwerij"
-
-def probe(obj):
-    return hasattr(obj, GIBBERISH)
-"#;
-
-const DOUBLE_CONST: &str = r#"GIBBERISH = "abc"
-GIBBERISH = "def"
-
-def probe(obj):
-    return hasattr(obj, GIBBERISH)
-"#;
-
 #[test]
 fn module_table_loop_stays_silent() {
     assert_eq!(dynamics(MODULE_TABLE_LOOP), Vec::<String>::new());
 }
 
 #[test]
-fn literal_pair_comprehension_stays_silent() {
-    assert_eq!(dynamics(PAIR_COMPREHENSION), Vec::<String>::new());
-}
-
-#[test]
 fn comprehension_over_call_result_still_flags() {
     assert_eq!(dynamics(CALL_COMPREHENSION).len(), 1);
-}
-
-#[test]
-fn class_attr_table_loop_stays_silent() {
-    assert_eq!(dynamics(CLASS_ATTR_TABLE), Vec::<String>::new());
-}
-
-#[test]
-fn dict_items_table_loop_stays_silent() {
-    assert_eq!(dynamics(CODES_TABLE), Vec::<String>::new());
-}
-
-#[test]
-fn table_assigned_twice_still_flags() {
-    assert_eq!(dynamics(DOUBLE_TABLE).len(), 1);
-}
-
-#[test]
-fn sorted_table_loop_stays_silent() {
-    assert_eq!(dynamics(SORTED_TABLE), Vec::<String>::new());
-}
-
-#[test]
-fn const_string_hasattr_stays_silent() {
-    assert_eq!(dynamics(CONST_NAME), Vec::<String>::new());
-}
-
-#[test]
-fn const_assigned_twice_still_flags() {
-    assert_eq!(dynamics(DOUBLE_CONST).len(), 1);
 }
 
 const MODULE_CALL_LOOP: &str = r#"def names():
@@ -416,4 +310,102 @@ fn pd09_many_constants_complete() {
     }
     source.push_str("def f(o, x):\n    return getattr(o, x)\n");
     assert_eq!(dynamics(&source).len(), 1);
+}
+const PYDYN2_COMPOSED: &str =
+    "for field in ('name', 'age'):\n    getattr(self, field + '_value')\n";
+
+#[test]
+fn pydyn2_composed_name_still_flags() {
+    assert_eq!(dynamics(PYDYN2_COMPOSED).len(), 1);
+}
+
+const PYDYN1_ROW_FIELD: &str = "class Opts:\n    field = 'timeout'\n\ndef read(obj, row):\n    return getattr(obj, row.field)\n";
+
+#[test]
+fn pydyn1_foreign_object_field_still_flags() {
+    assert_eq!(dynamics(PYDYN1_ROW_FIELD).len(), 1);
+}
+
+const PYDYN1_FOREIGN_TABLE: &str = "class Schema:\n    fields = ('a', 'b')\n\ndef export(req, o):\n    for f in req.fields:\n        getattr(o, f)\n";
+
+#[test]
+fn pydyn1_foreign_table_iter_still_flags() {
+    assert_eq!(dynamics(PYDYN1_FOREIGN_TABLE).len(), 1);
+}
+
+const PYDYN5_SPLAT: &str = "def f(o, pair):\n    return getattr(*pair)\n";
+
+#[test]
+fn pydyn5_splat_name_still_flags() {
+    assert_eq!(dynamics(PYDYN5_SPLAT).len(), 1);
+}
+
+const PYDYN9_MATCH_CAPTURE: &str = "def show(o, rows):\n    for n in ('a', 'b'):\n        match rows[0]:\n            case n:\n                pass\n        getattr(o, n)\n";
+
+#[test]
+fn pydyn9_match_capture_still_flags() {
+    assert_eq!(dynamics(PYDYN9_MATCH_CAPTURE).len(), 1);
+}
+
+const INLINE_LIST_LOOP: &str = r#"import importlib
+
+
+def load(names):
+    for lib in ["os", "sys"]:
+        importlib.import_module(lib)
+"#;
+
+#[test]
+fn list_loop_import_stays_silent() {
+    assert_eq!(dynamics(INLINE_LIST_LOOP), Vec::<String>::new());
+}
+
+const TUPLE_GETATTR_LOOP: &str = r#"def load(mod):
+    for name in ("a", "b"):
+        getattr(mod, name)
+"#;
+
+#[test]
+fn inline_tuple_getattr_loop_stays_silent() {
+    assert_eq!(dynamics(TUPLE_GETATTR_LOOP), Vec::<String>::new());
+}
+
+const INLINE_COMP: &str = r#"def load(obj):
+    return [getattr(obj, f) for f in ("a", "b")]
+"#;
+
+#[test]
+fn comprehension_over_inline_tuple_stays_silent() {
+    assert_eq!(dynamics(INLINE_COMP), Vec::<String>::new());
+}
+
+const AFTER_LOOP: &str = "def load(mod):\n    for name in ('a', 'b'):\n        print(name)\n    return getattr(mod, name)\n";
+
+#[test]
+fn lookup_after_loop_still_flags() {
+    assert_eq!(dynamics(AFTER_LOOP).len(), 1);
+}
+
+const REASSIGNED_BODY: &str =
+    "def load(mod):\n    for name in ('a', 'b'):\n        name = 'c'\n        getattr(mod, name)\n";
+
+#[test]
+fn loop_variable_reassigned_in_body_still_flags() {
+    assert_eq!(dynamics(REASSIGNED_BODY).len(), 1);
+}
+
+const NAMED_TABLE_LOOP: &str =
+    "TABLE = ('a', 'b')\n\ndef load(mod):\n    for name in TABLE:\n        getattr(mod, name)\n";
+
+#[test]
+fn loop_over_named_table_still_flags() {
+    assert_eq!(dynamics(NAMED_TABLE_LOOP).len(), 1);
+}
+
+const FSTRING_ITERABLE: &str =
+    "def load(mod, y):\n    for x in ('a', f'{y}'):\n        getattr(mod, x)\n";
+
+#[test]
+fn fstring_element_in_iterable_still_flags() {
+    assert_eq!(dynamics(FSTRING_ITERABLE).len(), 1);
 }

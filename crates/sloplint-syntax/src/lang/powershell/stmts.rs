@@ -25,6 +25,15 @@ fn is_plain_ps_var(t: &str) -> bool {
 }
 
 pub(crate) fn ps_decl_names<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
+    if n.kind() == "foreach_statement" {
+        if let Some(var) = first_named_child_matching(n, &["variable"]) {
+            let t = text(cx, var);
+            if is_plain_ps_var(t) {
+                out.push((ps_var_name(t), pos_of(var)));
+            }
+        }
+        return;
+    }
     if n.kind() != "assignment_expression" {
         return;
     }

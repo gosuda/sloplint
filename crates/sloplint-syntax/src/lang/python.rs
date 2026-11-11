@@ -8,8 +8,6 @@ use crate::hooks::{
 use crate::spec::Role;
 
 mod dynamic;
-mod dynamic_mutation;
-mod dynamic_tables;
 mod imports;
 mod items;
 mod params;
@@ -38,6 +36,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("call", Role::Call),
     ("assignment", Role::Bind),
     ("augmented_assignment", Role::Write),
+    ("named_expression", Role::Bind),
     ("import_statement", Role::Import),
     ("import_from_statement", Role::Import),
     ("class_definition", Role::TypeDef),
@@ -229,16 +228,41 @@ pub(crate) fn py_callee_text<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
         _ => "call",
     }
 }
-
 fn py_pat_names<'s>(cx: &Cx<'_, 's>, left: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     let mut stack = vec![left];
     while let Some(cur) = stack.pop() {
         match cur.kind() {
             "identifier" => out.push((text(cx, cur), pos_of(cur))),
-            "pattern_list" | "tuple_pattern" | "list_pattern" => {
+            "pattern_list"
+            | "tuple_pattern"
+            | "list_pattern"
+            | "splat_pattern"
+            | "as_pattern_target"
+            | "list_splat_pattern"
+            | "dictionary_splat_pattern" => {
                 stack.extend(named_children(cur));
             }
             _ => {}
+        }
+    }
+}
+
+fn py_with_item_target<'s>(cx: &Cx<'_, 's>, item: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    let value = child_by_field(item, "value").filter(|v| v.kind() == "as_pattern");
+    if let Some(target) = value.and_then(|v| child_by_field(v, "alias")) {
+        py_pat_names(cx, target, out);
+    }
+}
+
+fn py_with_targets<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    for clause in named_children(n) {
+        if clause.kind() != "with_clause" {
+            continue;
+        }
+        for item in named_children(clause) {
+            if item.kind() == "with_item" {
+                py_with_item_target(cx, item, out);
+            }
         }
     }
 }
@@ -410,12 +434,31 @@ impl LangHooks for PythonHooks {
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() != "assignment" {
-            return;
+        match n.kind() {
+            "assignment" | "for_statement" => {
+                if let Some(left) = child_by_field(n, "left") {
+                    py_pat_names(cx, left, out);
+                }
+            }
+            "with_statement" => py_with_targets(cx, n, out),
+            "except_clause" => {
+                if let Some(alias) = child_by_field(n, "alias") {
+                    py_pat_names(cx, alias, out);
+                }
+            }
+            "named_expression" => {
+                if let Some(name) = child_by_field(n, "name")
+                    && name.kind() == "identifier"
+                {
+                    out.push((text(cx, name), pos_of(name)));
+                }
+            }
+            _ => {}
         }
-        if let Some(left) = child_by_field(n, "left") {
-            py_pat_names(cx, left, out);
-        }
+    }
+
+    fn binds_flow_targets(&self, kind: &str) -> bool {
+        matches!(kind, "for_statement" | "with_statement" | "except_clause")
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {

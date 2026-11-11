@@ -1,1 +1,2 @@
 # 18 lines below minor_at=20.
+# decode_test.go (700 lines) stays silent because test-role files are exempt, not because of its size.

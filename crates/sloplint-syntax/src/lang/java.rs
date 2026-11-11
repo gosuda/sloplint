@@ -121,24 +121,55 @@ impl LangHooks for JavaHooks {
         items::local_declared(cx, n, out);
     }
     fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
-        if node.kind() == "enhanced_for_statement" {
-            return depth;
+        if node.kind() == "local_variable_declaration"
+            && cx
+                .parent_of(node)
+                .is_some_and(|parent| parent.kind() == "switch_block_statement_group")
+        {
+            return depth.saturating_sub(2);
         }
-        let _ = (node, cx);
-        depth.saturating_sub(1)
+        match node.kind() {
+            "enhanced_for_statement"
+            | "if_statement"
+            | "while_statement"
+            | "for_statement"
+            | "switch_block_statement_group"
+            | "switch_rule" => depth,
+            "resource" => depth.saturating_sub(2),
+            _ => depth.saturating_sub(1),
+        }
+    }
+
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
+        funcs::lambda_head(cx, n)
     }
 
     fn shadow_decl_kind(&self, kind: &str) -> bool {
         matches!(
             kind,
-            "enhanced_for_statement" | "catch_formal_parameter" | "local_variable_declaration"
+            "enhanced_for_statement"
+                | "catch_formal_parameter"
+                | "local_variable_declaration"
+                | "if_statement"
+                | "while_statement"
+                | "for_statement"
+                | "switch_block_statement_group"
+                | "switch_rule"
+                | "resource"
         )
     }
-
     fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
         items::shadow_statement_names(cx, n, out);
     }
-
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         items::write_targets(cx, n, out);
     }

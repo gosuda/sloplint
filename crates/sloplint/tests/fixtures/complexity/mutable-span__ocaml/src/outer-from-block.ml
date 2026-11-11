@@ -1,0 +1,38 @@
+let spread (limit : int) : int =
+  let total = ref 0 in
+  total := !total + 1;
+  let a01 = 1 in
+  let a02 = 2 in
+  let a03 = 3 in
+  let a04 = 4 in
+  let a05 = 5 in
+  let a06 = 6 in
+  let a07 = 7 in
+  let a08 = 8 in
+  let a09 = 9 in
+  let a10 = 10 in
+  let a11 = 11 in
+  let a12 = 12 in
+  let a13 = 13 in
+  let a14 = 14 in
+  let a15 = 15 in
+  let a16 = 16 in
+  let a17 = 17 in
+  let a18 = 18 in
+  let a19 = 19 in
+  let a20 = 20 in
+  let a21 = 21 in
+  let a22 = 22 in
+  let a23 = 23 in
+  let a24 = 24 in
+  let a25 = 25 in
+  let a26 = 26 in
+  let a27 = 27 in
+  let a28 = 28 in
+  let a29 = 29 in
+  let a30 = 30 in
+  begin
+    total := !total + limit;
+    total := !total + 1
+  end;
+  !total

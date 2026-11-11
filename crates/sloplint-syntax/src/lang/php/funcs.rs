@@ -220,3 +220,90 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
         sole_call: sole_call(n),
     })
 }
+
+fn find_use_clause(n: Node<'_>) -> Option<Node<'_>> {
+    named_children(n)
+        .into_iter()
+        .find(|child| child.kind() == "anonymous_function_use_clause")
+}
+fn push_by_value_uses<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    let Some(clause) = find_use_clause(n) else {
+        return;
+    };
+    for child in named_children(clause) {
+        if child.kind() != "variable_name" {
+            continue;
+        }
+        let raw = text(cx, child);
+        let name = raw.strip_prefix('$').unwrap_or(raw);
+        if !name.is_empty() {
+            out.push(name);
+        }
+    }
+}
+pub(crate) fn captures_by_ref(cx: &Cx<'_, '_>, n: Node<'_>, want: &str) -> bool {
+    let Some(clause) = find_use_clause(n) else {
+        return false;
+    };
+    for child in named_children(clause) {
+        if child.kind() != "by_ref" {
+            continue;
+        }
+        let hit = named_children(child).into_iter().any(|var| {
+            if var.kind() != "variable_name" {
+                return false;
+            }
+            let raw = text(cx, var);
+            raw.strip_prefix('$').unwrap_or(raw) == want
+        });
+        if hit {
+            return true;
+        }
+    }
+    false
+}
+fn closure_sole_call(n: Node<'_>) -> Option<usize> {
+    let body = child_by_field(n, "body")?;
+    if body.kind() == "compound_statement" {
+        return sole_call(n);
+    }
+    matches!(
+        body.kind(),
+        "function_call_expression"
+            | "member_call_expression"
+            | "scoped_call_expression"
+            | "nullsafe_member_call_expression"
+            | "object_creation_expression"
+    )
+    .then(|| body.id())
+}
+pub(crate) fn closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
+    if n.kind() != "anonymous_function" && n.kind() != "arrow_function" {
+        return None;
+    }
+    let mut missing = Vec::new();
+    let params = push_params(cx, n, &mut missing);
+    let mut shadow_params = Vec::new();
+    push_by_value_uses(cx, n, &mut shadow_params);
+    Some(FunctionHead {
+        shadow_params,
+        name: "",
+        name_pos: pos_of(n),
+        visibility: Visibility::Private,
+        signature_forced: false,
+        entry_point: false,
+        in_test: in_test_class(cx, n) || is_test_path(cx.path),
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        region: None,
+        receiver: None,
+        params,
+        return_type: child_by_field(n, "return_type").map(|t| text(cx, t)),
+        missing_annotations: Vec::new(),
+        doc: Vec::new(),
+        doc_pos: None,
+        sole_call: closure_sole_call(n),
+    })
+}

@@ -155,7 +155,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             params,
             sole_call: head.sole_call,
             scored: vec![false],
-            block_scoped: self.hooks.block_scoped_binds(),
+            block_scoped: self.hooks.block_scoped_decls(),
         });
         self.assert_mark_entered(node.id());
         self.marks.push((node.id(), Mark::Fn));

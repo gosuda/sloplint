@@ -59,6 +59,33 @@ impl LangHooks for ObjcHooks {
         ShadowKind::DeclsAndBinds
     }
 
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        if node.kind() == "declaration"
+            && cx
+                .parent_of(node)
+                .is_some_and(|parent| parent.kind() == "case_statement")
+        {
+            depth.saturating_sub(2)
+        } else if node.kind() == "for_statement" {
+            depth
+        } else {
+            depth.saturating_sub(1)
+        }
+    }
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        kind == "for_statement"
+    }
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        match n.kind() {
+            "for_statement" => push_for_in_var(cx, n, out),
+            "block_literal" => push_block_params(cx, n, out),
+            _ => {}
+        }
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         match n.kind() {
             "function_definition" => funcs::c_function(cx, n),
@@ -330,4 +357,52 @@ fn switch_scrutinee(switch: Node<'_>) -> ScrutineeKind {
         Some("field_expression") => ScrutineeKind::Field,
         _ => ScrutineeKind::Other,
     }
+}
+
+fn push_block_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    let Some(list) = first_named_child_matching(n, &["parameter_list"]) else {
+        return;
+    };
+    for child in named_children(list) {
+        if child.kind() == "identifier" {
+            out.push(text(cx, child));
+        } else if child.kind() == "parameter_declaration"
+            && let Some(found) = c_family::param(cx, child, &C_DECLARATORS)
+            && !found.name.is_empty()
+        {
+            out.push(found.name);
+        }
+    }
+}
+
+fn push_for_in_var<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    if child_by_field(n, "initializer").is_some() {
+        return;
+    }
+    for child in named_children(n) {
+        if is_loop_header_field(n, child) {
+            continue;
+        }
+        if child.kind() == "identifier" {
+            out.push(text(cx, child));
+            return;
+        }
+        if C_DECLARATORS.wrap.contains(&child.kind()) {
+            let found = c_family::leaf(child, C_DECLARATORS.wrap);
+            if found.kind() == "identifier" {
+                out.push(text(cx, found));
+            }
+            return;
+        }
+    }
+}
+
+fn is_loop_header_field(n: Node<'_>, child: Node<'_>) -> bool {
+    [
+        child_by_field(n, "body"),
+        child_by_field(n, "condition"),
+        child_by_field(n, "update"),
+    ]
+    .into_iter()
+    .any(|found| found.is_some_and(|slot| slot.id() == child.id()))
 }

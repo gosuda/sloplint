@@ -1,2 +1,4 @@
-# Positive: `total` stays mutable for 30 lines (strict major at 30).
+# Positive: `total` stays mutable for 32 lines (strict major at 30).
 a.sh:2 info complexity/mutable-span
+# outer-from-block.sh: binding line 2, writes lines 3, 35 and 36 (span 33); far writes sit in an if body with no shadowing.
+outer-from-block.sh:2 info complexity/mutable-span

@@ -13,50 +13,6 @@ use crate::hooks::{
     first_named_child_matching, has_child_kind, named_children, pos_of, rfind_named_child, text,
 };
 
-pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    if n.kind() != "local_declaration_statement" || has_mod(cx, n, "const") {
-        return;
-    }
-    for decl in named_children(n) {
-        if decl.kind() != "variable_declaration" {
-            continue;
-        }
-        for d in named_children(decl) {
-            if d.kind() != "variable_declarator" {
-                continue;
-            }
-            if decl_tuple(cx, d, out) {
-                continue;
-            }
-            if let Some(nm) = child_by_field(d, "name") {
-                out.push((text(cx, nm), pos_of(nm)));
-            }
-        }
-    }
-}
-
-fn decl_tuple<'s>(cx: &Cx<'_, 's>, d: Node<'_>, out: &mut Vec<(&'s str, Pos)>) -> bool {
-    let mut tupled = false;
-    for t in named_children(d) {
-        if t.kind() == "tuple_pattern" {
-            tupled = true;
-            tuple_names(cx, t, out);
-        }
-    }
-    tupled
-}
-
-fn tuple_names<'s>(cx: &Cx<'_, 's>, t: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    let mut pending: Vec<Node<'_>> = named_children(t).into_iter().rev().collect();
-    while let Some(c) = pending.pop() {
-        if c.kind() == "tuple_pattern" {
-            pending.extend(named_children(c).into_iter().rev());
-        } else if c.kind() == "identifier" {
-            out.push((text(cx, c), pos_of(c)));
-        }
-    }
-}
-
 fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     let mut current = n;
     loop {

@@ -1,1 +1,2 @@
 # near-miss: `segments` is only extended with method calls inside one loop, never reassigned.
+# shadowed-block.rs: outer `total` is written once on line 3; the line-21 write targets the inner block's own `total`, so misattribution would span 18 and fire.

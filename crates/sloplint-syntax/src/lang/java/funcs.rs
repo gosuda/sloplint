@@ -77,6 +77,61 @@ fn formal_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>) -> Vec<Param<'s>> {
         .filter_map(|p| formal_param(cx, p))
         .collect()
 }
+fn anon_param<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Param<'s> {
+    Param {
+        name: text(cx, n),
+        ty: None,
+        primitive_kind: PrimitiveKind::Other,
+        has_default: false,
+        bool_default: false,
+        keyword_only: false,
+        is_variadic: false,
+    }
+}
+
+fn inferred_params<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>>) {
+    for child in code_children(list) {
+        if child.kind() == "identifier" {
+            out.push(anon_param(cx, child));
+        }
+    }
+}
+
+pub(crate) fn lambda_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> {
+    if n.kind() != "lambda_expression" {
+        return None;
+    }
+    let mut params = Vec::new();
+    if let Some(list) = child_by_field(n, "parameters") {
+        match list.kind() {
+            "formal_parameters" => params.extend(formal_params(cx, list)),
+            "inferred_parameters" => inferred_params(cx, list, &mut params),
+            "identifier" => params.push(anon_param(cx, list)),
+            _ => {}
+        }
+    }
+    Some(FunctionHead {
+        shadow_params: Vec::new(),
+        name: "",
+        name_pos: pos_of(n),
+        visibility: Visibility::Private,
+        signature_forced: false,
+        entry_point: false,
+        in_test: false,
+        is_overload: false,
+        is_deprecated: false,
+        is_decorated: false,
+        is_trait_item: false,
+        region: None,
+        params,
+        receiver: None,
+        return_type: None,
+        missing_annotations: Vec::new(),
+        doc: Vec::new(),
+        doc_pos: None,
+        sole_call: None,
+    })
+}
 
 fn statement_call(statement: Node<'_>) -> Option<usize> {
     if !matches!(

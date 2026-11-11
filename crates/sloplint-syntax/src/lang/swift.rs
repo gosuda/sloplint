@@ -4,6 +4,7 @@ use tree_sitter::Node;
 use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead};
 use crate::spec::Role;
 
+mod binds;
 mod calls;
 mod funcs;
 mod items;
@@ -17,8 +18,9 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("for_statement", Role::Loop), ("while_statement", Role::Loop),
     ("repeat_while_statement", Role::Loop), ("catch_block", Role::Catch),
     ("ternary_expression", Role::Ternary), ("call_expression", Role::Call),
-    ("property_declaration", Role::Decl), ("assignment", Role::Write),
-    ("import_declaration", Role::Import), ("class_declaration", Role::TypeDef),
+    ("property_declaration", Role::Decl), ("value_binding_pattern", Role::Decl),
+    ("assignment", Role::Write), ("import_declaration", Role::Import),
+    ("class_declaration", Role::TypeDef),
     ("protocol_declaration", Role::TypeDef), ("typealias_declaration", Role::TypeDef),
     ("comment", Role::Comment), ("multiline_comment", Role::Comment),
     ("switch_entry", Role::MatchArm), ("navigation_expression", Role::Member),
@@ -31,6 +33,31 @@ pub(crate) struct SwiftHooks;
 impl LangHooks for SwiftHooks {
     fn shadow_filter(&self) -> ShadowKind {
         ShadowKind::DeclsAndBinds
+    }
+
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
+        funcs::closure_head(cx, n)
+    }
+
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        binds::shadow_kind_for(kind)
+    }
+
+    fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
+        binds::shadow_names_for(cx, n, out);
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        binds::scope_parent(depth, node, cx)
     }
 
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {

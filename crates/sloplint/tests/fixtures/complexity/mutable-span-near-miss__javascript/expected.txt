@@ -1,1 +1,2 @@
 # Near-miss: `fixed` is never reassigned after its declaration.
+# closure-param.js: outer `total` is written once on line 3; the line-20 write targets the arrow-function parameter, so misattribution would span 17 and fire.

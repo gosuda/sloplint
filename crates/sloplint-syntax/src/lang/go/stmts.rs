@@ -110,6 +110,9 @@ pub(crate) fn go_write_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'
         }
         return;
     }
+    if !matches!(n.kind(), "inc_statement" | "dec_statement") {
+        return;
+    }
     if let Some(child) = first_named_child(n)
         && let Some(root) = go_root(cx, child)
     {

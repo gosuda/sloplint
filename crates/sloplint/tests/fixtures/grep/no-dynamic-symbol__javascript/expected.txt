@@ -1,1 +1,4 @@
+src/after_loop.js:4 info grep/no-dynamic-symbol
+src/after_loop.js:6 info grep/no-dynamic-symbol
 src/app.js:2 info grep/no-dynamic-symbol
+src/named_table.js:4 info grep/no-dynamic-symbol

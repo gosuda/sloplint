@@ -5,6 +5,15 @@ use crate::shadow::FrameDecl;
 use crate::walk::WalkState;
 
 impl<'s, 'a> WalkState<'s, 'a, '_> {
+    pub(crate) fn bind_flow_targets(&mut self, node: tree_sitter::Node<'_>) {
+        if self.collect_facts
+            && !self.fn_stack.is_empty()
+            && self.hooks.binds_flow_targets(node.kind())
+        {
+            self.apply_bind(node);
+        }
+    }
+
     pub(crate) fn apply_write_roots(&mut self, node: tree_sitter::Node<'_>) {
         let hooks = self.hooks;
         let mut roots = Vec::new();

@@ -1,1 +1,2 @@
 a.ps1:2 info complexity/mutable-span
+outer-from-loop.ps1:2 info complexity/mutable-span

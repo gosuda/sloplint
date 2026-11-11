@@ -2,7 +2,7 @@ use sloplint_core::facts::{AmbientKind, Pos};
 use tree_sitter::Node;
 
 use super::calls::{incr_write_root, infix_write_root};
-use super::funcs::pattern_ident;
+use super::funcs::pattern_names;
 use super::params::{is_let_binding, is_parameter};
 use crate::hooks::{
     Cx, FileSetKind, any_named_child, child_by_field, has_child_kind, named_children, pos_of, text,
@@ -40,10 +40,8 @@ pub(crate) fn decl_names_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&
         if !mutable && !is_ref_binding(cx, lb) {
             continue;
         }
-        if let Some(pat) = child_by_field(lb, "pattern")
-            && let Some(found) = pattern_ident(cx, pat)
-        {
-            out.push(found);
+        if let Some(pat) = child_by_field(lb, "pattern") {
+            pattern_names(cx, pat, out);
         }
     }
 }
@@ -52,18 +50,18 @@ fn push_let_pattern<'s>(cx: &Cx<'_, 's>, lb: Node<'_>, out: &mut Vec<&'s str>) {
     if !is_let_binding(&lb) {
         return;
     }
-    if let Some(pattern) = child_by_field(lb, "pattern")
-        && let Some((name, _)) = pattern_ident(cx, pattern)
-    {
-        out.push(name);
+    if let Some(pattern) = child_by_field(lb, "pattern") {
+        let mut found = Vec::new();
+        pattern_names(cx, pattern, &mut found);
+        out.extend(found.into_iter().map(|(name, _)| name));
     }
 }
 pub(crate) fn shadow_names_head<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
     if n.kind() == "match_case" {
-        if let Some(pattern) = child_by_field(n, "pattern")
-            && let Some((name, _)) = pattern_ident(cx, pattern)
-        {
-            out.push(name);
+        if let Some(pattern) = child_by_field(n, "pattern") {
+            let mut found = Vec::new();
+            pattern_names(cx, pattern, &mut found);
+            out.extend(found.into_iter().map(|(name, _)| name));
         }
         return;
     }
@@ -93,10 +91,14 @@ fn push_ref_mutable_bindings<'s>(
         if !mutable && !is_ref_binding(cx, lb) {
             continue;
         }
-        if let Some(pat) = child_by_field(lb, "pattern")
-            && let Some((name, pos)) = pattern_ident(cx, pat)
-        {
-            out.push((AmbientKind::GlobalMutable, name, pos));
+        if let Some(pat) = child_by_field(lb, "pattern") {
+            let mut found = Vec::new();
+            pattern_names(cx, pat, &mut found);
+            out.extend(
+                found
+                    .into_iter()
+                    .map(|(name, pos)| (AmbientKind::GlobalMutable, name, pos)),
+            );
         }
     }
 }
@@ -125,10 +127,10 @@ fn file_global_names<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
             if !mutable && !is_ref_binding(cx, lb) {
                 continue;
             }
-            if let Some(pattern) = child_by_field(lb, "pattern")
-                && let Some((name, _)) = pattern_ident(cx, pattern)
-            {
-                names.push(name);
+            if let Some(pattern) = child_by_field(lb, "pattern") {
+                let mut found = Vec::new();
+                pattern_names(cx, pattern, &mut found);
+                names.extend(found.into_iter().map(|(name, _)| name));
             }
         }
     }

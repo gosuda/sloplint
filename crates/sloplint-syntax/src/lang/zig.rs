@@ -12,6 +12,7 @@ mod calls;
 mod funcs;
 mod imports;
 mod items;
+mod payloads;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_declaration", Role::Function),
@@ -96,12 +97,32 @@ impl LangHooks for ZigHooks {
         false
     }
 
+    fn block_scoped_binds(&self) -> bool {
+        true
+    }
+
+    fn block_scoped_decls(&self) -> bool {
+        true
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, _cx: &Cx<'_, '_>) -> usize {
+        if payloads::shadow_decl_kind(node.kind()) {
+            depth
+        } else {
+            depth.saturating_sub(1)
+        }
+    }
+
     fn shadow_decl_kind(&self, kind: &str) -> bool {
-        kind == "variable_declaration"
+        kind == "variable_declaration" || payloads::shadow_decl_kind(kind)
     }
 
     fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
-        if n.kind() != "variable_declaration" || has_child_kind(n, "var") {
+        if n.kind() != "variable_declaration" {
+            payloads::shadow_names(n, cx, out);
+            return;
+        }
+        if has_child_kind(n, "var") {
             return;
         }
         let mut headed = false;

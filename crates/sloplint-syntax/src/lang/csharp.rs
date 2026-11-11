@@ -3,12 +3,13 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, any_named_child, child_by_field,
-    trimmed,
+    named_children, text, trimmed,
 };
 use crate::spec::Role;
 
 mod arms;
 mod calls;
+mod decls;
 mod funcs;
 mod items;
 mod shadow;
@@ -36,6 +37,10 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("invocation_expression", Role::Call),
     ("object_creation_expression", Role::NewCall),
     ("local_declaration_statement", Role::Decl),
+    ("declaration_expression", Role::Decl),
+    ("declaration_pattern", Role::Decl),
+    ("var_pattern", Role::Decl),
+    ("recursive_pattern", Role::Decl),
     ("assignment_expression", Role::Write),
     ("prefix_unary_expression", Role::Write),
     ("postfix_unary_expression", Role::Write),
@@ -111,20 +116,72 @@ pub(crate) fn seg_last(t: &str) -> &str {
     }
     &base[start..end]
 }
+fn pattern_scope(depth: usize, cx: &Cx<'_, '_>) -> usize {
+    let mut current = depth.saturating_sub(1);
+    for ancestor in cx.ancestors() {
+        if matches!(
+            ancestor.kind(),
+            "block"
+                | "switch_body"
+                | "for_statement"
+                | "foreach_statement"
+                | "while_statement"
+                | "using_statement"
+        ) {
+            return current;
+        }
+        current = current.saturating_sub(1);
+    }
+    depth.saturating_sub(1)
+}
+fn switch_decl_parent(depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+    if cx
+        .parent_of(node)
+        .is_some_and(|parent| parent.kind() == "switch_section")
+    {
+        depth.saturating_sub(2)
+    } else {
+        depth.saturating_sub(1)
+    }
+}
+fn using_shadow_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    for init in named_children(n) {
+        if init.kind() != "variable_declaration" {
+            continue;
+        }
+        for declarator in named_children(init) {
+            if declarator.kind() != "variable_declarator" {
+                continue;
+            }
+            let Some(name) = child_by_field(declarator, "name") else {
+                continue;
+            };
+            if name.kind() != "identifier" {
+                continue;
+            }
+            out.push(text(cx, name));
+        }
+    }
+}
 impl LangHooks for CSharpHooks {
     fn shadow_filter(&self) -> ShadowKind {
         ShadowKind::DeclsAndBinds
     }
-
     fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
-        if matches!(
-            node.kind(),
-            "foreach_statement" | "for_statement" | "if_statement"
-        ) {
-            return depth;
+        match node.kind() {
+            "for_statement" | "foreach_statement" | "using_statement" => depth,
+            "if_statement" => pattern_scope(depth, cx),
+            "local_declaration_statement" => switch_decl_parent(depth, node, cx),
+            "declaration_expression"
+            | "declaration_pattern"
+            | "var_pattern"
+            | "recursive_pattern" => pattern_scope(depth, cx),
+            _ => depth.saturating_sub(1),
         }
-        let _ = cx;
-        depth.saturating_sub(1)
+    }
+
+    fn block_scoped_decls(&self) -> bool {
+        true
     }
 
     fn shadow_decl_kind(&self, kind: &str) -> bool {
@@ -132,6 +189,7 @@ impl LangHooks for CSharpHooks {
             kind,
             "foreach_statement"
                 | "for_statement"
+                | "using_statement"
                 | "if_statement"
                 | "declaration_expression"
                 | "declaration_pattern"
@@ -144,11 +202,12 @@ impl LangHooks for CSharpHooks {
     fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
         if n.kind() == "if_statement" {
             shadow::if_condition_shadow_names(cx, n, out);
+        } else if n.kind() == "using_statement" {
+            using_shadow_names(cx, n, out);
         } else {
             shadow::shadow_decl_names(cx, n, out);
         }
     }
-
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         funcs::function_head(cx, n)
     }
@@ -172,7 +231,7 @@ impl LangHooks for CSharpHooks {
             .is_some_and(|a| a.id() == n.id())
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        items::decl_names(cx, n, out);
+        decls::decl_names(cx, n, out);
     }
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         items::write_roots(cx, n, out);

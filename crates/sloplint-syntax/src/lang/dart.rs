@@ -8,6 +8,7 @@ mod calls;
 mod funcs;
 mod imports;
 mod items;
+mod shadow;
 mod syntax;
 
 pub(crate) static TABLE: crate::lang::Table = &[
@@ -62,8 +63,38 @@ impl LangHooks for DartHooks {
         funcs::function_head(cx, n)
     }
 
+    fn closure_as_function<'s>(
+        &self,
+        n: Node<'_>,
+        _parent: Option<Node<'_>>,
+        cx: &Cx<'_, 's>,
+    ) -> Option<FunctionHead<'s>> {
+        if n.kind() != "function_expression" {
+            return None;
+        }
+        Some(items::closure_head(cx, n))
+    }
+
+    fn shadow_decl_kind(&self, kind: &str) -> bool {
+        matches!(kind, "for_statement" | "catch_clause" | "if_statement")
+    }
+
     fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
-        funcs::closure_shadow_params(cx, n, out);
+        shadow::shadow_names(cx, n, out);
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        if matches!(node.kind(), "for_statement" | "if_statement") {
+            return depth;
+        }
+        if node.kind() == "local_variable_declaration" && shadow::switch_case_decl(cx, node) {
+            return depth.saturating_sub(3);
+        }
+        depth.saturating_sub(1)
+    }
+
+    fn block_scoped_decls(&self) -> bool {
+        true
     }
 
     fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {

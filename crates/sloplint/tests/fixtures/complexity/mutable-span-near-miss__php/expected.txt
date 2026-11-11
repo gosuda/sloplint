@@ -1,1 +1,2 @@
 # A binding never reassigned after declaration: no finding.
+# shadowed_closure.php: outer `$total` is written once on line 4; the line-26 write targets the closure parameter, so misattribution would span 22 and fire.

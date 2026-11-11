@@ -122,8 +122,49 @@ pub(super) fn write_roots<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s s
     ) {
         return;
     }
-    if let Some(left) = child_by_field(n, "left") {
-        out.extend(write_root(cx, left));
+    let Some(left) = child_by_field(n, "left") else {
+        return;
+    };
+    let mut targets = Vec::new();
+    push_destructure_targets(left, &mut targets);
+    for target in targets {
+        out.extend(write_root(cx, target));
+    }
+}
+
+fn push_struct_targets<'a>(cur: Node<'a>, stack: &mut Vec<Node<'a>>) {
+    let name = child_by_field(cur, "name").map(|node| node.id());
+    for child in named_children(cur) {
+        if name.is_some_and(|id| id == child.id()) {
+            continue;
+        }
+        if child.kind() == "field_initializer" {
+            if let Some(value) = child_by_field(child, "value") {
+                stack.push(value);
+            }
+        } else if child.kind() == "shorthand_field_initializer" {
+            if let Some(id) = first_named_child(child) {
+                stack.push(id);
+            }
+        } else {
+            stack.push(child);
+        }
+    }
+}
+
+fn push_destructure_targets<'a>(left: Node<'a>, out: &mut Vec<Node<'a>>) {
+    let mut stack = vec![left];
+    while let Some(cur) = stack.pop() {
+        match cur.kind() {
+            "tuple_expression" | "array_expression" => stack.extend(named_children(cur)),
+            "parenthesized_expression" => {
+                if let Some(inner) = first_named_child(cur) {
+                    stack.push(inner);
+                }
+            }
+            "struct_expression" => push_struct_targets(cur, &mut stack),
+            _ => out.push(cur),
+        }
     }
 }
 

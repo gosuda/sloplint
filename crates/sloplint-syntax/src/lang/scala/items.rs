@@ -108,7 +108,11 @@ pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s st
 }
 
 fn is_compound_write_op(op: &str) -> bool {
-    op.ends_with('=') && !matches!(op, "==" | "!=" | "<=" | ">=" | "===" | "!==" | "=:=")
+    op.ends_with('=')
+        && !matches!(
+            op,
+            "==" | "!=" | "<=" | ">=" | "=/=" | "=!=" | "===" | "!==" | "=:="
+        )
 }
 
 fn is_compound_write(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
@@ -116,7 +120,65 @@ fn is_compound_write(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
         && child_by_field(n, "operator").is_some_and(|o| is_compound_write_op(text(cx, o)))
 }
 
+pub(crate) fn shadow_decl_kind(kind: &str) -> bool {
+    matches!(kind, "for_expression" | "case_clause")
+}
+
+fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str>) {
+    let mut pending = vec![root];
+    while let Some(node) = pending.pop() {
+        if node.kind() == "identifier" {
+            out.push(text(cx, node));
+        } else if node.kind() != "wildcard" {
+            pending.extend(named_children(node).into_iter().rev());
+        }
+    }
+}
+
+fn push_generator_pattern<'s>(cx: &Cx<'_, 's>, enumerator: Node<'_>, out: &mut Vec<&'s str>) {
+    let Some(head) = first_named_child(enumerator) else {
+        return;
+    };
+    if head.kind() == "guard" {
+        return;
+    }
+    push_pattern_names(cx, head, out);
+}
+
+fn push_for_binders<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    for holder in named_children(n) {
+        if holder.kind() != "enumerators" {
+            continue;
+        }
+        for enumerator in named_children(holder) {
+            if enumerator.kind() != "enumerator" {
+                continue;
+            }
+            push_generator_pattern(cx, enumerator, out);
+        }
+    }
+}
+
+pub(crate) fn shadow_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    match n.kind() {
+        "for_expression" => push_for_binders(cx, n, out),
+        "case_clause" => {
+            if let Some(pat) = child_by_field(n, "pattern") {
+                push_pattern_names(cx, pat, out);
+            }
+        }
+        _ => {}
+    }
+}
+
 pub(crate) fn write_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    if n.kind() == "assignment_expression"
+        && cx
+            .parent()
+            .is_some_and(|parent| parent.kind() == "arguments")
+    {
+        return;
+    }
     if (n.kind() == "assignment_expression" || is_compound_write(cx, n))
         && let Some(l) = child_by_field(n, "left")
     {

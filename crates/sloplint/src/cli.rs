@@ -32,7 +32,7 @@ pub enum Command {
 /// Arguments of `check`.
 #[derive(Debug, Args)]
 pub struct CheckArgs {
-    /// Paths whose findings are reported; every run analyzes the whole project root, but with no PATHS only findings under the current directory are reported.
+    /// Paths whose findings are reported; every run analyzes the whole project root, but with no PATHS only findings under the current directory are reported (the whole root when the current directory is outside it).
     #[arg(value_name = "PATHS")]
     pub paths: Vec<PathBuf>,
     /// Output format.
@@ -122,7 +122,7 @@ pub enum Format {
 /// Strictness profile names accepted on the command line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum StrictnessArg {
-    /// Reports only syntax, query cap, and suppression findings.
+    /// Reports only syntax, query cap, suppression, and custom rule findings.
     Minimal,
     /// Adds missing type annotations on exported functions.
     Basic,

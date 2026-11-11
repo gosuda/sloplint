@@ -375,3 +375,49 @@ pub(crate) fn ambient_sites<'s>(
         _ => {}
     }
 }
+
+fn push_decl_id<'s>(cx: &Cx<'_, 's>, decl: Node<'_>, out: &mut Vec<&'s str>) {
+    if let Some(id) = first_of_kind(decl, &["identifier"]) {
+        out.push(text(cx, id));
+    }
+}
+
+fn push_loop_multi<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    for inner in named_children(n) {
+        if inner.kind() == "variable_declaration" {
+            push_decl_id(cx, inner, out);
+        }
+    }
+}
+
+fn push_loop_child<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    if n.kind() == "variable_declaration" {
+        push_decl_id(cx, n, out);
+    } else if n.kind() == "multi_variable_declaration" {
+        push_loop_multi(cx, n, out);
+    }
+}
+
+fn push_loop_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    for child in named_children(n) {
+        push_loop_child(cx, child, out);
+    }
+}
+
+fn push_when_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    let Some(subject) = first_of_kind(n, &["when_subject"]) else {
+        return;
+    };
+    let Some(decl) = first_of_kind(subject, &["variable_declaration"]) else {
+        return;
+    };
+    push_decl_id(cx, decl, out);
+}
+
+pub(crate) fn shadow_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
+    match n.kind() {
+        "for_statement" => push_loop_names(cx, n, out),
+        "when_expression" => push_when_names(cx, n, out),
+        _ => {}
+    }
+}

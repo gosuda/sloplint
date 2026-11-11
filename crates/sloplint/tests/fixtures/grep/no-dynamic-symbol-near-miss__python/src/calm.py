@@ -6,9 +6,6 @@ class Lazy:
         return getattr(self._fallback, name)
 
 
-LIBS = ("os", "sys")
-
-
 def load():
-    for lib in LIBS:
+    for lib in ("os", "sys"):
         importlib.import_module(lib)

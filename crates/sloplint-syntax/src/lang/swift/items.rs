@@ -16,6 +16,10 @@ use super::funcs::visibility_of;
 use super::syntax::COMMENT_KINDS;
 
 pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
+    if n.kind() == "value_binding_pattern" {
+        super::binds::decl_names_for(cx, n, out);
+        return;
+    }
     if is_var(cx, n) {
         out.extend(bound_names(cx, n));
     }

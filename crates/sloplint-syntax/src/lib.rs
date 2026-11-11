@@ -3,6 +3,7 @@ mod custom;
 mod cx;
 mod emit;
 mod generated;
+mod header_comments;
 mod hooks;
 mod lang;
 mod shadow;
