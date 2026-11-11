@@ -113,6 +113,9 @@ fn test_keys_strip_each_affix_form() {
         (Lang::Bash, "widget-spec.sh", "widget"),
         (Lang::Python, "pkg/test_widget.py", "pkg/widget"),
         (Lang::R, "test-service.R", "service"),
+        (Lang::Scala, "src/ServiceSuite.scala", "src/Service"),
+        (Lang::Cpp, "src/widget_unittest.cc", "src/widget"),
+        (Lang::PowerShell, "deploy.tests.ps1", "deploy"),
     ];
     for (lang, path, want) in cases {
         assert_eq!(test_keys(lang, path), [want], "affix in {path}");

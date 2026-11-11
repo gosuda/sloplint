@@ -278,9 +278,22 @@ fn stem_of(base: &str) -> &str {
     }
 }
 
-const TEST_SUFFIXES: [&str; 12] = [
-    "_tests", "_test", "-test", ".test", ".Tests", "_spec", "-spec", ".spec", "Tests", "Test",
-    "Spec", "IT",
+const TEST_SUFFIXES: [&str; 15] = [
+    "_unittest",
+    "_tests",
+    "_test",
+    "-test",
+    ".test",
+    ".Tests",
+    ".tests",
+    "_spec",
+    "-spec",
+    ".spec",
+    "Tests",
+    "Test",
+    "Spec",
+    "Suite",
+    "IT",
 ];
 
 const TEST_PREFIXES: [&str; 2] = ["test_", "test-"];
