@@ -225,6 +225,33 @@ fn python_module_is_not_covered_by_matching_javascript_test() {
 }
 
 #[test]
+fn java_module_is_covered_by_kotlin_test_import() {
+    let rule = rule();
+    let parser = lib(Lang::Java, "svc", 1);
+    let parser_test = evidence(Lang::Kotlin, "svc", &["app.Parser"]);
+    let lexer_test = test_file(Lang::Java, "svc");
+    let files = [
+        WorldFile {
+            path: "svc/src/main/java/app/Parser.java",
+            facts: &parser,
+        },
+        WorldFile {
+            path: "svc/src/test/kotlin/app/ParserTest.kt",
+            facts: &parser_test,
+        },
+        WorldFile {
+            path: "svc/src/test/java/app/LexerTest.java",
+            facts: &lexer_test,
+        },
+    ];
+    assert_eq!(
+        check(&rule, &files),
+        Vec::<String>::new(),
+        "a Kotlin test importing app.Parser covers Parser.java in the same package"
+    );
+}
+
+#[test]
 fn explicit_index_import_covers_the_index_module() {
     let rule = rule();
     let widget = manifest(lib(Lang::TypeScript, "app", 1));

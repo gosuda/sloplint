@@ -182,6 +182,38 @@ fn same_package_reaching_threshold_flags() {
     );
 }
 
+fn homonyms_across(langs: [Lang; 2]) -> usize {
+    let rule = HomonymDefinitions {
+        allow: HashSet::new(),
+        min_files: 2,
+    };
+    let owned = langs.map(|lang| {
+        let mut file = facts_in("ui", vec![site("render_card", 1)]);
+        file.lang = lang;
+        file
+    });
+    let files = [
+        WorldFile {
+            path: "ui/button.src",
+            facts: &owned[0],
+        },
+        WorldFile {
+            path: "ui/card.src",
+            facts: &owned[1],
+        },
+    ];
+    let mut out = Vec::new();
+    rule.check(&files, &mut out);
+    out.len()
+}
+
+#[test]
+fn languages_of_one_family_share_their_definitions() {
+    assert_eq!(homonyms_across([Lang::TypeScript, Lang::Tsx]), 1);
+    assert_eq!(homonyms_across([Lang::Java, Lang::Kotlin]), 1);
+    assert_eq!(homonyms_across([Lang::TypeScript, Lang::Python]), 0);
+}
+
 #[test]
 fn bench_first_site_does_not_suppress_libraries_meeting_threshold() {
     let rule = HomonymDefinitions {

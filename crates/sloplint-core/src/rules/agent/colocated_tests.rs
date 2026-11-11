@@ -191,10 +191,7 @@ fn key_len(key: &str) -> usize {
 }
 
 fn coverage_scope(lang: Lang) -> &'static str {
-    match lang {
-        Lang::JavaScript | Lang::TypeScript | Lang::Tsx => "javascript",
-        _ => lang.config_key(),
-    }
+    lang.namespace().config_key()
 }
 
 fn scoped_package<'a>(file: &WorldFile<'a>) -> Option<&'a str> {

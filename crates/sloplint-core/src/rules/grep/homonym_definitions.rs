@@ -122,10 +122,10 @@ fn add_definitions<'a>(
     let package = facts.package.as_str();
     for site in &facts.definitions {
         if INFO.roles.eligible(facts.role, &facts.regions, site.line)
-            && reported.contains(&(facts.lang, package, site.name.as_ref()))
+            && reported.contains(&(facts.lang.namespace(), package, site.name.as_ref()))
         {
             flat.push((
-                facts.lang,
+                facts.lang.namespace(),
                 package,
                 SiteRef {
                     name: &site.name,
@@ -162,7 +162,7 @@ impl HomonymDefinitions {
                         let shard =
                             usize::from(state.hash_one(&*site.name).to_le_bytes()[0]) % NAME_SHARDS;
                         buckets[shard].push((
-                            facts.lang,
+                            facts.lang.namespace(),
                             package,
                             &site.name,
                             chunk_index * chunk + offset,
