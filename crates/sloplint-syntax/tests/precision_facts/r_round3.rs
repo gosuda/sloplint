@@ -40,6 +40,37 @@ const MATCH_FUN_COMPUTED: &str = r#"apply_all <- function(prefix, x) {
 }
 "#;
 
+const GET_NAMED_COMPUTED: &str = r#"read_one <- function(key) {
+  get(mode = "function", x = key)
+}
+"#;
+
+const GET_NAMED_STATIC: &str = r#"read_one <- function() {
+  get(mode = "function", x = "name")
+}
+"#;
+
+const GET_POSITIONAL_STATIC: &str = r#"read_one <- function() {
+  get("name", mode = "function")
+}
+"#;
+
+const DO_CALL_NAMED_COMPUTED: &str = r#"build <- function(kind, parts) {
+  do.call(args = list(parts), what = paste0("make_", kind))
+}
+"#;
+
+const DO_CALL_STATIC_FORMS: &str = r#"combine <- function(parts) {
+  do.call("rbind", list(parts))
+  do.call(rbind, list(parts))
+}
+"#;
+
+const DO_CALL_QUOTE_WITH_NAMED_WHAT: &str = r#"apply_it <- function(fname) {
+  do.call(quote = TRUE, what = fname)
+}
+"#;
+
 fn with_facts(source: &str, mut check: impl FnMut(&Analysis<'_>)) {
     let custom = match CustomRules::compile(&[]) {
         Ok(custom) => custom,
@@ -136,6 +167,66 @@ fn function_valued_match_fun_is_not_computed() {
         assert_eq!(
             analysis.facts.dynamic_symbols[0].what, "match.fun() with computed function name",
             "keeps the match.fun lookup description"
+        );
+    });
+}
+
+#[test]
+fn named_get_lookup_argument_is_selected_over_other_formals() {
+    with_facts(GET_NAMED_COMPUTED, |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses named get lookup");
+        assert_eq!(
+            analysis.facts.dynamic_symbols.len(),
+            1,
+            "x = key is the lookup argument even behind mode"
+        );
+        assert_eq!(
+            analysis.facts.dynamic_symbols[0].what, "get() with computed name",
+            "keeps the get lookup description"
+        );
+    });
+    with_facts(GET_NAMED_STATIC, |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses static named get");
+        assert!(
+            analysis.facts.dynamic_symbols.is_empty(),
+            "a static x argument stays silent"
+        );
+    });
+    with_facts(GET_POSITIONAL_STATIC, |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses positional get");
+        assert!(
+            analysis.facts.dynamic_symbols.is_empty(),
+            "the plain static form stays silent"
+        );
+    });
+}
+
+#[test]
+fn named_do_call_what_is_selected_over_other_formals() {
+    with_facts(DO_CALL_NAMED_COMPUTED, |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses named do.call");
+        assert_eq!(
+            analysis.facts.dynamic_symbols.len(),
+            1,
+            "a computed what is reported behind args"
+        );
+        assert_eq!(
+            analysis.facts.dynamic_symbols[0].what, "do.call() with computed function name",
+            "keeps the do.call lookup description"
+        );
+    });
+    with_facts(DO_CALL_STATIC_FORMS, |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses static do.call");
+        assert!(
+            analysis.facts.dynamic_symbols.is_empty(),
+            "string and identifier function names stay exempt"
+        );
+    });
+    with_facts(DO_CALL_QUOTE_WITH_NAMED_WHAT, |analysis| {
+        assert!(analysis.parse_error.is_none(), "parses quote and what");
+        assert!(
+            analysis.facts.dynamic_symbols.is_empty(),
+            "quote is no longer mistaken for the function name"
         );
     });
 }

@@ -246,17 +246,17 @@ impl LangHooks for RHooks {
 
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
         let short = last_segment(trimmed(cx, child_by_field(n, "function")?), &["::"]);
-        let first = first_argument_value(n);
+        let lookup = lookup_formal(short).and_then(|formal| lookup_value(cx, n, formal));
         match short {
             "eval" => Some("eval() of runtime code"),
             "evalq" => Some("evalq() of runtime code"),
-            "do.call" => first
+            "do.call" => lookup
                 .filter(|v| !matches!(v.kind(), "string" | "identifier"))
                 .map(|_| "do.call() with computed function name"),
-            "match.fun" => first
+            "match.fun" => lookup
                 .filter(|v| !matches!(v.kind(), "string" | "identifier"))
                 .map(|_| "match.fun() with computed function name"),
-            _ => first
+            _ => lookup
                 .filter(|v| v.kind() != "string")
                 .and_then(|_| computed_lookup(short)),
         }
@@ -509,6 +509,27 @@ fn is_rethrow(cx: &Cx<'_, '_>, call: Node<'_>, binding: Option<&str>) -> bool {
     last_segment(trimmed(cx, function), &["::"]) == "stop"
         && single_argument_value(call)
             .is_some_and(|only| only.kind() == "identifier" && trimmed(cx, only) == binding)
+}
+
+fn lookup_formal(short: &str) -> Option<&'static str> {
+    match short {
+        "get" | "get0" | "mget" | "assign" => Some("x"),
+        "do.call" => Some("what"),
+        "match.fun" => Some("FUN"),
+        _ => None,
+    }
+}
+
+fn lookup_value<'s>(cx: &Cx<'_, '_>, call: Node<'s>, formal: &str) -> Option<Node<'s>> {
+    let list = child_by_field(call, "arguments")?;
+    let named = find_named_child(list, |c| c.kind() == "argument" && arg_name_is(cx, c, formal));
+    let positional = find_named_child(list, |c| {
+        c.kind() == "argument"
+            && child_by_field(c, "name").is_none()
+            && child_by_field(c, "value").is_some()
+    });
+    let argument = named.or(positional)?;
+    child_by_field(argument, "value")
 }
 
 fn computed_lookup(short: &str) -> Option<&'static str> {
