@@ -143,12 +143,6 @@ fn impl_index<'a>(files: &[WorldFile<'a>]) -> Impls<'a> {
     let mut index: Impls<'a> = HashMap::new();
     for file in applicable_files(files) {
         for site in &file.facts.impls {
-            if !INFO
-                .roles
-                .eligible(file.facts.role, &file.facts.regions, site.line)
-            {
-                continue;
-            }
             index
                 .entry((
                     file.facts.lang,
@@ -461,9 +455,43 @@ mod tests {
     }
 
     #[test]
-    fn test_double_does_not_suppress_the_library_singleton() {
+    fn test_double_impl_silences_the_library_singleton() {
         let library = same_package(vec![named("Repo")], vec![named("Repo")]);
+        let double = test_double(Vec::new(), vec![named("Repo")]);
+        let files = [
+            WorldFile {
+                path: "a.rs",
+                facts: &library,
+            },
+            WorldFile {
+                path: "t.rs",
+                facts: &double,
+            },
+        ];
+        assert!(
+            reported(&files).is_empty(),
+            "a test double is a second implementation and keeps the seam: {:?}",
+            reported(&files)
+        );
+    }
+
+    #[test]
+    fn abstraction_and_impl_only_in_a_test_file_stay_silent() {
         let double = test_double(vec![named("Repo")], vec![named("Repo")]);
+        let files = [WorldFile {
+            path: "t.rs",
+            facts: &double,
+        }];
+        assert!(
+            reported(&files).is_empty(),
+            "a test-only impl must stay silent"
+        );
+    }
+
+    #[test]
+    fn test_region_abstraction_does_not_ambiguate_the_library_singleton() {
+        let library = same_package(vec![named("Repo")], vec![named("Repo")]);
+        let double = test_double(vec![named("Repo")], Vec::new());
         let files = [
             WorldFile {
                 path: "a.rs",
@@ -478,21 +506,8 @@ mod tests {
         assert_eq!(
             out.len(),
             1,
-            "a test-only impl must not hide the library singleton: {out:?}"
+            "the exempt abstraction declaration must not block the library report: {out:?}"
         );
         assert_eq!(&*out[0].path, "a.rs");
-    }
-
-    #[test]
-    fn abstraction_and_impl_only_in_a_test_file_stay_silent() {
-        let double = test_double(vec![named("Repo")], vec![named("Repo")]);
-        let files = [WorldFile {
-            path: "t.rs",
-            facts: &double,
-        }];
-        assert!(
-            reported(&files).is_empty(),
-            "a test-only impl must stay silent"
-        );
     }
 }
