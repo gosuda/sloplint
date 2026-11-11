@@ -7,7 +7,7 @@ pub(crate) fn closed_name(cx: &Cx<'_, '_>, expr: Node<'_>) -> bool {
         return false;
     }
     let want = text(cx, expr);
-    enclosing_loop_ok(cx, want, expr)
+    !want.contains('\\') && enclosing_loop_ok(cx, want, expr)
 }
 
 fn enclosing_loop_ok(cx: &Cx<'_, '_>, want: &str, expr: Node<'_>) -> bool {
@@ -175,6 +175,7 @@ fn decl_binds(cx: &Cx<'_, '_>, cur: Node<'_>, want: &str) -> bool {
         "for_in_statement" => pattern_binds(cx, cur, "left", want),
         "internal_module" => pattern_binds(cx, cur, "name", want),
         "import_statement" => import_binds(cx, cur, want),
+        "with_statement" => true,
         "function_declaration"
         | "generator_function_declaration"
         | "function_expression"

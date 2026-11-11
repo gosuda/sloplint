@@ -232,3 +232,17 @@ fn unrelated_local_declaration_stays_silent() {
 fn escaped_local_declaration_still_flags() {
     assert_eq!(dynamics(ESCAPED_DECL).len(), 1);
 }
+
+const ESCAPED_LOOKUP: &str = "function load(obj) {\n  for (const n\\u0061me of ['a', 'b']) {\n    { const name = pick(); obj[n\\u0061me](); }\n  }\n}\n";
+
+#[test]
+fn escaped_lookup_name_still_flags() {
+    assert_eq!(dynamics(ESCAPED_LOOKUP).len(), 1);
+}
+
+const WITH_IN_BODY: &str = "function load(obj, scope) {\n  for (const name of ['a', 'b']) {\n    with (scope) { obj[name](); }\n  }\n}\n";
+
+#[test]
+fn with_statement_in_literal_loop_still_flags() {
+    assert_eq!(dynamics(WITH_IN_BODY).len(), 1);
+}
