@@ -113,6 +113,12 @@ fn abstraction_sites<'a>(files: &[WorldFile<'a>]) -> Sites<'a> {
     let mut sites: Sites<'a> = Vec::new();
     for file in applicable_files(files) {
         for site in &file.facts.abstractions {
+            if !INFO
+                .roles
+                .eligible(file.facts.role, &file.facts.regions, site.line)
+            {
+                continue;
+            }
             sites.push((
                 file.facts.lang,
                 file.facts.package.as_str(),
@@ -137,6 +143,12 @@ fn impl_index<'a>(files: &[WorldFile<'a>]) -> Impls<'a> {
     let mut index: Impls<'a> = HashMap::new();
     for file in applicable_files(files) {
         for site in &file.facts.impls {
+            if !INFO
+                .roles
+                .eligible(file.facts.role, &file.facts.regions, site.line)
+            {
+                continue;
+            }
             index
                 .entry((
                     file.facts.lang,
@@ -202,6 +214,19 @@ mod tests {
 
     fn same_package(abstractions: Vec<NamedSite>, impls: Vec<NamedSite>) -> WorldFacts {
         facts("pkg", abstractions, impls)
+    }
+
+    fn test_double(abstractions: Vec<NamedSite>, impls: Vec<NamedSite>) -> WorldFacts {
+        let mut double = facts("pkg", abstractions, impls);
+        double.role = crate::role::CodeRole::Test;
+        double
+    }
+
+    fn reported(files: &[WorldFile<'_>]) -> Vec<Finding> {
+        let rule = SingleImplAbstraction { allow: Vec::new() };
+        let mut out = Vec::new();
+        rule.check(files, &mut out);
+        out
     }
 
     #[test]
@@ -432,6 +457,42 @@ mod tests {
         assert_eq!(
             count, 1,
             "a crate-visible trait with one concrete impl flags: {count}"
+        );
+    }
+
+    #[test]
+    fn test_double_does_not_suppress_the_library_singleton() {
+        let library = same_package(vec![named("Repo")], vec![named("Repo")]);
+        let double = test_double(vec![named("Repo")], vec![named("Repo")]);
+        let files = [
+            WorldFile {
+                path: "a.rs",
+                facts: &library,
+            },
+            WorldFile {
+                path: "t.rs",
+                facts: &double,
+            },
+        ];
+        let out = reported(&files);
+        assert_eq!(
+            out.len(),
+            1,
+            "a test-only impl must not hide the library singleton: {out:?}"
+        );
+        assert_eq!(&*out[0].path, "a.rs");
+    }
+
+    #[test]
+    fn abstraction_and_impl_only_in_a_test_file_stay_silent() {
+        let double = test_double(vec![named("Repo")], vec![named("Repo")]);
+        let files = [WorldFile {
+            path: "t.rs",
+            facts: &double,
+        }];
+        assert!(
+            reported(&files).is_empty(),
+            "a test-only impl must stay silent"
         );
     }
 }

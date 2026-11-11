@@ -1,4 +1,5 @@
 use super::*;
+use crate::facts::WorldFacts;
 use crate::role::{CodeRole, RoleRegion};
 use std::collections::{BTreeMap, BTreeSet};
 

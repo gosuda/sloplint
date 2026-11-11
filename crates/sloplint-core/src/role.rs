@@ -67,6 +67,10 @@ impl RolePolicy {
             CodeRole::Example => self.example,
         }
     }
+
+    pub fn eligible(self, file_role: CodeRole, regions: &[RoleRegion], line: u32) -> bool {
+        self.shift(role_at(file_role, regions, line)) != Shift::Off
+    }
 }
 
 pub fn role_at(file_role: CodeRole, regions: &[RoleRegion], line: u32) -> CodeRole {

@@ -6,10 +6,10 @@ use serde::{Deserialize, Serialize};
 
 use super::{parse_options, string_values};
 use crate::config::Strictness;
-use crate::facts::{NamedSite, WorldFacts};
+use crate::facts::NamedSite;
 use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::lang::Lang;
-use crate::role::{RolePolicy, Shift, role_at};
+use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, Preset, RuleInfo, WorldFile, WorldRule};
 
 const ALLOWED_NAMES: &[&str] = &[
@@ -113,10 +113,6 @@ impl WorldRule for HomonymDefinitions {
 
 type Bucket<'a> = Vec<(Lang, &'a str, &'a str, usize)>;
 
-fn eligible(facts: &WorldFacts, line: u32) -> bool {
-    INFO.roles.shift(role_at(facts.role, &facts.regions, line)) != Shift::Off
-}
-
 fn add_definitions<'a>(
     file: &WorldFile<'a>,
     reported: &HashSet<(Lang, &'a str, &'a str)>,
@@ -125,7 +121,7 @@ fn add_definitions<'a>(
     let facts = file.facts;
     let package = facts.package.as_str();
     for site in &facts.definitions {
-        if eligible(facts, site.line)
+        if INFO.roles.eligible(facts.role, &facts.regions, site.line)
             && reported.contains(&(facts.lang, package, site.name.as_ref()))
         {
             flat.push((
@@ -158,7 +154,9 @@ impl HomonymDefinitions {
                     let facts = file.facts;
                     let package = facts.package.as_str();
                     for site in &facts.definitions {
-                        if self.allow.contains(site.name.as_ref()) || !eligible(facts, site.line) {
+                        if self.allow.contains(site.name.as_ref())
+                            || !INFO.roles.eligible(facts.role, &facts.regions, site.line)
+                        {
                             continue;
                         }
                         let shard =

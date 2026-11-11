@@ -4,7 +4,7 @@ use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::{Deserialize, Serialize};
 
 use crate::config::Strictness;
-use crate::facts::{AmbientKind, FileFacts};
+use crate::facts::{Ambient, AmbientKind, FileFacts};
 use crate::finding::{Confidence, Finding, Level, Severity};
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
@@ -104,6 +104,7 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 struct Joins<'a> {
     assigned: HashSet<&'a str>,
     storing: HashSet<u32>,
+    reported: HashSet<&'a str>,
 }
 
 fn joins<'a>(facts: &'a FileFacts<'_>) -> Joins<'a> {
@@ -138,7 +139,11 @@ fn joins<'a>(facts: &'a FileFacts<'_>) -> Joins<'a> {
             storing.insert(index);
         }
     }
-    Joins { assigned, storing }
+    Joins {
+        assigned,
+        storing,
+        reported: HashSet::new(),
+    }
 }
 
 impl FileRule for AmbientGlobalState {
@@ -146,52 +151,64 @@ impl FileRule for AmbientGlobalState {
         if self.allow_files.is_match(facts.path) {
             return;
         }
-        let joins = joins(facts);
-        let mut seen: HashSet<&str> = HashSet::new();
+        let mut joins = joins(facts);
         for site in &facts.ambient {
-            if site.name == "_" {
+            if site.name == "_"
+                || !INFO
+                    .roles
+                    .eligible(facts.role, &facts.regions, site.pos.line)
+            {
                 continue;
             }
-            match site.kind {
-                AmbientKind::GlobalMutable => {
-                    if joins.assigned.contains(site.name) && seen.insert(site.name) {
-                        out.push(Finding::at(
-                            facts,
-                            site.pos,
-                            INFO.id,
-                            Severity::Major,
-                            format!("mutable global `{}`", site.name),
-                            OWNED_FIX.to_string(),
-                        ));
-                    }
-                }
-                AmbientKind::GlobalWrite => {
-                    if ENV_OBJECTS.contains(&site.name) && seen.insert(site.name) {
-                        out.push(Finding::at(
-                            facts,
-                            site.pos,
-                            INFO.id,
-                            Severity::Major,
-                            format!("writes shared environment `{}`", site.name),
-                            ENV_FIX.to_string(),
-                        ));
-                    }
-                }
-                AmbientKind::EnvRead => {
-                    if site
-                        .in_function
-                        .is_some_and(|index| joins.storing.contains(&index))
-                    {
-                        out.push(Finding::at(
-                            facts,
-                            site.pos,
-                            INFO.id,
-                            Severity::Major,
-                            ENV_MESSAGE.to_string(),
-                            ENV_FIX.to_string(),
-                        ));
-                    }
-                }
+            report_site(facts, &mut joins, site, out);
+        }
+    }
+}
+
+fn report_site<'a>(
+    facts: &FileFacts<'a>,
+    joins: &mut Joins<'a>,
+    site: &Ambient<'a>,
+    out: &mut Vec<Finding>,
+) {
+    match site.kind {
+        AmbientKind::GlobalMutable => {
+            if joins.assigned.contains(site.name) && joins.reported.insert(site.name) {
+                out.push(Finding::at(
+                    facts,
+                    site.pos,
+                    INFO.id,
+                    Severity::Major,
+                    format!("mutable global `{}`", site.name),
+                    OWNED_FIX.to_string(),
+                ));
+            }
+        }
+        AmbientKind::GlobalWrite => {
+            if ENV_OBJECTS.contains(&site.name) && joins.reported.insert(site.name) {
+                out.push(Finding::at(
+                    facts,
+                    site.pos,
+                    INFO.id,
+                    Severity::Major,
+                    format!("writes shared environment `{}`", site.name),
+                    ENV_FIX.to_string(),
+                ));
+            }
+        }
+        AmbientKind::EnvRead => {
+            if site
+                .in_function
+                .is_some_and(|index| joins.storing.contains(&index))
+            {
+                out.push(Finding::at(
+                    facts,
+                    site.pos,
+                    INFO.id,
+                    Severity::Major,
+                    ENV_MESSAGE.to_string(),
+                    ENV_FIX.to_string(),
+                ));
             }
         }
     }
@@ -279,6 +296,32 @@ mod tests {
             kind,
             name,
             in_function,
+        }
+    }
+
+    fn regioned_facts<'s>(
+        source: &'s str,
+        ambient: Vec<Ambient<'s>>,
+        regions: Vec<crate::role::RoleRegion>,
+    ) -> FileFacts<'s> {
+        let mut checked = facts(source, ambient);
+        checked.regions = regions;
+        checked
+    }
+
+    fn positioned(rule: &AmbientGlobalState, checked: &FileFacts<'_>) -> Vec<(u32, String)> {
+        let mut out = Vec::new();
+        rule.check(checked, &mut out);
+        out.into_iter()
+            .map(|finding| (finding.line, finding.message))
+            .collect()
+    }
+
+    fn test_region() -> crate::role::RoleRegion {
+        crate::role::RoleRegion {
+            start_line: 1,
+            end_line: 10,
+            role: crate::role::CodeRole::Test,
         }
     }
 
@@ -435,6 +478,54 @@ mod tests {
             out.len(),
             1,
             "strict flags the assigned global on a positive input"
+        );
+    }
+    #[test]
+    fn test_region_env_write_does_not_suppress_the_library_env_write() {
+        let checked = regioned_facts(
+            "import os\n",
+            vec![
+                site(AmbientKind::GlobalWrite, "process.env", 5, Some(0)),
+                site(AmbientKind::GlobalWrite, "process.env", 20, Some(0)),
+            ],
+            vec![test_region()],
+        );
+        assert_eq!(
+            positioned(&rule(), &checked),
+            [(20, "writes shared environment `process.env`".to_string())],
+            "the exempt test write must neither report nor consume the seen slot"
+        );
+    }
+    #[test]
+    fn both_env_writes_inside_the_test_region_stay_silent() {
+        let checked = regioned_facts(
+            "import os\n",
+            vec![
+                site(AmbientKind::GlobalWrite, "process.env", 5, Some(0)),
+                site(AmbientKind::GlobalWrite, "process.env", 8, Some(0)),
+            ],
+            vec![test_region()],
+        );
+        assert!(
+            positioned(&rule(), &checked).is_empty(),
+            "two test-region writes must stay silent"
+        );
+    }
+    #[test]
+    fn test_region_write_does_not_consume_the_seen_slot_of_the_library_global() {
+        let checked = regioned_facts(
+            "package store\n",
+            vec![
+                site(AmbientKind::GlobalWrite, "cache", 5, Some(0)),
+                site(AmbientKind::GlobalMutable, "cache", 6, None),
+                site(AmbientKind::GlobalMutable, "cache", 20, None),
+            ],
+            vec![test_region()],
+        );
+        assert_eq!(
+            positioned(&rule(), &checked),
+            [(20, "mutable global `cache`".to_string())],
+            "the test-region write must not block the library mutable global"
         );
     }
 }
