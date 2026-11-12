@@ -1,1 +1,1 @@
-# Collision aliases (crypto/rand vs math/rand), blank and plain imports never fire.
+# Collision aliases (crypto/rand vs math/rand, an import name the file binds locally), aliases spelled as the versioned last path part, blank and plain imports never fire.

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -68,6 +68,7 @@ impl FileRule for NoRenameImport {
                 *production.entry(import.name).or_insert(0) += 1;
             }
         }
+        let bound = bound_names(facts);
         for import in &facts.imports {
             let Some(alias) = import.alias else { continue };
             let visible = if import.in_test {
@@ -83,6 +84,7 @@ impl FileRule for NoRenameImport {
                 || !valid_ident(import.name)
                 || alias.contains(import.name)
                 || import.name.contains(alias)
+                || bound.contains(import.name)
                 || visible.get(import.name).is_some_and(|count| *count > 1)
                 || self.allowed(import, alias)
             {
@@ -101,6 +103,17 @@ impl FileRule for NoRenameImport {
             ));
         }
     }
+}
+
+fn bound_names<'s>(facts: &FileFacts<'s>) -> HashSet<&'s str> {
+    let mut bound: HashSet<&'s str> = facts.bindings.iter().map(|binding| binding.name).collect();
+    bound.extend(facts.types.iter().map(|ty| ty.name));
+    for function in &facts.functions {
+        bound.insert(function.name);
+        bound.extend(function.receiver);
+        bound.extend(function.params.iter().map(|param| param.name));
+    }
+    bound
 }
 
 fn valid_ident(name: &str) -> bool {
@@ -141,7 +154,9 @@ impl NoRenameImport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::facts::{ImportScope, Pos};
+    use crate::facts::{
+        Function, ImportScope, MutBinding, Param, Pos, PrimitiveKind, TypeDef, Visibility,
+    };
     use crate::lang::Lang;
     use crate::role::CodeRole;
     use std::borrow::Cow;
@@ -210,6 +225,120 @@ mod tests {
     fn in_test(mut import: Import<'static>) -> Import<'static> {
         import.in_test = true;
         import
+    }
+
+    fn run(facts: &FileFacts<'_>) -> Vec<Finding> {
+        let mut out = Vec::new();
+        rule().check(facts, &mut out);
+        out
+    }
+
+    fn binding(name: &'static str) -> MutBinding<'static> {
+        MutBinding {
+            name,
+            pos: Pos { line: 4, byte: 0 },
+            last_write_line: 4,
+            first_write_line: 4,
+            write_lines: 0,
+            loop_depth: 0,
+        }
+    }
+
+    fn param(name: &'static str) -> Param<'static> {
+        Param {
+            name,
+            ty: None,
+            primitive_kind: PrimitiveKind::Other,
+            has_default: false,
+            bool_default: false,
+            keyword_only: false,
+            is_variadic: false,
+        }
+    }
+
+    fn function(name: &'static str, params: Vec<Param<'static>>) -> Function<'static> {
+        Function {
+            name,
+            pos: Pos { line: 3, byte: 0 },
+            doc: Vec::new(),
+            doc_pos: None,
+            visibility: Visibility::Private,
+            signature_forced: false,
+            entry_point: false,
+            in_test: false,
+            is_overload: false,
+            is_deprecated: false,
+            is_decorated: false,
+            is_trait_item: false,
+            is_method: false,
+            receiver: None,
+            params,
+            return_type: None,
+            untyped_throws: false,
+            missing_annotations: Vec::new(),
+            cognitive: 0,
+            max_depth: 0,
+            deepest_line: 0,
+            end_line: 5,
+            has_value_return: false,
+            sole_call: None,
+        }
+    }
+
+    fn renamed_runsc() -> Import<'static> {
+        import("example.com/shim/runsc", "runsc", Some("rsc"))
+    }
+
+    #[test]
+    fn alias_of_a_name_the_file_binds_locally_stays_silent() {
+        let mut file = facts(vec![renamed_runsc()]);
+        file.bindings.push(binding("runsc"));
+        let out = run(&file);
+        assert!(out.is_empty(), "a local `runsc` needs the alias: {out:?}");
+    }
+
+    #[test]
+    fn alias_of_a_name_the_file_takes_as_a_parameter_stays_silent() {
+        let mut file = facts(vec![renamed_runsc()]);
+        file.functions
+            .push(function("Start", vec![param("ctx"), param("runsc")]));
+        let out = run(&file);
+        assert!(
+            out.is_empty(),
+            "a `runsc` parameter needs the alias: {out:?}"
+        );
+    }
+
+    #[test]
+    fn alias_of_a_name_the_file_declares_as_a_function_stays_silent() {
+        let mut file = facts(vec![renamed_runsc()]);
+        file.functions.push(function("runsc", Vec::new()));
+        let out = run(&file);
+        assert!(
+            out.is_empty(),
+            "a `runsc` function needs the alias: {out:?}"
+        );
+    }
+
+    #[test]
+    fn alias_of_a_name_the_file_declares_as_a_type_stays_silent() {
+        let mut file = facts(vec![renamed_runsc()]);
+        file.types.push(TypeDef {
+            name: "runsc",
+            pos: Pos { line: 3, byte: 0 },
+            visibility: Visibility::Private,
+            abstraction: false,
+        });
+        let out = run(&file);
+        assert!(out.is_empty(), "a `runsc` type needs the alias: {out:?}");
+    }
+
+    #[test]
+    fn alias_beside_bindings_of_other_names_still_flags() {
+        let mut file = facts(vec![renamed_runsc()]);
+        file.bindings.push(binding("service"));
+        file.functions.push(function("New", vec![param("ctx")]));
+        assert_eq!(run(&file).len(), 1, "no local `runsc` exists");
     }
 
     #[test]

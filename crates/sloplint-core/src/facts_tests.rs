@@ -372,6 +372,52 @@ fn generic_and_abstract_impls_stay_out_of_world() {
     );
 }
 
+fn use_item(module: &'static str, name: &'static str) -> Import<'static> {
+    Import {
+        pos: Pos { line: 1, byte: 0 },
+        module: std::borrow::Cow::Borrowed(module),
+        name,
+        alias: None,
+        kind: ImportKind::Named,
+        scope: ImportScope::Module,
+        in_test: false,
+        is_reexport: true,
+        external_root: None,
+    }
+}
+
+#[test]
+fn world_reexports_carry_exported_name_and_source_module() {
+    let mut aliased = use_item("emit", "render");
+    aliased.alias = Some("show");
+    let mut glob = use_item("hooks", "*");
+    glob.kind = ImportKind::Wildcard;
+    let mut private = use_item("paths", "join");
+    private.is_reexport = false;
+    let mut tested = use_item("probe", "check");
+    tested.in_test = true;
+    let mut local = use_item("inner", "step");
+    local.scope = ImportScope::FunctionLocal;
+    let mut facts = facts_with("pub use emit::render;\n", vec![], vec![], vec![]);
+    facts.imports = vec![
+        use_item("a::b", "render"),
+        aliased,
+        glob,
+        private,
+        tested,
+        local,
+    ];
+    let world = WorldFacts::from_facts(&facts);
+    assert_eq!(
+        world
+            .reexports
+            .iter()
+            .map(|item| (item.name.as_ref(), item.module.as_ref()))
+            .collect::<Vec<_>>(),
+        [("render", "a::b"), ("show", "emit"), ("*", "hooks")],
+    );
+}
+
 fn manifests(dirs: &[(&str, ManifestKind)]) -> BTreeSet<(ManifestKind, String)> {
     dirs.iter()
         .map(|(dir, kind)| (*kind, dir.to_string()))

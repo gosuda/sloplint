@@ -293,6 +293,12 @@ pub struct NamedSite {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Reexport {
+    pub name: Box<str>,
+    pub module: Box<str>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorldFacts {
     pub lang: Lang,
     pub role: CodeRole,
@@ -308,6 +314,7 @@ pub struct WorldFacts {
     pub impls: Vec<NamedSite>,
     pub barrel: Option<Vec<Vec<String>>>,
     pub imports: Vec<Box<str>>,
+    pub reexports: Vec<Reexport>,
 }
 
 impl WorldFacts {
@@ -357,6 +364,7 @@ impl WorldFacts {
                 .collect(),
             barrel: facts.barrel.as_ref().map(|b| b.targets.clone()),
             imports: import_targets(facts),
+            reexports: reexports_of(facts),
         }
     }
 }
@@ -381,6 +389,19 @@ fn import_targets(facts: &FileFacts<'_>) -> Vec<Box<str>> {
         }
     }
     targets
+}
+fn reexports_of(facts: &FileFacts<'_>) -> Vec<Reexport> {
+    facts
+        .imports
+        .iter()
+        .filter(|import| {
+            import.is_reexport && !import.in_test && import.scope == ImportScope::Module
+        })
+        .map(|import| Reexport {
+            name: Box::from(import.alias.unwrap_or(import.name)),
+            module: Box::from(&*import.module),
+        })
+        .collect()
 }
 fn is_single_segment(module: &str) -> bool {
     !module.starts_with('.')

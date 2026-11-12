@@ -203,6 +203,7 @@ mod tests {
             impls,
             barrel: None,
             imports: Vec::new(),
+            reexports: Vec::new(),
         }
     }
 

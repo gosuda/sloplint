@@ -32,6 +32,7 @@ fn world_facts(barrel: Option<Vec<Vec<String>>>) -> WorldFacts {
         impls: Vec::new(),
         barrel,
         imports: Vec::new(),
+        reexports: Vec::new(),
     }
 }
 

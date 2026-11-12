@@ -31,11 +31,11 @@ fn spec_import<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, in_test: bool, out: &mut Vec
     let (name, alias, kind) = match child_by_field(spec, "name").map(|v| v.kind()) {
         Some("dot") => ("*", None, ImportKind::Wildcard),
         Some("blank_identifier") => ("", None, ImportKind::SideEffect),
-        Some(_) => (
-            seg,
-            child_by_field(spec, "name").map(|v| text(cx, v)),
-            ImportKind::Named,
-        ),
+        Some(_) => {
+            let alias = child_by_field(spec, "name").map(|v| text(cx, v));
+            let name = alias.map_or(seg, |alias| aliased_name(module, alias));
+            (name, alias, ImportKind::Named)
+        }
         None => (seg, None, ImportKind::Named),
     };
     out.push(Import {
@@ -77,9 +77,17 @@ fn version_seg(module: &str) -> &str {
     };
     module[..cut].rsplit('/').next().map_or(last, |s| s)
 }
+
+fn aliased_name<'s>(module: &'s str, alias: &'s str) -> &'s str {
+    if module.rsplit('/').next() == Some(alias) {
+        return alias;
+    }
+    version_seg(module)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::go_external_root;
+    use super::{aliased_name, go_external_root};
 
     #[test]
     fn truncates_roots_to_three_segments() {
@@ -93,5 +101,17 @@ mod tests {
             Some("gopkg.in/yaml.v3")
         );
         assert_eq!(go_external_root("fmt"), None);
+    }
+
+    #[test]
+    fn an_alias_spelled_as_the_versioned_last_part_names_the_import_after_it() {
+        assert_eq!(aliased_name("k8s.io/api/core/v1", "v1"), "v1");
+    }
+
+    #[test]
+    fn an_alias_unlike_the_versioned_last_part_keeps_the_parent_part_as_name() {
+        assert_eq!(aliased_name("github.com/x/sandbox/v1", "api"), "sandbox");
+        assert_eq!(aliased_name("github.com/x/foo/v2", "foo"), "foo");
+        assert_eq!(aliased_name("regexp", "rx"), "regexp");
     }
 }

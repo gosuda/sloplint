@@ -129,6 +129,7 @@ mod tests {
             impls: Vec::new(),
             barrel,
             imports: Vec::new(),
+            reexports: Vec::new(),
         }
     }
 

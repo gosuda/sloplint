@@ -438,3 +438,33 @@ fn tsx_shares_typescript_evidence_gate() {
     ]);
     assert_eq!(reported_files(tmp.path()), ["src/Card.tsx".to_string()]);
 }
+
+#[test]
+fn rust_crate_root_imports_resolve_through_root_items_and_reexports() {
+    let tmp = tmp_with(&[
+        (
+            "crates/demo/src/lib.rs",
+            "mod emit;\nmod hooks;\npub mod paths;\n\npub use emit::render;\n\npub fn analyze(input: &str) -> usize {\n    hooks::hook(input)\n}\n",
+        ),
+        (
+            "crates/demo/src/emit.rs",
+            "pub fn render(input: &str) -> String {\n    input.to_uppercase()\n}\n",
+        ),
+        (
+            "crates/demo/src/hooks.rs",
+            "pub fn hook(input: &str) -> usize {\n    input.len()\n}\n",
+        ),
+        (
+            "crates/demo/src/paths.rs",
+            "pub fn join(a: &str, b: &str) -> String {\n    format!(\"{a}/{b}\")\n}\n",
+        ),
+        (
+            "crates/demo/tests/rendering.rs",
+            "use demo::{analyze, render};\nuse demo::paths::join;\n\n#[test]\nfn render_and_analyze_agree() {\n    assert_eq!(render(\"ab\"), \"AB\");\n    assert_eq!(analyze(\"ab\"), 2);\n    assert_eq!(join(\"a\", \"b\"), \"a/b\");\n}\n",
+        ),
+    ]);
+    assert_eq!(
+        reported_files(tmp.path()),
+        ["crates/demo/src/hooks.rs".to_string()]
+    );
+}

@@ -1,2 +1,3 @@
-# Positive: the alias shares nothing with regexp; strict rung info.
+# Positive: the aliases share nothing with regexp or sandbox and no local name collides; strict rung info.
 a.go:2 info grep/no-rename-import
+version.go:3 info grep/no-rename-import
