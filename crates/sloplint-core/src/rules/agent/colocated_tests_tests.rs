@@ -17,6 +17,7 @@ pub(super) fn lib(lang: Lang, package: &str, public_functions: u32) -> WorldFact
         impls: Vec::new(),
         barrel: None,
         imports: Vec::new(),
+        reexports: Vec::new(),
     }
 }
 
@@ -46,6 +47,7 @@ pub(super) fn evidence(lang: Lang, package: &str, imports: &[&str]) -> WorldFact
         impls: Vec::new(),
         barrel: None,
         imports: imports.iter().map(|spec| Box::<str>::from(*spec)).collect(),
+        reexports: Vec::new(),
     }
 }
 
@@ -63,6 +65,7 @@ pub(super) fn test_file(lang: Lang, package: &str) -> WorldFacts {
         impls: Vec::new(),
         barrel: None,
         imports: Vec::new(),
+        reexports: Vec::new(),
     }
 }
 

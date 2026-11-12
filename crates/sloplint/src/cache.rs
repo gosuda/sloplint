@@ -17,7 +17,7 @@ use crate::terminal::TerminalText;
 mod dirs;
 use dirs::{create_private, unsafe_dir, vet_existing};
 
-const VERSION: u32 = 8;
+const VERSION: u32 = 9;
 const NAMESPACE: &str = "sloplint";
 const SHARD_DIR: &str = "cache-v2";
 

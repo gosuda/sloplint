@@ -1,3 +1,4 @@
+use crate::facts::{NamedSite, Reexport, WorldFacts};
 use crate::lang::Lang;
 use crate::rules::WorldFile;
 
@@ -292,5 +293,168 @@ fn index_import_does_not_cover_sibling_module() {
         check(&rule, &files),
         ["src/widget/other.ts".to_string()],
         "an index import covers only the directory module, not its siblings"
+    );
+}
+
+const DEMO_MODULES: [&str; 4] = [
+    "crates/demo/src/lib.rs",
+    "crates/demo/src/emit.rs",
+    "crates/demo/src/hooks.rs",
+    "crates/demo/src/paths.rs",
+];
+
+fn demo_root(definitions: &[&str], reexports: &[(&str, &str)]) -> WorldFacts {
+    let mut root = lib(Lang::Rust, "crates/demo", 1);
+    root.definitions = definitions
+        .iter()
+        .map(|name| NamedSite {
+            name: Box::from(*name),
+            line: 1,
+            column: 1,
+        })
+        .collect();
+    root.reexports = reexports
+        .iter()
+        .map(|(name, module)| Reexport {
+            name: Box::from(*name),
+            module: Box::from(*module),
+        })
+        .collect();
+    root
+}
+
+fn demo_flagged(root: &WorldFacts, probes: &[(&str, &WorldFacts)]) -> Vec<String> {
+    let module = lib(Lang::Rust, "crates/demo", 1);
+    let mut files = vec![WorldFile {
+        path: DEMO_MODULES[0],
+        facts: root,
+    }];
+    for &path in &DEMO_MODULES[1..] {
+        files.push(WorldFile {
+            path,
+            facts: &module,
+        });
+    }
+    for &(path, facts) in probes {
+        files.push(WorldFile { path, facts });
+    }
+    check(&rule(), &files)
+}
+
+fn demo_paths(paths: &[&str]) -> Vec<String> {
+    paths
+        .iter()
+        .map(|name| format!("crates/demo/src/{name}.rs"))
+        .collect()
+}
+
+#[test]
+fn rust_crate_root_item_import_covers_the_root_file() {
+    let root = demo_root(&["analyze"], &[]);
+    let test = evidence(Lang::Rust, "crates/demo", &["demo", "demo/analyze"]);
+    assert_eq!(
+        demo_flagged(&root, &[("crates/demo/tests/rendering.rs", &test)]),
+        demo_paths(&["emit", "hooks", "paths"]),
+        "an item defined in the crate root covers the root file"
+    );
+}
+
+#[test]
+fn rust_crate_relative_root_item_import_covers_the_root_file() {
+    let root = demo_root(&["analyze"], &[]);
+    let mut inline = lib(Lang::Rust, "crates/demo", 0);
+    inline.has_inline_tests = true;
+    inline.imports = vec![Box::<str>::from("crate/analyze")];
+    assert_eq!(
+        demo_flagged(&root, &[("crates/demo/src/probe.rs", &inline)]),
+        demo_paths(&["emit", "hooks", "paths"]),
+        "`crate::Name` resolves like `<crate>::Name`"
+    );
+}
+
+#[test]
+fn rust_named_reexport_covers_its_source_module_only() {
+    let root = demo_root(&[], &[("render", "emit")]);
+    let test = evidence(Lang::Rust, "crates/demo", &["demo", "demo/render"]);
+    assert_eq!(
+        demo_flagged(&root, &[("crates/demo/tests/rendering.rs", &test)]),
+        demo_paths(&["lib", "hooks", "paths"]),
+        "a re-exported name covers the module it comes from, not the root or other modules"
+    );
+}
+
+#[test]
+fn rust_aliased_reexport_covers_its_source_module() {
+    let root = demo_root(&[], &[("show", "self::emit")]);
+    let test = evidence(Lang::Rust, "crates/demo", &["demo", "demo/show"]);
+    assert_eq!(
+        demo_flagged(&root, &[("crates/demo/tests/rendering.rs", &test)]),
+        demo_paths(&["lib", "hooks", "paths"]),
+        "the exported alias resolves to the module of the original item"
+    );
+}
+
+#[test]
+fn rust_glob_reexport_covers_each_globbed_module() {
+    let root = demo_root(&[], &[("*", "emit"), ("*", "crate::hooks")]);
+    let test = evidence(Lang::Rust, "crates/demo", &["demo", "demo/render"]);
+    assert_eq!(
+        demo_flagged(&root, &[("crates/demo/tests/rendering.rs", &test)]),
+        demo_paths(&["lib", "paths"]),
+        "a name the root neither defines nor names falls to its glob re-exports"
+    );
+}
+
+#[test]
+fn rust_unimported_module_still_reports_beside_resolved_root_imports() {
+    let root = demo_root(&["analyze"], &[("render", "emit")]);
+    let test = evidence(
+        Lang::Rust,
+        "crates/demo",
+        &[
+            "demo",
+            "demo/analyze",
+            "demo/render",
+            "demo::paths",
+            "demo::paths/join",
+        ],
+    );
+    assert_eq!(
+        demo_flagged(&root, &[("crates/demo/tests/rendering.rs", &test)]),
+        demo_paths(&["hooks"]),
+        "root, re-export source, and imported module are covered; the module nobody imports is not"
+    );
+}
+
+#[test]
+fn rust_root_import_from_another_workspace_crate_resolves_through_the_named_crate() {
+    let root = demo_root(&[], &[("render", "emit")]);
+    let own = evidence(Lang::Rust, "crates/demo", &["serde", "serde/Serialize"]);
+    let foreign = evidence(Lang::Rust, "crates/other", &["demo", "demo/render"]);
+    assert_eq!(
+        demo_flagged(
+            &root,
+            &[
+                ("crates/demo/tests/rendering.rs", &own),
+                ("crates/other/tests/render.rs", &foreign),
+            ]
+        ),
+        demo_paths(&["lib", "hooks", "paths"]),
+        "a test in another workspace crate that imports `demo::render` names the module behind it"
+    );
+}
+
+#[test]
+fn rust_root_import_of_another_crate_does_not_resolve_in_the_importing_crate() {
+    let root = demo_root(&["analyze"], &[("render", "emit")]);
+    let test = evidence(
+        Lang::Rust,
+        "crates/demo",
+        &["other", "other/render", "other/analyze"],
+    );
+    assert_eq!(
+        demo_flagged(&root, &[("crates/demo/tests/rendering.rs", &test)]),
+        demo_paths(&["lib", "emit", "hooks", "paths"]),
+        "`other::render` names an item of `other`, not the `render` that `demo` re-exports"
     );
 }

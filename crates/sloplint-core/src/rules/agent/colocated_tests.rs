@@ -160,8 +160,63 @@ impl PackageKeys<'_> {
     }
 }
 
+#[derive(Default)]
+struct RustCrate<'a> {
+    modules: HashSet<String>,
+    root: Option<(&'a str, &'a WorldFacts)>,
+}
+
+impl RustCrate<'_> {
+    fn item_keys(&self, crate_key: &str, name: &str) -> Vec<Vec<String>> {
+        let Some((root_path, root)) = self.root else {
+            return Vec::new();
+        };
+        if self.modules.contains(&format!("{crate_key}/{name}")) {
+            return Vec::new();
+        }
+        let root_keys = || vec![crate::module_keys::library_keys(Lang::Rust, root_path)];
+        if root.definitions.iter().any(|site| &*site.name == name) {
+            return root_keys();
+        }
+        if let Some(named) = root.reexports.iter().find(|item| &*item.name == name) {
+            return vec![crate::module_keys::rust_module_keys(
+                crate_key,
+                &named.module,
+            )];
+        }
+        let globs: Vec<Vec<String>> = root
+            .reexports
+            .iter()
+            .filter(|item| &*item.name == "*")
+            .map(|item| crate::module_keys::rust_module_keys(crate_key, &item.module))
+            .collect();
+        if globs.is_empty() { root_keys() } else { globs }
+    }
+}
+
+fn rust_crates<'a>(files: &[WorldFile<'a>]) -> HashMap<String, RustCrate<'a>> {
+    let mut crates: HashMap<String, RustCrate<'a>> = HashMap::new();
+    for file in files {
+        if file.facts.lang != Lang::Rust || file.facts.role != CodeRole::Library {
+            continue;
+        }
+        let Some(crate_key) = crate::module_keys::rust_crate_key(file.path) else {
+            continue;
+        };
+        let entry = crates.entry(crate_key).or_default();
+        if crate::module_keys::rust_is_crate_root(file.path) {
+            entry.root = Some((file.path, file.facts));
+        }
+        entry
+            .modules
+            .extend(crate::module_keys::library_keys(Lang::Rust, file.path));
+    }
+    crates
+}
+
 fn import_covered<'a>(files: &[WorldFile<'a>]) -> HashSet<&'a str> {
     let mut keys: HashMap<(&'a str, String), PackageKeys<'a>> = HashMap::new();
+    let crates = rust_crates(files);
     for file in files {
         if !is_evidence(file) {
             continue;
@@ -169,6 +224,7 @@ fn import_covered<'a>(files: &[WorldFile<'a>]) -> HashSet<&'a str> {
         record_library_keys(&mut keys, file);
         for spec in &file.facts.imports {
             record_import_keys(&mut keys, file, spec);
+            record_root_item_keys(&mut keys, file, spec, &crates);
         }
     }
     if keys.is_empty() {
@@ -223,6 +279,25 @@ fn record_import_keys<'a>(
         file,
         crate::module_keys::import_keys(file.facts.lang, file.path, spec),
     );
+}
+
+fn record_root_item_keys<'a>(
+    keys: &mut HashMap<(&'a str, String), PackageKeys<'a>>,
+    file: &WorldFile<'a>,
+    spec: &str,
+    crates: &HashMap<String, RustCrate<'a>>,
+) {
+    if file.facts.lang != Lang::Rust {
+        return;
+    }
+    let Some((crate_key, name)) = crate::module_keys::rust_root_item(file.path, spec) else {
+        return;
+    };
+    if let Some(owner) = crates.get(&crate_key) {
+        for owned in owner.item_keys(&crate_key, name) {
+            record(keys, file, owned);
+        }
+    }
 }
 
 fn record<'a>(

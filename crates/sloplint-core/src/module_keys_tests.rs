@@ -349,3 +349,46 @@ fn bare_package_name_keeps_its_last_part() {
         ["@scope/chart.js"]
     );
 }
+#[test]
+fn rust_crate_root_is_the_lib_file_directly_under_src() {
+    assert_eq!(
+        rust_crate_key("crates/log-core/src/tag.rs").as_deref(),
+        Some("log_core")
+    );
+    assert!(rust_is_crate_root("crates/log-core/src/lib.rs"));
+    assert!(!rust_is_crate_root("crates/log-core/src/tag.rs"));
+    assert!(!rust_is_crate_root("crates/log-core/src/nested/lib.rs"));
+    assert!(!rust_is_crate_root("crates/demo/src/demo/lib.rs"));
+    assert!(!rust_is_crate_root("src/lib.rs"));
+}
+#[test]
+fn rust_root_item_names_the_crate_and_one_root_name() {
+    let importer = "crates/log-core/tests/t.rs";
+    let item = |crate_key: &str, name: &'static str| Some((crate_key.to_string(), name));
+    assert_eq!(
+        rust_root_item(importer, "log_core/Tag"),
+        item("log_core", "Tag")
+    );
+    assert_eq!(
+        rust_root_item(importer, "crate/Tag"),
+        item("log_core", "Tag")
+    );
+    assert_eq!(
+        rust_root_item(importer, "other_crate/Tag"),
+        item("other_crate", "Tag")
+    );
+    assert_eq!(rust_root_item(importer, "log_core::tag/Tag"), None);
+    assert_eq!(rust_root_item(importer, "log_core"), None);
+    assert_eq!(rust_root_item("tests/t.rs", "crate/Tag"), None);
+}
+#[test]
+fn rust_module_keys_match_the_library_keys_of_the_reexport_source() {
+    assert_eq!(
+        rust_module_keys("log_core", "crate::sink::file"),
+        library_keys(Lang::Rust, "crates/log-core/src/sink/file.rs")
+    );
+    assert_eq!(
+        rust_module_keys("log_core", "self::emit"),
+        library_keys(Lang::Rust, "crates/log-core/src/emit.rs")
+    );
+}

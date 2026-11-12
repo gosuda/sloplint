@@ -18,6 +18,7 @@ fn world_facts(role: CodeRole) -> WorldFacts {
         impls: Vec::new(),
         barrel: None,
         imports: Vec::new(),
+        reexports: Vec::new(),
     }
 }
 

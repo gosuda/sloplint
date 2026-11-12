@@ -194,6 +194,37 @@ fn rust_names_equal(a: &str, b: &str) -> bool {
             .zip(b.bytes())
             .all(|(x, y)| x == y || x == b'-' && y == b'_' || x == b'_' && y == b'-')
 }
+pub fn rust_crate_key(path: &str) -> Option<String> {
+    rust_crate_of(path).map(|name| name.replace('-', "_"))
+}
+pub fn rust_is_crate_root(path: &str) -> bool {
+    rust_crate_key(path)
+        .is_some_and(|name| library_keys(Lang::Rust, path) == [format!("{name}/lib")])
+}
+pub fn rust_root_item<'s>(importer: &str, spec: &'s str) -> Option<(String, &'s str)> {
+    let mut segs = spec.split([':', '/']).filter(|seg| !seg.is_empty());
+    let root = segs.next()?;
+    let name = segs.next()?;
+    if segs.next().is_some() {
+        return None;
+    }
+    let crate_key = if root == "crate" {
+        rust_crate_key(importer)?
+    } else {
+        root.replace('-', "_")
+    };
+    Some((crate_key, name))
+}
+pub fn rust_module_keys(crate_key: &str, module: &str) -> Vec<String> {
+    let mut segs = vec![crate_key.to_string()];
+    for seg in module.split([':', '/']).filter(|seg| !seg.is_empty()) {
+        if segs.len() == 1 && matches!(seg, "crate" | "self") {
+            continue;
+        }
+        push_segment(&mut segs, seg);
+    }
+    suffix_keys(&segs)
+}
 fn rust_seg_count(spec: &str) -> usize {
     spec.split([':', '/']).filter(|s| !s.is_empty()).count()
 }

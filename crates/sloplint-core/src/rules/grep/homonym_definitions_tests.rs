@@ -35,6 +35,7 @@ fn facts_with_role(role: CodeRole, package: &str, defs: Vec<NamedSite>) -> World
         impls: Vec::new(),
         barrel: None,
         imports: Vec::new(),
+        reexports: Vec::new(),
     }
 }
 
