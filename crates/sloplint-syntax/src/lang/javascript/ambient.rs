@@ -1,6 +1,7 @@
 //! Bindings, writes, and ambient state for JavaScript.
 
 use super::funcs::closure_shadow_params;
+use super::items::unwrap_expression;
 use super::{first_code, top_level};
 use crate::hooks::{
     Cx, FileSetKind, child_by_field, code_children, find_named_child, named_children, pos_of, text,
@@ -9,6 +10,7 @@ use sloplint_core::facts::{AmbientKind, Pos};
 use tree_sitter::Node;
 
 const ENV_OBJECT: &str = "process.env";
+const GLOBAL_HOSTS: &[&str] = &["globalThis", "window", "self", "global"];
 
 enum PatternFrame<'t> {
     Pattern(Node<'t>),
@@ -200,37 +202,55 @@ pub(crate) fn write_roots_for<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&
     out.extend(names);
 }
 
-fn is_write_target(parent: Option<Node<'_>>, n: Node<'_>) -> bool {
-    let Some(parent) = parent else {
-        return false;
-    };
-    match parent.kind() {
-        "assignment_expression" | "augmented_assignment_expression" => {
-            child_by_field(parent, "left").is_some_and(|left| left.id() == n.id())
+fn is_write_target(parent: Node<'_>, child: usize) -> bool {
+    let field = match parent.kind() {
+        "assignment_expression" | "augmented_assignment_expression" | "assignment_pattern" => {
+            "left"
         }
-        "update_expression" => {
-            child_by_field(parent, "argument").is_some_and(|argument| argument.id() == n.id())
+        "update_expression" => "argument",
+        "pair_pattern" => "value",
+        "array_pattern" | "rest_pattern" => return true,
+        _ => return false,
+    };
+    child_by_field(parent, field).is_some_and(|target| target.id() == child)
+}
+
+fn wraps(parent: Node<'_>, target: usize) -> bool {
+    unwrap_expression(parent).is_some_and(|inner| inner.id() == target)
+}
+
+fn is_object_of(parent: Node<'_>, child: usize) -> bool {
+    matches!(parent.kind(), "member_expression" | "subscript_expression")
+        && child_by_field(parent, "object").is_some_and(|object| object.id() == child)
+}
+
+fn is_process(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    match n.kind() {
+        "identifier" => text(cx, n) == "process",
+        "member_expression" => {
+            child_by_field(n, "property").is_some_and(|property| text(cx, property) == "process")
+                && child_by_field(n, "object")
+                    .and_then(unwrap_expression)
+                    .is_some_and(|host| {
+                        host.kind() == "identifier" && GLOBAL_HOSTS.contains(&text(cx, host))
+                    })
         }
         _ => false,
     }
 }
 
 fn is_env_base(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    if n.kind() != "member_expression" {
+    if n.kind() != "member_expression"
+        || !child_by_field(n, "property").is_some_and(|property| text(cx, property) == "env")
+    {
         return false;
     }
-    let (Some(object), Some(property)) =
-        (child_by_field(n, "object"), child_by_field(n, "property"))
-    else {
+    let Some(object) = child_by_field(n, "object").and_then(unwrap_expression) else {
         return false;
     };
-    if text(cx, property) != "env" {
-        return false;
-    }
     match object.kind() {
-        "identifier" => text(cx, object) == "process",
         "meta_property" => text(cx, object) == "import.meta",
-        _ => false,
+        _ => is_process(cx, object),
     }
 }
 
@@ -240,46 +260,53 @@ fn env_rooted(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
         if is_env_base(cx, current) {
             return true;
         }
-        match current.kind() {
-            "member_expression" | "subscript_expression" => {
-                let Some(object) = child_by_field(current, "object") else {
-                    return false;
-                };
-                current = object;
-            }
-            _ => return false,
+        if !matches!(current.kind(), "member_expression" | "subscript_expression") {
+            return false;
         }
+        let Some(object) = child_by_field(current, "object").and_then(unwrap_expression) else {
+            return false;
+        };
+        current = object;
     }
 }
 
-fn under_env_store(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    let ancestors: Vec<Node<'_>> = cx.ancestors().collect();
-    let mut child = n;
-    for (index, node) in ancestors.iter().enumerate() {
-        match node.kind() {
-            "member_expression" | "subscript_expression" => {
-                if !child_by_field(*node, "object").is_some_and(|object| object.id() == child.id())
-                {
-                    return false;
-                }
-                if is_write_target(ancestors.get(index + 1).copied(), *node) {
-                    return true;
-                }
-                child = *node;
-            }
-            _ => return false,
+fn written(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    let mut child = n.id();
+    for parent in cx.ancestors() {
+        if !wraps(parent, n.id()) {
+            return is_write_target(parent, child);
         }
+        child = parent.id();
     }
     false
 }
 
-fn push_env_or_store<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(AmbientKind, &'s str, Pos)>) {
-    if is_env_base(cx, n) && !is_write_target(cx.parent(), n) && !under_env_store(cx, n) {
-        out.push((AmbientKind::EnvRead, text(cx, n), pos_of(n)));
-        return;
+fn under_env_store(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    let mut target = n.id();
+    let mut child = n.id();
+    for parent in cx.ancestors() {
+        if is_write_target(parent, child) {
+            return true;
+        }
+        if is_object_of(parent, child) {
+            target = parent.id();
+        } else if !wraps(parent, target) {
+            return false;
+        }
+        child = parent.id();
     }
-    if is_write_target(cx.parent(), n) && env_rooted(cx, n) {
+    false
+}
+
+pub(crate) fn push_env_or_store<'s>(
+    cx: &Cx<'_, 's>,
+    n: Node<'_>,
+    out: &mut Vec<(AmbientKind, &'s str, Pos)>,
+) {
+    if written(cx, n) && env_rooted(cx, n) {
         out.push((AmbientKind::GlobalWrite, ENV_OBJECT, pos_of(n)));
+    } else if is_env_base(cx, n) && !under_env_store(cx, n) {
+        out.push((AmbientKind::EnvRead, text(cx, n), pos_of(n)));
     }
 }
 
@@ -405,16 +432,6 @@ fn push_global_write<'s>(
     }
 }
 
-fn push_subscript_store<'s>(
-    cx: &Cx<'_, 's>,
-    n: Node<'_>,
-    out: &mut Vec<(AmbientKind, &'s str, Pos)>,
-) {
-    if n.kind() == "subscript_expression" && is_write_target(cx.parent(), n) && env_rooted(cx, n) {
-        out.push((AmbientKind::GlobalWrite, ENV_OBJECT, pos_of(n)));
-    }
-}
-
 fn push_declaration_global<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
@@ -448,8 +465,7 @@ pub(crate) fn ambient_sites<'s>(
         "lexical_declaration" | "variable_declaration" => {
             push_declaration_global(cx, n, in_function, out);
         }
-        "member_expression" => push_env_or_store(cx, n, out),
-        "subscript_expression" => push_subscript_store(cx, n, out),
+        "member_expression" | "subscript_expression" => push_env_or_store(cx, n, out),
         "assignment_expression" | "augmented_assignment_expression" | "update_expression" => {
             push_global_write(cx, n, in_function, out);
         }

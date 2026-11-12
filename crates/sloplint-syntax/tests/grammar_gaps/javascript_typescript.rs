@@ -452,6 +452,85 @@ fn env_shaped_target_that_is_not_the_environment_stays_silent() {
     }
 }
 
+fn environment_facts(lang: Lang, path: &str, source: &str) -> Vec<(AmbientKind, String)> {
+    let analysis = run_clean(lang, path, source);
+    analysis
+        .facts
+        .ambient
+        .iter()
+        .map(|a| (a.kind, a.name.to_string()))
+        .collect()
+}
+
+fn assert_environment_write(langs: &[(Lang, &str)], sources: &[&str]) {
+    for &(lang, path) in langs {
+        for source in sources {
+            assert_eq!(
+                environment_facts(lang, path, source),
+                [(AmbientKind::GlobalWrite, "process.env".to_string())],
+                "{lang:?}: `{source}` is one write to the environment object"
+            );
+        }
+    }
+}
+
+#[test]
+fn wrapped_environment_targets_are_environment_writes() {
+    assert_environment_write(
+        &SCRIPT_LANGS,
+        &[
+            "(process.env).TOKEN = 'x';\n",
+            "(process.env.TOKEN) = 'x';\n",
+        ],
+    );
+    assert_environment_write(
+        &TS_LANGS,
+        &[
+            "process.env!.TOKEN = 'x';\n",
+            "(process.env as Record<string, string>).TOKEN = 'x';\n",
+        ],
+    );
+}
+
+#[test]
+fn host_rooted_process_env_is_an_environment_write() {
+    assert_environment_write(
+        &SCRIPT_LANGS,
+        &[
+            "globalThis.process.env.TOKEN = 'x';\n",
+            "window.process.env['TOKEN'] = 'x';\n",
+        ],
+    );
+}
+
+#[test]
+fn destructuring_into_the_environment_is_an_environment_write() {
+    assert_environment_write(
+        &SCRIPT_LANGS,
+        &[
+            "({ TOKEN: process.env.TOKEN } = source);\n",
+            "[process.env.TOKEN] = values;\n",
+        ],
+    );
+}
+
+#[test]
+fn environment_near_misses_stay_reads_or_silent() {
+    let read = [(AmbientKind::EnvRead, "process.env".to_string())];
+    let default_read = "({ TOKEN: token = process.env.TOKEN } = source);\n";
+    for (lang, path) in SCRIPT_LANGS {
+        let plain = environment_facts(lang, path, "const token = process.env.TOKEN;\n");
+        assert_eq!(plain, read, "{lang:?}: a plain read stays a read");
+        let default = environment_facts(lang, path, default_read);
+        assert_eq!(default, read, "{lang:?}: a destructuring default is a read");
+        let foreign = environment_facts(lang, path, "my.process.env.TOKEN = 'x';\n");
+        assert!(
+            foreign.is_empty(),
+            "{lang:?}: `my.process` is not the process"
+        );
+    }
+}
+
 #[test]
 fn invalid_code_still_reports_a_parse_error() {
     for (lang, path) in SCRIPT_LANGS {
