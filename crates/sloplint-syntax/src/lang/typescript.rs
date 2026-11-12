@@ -25,9 +25,9 @@ use ambient::{
 };
 use calls::{callee_root, collapsed_callee, ts_args, ts_sole_call};
 use funcs::{
-    TsHead, closure_params, closure_shadow_params, doc_anchor, exported as ts_exported,
-    function_head, has_decorator, has_override, head_for, is_deprecated_named, member_public,
-    missing_of, visibility_of,
+    TsHead, closure_params, closure_shadow_params, contextually_typed, doc_anchor,
+    exported as ts_exported, function_head, has_decorator, has_override, head_for,
+    is_deprecated_named, member_public, missing_of, visibility_of,
 };
 use imports::{export_stmt, heritage_impls, import_stmt, parent_dir, ts_targets};
 pub(crate) static TABLE: crate::lang::Table = js_table!(
@@ -293,7 +293,11 @@ fn closure_head<'s>(
     let mut params = Vec::new();
     closure_params(cx, n, &mut params);
     let ret = child_by_field(n, "return_type").map(|t| text(cx, t));
-    let missing = missing_of(&params, ret, "");
+    let missing = if contextually_typed(cx, n) {
+        Vec::new()
+    } else {
+        missing_of(&params, ret, "")
+    };
     let mut shadow = closure_shadow_params(cx, n);
     hoisted_shadows_for(cx, body, &mut shadow);
     Some(FunctionHead {

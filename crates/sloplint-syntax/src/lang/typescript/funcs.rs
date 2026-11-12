@@ -6,8 +6,8 @@ use tree_sitter::Node;
 use super::ambient::hoisted_shadows_for;
 use super::calls::{ts_pat, ts_sole_call};
 use crate::hooks::{
-    Cx, FunctionHead, any_named_child, child_by_field, find_named_child, named_children, pos_of,
-    preceding_comments, text,
+    Cx, FunctionHead, any_named_child, child_by_field, code_children, find_named_child,
+    named_children, pos_of, preceding_comments, text,
 };
 use crate::lang::javascript::is_test_path;
 pub(crate) struct TsHead<'a> {
@@ -222,6 +222,37 @@ pub(crate) fn missing_of<'s>(
     missing
 }
 
+const TYPED_INITIALIZER_CAP: usize = 16;
+
+fn typed_slot(parent: Node<'_>, child: usize) -> bool {
+    match parent.kind() {
+        "variable_declarator" | "public_field_definition" => {
+            child_by_field(parent, "type").is_some()
+                && child_by_field(parent, "value").is_some_and(|value| value.id() == child)
+        }
+        "as_expression" | "satisfies_expression" => code_children(parent)
+            .last()
+            .is_some_and(|ty| ty.id() != child),
+        _ => false,
+    }
+}
+
+pub(crate) fn contextually_typed(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    let mut child = n.id();
+    let mut parent = cx.parent_of(n);
+    for _ in 0..TYPED_INITIALIZER_CAP {
+        let Some(node) = parent else {
+            return false;
+        };
+        if node.kind() != "parenthesized_expression" {
+            return typed_slot(node, child);
+        }
+        child = node.id();
+        parent = cx.parent_of(node);
+    }
+    false
+}
+
 pub(crate) fn top_level(cx: &Cx<'_, '_>) -> bool {
     matches!(
         cx.parent().map(|parent| parent.kind()),
@@ -236,7 +267,11 @@ pub(crate) fn head_for<'s>(
 ) -> FunctionHead<'s> {
     let ret = child_by_field(site.node, "return_type").map(|t| text(cx, t));
     let name = text(cx, site.name);
-    let missing = missing_of(&params, ret, name);
+    let missing = if contextually_typed(cx, site.node) {
+        Vec::new()
+    } else {
+        missing_of(&params, ret, name)
+    };
     let (doc, doc_pos) = preceding_comments(cx, site.header, &["comment"], &["decorator"]);
     let deprecated = is_deprecated_named(site.node, &doc, cx);
     FunctionHead {

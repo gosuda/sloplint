@@ -5,3 +5,5 @@ export function process(data, count) {
 export function* values() {
   yield 1;
 }
+
+export const untyped = (x) => x;

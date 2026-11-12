@@ -290,3 +290,100 @@ fn assert_calls_emit_an_assertion_fact() {
         "an identifier condition is a bare-name assertion"
     );
 }
+
+fn missing_for<'a>(a: &'a Analysis<'a>, name: &str) -> &'a [&'a str] {
+    &a.facts
+        .functions
+        .iter()
+        .find(|f| f.name == name)
+        .unwrap_or_else(|| panic!("has function {name}"))
+        .missing_annotations
+}
+
+#[test]
+fn annotated_declarator_types_its_untyped_function() {
+    let a = run(
+        "wrap.ts",
+        "type Fn = (x: number) => number;\nexport const wrap: <T>(fn: () => T) => () => T = (fn) => () => fn();\nexport const handler: Fn = (event) => event;\nexport const legacy: Fn = function (x) { return x; };\n",
+    );
+    assert!(a.parse_error.is_none(), "parses");
+    for name in ["wrap", "handler", "legacy"] {
+        assert!(
+            missing_for(&a, name).is_empty(),
+            "the declarator type annotates `{name}`: {:?}",
+            missing_for(&a, name)
+        );
+    }
+}
+
+#[test]
+fn unannotated_declarator_keeps_missing_annotations() {
+    let a = run(
+        "untyped.ts",
+        "export const untyped = (x) => x;\nexport const partly: Fn = (x) => (y) => y;\n",
+    );
+    assert!(a.parse_error.is_none(), "parses");
+    assert_eq!(missing_for(&a, "untyped"), ["x", "return"]);
+    let inner = a
+        .facts
+        .functions
+        .iter()
+        .find(|f| f.name.is_empty())
+        .unwrap_or_else(|| panic!("the returned arrow has a Function fact"));
+    assert_eq!(
+        inner.missing_annotations,
+        ["y", "return"],
+        "an arrow that is not the declarator's initializer is not typed by it"
+    );
+}
+
+#[test]
+fn annotated_class_field_types_its_untyped_arrow() {
+    let a = run(
+        "box.ts",
+        "type Fn = (x: number) => number;\nexport class Box {\n  run: Fn = (x) => x;\n  bare = (x) => x;\n}\n",
+    );
+    assert!(a.parse_error.is_none(), "parses");
+    assert!(
+        missing_for(&a, "run").is_empty(),
+        "the field type annotates `run`"
+    );
+    assert_eq!(missing_for(&a, "bare"), ["x", "return"]);
+}
+
+#[test]
+fn wrapped_initializer_takes_the_annotated_type() {
+    let a = run(
+        "wrapped.ts",
+        "type Fn = (x: number) => number;\nexport const paren: Fn = ((x) => x);\nexport const checked = ((x) => x) satisfies Fn;\nexport const cast = (x) => x as Fn;\n",
+    );
+    assert!(a.parse_error.is_none(), "parses");
+    let wrapped: Vec<_> = a
+        .facts
+        .functions
+        .iter()
+        .filter(|f| f.name.is_empty())
+        .collect();
+    assert_eq!(wrapped.len(), 2, "two wrapped initializers: {wrapped:?}");
+    for function in wrapped {
+        assert!(
+            function.missing_annotations.is_empty(),
+            "a wrapped initializer is typed by its annotation: {function:?}"
+        );
+    }
+    assert_eq!(
+        missing_for(&a, "cast"),
+        ["x", "return"],
+        "an `as` inside the body does not type the arrow"
+    );
+}
+
+#[test]
+fn any_annotated_declarator_counts_as_annotated() {
+    let a = run("loose.ts", "export const loose: any = (x) => x;\n");
+    assert!(a.parse_error.is_none(), "parses");
+    assert!(
+        missing_for(&a, "loose").is_empty(),
+        "`any` counts on the declarator as it does on a parameter"
+    );
+}
