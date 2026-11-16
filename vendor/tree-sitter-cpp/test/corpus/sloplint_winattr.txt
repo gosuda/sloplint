@@ -6,8 +6,14 @@ typedef CONST char *PCSZ;
 typedef CONST STRING* PCOEM_STRING;
 typedef VOID(NTAPI *PIO_APC_ROUTINE)(IN PVOID ApcContext, IN ULONG Reserved);
 typedef VOID (*PRTL_CALLBACK)(IN PVOID Context);
-struct S { [size_is(Length/2)] PUCHAR Buf; [default] LONG D; };
+struct S { WOW64_POINTER(PVOID) Reserved1[54]; [size_is(Length/2)] PUCHAR Buf; [default] LONG D; };
 void f(IN ULONG Count, OUT PVOID Buf, [size_is(n)] UCHAR *p);
+PSLIST_ENTRY
+__fastcall
+RtlInterlockedPushListSList (
+     IN PSLIST_HEADER ListHead,
+     IN ULONG Count
+     );
 #if defined(_WINNT_)
 typedef enum POWER_INFORMATION_LEVEL {
   PowerPolicyAc = 0x0,
@@ -69,6 +75,15 @@ struct MIDL_GUARD {
   (struct_specifier
     name: (type_identifier)
     body: (field_declaration_list
+      type: (field_declaration
+        name: (identifier)
+        type: (type_descriptor
+          type: (type_identifier)))
+      declarator: (field_declaration
+        (array_declarator
+          declarator: (field_identifier)
+          size: (number_literal)))
+      (field_declaration)
       (field_declaration
         (midl_attribute_list
           (identifier)
@@ -104,6 +119,22 @@ struct MIDL_GUARD {
           type: (type_identifier)
           declarator: (pointer_declarator
             declarator: (identifier))))))
+  (declaration
+    type: (type_identifier)
+    declarator: (ms_call_modifier)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          type: (type_identifier)
+          declarator: (identifier))
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          type: (type_identifier)
+          declarator: (identifier)))))
   (preproc_if
     condition: (preproc_defined
       (identifier))

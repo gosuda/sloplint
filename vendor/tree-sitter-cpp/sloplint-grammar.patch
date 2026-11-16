@@ -317,15 +317,22 @@
      }),
  
      declaration: $ => seq(
-@@ -242,6 +477,7 @@
+@@ -240,8 +475,14 @@
+         seq(
+           // C uses _declaration_declarator here for some nice macro parsing in function declarators,
            // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
++          // The literal-only leading repeat covers `T __stdcall F(args);`
++          // (calling-convention modifier between specifiers and name);
++          // generic macro_qualifier must NOT join it — an identifier here is
++          // the declarator, and that fork is the pain the comment above means.
++          repeat(choice($.ms_call_modifier, $.macro_attribute)),
            $._declarator,
            optional($.gnu_asm_expression),
 +          repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
          ),
          $.init_declarator,
        ))),
-@@ -284,14 +520,24 @@
+@@ -284,14 +525,24 @@
  
      enum_specifier: $ => prec.right(seq(
        'enum',
@@ -355,7 +362,7 @@
        ),
        optional($.attribute_specifier),
      )),
-@@ -339,9 +585,16 @@
+@@ -339,9 +590,16 @@
      ),
  
      template_instantiation: $ => seq(
@@ -374,7 +381,7 @@
        ';',
      ),
  
-@@ -387,22 +640,46 @@
+@@ -387,22 +645,46 @@
        ),
      ),
  
@@ -429,7 +436,7 @@
      ),
  
      variadic_parameter_declaration: $ => seq(
-@@ -432,6 +709,23 @@
+@@ -432,6 +714,23 @@
            $.initializer_list,
          )),
        ),
@@ -453,7 +460,7 @@
      ),
  
      operator_cast: $ => prec.right(1, seq(
-@@ -444,9 +738,31 @@
+@@ -444,9 +743,31 @@
      //   A b {};
      compound_statement: (_, original) => prec(-1, original),
  
@@ -486,7 +493,7 @@
      ),
  
      field_initializer: $ => prec(1, seq(
-@@ -469,22 +785,33 @@
+@@ -469,22 +790,43 @@
        alias($.operator_cast_declaration, $.declaration),
        $.friend_declaration,
        seq($.access_specifier, ':'),
@@ -500,6 +507,16 @@
        $.type_definition,
        $.static_assert_declaration,
 +      $.macro_declaration,
++      // `MACRO(TYPE) name;`/`MACRO(TYPE) name[N];` members — WOW64_POINTER
++      // and friends in Win32 headers. A full alternate (not a specifier
++      // variant) so the fork only opens on `IDENT (` members; putting
++      // macro_type_specifier inside _declaration_specifiers regressed
++      // `= delete`/`= default` methods.
++      alias(seq(
++        field('type', $.macro_type_specifier),
++        commaSep(field('declarator', $._field_declarator)),
++        ';',
++      ), $.field_declaration),
        ';',
      ),
  
@@ -527,7 +544,7 @@
        )),
        optional($.attribute_specifier),
        ';',
-@@ -493,6 +820,8 @@
+@@ -493,6 +835,8 @@
      inline_method_definition: $ => seq(
        $._declaration_specifiers,
        field('declarator', $._field_declarator),
@@ -536,7 +553,7 @@
        choice(
          field('body', choice($.compound_statement, $.try_statement)),
          $.default_method_clause,
-@@ -512,6 +841,7 @@
+@@ -512,6 +856,7 @@
          $.operator_cast,
          alias($.qualified_operator_cast_identifier, $.qualified_identifier),
        )),
@@ -544,7 +561,7 @@
        field('body', choice($.compound_statement, $.try_statement)),
      ),
  
-@@ -535,9 +865,11 @@
+@@ -535,9 +880,11 @@
      constructor_or_destructor_definition: $ => seq(
        repeat($._constructor_specifiers),
        field('declarator', $.function_declarator),
@@ -556,7 +573,7 @@
            field('body', $.compound_statement),
          ),
          alias($.constructor_try_statement, $.try_statement),
-@@ -580,6 +912,247 @@
+@@ -580,6 +927,247 @@
        'protected',
      ),
  
@@ -804,7 +821,7 @@
      _declarator: ($, original) => choice(
        original,
        $.reference_declarator,
-@@ -647,7 +1220,7 @@
+@@ -647,7 +1235,7 @@
      )),
  
      _function_postfix: $ => prec.right(choice(
@@ -813,7 +830,7 @@
        $.requires_clause,
      )),
  
-@@ -807,6 +1380,9 @@
+@@ -807,6 +1395,9 @@
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
@@ -823,7 +840,7 @@
      ),
  
      switch_statement: $ => seq(
-@@ -828,6 +1404,15 @@
+@@ -828,6 +1419,15 @@
        field('consequence', $.statement),
        optional(field('alternative', $.else_clause)),
      )),
@@ -839,7 +856,7 @@
  
      // Using prec(1) instead of prec.dynamic(1) causes issues with the
      // range loop's declaration specifiers if `int` is passed in, it'll
-@@ -968,10 +1553,257 @@
+@@ -968,10 +1568,257 @@
        ']',
      ),
  
@@ -1101,7 +1118,7 @@
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1823,15 @@
+@@ -991,9 +1838,15 @@
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -1120,7 +1137,7 @@
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +1845,7 @@
+@@ -1007,7 +1860,7 @@
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -1129,7 +1146,7 @@
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +1853,7 @@
+@@ -1015,6 +1868,7 @@
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -1137,7 +1154,7 @@
        )),
      ),
  
-@@ -1215,13 +2054,66 @@
+@@ -1215,13 +2069,66 @@
              field('operator', operator),
              field('right', $.expression),
            ));
@@ -1206,7 +1223,7 @@
        ')',
      ),
  
-@@ -1230,7 +2122,7 @@
+@@ -1230,7 +2137,7 @@
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -1215,7 +1232,7 @@
          field('value', $.initializer_list),
        ),
      ),
-@@ -1256,6 +2148,7 @@
+@@ -1256,6 +2163,7 @@
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -1223,7 +1240,7 @@
        )),
      ),
  
-@@ -1296,10 +2189,20 @@
+@@ -1296,10 +2204,20 @@
        $.user_defined_literal,
      ),
  
@@ -1248,7 +1265,7 @@
      )),
  
      _assignment_expression_lhs: $ => seq(
-@@ -1342,11 +2245,44 @@
+@@ -1342,11 +2260,44 @@
  
      this: _ => 'this',
  

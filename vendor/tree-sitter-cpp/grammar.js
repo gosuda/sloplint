@@ -475,6 +475,11 @@ module.exports = grammar(C, {
         seq(
           // C uses _declaration_declarator here for some nice macro parsing in function declarators,
           // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
+          // The literal-only leading repeat covers `T __stdcall F(args);`
+          // (calling-convention modifier between specifiers and name);
+          // generic macro_qualifier must NOT join it — an identifier here is
+          // the declarator, and that fork is the pain the comment above means.
+          repeat(choice($.ms_call_modifier, $.macro_attribute)),
           $._declarator,
           optional($.gnu_asm_expression),
           repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
@@ -795,6 +800,16 @@ module.exports = grammar(C, {
       $.type_definition,
       $.static_assert_declaration,
       $.macro_declaration,
+      // `MACRO(TYPE) name;`/`MACRO(TYPE) name[N];` members — WOW64_POINTER
+      // and friends in Win32 headers. A full alternate (not a specifier
+      // variant) so the fork only opens on `IDENT (` members; putting
+      // macro_type_specifier inside _declaration_specifiers regressed
+      // `= delete`/`= default` methods.
+      alias(seq(
+        field('type', $.macro_type_specifier),
+        commaSep(field('declarator', $._field_declarator)),
+        ';',
+      ), $.field_declaration),
       ';',
     ),
 

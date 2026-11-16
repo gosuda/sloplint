@@ -241,6 +241,20 @@ reproduced on real code. Every repro below was first accepted by
   the now-redundant bare `$.primitive_type`), and the base's
   `_argument_list_type` carries `prec.dynamic(-1)` so `int (*F)(int)`
   keeps the declarator read over `call(*F, (int))`.
+- `declaration`'s declarator seq gains a leading literal-only
+  `repeat(choice($.ms_call_modifier, $.macro_attribute))` — the C base
+  carries it inside `_declaration_declarator`, which this grammar
+  replaces with plain `_declarator`, so `T __fastcall F(args);` (a
+  calling-convention keyword on its own line between specifiers and
+  name) parsed as ERROR. `_declarator` stays: the generic
+  `macro_qualifier` must NOT join the leading repeat (an identifier
+  there is the declarator).
+- `_field_declaration_list_item` gains a dedicated `MACRO(TYPE)
+  declarator;` alternate (aliased to `field_declaration`) for
+  `WOW64_POINTER(PVOID) Reserved1[54]` members. This is a whole-item
+  alternate, not a specifier variant: `macro_type_specifier` inside
+  `_declaration_specifiers` regressed `= delete`/`= default` methods
+  to MISSING identifiers when tried.
 - New conflicts for the Qt rules and the generic fallbacks:
   `argument_list`/`sized_type_specifier`/`expression`/
   `concatenated_string`/`_string`/`template_type`/`template_function`
@@ -296,6 +310,14 @@ clang++ with `-std=c++23`.
 - `Q_UNUSED(x)` without `;` and `Q_ASSERT(p)` inside function bodies.
 - `Q_FOREACH` with new declarations or existing variables, braced and
   unbraced bodies, empty bodies, and an enclosing `if`/`else`.
+- `T __fastcall F (args);` / `T __stdcall F(args);` (calling-convention
+  keyword between specifiers and name); `WOW64_POINTER(PVOID) X[54];`
+  members (`MACRO(TYPE) declarator`); `typedef CONST char *PCSZ;`;
+  `typedef VOID(NTAPI *F)(IN PVOID X);`; MIDL `[size_is(N)]`/`[default]`/
+  `[case(A,B)]` brackets on fields and parameters and alone inside
+  `#ifdef MIDL_PASS` guards; a declaratorless `typedef enum X {...};`
+  under `#if`; `struct X : public Y` under `#ifdef __cplusplus`. The
+  22,396-line `ntdll.h` Win32 SDK header parses with zero errors.
 
 ## Constructs known still failing
 
@@ -304,12 +326,7 @@ compilers reject them too: `enum : int;` without a body, `__has_include`
 outside a preprocessing directive, `new (int*)[n]` (array bound after a
 parenthesized type id). `T &s(x);` still reads as a function declaration,
 as before; only a member access, a call, or a non-type argument in the
-parens steers it to an initialized declaration. `WOW64_POINTER(TYPE)
-name[N]`-style fields (`MACRO(TYPE) declarator`) stay errors under this
-grammar: a `macro_type_specifier` alternative inside `field_declaration`
-parsed them but regressed `= delete`/`= default` members to MISSING
-identifiers, so the variant stays out; the C grammar accepts the same
-member and sloplint parses most affected headers as C anyway.
+parens steers it to an initialized declaration. 
 
 ## Corpus results
 
