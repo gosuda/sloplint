@@ -2,6 +2,8 @@
 mod boundary_caps;
 #[path = "analysis_boundaries/cli_contract.rs"]
 mod cli_contract;
+#[path = "analysis_boundaries/eof_newline.rs"]
+mod eof_newline;
 
 use clap::Parser;
 use sloplint::cli::{Cli, Command};
