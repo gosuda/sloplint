@@ -266,6 +266,13 @@ reproduced on real code. Every repro below was first accepted by
   at top level (dynamic +10), so the phantom-open braces inside these
   macros stop producing MISSING `}` errors on every real close brace
   downstream.
+- `guarded_function` pairs a `#if`/`#else`-split function signature
+  (specifiers + declarator, no `;`, inside a new
+  `preproc_*_in_guarded_signature` block) with the shared
+  `{` body that follows `#endif` — the nlohmann `operator<=>` vs
+  `operator<` idiom. `preprocIf`/`preprocessor` are inlined at the
+  bottom of this file because the node_modules C base exports no
+  helpers.
 - New conflicts for the Qt rules and the generic fallbacks:
   `argument_list`/`sized_type_specifier`/`expression`/
   `concatenated_string`/`_string`/`template_type`/`template_function`
@@ -351,7 +358,7 @@ parens steers it to an initialized declaration.
   the 4 controls.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
   corpus is not vendored): 13 files, 70 cases, all passing with the patch
-  (`tree-sitter test` reports 70/70). The latest additions cover the
+  (`tree-sitter test` reports 71/71). The latest additions cover the
   Win32 SDK cluster (typedef qualifier macros, function-pointer typedefs
   with SAL-annotated parameters, MIDL brackets, declaratorless typedefs
   inside `#if`, `#ifdef`-guarded constructs), bare macro sentinels before

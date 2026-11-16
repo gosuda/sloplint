@@ -1804,6 +1804,10 @@
           "named": true
         },
         {
+          "type": "guarded_function",
+          "named": true
+        },
+        {
           "type": "guarded_linkage",
           "named": true
         },
@@ -2368,6 +2372,10 @@
         },
         {
           "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "guarded_function",
           "named": true
         },
         {
@@ -4007,6 +4015,29 @@
     }
   },
   {
+    "type": "guarded_function",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "compound_statement",
+          "named": true
+        },
+        {
+          "type": "preproc_if_in_guarded_signature",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef_in_guarded_signature",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "guarded_linkage",
     "named": true,
     "fields": {
@@ -4135,6 +4166,10 @@
         },
         {
           "type": "goto_statement",
+          "named": true
+        },
+        {
+          "type": "guarded_function",
           "named": true
         },
         {
@@ -4801,6 +4836,10 @@
         },
         {
           "type": "goto_statement",
+          "named": true
+        },
+        {
+          "type": "guarded_function",
           "named": true
         },
         {
@@ -5961,6 +6000,10 @@
           {
             "type": "field_declaration",
             "named": true
+          },
+          {
+            "type": "type_specifier",
+            "named": true
           }
         ]
       }
@@ -5970,11 +6013,23 @@
       "required": false,
       "types": [
         {
+          "type": "_declarator",
+          "named": true
+        },
+        {
           "type": "access_specifier",
           "named": true
         },
         {
           "type": "alias_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_specifier",
           "named": true
         },
         {
@@ -6018,6 +6073,10 @@
           "named": true
         },
         {
+          "type": "guarded_function",
+          "named": true
+        },
+        {
           "type": "guarded_linkage",
           "named": true
         },
@@ -6038,7 +6097,15 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "midl_attribute_list",
+          "named": true
+        },
+        {
+          "type": "ms_declspec_modifier",
           "named": true
         },
         {
@@ -6094,6 +6161,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
           "named": true
         },
@@ -6103,6 +6174,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -6169,6 +6244,10 @@
           {
             "type": "field_declaration",
             "named": true
+          },
+          {
+            "type": "type_specifier",
+            "named": true
           }
         ]
       }
@@ -6178,11 +6257,23 @@
       "required": false,
       "types": [
         {
+          "type": "_declarator",
+          "named": true
+        },
+        {
           "type": "access_specifier",
           "named": true
         },
         {
           "type": "alias_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_specifier",
           "named": true
         },
         {
@@ -6226,6 +6317,10 @@
           "named": true
         },
         {
+          "type": "guarded_function",
+          "named": true
+        },
+        {
           "type": "guarded_linkage",
           "named": true
         },
@@ -6246,7 +6341,15 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "midl_attribute_list",
+          "named": true
+        },
+        {
+          "type": "ms_declspec_modifier",
           "named": true
         },
         {
@@ -6302,6 +6405,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
           "named": true
         },
@@ -6311,6 +6418,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -6349,6 +6460,10 @@
           {
             "type": "field_declaration",
             "named": true
+          },
+          {
+            "type": "type_specifier",
+            "named": true
           }
         ]
       }
@@ -6358,11 +6473,23 @@
       "required": false,
       "types": [
         {
+          "type": "_declarator",
+          "named": true
+        },
+        {
           "type": "access_specifier",
           "named": true
         },
         {
           "type": "alias_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_specifier",
           "named": true
         },
         {
@@ -6406,6 +6533,10 @@
           "named": true
         },
         {
+          "type": "guarded_function",
+          "named": true
+        },
+        {
           "type": "guarded_linkage",
           "named": true
         },
@@ -6426,7 +6557,15 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "midl_attribute_list",
+          "named": true
+        },
+        {
+          "type": "ms_declspec_modifier",
           "named": true
         },
         {
@@ -6482,6 +6621,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
           "named": true
         },
@@ -6491,6 +6634,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -6682,6 +6829,10 @@
           "named": true
         },
         {
+          "type": "guarded_function",
+          "named": true
+        },
+        {
           "type": "guarded_linkage",
           "named": true
         },
@@ -6779,6 +6930,116 @@
         },
         {
           "type": "variadic_parameter_declaration",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "preproc_if_in_guarded_signature",
+    "named": true,
+    "fields": {
+      "alternative": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "preproc_elif",
+            "named": true
+          },
+          {
+            "type": "preproc_elifdef",
+            "named": true
+          },
+          {
+            "type": "preproc_else",
+            "named": true
+          }
+        ]
+      },
+      "condition": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "call_expression",
+            "named": true
+          },
+          {
+            "type": "char_literal",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "number_literal",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "preproc_defined",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          }
+        ]
+      },
+      "type": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "type_specifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "_declarator",
+          "named": true
+        },
+        {
+          "type": "attribute_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
+          "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         }
       ]
@@ -6890,6 +7151,10 @@
           "named": true
         },
         {
+          "type": "guarded_function",
+          "named": true
+        },
+        {
           "type": "guarded_linkage",
           "named": true
         },
@@ -6987,6 +7252,88 @@
         },
         {
           "type": "variadic_parameter_declaration",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "preproc_ifdef_in_guarded_signature",
+    "named": true,
+    "fields": {
+      "alternative": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "preproc_elif",
+            "named": true
+          },
+          {
+            "type": "preproc_elifdef",
+            "named": true
+          },
+          {
+            "type": "preproc_else",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "type": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "type_specifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "_declarator",
+          "named": true
+        },
+        {
+          "type": "attribute_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
+          "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         }
       ]
@@ -8407,6 +8754,10 @@
         },
         {
           "type": "goto_statement",
+          "named": true
+        },
+        {
+          "type": "guarded_function",
           "named": true
         },
         {

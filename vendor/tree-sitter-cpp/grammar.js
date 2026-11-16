@@ -296,6 +296,20 @@ module.exports = grammar(C, {
     [$.macro_qualifier, $._macro_declaration_top, $.expression],
     [$._macro_declaration_top, $.expression, $.concatenated_string],
     [$.macro_namespace, $._macro_declaration_literals],
+    [$.preproc_ifdef, $._linkage_guard, $.preproc_ifdef_in_guarded_signature],
+    [$.preproc_if, $._linkage_guard, $.preproc_if_in_guarded_signature],
+    [$.preproc_ifdef, $.preproc_ifdef_in_guarded_signature],
+    [$.preproc_else, $.preproc_else_in_guarded_signature],
+    [$.preproc_if, $.preproc_if_in_guarded_signature],
+    [$.preproc_elifdef, $.preproc_elifdef_in_guarded_signature],
+    [$.function_definition, $.declaration, $.init_declarator, $._guarded_signature],
+    [$.attributed_declarator, $._guarded_signature],
+    [$.preproc_elif, $.preproc_elif_in_guarded_signature],
+    [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list, $.preproc_ifdef_in_guarded_signature],
+    [$.preproc_else, $.preproc_else_in_initializer_list, $.preproc_else_in_guarded_signature],
+    [$.preproc_if, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature],
+    [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature],
+    [$.preproc_elif, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature],
   ],
 
   inline: ($, original) => original.concat([
@@ -327,6 +341,7 @@ module.exports = grammar(C, {
       // `parenthesized_expression(args)` statement (MISSING `;`).
       alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
       $.macro_namespace,
+      $.guarded_function,
     ),
 
     _block_item: ($, original) => choice(
@@ -342,6 +357,7 @@ module.exports = grammar(C, {
       alias($.constructor_or_destructor_definition, $.function_definition),
       alias($.operator_cast_definition, $.function_definition),
       alias($.operator_cast_declaration, $.declaration),
+      $.guarded_function,
       // No `macro_declaration` fallback here: top-level preproc bodies
       // get it via the preprocIf('', ...) item choice in the base
       // grammar, and inside real function bodies `NAME(args)` must
@@ -1022,6 +1038,26 @@ module.exports = grammar(C, {
         'GTEST_NAMESPACE_END',
       ),
     )),
+
+    // `#if`/`#else`-split function signatures: each branch holds a
+    // signature (specifiers + declarator, no `;`) and the shared `{`
+    // body follows `#endif`. json.hpp gates `operator<=>`/`operator<`
+    // this way; the MISSING `;` path used to ERROR the `#if` arm and
+    // orphan the body into a naked compound_statement.
+    guarded_function: $ => prec.dynamic(10, seq(
+      choice(
+        $.preproc_if_in_guarded_signature,
+        $.preproc_ifdef_in_guarded_signature,
+      ),
+      $.compound_statement,
+    )),
+
+    _guarded_signature: $ => seq(
+      $._declaration_specifiers,
+      $._declarator,
+    ),
+
+    ...preprocIf('_in_guarded_signature', $ => $._guarded_signature),
 
     _macro_declaration_literals: $ => choice(
       'Q_OBJECT',
@@ -2424,4 +2460,70 @@ function commaSep(rule) {
  */
 function commaSep1(rule) {
   return seq(rule, repeat(seq(',', rule)));
+}
+
+/**
+ * Creates a preprocessor regex rule (copied from the C base — the
+ * node_modules copy does not export its helpers).
+ *
+ * @param {RegExp | Rule | string} command
+ *
+ * @returns {AliasRule}
+ */
+function preprocessor(command) {
+  return alias(new RegExp('#[ \t]*' + command), '#' + command);
+}
+
+/**
+ * Creates a set of rules for a preprocessor conditional block
+ * (copied from the C base — the node_modules copy does not export
+ * its helpers).
+ */
+function preprocIf(suffix, content, precedence = 0) {
+  function alternativeBlock($) {
+    return choice(
+      suffix ? alias($['preproc_else' + suffix], $.preproc_else) : $.preproc_else,
+      suffix ? alias($['preproc_elif' + suffix], $.preproc_elif) : $.preproc_elif,
+      suffix ? alias($['preproc_elifdef' + suffix], $.preproc_elifdef) : $.preproc_elifdef,
+    );
+  }
+
+  return {
+    ['preproc_if' + suffix]: $ => prec(precedence, seq(
+      preprocessor('if'),
+      field('condition', $._preproc_expression),
+      '\n',
+      repeat(content($)),
+      field('alternative', optional(alternativeBlock($))),
+      preprocessor('endif'),
+    )),
+
+    ['preproc_ifdef' + suffix]: $ => prec(precedence, seq(
+      choice(preprocessor('ifdef'), preprocessor('ifndef')),
+      field('name', $.identifier),
+      repeat(content($)),
+      field('alternative', optional(alternativeBlock($))),
+      preprocessor('endif'),
+    )),
+
+    ['preproc_else' + suffix]: $ => prec(precedence, seq(
+      preprocessor('else'),
+      repeat(content($)),
+    )),
+
+    ['preproc_elif' + suffix]: $ => prec(precedence, seq(
+      preprocessor('elif'),
+      field('condition', $._preproc_expression),
+      '\n',
+      repeat(content($)),
+      field('alternative', optional(alternativeBlock($))),
+    )),
+
+    ['preproc_elifdef' + suffix]: $ => prec(precedence, seq(
+      choice(preprocessor('elifdef'), preprocessor('elifndef')),
+      field('name', $.identifier),
+      repeat(content($)),
+      field('alternative', optional(alternativeBlock($))),
+    )),
+  };
 }

@@ -64,3 +64,51 @@ int z;
   (declaration
     type: (primitive_type)
     declarator: (identifier)))
+
+================================================================================
+Function signature split across #if/#else
+================================================================================
+
+#if COND
+    inline bool operator<(int lhs, int rhs) noexcept
+#else
+    inline bool operator==(int lhs, int rhs) noexcept
+#endif
+{
+    return true;
+}
+
+---
+
+(translation_unit
+  (guarded_function
+    (preproc_if_in_guarded_signature
+      condition: (identifier)
+      (storage_class_specifier)
+      type: (primitive_type)
+      (function_declarator
+        declarator: (operator_name)
+        parameters: (parameter_list
+          (parameter_declaration
+            type: (primitive_type)
+            declarator: (identifier))
+          (parameter_declaration
+            type: (primitive_type)
+            declarator: (identifier)))
+        (noexcept))
+      alternative: (preproc_else
+        (storage_class_specifier)
+        type: (primitive_type)
+        (function_declarator
+          declarator: (operator_name)
+          parameters: (parameter_list
+            (parameter_declaration
+              type: (primitive_type)
+              declarator: (identifier))
+            (parameter_declaration
+              type: (primitive_type)
+              declarator: (identifier)))
+          (noexcept))))
+    (compound_statement
+      (return_statement
+        (true)))))
