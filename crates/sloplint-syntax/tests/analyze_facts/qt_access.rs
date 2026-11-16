@@ -1,6 +1,7 @@
 //! Meta-object generator macros inject declarations that end in an access
 //! specifier: Qt's `Q_OBJECT`/`Q_GADGET` leave `private:` in force and
-//! Unreal's `GENERATED_*_BODY` leaves `public:`. A member declared after one
+//! Unreal's legacy `GENERATED_*_BODY` macros leave `public:` — while UE5's
+//! `GENERATED_BODY` keeps the incoming access. A member declared after one
 //! of those macros without an explicit label takes that injected access —
 //! the macro is itself the transition, not a no-op statement.
 //!
@@ -33,10 +34,15 @@ public:\n\
     void api() {}\n\
 };\n";
 
-/// `class` defaults to private, so a member reading exported after
-/// GENERATED_BODY can only come from the macro's `public:` transition.
+/// `class` defaults to private: UE5's GENERATED_BODY keeps that access,
+/// while the legacy GENERATED_UCLASS_BODY ends in `public:`.
 const UNREAL_CLASS: &str = "class UThing {\n\
     GENERATED_BODY()\n\
+    void helper() {}\n\
+};\n";
+
+const UNREAL_LEGACY_CLASS: &str = "class ULegacy {\n\
+    GENERATED_UCLASS_BODY()\n\
     void helper() {}\n\
 };\n";
 
@@ -61,11 +67,20 @@ fn q_gadget_marks_following_members_private() {
 }
 
 #[test]
-fn generated_body_marks_following_members_public() {
+fn generated_body_keeps_incoming_access() {
     assert_eq!(
         function_visibility(UNREAL_CLASS, "helper"),
+        Visibility::Private,
+        "UE5 GENERATED_BODY preserves incoming access, was Exported"
+    );
+}
+
+#[test]
+fn generated_uclass_body_marks_following_members_public() {
+    assert_eq!(
+        function_visibility(UNREAL_LEGACY_CLASS, "helper"),
         Visibility::Exported,
-        "GENERATED_BODY ends in public:, was Private when the macro was ignored"
+        "GENERATED_UCLASS_BODY ends in public:, was Private when the macro was ignored"
     );
 }
 
