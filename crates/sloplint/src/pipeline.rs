@@ -10,6 +10,7 @@ use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 use sloplint_core::baseline::Baseline;
 use sloplint_core::facts::{ManifestKind, WorldFacts, package_scope};
+use sloplint_core::lang::Lang;
 use sloplint_core::finding::{SourceText, line_context, line_starts};
 use sloplint_core::rules::{CATALOG, RuleSet, WorldFile};
 use sloplint_core::suppress::{self, RulePattern, Suppression};
@@ -153,6 +154,11 @@ fn process(
     if owned.starts_with('\u{feff}') {
         owned.drain(..'\u{feff}'.len_utf8());
     }
+    // Qt translation files share TypeScript's .ts extension but are XML; a
+    // TypeScript parse can only produce noise on them.
+    if entry.lang == Lang::TypeScript && owned.trim_start().starts_with("<?xml") {
+        return skipped("xml");
+    }
     // Several vendored grammars end line-oriented rules (preprocessor
     // directives, comments) in a required `\n`, so a source missing its
     // final newline mis-parses at EOF. Compilers treat the newline as
@@ -215,9 +221,18 @@ fn analyze_file(
         suppress::parse_suppressions(&text, &analysis.comments, &|id: &str| {
             pipe.rules.is_known(id)
         });
+    // A rescued (partial) analysis still carries a parse_error: report it
+    // alongside the findings the salvaged parse produced rather than either
+    // or.
     let mut findings: Vec<Finding> = match analysis.parse_error {
-        Some(pos) => pipe.rules.parse_error(&text, pos).into_iter().collect(),
-        None => rule_findings(pipe, &analysis),
+        Some(pos) if !analysis.partial => pipe.rules.parse_error(&text, pos).into_iter().collect(),
+        _ => {
+            let mut found = rule_findings(pipe, &analysis);
+            if let Some(pos) = analysis.parse_error {
+                found.extend(pipe.rules.parse_error(&text, pos));
+            }
+            found
+        }
     };
     pipe.rules.cap_levels(&mut meta);
     meta.retain(|finding| pipe.rules.is_active(&finding.rule));

@@ -83,6 +83,10 @@ pub struct Analysis<'s> {
     pub facts: FileFacts<'s>,
     pub comments: Vec<CommentText<'s>>,
     pub parse_error: Option<Pos>,
+    /// True when `facts` and `comments` were walked on a rescued parse: the
+    /// source's ERROR regions were blanked to recover a clean tree, so rule
+    /// coverage is partial. `parse_error` stays `Some` in that case.
+    pub partial: bool,
     pub custom_hits: Vec<CustomHit<'s>>,
     pub custom_capped: Vec<&'s str>,
 }
@@ -103,14 +107,79 @@ pub fn analyze<'s>(
             return clean_analysis(parsers, input, fallback, &retried, custom);
         }
     }
+    if let Some(rescued) = rescue_analysis(parsers, input, input.lang, &tree, custom) {
+        return rescued;
+    }
     let hooks = lang::hooks_for(input.lang, input.path, parsers.ocaml_interfaces);
     let comments = spec(input.lang).walk_comments(hooks, input, root).comments;
     Analysis {
         facts: walk::empty_facts(input, input.lang),
         comments,
         parse_error: Some(first_error_pos(root).unwrap_or_else(|| root_end_pos(root))),
+        partial: false,
         custom_hits: Vec::new(),
         custom_capped: Vec::new(),
+    }
+}
+
+/// Rounds of excise-and-reparse the rescue gets before giving up. Each round
+/// can unmask a construct the previous ERROR region was hiding.
+const MAX_RESCUE_ROUNDS: usize = 3;
+
+/// Blank every top-level ERROR node's bytes (keeping `\n` so positions stay
+/// stable) and reparse. A single unparseable construct — an unknown macro
+/// qualifier like `CAMLprim`/`g_autoptr` in declaration position, a stray
+/// brace inside `#if 0` — must not sink the whole file's rule coverage. When
+/// a round produces a clean tree, the file is analyzed normally and the
+/// original error position is still reported via `parse_error` with
+/// `partial` set. Excised spans hold no nodes, so every slice the walk hands
+/// out still names real source bytes.
+fn rescue_analysis<'s>(
+    parsers: &mut Parsers<'_>,
+    input: &FileInput<'s>,
+    lang: Lang,
+    first_tree: &Tree,
+    custom: &'s CustomRules,
+) -> Option<Analysis<'s>> {
+    let first_pos = first_error_pos(first_tree.root_node())?;
+    let mut text = input.source.as_bytes().to_vec();
+    let mut tree = first_tree.clone();
+    for _ in 0..MAX_RESCUE_ROUNDS {
+        let mut spans = Vec::new();
+        error_spans(tree.root_node(), &mut spans);
+        if spans.is_empty() {
+            return None;
+        }
+        for (start, end) in spans {
+            for byte in &mut text[start..end] {
+                if *byte != b'\n' {
+                    *byte = b' ';
+                }
+            }
+        }
+        let source = std::str::from_utf8(&text).ok()?;
+        tree = parsers.parse(lang, source);
+        if !tree.root_node().has_error() {
+            let mut analysis = clean_analysis(parsers, input, lang, &tree, custom);
+            analysis.parse_error = Some(first_pos);
+            analysis.partial = true;
+            return Some(analysis);
+        }
+    }
+    None
+}
+
+fn error_spans(node: Node<'_>, spans: &mut Vec<(usize, usize)>) {
+    if node.is_error() {
+        spans.push((node.start_byte(), node.end_byte()));
+        return;
+    }
+    if !node.has_error() {
+        return;
+    }
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        error_spans(child, spans);
     }
 }
 
@@ -128,6 +197,7 @@ fn clean_analysis<'s>(
         facts: walked.facts,
         comments: walked.comments,
         parse_error: None,
+        partial: false,
         custom_hits: hits,
         custom_capped: capped,
     }

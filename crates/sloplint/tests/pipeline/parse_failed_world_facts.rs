@@ -18,7 +18,12 @@ const HOMONYM: &str = "grep/homonym-definitions";
 const BROKEN_UTF8: &str = "fn ok() {}\n// café\n@\n";
 const HOMONYM_TOML: &str = "[rules.\"grep/homonym-definitions\"]\nmin_files = 2\n";
 const RENDER_CLEAN: &str = "pub fn render() {}\n";
-const RENDER_BROKEN: &str = "pub fn render() {}\nfn broken( {\n";
+// Garbage top to bottom: rescuing excises every error region and leaves an
+// empty program, so the file contributes no definitions to world rules. (A
+// rescuable failure like `pub fn render() {}\nfn broken( {` is different:
+// its surviving `render` definition does count, which is the point of the
+// rescue.)
+const RENDER_BROKEN: &str = "@@@###$$$\n^^^^&&&***\n";
 
 fn project() -> (tempfile::TempDir, PathBuf) {
     let tmp = tempfile::tempdir().unwrap_or_else(|e| panic!("tempdir: {e}"));
