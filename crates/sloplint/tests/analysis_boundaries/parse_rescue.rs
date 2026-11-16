@@ -88,7 +88,9 @@ fn boundary_suppression_inside_excised_region_still_applies() {
     // original parse's comments are merged back so it still suppresses the
     // rule that fires on the surviving function. (meta/parse-error itself is
     // not a suppressible operand; nesting-depth is.)
-    let source = "Mystery /* sloplint-allow-file(complexity/nesting-depth): vendor macro */ int x;\n\
+    // `template <typename T>` is unparseable in C (a bare unknown qualifier
+    // like `Mystery` became a valid macro_qualifier in the vendored grammar).
+    let source = "template <typename T> /* sloplint-allow-file(complexity/nesting-depth): vendor macro */ int x;\n\
          int kept(void)\n{\n\
          \tif (1) {\n\t\tif (1) {\n\t\t\tif (1) {\n\t\t\t\tif (1) {\n\t\t\t\t\tif (1) {\n\t\t\t\t\t\treturn 1;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\treturn 0;\n}\n";
     put(&root, "src/vend.c", source);
