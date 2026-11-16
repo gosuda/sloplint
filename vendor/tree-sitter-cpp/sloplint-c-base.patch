@@ -1,5 +1,5 @@
 --- a/grammar.js	2026-11-16 15:36:58.671581076 +0000
-+++ b/grammar.js	2026-11-16 19:05:10.178980389 +0000
++++ b/grammar.js	2026-11-16 19:17:44.500917748 +0000
 @@ -36,6 +36,8 @@
    name: 'c',
  
@@ -267,7 +267,7 @@
        $._abstract_declarator,
        ')',
      )),
-@@ -448,28 +596,62 @@
+@@ -448,28 +596,65 @@
  
      pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
        optional($.ms_based_modifier),
@@ -284,6 +284,7 @@
 +        $.ms_call_modifier,
 +        $.far_ptr_modifier,
 +        $.macro_attribute,
++        $.macro_qualifier,
 +      )),
        field('declarator', $._declarator),
      ))),
@@ -302,6 +303,7 @@
 +        $.ms_call_modifier,
 +        $.far_ptr_modifier,
 +        $.macro_attribute,
++        $.macro_qualifier,
 +      )),
        field('declarator', $._field_declarator),
      ))),
@@ -320,6 +322,7 @@
 +        $.ms_call_modifier,
 +        $.far_ptr_modifier,
 +        $.macro_attribute,
++        $.macro_qualifier,
 +      )),
        field('declarator', $._type_declarator),
      ))),
@@ -339,7 +342,7 @@
        field('declarator', optional($._abstract_declarator)),
      ))),
  
-@@ -594,6 +776,7 @@
+@@ -594,6 +779,7 @@
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -347,7 +350,7 @@
        $._type_identifier,
      ),
  
-@@ -652,6 +835,18 @@
+@@ -652,6 +838,18 @@
        'charptr_t',
        'nullptr_t',
        'max_align_t',
@@ -366,7 +369,7 @@
        ...[8, 16, 32, 64].map(n => `int${n}_t`),
        ...[8, 16, 32, 64].map(n => `uint${n}_t`),
        ...[8, 16, 32, 64].map(n => `char${n}_t`),
-@@ -659,6 +854,7 @@
+@@ -659,6 +857,7 @@
  
      enum_specifier: $ => seq(
        'enum',
@@ -374,7 +377,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -693,6 +889,7 @@
+@@ -693,6 +892,7 @@
        'struct',
        optional($.attribute_specifier),
        optional($.ms_declspec_modifier),
@@ -382,7 +385,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -706,6 +903,7 @@
+@@ -706,6 +906,7 @@
      union_specifier: $ => prec.right(seq(
        'union',
        optional($.ms_declspec_modifier),
@@ -390,7 +393,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -727,6 +925,7 @@
+@@ -727,6 +928,7 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -398,7 +401,7 @@
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
      ),
-@@ -802,6 +1001,7 @@
+@@ -802,6 +1004,7 @@
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,

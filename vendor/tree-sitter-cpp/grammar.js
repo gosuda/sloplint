@@ -170,7 +170,12 @@ module.exports = grammar(C, {
     [$.parenthesized_declarator, $.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator, $.type_specifier],
     [$._declaration_modifiers, $.parenthesized_declarator, $.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator, $.type_specifier],
     [$._declaration_modifiers, $.parenthesized_declarator, $.abstract_parenthesized_declarator, $.type_specifier],
-    [$._declarator, $._init_pointer_declarator],
+    [$.macro_qualifier, $._declarator, $.expression],
+    [$.macro_qualifier, $.expression],
+    [$.macro_qualifier, $._declarator],
+    [$.macro_qualifier, $._declarator, $._init_pointer_declarator],
+    [$.macro_qualifier, $._type_declarator],
+    [$.macro_qualifier, $._field_declarator],
     [$.template_type],
   ],
 

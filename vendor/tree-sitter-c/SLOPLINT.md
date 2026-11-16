@@ -133,10 +133,12 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
     parse versions until the real declarator path was pruned. The generic
     `macro_qualifier` stays before `'*'` in C: the C++-only `delete [] p`
     ambiguity that forbids it there cannot occur here, and
-    `typedef CONST STRING* X` needs it. The post-`'*'` repeat is
-    literal-only in C too: a generic identifier after `'*'` is the
-    declarator name (`int (*cmp)(...)`) — letting `macro_qualifier` eat it
-    produced an abstract declarator and lost the parameter's name.
+    `typedef CONST STRING* X` needs it. Post-`'*'` is split by rule kind:
+    concrete pointer declarators keep `macro_qualifier`
+    (`*RESTRICTED_POINTER x`), but `abstract_pointer_declarator` does not —
+    a generic post-`'*'` identifier made `(*cmp)` an abstract declarator
+    (`abstract_parenthesized_declarator` out-scores the concrete
+    `parenthesized_declarator`, prec -10) and lost the parameter's name.
 - Attribute-like declaration macros: vendor headers pre-decorate declarations
   with calling-convention, storage and compiler-attribute macros
   (`__IO uint32_t ISER[1];`, `VKAPI_ATTR VkBool32 VKAPI_CALL cb(void *);`,

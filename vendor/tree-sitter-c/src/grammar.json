@@ -5027,6 +5027,10 @@
                   {
                     "type": "SYMBOL",
                     "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
                   }
                 ]
               }
@@ -5116,6 +5120,10 @@
                   {
                     "type": "SYMBOL",
                     "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
                   }
                 ]
               }
@@ -5205,6 +5213,10 @@
                   {
                     "type": "SYMBOL",
                     "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
                   }
                 ]
               }

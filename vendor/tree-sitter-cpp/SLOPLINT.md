@@ -171,9 +171,9 @@ reproduced on real code. Every repro below was first accepted by
   `int WINAPI WinMain(...)`, `_In_`-style SAL annotations in parameter
   lists). The shared base's declarator machinery gains:
   `repeat(choice($.ms_call_modifier, $.far_ptr_modifier,
-  $.macro_attribute))` before `'*'`, a merged literal-only modifier
-  repeat after `'*'` (ms_pointer_modifier, type_qualifier,
-  ms_call_modifier, far_ptr_modifier, macro_attribute), and
+  $.macro_attribute))` before `'*'`, a merged modifier repeat after
+  `'*'` (literal-only in `abstract_pointer_declarator`, plus
+  `macro_qualifier` in the concrete pointer rules), and
   `repeat(choice($.ms_call_modifier, $.macro_attribute))` before the inner
   declarator of the parenthesized-declarator rules and in the
   `declaration`/`function_definition` pre-declarator slots. Both slots are
@@ -183,9 +183,12 @@ reproduced on real code. Every repro below was first accepted by
   pre-declarator let `f(...)` fork a `macro_qualifier` GLR branch whose
   argument-list interpretations multiplied versions until the real
   `parameter_list` path was pruned — `void f(T<A,U<B>,C> x) {}` produced a
-  `MISSING` declarator at `)`. A generic post-`'*'` identifier is always
-  the declarator name (`(*cmp)` function pointers): letting
-  `macro_qualifier` eat it produced abstract nameless declarators.
+  `MISSING` declarator at `)`. A generic post-`'*'` identifier in
+  `abstract_pointer_declarator` stole the declarator name of `(*cmp)`
+  function pointers — `abstract_parenthesized_declarator` (prec 1)
+  out-scores `parenthesized_declarator` (prec -10) — so the abstract
+  rule alone keeps the post-`'*'` repeat literal-only while
+  `*RESTRICTED_POINTER x` still parses via the concrete rules.
   WINAPI/NTAPI/APIENTRY still parse: they are `macro_attribute` literals. `far_ptr_modifier` is a new
   literal list (`FAR`, `NEAR`, `_far`, `_near`, `__far`, `__near`,
   `__huge`, `_huge`); WINAPI/NTAPI/APIENTRY already live in

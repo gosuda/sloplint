@@ -5564,6 +5564,10 @@
                   {
                     "type": "SYMBOL",
                     "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
                   }
                 ]
               }
@@ -5649,6 +5653,10 @@
                   {
                     "type": "SYMBOL",
                     "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
                   }
                 ]
               }
@@ -5734,6 +5742,10 @@
                   {
                     "type": "SYMBOL",
                     "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
                   }
                 ]
               }
@@ -19541,8 +19553,30 @@
       "type_specifier"
     ],
     [
+      "macro_qualifier",
+      "_declarator",
+      "expression"
+    ],
+    [
+      "macro_qualifier",
+      "expression"
+    ],
+    [
+      "macro_qualifier",
+      "_declarator"
+    ],
+    [
+      "macro_qualifier",
       "_declarator",
       "_init_pointer_declarator"
+    ],
+    [
+      "macro_qualifier",
+      "_type_declarator"
+    ],
+    [
+      "macro_qualifier",
+      "_field_declarator"
     ],
     [
       "template_type"
