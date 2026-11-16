@@ -1,8 +1,8 @@
 //! First error position on multiline UTF-8 input, observed through `analyze` only.
 //!
-//! A file that fails to parse yields empty facts and the byte offset of the
-//! first error node, so a valid declaration before the error contributes
-//! nothing to later stages.
+//! A file whose broken region rescues out cleanly yields a partial analysis:
+//! the first error position is still reported and the surviving declarations
+//! contribute their facts. A file that cannot be rescued yields empty facts.
 //!
 //! A tree can also fail invisibly: a grammar that recovers by inserting hidden
 //! MISSING nodes sets `has_error` without exposing an error or missing node to
@@ -15,7 +15,10 @@ use crate::support::run;
 const SOURCE: &str = "fn ok() {}\n// café\n@\n";
 
 #[test]
-fn a_valid_declaration_before_the_error_contributes_no_facts() {
+fn a_valid_declaration_before_the_error_survives_the_rescue() {
+    // The `@` is excised and the file reparsed: the error position is still
+    // reported, the analysis is marked `partial`, and the surviving `fn ok`
+    // now contributes its facts — that is the rescue working as designed.
     let analysis = run(Lang::Rust, "broken.rs", SOURCE);
     let pos = analysis.parse_error.expect("broken.rs must fail to parse");
     assert_eq!(pos.line, 3, "the `@` line is the third line");
@@ -31,40 +34,14 @@ fn a_valid_declaration_before_the_error_contributes_no_facts() {
         "@",
         "the byte offset slices the error character"
     );
-    assert!(
-        analysis.facts.functions.is_empty(),
-        "the valid `fn ok` yields no fact once the parse fails: {:?}",
+    assert!(analysis.partial, "a rescued parse marks itself partial");
+    assert_eq!(
+        analysis.facts.functions.len(),
+        1,
+        "the surviving `fn ok` contributes its fact after the error is excised: {:?}",
         analysis.facts.functions
     );
-    assert!(
-        analysis.facts.bindings.is_empty(),
-        "bindings are empty: {:?}",
-        analysis.facts.bindings
-    );
-    assert!(
-        analysis.facts.calls.is_empty(),
-        "calls are empty: {:?}",
-        analysis.facts.calls
-    );
-    assert!(
-        analysis.facts.imports.is_empty(),
-        "imports are empty: {:?}",
-        analysis.facts.imports
-    );
-    assert!(
-        analysis.facts.types.is_empty(),
-        "types are empty: {:?}",
-        analysis.facts.types
-    );
-    assert!(
-        analysis.facts.impls.is_empty(),
-        "impls are empty: {:?}",
-        analysis.facts.impls
-    );
-    assert!(
-        analysis.custom_hits.is_empty(),
-        "custom hits are empty on parse failure"
-    );
+    assert_eq!(analysis.facts.functions[0].name.as_ref(), "ok");
 }
 
 /// A statement glued to a label makes the vendored Go grammar insert a hidden

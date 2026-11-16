@@ -305,7 +305,7 @@ impl RuleSet {
             } else {
                 finding.severity = ceiling;
             }
-            let file_wide = std::mem::take(&mut finding.file_wide);
+            let file_wide = finding.file_wide;
             let role = if file_wide {
                 facts.role
             } else {

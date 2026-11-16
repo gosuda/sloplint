@@ -238,9 +238,10 @@ fn a_cpp_source_in_a_dot_c_file_is_not_retried() {
         analysis.parse_error.is_some(),
         "only `.h` files fall back to C++"
     );
-    assert!(
-        analysis.facts.functions.is_empty(),
-        "a failed parse yields empty facts"
+    assert_eq!(
+        analysis.facts.lang,
+        Lang::C,
+        "a `.c` file never retries as C++; the C-grammar rescue may salvage declarations, but every fact stays C"
     );
 }
 

@@ -87,6 +87,10 @@ pub struct Analysis<'s> {
     /// source's ERROR regions were blanked to recover a clean tree, so rule
     /// coverage is partial. `parse_error` stays `Some` in that case.
     pub partial: bool,
+    /// 1-based inclusive line ranges of the top-level constructs that
+    /// contained an excised ERROR region. Only set when `partial`: findings
+    /// inside them are judgments on truncated code and must be dropped.
+    pub tainted: Vec<(u32, u32)>,
     pub custom_hits: Vec<CustomHit<'s>>,
     pub custom_capped: Vec<&'s str>,
 }
@@ -117,6 +121,7 @@ pub fn analyze<'s>(
         comments,
         parse_error: Some(first_error_pos(root).unwrap_or_else(|| root_end_pos(root))),
         partial: false,
+        tainted: Vec::new(),
         custom_hits: Vec::new(),
         custom_capped: Vec::new(),
     }
@@ -144,14 +149,16 @@ fn rescue_analysis<'s>(
     let first_pos = first_error_pos(first_tree.root_node())?;
     let mut text = input.source.as_bytes().to_vec();
     let mut tree = first_tree.clone();
+    let mut tainted = Vec::new();
     for _ in 0..MAX_RESCUE_ROUNDS {
-        let mut spans = Vec::new();
-        error_spans(tree.root_node(), &mut spans);
-        if spans.is_empty() {
+        let mut errors = Vec::new();
+        error_nodes(tree.root_node(), &mut errors);
+        if errors.is_empty() {
             return None;
         }
-        for (start, end) in spans {
-            for byte in &mut text[start..end] {
+        for &node in &errors {
+            tainted.push(tainted_lines(tree.root_node(), node));
+            for byte in &mut text[node.start_byte()..node.end_byte()] {
                 if *byte != b'\n' {
                     *byte = b' ';
                 }
@@ -160,27 +167,81 @@ fn rescue_analysis<'s>(
         let source = std::str::from_utf8(&text).ok()?;
         tree = parsers.parse(lang, source);
         if !tree.root_node().has_error() {
+            // A program excised to nothing keeps the old contract: the file
+            // is judged by its syntax error alone.
+            if tree.root_node().named_child_count() == 0 {
+                return None;
+            }
             let mut analysis = clean_analysis(parsers, input, lang, &tree, custom);
+            merge_comments(parsers, input, first_tree, &mut analysis);
             analysis.parse_error = Some(first_pos);
             analysis.partial = true;
+            analysis.tainted = tainted;
             return Some(analysis);
         }
     }
     None
 }
 
-fn error_spans(node: Node<'_>, spans: &mut Vec<(usize, usize)>) {
-    if node.is_error() {
-        spans.push((node.start_byte(), node.end_byte()));
-        return;
+/// Collect every ERROR node without recursion: a deeply nested syntax error
+/// must not grow one stack frame per level like the tree walk it replaces.
+fn error_nodes<'t>(root: Node<'t>, errors: &mut Vec<Node<'t>>) {
+    let mut stack = vec![root];
+    while let Some(node) = stack.pop() {
+        if node.is_error() {
+            errors.push(node);
+            continue;
+        }
+        if !node.has_error() {
+            continue;
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            stack.push(child);
+        }
     }
-    if !node.has_error() {
-        return;
+}
+
+/// The line range of `node`'s top-level enclosing construct: everything the
+/// excision truncated, where findings would judge edited-out code.
+fn tainted_lines(root: Node<'_>, node: Node<'_>) -> (u32, u32) {
+    let mut top = node;
+    while let Some(parent) = top.parent() {
+        if parent == root {
+            break;
+        }
+        top = parent;
     }
-    let mut cursor = node.walk();
-    for child in node.children(&mut cursor) {
-        error_spans(child, spans);
+    (
+        hooks::narrow(top.start_position().row) + 1,
+        hooks::narrow(top.end_position().row) + 1,
+    )
+}
+
+/// A comment inside an excised region — say a `sloplint-allow-file` directive
+/// in an unsupported construct — vanishes from the rescued tree. Re-walk the
+/// original parse's comments and union them in so suppressions keep working.
+fn merge_comments<'s>(
+    parsers: &Parsers<'_>,
+    input: &FileInput<'s>,
+    first_tree: &Tree,
+    analysis: &mut Analysis<'s>,
+) {
+    let hooks = lang::hooks_for(input.lang, input.path, parsers.ocaml_interfaces);
+    let original = spec(input.lang)
+        .walk_comments(hooks, input, first_tree.root_node())
+        .comments;
+    let mut seen: HashSet<(u32, &str)> = analysis
+        .comments
+        .iter()
+        .map(|comment| (comment.start_line, comment.text))
+        .collect();
+    for comment in original {
+        if seen.insert((comment.start_line, comment.text)) {
+            analysis.comments.push(comment);
+        }
     }
+    analysis.comments.sort_by_key(|comment| comment.start_line);
 }
 
 fn clean_analysis<'s>(
@@ -198,6 +259,7 @@ fn clean_analysis<'s>(
         comments: walked.comments,
         parse_error: None,
         partial: false,
+        tainted: Vec::new(),
         custom_hits: hits,
         custom_capped: capped,
     }

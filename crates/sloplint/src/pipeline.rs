@@ -228,6 +228,17 @@ fn analyze_file(
         Some(pos) if !analysis.partial => pipe.rules.parse_error(&text, pos).into_iter().collect(),
         _ => {
             let mut found = rule_findings(pipe, &analysis);
+            if analysis.partial {
+                // On a rescued parse, file-wide aggregates miscount and
+                // findings inside excised constructs judge truncated code.
+                found.retain(|finding| {
+                    !finding.file_wide
+                        && !analysis
+                            .tainted
+                            .iter()
+                            .any(|&(first, last)| first <= finding.line && finding.line <= last)
+                });
+            }
             if let Some(pos) = analysis.parse_error {
                 found.extend(pipe.rules.parse_error(&text, pos));
             }
