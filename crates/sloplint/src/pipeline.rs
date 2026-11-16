@@ -10,8 +10,8 @@ use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 use sloplint_core::baseline::Baseline;
 use sloplint_core::facts::{ManifestKind, WorldFacts, package_scope};
-use sloplint_core::lang::Lang;
 use sloplint_core::finding::{SourceText, line_context, line_starts};
+use sloplint_core::lang::Lang;
 use sloplint_core::rules::{CATALOG, RuleSet, WorldFile};
 use sloplint_core::suppress::{self, RulePattern, Suppression};
 use sloplint_core::{Config, Finding};
@@ -237,12 +237,9 @@ fn analyze_file(
                 found.retain(|finding| {
                     finding.rule.starts_with("meta/")
                         || (!finding.file_wide
-                            && !analysis
-                                .tainted
-                                .iter()
-                                .any(|&(first, last)| {
-                                    first <= finding.line && finding.line <= last
-                                }))
+                            && !analysis.tainted.iter().any(|&(first, last)| {
+                                first <= finding.line && finding.line <= last
+                            }))
                 });
             }
             if let Some(pos) = analysis.parse_error {

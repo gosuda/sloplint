@@ -19,9 +19,7 @@ fn boundary_xml_declared_ts_file_is_skipped() {
         ..base(&root)
     });
     assert!(
-        r.findings
-            .iter()
-            .all(|f| &*f.rule != "meta/parse-error"),
+        r.findings.iter().all(|f| &*f.rule != "meta/parse-error"),
         "XML must not surface a TypeScript parse error: {:?}",
         r.findings.iter().map(|f| &*f.rule).collect::<Vec<_>>()
     );
