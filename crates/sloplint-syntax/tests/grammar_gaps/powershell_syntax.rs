@@ -537,8 +537,9 @@ fn invalid_powershell_still_reports_a_parse_error() {
             "invalid source must not parse cleanly:\n{source}"
         );
         assert!(
-            analysis.facts.functions.is_empty() && analysis.facts.calls.is_empty(),
-            "a failed parse yields no facts for:\n{source}"
+            (analysis.facts.functions.is_empty() && analysis.facts.calls.is_empty())
+                || analysis.partial,
+            "a failed parse yields facts only when the rescue marks it partial for:\n{source}"
         );
     }
 }
