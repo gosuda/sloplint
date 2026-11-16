@@ -127,8 +127,14 @@ reproduced on real code. Every repro below was first accepted by
   - `qt_statement_macro`: Qt statement macros conventionally written
     without a trailing semicolon (`Q_UNUSED`, `Q_ASSERT`/`Q_ASSERT_X`,
     `Q_VERIFY`/`Q_VERIFY_X`, `Q_CHECK_PTR`, `Q_UNREACHABLE`,
-    `Q_FALLTHROUGH`, `QT_REQUIRE_VERSION`, `Q_FOREACH`), in
+    `Q_FALLTHROUGH`, `QT_REQUIRE_VERSION`), in
     `_non_case_statement` with `optional(';')`.
+  - `qt_foreach_statement`: `Q_FOREACH`, `BOOST_FOREACH`, and `foreach`
+    own the following body statement. A new iterator has a `declarator`
+    field. An existing variable has a `qt_foreach_assignment` node with
+    a `left` field, so the adapter records its implicit write.
+    `qt_foreach_body` begins after the container expression. The adapter
+    registers the new iterator shadow only inside that iteration scope.
   - `macro_declaration` is also a member of `_block_item`, which is the
     repeated content of `preproc_if`/`preproc_ifdef` bodies at every
     level: without it every declaration macro inside a header guard or
@@ -196,8 +202,9 @@ clang++ with `-std=c++23`.
   `Q_DISABLE_COPY_MOVE(C)`.
 - `Q_DECLARE_METATYPE(const C*)` inside `#ifndef` header guards and
   inside function-level `#ifdef` blocks (the `_block_item` fix).
-- `Q_UNUSED(x)` without `;`, `Q_ASSERT(p)`, `Q_FOREACH(QString s, list)`
-  inside function bodies.
+- `Q_UNUSED(x)` without `;` and `Q_ASSERT(p)` inside function bodies.
+- `Q_FOREACH` with new declarations or existing variables, braced and
+  unbraced bodies, empty bodies, and an enclosing `if`/`else`.
 
 ## Constructs known still failing
 
@@ -215,10 +222,12 @@ parens steers it to an initialized declaration.
   `parser.c`, `scanner.c`, `grammar.json`, `node-types.json` all match), so
   the tag corpus result is the published result.
 - After the patch: 179 of 179 upstream cases pass.
-- New cases in `test/corpus/sloplint_*.txt`: 36 cases (32 repros,
-  4 controls). The published parser fails 32 of the 36 sources and passes
-  the 4 controls. The patched grammar passes all 36.
-- Total with the patch: 215 of 215.
+- The original 36 cases in `test/corpus/sloplint_*.txt` contain 32 repros
+  and 4 controls. The published parser fails those 32 repros and passes
+  the 4 controls.
+- `tree-sitter test --debug-build` passes all 41 local cases, including
+  five foreach regressions for body ownership and iterator forms.
+- Total with the patch: 220 of 220.
 
 ## Sweep result
 
@@ -235,6 +244,6 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 
 ## Size
 
-`src/parser.c`: 27,196,487 bytes (published: 17,299,078). States: 8682
+`src/parser.c`: 35,394,654 bytes (published: 17,299,078). States: 9417
 (published: 8637). Language version: 15 (published: 14). The literal
 enumeration of `macro_attribute` costs most of the size growth.

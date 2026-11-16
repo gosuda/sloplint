@@ -50,16 +50,12 @@ pub(crate) fn access_marker(cx: &Cx<'_, '_>, sib: Node<'_>) -> Option<bool> {
         let label = trimmed(cx, sib);
         return Some(label.starts_with("public") || label.starts_with("protected"));
     }
-    // Generator macros inject declarations that end in an access specifier:
-    // Qt's Q_OBJECT/Q_GADGET leave `private:` in force and Unreal's legacy
-    // GENERATED_*_BODY macros leave `public:`. UE5's GENERATED_BODY has no
-    // trailing specifier and keeps the incoming access. Without those
-    // transitions a member after Q_OBJECT in a `struct` reads public.
+    // Qt resets access to private; legacy Unreal class/interface macros reset
+    // it to public. GENERATED_BODY and its USTRUCT alias preserve access.
     if sib.kind() == "macro_declaration" {
         return match sib.child(0).map(|name| name.kind()) {
             Some("Q_OBJECT") | Some("Q_GADGET") => Some(false),
             Some("GENERATED_UCLASS_BODY")
-            | Some("GENERATED_USTRUCT_BODY")
             | Some("GENERATED_UINTERFACE_BODY")
             | Some("GENERATED_IINTERFACE_BODY") => Some(true),
             _ => None,

@@ -109,6 +109,7 @@ pub trait WorldRule: Send + Sync {
 pub struct WorldFile<'a> {
     pub path: &'a str,
     pub facts: &'a WorldFacts,
+    pub parsed: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

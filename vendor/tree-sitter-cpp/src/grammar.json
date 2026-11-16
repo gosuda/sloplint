@@ -7120,13 +7120,8 @@
           "name": "qt_statement_macro"
         },
         {
-          "type": "ALIAS",
-          "content": {
-            "type": "SYMBOL",
-            "name": "qt_foreach"
-          },
-          "named": true,
-          "value": "for_range_loop"
+          "type": "SYMBOL",
+          "name": "qt_foreach_statement"
         }
       ]
     },
@@ -14063,80 +14058,102 @@
         ]
       }
     },
-    "qt_foreach": {
-      "type": "PREC_DYNAMIC",
-      "value": 1,
-      "content": {
-        "type": "SEQ",
-        "members": [
-          {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "STRING",
-                "value": "Q_FOREACH"
-              },
-              {
-                "type": "STRING",
-                "value": "BOOST_FOREACH"
-              },
-              {
-                "type": "STRING",
-                "value": "foreach"
-              }
-            ]
-          },
-          {
-            "type": "STRING",
-            "value": "("
-          },
-          {
-            "type": "SYMBOL",
-            "name": "_declaration_specifiers"
-          },
-          {
-            "type": "FIELD",
-            "name": "declarator",
-            "content": {
-              "type": "SYMBOL",
-              "name": "_declarator"
+    "qt_foreach_statement": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "Q_FOREACH"
+            },
+            {
+              "type": "STRING",
+              "value": "BOOST_FOREACH"
+            },
+            {
+              "type": "STRING",
+              "value": "foreach"
             }
-          },
-          {
-            "type": "STRING",
-            "value": ","
-          },
-          {
-            "type": "FIELD",
-            "name": "right",
-            "content": {
-              "type": "CHOICE",
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
               "members": [
                 {
                   "type": "SYMBOL",
-                  "name": "expression"
+                  "name": "_declaration_specifiers"
                 },
                 {
-                  "type": "SYMBOL",
-                  "name": "initializer_list"
+                  "type": "FIELD",
+                  "name": "declarator",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_declarator"
+                  }
                 }
               ]
-            }
-          },
-          {
-            "type": "STRING",
-            "value": ")"
-          },
-          {
-            "type": "FIELD",
-            "name": "body",
-            "content": {
+            },
+            {
               "type": "SYMBOL",
-              "name": "statement"
+              "name": "qt_foreach_assignment"
             }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": ","
+        },
+        {
+          "type": "FIELD",
+          "name": "right",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "expression"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "initializer_list"
+              }
+            ]
           }
-        ]
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        },
+        {
+          "type": "FIELD",
+          "name": "body",
+          "content": {
+            "type": "SYMBOL",
+            "name": "qt_foreach_body"
+          }
+        }
+      ]
+    },
+    "qt_foreach_assignment": {
+      "type": "FIELD",
+      "name": "left",
+      "content": {
+        "type": "SYMBOL",
+        "name": "expression"
       }
+    },
+    "qt_foreach_body": {
+      "type": "SYMBOL",
+      "name": "statement"
     },
     "qt_statement_macro": {
       "type": "PREC_RIGHT",
@@ -14185,18 +14202,6 @@
                 {
                   "type": "STRING",
                   "value": "QT_REQUIRE_VERSION"
-                },
-                {
-                  "type": "STRING",
-                  "value": "Q_FOREACH"
-                },
-                {
-                  "type": "STRING",
-                  "value": "BOOST_FOREACH"
-                },
-                {
-                  "type": "STRING",
-                  "value": "foreach"
                 }
               ]
             }
@@ -18520,19 +18525,6 @@
     [
       "_linkage_guard",
       "preproc_ifdef"
-    ],
-    [
-      "type_qualifier",
-      "macro_argument_list"
-    ],
-    [
-      "type_specifier",
-      "macro_argument_list"
-    ],
-    [
-      "type_specifier",
-      "expression",
-      "macro_argument_list"
     ],
     [
       "type_specifier",

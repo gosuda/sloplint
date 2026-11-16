@@ -87,30 +87,42 @@ fn boundary_suppression_inside_excised_region_still_applies() {
     // original parse's comments are merged back so it still suppresses the
     // rule that fires on the surviving function. (meta/parse-error itself is
     // not a suppressible operand; nesting-depth is.)
-    put(
-        &root,
-        "src/vend.c",
-        "Mystery /* sloplint-allow-file(complexity/nesting-depth): vendor macro */ int x;\n\
+    let source = "Mystery /* sloplint-allow-file(complexity/nesting-depth): vendor macro */ int x;\n\
          int kept(void)\n{\n\
-         \tif (1) {\n\t\tif (1) {\n\t\t\tif (1) {\n\t\t\t\tif (1) {\n\t\t\t\t\tif (1) {\n\t\t\t\t\t\treturn 1;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\treturn 0;\n}\n",
-    );
+         \tif (1) {\n\t\tif (1) {\n\t\t\tif (1) {\n\t\t\t\tif (1) {\n\t\t\t\t\tif (1) {\n\t\t\t\t\t\treturn 1;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\treturn 0;\n}\n";
+    put(&root, "src/vend.c", source);
     put(
         &root,
         "sloplint.toml",
         "[rules.\"complexity/nesting-depth\"]\nlevel = \"minor\"\n",
     );
-    let r = run_ok(&super::RunOptions {
+    let options = super::RunOptions {
         strictness: Some(super::Strictness::Strict),
         mode: Some(super::Mode::Threshold),
         rule_filter: super::filt(&["complexity/nesting-depth", "meta/*"]),
         ..base(&root)
-    });
+    };
+    let r = run_ok(&options);
+    assert!(r.findings.iter().any(|f| &*f.rule == "meta/parse-error"));
     assert!(
         !r.findings
             .iter()
             .any(|f| &*f.rule == "complexity/nesting-depth"),
         "the directive inside the excised region must still suppress: {:?}",
         r.findings
+    );
+    let unsuppressed = source.replace(
+        "sloplint-allow-file(complexity/nesting-depth): vendor macro",
+        "vendor macro",
+    );
+    put(&root, "src/vend.c", &unsuppressed);
+    let control = run_ok(&options);
+    assert!(
+        control
+            .findings
+            .iter()
+            .any(|f| &*f.rule == "complexity/nesting-depth"),
+        "the same surviving function must be diagnosed without its directive"
     );
 }
 
@@ -195,11 +207,15 @@ fn boundary_deeply_nested_error_does_not_overflow() {
         body.push_str("if (1) {\n");
     }
     body.push_str("@@@###\n");
+    for _ in 0..4000 {
+        body.push_str("}\n");
+    }
+    body.push_str("}\nint handle(void) { return 0; }\n");
     put(&root, "src/deep.c", &body);
     let r = run_ok(&super::RunOptions {
         strictness: Some(super::Strictness::Standard),
         mode: Some(super::Mode::Threshold),
-        rule_filter: super::filt(&["meta/*"]),
+        rule_filter: super::filt(&["grep/generic-name", "meta/*"]),
         ..base(&root)
     });
     assert!(
@@ -207,6 +223,12 @@ fn boundary_deeply_nested_error_does_not_overflow() {
             .iter()
             .any(|f| &*f.rule == "meta/parse-error" && &*f.path == "src/deep.c"),
         "a deeply nested error still surfaces as parse-error"
+    );
+    assert!(
+        r.findings
+            .iter()
+            .any(|f| &*f.rule == "grep/generic-name" && f.line == 8004),
+        "the function after the deeply nested error must still be analyzed"
     );
 }
 

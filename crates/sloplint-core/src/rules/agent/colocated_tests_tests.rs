@@ -94,26 +94,32 @@ fn same_stem_test_covers_while_bare_files_flag() {
     let lonely_probe = test_file(Lang::Rust, "lonely");
     let files = [
         WorldFile {
+            parsed: true,
             path: "yaml/yaml.go",
             facts: &yaml,
         },
         WorldFile {
+            parsed: true,
             path: "yaml/decode_test.go",
             facts: &decode_test,
         },
         WorldFile {
+            parsed: true,
             path: "src/error.rs",
             facts: &error,
         },
         WorldFile {
+            parsed: true,
             path: "src/error_test.rs",
             facts: &source_test,
         },
         WorldFile {
+            parsed: true,
             path: "src/lonely.rs",
             facts: &lonely,
         },
         WorldFile {
+            parsed: true,
             path: "tests/other.rs",
             facts: &lonely_probe,
         },
@@ -134,18 +140,22 @@ fn support_and_prefixed_files_are_not_test_evidence() {
     let other_test = test_file(Lang::Rust, "lonely");
     let files = [
         WorldFile {
+            parsed: true,
             path: "src/lonely.rs",
             facts: &lonely,
         },
         WorldFile {
+            parsed: true,
             path: "src/support.rs",
             facts: &helper,
         },
         WorldFile {
+            parsed: true,
             path: "src/test_helpers.rs",
             facts: &prefixed,
         },
         WorldFile {
+            parsed: true,
             path: "tests/test_other.rs",
             facts: &other_test,
         },
@@ -172,22 +182,27 @@ fn default_excludes_skip_entry_only() {
     let rs_test = test_file(Lang::Rust, "app");
     let files = [
         WorldFile {
+            parsed: true,
             path: "cmd/tool/lib.go",
             facts: &tool,
         },
         WorldFile {
+            parsed: true,
             path: "src/app.rs",
             facts: &app,
         },
         WorldFile {
+            parsed: true,
             path: "src/main.rs",
             facts: &main,
         },
         WorldFile {
+            parsed: true,
             path: "cmd/other/other_test.go",
             facts: &go_test,
         },
         WorldFile {
+            parsed: true,
             path: "tests/test_other.rs",
             facts: &rs_test,
         },
@@ -212,10 +227,12 @@ fn silence_without_any_test_evidence() {
     let render = lib(Lang::Rust, "render", 1);
     let files = [
         WorldFile {
+            parsed: true,
             path: "service.go",
             facts: &service,
         },
         WorldFile {
+            parsed: true,
             path: "src/render.rs",
             facts: &render,
         },
@@ -235,14 +252,17 @@ fn hyphenated_nested_rust_import_covers_only_named_module() {
     let test = evidence(Lang::Rust, "my-parser", &["my_parser::rules::lexer"]);
     let files = [
         WorldFile {
+            parsed: true,
             path: "libs/my-parser/src/rules/lexer.rs",
             facts: &lexer,
         },
         WorldFile {
+            parsed: true,
             path: "libs/my-parser/src/rules/other.rs",
             facts: &other,
         },
         WorldFile {
+            parsed: true,
             path: "crates/e2e/tests/t.rs",
             facts: &test,
         },
@@ -263,18 +283,22 @@ fn python_double_dot_resolves_to_parent_package() {
     let sibling_probe = test_file(Lang::Python, "app");
     let files = [
         WorldFile {
+            parsed: true,
             path: "tests/core.py",
             facts: &target,
         },
         WorldFile {
+            parsed: true,
             path: "app/unit/core.py",
             facts: &sibling,
         },
         WorldFile {
+            parsed: true,
             path: "tests/unit/test_x.py",
             facts: &test,
         },
         WorldFile {
+            parsed: true,
             path: "app/test_other.py",
             facts: &sibling_probe,
         },
@@ -296,18 +320,22 @@ fn production_import_does_not_cover() {
     let test = evidence(Lang::Python, "pkg", &["pkg/other"]);
     let files = [
         WorldFile {
+            parsed: true,
             path: "pkg/core.py",
             facts: &core,
         },
         WorldFile {
+            parsed: true,
             path: "pkg/other.py",
             facts: &other,
         },
         WorldFile {
+            parsed: true,
             path: "pkg/user.py",
             facts: &prod,
         },
         WorldFile {
+            parsed: true,
             path: "tests/test_other.py",
             facts: &test,
         },
@@ -327,14 +355,17 @@ fn evidence_path_keys_do_not_cover_twin_modules() {
     let twin_probe = test_file(Lang::Rust, "pkgb");
     let files = [
         WorldFile {
+            parsed: true,
             path: "pkga/util/core.rs",
             facts: &tested,
         },
         WorldFile {
+            parsed: true,
             path: "pkgb/util/core.rs",
             facts: &twin,
         },
         WorldFile {
+            parsed: true,
             path: "pkgb/tests/other.rs",
             facts: &twin_probe,
         },

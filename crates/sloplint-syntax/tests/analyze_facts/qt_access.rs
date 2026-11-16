@@ -1,9 +1,6 @@
-//! Meta-object generator macros inject declarations that end in an access
-//! specifier: Qt's `Q_OBJECT`/`Q_GADGET` leave `private:` in force and
-//! Unreal's legacy `GENERATED_*_BODY` macros leave `public:` — while UE5's
-//! `GENERATED_BODY` keeps the incoming access. A member declared after one
-//! of those macros without an explicit label takes that injected access —
-//! the macro is itself the transition, not a no-op statement.
+//! Qt's `Q_OBJECT`/`Q_GADGET` leave `private:` in force. Unreal's modern
+//! `GENERATED_BODY` and its `GENERATED_USTRUCT_BODY` alias preserve access;
+//! the legacy class and interface macros leave `public:` in force.
 //!
 //! `Q_FOREACH (type var, container) body` is a range-for in disguise: the
 //! variable must bind so a write inside the body cannot be charged to an
@@ -34,18 +31,6 @@ public:\n\
     void api() {}\n\
 };\n";
 
-/// `class` defaults to private: UE5's GENERATED_BODY keeps that access,
-/// while the legacy GENERATED_UCLASS_BODY ends in `public:`.
-const UNREAL_CLASS: &str = "class UThing {\n\
-    GENERATED_BODY()\n\
-    void helper() {}\n\
-};\n";
-
-const UNREAL_LEGACY_CLASS: &str = "class ULegacy {\n\
-    GENERATED_UCLASS_BODY()\n\
-    void helper() {}\n\
-};\n";
-
 const OBJECT_CLASS: &str = "class Widget {\n\
     Q_OBJECT\n\
     void internal() {}\n\
@@ -67,21 +52,69 @@ fn q_gadget_marks_following_members_private() {
 }
 
 #[test]
-fn generated_body_keeps_incoming_access() {
-    assert_eq!(
-        function_visibility(UNREAL_CLASS, "helper"),
-        Visibility::Private,
-        "UE5 GENERATED_BODY preserves incoming access, was Exported"
-    );
+fn generated_body_preserves_member_access() {
+    for (macro_name, kind, default_access) in [
+        ("GENERATED_BODY", "class", Visibility::Private),
+        ("GENERATED_BODY", "struct", Visibility::Exported),
+        ("GENERATED_USTRUCT_BODY", "struct", Visibility::Exported),
+    ] {
+        for (label, access) in [
+            ("", default_access),
+            ("private:", Visibility::Private),
+            ("public:", Visibility::Exported),
+        ] {
+            let source = format!(
+                "{kind} Thing {{\n\
+                    {label}\n\
+                    {macro_name}()\n\
+                    void helper() {{}}\n\
+                    void separate();\n\
+                public:\n\
+                    void api() {{}}\n\
+                    void separate_api();\n\
+                }};\n\
+                void Thing::separate() {{}}\n\
+                void Thing::separate_api() {{}}\n"
+            );
+            let analysis = run_clean(Lang::Cpp, "thing.cpp", &source);
+            let functions: Vec<_> = analysis
+                .facts
+                .functions
+                .iter()
+                .map(|function| (function.name, function.visibility))
+                .collect();
+            assert_eq!(
+                functions,
+                [
+                    ("helper", access),
+                    ("api", Visibility::Exported),
+                    ("separate", access),
+                    ("separate_api", Visibility::Exported),
+                ],
+                "{macro_name} in {kind} after {label:?}"
+            );
+        }
+    }
 }
 
 #[test]
-fn generated_uclass_body_marks_following_members_public() {
-    assert_eq!(
-        function_visibility(UNREAL_LEGACY_CLASS, "helper"),
-        Visibility::Exported,
-        "GENERATED_UCLASS_BODY ends in public:, was Private when the macro was ignored"
-    );
+fn legacy_unreal_macros_start_public_member_sections() {
+    for macro_name in [
+        "GENERATED_UCLASS_BODY",
+        "GENERATED_UINTERFACE_BODY",
+        "GENERATED_IINTERFACE_BODY",
+    ] {
+        let source = format!(
+            "class Thing {{\n\
+                {macro_name}()\n\
+                void api() {{}}\n\
+            private:\n\
+                void helper() {{}}\n\
+            }};\n"
+        );
+        assert_eq!(function_visibility(&source, "api"), Visibility::Exported);
+        assert_eq!(function_visibility(&source, "helper"), Visibility::Private);
+    }
 }
 
 #[test]

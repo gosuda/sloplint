@@ -386,6 +386,10 @@
         "named": true
       },
       {
+        "type": "qt_foreach_statement",
+        "named": true
+      },
+      {
         "type": "qt_statement_macro",
         "named": true
       },
@@ -1314,6 +1318,10 @@
         },
         {
           "type": "labeled_statement",
+          "named": true
+        },
+        {
+          "type": "qt_foreach_statement",
           "named": true
         },
         {
@@ -6000,6 +6008,121 @@
     "fields": {}
   },
   {
+    "type": "qt_foreach_assignment",
+    "named": true,
+    "fields": {
+      "left": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "qt_foreach_body",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "statement",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "qt_foreach_statement",
+    "named": true,
+    "fields": {
+      "body": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "qt_foreach_body",
+            "named": true
+          }
+        ]
+      },
+      "declarator": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "_declarator",
+            "named": true
+          }
+        ]
+      },
+      "right": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          },
+          {
+            "type": "initializer_list",
+            "named": true
+          }
+        ]
+      },
+      "type": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "type_specifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "attribute_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "qt_foreach_assignment",
+          "named": true
+        },
+        {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "qt_section_label",
     "named": true,
     "fields": {}
@@ -6012,10 +6135,6 @@
         "multiple": false,
         "required": true,
         "types": [
-          {
-            "type": "BOOST_FOREACH",
-            "named": false
-          },
           {
             "type": "QT_REQUIRE_VERSION",
             "named": false
@@ -6037,10 +6156,6 @@
             "named": false
           },
           {
-            "type": "Q_FOREACH",
-            "named": false
-          },
-          {
             "type": "Q_UNREACHABLE",
             "named": false
           },
@@ -6054,10 +6169,6 @@
           },
           {
             "type": "Q_VERIFY_X",
-            "named": false
-          },
-          {
-            "type": "foreach",
             "named": false
           }
         ]

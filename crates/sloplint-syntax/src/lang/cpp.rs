@@ -28,6 +28,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("switch_statement", Role::Match),
     ("for_statement", Role::Loop),
     ("for_range_loop", Role::Loop),
+    ("qt_foreach_statement", Role::Loop),
+    ("qt_foreach_assignment", Role::Write),
     ("while_statement", Role::Loop),
     ("do_statement", Role::Loop),
     ("catch_clause", Role::Catch),
@@ -186,17 +188,22 @@ impl LangHooks for CppHooks {
     }
     fn decl_scope_parent(&self, depth: usize, node: Node<'_>, _cx: &Cx<'_, '_>) -> usize {
         match node.kind() {
-            "for_range_loop" | "catch_clause" => depth,
+            "for_range_loop" | "qt_foreach_body" | "catch_clause" => depth,
             "declaration" => statement_scope(depth, node),
             _ => depth.saturating_sub(1),
         }
     }
     fn shadow_decl_kind(&self, kind: &str) -> bool {
-        matches!(kind, "for_range_loop" | "catch_clause")
+        matches!(kind, "for_range_loop" | "qt_foreach_body" | "catch_clause")
     }
     fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
         match n.kind() {
             "for_range_loop" => range_names(cx, n, out),
+            "qt_foreach_body" => {
+                if let Some(parent) = cx.parent_of(n) {
+                    range_names(cx, parent, out);
+                }
+            }
             "catch_clause" => {
                 if let Some(name) = handlers::catch_binding(cx, n) {
                     out.push(name);
@@ -207,7 +214,7 @@ impl LangHooks for CppHooks {
     }
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         let target = match n.kind() {
-            "assignment_expression" => child_by_field(n, "left"),
+            "assignment_expression" | "qt_foreach_assignment" => child_by_field(n, "left"),
             "update_expression" => child_by_field(n, "argument"),
             _ => None,
         };

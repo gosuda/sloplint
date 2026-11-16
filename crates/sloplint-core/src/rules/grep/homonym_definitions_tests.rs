@@ -49,10 +49,12 @@ fn groups_emit_in_name_order_with_first_site_at_smallest_path() {
     let earlier = facts(vec![site("zeta", 1), site("alpha", 3)]);
     let files = [
         WorldFile {
+            parsed: true,
             path: "b.rs",
             facts: &later,
         },
         WorldFile {
+            parsed: true,
             path: "a.rs",
             facts: &earlier,
         },
@@ -92,16 +94,19 @@ fn repeats_inside_one_file_count_as_one_file() {
     let files = |extra: bool| {
         let mut files = vec![
             WorldFile {
+                parsed: true,
                 path: "a.rs",
                 facts: &crowded,
             },
             WorldFile {
+                parsed: true,
                 path: "b.rs",
                 facts: &other,
             },
         ];
         if extra {
             files.push(WorldFile {
+                parsed: true,
                 path: "c.rs",
                 facts: &third,
             });
@@ -140,6 +145,7 @@ fn same_name_across_packages_stays_silent() {
         .iter()
         .enumerate()
         .map(|(index, facts)| WorldFile {
+            parsed: true,
             path: if index < 4 { "left.rs" } else { "right.rs" },
             facts,
         })
@@ -165,6 +171,7 @@ fn same_package_reaching_threshold_flags() {
         .iter()
         .enumerate()
         .map(|(index, facts)| WorldFile {
+            parsed: true,
             path: ["a.rs", "b.rs", "c.rs", "d.rs", "e.rs"][index],
             facts,
         })
@@ -195,10 +202,12 @@ fn homonyms_across(langs: [Lang; 2]) -> usize {
     });
     let files = [
         WorldFile {
+            parsed: true,
             path: "ui/button.src",
             facts: &owned[0],
         },
         WorldFile {
+            parsed: true,
             path: "ui/card.src",
             facts: &owned[1],
         },
@@ -239,6 +248,7 @@ fn bench_first_site_does_not_suppress_libraries_meeting_threshold() {
         .iter()
         .enumerate()
         .map(|(index, facts)| WorldFile {
+            parsed: true,
             path: paths[index],
             facts,
         })
@@ -281,6 +291,7 @@ fn exempt_files_do_not_push_libraries_over_threshold() {
         .iter()
         .enumerate()
         .map(|(index, facts)| WorldFile {
+            parsed: true,
             path: paths[index],
             facts,
         })
@@ -315,6 +326,7 @@ fn test_region_inside_library_file_stays_below_threshold() {
         .iter()
         .enumerate()
         .map(|(index, facts)| WorldFile {
+            parsed: true,
             path: paths[index],
             facts,
         })
@@ -363,6 +375,7 @@ fn off_at_standard_info_at_strict() {
         .iter()
         .enumerate()
         .map(|(index, facts)| WorldFile {
+            parsed: true,
             path: ["a.rs", "b.rs", "c.rs", "d.rs", "e.rs"][index],
             facts,
         })
@@ -403,7 +416,7 @@ proptest! {
             .collect();
         let world: Vec<WorldFile> = owned
             .iter()
-            .map(|facts| WorldFile { path: "", facts })
+            .map(|facts| WorldFile { parsed: true, path: "", facts })
             .collect();
         let rule = HomonymDefinitions {
             allow: HashSet::from(["h".to_string()]),

@@ -1,0 +1,154 @@
+============================
+Qt foreach declaration owns its body
+============================
+
+void f() {
+  Q_FOREACH(int x, xs) {
+    x = 1;
+  }
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (qt_foreach_statement
+        type: (primitive_type)
+        declarator: (identifier)
+        right: (identifier)
+        body: (qt_foreach_body
+          (compound_statement
+            (expression_statement
+              (assignment_expression
+                left: (identifier)
+                right: (number_literal)))))))))
+
+============================
+Qt foreach reference declaration
+============================
+
+void f() {
+  Q_FOREACH(const Widget &item, widgets)
+    consume(item);
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (qt_foreach_statement
+        (type_qualifier)
+        type: (type_identifier)
+        declarator: (reference_declarator
+          (identifier))
+        right: (identifier)
+        body: (qt_foreach_body
+          (expression_statement
+            (call_expression
+              function: (identifier)
+              arguments: (argument_list
+                (identifier)))))))))
+
+============================
+Qt foreach existing variable
+============================
+
+void f() {
+  Q_FOREACH(x, xs) {
+    x = 1;
+  }
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (qt_foreach_statement
+        (qt_foreach_assignment
+          left: (identifier))
+        right: (identifier)
+        body: (qt_foreach_body
+          (compound_statement
+            (expression_statement
+              (assignment_expression
+                left: (identifier)
+                right: (number_literal)))))))))
+
+============================
+Qt foreach inside an unbraced if else
+============================
+
+void f() {
+  if (enabled)
+    Q_FOREACH(int x, xs)
+      consume(x);
+  else
+    fallback();
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (if_statement
+        condition: (condition_clause
+          value: (identifier))
+        consequence: (qt_foreach_statement
+          type: (primitive_type)
+          declarator: (identifier)
+          right: (identifier)
+          body: (qt_foreach_body
+            (expression_statement
+              (call_expression
+                function: (identifier)
+                arguments: (argument_list
+                  (identifier))))))
+        alternative: (else_clause
+          (expression_statement
+            (call_expression
+              function: (identifier)
+              arguments: (argument_list))))))))
+
+============================
+Qt foreach empty body
+============================
+
+void f() {
+  Q_FOREACH(int x, xs);
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (qt_foreach_statement
+        type: (primitive_type)
+        declarator: (identifier)
+        right: (identifier)
+        body: (qt_foreach_body
+          (expression_statement))))))

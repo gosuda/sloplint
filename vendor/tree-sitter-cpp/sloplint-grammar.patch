@@ -1,21 +1,15 @@
---- a/grammar.js	2026-11-16 15:38:12.089278171 +0000
-+++ b/grammar.js	2026-11-16 17:40:34.497341197 +0000
-@@ -58,6 +58,14 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -58,6 +58,8 @@
    ],
  
    conflicts: $ => [
 +    [$._linkage_guard, $.preproc_if],
 +    [$._linkage_guard, $.preproc_ifdef],
-+    // qt_foreach's declaration specifiers and qt_statement_macro's argument
-+    // soup can both consume `Q_FOREACH (const ...`: dynamic precedence on
-+    // qt_foreach picks the loop parse whenever a real declarator follows.
-+    [$.type_qualifier, $.macro_argument_list],
-+    [$.type_specifier, $.macro_argument_list],
-+    [$.type_specifier, $.expression, $.macro_argument_list],
      // C
      [$.type_specifier, $._declarator],
      [$.type_specifier, $.expression],
-@@ -85,6 +93,7 @@
+@@ -85,6 +87,7 @@
      [$.structured_binding_declarator, $._lambda_capture_identifier],
      [$.parameter_list, $.argument_list],
      [$.type_specifier, $.call_expression],
@@ -23,7 +17,7 @@
      [$._declaration_specifiers, $._constructor_specifiers],
      [$._binary_fold_operator, $._fold_operator],
      [$._function_declarator_seq],
-@@ -94,6 +103,20 @@
+@@ -94,6 +97,20 @@
      [$.init_statement, $._for_statement_body],
      [$.field_expression, $.template_method, $.template_type],
      [$.qualified_field_identifier, $.template_method, $.template_type],
@@ -44,7 +38,7 @@
    ],
  
    inline: ($, original) => original.concat([
-@@ -119,6 +142,7 @@
+@@ -119,6 +136,7 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -52,7 +46,7 @@
      ),
  
      _block_item: ($, original) => choice(
-@@ -134,6 +158,10 @@
+@@ -134,6 +152,10 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -63,7 +57,7 @@
      ),
  
      // Types
-@@ -168,6 +196,7 @@
+@@ -168,6 +190,7 @@
        $.dependent_type,
        $.placeholder_type_specifier,
        $.decltype,
@@ -71,7 +65,7 @@
        prec.right(choice(
          alias($.qualified_type_identifier, $.qualified_identifier),
          $._type_identifier,
-@@ -193,6 +222,9 @@
+@@ -193,6 +216,9 @@
        $._class_declaration_item,
      ),
      _class_declaration_item: $ => prec.right(seq(
@@ -81,7 +75,7 @@
        choice(
          field('name', $._class_name),
          seq(
-@@ -226,12 +258,16 @@
+@@ -226,12 +252,16 @@
        alias($.qualified_type_identifier, $.qualified_identifier),
      )),
  
@@ -99,7 +93,7 @@
      }),
  
      declaration: $ => seq(
-@@ -284,14 +320,23 @@
+@@ -284,14 +314,23 @@
  
      enum_specifier: $ => prec.right(seq(
        'enum',
@@ -128,7 +122,7 @@
        ),
        optional($.attribute_specifier),
      )),
-@@ -339,9 +384,16 @@
+@@ -339,9 +378,16 @@
      ),
  
      template_instantiation: $ => seq(
@@ -147,7 +141,7 @@
        ';',
      ),
  
-@@ -402,7 +454,7 @@
+@@ -402,7 +448,7 @@
        $._declaration_specifiers,
        field('declarator', optional(choice($._declarator, $.abstract_reference_declarator))),
        '=',
@@ -156,7 +150,7 @@
      ),
  
      variadic_parameter_declaration: $ => seq(
-@@ -432,6 +484,23 @@
+@@ -432,6 +478,23 @@
            $.initializer_list,
          )),
        ),
@@ -180,7 +174,7 @@
      ),
  
      operator_cast: $ => prec.right(1, seq(
-@@ -469,22 +538,28 @@
+@@ -469,22 +532,28 @@
        alias($.operator_cast_declaration, $.declaration),
        $.friend_declaration,
        seq($.access_specifier, ':'),
@@ -216,7 +210,7 @@
        )),
        optional($.attribute_specifier),
        ';',
-@@ -580,6 +655,173 @@
+@@ -580,6 +649,176 @@
        'protected',
      ),
  
@@ -328,34 +322,37 @@
 +      $.expression_statement,
 +    )),
 +
-+    // `Q_FOREACH (type var, container) stmt` / `BOOST_FOREACH` / Qt's
-+    // keyword-free `foreach` are range-for loops in disguise: parse them
-+    // with a declarator and a body field so the aliased `for_range_loop`
-+    // node binds the iterator name and the body counts for nesting depth.
-+    // When the item is predeclared (`Q_FOREACH (item, list)`) the
-+    // declaration specifiers fail and qt_statement_macro parses the call.
-+    qt_foreach: $ => prec.dynamic(1, seq(
++    qt_foreach_statement: $ => seq(
 +      choice('Q_FOREACH', 'BOOST_FOREACH', 'foreach'),
 +      '(',
-+      $._declaration_specifiers,
-+      field('declarator', $._declarator),
++      choice(
++        seq(
++          $._declaration_specifiers,
++          field('declarator', $._declarator),
++        ),
++        $.qt_foreach_assignment,
++      ),
 +      ',',
 +      field('right', choice($.expression, $.initializer_list)),
 +      ')',
-+      field('body', $.statement),
-+    )),
++      field('body', $.qt_foreach_body),
++    ),
++
++    qt_foreach_assignment: $ => field('left', $.expression),
++
++    // The iterator binding begins after the container expression is evaluated.
++    qt_foreach_body: $ => $.statement,
 +
 +    // Qt statement macros are conventionally written without a trailing
-+    // semicolon (Q_UNUSED(parent) before the next statement). argument_list
-+    // fails on Q_FOREACH's `type var` argument, so accept the token soup
-+    // too. The listed literals are keyword tokens: real code that calls a
++    // semicolon (Q_UNUSED(parent) before the next statement). The listed
++    // literals are keyword tokens: real code that calls a
 +    // function named Q_UNUSED et al. now parses as this rule — the same
 +    // trade-off as macro_attribute's literals.
 +    qt_statement_macro: $ => prec.right(seq(
 +      field('name', choice(
 +        'Q_UNUSED', 'Q_ASSERT', 'Q_ASSERT_X', 'Q_VERIFY', 'Q_VERIFY_X',
 +        'Q_CHECK_PTR', 'Q_UNREACHABLE', 'Q_FALLTHROUGH',
-+        'QT_REQUIRE_VERSION', 'Q_FOREACH', 'BOOST_FOREACH', 'foreach',
++        'QT_REQUIRE_VERSION',
 +      )),
 +      choice($.argument_list, $.macro_argument_list),
 +      optional(';'),
@@ -390,17 +387,17 @@
      _declarator: ($, original) => choice(
        original,
        $.reference_declarator,
-@@ -807,6 +1049,9 @@
+@@ -807,6 +1046,9 @@
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
 +      $.emit_statement,
 +      $.qt_statement_macro,
-+      alias($.qt_foreach, $.for_range_loop),
++      $.qt_foreach_statement,
      ),
  
      switch_statement: $ => seq(
-@@ -968,10 +1213,18 @@
+@@ -968,10 +1210,18 @@
        ']',
      ),
  
@@ -423,7 +420,7 @@
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1244,15 @@
+@@ -991,9 +1241,15 @@
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -442,7 +439,7 @@
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +1266,7 @@
+@@ -1007,7 +1263,7 @@
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -451,7 +448,7 @@
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +1274,7 @@
+@@ -1015,6 +1271,7 @@
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -459,7 +456,7 @@
        )),
      ),
  
-@@ -1230,7 +1490,7 @@
+@@ -1230,7 +1487,7 @@
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -468,7 +465,7 @@
          field('value', $.initializer_list),
        ),
      ),
-@@ -1256,6 +1516,7 @@
+@@ -1256,6 +1513,7 @@
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -476,7 +473,7 @@
        )),
      ),
  
-@@ -1342,6 +1603,25 @@
+@@ -1342,6 +1600,25 @@
  
      this: _ => 'this',
  
