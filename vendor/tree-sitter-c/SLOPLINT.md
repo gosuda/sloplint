@@ -241,3 +241,14 @@ repos run): error nodes 19,312 before, 17,937 after; files with any error
 with 0.27.1: 3,872,027). States: 2122 (published: 2015). Symbols: 367
 (published: 360). The literal enumeration of `macro_attribute` costs most of
 the size growth.
+
+- **MSVC `__asm {}` / `_asm {}` blocks** parse as a statement-level
+  `ms_asm_statement` wrapping a `ms_asm_block` token soup (identifiers,
+  literals, brackets, operators, comments). Instruction mnemonics and
+  register names are ordinary identifiers, so the block accepts a broad
+  token set instead of modelling real assembly. It lives at statement
+  position (`_non_case_statement`) because MSVC blocks take no trailing
+  `;`. The GNU `asm(...)` form stays in `gnu_asm_expression`, where it is
+  also used after declarators (`void f() asm("alias")`). Known gap: the
+  single-instruction form `__asm int 3` (no braces) is not covered —
+  the token soup cannot see newlines to bound the instruction.

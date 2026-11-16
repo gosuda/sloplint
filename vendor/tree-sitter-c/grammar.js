@@ -1081,6 +1081,7 @@ module.exports = grammar({
       $.goto_statement,
       $.seh_try_statement,
       $.seh_leave_statement,
+      $.ms_asm_statement,
       $.macro_declaration,
     ),
 
@@ -1422,6 +1423,36 @@ module.exports = grammar({
       )),
       ')',
     )),
+
+    // MSVC `__asm { ... }` / `_asm { ... }` inline-assembly block: a
+    // statement, terminated by the closing brace with no semicolon.
+    ms_asm_statement: $ => seq(
+      choice('__asm', '_asm'),
+      field('assembly_block', $.ms_asm_block),
+    ),
+
+    // MSVC `__asm { push ecx \ mov eax, [ebx+4] }` inline-assembly block.
+    // Instruction bodies are not C: accept a broad token soup between the
+    // braces rather than grammar real mnemonics (they are not part of the
+    // C/C++ token set and names like `cpuid`/`xmm0` are just identifiers).
+    ms_asm_block: $ => seq(
+      '{',
+      repeat(choice(
+        $.identifier,
+        $.primitive_type,
+        $.number_literal,
+        $.string_literal,
+        $.char_literal,
+        $.comment,
+        ',', ';', ':', '[', ']', '(', ')',
+        '.', '->', '::',
+        '+', '-', '*', '/', '%',
+        '&', '&&', '|', '||', '^', '~', '!',
+        '=', '==', '!=', '<', '>', '<<', '>>', '<=', '>=',
+        '?', '...',
+      )),
+      '}',
+    ),
 
     gnu_asm_qualifier: _ => choice(
       'volatile',

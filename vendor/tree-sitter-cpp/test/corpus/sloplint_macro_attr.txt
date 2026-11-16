@@ -538,3 +538,34 @@ class A {
               (primitive_type)
               (abstract_pointer_declarator)
               (null))))))))
+
+================================================================================
+MSVC __asm block
+================================================================================
+
+void f() {
+  __asm {
+    push ecx
+    mov eax, [ebx+4]
+    cpuid
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+        (compound_statement
+      (ms_asm_statement
+        (ms_asm_block
+          (identifier)
+          (identifier)
+          (identifier)
+          (identifier)
+          (identifier)
+          (number_literal)
+          (identifier))))))

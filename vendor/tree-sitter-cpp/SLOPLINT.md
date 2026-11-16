@@ -309,3 +309,8 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 `src/parser.c`: 35,394,654 bytes (published: 17,299,078). States: 9417
 (published: 8637). Language version: 15 (published: 14). The literal
 enumeration of `macro_attribute` costs most of the size growth.
+
+- **MSVC `__asm {}` / `_asm {}` blocks** inherit from the patched C base:
+  statement-level `ms_asm_statement` → `ms_asm_block` token soup (no
+  trailing `;`). See `../tree-sitter-c/SLOPLINT.md` for the rule shape
+  and the `__asm int 3` single-instruction known gap.

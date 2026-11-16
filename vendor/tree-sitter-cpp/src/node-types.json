@@ -390,6 +390,10 @@
         "named": true
       },
       {
+        "type": "ms_asm_statement",
+        "named": true
+      },
+      {
         "type": "qt_foreach_statement",
         "named": true
       },
@@ -1342,6 +1346,10 @@
         },
         {
           "type": "macro_declaration",
+          "named": true
+        },
+        {
+          "type": "ms_asm_statement",
           "named": true
         },
         {
@@ -4420,6 +4428,57 @@
     }
   },
   {
+    "type": "ms_asm_block",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "char_literal",
+          "named": true
+        },
+        {
+          "type": "comment",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "number_literal",
+          "named": true
+        },
+        {
+          "type": "primitive_type",
+          "named": true
+        },
+        {
+          "type": "string_literal",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "ms_asm_statement",
+    "named": true,
+    "fields": {
+      "assembly_block": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "ms_asm_block",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "ms_based_modifier",
     "named": true,
     "fields": {},
@@ -4785,11 +4844,11 @@
         "required": false,
         "types": [
           {
-            "type": "_declarator",
+            "type": "_abstract_declarator",
             "named": true
           },
           {
-            "type": "abstract_reference_declarator",
+            "type": "_declarator",
             "named": true
           }
         ]
@@ -9295,6 +9354,10 @@
   },
   {
     "type": "_alignof",
+    "named": false
+  },
+  {
+    "type": "_asm",
     "named": false
   },
   {

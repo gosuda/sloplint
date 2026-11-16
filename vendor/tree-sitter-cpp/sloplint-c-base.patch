@@ -1,5 +1,5 @@
 --- a/grammar.js	2026-11-16 15:36:58.671581076 +0000
-+++ b/grammar.js	2026-11-16 19:17:44.500917748 +0000
++++ b/grammar.js	2026-11-16 19:39:55.235500260 +0000
 @@ -36,6 +36,8 @@
    name: 'c',
  
@@ -401,11 +401,49 @@
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
      ),
-@@ -802,6 +1004,7 @@
+@@ -802,6 +1004,8 @@
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,
++      $.ms_asm_statement,
 +      $.macro_declaration,
      ),
  
      _top_level_statement: $ => choice(
+@@ -1143,6 +1347,36 @@
+       ')',
+     )),
+ 
++    // MSVC `__asm { ... }` / `_asm { ... }` inline-assembly block: a
++    // statement, terminated by the closing brace with no semicolon.
++    ms_asm_statement: $ => seq(
++      choice('__asm', '_asm'),
++      field('assembly_block', $.ms_asm_block),
++    ),
++
++    // MSVC `__asm { push ecx \ mov eax, [ebx+4] }` inline-assembly block.
++    // Instruction bodies are not C: accept a broad token soup between the
++    // braces rather than grammar real mnemonics (they are not part of the
++    // C/C++ token set and names like `cpuid`/`xmm0` are just identifiers).
++    ms_asm_block: $ => seq(
++      '{',
++      repeat(choice(
++        $.identifier,
++        $.primitive_type,
++        $.number_literal,
++        $.string_literal,
++        $.char_literal,
++        $.comment,
++        ',', ';', ':', '[', ']', '(', ')',
++        '.', '->', '::',
++        '+', '-', '*', '/', '%',
++        '&', '&&', '|', '||', '^', '~', '!',
++        '=', '==', '!=', '<', '>', '<<', '>>', '<=', '>=',
++        '?', '...',
++      )),
++      '}',
++    ),
++
+     gnu_asm_qualifier: _ => choice(
+       'volatile',
+       '__volatile__',

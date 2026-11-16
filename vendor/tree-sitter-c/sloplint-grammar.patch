@@ -1,5 +1,5 @@
 --- a/grammar.js	2026-11-16 15:38:11.940278785 +0000
-+++ b/grammar.js	2026-11-16 19:17:44.500917748 +0000
++++ b/grammar.js	2026-11-16 19:39:55.235500260 +0000
 @@ -37,7 +37,6 @@
  
    conflicts: $ => [
@@ -581,15 +581,53 @@
      )),
  
      bitfield_clause: $ => seq(':', $.expression),
-@@ -802,6 +1081,7 @@
+@@ -802,6 +1081,8 @@
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,
++      $.ms_asm_statement,
 +      $.macro_declaration,
      ),
  
      _top_level_statement: $ => choice(
-@@ -1226,6 +1506,7 @@
+@@ -1143,6 +1424,36 @@
+       ')',
+     )),
+ 
++    // MSVC `__asm { ... }` / `_asm { ... }` inline-assembly block: a
++    // statement, terminated by the closing brace with no semicolon.
++    ms_asm_statement: $ => seq(
++      choice('__asm', '_asm'),
++      field('assembly_block', $.ms_asm_block),
++    ),
++
++    // MSVC `__asm { push ecx \ mov eax, [ebx+4] }` inline-assembly block.
++    // Instruction bodies are not C: accept a broad token soup between the
++    // braces rather than grammar real mnemonics (they are not part of the
++    // C/C++ token set and names like `cpuid`/`xmm0` are just identifiers).
++    ms_asm_block: $ => seq(
++      '{',
++      repeat(choice(
++        $.identifier,
++        $.primitive_type,
++        $.number_literal,
++        $.string_literal,
++        $.char_literal,
++        $.comment,
++        ',', ';', ':', '[', ']', '(', ')',
++        '.', '->', '::',
++        '+', '-', '*', '/', '%',
++        '&', '&&', '|', '||', '^', '~', '!',
++        '=', '==', '!=', '<', '>', '<<', '>>', '<=', '>=',
++        '?', '...',
++      )),
++      '}',
++    ),
++
+     gnu_asm_qualifier: _ => choice(
+       'volatile',
+       '__volatile__',
+@@ -1226,6 +1537,7 @@
          $.initializer_pair,
          $.expression,
          $.initializer_list,
@@ -597,7 +635,7 @@
        )),
        optional(','),
        '}',
-@@ -1351,7 +1632,10 @@
+@@ -1351,7 +1663,10 @@
      ),
  
      macro_type_specifier: $ => prec.dynamic(-1, seq(
