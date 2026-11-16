@@ -1,5 +1,5 @@
 --- a/grammar.js	2026-11-16 15:36:58.671581076 +0000
-+++ b/grammar.js	2026-11-16 19:53:48.348992568 +0000
++++ b/grammar.js	2026-11-16 20:18:53.526667298 +0000
 @@ -36,6 +36,8 @@
    name: 'c',
  
@@ -43,7 +43,25 @@
      ),
  
      // Preprocesser
-@@ -148,7 +155,9 @@
+@@ -135,7 +142,7 @@
+     preproc_def: $ => seq(
+       preprocessor('define'),
+       field('name', $.identifier),
+-      field('value', optional($.preproc_arg)),
++      field('value', repeat(choice($.preproc_arg, $.comment))),
+       token.immediate(/\r?\n/),
+     ),
+ 
+@@ -143,17 +150,22 @@
+       preprocessor('define'),
+       field('name', $.identifier),
+       field('parameters', $.preproc_params),
+-      field('value', optional($.preproc_arg)),
++      // A block comment inside the \-continued body splits preproc_arg
++      // into pieces; let each piece be a value so the directive resumes
++      // after the comment instead of ending it.
++      field('value', repeat(choice($.preproc_arg, $.comment))),
+       token.immediate(/\r?\n/),
      ),
  
      preproc_params: $ => seq(
@@ -54,18 +72,34 @@
      ),
  
      preproc_call: $ => seq(
-@@ -161,6 +170,10 @@
+       field('directive', $.preproc_directive),
+-      field('argument', optional($.preproc_arg)),
++      field('argument', repeat(choice($.preproc_arg, $.comment))),
+       token.immediate(/\r?\n/),
+     ),
+ 
+@@ -161,6 +173,20 @@
      ...preprocIf('_in_field_declaration_list', $ => $._field_declaration_list_item),
      ...preprocIf('_in_enumerator_list', $ => seq($.enumerator, ',')),
      ...preprocIf('_in_enumerator_list_no_comma', $ => $.enumerator, -1),
-+    ...preprocIf('_in_parameter_list', $ => seq(
-+      optional(','),
-+      choice($.parameter_declaration, $.variadic_parameter),
++    // Inside a conditional-compilation block the comma is a loose atom:
++    // `f(a #ifdef X , b #endif c)` splits the separator into the block, so
++    // a `,` can appear at any position without an item following it.
++    ...preprocIf('_in_parameter_list', $ => choice(
++      $.parameter_declaration,
++      $.variadic_parameter,
++      ',',
++    )),
++    ...preprocIf('_in_initializer_list', $ => choice(
++      $.initializer_pair,
++      $.expression,
++      $.initializer_list,
++      ',',
 +    )),
  
      preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
      preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,
-@@ -240,7 +253,9 @@
+@@ -240,7 +266,9 @@
      function_definition: $ => seq(
        optional($.ms_call_modifier),
        $._declaration_specifiers,
@@ -76,7 +110,7 @@
        field('declarator', $._declarator),
        field('body', $.compound_statement),
      ),
-@@ -257,7 +272,7 @@
+@@ -257,7 +285,7 @@
        $._declaration_specifiers,
        commaSep1(field('declarator', choice(
          seq(
@@ -85,7 +119,7 @@
            $._declaration_declarator,
            optional($.gnu_asm_expression),
          ),
-@@ -283,10 +298,118 @@
+@@ -283,10 +311,133 @@
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -165,6 +199,9 @@
 +        $.primitive_type,
 +        $.sized_type_specifier,
 +        $.number_literal,
++        $.pointer_expression,
++        $.unary_expression,
++        $.sizeof_expression,
 +        $.string_literal,
 +        $.char_literal,
 +        ',',
@@ -192,7 +229,19 @@
 +        '<=',
 +        '>=',
 +        '||',
++        '^',
++        '<<=',
++        '>>=',
++        '%=',
++        '&=',
++        '|=',
++        '^=',
++        '++',
++        '--',
++        '[',
++        ']',
 +        'const',
++        $.macro_argument_list,
 +      )),
 +      ')',
      ),
@@ -205,7 +254,7 @@
        field('type', $.type_specifier),
        repeat($._declaration_modifiers),
      )),
-@@ -301,6 +424,27 @@
+@@ -301,6 +452,27 @@
        )),
      ),
  
@@ -233,7 +282,7 @@
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -341,6 +485,14 @@
+@@ -341,6 +513,14 @@
        '__vectorcall',
      ),
  
@@ -248,7 +297,7 @@
      ms_restrict_modifier: _ => '__restrict',
  
      ms_unsigned_ptr_modifier: _ => '__uptr',
-@@ -409,25 +561,25 @@
+@@ -409,25 +589,25 @@
  
      parenthesized_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
        '(',
@@ -278,7 +327,7 @@
        $._abstract_declarator,
        ')',
      )),
-@@ -448,28 +600,65 @@
+@@ -448,28 +628,65 @@
  
      pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
        optional($.ms_based_modifier),
@@ -353,7 +402,7 @@
        field('declarator', optional($._abstract_declarator)),
      ))),
  
-@@ -594,6 +783,7 @@
+@@ -594,6 +811,7 @@
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -361,7 +410,7 @@
        $._type_identifier,
      ),
  
-@@ -652,6 +842,18 @@
+@@ -652,6 +870,18 @@
        'charptr_t',
        'nullptr_t',
        'max_align_t',
@@ -380,7 +429,7 @@
        ...[8, 16, 32, 64].map(n => `int${n}_t`),
        ...[8, 16, 32, 64].map(n => `uint${n}_t`),
        ...[8, 16, 32, 64].map(n => `char${n}_t`),
-@@ -659,6 +861,7 @@
+@@ -659,6 +889,7 @@
  
      enum_specifier: $ => seq(
        'enum',
@@ -388,7 +437,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -693,6 +896,7 @@
+@@ -693,6 +924,7 @@
        'struct',
        optional($.attribute_specifier),
        optional($.ms_declspec_modifier),
@@ -396,7 +445,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -706,6 +910,7 @@
+@@ -706,6 +938,7 @@
      union_specifier: $ => prec.right(seq(
        'union',
        optional($.ms_declspec_modifier),
@@ -404,7 +453,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -727,6 +932,7 @@
+@@ -727,6 +960,7 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -412,22 +461,30 @@
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
      ),
-@@ -751,10 +957,32 @@
+@@ -751,10 +985,37 @@
  
      variadic_parameter: _ => '...',
  
-+    // `f(int a #ifdef X , int b #endif , int c)`: preprocessor blocks
-+    // inside the list are items of their own because a directive line
-+    // cannot sit inside a commaSep comma. A block may also attach to the
-+    // parameter before it (no comma between them). Commas stay strict.
-+    _parameter_list_item: $ => choice(
++    // `f(int a #ifdef X , int b #endif , int c)` and
++    // `f(int a, #ifdef X int b, #endif int c)`: the separator comma may
++    // hide inside an adjacent preproc block, so a real item may follow a
++    // block comma-free. Between real items commas stay strict.
++    _parameter_list_real: $ => choice(
 +      $.parameter_declaration,
 +      $.variadic_parameter,
++    ),
++
++    _parameter_list_item: $ => choice(
++      $._parameter_list_real,
 +      seq(
-+        choice($.parameter_declaration, $.variadic_parameter),
++        $._parameter_list_real,
 +        repeat1($._parameter_list_preproc),
++        optional(seq(optional(','), $._parameter_list_real)),
 +      ),
-+      $._parameter_list_preproc,
++      seq(
++        repeat1($._parameter_list_preproc),
++        optional(seq(optional(','), $._parameter_list_real)),
++      ),
 +    ),
 +
 +    _parameter_list_preproc: $ => choice(
@@ -439,14 +496,11 @@
        '(',
        choice(
 -        commaSep(choice($.parameter_declaration, $.variadic_parameter)),
-+        optional(seq(
-+          repeat($._parameter_list_preproc),
-+          commaSep1($._parameter_list_item),
-+        )),
++        optional(commaSep1($._parameter_list_item)),
          $.compound_statement,
        ),
        ')',
-@@ -802,6 +1030,8 @@
+@@ -802,6 +1063,8 @@
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,
@@ -455,7 +509,7 @@
      ),
  
      _top_level_statement: $ => choice(
-@@ -1143,6 +1373,36 @@
+@@ -1143,6 +1406,36 @@
        ')',
      )),
  
@@ -492,3 +546,45 @@
      gnu_asm_qualifier: _ => choice(
        'volatile',
        '__volatile__',
+@@ -1220,13 +1513,36 @@
+       ')',
+     ),
+ 
++    // `{a, #ifdef X ,b #endif ,c}` and `{a, #ifdef X b, #endif c}`:
++    // the separator comma may hide inside an adjacent preproc block, so a
++    // real item may follow a block comma-free.
++    _initializer_list_real: $ => choice(
++      $.initializer_pair,
++      $.expression,
++      $.initializer_list,
++    ),
++
++    _initializer_list_item: $ => choice(
++      $._initializer_list_real,
++      seq(
++        $._initializer_list_real,
++        repeat1($._initializer_list_preproc),
++        optional(seq(optional(','), $._initializer_list_real)),
++      ),
++      seq(
++        repeat1($._initializer_list_preproc),
++        optional(seq(optional(','), $._initializer_list_real)),
++      ),
++    ),
++
++    _initializer_list_preproc: $ => choice(
++      alias($.preproc_if_in_initializer_list, $.preproc_if),
++      alias($.preproc_ifdef_in_initializer_list, $.preproc_ifdef),
++    ),
++
+     initializer_list: $ => seq(
+       '{',
+-      commaSep(choice(
+-        $.initializer_pair,
+-        $.expression,
+-        $.initializer_list,
+-      )),
++      optional(commaSep1($._initializer_list_item)),
+       optional(','),
+       '}',
+     ),

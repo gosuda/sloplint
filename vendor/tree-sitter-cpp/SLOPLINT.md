@@ -323,18 +323,34 @@ enumeration of `macro_attribute` costs most of the size growth.
   expressions) parse. Both `SIGNAL`/`SLOT` names are literal tokens,
   same trade-off as `qt_statement_macro` literals.
 
-- **`#ifdef` blocks splitting a `parameter_list`** (`f(int a #ifdef X ,
-  int b #endif , int c)` — nghttp2-style conditional signatures) parse
-  via handwritten `preproc_ifdef_in_parameter_list`/
-  `preproc_if_in_parameter_list` rules (the C base's `preprocIf`
-  factory is module-local, so the variants are spelled out with literal
-  `alias(token(/#[ \t]*ifdef/), '#ifdef')` directives). Blocks are
-  either standalone items in the list or attached to the preceding
-  parameter; commas between real parameters stay strict, which keeps
-  the `T<A, U<B>, C>` ambiguity resolving on type-argument. Earlier
-  designs that put a second permissive shape beside the list, or
-  `optional(',')` between items, were reverted: they split multi-token
-  parameters and flipped template arguments to identifiers.
+- **Preproc blocks splitting comma lists** (`parameter_list`,
+  `field_initializer_list`, and the base's `initializer_list`) model
+  each list item as `choice(real, real·blocks·[real], blocks·[real])`
+  inside `commaSep1`, where a real item may follow a block comma-free
+  because the separator comma often hides inside the block. Between two
+  real items commas stay strict (`T<A, U<B>, C>` stays type-argument).
+  `parameter_list`/`field_initializer_list` use handwritten
+  `preproc_*_in_*_list` rules (the C base's `preprocIf` factory is
+  module-local, so variants are spelled out with literal
+  `alias(token(/#[ \t]*ifdef/), '#ifdef')` directives);
+  `initializer_list` inherits the base's `preprocIf('_in_*')` rules.
+  Earlier designs that put a second permissive shape beside the list,
+  or `optional(',')` between items, were reverted: they split
+  multi-token parameters and flipped template arguments to identifiers.
+
+- **Commas are loose atoms inside the blocks themselves**: the
+  `_in_*_list_item` content is `repeat(choice(item, ','))`, so a `,`
+  never demands a following item before `#endif`. Earlier per-item
+  `optional(',')` edges and strict separators committed the `,` to a
+  required continuation and produced `MISSING identifier`.
+
+- **Inherited from `sloplint-c-base.patch`**: comments inside a
+  `\`-continued `#define`/`#undef`/`#call` resume `preproc_arg` (the
+  `value`/`argument` field is `repeat(choice($.preproc_arg,
+  $.comment))`), and `macro_argument_list` accepts real expressions
+  (`$.pointer_expression`, `$.unary_expression`, `$.sizeof_expression`),
+  assignment/suffix operators, `[`/`]`, and nested
+  `$.macro_argument_list`.
 
 - **Access-modifier macros** (`JSON_PRIVATE_UNLESS_TESTED:`-style names
   in `private:`/`protected:` position) parse as `macro_access_label` in

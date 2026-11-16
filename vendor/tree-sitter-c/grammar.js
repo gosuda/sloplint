@@ -55,7 +55,11 @@ module.exports = grammar({
     [$._linkage_guard, $.preproc_if],
     [$._declaration_modifiers, $.type_specifier],
     [$._linkage_guard, $.preproc_ifdef],
-    [$._parameter_list_item, $._old_style_parameter_list],
+    [$._initializer_list_item],
+    [$._parameter_list_real, $._old_style_parameter_list],
+    [$._parameter_list_item],
+    [$.expression, $.concatenated_string],
+    [$.macro_argument_list, $.type_specifier, $.expression, $.macro_type_specifier],
     [$.attributed_declarator, $.parameter_declaration],
     [$.parameter_declaration],
     [$.macro_qualifier, $.type_specifier, $.sized_type_specifier],
@@ -192,7 +196,7 @@ module.exports = grammar({
     preproc_def: $ => seq(
       preprocessor('define'),
       field('name', $.identifier),
-      field('value', optional($.preproc_arg)),
+      field('value', repeat(choice($.preproc_arg, $.comment))),
       token.immediate(/\r?\n/),
     ),
 
@@ -200,7 +204,10 @@ module.exports = grammar({
       preprocessor('define'),
       field('name', $.identifier),
       field('parameters', $.preproc_params),
-      field('value', optional($.preproc_arg)),
+      // A block comment inside the \-continued body splits preproc_arg
+      // into pieces; let each piece be a value so the directive resumes
+      // after the comment instead of ending it.
+      field('value', repeat(choice($.preproc_arg, $.comment))),
       token.immediate(/\r?\n/),
     ),
 
@@ -212,7 +219,7 @@ module.exports = grammar({
 
     preproc_call: $ => seq(
       field('directive', $.preproc_directive),
-      field('argument', optional($.preproc_arg)),
+      field('argument', repeat(choice($.preproc_arg, $.comment))),
       token.immediate(/\r?\n/),
     ),
 
@@ -220,9 +227,19 @@ module.exports = grammar({
     ...preprocIf('_in_field_declaration_list', $ => $._field_declaration_list_item),
     ...preprocIf('_in_enumerator_list', $ => seq($.enumerator, ',')),
     ...preprocIf('_in_enumerator_list_no_comma', $ => $.enumerator, -1),
-    ...preprocIf('_in_parameter_list', $ => seq(
-      optional(','),
-      choice($.parameter_declaration, $.variadic_parameter),
+    // Inside a conditional-compilation block the comma is a loose atom:
+    // `f(a #ifdef X , b #endif c)` splits the separator into the block, so
+    // a `,` can appear at any position without an item following it.
+    ...preprocIf('_in_parameter_list', $ => choice(
+      $.parameter_declaration,
+      $.variadic_parameter,
+      ',',
+    )),
+    ...preprocIf('_in_initializer_list', $ => choice(
+      $.initializer_pair,
+      $.expression,
+      $.initializer_list,
+      ',',
     )),
 
     preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
@@ -442,6 +459,9 @@ module.exports = grammar({
         $.primitive_type,
         $.sized_type_specifier,
         $.number_literal,
+        $.pointer_expression,
+        $.unary_expression,
+        $.sizeof_expression,
         $.string_literal,
         $.char_literal,
         ',',
@@ -469,7 +489,19 @@ module.exports = grammar({
         '<=',
         '>=',
         '||',
+        '^',
+        '<<=',
+        '>>=',
+        '%=',
+        '&=',
+        '|=',
+        '^=',
+        '++',
+        '--',
+        '[',
+        ']',
         'const',
+        $.macro_argument_list,
       )),
       ')',
     ),
@@ -1038,18 +1070,26 @@ module.exports = grammar({
 
     variadic_parameter: _ => '...',
 
-    // `f(int a #ifdef X , int b #endif , int c)`: preprocessor blocks
-    // inside the list are items of their own because a directive line
-    // cannot sit inside a commaSep comma. A block may also attach to the
-    // parameter before it (no comma between them). Commas stay strict.
-    _parameter_list_item: $ => choice(
+    // `f(int a #ifdef X , int b #endif , int c)` and
+    // `f(int a, #ifdef X int b, #endif int c)`: the separator comma may
+    // hide inside an adjacent preproc block, so a real item may follow a
+    // block comma-free. Between real items commas stay strict.
+    _parameter_list_real: $ => choice(
       $.parameter_declaration,
       $.variadic_parameter,
+    ),
+
+    _parameter_list_item: $ => choice(
+      $._parameter_list_real,
       seq(
-        choice($.parameter_declaration, $.variadic_parameter),
+        $._parameter_list_real,
         repeat1($._parameter_list_preproc),
+        optional(seq(optional(','), $._parameter_list_real)),
       ),
-      $._parameter_list_preproc,
+      seq(
+        repeat1($._parameter_list_preproc),
+        optional(seq(optional(','), $._parameter_list_real)),
+      ),
     ),
 
     _parameter_list_preproc: $ => choice(
@@ -1060,10 +1100,7 @@ module.exports = grammar({
     parameter_list: $ => seq(
       '(',
       choice(
-        optional(seq(
-          repeat($._parameter_list_preproc),
-          commaSep1($._parameter_list_item),
-        )),
+        optional(commaSep1($._parameter_list_item)),
         $.compound_statement,
       ),
       ')',
@@ -1561,14 +1598,37 @@ module.exports = grammar({
       ')',
     ),
 
+    // `{a, #ifdef X ,b #endif ,c}` and `{a, #ifdef X b, #endif c}`:
+    // the separator comma may hide inside an adjacent preproc block, so a
+    // real item may follow a block comma-free.
+    _initializer_list_real: $ => choice(
+      $.initializer_pair,
+      $.expression,
+      $.initializer_list,
+      $.preproc_call,
+    ),
+
+    _initializer_list_item: $ => choice(
+      $._initializer_list_real,
+      seq(
+        $._initializer_list_real,
+        repeat1($._initializer_list_preproc),
+        optional(seq(optional(','), $._initializer_list_real)),
+      ),
+      seq(
+        repeat1($._initializer_list_preproc),
+        optional(seq(optional(','), $._initializer_list_real)),
+      ),
+    ),
+
+    _initializer_list_preproc: $ => choice(
+      alias($.preproc_if_in_initializer_list, $.preproc_if),
+      alias($.preproc_ifdef_in_initializer_list, $.preproc_ifdef),
+    ),
+
     initializer_list: $ => seq(
       '{',
-      commaSep(choice(
-        $.initializer_pair,
-        $.expression,
-        $.initializer_list,
-        $.preproc_call,
-      )),
+      optional(commaSep1($._initializer_list_item)),
       optional(','),
       '}',
     ),

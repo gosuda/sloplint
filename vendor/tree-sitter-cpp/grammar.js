@@ -112,7 +112,6 @@ module.exports = grammar(C, {
     [$.template_function, $.template_type, $.qualified_identifier],
     [$.template_type, $.qualified_type_identifier],
     [$.qualified_type_identifier, $.qualified_identifier],
-    [$.comma_expression, $.initializer_list],
     [$.expression, $._declarator],
     [$.expression, $.structured_binding_declarator],
     [$.expression, $._declarator, $.type_specifier],
@@ -190,6 +189,22 @@ module.exports = grammar(C, {
     [$.attributed_declarator, $.parameter_declaration],
     [$._function_attributes_start, $._function_attributes_end],
     [$.template_type, $.template_method],
+    [$.expression, $.concatenated_string],
+    [$._string, $.concatenated_string],
+    [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list],
+    [$.preproc_else, $.preproc_else_in_initializer_list],
+    [$.macro_declaration, $.expression, $._class_name],
+    [$.macro_qualifier, $.macro_declaration, $.expression],
+    [$.macro_declaration, $.expression, $.concatenated_string],
+    [$.preproc_ifdef_in_initializer_list, $.comma_expression],
+    [$.preproc_if, $.preproc_if_in_initializer_list],
+    [$.preproc_else_in_initializer_list, $.comma_expression],
+    [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list],
+    [$.preproc_elif, $.preproc_elif_in_initializer_list],
+    [$._initializer_list_item],
+    [$._parameter_list_item],
+    [$._field_initializer_list_item],
+    [$.comma_expression, $._initializer_list_real],
     [$.template_type],
   ],
 
@@ -516,26 +531,28 @@ module.exports = grammar(C, {
       ),
     ),
 
-    // `#ifdef`-conditional parameters (`f(int a #ifdef X , int b
-    // #endif , int c)`): preprocessor blocks inside the list are items of
-    // their own because a directive line cannot sit inside a commaSep
-    // comma. A block may also attach to the parameter before it (no comma
-    // between them). Commas stay strict.
-    _parameter_list_item: $ => choice(
+    // `f(int a #ifdef X , int b #endif , int c)` and
+    // `f(int a, #ifdef X int b, #endif int c)`: the separator comma may
+    // hide inside an adjacent preproc block, so a real item may follow a
+    // block comma-free. Between real items commas stay strict.
+    _parameter_list_real: $ => choice(
       $.parameter_declaration,
       $.optional_parameter_declaration,
       $.variadic_parameter_declaration,
       '...',
+    ),
+
+    _parameter_list_item: $ => choice(
+      $._parameter_list_real,
       seq(
-        choice(
-          $.parameter_declaration,
-          $.optional_parameter_declaration,
-          $.variadic_parameter_declaration,
-          '...',
-        ),
+        $._parameter_list_real,
         repeat1($._parameter_list_preproc),
+        optional(seq(optional(','), $._parameter_list_real)),
       ),
-      $._parameter_list_preproc,
+      seq(
+        repeat1($._parameter_list_preproc),
+        optional(seq(optional(','), $._parameter_list_real)),
+      ),
     ),
 
     _parameter_list_preproc: $ => choice(
@@ -545,10 +562,7 @@ module.exports = grammar(C, {
 
     parameter_list: $ => seq(
       '(',
-      optional(seq(
-        repeat($._parameter_list_preproc),
-        commaSep1($._parameter_list_item),
-      )),
+      optional(commaSep1($._parameter_list_item)),
       ')',
     ),
 
@@ -615,9 +629,31 @@ module.exports = grammar(C, {
     //   A b {};
     compound_statement: (_, original) => prec(-1, original),
 
+    // `: a(a), b(b) #ifdef X ,c(c) #endif` and
+    // `: a(a), #ifdef X c(c), #endif d(d)`: the separator comma may hide
+    // inside an adjacent preproc block, so a member may follow a block
+    // comma-free.
+    _field_initializer_list_item: $ => choice(
+      $.field_initializer,
+      seq(
+        $.field_initializer,
+        repeat1($._field_initializer_list_preproc),
+        optional(seq(optional(','), $.field_initializer)),
+      ),
+      seq(
+        repeat1($._field_initializer_list_preproc),
+        optional(seq(optional(','), $.field_initializer)),
+      ),
+    ),
+
+    _field_initializer_list_preproc: $ => choice(
+      alias($.preproc_if_in_field_initializer_list, $.preproc_if),
+      alias($.preproc_ifdef_in_field_initializer_list, $.preproc_ifdef),
+    ),
+
     field_initializer_list: $ => seq(
       ':',
-      commaSep1($.field_initializer),
+      optional(commaSep1($._field_initializer_list_item)),
     ),
 
     field_initializer: $ => prec(1, seq(
@@ -862,6 +898,9 @@ module.exports = grammar(C, {
         $.template_type,
         $.qualified_identifier,
         $.number_literal,
+        $.pointer_expression,
+        $.unary_expression,
+        $.sizeof_expression,
         $.string_literal,
         $.char_literal,
         ',',
@@ -895,6 +934,8 @@ module.exports = grammar(C, {
         '>>=',
         '->*',
         '.*',
+        '[',
+        ']',
         'operator',
         'const',
         'noexcept',
@@ -1397,14 +1438,14 @@ module.exports = grammar(C, {
       ')',
     ),
 
-    _in_parameter_list_item: $ => seq(
-      optional(','),
-      choice(
-        $.parameter_declaration,
-        $.optional_parameter_declaration,
-        $.variadic_parameter_declaration,
-        '...',
-      ),
+    // Loose commas inside a parameter-list block: the separator may be
+    // split into the block (`f(a #ifdef X , b #endif c)`).
+    _in_parameter_list_item: $ => choice(
+      $.parameter_declaration,
+      $.optional_parameter_declaration,
+      $.variadic_parameter_declaration,
+      '...',
+      ',',
     ),
 
     preproc_if_in_parameter_list: $ => seq(
@@ -1463,6 +1504,70 @@ module.exports = grammar(C, {
         alias($.preproc_else_in_parameter_list, $.preproc_else),
         alias($.preproc_elif_in_parameter_list, $.preproc_elif),
         alias($.preproc_elifdef_in_parameter_list, $.preproc_elifdef),
+      ))),
+    ),
+
+    _in_field_initializer_list_item: $ => choice(
+      $.field_initializer,
+      ',',
+    ),
+
+    preproc_if_in_field_initializer_list: $ => seq(
+      alias(token(/#[ \t]*if/), '#if'),
+      field('condition', $._preproc_expression),
+      '\n',
+      repeat($._in_field_initializer_list_item),
+      field('alternative', optional(choice(
+        alias($.preproc_else_in_field_initializer_list, $.preproc_else),
+        alias($.preproc_elif_in_field_initializer_list, $.preproc_elif),
+        alias($.preproc_elifdef_in_field_initializer_list, $.preproc_elifdef),
+      ))),
+      alias(token(/#[ \t]*endif/), '#endif'),
+    ),
+
+    preproc_ifdef_in_field_initializer_list: $ => seq(
+      choice(
+        alias(token(/#[ \t]*ifdef/), '#ifdef'),
+        alias(token(/#[ \t]*ifndef/), '#ifndef'),
+      ),
+      field('name', $.identifier),
+      repeat($._in_field_initializer_list_item),
+      field('alternative', optional(choice(
+        alias($.preproc_else_in_field_initializer_list, $.preproc_else),
+        alias($.preproc_elif_in_field_initializer_list, $.preproc_elif),
+        alias($.preproc_elifdef_in_field_initializer_list, $.preproc_elifdef),
+      ))),
+      alias(token(/#[ \t]*endif/), '#endif'),
+    ),
+
+    preproc_else_in_field_initializer_list: $ => seq(
+      alias(token(/#[ \t]*else/), '#else'),
+      repeat($._in_field_initializer_list_item),
+    ),
+
+    preproc_elif_in_field_initializer_list: $ => seq(
+      alias(token(/#[ \t]*elif/), '#elif'),
+      field('condition', $._preproc_expression),
+      '\n',
+      repeat($._in_field_initializer_list_item),
+      field('alternative', optional(choice(
+        alias($.preproc_else_in_field_initializer_list, $.preproc_else),
+        alias($.preproc_elif_in_field_initializer_list, $.preproc_elif),
+        alias($.preproc_elifdef_in_field_initializer_list, $.preproc_elifdef),
+      ))),
+    ),
+
+    preproc_elifdef_in_field_initializer_list: $ => seq(
+      choice(
+        alias(token(/#[ \t]*elifdef/), '#elifdef'),
+        alias(token(/#[ \t]*elifndef/), '#elifndef'),
+      ),
+      field('name', $.identifier),
+      repeat($._in_field_initializer_list_item),
+      field('alternative', optional(choice(
+        alias($.preproc_else_in_field_initializer_list, $.preproc_else),
+        alias($.preproc_elif_in_field_initializer_list, $.preproc_elif),
+        alias($.preproc_elifdef_in_field_initializer_list, $.preproc_elifdef),
       ))),
     ),
 

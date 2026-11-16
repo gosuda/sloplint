@@ -253,12 +253,31 @@ the size growth.
   single-instruction form `__asm int 3` (no braces) is not covered —
   the token soup cannot see newlines to bound the instruction.
 
-- **`#ifdef` blocks splitting a `parameter_list`** (`f(int a #ifdef X ,
-  int b #endif , int c)` — nghttp2-style conditional signatures) parse
-  via `preproc_ifdef_in_parameter_list`/`preproc_if_in_parameter_list`
-  (from `preprocIf('_in_parameter_list', ...)`) whose items each carry an
-  optional leading comma, so a block may sit between parameters without
-  a comma before the directive. Blocks are either standalone items in
-  the list or attached to the preceding parameter; commas between real
-  parameters stay strict, which keeps the template-argument ambiguity
+- **Preproc blocks splitting comma lists** (`parameter_list` and
+  `initializer_list`) model each list item as
+  `choice(real, real·blocks·[real], blocks·[real])` inside `commaSep1`,
+  where a real item may follow a block comma-free because the separator
+  comma often hides inside the block. Between two real items commas
+  stay strict, which keeps the template-argument ambiguity
   (`T<A, U<B>, C>`) resolving on type-argument.
+
+- **Commas are loose atoms inside the blocks themselves**
+  (`#ifdef X , y #endif` in a list): the `preprocIf('_in_*_list', ...)`
+  content is `repeat(choice(item, ','))`, so a `,` never demands a
+  following item. Earlier shapes — per-item `optional(',')` edges and
+  strict `seq(',', item)` separators — both committed the `,` to a
+  required continuation on `#endif` and produced `MISSING identifier`
+  or wrapped the block in `ERROR`. Making `,` a permissive atom is
+  unambiguous at LR(1).
+
+- **Comments inside a `\`-continued `#define`/`#undef`/`#call` line**
+  resume `preproc_arg` after the comment: the `value`/`argument` field
+  is `repeat(choice($.preproc_arg, $.comment))` on `preproc_def`,
+  `preproc_function_def`, and `preproc_call`.
+
+- **`macro_argument_list` token soup** also accepts real expression
+  rules (`$.pointer_expression`, `$.unary_expression`,
+  `$.sizeof_expression`), the assignment/suffix operators `^=`, `<<=`,
+  `>>=`, `%=`, `&=`, `|=`, `++`, `--`, `[`, `]`, and nested
+  `$.macro_argument_list` — otherwise `*x`-shaped first arguments
+  compete with the expression reading and land in `ERROR`.

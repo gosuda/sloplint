@@ -2923,10 +2923,18 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "field_initializer",
+          "named": true
+        },
+        {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         }
       ]
@@ -4105,6 +4113,14 @@
         {
           "type": "initializer_pair",
           "named": true
+        },
+        {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
         }
       ]
     }
@@ -4378,6 +4394,10 @@
           "named": true
         },
         {
+          "type": "pointer_expression",
+          "named": true
+        },
+        {
           "type": "primitive_type",
           "named": true
         },
@@ -4390,11 +4410,19 @@
           "named": true
         },
         {
+          "type": "sizeof_expression",
+          "named": true
+        },
+        {
           "type": "string_literal",
           "named": true
         },
         {
           "type": "template_type",
+          "named": true
+        },
+        {
+          "type": "unary_expression",
           "named": true
         }
       ]
@@ -5319,9 +5347,13 @@
     "named": true,
     "fields": {
       "argument": {
-        "multiple": false,
+        "multiple": true,
         "required": false,
         "types": [
+          {
+            "type": "comment",
+            "named": true
+          },
           {
             "type": "preproc_arg",
             "named": true
@@ -5355,9 +5387,13 @@
         ]
       },
       "value": {
-        "multiple": false,
+        "multiple": true,
         "required": false,
         "types": [
+          {
+            "type": "comment",
+            "named": true
+          },
           {
             "type": "preproc_arg",
             "named": true
@@ -5467,7 +5503,15 @@
           "named": true
         },
         {
+          "type": "expression",
+          "named": true
+        },
+        {
           "type": "field_declaration",
+          "named": true
+        },
+        {
+          "type": "field_initializer",
           "named": true
         },
         {
@@ -5480,6 +5524,14 @@
         },
         {
           "type": "guarded_linkage",
+          "named": true
+        },
+        {
+          "type": "initializer_list",
+          "named": true
+        },
+        {
+          "type": "initializer_pair",
           "named": true
         },
         {
@@ -5627,7 +5679,15 @@
           "named": true
         },
         {
+          "type": "expression",
+          "named": true
+        },
+        {
           "type": "field_declaration",
+          "named": true
+        },
+        {
+          "type": "field_initializer",
           "named": true
         },
         {
@@ -5640,6 +5700,14 @@
         },
         {
           "type": "guarded_linkage",
+          "named": true
+        },
+        {
+          "type": "initializer_list",
+          "named": true
+        },
+        {
+          "type": "initializer_pair",
           "named": true
         },
         {
@@ -5758,7 +5826,15 @@
           "named": true
         },
         {
+          "type": "expression",
+          "named": true
+        },
+        {
           "type": "field_declaration",
+          "named": true
+        },
+        {
+          "type": "field_initializer",
           "named": true
         },
         {
@@ -5771,6 +5847,14 @@
         },
         {
           "type": "guarded_linkage",
+          "named": true
+        },
+        {
+          "type": "initializer_list",
+          "named": true
+        },
+        {
+          "type": "initializer_pair",
           "named": true
         },
         {
@@ -5885,9 +5969,13 @@
         ]
       },
       "value": {
-        "multiple": false,
+        "multiple": true,
         "required": false,
         "types": [
+          {
+            "type": "comment",
+            "named": true
+          },
           {
             "type": "preproc_arg",
             "named": true
@@ -5982,7 +6070,15 @@
           "named": true
         },
         {
+          "type": "expression",
+          "named": true
+        },
+        {
           "type": "field_declaration",
+          "named": true
+        },
+        {
+          "type": "field_initializer",
           "named": true
         },
         {
@@ -5995,6 +6091,14 @@
         },
         {
           "type": "guarded_linkage",
+          "named": true
+        },
+        {
+          "type": "initializer_list",
+          "named": true
+        },
+        {
+          "type": "initializer_pair",
           "named": true
         },
         {
@@ -6142,7 +6246,15 @@
           "named": true
         },
         {
+          "type": "expression",
+          "named": true
+        },
+        {
           "type": "field_declaration",
+          "named": true
+        },
+        {
+          "type": "field_initializer",
           "named": true
         },
         {
@@ -6155,6 +6267,14 @@
         },
         {
           "type": "guarded_linkage",
+          "named": true
+        },
+        {
+          "type": "initializer_list",
+          "named": true
+        },
+        {
+          "type": "initializer_pair",
           "named": true
         },
         {
