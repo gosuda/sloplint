@@ -559,7 +559,7 @@ void f() {
     (function_declarator
       (identifier)
       (parameter_list))
-        (compound_statement
+    (compound_statement
       (ms_asm_statement
         (ms_asm_block
           (identifier)
@@ -569,3 +569,43 @@ void f() {
           (identifier)
           (number_literal)
           (identifier))))))
+
+================================================================================
+Qt SIGNAL/SLOT signature macros
+================================================================================
+
+void g() {
+  connect(w, SIGNAL(sendData(const char*,int)), this, SLOT(recvData(int)));
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier)
+            (call_expression
+              (qt_signature_call
+                (qt_signature
+                  (identifier)
+                  (qt_signature_type
+                    (type_qualifier)
+                    (primitive_type)
+                    (abstract_pointer_declarator))
+                  (qt_signature_type
+                    (primitive_type)))))
+            (this)
+            (call_expression
+              (qt_signature_call
+                (qt_signature
+                  (identifier)
+                  (qt_signature_type
+                    (primitive_type)))))))))))

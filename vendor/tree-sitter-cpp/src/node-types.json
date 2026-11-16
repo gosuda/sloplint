@@ -1237,7 +1237,7 @@
     "fields": {
       "arguments": {
         "multiple": false,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "argument_list",
@@ -1247,7 +1247,7 @@
       },
       "function": {
         "multiple": false,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "dependent_type",
@@ -1263,6 +1263,16 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "qt_signature_call",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -6295,6 +6305,118 @@
     "fields": {}
   },
   {
+    "type": "qt_signature",
+    "named": true,
+    "fields": {
+      "argument": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "qt_signature_type",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "qualified_identifier",
+            "named": true
+          },
+          {
+            "type": "template_function",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "qt_signature_call",
+    "named": true,
+    "fields": {
+      "function": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "SIGNAL",
+            "named": false
+          },
+          {
+            "type": "SLOT",
+            "named": false
+          }
+        ]
+      },
+      "signature": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "qt_signature",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "qt_signature_type",
+    "named": true,
+    "fields": {
+      "declarator": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "_abstract_declarator",
+            "named": true
+          },
+          {
+            "type": "_declarator",
+            "named": true
+          }
+        ]
+      },
+      "type": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "type_specifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "ms_pointer_modifier",
+          "named": true
+        },
+        {
+          "type": "ms_unaligned_ptr_modifier",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "qt_statement_macro",
     "named": true,
     "fields": {
@@ -8770,6 +8892,14 @@
   },
   {
     "type": "SDLCALL",
+    "named": false
+  },
+  {
+    "type": "SIGNAL",
+    "named": false
+  },
+  {
+    "type": "SLOT",
     "named": false
   },
   {

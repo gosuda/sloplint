@@ -177,6 +177,7 @@ module.exports = grammar(C, {
     [$.macro_qualifier, $._type_declarator],
     [$.macro_qualifier, $._field_declarator],
     [$._abstract_declarator, $.optional_parameter_declaration],
+    [$.ms_pointer_modifier, $.qt_signature_type],
     [$.template_type],
   ],
 
@@ -1329,6 +1330,30 @@ module.exports = grammar(C, {
         field('function', $.dependent_type),
         field('arguments', $.argument_list),
       ),
+      $.qt_signature_call,
+    ),
+
+    // Qt string-based connect macros take a signal/slot signature whose
+    // arguments are bare types: SIGNAL(sendData(const char*,int)). The
+    // signature is not a call expression, so it gets its own rule.
+    qt_signature_call: $ => seq(
+      field('function', choice('SIGNAL', 'SLOT')),
+      '(',
+      field('signature', $.qt_signature),
+      ')',
+    ),
+
+    qt_signature: $ => seq(
+      field('name', choice($.identifier, $.qualified_identifier, $.template_function)),
+      '(',
+      optional(commaSep1(field('argument', $.qt_signature_type))),
+      ')',
+    ),
+
+    qt_signature_type: $ => seq(
+      repeat(choice($.type_qualifier, $.ms_unaligned_ptr_modifier, $.ms_pointer_modifier)),
+      field('type', $.type_specifier),
+      optional(field('declarator', choice($._declarator, $._abstract_declarator))),
     ),
 
     co_await_expression: $ => prec.left(PREC.UNARY, seq(

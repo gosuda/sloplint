@@ -314,3 +314,11 @@ enumeration of `macro_attribute` costs most of the size growth.
   statement-level `ms_asm_statement` → `ms_asm_block` token soup (no
   trailing `;`). See `../tree-sitter-c/SLOPLINT.md` for the rule shape
   and the `__asm int 3` single-instruction known gap.
+
+- **Qt `SIGNAL(...)`/`SLOT(...)` string-based connect macros** parse as
+  `qt_signature_call` (a `call_expression` alternative): inside them a
+  `qt_signature` is `name(type, type, ...)` where each
+  `qt_signature_type` is a specifier plus optional declarator, so
+  bare-type arguments like `const char*` or `int` (not valid
+  expressions) parse. Both `SIGNAL`/`SLOT` names are literal tokens,
+  same trade-off as `qt_statement_macro` literals.
