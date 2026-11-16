@@ -1,0 +1,352 @@
+==========================================
+Qt object macro in class body
+==========================================
+
+class Foo : public QObject
+{
+Q_OBJECT
+public:
+    void bar();
+};
+
+---
+
+(translation_unit
+  (class_specifier
+    name: (type_identifier)
+    (base_class_clause
+      (access_specifier)
+      (type_identifier))
+    body: (field_declaration_list
+      (macro_declaration)
+      (access_specifier)
+      (field_declaration
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list))))))
+
+==========================================
+Qt signals and slots section labels
+==========================================
+
+class Foo : public QObject
+{
+Q_OBJECT
+signals:
+    void ready();
+public slots:
+    void onReady();
+private Q_SLOTS:
+    void helper();
+Q_SIGNALS:
+    void done(int code);
+};
+
+---
+
+(translation_unit
+  (class_specifier
+    name: (type_identifier)
+    (base_class_clause
+      (access_specifier)
+      (type_identifier))
+    body: (field_declaration_list
+      (macro_declaration)
+      (qt_section_label)
+      (field_declaration
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list)))
+      (access_specifier)
+      (qt_section_label)
+      (field_declaration
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list)))
+      (access_specifier)
+      (qt_section_label)
+      (field_declaration
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list)))
+      (qt_section_label)
+      (field_declaration
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list
+            (parameter_declaration
+              type: (primitive_type)
+              declarator: (identifier))))))))
+
+==========================================
+Qt declaration modifiers on member functions
+==========================================
+
+class Foo : public QObject
+{
+    Q_INVOKABLE int answer();
+    Q_SIGNAL void sig();
+    Q_SLOT void slot();
+    Q_REVISION(2) void rev();
+    Q_REQUIRED_RESULT int status();
+};
+
+---
+
+(translation_unit
+  (class_specifier
+    name: (type_identifier)
+    (base_class_clause
+      (access_specifier)
+      (type_identifier))
+    body: (field_declaration_list
+      (field_declaration
+        (macro_attribute)
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list)))
+      (field_declaration
+        (macro_attribute)
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list)))
+      (field_declaration
+        (macro_attribute)
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list)))
+      (field_declaration
+        (macro_attribute
+          (argument_list
+            (number_literal)))
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list)))
+      (field_declaration
+        (macro_attribute)
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list))))))
+
+==========================================
+Qt emit statements in function body
+==========================================
+
+void Foo::run()
+{
+    emit ready();
+    Q_EMIT done(42);
+    emit model->changed(a, b);
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (qualified_identifier
+        scope: (namespace_identifier)
+        name: (identifier))
+      parameters: (parameter_list))
+    body: (compound_statement
+      (emit_statement
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list))))
+      (emit_statement
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (argument_list
+              (number_literal)))))
+      (emit_statement
+        (expression_statement
+          (call_expression
+            function: (field_expression
+              argument: (identifier)
+              field: (field_identifier))
+            arguments: (argument_list
+              (identifier)
+              (identifier))))))))
+
+==========================================
+Qt namespace macros at top level
+==========================================
+
+QT_BEGIN_NAMESPACE
+
+class Foo {};
+
+QT_END_NAMESPACE
+
+---
+
+(translation_unit
+  (macro_declaration)
+  (class_specifier
+    name: (type_identifier)
+    body: (field_declaration_list))
+  (macro_declaration))
+
+==========================================
+Unreal generated body macro
+==========================================
+
+class AThing
+{
+GENERATED_BODY()
+public:
+    int x;
+};
+
+---
+
+(translation_unit
+  (class_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (macro_declaration
+        (argument_list))
+      (access_specifier)
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier)))))
+
+==========================================
+slots and signals as member names
+==========================================
+
+class Foo
+{
+    int slots;
+    int signals;
+};
+
+---
+
+(translation_unit
+  (class_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier))
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier)))))
+
+================================================================================
+Qt function-like declaration macros
+================================================================================
+
+class Counter : public QObject {
+  Q_OBJECT
+  Q_PROPERTY(int value READ value WRITE setValue NOTIFY valueChanged)
+  Q_ENUMS(Priority)
+  Q_DECLARE_METATYPE(Counter)
+
+public:
+  int value() const;
+  void setValue(int v);
+};
+
+Q_GLOBAL_STATIC(Counter, globalCounter)
+Q_COREAPP_STARTUP_FUNC(initCounter)
+
+---
+
+(translation_unit
+  (class_specifier
+    (type_identifier)
+    (base_class_clause
+      (access_specifier)
+      (type_identifier))
+    (field_declaration_list
+      (macro_declaration)
+      (macro_declaration
+        (macro_argument_list
+          (primitive_type)
+          (identifier)
+          (identifier)
+          (identifier)
+          (identifier)
+          (identifier)
+          (identifier)
+          (identifier)))
+      (macro_declaration
+        (macro_argument_list
+          (identifier)))
+      (macro_declaration
+        (macro_argument_list
+          (identifier)))
+      (access_specifier)
+      (field_declaration
+        (primitive_type)
+        (function_declarator
+          (field_identifier)
+          (parameter_list)
+          (type_qualifier)))
+      (field_declaration
+        (primitive_type)
+        (function_declarator
+          (field_identifier)
+          (parameter_list
+            (parameter_declaration
+              (primitive_type)
+              (identifier)))))))
+  (macro_declaration
+    (macro_argument_list
+      (identifier)
+      (identifier)))
+  (macro_declaration
+    (argument_list
+      (identifier))))
+
+================================================================================
+Q_PLUGIN_METADATA and flag macros
+================================================================================
+
+class Plugin : public QObject {
+  Q_OBJECT
+  Q_PLUGIN_METADATA(IID "org.example.Plugin" FILE "plugin.json")
+  Q_INTERFACES(PluginInterface)
+  Q_DISABLE_COPY_MOVE(Plugin)
+};
+
+---
+
+(translation_unit
+  (class_specifier
+    (type_identifier)
+    (base_class_clause
+      (access_specifier)
+      (type_identifier))
+    (field_declaration_list
+      (macro_declaration)
+      (macro_declaration
+        (argument_list
+          (concatenated_string
+            (identifier)
+            (string_literal
+              (string_content))
+            (identifier)
+            (string_literal
+              (string_content)))))
+      (macro_declaration
+        (macro_argument_list
+          (identifier)))
+      (macro_declaration
+        (macro_argument_list
+          (identifier))))))

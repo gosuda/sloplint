@@ -128,6 +128,10 @@
           },
           "named": true,
           "value": "declaration"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_declaration"
         }
       ]
     },
@@ -3285,424 +3289,527 @@
       "type": "CHOICE",
       "members": [
         {
-          "type": "STRING",
-          "value": "WINAPI"
-        },
-        {
-          "type": "STRING",
-          "value": "WINAPIV"
-        },
-        {
-          "type": "STRING",
-          "value": "CALLBACK"
-        },
-        {
-          "type": "STRING",
-          "value": "APIENTRY"
-        },
-        {
-          "type": "STRING",
-          "value": "NTAPI"
-        },
-        {
-          "type": "STRING",
-          "value": "PASCAL"
-        },
-        {
-          "type": "STRING",
-          "value": "STDCALL"
-        },
-        {
-          "type": "STRING",
-          "value": "CDECL"
-        },
-        {
-          "type": "STRING",
-          "value": "FASTCALL"
-        },
-        {
-          "type": "STRING",
-          "value": "JNICALL"
-        },
-        {
-          "type": "STRING",
-          "value": "WINBASEAPI"
-        },
-        {
-          "type": "STRING",
-          "value": "WINADVAPI"
-        },
-        {
-          "type": "STRING",
-          "value": "STDAPICALLTYPE"
-        },
-        {
-          "type": "STRING",
-          "value": "STDAPI"
-        },
-        {
-          "type": "STRING",
-          "value": "RPC_ENTRY"
-        },
-        {
-          "type": "STRING",
-          "value": "APIPRIVATE"
-        },
-        {
-          "type": "STRING",
-          "value": "APIPUBLIC"
-        },
-        {
-          "type": "STRING",
-          "value": "__RPC_API"
-        },
-        {
-          "type": "STRING",
-          "value": "__RPC_STUB"
-        },
-        {
-          "type": "STRING",
-          "value": "__RPC_USER"
-        },
-        {
-          "type": "STRING",
-          "value": "__IO"
-        },
-        {
-          "type": "STRING",
-          "value": "__I"
-        },
-        {
-          "type": "STRING",
-          "value": "__O"
-        },
-        {
-          "type": "STRING",
-          "value": "__IM"
-        },
-        {
-          "type": "STRING",
-          "value": "__OM"
-        },
-        {
-          "type": "STRING",
-          "value": "__IOM"
-        },
-        {
-          "type": "STRING",
-          "value": "__ASM"
-        },
-        {
-          "type": "STRING",
-          "value": "__INLINE"
-        },
-        {
-          "type": "STRING",
-          "value": "__STATIC_INLINE"
-        },
-        {
-          "type": "STRING",
-          "value": "__STATIC_FORCEINLINE"
-        },
-        {
-          "type": "STRING",
-          "value": "__WEAK"
-        },
-        {
-          "type": "STRING",
-          "value": "__IRQ"
-        },
-        {
-          "type": "STRING",
-          "value": "__PACKED"
-        },
-        {
-          "type": "STRING",
-          "value": "__NO_RETURN"
-        },
-        {
-          "type": "STRING",
-          "value": "__ALIGNED"
-        },
-        {
-          "type": "STRING",
-          "value": "__COMPILER_BARRIER"
-        },
-        {
-          "type": "STRING",
-          "value": "__PROGRAM_START"
-        },
-        {
-          "type": "STRING",
-          "value": "__VECTOR_TABLE"
-        },
-        {
-          "type": "STRING",
-          "value": "__user"
-        },
-        {
-          "type": "STRING",
-          "value": "__kernel"
-        },
-        {
-          "type": "STRING",
-          "value": "__iomem"
-        },
-        {
-          "type": "STRING",
-          "value": "__maybe_unused"
-        },
-        {
-          "type": "STRING",
-          "value": "__always_inline"
-        },
-        {
-          "type": "STRING",
-          "value": "__must_check"
-        },
-        {
-          "type": "STRING",
-          "value": "__init"
-        },
-        {
-          "type": "STRING",
-          "value": "__exit"
-        },
-        {
-          "type": "STRING",
-          "value": "__weak"
-        },
-        {
-          "type": "STRING",
-          "value": "__section"
-        },
-        {
-          "type": "STRING",
-          "value": "__rcu"
-        },
-        {
-          "type": "STRING",
-          "value": "__percpu"
-        },
-        {
-          "type": "STRING",
-          "value": "__bitwise"
-        },
-        {
-          "type": "STRING",
-          "value": "__force"
-        },
-        {
-          "type": "STRING",
-          "value": "__nocast"
-        },
-        {
-          "type": "STRING",
-          "value": "__acquires"
-        },
-        {
-          "type": "STRING",
-          "value": "__releases"
-        },
-        {
-          "type": "STRING",
-          "value": "__initdata"
-        },
-        {
-          "type": "STRING",
-          "value": "__ref"
-        },
-        {
-          "type": "STRING",
-          "value": "__refdata"
-        },
-        {
-          "type": "STRING",
-          "value": "__read_mostly"
-        },
-        {
-          "type": "STRING",
-          "value": "__ro_after_init"
-        },
-        {
-          "type": "STRING",
-          "value": "__latent_entropy"
-        },
-        {
-          "type": "STRING",
-          "value": "__cold"
-        },
-        {
-          "type": "STRING",
-          "value": "__noreturn"
-        },
-        {
-          "type": "STRING",
-          "value": "__unused"
-        },
-        {
-          "type": "STRING",
-          "value": "__used"
-        },
-        {
-          "type": "STRING",
-          "value": "__alias"
-        },
-        {
-          "type": "STRING",
-          "value": "__deprecated"
-        },
-        {
-          "type": "STRING",
-          "value": "__nonstring"
-        },
-        {
-          "type": "STRING",
-          "value": "__counted_by"
-        },
-        {
-          "type": "STRING",
-          "value": "__printf"
-        },
-        {
-          "type": "STRING",
-          "value": "__scanf"
-        },
-        {
-          "type": "STRING",
-          "value": "__visible"
-        },
-        {
-          "type": "STRING",
-          "value": "__initconst"
-        },
-        {
-          "type": "STRING",
-          "value": "__exitconst"
-        },
-        {
-          "type": "STRING",
-          "value": "__init_or_module"
-        },
-        {
-          "type": "STRING",
-          "value": "__randomize_layout"
-        },
-        {
-          "type": "STRING",
-          "value": "__no_randomize_layout"
-        },
-        {
-          "type": "STRING",
-          "value": "__THROW"
-        },
-        {
-          "type": "STRING",
-          "value": "__THROWNL"
-        },
-        {
-          "type": "STRING",
-          "value": "__LEAF"
-        },
-        {
-          "type": "STRING",
-          "value": "__LEAF_ATTR"
-        },
-        {
-          "type": "STRING",
-          "value": "__wur"
-        },
-        {
-          "type": "STRING",
-          "value": "__attribute_pure__"
-        },
-        {
-          "type": "STRING",
-          "value": "__attribute_const__"
-        },
-        {
-          "type": "STRING",
-          "value": "__attribute_malloc__"
-        },
-        {
-          "type": "STRING",
-          "value": "__attribute_alloc_size__"
-        },
-        {
-          "type": "STRING",
-          "value": "__attribute_deprecated__"
-        },
-        {
-          "type": "STRING",
-          "value": "__attribute_warn_unused_result__"
-        },
-        {
-          "type": "STRING",
-          "value": "__nonnull"
-        },
-        {
-          "type": "STRING",
-          "value": "__attribute_format_arg__"
-        },
-        {
-          "type": "STRING",
-          "value": "__attribute_format_strfmon__"
-        },
-        {
-          "type": "STRING",
-          "value": "__attribute_artificial__"
-        },
-        {
-          "type": "STRING",
-          "value": "__glibc_unlikely"
-        },
-        {
-          "type": "STRING",
-          "value": "__glibc_likely"
-        },
-        {
-          "type": "STRING",
-          "value": "VKAPI_ATTR"
-        },
-        {
-          "type": "STRING",
-          "value": "VKAPI_CALL"
-        },
-        {
-          "type": "STRING",
-          "value": "SDLCALL"
-        },
-        {
-          "type": "STRING",
-          "value": "NAPI_CDECL"
-        },
-        {
-          "type": "STRING",
-          "value": "STRINGZILLA_API"
-        },
-        {
-          "type": "STRING",
-          "value": "STRINGZILLA_INLINE"
-        },
-        {
-          "type": "STRING",
-          "value": "STRINGZILLA_CONSTEXPR"
-        },
-        {
-          "type": "STRING",
-          "value": "DOCKS_EXPORT"
-        },
-        {
-          "type": "STRING",
-          "value": "SQLITECPP_API"
-        },
-        {
-          "type": "STRING",
-          "value": "PCAP_API"
-        },
-        {
-          "type": "STRING",
-          "value": "WUFFS_MIMIC"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "WINAPI"
+            },
+            {
+              "type": "STRING",
+              "value": "WINAPIV"
+            },
+            {
+              "type": "STRING",
+              "value": "CALLBACK"
+            },
+            {
+              "type": "STRING",
+              "value": "APIENTRY"
+            },
+            {
+              "type": "STRING",
+              "value": "NTAPI"
+            },
+            {
+              "type": "STRING",
+              "value": "PASCAL"
+            },
+            {
+              "type": "STRING",
+              "value": "STDCALL"
+            },
+            {
+              "type": "STRING",
+              "value": "CDECL"
+            },
+            {
+              "type": "STRING",
+              "value": "FASTCALL"
+            },
+            {
+              "type": "STRING",
+              "value": "JNICALL"
+            },
+            {
+              "type": "STRING",
+              "value": "WINBASEAPI"
+            },
+            {
+              "type": "STRING",
+              "value": "WINADVAPI"
+            },
+            {
+              "type": "STRING",
+              "value": "STDAPICALLTYPE"
+            },
+            {
+              "type": "STRING",
+              "value": "STDAPI"
+            },
+            {
+              "type": "STRING",
+              "value": "RPC_ENTRY"
+            },
+            {
+              "type": "STRING",
+              "value": "APIPRIVATE"
+            },
+            {
+              "type": "STRING",
+              "value": "APIPUBLIC"
+            },
+            {
+              "type": "STRING",
+              "value": "__RPC_API"
+            },
+            {
+              "type": "STRING",
+              "value": "__RPC_STUB"
+            },
+            {
+              "type": "STRING",
+              "value": "__RPC_USER"
+            },
+            {
+              "type": "STRING",
+              "value": "__IO"
+            },
+            {
+              "type": "STRING",
+              "value": "__I"
+            },
+            {
+              "type": "STRING",
+              "value": "__O"
+            },
+            {
+              "type": "STRING",
+              "value": "__IM"
+            },
+            {
+              "type": "STRING",
+              "value": "__OM"
+            },
+            {
+              "type": "STRING",
+              "value": "__IOM"
+            },
+            {
+              "type": "STRING",
+              "value": "__ASM"
+            },
+            {
+              "type": "STRING",
+              "value": "__INLINE"
+            },
+            {
+              "type": "STRING",
+              "value": "__STATIC_INLINE"
+            },
+            {
+              "type": "STRING",
+              "value": "__STATIC_FORCEINLINE"
+            },
+            {
+              "type": "STRING",
+              "value": "__WEAK"
+            },
+            {
+              "type": "STRING",
+              "value": "__IRQ"
+            },
+            {
+              "type": "STRING",
+              "value": "__PACKED"
+            },
+            {
+              "type": "STRING",
+              "value": "__NO_RETURN"
+            },
+            {
+              "type": "STRING",
+              "value": "__ALIGNED"
+            },
+            {
+              "type": "STRING",
+              "value": "__COMPILER_BARRIER"
+            },
+            {
+              "type": "STRING",
+              "value": "__PROGRAM_START"
+            },
+            {
+              "type": "STRING",
+              "value": "__VECTOR_TABLE"
+            },
+            {
+              "type": "STRING",
+              "value": "__user"
+            },
+            {
+              "type": "STRING",
+              "value": "__kernel"
+            },
+            {
+              "type": "STRING",
+              "value": "__iomem"
+            },
+            {
+              "type": "STRING",
+              "value": "__maybe_unused"
+            },
+            {
+              "type": "STRING",
+              "value": "__always_inline"
+            },
+            {
+              "type": "STRING",
+              "value": "__must_check"
+            },
+            {
+              "type": "STRING",
+              "value": "__init"
+            },
+            {
+              "type": "STRING",
+              "value": "__exit"
+            },
+            {
+              "type": "STRING",
+              "value": "__weak"
+            },
+            {
+              "type": "STRING",
+              "value": "__section"
+            },
+            {
+              "type": "STRING",
+              "value": "__rcu"
+            },
+            {
+              "type": "STRING",
+              "value": "__percpu"
+            },
+            {
+              "type": "STRING",
+              "value": "__bitwise"
+            },
+            {
+              "type": "STRING",
+              "value": "__force"
+            },
+            {
+              "type": "STRING",
+              "value": "__nocast"
+            },
+            {
+              "type": "STRING",
+              "value": "__acquires"
+            },
+            {
+              "type": "STRING",
+              "value": "__releases"
+            },
+            {
+              "type": "STRING",
+              "value": "__initdata"
+            },
+            {
+              "type": "STRING",
+              "value": "__ref"
+            },
+            {
+              "type": "STRING",
+              "value": "__refdata"
+            },
+            {
+              "type": "STRING",
+              "value": "__read_mostly"
+            },
+            {
+              "type": "STRING",
+              "value": "__ro_after_init"
+            },
+            {
+              "type": "STRING",
+              "value": "__latent_entropy"
+            },
+            {
+              "type": "STRING",
+              "value": "__cold"
+            },
+            {
+              "type": "STRING",
+              "value": "__noreturn"
+            },
+            {
+              "type": "STRING",
+              "value": "__unused"
+            },
+            {
+              "type": "STRING",
+              "value": "__used"
+            },
+            {
+              "type": "STRING",
+              "value": "__alias"
+            },
+            {
+              "type": "STRING",
+              "value": "__deprecated"
+            },
+            {
+              "type": "STRING",
+              "value": "__nonstring"
+            },
+            {
+              "type": "STRING",
+              "value": "__counted_by"
+            },
+            {
+              "type": "STRING",
+              "value": "__printf"
+            },
+            {
+              "type": "STRING",
+              "value": "__scanf"
+            },
+            {
+              "type": "STRING",
+              "value": "__visible"
+            },
+            {
+              "type": "STRING",
+              "value": "__initconst"
+            },
+            {
+              "type": "STRING",
+              "value": "__exitconst"
+            },
+            {
+              "type": "STRING",
+              "value": "__init_or_module"
+            },
+            {
+              "type": "STRING",
+              "value": "__randomize_layout"
+            },
+            {
+              "type": "STRING",
+              "value": "__no_randomize_layout"
+            },
+            {
+              "type": "STRING",
+              "value": "__THROW"
+            },
+            {
+              "type": "STRING",
+              "value": "__THROWNL"
+            },
+            {
+              "type": "STRING",
+              "value": "__LEAF"
+            },
+            {
+              "type": "STRING",
+              "value": "__LEAF_ATTR"
+            },
+            {
+              "type": "STRING",
+              "value": "__wur"
+            },
+            {
+              "type": "STRING",
+              "value": "__attribute_pure__"
+            },
+            {
+              "type": "STRING",
+              "value": "__attribute_const__"
+            },
+            {
+              "type": "STRING",
+              "value": "__attribute_malloc__"
+            },
+            {
+              "type": "STRING",
+              "value": "__attribute_alloc_size__"
+            },
+            {
+              "type": "STRING",
+              "value": "__attribute_deprecated__"
+            },
+            {
+              "type": "STRING",
+              "value": "__attribute_warn_unused_result__"
+            },
+            {
+              "type": "STRING",
+              "value": "__nonnull"
+            },
+            {
+              "type": "STRING",
+              "value": "__attribute_format_arg__"
+            },
+            {
+              "type": "STRING",
+              "value": "__attribute_format_strfmon__"
+            },
+            {
+              "type": "STRING",
+              "value": "__attribute_artificial__"
+            },
+            {
+              "type": "STRING",
+              "value": "__glibc_unlikely"
+            },
+            {
+              "type": "STRING",
+              "value": "__glibc_likely"
+            },
+            {
+              "type": "STRING",
+              "value": "VKAPI_ATTR"
+            },
+            {
+              "type": "STRING",
+              "value": "VKAPI_CALL"
+            },
+            {
+              "type": "STRING",
+              "value": "SDLCALL"
+            },
+            {
+              "type": "STRING",
+              "value": "NAPI_CDECL"
+            },
+            {
+              "type": "STRING",
+              "value": "STRINGZILLA_API"
+            },
+            {
+              "type": "STRING",
+              "value": "STRINGZILLA_INLINE"
+            },
+            {
+              "type": "STRING",
+              "value": "STRINGZILLA_CONSTEXPR"
+            },
+            {
+              "type": "STRING",
+              "value": "DOCKS_EXPORT"
+            },
+            {
+              "type": "STRING",
+              "value": "SQLITECPP_API"
+            },
+            {
+              "type": "STRING",
+              "value": "PCAP_API"
+            },
+            {
+              "type": "STRING",
+              "value": "WUFFS_MIMIC"
+            }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": "Q_INVOKABLE"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_SIGNAL"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_SLOT"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_DECL_OVERRIDE"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_DECL_FINAL"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_DECL_CONSTEXPR"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_DECL_RELAXED_CONSTEXPR"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_DECL_DEPRECATED"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_DECL_NOTHROW"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_REQUIRED_RESULT"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_NORETURN"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_CONSTEXPR"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_ALWAYS_INLINE"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_NEVER_INLINE"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_PACKED"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_DECL_UNUSED"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_DECL_EXPORT"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_DECL_IMPORT"
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "Q_REVISION"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "argument_list"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "Q_DECL_DEPRECATED_X"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "argument_list"
+            }
+          ]
         }
       ]
     },
@@ -6314,6 +6421,31 @@
           ]
         },
         {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "access_specifier"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
+              "type": "SYMBOL",
+              "name": "qt_section_label"
+            },
+            {
+              "type": "STRING",
+              "value": ":"
+            }
+          ]
+        },
+        {
           "type": "SYMBOL",
           "name": "alias_declaration"
         },
@@ -6328,6 +6460,10 @@
         {
           "type": "SYMBOL",
           "name": "static_assert_declaration"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_declaration"
         },
         {
           "type": "STRING",
@@ -6970,6 +7106,10 @@
         {
           "type": "SYMBOL",
           "name": "throw_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "emit_statement"
         }
       ]
     },
@@ -11914,6 +12054,13 @@
         "type": "SEQ",
         "members": [
           {
+            "type": "REPEAT",
+            "content": {
+              "type": "SYMBOL",
+              "name": "macro_attribute"
+            }
+          },
+          {
             "type": "CHOICE",
             "members": [
               {
@@ -13511,6 +13658,393 @@
           "value": "protected"
         }
       ]
+    },
+    "qt_section_label": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "signals"
+        },
+        {
+          "type": "STRING",
+          "value": "slots"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_SIGNALS"
+        },
+        {
+          "type": "STRING",
+          "value": "Q_SLOTS"
+        }
+      ]
+    },
+    "macro_declaration": {
+      "type": "PREC_RIGHT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "Q_OBJECT"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_GADGET"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_NAMESPACE"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_ELEMENT"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_ANONYMOUS"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_SINGLETON"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_INTERFACE"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_UNAVAILABLE"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_STRUCTURED_VALUE"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_CONSTRUCTIBLE_VALUE"
+              },
+              {
+                "type": "STRING",
+                "value": "QT_BEGIN_NAMESPACE"
+              },
+              {
+                "type": "STRING",
+                "value": "QT_END_NAMESPACE"
+              },
+              {
+                "type": "STRING",
+                "value": "QT_BEGIN_INCLUDE_NAMESPACE"
+              },
+              {
+                "type": "STRING",
+                "value": "QT_END_INCLUDE_NAMESPACE"
+              },
+              {
+                "type": "STRING",
+                "value": "GENERATED_BODY"
+              },
+              {
+                "type": "STRING",
+                "value": "GENERATED_UCLASS_BODY"
+              },
+              {
+                "type": "STRING",
+                "value": "GENERATED_USTRUCT_BODY"
+              },
+              {
+                "type": "STRING",
+                "value": "GENERATED_UINTERFACE_BODY"
+              },
+              {
+                "type": "STRING",
+                "value": "GENERATED_IINTERFACE_BODY"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_PROPERTY"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_ENUM"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_ENUM_NS"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_FLAG"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_FLAG_NS"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_ENUMS"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_FLAGS"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_CLASSINFO"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_INTERFACES"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_PLUGIN_METADATA"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_DISABLE_COPY"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_DISABLE_MOVE"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_DISABLE_COPY_MOVE"
+              },
+              {
+                "type": "STRING",
+                "value": "QDOC_PROPERTY"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_GLOBAL_STATIC"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_GLOBAL_STATIC_WITH_ARGS"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_COREAPP_STARTUP_FUNC"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_IMPORT_PLUGIN"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_DECLARE_METATYPE"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_DECLARE_TYPEINFO"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_DECLARE_FLAGS"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_DECLARE_OPERATORS_FOR_FLAGS"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_DECLARE_INTERFACE"
+              },
+              {
+                "type": "STRING",
+                "value": "Q_DECLARE_TR_FUNCTIONS"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_NAMED_ELEMENT"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_ATTACHED"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_EXTENDED"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_FOREIGN"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_VALUE_TYPE"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_UNCREATABLE"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_ADDED_IN_VERSION"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_REMOVED_IN_VERSION"
+              },
+              {
+                "type": "STRING",
+                "value": "QML_FOREIGN_NAMESPACE"
+              }
+            ]
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "argument_list"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_argument_list"
+                  }
+                ]
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "macro_argument_list": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "identifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "primitive_type"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "sized_type_specifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "template_type"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "qualified_identifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "number_literal"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "string_literal"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "char_literal"
+              },
+              {
+                "type": "STRING",
+                "value": ","
+              },
+              {
+                "type": "STRING",
+                "value": "::"
+              },
+              {
+                "type": "STRING",
+                "value": "<"
+              },
+              {
+                "type": "STRING",
+                "value": ">"
+              },
+              {
+                "type": "STRING",
+                "value": "*"
+              },
+              {
+                "type": "STRING",
+                "value": "&"
+              },
+              {
+                "type": "STRING",
+                "value": "&&"
+              },
+              {
+                "type": "STRING",
+                "value": "|"
+              },
+              {
+                "type": "STRING",
+                "value": "const"
+              },
+              {
+                "type": "STRING",
+                "value": "noexcept"
+              }
+            ]
+          }
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "emit_statement": {
+      "type": "PREC",
+      "value": -1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "FIELD",
+            "name": "name",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "emit"
+                },
+                {
+                  "type": "STRING",
+                  "value": "Q_EMIT"
+                }
+              ]
+            }
+          },
+          {
+            "type": "SYMBOL",
+            "name": "expression_statement"
+          }
+        ]
+      }
     },
     "reference_declarator": {
       "type": "PREC_DYNAMIC",
@@ -17970,6 +18504,55 @@
     [
       "_declarator",
       "_init_pointer_declarator"
+    ],
+    [
+      "_declaration_modifiers",
+      "_declarator",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "_declaration_modifiers",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "_declaration_modifiers",
+      "_declarator",
+      "type_specifier"
+    ],
+    [
+      "_class_declaration_item",
+      "_class_name"
+    ],
+    [
+      "argument_list",
+      "macro_argument_list"
+    ],
+    [
+      "sized_type_specifier",
+      "macro_argument_list"
+    ],
+    [
+      "expression",
+      "macro_argument_list"
+    ],
+    [
+      "expression",
+      "macro_argument_list",
+      "template_type",
+      "template_function"
+    ],
+    [
+      "concatenated_string",
+      "macro_argument_list"
+    ],
+    [
+      "_string",
+      "macro_argument_list"
+    ],
+    [
+      "template_type"
     ]
   ],
   "precedences": [

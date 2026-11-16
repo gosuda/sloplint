@@ -104,6 +104,17 @@ module.exports = grammar(C, {
     [$._class_name, $.expression],
     [$._declarator, $._init_reference_declarator],
     [$._declarator, $._init_pointer_declarator],
+    [$._declaration_modifiers, $._declarator, $.type_specifier, $.expression],
+    [$._declaration_modifiers, $.type_specifier, $.expression],
+    [$._declaration_modifiers, $._declarator, $.type_specifier],
+    [$._class_declaration_item, $._class_name],
+    [$.argument_list, $.macro_argument_list],
+    [$.sized_type_specifier, $.macro_argument_list],
+    [$.expression, $.macro_argument_list],
+    [$.expression, $.macro_argument_list, $.template_type, $.template_function],
+    [$.concatenated_string, $.macro_argument_list],
+    [$._string, $.macro_argument_list],
+    [$.template_type],
   ],
 
   inline: ($, original) => original.concat([
@@ -129,6 +140,7 @@ module.exports = grammar(C, {
       alias($.constructor_or_destructor_definition, $.function_definition),
       alias($.operator_cast_definition, $.function_definition),
       alias($.operator_cast_declaration, $.declaration),
+      $.macro_declaration,
     ),
 
     _block_item: ($, original) => choice(
@@ -204,6 +216,9 @@ module.exports = grammar(C, {
       $._class_declaration_item,
     ),
     _class_declaration_item: $ => prec.right(seq(
+      // Export/annotation macros between `class`/`struct` and the name:
+      // `class DOCKS_EXPORT Foo`, `struct FOO_API Bar`.
+      repeat($.macro_attribute),
       choice(
         field('name', $._class_name),
         seq(
@@ -517,10 +532,12 @@ module.exports = grammar(C, {
       alias($.operator_cast_declaration, $.declaration),
       $.friend_declaration,
       seq($.access_specifier, ':'),
+      seq(optional($.access_specifier), $.qt_section_label, ':'),
       $.alias_declaration,
       $.using_declaration,
       $.type_definition,
       $.static_assert_declaration,
+      $.macro_declaration,
       ';',
     ),
 
@@ -630,6 +647,140 @@ module.exports = grammar(C, {
       'public',
       'private',
       'protected',
+    ),
+
+    // Qt section labels: `signals:`, `public slots:`, `Q_SIGNALS:`.
+    qt_section_label: _ => choice(
+      'signals',
+      'slots',
+      'Q_SIGNALS',
+      'Q_SLOTS',
+    ),
+
+    // A bare macro name that expands to declarations: Qt `Q_OBJECT`,
+    // `QT_BEGIN_NAMESPACE`, Unreal `GENERATED_BODY()`, Qt6 `QML_ELEMENT`.
+    // Literal list — a lone identifier is never a valid member or
+    // top-level item, but a regex would shadow real identifiers.
+    macro_declaration: $ => prec.right(seq(
+      choice(
+      'Q_OBJECT',
+      'Q_GADGET',
+      'Q_NAMESPACE',
+      'QML_ELEMENT',
+      'QML_ANONYMOUS',
+      'QML_SINGLETON',
+      'QML_INTERFACE',
+      'QML_UNAVAILABLE',
+      'QML_STRUCTURED_VALUE',
+      'QML_CONSTRUCTIBLE_VALUE',
+      'QT_BEGIN_NAMESPACE',
+      'QT_END_NAMESPACE',
+      'QT_BEGIN_INCLUDE_NAMESPACE',
+      'QT_END_INCLUDE_NAMESPACE',
+      'GENERATED_BODY',
+      'GENERATED_UCLASS_BODY',
+      'GENERATED_USTRUCT_BODY',
+      'GENERATED_UINTERFACE_BODY',
+      'GENERATED_IINTERFACE_BODY',
+      'Q_PROPERTY',
+      'Q_ENUM',
+      'Q_ENUM_NS',
+      'Q_FLAG',
+      'Q_FLAG_NS',
+      'Q_ENUMS',
+      'Q_FLAGS',
+      'Q_CLASSINFO',
+      'Q_INTERFACES',
+      'Q_PLUGIN_METADATA',
+      'Q_DISABLE_COPY',
+      'Q_DISABLE_MOVE',
+      'Q_DISABLE_COPY_MOVE',
+      'QDOC_PROPERTY',
+      'Q_GLOBAL_STATIC',
+      'Q_GLOBAL_STATIC_WITH_ARGS',
+      'Q_COREAPP_STARTUP_FUNC',
+      'Q_IMPORT_PLUGIN',
+      'Q_DECLARE_METATYPE',
+      'Q_DECLARE_TYPEINFO',
+      'Q_DECLARE_FLAGS',
+      'Q_DECLARE_OPERATORS_FOR_FLAGS',
+      'Q_DECLARE_INTERFACE',
+      'Q_DECLARE_TR_FUNCTIONS',
+      'QML_NAMED_ELEMENT',
+      'QML_ATTACHED',
+      'QML_EXTENDED',
+      'QML_FOREIGN',
+      'QML_VALUE_TYPE',
+      'QML_UNCREATABLE',
+      'QML_ADDED_IN_VERSION',
+      'QML_REMOVED_IN_VERSION',
+      'QML_FOREIGN_NAMESPACE',
+      ),
+      optional(choice($.argument_list, $.macro_argument_list)),
+    )),
+
+    // Macro arguments that are not expressions: `Q_PROPERTY(QString title
+    // READ title WRITE setTitle NOTIFY titleChanged)` mixes types, member
+    // names, and DSL keywords as bare words.
+    macro_argument_list: $ => seq(
+      '(',
+      repeat(choice(
+        $.identifier,
+        $.primitive_type,
+        $.sized_type_specifier,
+        $.template_type,
+        $.qualified_identifier,
+        $.number_literal,
+        $.string_literal,
+        $.char_literal,
+        ',',
+        '::',
+        '<',
+        '>',
+        '*',
+        '&',
+        '&&',
+        '|',
+        'const',
+        'noexcept',
+      )),
+      ')',
+    ),
+
+    // Qt `emit sig(...)` / `Q_EMIT sig(...)`: emit is a no-op marker macro.
+    // `emit` is a literal, so it is a keyword token: a statement that
+    // starts with an `emit` variable (`emit = 0;`) no longer parses —
+    // the same trade-off as macro_attribute's literals, and Qt reserves
+    // `emit` when keywords are enabled.
+    emit_statement: $ => prec(-1, seq(
+      field('name', choice('emit', 'Q_EMIT')),
+      $.expression_statement,
+    )),
+
+    macro_attribute: ($, original) => choice(
+      original,
+      // Qt declaration modifiers (moc-expanded): seen in class members and
+      // free declarations throughout Qt-based code.
+      'Q_INVOKABLE',
+      'Q_SIGNAL',
+      'Q_SLOT',
+      'Q_DECL_OVERRIDE',
+      'Q_DECL_FINAL',
+      'Q_DECL_CONSTEXPR',
+      'Q_DECL_RELAXED_CONSTEXPR',
+      'Q_DECL_DEPRECATED',
+      'Q_DECL_NOTHROW',
+      'Q_REQUIRED_RESULT',
+      'Q_NORETURN',
+      'Q_CONSTEXPR',
+      'Q_ALWAYS_INLINE',
+      'Q_NEVER_INLINE',
+      'Q_PACKED',
+      'Q_DECL_UNUSED',
+      'Q_DECL_EXPORT',
+      'Q_DECL_IMPORT',
+      seq('Q_REVISION', $.argument_list),
+      seq('Q_DECL_DEPRECATED_X', $.argument_list),
     ),
 
     _declarator: ($, original) => choice(
@@ -859,6 +1010,7 @@ module.exports = grammar(C, {
       $.for_range_loop,
       $.try_statement,
       $.throw_statement,
+      $.emit_statement,
     ),
 
     switch_statement: $ => seq(

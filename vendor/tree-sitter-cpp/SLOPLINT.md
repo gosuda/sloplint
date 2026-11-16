@@ -101,6 +101,51 @@ reproduced on real code. Every repro below was first accepted by
   input, so a regex token could never match an identifier subset; literals
   are the only mechanism. Trade-off: an identifier equal to a listed
   literal can no longer be a real type or declarator.
+- Qt and code-generation class, all literal enumerations for the same
+  `word`-token reason:
+  - `macro_declaration`: bare or call-shaped declaration-expanding macros
+    valid as a top-level item or a field-declaration-list item
+    (`Q_OBJECT`, `Q_GADGET`, `Q_NAMESPACE`, `QT_BEGIN_NAMESPACE`,
+    `GENERATED_BODY` and the Unreal body variants, `Q_PROPERTY`,
+    `Q_ENUM`/`Q_FLAG` and their `_NS` forms, `Q_ENUMS`/`Q_FLAGS`,
+    `Q_CLASSINFO`, `Q_INTERFACES`, `Q_PLUGIN_METADATA`,
+    `Q_DISABLE_COPY`/`Q_DISABLE_MOVE`/`Q_DISABLE_COPY_MOVE`,
+    `Q_GLOBAL_STATIC`(+`_WITH_ARGS`), `Q_COREAPP_STARTUP_FUNC`,
+    `Q_IMPORT_PLUGIN`, the `Q_DECLARE_*` family, and the `QML_*` macros
+    that expand to declarations). Optional arguments accept either a real
+    `argument_list` or the new `macro_argument_list` token soup, which
+    covers keyword-bag argument syntax like
+    `Q_PROPERTY(int value READ value WRITE setValue NOTIFY changed)`.
+  - `qt_section_label`: `signals`, `slots`, `Q_SIGNALS`, `Q_SLOTS`
+    followed by `:` inside a class body, with an optional preceding
+    `access_specifier`, covering `signals:`, `public slots:` and
+    `private Q_SLOTS:`.
+  - `emit_statement`: `emit` or `Q_EMIT` followed by an expression
+    statement inside a compound statement, at `prec(-1)` so it is only a
+    rescue. `emit` is a documented Qt-reserved word; as with every listed
+    literal, an identifier spelled `emit` can no longer be an expression.
+  - The Qt member-function modifiers (`Q_INVOKABLE`, `Q_SIGNAL`,
+    `Q_SLOT`, `Q_REQUIRED_RESULT`, `Q_NORETURN`, `Q_CONSTEXPR`,
+    `Q_ALWAYS_INLINE`, `Q_NEVER_INLINE`, `Q_PACKED`, `Q_DECL_EXPORT`,
+    `Q_DECL_IMPORT`, `Q_DECL_OVERRIDE`, `Q_DECL_FINAL`,
+    `Q_DECL_CONSTEXPR`, `Q_DECL_RELAXED_CONSTEXPR`, `Q_DECL_DEPRECATED`,
+    `Q_DECL_NOTHROW`, `Q_DECL_UNUSED`, plus argument forms
+    `Q_REVISION(n)` and `Q_DECL_DEPRECATED_X(x)`) join `macro_attribute`.
+  - `_class_declaration_item` accepts `repeat($.macro_attribute)` before
+    the class name, so `class WINBASEAPI Foo` and similar exported-class
+    declarations parse.
+  - Deliberately not handled: project-local export macros
+    (`DOCKS_EXPORT`, `MYLIB_API`) and other unknown bare identifiers in
+    specifier position. A generic `$.identifier` alternative was tried
+    and reverted: even at `prec(-1)` it steals real declarator and class
+    names once ambiguity conflicts are declared, and the needed conflicts
+    with inlined `_declarator` cannot be declared at all. Those files
+    still error and are handled by the sloplint excision pass.
+- New conflicts for the Qt rules: `_declaration_modifiers` with
+  `_declarator`/`type_specifier`/`expression`, `_class_declaration_item`
+  with `_class_name`, `argument_list`/`sized_type_specifier`/
+  `expression`/`concatenated_string`/`_string`/`template_type` with
+  `macro_argument_list`, and `template_type` alone.
 
 ## Constructs verified fixed
 
@@ -128,6 +173,15 @@ clang++ with `-std=c++23`.
 - `__IO uint32_t ISER[1];`, `__STATIC_INLINE int clip(int x) {...}`,
   `VKAPI_ATTR VkBool32 VKAPI_CALL cb(void *);`, `int WINAPI wWinMain(...);`,
   `NAPI_CDECL f(int);`, `CALLBACK int handler(void);`
+- `class Counter : public QObject { Q_OBJECT ... };` with
+  `Q_PROPERTY(int v READ v WRITE setV NOTIFY changed)`, `Q_ENUMS(P)`,
+  `Q_DECLARE_METATYPE(T)` members; `signals:`/`public slots:`/
+  `private Q_SLOTS:` sections; `Q_INVOKABLE`/`Q_REVISION(2)`/
+  `Q_REQUIRED_RESULT` member modifiers; `emit sig(x);`/`Q_EMIT done();`;
+  `QT_BEGIN_NAMESPACE`/`QT_END_NAMESPACE` at top level;
+  `GENERATED_BODY()`, `Q_GLOBAL_STATIC(T, x)`, `Q_COREAPP_STARTUP_FUNC(f)`,
+  `Q_PLUGIN_METADATA(IID "x" FILE "y")`, `Q_INTERFACES(I)`,
+  `Q_DISABLE_COPY_MOVE(C)`.
 
 ## Constructs known still failing
 
@@ -145,10 +199,10 @@ parens steers it to an initialized declaration.
   `parser.c`, `scanner.c`, `grammar.json`, `node-types.json` all match), so
   the tag corpus result is the published result.
 - After the patch: 179 of 179 upstream cases pass.
-- New cases in `test/corpus/sloplint_*.txt`: 25 cases (21 repros,
-  4 controls). The published parser fails 21 of the 25 sources and passes
-  the 4 controls. The patched grammar passes all 25.
-- Total with the patch: 204 of 204.
+- New cases in `test/corpus/sloplint_*.txt`: 34 cases (30 repros,
+  4 controls). The published parser fails 30 of the 34 sources and passes
+  the 4 controls. The patched grammar passes all 34.
+- Total with the patch: 213 of 213.
 
 ## Sweep result
 
