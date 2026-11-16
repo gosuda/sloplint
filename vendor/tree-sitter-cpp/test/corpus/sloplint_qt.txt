@@ -194,11 +194,10 @@ QT_END_NAMESPACE
 ---
 
 (translation_unit
-  (macro_declaration)
-  (class_specifier
-    name: (type_identifier)
-    body: (field_declaration_list))
-  (macro_declaration))
+  (macro_namespace
+    (class_specifier
+      name: (type_identifier)
+      body: (field_declaration_list))))
 
 ==========================================
 Unreal generated body macro

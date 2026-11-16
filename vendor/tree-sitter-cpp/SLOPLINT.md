@@ -255,6 +255,17 @@ reproduced on real code. Every repro below was first accepted by
   alternate, not a specifier variant: `macro_type_specifier` inside
   `_declaration_specifiers` regressed `= delete`/`= default` methods
   to MISSING identifiers when tried.
+- `_macro_declaration_top` allows a bare identifier with no argument
+  list and no `;` (at `prec.dynamic(-1)` so a real declaration still
+  wins): namespace sentinels like `NLOHMANN_JSON_NAMESPACE_END` used to
+  become an unterminated `expression_statement` that swallowed the
+  following preproc block into ERRORs.
+- `macro_namespace` pairs `NLOHMANN_JSON_NAMESPACE_BEGIN`/`END`,
+  `QT_BEGIN/END_NAMESPACE`, `ABSL_NAMESPACE_BEGIN`/`END`,
+  `PROTOBUF_NAMESPACE_OPEN`/`CLOSE` and `GTEST_NAMESPACE_BEGIN`/`END`
+  at top level (dynamic +10), so the phantom-open braces inside these
+  macros stop producing MISSING `}` errors on every real close brace
+  downstream.
 - New conflicts for the Qt rules and the generic fallbacks:
   `argument_list`/`sized_type_specifier`/`expression`/
   `concatenated_string`/`_string`/`template_type`/`template_function`
@@ -339,11 +350,12 @@ parens steers it to an initialized declaration.
   and 4 controls. The published parser fails those 32 repros and passes
   the 4 controls.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 12 files, 68 cases, all passing with the patch
-  (`tree-sitter test` reports 68/68). The latest additions cover the
-  Win32 SDK cluster: typedef qualifier macros, function-pointer typedefs
+  corpus is not vendored): 13 files, 70 cases, all passing with the patch
+  (`tree-sitter test` reports 70/70). The latest additions cover the
+  Win32 SDK cluster (typedef qualifier macros, function-pointer typedefs
   with SAL-annotated parameters, MIDL brackets, declaratorless typedefs
-  inside `#if`, and `#ifdef`-guarded constructs.
+  inside `#if`, `#ifdef`-guarded constructs), bare macro sentinels before
+  preproc blocks, and `NS_BEGIN`/`NS_END` namespace-macro pairs.
 
 ## Sweep result
 

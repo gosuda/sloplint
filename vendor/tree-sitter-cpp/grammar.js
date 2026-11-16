@@ -285,6 +285,17 @@ module.exports = grammar(C, {
     [$.type_specifier, $.call_expression, $._argument_list_type],
     [$._typedef_macro_qualifier, $.type_specifier],
     [$._typedef_macro_qualifier, $.type_specifier, $.sized_type_specifier],
+    [$.macro_qualifier, $._macro_declaration_top, $.type_specifier],
+    [$._macro_declaration_top, $.expression],
+    [$._macro_declaration_top, $.type_specifier],
+    [$._macro_declaration_top, $._declarator, $.type_specifier, $.expression],
+    [$._macro_declaration_top, $._class_name],
+    [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier],
+    [$.macro_qualifier, $._macro_declaration_top, $.type_specifier, $.expression],
+    [$._macro_declaration_top, $.expression, $._class_name],
+    [$.macro_qualifier, $._macro_declaration_top, $.expression],
+    [$._macro_declaration_top, $.expression, $.concatenated_string],
+    [$.macro_namespace, $._macro_declaration_literals],
   ],
 
   inline: ($, original) => original.concat([
@@ -315,6 +326,7 @@ module.exports = grammar(C, {
       // fragments into `macro_declaration(NAME)` plus a
       // `parenthesized_expression(args)` statement (MISSING `;`).
       alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
+      $.macro_namespace,
     ),
 
     _block_item: ($, original) => choice(
@@ -974,12 +986,40 @@ module.exports = grammar(C, {
       // No dynamic precedence here: the alias wrappers at the
       // `_top_level_item`/`_block_item` use sites supply dynamic(-2), and
       // an inner dynamic score would compete with it unpredictably.
-      seq(
+      // The identifier may stand alone: namespace-macro sentinels like
+      // `NLOHMANN_JSON_NAMESPACE_END` carry no argument list and no `;`.
+      // Without this arm the bare name becomes an unterminated
+      // expression_statement that swallows the following preproc block.
+      // The extra dynamic(-1) keeps `ASIO_DECL int f()` on the
+      // declaration side — a bare qualifier identifier must lose to
+      // macro_qualifier + declaration whenever that fork exists.
+      prec.dynamic(-1, seq(
         $.identifier,
-        choice(
-          seq($.macro_argument_list, optional(';')),
-          ';',
-        ),
+        optional($.macro_argument_list),
+        optional(';'),
+      )),
+    )),
+
+    // `NS_BEGIN_MACRO ... NS_END_MACRO` pairs — the nlohmann/abseil/Qt
+    // idiom where a namespace's braces hide inside two macros. Without
+    // this rule the phantom-open brace leaves `}` MISSING errors at
+    // every real close-brace downstream. Names are literal because the
+    // END marker is what makes the pair safe to swallow.
+    macro_namespace: $ => prec.dynamic(10, seq(
+      choice(
+        'NLOHMANN_JSON_NAMESPACE_BEGIN',
+        'QT_BEGIN_NAMESPACE',
+        'ABSL_NAMESPACE_BEGIN',
+        'PROTOBUF_NAMESPACE_OPEN',
+        'GTEST_NAMESPACE_BEGIN',
+      ),
+      repeat($._top_level_item),
+      choice(
+        'NLOHMANN_JSON_NAMESPACE_END',
+        'QT_END_NAMESPACE',
+        'ABSL_NAMESPACE_END',
+        'PROTOBUF_NAMESPACE_CLOSE',
+        'GTEST_NAMESPACE_END',
       ),
     )),
 

@@ -55,7 +55,7 @@
      [$._declaration_specifiers, $._constructor_specifiers],
      [$._binary_fold_operator, $._fold_operator],
      [$._function_declarator_seq],
-@@ -94,6 +126,165 @@
+@@ -94,6 +126,176 @@
      [$.init_statement, $._for_statement_body],
      [$.field_expression, $.template_method, $.template_type],
      [$.qualified_field_identifier, $.template_method, $.template_type],
@@ -218,10 +218,21 @@
 +    [$.type_specifier, $.call_expression, $._argument_list_type],
 +    [$._typedef_macro_qualifier, $.type_specifier],
 +    [$._typedef_macro_qualifier, $.type_specifier, $.sized_type_specifier],
++    [$.macro_qualifier, $._macro_declaration_top, $.type_specifier],
++    [$._macro_declaration_top, $.expression],
++    [$._macro_declaration_top, $.type_specifier],
++    [$._macro_declaration_top, $._declarator, $.type_specifier, $.expression],
++    [$._macro_declaration_top, $._class_name],
++    [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier],
++    [$.macro_qualifier, $._macro_declaration_top, $.type_specifier, $.expression],
++    [$._macro_declaration_top, $.expression, $._class_name],
++    [$.macro_qualifier, $._macro_declaration_top, $.expression],
++    [$._macro_declaration_top, $.expression, $.concatenated_string],
++    [$.macro_namespace, $._macro_declaration_literals],
    ],
  
    inline: ($, original) => original.concat([
-@@ -119,6 +310,11 @@
+@@ -119,6 +321,12 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -230,10 +241,11 @@
 +      // fragments into `macro_declaration(NAME)` plus a
 +      // `parenthesized_expression(args)` statement (MISSING `;`).
 +      alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
++      $.macro_namespace,
      ),
  
      _block_item: ($, original) => choice(
-@@ -134,6 +330,23 @@
+@@ -134,6 +342,23 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -257,7 +269,7 @@
      ),
  
      // Types
-@@ -168,14 +381,27 @@
+@@ -168,14 +393,27 @@
        $.dependent_type,
        $.placeholder_type_specifier,
        $.decltype,
@@ -287,7 +299,7 @@
        'mutable',
        'constinit',
        'consteval',
-@@ -193,6 +419,11 @@
+@@ -193,6 +431,11 @@
        $._class_declaration_item,
      ),
      _class_declaration_item: $ => prec.right(seq(
@@ -299,7 +311,7 @@
        choice(
          field('name', $._class_name),
          seq(
-@@ -226,12 +457,16 @@
+@@ -226,12 +469,16 @@
        alias($.qualified_type_identifier, $.qualified_identifier),
      )),
  
@@ -317,7 +329,7 @@
      }),
  
      declaration: $ => seq(
-@@ -240,8 +475,14 @@
+@@ -240,8 +487,14 @@
          seq(
            // C uses _declaration_declarator here for some nice macro parsing in function declarators,
            // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
@@ -332,7 +344,7 @@
          ),
          $.init_declarator,
        ))),
-@@ -284,14 +525,24 @@
+@@ -284,14 +537,24 @@
  
      enum_specifier: $ => prec.right(seq(
        'enum',
@@ -362,7 +374,7 @@
        ),
        optional($.attribute_specifier),
      )),
-@@ -339,9 +590,16 @@
+@@ -339,9 +602,16 @@
      ),
  
      template_instantiation: $ => seq(
@@ -381,7 +393,7 @@
        ';',
      ),
  
-@@ -387,22 +645,46 @@
+@@ -387,22 +657,46 @@
        ),
      ),
  
@@ -436,7 +448,7 @@
      ),
  
      variadic_parameter_declaration: $ => seq(
-@@ -432,6 +714,23 @@
+@@ -432,6 +726,23 @@
            $.initializer_list,
          )),
        ),
@@ -460,7 +472,7 @@
      ),
  
      operator_cast: $ => prec.right(1, seq(
-@@ -444,9 +743,31 @@
+@@ -444,9 +755,31 @@
      //   A b {};
      compound_statement: (_, original) => prec(-1, original),
  
@@ -493,7 +505,7 @@
      ),
  
      field_initializer: $ => prec(1, seq(
-@@ -469,22 +790,43 @@
+@@ -469,22 +802,43 @@
        alias($.operator_cast_declaration, $.declaration),
        $.friend_declaration,
        seq($.access_specifier, ':'),
@@ -544,7 +556,7 @@
        )),
        optional($.attribute_specifier),
        ';',
-@@ -493,6 +835,8 @@
+@@ -493,6 +847,8 @@
      inline_method_definition: $ => seq(
        $._declaration_specifiers,
        field('declarator', $._field_declarator),
@@ -553,7 +565,7 @@
        choice(
          field('body', choice($.compound_statement, $.try_statement)),
          $.default_method_clause,
-@@ -512,6 +856,7 @@
+@@ -512,6 +868,7 @@
          $.operator_cast,
          alias($.qualified_operator_cast_identifier, $.qualified_identifier),
        )),
@@ -561,7 +573,7 @@
        field('body', choice($.compound_statement, $.try_statement)),
      ),
  
-@@ -535,9 +880,11 @@
+@@ -535,9 +892,11 @@
      constructor_or_destructor_definition: $ => seq(
        repeat($._constructor_specifiers),
        field('declarator', $.function_declarator),
@@ -573,7 +585,7 @@
            field('body', $.compound_statement),
          ),
          alias($.constructor_try_statement, $.try_statement),
-@@ -580,6 +927,247 @@
+@@ -580,6 +939,275 @@
        'protected',
      ),
  
@@ -624,12 +636,40 @@
 +      // No dynamic precedence here: the alias wrappers at the
 +      // `_top_level_item`/`_block_item` use sites supply dynamic(-2), and
 +      // an inner dynamic score would compete with it unpredictably.
-+      seq(
++      // The identifier may stand alone: namespace-macro sentinels like
++      // `NLOHMANN_JSON_NAMESPACE_END` carry no argument list and no `;`.
++      // Without this arm the bare name becomes an unterminated
++      // expression_statement that swallows the following preproc block.
++      // The extra dynamic(-1) keeps `ASIO_DECL int f()` on the
++      // declaration side — a bare qualifier identifier must lose to
++      // macro_qualifier + declaration whenever that fork exists.
++      prec.dynamic(-1, seq(
 +        $.identifier,
-+        choice(
-+          seq($.macro_argument_list, optional(';')),
-+          ';',
-+        ),
++        optional($.macro_argument_list),
++        optional(';'),
++      )),
++    )),
++
++    // `NS_BEGIN_MACRO ... NS_END_MACRO` pairs — the nlohmann/abseil/Qt
++    // idiom where a namespace's braces hide inside two macros. Without
++    // this rule the phantom-open brace leaves `}` MISSING errors at
++    // every real close-brace downstream. Names are literal because the
++    // END marker is what makes the pair safe to swallow.
++    macro_namespace: $ => prec.dynamic(10, seq(
++      choice(
++        'NLOHMANN_JSON_NAMESPACE_BEGIN',
++        'QT_BEGIN_NAMESPACE',
++        'ABSL_NAMESPACE_BEGIN',
++        'PROTOBUF_NAMESPACE_OPEN',
++        'GTEST_NAMESPACE_BEGIN',
++      ),
++      repeat($._top_level_item),
++      choice(
++        'NLOHMANN_JSON_NAMESPACE_END',
++        'QT_END_NAMESPACE',
++        'ABSL_NAMESPACE_END',
++        'PROTOBUF_NAMESPACE_CLOSE',
++        'GTEST_NAMESPACE_END',
 +      ),
 +    )),
 +
@@ -821,7 +861,7 @@
      _declarator: ($, original) => choice(
        original,
        $.reference_declarator,
-@@ -647,7 +1235,7 @@
+@@ -647,7 +1275,7 @@
      )),
  
      _function_postfix: $ => prec.right(choice(
@@ -830,7 +870,7 @@
        $.requires_clause,
      )),
  
-@@ -807,6 +1395,9 @@
+@@ -807,6 +1435,9 @@
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
@@ -840,7 +880,7 @@
      ),
  
      switch_statement: $ => seq(
-@@ -828,6 +1419,15 @@
+@@ -828,6 +1459,15 @@
        field('consequence', $.statement),
        optional(field('alternative', $.else_clause)),
      )),
@@ -856,7 +896,7 @@
  
      // Using prec(1) instead of prec.dynamic(1) causes issues with the
      // range loop's declaration specifiers if `int` is passed in, it'll
-@@ -968,10 +1568,257 @@
+@@ -968,10 +1608,257 @@
        ']',
      ),
  
@@ -1118,7 +1158,7 @@
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1838,15 @@
+@@ -991,9 +1878,15 @@
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -1137,7 +1177,7 @@
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +1860,7 @@
+@@ -1007,7 +1900,7 @@
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -1146,7 +1186,7 @@
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +1868,7 @@
+@@ -1015,6 +1908,7 @@
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -1154,7 +1194,7 @@
        )),
      ),
  
-@@ -1215,13 +2069,66 @@
+@@ -1215,13 +2109,66 @@
              field('operator', operator),
              field('right', $.expression),
            ));
@@ -1223,7 +1263,7 @@
        ')',
      ),
  
-@@ -1230,7 +2137,7 @@
+@@ -1230,7 +2177,7 @@
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -1232,7 +1272,7 @@
          field('value', $.initializer_list),
        ),
      ),
-@@ -1256,6 +2163,7 @@
+@@ -1256,6 +2203,7 @@
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -1240,7 +1280,7 @@
        )),
      ),
  
-@@ -1296,10 +2204,20 @@
+@@ -1296,10 +2244,20 @@
        $.user_defined_literal,
      ),
  
@@ -1265,7 +1305,7 @@
      )),
  
      _assignment_expression_lhs: $ => seq(
-@@ -1342,11 +2260,44 @@
+@@ -1342,11 +2300,44 @@
  
      this: _ => 'this',
  

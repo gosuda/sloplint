@@ -4158,6 +4158,10 @@
           "named": true
         },
         {
+          "type": "macro_namespace",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -4722,6 +4726,181 @@
         },
         {
           "type": "macro_argument_list",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "macro_namespace",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "alias_declaration",
+          "named": true
+        },
+        {
+          "type": "attributed_statement",
+          "named": true
+        },
+        {
+          "type": "break_statement",
+          "named": true
+        },
+        {
+          "type": "case_statement",
+          "named": true
+        },
+        {
+          "type": "co_return_statement",
+          "named": true
+        },
+        {
+          "type": "co_yield_statement",
+          "named": true
+        },
+        {
+          "type": "compound_statement",
+          "named": true
+        },
+        {
+          "type": "concept_definition",
+          "named": true
+        },
+        {
+          "type": "continue_statement",
+          "named": true
+        },
+        {
+          "type": "declaration",
+          "named": true
+        },
+        {
+          "type": "do_statement",
+          "named": true
+        },
+        {
+          "type": "expression_statement",
+          "named": true
+        },
+        {
+          "type": "for_range_loop",
+          "named": true
+        },
+        {
+          "type": "for_statement",
+          "named": true
+        },
+        {
+          "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "goto_statement",
+          "named": true
+        },
+        {
+          "type": "guarded_linkage",
+          "named": true
+        },
+        {
+          "type": "if_statement",
+          "named": true
+        },
+        {
+          "type": "labeled_statement",
+          "named": true
+        },
+        {
+          "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_declaration",
+          "named": true
+        },
+        {
+          "type": "macro_namespace",
+          "named": true
+        },
+        {
+          "type": "namespace_alias_definition",
+          "named": true
+        },
+        {
+          "type": "namespace_definition",
+          "named": true
+        },
+        {
+          "type": "preproc_call",
+          "named": true
+        },
+        {
+          "type": "preproc_def",
+          "named": true
+        },
+        {
+          "type": "preproc_function_def",
+          "named": true
+        },
+        {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        },
+        {
+          "type": "preproc_include",
+          "named": true
+        },
+        {
+          "type": "return_statement",
+          "named": true
+        },
+        {
+          "type": "static_assert_declaration",
+          "named": true
+        },
+        {
+          "type": "switch_statement",
+          "named": true
+        },
+        {
+          "type": "template_declaration",
+          "named": true
+        },
+        {
+          "type": "template_instantiation",
+          "named": true
+        },
+        {
+          "type": "throw_statement",
+          "named": true
+        },
+        {
+          "type": "try_statement",
+          "named": true
+        },
+        {
+          "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_specifier",
+          "named": true
+        },
+        {
+          "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "while_statement",
           "named": true
         }
       ]
@@ -8251,6 +8430,10 @@
           "named": true
         },
         {
+          "type": "macro_namespace",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -9044,6 +9227,14 @@
     "named": false
   },
   {
+    "type": "ABSL_NAMESPACE_BEGIN",
+    "named": false
+  },
+  {
+    "type": "ABSL_NAMESPACE_END",
+    "named": false
+  },
+  {
     "type": "APIENTRY",
     "named": false
   },
@@ -9156,6 +9347,14 @@
     "named": false
   },
   {
+    "type": "GTEST_NAMESPACE_BEGIN",
+    "named": false
+  },
+  {
+    "type": "GTEST_NAMESPACE_END",
+    "named": false
+  },
+  {
     "type": "H_INLINE",
     "named": false
   },
@@ -9216,6 +9415,14 @@
     "named": false
   },
   {
+    "type": "NLOHMANN_JSON_NAMESPACE_BEGIN",
+    "named": false
+  },
+  {
+    "type": "NLOHMANN_JSON_NAMESPACE_END",
+    "named": false
+  },
+  {
     "type": "NOINLINE",
     "named": false
   },
@@ -9237,6 +9444,14 @@
   },
   {
     "type": "PCAP_API",
+    "named": false
+  },
+  {
+    "type": "PROTOBUF_NAMESPACE_CLOSE",
+    "named": false
+  },
+  {
+    "type": "PROTOBUF_NAMESPACE_OPEN",
     "named": false
   },
   {

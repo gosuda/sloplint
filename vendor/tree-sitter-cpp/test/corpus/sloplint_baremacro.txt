@@ -1,0 +1,66 @@
+================================================================================
+Bare namespace-macro sentinels before preproc blocks
+================================================================================
+
+NS_BEGIN
+namespace d {
+int x;
+}
+NS_END
+
+#if defined(X)
+    #undef X
+#endif
+#define X 1
+int z;
+
+---
+
+(translation_unit
+  (macro_declaration
+    (identifier))
+  (namespace_definition
+    name: (namespace_identifier)
+    body: (declaration_list
+      (declaration
+        type: (primitive_type)
+        declarator: (identifier))))
+  (macro_declaration
+    (identifier))
+  (preproc_if
+    condition: (preproc_defined
+      (identifier))
+    (preproc_call
+      directive: (preproc_directive)
+      argument: (preproc_arg)))
+  (preproc_def
+    name: (identifier)
+    value: (preproc_arg))
+  (declaration
+    type: (primitive_type)
+    declarator: (identifier)))
+
+================================================================================
+Namespace BEGIN/END macro pairs wrap their contents
+================================================================================
+
+NLOHMANN_JSON_NAMESPACE_BEGIN
+namespace detail {
+int x;
+}
+NLOHMANN_JSON_NAMESPACE_END
+int z;
+
+---
+
+(translation_unit
+  (macro_namespace
+    (namespace_definition
+      name: (namespace_identifier)
+      body: (declaration_list
+        (declaration
+          type: (primitive_type)
+          declarator: (identifier)))))
+  (declaration
+    type: (primitive_type)
+    declarator: (identifier)))

@@ -162,6 +162,10 @@
           },
           "named": true,
           "value": "macro_declaration"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_namespace"
         }
       ]
     },
@@ -6900,43 +6904,41 @@
             ]
           },
           {
-            "type": "SEQ",
-            "members": [
-              {
-                "type": "SYMBOL",
-                "name": "identifier"
-              },
-              {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "SEQ",
-                    "members": [
-                      {
-                        "type": "SYMBOL",
-                        "name": "macro_argument_list"
-                      },
-                      {
-                        "type": "CHOICE",
-                        "members": [
-                          {
-                            "type": "STRING",
-                            "value": ";"
-                          },
-                          {
-                            "type": "BLANK"
-                          }
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "type": "STRING",
-                    "value": ";"
-                  }
-                ]
-              }
-            ]
+            "type": "PREC_DYNAMIC",
+            "value": -1,
+            "content": {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "macro_argument_list"
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": ";"
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                }
+              ]
+            }
           }
         ]
       }
@@ -20365,6 +20367,72 @@
         }
       ]
     },
+    "macro_namespace": {
+      "type": "PREC_DYNAMIC",
+      "value": 10,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "NLOHMANN_JSON_NAMESPACE_BEGIN"
+              },
+              {
+                "type": "STRING",
+                "value": "QT_BEGIN_NAMESPACE"
+              },
+              {
+                "type": "STRING",
+                "value": "ABSL_NAMESPACE_BEGIN"
+              },
+              {
+                "type": "STRING",
+                "value": "PROTOBUF_NAMESPACE_OPEN"
+              },
+              {
+                "type": "STRING",
+                "value": "GTEST_NAMESPACE_BEGIN"
+              }
+            ]
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_top_level_item"
+            }
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "NLOHMANN_JSON_NAMESPACE_END"
+              },
+              {
+                "type": "STRING",
+                "value": "QT_END_NAMESPACE"
+              },
+              {
+                "type": "STRING",
+                "value": "ABSL_NAMESPACE_END"
+              },
+              {
+                "type": "STRING",
+                "value": "PROTOBUF_NAMESPACE_CLOSE"
+              },
+              {
+                "type": "STRING",
+                "value": "GTEST_NAMESPACE_END"
+              }
+            ]
+          }
+        ]
+      }
+    },
     "_macro_declaration_literals": {
       "type": "CHOICE",
       "members": [
@@ -26841,6 +26909,60 @@
       "_typedef_macro_qualifier",
       "type_specifier",
       "sized_type_specifier"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top",
+      "type_specifier"
+    ],
+    [
+      "_macro_declaration_top",
+      "expression"
+    ],
+    [
+      "_macro_declaration_top",
+      "type_specifier"
+    ],
+    [
+      "_macro_declaration_top",
+      "_declarator",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "_macro_declaration_top",
+      "_class_name"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top",
+      "_declarator",
+      "type_specifier"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "_macro_declaration_top",
+      "expression",
+      "_class_name"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top",
+      "expression"
+    ],
+    [
+      "_macro_declaration_top",
+      "expression",
+      "concatenated_string"
+    ],
+    [
+      "macro_namespace",
+      "_macro_declaration_literals"
     ]
   ],
   "precedences": [
