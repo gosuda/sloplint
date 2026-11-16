@@ -156,7 +156,8 @@ fn process(
     // Several vendored grammars end line-oriented rules (preprocessor
     // directives, comments) in a required `\n`, so a source missing its
     // final newline mis-parses at EOF. Compilers treat the newline as
-    // optional; normalize once here so every grammar sees it.
+    // optional; normalize once here (mirrored in `read_source`) so every
+    // grammar sees it.
     if !owned.is_empty() && !owned.ends_with('\n') {
         owned.push('\n');
     }
