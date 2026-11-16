@@ -3152,6 +3152,455 @@
         {
           "type": "SYMBOL",
           "name": "ms_declspec_modifier"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_attribute"
+        }
+      ]
+    },
+    "macro_attribute": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "WINAPI"
+        },
+        {
+          "type": "STRING",
+          "value": "WINAPIV"
+        },
+        {
+          "type": "STRING",
+          "value": "CALLBACK"
+        },
+        {
+          "type": "STRING",
+          "value": "APIENTRY"
+        },
+        {
+          "type": "STRING",
+          "value": "NTAPI"
+        },
+        {
+          "type": "STRING",
+          "value": "PASCAL"
+        },
+        {
+          "type": "STRING",
+          "value": "STDCALL"
+        },
+        {
+          "type": "STRING",
+          "value": "CDECL"
+        },
+        {
+          "type": "STRING",
+          "value": "FASTCALL"
+        },
+        {
+          "type": "STRING",
+          "value": "JNICALL"
+        },
+        {
+          "type": "STRING",
+          "value": "WINBASEAPI"
+        },
+        {
+          "type": "STRING",
+          "value": "WINADVAPI"
+        },
+        {
+          "type": "STRING",
+          "value": "STDAPICALLTYPE"
+        },
+        {
+          "type": "STRING",
+          "value": "STDAPI"
+        },
+        {
+          "type": "STRING",
+          "value": "RPC_ENTRY"
+        },
+        {
+          "type": "STRING",
+          "value": "APIPRIVATE"
+        },
+        {
+          "type": "STRING",
+          "value": "APIPUBLIC"
+        },
+        {
+          "type": "STRING",
+          "value": "__RPC_API"
+        },
+        {
+          "type": "STRING",
+          "value": "__RPC_STUB"
+        },
+        {
+          "type": "STRING",
+          "value": "__RPC_USER"
+        },
+        {
+          "type": "STRING",
+          "value": "__IO"
+        },
+        {
+          "type": "STRING",
+          "value": "__I"
+        },
+        {
+          "type": "STRING",
+          "value": "__O"
+        },
+        {
+          "type": "STRING",
+          "value": "__IM"
+        },
+        {
+          "type": "STRING",
+          "value": "__OM"
+        },
+        {
+          "type": "STRING",
+          "value": "__IOM"
+        },
+        {
+          "type": "STRING",
+          "value": "__ASM"
+        },
+        {
+          "type": "STRING",
+          "value": "__INLINE"
+        },
+        {
+          "type": "STRING",
+          "value": "__STATIC_INLINE"
+        },
+        {
+          "type": "STRING",
+          "value": "__STATIC_FORCEINLINE"
+        },
+        {
+          "type": "STRING",
+          "value": "__WEAK"
+        },
+        {
+          "type": "STRING",
+          "value": "__IRQ"
+        },
+        {
+          "type": "STRING",
+          "value": "__PACKED"
+        },
+        {
+          "type": "STRING",
+          "value": "__NO_RETURN"
+        },
+        {
+          "type": "STRING",
+          "value": "__ALIGNED"
+        },
+        {
+          "type": "STRING",
+          "value": "__COMPILER_BARRIER"
+        },
+        {
+          "type": "STRING",
+          "value": "__PROGRAM_START"
+        },
+        {
+          "type": "STRING",
+          "value": "__VECTOR_TABLE"
+        },
+        {
+          "type": "STRING",
+          "value": "__user"
+        },
+        {
+          "type": "STRING",
+          "value": "__kernel"
+        },
+        {
+          "type": "STRING",
+          "value": "__iomem"
+        },
+        {
+          "type": "STRING",
+          "value": "__maybe_unused"
+        },
+        {
+          "type": "STRING",
+          "value": "__always_inline"
+        },
+        {
+          "type": "STRING",
+          "value": "__must_check"
+        },
+        {
+          "type": "STRING",
+          "value": "__init"
+        },
+        {
+          "type": "STRING",
+          "value": "__exit"
+        },
+        {
+          "type": "STRING",
+          "value": "__weak"
+        },
+        {
+          "type": "STRING",
+          "value": "__section"
+        },
+        {
+          "type": "STRING",
+          "value": "__rcu"
+        },
+        {
+          "type": "STRING",
+          "value": "__percpu"
+        },
+        {
+          "type": "STRING",
+          "value": "__bitwise"
+        },
+        {
+          "type": "STRING",
+          "value": "__force"
+        },
+        {
+          "type": "STRING",
+          "value": "__nocast"
+        },
+        {
+          "type": "STRING",
+          "value": "__acquires"
+        },
+        {
+          "type": "STRING",
+          "value": "__releases"
+        },
+        {
+          "type": "STRING",
+          "value": "__initdata"
+        },
+        {
+          "type": "STRING",
+          "value": "__ref"
+        },
+        {
+          "type": "STRING",
+          "value": "__refdata"
+        },
+        {
+          "type": "STRING",
+          "value": "__read_mostly"
+        },
+        {
+          "type": "STRING",
+          "value": "__ro_after_init"
+        },
+        {
+          "type": "STRING",
+          "value": "__latent_entropy"
+        },
+        {
+          "type": "STRING",
+          "value": "__cold"
+        },
+        {
+          "type": "STRING",
+          "value": "__noreturn"
+        },
+        {
+          "type": "STRING",
+          "value": "__unused"
+        },
+        {
+          "type": "STRING",
+          "value": "__used"
+        },
+        {
+          "type": "STRING",
+          "value": "__alias"
+        },
+        {
+          "type": "STRING",
+          "value": "__deprecated"
+        },
+        {
+          "type": "STRING",
+          "value": "__nonstring"
+        },
+        {
+          "type": "STRING",
+          "value": "__counted_by"
+        },
+        {
+          "type": "STRING",
+          "value": "__printf"
+        },
+        {
+          "type": "STRING",
+          "value": "__scanf"
+        },
+        {
+          "type": "STRING",
+          "value": "__visible"
+        },
+        {
+          "type": "STRING",
+          "value": "__initconst"
+        },
+        {
+          "type": "STRING",
+          "value": "__exitconst"
+        },
+        {
+          "type": "STRING",
+          "value": "__init_or_module"
+        },
+        {
+          "type": "STRING",
+          "value": "__randomize_layout"
+        },
+        {
+          "type": "STRING",
+          "value": "__no_randomize_layout"
+        },
+        {
+          "type": "STRING",
+          "value": "__diag_push"
+        },
+        {
+          "type": "STRING",
+          "value": "__diag_pop"
+        },
+        {
+          "type": "STRING",
+          "value": "__diag_ignore"
+        },
+        {
+          "type": "STRING",
+          "value": "__diag_error"
+        },
+        {
+          "type": "STRING",
+          "value": "__diag_warning"
+        },
+        {
+          "type": "STRING",
+          "value": "__THROW"
+        },
+        {
+          "type": "STRING",
+          "value": "__THROWNL"
+        },
+        {
+          "type": "STRING",
+          "value": "__LEAF"
+        },
+        {
+          "type": "STRING",
+          "value": "__LEAF_ATTR"
+        },
+        {
+          "type": "STRING",
+          "value": "__wur"
+        },
+        {
+          "type": "STRING",
+          "value": "__attribute_pure__"
+        },
+        {
+          "type": "STRING",
+          "value": "__attribute_const__"
+        },
+        {
+          "type": "STRING",
+          "value": "__attribute_malloc__"
+        },
+        {
+          "type": "STRING",
+          "value": "__attribute_alloc_size__"
+        },
+        {
+          "type": "STRING",
+          "value": "__attribute_deprecated__"
+        },
+        {
+          "type": "STRING",
+          "value": "__attribute_warn_unused_result__"
+        },
+        {
+          "type": "STRING",
+          "value": "__nonnull"
+        },
+        {
+          "type": "STRING",
+          "value": "__attribute_format_arg__"
+        },
+        {
+          "type": "STRING",
+          "value": "__attribute_format_strfmon__"
+        },
+        {
+          "type": "STRING",
+          "value": "__attribute_artificial__"
+        },
+        {
+          "type": "STRING",
+          "value": "__glibc_unlikely"
+        },
+        {
+          "type": "STRING",
+          "value": "__glibc_likely"
+        },
+        {
+          "type": "STRING",
+          "value": "VKAPI_ATTR"
+        },
+        {
+          "type": "STRING",
+          "value": "VKAPI_CALL"
+        },
+        {
+          "type": "STRING",
+          "value": "SDLCALL"
+        },
+        {
+          "type": "STRING",
+          "value": "NAPI_CDECL"
+        },
+        {
+          "type": "STRING",
+          "value": "STRINGZILLA_API"
+        },
+        {
+          "type": "STRING",
+          "value": "STRINGZILLA_INLINE"
+        },
+        {
+          "type": "STRING",
+          "value": "STRINGZILLA_CONSTEXPR"
+        },
+        {
+          "type": "STRING",
+          "value": "DOCKS_EXPORT"
+        },
+        {
+          "type": "STRING",
+          "value": "SQLITECPP_API"
+        },
+        {
+          "type": "STRING",
+          "value": "PCAP_API"
+        },
+        {
+          "type": "STRING",
+          "value": "WUFFS_MIMIC"
         }
       ]
     },
@@ -4964,6 +5413,10 @@
         {
           "type": "SYMBOL",
           "name": "primitive_type"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_attribute"
         },
         {
           "type": "SYMBOL",
@@ -10038,6 +10491,10 @@
     [
       "_linkage_guard",
       "preproc_if"
+    ],
+    [
+      "_declaration_modifiers",
+      "type_specifier"
     ],
     [
       "_linkage_guard",

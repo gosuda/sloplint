@@ -50,8 +50,8 @@ reproduced on real code. Every repro below was first accepted by
 - Regenerating the unpatched grammar with 0.27.1 already moves the parser
   from ABI 14 to ABI 15. No node kind and no field is added or removed by
   the patch. `node-types.json` gains the `guarded_linkage` node kind
-  (`name` and `value` fields, same as `linkage_specification`) and keeps
-  every other type and field.
+  (`name` and `value` fields, same as `linkage_specification`) and the
+  `macro_attribute` node kind, and keeps every other type and field.
 
 ## Changes to grammar.js
 
@@ -90,6 +90,17 @@ reproduced on real code. Every repro below was first accepted by
   `[$._linkage_guard, $.preproc_ifdef]`. The rule covers the shared C/C++
   header idiom where `extern "C" {` opens inside one conditional block and
   `}` closes inside a later one.
+- Attribute-like declaration macros: the C base gains `macro_attribute`, a
+  literal enumeration of widespread calling-convention, storage and
+  compiler-attribute macros (`__IO`, `WINAPI`, `VKAPI_ATTR`/`VKAPI_CALL`,
+  `NAPI_CDECL`, CMSIS, Linux sparse, glibc attribute names and frequent
+  corpus `*_API` modifiers), usable in `_declaration_modifiers` and as a
+  `type_specifier`. This grammar adds `$.macro_attribute` to its own
+  `type_specifier` and declares `[$._declaration_modifiers,
+  $.type_specifier]`. The `word` token intercepts every identifier-shaped
+  input, so a regex token could never match an identifier subset; literals
+  are the only mechanism. Trade-off: an identifier equal to a listed
+  literal can no longer be a real type or declarator.
 
 ## Constructs verified fixed
 
@@ -114,6 +125,9 @@ clang++ with `-std=c++23`.
   and defaulted friends
 - `g(typename S::First());`, `auto x = typename S::First();`,
   `auto x = typename S::First{};`
+- `__IO uint32_t ISER[1];`, `__STATIC_INLINE int clip(int x) {...}`,
+  `VKAPI_ATTR VkBool32 VKAPI_CALL cb(void *);`, `int WINAPI wWinMain(...);`,
+  `NAPI_CDECL f(int);`, `CALLBACK int handler(void);`
 
 ## Constructs known still failing
 
@@ -131,10 +145,10 @@ parens steers it to an initialized declaration.
   `parser.c`, `scanner.c`, `grammar.json`, `node-types.json` all match), so
   the tag corpus result is the published result.
 - After the patch: 179 of 179 upstream cases pass.
-- New cases in `test/corpus/sloplint_*.txt`: 22 cases (18 repros,
-  4 controls). The published parser fails 18 of the 22 sources and passes
-  the 4 controls. The patched grammar passes all 22.
-- Total with the patch: 201 of 201.
+- New cases in `test/corpus/sloplint_*.txt`: 24 cases (20 repros,
+  4 controls). The published parser fails 20 of the 24 sources and passes
+  the 4 controls. The patched grammar passes all 24.
+- Total with the patch: 203 of 203.
 
 ## Sweep result
 
@@ -151,5 +165,6 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 
 ## Size
 
-`src/parser.c`: 17,722,475 bytes (published: 17,299,078). States: 8571
-(published: 8637). Language version: 15 (published: 14).
+`src/parser.c`: 27,196,487 bytes (published: 17,299,078). States: 8682
+(published: 8637). Language version: 15 (published: 14). The literal
+enumeration of `macro_attribute` costs most of the size growth.

@@ -38,6 +38,8 @@ mod is_method;
 mod java_scopes;
 #[path = "analyze_facts/kotlin_scopes.rs"]
 mod kotlin_scopes;
+#[path = "analyze_facts/macro_attr.rs"]
+mod macro_attr;
 #[path = "analyze_facts/objc_scopes.rs"]
 mod objc_scopes;
 #[path = "analyze_facts/ocaml_r_scopes.rs"]

@@ -1,0 +1,89 @@
+========================================
+Attribute-like macros in declaration specifiers
+========================================
+
+__IO uint32_t ISER[1];
+__STATIC_INLINE int clip(int x) { return x; }
+VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(void *ud);
+int WINAPI wWinMain(void *h, void *p, void *c, int s);
+
+---
+
+(translation_unit
+  (declaration
+    (macro_attribute)
+    type: (primitive_type)
+    declarator: (array_declarator
+      declarator: (identifier)
+      size: (number_literal)))
+  (function_definition
+    (macro_attribute)
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))))
+    body: (compound_statement
+      (return_statement
+        (identifier))))
+  (declaration
+    (macro_attribute)
+    type: (type_identifier)
+    (macro_attribute)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier))))))
+  (declaration
+    type: (primitive_type)
+    (macro_attribute)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))))))
+
+========================================
+Calling-convention macro as a type position
+========================================
+
+NAPI_CDECL baz(int a);
+CALLBACK int handler(void);
+
+---
+
+(translation_unit
+  (declaration
+    type: (macro_attribute)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)))))
+  (declaration
+    (macro_attribute)
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type))))))

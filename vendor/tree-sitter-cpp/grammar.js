@@ -87,6 +87,7 @@ module.exports = grammar(C, {
     [$.structured_binding_declarator, $._lambda_capture_identifier],
     [$.parameter_list, $.argument_list],
     [$.type_specifier, $.call_expression],
+    [$._declaration_modifiers, $.type_specifier],
     [$._declaration_specifiers, $._constructor_specifiers],
     [$._binary_fold_operator, $._fold_operator],
     [$._function_declarator_seq],
@@ -177,6 +178,7 @@ module.exports = grammar(C, {
       $.dependent_type,
       $.placeholder_type_specifier,
       $.decltype,
+      $.macro_attribute,
       prec.right(choice(
         alias($.qualified_type_identifier, $.qualified_identifier),
         $._type_identifier,

@@ -85,12 +85,25 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
   `preproc_ifdef`, and declares two conflicts: `[$._linkage_guard,
   $.preproc_if]` and `[$._linkage_guard, $.preproc_ifdef]`. It keeps the
   `name` and `value` fields of `linkage_specification`.
+- Attribute-like declaration macros: vendor headers pre-decorate declarations
+  with calling-convention, storage and compiler-attribute macros
+  (`__IO uint32_t ISER[1];`, `VKAPI_ATTR VkBool32 VKAPI_CALL cb(void *);`,
+  `NAPI_CDECL f(int)` with the macro in the type position). The grammar's
+  `word` token intercepts every identifier-shaped input, so a regex token
+  can never match an identifier subset; a new `macro_attribute` rule
+  enumerates the widespread literals instead (Windows calling conventions,
+  CMSIS, Linux sparse attributes, glibc attribute macros and the corpus'
+  frequent `*_API` modifiers). It joins `_declaration_modifiers` and
+  `type_specifier`, with conflict `[$._declaration_modifiers,
+  $.type_specifier]`. Trade-off: an identifier equal to a listed literal can
+  no longer be a real type or declarator.
 
 ## Adapter impact
 
 Node kinds and fields that `crates/sloplint-syntax/src/lang/c.rs` depends on
 keep their names. `node-types.json` gains the `guarded_linkage` node kind
-(`name` and `value` fields, same as `linkage_specification`), anonymous tokens
+(`name` and `value` fields, same as `linkage_specification`), the
+`macro_attribute` node kind, anonymous tokens
 (`_Complex`,
 `complex`, `_Thread_local`, `__signed`, `__signed__`) and new homes for
 existing named kinds (`system_lib_string` in preproc arguments,
@@ -140,9 +153,9 @@ Inputs that are not valid C and so stay errors: `int x = ;`, unterminated
 
 - Upstream `tree-sitter test` at tag v0.24.2, before: 85 of 85 pass.
 - After the patch: 85 of 85 upstream cases pass.
-- New cases in `test/corpus/sloplint_*.txt`: 21 cases (17 repros, 4 controls).
-  The unpatched grammar fails 17 of the 21. The patched grammar passes all 21.
-- Total with the patch: 106 of 106.
+- New cases in `test/corpus/sloplint_*.txt`: 24 cases (20 repros, 4 controls).
+  The unpatched grammar fails 20 of the 24. The patched grammar passes all 24.
+- Total with the patch: 109 of 109.
 
 ## Sweep result
 
@@ -159,8 +172,14 @@ and register variables with asm labels. 15 files (all copies of one Go DWARF
 `complex` and the new grammar correctly reads as the complex type. 2619
 still-error files have a partly changed tree; every other tree is identical.
 
+The `macro_attribute` change was measured separately on 412 corpus files
+that carried error nodes (the most error-dense .c/.h files of the big
+repos run): error nodes 19,312 before, 17,937 after; files with any error
+403 before, 397 after; six files fully clean; no clean file went to error.
+
 ## Size
 
-`src/parser.c`: 4,039,361 bytes (published: 3,872,012; regenerated unpatched
-with 0.27.1: 3,872,027). States: 2054 (published: 2015). Symbols: 366
-(published: 360). Tokens: 166 (published: 161).
+`src/parser.c`: 7,488,274 bytes (published: 3,872,012; regenerated unpatched
+with 0.27.1: 3,872,027). States: 2122 (published: 2015). Symbols: 367
+(published: 360). The literal enumeration of `macro_attribute` costs most of
+the size growth.

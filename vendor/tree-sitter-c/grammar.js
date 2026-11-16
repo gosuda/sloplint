@@ -55,6 +55,7 @@ module.exports = grammar({
     [$.type_qualifier, $.extension_expression],
     [$._declarator, $._declaration_declarator],
     [$._linkage_guard, $.preproc_if],
+    [$._declaration_modifiers, $.type_specifier],
     [$._linkage_guard, $.preproc_ifdef],
   ],
 
@@ -292,6 +293,48 @@ module.exports = grammar({
       $.attribute_specifier,
       $.attribute_declaration,
       $.ms_declspec_modifier,
+      $.macro_attribute,
+    ),
+
+    // Vendor headers pre-decorate declarations with attribute-like macros:
+    // `__IO uint32_t ISER[1];`, `VKAPI_ATTR VkBool32 VKAPI_CALL f(void);`,
+    // `int WINAPI wWinMain(...)`. The `word` token intercepts every
+    // identifier-shaped input, so only literals can be recognized here;
+    // this enumerates the widespread calling-convention, storage and
+    // compiler-attribute macros, which are never real types or declarators.
+    macro_attribute: $ => choice(
+      // Windows / JNI calling conventions
+      'WINAPI', 'WINAPIV', 'CALLBACK', 'APIENTRY', 'NTAPI', 'PASCAL',
+      'STDCALL', 'CDECL', 'FASTCALL', 'JNICALL', 'WINBASEAPI', 'WINADVAPI',
+      'STDAPICALLTYPE', 'STDAPI', 'RPC_ENTRY', 'APIPRIVATE', 'APIPUBLIC',
+      '__RPC_API', '__RPC_STUB', '__RPC_USER',
+      // CMSIS / ARM
+      '__IO', '__I', '__O', '__IM', '__OM', '__IOM', '__ASM', '__INLINE',
+      '__STATIC_INLINE', '__STATIC_FORCEINLINE', '__WEAK', '__IRQ',
+      '__PACKED', '__NO_RETURN', '__ALIGNED', '__COMPILER_BARRIER',
+      '__PROGRAM_START', '__VECTOR_TABLE',
+      // Linux sparse / GCC attributes
+      '__user', '__kernel', '__iomem', '__maybe_unused', '__always_inline',
+      '__must_check', '__init', '__exit', '__weak', '__section', '__rcu',
+      '__percpu', '__bitwise', '__force', '__nocast', '__acquires',
+      '__releases', '__initdata', '__ref', '__refdata', '__read_mostly',
+      '__ro_after_init', '__latent_entropy', '__cold', '__noreturn',
+      '__unused', '__used', '__alias', '__deprecated', '__nonstring',
+      '__counted_by', '__printf', '__scanf', '__visible', '__initconst',
+      '__exitconst', '__init_or_module', '__randomize_layout',
+      '__no_randomize_layout', '__diag_push', '__diag_pop', '__diag_ignore',
+      '__diag_error', '__diag_warning',
+      // glibc
+      '__THROW', '__THROWNL', '__LEAF', '__LEAF_ATTR', '__wur',
+      '__attribute_pure__', '__attribute_const__', '__attribute_malloc__',
+      '__attribute_alloc_size__', '__attribute_deprecated__',
+      '__attribute_warn_unused_result__', '__nonnull',
+      '__attribute_format_arg__', '__attribute_format_strfmon__',
+      '__attribute_artificial__', '__glibc_unlikely', '__glibc_likely',
+      // vendor API/export macros seen in the wild
+      'VKAPI_ATTR', 'VKAPI_CALL', 'SDLCALL', 'NAPI_CDECL',
+      'STRINGZILLA_API', 'STRINGZILLA_INLINE', 'STRINGZILLA_CONSTEXPR',
+      'DOCKS_EXPORT', 'SQLITECPP_API', 'PCAP_API', 'WUFFS_MIMIC',
     ),
 
     _declaration_specifiers: $ => prec.right(seq(
@@ -628,6 +671,7 @@ module.exports = grammar({
       $.macro_type_specifier,
       $.sized_type_specifier,
       $.primitive_type,
+      $.macro_attribute,
       $._type_identifier,
     ),
 
