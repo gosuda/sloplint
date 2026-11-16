@@ -44,6 +44,13 @@ pub fn read_source(path: &Path, max_bytes: u64) -> Result<String, RunError> {
     if text.starts_with('\u{feff}') {
         text.drain(..'\u{feff}'.len_utf8());
     }
+    // The analysis text always carries a final newline: several vendored
+    // grammars require it and `process` normalizes it before hashing, so
+    // every re-read (site context, suppression fallback, rendering) must
+    // normalize the same way or hashes never match.
+    if !text.is_empty() && !text.ends_with('\n') {
+        text.push('\n');
+    }
     Ok(text)
 }
 

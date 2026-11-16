@@ -153,6 +153,14 @@ fn process(
     if owned.starts_with('\u{feff}') {
         owned.drain(..'\u{feff}'.len_utf8());
     }
+    // Several vendored grammars end line-oriented rules (preprocessor
+    // directives, comments) in a required `\n`, so a source missing its
+    // final newline mis-parses at EOF. Compilers treat the newline as
+    // optional; normalize once here (mirrored in `read_source`) so every
+    // grammar sees it.
+    if !owned.is_empty() && !owned.ends_with('\n') {
+        owned.push('\n');
+    }
     let hash = analyzed_hash(pipe.shadowed.contains(entry.rel.as_str()), owned.as_str());
     let (mut output, from_cache) = {
         let probe = Probe {
