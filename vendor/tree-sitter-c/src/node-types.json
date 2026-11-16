@@ -274,10 +274,6 @@
         "named": true
       },
       {
-        "type": "macro_declaration",
-        "named": true
-      },
-      {
         "type": "ms_asm_statement",
         "named": true
       },
@@ -528,6 +524,14 @@
           "named": true
         },
         {
+          "type": "preproc_call",
+          "named": true
+        },
+        {
+          "type": "preproc_def",
+          "named": true
+        },
+        {
           "type": "preproc_defined",
           "named": true
         },
@@ -537,6 +541,10 @@
         },
         {
           "type": "preproc_ifdef",
+          "named": true
+        },
+        {
+          "type": "primitive_type",
           "named": true
         },
         {
@@ -1052,10 +1060,6 @@
           "named": true
         },
         {
-          "type": "macro_declaration",
-          "named": true
-        },
-        {
           "type": "ms_asm_statement",
           "named": true
         },
@@ -1259,6 +1263,10 @@
       "required": true,
       "types": [
         {
+          "type": "call_expression",
+          "named": true
+        },
+        {
           "type": "identifier",
           "named": true
         },
@@ -1400,6 +1408,10 @@
           },
           {
             "type": "macro_attribute",
+            "named": true
+          },
+          {
+            "type": "macro_qualifier",
             "named": true
           },
           {
@@ -1655,11 +1667,19 @@
       "required": false,
       "types": [
         {
+          "type": "call_expression",
+          "named": true
+        },
+        {
           "type": "enumerator",
           "named": true
         },
         {
           "type": "preproc_call",
+          "named": true
+        },
+        {
+          "type": "preproc_def",
           "named": true
         },
         {
@@ -2560,11 +2580,23 @@
       }
     },
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": false,
       "types": [
         {
           "type": "gnu_asm_expression",
+          "named": true
+        },
+        {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
+          "type": "ms_call_modifier",
           "named": true
         }
       ]
@@ -2592,6 +2624,10 @@
         },
         {
           "type": "preproc_call",
+          "named": true
+        },
+        {
+          "type": "preproc_def",
           "named": true
         },
         {
@@ -3426,6 +3462,10 @@
           "named": true
         },
         {
+          "type": "macro_declaration",
+          "named": true
+        },
+        {
           "type": "parameter_declaration",
           "named": true
         },
@@ -3554,6 +3594,10 @@
           "named": true
         },
         {
+          "type": "macro_declaration",
+          "named": true
+        },
+        {
           "type": "parameter_declaration",
           "named": true
         },
@@ -3650,6 +3694,10 @@
         },
         {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_declaration",
           "named": true
         },
         {
@@ -3849,6 +3897,10 @@
           "named": true
         },
         {
+          "type": "macro_declaration",
+          "named": true
+        },
+        {
           "type": "parameter_declaration",
           "named": true
         },
@@ -3974,6 +4026,10 @@
         },
         {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_declaration",
           "named": true
         },
         {

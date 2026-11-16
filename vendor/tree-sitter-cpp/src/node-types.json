@@ -386,10 +386,6 @@
         "named": true
       },
       {
-        "type": "macro_declaration",
-        "named": true
-      },
-      {
         "type": "ms_asm_statement",
         "named": true
       },
@@ -568,6 +564,14 @@
         },
         {
           "type": "gnu_asm_expression",
+          "named": true
+        },
+        {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         },
         {
@@ -778,6 +782,14 @@
           "named": true
         },
         {
+          "type": "preproc_call",
+          "named": true
+        },
+        {
+          "type": "preproc_def",
+          "named": true
+        },
+        {
           "type": "preproc_defined",
           "named": true
         },
@@ -787,6 +799,10 @@
         },
         {
           "type": "preproc_ifdef",
+          "named": true
+        },
+        {
+          "type": "primitive_type",
           "named": true
         },
         {
@@ -1391,10 +1407,6 @@
           "named": true
         },
         {
-          "type": "macro_declaration",
-          "named": true
-        },
-        {
           "type": "ms_asm_statement",
           "named": true
         },
@@ -1772,6 +1784,10 @@
           "named": true
         },
         {
+          "type": "macro_declaration",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -1842,6 +1858,10 @@
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "call_expression",
+          "named": true
+        },
         {
           "type": "identifier",
           "named": true
@@ -2211,6 +2231,18 @@
             "named": true
           },
           {
+            "type": "macro_attribute",
+            "named": true
+          },
+          {
+            "type": "macro_qualifier",
+            "named": true
+          },
+          {
+            "type": "ms_call_modifier",
+            "named": true
+          },
+          {
             "type": "operator_cast",
             "named": true
           }
@@ -2320,6 +2352,10 @@
         },
         {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_declaration",
           "named": true
         },
         {
@@ -2658,11 +2694,19 @@
       "required": false,
       "types": [
         {
+          "type": "call_expression",
+          "named": true
+        },
+        {
           "type": "enumerator",
           "named": true
         },
         {
           "type": "preproc_call",
+          "named": true
+        },
+        {
+          "type": "preproc_def",
           "named": true
         },
         {
@@ -3457,6 +3501,14 @@
           "named": true
         },
         {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "noexcept",
           "named": true
         },
@@ -4153,6 +4205,24 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
+          "type": "ms_call_modifier",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -4200,6 +4270,14 @@
         },
         {
           "type": "initializer_pair",
+          "named": true
+        },
+        {
+          "type": "preproc_call",
+          "named": true
+        },
+        {
+          "type": "preproc_def",
           "named": true
         },
         {
@@ -4771,7 +4849,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "namespace_identifier",
@@ -5647,6 +5725,10 @@
           "named": true
         },
         {
+          "type": "macro_declaration",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -5831,6 +5913,10 @@
           "named": true
         },
         {
+          "type": "macro_declaration",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -5983,6 +6069,10 @@
         },
         {
           "type": "macro_access_label",
+          "named": true
+        },
+        {
+          "type": "macro_declaration",
           "named": true
         },
         {
@@ -6238,6 +6328,10 @@
           "named": true
         },
         {
+          "type": "macro_declaration",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -6419,6 +6513,10 @@
         },
         {
           "type": "macro_access_label",
+          "named": true
+        },
+        {
+          "type": "macro_declaration",
           "named": true
         },
         {
@@ -10093,10 +10191,6 @@
   },
   {
     "type": "noexcept",
-    "named": false
-  },
-  {
-    "type": "noreturn",
     "named": false
   },
   {

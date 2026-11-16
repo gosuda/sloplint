@@ -155,7 +155,12 @@ reproduced on real code. Every repro below was first accepted by
     repeated content of `preproc_if`/`preproc_ifdef` bodies at every
     level: without it every declaration macro inside a header guard or
     inside a function-level `#ifdef` dropped to an ERROR parsed as a
-    `function_declarator` missing its `;`.
+    `function_declarator` missing its `;`. (The base C grammar keeps its
+    generic `identifier`-fallback `macro_declaration` out of statement
+    positions — inside function bodies `NAME(args)` must be a
+    `call_expression`. This grammar's `macro_declaration` is the
+    literal-name Qt/UE list plus a `prec.dynamic(-1)` generic fallback,
+    which dynamic precedence keeps below call sites.)
   - The Qt member-function modifiers (`Q_INVOKABLE`, `Q_SIGNAL`,
     `Q_SLOT`, `Q_REQUIRED_RESULT`, `Q_NORETURN`, `Q_CONSTEXPR`,
     `Q_ALWAYS_INLINE`, `Q_NEVER_INLINE`, `Q_PACKED`, `Q_DECL_EXPORT`,
@@ -306,7 +311,7 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 
 ## Size
 
-`src/parser.c`: 35,394,654 bytes (published: 17,299,078). States: 9417
+`src/parser.c`: 118,131,300 bytes (published: 17,299,078). States: 20818
 (published: 8637). Language version: 15 (published: 14). The literal
 enumeration of `macro_attribute` costs most of the size growth.
 
@@ -324,12 +329,14 @@ enumeration of `macro_attribute` costs most of the size growth.
   same trade-off as `qt_statement_macro` literals.
 
 - **Preproc blocks splitting comma lists** (`parameter_list`,
-  `field_initializer_list`, `argument_list`, and the base's
-  `initializer_list`) model
+  `field_initializer_list`, and the base's `initializer_list`) model
   each list item as `choice(real, real·blocks·[real], blocks·[real])`
   inside `commaSep1`, where a real item may follow a block comma-free
   because the separator comma often hides inside the block. Between two
   real items commas stay strict (`T<A, U<B>, C>` stays type-argument).
+  The base's `argument_list` is instead comma-required between real
+  items (see the C base notes): `"a" "b"` is forced through
+  `concatenated_string` instead of splitting into two arguments.
   `parameter_list`/`field_initializer_list` use handwritten
   `preproc_*_in_*_list` rules (the C base's `preprocIf` factory is
   module-local, so variants are spelled out with literal
@@ -387,3 +394,54 @@ enumeration of `macro_attribute` costs most of the size growth.
 - **Nested calls inside macro arguments** (`M(to_string())`) parse: a
   `macro_argument_list` may recursively contain another
   `macro_argument_list` after a `(`.
+
+- **Free-atom `enumerator_list`** — inherited from the base patch:
+  `repeat(choice($.enumerator, $.call_expression, '__extension__',
+  preproc_if/ifdef aliases, $.preproc_def, $.preproc_call, ','))`.
+  X-macro enum tables (`{ #define ET(E) E, GEN(ET) #undef ET }`) parse.
+- **`primitive_type` as a call argument** — `_argument_list_real` gains
+  `$.primitive_type` so `GET(uint8_t)`-style macro calls parse.
+  `$.type_identifier` is deliberately not added (it would fork an
+  ambiguity on every `f(x)` call).
+- **`macro_qualifier`/`macro_attribute` in `_function_postfix`** —
+  `repeat1(choice($.virtual_specifier, $.macro_attribute,
+  $.macro_qualifier))`, so member declarations with a trailing
+  attribute macro (`int f() const FLATBUFFERS_OVERRIDE;`) parse on the
+  declaration path, not only on definitions.
+- **Typed args preferred in `macro_declaration`** — the args slot is
+  `optional(choice(prec.dynamic(1, $.argument_list),
+  $.macro_argument_list))` in both the literal-name and generic
+  fallback forms: `Q_PLUGIN_METADATA(IID "x" FILE "y")` lands
+  `concatenated_string` children, while DSL-soup args
+  (`Q_PROPERTY(QString title READ title ...)`) still fall back to
+  `macro_argument_list`.
+- **`type_qualifier` no longer inherits C's `noreturn`** — C++ has no
+  `noreturn` keyword (`[[noreturn]]` is an attribute), so the rule is a
+  full replacement list without `'noreturn'`; `auto noreturn = ...`
+  parses and `noreturn void die();` still parses as a two-specifier
+  declaration.
+- **Trailing macros after a variable declarator** — `declaration`'s
+  declarator seq gains `repeat(choice($.ms_call_modifier,
+  $.macro_attribute, $.macro_qualifier))` (inherited `init_declarator`
+  carries the same repeat), covering `} var SEC(".maps");`.
+- **`__extension__` inside preproc blocks** — inherited: the
+  `preprocIf('')` block content and the `_in_enumerator_list*` contents
+  accept a bare `'__extension__'` atom.
+- **Known remaining gaps** — `T* f(T (&arr)[N])` inside a template
+  still loses to the `init_declarator` reinterpretation
+  (`f = T(T(&arr))[N]`); `return x\n#endif\n? a : b;` expressions
+  split across `#if` branches still error; a handful of generated
+  headers carry a lone stray-brace ERROR that parse-rescue excises.
+
+## Packed generated parser
+
+The generated `src/parser.c` (~118MB) exceeds GitHub's 100MB blob limit,
+so the committed artifact is `src/parser.c.gz` (`gzip -9`, ~8MB) and
+`src/parser.c` is gitignored. `bindings/rust/build.rs` compiles
+`src/parser.c` when present (a fresh `tree-sitter generate` output) and
+otherwise decompresses `src/parser.c.gz` into `OUT_DIR` with the `flate2`
+build-dependency. After every regen, refresh the packed copy:
+
+```
+gzip -9 -c src/parser.c > src/parser.c.gz
+```

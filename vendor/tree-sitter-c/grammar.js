@@ -55,6 +55,38 @@ module.exports = grammar({
     [$._linkage_guard, $.preproc_if],
     [$._declaration_modifiers, $.type_specifier],
     [$._linkage_guard, $.preproc_ifdef],
+    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.expression, $.concatenated_string],
+    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.concatenated_string],
+    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.expression, $.concatenated_string],
+    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.concatenated_string],
+    [$.concatenated_string],
+    [$.macro_argument_list, $._string, $.concatenated_string],
+    [$.macro_argument_list, $.concatenated_string],
+    [$.enumerator_list, $.expression, $.concatenated_string],
+    [$.enumerator_list, $.concatenated_string],
+    [$.enumerator, $.concatenated_string],
+    [$.macro_qualifier, $._declaration_declarator],
+    [$.macro_qualifier, $._declarator, $._declaration_declarator],
+    [$.extension_expression],
+    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.extension_expression],
+    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma],
+    [$.enumerator, $.assignment_expression, $.binary_expression],
+    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.extension_expression],
+    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma],
+    [$.preproc_else, $.type_qualifier],
+    [$.preproc_else, $.type_definition],
+    [$.preproc_else, $.extension_expression],
+    [$.preproc_else, $.type_qualifier, $.extension_expression],
+    [$.macro_argument_list, $.type_specifier, $._argument_list_real],
+    [$.macro_argument_list, $._argument_list_real],
+    [$.enumerator_list, $.expression],
+    [$.enumerator, $.expression],
+    [$.enumerator_list, $.extension_expression],
+    [$.preproc_ifdef, $.type_qualifier],
+    [$.preproc_ifdef, $.type_definition],
+    [$.preproc_ifdef, $.extension_expression],
+    [$.preproc_ifdef, $.type_qualifier, $.extension_expression],
+    [$._string, $.concatenated_string],
     [$.preproc_else_in_initializer_list, $.field_expression],
     [$.preproc_ifdef_in_initializer_list, $.field_expression],
     [$.preproc_else_in_argument_list, $.field_expression],
@@ -66,11 +98,8 @@ module.exports = grammar({
     [$.expression, $.field_designator],
     [$.binary_expression, $.initializer_pair],
     [$.binary_expression, $._initializer_list_real],
-    [$.binary_expression, $._argument_list_real],
     [$.binary_expression],
     [$.binary_expression, $.extension_expression],
-    [$._argument_list_item],
-    [$._initializer_list_item],
     [$._parameter_list_real, $._old_style_parameter_list],
     [$._parameter_list_item],
     [$.expression, $.concatenated_string],
@@ -98,7 +127,6 @@ module.exports = grammar({
     [$.macro_qualifier, $._declarator],
     [$.macro_qualifier, $._declarator, $.type_specifier, $.macro_type_specifier],
     [$.macro_argument_list, $._string],
-    [$.macro_argument_list, $.concatenated_string],
     [$.macro_argument_list, $.type_specifier, $.expression],
     [$.macro_argument_list, $.expression],
     [$.macro_argument_list, $.sized_type_specifier],
@@ -192,7 +220,6 @@ module.exports = grammar({
       $.preproc_def,
       $.preproc_function_def,
       $.preproc_call,
-      $.macro_declaration,
     ),
 
     // Preprocesser
@@ -238,10 +265,10 @@ module.exports = grammar({
       token.immediate(/\r?\n/),
     ),
 
-    ...preprocIf('', $ => choice($._block_item, $.dangling_else, $.dangling_label)),
+    ...preprocIf('', $ => choice($._block_item, $.dangling_else, $.dangling_label, '__extension__')),
     ...preprocIf('_in_field_declaration_list', $ => $._field_declaration_list_item),
-    ...preprocIf('_in_enumerator_list', $ => seq($.enumerator, ',')),
-    ...preprocIf('_in_enumerator_list_no_comma', $ => $.enumerator, -1),
+    ...preprocIf('_in_enumerator_list', $ => choice(seq($.enumerator, ','), $.enumerator, $.call_expression, '__extension__', $.preproc_def)),
+    ...preprocIf('_in_enumerator_list_no_comma', $ => choice($.enumerator, $.call_expression, '__extension__', $.preproc_def), -1),
     // Inside a conditional-compilation block the comma is a loose atom:
     // `f(a #ifdef X , b #endif c)` splits the separator into the block, so
     // a `,` can appear at any position without an item following it.
@@ -255,6 +282,10 @@ module.exports = grammar({
       $.expression,
       $.initializer_list,
       ',',
+      // `#define`/`#undef`/unknown directives inside a braced list:
+      // generated lookup tables redefine an X-macro between items.
+      $.preproc_def,
+      $.preproc_call,
       seq(
         choice(
         '||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
@@ -278,6 +309,14 @@ module.exports = grammar({
       $.expression,
       $.compound_statement,
       ',',
+      $.preproc_def,
+      $.preproc_call,
+      // A bare operator passed as a macro argument:
+      // `assert_int(1, ==, call(...))`, `check(x, <=, y)`.
+      choice(
+        '||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
+        '<<', '>>', '+', '-', '*', '/', '%', '.', '->',
+      ),
       seq(
         choice(
         '||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
@@ -381,6 +420,9 @@ module.exports = grammar({
       // calling-convention spellings outside ms_call_modifier's literal list.
       repeat(choice($.ms_call_modifier, $.macro_attribute)),
       field('declarator', $._declarator),
+      // Trailing attribute/override macros between declarator and body:
+      // `f() FLATBUFFERS_OVERRIDE {`, `f() MYLIB_NOEXCEPT {`.
+      repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
       field('body', $.compound_statement),
     ),
 
@@ -399,6 +441,7 @@ module.exports = grammar({
           repeat(choice($.ms_call_modifier, $.macro_attribute)),
           $._declaration_declarator,
           optional($.gnu_asm_expression),
+          repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
         ),
         $.init_declarator,
       ))),
@@ -497,7 +540,7 @@ module.exports = grammar({
     // markers). Dynamic -1: real statements and declarations win; this only
     // catches bare `NAME` / `NAME(...)` items no other rule accepts, chiefly
     // inside struct bodies where expression statements cannot appear.
-    macro_declaration: $ => prec.dynamic(-1, prec.right(seq(
+    macro_declaration: $ => prec.dynamic(-2, prec.right(seq(
       $.identifier,
       optional(choice($.argument_list, $.macro_argument_list)),
       optional(';'),
@@ -875,6 +918,7 @@ module.exports = grammar({
 
     init_declarator: $ => seq(
       field('declarator', $._declarator),
+      repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
       optional($.gnu_asm_expression),
       '=',
       field('value', choice($.initializer_list, $.expression)),
@@ -1039,18 +1083,16 @@ module.exports = grammar({
     enumerator_list: $ => seq(
       '{',
       repeat(choice(
-        seq($.enumerator, ','),
+        $.enumerator,
+        $.call_expression,
+        '__extension__',
         alias($.preproc_if_in_enumerator_list, $.preproc_if),
         alias($.preproc_ifdef_in_enumerator_list, $.preproc_ifdef),
-        seq($.preproc_call, ','),
-      )),
-      optional(seq(
-        choice(
-          $.enumerator,
-          alias($.preproc_if_in_enumerator_list_no_comma, $.preproc_if),
-          alias($.preproc_ifdef_in_enumerator_list_no_comma, $.preproc_ifdef),
-          $.preproc_call,
-        ),
+        alias($.preproc_if_in_enumerator_list_no_comma, $.preproc_if),
+        alias($.preproc_ifdef_in_enumerator_list_no_comma, $.preproc_ifdef),
+        $.preproc_def,
+        $.preproc_call,
+        ',',
       )),
       '}',
     ),
@@ -1202,7 +1244,6 @@ module.exports = grammar({
       $.seh_try_statement,
       $.seh_leave_statement,
       $.ms_asm_statement,
-      $.macro_declaration,
     ),
 
     _top_level_statement: $ => choice(
@@ -1702,29 +1743,31 @@ module.exports = grammar({
     // A real argument may follow a preproc block comma-free because the
     // separator comma often hides inside the block (`f(a #ifdef X , b
     // #endif c)`); between real arguments commas stay strict.
-    _argument_list_real: $ => choice($.expression, $.compound_statement),
+    _argument_list_real: $ => choice($.expression, $.compound_statement, $.primitive_type),
 
-    _argument_list_item: $ => choice(
-      $._argument_list_real,
-      seq(
-        $._argument_list_real,
-        repeat1($._argument_list_preproc),
-        optional(seq(optional(','), $._argument_list_real)),
-      ),
-      seq(
-        repeat1($._argument_list_preproc),
-        optional(seq(optional(','), $._argument_list_real)),
-      ),
-    ),
-
+    // Free-atom stream: real arguments, preproc blocks/directives and
+    // separator commas interleave in any order. `#define`/`#undef`
+    // between items (generated lookup tables redefining an X-macro) join
+    // the preproc stream, so `f(#define X ... GEN(X) #undef X)` needs no
+    // comma bookkeeping.
     _argument_list_preproc: $ => choice(
       alias($.preproc_if_in_argument_list, $.preproc_if),
       alias($.preproc_ifdef_in_argument_list, $.preproc_ifdef),
+      $.preproc_def,
+      $.preproc_call,
     ),
 
+    // Real args need commas between them; preproc atoms stay a free stream.
+    // Comma-free `"a" "b"` must therefore reduce through concatenated_string
+    // instead of splitting into two items.
     argument_list: $ => seq(
       '(',
-      commaSep($._argument_list_item),
+      repeat(choice(
+        seq($._argument_list_real, ','),
+        $._argument_list_preproc,
+        ',',
+      )),
+      optional($._argument_list_real),
       ')',
     ),
 
@@ -1768,31 +1811,24 @@ module.exports = grammar({
       $.initializer_pair,
       $.expression,
       $.initializer_list,
-      $.preproc_call,
-    ),
-
-    _initializer_list_item: $ => choice(
-      $._initializer_list_real,
-      seq(
-        $._initializer_list_real,
-        repeat1($._initializer_list_preproc),
-        optional(seq(optional(','), $._initializer_list_real)),
-      ),
-      seq(
-        repeat1($._initializer_list_preproc),
-        optional(seq(optional(','), $._initializer_list_real)),
-      ),
     ),
 
     _initializer_list_preproc: $ => choice(
       alias($.preproc_if_in_initializer_list, $.preproc_if),
       alias($.preproc_ifdef_in_initializer_list, $.preproc_ifdef),
+      $.preproc_def,
+      $.preproc_call,
     ),
 
+    // Free-atom stream like argument_list: `{ #define TD(A) #A,
+    // GEN(TD) #undef TD }` chains preproc and real atoms without commas.
     initializer_list: $ => seq(
       '{',
-      optional(commaSep1($._initializer_list_item)),
-      optional(','),
+      repeat(choice(
+        $._initializer_list_real,
+        $._initializer_list_preproc,
+        ',',
+      )),
       '}',
     ),
 
@@ -1870,14 +1906,19 @@ module.exports = grammar({
 
     // Must concatenate at least 2 nodes, one of which must be a string_literal.
     // Identifier is added to parse macros that are strings, like PRIu64.
-    concatenated_string: $ => prec.right(seq(
+    concatenated_string: $ => prec.dynamic(2, prec.right(seq(
       choice(
         seq($.identifier, $.string_literal),
         seq($.string_literal, $.string_literal),
         seq($.string_literal, $.identifier),
+        // Stringification/expansion macros take part in literal
+        // concatenation: `XSTR(a) "." XSTR(b)`, `"v" FLATBUFFERS_STRING(x)`.
+        seq($.call_expression, $.string_literal),
+        seq($.string_literal, $.call_expression),
+        seq($.call_expression, $.call_expression),
       ),
-      repeat(choice($.string_literal, $.identifier)),
-    )),
+      repeat(choice($.string_literal, $.identifier, $.call_expression)),
+    ))),
 
     string_literal: $ => seq(
       choice('L"', 'u"', 'U"', 'u8"', '"'),

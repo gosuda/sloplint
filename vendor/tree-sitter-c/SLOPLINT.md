@@ -95,12 +95,16 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
     `bool f(T a, T* b)` mis-parses. `prec.dynamic(-1)` makes every real type
     or declarator read win.
   - `macro_declaration` is a bare `identifier` with an optional argument
-    list and optional `;`, added to `_top_level_item`, `_block_item`,
-    `_non_case_statement` and `_field_declaration_list_item`. It only
-    catches items no other rule accepts (a lone `NAME` or `NAME(...)` with
-    no trailing `;`), chiefly inside struct bodies where expression
-    statements cannot appear. `prec.dynamic(-1)` keeps real statements and
-    declarations preferred.
+    list and optional `;`, added only to `_top_level_item` and
+    `_field_declaration_list_item`. It only catches items no other rule
+    accepts (a lone `NAME` or `NAME(...)` with no trailing `;`), chiefly
+    inside struct bodies where expression statements cannot appear. It is
+    deliberately absent from `_block_item` and `_non_case_statement`:
+    inside function bodies `NAME(args)` must always be a
+    `call_expression` — reachable there, the fallback stole call sites
+    whose arguments contain concatenated literals (`log_error("a" "b")`)
+    and no precedence setting reliably gives them back. `prec.dynamic(-2)`
+    keeps real statements and declarations preferred at file scope.
   - `macro_argument_list` is the permissive token list these two rules
     share: identifiers, primitive and sized types, literals, commas and the
     operator characters that appear inside real macro arguments
@@ -253,13 +257,23 @@ the size growth.
   single-instruction form `__asm int 3` (no braces) is not covered —
   the token soup cannot see newlines to bound the instruction.
 
-- **Preproc blocks splitting comma lists** (`parameter_list`,
-  `initializer_list`, and `argument_list`) model each list item as
+- **Preproc blocks splitting comma lists** (`parameter_list` and
+  `initializer_list`) model each list item as
   `choice(real, real·blocks·[real], blocks·[real])` inside `commaSep1`,
   where a real item may follow a block comma-free because the separator
   comma often hides inside the block. Between two real items commas
   stay strict, which keeps the template-argument ambiguity
   (`T<A, U<B>, C>`) resolving on type-argument.
+
+- **`argument_list` requires commas between real items** — the body is
+  `repeat(choice(real·',', preproc·atom, ','))` then `optional(real)`,
+  not the commaSep1 model above. Adjacent expressions can no longer
+  split into two arguments, so `"a" "b"` is forced through
+  `concatenated_string` and `MACRO "x"` arguments keep their
+  identifier+literal chain shape. Preproc atoms
+  (`preproc_if/ifdef_in_argument_list`, `preproc_def`, `preproc_call`)
+  and bare `,` stay a free stream so separator commas hidden inside
+  `#ifdef` blocks still work.
 
 - **Commas are loose atoms inside the blocks themselves**
   (`#ifdef X , y #endif` in a list): the `preprocIf('_in_*_list', ...)`
@@ -316,3 +330,29 @@ the size growth.
   `>>=`, `%=`, `&=`, `|=`, `++`, `--`, `[`, `]`, and nested
   `$.macro_argument_list` — otherwise `*x`-shaped first arguments
   compete with the expression reading and land in `ERROR`.
+
+- **Free-atom `enumerator_list`** — the body is now
+  `repeat(choice($.enumerator, $.call_expression, '__extension__',
+  preproc_if/ifdef aliases (comma and no_comma), $.preproc_def,
+  $.preproc_call, ','))`, matching the `argument_list`/`initializer_list`
+  stream model. `#define`-driven X-macro enum tables
+  (`{ #define ET(E) E, GEN(ET) #undef ET }`) parse without comma
+  bookkeeping, and `GEN(ET)` generator calls sit beside real
+  enumerators.
+- **`__extension__` inside preproc blocks** — the shared `preprocIf('')`
+  block content accepts a bare `'__extension__'`
+  (`#ifdef __GNUC__\n__extension__\n#endif`), and the
+  `_in_enumerator_list`/`_in_enumerator_list_no_comma` block contents
+  accept `$.enumerator`, `$.call_expression`, `'__extension__'` and
+  `$.preproc_def`.
+- **`primitive_type` as a call argument** — `_argument_list_real` gains
+  `$.primitive_type`, so macro-style calls taking a builtin type parse:
+  `GET(uint8_t)`, `READ(int)`. Only `primitive_type` is added (never
+  `$.type_identifier`): user-type spellings stay on the
+  `identifier`-expression path with zero new ambiguity.
+- **Trailing macros after a variable declarator** — `declaration`'s
+  declarator seq and `init_declarator` carry a trailing
+  `repeat(choice($.ms_call_modifier, $.macro_attribute,
+  $.macro_qualifier))`, covering `} worker_id_map SEC(".maps");` and
+  `int x PACKED = v;`. Same permissive model as the
+  `function_definition` trailing-macro repeat.

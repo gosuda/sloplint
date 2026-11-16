@@ -1,5 +1,5 @@
---- a/grammar.js	2026-11-16 15:38:12.089278171 +0000
-+++ b/grammar.js	2026-11-16 20:49:28.827924718 +0000
+--- a/grammar.js
++++ b/grammar.js
 @@ -58,6 +58,44 @@
    ],
  
@@ -61,7 +61,7 @@
      [$._declaration_specifiers, $._constructor_specifiers],
      [$._binary_fold_operator, $._fold_operator],
      [$._function_declarator_seq],
-@@ -94,6 +132,102 @@
+@@ -94,6 +132,138 @@
      [$.init_statement, $._for_statement_body],
      [$.field_expression, $.template_method, $.template_type],
      [$.qualified_field_identifier, $.template_method, $.template_type],
@@ -110,7 +110,6 @@
 +    [$.macro_qualifier, $._field_declarator],
 +    [$._abstract_declarator, $.optional_parameter_declaration],
 +    [$.ms_pointer_modifier, $.qt_signature_type],
-+    [$.macro_argument_list, $.call_expression],
 +    [$.macro_argument_list, $.type_qualifier],
 +    [$.macro_argument_list, $.type_specifier],
 +    [$.macro_argument_list, $.type_specifier, $.call_expression],
@@ -134,11 +133,9 @@
 +    [$.preproc_else_in_initializer_list, $.comma_expression],
 +    [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list],
 +    [$.preproc_elif, $.preproc_elif_in_initializer_list],
-+    [$._initializer_list_item],
 +    [$._parameter_list_item],
 +    [$._field_initializer_list_item],
 +    [$.comma_expression, $._initializer_list_real],
-+    [$._argument_list_item],
 +    [$._in_parameter_list_item, $._in_argument_list_item],
 +    [$.preproc_ifdef_in_parameter_list, $.preproc_ifdef_in_argument_list],
 +    [$.preproc_else_in_parameter_list, $.preproc_else_in_argument_list],
@@ -160,11 +157,50 @@
 +    [$.expression, $.field_designator, $._class_name],
 +    [$.preproc_ifdef_in_initializer_list, $.field_expression],
 +    [$.preproc_else_in_initializer_list, $.field_expression],
++    [$.field_initializer_list],
++    [$.expression, $.concatenated_string, $.template_type, $.template_function],
++    [$.preproc_ifdef, $.type_qualifier, $.extension_expression],
++    [$.preproc_ifdef, $.type_qualifier],
++    [$.preproc_ifdef, $.extension_expression],
++    [$.preproc_ifdef, $.type_definition],
++    [$.call_expression, $._argument_list_real],
++    [$._argument_list_real, $.compound_literal_expression],
++    [$.macro_argument_list, $._argument_list_real],
++    [$.macro_argument_list, $.call_expression, $._argument_list_real],
++    [$.macro_argument_list, $.expression, $.concatenated_string],
++    [$.macro_argument_list, $._string, $.concatenated_string],
++    [$.enumerator_list, $.extension_expression],
++    [$.enumerator, $.expression],
++    [$.enumerator, $.concatenated_string],
++    [$.enumerator_list, $.concatenated_string],
++    [$.enumerator_list, $.expression, $.concatenated_string],
++    [$.concatenated_string],
++    [$.constructor_or_destructor_definition],
++    [$._scope_resolution],
++    [$.preproc_else, $.type_qualifier, $.extension_expression],
++    [$.preproc_else, $.type_qualifier],
++    [$.preproc_else, $.extension_expression],
++    [$.preproc_else, $.type_definition],
++    [$._block_item, $._initializer_list_preproc],
++    [$.concatenated_string, $._class_name],
++    [$.type_specifier, $._argument_list_real],
++    [$.type_specifier, $.call_expression, $._argument_list_real],
++    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma],
++    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.extension_expression],
++    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.concatenated_string],
++    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.expression, $.concatenated_string],
++    [$._block_item, $.preproc_ifdef_in_initializer_list],
++    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma],
++    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.extension_expression],
++    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.concatenated_string],
++    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.expression, $.concatenated_string],
++    [$.extension_expression],
++    [$._block_item, $.preproc_else_in_initializer_list],
 +    [$.template_type],
    ],
  
    inline: ($, original) => original.concat([
-@@ -119,6 +253,7 @@
+@@ -119,6 +289,7 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -172,7 +208,7 @@
      ),
  
      _block_item: ($, original) => choice(
-@@ -134,6 +269,10 @@
+@@ -134,6 +305,10 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -183,7 +219,7 @@
      ),
  
      // Types
-@@ -168,6 +307,7 @@
+@@ -168,14 +343,27 @@
        $.dependent_type,
        $.placeholder_type_specifier,
        $.decltype,
@@ -191,7 +227,29 @@
        prec.right(choice(
          alias($.qualified_type_identifier, $.qualified_identifier),
          $._type_identifier,
-@@ -193,6 +333,11 @@
+       )),
+     ),
+ 
+-    type_qualifier: (_, original) => choice(
+-      original,
++    // Replaces the base list (which it cannot subtract from): C++ has no
++    // `noreturn` keyword (`[[noreturn]]` is an attribute), so the C23
++    // spelling must not shadow identifier uses like `auto noreturn = ...`.
++    type_qualifier: ($, original) => choice(
++      'const',
++      'constexpr',
++      'volatile',
++      'restrict',
++      '__restrict__',
++      '__extension__',
++      '_Atomic',
++      '_Noreturn',
++      '_Nonnull',
++      $.alignas_qualifier,
+       'mutable',
+       'constinit',
+       'consteval',
+@@ -193,6 +381,11 @@
        $._class_declaration_item,
      ),
      _class_declaration_item: $ => prec.right(seq(
@@ -203,7 +261,7 @@
        choice(
          field('name', $._class_name),
          seq(
-@@ -226,12 +371,16 @@
+@@ -226,12 +419,16 @@
        alias($.qualified_type_identifier, $.qualified_identifier),
      )),
  
@@ -221,7 +279,15 @@
      }),
  
      declaration: $ => seq(
-@@ -284,14 +433,24 @@
+@@ -242,6 +439,7 @@
+           // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
+           $._declarator,
+           optional($.gnu_asm_expression),
++          repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+         ),
+         $.init_declarator,
+       ))),
+@@ -284,14 +482,24 @@
  
      enum_specifier: $ => prec.right(seq(
        'enum',
@@ -251,7 +317,7 @@
        ),
        optional($.attribute_specifier),
      )),
-@@ -339,9 +498,16 @@
+@@ -339,9 +547,16 @@
      ),
  
      template_instantiation: $ => seq(
@@ -270,7 +336,7 @@
        ';',
      ),
  
-@@ -387,22 +553,46 @@
+@@ -387,22 +602,46 @@
        ),
      ),
  
@@ -325,7 +391,7 @@
      ),
  
      variadic_parameter_declaration: $ => seq(
-@@ -432,6 +622,23 @@
+@@ -432,6 +671,23 @@
            $.initializer_list,
          )),
        ),
@@ -349,7 +415,7 @@
      ),
  
      operator_cast: $ => prec.right(1, seq(
-@@ -444,9 +651,31 @@
+@@ -444,9 +700,31 @@
      //   A b {};
      compound_statement: (_, original) => prec(-1, original),
  
@@ -382,7 +448,7 @@
      ),
  
      field_initializer: $ => prec(1, seq(
-@@ -469,22 +698,32 @@
+@@ -469,22 +747,32 @@
        alias($.operator_cast_declaration, $.declaration),
        $.friend_declaration,
        seq($.access_specifier, ':'),
@@ -422,7 +488,36 @@
        )),
        optional($.attribute_specifier),
        ';',
-@@ -580,6 +819,225 @@
+@@ -493,6 +781,8 @@
+     inline_method_definition: $ => seq(
+       $._declaration_specifiers,
+       field('declarator', $._field_declarator),
++      // Trailing attribute/override macros: `f() FLATBUFFERS_OVERRIDE {`.
++      repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+       choice(
+         field('body', choice($.compound_statement, $.try_statement)),
+         $.default_method_clause,
+@@ -512,6 +802,7 @@
+         $.operator_cast,
+         alias($.qualified_operator_cast_identifier, $.qualified_identifier),
+       )),
++      repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+       field('body', choice($.compound_statement, $.try_statement)),
+     ),
+ 
+@@ -535,9 +826,11 @@
+     constructor_or_destructor_definition: $ => seq(
+       repeat($._constructor_specifiers),
+       field('declarator', $.function_declarator),
++      repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+       choice(
+         seq(
+           optional($.field_initializer_list),
++          repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+           field('body', $.compound_statement),
+         ),
+         alias($.constructor_try_statement, $.try_statement),
+@@ -580,6 +873,225 @@
        'protected',
      ),
  
@@ -499,7 +594,7 @@
 +      'QML_REMOVED_IN_VERSION',
 +      'QML_FOREIGN_NAMESPACE',
 +      ),
-+      optional(choice($.argument_list, $.macro_argument_list)),
++      optional(choice(prec.dynamic(1, $.argument_list), $.macro_argument_list)),
 +      ),
 +      // Generic fallback for macro names outside the literal list
 +      // (serialize/test/register macros, vendor markers). Dynamic +2:
@@ -510,7 +605,7 @@
 +      // declaration macro than an unnamed-reference declaration.
 +      prec.dynamic(-1, seq(
 +        $.identifier,
-+        optional(choice($.argument_list, $.macro_argument_list)),
++        optional(choice(prec.dynamic(1, $.argument_list), $.macro_argument_list)),
 +        optional(';'),
 +      )),
 +    )),
@@ -648,7 +743,16 @@
      _declarator: ($, original) => choice(
        original,
        $.reference_declarator,
-@@ -807,6 +1265,9 @@
+@@ -647,7 +1159,7 @@
+     )),
+ 
+     _function_postfix: $ => prec.right(choice(
+-      repeat1($.virtual_specifier),
++      repeat1(choice($.virtual_specifier, $.macro_attribute, $.macro_qualifier)),
+       $.requires_clause,
+     )),
+ 
+@@ -807,6 +1319,9 @@
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
@@ -658,7 +762,7 @@
      ),
  
      switch_statement: $ => seq(
-@@ -828,6 +1289,15 @@
+@@ -828,6 +1343,15 @@
        field('consequence', $.statement),
        optional(field('alternative', $.else_clause)),
      )),
@@ -674,7 +778,7 @@
  
      // Using prec(1) instead of prec.dynamic(1) causes issues with the
      // range loop's declaration specifiers if `int` is passed in, it'll
-@@ -968,10 +1438,257 @@
+@@ -968,10 +1492,257 @@
        ']',
      ),
  
@@ -936,7 +1040,7 @@
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1708,15 @@
+@@ -991,9 +1762,15 @@
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -955,7 +1059,7 @@
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +1730,7 @@
+@@ -1007,7 +1784,7 @@
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -964,7 +1068,7 @@
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +1738,7 @@
+@@ -1015,6 +1792,7 @@
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -972,7 +1076,7 @@
        )),
      ),
  
-@@ -1215,13 +1939,66 @@
+@@ -1215,13 +1993,65 @@
              field('operator', operator),
              field('right', $.expression),
            ));
@@ -1014,34 +1118,33 @@
 +      $.expression,
 +      $.initializer_list,
 +      $.compound_statement,
++      $.primitive_type,
 +    ),
 +
-+    _argument_list_item: $ => choice(
-+      $._argument_list_real,
-+      seq(
-+        $._argument_list_real,
-+        repeat1($._argument_list_preproc),
-+        optional(seq(optional(','), $._argument_list_real)),
-+      ),
-+      seq(
-+        repeat1($._argument_list_preproc),
-+        optional(seq(optional(','), $._argument_list_real)),
-+      ),
-+    ),
-+
++    // Free-atom stream: real arguments, preproc blocks/directives and
++    // separator commas interleave in any order. `#define`/`#undef`
++    // between items (generated lookup tables redefining an X-macro) join
++    // the preproc stream, so `f(#define X ... GEN(X) #undef X)` needs no
++    // comma bookkeeping.
 +    _argument_list_preproc: $ => choice(
 +      alias($.preproc_if_in_argument_list, $.preproc_if),
 +      alias($.preproc_ifdef_in_argument_list, $.preproc_ifdef),
++      $.preproc_def,
++      $.preproc_call,
 +    ),
 +
      argument_list: $ => seq(
        '(',
 -      commaSep(choice($.expression, $.initializer_list, $.compound_statement)),
-+      commaSep($._argument_list_item),
++      repeat(choice(
++        $._argument_list_real,
++        $._argument_list_preproc,
++        ',',
++      )),
        ')',
      ),
  
-@@ -1230,7 +2007,7 @@
+@@ -1230,7 +2060,7 @@
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -1050,7 +1153,7 @@
          field('value', $.initializer_list),
        ),
      ),
-@@ -1256,6 +2033,7 @@
+@@ -1256,6 +2086,7 @@
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -1058,7 +1161,7 @@
        )),
      ),
  
-@@ -1296,10 +2074,20 @@
+@@ -1296,10 +2127,20 @@
        $.user_defined_literal,
      ),
  
@@ -1083,10 +1186,15 @@
      )),
  
      _assignment_expression_lhs: $ => seq(
-@@ -1342,9 +2130,39 @@
+@@ -1342,11 +2183,44 @@
  
      this: _ => 'this',
  
+-    concatenated_string: $ => prec.right(seq(
+-      choice($.identifier, $.string_literal, $.raw_string_literal),
+-      choice($.string_literal, $.raw_string_literal),
+-      repeat(choice($.identifier, $.string_literal, $.raw_string_literal)),
+-    )),
 +    // Preprocessor operands that are not expressions: `__has_include(<x.h>)`,
 +    // `__has_embed("x")`, `__has_warning("-Wx")` and `__has_cpp_attribute(ns::name)`.
 +    preproc_argument_list: $ => seq(
@@ -1109,19 +1217,22 @@
 +    // Must concatenate at least 2 nodes, one of which must be a string
 +    // literal. Identifier is added to parse macros that are strings, like
 +    // PRIu64 — so a `"lit" MACRO` / `MACRO "lit"` start is valid too.
-     concatenated_string: $ => prec.right(seq(
--      choice($.identifier, $.string_literal, $.raw_string_literal),
--      choice($.string_literal, $.raw_string_literal),
++    concatenated_string: $ => prec.dynamic(2, prec.right(seq(
 +      choice(
 +        seq(
-+          choice($.identifier, $.string_literal, $.raw_string_literal),
++          choice($.identifier, $.string_literal, $.raw_string_literal, $.call_expression),
 +          choice($.string_literal, $.raw_string_literal),
 +        ),
 +        seq(
 +          choice($.string_literal, $.raw_string_literal),
-+          $.identifier,
++          choice($.identifier, $.call_expression),
 +        ),
++        // Stringification macros concatenate with each other:
++        // `XSTR(A) XSTR(B)`.
++        seq($.call_expression, $.call_expression),
 +      ),
-       repeat(choice($.identifier, $.string_literal, $.raw_string_literal)),
-     )),
++      repeat(choice($.identifier, $.string_literal, $.raw_string_literal, $.call_expression)),
++    ))),
  
+     number_literal: $ => {
+       const sign = /[-\+]/;
