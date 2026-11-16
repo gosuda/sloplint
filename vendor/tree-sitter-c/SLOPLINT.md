@@ -284,6 +284,27 @@ the size growth.
   rules merged at the `#ifdef` and the deterministic merge
   systematically stole blocks meant for list items.
 
+- **Statement fragments inside preproc blocks** — a block may end
+  between `else` and its body (`} else #endif { }`) or carry a bare
+  label (`#ifdef X fin: #endif stmt`): the `''`-suffixed block content
+  accepts `dangling_else` (`if(cond) stmt else`, `else if` tails
+  recurse) and `dangling_label` (`name:`) alongside `_block_item`. The
+  matching `{ ... }` / statement after `#endif` parses as an ordinary
+  block item.
+
+- **Preproc inside expressions** — `a + #ifdef X b + #endif c`,
+  `a && #ifdef X b #endif`, `x = #ifdef v1 #else v2 #endif`, and
+  `( #ifdef expr #else expr #endif )`: `binary_expression` and
+  `assignment_expression` gain rows that place
+  `repeat1($._infix_continuation_preproc)` between operator and right
+  operand (or where the right operand would be), and
+  `parenthesized_expression` accepts block-led content. The
+  `_in_argument_list`/`_in_initializer_list` block contents also accept
+  trailing `expr op` fragments for the `b +` tails. Known gap:
+  `TYPE MACRO(args) name` declarations (e.g. `unsigned char ALIGN(16)
+  x[]`) stay unparseable — disambiguating the `NAME(args)` qualifier
+  from a function declarator needs lexer help, not more LR rows.
+
 - **Comments inside a `\`-continued `#define`/`#undef`/`#call` line**
   resume `preproc_arg` after the comment: the `value`/`argument` field
   is `repeat(choice($.preproc_arg, $.comment))` on `preproc_def`,

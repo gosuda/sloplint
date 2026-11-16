@@ -680,7 +680,7 @@
       },
       "right": {
         "multiple": false,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "expression",
@@ -688,6 +688,20 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -1299,6 +1313,58 @@
     "type": "continue_statement",
     "named": true,
     "fields": {}
+  },
+  {
+    "type": "dangling_else",
+    "named": true,
+    "fields": {
+      "condition": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          }
+        ]
+      },
+      "consequence": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "statement",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "dangling_else",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "dangling_label",
+    "named": true,
+    "fields": {
+      "label": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "statement_identifier",
+            "named": true
+          }
+        ]
+      }
+    }
   },
   {
     "type": "declaration",
@@ -3057,7 +3123,7 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": true,
       "types": [
         {
@@ -3074,6 +3140,14 @@
         },
         {
           "type": "preproc_defined",
+          "named": true
+        },
+        {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         }
       ]
@@ -3308,6 +3382,14 @@
       "required": false,
       "types": [
         {
+          "type": "dangling_else",
+          "named": true
+        },
+        {
+          "type": "dangling_label",
+          "named": true
+        },
+        {
           "type": "declaration",
           "named": true
         },
@@ -3428,6 +3510,14 @@
       "required": false,
       "types": [
         {
+          "type": "dangling_else",
+          "named": true
+        },
+        {
+          "type": "dangling_label",
+          "named": true
+        },
+        {
           "type": "declaration",
           "named": true
         },
@@ -3518,6 +3608,14 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "dangling_else",
+          "named": true
+        },
+        {
+          "type": "dangling_label",
+          "named": true
+        },
         {
           "type": "declaration",
           "named": true
@@ -3707,6 +3805,14 @@
       "required": false,
       "types": [
         {
+          "type": "dangling_else",
+          "named": true
+        },
+        {
+          "type": "dangling_label",
+          "named": true
+        },
+        {
           "type": "declaration",
           "named": true
         },
@@ -3826,6 +3932,14 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "dangling_else",
+          "named": true
+        },
+        {
+          "type": "dangling_label",
+          "named": true
+        },
         {
           "type": "declaration",
           "named": true

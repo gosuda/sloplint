@@ -55,6 +55,14 @@ module.exports = grammar({
     [$._linkage_guard, $.preproc_if],
     [$._declaration_modifiers, $.type_specifier],
     [$._linkage_guard, $.preproc_ifdef],
+    [$.preproc_else_in_initializer_list, $.field_expression],
+    [$.preproc_ifdef_in_initializer_list, $.field_expression],
+    [$.preproc_else_in_argument_list, $.field_expression],
+    [$.comma_expression, $.binary_expression],
+    [$.preproc_ifdef_in_argument_list, $.field_expression],
+    [$.parenthesized_expression],
+    [$.binary_expression, $.parenthesized_expression],
+    [$.labeled_statement, $.dangling_label],
     [$.expression, $.field_designator],
     [$.binary_expression, $.initializer_pair],
     [$.binary_expression, $._initializer_list_real],
@@ -230,7 +238,7 @@ module.exports = grammar({
       token.immediate(/\r?\n/),
     ),
 
-    ...preprocIf('', $ => $._block_item),
+    ...preprocIf('', $ => choice($._block_item, $.dangling_else, $.dangling_label)),
     ...preprocIf('_in_field_declaration_list', $ => $._field_declaration_list_item),
     ...preprocIf('_in_enumerator_list', $ => seq($.enumerator, ',')),
     ...preprocIf('_in_enumerator_list_no_comma', $ => $.enumerator, -1),
@@ -254,6 +262,13 @@ module.exports = grammar({
         ),
         $.expression,
       ),
+      seq(
+        $.expression,
+        choice(
+'||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
+        '<<', '>>', '+', '-', '*', '/', '%', '.', '->',
+        ),
+      ),
     )),
     // A block may hold `,arg` (split separator) or `op expr` (split
     // infix continuation, `a | b #ifdef X | c #endif`) — both sit in the
@@ -269,6 +284,13 @@ module.exports = grammar({
         '<<', '>>', '+', '-', '*', '/', '%', '.', '->',
         ),
         $.expression,
+      ),
+      seq(
+        $.expression,
+        choice(
+'||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
+        '<<', '>>', '+', '-', '*', '/', '%', '.', '->',
+        ),
       ),
     )),
 
@@ -1228,6 +1250,22 @@ module.exports = grammar({
     )),
 
     else_clause: $ => seq('else', $.statement),
+    // `} else #endif { }`: a preproc block may end between `else` and
+    // its body, leaving an if without an else-consequence inside the
+    // block (the `{ ... }` after `#endif` then parses as a bare
+    // compound statement). Chained `else if` tails recurse.
+    dangling_else: $ => prec.right(seq(
+      'if',
+      field('condition', $.parenthesized_expression),
+      field('consequence', $.statement),
+      'else',
+      optional($.dangling_else),
+    )),
+
+    // `#ifdef X fin: #endif stmt`: a label may sit alone inside a
+    // preproc block while its statement follows the `#endif`.
+    dangling_label: $ => seq(field('label', $._statement_identifier), ':'),
+
 
     switch_statement: $ => seq(
       'switch',
@@ -1382,22 +1420,44 @@ module.exports = grammar({
       $.parenthesized_expression,
     ),
 
-    assignment_expression: $ => prec.right(PREC.ASSIGNMENT, seq(
-      field('left', $._assignment_left_expression),
-      field('operator', choice(
-        '=',
-        '*=',
-        '/=',
-        '%=',
-        '+=',
-        '-=',
-        '<<=',
-        '>>=',
-        '&=',
-        '^=',
-        '|=',
-      )),
-      field('right', $.expression),
+    assignment_expression: $ => prec.right(PREC.ASSIGNMENT, choice(
+      seq(
+        field('left', $._assignment_left_expression),
+        field('operator', choice(
+          '=',
+          '*=',
+          '/=',
+          '%=',
+          '+=',
+          '-=',
+          '<<=',
+          '>>=',
+          '&=',
+          '^=',
+          '|=',
+        )),
+        field('right', $.expression),
+      ),
+      // `x = #ifndef A v1 #else v2 #endif`: the right operand may live
+      // inside a preproc block, or the block may sit before it.
+      seq(
+        field('left', $._assignment_left_expression),
+        field('operator', choice(
+          '=',
+          '*=',
+          '/=',
+          '%=',
+          '+=',
+          '-=',
+          '<<=',
+          '>>=',
+          '&=',
+          '^=',
+          '|=',
+        )),
+        repeat1($._infix_continuation_preproc),
+        optional(field('right', $.expression)),
+      ),
     )),
 
     pointer_expression: $ => prec.left(PREC.CAST, seq(
@@ -1447,6 +1507,26 @@ module.exports = grammar({
           field('left', $.expression),
           repeat1($._infix_continuation_preproc),
         ),
+        // `a + #ifdef X b + #endif c` / `a && #ifdef X b #endif`: a block
+        // may sit between the operator and the right operand — or hold
+        // the right operand entirely.
+        ...table.map(([operator, precedence]) => {
+          return prec.left(precedence, seq(
+            field('left', $.expression),
+            // @ts-ignore
+            field('operator', operator),
+            repeat1($._infix_continuation_preproc),
+            field('right', $.expression),
+          ));
+        }),
+        ...table.map(([operator, precedence]) => {
+          return prec.left(precedence, seq(
+            field('left', $.expression),
+            // @ts-ignore
+            field('operator', operator),
+            repeat1($._infix_continuation_preproc),
+          ));
+        }),
       );
     },
 
@@ -1665,7 +1745,19 @@ module.exports = grammar({
 
     parenthesized_expression: $ => seq(
       '(',
-      choice($.expression, $.comma_expression, $.compound_statement),
+      choice(
+        $.expression,
+        $.comma_expression,
+        $.compound_statement,
+        seq(
+          repeat1($._infix_continuation_preproc),
+          repeat(choice(
+            $._infix_continuation_preproc,
+            $.expression,
+            $.comma_expression,
+          )),
+        ),
+      ),
       ')',
     ),
 
@@ -1718,6 +1810,15 @@ module.exports = grammar({
         field('designator', $._field_identifier),
         ':',
         field('value', choice($.expression, $.initializer_list)),
+      ),
+      // `.local{expr}`: a braced designated initializer drops the `=`.
+      seq(
+        field('designator', repeat1(choice(
+          $.subscript_designator,
+          $.field_designator,
+          $.subscript_range_designator,
+        ))),
+        field('value', $.initializer_list),
       ),
     ),
 

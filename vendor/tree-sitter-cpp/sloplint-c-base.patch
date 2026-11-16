@@ -1,5 +1,5 @@
 --- a/grammar.js	2026-11-16 15:36:58.671581076 +0000
-+++ b/grammar.js	2026-11-16 20:37:31.365978725 +0000
++++ b/grammar.js	2026-11-16 20:50:40.420619970 +0000
 @@ -36,6 +36,8 @@
    name: 'c',
  
@@ -52,7 +52,7 @@
        token.immediate(/\r?\n/),
      ),
  
-@@ -143,17 +150,22 @@
+@@ -143,24 +150,81 @@
        preprocessor('define'),
        field('name', $.identifier),
        field('parameters', $.preproc_params),
@@ -78,7 +78,8 @@
        token.immediate(/\r?\n/),
      ),
  
-@@ -161,6 +173,44 @@
+-    ...preprocIf('', $ => $._block_item),
++    ...preprocIf('', $ => choice($._block_item, $.dangling_else, $.dangling_label)),
      ...preprocIf('_in_field_declaration_list', $ => $._field_declaration_list_item),
      ...preprocIf('_in_enumerator_list', $ => seq($.enumerator, ',')),
      ...preprocIf('_in_enumerator_list_no_comma', $ => $.enumerator, -1),
@@ -102,6 +103,13 @@
 +        ),
 +        $.expression,
 +      ),
++      seq(
++        $.expression,
++        choice(
++'||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
++        '<<', '>>', '+', '-', '*', '/', '%', '.', '->',
++        ),
++      ),
 +    )),
 +    // A block may hold `,arg` (split separator) or `op expr` (split
 +    // infix continuation, `a | b #ifdef X | c #endif`) — both sit in the
@@ -118,12 +126,19 @@
 +        ),
 +        $.expression,
 +      ),
++      seq(
++        $.expression,
++        choice(
++'||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
++        '<<', '>>', '+', '-', '*', '/', '%', '.', '->',
++        ),
++      ),
 +    )),
 +
  
      preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
      preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,
-@@ -240,7 +290,9 @@
+@@ -240,7 +304,9 @@
      function_definition: $ => seq(
        optional($.ms_call_modifier),
        $._declaration_specifiers,
@@ -134,7 +149,7 @@
        field('declarator', $._declarator),
        field('body', $.compound_statement),
      ),
-@@ -257,7 +309,7 @@
+@@ -257,7 +323,7 @@
        $._declaration_specifiers,
        commaSep1(field('declarator', choice(
          seq(
@@ -143,7 +158,7 @@
            $._declaration_declarator,
            optional($.gnu_asm_expression),
          ),
-@@ -283,10 +335,133 @@
+@@ -283,10 +349,133 @@
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -278,7 +293,7 @@
        field('type', $.type_specifier),
        repeat($._declaration_modifiers),
      )),
-@@ -301,6 +476,27 @@
+@@ -301,6 +490,27 @@
        )),
      ),
  
@@ -306,7 +321,7 @@
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -341,6 +537,14 @@
+@@ -341,6 +551,14 @@
        '__vectorcall',
      ),
  
@@ -321,7 +336,7 @@
      ms_restrict_modifier: _ => '__restrict',
  
      ms_unsigned_ptr_modifier: _ => '__uptr',
-@@ -409,25 +613,25 @@
+@@ -409,25 +627,25 @@
  
      parenthesized_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
        '(',
@@ -351,7 +366,7 @@
        $._abstract_declarator,
        ')',
      )),
-@@ -448,28 +652,65 @@
+@@ -448,28 +666,65 @@
  
      pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
        optional($.ms_based_modifier),
@@ -426,7 +441,7 @@
        field('declarator', optional($._abstract_declarator)),
      ))),
  
-@@ -594,6 +835,7 @@
+@@ -594,6 +849,7 @@
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -434,7 +449,7 @@
        $._type_identifier,
      ),
  
-@@ -652,6 +894,18 @@
+@@ -652,6 +908,18 @@
        'charptr_t',
        'nullptr_t',
        'max_align_t',
@@ -453,7 +468,7 @@
        ...[8, 16, 32, 64].map(n => `int${n}_t`),
        ...[8, 16, 32, 64].map(n => `uint${n}_t`),
        ...[8, 16, 32, 64].map(n => `char${n}_t`),
-@@ -659,6 +913,7 @@
+@@ -659,6 +927,7 @@
  
      enum_specifier: $ => seq(
        'enum',
@@ -461,7 +476,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -693,6 +948,7 @@
+@@ -693,6 +962,7 @@
        'struct',
        optional($.attribute_specifier),
        optional($.ms_declspec_modifier),
@@ -469,7 +484,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -706,6 +962,7 @@
+@@ -706,6 +976,7 @@
      union_specifier: $ => prec.right(seq(
        'union',
        optional($.ms_declspec_modifier),
@@ -477,7 +492,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -727,6 +984,7 @@
+@@ -727,6 +998,7 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -485,7 +500,7 @@
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
      ),
-@@ -751,10 +1009,37 @@
+@@ -751,10 +1023,37 @@
  
      variadic_parameter: _ => '...',
  
@@ -524,7 +539,7 @@
          $.compound_statement,
        ),
        ')',
-@@ -802,6 +1087,8 @@
+@@ -802,6 +1101,8 @@
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,
@@ -533,7 +548,91 @@
      ),
  
      _top_level_statement: $ => choice(
-@@ -1053,16 +1340,29 @@
+@@ -849,6 +1150,22 @@
+     )),
+ 
+     else_clause: $ => seq('else', $.statement),
++    // `} else #endif { }`: a preproc block may end between `else` and
++    // its body, leaving an if without an else-consequence inside the
++    // block (the `{ ... }` after `#endif` then parses as a bare
++    // compound statement). Chained `else if` tails recurse.
++    dangling_else: $ => prec.right(seq(
++      'if',
++      field('condition', $.parenthesized_expression),
++      field('consequence', $.statement),
++      'else',
++      optional($.dangling_else),
++    )),
++
++    // `#ifdef X fin: #endif stmt`: a label may sit alone inside a
++    // preproc block while its statement follows the `#endif`.
++    dangling_label: $ => seq(field('label', $._statement_identifier), ':'),
++
+ 
+     switch_statement: $ => seq(
+       'switch',
+@@ -1003,22 +1320,44 @@
+       $.parenthesized_expression,
+     ),
+ 
+-    assignment_expression: $ => prec.right(PREC.ASSIGNMENT, seq(
+-      field('left', $._assignment_left_expression),
+-      field('operator', choice(
+-        '=',
+-        '*=',
+-        '/=',
+-        '%=',
+-        '+=',
+-        '-=',
+-        '<<=',
+-        '>>=',
+-        '&=',
+-        '^=',
+-        '|=',
+-      )),
+-      field('right', $.expression),
++    assignment_expression: $ => prec.right(PREC.ASSIGNMENT, choice(
++      seq(
++        field('left', $._assignment_left_expression),
++        field('operator', choice(
++          '=',
++          '*=',
++          '/=',
++          '%=',
++          '+=',
++          '-=',
++          '<<=',
++          '>>=',
++          '&=',
++          '^=',
++          '|=',
++        )),
++        field('right', $.expression),
++      ),
++      // `x = #ifndef A v1 #else v2 #endif`: the right operand may live
++      // inside a preproc block, or the block may sit before it.
++      seq(
++        field('left', $._assignment_left_expression),
++        field('operator', choice(
++          '=',
++          '*=',
++          '/=',
++          '%=',
++          '+=',
++          '-=',
++          '<<=',
++          '>>=',
++          '&=',
++          '^=',
++          '|=',
++        )),
++        repeat1($._infix_continuation_preproc),
++        optional(field('right', $.expression)),
++      ),
+     )),
+ 
+     pointer_expression: $ => prec.left(PREC.CAST, seq(
+@@ -1053,16 +1392,49 @@
          ['>>', PREC.SHIFT],
        ];
  
@@ -559,6 +658,26 @@
 -      }));
 +          repeat1($._infix_continuation_preproc),
 +        ),
++        // `a + #ifdef X b + #endif c` / `a && #ifdef X b #endif`: a block
++        // may sit between the operator and the right operand — or hold
++        // the right operand entirely.
++        ...table.map(([operator, precedence]) => {
++          return prec.left(precedence, seq(
++            field('left', $.expression),
++            // @ts-ignore
++            field('operator', operator),
++            repeat1($._infix_continuation_preproc),
++            field('right', $.expression),
++          ));
++        }),
++        ...table.map(([operator, precedence]) => {
++          return prec.left(precedence, seq(
++            field('left', $.expression),
++            // @ts-ignore
++            field('operator', operator),
++            repeat1($._infix_continuation_preproc),
++          ));
++        }),
 +      );
      },
  
@@ -570,7 +689,7 @@
      update_expression: $ => {
        const argument = field('argument', $.expression);
        const operator = field('operator', choice('--', '++'));
-@@ -1143,6 +1443,36 @@
+@@ -1143,6 +1515,36 @@
        ')',
      )),
  
@@ -607,7 +726,7 @@
      gnu_asm_qualifier: _ => choice(
        'volatile',
        '__volatile__',
-@@ -1197,7 +1527,34 @@
+@@ -1197,7 +1599,34 @@
      extension_expression: $ => seq('__extension__', $.expression),
  
      // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
@@ -643,7 +762,24 @@
  
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
-@@ -1220,13 +1577,36 @@
+@@ -1216,17 +1645,52 @@
+ 
+     parenthesized_expression: $ => seq(
+       '(',
+-      choice($.expression, $.comma_expression, $.compound_statement),
++      choice(
++        $.expression,
++        $.comma_expression,
++        $.compound_statement,
++        seq(
++          repeat1($._infix_continuation_preproc),
++          repeat(choice(
++            $._infix_continuation_preproc,
++            $.expression,
++            $.comma_expression,
++          )),
++        ),
++      ),
        ')',
      ),
  
@@ -685,3 +821,19 @@
        optional(','),
        '}',
      ),
+@@ -1246,6 +1710,15 @@
+         ':',
+         field('value', choice($.expression, $.initializer_list)),
+       ),
++      // `.local{expr}`: a braced designated initializer drops the `=`.
++      seq(
++        field('designator', repeat1(choice(
++          $.subscript_designator,
++          $.field_designator,
++          $.subscript_range_designator,
++        ))),
++        field('value', $.initializer_list),
++      ),
+     ),
+ 
+     subscript_designator: $ => seq('[', $.expression, ']'),

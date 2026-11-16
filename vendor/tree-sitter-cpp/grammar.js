@@ -218,6 +218,15 @@ module.exports = grammar(C, {
     [$.binary_expression],
     [$.binary_expression, $.optional_parameter_declaration],
     [$.expression, $.field_designator],
+    [$.labeled_statement, $.dangling_label],
+    [$.labeled_statement, $.dangling_label, $.initializer_pair],
+    [$.binary_expression, $.parenthesized_expression],
+    [$.parenthesized_expression],
+    [$.field_expression, $._in_argument_list_item],
+    [$.comma_expression, $.binary_expression],
+    [$.expression, $.field_designator, $._class_name],
+    [$.preproc_ifdef_in_initializer_list, $.field_expression],
+    [$.preproc_else_in_initializer_list, $.field_expression],
     [$.template_type],
   ],
 
@@ -1280,6 +1289,15 @@ module.exports = grammar(C, {
       field('consequence', $.statement),
       optional(field('alternative', $.else_clause)),
     )),
+    dangling_else: $ => prec.right(seq(
+      'if',
+      optional('constexpr'),
+      field('condition', $.condition_clause),
+      field('consequence', $.statement),
+      'else',
+      optional($.dangling_else),
+    )),
+
 
     // Using prec(1) instead of prec.dynamic(1) causes issues with the
     // range loop's declaration specifiers if `int` is passed in, it'll
@@ -1532,6 +1550,14 @@ module.exports = grammar(C, {
           '<=>', 'or', 'and', 'bitor', 'xor', 'bitand', 'not_eq',
         ),
         $.expression,
+      ),
+      seq(
+        $.expression,
+        choice(
+          '||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
+          '<<', '>>', '+', '-', '*', '/', '%', '.', '->', '.*', '->*',
+          '<=>', 'or', 'and', 'bitor', 'xor', 'bitand', 'not_eq',
+        ),
       ),
     ),
 
@@ -1922,6 +1948,23 @@ module.exports = grammar(C, {
           field('left', $.expression),
           repeat1($._infix_continuation_preproc),
         ),
+        ...table.map(([operator, precedence]) => {
+          return prec.left(precedence, seq(
+            field('left', $.expression),
+            // @ts-ignore
+            field('operator', operator),
+            repeat1($._infix_continuation_preproc),
+            field('right', $.expression),
+          ));
+        }),
+        ...table.map(([operator, precedence]) => {
+          return prec.left(precedence, seq(
+            field('left', $.expression),
+            // @ts-ignore
+            field('operator', operator),
+            repeat1($._infix_continuation_preproc),
+          ));
+        }),
       );
     },
 
@@ -2031,10 +2074,20 @@ module.exports = grammar(C, {
       $.user_defined_literal,
     ),
 
-    assignment_expression: $ => prec.right(PREC.ASSIGNMENT, seq(
-      field('left', $._assignment_left_expression),
-      field('operator', choice(...ASSIGNMENT_OPERATORS)),
-      field('right', choice($.expression, $.initializer_list)),
+    assignment_expression: $ => prec.right(PREC.ASSIGNMENT, choice(
+      seq(
+        field('left', $._assignment_left_expression),
+        field('operator', choice(...ASSIGNMENT_OPERATORS)),
+        field('right', choice($.expression, $.initializer_list)),
+      ),
+      // `x = #ifndef A v1 #else v2 #endif`: the right operand may live
+      // inside a preproc block, or the block may sit before it.
+      seq(
+        field('left', $._assignment_left_expression),
+        field('operator', choice(...ASSIGNMENT_OPERATORS)),
+        repeat1($._infix_continuation_preproc),
+        optional(field('right', choice($.expression, $.initializer_list))),
+      ),
     )),
 
     _assignment_expression_lhs: $ => seq(

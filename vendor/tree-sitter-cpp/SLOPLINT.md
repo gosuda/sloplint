@@ -360,6 +360,18 @@ enumeration of `macro_attribute` costs most of the size growth.
   either edge of the literal chain — `"lit" MACRO`, `MACRO "lit"`, and
   interleaved forms — plus `raw_string_literal` anywhere in the chain.
 
+- **Statement fragments inside preproc blocks** — inherited from the
+  base: `dangling_else` (cpp override carries `constexpr` +
+  `condition_clause`) and `dangling_label` cover `} else #endif { }`
+  and `#ifdef X fin: #endif stmt`.
+
+- **Preproc inside expressions** — the base's mid-split rows on
+  `binary_expression` are mirrored for the cpp-only operators; the
+  overridden `assignment_expression` and `_in_argument_list_item` carry
+  the same `repeat1($._infix_continuation_preproc)` / trailing
+  `expr op` shapes. Known gap: `TYPE MACRO(args) name` declarations
+  stay unparseable (declarator/qualifier ambiguity needs lexer help).
+
 - **Inherited from `sloplint-c-base.patch`**: comments inside a
   `\`-continued `#define`/`#undef`/`#call` resume `preproc_arg` (the
   `value`/`argument` field is `repeat(choice($.preproc_arg,
