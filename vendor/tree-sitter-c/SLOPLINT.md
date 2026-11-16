@@ -120,16 +120,20 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
     `repeat(choice($.ms_pointer_modifier, $.type_qualifier,
     $.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute,
     $.macro_qualifier))` after it, in all four pointer-declarator rules;
-    `repeat(choice($.ms_call_modifier, $.macro_qualifier))` before the
+    `repeat(choice($.ms_call_modifier, $.macro_attribute))` before the
     inner declarator of the four parenthesized-declarator rules and in the
     `declaration`/`function_definition` pre-declarator slots.
   - `far_ptr_modifier` is a literal list (`FAR`, `NEAR`, `_far`, `_near`,
     `__far`, `__near`, `__huge`, `_huge`); WINAPI/NTAPI/APIENTRY and
     friends already live in `macro_attribute`, so they were not duplicated
     into `ms_call_modifier`.
-  - The generic `macro_qualifier` is safe in these positions in C: the
-    C++-only `delete [] p` ambiguity that forbids it in the cpp grammar
-    cannot occur here.
+  - The pre-declarator slots are literal-only (`ms_call_modifier` +
+    `macro_attribute`): a generic `macro_qualifier` there let `f(...)`
+    fork a GLR branch whose argument-list interpretations multiplied
+    parse versions until the real declarator path was pruned. The generic
+    `macro_qualifier` stays before `'*'` and after `'*'` in C: the C++-only
+    `delete [] p` ambiguity that forbids it pre-`'*'` in the cpp grammar
+    cannot occur here, and `typedef CONST STRING* X` needs it.
 - Attribute-like declaration macros: vendor headers pre-decorate declarations
   with calling-convention, storage and compiler-attribute macros
   (`__IO uint32_t ISER[1];`, `VKAPI_ATTR VkBool32 VKAPI_CALL cb(void *);`,

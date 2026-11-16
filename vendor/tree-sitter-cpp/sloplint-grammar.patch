@@ -1,5 +1,5 @@
 --- a/grammar.js	2026-11-16 15:38:12.089278171 +0000
-+++ b/grammar.js	2026-11-16 18:44:08.290099751 +0000
++++ b/grammar.js	2026-11-16 18:58:12.418674905 +0000
 @@ -58,6 +58,44 @@
    ],
  
@@ -53,7 +53,7 @@
      [$._declaration_specifiers, $._constructor_specifiers],
      [$._binary_fold_operator, $._fold_operator],
      [$._function_declarator_seq],
-@@ -94,6 +133,46 @@
+@@ -94,6 +133,50 @@
      [$.init_statement, $._for_statement_body],
      [$.field_expression, $.template_method, $.template_type],
      [$.qualified_field_identifier, $.template_method, $.template_type],
@@ -71,7 +71,6 @@
 +    [$.macro_declaration, $._declarator, $.type_specifier, $.expression],
 +    [$.macro_declaration, $._declarator],
 +    [$.macro_qualifier, $._declarator],
-+    [$.macro_qualifier, $._declarator, $.type_specifier, $.expression],
 +    [$.macro_qualifier, $._type_declarator],
 +    [$.macro_qualifier, $._field_declarator],
 +    [$.macro_qualifier, $._declarator, $.expression],
@@ -79,8 +78,6 @@
 +    [$.macro_qualifier, $._declarator, $._init_pointer_declarator],
 +    [$.pointer_declarator, $._init_pointer_declarator],
 +    [$._declarator, $._init_reference_declarator],
-+    [$._declaration_specifiers, $.abstract_parenthesized_declarator],
-+    [$._declaration_specifiers, $.parenthesized_declarator, $.abstract_parenthesized_declarator],
 +    [$.function_definition, $.pointer_declarator],
 +    [$.parenthesized_declarator, $.pointer_declarator],
 +    [$.pointer_declarator],
@@ -94,13 +91,20 @@
 +    [$._declaration_modifiers, $.pointer_declarator, $.type_specifier],
 +    [$.pointer_declarator, $.type_specifier],
 +    [$._declaration_modifiers, $.pointer_declarator],
-+    [$.abstract_pointer_declarator, $.type_specifier],
-+    [$._declaration_modifiers, $.abstract_pointer_declarator, $.type_specifier],
++    [$.parenthesized_declarator, $.type_specifier],
++    [$.parenthesized_declarator, $.pointer_declarator, $.type_specifier],
++    [$.abstract_parenthesized_declarator, $.type_specifier],
++    [$.abstract_parenthesized_declarator, $.abstract_pointer_declarator, $.type_specifier],
++    [$._declaration_modifiers, $.abstract_parenthesized_declarator, $.abstract_pointer_declarator, $.type_specifier],
++    [$.parenthesized_declarator, $.abstract_parenthesized_declarator, $.type_specifier],
++    [$.parenthesized_declarator, $.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator, $.type_specifier],
++    [$._declaration_modifiers, $.parenthesized_declarator, $.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator, $.type_specifier],
++    [$._declaration_modifiers, $.parenthesized_declarator, $.abstract_parenthesized_declarator, $.type_specifier],
 +    [$.template_type],
    ],
  
    inline: ($, original) => original.concat([
-@@ -119,6 +198,7 @@
+@@ -119,6 +202,7 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -108,7 +112,7 @@
      ),
  
      _block_item: ($, original) => choice(
-@@ -134,6 +214,10 @@
+@@ -134,6 +218,10 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -119,7 +123,7 @@
      ),
  
      // Types
-@@ -168,6 +252,7 @@
+@@ -168,6 +256,7 @@
        $.dependent_type,
        $.placeholder_type_specifier,
        $.decltype,
@@ -127,7 +131,7 @@
        prec.right(choice(
          alias($.qualified_type_identifier, $.qualified_identifier),
          $._type_identifier,
-@@ -193,6 +278,11 @@
+@@ -193,6 +282,11 @@
        $._class_declaration_item,
      ),
      _class_declaration_item: $ => prec.right(seq(
@@ -139,7 +143,7 @@
        choice(
          field('name', $._class_name),
          seq(
-@@ -226,12 +316,16 @@
+@@ -226,12 +320,16 @@
        alias($.qualified_type_identifier, $.qualified_identifier),
      )),
  
@@ -157,7 +161,7 @@
      }),
  
      declaration: $ => seq(
-@@ -284,14 +378,24 @@
+@@ -284,14 +382,24 @@
  
      enum_specifier: $ => prec.right(seq(
        'enum',
@@ -187,7 +191,7 @@
        ),
        optional($.attribute_specifier),
      )),
-@@ -339,9 +443,16 @@
+@@ -339,9 +447,16 @@
      ),
  
      template_instantiation: $ => seq(
@@ -206,7 +210,7 @@
        ';',
      ),
  
-@@ -402,7 +513,7 @@
+@@ -402,7 +517,7 @@
        $._declaration_specifiers,
        field('declarator', optional(choice($._declarator, $.abstract_reference_declarator))),
        '=',
@@ -215,7 +219,7 @@
      ),
  
      variadic_parameter_declaration: $ => seq(
-@@ -432,6 +543,23 @@
+@@ -432,6 +547,23 @@
            $.initializer_list,
          )),
        ),
@@ -239,7 +243,7 @@
      ),
  
      operator_cast: $ => prec.right(1, seq(
-@@ -469,22 +597,28 @@
+@@ -469,22 +601,28 @@
        alias($.operator_cast_declaration, $.declaration),
        $.friend_declaration,
        seq($.access_specifier, ':'),
@@ -275,7 +279,7 @@
        )),
        optional($.attribute_specifier),
        ';',
-@@ -580,6 +714,205 @@
+@@ -580,6 +718,205 @@
        'protected',
      ),
  
@@ -481,7 +485,7 @@
      _declarator: ($, original) => choice(
        original,
        $.reference_declarator,
-@@ -807,6 +1140,9 @@
+@@ -807,6 +1144,9 @@
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
@@ -491,7 +495,7 @@
      ),
  
      switch_statement: $ => seq(
-@@ -968,10 +1304,18 @@
+@@ -968,10 +1308,18 @@
        ']',
      ),
  
@@ -514,7 +518,7 @@
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1335,15 @@
+@@ -991,9 +1339,15 @@
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -533,7 +537,7 @@
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +1357,7 @@
+@@ -1007,7 +1361,7 @@
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -542,7 +546,7 @@
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +1365,7 @@
+@@ -1015,6 +1369,7 @@
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -550,7 +554,7 @@
        )),
      ),
  
-@@ -1230,7 +1581,7 @@
+@@ -1230,7 +1585,7 @@
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -559,7 +563,7 @@
          field('value', $.initializer_list),
        ),
      ),
-@@ -1256,6 +1607,7 @@
+@@ -1256,6 +1611,7 @@
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -567,7 +571,7 @@
        )),
      ),
  
-@@ -1342,6 +1694,25 @@
+@@ -1342,6 +1698,25 @@
  
      this: _ => 'this',
  

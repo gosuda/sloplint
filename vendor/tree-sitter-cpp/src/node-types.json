@@ -610,7 +610,7 @@
           "named": true
         },
         {
-          "type": "macro_qualifier",
+          "type": "macro_attribute",
           "named": true
         },
         {
@@ -5008,7 +5008,7 @@
           "named": true
         },
         {
-          "type": "macro_qualifier",
+          "type": "macro_attribute",
           "named": true
         },
         {

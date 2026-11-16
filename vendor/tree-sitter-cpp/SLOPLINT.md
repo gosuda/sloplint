@@ -173,12 +173,17 @@ reproduced on real code. Every repro below was first accepted by
   `repeat(choice($.ms_call_modifier, $.far_ptr_modifier,
   $.macro_attribute))` before `'*'`, a merged modifier repeat after `'*'`
   that also allows `macro_qualifier`, and
-  `repeat(choice($.ms_call_modifier, $.macro_qualifier))` before the inner
+  `repeat(choice($.ms_call_modifier, $.macro_attribute))` before the inner
   declarator of the parenthesized-declarator rules and in the
-  `declaration`/`function_definition` pre-declarator slots. The pre-`'*'`
-  slot is deliberately literal-only: a generic identifier there kept the
-  `[]` of `delete [] p` ambiguous against `lambda_capture_specifier` long
-  enough to misparse the whole expression. `far_ptr_modifier` is a new
+  `declaration`/`function_definition` pre-declarator slots. Both slots are
+  deliberately literal-only: a generic identifier pre-`'*'` kept the `[]`
+  of `delete [] p` ambiguous against `lambda_capture_specifier` long
+  enough to misparse the whole expression, and a generic identifier
+  pre-declarator let `f(...)` fork a `macro_qualifier` GLR branch whose
+  argument-list interpretations multiplied versions until the real
+  `parameter_list` path was pruned — `void f(T<A,U<B>,C> x) {}` produced a
+  `MISSING` declarator at `)`. WINAPI/NTAPI/APIENTRY still parse: they
+  are `macro_attribute` literals. `far_ptr_modifier` is a new
   literal list (`FAR`, `NEAR`, `_far`, `_near`, `__far`, `__near`,
   `__huge`, `_huge`); WINAPI/NTAPI/APIENTRY already live in
   `macro_attribute`, so they are reused, not duplicated into

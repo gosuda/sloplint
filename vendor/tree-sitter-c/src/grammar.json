@@ -2874,7 +2874,7 @@
               },
               {
                 "type": "SYMBOL",
-                "name": "macro_qualifier"
+                "name": "macro_attribute"
               }
             ]
           }
@@ -2976,7 +2976,7 @@
                             },
                             {
                               "type": "SYMBOL",
-                              "name": "macro_qualifier"
+                              "name": "macro_attribute"
                             }
                           ]
                         }
@@ -3035,7 +3035,7 @@
                                   },
                                   {
                                     "type": "SYMBOL",
-                                    "name": "macro_qualifier"
+                                    "name": "macro_attribute"
                                   }
                                 ]
                               }
@@ -4767,7 +4767,7 @@
                 },
                 {
                   "type": "SYMBOL",
-                  "name": "macro_qualifier"
+                  "name": "macro_attribute"
                 }
               ]
             }
@@ -4804,7 +4804,7 @@
                 },
                 {
                   "type": "SYMBOL",
-                  "name": "macro_qualifier"
+                  "name": "macro_attribute"
                 }
               ]
             }
@@ -4841,7 +4841,7 @@
                 },
                 {
                   "type": "SYMBOL",
-                  "name": "macro_qualifier"
+                  "name": "macro_attribute"
                 }
               ]
             }
@@ -4878,7 +4878,7 @@
                 },
                 {
                   "type": "SYMBOL",
-                  "name": "macro_qualifier"
+                  "name": "macro_attribute"
                 }
               ]
             }
@@ -11238,6 +11238,45 @@
       "preproc_ifdef"
     ],
     [
+      "_declaration_modifiers",
+      "parenthesized_declarator",
+      "abstract_parenthesized_declarator",
+      "pointer_declarator",
+      "abstract_pointer_declarator",
+      "type_specifier"
+    ],
+    [
+      "parenthesized_declarator",
+      "abstract_parenthesized_declarator",
+      "pointer_declarator",
+      "abstract_pointer_declarator",
+      "type_specifier"
+    ],
+    [
+      "parenthesized_declarator",
+      "abstract_parenthesized_declarator",
+      "type_specifier"
+    ],
+    [
+      "_declaration_specifiers",
+      "abstract_pointer_declarator"
+    ],
+    [
+      "_declaration_modifiers",
+      "abstract_parenthesized_declarator",
+      "abstract_pointer_declarator",
+      "type_specifier"
+    ],
+    [
+      "abstract_parenthesized_declarator",
+      "abstract_pointer_declarator",
+      "type_specifier"
+    ],
+    [
+      "abstract_parenthesized_declarator",
+      "type_specifier"
+    ],
+    [
       "parenthesized_declarator",
       "abstract_parenthesized_declarator",
       "pointer_declarator",
@@ -11252,27 +11291,11 @@
       "abstract_pointer_declarator"
     ],
     [
-      "_declaration_modifiers",
-      "abstract_pointer_declarator",
-      "type_specifier"
-    ],
-    [
-      "abstract_pointer_declarator",
-      "type_specifier"
-    ],
-    [
       "function_definition",
       "declaration",
       "pointer_declarator"
     ],
     [
-      "pointer_declarator",
-      "abstract_pointer_declarator"
-    ],
-    [
-      "_declaration_specifiers",
-      "parenthesized_declarator",
-      "abstract_parenthesized_declarator",
       "pointer_declarator",
       "abstract_pointer_declarator"
     ],
@@ -11284,11 +11307,6 @@
       "pointer_type_declarator"
     ],
     [
-      "abstract_pointer_declarator"
-    ],
-    [
-      "_declaration_specifiers",
-      "abstract_parenthesized_declarator",
       "abstract_pointer_declarator"
     ],
     [

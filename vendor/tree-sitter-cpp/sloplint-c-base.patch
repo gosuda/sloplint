@@ -1,5 +1,5 @@
 --- a/grammar.js	2026-11-16 15:36:58.671581076 +0000
-+++ b/grammar.js	2026-11-16 18:43:55.538151495 +0000
++++ b/grammar.js	2026-11-16 18:57:37.449816744 +0000
 @@ -36,6 +36,8 @@
    name: 'c',
  
@@ -61,7 +61,7 @@
 -      optional($.ms_call_modifier),
 +      // WINAPI/NTAPI/APIENTRY/CDECL/FAR and friends: macro_qualifier covers
 +      // calling-convention spellings outside ms_call_modifier's literal list.
-+      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
++      repeat(choice($.ms_call_modifier, $.macro_attribute)),
        field('declarator', $._declarator),
        field('body', $.compound_statement),
      ),
@@ -70,7 +70,7 @@
        commaSep1(field('declarator', choice(
          seq(
 -          optional($.ms_call_modifier),
-+          repeat(choice($.ms_call_modifier, $.macro_qualifier)),
++          repeat(choice($.ms_call_modifier, $.macro_attribute)),
            $._declaration_declarator,
            optional($.gnu_asm_expression),
          ),
@@ -242,28 +242,28 @@
      parenthesized_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
        '(',
 -      optional($.ms_call_modifier),
-+      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
++      repeat(choice($.ms_call_modifier, $.macro_attribute)),
        $._declarator,
        ')',
      )),
      parenthesized_field_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
        '(',
 -      optional($.ms_call_modifier),
-+      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
++      repeat(choice($.ms_call_modifier, $.macro_attribute)),
        $._field_declarator,
        ')',
      )),
      parenthesized_type_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
        '(',
 -      optional($.ms_call_modifier),
-+      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
++      repeat(choice($.ms_call_modifier, $.macro_attribute)),
        $._type_declarator,
        ')',
      )),
      abstract_parenthesized_declarator: $ => prec(1, seq(
        '(',
 -      optional($.ms_call_modifier),
-+      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
++      repeat(choice($.ms_call_modifier, $.macro_attribute)),
        $._abstract_declarator,
        ')',
      )),
