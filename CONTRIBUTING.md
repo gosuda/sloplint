@@ -35,6 +35,24 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 ```
 
+CI runs Clippy, debug-profile tests, and release-binary self-lint on all six
+native release targets. It disables incremental compilation and keeps line-table
+debug information for backtraces; debug assertions and overflow checks remain
+enabled in tests. Local build profiles and the release profile are unchanged.
+
+CI caches registry and vendored grammar dependencies, excluding first-party
+builds. The cache is partitioned by runner, target, toolchain, compiler settings,
+manifests, lockfile, and vendored source content. The `crates -> ../target`
+workspace setting keeps `vendor/` outside the cache action's first-party cleanup
+scope. Vendor timestamps are normalized only in CI, after selecting a cache
+whose restore prefix includes the vendor content hash. Keep that hash in the
+restore prefix whenever changing the cache configuration, and keep the CI and
+release cache settings aligned. All build and test commands run on cache hits.
+
+Tagged releases reuse the same checks with `skip-release-build: true`: the
+release workflow's build matrix compiles and self-lints each release binary once
+before packaging it. Publishing still requires both the CI and build jobs.
+
 CI runs `sloplint check crates --format agent --strictness standard --mode threshold --fail-on minor` (using the root `sloplint.toml`, which excludes test fixtures). Minor and higher findings fail CI. Lower rungs are reported without failing, so treat them as defects unless a reviewer accepts them. The self-lint gate is a contributor check, not a protected boundary. A pull request can change `sloplint.toml` (`exclude`, rule levels, custom rules) and the workflow itself. Reviewers must read changes to `sloplint.toml` and `.github/`:
 
 ```bash
