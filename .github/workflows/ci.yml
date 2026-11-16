@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_call:
+    inputs:
+      skip-release-build:
+        description: The caller builds and self-lints every release target.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -71,6 +76,10 @@ jobs:
           - { os: windows-2025, target: x86_64-pc-windows-msvc }
           - { os: windows-11-arm, target: aarch64-pc-windows-msvc }
     env:
+      CARGO_INCREMENTAL: "0"
+      # Keep assertion checks and useful backtraces without full debug symbols.
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
+      CARGO_PROFILE_TEST_DEBUG: line-tables-only
       MACOSX_DEPLOYMENT_TARGET: "11.0"
       SLOPLINT_REQUIRE_FS_CAPS: ${{ matrix.require_fs_caps }}
     steps:
@@ -78,10 +87,26 @@ jobs:
         with:
           persist-credentials: false
       - run: rustup target add ${{ matrix.target }}
+      - name: Cache Rust and native dependencies
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          # Retain vendor dependencies; prune only the first-party crates.
+          workspaces: crates -> ../target
+          # The vendor hash must be in the restore prefix, not only its suffix.
+          shared-key: native-v1-${{ matrix.os }}-${{ matrix.target }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/config.toml', 'vendor/**') }}
+          env-vars: MACOSX_DEPLOYMENT_TARGET ImageOS ImageVersion
+          cache-bin: false
+          save-if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
+      - name: Preserve vendor dependency fingerprints
+        # A fresh checkout otherwise rebuilds every generated parser. Content
+        # changes cannot restore the old cache because the key hashes vendor/.
+        run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
       - run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
       - run: cargo test --workspace --locked --target ${{ matrix.target }}
-      - run: cargo build --release --locked --target ${{ matrix.target }}
+      - if: ${{ !inputs.skip-release-build }}
+        run: cargo build --release --locked --target ${{ matrix.target }}
       - name: Self-lint with the release binary
+        if: ${{ !inputs.skip-release-build }}
         run: |
           bin="target/${{ matrix.target }}/release/sloplint"
           if [ "$RUNNER_OS" = Windows ]; then bin="$bin.exe"; fi
