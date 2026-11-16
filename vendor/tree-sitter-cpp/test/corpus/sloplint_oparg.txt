@@ -1,0 +1,36 @@
+========================================
+Bare comparison operator as a call argument
+========================================
+
+void f(void) {
+  assert_int(0, ==, rv);
+  assert_size(493, !=, n);
+  assert_int(a, <=, b);
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type))))
+    body: (compound_statement
+      (macro_declaration
+        (identifier)
+        (macro_argument_list
+          (number_literal)
+          (identifier)))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list
+          (number_literal)
+          (identifier)))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list
+          (identifier)
+          (identifier))))))

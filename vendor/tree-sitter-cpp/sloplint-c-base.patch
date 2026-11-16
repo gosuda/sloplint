@@ -773,7 +773,7 @@
      gnu_asm_qualifier: _ => choice(
        'volatile',
        '__volatile__',
-@@ -1197,7 +1611,36 @@
+@@ -1197,7 +1611,57 @@
      extension_expression: $ => seq('__extension__', $.expression),
  
      // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
@@ -781,7 +781,28 @@
 +    // A real argument may follow a preproc block comma-free because the
 +    // separator comma often hides inside the block (`f(a #ifdef X , b
 +    // #endif c)`); between real arguments commas stay strict.
-+    _argument_list_real: $ => choice($.expression, $.compound_statement, $.primitive_type),
++    _argument_list_real: $ => choice($.expression, $.compound_statement, $._argument_list_type, $._argument_list_operator),
++
++    // Assertion macros (munit, CMocka) take a bare comparison operator:
++    // `assert_int(0, ==, rv)`. No expression can start with these tokens,
++    // so accepting them in argument position is unambiguous.
++    _argument_list_operator: $ => choice('==', '!=', '<=', '>=', '<', '>'),
++
++    // A bare type as a call argument: `SWAP(void *, &a, &b)`,
++    // `SWAP(const char *, ...)`, `M(unsigned int, x)`. Restricted to
++    // primitive_type and sized_type_specifier so `T *` never competes
++    // with `a * b` on the identifier-expression path.
++    _argument_list_type: $ => seq(
++      repeat($.type_qualifier),
++      choice(
++        $.primitive_type,
++        $.sized_type_specifier,
++        $.struct_specifier,
++        $.union_specifier,
++        $.enum_specifier,
++      ),
++      repeat('*'),
++    ),
 +
 +    // Free-atom stream: real arguments, preproc blocks/directives and
 +    // separator commas interleave in any order. `#define`/`#undef`
@@ -811,7 +832,7 @@
  
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
-@@ -1216,18 +1659,47 @@
+@@ -1216,18 +1680,47 @@
  
      parenthesized_expression: $ => seq(
        '(',
@@ -865,7 +886,7 @@
        '}',
      ),
  
-@@ -1246,6 +1718,15 @@
+@@ -1246,6 +1739,15 @@
          ':',
          field('value', choice($.expression, $.initializer_list)),
        ),
@@ -881,7 +902,7 @@
      ),
  
      subscript_designator: $ => seq('[', $.expression, ']'),
-@@ -1296,14 +1777,19 @@
+@@ -1296,14 +1798,19 @@
  
      // Must concatenate at least 2 nodes, one of which must be a string_literal.
      // Identifier is added to parse macros that are strings, like PRIu64.

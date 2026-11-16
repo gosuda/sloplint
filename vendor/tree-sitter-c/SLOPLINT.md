@@ -302,8 +302,12 @@ the size growth.
   between `else` and its body (`} else #endif { }`) or carry a bare
   label (`#ifdef X fin: #endif stmt`): the `''`-suffixed block content
   accepts `dangling_else` (`if(cond) stmt else`, `else if` tails
-  recurse) and `dangling_label` (`name:`) alongside `_block_item`. The
-  matching `{ ... }` / statement after `#endif` parses as an ordinary
+  recurse) and `dangling_label` (`name:`) alongside `_top_level_item`.
+  `_top_level_item` covers every `_block_item` member (`declaration`,
+  all statement shapes via `_top_level_statement`) plus
+  `macro_declaration`, so a `#ifdef` guard wrapping declarations or
+  declaration macros parses at any nesting level. The matching
+  `{ ... }` / statement after `#endif` parses as an ordinary
   block item.
 
 - **Preproc inside expressions** — `a + #ifdef X b + #endif c`,
@@ -345,11 +349,21 @@ the size growth.
   `_in_enumerator_list`/`_in_enumerator_list_no_comma` block contents
   accept `$.enumerator`, `$.call_expression`, `'__extension__'` and
   `$.preproc_def`.
-- **`primitive_type` as a call argument** — `_argument_list_real` gains
-  `$.primitive_type`, so macro-style calls taking a builtin type parse:
-  `GET(uint8_t)`, `READ(int)`. Only `primitive_type` is added (never
-  `$.type_identifier`): user-type spellings stay on the
-  `identifier`-expression path with zero new ambiguity.
+- **Type spellings as call arguments** — `_argument_list_real` gains
+  `$._argument_list_type`, a strict `seq(repeat($.type_qualifier),
+  choice($.primitive_type, $.sized_type_specifier, $.struct_specifier,
+  $.union_specifier, $.enum_specifier), repeat('*'))`, so macro-style
+  calls taking a type parse: `GET(uint8_t)`, `SWAP(void *, &a, &b)`,
+  `SWAP(const char *, ...)`, `SWAP(unsigned int, ...)`,
+  `SWAP(struct foo *, ...)`. `$.type_identifier` is deliberately not
+  added: user-type spellings stay on the `identifier`-expression path
+  with zero new ambiguity.
+
+  - `_argument_list_operator` is a second new `_argument_list_real`
+    member: the bare comparison tokens `==`, `!=`, `<=`, `>=`, `<`, `>`
+    as items, for assertion macros that pass the operator as a token
+    (`assert_int(0, ==, rv)` — munit/CMocka idiom). No expression can
+    start with these tokens, so argument position stays unambiguous.
 - **Trailing macros after a variable declarator** — `declaration`'s
   declarator seq and `init_declarator` carry a trailing
   `repeat(choice($.ms_call_modifier, $.macro_attribute,

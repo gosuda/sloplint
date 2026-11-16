@@ -1,0 +1,80 @@
+========================================
+Bare pointer type as a call argument
+========================================
+
+int g(void) {
+  SWAP(void *, &a, &b);
+  SWAP(const char *, &a, &b);
+  return 0;
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type))))
+    body: (compound_statement
+      (macro_declaration
+        (identifier)
+        (macro_argument_list
+          (primitive_type)
+          (pointer_expression
+            argument: (identifier))
+          (pointer_expression
+            argument: (identifier))))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list
+          (primitive_type)
+          (pointer_expression
+            argument: (identifier))
+          (pointer_expression
+            argument: (identifier))))
+      (return_statement
+        (number_literal)))))
+
+========================================
+Multi-word and struct types as call arguments
+========================================
+
+int g(void) {
+  SWAP(unsigned int, a, b);
+  SWAP(struct foo *, &a, &b);
+  return 0;
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type))))
+    body: (compound_statement
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (identifier)
+            (primitive_type)
+            (identifier)
+            (identifier))))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list
+          (identifier)
+          (identifier)
+          (pointer_expression
+            argument: (identifier))
+          (pointer_expression
+            argument: (identifier))))
+      (return_statement
+        (number_literal)))))

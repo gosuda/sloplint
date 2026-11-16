@@ -478,7 +478,7 @@
               "members": [
                 {
                   "type": "SYMBOL",
-                  "name": "_block_item"
+                  "name": "_top_level_item"
                 },
                 {
                   "type": "SYMBOL",
@@ -580,7 +580,7 @@
               "members": [
                 {
                   "type": "SYMBOL",
-                  "name": "_block_item"
+                  "name": "_top_level_item"
                 },
                 {
                   "type": "SYMBOL",
@@ -660,7 +660,7 @@
               "members": [
                 {
                   "type": "SYMBOL",
-                  "name": "_block_item"
+                  "name": "_top_level_item"
                 },
                 {
                   "type": "SYMBOL",
@@ -714,7 +714,7 @@
               "members": [
                 {
                   "type": "SYMBOL",
-                  "name": "_block_item"
+                  "name": "_top_level_item"
                 },
                 {
                   "type": "SYMBOL",
@@ -807,7 +807,7 @@
               "members": [
                 {
                   "type": "SYMBOL",
-                  "name": "_block_item"
+                  "name": "_top_level_item"
                 },
                 {
                   "type": "SYMBOL",
@@ -15937,7 +15937,84 @@
         },
         {
           "type": "SYMBOL",
-          "name": "primitive_type"
+          "name": "_argument_list_type"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_argument_list_operator"
+        }
+      ]
+    },
+    "_argument_list_operator": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "=="
+        },
+        {
+          "type": "STRING",
+          "value": "!="
+        },
+        {
+          "type": "STRING",
+          "value": "<="
+        },
+        {
+          "type": "STRING",
+          "value": ">="
+        },
+        {
+          "type": "STRING",
+          "value": "<"
+        },
+        {
+          "type": "STRING",
+          "value": ">"
+        }
+      ]
+    },
+    "_argument_list_type": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "type_qualifier"
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "primitive_type"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sized_type_specifier"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "struct_specifier"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "union_specifier"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "enum_specifier"
+            }
+          ]
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "STRING",
+            "value": "*"
+          }
         }
       ]
     },
@@ -17344,6 +17421,23 @@
       "preproc_ifdef"
     ],
     [
+      "macro_argument_list",
+      "_argument_list_operator"
+    ],
+    [
+      "type_specifier",
+      "_argument_list_type"
+    ],
+    [
+      "macro_argument_list",
+      "type_specifier",
+      "_argument_list_type"
+    ],
+    [
+      "macro_argument_list",
+      "_argument_list_type"
+    ],
+    [
       "preproc_else_in_enumerator_list",
       "preproc_else_in_enumerator_list_no_comma",
       "expression",
@@ -17441,15 +17535,6 @@
       "preproc_else",
       "type_qualifier",
       "extension_expression"
-    ],
-    [
-      "macro_argument_list",
-      "type_specifier",
-      "_argument_list_real"
-    ],
-    [
-      "macro_argument_list",
-      "_argument_list_real"
     ],
     [
       "enumerator_list",

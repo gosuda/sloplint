@@ -399,10 +399,23 @@ enumeration of `macro_attribute` costs most of the size growth.
   `repeat(choice($.enumerator, $.call_expression, '__extension__',
   preproc_if/ifdef aliases, $.preproc_def, $.preproc_call, ','))`.
   X-macro enum tables (`{ #define ET(E) E, GEN(ET) #undef ET }`) parse.
-- **`primitive_type` as a call argument** — `_argument_list_real` gains
-  `$.primitive_type` so `GET(uint8_t)`-style macro calls parse.
-  `$.type_identifier` is deliberately not added (it would fork an
-  ambiguity on every `f(x)` call).
+- **Type spellings as call arguments** — `_argument_list_real` gains
+  `$._argument_list_type`, a strict `seq(repeat($.type_qualifier),
+  choice($.primitive_type, $.sized_type_specifier, $.struct_specifier,
+  $.union_specifier, $.enum_specifier), repeat('*'))`, so macro-style
+  calls taking a type parse: `GET(uint8_t)`, `SWAP(unsigned int, ...)`.
+  Unlike the standalone C grammar, `NAME(type *, args)` in a cpp
+  function body resolves as `macro_declaration` (`void *`, `struct foo *`
+  fit the `macro_argument_list` soup) rather than `call_expression` —
+  semantically defensible since such sites are statement macros like
+  `NGHTTP2_SWAP`. Both paths are ERROR-free; `$.type_identifier` stays
+  out to keep `f(x)` unambiguous.
+
+  - `_argument_list_operator` is a second new `_argument_list_real`
+    member: the bare comparison tokens `==`, `!=`, `<=`, `>=`, `<`, `>`
+    as items, for assertion macros that pass the operator as a token
+    (`assert_int(0, ==, rv)` — munit/CMocka idiom). No expression can
+    start with these tokens, so argument position stays unambiguous.
 - **`macro_qualifier`/`macro_attribute` in `_function_postfix`** —
   `repeat1(choice($.virtual_specifier, $.macro_attribute,
   $.macro_qualifier))`, so member declarations with a trailing

@@ -55,6 +55,10 @@ module.exports = grammar({
     [$._linkage_guard, $.preproc_if],
     [$._declaration_modifiers, $.type_specifier],
     [$._linkage_guard, $.preproc_ifdef],
+    [$.macro_argument_list, $._argument_list_operator],
+    [$.type_specifier, $._argument_list_type],
+    [$.macro_argument_list, $.type_specifier, $._argument_list_type],
+    [$.macro_argument_list, $._argument_list_type],
     [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.expression, $.concatenated_string],
     [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.concatenated_string],
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.expression, $.concatenated_string],
@@ -77,8 +81,6 @@ module.exports = grammar({
     [$.preproc_else, $.type_definition],
     [$.preproc_else, $.extension_expression],
     [$.preproc_else, $.type_qualifier, $.extension_expression],
-    [$.macro_argument_list, $.type_specifier, $._argument_list_real],
-    [$.macro_argument_list, $._argument_list_real],
     [$.enumerator_list, $.expression],
     [$.enumerator, $.expression],
     [$.enumerator_list, $.extension_expression],
@@ -265,7 +267,10 @@ module.exports = grammar({
       token.immediate(/\r?\n/),
     ),
 
-    ...preprocIf('', $ => choice($._block_item, $.dangling_else, $.dangling_label, '__extension__')),
+    // Top-level preproc bodies hold top-level items (a guarded header can
+    // contain declaration macros); nested bodies still accept every
+    // statement shape through _top_level_statement -> statement.
+    ...preprocIf('', $ => choice($._top_level_item, $.dangling_else, $.dangling_label, '__extension__')),
     ...preprocIf('_in_field_declaration_list', $ => $._field_declaration_list_item),
     ...preprocIf('_in_enumerator_list', $ => choice(seq($.enumerator, ','), $.enumerator, $.call_expression, '__extension__', $.preproc_def)),
     ...preprocIf('_in_enumerator_list_no_comma', $ => choice($.enumerator, $.call_expression, '__extension__', $.preproc_def), -1),
@@ -1743,7 +1748,28 @@ module.exports = grammar({
     // A real argument may follow a preproc block comma-free because the
     // separator comma often hides inside the block (`f(a #ifdef X , b
     // #endif c)`); between real arguments commas stay strict.
-    _argument_list_real: $ => choice($.expression, $.compound_statement, $.primitive_type),
+    _argument_list_real: $ => choice($.expression, $.compound_statement, $._argument_list_type, $._argument_list_operator),
+
+    // Assertion macros (munit, CMocka) take a bare comparison operator:
+    // `assert_int(0, ==, rv)`. No expression can start with these tokens,
+    // so accepting them in argument position is unambiguous.
+    _argument_list_operator: $ => choice('==', '!=', '<=', '>=', '<', '>'),
+
+    // A bare type as a call argument: `SWAP(void *, &a, &b)`,
+    // `SWAP(const char *, ...)`, `M(unsigned int, x)`. Restricted to
+    // primitive_type and sized_type_specifier so `T *` never competes
+    // with `a * b` on the identifier-expression path.
+    _argument_list_type: $ => seq(
+      repeat($.type_qualifier),
+      choice(
+        $.primitive_type,
+        $.sized_type_specifier,
+        $.struct_specifier,
+        $.union_specifier,
+        $.enum_specifier,
+      ),
+      repeat('*'),
+    ),
 
     // Free-atom stream: real arguments, preproc blocks/directives and
     // separator commas interleave in any order. `#define`/`#undef`

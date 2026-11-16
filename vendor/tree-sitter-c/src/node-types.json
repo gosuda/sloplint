@@ -520,6 +520,10 @@
           "named": true
         },
         {
+          "type": "enum_specifier",
+          "named": true
+        },
+        {
           "type": "expression",
           "named": true
         },
@@ -548,7 +552,23 @@
           "named": true
         },
         {
+          "type": "sized_type_specifier",
+          "named": true
+        },
+        {
+          "type": "struct_specifier",
+          "named": true
+        },
+        {
           "type": "system_lib_string",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
+          "named": true
+        },
+        {
+          "type": "union_specifier",
           "named": true
         }
       ]
@@ -3418,6 +3438,26 @@
       "required": false,
       "types": [
         {
+          "type": "attributed_statement",
+          "named": true
+        },
+        {
+          "type": "break_statement",
+          "named": true
+        },
+        {
+          "type": "case_statement",
+          "named": true
+        },
+        {
+          "type": "compound_statement",
+          "named": true
+        },
+        {
+          "type": "continue_statement",
+          "named": true
+        },
+        {
           "type": "dangling_else",
           "named": true
         },
@@ -3430,6 +3470,10 @@
           "named": true
         },
         {
+          "type": "do_statement",
+          "named": true
+        },
+        {
           "type": "enumerator",
           "named": true
         },
@@ -3438,7 +3482,15 @@
           "named": true
         },
         {
+          "type": "expression_statement",
+          "named": true
+        },
+        {
           "type": "field_declaration",
+          "named": true
+        },
+        {
+          "type": "for_statement",
           "named": true
         },
         {
@@ -3446,7 +3498,15 @@
           "named": true
         },
         {
+          "type": "goto_statement",
+          "named": true
+        },
+        {
           "type": "guarded_linkage",
+          "named": true
+        },
+        {
+          "type": "if_statement",
           "named": true
         },
         {
@@ -3455,6 +3515,10 @@
         },
         {
           "type": "initializer_pair",
+          "named": true
+        },
+        {
+          "type": "labeled_statement",
           "named": true
         },
         {
@@ -3494,7 +3558,11 @@
           "named": true
         },
         {
-          "type": "statement",
+          "type": "return_statement",
+          "named": true
+        },
+        {
+          "type": "switch_statement",
           "named": true
         },
         {
@@ -3507,6 +3575,10 @@
         },
         {
           "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "while_statement",
           "named": true
         }
       ]
@@ -3550,6 +3622,26 @@
       "required": false,
       "types": [
         {
+          "type": "attributed_statement",
+          "named": true
+        },
+        {
+          "type": "break_statement",
+          "named": true
+        },
+        {
+          "type": "case_statement",
+          "named": true
+        },
+        {
+          "type": "compound_statement",
+          "named": true
+        },
+        {
+          "type": "continue_statement",
+          "named": true
+        },
+        {
           "type": "dangling_else",
           "named": true
         },
@@ -3562,6 +3654,10 @@
           "named": true
         },
         {
+          "type": "do_statement",
+          "named": true
+        },
+        {
           "type": "enumerator",
           "named": true
         },
@@ -3570,7 +3666,15 @@
           "named": true
         },
         {
+          "type": "expression_statement",
+          "named": true
+        },
+        {
           "type": "field_declaration",
+          "named": true
+        },
+        {
+          "type": "for_statement",
           "named": true
         },
         {
@@ -3578,7 +3682,15 @@
           "named": true
         },
         {
+          "type": "goto_statement",
+          "named": true
+        },
+        {
           "type": "guarded_linkage",
+          "named": true
+        },
+        {
+          "type": "if_statement",
           "named": true
         },
         {
@@ -3587,6 +3699,10 @@
         },
         {
           "type": "initializer_pair",
+          "named": true
+        },
+        {
+          "type": "labeled_statement",
           "named": true
         },
         {
@@ -3626,7 +3742,11 @@
           "named": true
         },
         {
-          "type": "statement",
+          "type": "return_statement",
+          "named": true
+        },
+        {
+          "type": "switch_statement",
           "named": true
         },
         {
@@ -3639,6 +3759,10 @@
         },
         {
           "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "while_statement",
           "named": true
         }
       ]
@@ -3653,6 +3777,26 @@
       "required": false,
       "types": [
         {
+          "type": "attributed_statement",
+          "named": true
+        },
+        {
+          "type": "break_statement",
+          "named": true
+        },
+        {
+          "type": "case_statement",
+          "named": true
+        },
+        {
+          "type": "compound_statement",
+          "named": true
+        },
+        {
+          "type": "continue_statement",
+          "named": true
+        },
+        {
           "type": "dangling_else",
           "named": true
         },
@@ -3665,6 +3809,10 @@
           "named": true
         },
         {
+          "type": "do_statement",
+          "named": true
+        },
+        {
           "type": "enumerator",
           "named": true
         },
@@ -3673,7 +3821,15 @@
           "named": true
         },
         {
+          "type": "expression_statement",
+          "named": true
+        },
+        {
           "type": "field_declaration",
+          "named": true
+        },
+        {
+          "type": "for_statement",
           "named": true
         },
         {
@@ -3681,7 +3837,15 @@
           "named": true
         },
         {
+          "type": "goto_statement",
+          "named": true
+        },
+        {
           "type": "guarded_linkage",
+          "named": true
+        },
+        {
+          "type": "if_statement",
           "named": true
         },
         {
@@ -3690,6 +3854,10 @@
         },
         {
           "type": "initializer_pair",
+          "named": true
+        },
+        {
+          "type": "labeled_statement",
           "named": true
         },
         {
@@ -3729,7 +3897,11 @@
           "named": true
         },
         {
-          "type": "statement",
+          "type": "return_statement",
+          "named": true
+        },
+        {
+          "type": "switch_statement",
           "named": true
         },
         {
@@ -3742,6 +3914,10 @@
         },
         {
           "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "while_statement",
           "named": true
         }
       ]
@@ -3853,6 +4029,26 @@
       "required": false,
       "types": [
         {
+          "type": "attributed_statement",
+          "named": true
+        },
+        {
+          "type": "break_statement",
+          "named": true
+        },
+        {
+          "type": "case_statement",
+          "named": true
+        },
+        {
+          "type": "compound_statement",
+          "named": true
+        },
+        {
+          "type": "continue_statement",
+          "named": true
+        },
+        {
           "type": "dangling_else",
           "named": true
         },
@@ -3865,6 +4061,10 @@
           "named": true
         },
         {
+          "type": "do_statement",
+          "named": true
+        },
+        {
           "type": "enumerator",
           "named": true
         },
@@ -3873,7 +4073,15 @@
           "named": true
         },
         {
+          "type": "expression_statement",
+          "named": true
+        },
+        {
           "type": "field_declaration",
+          "named": true
+        },
+        {
+          "type": "for_statement",
           "named": true
         },
         {
@@ -3881,7 +4089,15 @@
           "named": true
         },
         {
+          "type": "goto_statement",
+          "named": true
+        },
+        {
           "type": "guarded_linkage",
+          "named": true
+        },
+        {
+          "type": "if_statement",
           "named": true
         },
         {
@@ -3890,6 +4106,10 @@
         },
         {
           "type": "initializer_pair",
+          "named": true
+        },
+        {
+          "type": "labeled_statement",
           "named": true
         },
         {
@@ -3929,7 +4149,11 @@
           "named": true
         },
         {
-          "type": "statement",
+          "type": "return_statement",
+          "named": true
+        },
+        {
+          "type": "switch_statement",
           "named": true
         },
         {
@@ -3942,6 +4166,10 @@
         },
         {
           "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "while_statement",
           "named": true
         }
       ]
@@ -3985,6 +4213,26 @@
       "required": false,
       "types": [
         {
+          "type": "attributed_statement",
+          "named": true
+        },
+        {
+          "type": "break_statement",
+          "named": true
+        },
+        {
+          "type": "case_statement",
+          "named": true
+        },
+        {
+          "type": "compound_statement",
+          "named": true
+        },
+        {
+          "type": "continue_statement",
+          "named": true
+        },
+        {
           "type": "dangling_else",
           "named": true
         },
@@ -3997,6 +4245,10 @@
           "named": true
         },
         {
+          "type": "do_statement",
+          "named": true
+        },
+        {
           "type": "enumerator",
           "named": true
         },
@@ -4005,7 +4257,15 @@
           "named": true
         },
         {
+          "type": "expression_statement",
+          "named": true
+        },
+        {
           "type": "field_declaration",
+          "named": true
+        },
+        {
+          "type": "for_statement",
           "named": true
         },
         {
@@ -4013,7 +4273,15 @@
           "named": true
         },
         {
+          "type": "goto_statement",
+          "named": true
+        },
+        {
           "type": "guarded_linkage",
+          "named": true
+        },
+        {
+          "type": "if_statement",
           "named": true
         },
         {
@@ -4022,6 +4290,10 @@
         },
         {
           "type": "initializer_pair",
+          "named": true
+        },
+        {
+          "type": "labeled_statement",
           "named": true
         },
         {
@@ -4061,7 +4333,11 @@
           "named": true
         },
         {
-          "type": "statement",
+          "type": "return_statement",
+          "named": true
+        },
+        {
+          "type": "switch_statement",
           "named": true
         },
         {
@@ -4074,6 +4350,10 @@
         },
         {
           "type": "variadic_parameter",
+          "named": true
+        },
+        {
+          "type": "while_statement",
           "named": true
         }
       ]
