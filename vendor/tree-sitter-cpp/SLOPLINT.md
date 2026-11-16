@@ -324,7 +324,8 @@ enumeration of `macro_attribute` costs most of the size growth.
   same trade-off as `qt_statement_macro` literals.
 
 - **Preproc blocks splitting comma lists** (`parameter_list`,
-  `field_initializer_list`, and the base's `initializer_list`) model
+  `field_initializer_list`, `argument_list`, and the base's
+  `initializer_list`) model
   each list item as `choice(real, real·blocks·[real], blocks·[real])`
   inside `commaSep1`, where a real item may follow a block comma-free
   because the separator comma often hides inside the block. Between two
@@ -343,6 +344,21 @@ enumeration of `macro_attribute` costs most of the size growth.
   never demands a following item before `#endif`. Earlier per-item
   `optional(',')` edges and strict separators committed the `,` to a
   required continuation and produced `MISSING identifier`.
+
+- **Infix continuations** (`a | b #ifdef | c #endif`):
+  `_in_argument_list_item` and the base's `_in_initializer_list`
+  content accept `seq(op, expression)` items covering the C++ operator
+  spellings (`.*`, `->*`, `<=>`, `or`, `and`, `bitor`, `xor`,
+  `bitand`, `not_eq`, and the shared set). The overridden
+  `binary_expression` gains the same `seq(left,
+  repeat1($._infix_continuation_preproc))` fallback row as the C
+  grammar, reusing the argument-list preproc rules via the same alias —
+  separate `_in_infix` rules were tried and removed because the
+  deterministic `#ifdef` merge stole list blocks.
+
+- **`concatenated_string`** accepts `identifier` (macro names) at
+  either edge of the literal chain — `"lit" MACRO`, `MACRO "lit"`, and
+  interleaved forms — plus `raw_string_literal` anywhere in the chain.
 
 - **Inherited from `sloplint-c-base.patch`**: comments inside a
   `\`-continued `#define`/`#undef`/`#call` resume `preproc_arg` (the

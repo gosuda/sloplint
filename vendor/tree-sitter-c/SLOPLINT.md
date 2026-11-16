@@ -253,8 +253,8 @@ the size growth.
   single-instruction form `__asm int 3` (no braces) is not covered —
   the token soup cannot see newlines to bound the instruction.
 
-- **Preproc blocks splitting comma lists** (`parameter_list` and
-  `initializer_list`) model each list item as
+- **Preproc blocks splitting comma lists** (`parameter_list`,
+  `initializer_list`, and `argument_list`) model each list item as
   `choice(real, real·blocks·[real], blocks·[real])` inside `commaSep1`,
   where a real item may follow a block comma-free because the separator
   comma often hides inside the block. Between two real items commas
@@ -269,6 +269,20 @@ the size growth.
   required continuation on `#endif` and produced `MISSING identifier`
   or wrapped the block in `ERROR`. Making `,` a permissive atom is
   unambiguous at LR(1).
+
+- **Infix continuations** (`a | b #ifdef | c #endif` — the alternate
+  tokens of a binary expression hidden inside a preproc block): the
+  `_in_argument_list` and `_in_initializer_list` block contents also
+  accept `seq(op, expression)` items, where `op` is any binary
+  operator. `binary_expression` itself gains a fallback row
+  `seq(left, repeat1($._infix_continuation_preproc))`, and
+  `_infix_continuation_preproc` aliases the
+  `preproc_if/ifdef_in_argument_list` rules so an `expr #ifdef`
+  sequence shifts one unambiguous rule — whichever reading
+  (infix tail vs. block item) completes wins. A separate
+  `_in_infix` preproc rule family was tried and removed: the two
+  rules merged at the `#ifdef` and the deterministic merge
+  systematically stole blocks meant for list items.
 
 - **Comments inside a `\`-continued `#define`/`#undef`/`#call` line**
   resume `preproc_arg` after the comment: the `value`/`argument` field

@@ -271,7 +271,7 @@ void f() {
     (function_declarator
       (identifier)
       (parameter_list))
-        (compound_statement
+    (compound_statement
       (ms_asm_statement
         (ms_asm_block
           (identifier)

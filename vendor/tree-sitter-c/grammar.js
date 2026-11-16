@@ -55,6 +55,13 @@ module.exports = grammar({
     [$._linkage_guard, $.preproc_if],
     [$._declaration_modifiers, $.type_specifier],
     [$._linkage_guard, $.preproc_ifdef],
+    [$.expression, $.field_designator],
+    [$.binary_expression, $.initializer_pair],
+    [$.binary_expression, $._initializer_list_real],
+    [$.binary_expression, $._argument_list_real],
+    [$.binary_expression],
+    [$.binary_expression, $.extension_expression],
+    [$._argument_list_item],
     [$._initializer_list_item],
     [$._parameter_list_real, $._old_style_parameter_list],
     [$._parameter_list_item],
@@ -240,7 +247,31 @@ module.exports = grammar({
       $.expression,
       $.initializer_list,
       ',',
+      seq(
+        choice(
+        '||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
+        '<<', '>>', '+', '-', '*', '/', '%', '.', '->',
+        ),
+        $.expression,
+      ),
     )),
+    // A block may hold `,arg` (split separator) or `op expr` (split
+    // infix continuation, `a | b #ifdef X | c #endif`) — both sit in the
+    // same `preproc_if_in_argument_list` rules, which the infix tail of
+    // a binary_expression reuses.
+    ...preprocIf('_in_argument_list', $ => choice(
+      $.expression,
+      $.compound_statement,
+      ',',
+      seq(
+        choice(
+        '||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
+        '<<', '>>', '+', '-', '*', '/', '%', '.', '->',
+        ),
+        $.expression,
+      ),
+    )),
+
 
     preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
     preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,
@@ -1401,15 +1432,28 @@ module.exports = grammar({
         ['>>', PREC.SHIFT],
       ];
 
-      return choice(...table.map(([operator, precedence]) => {
-        return prec.left(precedence, seq(
+      return choice(
+        ...table.map(([operator, precedence]) => {
+          return prec.left(precedence, seq(
+            field('left', $.expression),
+            // @ts-ignore
+            field('operator', operator),
+            field('right', $.expression),
+          ));
+        }),
+        // `a | b #ifdef X | c #endif`: the tail of a binary chain can be
+        // split into conditional blocks carrying `op operand` pairs.
+        seq(
           field('left', $.expression),
-          // @ts-ignore
-          field('operator', operator),
-          field('right', $.expression),
-        ));
-      }));
+          repeat1($._infix_continuation_preproc),
+        ),
+      );
     },
+
+    _infix_continuation_preproc: $ => choice(
+      alias($.preproc_if_in_argument_list, $.preproc_if),
+      alias($.preproc_ifdef_in_argument_list, $.preproc_ifdef),
+    ),
 
     update_expression: $ => {
       const argument = field('argument', $.expression);
@@ -1575,7 +1619,34 @@ module.exports = grammar({
     extension_expression: $ => seq('__extension__', $.expression),
 
     // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
-    argument_list: $ => seq('(', commaSep(choice($.expression, $.compound_statement)), ')'),
+    // A real argument may follow a preproc block comma-free because the
+    // separator comma often hides inside the block (`f(a #ifdef X , b
+    // #endif c)`); between real arguments commas stay strict.
+    _argument_list_real: $ => choice($.expression, $.compound_statement),
+
+    _argument_list_item: $ => choice(
+      $._argument_list_real,
+      seq(
+        $._argument_list_real,
+        repeat1($._argument_list_preproc),
+        optional(seq(optional(','), $._argument_list_real)),
+      ),
+      seq(
+        repeat1($._argument_list_preproc),
+        optional(seq(optional(','), $._argument_list_real)),
+      ),
+    ),
+
+    _argument_list_preproc: $ => choice(
+      alias($.preproc_if_in_argument_list, $.preproc_if),
+      alias($.preproc_ifdef_in_argument_list, $.preproc_ifdef),
+    ),
+
+    argument_list: $ => seq(
+      '(',
+      commaSep($._argument_list_item),
+      ')',
+    ),
 
     field_expression: $ => seq(
       prec(PREC.FIELD, seq(

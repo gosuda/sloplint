@@ -119,3 +119,113 @@ int q, unsigned short s
           (primitive_type)
           (identifier))))
     (compound_statement)))
+
+================================================================================
+preproc block splitting argument list: f(a #ifdef ,b,c #endif)
+================================================================================
+
+void caller() {
+  f(a
+#ifdef COND
+    ,b,c
+#endif
+    );
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (binary_expression
+              (identifier)
+              (preproc_ifdef
+                (identifier)
+                (identifier)
+                (identifier)))))))))
+
+================================================================================
+infix continuation: f(a | b #ifdef | c #endif)
+================================================================================
+
+void caller() {
+  f(a | b
+#ifdef COND
+    | c
+#endif
+    );
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (binary_expression
+              (binary_expression
+                (identifier)
+                (identifier))
+              (preproc_ifdef
+                (identifier)
+                (identifier)))))))))
+
+================================================================================
+infix continuation in designated initializer
+================================================================================
+
+struct hints { int flags; };
+void caller() {
+  struct hints h = {
+    .flags = A
+#ifdef COND
+             | B
+#endif
+    ,
+  };
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (struct_specifier
+          (type_identifier))
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (initializer_pair
+              (field_designator
+                (field_identifier))
+              (binary_expression
+                (identifier)
+                (preproc_ifdef
+                  (identifier)
+                  (identifier))))))))))

@@ -205,6 +205,19 @@ module.exports = grammar(C, {
     [$._parameter_list_item],
     [$._field_initializer_list_item],
     [$.comma_expression, $._initializer_list_real],
+    [$._argument_list_item],
+    [$._in_parameter_list_item, $._in_argument_list_item],
+    [$.preproc_ifdef_in_parameter_list, $.preproc_ifdef_in_argument_list],
+    [$.preproc_else_in_parameter_list, $.preproc_else_in_argument_list],
+    [$.preproc_if_in_parameter_list, $.preproc_if_in_argument_list],
+    [$.preproc_elifdef_in_parameter_list, $.preproc_elifdef_in_argument_list],
+    [$.preproc_elif_in_parameter_list, $.preproc_elif_in_argument_list],
+    [$.binary_expression, $._argument_list_real],
+    [$.binary_expression, $.extension_expression],
+    [$.binary_expression, $.delete_expression],
+    [$.binary_expression],
+    [$.binary_expression, $.optional_parameter_declaration],
+    [$.expression, $.field_designator],
     [$.template_type],
   ],
 
@@ -1507,6 +1520,80 @@ module.exports = grammar(C, {
       ))),
     ),
 
+    _in_argument_list_item: $ => choice(
+      $.expression,
+      $.initializer_list,
+      $.compound_statement,
+      ',',
+      seq(
+        choice(
+          '||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
+          '<<', '>>', '+', '-', '*', '/', '%', '.', '->', '.*', '->*',
+          '<=>', 'or', 'and', 'bitor', 'xor', 'bitand', 'not_eq',
+        ),
+        $.expression,
+      ),
+    ),
+
+    preproc_if_in_argument_list: $ => seq(
+      alias(token(/#[ \t]*if/), '#if'),
+      field('condition', $._preproc_expression),
+      '\n',
+      repeat($._in_argument_list_item),
+      field('alternative', optional(choice(
+        alias($.preproc_else_in_argument_list, $.preproc_else),
+        alias($.preproc_elif_in_argument_list, $.preproc_elif),
+        alias($.preproc_elifdef_in_argument_list, $.preproc_elifdef),
+      ))),
+      alias(token(/#[ \t]*endif/), '#endif'),
+    ),
+
+    preproc_ifdef_in_argument_list: $ => seq(
+      choice(
+        alias(token(/#[ \t]*ifdef/), '#ifdef'),
+        alias(token(/#[ \t]*ifndef/), '#ifndef'),
+      ),
+      field('name', $.identifier),
+      repeat($._in_argument_list_item),
+      field('alternative', optional(choice(
+        alias($.preproc_else_in_argument_list, $.preproc_else),
+        alias($.preproc_elif_in_argument_list, $.preproc_elif),
+        alias($.preproc_elifdef_in_argument_list, $.preproc_elifdef),
+      ))),
+      alias(token(/#[ \t]*endif/), '#endif'),
+    ),
+
+    preproc_else_in_argument_list: $ => seq(
+      alias(token(/#[ \t]*else/), '#else'),
+      repeat($._in_argument_list_item),
+    ),
+
+    preproc_elif_in_argument_list: $ => seq(
+      alias(token(/#[ \t]*elif/), '#elif'),
+      field('condition', $._preproc_expression),
+      '\n',
+      repeat($._in_argument_list_item),
+      field('alternative', optional(choice(
+        alias($.preproc_else_in_argument_list, $.preproc_else),
+        alias($.preproc_elif_in_argument_list, $.preproc_elif),
+        alias($.preproc_elifdef_in_argument_list, $.preproc_elifdef),
+      ))),
+    ),
+
+    preproc_elifdef_in_argument_list: $ => seq(
+      choice(
+        alias(token(/#[ \t]*elifdef/), '#elifdef'),
+        alias(token(/#[ \t]*elifndef/), '#elifndef'),
+      ),
+      field('name', $.identifier),
+      repeat($._in_argument_list_item),
+      field('alternative', optional(choice(
+        alias($.preproc_else_in_argument_list, $.preproc_else),
+        alias($.preproc_elif_in_argument_list, $.preproc_elif),
+        alias($.preproc_elifdef_in_argument_list, $.preproc_elifdef),
+      ))),
+    ),
+
     _in_field_initializer_list_item: $ => choice(
       $.field_initializer,
       ',',
@@ -1826,13 +1913,49 @@ module.exports = grammar(C, {
             field('operator', operator),
             field('right', $.expression),
           ));
-        }));
+        }),
+        // `a | b #ifdef X | c #endif`: the tail of a binary chain can be
+        // split into conditional blocks carrying `op operand` pairs.
+        // (Also present in the base binary_expression; needed here so the
+        // cpp-only operators share the same tail.)
+        seq(
+          field('left', $.expression),
+          repeat1($._infix_continuation_preproc),
+        ),
+      );
     },
 
     // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
+    // A real argument may follow a preproc block comma-free because the
+    // separator comma often hides inside the block (`f(a #ifdef X , b
+    // #endif c)`); between real arguments commas stay strict.
+    _argument_list_real: $ => choice(
+      $.expression,
+      $.initializer_list,
+      $.compound_statement,
+    ),
+
+    _argument_list_item: $ => choice(
+      $._argument_list_real,
+      seq(
+        $._argument_list_real,
+        repeat1($._argument_list_preproc),
+        optional(seq(optional(','), $._argument_list_real)),
+      ),
+      seq(
+        repeat1($._argument_list_preproc),
+        optional(seq(optional(','), $._argument_list_real)),
+      ),
+    ),
+
+    _argument_list_preproc: $ => choice(
+      alias($.preproc_if_in_argument_list, $.preproc_if),
+      alias($.preproc_ifdef_in_argument_list, $.preproc_ifdef),
+    ),
+
     argument_list: $ => seq(
       '(',
-      commaSep(choice($.expression, $.initializer_list, $.compound_statement)),
+      commaSep($._argument_list_item),
       ')',
     ),
 
@@ -1973,9 +2096,20 @@ module.exports = grammar(C, {
       field('name', $.identifier),
     ),
 
+    // Must concatenate at least 2 nodes, one of which must be a string
+    // literal. Identifier is added to parse macros that are strings, like
+    // PRIu64 — so a `"lit" MACRO` / `MACRO "lit"` start is valid too.
     concatenated_string: $ => prec.right(seq(
-      choice($.identifier, $.string_literal, $.raw_string_literal),
-      choice($.string_literal, $.raw_string_literal),
+      choice(
+        seq(
+          choice($.identifier, $.string_literal, $.raw_string_literal),
+          choice($.string_literal, $.raw_string_literal),
+        ),
+        seq(
+          choice($.string_literal, $.raw_string_literal),
+          $.identifier,
+        ),
+      ),
       repeat(choice($.identifier, $.string_literal, $.raw_string_literal)),
     )),
 

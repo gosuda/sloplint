@@ -228,3 +228,189 @@ void g(int a
             (primitive_type)
             (identifier)))))
     (compound_statement)))
+
+================================================================================
+preproc block splitting argument list: f(a #ifdef ,b,c #endif)
+================================================================================
+
+void caller() {
+  f(a
+#ifdef COND
+    ,b,c
+#endif
+    );
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (binary_expression
+              (identifier)
+              (preproc_ifdef
+                (identifier)
+                (identifier)
+                (identifier)))))))))
+
+================================================================================
+preproc block splitting argument list between separators
+================================================================================
+
+void caller() {
+  f(a,
+#ifdef COND
+    b,
+#endif
+    c);
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier)
+            (preproc_ifdef
+              (identifier)
+              (identifier))
+            (identifier)))))))
+
+================================================================================
+infix continuation: f(a | b #ifdef | c #endif)
+================================================================================
+
+void caller() {
+  f(a | b
+#ifdef COND
+    | c
+#endif
+    );
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (binary_expression
+              (binary_expression
+                (identifier)
+                (identifier))
+              (preproc_ifdef
+                (identifier)
+                (identifier)))))))))
+
+================================================================================
+infix continuation in designated initializer
+================================================================================
+
+struct hints { int flags; };
+void caller() {
+  struct hints h{
+    .flags = A
+#ifdef COND
+             | B
+#endif
+    ,
+  };
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (struct_specifier
+          (type_identifier))
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (initializer_pair
+              (field_designator
+                (field_identifier))
+              (identifier))
+            (preproc_ifdef
+              (identifier)
+              (identifier))))))))
+
+================================================================================
+concatenated string with macro: "lit" MACRO and MACRO "lit"
+================================================================================
+
+const char *s1 = "x" MACRO;
+const char *s2 = MACRO "x";
+const char *s3 = "a" "b" MACRO "c";
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (type_qualifier)
+    (primitive_type)
+    (init_declarator
+      (pointer_declarator
+        (identifier))
+      (concatenated_string
+        (string_literal
+          (string_content))
+        (identifier))))
+  (declaration
+    (type_qualifier)
+    (primitive_type)
+    (init_declarator
+      (pointer_declarator
+        (identifier))
+      (concatenated_string
+        (identifier)
+        (string_literal
+          (string_content)))))
+  (declaration
+    (type_qualifier)
+    (primitive_type)
+    (init_declarator
+      (pointer_declarator
+        (identifier))
+      (concatenated_string
+        (string_literal
+          (string_content))
+        (string_literal
+          (string_content))
+        (identifier)
+        (string_literal
+          (string_content))))))
