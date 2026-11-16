@@ -68,26 +68,20 @@ module.exports = grammar(C, {
     // `identifier ~` leads a destructor vs a macro fallback.
     [$.macro_declaration, $.macro_qualifier, $.type_specifier],
     // Bare `identifier` at statement start: expression vs macro fallback.
-    [$.macro_declaration, $.expression],
     // `identifier *|&|::|<|…` — multiply/pointer/member reads vs the macro
     // fallbacks; one broad set for every post-identifier continuation.
-    [$.macro_qualifier, $.macro_declaration, $.type_specifier, $.expression],
     // `Name {` in class position: class name vs bare macro marker.
-    [$.macro_declaration, $._class_name],
     // `identifier [[` — attribute-attached declarator vs macro fallback.
-    [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier],
     // `identifier __cdecl|const|…` — type followed by modifier vs fallback.
     [$.macro_declaration, $.type_specifier],
     // `identifier int|void|…` — modifier-then-primitive vs the two fallbacks.
     [$.macro_qualifier, $.macro_declaration],
     // `{ identifier ;` inside class bodies: expr-statement, field decl, or
     // bare macro marker — three-way for the optional-semicolon generic.
-    [$.macro_declaration, $.type_specifier, $.expression],
     // `enum Name {` — enum name vs export-macro qualifier.
     [$.macro_qualifier, $._class_name],
     // `identifier ;` at top level before a preproc directive: expression
     // statement vs generic macro item.
-    [$.macro_declaration, $._top_level_expression_statement],
     // `template Foo (` — explicit instantiation declarator vs qualifier.
     [$.macro_qualifier, $._declarator, $.type_specifier],
     // `Foo __extension__|modifier` — qualifier macro vs type.
@@ -137,13 +131,6 @@ module.exports = grammar(C, {
     [$.qualified_field_identifier, $.template_method],
     [$.type_specifier, $._class_name],
     [$._class_name, $.expression],
-    [$.argument_list, $.macro_argument_list],
-    [$.sized_type_specifier, $.macro_argument_list],
-    [$.expression, $.macro_argument_list],
-    [$.expression, $.macro_argument_list, $.template_type, $.template_function],
-    [$.concatenated_string, $.macro_argument_list],
-    [$._string, $.macro_argument_list],
-    [$.macro_declaration, $._declarator, $.type_specifier, $.expression],
     [$.macro_declaration, $._declarator],
     [$.pointer_declarator, $._init_pointer_declarator],
     [$._declarator, $._init_reference_declarator],
@@ -177,10 +164,6 @@ module.exports = grammar(C, {
     [$.macro_qualifier, $._field_declarator],
     [$._abstract_declarator, $.optional_parameter_declaration],
     [$.ms_pointer_modifier, $.qt_signature_type],
-    [$.macro_argument_list, $.type_qualifier],
-    [$.macro_argument_list, $.type_specifier],
-    [$.macro_argument_list, $.type_specifier, $.call_expression],
-    [$.macro_argument_list, $.type_specifier, $.expression],
     [$.parameter_declaration, $.variadic_parameter_declaration],
     [$.parameter_declaration, $.optional_parameter_declaration],
     [$.parameter_declaration],
@@ -192,9 +175,6 @@ module.exports = grammar(C, {
     [$._string, $.concatenated_string],
     [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list],
     [$.preproc_else, $.preproc_else_in_initializer_list],
-    [$.macro_declaration, $.expression, $._class_name],
-    [$.macro_qualifier, $.macro_declaration, $.expression],
-    [$.macro_declaration, $.expression, $.concatenated_string],
     [$.preproc_if, $.preproc_if_in_initializer_list],
     [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list],
     [$.preproc_elif, $.preproc_elif_in_initializer_list],
@@ -228,12 +208,6 @@ module.exports = grammar(C, {
     [$.preproc_ifdef, $.type_qualifier],
     [$.preproc_ifdef, $.extension_expression],
     [$.preproc_ifdef, $.type_definition],
-    [$.call_expression, $._argument_list_real],
-    [$._argument_list_real, $.compound_literal_expression],
-    [$.macro_argument_list, $._argument_list_real],
-    [$.macro_argument_list, $.call_expression, $._argument_list_real],
-    [$.macro_argument_list, $.expression, $.concatenated_string],
-    [$.macro_argument_list, $._string, $.concatenated_string],
     [$.enumerator_list, $.extension_expression],
     [$.enumerator, $.expression],
     [$.enumerator, $.concatenated_string],
@@ -248,8 +222,6 @@ module.exports = grammar(C, {
     [$.preproc_else, $.type_definition],
     [$._block_item, $._initializer_list_preproc],
     [$.concatenated_string, $._class_name],
-    [$.type_specifier, $._argument_list_real],
-    [$.type_specifier, $.call_expression, $._argument_list_real],
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma],
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.extension_expression],
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.concatenated_string],
@@ -263,7 +235,32 @@ module.exports = grammar(C, {
     [$.preproc_ifdef_in_initializer_list, $.comma_expression],
     [$._block_item, $.preproc_else_in_initializer_list],
     [$.preproc_else_in_initializer_list, $.comma_expression],
-    [$.template_type],
+    [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier, $.expression],
+    [$._macro_declaration_top, $.type_specifier, $.expression],
+    [$._macro_declaration_top, $._top_level_expression_statement],
+    [$.macro_qualifier, $._macro_declaration_top],
+    [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier],
+    [$.macro_argument_list, $.template_type],
+    [$.macro_argument_list, $.sized_type_specifier],
+    [$._argument_list_real, $._argument_list_type],
+    [$.call_expression, $._argument_list_real, $._argument_list_type],
+    [$._argument_list_real, $._argument_list_type, $.compound_literal_expression],
+    [$.sized_type_specifier, $._argument_list_real, $._argument_list_type],
+    [$.sized_type_specifier, $.expression],
+    [$._argument_list_type],
+    [$.sized_type_specifier, $._argument_list_type],
+    [$.type_specifier, $._argument_list_real, $._argument_list_type],
+    [$.type_specifier, $.call_expression, $._argument_list_real, $._argument_list_type],
+    [$.macro_qualifier, $.sized_type_specifier, $.expression],
+    [$._declaration_modifiers, $._argument_list_type],
+    [$.type_specifier, $._argument_list_type],
+    [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression],
+    [$._macro_declaration_stmt, $.expression],
+    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression],
+    [$.macro_qualifier, $._macro_declaration_stmt],
+    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression],
+    [$._macro_declaration_top, $._macro_declaration_stmt],
+    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt],
   ],
 
   inline: ($, original) => original.concat([
@@ -289,7 +286,11 @@ module.exports = grammar(C, {
       alias($.constructor_or_destructor_definition, $.function_definition),
       alias($.operator_cast_definition, $.function_definition),
       alias($.operator_cast_declaration, $.declaration),
-      $.macro_declaration,
+      // Strict variant — a generic `NAME` needs args or `;` (literal
+      // Qt/UE names stay bare). Without the constraint `NAME(args)`
+      // fragments into `macro_declaration(NAME)` plus a
+      // `parenthesized_expression(args)` statement (MISSING `;`).
+      alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
     ),
 
     _block_item: ($, original) => choice(
@@ -305,10 +306,23 @@ module.exports = grammar(C, {
       alias($.constructor_or_destructor_definition, $.function_definition),
       alias($.operator_cast_definition, $.function_definition),
       alias($.operator_cast_declaration, $.declaration),
-      // Top-level preproc_if bodies repeat _block_item, so declaration
-      // macros (Q_DECLARE_METATYPE, Q_GLOBAL_STATIC, ...) must be valid
-      // block items too or every guarded header drops to ERROR.
-      $.macro_declaration,
+      // No `macro_declaration` fallback here: top-level preproc bodies
+      // get it via the preprocIf('', ...) item choice in the base
+      // grammar, and inside real function bodies `NAME(args)` must
+      // always stay a call_expression.
+    ),
+
+    // Namespace bodies repeat `_block_item`, but `NAME(args)` there is a
+    // declaration macro (KDBINDINGS_DEFINE_*), never a call — expression
+    // statements cannot appear in `declaration_list`, so the strict
+    // variant is added here rather than to `_block_item` itself.
+    declaration_list: $ => seq(
+      '{',
+      repeat(choice(
+        $._block_item,
+        alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
+      )),
+      '}',
     ),
 
     // Types
@@ -892,7 +906,44 @@ module.exports = grammar(C, {
     // top-level item, but a regex would shadow real identifiers.
     macro_declaration: $ => prec.right(choice(
       seq(
-      choice(
+      $._macro_declaration_literals,
+      optional($.macro_argument_list),
+      ),
+      // Generic fallback for macro names outside the literal list
+      // (serialize/test/register macros, vendor markers). Dynamic +2:
+      // real named items still win, but this must beat the
+      // abstract-declarator reinterpretation of `NAME(&)`/`NAME(^)`
+      // and error-tolerant `X == Y(...)` binary expressions — inside
+      // declaration_list a bare NAME(args) call is far more often a
+      // declaration macro than an unnamed-reference declaration.
+      prec.dynamic(-1, seq(
+        $.identifier,
+        optional($.macro_argument_list),
+        optional(';'),
+      )),
+    )),
+
+    // `NAME(args)`/`NAME(args);`/`NAME;` for `_top_level_item` and
+    // `_block_item`; literal names keep their bare form. Aliased back to
+    // `macro_declaration` at use sites.
+    _macro_declaration_top: $ => prec.right(choice(
+      seq(
+      $._macro_declaration_literals,
+      optional($.macro_argument_list),
+      ),
+      // No dynamic precedence here: the alias wrappers at the
+      // `_top_level_item`/`_block_item` use sites supply dynamic(-2), and
+      // an inner dynamic score would compete with it unpredictably.
+      seq(
+        $.identifier,
+        choice(
+          seq($.macro_argument_list, optional(';')),
+          ';',
+        ),
+      ),
+    )),
+
+    _macro_declaration_literals: $ => choice(
       'Q_OBJECT',
       'Q_GADGET',
       'Q_NAMESPACE',
@@ -946,21 +997,6 @@ module.exports = grammar(C, {
       'QML_REMOVED_IN_VERSION',
       'QML_FOREIGN_NAMESPACE',
       ),
-      optional(choice(prec.dynamic(1, $.argument_list), $.macro_argument_list)),
-      ),
-      // Generic fallback for macro names outside the literal list
-      // (serialize/test/register macros, vendor markers). Dynamic +2:
-      // real named items still win, but this must beat the
-      // abstract-declarator reinterpretation of `NAME(&)`/`NAME(^)`
-      // and error-tolerant `X == Y(...)` binary expressions — inside
-      // declaration_list a bare NAME(args) call is far more often a
-      // declaration macro than an unnamed-reference declaration.
-      prec.dynamic(-1, seq(
-        $.identifier,
-        optional(choice(prec.dynamic(1, $.argument_list), $.macro_argument_list)),
-        optional(';'),
-      )),
-    )),
 
     // Macro arguments that are not expressions: `Q_PROPERTY(QString title
     // READ title WRITE setTitle NOTIFY titleChanged)` mixes types, member
@@ -1062,7 +1098,7 @@ module.exports = grammar(C, {
         'Q_CHECK_PTR', 'Q_UNREACHABLE', 'Q_FALLTHROUGH',
         'QT_REQUIRE_VERSION',
       )),
-      choice($.argument_list, $.macro_argument_list),
+      $.macro_argument_list,
       optional(';'),
     )),
 
@@ -2031,6 +2067,8 @@ module.exports = grammar(C, {
       $.initializer_list,
       $.compound_statement,
       $.primitive_type,
+      $._argument_list_type,
+      $._argument_list_operator,
     ),
 
     // Free-atom stream: real arguments, preproc blocks/directives and

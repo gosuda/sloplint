@@ -151,16 +151,27 @@ reproduced on real code. Every repro below was first accepted by
     a `left` field, so the adapter records its implicit write.
     `qt_foreach_body` begins after the container expression. The adapter
     registers the new iterator shadow only inside that iteration scope.
-  - `macro_declaration` is also a member of `_block_item`, which is the
-    repeated content of `preproc_if`/`preproc_ifdef` bodies at every
-    level: without it every declaration macro inside a header guard or
-    inside a function-level `#ifdef` dropped to an ERROR parsed as a
-    `function_declarator` missing its `;`. (The base C grammar keeps its
-    generic `identifier`-fallback `macro_declaration` out of statement
-    positions — inside function bodies `NAME(args)` must be a
-    `call_expression`. This grammar's `macro_declaration` is the
-    literal-name Qt/UE list plus a `prec.dynamic(-1)` generic fallback,
-    which dynamic precedence keeps below call sites.)
+  - The strict `_macro_declaration_top` variant is what use sites
+    actually reference (aliased back to `macro_declaration`):
+    `_top_level_item` and the base's `preprocIf('', ...)` item choice
+    each alias it at `prec.dynamic(-2)`, and this grammar's
+    `declaration_list` override repeats
+    `choice($._block_item, alias(..._macro_declaration_top...))` so
+    namespace-scope `KDBINDINGS_DEFINE_*` macros parse. `_block_item`
+    itself carries no macro fallback: inside real function bodies
+    `NAME(args)` must always be a `call_expression` — when the fallback
+    lived there it both stole call sites and, while it shared
+    `argument_list` with `call_expression`, collapsed the merged
+    `(`-list states into ERROR on `NAME(CALL(args))`. All macro arg
+    slots are `macro_argument_list` only, never `argument_list`.
+    `_non_case_statement` (inherited from the base, so the cpp additions
+    keep it via `original`) carries the strict `_macro_declaration_stmt`
+    variant — `identifier + macro_argument_list` with no `;` — for
+    `NAME(args)` items in statement position that no statement rule can
+    accept, e.g. `FLATBUFFERS_GEN_TYPES(TD)` in a switch body.
+    `NAME(args);` still resolves as a call unless a real macro item
+    appeared earlier in the block (then the `;` lands as an empty
+    `expression_statement`).
   - The Qt member-function modifiers (`Q_INVOKABLE`, `Q_SIGNAL`,
     `Q_SLOT`, `Q_REQUIRED_RESULT`, `Q_NORETURN`, `Q_CONSTEXPR`,
     `Q_ALWAYS_INLINE`, `Q_NEVER_INLINE`, `Q_PACKED`, `Q_DECL_EXPORT`,
@@ -400,16 +411,11 @@ enumeration of `macro_attribute` costs most of the size growth.
   preproc_if/ifdef aliases, $.preproc_def, $.preproc_call, ','))`.
   X-macro enum tables (`{ #define ET(E) E, GEN(ET) #undef ET }`) parse.
 - **Type spellings as call arguments** — `_argument_list_real` gains
-  `$._argument_list_type`, a strict `seq(repeat($.type_qualifier),
-  choice($.primitive_type, $.sized_type_specifier, $.struct_specifier,
-  $.union_specifier, $.enum_specifier), repeat('*'))`, so macro-style
-  calls taking a type parse: `GET(uint8_t)`, `SWAP(unsigned int, ...)`.
-  Unlike the standalone C grammar, `NAME(type *, args)` in a cpp
-  function body resolves as `macro_declaration` (`void *`, `struct foo *`
-  fit the `macro_argument_list` soup) rather than `call_expression` —
-  semantically defensible since such sites are statement macros like
-  `NGHTTP2_SWAP`. Both paths are ERROR-free; `$.type_identifier` stays
-  out to keep `f(x)` unambiguous.
+  `$._argument_list_type` (the base's strict type sequence) and
+  `$._argument_list_operator`, so macro-style calls taking a type or a
+  bare comparison token parse as real `call_expression` trees:
+  `GET(uint8_t)`, `SWAP(unsigned int, *a, *b)`, `assert_int(0, ==, rv)`.
+  `$.type_identifier` stays out to keep `f(x)` unambiguous.
 
   - `_argument_list_operator` is a second new `_argument_list_real`
     member: the bare comparison tokens `==`, `!=`, `<=`, `>=`, `<`, `>`
@@ -421,13 +427,13 @@ enumeration of `macro_attribute` costs most of the size growth.
   $.macro_qualifier))`, so member declarations with a trailing
   attribute macro (`int f() const FLATBUFFERS_OVERRIDE;`) parse on the
   declaration path, not only on definitions.
-- **Typed args preferred in `macro_declaration`** — the args slot is
-  `optional(choice(prec.dynamic(1, $.argument_list),
-  $.macro_argument_list))` in both the literal-name and generic
-  fallback forms: `Q_PLUGIN_METADATA(IID "x" FILE "y")` lands
-  `concatenated_string` children, while DSL-soup args
-  (`Q_PROPERTY(QString title READ title ...)`) still fall back to
-  `macro_argument_list`.
+- **`macro_declaration` args are `macro_argument_list` only** —
+  `optional($.macro_argument_list)` in both the literal-name and
+  generic fallback forms (and in `qt_statement_macro`). Sharing
+  `argument_list` with `call_expression` made `identifier + arglist`
+  token-identical to a call and collapsed merged `(`-list parse
+  states, ERRORing every in-body `NAME(CALL(args))`; the permissive
+  soup covers the same inputs without sharing states.
 - **`type_qualifier` no longer inherits C's `noreturn`** — C++ has no
   `noreturn` keyword (`[[noreturn]]` is an attribute), so the rule is a
   full replacement list without `'noreturn'`; `auto noreturn = ...`

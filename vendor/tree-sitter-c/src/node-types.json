@@ -274,6 +274,10 @@
         "named": true
       },
       {
+        "type": "macro_declaration",
+        "named": true
+      },
+      {
         "type": "ms_asm_statement",
         "named": true
       },
@@ -1077,6 +1081,10 @@
         },
         {
           "type": "labeled_statement",
+          "named": true
+        },
+        {
+          "type": "macro_declaration",
           "named": true
         },
         {
@@ -2832,10 +2840,6 @@
       "required": true,
       "types": [
         {
-          "type": "argument_list",
-          "named": true
-        },
-        {
           "type": "identifier",
           "named": true
         },
@@ -2854,10 +2858,6 @@
       "multiple": true,
       "required": true,
       "types": [
-        {
-          "type": "argument_list",
-          "named": true
-        },
         {
           "type": "identifier",
           "named": true

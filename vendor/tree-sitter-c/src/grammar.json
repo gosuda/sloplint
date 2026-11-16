@@ -79,8 +79,21 @@
           "name": "preproc_call"
         },
         {
-          "type": "SYMBOL",
-          "name": "macro_declaration"
+          "type": "ALIAS",
+          "content": {
+            "type": "PREC_DYNAMIC",
+            "value": -2,
+            "content": {
+              "type": "PREC_RIGHT",
+              "value": 0,
+              "content": {
+                "type": "SYMBOL",
+                "name": "_macro_declaration_top"
+              }
+            }
+          },
+          "named": true,
+          "value": "macro_declaration"
         }
       ]
     },
@@ -7891,17 +7904,8 @@
               "type": "CHOICE",
               "members": [
                 {
-                  "type": "CHOICE",
-                  "members": [
-                    {
-                      "type": "SYMBOL",
-                      "name": "argument_list"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "macro_argument_list"
-                    }
-                  ]
+                  "type": "SYMBOL",
+                  "name": "macro_argument_list"
                 },
                 {
                   "type": "BLANK"
@@ -7929,17 +7933,8 @@
               "type": "CHOICE",
               "members": [
                 {
-                  "type": "CHOICE",
-                  "members": [
-                    {
-                      "type": "SYMBOL",
-                      "name": "argument_list"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "macro_argument_list"
-                    }
-                  ]
+                  "type": "SYMBOL",
+                  "name": "macro_argument_list"
                 },
                 {
                   "type": "BLANK"
@@ -7961,6 +7956,58 @@
           ]
         }
       }
+    },
+    "_macro_declaration_top": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_argument_list"
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": ";"
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "STRING",
+              "value": ";"
+            }
+          ]
+        }
+      ]
+    },
+    "_macro_declaration_stmt": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_argument_list"
+        }
+      ]
     },
     "macro_argument_list": {
       "type": "SEQ",
@@ -11661,6 +11708,23 @@
         {
           "type": "SYMBOL",
           "name": "ms_asm_statement"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "PREC_DYNAMIC",
+            "value": -2,
+            "content": {
+              "type": "PREC_RIGHT",
+              "value": 0,
+              "content": {
+                "type": "SYMBOL",
+                "name": "_macro_declaration_stmt"
+              }
+            }
+          },
+          "named": true,
+          "value": "macro_declaration"
         }
       ]
     },
@@ -17421,21 +17485,47 @@
       "preproc_ifdef"
     ],
     [
-      "macro_argument_list",
-      "_argument_list_operator"
+      "macro_qualifier",
+      "_macro_declaration_stmt"
     ],
     [
+      "_macro_declaration_stmt",
+      "expression"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_stmt",
       "type_specifier",
-      "_argument_list_type"
+      "expression",
+      "macro_type_specifier"
+    ],
+    [
+      "_macro_declaration_top"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top"
+    ],
+    [
+      "_macro_declaration_top",
+      "_top_level_expression_statement"
+    ],
+    [
+      "_macro_declaration_top",
+      "type_specifier",
+      "_top_level_expression_statement"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top",
+      "type_specifier",
+      "expression",
+      "macro_type_specifier"
     ],
     [
       "macro_argument_list",
       "type_specifier",
-      "_argument_list_type"
-    ],
-    [
-      "macro_argument_list",
-      "_argument_list_type"
+      "macro_type_specifier"
     ],
     [
       "preproc_else_in_enumerator_list",
@@ -17460,15 +17550,6 @@
       "concatenated_string"
     ],
     [
-      "concatenated_string"
-    ],
-    [
-      "macro_argument_list",
-      "_string",
-      "concatenated_string"
-    ],
-    [
-      "macro_argument_list",
       "concatenated_string"
     ],
     [
@@ -17631,12 +17712,6 @@
       "concatenated_string"
     ],
     [
-      "macro_argument_list",
-      "type_specifier",
-      "expression",
-      "macro_type_specifier"
-    ],
-    [
       "attributed_declarator",
       "parameter_declaration"
     ],
@@ -17739,19 +17814,6 @@
     ],
     [
       "macro_argument_list",
-      "_string"
-    ],
-    [
-      "macro_argument_list",
-      "type_specifier",
-      "expression"
-    ],
-    [
-      "macro_argument_list",
-      "expression"
-    ],
-    [
-      "macro_argument_list",
       "sized_type_specifier"
     ],
     [
@@ -17761,10 +17823,6 @@
     [
       "macro_argument_list",
       "type_qualifier"
-    ],
-    [
-      "macro_argument_list",
-      "argument_list"
     ],
     [
       "macro_qualifier",
@@ -17782,10 +17840,6 @@
       "macro_qualifier",
       "type_specifier",
       "macro_type_specifier"
-    ],
-    [
-      "macro_declaration",
-      "_top_level_expression_statement"
     ],
     [
       "macro_qualifier",
@@ -17801,24 +17855,8 @@
     ],
     [
       "macro_declaration",
-      "type_specifier",
-      "_top_level_expression_statement"
-    ],
-    [
-      "macro_qualifier",
-      "macro_declaration",
-      "type_specifier",
-      "expression",
-      "macro_type_specifier"
-    ],
-    [
-      "macro_declaration",
       "macro_qualifier",
       "type_specifier"
-    ],
-    [
-      "macro_declaration",
-      "expression"
     ],
     [
       "macro_declaration",
@@ -17827,11 +17865,6 @@
     [
       "macro_qualifier",
       "macro_declaration"
-    ],
-    [
-      "macro_declaration",
-      "type_specifier",
-      "expression"
     ],
     [
       "macro_qualifier",

@@ -386,6 +386,10 @@
         "named": true
       },
       {
+        "type": "macro_declaration",
+        "named": true
+      },
+      {
         "type": "ms_asm_statement",
         "named": true
       },
@@ -774,6 +778,10 @@
           "named": true
         },
         {
+          "type": "enum_specifier",
+          "named": true
+        },
+        {
           "type": "expression",
           "named": true
         },
@@ -806,7 +814,23 @@
           "named": true
         },
         {
+          "type": "sized_type_specifier",
+          "named": true
+        },
+        {
+          "type": "struct_specifier",
+          "named": true
+        },
+        {
           "type": "system_lib_string",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
+          "named": true
+        },
+        {
+          "type": "union_specifier",
           "named": true
         }
       ]
@@ -1407,6 +1431,10 @@
           "named": true
         },
         {
+          "type": "macro_declaration",
+          "named": true
+        },
+        {
           "type": "ms_asm_statement",
           "named": true
         },
@@ -1781,10 +1809,6 @@
         },
         {
           "type": "linkage_specification",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -2352,10 +2376,6 @@
         },
         {
           "type": "linkage_specification",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -4618,10 +4638,6 @@
       "required": false,
       "types": [
         {
-          "type": "argument_list",
-          "named": true
-        },
-        {
           "type": "identifier",
           "named": true
         },
@@ -4640,10 +4656,6 @@
       "multiple": true,
       "required": true,
       "types": [
-        {
-          "type": "argument_list",
-          "named": true
-        },
         {
           "type": "identifier",
           "named": true
@@ -4849,7 +4861,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "namespace_identifier",
@@ -5725,10 +5737,6 @@
           "named": true
         },
         {
-          "type": "macro_declaration",
-          "named": true
-        },
-        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -5913,10 +5921,6 @@
           "named": true
         },
         {
-          "type": "macro_declaration",
-          "named": true
-        },
-        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -6069,10 +6073,6 @@
         },
         {
           "type": "macro_access_label",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -6328,10 +6328,6 @@
           "named": true
         },
         {
-          "type": "macro_declaration",
-          "named": true
-        },
-        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -6513,10 +6509,6 @@
         },
         {
           "type": "macro_access_label",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -6933,10 +6925,6 @@
       "multiple": false,
       "required": true,
       "types": [
-        {
-          "type": "argument_list",
-          "named": true
-        },
         {
           "type": "macro_argument_list",
           "named": true

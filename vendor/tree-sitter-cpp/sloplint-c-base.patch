@@ -17,7 +17,7 @@
    ],
  
    extras: $ => [
-@@ -96,10 +99,12 @@
+@@ -96,10 +99,18 @@
        $._empty_declaration,
        $.preproc_if,
        $.preproc_ifdef,
@@ -26,11 +26,17 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
-+      $.macro_declaration,
++      // Strict top-level variant: a bare `NAME` without args or `;`
++      // is not a declaration macro here. Without the constraint
++      // `NAME(args)` fragments into `macro_declaration(NAME)` plus a
++      // `parenthesized_expression(args)` statement (a MISSING `;` error
++      // in the bargain); the field-list variant keeps the bare form
++      // for `Q_OBJECT`-style markers inside struct bodies.
++      alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
      ),
  
      _block_item: $ => choice(
-@@ -113,6 +118,7 @@
+@@ -113,6 +124,7 @@
        $._empty_declaration,
        $.preproc_if,
        $.preproc_ifdef,
@@ -38,7 +44,7 @@
        $.preproc_include,
        $.preproc_def,
        $.preproc_function_def,
-@@ -135,7 +141,7 @@
+@@ -135,7 +147,7 @@
      preproc_def: $ => seq(
        preprocessor('define'),
        field('name', $.identifier),
@@ -47,7 +53,7 @@
        token.immediate(/\r?\n/),
      ),
  
-@@ -143,24 +149,93 @@
+@@ -143,24 +155,97 @@
        preprocessor('define'),
        field('name', $.identifier),
        field('parameters', $.preproc_params),
@@ -74,7 +80,11 @@
      ),
  
 -    ...preprocIf('', $ => $._block_item),
-+    ...preprocIf('', $ => choice($._block_item, $.dangling_else, $.dangling_label, '__extension__')),
++    // Declaration macros (Q_DECLARE_METATYPE, MY_REGISTER(...), ...) are
++    // valid inside top-level preproc bodies even though they are not real
++    // block items — injecting them here keeps `_block_item` itself free of
++    // the `NAME(args)` fallback so calls in function bodies stay calls.
++    ...preprocIf('', $ => choice($._block_item, alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration), $.dangling_else, $.dangling_label, '__extension__')),
      ...preprocIf('_in_field_declaration_list', $ => $._field_declaration_list_item),
 -    ...preprocIf('_in_enumerator_list', $ => seq($.enumerator, ',')),
 -    ...preprocIf('_in_enumerator_list_no_comma', $ => $.enumerator, -1),
@@ -147,7 +157,7 @@
  
      preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
      preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,
-@@ -240,8 +315,13 @@
+@@ -240,8 +325,13 @@
      function_definition: $ => seq(
        optional($.ms_call_modifier),
        $._declaration_specifiers,
@@ -162,7 +172,7 @@
        field('body', $.compound_statement),
      ),
  
-@@ -257,7 +337,7 @@
+@@ -257,7 +347,7 @@
        $._declaration_specifiers,
        commaSep1(field('declarator', choice(
          seq(
@@ -171,7 +181,7 @@
            $._declaration_declarator,
            optional($.gnu_asm_expression),
          ),
-@@ -283,10 +363,133 @@
+@@ -283,10 +373,151 @@
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -228,7 +238,7 @@
 +    // so `uint`/`ULong`-shaped typedefs still resolve as types.
 +    macro_qualifier: $ => prec.dynamic(-1, prec.right(seq(
 +      $.identifier,
-+      optional(choice($.argument_list, $.macro_argument_list)),
++      optional($.macro_argument_list),
 +    ))),
 +
 +    // Generic macro-expands-to-declarations fallback for names the literal
@@ -238,9 +248,27 @@
 +    // inside struct bodies where expression statements cannot appear.
 +    macro_declaration: $ => prec.dynamic(-2, prec.right(seq(
 +      $.identifier,
-+      optional(choice($.argument_list, $.macro_argument_list)),
++      optional($.macro_argument_list),
 +      optional(';'),
 +    ))),
++
++    // `NAME(args)` / `NAME;` / `NAME(args);` only — see _top_level_item.
++    _macro_declaration_top: $ => seq(
++      $.identifier,
++      choice(
++        seq($.macro_argument_list, optional(';')),
++        ';',
++      ),
++    ),
++
++    // `NAME(args)` and nothing else: no bare `NAME` (lets `NAME(args)`
++    // fragment into NAME + parenthesized args) and no `;` (a `;`-tolerant
++    // variant re-collides with call_expression + `;`, which must win in
++    // statement position). Used via _non_case_statement.
++    _macro_declaration_stmt: $ => seq(
++      $.identifier,
++      $.macro_argument_list,
++    ),
 +
 +    // Macro arguments that are not expressions (types, member names, DSL
 +    // keywords, operators) accepted as a permissive token list.
@@ -306,7 +334,7 @@
        field('type', $.type_specifier),
        repeat($._declaration_modifiers),
      )),
-@@ -301,6 +504,27 @@
+@@ -301,6 +532,27 @@
        )),
      ),
  
@@ -334,7 +362,7 @@
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -341,6 +565,14 @@
+@@ -341,6 +593,14 @@
        '__vectorcall',
      ),
  
@@ -349,7 +377,7 @@
      ms_restrict_modifier: _ => '__restrict',
  
      ms_unsigned_ptr_modifier: _ => '__uptr',
-@@ -409,25 +641,25 @@
+@@ -409,25 +669,25 @@
  
      parenthesized_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
        '(',
@@ -379,7 +407,7 @@
        $._abstract_declarator,
        ')',
      )),
-@@ -448,28 +680,65 @@
+@@ -448,28 +708,65 @@
  
      pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
        optional($.ms_based_modifier),
@@ -454,7 +482,7 @@
        field('declarator', optional($._abstract_declarator)),
      ))),
  
-@@ -543,6 +812,7 @@
+@@ -543,6 +840,7 @@
  
      init_declarator: $ => seq(
        field('declarator', $._declarator),
@@ -462,7 +490,7 @@
        '=',
        field('value', choice($.initializer_list, $.expression)),
      ),
-@@ -594,6 +864,7 @@
+@@ -594,6 +892,7 @@
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -470,7 +498,7 @@
        $._type_identifier,
      ),
  
-@@ -652,6 +923,18 @@
+@@ -652,6 +951,18 @@
        'charptr_t',
        'nullptr_t',
        'max_align_t',
@@ -489,7 +517,7 @@
        ...[8, 16, 32, 64].map(n => `int${n}_t`),
        ...[8, 16, 32, 64].map(n => `uint${n}_t`),
        ...[8, 16, 32, 64].map(n => `char${n}_t`),
-@@ -659,6 +942,7 @@
+@@ -659,6 +970,7 @@
  
      enum_specifier: $ => seq(
        'enum',
@@ -497,7 +525,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -673,18 +957,16 @@
+@@ -673,18 +985,16 @@
      enumerator_list: $ => seq(
        '{',
        repeat(choice(
@@ -524,7 +552,7 @@
        )),
        '}',
      ),
-@@ -693,6 +975,7 @@
+@@ -693,6 +1003,7 @@
        'struct',
        optional($.attribute_specifier),
        optional($.ms_declspec_modifier),
@@ -532,7 +560,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -706,6 +989,7 @@
+@@ -706,6 +1017,7 @@
      union_specifier: $ => prec.right(seq(
        'union',
        optional($.ms_declspec_modifier),
@@ -540,7 +568,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -727,6 +1011,7 @@
+@@ -727,6 +1039,7 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -548,7 +576,7 @@
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
      ),
-@@ -751,10 +1036,37 @@
+@@ -751,10 +1064,37 @@
  
      variadic_parameter: _ => '...',
  
@@ -587,15 +615,22 @@
          $.compound_statement,
        ),
        ')',
-@@ -802,6 +1114,7 @@
+@@ -802,6 +1142,14 @@
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,
 +      $.ms_asm_statement,
++      // `NAME(args)` with no `;` in statement position — unreachable as a
++      // call (expression_statement requires `;`), so it can only be a
++      // table-generator/statement macro, e.g. `FLATBUFFERS_GEN_TYPES(TD)`
++      // inside a switch. With `;` the call read wins at dynamic 0 over
++      // the macro + empty-`;`-statement split at -2. See
++      // _macro_declaration_stmt.
++      alias(prec.dynamic(-2, prec.right($._macro_declaration_stmt)), $.macro_declaration),
      ),
  
      _top_level_statement: $ => choice(
-@@ -849,6 +1162,22 @@
+@@ -849,6 +1197,22 @@
      )),
  
      else_clause: $ => seq('else', $.statement),
@@ -618,7 +653,7 @@
  
      switch_statement: $ => seq(
        'switch',
-@@ -1003,22 +1332,44 @@
+@@ -1003,22 +1367,44 @@
        $.parenthesized_expression,
      ),
  
@@ -679,7 +714,7 @@
      )),
  
      pointer_expression: $ => prec.left(PREC.CAST, seq(
-@@ -1053,16 +1404,49 @@
+@@ -1053,16 +1439,49 @@
          ['>>', PREC.SHIFT],
        ];
  
@@ -736,7 +771,7 @@
      update_expression: $ => {
        const argument = field('argument', $.expression);
        const operator = field('operator', choice('--', '++'));
-@@ -1143,6 +1527,36 @@
+@@ -1143,6 +1562,36 @@
        ')',
      )),
  
@@ -773,7 +808,7 @@
      gnu_asm_qualifier: _ => choice(
        'volatile',
        '__volatile__',
-@@ -1197,7 +1611,57 @@
+@@ -1197,7 +1646,57 @@
      extension_expression: $ => seq('__extension__', $.expression),
  
      // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
@@ -832,7 +867,7 @@
  
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
-@@ -1216,18 +1680,47 @@
+@@ -1216,18 +1715,47 @@
  
      parenthesized_expression: $ => seq(
        '(',
@@ -886,7 +921,7 @@
        '}',
      ),
  
-@@ -1246,6 +1739,15 @@
+@@ -1246,6 +1774,15 @@
          ':',
          field('value', choice($.expression, $.initializer_list)),
        ),
@@ -902,25 +937,29 @@
      ),
  
      subscript_designator: $ => seq('[', $.expression, ']'),
-@@ -1296,14 +1798,19 @@
+@@ -1296,14 +1833,19 @@
  
      // Must concatenate at least 2 nodes, one of which must be a string_literal.
      // Identifier is added to parse macros that are strings, like PRIu64.
 -    concatenated_string: $ => prec.right(seq(
-+    concatenated_string: $ => prec.dynamic(2, prec.right(seq(
-       choice(
-         seq($.identifier, $.string_literal),
-         seq($.string_literal, $.string_literal),
-         seq($.string_literal, $.identifier),
-+        // Stringification/expansion macros take part in literal
-+        // concatenation: `XSTR(a) "." XSTR(b)`, `"v" FLATBUFFERS_STRING(x)`.
-+        seq($.call_expression, $.string_literal),
-+        seq($.string_literal, $.call_expression),
-+        seq($.call_expression, $.call_expression),
+-      choice(
+-        seq($.identifier, $.string_literal),
+-        seq($.string_literal, $.string_literal),
+-        seq($.string_literal, $.identifier),
++    // At least one string_literal is required so adjacent decl macros
++    // (`NAME(a)` `NAME(b)`) never merge into a fake concatenation.
++    concatenated_string: $ => prec.dynamic(2, prec.right(choice(
++      seq(
++        repeat1(choice($.identifier, $.call_expression)),
++        $.string_literal,
++        repeat(choice($.identifier, $.call_expression, $.string_literal)),
        ),
 -      repeat(choice($.string_literal, $.identifier)),
 -    )),
-+      repeat(choice($.string_literal, $.identifier, $.call_expression)),
++      seq(
++        $.string_literal,
++        repeat1(choice($.identifier, $.call_expression, $.string_literal)),
++      ),
 +    ))),
  
      string_literal: $ => seq(

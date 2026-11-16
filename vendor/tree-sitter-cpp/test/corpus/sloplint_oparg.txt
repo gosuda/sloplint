@@ -19,18 +19,21 @@ void f(void) {
         (parameter_declaration
           type: (primitive_type))))
     body: (compound_statement
-      (macro_declaration
-        (identifier)
-        (macro_argument_list
-          (number_literal)
-          (identifier)))
-      (macro_declaration
-        (identifier)
-        (macro_argument_list
-          (number_literal)
-          (identifier)))
-      (macro_declaration
-        (identifier)
-        (macro_argument_list
-          (identifier)
-          (identifier))))))
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (number_literal)
+            (identifier))))
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (number_literal)
+            (identifier))))
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (identifier)
+            (identifier)))))))

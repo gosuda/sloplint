@@ -19,22 +19,25 @@ int g(void) {
         (parameter_declaration
           type: (primitive_type))))
     body: (compound_statement
-      (macro_declaration
-        (identifier)
-        (macro_argument_list
-          (primitive_type)
-          (pointer_expression
-            argument: (identifier))
-          (pointer_expression
-            argument: (identifier))))
-      (macro_declaration
-        (identifier)
-        (macro_argument_list
-          (primitive_type)
-          (pointer_expression
-            argument: (identifier))
-          (pointer_expression
-            argument: (identifier))))
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (primitive_type)
+            (pointer_expression
+              argument: (identifier))
+            (pointer_expression
+              argument: (identifier)))))
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (type_qualifier)
+            (primitive_type)
+            (pointer_expression
+              argument: (identifier))
+            (pointer_expression
+              argument: (identifier)))))
       (return_statement
         (number_literal)))))
 
@@ -63,18 +66,19 @@ int g(void) {
         (call_expression
           function: (identifier)
           arguments: (argument_list
-            (identifier)
-            (primitive_type)
+            (sized_type_specifier
+              type: (primitive_type))
             (identifier)
             (identifier))))
-      (macro_declaration
-        (identifier)
-        (macro_argument_list
-          (identifier)
-          (identifier)
-          (pointer_expression
-            argument: (identifier))
-          (pointer_expression
-            argument: (identifier))))
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (struct_specifier
+              name: (type_identifier))
+            (pointer_expression
+              argument: (identifier))
+            (pointer_expression
+              argument: (identifier)))))
       (return_statement
         (number_literal)))))

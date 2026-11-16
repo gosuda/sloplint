@@ -1,0 +1,50 @@
+========================================
+Nested call arguments in body stay calls
+========================================
+
+void f(void) {
+    foo(x(y), z);
+    assert(x(y) >= z);
+    m(g(a) + b);
+}
+
+---
+
+(translation_unit
+    (function_definition
+        (primitive_type)
+        (function_declarator
+            (identifier)
+            (parameter_list
+                (parameter_declaration
+                    (primitive_type))))
+        (compound_statement
+            (expression_statement
+                (call_expression
+                    (identifier)
+                    (argument_list
+                        (call_expression
+                            (identifier)
+                            (argument_list
+                                (identifier)))
+                        (identifier))))
+            (expression_statement
+                (call_expression
+                    (identifier)
+                    (argument_list
+                        (binary_expression
+                            (call_expression
+                                (identifier)
+                                (argument_list
+                                    (identifier)))
+                            (identifier)))))
+            (expression_statement
+                (call_expression
+                    (identifier)
+                    (argument_list
+                        (binary_expression
+                            (call_expression
+                                (identifier)
+                                (argument_list
+                                    (identifier)))
+                            (identifier))))))))

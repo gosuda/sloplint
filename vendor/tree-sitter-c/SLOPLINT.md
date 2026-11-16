@@ -87,24 +87,40 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
   `name` and `value` fields of `linkage_specification`.
 - Generic macro fallbacks for names no literal list can enumerate
   (`ASIO_DECL`, `FMT_API`, `MYLIB_EXPORT` and friends):
-  - `macro_qualifier` is a bare `identifier` (optionally with an argument
-    list) usable only in the pre-type position of `_declaration_specifiers`
-    and before a struct/union/enum name. It is deliberately absent from
-    `_declaration_modifiers`'s post-type position: there an identifier is a
-    declarator, and allowing it produced `int name : 1` and
-    `bool f(T a, T* b)` mis-parses. `prec.dynamic(-1)` makes every real type
-    or declarator read win.
-  - `macro_declaration` is a bare `identifier` with an optional argument
-    list and optional `;`, added only to `_top_level_item` and
-    `_field_declaration_list_item`. It only catches items no other rule
-    accepts (a lone `NAME` or `NAME(...)` with no trailing `;`), chiefly
-    inside struct bodies where expression statements cannot appear. It is
-    deliberately absent from `_block_item` and `_non_case_statement`:
-    inside function bodies `NAME(args)` must always be a
-    `call_expression` — reachable there, the fallback stole call sites
-    whose arguments contain concatenated literals (`log_error("a" "b")`)
-    and no precedence setting reliably gives them back. `prec.dynamic(-2)`
-    keeps real statements and declarations preferred at file scope.
+  - `macro_qualifier` is a bare `identifier` with an optional
+    `macro_argument_list` usable only in the pre-type position of
+    `_declaration_specifiers` and before a struct/union/enum name. It is
+    deliberately absent from `_declaration_modifiers`'s post-type
+    position: there an identifier is a declarator, and allowing it
+    produced `int name : 1` and `bool f(T a, T* b)` mis-parses.
+    `prec.dynamic(-1)` makes every real type or declarator read win.
+    The argument list is `macro_argument_list` only, never
+    `argument_list`: `identifier + argument_list` is token-identical to
+    `call_expression`, and sharing it collapsed the merged `(`-list parse
+    states so in-body `NAME(CALL(args), ...)` degraded to `ERROR`.
+  - `macro_declaration` is a bare `identifier` with an optional
+    `macro_argument_list` and optional `;`. At `_top_level_item` the
+    strict `_macro_declaration_top` variant is used (aliased at
+    `prec.dynamic(-2)`): it requires an argument list or `;`, so a bare
+    `NAME` cannot fragment `NAME(args)` into
+    `macro_declaration` + `parenthesized_expression` + `MISSING ;`. The
+    lenient rule is added to `_field_declaration_list_item` and catches
+    items no other rule accepts, chiefly inside struct bodies where
+    expression statements cannot appear. It is deliberately absent from
+    `_block_item`: inside function bodies `NAME(args)` must always be a
+    `call_expression` — reachable there, the `;`-tolerant fallback stole
+    call sites whose arguments contain concatenated literals
+    (`log_error("a" "b")`) and no precedence setting reliably gives them
+    back. `_non_case_statement` instead carries the strict
+    `_macro_declaration_stmt` variant (aliased at `prec.dynamic(-2)`):
+    `identifier + macro_argument_list` and nothing else — no bare `NAME`,
+    no `;`. `NAME(args)` with no `;` cannot be an expression statement,
+    so it can only be a table-generator or statement macro
+    (`FLATBUFFERS_GEN_TYPES(TD)` inside a switch). `NAME(args);` still
+    resolves as `call_expression` + `;` unless a real macro item already
+    appeared in the same block — the GLR merge then keeps the macro read
+    and `;` lands as an empty `expression_statement`, which is benign for
+    the dominant case (`FLATBUFFERS_ASSERT(0)`-style true macros).
   - `macro_argument_list` is the permissive token list these two rules
     share: identifiers, primitive and sized types, literals, commas and the
     operator characters that appear inside real macro arguments

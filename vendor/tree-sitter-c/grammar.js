@@ -55,17 +55,20 @@ module.exports = grammar({
     [$._linkage_guard, $.preproc_if],
     [$._declaration_modifiers, $.type_specifier],
     [$._linkage_guard, $.preproc_ifdef],
-    [$.macro_argument_list, $._argument_list_operator],
-    [$.type_specifier, $._argument_list_type],
-    [$.macro_argument_list, $.type_specifier, $._argument_list_type],
-    [$.macro_argument_list, $._argument_list_type],
+    [$.macro_qualifier, $._macro_declaration_stmt],
+    [$._macro_declaration_stmt, $.expression],
+    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_type_specifier],
+    [$._macro_declaration_top],
+    [$.macro_qualifier, $._macro_declaration_top],
+    [$._macro_declaration_top, $._top_level_expression_statement],
+    [$._macro_declaration_top, $.type_specifier, $._top_level_expression_statement],
+    [$.macro_qualifier, $._macro_declaration_top, $.type_specifier, $.expression, $.macro_type_specifier],
+    [$.macro_argument_list, $.type_specifier, $.macro_type_specifier],
     [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.expression, $.concatenated_string],
     [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.concatenated_string],
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.expression, $.concatenated_string],
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.concatenated_string],
     [$.concatenated_string],
-    [$.macro_argument_list, $._string, $.concatenated_string],
-    [$.macro_argument_list, $.concatenated_string],
     [$.enumerator_list, $.expression, $.concatenated_string],
     [$.enumerator_list, $.concatenated_string],
     [$.enumerator, $.concatenated_string],
@@ -105,7 +108,6 @@ module.exports = grammar({
     [$._parameter_list_real, $._old_style_parameter_list],
     [$._parameter_list_item],
     [$.expression, $.concatenated_string],
-    [$.macro_argument_list, $.type_specifier, $.expression, $.macro_type_specifier],
     [$.attributed_declarator, $.parameter_declaration],
     [$.parameter_declaration],
     [$.macro_qualifier, $.type_specifier, $.sized_type_specifier],
@@ -128,30 +130,21 @@ module.exports = grammar({
     [$.macro_qualifier, $._type_declarator],
     [$.macro_qualifier, $._declarator],
     [$.macro_qualifier, $._declarator, $.type_specifier, $.macro_type_specifier],
-    [$.macro_argument_list, $._string],
-    [$.macro_argument_list, $.type_specifier, $.expression],
-    [$.macro_argument_list, $.expression],
     [$.macro_argument_list, $.sized_type_specifier],
     [$.macro_argument_list, $.type_specifier],
     [$.macro_argument_list, $.type_qualifier],
-    [$.macro_argument_list, $.argument_list],
     [$.macro_qualifier, $.type_specifier, $.expression, $.macro_type_specifier],
     [$.macro_qualifier, $.macro_declaration, $.type_specifier, $.macro_type_specifier],
     [$.macro_qualifier, $.type_specifier, $.macro_type_specifier],
-    [$.macro_declaration, $._top_level_expression_statement],
     [$.macro_qualifier, $.union_specifier],
     [$.macro_qualifier, $.struct_specifier],
     [$.macro_qualifier, $.enum_specifier],
-    [$.macro_declaration, $.type_specifier, $._top_level_expression_statement],
     // Generic macro fallbacks (macro_declaration / macro_qualifier / macro_argument_list)
     // start with a bare identifier like every other construct; each entry is a
     // verbatim unresolved-conflict set reported by tree-sitter generate.
-    [$.macro_qualifier, $.macro_declaration, $.type_specifier, $.expression, $.macro_type_specifier],
     [$.macro_declaration, $.macro_qualifier, $.type_specifier],
-    [$.macro_declaration, $.expression],
     [$.macro_declaration, $.type_specifier],
     [$.macro_qualifier, $.macro_declaration],
-    [$.macro_declaration, $.type_specifier, $.expression],
     [$.macro_qualifier, $.type_specifier],
     [$.macro_qualifier, $._declarator, $.type_specifier],
     [$.macro_declaration, $.macro_qualifier],
@@ -203,7 +196,10 @@ module.exports = grammar({
       $.preproc_def,
       $.preproc_function_def,
       $.preproc_call,
-      $.macro_declaration,
+      // `NAME(args)` / `NAME;` / `NAME(args);` only — see _macro_declaration_top.
+      // A bare `NAME` alternative lets `NAME(args)` fragment into
+      // macro_declaration(NAME) + parenthesized_expression(args) + MISSING ';'.
+      alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
     ),
 
     _block_item: $ => choice(
@@ -537,7 +533,7 @@ module.exports = grammar({
     // as types.
     macro_qualifier: $ => prec.dynamic(-1, prec.right(seq(
       $.identifier,
-      optional(choice($.argument_list, $.macro_argument_list)),
+      optional($.macro_argument_list),
     ))),
 
     // Generic macro-expands-to-declarations fallback for names the literal
@@ -547,9 +543,30 @@ module.exports = grammar({
     // inside struct bodies where expression statements cannot appear.
     macro_declaration: $ => prec.dynamic(-2, prec.right(seq(
       $.identifier,
-      optional(choice($.argument_list, $.macro_argument_list)),
+      optional($.macro_argument_list),
       optional(';'),
     ))),
+
+    // Generic `NAME(args)` fallback usable only where a bare `NAME` would be
+    // wrong: top level. `identifier + argument_list` collides token-for-token
+    // with call_expression, so the args here go through the permissive macro
+    // list, which never shares states with call arguments.
+    _macro_declaration_top: $ => seq(
+      $.identifier,
+      choice(
+        seq($.macro_argument_list, optional(';')),
+        ';',
+      ),
+    ),
+
+    // `NAME(args)` and nothing else: no bare `NAME` (lets `NAME(args)`
+    // fragment into NAME + parenthesized args) and no `;` (a `;`-tolerant
+    // variant re-collides with call_expression + `;`, which must win in
+    // statement position). Used via _non_case_statement.
+    _macro_declaration_stmt: $ => seq(
+      $.identifier,
+      $.macro_argument_list,
+    ),
 
     // Macro arguments that are not expressions (types, member names, DSL
     // keywords, operators) accepted as a permissive token list.
@@ -1249,6 +1266,13 @@ module.exports = grammar({
       $.seh_try_statement,
       $.seh_leave_statement,
       $.ms_asm_statement,
+      // `NAME(args)` with no `;` in statement position — unreachable as a
+      // call (expression_statement requires `;`), so it can only be a
+      // table-generator/statement macro, e.g. `FLATBUFFERS_GEN_TYPES(TD)`
+      // inside a switch. With `;` the call read wins at dynamic 0 over
+      // the macro + empty-`;`-statement split at -2. See
+      // _macro_declaration_stmt.
+      alias(prec.dynamic(-2, prec.right($._macro_declaration_stmt)), $.macro_declaration),
     ),
 
     _top_level_statement: $ => choice(
