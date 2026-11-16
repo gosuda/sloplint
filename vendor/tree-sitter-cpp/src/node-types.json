@@ -610,6 +610,10 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "ms_call_modifier",
           "named": true
         }
@@ -635,6 +639,22 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "far_ptr_modifier",
+          "named": true
+        },
+        {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
+          "type": "ms_call_modifier",
+          "named": true
+        },
         {
           "type": "ms_pointer_modifier",
           "named": true
@@ -2598,6 +2618,11 @@
         }
       ]
     }
+  },
+  {
+    "type": "far_ptr_modifier",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "field_declaration",
@@ -4983,6 +5008,10 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "ms_call_modifier",
           "named": true
         }
@@ -5074,7 +5103,23 @@
       "required": false,
       "types": [
         {
+          "type": "far_ptr_modifier",
+          "named": true
+        },
+        {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "ms_based_modifier",
+          "named": true
+        },
+        {
+          "type": "ms_call_modifier",
           "named": true
         },
         {
@@ -5138,7 +5183,23 @@
       "required": false,
       "types": [
         {
+          "type": "far_ptr_modifier",
+          "named": true
+        },
+        {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "ms_based_modifier",
+          "named": true
+        },
+        {
+          "type": "ms_call_modifier",
           "named": true
         },
         {
@@ -8181,6 +8242,10 @@
     "named": false
   },
   {
+    "type": "FAR",
+    "named": false
+  },
+  {
     "type": "FASTCALL",
     "named": false
   },
@@ -8262,6 +8327,10 @@
   },
   {
     "type": "NAPI_EXTERN",
+    "named": false
+  },
+  {
+    "type": "NEAR",
     "named": false
   },
   {
@@ -9021,6 +9090,10 @@
     "named": false
   },
   {
+    "type": "__far",
+    "named": false
+  },
+  {
     "type": "__fastcall",
     "named": false
   },
@@ -9042,6 +9115,10 @@
   },
   {
     "type": "__glibc_unlikely",
+    "named": false
+  },
+  {
+    "type": "__huge",
     "named": false
   },
   {
@@ -9090,6 +9167,10 @@
   },
   {
     "type": "__must_check",
+    "named": false
+  },
+  {
+    "type": "__near",
     "named": false
   },
   {
@@ -9214,6 +9295,18 @@
   },
   {
     "type": "_alignof",
+    "named": false
+  },
+  {
+    "type": "_far",
+    "named": false
+  },
+  {
+    "type": "_huge",
+    "named": false
+  },
+  {
+    "type": "_near",
     "named": false
   },
   {

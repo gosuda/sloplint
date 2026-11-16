@@ -1,5 +1,5 @@
 --- a/grammar.js	2026-11-16 15:36:58.671581076 +0000
-+++ b/grammar.js	2026-11-16 18:13:22.857547809 +0000
++++ b/grammar.js	2026-11-16 18:43:55.538151495 +0000
 @@ -36,6 +36,8 @@
    name: 'c',
  
@@ -54,7 +54,27 @@
      ),
  
      preproc_call: $ => seq(
-@@ -283,10 +292,118 @@
+@@ -240,7 +249,9 @@
+     function_definition: $ => seq(
+       optional($.ms_call_modifier),
+       $._declaration_specifiers,
+-      optional($.ms_call_modifier),
++      // WINAPI/NTAPI/APIENTRY/CDECL/FAR and friends: macro_qualifier covers
++      // calling-convention spellings outside ms_call_modifier's literal list.
++      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
+       field('declarator', $._declarator),
+       field('body', $.compound_statement),
+     ),
+@@ -257,7 +268,7 @@
+       $._declaration_specifiers,
+       commaSep1(field('declarator', choice(
+         seq(
+-          optional($.ms_call_modifier),
++          repeat(choice($.ms_call_modifier, $.macro_qualifier)),
+           $._declaration_declarator,
+           optional($.gnu_asm_expression),
+         ),
+@@ -283,10 +294,118 @@
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -174,7 +194,7 @@
        field('type', $.type_specifier),
        repeat($._declaration_modifiers),
      )),
-@@ -301,6 +418,27 @@
+@@ -301,6 +420,27 @@
        )),
      ),
  
@@ -202,7 +222,128 @@
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -594,6 +732,7 @@
+@@ -341,6 +481,14 @@
+       '__vectorcall',
+     ),
+ 
++    // Pointer-model macros (`fd_set FAR*`, `char NEAR*`): literals, safe
++    // inside declarator machinery where a generic identifier would misparse
++    // (see delete[] history). Calling-convention spellings like WINAPI ride
++    // macro_attribute/macro_qualifier, which already cover them.
++    far_ptr_modifier: _ => choice(
++      'FAR', 'NEAR', '_far', '_near', '__far', '__near', '__huge', '_huge',
++    ),
++
+     ms_restrict_modifier: _ => '__restrict',
+ 
+     ms_unsigned_ptr_modifier: _ => '__uptr',
+@@ -409,25 +557,25 @@
+ 
+     parenthesized_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
+       '(',
+-      optional($.ms_call_modifier),
++      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
+       $._declarator,
+       ')',
+     )),
+     parenthesized_field_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
+       '(',
+-      optional($.ms_call_modifier),
++      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
+       $._field_declarator,
+       ')',
+     )),
+     parenthesized_type_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
+       '(',
+-      optional($.ms_call_modifier),
++      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
+       $._type_declarator,
+       ')',
+     )),
+     abstract_parenthesized_declarator: $ => prec(1, seq(
+       '(',
+-      optional($.ms_call_modifier),
++      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
+       $._abstract_declarator,
+       ')',
+     )),
+@@ -448,28 +596,66 @@
+ 
+     pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
+       optional($.ms_based_modifier),
++      // Calling-convention / pointer-model macros before '*' (NTAPI*,
++      // FAR*, WINAPI*): literals only — a generic identifier here makes
++      // `delete [] p` ambiguous against delete's own `[]` marker.
++      repeat(choice($.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute)),
+       '*',
+-      repeat($.ms_pointer_modifier),
+-      repeat($.type_qualifier),
++      repeat(choice(
++        $.ms_pointer_modifier,
++        $.type_qualifier,
++        $.ms_call_modifier,
++        $.far_ptr_modifier,
++        $.macro_attribute,
++        $.macro_qualifier,
++      )),
+       field('declarator', $._declarator),
+     ))),
+     pointer_field_declarator: $ => prec.dynamic(1, prec.right(seq(
+       optional($.ms_based_modifier),
++      // Calling-convention / pointer-model macros before '*' (NTAPI*,
++      // FAR*, WINAPI*): literals only — a generic identifier here makes
++      // `delete [] p` ambiguous against delete's own `[]` marker.
++      repeat(choice($.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute)),
+       '*',
+-      repeat($.ms_pointer_modifier),
+-      repeat($.type_qualifier),
++      repeat(choice(
++        $.ms_pointer_modifier,
++        $.type_qualifier,
++        $.ms_call_modifier,
++        $.far_ptr_modifier,
++        $.macro_attribute,
++        $.macro_qualifier,
++      )),
+       field('declarator', $._field_declarator),
+     ))),
+     pointer_type_declarator: $ => prec.dynamic(1, prec.right(seq(
+       optional($.ms_based_modifier),
++      // Calling-convention / pointer-model macros before '*' (NTAPI*,
++      // FAR*, WINAPI*): literals only — a generic identifier here makes
++      // `delete [] p` ambiguous against delete's own `[]` marker.
++      repeat(choice($.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute)),
+       '*',
+-      repeat($.ms_pointer_modifier),
+-      repeat($.type_qualifier),
++      repeat(choice(
++        $.ms_pointer_modifier,
++        $.type_qualifier,
++        $.ms_call_modifier,
++        $.far_ptr_modifier,
++        $.macro_attribute,
++        $.macro_qualifier,
++      )),
+       field('declarator', $._type_declarator),
+     ))),
+-    abstract_pointer_declarator: $ => prec.dynamic(1, prec.right(seq('*',
+-      repeat($.ms_pointer_modifier),
+-      repeat($.type_qualifier),
++    abstract_pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
++      repeat(choice($.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute)),
++      '*',
++      repeat(choice(
++        $.ms_pointer_modifier,
++        $.type_qualifier,
++        $.ms_call_modifier,
++        $.far_ptr_modifier,
++        $.macro_attribute,
++        $.macro_qualifier,
++      )),
+       field('declarator', optional($._abstract_declarator)),
+     ))),
+ 
+@@ -594,6 +780,7 @@
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -210,7 +351,7 @@
        $._type_identifier,
      ),
  
-@@ -652,6 +791,18 @@
+@@ -652,6 +839,18 @@
        'charptr_t',
        'nullptr_t',
        'max_align_t',
@@ -229,7 +370,7 @@
        ...[8, 16, 32, 64].map(n => `int${n}_t`),
        ...[8, 16, 32, 64].map(n => `uint${n}_t`),
        ...[8, 16, 32, 64].map(n => `char${n}_t`),
-@@ -659,6 +810,7 @@
+@@ -659,6 +858,7 @@
  
      enum_specifier: $ => seq(
        'enum',
@@ -237,7 +378,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -693,6 +845,7 @@
+@@ -693,6 +893,7 @@
        'struct',
        optional($.attribute_specifier),
        optional($.ms_declspec_modifier),
@@ -245,7 +386,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -706,6 +859,7 @@
+@@ -706,6 +907,7 @@
      union_specifier: $ => prec.right(seq(
        'union',
        optional($.ms_declspec_modifier),
@@ -253,7 +394,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -727,6 +881,7 @@
+@@ -727,6 +929,7 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -261,7 +402,7 @@
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
      ),
-@@ -802,6 +957,7 @@
+@@ -802,6 +1005,7 @@
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,

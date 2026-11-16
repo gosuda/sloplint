@@ -1,5 +1,5 @@
 --- a/grammar.js	2026-11-16 15:38:11.940278785 +0000
-+++ b/grammar.js	2026-11-16 18:13:13.086586178 +0000
++++ b/grammar.js	2026-11-16 18:44:32.678000790 +0000
 @@ -37,7 +37,6 @@
  
    conflicts: $ => [
@@ -8,7 +8,7 @@
      [$.type_specifier, $.expression],
      [$.type_specifier, $.expression, $.macro_type_specifier],
      [$.type_specifier, $.macro_type_specifier],
-@@ -51,8 +50,40 @@
+@@ -51,8 +50,55 @@
      [$.function_declarator, $._function_declaration_declarator],
      [$._block_item, $.statement],
      [$._top_level_item, $._top_level_statement],
@@ -18,6 +18,21 @@
 +    [$._linkage_guard, $.preproc_if],
 +    [$._declaration_modifiers, $.type_specifier],
 +    [$._linkage_guard, $.preproc_ifdef],
++    [$.parenthesized_declarator, $.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator],
++    [$.parenthesized_type_declarator, $.pointer_type_declarator],
++    [$.abstract_parenthesized_declarator, $.abstract_pointer_declarator],
++    [$._declaration_modifiers, $.abstract_pointer_declarator, $.type_specifier],
++    [$.abstract_pointer_declarator, $.type_specifier],
++    [$.function_definition, $.declaration, $.pointer_declarator],
++    [$.pointer_declarator, $.abstract_pointer_declarator],
++    [$._declaration_specifiers, $.parenthesized_declarator, $.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator],
++    [$.macro_qualifier, $._field_declarator],
++    [$.pointer_type_declarator],
++    [$.abstract_pointer_declarator],
++    [$._declaration_specifiers, $.abstract_parenthesized_declarator, $.abstract_pointer_declarator],
++    [$.pointer_declarator],
++    [$.macro_qualifier, $._type_declarator],
++    [$.macro_qualifier, $._declarator],
 +    [$.macro_qualifier, $._declarator, $.type_specifier, $.macro_type_specifier],
 +    [$.macro_argument_list, $._string],
 +    [$.macro_argument_list, $.concatenated_string],
@@ -50,7 +65,7 @@
    ],
  
    extras: $ => [
-@@ -89,6 +120,7 @@
+@@ -89,6 +135,7 @@
        $.function_definition,
        alias($._old_style_function_definition, $.function_definition),
        $.linkage_specification,
@@ -58,7 +73,7 @@
        $.declaration,
        $._top_level_statement,
        $.attributed_statement,
-@@ -100,12 +132,14 @@
+@@ -100,12 +147,14 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -73,7 +88,7 @@
        $.declaration,
        $.statement,
        $.attributed_statement,
-@@ -117,6 +151,7 @@
+@@ -117,6 +166,7 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -81,7 +96,7 @@
      ),
  
      // Preprocesser
-@@ -148,7 +183,9 @@
+@@ -148,7 +198,9 @@
      ),
  
      preproc_params: $ => seq(
@@ -92,7 +107,7 @@
      ),
  
      preproc_call: $ => seq(
-@@ -199,7 +236,11 @@
+@@ -199,7 +251,11 @@
  
      preproc_argument_list: $ => seq(
        '(',
@@ -105,7 +120,27 @@
        ')',
      ),
  
-@@ -283,10 +324,132 @@
+@@ -240,7 +296,9 @@
+     function_definition: $ => seq(
+       optional($.ms_call_modifier),
+       $._declaration_specifiers,
+-      optional($.ms_call_modifier),
++      // WINAPI/NTAPI/APIENTRY/CDECL/FAR and friends: macro_qualifier covers
++      // calling-convention spellings outside ms_call_modifier's literal list.
++      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
+       field('declarator', $._declarator),
+       field('body', $.compound_statement),
+     ),
+@@ -257,7 +315,7 @@
+       $._declaration_specifiers,
+       commaSep1(field('declarator', choice(
+         seq(
+-          optional($.ms_call_modifier),
++          repeat(choice($.ms_call_modifier, $.macro_qualifier)),
+           $._declaration_declarator,
+           optional($.gnu_asm_expression),
+         ),
+@@ -283,10 +341,132 @@
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -239,7 +274,7 @@
        field('type', $.type_specifier),
        repeat($._declaration_modifiers),
      )),
-@@ -301,6 +464,27 @@
+@@ -301,6 +481,27 @@
        )),
      ),
  
@@ -267,7 +302,21 @@
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -396,7 +580,7 @@
+@@ -341,6 +542,13 @@
+       '__vectorcall',
+     ),
+ 
++    // Pointer-model macros (`fd_set FAR*`, `char NEAR*`). Calling-convention
++    // spellings like WINAPI ride macro_attribute/macro_qualifier, which
++    // already cover them.
++    far_ptr_modifier: _ => choice(
++      'FAR', 'NEAR', '_far', '_near', '__far', '__near', '__huge', '_huge',
++    ),
++
+     ms_restrict_modifier: _ => '__restrict',
+ 
+     ms_unsigned_ptr_modifier: _ => '__uptr',
+@@ -396,7 +604,7 @@
        alias($.array_type_declarator, $.array_declarator),
        alias($.parenthesized_type_declarator, $.parenthesized_declarator),
        $._type_identifier,
@@ -276,7 +325,104 @@
        $.primitive_type,
      ),
  
-@@ -543,6 +727,7 @@
+@@ -409,25 +617,25 @@
+ 
+     parenthesized_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
+       '(',
+-      optional($.ms_call_modifier),
++      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
+       $._declarator,
+       ')',
+     )),
+     parenthesized_field_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
+       '(',
+-      optional($.ms_call_modifier),
++      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
+       $._field_declarator,
+       ')',
+     )),
+     parenthesized_type_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
+       '(',
+-      optional($.ms_call_modifier),
++      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
+       $._type_declarator,
+       ')',
+     )),
+     abstract_parenthesized_declarator: $ => prec(1, seq(
+       '(',
+-      optional($.ms_call_modifier),
++      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
+       $._abstract_declarator,
+       ')',
+     )),
+@@ -448,28 +656,57 @@
+ 
+     pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
+       optional($.ms_based_modifier),
++      repeat(choice($.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute, $.macro_qualifier)),
+       '*',
+-      repeat($.ms_pointer_modifier),
+-      repeat($.type_qualifier),
++      repeat(choice(
++        $.ms_pointer_modifier,
++        $.type_qualifier,
++        $.ms_call_modifier,
++        $.far_ptr_modifier,
++        $.macro_attribute,
++        $.macro_qualifier,
++      )),
+       field('declarator', $._declarator),
+     ))),
+     pointer_field_declarator: $ => prec.dynamic(1, prec.right(seq(
+       optional($.ms_based_modifier),
++      repeat(choice($.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute, $.macro_qualifier)),
+       '*',
+-      repeat($.ms_pointer_modifier),
+-      repeat($.type_qualifier),
++      repeat(choice(
++        $.ms_pointer_modifier,
++        $.type_qualifier,
++        $.ms_call_modifier,
++        $.far_ptr_modifier,
++        $.macro_attribute,
++        $.macro_qualifier,
++      )),
+       field('declarator', $._field_declarator),
+     ))),
+     pointer_type_declarator: $ => prec.dynamic(1, prec.right(seq(
+       optional($.ms_based_modifier),
++      repeat(choice($.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute, $.macro_qualifier)),
+       '*',
+-      repeat($.ms_pointer_modifier),
+-      repeat($.type_qualifier),
++      repeat(choice(
++        $.ms_pointer_modifier,
++        $.type_qualifier,
++        $.ms_call_modifier,
++        $.far_ptr_modifier,
++        $.macro_attribute,
++        $.macro_qualifier,
++      )),
+       field('declarator', $._type_declarator),
+     ))),
+-    abstract_pointer_declarator: $ => prec.dynamic(1, prec.right(seq('*',
+-      repeat($.ms_pointer_modifier),
+-      repeat($.type_qualifier),
++    abstract_pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
++      repeat(choice($.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute, $.macro_qualifier)),
++      '*',
++      repeat(choice(
++        $.ms_pointer_modifier,
++        $.type_qualifier,
++        $.ms_call_modifier,
++        $.far_ptr_modifier,
++        $.macro_attribute,
++        $.macro_qualifier,
++      )),
+       field('declarator', optional($._abstract_declarator)),
+     ))),
+ 
+@@ -543,6 +780,7 @@
  
      init_declarator: $ => seq(
        field('declarator', $._declarator),
@@ -284,7 +430,7 @@
        '=',
        field('value', choice($.initializer_list, $.expression)),
      ),
-@@ -563,6 +748,7 @@
+@@ -563,6 +801,7 @@
        '__inline__',
        '__forceinline',
        'thread_local',
@@ -292,7 +438,7 @@
        '__thread',
      ),
  
-@@ -574,6 +760,8 @@
+@@ -574,6 +813,8 @@
        '__restrict__',
        '__extension__',
        '_Atomic',
@@ -301,7 +447,7 @@
        '_Noreturn',
        'noreturn',
        '_Nonnull',
-@@ -594,6 +782,7 @@
+@@ -594,6 +835,7 @@
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -309,7 +455,7 @@
        $._type_identifier,
      ),
  
-@@ -601,6 +790,8 @@
+@@ -601,6 +843,8 @@
        seq(
          repeat(choice(
            'signed',
@@ -318,7 +464,7 @@
            'unsigned',
            'long',
            'short',
-@@ -611,6 +802,8 @@
+@@ -611,6 +855,8 @@
          ))),
          repeat1(choice(
            'signed',
@@ -327,7 +473,7 @@
            'unsigned',
            'long',
            'short',
-@@ -619,6 +812,8 @@
+@@ -619,6 +865,8 @@
        seq(
          repeat1(choice(
            'signed',
@@ -336,7 +482,7 @@
            'unsigned',
            'long',
            'short',
-@@ -630,6 +825,8 @@
+@@ -630,6 +878,8 @@
          ))),
          repeat(choice(
            'signed',
@@ -345,7 +491,7 @@
            'unsigned',
            'long',
            'short',
-@@ -652,6 +849,18 @@
+@@ -652,6 +902,18 @@
        'charptr_t',
        'nullptr_t',
        'max_align_t',
@@ -364,7 +510,7 @@
        ...[8, 16, 32, 64].map(n => `int${n}_t`),
        ...[8, 16, 32, 64].map(n => `uint${n}_t`),
        ...[8, 16, 32, 64].map(n => `char${n}_t`),
-@@ -659,17 +868,26 @@
+@@ -659,17 +921,26 @@
  
      enum_specifier: $ => seq(
        'enum',
@@ -393,7 +539,7 @@
      enumerator_list: $ => seq(
        '{',
        repeat(choice(
-@@ -693,6 +911,7 @@
+@@ -693,6 +964,7 @@
        'struct',
        optional($.attribute_specifier),
        optional($.ms_declspec_modifier),
@@ -401,7 +547,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -706,6 +925,7 @@
+@@ -706,6 +978,7 @@
      union_specifier: $ => prec.right(seq(
        'union',
        optional($.ms_declspec_modifier),
@@ -409,7 +555,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -727,6 +947,7 @@
+@@ -727,6 +1000,7 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -417,7 +563,7 @@
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
      ),
-@@ -737,9 +958,12 @@
+@@ -737,9 +1011,12 @@
        optional($.attribute_specifier),
        ';',
      ),
@@ -433,7 +579,7 @@
      )),
  
      bitfield_clause: $ => seq(':', $.expression),
-@@ -802,6 +1026,7 @@
+@@ -802,6 +1079,7 @@
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,
@@ -441,7 +587,7 @@
      ),
  
      _top_level_statement: $ => choice(
-@@ -1226,6 +1451,7 @@
+@@ -1226,6 +1504,7 @@
          $.initializer_pair,
          $.expression,
          $.initializer_list,
@@ -449,7 +595,7 @@
        )),
        optional(','),
        '}',
-@@ -1351,7 +1577,10 @@
+@@ -1351,7 +1630,10 @@
      ),
  
      macro_type_specifier: $ => prec.dynamic(-1, seq(

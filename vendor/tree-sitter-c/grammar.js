@@ -55,6 +55,21 @@ module.exports = grammar({
     [$._linkage_guard, $.preproc_if],
     [$._declaration_modifiers, $.type_specifier],
     [$._linkage_guard, $.preproc_ifdef],
+    [$.parenthesized_declarator, $.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator],
+    [$.parenthesized_type_declarator, $.pointer_type_declarator],
+    [$.abstract_parenthesized_declarator, $.abstract_pointer_declarator],
+    [$._declaration_modifiers, $.abstract_pointer_declarator, $.type_specifier],
+    [$.abstract_pointer_declarator, $.type_specifier],
+    [$.function_definition, $.declaration, $.pointer_declarator],
+    [$.pointer_declarator, $.abstract_pointer_declarator],
+    [$._declaration_specifiers, $.parenthesized_declarator, $.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator],
+    [$.macro_qualifier, $._field_declarator],
+    [$.pointer_type_declarator],
+    [$.abstract_pointer_declarator],
+    [$._declaration_specifiers, $.abstract_parenthesized_declarator, $.abstract_pointer_declarator],
+    [$.pointer_declarator],
+    [$.macro_qualifier, $._type_declarator],
+    [$.macro_qualifier, $._declarator],
     [$.macro_qualifier, $._declarator, $.type_specifier, $.macro_type_specifier],
     [$.macro_argument_list, $._string],
     [$.macro_argument_list, $.concatenated_string],
@@ -281,7 +296,9 @@ module.exports = grammar({
     function_definition: $ => seq(
       optional($.ms_call_modifier),
       $._declaration_specifiers,
-      optional($.ms_call_modifier),
+      // WINAPI/NTAPI/APIENTRY/CDECL/FAR and friends: macro_qualifier covers
+      // calling-convention spellings outside ms_call_modifier's literal list.
+      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
       field('declarator', $._declarator),
       field('body', $.compound_statement),
     ),
@@ -298,7 +315,7 @@ module.exports = grammar({
       $._declaration_specifiers,
       commaSep1(field('declarator', choice(
         seq(
-          optional($.ms_call_modifier),
+          repeat(choice($.ms_call_modifier, $.macro_qualifier)),
           $._declaration_declarator,
           optional($.gnu_asm_expression),
         ),
@@ -525,6 +542,13 @@ module.exports = grammar({
       '__vectorcall',
     ),
 
+    // Pointer-model macros (`fd_set FAR*`, `char NEAR*`). Calling-convention
+    // spellings like WINAPI ride macro_attribute/macro_qualifier, which
+    // already cover them.
+    far_ptr_modifier: _ => choice(
+      'FAR', 'NEAR', '_far', '_near', '__far', '__near', '__huge', '_huge',
+    ),
+
     ms_restrict_modifier: _ => '__restrict',
 
     ms_unsigned_ptr_modifier: _ => '__uptr',
@@ -593,25 +617,25 @@ module.exports = grammar({
 
     parenthesized_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
       '(',
-      optional($.ms_call_modifier),
+      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
       $._declarator,
       ')',
     )),
     parenthesized_field_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
       '(',
-      optional($.ms_call_modifier),
+      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
       $._field_declarator,
       ')',
     )),
     parenthesized_type_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
       '(',
-      optional($.ms_call_modifier),
+      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
       $._type_declarator,
       ')',
     )),
     abstract_parenthesized_declarator: $ => prec(1, seq(
       '(',
-      optional($.ms_call_modifier),
+      repeat(choice($.ms_call_modifier, $.macro_qualifier)),
       $._abstract_declarator,
       ')',
     )),
@@ -632,28 +656,57 @@ module.exports = grammar({
 
     pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
       optional($.ms_based_modifier),
+      repeat(choice($.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute, $.macro_qualifier)),
       '*',
-      repeat($.ms_pointer_modifier),
-      repeat($.type_qualifier),
+      repeat(choice(
+        $.ms_pointer_modifier,
+        $.type_qualifier,
+        $.ms_call_modifier,
+        $.far_ptr_modifier,
+        $.macro_attribute,
+        $.macro_qualifier,
+      )),
       field('declarator', $._declarator),
     ))),
     pointer_field_declarator: $ => prec.dynamic(1, prec.right(seq(
       optional($.ms_based_modifier),
+      repeat(choice($.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute, $.macro_qualifier)),
       '*',
-      repeat($.ms_pointer_modifier),
-      repeat($.type_qualifier),
+      repeat(choice(
+        $.ms_pointer_modifier,
+        $.type_qualifier,
+        $.ms_call_modifier,
+        $.far_ptr_modifier,
+        $.macro_attribute,
+        $.macro_qualifier,
+      )),
       field('declarator', $._field_declarator),
     ))),
     pointer_type_declarator: $ => prec.dynamic(1, prec.right(seq(
       optional($.ms_based_modifier),
+      repeat(choice($.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute, $.macro_qualifier)),
       '*',
-      repeat($.ms_pointer_modifier),
-      repeat($.type_qualifier),
+      repeat(choice(
+        $.ms_pointer_modifier,
+        $.type_qualifier,
+        $.ms_call_modifier,
+        $.far_ptr_modifier,
+        $.macro_attribute,
+        $.macro_qualifier,
+      )),
       field('declarator', $._type_declarator),
     ))),
-    abstract_pointer_declarator: $ => prec.dynamic(1, prec.right(seq('*',
-      repeat($.ms_pointer_modifier),
-      repeat($.type_qualifier),
+    abstract_pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
+      repeat(choice($.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute, $.macro_qualifier)),
+      '*',
+      repeat(choice(
+        $.ms_pointer_modifier,
+        $.type_qualifier,
+        $.ms_call_modifier,
+        $.far_ptr_modifier,
+        $.macro_attribute,
+        $.macro_qualifier,
+      )),
       field('declarator', optional($._abstract_declarator)),
     ))),
 

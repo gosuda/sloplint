@@ -166,6 +166,25 @@ reproduced on real code. Every repro below was first accepted by
   token soup also accepts the operator characters real macro arguments
   carry (`=`, `!`, `?`, `:`, `.`, `->`, `~`, arithmetic and comparison
   operators).
+- Calling-convention and pointer-model macros inside declarators
+  (`void* __cdecl memset(...)`, `VOID(NTAPI* FN)(...)`, `fd_set FAR*`,
+  `int WINAPI WinMain(...)`, `_In_`-style SAL annotations in parameter
+  lists). The shared base's declarator machinery gains:
+  `repeat(choice($.ms_call_modifier, $.far_ptr_modifier,
+  $.macro_attribute))` before `'*'`, a merged modifier repeat after `'*'`
+  that also allows `macro_qualifier`, and
+  `repeat(choice($.ms_call_modifier, $.macro_qualifier))` before the inner
+  declarator of the parenthesized-declarator rules and in the
+  `declaration`/`function_definition` pre-declarator slots. The pre-`'*'`
+  slot is deliberately literal-only: a generic identifier there kept the
+  `[]` of `delete [] p` ambiguous against `lambda_capture_specifier` long
+  enough to misparse the whole expression. `far_ptr_modifier` is a new
+  literal list (`FAR`, `NEAR`, `_far`, `_near`, `__far`, `__near`,
+  `__huge`, `_huge`); WINAPI/NTAPI/APIENTRY already live in
+  `macro_attribute`, so they are reused, not duplicated into
+  `ms_call_modifier`. Known loss: `typedef CONST STRING* X` (unknown
+  macro + unknown type) stays an error — genuinely ambiguous without a
+  preprocessor.
 - New conflicts for the Qt rules and the generic fallbacks:
   `argument_list`/`sized_type_specifier`/`expression`/
   `concatenated_string`/`_string`/`template_type`/`template_function`

@@ -12,9 +12,12 @@ char d[]={
   (declaration
     type: (primitive_type)
     declarator: (init_declarator
-      declarator: (array_declarator declarator: (identifier))
+      declarator: (array_declarator
+        declarator: (identifier))
       value: (initializer_list
-        (preproc_call directive: (preproc_directive) argument: (preproc_arg))))))
+        (preproc_call
+          directive: (preproc_directive)
+          argument: (preproc_arg))))))
 
 ========================================
 #embed between other initializer elements
@@ -30,10 +33,13 @@ char d[]={1,
   (declaration
     type: (primitive_type)
     declarator: (init_declarator
-      declarator: (array_declarator declarator: (identifier))
+      declarator: (array_declarator
+        declarator: (identifier))
       value: (initializer_list
         (number_literal)
-        (preproc_call directive: (preproc_directive) argument: (preproc_arg))
+        (preproc_call
+          directive: (preproc_directive)
+          argument: (preproc_arg))
         (number_literal)))))
 
 ========================================
@@ -49,12 +55,23 @@ struct P p = {.x = 1, .y = 2};
   (declaration
     type: (primitive_type)
     declarator: (init_declarator
-      declarator: (array_declarator declarator: (identifier))
-      value: (initializer_list (number_literal) (number_literal) (number_literal))))
+      declarator: (array_declarator
+        declarator: (identifier))
+      value: (initializer_list
+        (number_literal)
+        (number_literal)
+        (number_literal))))
   (declaration
-    type: (struct_specifier name: (type_identifier))
+    type: (struct_specifier
+      name: (type_identifier))
     declarator: (init_declarator
       declarator: (identifier)
       value: (initializer_list
-        (initializer_pair designator: (field_designator (field_identifier)) value: (number_literal))
-        (initializer_pair designator: (field_designator (field_identifier)) value: (number_literal))))))
+        (initializer_pair
+          designator: (field_designator
+            (field_identifier))
+          value: (number_literal))
+        (initializer_pair
+          designator: (field_designator
+            (field_identifier))
+          value: (number_literal))))))

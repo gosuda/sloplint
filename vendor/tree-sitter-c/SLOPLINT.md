@@ -112,6 +112,24 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
     headers: `_Bool`, `__fp16`, `__bf16`, `__vector`, `__pixel`,
     `__int128_t`, `__int{8..128}`, `_Float{16,32,64,128}`,
     `_Float{32,64,128}x`, `_Decimal{32,64,128}`.
+- Calling-convention and pointer-model macros inside declarators
+  (`void* __cdecl memset(...)`, `VOID(NTAPI* FN)(...)`, `fd_set FAR*`,
+  `int WINAPI WinMain(...)`, `_In_`-style SAL annotations):
+  - `repeat(choice($.ms_call_modifier, $.far_ptr_modifier,
+    $.macro_attribute, $.macro_qualifier))` before `'*'` and a merged
+    `repeat(choice($.ms_pointer_modifier, $.type_qualifier,
+    $.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute,
+    $.macro_qualifier))` after it, in all four pointer-declarator rules;
+    `repeat(choice($.ms_call_modifier, $.macro_qualifier))` before the
+    inner declarator of the four parenthesized-declarator rules and in the
+    `declaration`/`function_definition` pre-declarator slots.
+  - `far_ptr_modifier` is a literal list (`FAR`, `NEAR`, `_far`, `_near`,
+    `__far`, `__near`, `__huge`, `_huge`); WINAPI/NTAPI/APIENTRY and
+    friends already live in `macro_attribute`, so they were not duplicated
+    into `ms_call_modifier`.
+  - The generic `macro_qualifier` is safe in these positions in C: the
+    C++-only `delete [] p` ambiguity that forbids it in the cpp grammar
+    cannot occur here.
 - Attribute-like declaration macros: vendor headers pre-decorate declarations
   with calling-convention, storage and compiler-attribute macros
   (`__IO uint32_t ISER[1];`, `VKAPI_ATTR VkBool32 VKAPI_CALL cb(void *);`,

@@ -2864,16 +2864,20 @@
           "name": "_declaration_specifiers"
         },
         {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "SYMBOL",
-              "name": "ms_call_modifier"
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
+          "type": "REPEAT",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "ms_call_modifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "macro_qualifier"
+              }
+            ]
+          }
         },
         {
           "type": "FIELD",
@@ -2962,16 +2966,20 @@
                     "type": "SEQ",
                     "members": [
                       {
-                        "type": "CHOICE",
-                        "members": [
-                          {
-                            "type": "SYMBOL",
-                            "name": "ms_call_modifier"
-                          },
-                          {
-                            "type": "BLANK"
-                          }
-                        ]
+                        "type": "REPEAT",
+                        "content": {
+                          "type": "CHOICE",
+                          "members": [
+                            {
+                              "type": "SYMBOL",
+                              "name": "ms_call_modifier"
+                            },
+                            {
+                              "type": "SYMBOL",
+                              "name": "macro_qualifier"
+                            }
+                          ]
+                        }
                       },
                       {
                         "type": "SYMBOL",
@@ -3017,16 +3025,20 @@
                           "type": "SEQ",
                           "members": [
                             {
-                              "type": "CHOICE",
-                              "members": [
-                                {
-                                  "type": "SYMBOL",
-                                  "name": "ms_call_modifier"
-                                },
-                                {
-                                  "type": "BLANK"
-                                }
-                              ]
+                              "type": "REPEAT",
+                              "content": {
+                                "type": "CHOICE",
+                                "members": [
+                                  {
+                                    "type": "SYMBOL",
+                                    "name": "ms_call_modifier"
+                                  },
+                                  {
+                                    "type": "SYMBOL",
+                                    "name": "macro_qualifier"
+                                  }
+                                ]
+                              }
                             },
                             {
                               "type": "SYMBOL",
@@ -4401,6 +4413,43 @@
         }
       ]
     },
+    "far_ptr_modifier": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "FAR"
+        },
+        {
+          "type": "STRING",
+          "value": "NEAR"
+        },
+        {
+          "type": "STRING",
+          "value": "_far"
+        },
+        {
+          "type": "STRING",
+          "value": "_near"
+        },
+        {
+          "type": "STRING",
+          "value": "__far"
+        },
+        {
+          "type": "STRING",
+          "value": "__near"
+        },
+        {
+          "type": "STRING",
+          "value": "__huge"
+        },
+        {
+          "type": "STRING",
+          "value": "_huge"
+        }
+      ]
+    },
     "ms_restrict_modifier": {
       "type": "STRING",
       "value": "__restrict"
@@ -4708,16 +4757,20 @@
             "value": "("
           },
           {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "SYMBOL",
-                "name": "ms_call_modifier"
-              },
-              {
-                "type": "BLANK"
-              }
-            ]
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "ms_call_modifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_qualifier"
+                }
+              ]
+            }
           },
           {
             "type": "SYMBOL",
@@ -4741,16 +4794,20 @@
             "value": "("
           },
           {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "SYMBOL",
-                "name": "ms_call_modifier"
-              },
-              {
-                "type": "BLANK"
-              }
-            ]
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "ms_call_modifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_qualifier"
+                }
+              ]
+            }
           },
           {
             "type": "SYMBOL",
@@ -4774,16 +4831,20 @@
             "value": "("
           },
           {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "SYMBOL",
-                "name": "ms_call_modifier"
-              },
-              {
-                "type": "BLANK"
-              }
-            ]
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "ms_call_modifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_qualifier"
+                }
+              ]
+            }
           },
           {
             "type": "SYMBOL",
@@ -4807,16 +4868,20 @@
             "value": "("
           },
           {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "SYMBOL",
-                "name": "ms_call_modifier"
-              },
-              {
-                "type": "BLANK"
-              }
-            ]
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "ms_call_modifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_qualifier"
+                }
+              ]
+            }
           },
           {
             "type": "SYMBOL",
@@ -4911,21 +4976,63 @@
               ]
             },
             {
+              "type": "REPEAT",
+              "content": {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "far_ptr_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
+                  }
+                ]
+              }
+            },
+            {
               "type": "STRING",
               "value": "*"
             },
             {
               "type": "REPEAT",
               "content": {
-                "type": "SYMBOL",
-                "name": "ms_pointer_modifier"
-              }
-            },
-            {
-              "type": "REPEAT",
-              "content": {
-                "type": "SYMBOL",
-                "name": "type_qualifier"
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "ms_pointer_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "type_qualifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "far_ptr_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
+                  }
+                ]
               }
             },
             {
@@ -4962,21 +5069,63 @@
               ]
             },
             {
+              "type": "REPEAT",
+              "content": {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "far_ptr_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
+                  }
+                ]
+              }
+            },
+            {
               "type": "STRING",
               "value": "*"
             },
             {
               "type": "REPEAT",
               "content": {
-                "type": "SYMBOL",
-                "name": "ms_pointer_modifier"
-              }
-            },
-            {
-              "type": "REPEAT",
-              "content": {
-                "type": "SYMBOL",
-                "name": "type_qualifier"
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "ms_pointer_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "type_qualifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "far_ptr_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
+                  }
+                ]
               }
             },
             {
@@ -5013,21 +5162,63 @@
               ]
             },
             {
+              "type": "REPEAT",
+              "content": {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "far_ptr_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
+                  }
+                ]
+              }
+            },
+            {
               "type": "STRING",
               "value": "*"
             },
             {
               "type": "REPEAT",
               "content": {
-                "type": "SYMBOL",
-                "name": "ms_pointer_modifier"
-              }
-            },
-            {
-              "type": "REPEAT",
-              "content": {
-                "type": "SYMBOL",
-                "name": "type_qualifier"
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "ms_pointer_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "type_qualifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "far_ptr_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
+                  }
+                ]
               }
             },
             {
@@ -5052,21 +5243,63 @@
           "type": "SEQ",
           "members": [
             {
+              "type": "REPEAT",
+              "content": {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "far_ptr_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
+                  }
+                ]
+              }
+            },
+            {
               "type": "STRING",
               "value": "*"
             },
             {
               "type": "REPEAT",
               "content": {
-                "type": "SYMBOL",
-                "name": "ms_pointer_modifier"
-              }
-            },
-            {
-              "type": "REPEAT",
-              "content": {
-                "type": "SYMBOL",
-                "name": "type_qualifier"
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "ms_pointer_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "type_qualifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "ms_call_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "far_ptr_modifier"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_attribute"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "macro_qualifier"
+                  }
+                ]
               }
             },
             {
@@ -11003,6 +11236,71 @@
     [
       "_linkage_guard",
       "preproc_ifdef"
+    ],
+    [
+      "parenthesized_declarator",
+      "abstract_parenthesized_declarator",
+      "pointer_declarator",
+      "abstract_pointer_declarator"
+    ],
+    [
+      "parenthesized_type_declarator",
+      "pointer_type_declarator"
+    ],
+    [
+      "abstract_parenthesized_declarator",
+      "abstract_pointer_declarator"
+    ],
+    [
+      "_declaration_modifiers",
+      "abstract_pointer_declarator",
+      "type_specifier"
+    ],
+    [
+      "abstract_pointer_declarator",
+      "type_specifier"
+    ],
+    [
+      "function_definition",
+      "declaration",
+      "pointer_declarator"
+    ],
+    [
+      "pointer_declarator",
+      "abstract_pointer_declarator"
+    ],
+    [
+      "_declaration_specifiers",
+      "parenthesized_declarator",
+      "abstract_parenthesized_declarator",
+      "pointer_declarator",
+      "abstract_pointer_declarator"
+    ],
+    [
+      "macro_qualifier",
+      "_field_declarator"
+    ],
+    [
+      "pointer_type_declarator"
+    ],
+    [
+      "abstract_pointer_declarator"
+    ],
+    [
+      "_declaration_specifiers",
+      "abstract_parenthesized_declarator",
+      "abstract_pointer_declarator"
+    ],
+    [
+      "pointer_declarator"
+    ],
+    [
+      "macro_qualifier",
+      "_type_declarator"
+    ],
+    [
+      "macro_qualifier",
+      "_declarator"
     ],
     [
       "macro_qualifier",

@@ -262,3 +262,90 @@ int Foo = 1;
     (init_declarator
       (identifier)
       (number_literal))))
+
+================================================================================
+Calling-convention and pointer-model macros inside declarators
+================================================================================
+
+extern void* __cdecl memset(void*, int, size_t);
+typedef VOID(NTAPI* PIO_APC_ROUTINE)(PVOID ApcContext, _In_ PIO_STATUS_BLOCK IoStatusBlock);
+int f(fd_set FAR* s, char NEAR* d);
+int WINAPI WinMain(HINSTANCE h, int s) { return 0; }
+void g(int n) { delete [] p; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (storage_class_specifier)
+    (primitive_type)
+    (pointer_declarator
+      (ms_call_modifier)
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (parameter_declaration
+            (primitive_type)
+            (abstract_pointer_declarator))
+          (parameter_declaration
+            (primitive_type))
+          (parameter_declaration
+            (primitive_type))))))
+  (type_definition
+    (type_identifier)
+    (function_declarator
+      (parenthesized_declarator
+        (pointer_declarator
+          (macro_attribute)
+          (type_identifier)))
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (identifier))
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          (type_identifier)
+          (identifier)))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (pointer_declarator
+            (far_ptr_modifier)
+            (identifier)))
+        (parameter_declaration
+          (primitive_type)
+          (pointer_declarator
+            (far_ptr_modifier)
+            (identifier))))))
+  (function_definition
+    (primitive_type)
+    (macro_attribute)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (identifier))
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (return_statement
+        (number_literal))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (expression_statement
+        (delete_expression
+          (identifier))))))

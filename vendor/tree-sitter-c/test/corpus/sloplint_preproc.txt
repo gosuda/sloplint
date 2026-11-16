@@ -13,11 +13,14 @@ __has_include with angle and quoted headers
   (preproc_if
     condition: (call_expression
       function: (identifier)
-      arguments: (argument_list (system_lib_string))))
+      arguments: (argument_list
+        (system_lib_string))))
   (preproc_if
     condition: (call_expression
       function: (identifier)
-      arguments: (argument_list (string_literal (string_content))))))
+      arguments: (argument_list
+        (string_literal
+          (string_content))))))
 
 ========================================
 __has_include combined with defined
@@ -31,10 +34,12 @@ __has_include combined with defined
 (translation_unit
   (preproc_if
     condition: (binary_expression
-      left: (preproc_defined (identifier))
+      left: (preproc_defined
+        (identifier))
       right: (call_expression
         function: (identifier)
-        arguments: (argument_list (system_lib_string))))))
+        arguments: (argument_list
+          (system_lib_string))))))
 
 ========================================
 defined without parentheses still parses
@@ -48,8 +53,11 @@ defined without parentheses still parses
 ---
 
 (translation_unit
-  (preproc_if condition: (preproc_defined (identifier)))
-  (preproc_ifdef name: (identifier)))
+  (preproc_if
+    condition: (preproc_defined
+      (identifier)))
+  (preproc_ifdef
+    name: (identifier)))
 
 ==========================================
 extern "C" linkage inside preproc guards

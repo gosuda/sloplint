@@ -158,3 +158,95 @@ int g(void);
       parameters: (parameter_list
         (parameter_declaration
           type: (primitive_type))))))
+
+================================================================================
+Calling-convention and pointer-model macros inside declarators
+================================================================================
+
+extern void* __cdecl memset(void*, int, size_t);
+typedef VOID(NTAPI* PIO_APC_ROUTINE)(PVOID ApcContext, _In_ PIO_STATUS_BLOCK IoStatusBlock);
+int f(fd_set FAR* s, char NEAR* d);
+static char* __cdecl crt_lstrcpynA(char* dst, const char* src, int maxLen)
+{
+    return dst;
+}
+typedef CONST STRING* PCOEM_STRING;
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (storage_class_specifier)
+    type: (primitive_type)
+    declarator: (pointer_declarator
+      (ms_call_modifier)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (parameter_declaration
+            type: (primitive_type)
+            declarator: (abstract_pointer_declarator))
+          (parameter_declaration
+            type: (primitive_type))
+          (parameter_declaration
+            type: (primitive_type))))))
+  (type_definition
+    type: (type_identifier)
+    declarator: (function_declarator
+      declarator: (parenthesized_declarator
+        (pointer_declarator
+          (macro_attribute)
+          declarator: (type_identifier)))
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (type_identifier)
+          declarator: (identifier))
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          type: (type_identifier)
+          declarator: (identifier)))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (type_identifier)
+          declarator: (pointer_declarator
+            (far_ptr_modifier)
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            (far_ptr_modifier)
+            declarator: (identifier))))))
+  (function_definition
+    (storage_class_specifier)
+    type: (primitive_type)
+    declarator: (pointer_declarator
+      (ms_call_modifier)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (parameter_declaration
+            type: (primitive_type)
+            declarator: (pointer_declarator
+              declarator: (identifier)))
+          (parameter_declaration
+            (type_qualifier)
+            type: (primitive_type)
+            declarator: (pointer_declarator
+              declarator: (identifier)))
+          (parameter_declaration
+            type: (primitive_type)
+            declarator: (identifier)))))
+    body: (compound_statement
+      (return_statement
+        (identifier))))
+  (type_definition
+    type: (type_identifier)
+    declarator: (pointer_declarator
+      (macro_qualifier
+        (identifier))
+      declarator: (type_identifier))))
