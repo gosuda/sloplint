@@ -386,6 +386,10 @@
         "named": true
       },
       {
+        "type": "macro_declaration",
+        "named": true
+      },
+      {
         "type": "qt_foreach_statement",
         "named": true
       },
@@ -1321,6 +1325,10 @@
           "named": true
         },
         {
+          "type": "macro_declaration",
+          "named": true
+        },
+        {
           "type": "qt_foreach_statement",
           "named": true
         },
@@ -1489,6 +1497,10 @@
         },
         {
           "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         },
         {
@@ -1683,10 +1695,6 @@
         },
         {
           "type": "linkage_specification",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -2138,6 +2146,10 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -2182,10 +2194,6 @@
         },
         {
           "type": "linkage_specification",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -2475,11 +2483,15 @@
       }
     },
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": false,
       "types": [
         {
           "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         }
       ]
@@ -2644,6 +2656,10 @@
         },
         {
           "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         },
         {
@@ -3137,6 +3153,10 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -3401,6 +3421,10 @@
         },
         {
           "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         },
         {
@@ -4329,11 +4353,38 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": false,
       "types": [
         {
           "type": "argument_list",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "macro_argument_list",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "macro_qualifier",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "argument_list",
+          "named": true
+        },
+        {
+          "type": "identifier",
           "named": true
         },
         {
@@ -4486,7 +4537,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "namespace_identifier",
@@ -4667,6 +4718,10 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -4756,6 +4811,10 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -4839,6 +4898,10 @@
         },
         {
           "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         },
         {
@@ -5262,10 +5325,6 @@
           "named": true
         },
         {
-          "type": "macro_declaration",
-          "named": true
-        },
-        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -5410,10 +5469,6 @@
           "named": true
         },
         {
-          "type": "macro_declaration",
-          "named": true
-        },
-        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -5526,10 +5581,6 @@
         },
         {
           "type": "linkage_specification",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -5741,10 +5792,6 @@
           "named": true
         },
         {
-          "type": "macro_declaration",
-          "named": true
-        },
-        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -5886,10 +5933,6 @@
         },
         {
           "type": "linkage_specification",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -6101,6 +6144,10 @@
         },
         {
           "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         },
         {
@@ -6717,6 +6764,10 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -6992,6 +7043,10 @@
         },
         {
           "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         },
         {
@@ -7622,6 +7677,10 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -7774,6 +7833,10 @@
         },
         {
           "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         },
         {
@@ -8086,7 +8149,55 @@
     "named": false
   },
   {
+    "type": "DOCKS_EXPORT_FOR_UNIT_TESTS",
+    "named": false
+  },
+  {
+    "type": "DOCTEST_INTERFACE",
+    "named": false
+  },
+  {
+    "type": "DOCTEST_INTERFACE_DECL",
+    "named": false
+  },
+  {
+    "type": "DOCTEST_INTERFACE_DEF",
+    "named": false
+  },
+  {
+    "type": "DOCTEST_NOINLINE",
+    "named": false
+  },
+  {
+    "type": "DOCTEST_NORETURN",
+    "named": false
+  },
+  {
+    "type": "DOCTEST_THREAD_LOCAL",
+    "named": false
+  },
+  {
+    "type": "EXTERN_C",
+    "named": false
+  },
+  {
     "type": "FASTCALL",
+    "named": false
+  },
+  {
+    "type": "FLATBUFFERS_CONSTEXPR",
+    "named": false
+  },
+  {
+    "type": "FLATBUFFERS_CONSTEXPR_CPP11",
+    "named": false
+  },
+  {
+    "type": "FLUTTER_PLUGIN_EXPORT",
+    "named": false
+  },
+  {
+    "type": "FOUNDATION_EXPORT",
     "named": false
   },
   {
@@ -8110,6 +8221,26 @@
     "named": false
   },
   {
+    "type": "GLAD_API_CALL",
+    "named": false
+  },
+  {
+    "type": "GLFWAPI",
+    "named": false
+  },
+  {
+    "type": "H_INLINE",
+    "named": false
+  },
+  {
+    "type": "IJK_API",
+    "named": false
+  },
+  {
+    "type": "IMPORT_FN",
+    "named": false
+  },
+  {
     "type": "JNICALL",
     "named": false
   },
@@ -8127,6 +8258,38 @@
   },
   {
     "type": "NAPI_CDECL",
+    "named": false
+  },
+  {
+    "type": "NAPI_EXTERN",
+    "named": false
+  },
+  {
+    "type": "NGHTTP2_EXTERN",
+    "named": false
+  },
+  {
+    "type": "NK_API",
+    "named": false
+  },
+  {
+    "type": "NK_GLOBAL",
+    "named": false
+  },
+  {
+    "type": "NK_INTERN",
+    "named": false
+  },
+  {
+    "type": "NK_LIB",
+    "named": false
+  },
+  {
+    "type": "NOINLINE",
+    "named": false
+  },
+  {
+    "type": "NO_INLINE",
     "named": false
   },
   {
@@ -8474,11 +8637,23 @@
     "named": false
   },
   {
+    "type": "SCMP_WEAK",
+    "named": false
+  },
+  {
     "type": "SDLCALL",
     "named": false
   },
   {
     "type": "SQLITECPP_API",
+    "named": false
+  },
+  {
+    "type": "SQLITE_API",
+    "named": false
+  },
+  {
+    "type": "STBIWDEF",
     "named": false
   },
   {
@@ -8502,7 +8677,19 @@
     "named": false
   },
   {
+    "type": "STRINGZILLA_DEVICE_NOINLINE",
+    "named": false
+  },
+  {
     "type": "STRINGZILLA_INLINE",
+    "named": false
+  },
+  {
+    "type": "STRINGZILLA_INLINE_",
+    "named": false
+  },
+  {
+    "type": "STRINGZILLA_OUTLINED_",
     "named": false
   },
   {
@@ -8515,6 +8702,10 @@
   },
   {
     "type": "UR\"",
+    "named": false
+  },
+  {
+    "type": "UTF8PROC_DLLEXPORT",
     "named": false
   },
   {
@@ -8543,6 +8734,18 @@
   },
   {
     "type": "WUFFS_MIMIC",
+    "named": false
+  },
+  {
+    "type": "Z7_FORCE_INLINE",
+    "named": false
+  },
+  {
+    "type": "Z7_NO_INLINE",
+    "named": false
+  },
+  {
+    "type": "ZEXTERN",
     "named": false
   },
   {

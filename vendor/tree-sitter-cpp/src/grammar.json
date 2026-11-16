@@ -72,6 +72,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "macro_declaration"
+        },
+        {
+          "type": "SYMBOL",
           "name": "namespace_definition"
         },
         {
@@ -193,6 +197,10 @@
         {
           "type": "SYMBOL",
           "name": "preproc_call"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_declaration"
         },
         {
           "type": "SYMBOL",
@@ -432,6 +440,19 @@
                       "name": "identifier"
                     },
                     {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "SYMBOL",
+                          "name": "identifier"
+                        },
+                        {
+                          "type": "STRING",
+                          "value": "..."
+                        }
+                      ]
+                    },
+                    {
                       "type": "STRING",
                       "value": "..."
                     }
@@ -452,6 +473,19 @@
                           {
                             "type": "SYMBOL",
                             "name": "identifier"
+                          },
+                          {
+                            "type": "SEQ",
+                            "members": [
+                              {
+                                "type": "SYMBOL",
+                                "name": "identifier"
+                              },
+                              {
+                                "type": "STRING",
+                                "value": "..."
+                              }
+                            ]
                           },
                           {
                             "type": "STRING",
@@ -3689,6 +3723,10 @@
             },
             {
               "type": "STRING",
+              "value": "NAPI_EXTERN"
+            },
+            {
+              "type": "STRING",
               "value": "STRINGZILLA_API"
             },
             {
@@ -3697,11 +3735,27 @@
             },
             {
               "type": "STRING",
+              "value": "STRINGZILLA_INLINE_"
+            },
+            {
+              "type": "STRING",
               "value": "STRINGZILLA_CONSTEXPR"
             },
             {
               "type": "STRING",
+              "value": "STRINGZILLA_OUTLINED_"
+            },
+            {
+              "type": "STRING",
+              "value": "STRINGZILLA_DEVICE_NOINLINE"
+            },
+            {
+              "type": "STRING",
               "value": "DOCKS_EXPORT"
+            },
+            {
+              "type": "STRING",
+              "value": "DOCKS_EXPORT_FOR_UNIT_TESTS"
             },
             {
               "type": "STRING",
@@ -3714,6 +3768,126 @@
             {
               "type": "STRING",
               "value": "WUFFS_MIMIC"
+            },
+            {
+              "type": "STRING",
+              "value": "SQLITE_API"
+            },
+            {
+              "type": "STRING",
+              "value": "NK_API"
+            },
+            {
+              "type": "STRING",
+              "value": "NK_LIB"
+            },
+            {
+              "type": "STRING",
+              "value": "NK_INTERN"
+            },
+            {
+              "type": "STRING",
+              "value": "NK_GLOBAL"
+            },
+            {
+              "type": "STRING",
+              "value": "NGHTTP2_EXTERN"
+            },
+            {
+              "type": "STRING",
+              "value": "GLFWAPI"
+            },
+            {
+              "type": "STRING",
+              "value": "ZEXTERN"
+            },
+            {
+              "type": "STRING",
+              "value": "IJK_API"
+            },
+            {
+              "type": "STRING",
+              "value": "GLAD_API_CALL"
+            },
+            {
+              "type": "STRING",
+              "value": "DOCTEST_INTERFACE"
+            },
+            {
+              "type": "STRING",
+              "value": "DOCTEST_INTERFACE_DECL"
+            },
+            {
+              "type": "STRING",
+              "value": "DOCTEST_INTERFACE_DEF"
+            },
+            {
+              "type": "STRING",
+              "value": "DOCTEST_NOINLINE"
+            },
+            {
+              "type": "STRING",
+              "value": "DOCTEST_THREAD_LOCAL"
+            },
+            {
+              "type": "STRING",
+              "value": "DOCTEST_NORETURN"
+            },
+            {
+              "type": "STRING",
+              "value": "EXTERN_C"
+            },
+            {
+              "type": "STRING",
+              "value": "SCMP_WEAK"
+            },
+            {
+              "type": "STRING",
+              "value": "STBIWDEF"
+            },
+            {
+              "type": "STRING",
+              "value": "FOUNDATION_EXPORT"
+            },
+            {
+              "type": "STRING",
+              "value": "NO_INLINE"
+            },
+            {
+              "type": "STRING",
+              "value": "NOINLINE"
+            },
+            {
+              "type": "STRING",
+              "value": "H_INLINE"
+            },
+            {
+              "type": "STRING",
+              "value": "Z7_NO_INLINE"
+            },
+            {
+              "type": "STRING",
+              "value": "Z7_FORCE_INLINE"
+            },
+            {
+              "type": "STRING",
+              "value": "FLATBUFFERS_CONSTEXPR"
+            },
+            {
+              "type": "STRING",
+              "value": "FLATBUFFERS_CONSTEXPR_CPP11"
+            },
+            {
+              "type": "STRING",
+              "value": "IMPORT_FN"
+            },
+            {
+              "type": "STRING",
+              "value": "UTF8PROC_DLLEXPORT"
+            },
+            {
+              "type": "STRING",
+              "value": "FLUTTER_PLUGIN_EXPORT"
             }
           ]
         },
@@ -3817,6 +3991,503 @@
         }
       ]
     },
+    "macro_qualifier": {
+      "type": "PREC_DYNAMIC",
+      "value": -1,
+      "content": {
+        "type": "PREC_RIGHT",
+        "value": 0,
+        "content": {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "identifier"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "argument_list"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "macro_argument_list"
+                    }
+                  ]
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "macro_declaration": {
+      "type": "PREC_RIGHT",
+      "value": 0,
+      "content": {
+        "type": "CHOICE",
+        "members": [
+          {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "STRING",
+                    "value": "Q_OBJECT"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_GADGET"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_NAMESPACE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_ELEMENT"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_ANONYMOUS"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_SINGLETON"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_INTERFACE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_UNAVAILABLE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_STRUCTURED_VALUE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_CONSTRUCTIBLE_VALUE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QT_BEGIN_NAMESPACE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QT_END_NAMESPACE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QT_BEGIN_INCLUDE_NAMESPACE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QT_END_INCLUDE_NAMESPACE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "GENERATED_BODY"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "GENERATED_UCLASS_BODY"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "GENERATED_USTRUCT_BODY"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "GENERATED_UINTERFACE_BODY"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "GENERATED_IINTERFACE_BODY"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_PROPERTY"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_ENUM"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_ENUM_NS"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_FLAG"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_FLAG_NS"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_ENUMS"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_FLAGS"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_CLASSINFO"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_INTERFACES"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_PLUGIN_METADATA"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_DISABLE_COPY"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_DISABLE_MOVE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_DISABLE_COPY_MOVE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QDOC_PROPERTY"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_GLOBAL_STATIC"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_GLOBAL_STATIC_WITH_ARGS"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_COREAPP_STARTUP_FUNC"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_IMPORT_PLUGIN"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_DECLARE_METATYPE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_DECLARE_TYPEINFO"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_DECLARE_FLAGS"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_DECLARE_OPERATORS_FOR_FLAGS"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_DECLARE_INTERFACE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "Q_DECLARE_TR_FUNCTIONS"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_NAMED_ELEMENT"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_ATTACHED"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_EXTENDED"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_FOREIGN"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_VALUE_TYPE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_UNCREATABLE"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_ADDED_IN_VERSION"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_REMOVED_IN_VERSION"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": "QML_FOREIGN_NAMESPACE"
+                  }
+                ]
+              },
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "argument_list"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "macro_argument_list"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "PREC_DYNAMIC",
+            "value": -1,
+            "content": {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "CHOICE",
+                      "members": [
+                        {
+                          "type": "SYMBOL",
+                          "name": "argument_list"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "macro_argument_list"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": ";"
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "macro_argument_list": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "identifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "primitive_type"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "sized_type_specifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "template_type"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "qualified_identifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "number_literal"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "string_literal"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "char_literal"
+              },
+              {
+                "type": "STRING",
+                "value": ","
+              },
+              {
+                "type": "STRING",
+                "value": "::"
+              },
+              {
+                "type": "STRING",
+                "value": "<"
+              },
+              {
+                "type": "STRING",
+                "value": ">"
+              },
+              {
+                "type": "STRING",
+                "value": "*"
+              },
+              {
+                "type": "STRING",
+                "value": "&"
+              },
+              {
+                "type": "STRING",
+                "value": "&&"
+              },
+              {
+                "type": "STRING",
+                "value": "|"
+              },
+              {
+                "type": "STRING",
+                "value": "="
+              },
+              {
+                "type": "STRING",
+                "value": "!"
+              },
+              {
+                "type": "STRING",
+                "value": "?"
+              },
+              {
+                "type": "STRING",
+                "value": ":"
+              },
+              {
+                "type": "STRING",
+                "value": "."
+              },
+              {
+                "type": "STRING",
+                "value": "->"
+              },
+              {
+                "type": "STRING",
+                "value": "~"
+              },
+              {
+                "type": "STRING",
+                "value": "+"
+              },
+              {
+                "type": "STRING",
+                "value": "-"
+              },
+              {
+                "type": "STRING",
+                "value": "/"
+              },
+              {
+                "type": "STRING",
+                "value": "%"
+              },
+              {
+                "type": "STRING",
+                "value": "=="
+              },
+              {
+                "type": "STRING",
+                "value": "!="
+              },
+              {
+                "type": "STRING",
+                "value": "<<"
+              },
+              {
+                "type": "STRING",
+                "value": ">>"
+              },
+              {
+                "type": "STRING",
+                "value": "<="
+              },
+              {
+                "type": "STRING",
+                "value": ">="
+              },
+              {
+                "type": "STRING",
+                "value": "||"
+              },
+              {
+                "type": "STRING",
+                "value": "const"
+              },
+              {
+                "type": "STRING",
+                "value": "noexcept"
+              }
+            ]
+          }
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
     "_declaration_specifiers": {
       "type": "PREC_RIGHT",
       "value": 0,
@@ -3826,8 +4497,17 @@
           {
             "type": "REPEAT",
             "content": {
-              "type": "SYMBOL",
-              "name": "_declaration_modifiers"
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_declaration_modifiers"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_qualifier"
+                }
+              ]
             }
           },
           {
@@ -5985,6 +6665,90 @@
           },
           {
             "type": "STRING",
+            "value": "_Bool"
+          },
+          {
+            "type": "STRING",
+            "value": "__fp16"
+          },
+          {
+            "type": "STRING",
+            "value": "__bf16"
+          },
+          {
+            "type": "STRING",
+            "value": "__vector"
+          },
+          {
+            "type": "STRING",
+            "value": "__pixel"
+          },
+          {
+            "type": "STRING",
+            "value": "__int128_t"
+          },
+          {
+            "type": "STRING",
+            "value": "__int8"
+          },
+          {
+            "type": "STRING",
+            "value": "__int16"
+          },
+          {
+            "type": "STRING",
+            "value": "__int32"
+          },
+          {
+            "type": "STRING",
+            "value": "__int64"
+          },
+          {
+            "type": "STRING",
+            "value": "__int128"
+          },
+          {
+            "type": "STRING",
+            "value": "_Float16"
+          },
+          {
+            "type": "STRING",
+            "value": "_Float32"
+          },
+          {
+            "type": "STRING",
+            "value": "_Float64"
+          },
+          {
+            "type": "STRING",
+            "value": "_Float128"
+          },
+          {
+            "type": "STRING",
+            "value": "_Float32x"
+          },
+          {
+            "type": "STRING",
+            "value": "_Float64x"
+          },
+          {
+            "type": "STRING",
+            "value": "_Float128x"
+          },
+          {
+            "type": "STRING",
+            "value": "_Decimal32"
+          },
+          {
+            "type": "STRING",
+            "value": "_Decimal64"
+          },
+          {
+            "type": "STRING",
+            "value": "_Decimal128"
+          },
+          {
+            "type": "STRING",
             "value": "int8_t"
           },
           {
@@ -6070,6 +6834,13 @@
                         "type": "BLANK"
                       }
                     ]
+                  },
+                  {
+                    "type": "REPEAT",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "macro_qualifier"
+                    }
                   },
                   {
                     "type": "CHOICE",
@@ -6337,6 +7108,10 @@
             {
               "type": "SYMBOL",
               "name": "preproc_call"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "macro_declaration"
             },
             {
               "type": "ALIAS",
@@ -7088,6 +7863,10 @@
             {
               "type": "SYMBOL",
               "name": "seh_leave_statement"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "macro_declaration"
             }
           ]
         },
@@ -12068,8 +12847,17 @@
           {
             "type": "REPEAT",
             "content": {
-              "type": "SYMBOL",
-              "name": "macro_attribute"
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_attribute"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_qualifier"
+                }
+              ]
             }
           },
           {
@@ -13689,342 +14477,6 @@
         {
           "type": "STRING",
           "value": "Q_SLOTS"
-        }
-      ]
-    },
-    "macro_declaration": {
-      "type": "PREC_RIGHT",
-      "value": 0,
-      "content": {
-        "type": "SEQ",
-        "members": [
-          {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "STRING",
-                "value": "Q_OBJECT"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_GADGET"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_NAMESPACE"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_ELEMENT"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_ANONYMOUS"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_SINGLETON"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_INTERFACE"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_UNAVAILABLE"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_STRUCTURED_VALUE"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_CONSTRUCTIBLE_VALUE"
-              },
-              {
-                "type": "STRING",
-                "value": "QT_BEGIN_NAMESPACE"
-              },
-              {
-                "type": "STRING",
-                "value": "QT_END_NAMESPACE"
-              },
-              {
-                "type": "STRING",
-                "value": "QT_BEGIN_INCLUDE_NAMESPACE"
-              },
-              {
-                "type": "STRING",
-                "value": "QT_END_INCLUDE_NAMESPACE"
-              },
-              {
-                "type": "STRING",
-                "value": "GENERATED_BODY"
-              },
-              {
-                "type": "STRING",
-                "value": "GENERATED_UCLASS_BODY"
-              },
-              {
-                "type": "STRING",
-                "value": "GENERATED_USTRUCT_BODY"
-              },
-              {
-                "type": "STRING",
-                "value": "GENERATED_UINTERFACE_BODY"
-              },
-              {
-                "type": "STRING",
-                "value": "GENERATED_IINTERFACE_BODY"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_PROPERTY"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_ENUM"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_ENUM_NS"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_FLAG"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_FLAG_NS"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_ENUMS"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_FLAGS"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_CLASSINFO"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_INTERFACES"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_PLUGIN_METADATA"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_DISABLE_COPY"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_DISABLE_MOVE"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_DISABLE_COPY_MOVE"
-              },
-              {
-                "type": "STRING",
-                "value": "QDOC_PROPERTY"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_GLOBAL_STATIC"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_GLOBAL_STATIC_WITH_ARGS"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_COREAPP_STARTUP_FUNC"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_IMPORT_PLUGIN"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_DECLARE_METATYPE"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_DECLARE_TYPEINFO"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_DECLARE_FLAGS"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_DECLARE_OPERATORS_FOR_FLAGS"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_DECLARE_INTERFACE"
-              },
-              {
-                "type": "STRING",
-                "value": "Q_DECLARE_TR_FUNCTIONS"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_NAMED_ELEMENT"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_ATTACHED"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_EXTENDED"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_FOREIGN"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_VALUE_TYPE"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_UNCREATABLE"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_ADDED_IN_VERSION"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_REMOVED_IN_VERSION"
-              },
-              {
-                "type": "STRING",
-                "value": "QML_FOREIGN_NAMESPACE"
-              }
-            ]
-          },
-          {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "SYMBOL",
-                    "name": "argument_list"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "macro_argument_list"
-                  }
-                ]
-              },
-              {
-                "type": "BLANK"
-              }
-            ]
-          }
-        ]
-      }
-    },
-    "macro_argument_list": {
-      "type": "SEQ",
-      "members": [
-        {
-          "type": "STRING",
-          "value": "("
-        },
-        {
-          "type": "REPEAT",
-          "content": {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "SYMBOL",
-                "name": "identifier"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "primitive_type"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "sized_type_specifier"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "template_type"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "qualified_identifier"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "number_literal"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "string_literal"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "char_literal"
-              },
-              {
-                "type": "STRING",
-                "value": ","
-              },
-              {
-                "type": "STRING",
-                "value": "::"
-              },
-              {
-                "type": "STRING",
-                "value": "<"
-              },
-              {
-                "type": "STRING",
-                "value": ">"
-              },
-              {
-                "type": "STRING",
-                "value": "*"
-              },
-              {
-                "type": "STRING",
-                "value": "&"
-              },
-              {
-                "type": "STRING",
-                "value": "&&"
-              },
-              {
-                "type": "STRING",
-                "value": "|"
-              },
-              {
-                "type": "STRING",
-                "value": "const"
-              },
-              {
-                "type": "STRING",
-                "value": "noexcept"
-              }
-            ]
-          }
-        },
-        {
-          "type": "STRING",
-          "value": ")"
         }
       ]
     },
@@ -18528,6 +18980,73 @@
     ],
     [
       "type_specifier",
+      "_declarator",
+      "expression",
+      "macro_declaration",
+      "macro_qualifier"
+    ],
+    [
+      "macro_declaration",
+      "macro_qualifier",
+      "type_specifier"
+    ],
+    [
+      "macro_declaration",
+      "expression"
+    ],
+    [
+      "macro_qualifier",
+      "macro_declaration",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "macro_declaration",
+      "_class_name"
+    ],
+    [
+      "macro_qualifier",
+      "macro_declaration",
+      "_declarator",
+      "type_specifier"
+    ],
+    [
+      "macro_declaration",
+      "type_specifier"
+    ],
+    [
+      "macro_qualifier",
+      "macro_declaration"
+    ],
+    [
+      "macro_declaration",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "macro_qualifier",
+      "_class_name"
+    ],
+    [
+      "macro_declaration",
+      "_top_level_expression_statement"
+    ],
+    [
+      "macro_qualifier",
+      "_declarator",
+      "type_specifier"
+    ],
+    [
+      "macro_qualifier",
+      "type_specifier"
+    ],
+    [
+      "macro_qualifier",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "type_specifier",
       "_declarator"
     ],
     [
@@ -18718,6 +19237,16 @@
     [
       "_string",
       "macro_argument_list"
+    ],
+    [
+      "macro_declaration",
+      "_declarator",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "macro_declaration",
+      "_declarator"
     ],
     [
       "template_type"

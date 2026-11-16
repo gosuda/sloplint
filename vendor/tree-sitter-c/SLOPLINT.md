@@ -85,6 +85,33 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
   `preproc_ifdef`, and declares two conflicts: `[$._linkage_guard,
   $.preproc_if]` and `[$._linkage_guard, $.preproc_ifdef]`. It keeps the
   `name` and `value` fields of `linkage_specification`.
+- Generic macro fallbacks for names no literal list can enumerate
+  (`ASIO_DECL`, `FMT_API`, `MYLIB_EXPORT` and friends):
+  - `macro_qualifier` is a bare `identifier` (optionally with an argument
+    list) usable only in the pre-type position of `_declaration_specifiers`
+    and before a struct/union/enum name. It is deliberately absent from
+    `_declaration_modifiers`'s post-type position: there an identifier is a
+    declarator, and allowing it produced `int name : 1` and
+    `bool f(T a, T* b)` mis-parses. `prec.dynamic(-1)` makes every real type
+    or declarator read win.
+  - `macro_declaration` is a bare `identifier` with an optional argument
+    list and optional `;`, added to `_top_level_item`, `_block_item`,
+    `_non_case_statement` and `_field_declaration_list_item`. It only
+    catches items no other rule accepts (a lone `NAME` or `NAME(...)` with
+    no trailing `;`), chiefly inside struct bodies where expression
+    statements cannot appear. `prec.dynamic(-1)` keeps real statements and
+    declarations preferred.
+  - `macro_argument_list` is the permissive token list these two rules
+    share: identifiers, primitive and sized types, literals, commas and the
+    operator characters that appear inside real macro arguments
+    (`<`, `>`, `*`, `&`, `=`, `!`, `?`, `:`, `.`, `->`, `~`, arithmetic
+    and comparison operators, `const`).
+  - `preproc_params` accepts a trailing `...` and `identifier...` so
+    variadic function-macro definitions parse.
+  - `primitive_type` gains the compiler-extension spellings seen in corpus
+    headers: `_Bool`, `__fp16`, `__bf16`, `__vector`, `__pixel`,
+    `__int128_t`, `__int{8..128}`, `_Float{16,32,64,128}`,
+    `_Float{32,64,128}x`, `_Decimal{32,64,128}`.
 - Attribute-like declaration macros: vendor headers pre-decorate declarations
   with calling-convention, storage and compiler-attribute macros
   (`__IO uint32_t ISER[1];`, `VKAPI_ATTR VkBool32 VKAPI_CALL cb(void *);`,
@@ -103,7 +130,8 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
 Node kinds and fields that `crates/sloplint-syntax/src/lang/c.rs` depends on
 keep their names. `node-types.json` gains the `guarded_linkage` node kind
 (`name` and `value` fields, same as `linkage_specification`), the
-`macro_attribute` node kind, anonymous tokens
+`macro_attribute`, `macro_qualifier`, `macro_declaration` and
+`macro_argument_list` node kinds, anonymous tokens
 (`_Complex`,
 `complex`, `_Thread_local`, `__signed`, `__signed__`) and new homes for
 existing named kinds (`system_lib_string` in preproc arguments,
@@ -129,6 +157,9 @@ Each was a parse error with the published crate and is valid for
 - `struct S{unsigned:0; int x;};`, `struct S{int a:3, :4, b:2;};`
 - `register long a7 __asm__("a7") = n;`, `int x __asm__("y") = 3;`
 - `typedef __signed char i8;`, `__signed int x;`, `__signed__ int y;`
+- `ASIO_DECL int f(void);`, `CUSTOM_API struct S { int x; };`, a bare
+  `MY_MARKER` or `MY_MARKER(x, y)` item inside a struct body, and
+  `#define LOG(fmt, ...) printf(fmt, __VA_ARGS__)`
 
 ## Constructs known still failing
 

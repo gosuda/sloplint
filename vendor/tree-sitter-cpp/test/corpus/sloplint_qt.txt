@@ -218,7 +218,7 @@ public:
     name: (type_identifier)
     body: (field_declaration_list
       (macro_declaration
-        (argument_list))
+        (macro_argument_list))
       (access_specifier)
       (field_declaration
         type: (primitive_type)
@@ -311,7 +311,7 @@ Q_COREAPP_STARTUP_FUNC(initCounter)
       (identifier)
       (identifier)))
   (macro_declaration
-    (argument_list
+    (macro_argument_list
       (identifier))))
 
 ================================================================================
@@ -402,7 +402,7 @@ void f() {
         (macro_argument_list
           (identifier)))
       (qt_statement_macro
-        (argument_list
+        (macro_argument_list
           (identifier)))
       (qt_foreach_statement
         type: (type_identifier)

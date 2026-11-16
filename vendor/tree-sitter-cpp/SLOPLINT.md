@@ -147,23 +147,39 @@ reproduced on real code. Every repro below was first accepted by
     `Q_DECL_CONSTEXPR`, `Q_DECL_RELAXED_CONSTEXPR`, `Q_DECL_DEPRECATED`,
     `Q_DECL_NOTHROW`, `Q_DECL_UNUSED`, plus argument forms
     `Q_REVISION(n)` and `Q_DECL_DEPRECATED_X(x)`) join `macro_attribute`.
-  - `_class_declaration_item` accepts `repeat($.macro_attribute)` before
-    the class name, so `class WINBASEAPI Foo` and similar exported-class
-    declarations parse.
-  - Deliberately not handled: project-local export macros
-    (`DOCKS_EXPORT`, `MYLIB_API`) and other unknown bare identifiers in
-    specifier position. A generic `$.identifier` alternative was tried
-    and reverted: even at `prec(-1)` it steals real declarator and class
-    names once ambiguity conflicts are declared, and the needed conflicts
-    with inlined `_declarator` cannot be declared at all. Those files
-    still error and are handled by the sloplint excision pass.
-- New conflicts for the Qt rules: `argument_list`/
-  `sized_type_specifier`/`expression`/`concatenated_string`/`_string`/
-  `template_type`/`template_function` with `macro_argument_list`, and
-  `template_type` alone. An earlier set of `_declaration_modifiers` and
-  `_class_declaration_item` conflicts added for a since-reverted
-  generic-identifier rescue was pruned when `generate` reported them
-  unnecessary.
+  - `_class_declaration_item` accepts `repeat(choice($.macro_attribute,
+    $.macro_qualifier))` before the item, and the `enum_specifier` name
+    slot accepts `repeat($.macro_qualifier)`, so `class FOO_API Bar` and
+    `enum class MY_API E` parse with any export macro spelling.
+- Generic macro fallbacks for names no literal list can enumerate
+  (`ASIO_DECL`, `FMT_API`, `MYLIB_EXPORT` and friends). The base C
+  grammar carries two `prec.dynamic(-1)` rules this grammar inherits:
+  `macro_qualifier` (a bare `identifier` with an optional argument list,
+  usable only in the pre-type position of `_declaration_specifiers` and
+  before a struct/union/enum/class name — post-type an identifier is a
+  declarator, and allowing it there mis-parsed `int name : 1` and
+  `bool f(T a, T* b)`) and `macro_declaration` (a bare `identifier` with
+  an optional argument list and optional `;`, catching items no other
+  rule accepts). In this grammar `macro_declaration` is a
+  `prec.right(choice(...))`: the literal Qt/UE list above, or the
+  `prec.dynamic(-1)` generic fallback. The shared `macro_argument_list`
+  token soup also accepts the operator characters real macro arguments
+  carry (`=`, `!`, `?`, `:`, `.`, `->`, `~`, arithmetic and comparison
+  operators).
+- New conflicts for the Qt rules and the generic fallbacks:
+  `argument_list`/`sized_type_specifier`/`expression`/
+  `concatenated_string`/`_string`/`template_type`/`template_function`
+  with `macro_argument_list`, `template_type` alone, and the verbatim
+  conflict sets `tree-sitter generate` reported for the generic rules
+  (`macro_declaration`/`macro_qualifier` against `_declarator`,
+  `type_specifier`, `expression`, `_class_name`,
+  `_top_level_expression_statement`, `_block_item`, `_non_case_statement`,
+  `_field_declaration_list_item`, `parameter_list`,
+  `_declaration_modifiers`, `statement`, `attributed_statement` and
+  `preproc_*` in the combinations the generator asked for). Every set
+  was added exactly as reported — a declared superset does not resolve a
+  reported subset — and `prec.dynamic(-1)` on the generic rules keeps
+  real reads preferred, so no clean-input parse changes.
 
 ## Constructs verified fixed
 

@@ -60,6 +60,42 @@ module.exports = grammar(C, {
   conflicts: $ => [
     [$._linkage_guard, $.preproc_if],
     [$._linkage_guard, $.preproc_ifdef],
+    // `identifier (` opens a call, a declarator, a macro-type specifier, or
+    // the generic macro_declaration/macro_qualifier fallbacks — all five can
+    // coexist where declarations and statements interleave. Dynamic -1 on
+    // the macro rules keeps real constructs winning at runtime.
+    [$.type_specifier, $._declarator, $.expression, $.macro_declaration, $.macro_qualifier],
+    // `identifier ~` leads a destructor vs a macro fallback.
+    [$.macro_declaration, $.macro_qualifier, $.type_specifier],
+    // Bare `identifier` at statement start: expression vs macro fallback.
+    [$.macro_declaration, $.expression],
+    // `identifier *|&|::|<|…` — multiply/pointer/member reads vs the macro
+    // fallbacks; one broad set for every post-identifier continuation.
+    [$.macro_qualifier, $.macro_declaration, $.type_specifier, $.expression],
+    // `Name {` in class position: class name vs bare macro marker.
+    [$.macro_declaration, $._class_name],
+    // `identifier [[` — attribute-attached declarator vs macro fallback.
+    [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier],
+    // `identifier __cdecl|const|…` — type followed by modifier vs fallback.
+    [$.macro_declaration, $.type_specifier],
+    // `identifier int|void|…` — modifier-then-primitive vs the two fallbacks.
+    [$.macro_qualifier, $.macro_declaration],
+    // `{ identifier ;` inside class bodies: expr-statement, field decl, or
+    // bare macro marker — three-way for the optional-semicolon generic.
+    [$.macro_declaration, $.type_specifier, $.expression],
+    // `enum Name {` — enum name vs export-macro qualifier.
+    [$.macro_qualifier, $._class_name],
+    // `identifier ;` at top level before a preproc directive: expression
+    // statement vs generic macro item.
+    [$.macro_declaration, $._top_level_expression_statement],
+    // `template Foo (` — explicit instantiation declarator vs qualifier.
+    [$.macro_qualifier, $._declarator, $.type_specifier],
+    // `Foo __extension__|modifier` — qualifier macro vs type.
+    [$.macro_qualifier, $.type_specifier],
+    // `operator T (` / `Foo (` declarator-vs-qualifier after operator casts.
+    // `name [` in class bodies: array/bitfield declarator vs macro marker.
+    // `if (Foo (` — condition declaration (lock-guard idiom) vs call.
+    [$.macro_qualifier, $.type_specifier, $.expression],
     // C
     [$.type_specifier, $._declarator],
     [$.type_specifier, $.expression],
@@ -110,6 +146,8 @@ module.exports = grammar(C, {
     [$.expression, $.macro_argument_list, $.template_type, $.template_function],
     [$.concatenated_string, $.macro_argument_list],
     [$._string, $.macro_argument_list],
+    [$.macro_declaration, $._declarator, $.type_specifier, $.expression],
+    [$.macro_declaration, $._declarator],
     [$.template_type],
   ],
 
@@ -217,8 +255,10 @@ module.exports = grammar(C, {
     ),
     _class_declaration_item: $ => prec.right(seq(
       // Export/annotation macros between `class`/`struct` and the name:
-      // `class DOCKS_EXPORT Foo`, `struct FOO_API Bar`.
-      repeat($.macro_attribute),
+      // `class DOCKS_EXPORT Foo`, `struct FOO_API Bar`. macro_qualifier
+      // covers names the literal list cannot enumerate; its dynamic -1
+      // keeps `class FOO` reading FOO as the name.
+      repeat(choice($.macro_attribute, $.macro_qualifier)),
       choice(
         field('name', $._class_name),
         seq(
@@ -317,6 +357,7 @@ module.exports = grammar(C, {
       choice(
         seq(
           optional(choice('class', 'struct')),
+          repeat($.macro_qualifier),
           choice(
             seq(
               field('name', $._class_name),
@@ -661,7 +702,8 @@ module.exports = grammar(C, {
     // `QT_BEGIN_NAMESPACE`, Unreal `GENERATED_BODY()`, Qt6 `QML_ELEMENT`.
     // Literal list — a lone identifier is never a valid member or
     // top-level item, but a regex would shadow real identifiers.
-    macro_declaration: $ => prec.right(seq(
+    macro_declaration: $ => prec.right(choice(
+      seq(
       choice(
       'Q_OBJECT',
       'Q_GADGET',
@@ -717,6 +759,16 @@ module.exports = grammar(C, {
       'QML_FOREIGN_NAMESPACE',
       ),
       optional(choice($.argument_list, $.macro_argument_list)),
+      ),
+      // Generic fallback for macro names outside the literal list
+      // (serialize/test/register macros, vendor markers). Dynamic -1:
+      // real items win; this catches bare NAME / NAME(...) / NAME(...);
+      // in class bodies and guarded blocks where nothing else parses.
+      prec.dynamic(-1, seq(
+        $.identifier,
+        optional(choice($.argument_list, $.macro_argument_list)),
+        optional(';'),
+      )),
     )),
 
     // Macro arguments that are not expressions: `Q_PROPERTY(QString title
@@ -741,6 +793,24 @@ module.exports = grammar(C, {
         '&',
         '&&',
         '|',
+        '=',
+        '!',
+        '?',
+        ':',
+        '.',
+        '->',
+        '~',
+        '+',
+        '-',
+        '/',
+        '%',
+        '==',
+        '!=',
+        '<<',
+        '>>',
+        '<=',
+        '>=',
+        '||',
         'const',
         'noexcept',
       )),

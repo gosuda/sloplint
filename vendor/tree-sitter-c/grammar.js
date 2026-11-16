@@ -37,7 +37,6 @@ module.exports = grammar({
 
   conflicts: $ => [
     [$.type_specifier, $._declarator],
-    [$.type_specifier, $._declarator, $.macro_type_specifier],
     [$.type_specifier, $.expression],
     [$.type_specifier, $.expression, $.macro_type_specifier],
     [$.type_specifier, $.macro_type_specifier],
@@ -51,12 +50,40 @@ module.exports = grammar({
     [$.function_declarator, $._function_declaration_declarator],
     [$._block_item, $.statement],
     [$._top_level_item, $._top_level_statement],
-    [$.type_specifier, $._top_level_expression_statement],
     [$.type_qualifier, $.extension_expression],
     [$._declarator, $._declaration_declarator],
     [$._linkage_guard, $.preproc_if],
     [$._declaration_modifiers, $.type_specifier],
     [$._linkage_guard, $.preproc_ifdef],
+    [$.macro_qualifier, $._declarator, $.type_specifier, $.macro_type_specifier],
+    [$.macro_argument_list, $._string],
+    [$.macro_argument_list, $.concatenated_string],
+    [$.macro_argument_list, $.type_specifier, $.expression],
+    [$.macro_argument_list, $.expression],
+    [$.macro_argument_list, $.sized_type_specifier],
+    [$.macro_argument_list, $.type_specifier],
+    [$.macro_argument_list, $.type_qualifier],
+    [$.macro_argument_list, $.argument_list],
+    [$.macro_qualifier, $.type_specifier, $.expression, $.macro_type_specifier],
+    [$.macro_qualifier, $.macro_declaration, $.type_specifier, $.macro_type_specifier],
+    [$.macro_qualifier, $.type_specifier, $.macro_type_specifier],
+    [$.macro_declaration, $._top_level_expression_statement],
+    [$.macro_qualifier, $.union_specifier],
+    [$.macro_qualifier, $.struct_specifier],
+    [$.macro_qualifier, $.enum_specifier],
+    [$.macro_declaration, $.type_specifier, $._top_level_expression_statement],
+    // Generic macro fallbacks (macro_declaration / macro_qualifier / macro_argument_list)
+    // start with a bare identifier like every other construct; each entry is a
+    // verbatim unresolved-conflict set reported by tree-sitter generate.
+    [$.macro_qualifier, $.macro_declaration, $.type_specifier, $.expression, $.macro_type_specifier],
+    [$.macro_declaration, $.macro_qualifier, $.type_specifier],
+    [$.macro_declaration, $.expression],
+    [$.macro_declaration, $.type_specifier],
+    [$.macro_qualifier, $.macro_declaration],
+    [$.macro_declaration, $.type_specifier, $.expression],
+    [$.macro_qualifier, $.type_specifier],
+    [$.macro_qualifier, $._declarator, $.type_specifier],
+    [$.macro_declaration, $.macro_qualifier],
   ],
 
   extras: $ => [
@@ -105,6 +132,7 @@ module.exports = grammar({
       $.preproc_def,
       $.preproc_function_def,
       $.preproc_call,
+      $.macro_declaration,
     ),
 
     _block_item: $ => choice(
@@ -123,6 +151,7 @@ module.exports = grammar({
       $.preproc_def,
       $.preproc_function_def,
       $.preproc_call,
+      $.macro_declaration,
     ),
 
     // Preprocesser
@@ -154,7 +183,9 @@ module.exports = grammar({
     ),
 
     preproc_params: $ => seq(
-      token.immediate('('), commaSep(choice($.identifier, '...')), ')',
+      token.immediate('('),
+      commaSep(choice($.identifier, seq($.identifier, '...'), '...')),
+      ')',
     ),
 
     preproc_call: $ => seq(
@@ -331,13 +362,94 @@ module.exports = grammar({
       '__attribute_format_arg__', '__attribute_format_strfmon__',
       '__attribute_artificial__', '__glibc_unlikely', '__glibc_likely',
       // vendor API/export macros seen in the wild
-      'VKAPI_ATTR', 'VKAPI_CALL', 'SDLCALL', 'NAPI_CDECL',
-      'STRINGZILLA_API', 'STRINGZILLA_INLINE', 'STRINGZILLA_CONSTEXPR',
-      'DOCKS_EXPORT', 'SQLITECPP_API', 'PCAP_API', 'WUFFS_MIMIC',
+      'VKAPI_ATTR', 'VKAPI_CALL', 'SDLCALL', 'NAPI_CDECL', 'NAPI_EXTERN',
+      'STRINGZILLA_API', 'STRINGZILLA_INLINE', 'STRINGZILLA_INLINE_',
+      'STRINGZILLA_CONSTEXPR', 'STRINGZILLA_OUTLINED_',
+      'STRINGZILLA_DEVICE_NOINLINE',
+      'DOCKS_EXPORT', 'DOCKS_EXPORT_FOR_UNIT_TESTS', 'SQLITECPP_API',
+      'PCAP_API', 'WUFFS_MIMIC',
+      // Corpus-mined export/attribute spellings (frequent in repos_big):
+      // sqlite, Nuklear, nghttp2, GLFW, zlib, glad, doctest, stb,
+      // Foundation, flatbuffers, utf8proc, 7zip, Flutter, seccomp, node-api.
+      'SQLITE_API', 'NK_API', 'NK_LIB', 'NK_INTERN', 'NK_GLOBAL',
+      'NGHTTP2_EXTERN', 'GLFWAPI', 'ZEXTERN', 'IJK_API', 'GLAD_API_CALL',
+      'DOCTEST_INTERFACE', 'DOCTEST_INTERFACE_DECL', 'DOCTEST_INTERFACE_DEF',
+      'DOCTEST_NOINLINE', 'DOCTEST_THREAD_LOCAL', 'DOCTEST_NORETURN',
+      'EXTERN_C', 'SCMP_WEAK', 'STBIWDEF', 'FOUNDATION_EXPORT',
+      'NO_INLINE', 'NOINLINE', 'H_INLINE', 'Z7_NO_INLINE',
+      'Z7_FORCE_INLINE', 'FLATBUFFERS_CONSTEXPR',
+      'FLATBUFFERS_CONSTEXPR_CPP11', 'IMPORT_FN', 'UTF8PROC_DLLEXPORT',
+      'FLUTTER_PLUGIN_EXPORT',
+    ),
+
+    // Generic identifier-as-modifier for API/export/qualifier macros the
+    // literal lists cannot enumerate: `ASIO_DECL`, `FMT_API`, `FOO_EXPORT`,
+    // `MYLIB_CALL(args)`. Only usable in the pre-type position of
+    // _declaration_specifiers and before a struct/union/enum/class name:
+    // post-type an identifier is a declarator. Dynamic -1: any real type or
+    // declarator read wins, so `uint`/`ULong`-shaped typedefs still resolve
+    // as types.
+    macro_qualifier: $ => prec.dynamic(-1, prec.right(seq(
+      $.identifier,
+      optional(choice($.argument_list, $.macro_argument_list)),
+    ))),
+
+    // Generic macro-expands-to-declarations fallback for names the literal
+    // lists cannot enumerate (test/assert/serialize macros, Qt/UE-adjacent
+    // markers). Dynamic -1: real statements and declarations win; this only
+    // catches bare `NAME` / `NAME(...)` items no other rule accepts, chiefly
+    // inside struct bodies where expression statements cannot appear.
+    macro_declaration: $ => prec.dynamic(-1, prec.right(seq(
+      $.identifier,
+      optional(choice($.argument_list, $.macro_argument_list)),
+      optional(';'),
+    ))),
+
+    // Macro arguments that are not expressions (types, member names, DSL
+    // keywords, operators) accepted as a permissive token list.
+    macro_argument_list: $ => seq(
+      '(',
+      repeat(choice(
+        $.identifier,
+        $.primitive_type,
+        $.sized_type_specifier,
+        $.number_literal,
+        $.string_literal,
+        $.char_literal,
+        ',',
+        '<',
+        '>',
+        '*',
+        '&',
+        '&&',
+        '|',
+        '=',
+        '!',
+        '?',
+        ':',
+        '.',
+        '->',
+        '~',
+        '+',
+        '-',
+        '/',
+        '%',
+        '==',
+        '!=',
+        '<<',
+        '>>',
+        '<=',
+        '>=',
+        '||',
+        'const',
+      )),
+      ')',
     ),
 
     _declaration_specifiers: $ => prec.right(seq(
-      repeat($._declaration_modifiers),
+      // macro_qualifier is allowed only before the type: a bare identifier
+      // after the type is always a declarator name, never a macro.
+      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
       field('type', $.type_specifier),
       repeat($._declaration_modifiers),
     )),
@@ -737,6 +849,18 @@ module.exports = grammar({
       'charptr_t',
       'nullptr_t',
       'max_align_t',
+      // Reserved/builtin spellings (underscore- or _Capital-prefixed) that
+      // cannot be user typedefs: MSVC ints, GCC/Clang vectors, ISO _FloatN.
+      '_Bool',
+      '__fp16',
+      '__bf16',
+      '__vector',
+      '__pixel',
+      '__int128_t',
+      ...[8, 16, 32, 64, 128].map(n => `__int${n}`),
+      ...[16, 32, 64, 128].map(n => `_Float${n}`),
+      ...[32, 64, 128].map(n => `_Float${n}x`),
+      ...[32, 64, 128].map(n => `_Decimal${n}`),
       ...[8, 16, 32, 64].map(n => `int${n}_t`),
       ...[8, 16, 32, 64].map(n => `uint${n}_t`),
       ...[8, 16, 32, 64].map(n => `char${n}_t`),
@@ -744,6 +868,7 @@ module.exports = grammar({
 
     enum_specifier: $ => seq(
       'enum',
+      repeat($.macro_qualifier),
       choice(
         seq(
           field('name', $._type_identifier),
@@ -786,6 +911,7 @@ module.exports = grammar({
       'struct',
       optional($.attribute_specifier),
       optional($.ms_declspec_modifier),
+      repeat($.macro_qualifier),
       choice(
         seq(
           field('name', $._type_identifier),
@@ -799,6 +925,7 @@ module.exports = grammar({
     union_specifier: $ => prec.right(seq(
       'union',
       optional($.ms_declspec_modifier),
+      repeat($.macro_qualifier),
       choice(
         seq(
           field('name', $._type_identifier),
@@ -820,6 +947,7 @@ module.exports = grammar({
       $.preproc_def,
       $.preproc_function_def,
       $.preproc_call,
+      $.macro_declaration,
       alias($.preproc_if_in_field_declaration_list, $.preproc_if),
       alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
     ),
@@ -898,6 +1026,7 @@ module.exports = grammar({
       $.goto_statement,
       $.seh_try_statement,
       $.seh_leave_statement,
+      $.macro_declaration,
     ),
 
     _top_level_statement: $ => choice(

@@ -7,13 +7,14 @@ use super::{base, put, run_ok, tmp};
 #[test]
 fn boundary_error_region_excised_rules_still_run() {
     let (_t, root) = tmp();
-    // Corpus shape (dune C stubs): `CAMLprim` is an unknown qualifier macro in
-    // declaration position, so the grammar cannot place the whole function.
-    // `kept` parses fine and nests deep enough for the nesting rule.
+    // `template <typename T>` is not C: the grammar cannot place the whole
+    // function, so it is excised. (`CAMLprim`-style unknown qualifier macros
+    // no longer work here — the grammar now accepts them.) `kept` parses fine
+    // and nests deep enough for the nesting rule.
     put(
         &root,
         "src/stubs.c",
-        "CAMLprim value stub(value v)\n{\n\t(void)v;\n}\n\
+        "template <typename T> int stub(T v)\n{\n\treturn (int)v;\n}\n\
          int kept(void)\n{\n\
          \tif (1) {\n\t\tif (1) {\n\t\t\tif (1) {\n\t\t\t\tif (1) {\n\t\t\t\t\tif (1) {\n\t\t\t\t\t\treturn 1;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\treturn 0;\n}\n",
     );

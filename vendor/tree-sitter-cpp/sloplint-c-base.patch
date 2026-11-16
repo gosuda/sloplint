@@ -1,8 +1,6 @@
-diff --git a/grammar.js b/grammar.js
-index db16bf8..9897d1b 100644
---- a/grammar.js
-+++ b/grammar.js
-@@ -36,6 +36,8 @@ module.exports = grammar({
+--- a/grammar.js	2026-11-16 15:36:58.671581076 +0000
++++ b/grammar.js	2026-11-16 18:13:22.857547809 +0000
+@@ -36,6 +36,8 @@
    name: 'c',
  
    conflicts: $ => [
@@ -11,7 +9,7 @@ index db16bf8..9897d1b 100644
      [$.type_specifier, $._declarator],
      [$.type_specifier, $._declarator, $.macro_type_specifier],
      [$.type_specifier, $.expression],
-@@ -53,6 +55,7 @@ module.exports = grammar({
+@@ -53,6 +55,7 @@
      [$._top_level_item, $._top_level_statement],
      [$.type_specifier, $._top_level_expression_statement],
      [$.type_qualifier, $.extension_expression],
@@ -19,7 +17,7 @@ index db16bf8..9897d1b 100644
    ],
  
    extras: $ => [
-@@ -96,6 +99,7 @@ module.exports = grammar({
+@@ -96,10 +99,12 @@
        $._empty_declaration,
        $.preproc_if,
        $.preproc_ifdef,
@@ -27,7 +25,12 @@ index db16bf8..9897d1b 100644
        $.preproc_include,
        $.preproc_def,
        $.preproc_function_def,
-@@ -113,6 +117,7 @@ module.exports = grammar({
+       $.preproc_call,
++      $.macro_declaration,
+     ),
+ 
+     _block_item: $ => choice(
+@@ -113,10 +118,12 @@
        $._empty_declaration,
        $.preproc_if,
        $.preproc_ifdef,
@@ -35,7 +38,23 @@ index db16bf8..9897d1b 100644
        $.preproc_include,
        $.preproc_def,
        $.preproc_function_def,
-@@ -283,6 +288,36 @@ module.exports = grammar({
+       $.preproc_call,
++      $.macro_declaration,
+     ),
+ 
+     // Preprocesser
+@@ -148,7 +155,9 @@
+     ),
+ 
+     preproc_params: $ => seq(
+-      token.immediate('('), commaSep(choice($.identifier, '...')), ')',
++      token.immediate('('),
++      commaSep(choice($.identifier, seq($.identifier, '...'), '...')),
++      ')',
+     ),
+ 
+     preproc_call: $ => seq(
+@@ -283,10 +292,118 @@
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -66,13 +85,96 @@ index db16bf8..9897d1b 100644
 +      '__attribute_warn_unused_result__', '__nonnull',
 +      '__attribute_format_arg__', '__attribute_format_strfmon__',
 +      '__attribute_artificial__', '__glibc_unlikely', '__glibc_likely',
-+      'VKAPI_ATTR', 'VKAPI_CALL', 'SDLCALL', 'NAPI_CDECL',
-+      'STRINGZILLA_API', 'STRINGZILLA_INLINE', 'STRINGZILLA_CONSTEXPR',
-+      'DOCKS_EXPORT', 'SQLITECPP_API', 'PCAP_API', 'WUFFS_MIMIC',
++      'VKAPI_ATTR', 'VKAPI_CALL', 'SDLCALL', 'NAPI_CDECL', 'NAPI_EXTERN',
++      'STRINGZILLA_API', 'STRINGZILLA_INLINE', 'STRINGZILLA_INLINE_',
++      'STRINGZILLA_CONSTEXPR', 'STRINGZILLA_OUTLINED_',
++      'STRINGZILLA_DEVICE_NOINLINE',
++      'DOCKS_EXPORT', 'DOCKS_EXPORT_FOR_UNIT_TESTS', 'SQLITECPP_API',
++      'PCAP_API', 'WUFFS_MIMIC',
++      // Corpus-mined export/attribute spellings (frequent in repos_big):
++      // sqlite, Nuklear, nghttp2, GLFW, zlib, glad, doctest, stb,
++      // Foundation, flatbuffers, utf8proc, 7zip, Flutter, seccomp, node-api.
++      'SQLITE_API', 'NK_API', 'NK_LIB', 'NK_INTERN', 'NK_GLOBAL',
++      'NGHTTP2_EXTERN', 'GLFWAPI', 'ZEXTERN', 'IJK_API', 'GLAD_API_CALL',
++      'DOCTEST_INTERFACE', 'DOCTEST_INTERFACE_DECL', 'DOCTEST_INTERFACE_DEF',
++      'DOCTEST_NOINLINE', 'DOCTEST_THREAD_LOCAL', 'DOCTEST_NORETURN',
++      'EXTERN_C', 'SCMP_WEAK', 'STBIWDEF', 'FOUNDATION_EXPORT',
++      'NO_INLINE', 'NOINLINE', 'H_INLINE', 'Z7_NO_INLINE',
++      'Z7_FORCE_INLINE', 'FLATBUFFERS_CONSTEXPR',
++      'FLATBUFFERS_CONSTEXPR_CPP11', 'IMPORT_FN', 'UTF8PROC_DLLEXPORT',
++      'FLUTTER_PLUGIN_EXPORT',
++    ),
++
++    // Generic identifier-as-modifier for API/export/qualifier macros the
++    // literal lists cannot enumerate: `ASIO_DECL`, `FMT_API`, `FOO_EXPORT`,
++    // `MYLIB_CALL(args)`. Dynamic -1: any real type or declarator read wins,
++    // so `uint`/`ULong`-shaped typedefs still resolve as types.
++    macro_qualifier: $ => prec.dynamic(-1, prec.right(seq(
++      $.identifier,
++      optional(choice($.argument_list, $.macro_argument_list)),
++    ))),
++
++    // Generic macro-expands-to-declarations fallback for names the literal
++    // lists cannot enumerate (test/assert/serialize macros, Qt/UE-adjacent
++    // markers). Dynamic -1: real statements and declarations win; this only
++    // catches bare `NAME` / `NAME(...)` items no other rule accepts, chiefly
++    // inside struct bodies where expression statements cannot appear.
++    macro_declaration: $ => prec.dynamic(-1, prec.right(seq(
++      $.identifier,
++      optional(choice($.argument_list, $.macro_argument_list)),
++      optional(';'),
++    ))),
++
++    // Macro arguments that are not expressions (types, member names, DSL
++    // keywords, operators) accepted as a permissive token list.
++    macro_argument_list: $ => seq(
++      '(',
++      repeat(choice(
++        $.identifier,
++        $.primitive_type,
++        $.sized_type_specifier,
++        $.number_literal,
++        $.string_literal,
++        $.char_literal,
++        ',',
++        '<',
++        '>',
++        '*',
++        '&',
++        '&&',
++        '|',
++        '=',
++        '!',
++        '?',
++        ':',
++        '.',
++        '->',
++        '~',
++        '+',
++        '-',
++        '/',
++        '%',
++        '==',
++        '!=',
++        '<<',
++        '>>',
++        '<=',
++        '>=',
++        '||',
++        'const',
++      )),
++      ')',
      ),
  
      _declaration_specifiers: $ => prec.right(seq(
-@@ -301,6 +336,27 @@ module.exports = grammar({
+-      repeat($._declaration_modifiers),
++      // macro_qualifier is allowed only before the type: a bare identifier
++      // after the type is always a declarator name, never a macro.
++      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
+       field('type', $.type_specifier),
+       repeat($._declaration_modifiers),
+     )),
+@@ -301,6 +418,27 @@
        )),
      ),
  
@@ -100,7 +202,7 @@ index db16bf8..9897d1b 100644
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -594,6 +650,7 @@ module.exports = grammar({
+@@ -594,6 +732,7 @@
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -108,3 +210,62 @@ index db16bf8..9897d1b 100644
        $._type_identifier,
      ),
  
+@@ -652,6 +791,18 @@
+       'charptr_t',
+       'nullptr_t',
+       'max_align_t',
++      // Reserved/builtin spellings (underscore- or _Capital-prefixed) that
++      // cannot be user typedefs: MSVC ints, GCC/Clang vectors, ISO _FloatN.
++      '_Bool',
++      '__fp16',
++      '__bf16',
++      '__vector',
++      '__pixel',
++      '__int128_t',
++      ...[8, 16, 32, 64, 128].map(n => `__int${n}`),
++      ...[16, 32, 64, 128].map(n => `_Float${n}`),
++      ...[32, 64, 128].map(n => `_Float${n}x`),
++      ...[32, 64, 128].map(n => `_Decimal${n}`),
+       ...[8, 16, 32, 64].map(n => `int${n}_t`),
+       ...[8, 16, 32, 64].map(n => `uint${n}_t`),
+       ...[8, 16, 32, 64].map(n => `char${n}_t`),
+@@ -659,6 +810,7 @@
+ 
+     enum_specifier: $ => seq(
+       'enum',
++      repeat($.macro_qualifier),
+       choice(
+         seq(
+           field('name', $._type_identifier),
+@@ -693,6 +845,7 @@
+       'struct',
+       optional($.attribute_specifier),
+       optional($.ms_declspec_modifier),
++      repeat($.macro_qualifier),
+       choice(
+         seq(
+           field('name', $._type_identifier),
+@@ -706,6 +859,7 @@
+     union_specifier: $ => prec.right(seq(
+       'union',
+       optional($.ms_declspec_modifier),
++      repeat($.macro_qualifier),
+       choice(
+         seq(
+           field('name', $._type_identifier),
+@@ -727,6 +881,7 @@
+       $.preproc_def,
+       $.preproc_function_def,
+       $.preproc_call,
++      $.macro_declaration,
+       alias($.preproc_if_in_field_declaration_list, $.preproc_if),
+       alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
+     ),
+@@ -802,6 +957,7 @@
+       $.goto_statement,
+       $.seh_try_statement,
+       $.seh_leave_statement,
++      $.macro_declaration,
+     ),
+ 
+     _top_level_statement: $ => choice(

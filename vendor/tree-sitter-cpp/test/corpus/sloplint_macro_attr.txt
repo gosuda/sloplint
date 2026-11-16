@@ -128,3 +128,137 @@ void f(void) {
         (call_expression
           (identifier)
           (argument_list))))))
+
+================================================================================
+Generic qualifier macros the literal lists cannot enumerate
+================================================================================
+
+ASIO_DECL int connect();
+FMT_API void report(const char* fmt, int code);
+
+class MYLIB_API Widget {
+public:
+    void m() {}
+};
+
+enum class EXPORT_ENUM Color { Red, Green };
+
+struct S {
+    CUSTOM_MARKER
+    int x;
+    OTHER_MACRO(x, y)
+    void n() {}
+};
+
+---
+
+(translation_unit
+  (declaration
+    (macro_qualifier
+      (identifier))
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list)))
+  (declaration
+    (macro_qualifier
+      (identifier))
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)))))
+  (class_specifier
+    (macro_qualifier
+      (identifier))
+    name: (type_identifier)
+    body: (field_declaration_list
+      (access_specifier)
+      (function_definition
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list))
+        body: (compound_statement))))
+  (declaration
+    type: (enum_specifier
+      name: (type_identifier))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (initializer_list
+        (identifier)
+        (identifier))))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        (macro_qualifier
+          (identifier))
+        type: (primitive_type)
+        declarator: (field_identifier))
+      (function_definition
+        (macro_qualifier
+          (identifier)
+          (macro_argument_list
+            (identifier)
+            (identifier)))
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list))
+        body: (compound_statement)))))
+
+================================================================================
+Post-type identifiers are never qualifiers (controls)
+================================================================================
+
+struct S { int name : 3 { 0 }; };
+bool eq(const T& a, const T* b) { return a == *b; }
+int Foo = 1;
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier)
+        (bitfield_clause
+          (number_literal))
+        (initializer_list
+          (number_literal)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          (type_identifier)
+          (reference_declarator
+            (identifier)))
+        (parameter_declaration
+          (type_qualifier)
+          (type_identifier)
+          (pointer_declarator
+            (identifier)))))
+    (compound_statement
+      (return_statement
+        (binary_expression
+          (identifier)
+          (pointer_expression
+            (identifier))))))
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (number_literal))))

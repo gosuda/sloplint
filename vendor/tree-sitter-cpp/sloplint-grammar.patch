@@ -1,15 +1,51 @@
---- a/grammar.js
-+++ b/grammar.js
-@@ -58,6 +58,8 @@
+--- a/grammar.js	2026-11-16 15:38:12.089278171 +0000
++++ b/grammar.js	2026-11-16 18:27:01.932267043 +0000
+@@ -58,6 +58,44 @@
    ],
  
    conflicts: $ => [
 +    [$._linkage_guard, $.preproc_if],
 +    [$._linkage_guard, $.preproc_ifdef],
++    // `identifier (` opens a call, a declarator, a macro-type specifier, or
++    // the generic macro_declaration/macro_qualifier fallbacks — all five can
++    // coexist where declarations and statements interleave. Dynamic -1 on
++    // the macro rules keeps real constructs winning at runtime.
++    [$.type_specifier, $._declarator, $.expression, $.macro_declaration, $.macro_qualifier],
++    // `identifier ~` leads a destructor vs a macro fallback.
++    [$.macro_declaration, $.macro_qualifier, $.type_specifier],
++    // Bare `identifier` at statement start: expression vs macro fallback.
++    [$.macro_declaration, $.expression],
++    // `identifier *|&|::|<|…` — multiply/pointer/member reads vs the macro
++    // fallbacks; one broad set for every post-identifier continuation.
++    [$.macro_qualifier, $.macro_declaration, $.type_specifier, $.expression],
++    // `Name {` in class position: class name vs bare macro marker.
++    [$.macro_declaration, $._class_name],
++    // `identifier [[` — attribute-attached declarator vs macro fallback.
++    [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier],
++    // `identifier __cdecl|const|…` — type followed by modifier vs fallback.
++    [$.macro_declaration, $.type_specifier],
++    // `identifier int|void|…` — modifier-then-primitive vs the two fallbacks.
++    [$.macro_qualifier, $.macro_declaration],
++    // `{ identifier ;` inside class bodies: expr-statement, field decl, or
++    // bare macro marker — three-way for the optional-semicolon generic.
++    [$.macro_declaration, $.type_specifier, $.expression],
++    // `enum Name {` — enum name vs export-macro qualifier.
++    [$.macro_qualifier, $._class_name],
++    // `identifier ;` at top level before a preproc directive: expression
++    // statement vs generic macro item.
++    [$.macro_declaration, $._top_level_expression_statement],
++    // `template Foo (` — explicit instantiation declarator vs qualifier.
++    [$.macro_qualifier, $._declarator, $.type_specifier],
++    // `Foo __extension__|modifier` — qualifier macro vs type.
++    [$.macro_qualifier, $.type_specifier],
++    // `operator T (` / `Foo (` declarator-vs-qualifier after operator casts.
++    // `name [` in class bodies: array/bitfield declarator vs macro marker.
++    // `if (Foo (` — condition declaration (lock-guard idiom) vs call.
++    [$.macro_qualifier, $.type_specifier, $.expression],
      // C
      [$.type_specifier, $._declarator],
      [$.type_specifier, $.expression],
-@@ -85,6 +87,7 @@
+@@ -85,6 +123,7 @@
      [$.structured_binding_declarator, $._lambda_capture_identifier],
      [$.parameter_list, $.argument_list],
      [$.type_specifier, $.call_expression],
@@ -17,7 +53,7 @@
      [$._declaration_specifiers, $._constructor_specifiers],
      [$._binary_fold_operator, $._fold_operator],
      [$._function_declarator_seq],
-@@ -94,6 +97,20 @@
+@@ -94,6 +133,22 @@
      [$.init_statement, $._for_statement_body],
      [$.field_expression, $.template_method, $.template_type],
      [$.qualified_field_identifier, $.template_method, $.template_type],
@@ -34,11 +70,13 @@
 +    [$.expression, $.macro_argument_list, $.template_type, $.template_function],
 +    [$.concatenated_string, $.macro_argument_list],
 +    [$._string, $.macro_argument_list],
++    [$.macro_declaration, $._declarator, $.type_specifier, $.expression],
++    [$.macro_declaration, $._declarator],
 +    [$.template_type],
    ],
  
    inline: ($, original) => original.concat([
-@@ -119,6 +136,7 @@
+@@ -119,6 +174,7 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -46,7 +84,7 @@
      ),
  
      _block_item: ($, original) => choice(
-@@ -134,6 +152,10 @@
+@@ -134,6 +190,10 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -57,7 +95,7 @@
      ),
  
      // Types
-@@ -168,6 +190,7 @@
+@@ -168,6 +228,7 @@
        $.dependent_type,
        $.placeholder_type_specifier,
        $.decltype,
@@ -65,17 +103,19 @@
        prec.right(choice(
          alias($.qualified_type_identifier, $.qualified_identifier),
          $._type_identifier,
-@@ -193,6 +216,9 @@
+@@ -193,6 +254,11 @@
        $._class_declaration_item,
      ),
      _class_declaration_item: $ => prec.right(seq(
 +      // Export/annotation macros between `class`/`struct` and the name:
-+      // `class DOCKS_EXPORT Foo`, `struct FOO_API Bar`.
-+      repeat($.macro_attribute),
++      // `class DOCKS_EXPORT Foo`, `struct FOO_API Bar`. macro_qualifier
++      // covers names the literal list cannot enumerate; its dynamic -1
++      // keeps `class FOO` reading FOO as the name.
++      repeat(choice($.macro_attribute, $.macro_qualifier)),
        choice(
          field('name', $._class_name),
          seq(
-@@ -226,12 +252,16 @@
+@@ -226,12 +292,16 @@
        alias($.qualified_type_identifier, $.qualified_identifier),
      )),
  
@@ -93,7 +133,7 @@
      }),
  
      declaration: $ => seq(
-@@ -284,14 +314,23 @@
+@@ -284,14 +354,24 @@
  
      enum_specifier: $ => prec.right(seq(
        'enum',
@@ -104,6 +144,7 @@
 -          optional($._enum_base_clause),
 -          optional(field('body', $.enumerator_list)),
 +          optional(choice('class', 'struct')),
++          repeat($.macro_qualifier),
 +          choice(
 +            seq(
 +              field('name', $._class_name),
@@ -122,7 +163,7 @@
        ),
        optional($.attribute_specifier),
      )),
-@@ -339,9 +378,16 @@
+@@ -339,9 +419,16 @@
      ),
  
      template_instantiation: $ => seq(
@@ -141,7 +182,7 @@
        ';',
      ),
  
-@@ -402,7 +448,7 @@
+@@ -402,7 +489,7 @@
        $._declaration_specifiers,
        field('declarator', optional(choice($._declarator, $.abstract_reference_declarator))),
        '=',
@@ -150,7 +191,7 @@
      ),
  
      variadic_parameter_declaration: $ => seq(
-@@ -432,6 +478,23 @@
+@@ -432,6 +519,23 @@
            $.initializer_list,
          )),
        ),
@@ -174,7 +215,7 @@
      ),
  
      operator_cast: $ => prec.right(1, seq(
-@@ -469,22 +532,28 @@
+@@ -469,22 +573,28 @@
        alias($.operator_cast_declaration, $.declaration),
        $.friend_declaration,
        seq($.access_specifier, ':'),
@@ -210,7 +251,7 @@
        )),
        optional($.attribute_specifier),
        ';',
-@@ -580,6 +649,176 @@
+@@ -580,6 +690,205 @@
        'protected',
      ),
  
@@ -226,7 +267,8 @@
 +    // `QT_BEGIN_NAMESPACE`, Unreal `GENERATED_BODY()`, Qt6 `QML_ELEMENT`.
 +    // Literal list — a lone identifier is never a valid member or
 +    // top-level item, but a regex would shadow real identifiers.
-+    macro_declaration: $ => prec.right(seq(
++    macro_declaration: $ => prec.right(choice(
++      seq(
 +      choice(
 +      'Q_OBJECT',
 +      'Q_GADGET',
@@ -282,6 +324,16 @@
 +      'QML_FOREIGN_NAMESPACE',
 +      ),
 +      optional(choice($.argument_list, $.macro_argument_list)),
++      ),
++      // Generic fallback for macro names outside the literal list
++      // (serialize/test/register macros, vendor markers). Dynamic -1:
++      // real items win; this catches bare NAME / NAME(...) / NAME(...);
++      // in class bodies and guarded blocks where nothing else parses.
++      prec.dynamic(-1, seq(
++        $.identifier,
++        optional(choice($.argument_list, $.macro_argument_list)),
++        optional(';'),
++      )),
 +    )),
 +
 +    // Macro arguments that are not expressions: `Q_PROPERTY(QString title
@@ -306,6 +358,24 @@
 +        '&',
 +        '&&',
 +        '|',
++        '=',
++        '!',
++        '?',
++        ':',
++        '.',
++        '->',
++        '~',
++        '+',
++        '-',
++        '/',
++        '%',
++        '==',
++        '!=',
++        '<<',
++        '>>',
++        '<=',
++        '>=',
++        '||',
 +        'const',
 +        'noexcept',
 +      )),
@@ -387,7 +457,7 @@
      _declarator: ($, original) => choice(
        original,
        $.reference_declarator,
-@@ -807,6 +1046,9 @@
+@@ -807,6 +1116,9 @@
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
@@ -397,7 +467,7 @@
      ),
  
      switch_statement: $ => seq(
-@@ -968,10 +1210,18 @@
+@@ -968,10 +1280,18 @@
        ']',
      ),
  
@@ -420,7 +490,7 @@
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1241,15 @@
+@@ -991,9 +1311,15 @@
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -439,7 +509,7 @@
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +1263,7 @@
+@@ -1007,7 +1333,7 @@
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -448,7 +518,7 @@
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +1271,7 @@
+@@ -1015,6 +1341,7 @@
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -456,7 +526,7 @@
        )),
      ),
  
-@@ -1230,7 +1487,7 @@
+@@ -1230,7 +1557,7 @@
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -465,7 +535,7 @@
          field('value', $.initializer_list),
        ),
      ),
-@@ -1256,6 +1513,7 @@
+@@ -1256,6 +1583,7 @@
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -473,7 +543,7 @@
        )),
      ),
  
-@@ -1342,6 +1600,25 @@
+@@ -1342,6 +1670,25 @@
  
      this: _ => 'this',
  
