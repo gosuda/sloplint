@@ -178,6 +178,18 @@ module.exports = grammar(C, {
     [$.macro_qualifier, $._field_declarator],
     [$._abstract_declarator, $.optional_parameter_declaration],
     [$.ms_pointer_modifier, $.qt_signature_type],
+    [$.macro_argument_list, $.call_expression],
+    [$.macro_argument_list, $.type_qualifier],
+    [$.macro_argument_list, $.type_specifier],
+    [$.macro_argument_list, $.type_specifier, $.call_expression],
+    [$.macro_argument_list, $.type_specifier, $.expression],
+    [$.parameter_declaration, $.variadic_parameter_declaration],
+    [$.parameter_declaration, $.optional_parameter_declaration],
+    [$.parameter_declaration],
+    [$.variadic_declarator],
+    [$.attributed_declarator, $.parameter_declaration],
+    [$._function_attributes_start, $._function_attributes_end],
+    [$.template_type, $.template_method],
     [$.template_type],
   ],
 
@@ -504,13 +516,38 @@ module.exports = grammar(C, {
       ),
     ),
 
+    // `#ifdef`-conditional parameters (`f(int a #ifdef X , int b
+    // #endif , int c)`): preprocessor blocks inside the list are items of
+    // their own because a directive line cannot sit inside a commaSep
+    // comma. A block may also attach to the parameter before it (no comma
+    // between them). Commas stay strict.
+    _parameter_list_item: $ => choice(
+      $.parameter_declaration,
+      $.optional_parameter_declaration,
+      $.variadic_parameter_declaration,
+      '...',
+      seq(
+        choice(
+          $.parameter_declaration,
+          $.optional_parameter_declaration,
+          $.variadic_parameter_declaration,
+          '...',
+        ),
+        repeat1($._parameter_list_preproc),
+      ),
+      $._parameter_list_preproc,
+    ),
+
+    _parameter_list_preproc: $ => choice(
+      alias($.preproc_if_in_parameter_list, $.preproc_if),
+      alias($.preproc_ifdef_in_parameter_list, $.preproc_ifdef),
+    ),
+
     parameter_list: $ => seq(
       '(',
-      commaSep(choice(
-        $.parameter_declaration,
-        $.optional_parameter_declaration,
-        $.variadic_parameter_declaration,
-        '...',
+      optional(seq(
+        repeat($._parameter_list_preproc),
+        commaSep1($._parameter_list_item),
       )),
       ')',
     ),
@@ -604,6 +641,10 @@ module.exports = grammar(C, {
       $.friend_declaration,
       seq($.access_specifier, ':'),
       seq(optional($.access_specifier), $.qt_section_label, ':'),
+      // Access-section macros that expand to `public:`/`private:`/
+      // `protected:` (JSON_PRIVATE_UNLESS_TESTED, GST_PAD_STREAM_LOCK
+      // style labels) look identical to a member access specifier.
+      $.macro_access_label,
       $.alias_declaration,
       $.using_declaration,
       $.type_definition,
@@ -721,6 +762,11 @@ module.exports = grammar(C, {
     ),
 
     // Qt section labels: `signals:`, `public slots:`, `Q_SIGNALS:`.
+    macro_access_label: $ => seq(
+      field('name', $.identifier),
+      ':',
+    ),
+
     qt_section_label: _ => choice(
       'signals',
       'slots',
@@ -852,6 +898,7 @@ module.exports = grammar(C, {
         'operator',
         'const',
         'noexcept',
+        $.macro_argument_list,
       )),
       ')',
     ),
@@ -1348,6 +1395,75 @@ module.exports = grammar(C, {
       '(',
       optional(commaSep1(field('argument', $.qt_signature_type))),
       ')',
+    ),
+
+    _in_parameter_list_item: $ => seq(
+      optional(','),
+      choice(
+        $.parameter_declaration,
+        $.optional_parameter_declaration,
+        $.variadic_parameter_declaration,
+        '...',
+      ),
+    ),
+
+    preproc_if_in_parameter_list: $ => seq(
+      alias(token(/#[ \t]*if/), '#if'),
+      field('condition', $._preproc_expression),
+      '\n',
+      repeat($._in_parameter_list_item),
+      field('alternative', optional(choice(
+        alias($.preproc_else_in_parameter_list, $.preproc_else),
+        alias($.preproc_elif_in_parameter_list, $.preproc_elif),
+        alias($.preproc_elifdef_in_parameter_list, $.preproc_elifdef),
+      ))),
+      alias(token(/#[ \t]*endif/), '#endif'),
+    ),
+
+    preproc_ifdef_in_parameter_list: $ => seq(
+      choice(
+        alias(token(/#[ \t]*ifdef/), '#ifdef'),
+        alias(token(/#[ \t]*ifndef/), '#ifndef'),
+      ),
+      field('name', $.identifier),
+      repeat($._in_parameter_list_item),
+      field('alternative', optional(choice(
+        alias($.preproc_else_in_parameter_list, $.preproc_else),
+        alias($.preproc_elif_in_parameter_list, $.preproc_elif),
+        alias($.preproc_elifdef_in_parameter_list, $.preproc_elifdef),
+      ))),
+      alias(token(/#[ \t]*endif/), '#endif'),
+    ),
+
+    preproc_else_in_parameter_list: $ => seq(
+      alias(token(/#[ \t]*else/), '#else'),
+      repeat($._in_parameter_list_item),
+    ),
+
+    preproc_elif_in_parameter_list: $ => seq(
+      alias(token(/#[ \t]*elif/), '#elif'),
+      field('condition', $._preproc_expression),
+      '\n',
+      repeat($._in_parameter_list_item),
+      field('alternative', optional(choice(
+        alias($.preproc_else_in_parameter_list, $.preproc_else),
+        alias($.preproc_elif_in_parameter_list, $.preproc_elif),
+        alias($.preproc_elifdef_in_parameter_list, $.preproc_elifdef),
+      ))),
+    ),
+
+    preproc_elifdef_in_parameter_list: $ => seq(
+      choice(
+        alias(token(/#[ \t]*elifdef/), '#elifdef'),
+        alias(token(/#[ \t]*elifndef/), '#elifndef'),
+      ),
+      field('name', $.identifier),
+      repeat($._in_parameter_list_item),
+      field('alternative', optional(choice(
+        alias($.preproc_else_in_parameter_list, $.preproc_else),
+        alias($.preproc_elif_in_parameter_list, $.preproc_elif),
+        alias($.preproc_elifdef_in_parameter_list, $.preproc_elifdef),
+      ))),
     ),
 
     qt_signature_type: $ => seq(

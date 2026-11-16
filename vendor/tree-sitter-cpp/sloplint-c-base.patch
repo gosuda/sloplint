@@ -1,5 +1,5 @@
 --- a/grammar.js	2026-11-16 15:36:58.671581076 +0000
-+++ b/grammar.js	2026-11-16 19:39:55.235500260 +0000
++++ b/grammar.js	2026-11-16 19:53:48.348992568 +0000
 @@ -36,6 +36,8 @@
    name: 'c',
  
@@ -54,7 +54,18 @@
      ),
  
      preproc_call: $ => seq(
-@@ -240,7 +249,9 @@
+@@ -161,6 +170,10 @@
+     ...preprocIf('_in_field_declaration_list', $ => $._field_declaration_list_item),
+     ...preprocIf('_in_enumerator_list', $ => seq($.enumerator, ',')),
+     ...preprocIf('_in_enumerator_list_no_comma', $ => $.enumerator, -1),
++    ...preprocIf('_in_parameter_list', $ => seq(
++      optional(','),
++      choice($.parameter_declaration, $.variadic_parameter),
++    )),
+ 
+     preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
+     preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,
+@@ -240,7 +253,9 @@
      function_definition: $ => seq(
        optional($.ms_call_modifier),
        $._declaration_specifiers,
@@ -65,7 +76,7 @@
        field('declarator', $._declarator),
        field('body', $.compound_statement),
      ),
-@@ -257,7 +268,7 @@
+@@ -257,7 +272,7 @@
        $._declaration_specifiers,
        commaSep1(field('declarator', choice(
          seq(
@@ -74,7 +85,7 @@
            $._declaration_declarator,
            optional($.gnu_asm_expression),
          ),
-@@ -283,10 +294,118 @@
+@@ -283,10 +298,118 @@
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -194,7 +205,7 @@
        field('type', $.type_specifier),
        repeat($._declaration_modifiers),
      )),
-@@ -301,6 +420,27 @@
+@@ -301,6 +424,27 @@
        )),
      ),
  
@@ -222,7 +233,7 @@
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -341,6 +481,14 @@
+@@ -341,6 +485,14 @@
        '__vectorcall',
      ),
  
@@ -237,7 +248,7 @@
      ms_restrict_modifier: _ => '__restrict',
  
      ms_unsigned_ptr_modifier: _ => '__uptr',
-@@ -409,25 +557,25 @@
+@@ -409,25 +561,25 @@
  
      parenthesized_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
        '(',
@@ -267,7 +278,7 @@
        $._abstract_declarator,
        ')',
      )),
-@@ -448,28 +596,65 @@
+@@ -448,28 +600,65 @@
  
      pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
        optional($.ms_based_modifier),
@@ -342,7 +353,7 @@
        field('declarator', optional($._abstract_declarator)),
      ))),
  
-@@ -594,6 +779,7 @@
+@@ -594,6 +783,7 @@
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -350,7 +361,7 @@
        $._type_identifier,
      ),
  
-@@ -652,6 +838,18 @@
+@@ -652,6 +842,18 @@
        'charptr_t',
        'nullptr_t',
        'max_align_t',
@@ -369,7 +380,7 @@
        ...[8, 16, 32, 64].map(n => `int${n}_t`),
        ...[8, 16, 32, 64].map(n => `uint${n}_t`),
        ...[8, 16, 32, 64].map(n => `char${n}_t`),
-@@ -659,6 +857,7 @@
+@@ -659,6 +861,7 @@
  
      enum_specifier: $ => seq(
        'enum',
@@ -377,7 +388,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -693,6 +892,7 @@
+@@ -693,6 +896,7 @@
        'struct',
        optional($.attribute_specifier),
        optional($.ms_declspec_modifier),
@@ -385,7 +396,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -706,6 +906,7 @@
+@@ -706,6 +910,7 @@
      union_specifier: $ => prec.right(seq(
        'union',
        optional($.ms_declspec_modifier),
@@ -393,7 +404,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -727,6 +928,7 @@
+@@ -727,6 +932,7 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -401,7 +412,41 @@
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
      ),
-@@ -802,6 +1004,8 @@
+@@ -751,10 +957,32 @@
+ 
+     variadic_parameter: _ => '...',
+ 
++    // `f(int a #ifdef X , int b #endif , int c)`: preprocessor blocks
++    // inside the list are items of their own because a directive line
++    // cannot sit inside a commaSep comma. A block may also attach to the
++    // parameter before it (no comma between them). Commas stay strict.
++    _parameter_list_item: $ => choice(
++      $.parameter_declaration,
++      $.variadic_parameter,
++      seq(
++        choice($.parameter_declaration, $.variadic_parameter),
++        repeat1($._parameter_list_preproc),
++      ),
++      $._parameter_list_preproc,
++    ),
++
++    _parameter_list_preproc: $ => choice(
++      alias($.preproc_if_in_parameter_list, $.preproc_if),
++      alias($.preproc_ifdef_in_parameter_list, $.preproc_ifdef),
++    ),
++
+     parameter_list: $ => seq(
+       '(',
+       choice(
+-        commaSep(choice($.parameter_declaration, $.variadic_parameter)),
++        optional(seq(
++          repeat($._parameter_list_preproc),
++          commaSep1($._parameter_list_item),
++        )),
+         $.compound_statement,
+       ),
+       ')',
+@@ -802,6 +1030,8 @@
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,
@@ -410,7 +455,7 @@
      ),
  
      _top_level_statement: $ => choice(
-@@ -1143,6 +1347,36 @@
+@@ -1143,6 +1373,36 @@
        ')',
      )),
  

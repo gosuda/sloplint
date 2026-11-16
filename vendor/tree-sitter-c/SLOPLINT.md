@@ -252,3 +252,13 @@ the size growth.
   also used after declarators (`void f() asm("alias")`). Known gap: the
   single-instruction form `__asm int 3` (no braces) is not covered —
   the token soup cannot see newlines to bound the instruction.
+
+- **`#ifdef` blocks splitting a `parameter_list`** (`f(int a #ifdef X ,
+  int b #endif , int c)` — nghttp2-style conditional signatures) parse
+  via `preproc_ifdef_in_parameter_list`/`preproc_if_in_parameter_list`
+  (from `preprocIf('_in_parameter_list', ...)`) whose items each carry an
+  optional leading comma, so a block may sit between parameters without
+  a comma before the directive. Blocks are either standalone items in
+  the list or attached to the preceding parameter; commas between real
+  parameters stay strict, which keeps the template-argument ambiguity
+  (`T<A, U<B>, C>`) resolving on type-argument.

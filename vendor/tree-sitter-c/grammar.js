@@ -55,6 +55,10 @@ module.exports = grammar({
     [$._linkage_guard, $.preproc_if],
     [$._declaration_modifiers, $.type_specifier],
     [$._linkage_guard, $.preproc_ifdef],
+    [$._parameter_list_item, $._old_style_parameter_list],
+    [$.attributed_declarator, $.parameter_declaration],
+    [$.parameter_declaration],
+    [$.macro_qualifier, $.type_specifier, $.sized_type_specifier],
     [$._declaration_modifiers, $.parenthesized_declarator, $.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator, $.type_specifier],
     [$.parenthesized_declarator, $.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator, $.type_specifier],
     [$.parenthesized_declarator, $.abstract_parenthesized_declarator, $.type_specifier],
@@ -216,6 +220,10 @@ module.exports = grammar({
     ...preprocIf('_in_field_declaration_list', $ => $._field_declaration_list_item),
     ...preprocIf('_in_enumerator_list', $ => seq($.enumerator, ',')),
     ...preprocIf('_in_enumerator_list_no_comma', $ => $.enumerator, -1),
+    ...preprocIf('_in_parameter_list', $ => seq(
+      optional(','),
+      choice($.parameter_declaration, $.variadic_parameter),
+    )),
 
     preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
     preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,
@@ -1030,10 +1038,32 @@ module.exports = grammar({
 
     variadic_parameter: _ => '...',
 
+    // `f(int a #ifdef X , int b #endif , int c)`: preprocessor blocks
+    // inside the list are items of their own because a directive line
+    // cannot sit inside a commaSep comma. A block may also attach to the
+    // parameter before it (no comma between them). Commas stay strict.
+    _parameter_list_item: $ => choice(
+      $.parameter_declaration,
+      $.variadic_parameter,
+      seq(
+        choice($.parameter_declaration, $.variadic_parameter),
+        repeat1($._parameter_list_preproc),
+      ),
+      $._parameter_list_preproc,
+    ),
+
+    _parameter_list_preproc: $ => choice(
+      alias($.preproc_if_in_parameter_list, $.preproc_if),
+      alias($.preproc_ifdef_in_parameter_list, $.preproc_ifdef),
+    ),
+
     parameter_list: $ => seq(
       '(',
       choice(
-        commaSep(choice($.parameter_declaration, $.variadic_parameter)),
+        optional(seq(
+          repeat($._parameter_list_preproc),
+          commaSep1($._parameter_list_item),
+        )),
         $.compound_statement,
       ),
       ')',

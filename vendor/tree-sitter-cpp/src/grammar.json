@@ -2078,6 +2078,400 @@
         ]
       }
     },
+    "preproc_if_in_parameter_list": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "TOKEN",
+            "content": {
+              "type": "PATTERN",
+              "value": "#[ \\t]*if"
+            }
+          },
+          "named": false,
+          "value": "#if"
+        },
+        {
+          "type": "FIELD",
+          "name": "condition",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_preproc_expression"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "\n"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_in_parameter_list_item"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "alternative",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "preproc_else_in_parameter_list"
+                    },
+                    "named": true,
+                    "value": "preproc_else"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "preproc_elif_in_parameter_list"
+                    },
+                    "named": true,
+                    "value": "preproc_elif"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "preproc_elifdef_in_parameter_list"
+                    },
+                    "named": true,
+                    "value": "preproc_elifdef"
+                  }
+                ]
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "TOKEN",
+            "content": {
+              "type": "PATTERN",
+              "value": "#[ \\t]*endif"
+            }
+          },
+          "named": false,
+          "value": "#endif"
+        }
+      ]
+    },
+    "preproc_ifdef_in_parameter_list": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "TOKEN",
+                "content": {
+                  "type": "PATTERN",
+                  "value": "#[ \\t]*ifdef"
+                }
+              },
+              "named": false,
+              "value": "#ifdef"
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "TOKEN",
+                "content": {
+                  "type": "PATTERN",
+                  "value": "#[ \\t]*ifndef"
+                }
+              },
+              "named": false,
+              "value": "#ifndef"
+            }
+          ]
+        },
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "SYMBOL",
+            "name": "identifier"
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_in_parameter_list_item"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "alternative",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "preproc_else_in_parameter_list"
+                    },
+                    "named": true,
+                    "value": "preproc_else"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "preproc_elif_in_parameter_list"
+                    },
+                    "named": true,
+                    "value": "preproc_elif"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "preproc_elifdef_in_parameter_list"
+                    },
+                    "named": true,
+                    "value": "preproc_elifdef"
+                  }
+                ]
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "TOKEN",
+            "content": {
+              "type": "PATTERN",
+              "value": "#[ \\t]*endif"
+            }
+          },
+          "named": false,
+          "value": "#endif"
+        }
+      ]
+    },
+    "preproc_else_in_parameter_list": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "TOKEN",
+            "content": {
+              "type": "PATTERN",
+              "value": "#[ \\t]*else"
+            }
+          },
+          "named": false,
+          "value": "#else"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_in_parameter_list_item"
+          }
+        }
+      ]
+    },
+    "preproc_elif_in_parameter_list": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "TOKEN",
+            "content": {
+              "type": "PATTERN",
+              "value": "#[ \\t]*elif"
+            }
+          },
+          "named": false,
+          "value": "#elif"
+        },
+        {
+          "type": "FIELD",
+          "name": "condition",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_preproc_expression"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "\n"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_in_parameter_list_item"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "alternative",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "preproc_else_in_parameter_list"
+                    },
+                    "named": true,
+                    "value": "preproc_else"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "preproc_elif_in_parameter_list"
+                    },
+                    "named": true,
+                    "value": "preproc_elif"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "preproc_elifdef_in_parameter_list"
+                    },
+                    "named": true,
+                    "value": "preproc_elifdef"
+                  }
+                ]
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "preproc_elifdef_in_parameter_list": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "TOKEN",
+                "content": {
+                  "type": "PATTERN",
+                  "value": "#[ \\t]*elifdef"
+                }
+              },
+              "named": false,
+              "value": "#elifdef"
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "TOKEN",
+                "content": {
+                  "type": "PATTERN",
+                  "value": "#[ \\t]*elifndef"
+                }
+              },
+              "named": false,
+              "value": "#elifndef"
+            }
+          ]
+        },
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "SYMBOL",
+            "name": "identifier"
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_in_parameter_list_item"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "alternative",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "preproc_else_in_parameter_list"
+                    },
+                    "named": true,
+                    "value": "preproc_else"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "preproc_elif_in_parameter_list"
+                    },
+                    "named": true,
+                    "value": "preproc_elif"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "preproc_elifdef_in_parameter_list"
+                    },
+                    "named": true,
+                    "value": "preproc_elifdef"
+                  }
+                ]
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        }
+      ]
+    },
     "preproc_arg": {
       "type": "TOKEN",
       "content": {
@@ -4506,6 +4900,10 @@
               {
                 "type": "STRING",
                 "value": "noexcept"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "macro_argument_list"
               }
             ]
           }
@@ -7455,6 +7853,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "macro_access_label"
+        },
+        {
+          "type": "SYMBOL",
           "name": "alias_declaration"
         },
         {
@@ -7813,6 +8215,87 @@
       "type": "STRING",
       "value": "..."
     },
+    "_parameter_list_item": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "parameter_declaration"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "optional_parameter_declaration"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "variadic_parameter_declaration"
+        },
+        {
+          "type": "STRING",
+          "value": "..."
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "parameter_declaration"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "optional_parameter_declaration"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "variadic_parameter_declaration"
+                },
+                {
+                  "type": "STRING",
+                  "value": "..."
+                }
+              ]
+            },
+            {
+              "type": "REPEAT1",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_parameter_list_preproc"
+              }
+            }
+          ]
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_parameter_list_preproc"
+        }
+      ]
+    },
+    "_parameter_list_preproc": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "preproc_if_in_parameter_list"
+          },
+          "named": true,
+          "value": "preproc_if"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "preproc_ifdef_in_parameter_list"
+          },
+          "named": true,
+          "value": "preproc_ifdef"
+        }
+      ]
+    },
     "parameter_list": {
       "type": "SEQ",
       "members": [
@@ -7827,58 +8310,36 @@
               "type": "SEQ",
               "members": [
                 {
-                  "type": "CHOICE",
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_parameter_list_preproc"
+                  }
+                },
+                {
+                  "type": "SEQ",
                   "members": [
                     {
                       "type": "SYMBOL",
-                      "name": "parameter_declaration"
+                      "name": "_parameter_list_item"
                     },
                     {
-                      "type": "SYMBOL",
-                      "name": "optional_parameter_declaration"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "variadic_parameter_declaration"
-                    },
-                    {
-                      "type": "STRING",
-                      "value": "..."
-                    }
-                  ]
-                },
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "SEQ",
-                    "members": [
-                      {
-                        "type": "STRING",
-                        "value": ","
-                      },
-                      {
-                        "type": "CHOICE",
+                      "type": "REPEAT",
+                      "content": {
+                        "type": "SEQ",
                         "members": [
                           {
-                            "type": "SYMBOL",
-                            "name": "parameter_declaration"
-                          },
-                          {
-                            "type": "SYMBOL",
-                            "name": "optional_parameter_declaration"
-                          },
-                          {
-                            "type": "SYMBOL",
-                            "name": "variadic_parameter_declaration"
-                          },
-                          {
                             "type": "STRING",
-                            "value": "..."
+                            "value": ","
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "_parameter_list_item"
                           }
                         ]
                       }
-                    ]
-                  }
+                    }
+                  ]
                 }
               ]
             },
@@ -14907,6 +15368,23 @@
         }
       ]
     },
+    "macro_access_label": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "name",
+          "content": {
+            "type": "SYMBOL",
+            "name": "identifier"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        }
+      ]
+    },
     "qt_section_label": {
       "type": "CHOICE",
       "members": [
@@ -16760,6 +17238,44 @@
         {
           "type": "STRING",
           "value": ")"
+        }
+      ]
+    },
+    "_in_parameter_list_item": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": ","
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "parameter_declaration"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "optional_parameter_declaration"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "variadic_parameter_declaration"
+            },
+            {
+              "type": "STRING",
+              "value": "..."
+            }
+          ]
         }
       ]
     },
@@ -19999,6 +20515,54 @@
     [
       "ms_pointer_modifier",
       "qt_signature_type"
+    ],
+    [
+      "macro_argument_list",
+      "call_expression"
+    ],
+    [
+      "macro_argument_list",
+      "type_qualifier"
+    ],
+    [
+      "macro_argument_list",
+      "type_specifier"
+    ],
+    [
+      "macro_argument_list",
+      "type_specifier",
+      "call_expression"
+    ],
+    [
+      "macro_argument_list",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "parameter_declaration",
+      "variadic_parameter_declaration"
+    ],
+    [
+      "parameter_declaration",
+      "optional_parameter_declaration"
+    ],
+    [
+      "parameter_declaration"
+    ],
+    [
+      "variadic_declarator"
+    ],
+    [
+      "attributed_declarator",
+      "parameter_declaration"
+    ],
+    [
+      "_function_attributes_start",
+      "_function_attributes_end"
+    ],
+    [
+      "template_type",
+      "template_method"
     ],
     [
       "template_type"

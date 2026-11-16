@@ -2753,6 +2753,10 @@
           "named": true
         },
         {
+          "type": "macro_access_label",
+          "named": true
+        },
+        {
           "type": "macro_declaration",
           "named": true
         },
@@ -4334,6 +4338,22 @@
     }
   },
   {
+    "type": "macro_access_label",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "macro_argument_list",
     "named": true,
     "fields": {},
@@ -4347,6 +4367,10 @@
         },
         {
           "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "macro_argument_list",
           "named": true
         },
         {
@@ -5030,6 +5054,14 @@
           "named": true
         },
         {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        },
+        {
           "type": "variadic_parameter_declaration",
           "named": true
         }
@@ -5455,11 +5487,23 @@
           "named": true
         },
         {
+          "type": "macro_access_label",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
         {
           "type": "namespace_definition",
+          "named": true
+        },
+        {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
           "named": true
         },
         {
@@ -5516,6 +5560,10 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]
@@ -5599,11 +5647,23 @@
           "named": true
         },
         {
+          "type": "macro_access_label",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
         {
           "type": "namespace_definition",
+          "named": true
+        },
+        {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
           "named": true
         },
         {
@@ -5660,6 +5720,10 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]
@@ -5714,11 +5778,23 @@
           "named": true
         },
         {
+          "type": "macro_access_label",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
         {
           "type": "namespace_definition",
+          "named": true
+        },
+        {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
           "named": true
         },
         {
@@ -5775,6 +5851,10 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]
@@ -5922,11 +6002,23 @@
           "named": true
         },
         {
+          "type": "macro_access_label",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
         {
           "type": "namespace_definition",
+          "named": true
+        },
+        {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
           "named": true
         },
         {
@@ -5983,6 +6075,10 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]
@@ -6066,11 +6162,23 @@
           "named": true
         },
         {
+          "type": "macro_access_label",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
         {
           "type": "namespace_definition",
+          "named": true
+        },
+        {
+          "type": "optional_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "parameter_declaration",
           "named": true
         },
         {
@@ -6127,6 +6235,10 @@
         },
         {
           "type": "using_declaration",
+          "named": true
+        },
+        {
+          "type": "variadic_parameter_declaration",
           "named": true
         }
       ]

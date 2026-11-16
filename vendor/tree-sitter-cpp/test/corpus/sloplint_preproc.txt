@@ -169,3 +169,62 @@ int a;
       (primitive_type)
       (identifier))
     (identifier)))
+
+==========================================
+preproc block splitting parameter list
+==========================================
+
+void f(struct sockaddr *sap, int salen
+#ifdef X
+,
+int q, unsigned short s
+#endif
+, int c) {}
+void g(int a
+#ifdef Y
+, int b
+#endif
+) {}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (struct_specifier
+            (type_identifier))
+          (pointer_declarator
+            (identifier)))
+        (parameter_declaration
+          (primitive_type)
+          (identifier))
+        (preproc_ifdef
+          (identifier)
+          (parameter_declaration
+            (primitive_type)
+            (identifier))
+          (parameter_declaration
+            (sized_type_specifier)
+            (identifier)))
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))
+        (preproc_ifdef
+          (identifier)
+          (parameter_declaration
+            (primitive_type)
+            (identifier)))))
+    (compound_statement)))

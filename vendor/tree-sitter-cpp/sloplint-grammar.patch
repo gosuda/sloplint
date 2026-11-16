@@ -1,5 +1,5 @@
 --- a/grammar.js	2026-11-16 15:38:12.089278171 +0000
-+++ b/grammar.js	2026-11-16 19:42:52.194778659 +0000
++++ b/grammar.js	2026-11-16 19:54:43.804754591 +0000
 @@ -58,6 +58,44 @@
    ],
  
@@ -53,7 +53,7 @@
      [$._declaration_specifiers, $._constructor_specifiers],
      [$._binary_fold_operator, $._fold_operator],
      [$._function_declarator_seq],
-@@ -94,6 +133,52 @@
+@@ -94,6 +133,64 @@
      [$.init_statement, $._for_statement_body],
      [$.field_expression, $.template_method, $.template_type],
      [$.qualified_field_identifier, $.template_method, $.template_type],
@@ -102,11 +102,23 @@
 +    [$.macro_qualifier, $._field_declarator],
 +    [$._abstract_declarator, $.optional_parameter_declaration],
 +    [$.ms_pointer_modifier, $.qt_signature_type],
++    [$.macro_argument_list, $.call_expression],
++    [$.macro_argument_list, $.type_qualifier],
++    [$.macro_argument_list, $.type_specifier],
++    [$.macro_argument_list, $.type_specifier, $.call_expression],
++    [$.macro_argument_list, $.type_specifier, $.expression],
++    [$.parameter_declaration, $.variadic_parameter_declaration],
++    [$.parameter_declaration, $.optional_parameter_declaration],
++    [$.parameter_declaration],
++    [$.variadic_declarator],
++    [$.attributed_declarator, $.parameter_declaration],
++    [$._function_attributes_start, $._function_attributes_end],
++    [$.template_type, $.template_method],
 +    [$.template_type],
    ],
  
    inline: ($, original) => original.concat([
-@@ -119,6 +204,7 @@
+@@ -119,6 +216,7 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -114,7 +126,7 @@
      ),
  
      _block_item: ($, original) => choice(
-@@ -134,6 +220,10 @@
+@@ -134,6 +232,10 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -125,7 +137,7 @@
      ),
  
      // Types
-@@ -168,6 +258,7 @@
+@@ -168,6 +270,7 @@
        $.dependent_type,
        $.placeholder_type_specifier,
        $.decltype,
@@ -133,7 +145,7 @@
        prec.right(choice(
          alias($.qualified_type_identifier, $.qualified_identifier),
          $._type_identifier,
-@@ -193,6 +284,11 @@
+@@ -193,6 +296,11 @@
        $._class_declaration_item,
      ),
      _class_declaration_item: $ => prec.right(seq(
@@ -145,7 +157,7 @@
        choice(
          field('name', $._class_name),
          seq(
-@@ -226,12 +322,16 @@
+@@ -226,12 +334,16 @@
        alias($.qualified_type_identifier, $.qualified_identifier),
      )),
  
@@ -163,7 +175,7 @@
      }),
  
      declaration: $ => seq(
-@@ -284,14 +384,24 @@
+@@ -284,14 +396,24 @@
  
      enum_specifier: $ => prec.right(seq(
        'enum',
@@ -193,7 +205,7 @@
        ),
        optional($.attribute_specifier),
      )),
-@@ -339,9 +449,16 @@
+@@ -339,9 +461,16 @@
      ),
  
      template_instantiation: $ => seq(
@@ -212,7 +224,50 @@
        ';',
      ),
  
-@@ -400,9 +517,9 @@
+@@ -387,22 +516,47 @@
+       ),
+     ),
+ 
++    // `#ifdef`-conditional parameters (`f(int a #ifdef X , int b
++    // #endif , int c)`): preprocessor blocks inside the list are items of
++    // their own because a directive line cannot sit inside a commaSep
++    // comma. A block may also attach to the parameter before it (no comma
++    // between them). Commas stay strict.
++    _parameter_list_item: $ => choice(
++      $.parameter_declaration,
++      $.optional_parameter_declaration,
++      $.variadic_parameter_declaration,
++      '...',
++      seq(
++        choice(
++          $.parameter_declaration,
++          $.optional_parameter_declaration,
++          $.variadic_parameter_declaration,
++          '...',
++        ),
++        repeat1($._parameter_list_preproc),
++      ),
++      $._parameter_list_preproc,
++    ),
++
++    _parameter_list_preproc: $ => choice(
++      alias($.preproc_if_in_parameter_list, $.preproc_if),
++      alias($.preproc_ifdef_in_parameter_list, $.preproc_ifdef),
++    ),
++
+     parameter_list: $ => seq(
+       '(',
+-      commaSep(choice(
+-        $.parameter_declaration,
+-        $.optional_parameter_declaration,
+-        $.variadic_parameter_declaration,
+-        '...',
++      optional(seq(
++        repeat($._parameter_list_preproc),
++        commaSep1($._parameter_list_item),
+       )),
+       ')',
+     ),
  
      optional_parameter_declaration: $ => seq(
        $._declaration_specifiers,
@@ -224,7 +279,7 @@
      ),
  
      variadic_parameter_declaration: $ => seq(
-@@ -432,6 +549,23 @@
+@@ -432,6 +586,23 @@
            $.initializer_list,
          )),
        ),
@@ -248,11 +303,15 @@
      ),
  
      operator_cast: $ => prec.right(1, seq(
-@@ -469,22 +603,28 @@
+@@ -469,22 +640,32 @@
        alias($.operator_cast_declaration, $.declaration),
        $.friend_declaration,
        seq($.access_specifier, ':'),
 +      seq(optional($.access_specifier), $.qt_section_label, ':'),
++      // Access-section macros that expand to `public:`/`private:`/
++      // `protected:` (JSON_PRIVATE_UNLESS_TESTED, GST_PAD_STREAM_LOCK
++      // style labels) look identical to a member access specifier.
++      $.macro_access_label,
        $.alias_declaration,
        $.using_declaration,
        $.type_definition,
@@ -284,11 +343,16 @@
        )),
        optional($.attribute_specifier),
        ';',
-@@ -580,6 +720,214 @@
+@@ -580,6 +761,220 @@
        'protected',
      ),
  
 +    // Qt section labels: `signals:`, `public slots:`, `Q_SIGNALS:`.
++    macro_access_label: $ => seq(
++      field('name', $.identifier),
++      ':',
++    ),
++
 +    qt_section_label: _ => choice(
 +      'signals',
 +      'slots',
@@ -420,6 +484,7 @@
 +        'operator',
 +        'const',
 +        'noexcept',
++        $.macro_argument_list,
 +      )),
 +      ')',
 +    ),
@@ -499,7 +564,7 @@
      _declarator: ($, original) => choice(
        original,
        $.reference_declarator,
-@@ -807,6 +1155,9 @@
+@@ -807,6 +1202,9 @@
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
@@ -509,7 +574,7 @@
      ),
  
      switch_statement: $ => seq(
-@@ -968,10 +1319,42 @@
+@@ -968,10 +1366,111 @@
        ']',
      ),
  
@@ -548,6 +613,75 @@
 +      ')',
 +    ),
 +
++    _in_parameter_list_item: $ => seq(
++      optional(','),
++      choice(
++        $.parameter_declaration,
++        $.optional_parameter_declaration,
++        $.variadic_parameter_declaration,
++        '...',
++      ),
++    ),
++
++    preproc_if_in_parameter_list: $ => seq(
++      alias(token(/#[ \t]*if/), '#if'),
++      field('condition', $._preproc_expression),
++      '\n',
++      repeat($._in_parameter_list_item),
++      field('alternative', optional(choice(
++        alias($.preproc_else_in_parameter_list, $.preproc_else),
++        alias($.preproc_elif_in_parameter_list, $.preproc_elif),
++        alias($.preproc_elifdef_in_parameter_list, $.preproc_elifdef),
++      ))),
++      alias(token(/#[ \t]*endif/), '#endif'),
++    ),
++
++    preproc_ifdef_in_parameter_list: $ => seq(
++      choice(
++        alias(token(/#[ \t]*ifdef/), '#ifdef'),
++        alias(token(/#[ \t]*ifndef/), '#ifndef'),
++      ),
++      field('name', $.identifier),
++      repeat($._in_parameter_list_item),
++      field('alternative', optional(choice(
++        alias($.preproc_else_in_parameter_list, $.preproc_else),
++        alias($.preproc_elif_in_parameter_list, $.preproc_elif),
++        alias($.preproc_elifdef_in_parameter_list, $.preproc_elifdef),
++      ))),
++      alias(token(/#[ \t]*endif/), '#endif'),
++    ),
++
++    preproc_else_in_parameter_list: $ => seq(
++      alias(token(/#[ \t]*else/), '#else'),
++      repeat($._in_parameter_list_item),
++    ),
++
++    preproc_elif_in_parameter_list: $ => seq(
++      alias(token(/#[ \t]*elif/), '#elif'),
++      field('condition', $._preproc_expression),
++      '\n',
++      repeat($._in_parameter_list_item),
++      field('alternative', optional(choice(
++        alias($.preproc_else_in_parameter_list, $.preproc_else),
++        alias($.preproc_elif_in_parameter_list, $.preproc_elif),
++        alias($.preproc_elifdef_in_parameter_list, $.preproc_elifdef),
++      ))),
++    ),
++
++    preproc_elifdef_in_parameter_list: $ => seq(
++      choice(
++        alias(token(/#[ \t]*elifdef/), '#elifdef'),
++        alias(token(/#[ \t]*elifndef/), '#elifndef'),
++      ),
++      field('name', $.identifier),
++      repeat($._in_parameter_list_item),
++      field('alternative', optional(choice(
++        alias($.preproc_else_in_parameter_list, $.preproc_else),
++        alias($.preproc_elif_in_parameter_list, $.preproc_elif),
++        alias($.preproc_elifdef_in_parameter_list, $.preproc_elifdef),
++      ))),
++    ),
++
 +    qt_signature_type: $ => seq(
 +      repeat(choice($.type_qualifier, $.ms_unaligned_ptr_modifier, $.ms_pointer_modifier)),
 +      field('type', $.type_specifier),
@@ -556,7 +690,7 @@
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1374,15 @@
+@@ -991,9 +1490,15 @@
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -575,7 +709,7 @@
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +1396,7 @@
+@@ -1007,7 +1512,7 @@
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -584,7 +718,7 @@
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +1404,7 @@
+@@ -1015,6 +1520,7 @@
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -592,7 +726,7 @@
        )),
      ),
  
-@@ -1230,7 +1620,7 @@
+@@ -1230,7 +1736,7 @@
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -601,7 +735,7 @@
          field('value', $.initializer_list),
        ),
      ),
-@@ -1256,6 +1646,7 @@
+@@ -1256,6 +1762,7 @@
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -609,7 +743,7 @@
        )),
      ),
  
-@@ -1342,6 +1733,25 @@
+@@ -1342,6 +1849,25 @@
  
      this: _ => 'this',
  

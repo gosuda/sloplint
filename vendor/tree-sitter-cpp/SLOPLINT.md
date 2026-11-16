@@ -322,3 +322,24 @@ enumeration of `macro_attribute` costs most of the size growth.
   bare-type arguments like `const char*` or `int` (not valid
   expressions) parse. Both `SIGNAL`/`SLOT` names are literal tokens,
   same trade-off as `qt_statement_macro` literals.
+
+- **`#ifdef` blocks splitting a `parameter_list`** (`f(int a #ifdef X ,
+  int b #endif , int c)` — nghttp2-style conditional signatures) parse
+  via handwritten `preproc_ifdef_in_parameter_list`/
+  `preproc_if_in_parameter_list` rules (the C base's `preprocIf`
+  factory is module-local, so the variants are spelled out with literal
+  `alias(token(/#[ \t]*ifdef/), '#ifdef')` directives). Blocks are
+  either standalone items in the list or attached to the preceding
+  parameter; commas between real parameters stay strict, which keeps
+  the `T<A, U<B>, C>` ambiguity resolving on type-argument. Earlier
+  designs that put a second permissive shape beside the list, or
+  `optional(',')` between items, were reverted: they split multi-token
+  parameters and flipped template arguments to identifiers.
+
+- **Access-modifier macros** (`JSON_PRIVATE_UNLESS_TESTED:`-style names
+  in `private:`/`protected:` position) parse as `macro_access_label` in
+  `_class_member`, ahead of the bitfield reading.
+
+- **Nested calls inside macro arguments** (`M(to_string())`) parse: a
+  `macro_argument_list` may recursively contain another
+  `macro_argument_list` after a `(`.
