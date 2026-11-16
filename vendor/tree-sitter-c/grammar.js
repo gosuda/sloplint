@@ -54,6 +54,8 @@ module.exports = grammar({
     [$.type_specifier, $._top_level_expression_statement],
     [$.type_qualifier, $.extension_expression],
     [$._declarator, $._declaration_declarator],
+    [$._linkage_guard, $.preproc_if],
+    [$._linkage_guard, $.preproc_ifdef],
   ],
 
   extras: $ => [
@@ -90,6 +92,7 @@ module.exports = grammar({
       $.function_definition,
       alias($._old_style_function_definition, $.function_definition),
       $.linkage_specification,
+      $.guarded_linkage,
       $.declaration,
       $._top_level_statement,
       $.attributed_statement,
@@ -107,6 +110,7 @@ module.exports = grammar({
       $.function_definition,
       alias($._old_style_function_definition, $.function_definition),
       $.linkage_specification,
+      $.guarded_linkage,
       $.declaration,
       $.statement,
       $.attributed_statement,
@@ -304,6 +308,27 @@ module.exports = grammar({
         $.declaration,
         $.declaration_list,
       )),
+    ),
+
+    // `extern "C"` inside preproc guards: the opening brace lives inside one
+    // conditional block and the closing brace inside a later one, so neither
+    // block parses on its own. Shared C/C++ headers are written this way.
+    guarded_linkage: $ => prec.dynamic(10, seq(
+      $._linkage_guard,
+      'extern',
+      field('value', $.string_literal),
+      '{',
+      alias(preprocessor('endif'), '#endif'),
+      repeat($._top_level_item),
+      $._linkage_guard,
+      '}',
+      alias(preprocessor('endif'), '#endif'),
+    )),
+
+    _linkage_guard: $ => choice(
+      seq(preprocessor('ifdef'), field('name', $.identifier)),
+      seq(preprocessor('ifndef'), field('name', $.identifier)),
+      seq(preprocessor('if'), field('condition', $._preproc_expression), '\n'),
     ),
 
     attribute_specifier: $ => seq(

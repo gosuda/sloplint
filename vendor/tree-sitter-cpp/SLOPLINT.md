@@ -32,14 +32,26 @@ reproduced on real code. Every repro below was first accepted by
   f4c21152f1952a99f4744e8c41d3ffb8038ae78c), the version pinned by the
   upstream `package-lock.json` (`tree-sitter-c 0.23.1`). Place it at
   `node_modules/tree-sitter-c` next to `grammar.js`. No file from it is
-  copied here. The C++ worker and the C worker patch only their own grammar.
+  copied here. The C++ worker and the C worker patch only their own grammar,
+  with one exception: `guarded_linkage` lives in the C base, not in
+  `grammar.js` here, because a rule added to this grammar never shares a
+  parse state with the base's `preproc_if`/`preproc_ifdef` (the conflict
+  declarations reported "unnecessary" and the rule never fired). Apply
+  `sloplint-c-base.patch` with `git apply` inside that clone before
+  `tree-sitter generate`; it carries the `guarded_linkage` and
+  `_linkage_guard` rules, their `_top_level_item`/`_block_item` members and
+  the two conflicts. The same pair of conflicts is declared in this
+  grammar's own `conflicts:` because the generator reads only the child's
+  conflict list.
 - Commands, run in this directory with that symlink in place:
   `tree-sitter generate`, then `tree-sitter test`.
 - It rewrites `src/parser.c`, `src/grammar.json` and `src/node-types.json`.
   `src/scanner.c` is not generated and is untouched.
 - Regenerating the unpatched grammar with 0.27.1 already moves the parser
   from ABI 14 to ABI 15. No node kind and no field is added or removed by
-  the patch. `node-types.json` keeps every type and every field.
+  the patch. `node-types.json` gains the `guarded_linkage` node kind
+  (`name` and `value` fields, same as `linkage_specification`) and keeps
+  every other type and field.
 
 ## Changes to grammar.js
 
@@ -72,6 +84,12 @@ reproduced on real code. Every repro below was first accepted by
   `qualified_field_identifier` each with `template_method`, `type_specifier`
   with `_class_name`, `_class_name` with `expression`, `_declarator` with
   each of the two new init declarator rules.
+- `extern "C"` inside preproc guards: `guarded_linkage` and `_linkage_guard`
+  arrive through the patched C base (see "Regenerating src/"); this grammar
+  only adds the matching conflicts `[$._linkage_guard, $.preproc_if]` and
+  `[$._linkage_guard, $.preproc_ifdef]`. The rule covers the shared C/C++
+  header idiom where `extern "C" {` opens inside one conditional block and
+  `}` closes inside a later one.
 
 ## Constructs verified fixed
 
@@ -113,10 +131,10 @@ parens steers it to an initialized declaration.
   `parser.c`, `scanner.c`, `grammar.json`, `node-types.json` all match), so
   the tag corpus result is the published result.
 - After the patch: 179 of 179 upstream cases pass.
-- New cases in `test/corpus/sloplint_*.txt`: 21 cases (17 repros,
-  4 controls). The published parser fails 17 of the 21 sources and passes
-  the 4 controls. The patched grammar passes all 21.
-- Total with the patch: 200 of 200.
+- New cases in `test/corpus/sloplint_*.txt`: 22 cases (18 repros,
+  4 controls). The published parser fails 18 of the 22 sources and passes
+  the 4 controls. The patched grammar passes all 22.
+- Total with the patch: 201 of 201.
 
 ## Sweep result
 

@@ -74,11 +74,24 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
 - `__signed` spellings: the `signed`/`unsigned`/`long`/`short` modifier lists
   in `sized_type_specifier` and `_type_declarator` also accept `__signed__`
   and `__signed` (`typedef __signed char i8;`).
+- `extern "C"` inside preproc guards: a new `guarded_linkage` rule covers the
+  shared-header idiom where the opening brace lives inside one conditional
+  block and the closing brace inside a later one, so neither block parses on
+  its own (`#ifdef __cplusplus` newline `extern "C" {` newline `#endif`,
+  declarations, then `#ifdef __cplusplus` newline `}` newline `#endif`).
+  A hidden `_linkage_guard` matches `#ifdef`/`#ifndef`/`#if` heads on both
+  sides. The rule sits in `_top_level_item` and `_block_item`, uses
+  `prec.dynamic(10)` to win the ambiguity against `preproc_if` and
+  `preproc_ifdef`, and declares two conflicts: `[$._linkage_guard,
+  $.preproc_if]` and `[$._linkage_guard, $.preproc_ifdef]`. It keeps the
+  `name` and `value` fields of `linkage_specification`.
 
 ## Adapter impact
 
 Node kinds and fields that `crates/sloplint-syntax/src/lang/c.rs` depends on
-keep their names. `node-types.json` only gains anonymous tokens (`_Complex`,
+keep their names. `node-types.json` gains the `guarded_linkage` node kind
+(`name` and `value` fields, same as `linkage_specification`), anonymous tokens
+(`_Complex`,
 `complex`, `_Thread_local`, `__signed`, `__signed__`) and new homes for
 existing named kinds (`system_lib_string` in preproc arguments,
 `sized_type_specifier` as an enum underlying type, `gnu_asm_expression` in
@@ -127,9 +140,9 @@ Inputs that are not valid C and so stay errors: `int x = ;`, unterminated
 
 - Upstream `tree-sitter test` at tag v0.24.2, before: 85 of 85 pass.
 - After the patch: 85 of 85 upstream cases pass.
-- New cases in `test/corpus/sloplint_*.txt`: 20 cases (16 repros, 4 controls).
-  The unpatched grammar fails 16 of the 20. The patched grammar passes all 20.
-- Total with the patch: 105 of 105.
+- New cases in `test/corpus/sloplint_*.txt`: 21 cases (17 repros, 4 controls).
+  The unpatched grammar fails 17 of the 21. The patched grammar passes all 21.
+- Total with the patch: 106 of 106.
 
 ## Sweep result
 

@@ -1,14 +1,34 @@
+diff --git a/grammar.js b/grammar.js
+index 7cdde6e..d8d74db 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -53,6 +53,7 @@
+@@ -53,6 +53,9 @@ module.exports = grammar({
      [$._top_level_item, $._top_level_statement],
      [$.type_specifier, $._top_level_expression_statement],
      [$.type_qualifier, $.extension_expression],
 +    [$._declarator, $._declaration_declarator],
++    [$._linkage_guard, $.preproc_if],
++    [$._linkage_guard, $.preproc_ifdef],
    ],
  
    extras: $ => [
-@@ -199,7 +200,11 @@
+@@ -89,6 +92,7 @@ module.exports = grammar({
+       $.function_definition,
+       alias($._old_style_function_definition, $.function_definition),
+       $.linkage_specification,
++      $.guarded_linkage,
+       $.declaration,
+       $._top_level_statement,
+       $.attributed_statement,
+@@ -106,6 +110,7 @@ module.exports = grammar({
+       $.function_definition,
+       alias($._old_style_function_definition, $.function_definition),
+       $.linkage_specification,
++      $.guarded_linkage,
+       $.declaration,
+       $.statement,
+       $.attributed_statement,
+@@ -199,7 +204,11 @@ module.exports = grammar({
  
      preproc_argument_list: $ => seq(
        '(',
@@ -21,7 +41,35 @@
        ')',
      ),
  
-@@ -396,7 +401,7 @@
+@@ -301,6 +310,27 @@ module.exports = grammar({
+       )),
+     ),
+ 
++    // `extern "C"` inside preproc guards: the opening brace lives inside one
++    // conditional block and the closing brace inside a later one, so neither
++    // block parses on its own. Shared C/C++ headers are written this way.
++    guarded_linkage: $ => prec.dynamic(10, seq(
++      $._linkage_guard,
++      'extern',
++      field('value', $.string_literal),
++      '{',
++      alias(preprocessor('endif'), '#endif'),
++      repeat($._top_level_item),
++      $._linkage_guard,
++      '}',
++      alias(preprocessor('endif'), '#endif'),
++    )),
++
++    _linkage_guard: $ => choice(
++      seq(preprocessor('ifdef'), field('name', $.identifier)),
++      seq(preprocessor('ifndef'), field('name', $.identifier)),
++      seq(preprocessor('if'), field('condition', $._preproc_expression), '\n'),
++    ),
++
+     attribute_specifier: $ => seq(
+       choice('__attribute__', '__attribute'),
+       '(',
+@@ -396,7 +426,7 @@ module.exports = grammar({
        alias($.array_type_declarator, $.array_declarator),
        alias($.parenthesized_type_declarator, $.parenthesized_declarator),
        $._type_identifier,
@@ -30,7 +78,7 @@
        $.primitive_type,
      ),
  
-@@ -543,6 +548,7 @@
+@@ -543,6 +573,7 @@ module.exports = grammar({
  
      init_declarator: $ => seq(
        field('declarator', $._declarator),
@@ -38,7 +86,7 @@
        '=',
        field('value', choice($.initializer_list, $.expression)),
      ),
-@@ -563,6 +569,7 @@
+@@ -563,6 +594,7 @@ module.exports = grammar({
        '__inline__',
        '__forceinline',
        'thread_local',
@@ -46,7 +94,7 @@
        '__thread',
      ),
  
-@@ -574,6 +581,8 @@
+@@ -574,6 +606,8 @@ module.exports = grammar({
        '__restrict__',
        '__extension__',
        '_Atomic',
@@ -55,7 +103,7 @@
        '_Noreturn',
        'noreturn',
        '_Nonnull',
-@@ -601,6 +610,8 @@
+@@ -601,6 +635,8 @@ module.exports = grammar({
        seq(
          repeat(choice(
            'signed',
@@ -64,7 +112,7 @@
            'unsigned',
            'long',
            'short',
-@@ -611,6 +622,8 @@
+@@ -611,6 +647,8 @@ module.exports = grammar({
          ))),
          repeat1(choice(
            'signed',
@@ -73,7 +121,7 @@
            'unsigned',
            'long',
            'short',
-@@ -619,6 +632,8 @@
+@@ -619,6 +657,8 @@ module.exports = grammar({
        seq(
          repeat1(choice(
            'signed',
@@ -82,7 +130,7 @@
            'unsigned',
            'long',
            'short',
-@@ -630,6 +645,8 @@
+@@ -630,6 +670,8 @@ module.exports = grammar({
          ))),
          repeat(choice(
            'signed',
@@ -91,7 +139,7 @@
            'unsigned',
            'long',
            'short',
-@@ -662,14 +679,22 @@
+@@ -662,14 +704,22 @@ module.exports = grammar({
        choice(
          seq(
            field('name', $._type_identifier),
@@ -116,7 +164,7 @@
      enumerator_list: $ => seq(
        '{',
        repeat(choice(
-@@ -737,9 +762,12 @@
+@@ -737,9 +787,12 @@ module.exports = grammar({
        optional($.attribute_specifier),
        ';',
      ),
@@ -132,7 +180,7 @@
      )),
  
      bitfield_clause: $ => seq(':', $.expression),
-@@ -1226,6 +1254,7 @@
+@@ -1226,6 +1279,7 @@ module.exports = grammar({
          $.initializer_pair,
          $.expression,
          $.initializer_list,
@@ -140,7 +188,7 @@
        )),
        optional(','),
        '}',
-@@ -1351,7 +1380,10 @@
+@@ -1351,7 +1405,10 @@ module.exports = grammar({
      ),
  
      macro_type_specifier: $ => prec.dynamic(-1, seq(

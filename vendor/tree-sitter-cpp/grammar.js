@@ -58,6 +58,8 @@ module.exports = grammar(C, {
   ],
 
   conflicts: $ => [
+    [$._linkage_guard, $.preproc_if],
+    [$._linkage_guard, $.preproc_ifdef],
     // C
     [$.type_specifier, $._declarator],
     [$.type_specifier, $.expression],

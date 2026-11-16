@@ -52,6 +52,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "guarded_linkage"
+        },
+        {
+          "type": "SYMBOL",
           "name": "preproc_include"
         },
         {
@@ -165,6 +169,10 @@
         {
           "type": "SYMBOL",
           "name": "preproc_ifdef"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "guarded_linkage"
         },
         {
           "type": "SYMBOL",
@@ -3335,6 +3343,143 @@
               }
             ]
           }
+        }
+      ]
+    },
+    "guarded_linkage": {
+      "type": "PREC_DYNAMIC",
+      "value": 10,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "_linkage_guard"
+          },
+          {
+            "type": "STRING",
+            "value": "extern"
+          },
+          {
+            "type": "FIELD",
+            "name": "value",
+            "content": {
+              "type": "SYMBOL",
+              "name": "string_literal"
+            }
+          },
+          {
+            "type": "STRING",
+            "value": "{"
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "PATTERN",
+              "value": "#[ \t]*endif"
+            },
+            "named": false,
+            "value": "#endif"
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_top_level_item"
+            }
+          },
+          {
+            "type": "SYMBOL",
+            "name": "_linkage_guard"
+          },
+          {
+            "type": "STRING",
+            "value": "}"
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "PATTERN",
+              "value": "#[ \t]*endif"
+            },
+            "named": false,
+            "value": "#endif"
+          }
+        ]
+      }
+    },
+    "_linkage_guard": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "PATTERN",
+                "value": "#[ \t]*ifdef"
+              },
+              "named": false,
+              "value": "#ifdef"
+            },
+            {
+              "type": "FIELD",
+              "name": "name",
+              "content": {
+                "type": "SYMBOL",
+                "name": "identifier"
+              }
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "PATTERN",
+                "value": "#[ \t]*ifndef"
+              },
+              "named": false,
+              "value": "#ifndef"
+            },
+            {
+              "type": "FIELD",
+              "name": "name",
+              "content": {
+                "type": "SYMBOL",
+                "name": "identifier"
+              }
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "PATTERN",
+                "value": "#[ \t]*if"
+              },
+              "named": false,
+              "value": "#if"
+            },
+            {
+              "type": "FIELD",
+              "name": "condition",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_preproc_expression"
+              }
+            },
+            {
+              "type": "STRING",
+              "value": "\n"
+            }
+          ]
         }
       ]
     },
@@ -17218,6 +17363,14 @@
     }
   ],
   "conflicts": [
+    [
+      "_linkage_guard",
+      "preproc_if"
+    ],
+    [
+      "_linkage_guard",
+      "preproc_ifdef"
+    ],
     [
       "type_specifier",
       "_declarator"

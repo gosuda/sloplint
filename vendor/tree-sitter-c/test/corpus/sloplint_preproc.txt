@@ -50,3 +50,29 @@ defined without parentheses still parses
 (translation_unit
   (preproc_if condition: (preproc_defined (identifier)))
   (preproc_ifdef name: (identifier)))
+
+==========================================
+extern "C" linkage inside preproc guards
+==========================================
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int a;
+
+#ifdef __cplusplus
+}
+#endif
+
+---
+
+(translation_unit
+  (guarded_linkage
+    (identifier)
+    (string_literal
+      (string_content))
+    (declaration
+      (primitive_type)
+      (identifier))
+    (identifier)))

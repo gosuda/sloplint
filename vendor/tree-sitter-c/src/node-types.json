@@ -1128,6 +1128,10 @@
           "named": true
         },
         {
+          "type": "guarded_linkage",
+          "named": true
+        },
+        {
           "type": "linkage_specification",
           "named": true
         },
@@ -1332,6 +1336,10 @@
         },
         {
           "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "guarded_linkage",
           "named": true
         },
         {
@@ -2140,6 +2148,180 @@
     }
   },
   {
+    "type": "guarded_linkage",
+    "named": true,
+    "fields": {
+      "condition": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "call_expression",
+            "named": true
+          },
+          {
+            "type": "char_literal",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "number_literal",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "preproc_defined",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "string_literal",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "attributed_statement",
+          "named": true
+        },
+        {
+          "type": "break_statement",
+          "named": true
+        },
+        {
+          "type": "case_statement",
+          "named": true
+        },
+        {
+          "type": "compound_statement",
+          "named": true
+        },
+        {
+          "type": "continue_statement",
+          "named": true
+        },
+        {
+          "type": "declaration",
+          "named": true
+        },
+        {
+          "type": "do_statement",
+          "named": true
+        },
+        {
+          "type": "expression_statement",
+          "named": true
+        },
+        {
+          "type": "for_statement",
+          "named": true
+        },
+        {
+          "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "goto_statement",
+          "named": true
+        },
+        {
+          "type": "guarded_linkage",
+          "named": true
+        },
+        {
+          "type": "if_statement",
+          "named": true
+        },
+        {
+          "type": "labeled_statement",
+          "named": true
+        },
+        {
+          "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "preproc_call",
+          "named": true
+        },
+        {
+          "type": "preproc_def",
+          "named": true
+        },
+        {
+          "type": "preproc_function_def",
+          "named": true
+        },
+        {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        },
+        {
+          "type": "preproc_include",
+          "named": true
+        },
+        {
+          "type": "return_statement",
+          "named": true
+        },
+        {
+          "type": "switch_statement",
+          "named": true
+        },
+        {
+          "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_specifier",
+          "named": true
+        },
+        {
+          "type": "while_statement",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "if_statement",
     "named": true,
     "fields": {
@@ -2830,6 +3012,10 @@
           "named": true
         },
         {
+          "type": "guarded_linkage",
+          "named": true
+        },
+        {
           "type": "linkage_specification",
           "named": true
         },
@@ -2926,6 +3112,10 @@
           "named": true
         },
         {
+          "type": "guarded_linkage",
+          "named": true
+        },
+        {
           "type": "linkage_specification",
           "named": true
         },
@@ -2990,6 +3180,10 @@
         },
         {
           "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "guarded_linkage",
           "named": true
         },
         {
@@ -3153,6 +3347,10 @@
           "named": true
         },
         {
+          "type": "guarded_linkage",
+          "named": true
+        },
+        {
           "type": "linkage_specification",
           "named": true
         },
@@ -3246,6 +3444,10 @@
         },
         {
           "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "guarded_linkage",
           "named": true
         },
         {
@@ -3694,6 +3896,10 @@
         },
         {
           "type": "goto_statement",
+          "named": true
+        },
+        {
+          "type": "guarded_linkage",
           "named": true
         },
         {

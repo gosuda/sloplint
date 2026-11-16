@@ -1,6 +1,17 @@
+diff --git a/grammar.js b/grammar.js
+index 77a89b2..17afac7 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -94,6 +94,13 @@
+@@ -58,6 +58,8 @@ module.exports = grammar(C, {
+   ],
+ 
+   conflicts: $ => [
++    [$._linkage_guard, $.preproc_if],
++    [$._linkage_guard, $.preproc_ifdef],
+     // C
+     [$.type_specifier, $._declarator],
+     [$.type_specifier, $.expression],
+@@ -94,6 +96,13 @@ module.exports = grammar(C, {
      [$.init_statement, $._for_statement_body],
      [$.field_expression, $.template_method, $.template_type],
      [$.qualified_field_identifier, $.template_method, $.template_type],
@@ -14,7 +25,7 @@
    ],
  
    inline: ($, original) => original.concat([
-@@ -226,12 +233,16 @@
+@@ -226,12 +235,16 @@ module.exports = grammar(C, {
        alias($.qualified_type_identifier, $.qualified_identifier),
      )),
  
@@ -32,7 +43,7 @@
      }),
  
      declaration: $ => seq(
-@@ -284,14 +295,23 @@
+@@ -284,14 +297,23 @@ module.exports = grammar(C, {
  
      enum_specifier: $ => prec.right(seq(
        'enum',
@@ -61,7 +72,7 @@
        ),
        optional($.attribute_specifier),
      )),
-@@ -339,9 +359,16 @@
+@@ -339,9 +361,16 @@ module.exports = grammar(C, {
      ),
  
      template_instantiation: $ => seq(
@@ -80,7 +91,7 @@
        ';',
      ),
  
-@@ -402,7 +429,7 @@
+@@ -402,7 +431,7 @@ module.exports = grammar(C, {
        $._declaration_specifiers,
        field('declarator', optional(choice($._declarator, $.abstract_reference_declarator))),
        '=',
@@ -89,7 +100,7 @@
      ),
  
      variadic_parameter_declaration: $ => seq(
-@@ -432,6 +459,23 @@
+@@ -432,6 +461,23 @@ module.exports = grammar(C, {
            $.initializer_list,
          )),
        ),
@@ -113,7 +124,7 @@
      ),
  
      operator_cast: $ => prec.right(1, seq(
-@@ -478,13 +522,17 @@
+@@ -478,13 +524,17 @@ module.exports = grammar(C, {
  
      field_declaration: $ => seq(
        $._declaration_specifiers,
@@ -138,7 +149,7 @@
        )),
        optional($.attribute_specifier),
        ';',
-@@ -968,10 +1016,18 @@
+@@ -968,10 +1018,18 @@ module.exports = grammar(C, {
        ']',
      ),
  
@@ -161,7 +172,7 @@
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1047,15 @@
+@@ -991,9 +1049,15 @@ module.exports = grammar(C, {
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -180,7 +191,7 @@
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +1069,7 @@
+@@ -1007,7 +1071,7 @@ module.exports = grammar(C, {
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -189,7 +200,7 @@
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +1077,7 @@
+@@ -1015,6 +1079,7 @@ module.exports = grammar(C, {
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -197,7 +208,7 @@
        )),
      ),
  
-@@ -1230,7 +1293,7 @@
+@@ -1230,7 +1295,7 @@ module.exports = grammar(C, {
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -206,7 +217,7 @@
          field('value', $.initializer_list),
        ),
      ),
-@@ -1256,6 +1319,7 @@
+@@ -1256,6 +1321,7 @@ module.exports = grammar(C, {
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -214,7 +225,7 @@
        )),
      ),
  
-@@ -1342,6 +1406,25 @@
+@@ -1342,6 +1408,25 @@ module.exports = grammar(C, {
  
      this: _ => 'this',
  

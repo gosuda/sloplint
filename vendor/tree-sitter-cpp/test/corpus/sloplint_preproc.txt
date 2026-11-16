@@ -143,3 +143,29 @@ int g;
     (declaration
       (primitive_type)
       (identifier))))
+
+==========================================
+extern "C" linkage inside preproc guards
+==========================================
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int a;
+
+#ifdef __cplusplus
+}
+#endif
+
+---
+
+(translation_unit
+  (guarded_linkage
+    (identifier)
+    (string_literal
+      (string_content))
+    (declaration
+      (primitive_type)
+      (identifier))
+    (identifier)))
