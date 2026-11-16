@@ -453,13 +453,27 @@ KDBINDINGS_DEFINE_BINARY_OP(||)
   (namespace_definition
     (namespace_identifier)
     (declaration_list
-      (macro_declaration (identifier) (macro_argument_list))
-      (macro_declaration (identifier) (macro_argument_list))
-      (macro_declaration (identifier) (macro_argument_list))
-      (macro_declaration (identifier) (macro_argument_list))
-      (macro_declaration (identifier) (macro_argument_list))
-      (macro_declaration (identifier) (macro_argument_list))
-      (macro_declaration (identifier) (macro_argument_list)))))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list)))))
 
 ================================================================================
 decltype functional-cast brace init
@@ -479,10 +493,48 @@ void f() {
       (parameter_list))
     (compound_statement
       (declaration
-        (placeholder_type_specifier (auto))
+        (placeholder_type_specifier
+          (auto))
         (init_declarator
           (identifier)
           (compound_literal_expression
-            (decltype (identifier))
+            (decltype
+              (identifier))
             (initializer_list
               (number_literal))))))))
+
+================================================================================
+Unnamed qualified pointer parameter with a default value
+================================================================================
+
+class A {
+  explicit A(Core::Object * = nullptr);
+  explicit B(int * = nullptr);
+};
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (class_specifier
+    (type_identifier)
+    (field_declaration_list
+      (declaration
+        (explicit_function_specifier)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (optional_parameter_declaration
+              (qualified_identifier
+                (namespace_identifier)
+                (type_identifier))
+              (abstract_pointer_declarator)
+              (null)))))
+      (declaration
+        (explicit_function_specifier)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (optional_parameter_declaration
+              (primitive_type)
+              (abstract_pointer_declarator)
+              (null))))))))

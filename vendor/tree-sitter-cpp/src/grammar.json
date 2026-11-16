@@ -13971,6 +13971,10 @@
                   },
                   {
                     "type": "SYMBOL",
+                    "name": "_abstract_declarator"
+                  },
+                  {
+                    "type": "SYMBOL",
                     "name": "abstract_reference_declarator"
                   }
                 ]
@@ -19605,6 +19609,10 @@
     [
       "macro_qualifier",
       "_field_declarator"
+    ],
+    [
+      "_abstract_declarator",
+      "optional_parameter_declaration"
     ],
     [
       "template_type"

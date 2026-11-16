@@ -98,6 +98,10 @@ reproduced on real code. Every repro below was first accepted by
 - `decltype(x){args}` functional-cast brace init (`auto i =
   decltype(n){0}`): `compound_literal_expression`'s type choice gained
   `decltype`.
+- Unnamed pointer parameters with defaults (`explicit A(Core::Object *
+  = nullptr)`): `optional_parameter_declaration`'s declarator choice
+  gained `$._abstract_declarator`; upstream rejects the `* =` shape for
+  qualified types entirely.
 - Known upstream gap (queued, not fixed): comparison operators like
   `>=` inside template argument lists
   (`enable_if_t<sizeof...(Ts) >= 1>`) — the `>`-close token steals the

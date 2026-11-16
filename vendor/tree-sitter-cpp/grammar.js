@@ -176,6 +176,7 @@ module.exports = grammar(C, {
     [$.macro_qualifier, $._declarator, $._init_pointer_declarator],
     [$.macro_qualifier, $._type_declarator],
     [$.macro_qualifier, $._field_declarator],
+    [$._abstract_declarator, $.optional_parameter_declaration],
     [$.template_type],
   ],
 
@@ -515,7 +516,7 @@ module.exports = grammar(C, {
 
     optional_parameter_declaration: $ => seq(
       $._declaration_specifiers,
-      field('declarator', optional(choice($._declarator, $.abstract_reference_declarator))),
+      field('declarator', optional(choice($._declarator, $._abstract_declarator, $.abstract_reference_declarator))),
       '=',
       field('default_value', choice($.expression, $.initializer_list)),
     ),
