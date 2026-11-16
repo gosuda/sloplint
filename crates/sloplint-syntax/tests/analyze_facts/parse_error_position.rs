@@ -41,7 +41,7 @@ fn a_valid_declaration_before_the_error_survives_the_rescue() {
         "the surviving `fn ok` contributes its fact after the error is excised: {:?}",
         analysis.facts.functions
     );
-    assert_eq!(analysis.facts.functions[0].name.as_ref(), "ok");
+    assert_eq!(analysis.facts.functions[0].name, "ok");
 }
 
 /// A statement glued to a label makes the vendored Go grammar insert a hidden
