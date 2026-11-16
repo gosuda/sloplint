@@ -386,6 +386,10 @@
         "named": true
       },
       {
+        "type": "qt_statement_macro",
+        "named": true
+      },
+      {
         "type": "return_statement",
         "named": true
       },
@@ -1313,6 +1317,10 @@
           "named": true
         },
         {
+          "type": "qt_statement_macro",
+          "named": true
+        },
+        {
           "type": "return_statement",
           "named": true
         },
@@ -1667,6 +1675,10 @@
         },
         {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_declaration",
           "named": true
         },
         {
@@ -2162,6 +2174,10 @@
         },
         {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_declaration",
           "named": true
         },
         {
@@ -5989,6 +6005,72 @@
     "fields": {}
   },
   {
+    "type": "qt_statement_macro",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "QT_REQUIRE_VERSION",
+            "named": false
+          },
+          {
+            "type": "Q_ASSERT",
+            "named": false
+          },
+          {
+            "type": "Q_ASSERT_X",
+            "named": false
+          },
+          {
+            "type": "Q_CHECK_PTR",
+            "named": false
+          },
+          {
+            "type": "Q_FALLTHROUGH",
+            "named": false
+          },
+          {
+            "type": "Q_FOREACH",
+            "named": false
+          },
+          {
+            "type": "Q_UNREACHABLE",
+            "named": false
+          },
+          {
+            "type": "Q_UNUSED",
+            "named": false
+          },
+          {
+            "type": "Q_VERIFY",
+            "named": false
+          },
+          {
+            "type": "Q_VERIFY_X",
+            "named": false
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "argument_list",
+          "named": true
+        },
+        {
+          "type": "macro_argument_list",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "qualified_identifier",
     "named": true,
     "fields": {
@@ -8025,7 +8107,23 @@
     "named": false
   },
   {
+    "type": "QT_REQUIRE_VERSION",
+    "named": false
+  },
+  {
     "type": "Q_ALWAYS_INLINE",
+    "named": false
+  },
+  {
+    "type": "Q_ASSERT",
+    "named": false
+  },
+  {
+    "type": "Q_ASSERT_X",
+    "named": false
+  },
+  {
+    "type": "Q_CHECK_PTR",
     "named": false
   },
   {
@@ -8133,6 +8231,10 @@
     "named": false
   },
   {
+    "type": "Q_FALLTHROUGH",
+    "named": false
+  },
+  {
     "type": "Q_FLAG",
     "named": false
   },
@@ -8142,6 +8244,10 @@
   },
   {
     "type": "Q_FLAG_NS",
+    "named": false
+  },
+  {
+    "type": "Q_FOREACH",
     "named": false
   },
   {
@@ -8218,6 +8324,22 @@
   },
   {
     "type": "Q_SLOTS",
+    "named": false
+  },
+  {
+    "type": "Q_UNREACHABLE",
+    "named": false
+  },
+  {
+    "type": "Q_UNUSED",
+    "named": false
+  },
+  {
+    "type": "Q_VERIFY",
+    "named": false
+  },
+  {
+    "type": "Q_VERIFY_X",
     "named": false
   },
   {

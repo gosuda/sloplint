@@ -104,10 +104,6 @@ module.exports = grammar(C, {
     [$._class_name, $.expression],
     [$._declarator, $._init_reference_declarator],
     [$._declarator, $._init_pointer_declarator],
-    [$._declaration_modifiers, $._declarator, $.type_specifier, $.expression],
-    [$._declaration_modifiers, $.type_specifier, $.expression],
-    [$._declaration_modifiers, $._declarator, $.type_specifier],
-    [$._class_declaration_item, $._class_name],
     [$.argument_list, $.macro_argument_list],
     [$.sized_type_specifier, $.macro_argument_list],
     [$.expression, $.macro_argument_list],
@@ -156,6 +152,10 @@ module.exports = grammar(C, {
       alias($.constructor_or_destructor_definition, $.function_definition),
       alias($.operator_cast_definition, $.function_definition),
       alias($.operator_cast_declaration, $.declaration),
+      // Top-level preproc_if bodies repeat _block_item, so declaration
+      // macros (Q_DECLARE_METATYPE, Q_GLOBAL_STATIC, ...) must be valid
+      // block items too or every guarded header drops to ERROR.
+      $.macro_declaration,
     ),
 
     // Types
@@ -757,6 +757,22 @@ module.exports = grammar(C, {
       $.expression_statement,
     )),
 
+    // Qt statement macros are conventionally written without a trailing
+    // semicolon (Q_UNUSED(parent) before the next statement). argument_list
+    // fails on Q_FOREACH's `type var` argument, so accept the token soup
+    // too. The listed literals are keyword tokens: real code that calls a
+    // function named Q_UNUSED et al. now parses as this rule — the same
+    // trade-off as macro_attribute's literals.
+    qt_statement_macro: $ => prec.right(seq(
+      field('name', choice(
+        'Q_UNUSED', 'Q_ASSERT', 'Q_ASSERT_X', 'Q_VERIFY', 'Q_VERIFY_X',
+        'Q_CHECK_PTR', 'Q_UNREACHABLE', 'Q_FALLTHROUGH',
+        'QT_REQUIRE_VERSION', 'Q_FOREACH',
+      )),
+      choice($.argument_list, $.macro_argument_list),
+      optional(';'),
+    )),
+
     macro_attribute: ($, original) => choice(
       original,
       // Qt declaration modifiers (moc-expanded): seen in class members and
@@ -1011,6 +1027,7 @@ module.exports = grammar(C, {
       $.try_statement,
       $.throw_statement,
       $.emit_statement,
+      $.qt_statement_macro,
     ),
 
     switch_statement: $ => seq(

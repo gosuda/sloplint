@@ -350,3 +350,66 @@ class Plugin : public QObject {
       (macro_declaration
         (macro_argument_list
           (identifier))))))
+
+==========
+Qt declaration macro inside preproc guard
+==========
+
+#ifndef GUARD_H
+#define GUARD_H
+
+class C {};
+
+Q_DECLARE_METATYPE(const C*)
+
+#endif
+
+---
+
+(translation_unit
+  (preproc_ifdef
+    name: (identifier)
+    (preproc_def
+      name: (identifier))
+    (class_specifier
+      name: (type_identifier)
+      body: (field_declaration_list))
+    (macro_declaration
+      (macro_argument_list
+        (identifier)))))
+
+==========
+Qt statement macro without semicolon
+==========
+
+void f() {
+    Q_UNUSED(parent)
+    Q_ASSERT(p);
+    Q_FOREACH(QString s, list)
+    if (a) return;
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (qt_statement_macro
+        (macro_argument_list
+          (identifier)))
+      (qt_statement_macro
+        (argument_list
+          (identifier)))
+      (qt_statement_macro
+        (macro_argument_list
+          (identifier)
+          (identifier)
+          (identifier)))
+      (if_statement
+        condition: (condition_clause
+          value: (identifier))
+        consequence: (return_statement)))))

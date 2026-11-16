@@ -252,6 +252,10 @@
           },
           "named": true,
           "value": "declaration"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_declaration"
         }
       ]
     },
@@ -7110,6 +7114,10 @@
         {
           "type": "SYMBOL",
           "name": "emit_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "qt_statement_macro"
         }
       ]
     },
@@ -14046,6 +14054,89 @@
         ]
       }
     },
+    "qt_statement_macro": {
+      "type": "PREC_RIGHT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "FIELD",
+            "name": "name",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": "Q_UNUSED"
+                },
+                {
+                  "type": "STRING",
+                  "value": "Q_ASSERT"
+                },
+                {
+                  "type": "STRING",
+                  "value": "Q_ASSERT_X"
+                },
+                {
+                  "type": "STRING",
+                  "value": "Q_VERIFY"
+                },
+                {
+                  "type": "STRING",
+                  "value": "Q_VERIFY_X"
+                },
+                {
+                  "type": "STRING",
+                  "value": "Q_CHECK_PTR"
+                },
+                {
+                  "type": "STRING",
+                  "value": "Q_UNREACHABLE"
+                },
+                {
+                  "type": "STRING",
+                  "value": "Q_FALLTHROUGH"
+                },
+                {
+                  "type": "STRING",
+                  "value": "QT_REQUIRE_VERSION"
+                },
+                {
+                  "type": "STRING",
+                  "value": "Q_FOREACH"
+                }
+              ]
+            }
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "argument_list"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "macro_argument_list"
+              }
+            ]
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": ";"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        ]
+      }
+    },
     "reference_declarator": {
       "type": "PREC_DYNAMIC",
       "value": 1,
@@ -18504,26 +18595,6 @@
     [
       "_declarator",
       "_init_pointer_declarator"
-    ],
-    [
-      "_declaration_modifiers",
-      "_declarator",
-      "type_specifier",
-      "expression"
-    ],
-    [
-      "_declaration_modifiers",
-      "type_specifier",
-      "expression"
-    ],
-    [
-      "_declaration_modifiers",
-      "_declarator",
-      "type_specifier"
-    ],
-    [
-      "_class_declaration_item",
-      "_class_name"
     ],
     [
       "argument_list",

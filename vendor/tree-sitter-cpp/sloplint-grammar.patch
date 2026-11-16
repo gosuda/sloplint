@@ -1,5 +1,5 @@
---- a/grammar.js
-+++ b/grammar.js
+--- a/grammar.js	2026-11-16 15:38:12.089278171 +0000
++++ b/grammar.js	2026-11-16 17:18:32.678446061 +0000
 @@ -58,6 +58,8 @@
    ],
  
@@ -17,7 +17,7 @@
      [$._declaration_specifiers, $._constructor_specifiers],
      [$._binary_fold_operator, $._fold_operator],
      [$._function_declarator_seq],
-@@ -94,6 +97,24 @@
+@@ -94,6 +97,20 @@
      [$.init_statement, $._for_statement_body],
      [$.field_expression, $.template_method, $.template_type],
      [$.qualified_field_identifier, $.template_method, $.template_type],
@@ -28,10 +28,6 @@
 +    [$._class_name, $.expression],
 +    [$._declarator, $._init_reference_declarator],
 +    [$._declarator, $._init_pointer_declarator],
-+    [$._declaration_modifiers, $._declarator, $.type_specifier, $.expression],
-+    [$._declaration_modifiers, $.type_specifier, $.expression],
-+    [$._declaration_modifiers, $._declarator, $.type_specifier],
-+    [$._class_declaration_item, $._class_name],
 +    [$.argument_list, $.macro_argument_list],
 +    [$.sized_type_specifier, $.macro_argument_list],
 +    [$.expression, $.macro_argument_list],
@@ -42,7 +38,7 @@
    ],
  
    inline: ($, original) => original.concat([
-@@ -119,6 +140,7 @@
+@@ -119,6 +136,7 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -50,6 +46,17 @@
      ),
  
      _block_item: ($, original) => choice(
+@@ -134,6 +152,10 @@
+       alias($.constructor_or_destructor_definition, $.function_definition),
+       alias($.operator_cast_definition, $.function_definition),
+       alias($.operator_cast_declaration, $.declaration),
++      // Top-level preproc_if bodies repeat _block_item, so declaration
++      // macros (Q_DECLARE_METATYPE, Q_GLOBAL_STATIC, ...) must be valid
++      // block items too or every guarded header drops to ERROR.
++      $.macro_declaration,
+     ),
+ 
+     // Types
 @@ -168,6 +190,7 @@
        $.dependent_type,
        $.placeholder_type_specifier,
@@ -203,7 +210,7 @@
        )),
        optional($.attribute_specifier),
        ';',
-@@ -580,6 +649,140 @@
+@@ -580,6 +649,156 @@
        'protected',
      ),
  
@@ -315,6 +322,22 @@
 +      $.expression_statement,
 +    )),
 +
++    // Qt statement macros are conventionally written without a trailing
++    // semicolon (Q_UNUSED(parent) before the next statement). argument_list
++    // fails on Q_FOREACH's `type var` argument, so accept the token soup
++    // too. The listed literals are keyword tokens: real code that calls a
++    // function named Q_UNUSED et al. now parses as this rule — the same
++    // trade-off as macro_attribute's literals.
++    qt_statement_macro: $ => prec.right(seq(
++      field('name', choice(
++        'Q_UNUSED', 'Q_ASSERT', 'Q_ASSERT_X', 'Q_VERIFY', 'Q_VERIFY_X',
++        'Q_CHECK_PTR', 'Q_UNREACHABLE', 'Q_FALLTHROUGH',
++        'QT_REQUIRE_VERSION', 'Q_FOREACH',
++      )),
++      choice($.argument_list, $.macro_argument_list),
++      optional(';'),
++    )),
++
 +    macro_attribute: ($, original) => choice(
 +      original,
 +      // Qt declaration modifiers (moc-expanded): seen in class members and
@@ -344,15 +367,16 @@
      _declarator: ($, original) => choice(
        original,
        $.reference_declarator,
-@@ -807,6 +1010,7 @@
+@@ -807,6 +1026,8 @@
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
 +      $.emit_statement,
++      $.qt_statement_macro,
      ),
  
      switch_statement: $ => seq(
-@@ -968,10 +1172,18 @@
+@@ -968,10 +1189,18 @@
        ']',
      ),
  
@@ -375,7 +399,7 @@
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1203,15 @@
+@@ -991,9 +1220,15 @@
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -394,7 +418,7 @@
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +1225,7 @@
+@@ -1007,7 +1242,7 @@
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -403,7 +427,7 @@
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +1233,7 @@
+@@ -1015,6 +1250,7 @@
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -411,7 +435,7 @@
        )),
      ),
  
-@@ -1230,7 +1449,7 @@
+@@ -1230,7 +1466,7 @@
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -420,7 +444,7 @@
          field('value', $.initializer_list),
        ),
      ),
-@@ -1256,6 +1475,7 @@
+@@ -1256,6 +1492,7 @@
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -428,7 +452,7 @@
        )),
      ),
  
-@@ -1342,6 +1562,25 @@
+@@ -1342,6 +1579,25 @@
  
      this: _ => 'this',
  

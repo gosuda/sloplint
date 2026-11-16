@@ -124,6 +124,16 @@ reproduced on real code. Every repro below was first accepted by
     statement inside a compound statement, at `prec(-1)` so it is only a
     rescue. `emit` is a documented Qt-reserved word; as with every listed
     literal, an identifier spelled `emit` can no longer be an expression.
+  - `qt_statement_macro`: Qt statement macros conventionally written
+    without a trailing semicolon (`Q_UNUSED`, `Q_ASSERT`/`Q_ASSERT_X`,
+    `Q_VERIFY`/`Q_VERIFY_X`, `Q_CHECK_PTR`, `Q_UNREACHABLE`,
+    `Q_FALLTHROUGH`, `QT_REQUIRE_VERSION`, `Q_FOREACH`), in
+    `_non_case_statement` with `optional(';')`.
+  - `macro_declaration` is also a member of `_block_item`, which is the
+    repeated content of `preproc_if`/`preproc_ifdef` bodies at every
+    level: without it every declaration macro inside a header guard or
+    inside a function-level `#ifdef` dropped to an ERROR parsed as a
+    `function_declarator` missing its `;`.
   - The Qt member-function modifiers (`Q_INVOKABLE`, `Q_SIGNAL`,
     `Q_SLOT`, `Q_REQUIRED_RESULT`, `Q_NORETURN`, `Q_CONSTEXPR`,
     `Q_ALWAYS_INLINE`, `Q_NEVER_INLINE`, `Q_PACKED`, `Q_DECL_EXPORT`,
@@ -141,11 +151,13 @@ reproduced on real code. Every repro below was first accepted by
     names once ambiguity conflicts are declared, and the needed conflicts
     with inlined `_declarator` cannot be declared at all. Those files
     still error and are handled by the sloplint excision pass.
-- New conflicts for the Qt rules: `_declaration_modifiers` with
-  `_declarator`/`type_specifier`/`expression`, `_class_declaration_item`
-  with `_class_name`, `argument_list`/`sized_type_specifier`/
-  `expression`/`concatenated_string`/`_string`/`template_type` with
-  `macro_argument_list`, and `template_type` alone.
+- New conflicts for the Qt rules: `argument_list`/
+  `sized_type_specifier`/`expression`/`concatenated_string`/`_string`/
+  `template_type`/`template_function` with `macro_argument_list`, and
+  `template_type` alone. An earlier set of `_declaration_modifiers` and
+  `_class_declaration_item` conflicts added for a since-reverted
+  generic-identifier rescue was pruned when `generate` reported them
+  unnecessary.
 
 ## Constructs verified fixed
 
@@ -182,6 +194,10 @@ clang++ with `-std=c++23`.
   `GENERATED_BODY()`, `Q_GLOBAL_STATIC(T, x)`, `Q_COREAPP_STARTUP_FUNC(f)`,
   `Q_PLUGIN_METADATA(IID "x" FILE "y")`, `Q_INTERFACES(I)`,
   `Q_DISABLE_COPY_MOVE(C)`.
+- `Q_DECLARE_METATYPE(const C*)` inside `#ifndef` header guards and
+  inside function-level `#ifdef` blocks (the `_block_item` fix).
+- `Q_UNUSED(x)` without `;`, `Q_ASSERT(p)`, `Q_FOREACH(QString s, list)`
+  inside function bodies.
 
 ## Constructs known still failing
 
@@ -199,10 +215,10 @@ parens steers it to an initialized declaration.
   `parser.c`, `scanner.c`, `grammar.json`, `node-types.json` all match), so
   the tag corpus result is the published result.
 - After the patch: 179 of 179 upstream cases pass.
-- New cases in `test/corpus/sloplint_*.txt`: 34 cases (30 repros,
-  4 controls). The published parser fails 30 of the 34 sources and passes
-  the 4 controls. The patched grammar passes all 34.
-- Total with the patch: 213 of 213.
+- New cases in `test/corpus/sloplint_*.txt`: 36 cases (32 repros,
+  4 controls). The published parser fails 32 of the 36 sources and passes
+  the 4 controls. The patched grammar passes all 36.
+- Total with the patch: 215 of 215.
 
 ## Sweep result
 
