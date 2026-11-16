@@ -5564,10 +5564,6 @@
                   {
                     "type": "SYMBOL",
                     "name": "macro_attribute"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "macro_qualifier"
                   }
                 ]
               }
@@ -5653,10 +5649,6 @@
                   {
                     "type": "SYMBOL",
                     "name": "macro_attribute"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "macro_qualifier"
                   }
                 ]
               }
@@ -5742,10 +5734,6 @@
                   {
                     "type": "SYMBOL",
                     "name": "macro_attribute"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "macro_qualifier"
                   }
                 ]
               }
@@ -5819,10 +5807,6 @@
                   {
                     "type": "SYMBOL",
                     "name": "macro_attribute"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "macro_qualifier"
                   }
                 ]
               }
@@ -19450,32 +19434,6 @@
       "_declarator"
     ],
     [
-      "macro_qualifier",
-      "_declarator"
-    ],
-    [
-      "macro_qualifier",
-      "_type_declarator"
-    ],
-    [
-      "macro_qualifier",
-      "_field_declarator"
-    ],
-    [
-      "macro_qualifier",
-      "_declarator",
-      "expression"
-    ],
-    [
-      "macro_qualifier",
-      "expression"
-    ],
-    [
-      "macro_qualifier",
-      "_declarator",
-      "_init_pointer_declarator"
-    ],
-    [
       "pointer_declarator",
       "_init_pointer_declarator"
     ],
@@ -19581,6 +19539,10 @@
       "parenthesized_declarator",
       "abstract_parenthesized_declarator",
       "type_specifier"
+    ],
+    [
+      "_declarator",
+      "_init_pointer_declarator"
     ],
     [
       "template_type"

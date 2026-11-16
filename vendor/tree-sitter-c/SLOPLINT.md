@@ -117,9 +117,9 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
   `int WINAPI WinMain(...)`, `_In_`-style SAL annotations):
   - `repeat(choice($.ms_call_modifier, $.far_ptr_modifier,
     $.macro_attribute, $.macro_qualifier))` before `'*'` and a merged
-    `repeat(choice($.ms_pointer_modifier, $.type_qualifier,
-    $.ms_call_modifier, $.far_ptr_modifier, $.macro_attribute,
-    $.macro_qualifier))` after it, in all four pointer-declarator rules;
+    literal-only `repeat(choice($.ms_pointer_modifier,
+    $.type_qualifier, $.ms_call_modifier, $.far_ptr_modifier,
+    $.macro_attribute))` after it, in all four pointer-declarator rules;
     `repeat(choice($.ms_call_modifier, $.macro_attribute))` before the
     inner declarator of the four parenthesized-declarator rules and in the
     `declaration`/`function_definition` pre-declarator slots.
@@ -131,9 +131,12 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
     `macro_attribute`): a generic `macro_qualifier` there let `f(...)`
     fork a GLR branch whose argument-list interpretations multiplied
     parse versions until the real declarator path was pruned. The generic
-    `macro_qualifier` stays before `'*'` and after `'*'` in C: the C++-only
-    `delete [] p` ambiguity that forbids it pre-`'*'` in the cpp grammar
-    cannot occur here, and `typedef CONST STRING* X` needs it.
+    `macro_qualifier` stays before `'*'` in C: the C++-only `delete [] p`
+    ambiguity that forbids it there cannot occur here, and
+    `typedef CONST STRING* X` needs it. The post-`'*'` repeat is
+    literal-only in C too: a generic identifier after `'*'` is the
+    declarator name (`int (*cmp)(...)`) — letting `macro_qualifier` eat it
+    produced an abstract declarator and lost the parameter's name.
 - Attribute-like declaration macros: vendor headers pre-decorate declarations
   with calling-convention, storage and compiler-attribute macros
   (`__IO uint32_t ISER[1];`, `VKAPI_ATTR VkBool32 VKAPI_CALL cb(void *);`,

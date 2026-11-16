@@ -648,10 +648,6 @@
           "named": true
         },
         {
-          "type": "macro_qualifier",
-          "named": true
-        },
-        {
           "type": "ms_call_modifier",
           "named": true
         },
@@ -5111,10 +5107,6 @@
           "named": true
         },
         {
-          "type": "macro_qualifier",
-          "named": true
-        },
-        {
           "type": "ms_based_modifier",
           "named": true
         },
@@ -5188,10 +5180,6 @@
         },
         {
           "type": "macro_attribute",
-          "named": true
-        },
-        {
-          "type": "macro_qualifier",
           "named": true
         },
         {
