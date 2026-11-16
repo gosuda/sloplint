@@ -4813,26 +4813,6 @@
     "named": false
   },
   {
-    "type": "__diag_error",
-    "named": false
-  },
-  {
-    "type": "__diag_ignore",
-    "named": false
-  },
-  {
-    "type": "__diag_pop",
-    "named": false
-  },
-  {
-    "type": "__diag_push",
-    "named": false
-  },
-  {
-    "type": "__diag_warning",
-    "named": false
-  },
-  {
     "type": "__except",
     "named": false
   },

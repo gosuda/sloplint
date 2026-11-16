@@ -59,7 +59,7 @@ impl LangHooks for CHooks {
         let body = child_by_field(n, "body")?;
         let (fd, name_node) = c_family::func_parts(n, &C_DECLARATORS, &["identifier"])?;
         let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
-        let public = !word(cx, n, &["storage_class_specifier"], &["static"]);
+        let public = !c_family::has_static(cx, n);
         let params = c_family::params(cx, fd, &C_DECLARATORS, &["parameter_declaration"]);
         Some(FunctionHead {
             shadow_params: params

@@ -322,8 +322,7 @@ module.exports = grammar({
       '__unused', '__used', '__alias', '__deprecated', '__nonstring',
       '__counted_by', '__printf', '__scanf', '__visible', '__initconst',
       '__exitconst', '__init_or_module', '__randomize_layout',
-      '__no_randomize_layout', '__diag_push', '__diag_pop', '__diag_ignore',
-      '__diag_error', '__diag_warning',
+      '__no_randomize_layout',
       // glibc
       '__THROW', '__THROWNL', '__LEAF', '__LEAF_ATTR', '__wur',
       '__attribute_pure__', '__attribute_const__', '__attribute_malloc__',

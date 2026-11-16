@@ -153,9 +153,9 @@ Inputs that are not valid C and so stay errors: `int x = ;`, unterminated
 
 - Upstream `tree-sitter test` at tag v0.24.2, before: 85 of 85 pass.
 - After the patch: 85 of 85 upstream cases pass.
-- New cases in `test/corpus/sloplint_*.txt`: 24 cases (20 repros, 4 controls).
-  The unpatched grammar fails 20 of the 24. The patched grammar passes all 24.
-- Total with the patch: 109 of 109.
+- New cases in `test/corpus/sloplint_*.txt`: 25 cases (21 repros, 4 controls).
+  The unpatched grammar fails 21 of the 25. The patched grammar passes all 25.
+- Total with the patch: 110 of 110.
 
 ## Sweep result
 

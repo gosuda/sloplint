@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 7cdde6e..df656da 100644
+index 7cdde6e..6152e57 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -53,6 +53,10 @@ module.exports = grammar({
@@ -42,7 +42,7 @@ index 7cdde6e..df656da 100644
        ')',
      ),
  
-@@ -283,6 +293,48 @@ module.exports = grammar({
+@@ -283,6 +293,47 @@ module.exports = grammar({
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -75,8 +75,7 @@ index 7cdde6e..df656da 100644
 +      '__unused', '__used', '__alias', '__deprecated', '__nonstring',
 +      '__counted_by', '__printf', '__scanf', '__visible', '__initconst',
 +      '__exitconst', '__init_or_module', '__randomize_layout',
-+      '__no_randomize_layout', '__diag_push', '__diag_pop', '__diag_ignore',
-+      '__diag_error', '__diag_warning',
++      '__no_randomize_layout',
 +      // glibc
 +      '__THROW', '__THROWNL', '__LEAF', '__LEAF_ATTR', '__wur',
 +      '__attribute_pure__', '__attribute_const__', '__attribute_malloc__',
@@ -91,7 +90,7 @@ index 7cdde6e..df656da 100644
      ),
  
      _declaration_specifiers: $ => prec.right(seq(
-@@ -301,6 +353,27 @@ module.exports = grammar({
+@@ -301,6 +352,27 @@ module.exports = grammar({
        )),
      ),
  
@@ -119,7 +118,7 @@ index 7cdde6e..df656da 100644
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -396,7 +469,7 @@ module.exports = grammar({
+@@ -396,7 +468,7 @@ module.exports = grammar({
        alias($.array_type_declarator, $.array_declarator),
        alias($.parenthesized_type_declarator, $.parenthesized_declarator),
        $._type_identifier,
@@ -128,7 +127,7 @@ index 7cdde6e..df656da 100644
        $.primitive_type,
      ),
  
-@@ -543,6 +616,7 @@ module.exports = grammar({
+@@ -543,6 +615,7 @@ module.exports = grammar({
  
      init_declarator: $ => seq(
        field('declarator', $._declarator),
@@ -136,7 +135,7 @@ index 7cdde6e..df656da 100644
        '=',
        field('value', choice($.initializer_list, $.expression)),
      ),
-@@ -563,6 +637,7 @@ module.exports = grammar({
+@@ -563,6 +636,7 @@ module.exports = grammar({
        '__inline__',
        '__forceinline',
        'thread_local',
@@ -144,7 +143,7 @@ index 7cdde6e..df656da 100644
        '__thread',
      ),
  
-@@ -574,6 +649,8 @@ module.exports = grammar({
+@@ -574,6 +648,8 @@ module.exports = grammar({
        '__restrict__',
        '__extension__',
        '_Atomic',
@@ -153,7 +152,7 @@ index 7cdde6e..df656da 100644
        '_Noreturn',
        'noreturn',
        '_Nonnull',
-@@ -594,6 +671,7 @@ module.exports = grammar({
+@@ -594,6 +670,7 @@ module.exports = grammar({
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -161,7 +160,7 @@ index 7cdde6e..df656da 100644
        $._type_identifier,
      ),
  
-@@ -601,6 +679,8 @@ module.exports = grammar({
+@@ -601,6 +678,8 @@ module.exports = grammar({
        seq(
          repeat(choice(
            'signed',
@@ -170,7 +169,7 @@ index 7cdde6e..df656da 100644
            'unsigned',
            'long',
            'short',
-@@ -611,6 +691,8 @@ module.exports = grammar({
+@@ -611,6 +690,8 @@ module.exports = grammar({
          ))),
          repeat1(choice(
            'signed',
@@ -179,7 +178,7 @@ index 7cdde6e..df656da 100644
            'unsigned',
            'long',
            'short',
-@@ -619,6 +701,8 @@ module.exports = grammar({
+@@ -619,6 +700,8 @@ module.exports = grammar({
        seq(
          repeat1(choice(
            'signed',
@@ -188,7 +187,7 @@ index 7cdde6e..df656da 100644
            'unsigned',
            'long',
            'short',
-@@ -630,6 +714,8 @@ module.exports = grammar({
+@@ -630,6 +713,8 @@ module.exports = grammar({
          ))),
          repeat(choice(
            'signed',
@@ -197,7 +196,7 @@ index 7cdde6e..df656da 100644
            'unsigned',
            'long',
            'short',
-@@ -662,14 +748,22 @@ module.exports = grammar({
+@@ -662,14 +747,22 @@ module.exports = grammar({
        choice(
          seq(
            field('name', $._type_identifier),
@@ -222,7 +221,7 @@ index 7cdde6e..df656da 100644
      enumerator_list: $ => seq(
        '{',
        repeat(choice(
-@@ -737,9 +831,12 @@ module.exports = grammar({
+@@ -737,9 +830,12 @@ module.exports = grammar({
        optional($.attribute_specifier),
        ';',
      ),
@@ -238,7 +237,7 @@ index 7cdde6e..df656da 100644
      )),
  
      bitfield_clause: $ => seq(':', $.expression),
-@@ -1226,6 +1323,7 @@ module.exports = grammar({
+@@ -1226,6 +1322,7 @@ module.exports = grammar({
          $.initializer_pair,
          $.expression,
          $.initializer_list,
@@ -246,7 +245,7 @@ index 7cdde6e..df656da 100644
        )),
        optional(','),
        '}',
-@@ -1351,7 +1449,10 @@ module.exports = grammar({
+@@ -1351,7 +1448,10 @@ module.exports = grammar({
      ),
  
      macro_type_specifier: $ => prec.dynamic(-1, seq(

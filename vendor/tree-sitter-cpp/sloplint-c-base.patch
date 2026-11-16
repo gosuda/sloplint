@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index db16bf8..79e5056 100644
+index db16bf8..9897d1b 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -36,6 +36,8 @@ module.exports = grammar({
@@ -35,7 +35,7 @@ index db16bf8..79e5056 100644
        $.preproc_include,
        $.preproc_def,
        $.preproc_function_def,
-@@ -283,6 +288,37 @@ module.exports = grammar({
+@@ -283,6 +288,36 @@ module.exports = grammar({
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -59,8 +59,7 @@ index db16bf8..79e5056 100644
 +      '__unused', '__used', '__alias', '__deprecated', '__nonstring',
 +      '__counted_by', '__printf', '__scanf', '__visible', '__initconst',
 +      '__exitconst', '__init_or_module', '__randomize_layout',
-+      '__no_randomize_layout', '__diag_push', '__diag_pop', '__diag_ignore',
-+      '__diag_error', '__diag_warning',
++      '__no_randomize_layout',
 +      '__THROW', '__THROWNL', '__LEAF', '__LEAF_ATTR', '__wur',
 +      '__attribute_pure__', '__attribute_const__', '__attribute_malloc__',
 +      '__attribute_alloc_size__', '__attribute_deprecated__',
@@ -73,7 +72,7 @@ index db16bf8..79e5056 100644
      ),
  
      _declaration_specifiers: $ => prec.right(seq(
-@@ -301,6 +337,27 @@ module.exports = grammar({
+@@ -301,6 +336,27 @@ module.exports = grammar({
        )),
      ),
  
@@ -101,7 +100,7 @@ index db16bf8..79e5056 100644
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -594,6 +651,7 @@ module.exports = grammar({
+@@ -594,6 +650,7 @@ module.exports = grammar({
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,

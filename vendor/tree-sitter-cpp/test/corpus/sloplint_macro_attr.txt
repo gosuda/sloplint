@@ -87,3 +87,44 @@ CALLBACK int handler(void);
       parameters: (parameter_list
         (parameter_declaration
           type: (primitive_type))))))
+
+========================================
+Diagnostic pragma macros stay statements
+========================================
+
+void f(void) {
+  __diag_push();
+  __diag_ignore("-Wunused");
+  work();
+  __diag_pop();
+}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list)))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (string_literal
+              (string_content)))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list)))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list))))))

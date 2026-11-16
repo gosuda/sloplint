@@ -6,6 +6,7 @@
 //! declaration died at the macro and yielded no facts. These tests pin the parse
 //! through the public `analyze` surface.
 
+use sloplint_core::facts::Visibility;
 use sloplint_core::lang::Lang;
 
 use crate::support::run_clean;
@@ -31,6 +32,22 @@ fn macro_decorated_c_declarations_parse_clean_and_yield_facts() {
     for want in ["clip", "debug_cb", "wWinMain"] {
         assert!(fns.contains(&want), "missing {want} in {fns:?}");
     }
+    // `__STATIC_INLINE` is CMSIS for `static inline`: the helper is private,
+    // unlike `VKAPI_ATTR`/`WINAPI` which carry no storage semantics.
+    let clip = analysis
+        .facts
+        .functions
+        .iter()
+        .find(|f| f.name == "clip")
+        .expect("clip is a function fact");
+    assert_eq!(clip.visibility, Visibility::Private);
+    let cb = analysis
+        .facts
+        .functions
+        .iter()
+        .find(|f| f.name == "debug_cb")
+        .expect("debug_cb is a function fact");
+    assert_eq!(cb.visibility, Visibility::Exported);
 }
 
 #[test]

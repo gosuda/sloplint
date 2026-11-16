@@ -145,10 +145,10 @@ parens steers it to an initialized declaration.
   `parser.c`, `scanner.c`, `grammar.json`, `node-types.json` all match), so
   the tag corpus result is the published result.
 - After the patch: 179 of 179 upstream cases pass.
-- New cases in `test/corpus/sloplint_*.txt`: 24 cases (20 repros,
-  4 controls). The published parser fails 20 of the 24 sources and passes
-  the 4 controls. The patched grammar passes all 24.
-- Total with the patch: 203 of 203.
+- New cases in `test/corpus/sloplint_*.txt`: 25 cases (21 repros,
+  4 controls). The published parser fails 21 of the 25 sources and passes
+  the 4 controls. The patched grammar passes all 25.
+- Total with the patch: 204 of 204.
 
 ## Sweep result
 

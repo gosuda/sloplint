@@ -3472,26 +3472,6 @@
         },
         {
           "type": "STRING",
-          "value": "__diag_push"
-        },
-        {
-          "type": "STRING",
-          "value": "__diag_pop"
-        },
-        {
-          "type": "STRING",
-          "value": "__diag_ignore"
-        },
-        {
-          "type": "STRING",
-          "value": "__diag_error"
-        },
-        {
-          "type": "STRING",
-          "value": "__diag_warning"
-        },
-        {
-          "type": "STRING",
           "value": "__THROW"
         },
         {

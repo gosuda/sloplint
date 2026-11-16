@@ -3,7 +3,7 @@
 use tree_sitter::Node;
 
 use crate::hooks::{Cx, child_by_field, has_child_kind, named_children, text, trimmed};
-use crate::lang::c_family::{inner, span, word};
+use crate::lang::c_family::{self, inner, span};
 
 pub(crate) fn member_list<'t>(cx: &Cx<'t, '_>, n: Node<'_>) -> Option<Node<'t>> {
     let parent = cx.parent_of(n)?;
@@ -31,7 +31,7 @@ pub(crate) fn is_public<'s>(
         return found.public;
     }
     let Some(items) = list else {
-        return !word(cx, n, &["storage_class_specifier"], &["static"]);
+        return !c_family::has_static(cx, n);
     };
     let anchor = cx
         .parent()
