@@ -231,12 +231,18 @@ fn analyze_file(
             if analysis.partial {
                 // On a rescued parse, file-wide aggregates miscount and
                 // findings inside excised constructs judge truncated code.
+                // meta/ findings describe the linter run itself — e.g.
+                // meta/custom-cap warns a custom query hit its limit — so
+                // they stay even when their anchor is line 1.
                 found.retain(|finding| {
-                    !finding.file_wide
-                        && !analysis
-                            .tainted
-                            .iter()
-                            .any(|&(first, last)| first <= finding.line && finding.line <= last)
+                    finding.rule.starts_with("meta/")
+                        || (!finding.file_wide
+                            && !analysis
+                                .tainted
+                                .iter()
+                                .any(|&(first, last)| {
+                                    first <= finding.line && finding.line <= last
+                                }))
                 });
             }
             if let Some(pos) = analysis.parse_error {
