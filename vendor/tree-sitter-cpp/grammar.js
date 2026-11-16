@@ -261,6 +261,30 @@ module.exports = grammar(C, {
     [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression],
     [$._macro_declaration_top, $._macro_declaration_stmt],
     [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt],
+    [$._field_declaration_list_item, $.field_declaration],
+    [$._midl_attribute, $.structured_binding_declarator],
+    [$._midl_attribute, $._lambda_capture_identifier],
+    [$._midl_attribute, $.expression],
+    [$._midl_attribute, $.expression, $.structured_binding_declarator],
+    [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
+    [$._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
+    [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
+    [$.macro_qualifier, $._declarator, $.type_specifier, $.macro_type_specifier],
+    [$.type_specifier, $.expression, $.macro_type_specifier],
+    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
+    [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier, $.macro_type_specifier],
+    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_type_specifier],
+    [$.macro_qualifier, $.type_specifier, $.expression, $.macro_type_specifier],
+    [$.macro_argument_list, $.type_qualifier],
+    [$.macro_argument_list, $.type_specifier],
+    [$.macro_argument_list, $.type_specifier, $.macro_type_specifier],
+    [$._declaration_modifiers, $.pointer_field_declarator],
+    [$._declaration_modifiers, $.field_declaration],
+    [$.call_expression, $._argument_list_type],
+    [$._argument_list_type, $.compound_literal_expression],
+    [$.type_specifier, $.call_expression, $._argument_list_type],
+    [$._typedef_macro_qualifier, $.type_specifier],
+    [$._typedef_macro_qualifier, $.type_specifier, $.sized_type_specifier],
   ],
 
   inline: ($, original) => original.concat([
@@ -775,6 +799,7 @@ module.exports = grammar(C, {
     ),
 
     field_declaration: $ => seq(
+      repeat($.midl_attribute_list),
       $._declaration_specifiers,
       commaSep(choice(
         seq(
@@ -2066,7 +2091,6 @@ module.exports = grammar(C, {
       $.expression,
       $.initializer_list,
       $.compound_statement,
-      $.primitive_type,
       $._argument_list_type,
       $._argument_list_operator,
     ),

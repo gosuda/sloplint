@@ -55,6 +55,10 @@ module.exports = grammar({
     [$._linkage_guard, $.preproc_if],
     [$._declaration_modifiers, $.type_specifier],
     [$._linkage_guard, $.preproc_ifdef],
+    [$._typedef_macro_qualifier, $.type_specifier, $.sized_type_specifier],
+    [$._typedef_macro_qualifier, $.type_specifier],
+    [$._field_declaration_list_item, $.field_declaration],
+    [$._midl_attribute, $.expression],
     [$.macro_qualifier, $._macro_declaration_stmt],
     [$._macro_declaration_stmt, $.expression],
     [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_type_specifier],
@@ -449,15 +453,35 @@ module.exports = grammar({
       ';',
     ),
 
-    type_definition: $ => seq(
-      optional('__extension__'),
-      'typedef',
-      $._type_definition_type,
-      $._type_definition_declarators,
-      repeat($.attribute_specifier),
-      ';',
+    type_definition: $ => choice(
+      seq(
+        optional('__extension__'),
+        'typedef',
+        $._type_definition_type,
+        $._type_definition_declarators,
+        repeat($.attribute_specifier),
+        ';',
+      ),
+      // Declaratorless typedef (`typedef enum X {...};`) — compilers
+      // accept it as an extension; Windows SDK headers use it inside
+      // #if blocks. Optional() would insert a MISSING declarator, which
+      // still counts as a parse error, so the empty branch is a full
+      // alternate instead.
+      seq(
+        optional('__extension__'),
+        'typedef',
+        $._type_definition_type,
+        repeat($.attribute_specifier),
+        ';',
+      ),
     ),
-    _type_definition_type: $ => seq(repeat($.type_qualifier), field('type', $.type_specifier), repeat($.type_qualifier)),
+    // Pre-type qualifiers also include a bare qualifier macro (`typedef
+    // CONST char *PCSZ`) — without an argument list, because `VOID (*P)`
+    // would otherwise swallow `(*P)` as its macro arguments and kill
+    // `typedef VOID (*F)(params)` function-pointer typedefs. Post-type
+    // stays keyword-only so a bare declarator name is never a macro.
+    _type_definition_type: $ => seq(repeat(choice($.type_qualifier, alias($._typedef_macro_qualifier, $.macro_qualifier))), field('type', $.type_specifier), repeat($.type_qualifier)),
+    _typedef_macro_qualifier: $ => $.identifier,
     _type_definition_declarators: $ => commaSep1(field('declarator', $._type_declarator)),
 
     _declaration_modifiers: $ => choice(
@@ -1127,6 +1151,9 @@ module.exports = grammar({
       choice(
         seq(
           field('name', $._type_identifier),
+          // `struct X : public Y` inside `#ifdef __cplusplus` in shared
+          // headers — never reachable in C-only code, so no ambiguity.
+          optional(seq(':', commaSep1(seq(optional($.identifier), $._type_identifier)))),
           field('body', optional($.field_declaration_list)),
         ),
         field('body', $.field_declaration_list),
@@ -1160,11 +1187,29 @@ module.exports = grammar({
       $.preproc_function_def,
       $.preproc_call,
       $.macro_declaration,
+      // MIDL brackets alone inside `#ifdef MIDL_PASS` while the field they
+      // annotate sits after the `#endif` (`[size_is(...)]` guard pattern).
+      $.midl_attribute_list,
       alias($.preproc_if_in_field_declaration_list, $.preproc_if),
       alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
     ),
 
+    // MIDL/RPC annotation brackets seen on Windows SDK members and params:
+    // `[size_is(N)] PUCHAR Buf;`, `[case(A, B)] T X;`, `[default] T X;`,
+    // `[in, out]`, `[range(0, N)]`. `case`/`default` are keywords so they
+    // need explicit alternatives next to the generic `name(args)` entry.
+    midl_attribute_list: $ => seq(
+      '[',
+      commaSep1($._midl_attribute),
+      ']',
+    ),
+    _midl_attribute: $ => choice(
+      'default',
+      seq(choice('case', $.identifier), optional($.macro_argument_list)),
+    ),
+
     field_declaration: $ => seq(
+      repeat($.midl_attribute_list),
       $._declaration_specifiers,
       optional($._field_declaration_declarator),
       optional($.attribute_specifier),
@@ -1229,6 +1274,7 @@ module.exports = grammar({
     ),
 
     parameter_declaration: $ => seq(
+      repeat($.midl_attribute_list),
       $._declaration_specifiers,
       optional(field('declarator', choice(
         $._declarator,
@@ -1783,7 +1829,7 @@ module.exports = grammar({
     // `SWAP(const char *, ...)`, `M(unsigned int, x)`. Restricted to
     // primitive_type and sized_type_specifier so `T *` never competes
     // with `a * b` on the identifier-expression path.
-    _argument_list_type: $ => seq(
+    _argument_list_type: $ => prec.dynamic(-1, seq(
       repeat($.type_qualifier),
       choice(
         $.primitive_type,
@@ -1793,7 +1839,7 @@ module.exports = grammar({
         $.enum_specifier,
       ),
       repeat('*'),
-    ),
+    )),
 
     // Free-atom stream: real arguments, preproc blocks/directives and
     // separator commas interleave in any order. `#define`/`#undef`

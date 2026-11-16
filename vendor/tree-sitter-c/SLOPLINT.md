@@ -171,14 +171,43 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
   `type_specifier`, with conflict `[$._declaration_modifiers,
   $.type_specifier]`. Trade-off: an identifier equal to a listed literal can
   no longer be a real type or declarator.
+- Win32 SDK headers (the ntdll.h family):
+  - `type_definition` is two full alternates now — one with declarators,
+    one without — so a declaratorless `typedef enum X {...};` inside an
+    `#if` block parses. `optional($._type_definition_declarators)` is not
+    used: the empty branch inserts a zero-width `MISSING` node, which
+    counts as a parse error.
+  - `_type_definition_type`'s pre-type qualifier slot accepts
+    `_typedef_macro_qualifier` (aliased to `macro_qualifier`), a bare
+    `identifier` with NO argument list — `typedef CONST char *PCSZ`.
+    The full `macro_qualifier` (identifier + optional
+    `macro_argument_list`) must not sit here: `typedef VOID (*P)(T)`
+    would let `VOID` swallow `(*P)` as its macro arguments and kill the
+    function-pointer typedef.
+  - `midl_attribute_list` (`'[' commaSep1($._midl_attribute) ']'`,
+    `_midl_attribute` = `'default'` or `choice('case', $.identifier) +
+    optional($.macro_argument_list)`) leads `field_declaration` and
+    `parameter_declaration` for `[size_is(N)]`, `[case(A,B)]`, `[default]`
+    members/params, and stands alone in `_field_declaration_list_item`
+    for the `#ifdef MIDL_PASS` guard pattern where the bracket and the
+    field it annotates sit in different preproc blocks.
+  - `struct_specifier`'s named branch accepts `':' commaSep1(seq(
+    optional($.identifier), $._type_identifier))` so `struct X : public Y`
+    inside `#ifdef __cplusplus` in shared headers parses.
+  - `_argument_list_type` carries `prec.dynamic(-1)`: with
+    `_argument_list_real` open to type spellings, `int (*F)(int)` forked
+    the read `call(*F, (int))` against the function-declarator read;
+    -1 keeps the declaration. It must not go to -2 — there it ties
+    `macro_declaration`/`_macro_declaration_stmt` and flips
+    `SWAP(const char*, &a, &b)` to the macro read.
 
 ## Adapter impact
 
 Node kinds and fields that `crates/sloplint-syntax/src/lang/c.rs` depends on
 keep their names. `node-types.json` gains the `guarded_linkage` node kind
 (`name` and `value` fields, same as `linkage_specification`), the
-`macro_attribute`, `macro_qualifier`, `macro_declaration` and
-`macro_argument_list` node kinds, anonymous tokens
+`macro_attribute`, `macro_qualifier`, `macro_declaration`,
+`macro_argument_list` and `midl_attribute_list` node kinds, anonymous tokens
 (`_Complex`,
 `complex`, `_Thread_local`, `__signed`, `__signed__`) and new homes for
 existing named kinds (`system_lib_string` in preproc arguments,
@@ -207,6 +236,13 @@ Each was a parse error with the published crate and is valid for
 - `ASIO_DECL int f(void);`, `CUSTOM_API struct S { int x; };`, a bare
   `MY_MARKER` or `MY_MARKER(x, y)` item inside a struct body, and
   `#define LOG(fmt, ...) printf(fmt, __VA_ARGS__)`
+- `typedef CONST char *PCSZ;`, `typedef VOID(NTAPI *F)(IN PVOID X);`,
+  `typedef VOID (*F)(IN PVOID X);`, `[size_is(N)] PUCHAR Buf;` on fields
+  and parameters, `[size_is(...), length_is(...)]` inside a `#ifdef
+  MIDL_PASS` block with the field after `#endif`, a declaratorless
+  `typedef enum X {...};` inside `#if`, `struct X : public Y {...}`
+  inside `#ifdef __cplusplus`, and `int (*F)(int)` keeping the
+  function-declarator read under the widened argument list.
 
 ## Constructs known still failing
 
@@ -231,9 +267,12 @@ Inputs that are not valid C and so stay errors: `int x = ;`, unterminated
 
 - Upstream `tree-sitter test` at tag v0.24.2, before: 85 of 85 pass.
 - After the patch: 85 of 85 upstream cases pass.
-- New cases in `test/corpus/sloplint_*.txt`: 25 cases (21 repros, 4 controls).
-  The unpatched grammar fails 21 of the 25. The patched grammar passes all 25.
-- Total with the patch: 110 of 110.
+- This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
+  corpus is not vendored): 13 files, 43 cases, all passing with the patch
+  (`tree-sitter test` reports 43/43). The latest additions cover the Win32
+  SDK cluster: typedef qualifier macros, function-pointer typedefs with
+  SAL-annotated parameters, MIDL brackets, declaratorless typedefs inside
+  `#if`, and `#ifdef`-guarded inheritance.
 
 ## Sweep result
 

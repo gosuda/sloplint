@@ -181,7 +181,51 @@
            $._declaration_declarator,
            optional($.gnu_asm_expression),
          ),
-@@ -283,10 +373,151 @@
+@@ -266,15 +356,35 @@
+       ';',
+     ),
+ 
+-    type_definition: $ => seq(
+-      optional('__extension__'),
+-      'typedef',
+-      $._type_definition_type,
+-      $._type_definition_declarators,
+-      repeat($.attribute_specifier),
+-      ';',
++    type_definition: $ => choice(
++      seq(
++        optional('__extension__'),
++        'typedef',
++        $._type_definition_type,
++        $._type_definition_declarators,
++        repeat($.attribute_specifier),
++        ';',
++      ),
++      // Declaratorless typedef (`typedef enum X {...};`) — compilers
++      // accept it as an extension; Windows SDK headers use it inside
++      // #if blocks. Optional() would insert a MISSING declarator, which
++      // still counts as a parse error, so the empty branch is a full
++      // alternate instead.
++      seq(
++        optional('__extension__'),
++        'typedef',
++        $._type_definition_type,
++        repeat($.attribute_specifier),
++        ';',
++      ),
+     ),
+-    _type_definition_type: $ => seq(repeat($.type_qualifier), field('type', $.type_specifier), repeat($.type_qualifier)),
++    // Pre-type qualifiers also include a bare qualifier macro (`typedef
++    // CONST char *PCSZ`) — without an argument list, because `VOID (*P)`
++    // would otherwise swallow `(*P)` as its macro arguments and kill
++    // `typedef VOID (*F)(params)` function-pointer typedefs. Post-type
++    // stays keyword-only so a bare declarator name is never a macro.
++    _type_definition_type: $ => seq(repeat(choice($.type_qualifier, alias($._typedef_macro_qualifier, $.macro_qualifier))), field('type', $.type_specifier), repeat($.type_qualifier)),
++    _typedef_macro_qualifier: $ => $.identifier,
+     _type_definition_declarators: $ => commaSep1(field('declarator', $._type_declarator)),
+ 
+     _declaration_modifiers: $ => choice(
+@@ -283,10 +393,151 @@
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -334,7 +378,7 @@
        field('type', $.type_specifier),
        repeat($._declaration_modifiers),
      )),
-@@ -301,6 +532,27 @@
+@@ -301,6 +552,27 @@
        )),
      ),
  
@@ -362,7 +406,7 @@
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -341,6 +593,14 @@
+@@ -341,6 +613,14 @@
        '__vectorcall',
      ),
  
@@ -377,7 +421,7 @@
      ms_restrict_modifier: _ => '__restrict',
  
      ms_unsigned_ptr_modifier: _ => '__uptr',
-@@ -409,25 +669,25 @@
+@@ -409,25 +689,25 @@
  
      parenthesized_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
        '(',
@@ -407,7 +451,7 @@
        $._abstract_declarator,
        ')',
      )),
-@@ -448,28 +708,65 @@
+@@ -448,28 +728,65 @@
  
      pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
        optional($.ms_based_modifier),
@@ -482,7 +526,7 @@
        field('declarator', optional($._abstract_declarator)),
      ))),
  
-@@ -543,6 +840,7 @@
+@@ -543,6 +860,7 @@
  
      init_declarator: $ => seq(
        field('declarator', $._declarator),
@@ -490,7 +534,7 @@
        '=',
        field('value', choice($.initializer_list, $.expression)),
      ),
-@@ -594,6 +892,7 @@
+@@ -594,6 +912,7 @@
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -498,7 +542,7 @@
        $._type_identifier,
      ),
  
-@@ -652,6 +951,18 @@
+@@ -652,6 +971,18 @@
        'charptr_t',
        'nullptr_t',
        'max_align_t',
@@ -517,7 +561,7 @@
        ...[8, 16, 32, 64].map(n => `int${n}_t`),
        ...[8, 16, 32, 64].map(n => `uint${n}_t`),
        ...[8, 16, 32, 64].map(n => `char${n}_t`),
-@@ -659,6 +970,7 @@
+@@ -659,6 +990,7 @@
  
      enum_specifier: $ => seq(
        'enum',
@@ -525,7 +569,7 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -673,18 +985,16 @@
+@@ -673,18 +1005,16 @@
      enumerator_list: $ => seq(
        '{',
        repeat(choice(
@@ -552,7 +596,7 @@
        )),
        '}',
      ),
-@@ -693,6 +1003,7 @@
+@@ -693,9 +1023,13 @@
        'struct',
        optional($.attribute_specifier),
        optional($.ms_declspec_modifier),
@@ -560,7 +604,13 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -706,6 +1017,7 @@
++          // `struct X : public Y` inside `#ifdef __cplusplus` in shared
++          // headers — never reachable in C-only code, so no ambiguity.
++          optional(seq(':', commaSep1(seq(optional($.identifier), $._type_identifier)))),
+           field('body', optional($.field_declaration_list)),
+         ),
+         field('body', $.field_declaration_list),
+@@ -706,6 +1040,7 @@
      union_specifier: $ => prec.right(seq(
        'union',
        optional($.ms_declspec_modifier),
@@ -568,15 +618,38 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -727,6 +1039,7 @@
+@@ -727,11 +1062,30 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
 +      $.macro_declaration,
++      // MIDL brackets alone inside `#ifdef MIDL_PASS` while the field they
++      // annotate sits after the `#endif` (`[size_is(...)]` guard pattern).
++      $.midl_attribute_list,
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
      ),
-@@ -751,10 +1064,37 @@
+ 
++    // MIDL/RPC annotation brackets seen on Windows SDK members and params:
++    // `[size_is(N)] PUCHAR Buf;`, `[case(A, B)] T X;`, `[default] T X;`,
++    // `[in, out]`, `[range(0, N)]`. `case`/`default` are keywords so they
++    // need explicit alternatives next to the generic `name(args)` entry.
++    midl_attribute_list: $ => seq(
++      '[',
++      commaSep1($._midl_attribute),
++      ']',
++    ),
++    _midl_attribute: $ => choice(
++      'default',
++      seq(choice('case', $.identifier), optional($.macro_argument_list)),
++    ),
++
+     field_declaration: $ => seq(
++      repeat($.midl_attribute_list),
+       $._declaration_specifiers,
+       optional($._field_declaration_declarator),
+       optional($.attribute_specifier),
+@@ -751,10 +1105,37 @@
  
      variadic_parameter: _ => '...',
  
@@ -615,7 +688,15 @@
          $.compound_statement,
        ),
        ')',
-@@ -802,6 +1142,14 @@
+@@ -766,6 +1147,7 @@
+     ),
+ 
+     parameter_declaration: $ => seq(
++      repeat($.midl_attribute_list),
+       $._declaration_specifiers,
+       optional(field('declarator', choice(
+         $._declarator,
+@@ -802,6 +1184,14 @@
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,
@@ -630,7 +711,7 @@
      ),
  
      _top_level_statement: $ => choice(
-@@ -849,6 +1197,22 @@
+@@ -849,6 +1239,22 @@
      )),
  
      else_clause: $ => seq('else', $.statement),
@@ -653,7 +734,7 @@
  
      switch_statement: $ => seq(
        'switch',
-@@ -1003,22 +1367,44 @@
+@@ -1003,22 +1409,44 @@
        $.parenthesized_expression,
      ),
  
@@ -714,7 +795,7 @@
      )),
  
      pointer_expression: $ => prec.left(PREC.CAST, seq(
-@@ -1053,16 +1439,49 @@
+@@ -1053,16 +1481,49 @@
          ['>>', PREC.SHIFT],
        ];
  
@@ -771,7 +852,7 @@
      update_expression: $ => {
        const argument = field('argument', $.expression);
        const operator = field('operator', choice('--', '++'));
-@@ -1143,6 +1562,36 @@
+@@ -1143,6 +1604,36 @@
        ')',
      )),
  
@@ -808,7 +889,7 @@
      gnu_asm_qualifier: _ => choice(
        'volatile',
        '__volatile__',
-@@ -1197,7 +1646,57 @@
+@@ -1197,7 +1688,57 @@
      extension_expression: $ => seq('__extension__', $.expression),
  
      // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
@@ -827,7 +908,7 @@
 +    // `SWAP(const char *, ...)`, `M(unsigned int, x)`. Restricted to
 +    // primitive_type and sized_type_specifier so `T *` never competes
 +    // with `a * b` on the identifier-expression path.
-+    _argument_list_type: $ => seq(
++    _argument_list_type: $ => prec.dynamic(-1, seq(
 +      repeat($.type_qualifier),
 +      choice(
 +        $.primitive_type,
@@ -837,7 +918,7 @@
 +        $.enum_specifier,
 +      ),
 +      repeat('*'),
-+    ),
++    )),
 +
 +    // Free-atom stream: real arguments, preproc blocks/directives and
 +    // separator commas interleave in any order. `#define`/`#undef`
@@ -867,7 +948,7 @@
  
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
-@@ -1216,18 +1715,47 @@
+@@ -1216,18 +1757,47 @@
  
      parenthesized_expression: $ => seq(
        '(',
@@ -921,7 +1002,7 @@
        '}',
      ),
  
-@@ -1246,6 +1774,15 @@
+@@ -1246,6 +1816,15 @@
          ':',
          field('value', choice($.expression, $.initializer_list)),
        ),
@@ -937,7 +1018,7 @@
      ),
  
      subscript_designator: $ => seq('[', $.expression, ']'),
-@@ -1296,14 +1833,19 @@
+@@ -1296,14 +1875,19 @@
  
      // Must concatenate at least 2 nodes, one of which must be a string_literal.
      // Identifier is added to parse macros that are strings, like PRIu64.

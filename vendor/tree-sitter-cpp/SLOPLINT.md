@@ -225,9 +225,22 @@ reproduced on real code. Every repro below was first accepted by
   literal list (`FAR`, `NEAR`, `_far`, `_near`, `__far`, `__near`,
   `__huge`, `_huge`); WINAPI/NTAPI/APIENTRY already live in
   `macro_attribute`, so they are reused, not duplicated into
-  `ms_call_modifier`. Known loss: `typedef CONST STRING* X` (unknown
-  macro + unknown type) stays an error — genuinely ambiguous without a
-  preprocessor.
+  `ms_call_modifier`.
+- Win32 SDK headers (ntdll.h family, all through the shared C base):
+  `_type_definition_type`'s pre-type qualifier slot takes a bare
+  `_typedef_macro_qualifier` (identifier, no argument list) so
+  `typedef CONST char *PCSZ` parses while `typedef VOID (*P)(T)` keeps
+  `(*P)` out of the qualifier's argument list; `type_definition` gains a
+  full no-declarator alternate for `typedef enum X {...};` under `#if`;
+  `midl_attribute_list` leads `field_declaration` (in this grammar) and
+  `parameter_declaration` (inherited) and stands alone in
+  `_field_declaration_list_item` for the `#ifdef MIDL_PASS` bracket
+  pattern; `struct_specifier`'s named branch accepts a `': public Base'`
+  clause for `#ifdef __cplusplus` shared headers; `_argument_list_real`
+  gains `$._argument_list_type` and `$._argument_list_operator` (dropping
+  the now-redundant bare `$.primitive_type`), and the base's
+  `_argument_list_type` carries `prec.dynamic(-1)` so `int (*F)(int)`
+  keeps the declarator read over `call(*F, (int))`.
 - New conflicts for the Qt rules and the generic fallbacks:
   `argument_list`/`sized_type_specifier`/`expression`/
   `concatenated_string`/`_string`/`template_type`/`template_function`
@@ -291,7 +304,12 @@ compilers reject them too: `enum : int;` without a body, `__has_include`
 outside a preprocessing directive, `new (int*)[n]` (array bound after a
 parenthesized type id). `T &s(x);` still reads as a function declaration,
 as before; only a member access, a call, or a non-type argument in the
-parens steers it to an initialized declaration.
+parens steers it to an initialized declaration. `WOW64_POINTER(TYPE)
+name[N]`-style fields (`MACRO(TYPE) declarator`) stay errors under this
+grammar: a `macro_type_specifier` alternative inside `field_declaration`
+parsed them but regressed `= delete`/`= default` members to MISSING
+identifiers, so the variant stays out; the C grammar accepts the same
+member and sloplint parses most affected headers as C anyway.
 
 ## Corpus results
 
@@ -303,9 +321,12 @@ parens steers it to an initialized declaration.
 - The original 36 cases in `test/corpus/sloplint_*.txt` contain 32 repros
   and 4 controls. The published parser fails those 32 repros and passes
   the 4 controls.
-- `tree-sitter test --debug-build` passes all 41 local cases, including
-  five foreach regressions for body ownership and iterator forms.
-- Total with the patch: 220 of 220.
+- This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
+  corpus is not vendored): 12 files, 68 cases, all passing with the patch
+  (`tree-sitter test` reports 68/68). The latest additions cover the
+  Win32 SDK cluster: typedef qualifier macros, function-pointer typedefs
+  with SAL-annotated parameters, MIDL brackets, declaratorless typedefs
+  inside `#if`, and `#ifdef`-guarded constructs.
 
 ## Sweep result
 

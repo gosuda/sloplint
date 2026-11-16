@@ -2858,6 +2858,10 @@
           "named": true
         },
         {
+          "type": "midl_attribute_list",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -2910,6 +2914,10 @@
         },
         {
           "type": "macro_declaration",
+          "named": true
+        },
+        {
+          "type": "midl_attribute_list",
           "named": true
         },
         {
@@ -4668,6 +4676,25 @@
     }
   },
   {
+    "type": "midl_attribute_list",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "macro_argument_list",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "ms_asm_block",
     "named": true,
     "fields": {},
@@ -5229,6 +5256,10 @@
           "named": true
         },
         {
+          "type": "midl_attribute_list",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -5737,6 +5768,10 @@
           "named": true
         },
         {
+          "type": "midl_attribute_list",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -5921,6 +5956,10 @@
           "named": true
         },
         {
+          "type": "midl_attribute_list",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -6073,6 +6112,10 @@
         },
         {
           "type": "macro_access_label",
+          "named": true
+        },
+        {
+          "type": "midl_attribute_list",
           "named": true
         },
         {
@@ -6328,6 +6371,10 @@
           "named": true
         },
         {
+          "type": "midl_attribute_list",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -6509,6 +6556,10 @@
         },
         {
           "type": "macro_access_label",
+          "named": true
+        },
+        {
+          "type": "midl_attribute_list",
           "named": true
         },
         {
@@ -8142,7 +8193,7 @@
     "fields": {
       "declarator": {
         "multiple": true,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "_type_declarator",
@@ -8167,6 +8218,10 @@
       "types": [
         {
           "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         },
         {

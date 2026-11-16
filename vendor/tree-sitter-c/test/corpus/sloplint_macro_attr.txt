@@ -245,10 +245,10 @@ typedef CONST STRING* PCOEM_STRING;
       (return_statement
         (identifier))))
   (type_definition
+    (macro_qualifier
+      (identifier))
     type: (type_identifier)
     declarator: (pointer_declarator
-      (macro_qualifier
-        (identifier))
       declarator: (type_identifier))))
 
 ================================================================================

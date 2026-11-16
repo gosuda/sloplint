@@ -1810,6 +1810,10 @@
           "named": true
         },
         {
+          "type": "midl_attribute_list",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -1838,6 +1842,10 @@
         },
         {
           "type": "macro_declaration",
+          "named": true
+        },
+        {
+          "type": "midl_attribute_list",
           "named": true
         },
         {
@@ -2896,6 +2904,25 @@
     }
   },
   {
+    "type": "midl_attribute_list",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "macro_argument_list",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "ms_asm_block",
     "named": true,
     "fields": {},
@@ -3091,6 +3118,10 @@
         },
         {
           "type": "macro_qualifier",
+          "named": true
+        },
+        {
+          "type": "midl_attribute_list",
           "named": true
         },
         {
@@ -3530,6 +3561,10 @@
           "named": true
         },
         {
+          "type": "midl_attribute_list",
+          "named": true
+        },
+        {
           "type": "parameter_declaration",
           "named": true
         },
@@ -3714,6 +3749,10 @@
           "named": true
         },
         {
+          "type": "midl_attribute_list",
+          "named": true
+        },
+        {
           "type": "parameter_declaration",
           "named": true
         },
@@ -3866,6 +3905,10 @@
         },
         {
           "type": "macro_declaration",
+          "named": true
+        },
+        {
+          "type": "midl_attribute_list",
           "named": true
         },
         {
@@ -4121,6 +4164,10 @@
           "named": true
         },
         {
+          "type": "midl_attribute_list",
+          "named": true
+        },
+        {
           "type": "parameter_declaration",
           "named": true
         },
@@ -4302,6 +4349,10 @@
         },
         {
           "type": "macro_declaration",
+          "named": true
+        },
+        {
+          "type": "midl_attribute_list",
           "named": true
         },
         {
@@ -4612,11 +4663,19 @@
           "named": true
         },
         {
+          "type": "identifier",
+          "named": true
+        },
+        {
           "type": "macro_qualifier",
           "named": true
         },
         {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "type_identifier",
           "named": true
         }
       ]
@@ -4841,7 +4900,7 @@
     "fields": {
       "declarator": {
         "multiple": true,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "_type_declarator",
@@ -4866,6 +4925,10 @@
       "types": [
         {
           "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         },
         {
