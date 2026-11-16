@@ -432,3 +432,57 @@ void g(T<A, U<B>, C> x) { }
                 (type_identifier))))
           (identifier))))
     (compound_statement)))
+
+================================================================================
+Operator-token macro argument sequences (KDBINDINGS_DEFINE_*)
+================================================================================
+
+namespace KDBindings {
+KDBINDINGS_DEFINE_BINARY_OP(==)
+KDBINDINGS_DEFINE_BINARY_OP(!=)
+KDBINDINGS_DEFINE_BINARY_OP(&)
+KDBINDINGS_DEFINE_BINARY_OP(^)
+KDBINDINGS_DEFINE_BINARY_OP(|)
+KDBINDINGS_DEFINE_BINARY_OP(&&)
+KDBINDINGS_DEFINE_BINARY_OP(||)
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (macro_declaration (identifier) (macro_argument_list))
+      (macro_declaration (identifier) (macro_argument_list))
+      (macro_declaration (identifier) (macro_argument_list))
+      (macro_declaration (identifier) (macro_argument_list))
+      (macro_declaration (identifier) (macro_argument_list))
+      (macro_declaration (identifier) (macro_argument_list))
+      (macro_declaration (identifier) (macro_argument_list)))))
+
+================================================================================
+decltype functional-cast brace init
+================================================================================
+
+void f() {
+  auto i = decltype(i){0};
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (placeholder_type_specifier (auto))
+        (init_declarator
+          (identifier)
+          (compound_literal_expression
+            (decltype (identifier))
+            (initializer_list
+              (number_literal))))))))

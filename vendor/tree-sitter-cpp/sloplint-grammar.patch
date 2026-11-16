@@ -1,5 +1,5 @@
 --- a/grammar.js	2026-11-16 15:38:12.089278171 +0000
-+++ b/grammar.js	2026-11-16 19:18:14.824794540 +0000
++++ b/grammar.js	2026-11-16 19:27:16.034595512 +0000
 @@ -58,6 +58,44 @@
    ],
  
@@ -279,7 +279,7 @@
        )),
        optional($.attribute_specifier),
        ';',
-@@ -580,6 +718,205 @@
+@@ -580,6 +718,214 @@
        'protected',
      ),
  
@@ -354,9 +354,12 @@
 +      optional(choice($.argument_list, $.macro_argument_list)),
 +      ),
 +      // Generic fallback for macro names outside the literal list
-+      // (serialize/test/register macros, vendor markers). Dynamic -1:
-+      // real items win; this catches bare NAME / NAME(...) / NAME(...);
-+      // in class bodies and guarded blocks where nothing else parses.
++      // (serialize/test/register macros, vendor markers). Dynamic +2:
++      // real named items still win, but this must beat the
++      // abstract-declarator reinterpretation of `NAME(&)`/`NAME(^)`
++      // and error-tolerant `X == Y(...)` binary expressions — inside
++      // declaration_list a bare NAME(args) call is far more often a
++      // declaration macro than an unnamed-reference declaration.
 +      prec.dynamic(-1, seq(
 +        $.identifier,
 +        optional(choice($.argument_list, $.macro_argument_list)),
@@ -404,6 +407,12 @@
 +        '<=',
 +        '>=',
 +        '||',
++        '^',
++        '<<=',
++        '>>=',
++        '->*',
++        '.*',
++        'operator',
 +        'const',
 +        'noexcept',
 +      )),
@@ -485,7 +494,7 @@
      _declarator: ($, original) => choice(
        original,
        $.reference_declarator,
-@@ -807,6 +1144,9 @@
+@@ -807,6 +1153,9 @@
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
@@ -495,7 +504,7 @@
      ),
  
      switch_statement: $ => seq(
-@@ -968,10 +1308,18 @@
+@@ -968,10 +1317,18 @@
        ']',
      ),
  
@@ -518,7 +527,7 @@
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1339,15 @@
+@@ -991,9 +1348,15 @@
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -537,7 +546,7 @@
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +1361,7 @@
+@@ -1007,7 +1370,7 @@
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -546,7 +555,7 @@
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +1369,7 @@
+@@ -1015,6 +1378,7 @@
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -554,16 +563,16 @@
        )),
      ),
  
-@@ -1230,7 +1585,7 @@
+@@ -1230,7 +1594,7 @@
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
 -        field('type', choice($._class_name, $.primitive_type)),
-+        field('type', choice($._class_name, $.primitive_type, $.dependent_type)),
++        field('type', choice($._class_name, $.primitive_type, $.dependent_type, $.decltype)),
          field('value', $.initializer_list),
        ),
      ),
-@@ -1256,6 +1611,7 @@
+@@ -1256,6 +1620,7 @@
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -571,7 +580,7 @@
        )),
      ),
  
-@@ -1342,6 +1698,25 @@
+@@ -1342,6 +1707,25 @@
  
      this: _ => 'this',
  

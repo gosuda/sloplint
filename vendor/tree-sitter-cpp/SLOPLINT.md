@@ -90,6 +90,18 @@ reproduced on real code. Every repro below was first accepted by
   `[$._linkage_guard, $.preproc_ifdef]`. The rule covers the shared C/C++
   header idiom where `extern "C" {` opens inside one conditional block and
   `}` closes inside a later one.
+- Operator-token macro arguments (`KDBINDINGS_DEFINE_BINARY_OP(==)`,
+  `(^)`, `(&&)`, `X(...)X(...)X(...)` sequences): `macro_argument_list`
+  gained `^`, `<<=`, `>>=`, `->*`, `.*`, `operator`. A missing token
+  there killed the macro path mid-sequence and let error-tolerant
+  `X & Y(...)` binary expressions win whole lines.
+- `decltype(x){args}` functional-cast brace init (`auto i =
+  decltype(n){0}`): `compound_literal_expression`'s type choice gained
+  `decltype`.
+- Known upstream gap (queued, not fixed): comparison operators like
+  `>=` inside template argument lists
+  (`enable_if_t<sizeof...(Ts) >= 1>`) — the `>`-close token steals the
+  lex; `(...)` around the expression works.
 - Attribute-like declaration macros: the C base gains `macro_attribute`, a
   literal enumeration of widespread calling-convention, storage and
   compiler-attribute macros (`__IO`, `WINAPI`, `VKAPI_ATTR`/`VKAPI_CALL`,

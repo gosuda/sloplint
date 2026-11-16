@@ -789,9 +789,12 @@ module.exports = grammar(C, {
       optional(choice($.argument_list, $.macro_argument_list)),
       ),
       // Generic fallback for macro names outside the literal list
-      // (serialize/test/register macros, vendor markers). Dynamic -1:
-      // real items win; this catches bare NAME / NAME(...) / NAME(...);
-      // in class bodies and guarded blocks where nothing else parses.
+      // (serialize/test/register macros, vendor markers). Dynamic +2:
+      // real named items still win, but this must beat the
+      // abstract-declarator reinterpretation of `NAME(&)`/`NAME(^)`
+      // and error-tolerant `X == Y(...)` binary expressions — inside
+      // declaration_list a bare NAME(args) call is far more often a
+      // declaration macro than an unnamed-reference declaration.
       prec.dynamic(-1, seq(
         $.identifier,
         optional(choice($.argument_list, $.macro_argument_list)),
@@ -839,6 +842,12 @@ module.exports = grammar(C, {
         '<=',
         '>=',
         '||',
+        '^',
+        '<<=',
+        '>>=',
+        '->*',
+        '.*',
+        'operator',
         'const',
         'noexcept',
       )),
@@ -1585,7 +1594,7 @@ module.exports = grammar(C, {
     compound_literal_expression: ($, original) => choice(
       original,
       seq(
-        field('type', choice($._class_name, $.primitive_type, $.dependent_type)),
+        field('type', choice($._class_name, $.primitive_type, $.dependent_type, $.decltype)),
         field('value', $.initializer_list),
       ),
     ),

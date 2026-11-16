@@ -1625,6 +1625,10 @@
         "required": true,
         "types": [
           {
+            "type": "decltype",
+            "named": true
+          },
+          {
             "type": "dependent_type",
             "named": true
           },

@@ -4477,6 +4477,30 @@
               },
               {
                 "type": "STRING",
+                "value": "^"
+              },
+              {
+                "type": "STRING",
+                "value": "<<="
+              },
+              {
+                "type": "STRING",
+                "value": ">>="
+              },
+              {
+                "type": "STRING",
+                "value": "->*"
+              },
+              {
+                "type": "STRING",
+                "value": ".*"
+              },
+              {
+                "type": "STRING",
+                "value": "operator"
+              },
+              {
+                "type": "STRING",
                 "value": "const"
               },
               {
@@ -11400,6 +11424,10 @@
                   {
                     "type": "SYMBOL",
                     "name": "dependent_type"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "decltype"
                   }
                 ]
               }
