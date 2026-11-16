@@ -60,6 +60,12 @@ module.exports = grammar(C, {
   conflicts: $ => [
     [$._linkage_guard, $.preproc_if],
     [$._linkage_guard, $.preproc_ifdef],
+    // qt_foreach's declaration specifiers and qt_statement_macro's argument
+    // soup can both consume `Q_FOREACH (const ...`: dynamic precedence on
+    // qt_foreach picks the loop parse whenever a real declarator follows.
+    [$.type_qualifier, $.macro_argument_list],
+    [$.type_specifier, $.macro_argument_list],
+    [$.type_specifier, $.expression, $.macro_argument_list],
     // C
     [$.type_specifier, $._declarator],
     [$.type_specifier, $.expression],
@@ -757,6 +763,23 @@ module.exports = grammar(C, {
       $.expression_statement,
     )),
 
+    // `Q_FOREACH (type var, container) stmt` / `BOOST_FOREACH` / Qt's
+    // keyword-free `foreach` are range-for loops in disguise: parse them
+    // with a declarator and a body field so the aliased `for_range_loop`
+    // node binds the iterator name and the body counts for nesting depth.
+    // When the item is predeclared (`Q_FOREACH (item, list)`) the
+    // declaration specifiers fail and qt_statement_macro parses the call.
+    qt_foreach: $ => prec.dynamic(1, seq(
+      choice('Q_FOREACH', 'BOOST_FOREACH', 'foreach'),
+      '(',
+      $._declaration_specifiers,
+      field('declarator', $._declarator),
+      ',',
+      field('right', choice($.expression, $.initializer_list)),
+      ')',
+      field('body', $.statement),
+    )),
+
     // Qt statement macros are conventionally written without a trailing
     // semicolon (Q_UNUSED(parent) before the next statement). argument_list
     // fails on Q_FOREACH's `type var` argument, so accept the token soup
@@ -767,7 +790,7 @@ module.exports = grammar(C, {
       field('name', choice(
         'Q_UNUSED', 'Q_ASSERT', 'Q_ASSERT_X', 'Q_VERIFY', 'Q_VERIFY_X',
         'Q_CHECK_PTR', 'Q_UNREACHABLE', 'Q_FALLTHROUGH',
-        'QT_REQUIRE_VERSION', 'Q_FOREACH',
+        'QT_REQUIRE_VERSION', 'Q_FOREACH', 'BOOST_FOREACH', 'foreach',
       )),
       choice($.argument_list, $.macro_argument_list),
       optional(';'),
@@ -1028,6 +1051,7 @@ module.exports = grammar(C, {
       $.throw_statement,
       $.emit_statement,
       $.qt_statement_macro,
+      alias($.qt_foreach, $.for_range_loop),
     ),
 
     switch_statement: $ => seq(

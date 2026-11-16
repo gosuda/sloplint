@@ -404,12 +404,11 @@ void f() {
       (qt_statement_macro
         (argument_list
           (identifier)))
-      (qt_statement_macro
-        (macro_argument_list
-          (identifier)
-          (identifier)
-          (identifier)))
-      (if_statement
-        condition: (condition_clause
-          value: (identifier))
-        consequence: (return_statement)))))
+      (for_range_loop
+        type: (type_identifier)
+        declarator: (identifier)
+        right: (identifier)
+        body: (if_statement
+          condition: (condition_clause
+            value: (identifier))
+          consequence: (return_statement))))))

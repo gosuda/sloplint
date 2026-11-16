@@ -6013,6 +6013,10 @@
         "required": true,
         "types": [
           {
+            "type": "BOOST_FOREACH",
+            "named": false
+          },
+          {
             "type": "QT_REQUIRE_VERSION",
             "named": false
           },
@@ -6050,6 +6054,10 @@
           },
           {
             "type": "Q_VERIFY_X",
+            "named": false
+          },
+          {
+            "type": "foreach",
             "named": false
           }
         ]
@@ -7951,6 +7959,10 @@
     "named": false
   },
   {
+    "type": "BOOST_FOREACH",
+    "named": false
+  },
+  {
     "type": "CALLBACK",
     "named": false
   },
@@ -9049,6 +9061,10 @@
   },
   {
     "type": "for",
+    "named": false
+  },
+  {
+    "type": "foreach",
     "named": false
   },
   {

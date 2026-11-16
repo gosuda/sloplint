@@ -54,6 +54,8 @@ mod php_scopes;
 mod powershell_scopes;
 #[path = "analyze_facts/python_scopes.rs"]
 mod python_scopes;
+#[path = "analyze_facts/qt_access.rs"]
+mod qt_access;
 #[path = "analyze_facts/ruby_scopes.rs"]
 mod ruby_scopes;
 #[path = "analyze_facts/rust_scopes.rs"]

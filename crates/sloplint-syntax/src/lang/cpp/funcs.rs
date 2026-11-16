@@ -46,9 +46,27 @@ pub(crate) fn is_public<'s>(
 }
 
 pub(crate) fn access_marker(cx: &Cx<'_, '_>, sib: Node<'_>) -> Option<bool> {
-    (sib.kind() == "access_specifier")
-        .then(|| trimmed(cx, sib))
-        .map(|label| label.starts_with("public") || label.starts_with("protected"))
+    if sib.kind() == "access_specifier" {
+        let label = trimmed(cx, sib);
+        return Some(label.starts_with("public") || label.starts_with("protected"));
+    }
+    // Generator macros inject declarations that end in an access specifier:
+    // Qt's Q_OBJECT/Q_GADGET leave `private:` in force and Unreal's
+    // GENERATED_*_BODY family leaves `public:`. Without that transition a
+    // member after Q_OBJECT in a `struct` reads public, and a member after
+    // GENERATED_BODY in a `class` reads private — both backwards.
+    if sib.kind() == "macro_declaration" {
+        return match sib.child(0).map(|name| name.kind()) {
+            Some("Q_OBJECT") | Some("Q_GADGET") => Some(false),
+            Some("GENERATED_BODY")
+            | Some("GENERATED_UCLASS_BODY")
+            | Some("GENERATED_USTRUCT_BODY")
+            | Some("GENERATED_UINTERFACE_BODY")
+            | Some("GENERATED_IINTERFACE_BODY") => Some(true),
+            _ => None,
+        };
+    }
+    None
 }
 
 pub(crate) fn in_anonymous(cx: &Cx<'_, '_>) -> bool {

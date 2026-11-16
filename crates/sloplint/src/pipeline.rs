@@ -211,7 +211,13 @@ fn analyze_file(
         role: pipe.roles.role(entry.rel.as_str()),
     };
     let analysis = analyze(parsers, &input, pipe.custom);
-    let world = WorldFacts::from_facts(&analysis.facts);
+    let mut world = WorldFacts::from_facts(&analysis.facts);
+    if analysis.partial {
+        // A rescued parse cannot prove the whole file is a pure barrel:
+        // excised constructs may have held the real declarations. World
+        // rules that judge completeness stay on per-declaration facts.
+        world.barrel = None;
+    }
     let text = SourceText {
         path: entry.rel.as_str(),
         source: probe.text,
@@ -236,10 +242,7 @@ fn analyze_file(
                 // they stay even when their anchor is line 1.
                 found.retain(|finding| {
                     finding.rule.starts_with("meta/")
-                        || (!finding.file_wide
-                            && !analysis.tainted.iter().any(|&(first, last)| {
-                                first <= finding.line && finding.line <= last
-                            }))
+                        || (!finding.file_wide && !analysis.is_tainted(finding.line))
                 });
             }
             if let Some(pos) = analysis.parse_error {

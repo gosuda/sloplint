@@ -90,9 +90,22 @@ pub struct Analysis<'s> {
     /// 1-based inclusive line ranges of the top-level constructs that
     /// contained an excised ERROR region. Only set when `partial`: findings
     /// inside them are judgments on truncated code and must be dropped.
+    /// Sorted and merged for `is_tainted`'s binary search.
     pub tainted: Vec<(u32, u32)>,
     pub custom_hits: Vec<CustomHit<'s>>,
     pub custom_capped: Vec<&'s str>,
+}
+
+impl Analysis<'_> {
+    /// Whether `line` lies inside a construct that rescue excised. The
+    /// ranges are sorted and merged at construction, so the check is a
+    /// binary search rather than a scan per finding.
+    pub fn is_tainted(&self, line: u32) -> bool {
+        let after = self.tainted.partition_point(|&(_, last)| last < line);
+        self.tainted
+            .get(after)
+            .is_some_and(|&(first, _)| first <= line)
+    }
 }
 
 pub fn analyze<'s>(
@@ -176,7 +189,7 @@ fn rescue_analysis<'s>(
             merge_comments(parsers, input, first_tree, &mut analysis);
             analysis.parse_error = Some(first_pos);
             analysis.partial = true;
-            analysis.tainted = tainted;
+            analysis.tainted = merge_ranges(tainted);
             return Some(analysis);
         }
     }
@@ -200,6 +213,24 @@ fn error_nodes<'t>(root: Node<'t>, errors: &mut Vec<Node<'t>>) {
             stack.push(child);
         }
     }
+}
+
+/// Sort and merge the tainted ranges so `Analysis::is_tainted` can binary
+/// search them: one entry per ERROR node would otherwise cost a linear scan
+/// per finding. Adjacent ranges merge too — excision drops everything in
+/// between anyway.
+fn merge_ranges(mut ranges: Vec<(u32, u32)>) -> Vec<(u32, u32)> {
+    ranges.sort_unstable();
+    let mut merged: Vec<(u32, u32)> = Vec::with_capacity(ranges.len());
+    for (first, last) in ranges {
+        match merged.last_mut() {
+            Some((_, prev_last)) if first <= prev_last.saturating_add(1) => {
+                *prev_last = (*prev_last).max(last);
+            }
+            _ => merged.push((first, last)),
+        }
+    }
+    merged
 }
 
 /// The line range of `node`'s top-level enclosing construct: everything the

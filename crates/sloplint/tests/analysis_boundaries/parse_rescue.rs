@@ -153,6 +153,39 @@ fn boundary_rescue_drops_file_wide_findings() {
 }
 
 #[test]
+fn boundary_rescued_file_does_not_count_as_barrel() {
+    let (_t, root) = tmp();
+    // Review-found world-rule miscount: `a.ts` holds one real re-export and
+    // one unparseable construct. Excision leaves a file that reads as a
+    // pure barrel re-exporting the barrel `b.ts` — but the excised bytes
+    // may have held real declarations, so the completeness judgment is
+    // unprovable and the chain finding must stay silent.
+    put(&root, "src/a.ts", "export * from './b';\n@@@###$$$\n");
+    put(&root, "src/b.ts", "export * from './c';\n");
+    put(&root, "src/c.ts", "export const value = 1;\n");
+    let r = run_ok(&super::RunOptions {
+        strictness: Some(super::Strictness::Standard),
+        mode: Some(super::Mode::Threshold),
+        rule_filter: super::filt(&["slop/barrel-file", "meta/*"]),
+        ..base(&root)
+    });
+    assert!(
+        r.findings
+            .iter()
+            .any(|f| &*f.rule == "meta/parse-error" && &*f.path == "src/a.ts"),
+        "the rescue must still report the excised region: {:?}",
+        r.findings
+    );
+    assert!(
+        !r.findings
+            .iter()
+            .any(|f| &*f.rule == "slop/barrel-file" && &*f.path == "src/a.ts"),
+        "a partially parsed file cannot be proven a pure barrel: {:?}",
+        r.findings
+    );
+}
+
+#[test]
 fn boundary_deeply_nested_error_does_not_overflow() {
     let (_t, root) = tmp();
     // Review-found recursion: an ERROR deep inside nested blocks must be
