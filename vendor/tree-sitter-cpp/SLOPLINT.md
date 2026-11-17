@@ -25,7 +25,14 @@ reproduced on real code. Every repro below was first accepted by
 
 ## Regenerating src/
 
-- Tool: tree-sitter-cli 0.27.1.
+- Tool: tree-sitter-cli 0.24.7 (`cargo install tree-sitter-cli --version
+  0.24.7 --locked`). 0.24.7 emits `LANGUAGE_VERSION` 14 and OLD-style
+  `TSFieldMapSlice` headers; a newer CLI (0.27.x) emits ABI 15 and
+  `TSMapSlice` headers — the generated `src/parser.c` and
+  `src/tree_sitter/*.h` must come from the SAME CLI version or the crate
+  fails to compile (`unknown type name 'TSFieldMapSlice'`). After
+  regenerating, purge `$XDG_CACHE_HOME/tree-sitter` — a stale cached
+  parser gives false greens.
 - The C++ `grammar.js` starts with `require('tree-sitter-c/grammar')`. For
   regeneration it resolves to a clone of
   https://github.com/tree-sitter/tree-sitter-c at tag v0.23.1 (commit
@@ -48,8 +55,9 @@ reproduced on real code. Every repro below was first accepted by
   `tree-sitter generate`, then `tree-sitter test`.
 - It rewrites `src/parser.c`, `src/grammar.json` and `src/node-types.json`.
   `src/scanner.c` is not generated and is untouched.
-- Regenerating the unpatched grammar with 0.27.1 already moves the parser
-  from ABI 14 to ABI 15. No node kind and no field is added or removed by
+- Regenerating the unpatched grammar with 0.27.x moves the parser from
+  ABI 14 to ABI 15; we stay on 0.24.7/ABI 14 for consistency. No node
+  kind and no field is added or removed by
   the patch. `node-types.json` gains the `guarded_linkage` node kind
   (`name` and `value` fields, same as `linkage_specification`) and the
   `macro_attribute` node kind, and keeps every other type and field.
@@ -288,6 +296,16 @@ reproduced on real code. Every repro below was first accepted by
   `operator<` idiom. `preprocIf`/`preprocessor` are inlined at the
   bottom of this file because the node_modules C base exports no
   helpers.
+- `guarded_class` does the same for a `#if`/`#else`-split class head
+  (`_guarded_class_head`: class/struct/union keyword, attributes, macro
+  qualifiers, name, optional `final`, optional `base_class_clause`,
+  inside `preproc_*_in_guarded_class` blocks) paired with the shared
+  `field_declaration_list` + `;` — the kddockwidgets
+  `#ifdef PYTHON_BINDINGS class X : public A #else class X : public B
+  #endif { }` idiom, where the two arms differ only in the base list.
+  It is registered in both `_top_level_item` and `_block_item` so the
+  form works inside namespace bodies (`declaration_list` items are
+  `_block_item`s) as well as at translation-unit level.
 - New conflicts for the Qt rules and the generic fallbacks:
   `argument_list`/`sized_type_specifier`/`expression`/
   `concatenated_string`/`_string`/`template_type`/`template_function`
@@ -356,13 +374,51 @@ clang++ with `-std=c++23`.
   The scope-prefixed `*` lives only inside
   `abstract_parenthesized_declarator` — putting it on
   `_abstract_declarator` made `delete [] p` ambiguous with a lambda
-  capture list. Named member-pointer variables (`int C::* p`) stay
-  errors: rare, and the scope prefix on `pointer_declarator` resurrects
-  the same ambiguity. A parameter list may also take a parenthesized
+  capture list. Named member-pointer declarators also parse:
+  `int C::* p;` worked already via `qualified_identifier`, and
+  `typedef void (C::*sb)(int);` works because `_type_declarator` gained
+  `qualified_identifier` and `_scope_resolution` accepts a plain
+  `_type_identifier` as its scope (needed because `dummy` inside the
+  parens lexes as `type_identifier`, not `identifier`). Trailing
+  qualifiers on the typedef also parse (`typedef void (C::*f)() const;`,
+  `noexcept`, `&`): `function_type_declarator` is overridden to take the
+  full `_function_declarator_seq` (parameters + cv/ref/noexcept/trailing
+  return) — the C base's version ends at the parameter list. A parameter
+  list may also take a parenthesized
   declarator (`T (&arr)[N]`, `T (*arr)[N]`) — the pre-type qualifier in
   a parameter is restricted to a bare identifier (`_parameter_specifiers`),
   so the `(` is never read as a macro argument list; `decltype` accepts a
   comma expression (`decltype(a, void())`).
+- Relational `>=` inside template arguments: `enable_if_t<sizeof...(Ts) >= 1>`,
+  `IC<int, sizeof(int) >= 4>`, `W<3 >= 2>`. The closing angle is
+  `token(prec(1, '>'))`, which outranks `>=` at lex time and splits it into
+  `>` `=`. `template_argument_list` gained a second alternative whose final
+  argument is `_template_relational_expression` closed by a further `>`.
+  `token.immediate('=')` confines the rejoin to a literally adjacent `>=`,
+  so `W<3> b = c` keeps the close read, and a declared
+  `_template_argument`/`_template_relational_argument` conflict lets GLR
+  compare both readings. The seed `_template_relational_argument`
+  (`expression`, `>` `=` rejoined as one `>=` operator leaf, operand)
+  emits a `binary_expression` with real `left`/`operator`/`right` fields,
+  and its operand is `_template_relational_operand` — unary-or-tighter
+  expressions plus binary chains whose operators outrank relational
+  (`* / % + - << >>`). Looser tails continue through the left-recursive
+  `_template_relational_binary`/`_conditional`/`_assignment` variants, so
+  `W<3 >= 2 && 0>` groups as `(3 >= 2) && 0` and `W<a >= b ? x : y>`
+  emits a real `conditional_expression` — matching C++ grouping exactly.
+  Residual: a `>=` argument only works in final position
+  (`X<a>=b, c>` still errors), and a spaced `3 > 2` still reads as
+  the close angle — matching C++, which rejects `W<3 > 2>` too.
+- Initializer value and the declaration's `;` carried inside preproc
+  arms: `T x =\n#if A v1;\n#else v2;\n#endif`. `declaration` gained a
+  second alternative ending in `_init_declarator_preproc` (aliased to
+  `init_declarator`), whose value is `preproc_if`/`preproc_ifdef`
+  `_in_init_declarator` — a new `preprocIf` suite whose arm items are
+  `expression ';'`, `preproc_def`, `preproc_call`, `preproc_null`. The
+  declarator is restricted to non-function forms (identifier,
+  qualified, pointer, reference, array, parenthesized): a `= #if`
+  initializer is never a function, and allowing function declarators
+  collided with guarded signatures and `= delete`/`= default`.
 
 ## Constructs known still failing
 
@@ -384,14 +440,15 @@ parens steers it to an initialized declaration.
   and 4 controls. The published parser fails those 32 repros and passes
   the 4 controls.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 15 files, 72 cases, all passing with the patch
-  (`tree-sitter test` reports 73/73). The latest additions cover the
+  corpus is not vendored): 19 files, 92 cases, all passing with the patch
+  (`tree-sitter test` reports 92/92). The latest additions cover the
   Win32 SDK cluster (typedef qualifier macros, function-pointer typedefs
   with SAL-annotated parameters, MIDL brackets, declaratorless typedefs
   inside `#if`, `#ifdef`-guarded constructs), bare macro sentinels before
   preproc blocks, `NS_BEGIN`/`NS_END` namespace-macro pairs, parenthesized
-  declarator parameters, `decltype` comma expressions, and member-pointer
-  function types `T (C::*)(Args...)`.
+  declarator parameters, `decltype` comma expressions, member-pointer
+  function types `T (C::*)(Args...)`, named member-pointer typedefs, and
+  `#if`/`#else`-split class heads (`guarded_class`).
 
 ## Sweep result
 
@@ -463,11 +520,32 @@ enumeration of `macro_attribute` costs most of the size growth.
 - **`concatenated_string`** accepts `identifier` (macro names) at
   either edge of the literal chain — `"lit" MACRO`, `MACRO "lit"`, and
   interleaved forms — plus `raw_string_literal` anywhere in the chain.
+  The generic `call_expression + call_expression` arm was removed:
+  with it present, three or more consecutive `NAME(ident)` lines at
+  namespace/file scope (the nghttp2/kdbindings/7zip declaration-macro
+  run idiom — 61+ corpus files) always read as a string concat plus a
+  MISSING `;` instead of a run of `macro_declaration`s. The trade-off
+  is that adjacent call-with-args concatenation (`XSTR(A) XSTR(B)`)
+  no longer parses; the parse-rescue pipeline still analyses the
+  surrounding code. Restricting the arm to known stringify-macro names
+  was tried and reverted: a literal `'XSTR'` lexes as a keyword and
+  shadows the identifier in every expression position.
 
 - **Statement fragments inside preproc blocks** — inherited from the
   base: `dangling_else` (cpp override carries `constexpr` +
   `condition_clause`) and `dangling_label` cover `} else #endif { }`
   and `#ifdef X fin: #endif stmt`.
+
+- **A whole `#if`/`#ifdef` group as an unbraced statement body** —
+  `if (x) #ifdef MAC a(); #else b(); #endif` (also `while`/`do`/`for`/
+  `for_range_loop` bodies, `else` consequences and labels). The base
+  defines `_statement_or_preproc = choice($.statement, $.preproc_if,
+  $.preproc_ifdef)`; the cpp overrides (`if_statement`, `dangling_else`,
+  `while_statement`, `for_range_loop`) point their body slots at it.
+  Deliberately NOT added to `_non_case_statement`: a `preproc_if` is
+  already a direct `_block_item`, so adding it inside `statement` would
+  make every block-level `#ifdef` ambiguous (block-item read vs
+  statement-wrapped read). The body slots are unambiguous positions.
 
 - **Preproc inside expressions** — the base's mid-split rows on
   `binary_expression` are mirrored for the cpp-only operators; the
@@ -481,8 +559,10 @@ enumeration of `macro_attribute` costs most of the size growth.
   `value`/`argument` field is `repeat(choice($.preproc_arg,
   $.comment))`), and `macro_argument_list` accepts real expressions
   (`$.pointer_expression`, `$.unary_expression`, `$.sizeof_expression`),
-  assignment/suffix operators, `[`/`]`, and nested
-  `$.macro_argument_list`.
+  assignment/suffix operators, `[`/`]`, `{`/`}` (brace-init args such
+  as `M(name, T{})` / `M({a, b})` — the KDBindings `make_node` idiom),
+  and nested `$.macro_argument_list`. The same brace atoms are added
+  to `vendor/tree-sitter-c`'s own `macro_argument_list`.
 
 - **Access-modifier macros** (`JSON_PRIVATE_UNLESS_TESTED:`-style names
   in `private:`/`protected:` position) parse as `macro_access_label` in
@@ -510,9 +590,15 @@ enumeration of `macro_attribute` costs most of the size growth.
     start with these tokens, so argument position stays unambiguous.
 - **`macro_qualifier`/`macro_attribute` in `_function_postfix`** —
   `repeat1(choice($.virtual_specifier, $.macro_attribute,
-  $.macro_qualifier))`, so member declarations with a trailing
-  attribute macro (`int f() const FLATBUFFERS_OVERRIDE;`) parse on the
-  declaration path, not only on definitions.
+  $._macro_qualifier_bare))`. The qualifier slot takes the base
+  grammar's bare-identifier form, not the arg-carrying
+  `macro_qualifier`: with args allowed, `M(f3) M(f4) M(f5)` read as
+  one function declarator followed by qualifier macros, starving the
+  macro-declaration read. The base's `_macro_qualifier_bare` carries
+  `prec.dynamic(-1)` and must not be redefined here without it — a
+  zero-precedence version wins against `type + identifier` reads
+  inside `_parameter_specifiers` (`Foo bar` params degrade to
+  `macro_qualifier + type_identifier`).
 - **`macro_declaration` args are `macro_argument_list` only** —
   `optional($.macro_argument_list)` in both the literal-name and
   generic fallback forms (and in `qt_statement_macro`). Sharing
@@ -536,7 +622,12 @@ enumeration of `macro_attribute` costs most of the size growth.
   still loses to the `init_declarator` reinterpretation
   (`f = T(T(&arr))[N]`); `return x\n#endif\n? a : b;` expressions
   split across `#if` branches still error; a handful of generated
-  headers carry a lone stray-brace ERROR that parse-rescue excises.
+  headers carry a lone stray-brace ERROR that parse-rescue excises;
+  `XSTR(A) XSTR(B)`-style adjacent call concatenation is a documented
+  loss (see `concatenated_string` above); bare `>=`/`>` inside
+  template arguments (`enable_if_t<sizeof(T) >= 1>`) stays
+  unparseable — `token(prec(1, '>'))` splits the operator at lex time
+  and a context-free fix needs an external scanner.
 
 ## Packed generated parser
 
@@ -550,3 +641,20 @@ build-dependency. After every regen, refresh the packed copy:
 ```
 gzip -9 -c src/parser.c > src/parser.c.gz
 ```
+- **`#` lines with no directive name** — inherited from the C base via
+  `sloplint-c-base.patch`: `preproc_null` covers the null directive and the
+  `# comment` banner idiom (heavy in boost `.hpp`/`.ipp` headers — the
+  largest single parse-error class in the corpus recount). Same rule and
+  rationale as in the C grammar's SLOPLINT.md.
+- **Operator tokens as preproc call arguments** — `preproc_argument_list`
+  gains the same comparison-operator item arm as the C grammar:
+  `BOOST_WORKAROUND(BOOST_MSVC, < 1300)` and `CHECK(x, ==, y)`. The boost
+  `.hpp` headers were the largest remaining parse-error class in the
+  corpus recount.
+- **Directive terminators tolerate trailing blanks** — inherited from the
+  C base via `sloplint-c-base.patch`: the `token.immediate(/\r?\n/)` at
+  the end of `preproc_include`/`preproc_def`/`preproc_function_def`/
+  `preproc_call` widens to `/[ \t]*\r?\n/`, so a directive line ending in
+  blanks no longer eats the following `#endif` as `preproc_arg`. Same
+  rule and rationale as in the C grammar's SLOPLINT.md (the
+  kddockwidgets_export.h whole-file ERROR class).

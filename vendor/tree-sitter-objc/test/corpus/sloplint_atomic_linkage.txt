@@ -1,0 +1,128 @@
+==================
+_Atomic (type) specifier in ivars, method params and properties
+==================
+
+@interface PWDebugSwitchOption : NSObject
+{
+@private
+    _Atomic (BOOL)* target_;
+    NSString*       defaultsKey_;
+}
+
+- (instancetype) initWithTarget:(_Atomic (BOOL)*)target defaultValue:(BOOL)value;
+
+@property (nonatomic, readonly)    _Atomic (BOOL)*  target;
+@end
+
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    superclass: (identifier)
+    (instance_variables
+      (instance_variable
+        (visibility_specification))
+      (instance_variable
+        (struct_declaration
+          (macro_type_specifier
+            name: (identifier)
+            type: (type_descriptor
+              type: (typedefed_specifier)))
+          (struct_declarator
+            (pointer_declarator
+              declarator: (identifier)))))
+      (instance_variable
+        (struct_declaration
+          (type_identifier)
+          (struct_declarator
+            (pointer_declarator
+              declarator: (identifier))))))
+    (method_declaration
+      (method_type
+        (type_name
+          (type_identifier)))
+      (identifier)
+      (method_parameter
+        (method_type
+          (type_name
+            (macro_type_specifier
+              name: (identifier)
+              type: (type_descriptor
+                type: (typedefed_specifier)))
+            (abstract_pointer_declarator)))
+        (identifier))
+      (identifier)
+      (method_parameter
+        (method_type
+          (type_name
+            (typedefed_specifier)))
+        (identifier)))
+    (property_declaration
+      (property_attributes_declaration
+        (property_attribute
+          (identifier))
+        (property_attribute
+          (identifier)))
+      (struct_declaration
+        (macro_type_specifier
+          name: (identifier)
+          type: (type_descriptor
+            type: (typedefed_specifier)))
+        (struct_declarator
+          (pointer_declarator
+            declarator: (identifier)))))))
+
+==================
+extern "C" braces split across preproc guards
+==================
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+BOOL isExceptionExpected (NSException* exception);
+
+#ifdef __cplusplus
+}
+#endif
+
+---
+
+(translation_unit
+  (guarded_linkage
+    name: (identifier)
+    value: (string_literal
+      (string_content))
+    (declaration
+      type: (typedefed_specifier)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (parameter_declaration
+            type: (type_identifier)
+            declarator: (pointer_declarator
+              declarator: (identifier))))))
+    name: (identifier)))
+
+================================================================================
+Bare top-level macro calls (DEBUG_OPTION_*)
+================================================================================
+
+DEBUG_OPTION_DECLARE_GROUP (PWFoundationDebugGroup)
+DEBUG_OPTION_DECLARE_SWITCH_D (PWDisableTimeoutsInTests)
+DEBUG_OPTION_DECLARE_FLAG(OPTDebugX);
+
+---
+
+(translation_unit
+  (macro_declaration
+    (identifier)
+    (macro_argument_list (identifier)))
+  (macro_declaration
+    (identifier)
+    (macro_argument_list (identifier)))
+  (expression_statement
+    (call_expression
+      (identifier)
+      (argument_list (identifier)))))

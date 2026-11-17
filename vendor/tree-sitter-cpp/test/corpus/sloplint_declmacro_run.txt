@@ -16,3 +16,64 @@ munit_void_test_decl(test_nghttp2_bufs_reset)
     (identifier)
     (macro_argument_list
       (identifier))))
+
+========================================
+Runs of three or more argument-macro lines
+========================================
+
+KDBINDINGS_DECLARE_STD_FUNCTION(f1)
+KDBINDINGS_DECLARE_STD_FUNCTION(f2)
+KDBINDINGS_DECLARE_STD_FUNCTION(f3)
+KDBINDINGS_DECLARE_STD_FUNCTION(f4)
+KDBINDINGS_DECLARE_STD_FUNCTION(f5)
+
+---
+
+(translation_unit
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier)))
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier)))
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier)))
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier)))
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier))))
+
+========================================
+Brace-initialised and brace-list macro arguments
+========================================
+
+M(name, T{})
+M({a, b})
+KDBINDINGS_DECLARE_FUNCTION(abs, node_abs{})
+
+---
+
+(translation_unit
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier)
+      (identifier)))
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier)
+      (identifier)))
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier)
+      (identifier))))

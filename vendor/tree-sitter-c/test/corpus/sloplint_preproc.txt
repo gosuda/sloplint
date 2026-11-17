@@ -400,3 +400,206 @@ void f() {
                     (identifier)
                     (argument_list)))))))
         (compound_statement)))))
+
+================================================================================
+preproc group as an unbraced statement body (dangling if/while/for/do)
+================================================================================
+
+void f() {
+    if (!x)
+#ifdef MAC
+        a();
+#else
+        b();
+#endif
+    while (x)
+#ifdef MAC
+        y();
+#endif
+    for (;;)
+#ifdef MAC
+        z();
+#endif
+    do
+#ifdef MAC
+        w();
+#endif
+    while (x);
+    if (a) s1();
+    else
+#ifdef MAC
+        s2();
+#endif
+    if (c)
+#ifdef MAC
+        m();
+#endif
+    else n();
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (if_statement
+        (parenthesized_expression
+          (unary_expression
+            (identifier)))
+        (preproc_ifdef
+          (identifier)
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list)))
+          (preproc_else
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list))))))
+      (while_statement
+        (parenthesized_expression
+          (identifier))
+        (preproc_ifdef
+          (identifier)
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list)))))
+      (for_statement
+        (preproc_ifdef
+          (identifier)
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list)))))
+      (do_statement
+        (preproc_ifdef
+          (identifier)
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list))))
+        (parenthesized_expression
+          (identifier)))
+      (if_statement
+        (parenthesized_expression
+          (identifier))
+        (expression_statement
+          (call_expression
+            (identifier)
+            (argument_list)))
+        (else_clause
+          (preproc_ifdef
+            (identifier)
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list))))))
+      (if_statement
+        (parenthesized_expression
+          (identifier))
+        (preproc_ifdef
+          (identifier)
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list))))
+        (else_clause
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list))))))))
+
+================================================================================
+Null directive and `#`-comment lines (bare `#`, `# /* ... */`)
+================================================================================
+
+#
+# /* ****************************************************** */
+# * banner idiom                                            */
+# */
+#define A 1
+#if A
+int c(void);
+#endif
+#pragma whatever
+#warning hi
+int d(void) {
+#
+    return 0;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_null)
+  (preproc_null)
+  (preproc_null)
+  (preproc_null)
+  (preproc_def
+    (identifier)
+    (preproc_arg))
+  (preproc_if
+    (identifier)
+    (declaration
+      (primitive_type)
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (parameter_declaration
+            (primitive_type))))))
+  (preproc_call
+    (preproc_directive)
+    (preproc_arg))
+  (preproc_call
+    (preproc_directive)
+    (preproc_arg))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (preproc_null)
+      (return_statement
+        (number_literal)))))
+
+==================
+Comparison operator as a preproc call argument (BOOST_WORKAROUND)
+==================
+
+#if BOOST_WORKAROUND(BOOST_MSVC, < 1300)
+#  define OLD 1
+#endif
+#if CHECK(x, ==, y)
+int x;
+#endif
+
+---
+
+(translation_unit
+  (preproc_if
+    condition: (call_expression
+      function: (identifier)
+      arguments: (argument_list
+        (identifier)
+        (number_literal)))
+    (preproc_def
+      name: (identifier)
+      value: (preproc_arg)))
+  (preproc_if
+    condition: (call_expression
+      function: (identifier)
+      arguments: (argument_list
+        (identifier)
+        (identifier)))
+    (declaration
+      type: (primitive_type)
+      declarator: (identifier))))

@@ -3,7 +3,7 @@
 use sloplint_core::facts::{ImplRef, TypeDef, Visibility};
 use tree_sitter::Node;
 
-use super::funcs::in_anonymous;
+use super::funcs::{class_name_node, in_anonymous};
 use super::imports::scope_of;
 use crate::hooks::{
     Container, Cx, FileSetKind, TypeHead, any_named_child, child_by_field, has_child_kind,
@@ -22,6 +22,11 @@ pub(crate) fn declared_names<'a, 's>(cx: &'a Cx<'_, 's>) -> &'a [&'s str] {
             match node.kind() {
                 "class_specifier" | "struct_specifier" | "union_specifier" => {
                     if let Some(name) = child_by_field(node, "name") {
+                        names.push(text(cx, name));
+                    }
+                }
+                "guarded_class" => {
+                    if let Some(name) = class_name_node(node) {
                         names.push(text(cx, name));
                     }
                 }
@@ -70,6 +75,61 @@ pub(crate) fn class_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead
         container: Some(Container::Class {
             exported: !anon,
             implements: base.is_some(),
+        }),
+    })
+}
+
+/// `guarded_class` (`#if`/`#else`-split class head + shared body): the name and
+/// base clauses live inside the `preproc_*_in_guarded_class` arms, the members
+/// in a plain `field_declaration_list` sibling.
+pub(crate) fn guarded_class_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
+    let body = named_children(n)
+        .into_iter()
+        .find(|c| c.kind() == "field_declaration_list")?;
+    let name_node = class_name_node(n)?;
+    let anon = in_anonymous(cx);
+    let child_abstract = is_abstract(cx, body);
+    let mut impls = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    // Base clauses live only inside the preproc arms; a nested class in the
+    // shared body owns its own bases.
+    let mut stack: Vec<_> = named_children(n)
+        .into_iter()
+        .filter(|c| c.kind().ends_with("_in_guarded_class"))
+        .collect();
+    while let Some(node) = stack.pop() {
+        if node.kind() == "base_class_clause" {
+            for c in named_children(node) {
+                if let Some(found) = base_ref(cx, c, child_abstract)
+                    // Generic and plain spellings of one short name are
+                    // distinct bases: `Base<int>` vs `Base` must both survive,
+                    // because generic impls are filtered downstream and would
+                    // otherwise swallow the concrete one.
+                    && seen.insert((found.name, found.is_generic))
+                {
+                    impls.push(found);
+                }
+            }
+        }
+        stack.extend(named_children(node));
+    }
+    let public = !anon && !in_function(cx);
+    let implements = !impls.is_empty();
+    Some(TypeHead {
+        def: Some(TypeDef {
+            name: text(cx, name_node),
+            pos: pos_of(name_node),
+            visibility: if public {
+                Visibility::Exported
+            } else {
+                Visibility::Private
+            },
+            abstraction: child_abstract,
+        }),
+        impls,
+        container: Some(Container::Class {
+            exported: !anon,
+            implements,
         }),
     })
 }
@@ -137,6 +197,13 @@ pub(crate) fn named_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead
 pub(crate) fn alias_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     let mut current = child_by_field(n, "declarator")?;
     loop {
+        if current.kind() == "qualified_identifier" {
+            // Member-pointer declarators: `typedef void (C::*name)()` stores the
+            // typedef name inside the qualified name's `name` field; the scope
+            // is the class, not the alias.
+            current = child_by_field(current, "name")?;
+            continue;
+        }
         if current.kind() == "type_identifier" || current.kind() == "identifier" {
             let public = !in_anonymous(cx) && !in_function(cx);
             return Some(TypeHead {

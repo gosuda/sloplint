@@ -24,6 +24,8 @@ mod global_write_scope_end;
 mod global_write_shadow;
 #[path = "analyze_facts/go_block_bindings.rs"]
 mod go_block_bindings;
+#[path = "analyze_facts/guarded_class.rs"]
+mod guarded_class;
 #[path = "analyze_facts/guarded_linkage.rs"]
 mod guarded_linkage;
 #[path = "analyze_facts/has_value_return.rs"]
@@ -40,6 +42,8 @@ mod java_scopes;
 mod kotlin_scopes;
 #[path = "analyze_facts/macro_attr.rs"]
 mod macro_attr;
+#[path = "analyze_facts/member_pointer.rs"]
+mod member_pointer;
 #[path = "analyze_facts/objc_scopes.rs"]
 mod objc_scopes;
 #[path = "analyze_facts/ocaml_r_scopes.rs"]

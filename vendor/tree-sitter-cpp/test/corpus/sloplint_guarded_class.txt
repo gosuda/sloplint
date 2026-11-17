@@ -1,0 +1,59 @@
+================================================================================
+Class head split across #if/#else with different base lists
+================================================================================
+
+namespace QtWidgets {
+#ifdef PYTHON_BINDINGS
+class DOCKS_EXPORT DockWidget : public QWidget, public Core::DockWidgetViewInterface
+#else
+class DOCKS_EXPORT DockWidget : public QtWidgets::View<QWidget>, public Core::DockWidgetViewInterface
+#endif
+{
+    Q_OBJECT
+public:
+    void method();
+};
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (namespace_definition
+    name: (namespace_identifier)
+    body: (declaration_list
+      (guarded_class
+        (preproc_ifdef_in_guarded_class
+          name: (identifier)
+          (macro_attribute)
+          name: (type_identifier)
+          (base_class_clause
+            (access_specifier)
+            (type_identifier)
+            (access_specifier)
+            (qualified_identifier
+              scope: (namespace_identifier)
+              name: (type_identifier)))
+          alternative: (preproc_else
+            (macro_attribute)
+            name: (type_identifier)
+            (base_class_clause
+              (access_specifier)
+              (qualified_identifier
+                scope: (namespace_identifier)
+                name: (template_type
+                  name: (type_identifier)
+                  arguments: (template_argument_list
+                    (type_descriptor
+                      type: (type_identifier)))))
+              (access_specifier)
+              (qualified_identifier
+                scope: (namespace_identifier)
+                name: (type_identifier)))))
+        (field_declaration_list
+          (macro_declaration)
+          (access_specifier)
+          (field_declaration
+            type: (primitive_type)
+            declarator: (function_declarator
+              declarator: (field_identifier)
+              parameters: (parameter_list))))))))

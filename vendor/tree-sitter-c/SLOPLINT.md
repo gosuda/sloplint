@@ -22,11 +22,15 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
 
 ## Regenerating src/
 
-- Tool: tree-sitter-cli 0.27.1.
+- Tool: tree-sitter-cli 0.24.7 (`cargo install tree-sitter-cli --version
+  0.24.7 --locked`). The generated `src/parser.c` and `src/tree_sitter/*.h`
+  must come from the SAME CLI version (0.24.7 emits `TSFieldMapSlice`
+  headers, 0.27.x emits `TSMapSlice`) or the crate fails to compile.
+  After regenerating, purge `$XDG_CACHE_HOME/tree-sitter`.
 - Command, run in this directory: `tree-sitter generate`
 - It rewrites `src/parser.c`, `src/grammar.json`, `src/node-types.json` and
   `src/tree_sitter/*.h`. There is no `src/scanner.c`.
-- Regenerating the unpatched grammar with 0.27.1 changes `src/parser.c` by 15 bytes
+- Regenerating the unpatched grammar with 0.27.x changes `src/parser.c` by 15 bytes
   (3,872,012 to 3,872,027) and refreshes `src/tree_sitter/array.h`. It adds or removes
   no node kind and no field.
 - Run `tree-sitter test` in an upstream clone with this `grammar.js` and the
@@ -253,6 +257,15 @@ Each was a parse error with the published crate and is valid for
 - `void f(const J j, T (*arr)[N])` and `int f(fd_set FAR* s, _In_ PUCHAR d)`
   — parenthesized declarator parameters and bare SAL qualifiers under
   `_parameter_specifiers`.
+- Initializer value and the declaration's `;` carried inside preproc
+  arms: `T x =\n#if A v1;\n#else v2;\n#endif`. `declaration` gained a
+  second alternative ending in `_init_declarator_preproc` (aliased to
+  `init_declarator`), whose value is `preproc_if`/`preproc_ifdef`
+  `_in_init_declarator` — a new `preprocIf` suite whose arm items are
+  `expression ';'`, `preproc_def`, `preproc_call`, `preproc_null`. The
+  declarator is restricted to non-function forms (identifier, pointer,
+  array, parenthesized): a `= #if` initializer is never a function, and
+  allowing function declarators collided with old-style definitions.
 
 ## Constructs known still failing
 
@@ -278,8 +291,8 @@ Inputs that are not valid C and so stay errors: `int x = ;`, unterminated
 - Upstream `tree-sitter test` at tag v0.24.2, before: 85 of 85 pass.
 - After the patch: 85 of 85 upstream cases pass.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 14 files, 44 cases, all passing with the patch
-  (`tree-sitter test` reports 44/44). The latest additions cover the Win32
+  corpus is not vendored): 16 files, 52 cases, all passing with the patch
+  (`tree-sitter test` reports 52/52). The latest additions cover the Win32
   SDK cluster: typedef qualifier macros, function-pointer typedefs with
   SAL-annotated parameters, MIDL brackets, declaratorless typedefs inside
   `#if`, and `#ifdef`-guarded inheritance.
@@ -375,6 +388,24 @@ the size growth.
   `{ ... }` / statement after `#endif` parses as an ordinary
   block item.
 
+- **A whole `#if`/`#ifdef` group as an unbraced statement body** —
+  `if (x) #ifdef MAC a(); #else b(); #endif` (also `while`/`do`/`for`
+  bodies, `else` consequences and labels). `_statement_or_preproc =
+  choice($.statement, $.preproc_if, $.preproc_ifdef)` is the body slot
+  for those positions. Deliberately NOT added to `_non_case_statement`:
+  a `preproc_if` is already a direct `_block_item`, so wrapping it in
+  `statement` too would make every block-level `#ifdef` ambiguous.
+
+- **`NAME(args);` inside a function's `#ifdef` group is a call, not a
+  `macro_declaration`** — `preprocIf('')` items are shared between file
+  scope and function bodies, so `if (x) #ifdef MAC a(); #endif` used to
+  give `a();` the file-scope macro read and the C adapter lost the call.
+  `preprocIf('_in_statement', ...)` carries `_block_item` items (no
+  `_macro_declaration_top` arm); `_block_item` and
+  `_statement_or_preproc` alias it back to `preproc_if`/`preproc_ifdef`
+  at use sites, so the node names are unchanged. File-scope guarded
+  groups still use `_top_level_item` and keep the macro read.
+
 - **Preproc inside expressions** — `a + #ifdef X b + #endif c`,
   `a && #ifdef X b #endif`, `x = #ifdef v1 #else v2 #endif`, and
   `( #ifdef expr #else expr #endif )`: `binary_expression` and
@@ -396,7 +427,8 @@ the size growth.
 - **`macro_argument_list` token soup** also accepts real expression
   rules (`$.pointer_expression`, `$.unary_expression`,
   `$.sizeof_expression`), the assignment/suffix operators `^=`, `<<=`,
-  `>>=`, `%=`, `&=`, `|=`, `++`, `--`, `[`, `]`, and nested
+  `>>=`, `%=`, `&=`, `|=`, `++`, `--`, `[`, `]`, `{`, `}` (brace-init
+  args such as `M(name, T{})` / `M({a, b})`), and nested
   `$.macro_argument_list` — otherwise `*x`-shaped first arguments
   compete with the expression reading and land in `ERROR`.
 
@@ -435,3 +467,40 @@ the size growth.
   $.macro_qualifier))`, covering `} worker_id_map SEC(".maps");` and
   `int x PACKED = v;`. Same permissive model as the
   `function_definition` trailing-macro repeat.
+- **`#` lines with no directive name** — new `preproc_null` rule is a member
+  of every item list that already takes `preproc_call`. It covers the null
+  directive (`#` alone or `#` + trailing blanks) and the pre-ANSI
+  `# comment` banner idiom (`# /*`, `# *`, `# */`, `#---`, `#anything
+  non-word`) that boost and BSD-derived sources use. The banner arm is one
+  token that eats the whole line on purpose: a `preproc_arg` run there would
+  let a trailing `*/` glue the *next* directive line into the argument
+  stream (upstream's `\/[^*]` arg char-class matches `/\n`, which swallows
+  the following `#define`/`#endif` and produces `MISSING` nodes — verified
+  empirically on an optional-directive-name variant and rejected). A bare
+  `#` goes through the `'#'` + immediate-newline arm so it never wins a
+  lex-time tie against `#`-starting tokens (objc's `preproc_linemarker`
+  showed why: same-length anonymous `'#'` stole the lex and the rule's
+  continuation then errored — a token-level `prec(1)` was also tried and
+  rejected: token precedence beats match length, so `#` shadowed every
+  `#if`/`#define` in the file).
+- **Operator tokens as preproc call arguments** — `preproc_argument_list`
+  gains a `seq(choice('==','!=','<=','>=','<','>'),
+  optional($._preproc_expression))` item, for macros that pass a bare
+  comparison as an argument: `BOOST_WORKAROUND(BOOST_MSVC, < 1300)` and
+  assertion-style `CHECK(x, ==, y)`. No ambiguity is possible: items are
+  comma-delimited, so `a > b` still reads as one binary argument.
+- **Directive terminators tolerate trailing blanks** —
+  `preproc_include`/`preproc_def`/`preproc_function_def`/`preproc_call`
+  end in `token.immediate(/[ \t]*\r?\n/)` (upstream:
+  `token.immediate(/\r?\n/)`). A directive line ending in spaces or tabs
+  (`#define KDDOCKWIDGETS_EXPORT ` inside a nested `#ifdef` —
+  kddockwidgets_export.h) made the immediate token fail, the value
+  position fell back to `preproc_arg`, the `\s` extras skipped to the
+  next line and the next `#endif`/`#else` was eaten as the argument —
+  cascading `MISSING` nodes and a whole-file ERROR. Absorbing the blanks
+  inside the terminator token is safe: at `A B\n` the regex still fails
+  on `B`, so argument lexing is unchanged; a `\<newline>` continuation
+  still goes through `preproc_arg`'s `\\\r?\n` arm. Dropping
+  `immediate` entirely is not an option — `\n` is itself an extra
+  (`/\s|\\\r?\n/`) and is consumed as one before it can terminate the
+  rule.

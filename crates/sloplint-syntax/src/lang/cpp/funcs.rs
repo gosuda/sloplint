@@ -39,10 +39,7 @@ pub(crate) fn is_public<'s>(
         .unwrap_or(n);
     cx.members
         .state_before(items, anchor, |sib| access_marker(cx, sib))
-        .unwrap_or_else(|| {
-            cx.parent_of(items)
-                .is_some_and(|g| g.kind() == "struct_specifier")
-        })
+        .unwrap_or_else(|| cx.parent_of(items).is_some_and(head_is_struct))
 }
 
 pub(crate) fn access_marker(cx: &Cx<'_, '_>, sib: Node<'_>) -> Option<bool> {
@@ -70,6 +67,54 @@ pub(crate) fn in_anonymous(cx: &Cx<'_, '_>) -> bool {
     })
 }
 
+/// First `preproc_*_in_guarded_class` arm of a `guarded_class` node. `#else`
+/// and `#elif` arms nest inside it as `alternative` children.
+fn guarded_arm(n: Node<'_>) -> Option<Node<'_>> {
+    named_children(n)
+        .into_iter()
+        .find(|c| c.kind().ends_with("_in_guarded_class"))
+}
+
+/// Class name for both specifier kinds and `guarded_class`: the arm carries the
+/// directive's own `name` field (the `#ifdef` macro) before the class name, so
+/// the last `name` field of the arm is the class.
+pub(crate) fn class_name_node<'t>(class: Node<'t>) -> Option<Node<'t>> {
+    if class.kind() != "guarded_class" {
+        return child_by_field(class, "name");
+    }
+    let arm = guarded_arm(class)?;
+    let mut cursor = arm.walk();
+    arm.children_by_field_name("name", &mut cursor).last()
+}
+
+/// Class body: the `body` field on specifiers, the shared
+/// `field_declaration_list` child on `guarded_class`.
+pub(crate) fn class_body<'t>(class: Node<'t>) -> Option<Node<'t>> {
+    child_by_field(class, "body").or_else(|| {
+        (class.kind() == "guarded_class")
+            .then(|| {
+                named_children(class)
+                    .into_iter()
+                    .find(|c| c.kind() == "field_declaration_list")
+            })
+            .flatten()
+    })
+}
+
+/// Members default public under `struct`/`union` — for `guarded_class` the
+/// keyword is an anonymous token inside the head arm.
+pub(crate) fn head_is_struct(class: Node<'_>) -> bool {
+    match class.kind() {
+        "struct_specifier" | "union_specifier" => true,
+        "guarded_class" => guarded_arm(class).is_some_and(|arm| {
+            let mut cursor = arm.walk();
+            arm.children(&mut cursor)
+                .any(|c| c.kind() == "struct" || c.kind() == "union")
+        }),
+        _ => false,
+    }
+}
+
 #[derive(Clone, Copy)]
 pub(crate) struct ScopeMember {
     pub(crate) forced: bool,
@@ -82,8 +127,10 @@ pub(crate) fn scope_member(cx: &Cx<'_, '_>, scope: &str, name: &str) -> Option<S
         stack.push(root);
     }
     while let Some(node) = stack.pop() {
-        if matches!(node.kind(), "class_specifier" | "struct_specifier")
-            && child_by_field(node, "name").is_some_and(|id| text(cx, id) == scope)
+        if matches!(
+            node.kind(),
+            "class_specifier" | "struct_specifier" | "guarded_class"
+        ) && class_name_node(node).is_some_and(|id| text(cx, id) == scope)
         {
             return class_slot(cx, node, name);
         }
@@ -93,8 +140,8 @@ pub(crate) fn scope_member(cx: &Cx<'_, '_>, scope: &str, name: &str) -> Option<S
 }
 
 fn class_slot(cx: &Cx<'_, '_>, class: Node<'_>, name: &str) -> Option<ScopeMember> {
-    let body = child_by_field(class, "body")?;
-    let fallback = class.kind() == "struct_specifier";
+    let body = class_body(class)?;
+    let fallback = head_is_struct(class);
     for cand in named_children(body) {
         if cand.kind() != "field_declaration" || !declares_name(cx, cand, name) {
             continue;

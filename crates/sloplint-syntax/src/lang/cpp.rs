@@ -45,6 +45,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("class_specifier", Role::TypeDef),
     ("struct_specifier", Role::TypeDef),
     ("union_specifier", Role::TypeDef),
+    ("guarded_class", Role::TypeDef),
     ("enum_specifier", Role::TypeDef),
     ("type_definition", Role::TypeDef),
     ("alias_declaration", Role::TypeDef),
@@ -266,6 +267,7 @@ impl LangHooks for CppHooks {
     fn typedef<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<TypeHead<'s>> {
         match n.kind() {
             "class_specifier" | "struct_specifier" => types::class_typedef(cx, n),
+            "guarded_class" => types::guarded_class_typedef(cx, n),
             "union_specifier" | "enum_specifier" => types::named_typedef(cx, n),
             "type_definition" => types::alias_typedef(cx, n),
             "alias_declaration" => types::named_typedef(cx, n),

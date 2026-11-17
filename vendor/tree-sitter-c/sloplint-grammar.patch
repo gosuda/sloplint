@@ -1,6 +1,8 @@
+diff --git a/grammar.js b/grammar.js
+index 7cdde6e..1553655 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -36,8 +36,11 @@
+@@ -36,8 +36,11 @@ module.exports = grammar({
    name: 'c',
  
    conflicts: $ => [
@@ -13,7 +15,7 @@
      [$.type_specifier, $.expression],
      [$.type_specifier, $.expression, $.macro_type_specifier],
      [$.type_specifier, $.macro_type_specifier],
-@@ -47,12 +50,113 @@
+@@ -47,12 +50,123 @@ module.exports = grammar({
      [$._declaration_modifiers, $.attributed_statement],
      [$.enum_specifier],
      [$.type_specifier, $._old_style_parameter_list],
@@ -26,12 +28,17 @@
      [$.type_qualifier, $.extension_expression],
 +    [$._declarator, $._declaration_declarator],
 +    [$._linkage_guard, $.preproc_if],
++    [$._linkage_guard, $.preproc_if_in_statement],
++    [$._linkage_guard, $.preproc_ifdef_in_statement],
 +    [$._declaration_modifiers, $.type_specifier],
 +    [$._linkage_guard, $.preproc_ifdef],
 +    [$._typedef_macro_qualifier, $.type_specifier, $.sized_type_specifier],
 +    [$._typedef_macro_qualifier, $.type_specifier],
 +    [$._field_declaration_list_item, $.field_declaration],
 +    [$._midl_attribute, $.expression],
++    [$._init_declarator_preproc, $._declarator],
++    [$._init_declarator_preproc, $.macro_qualifier, $._declarator, $._declaration_declarator],
++    [$._init_declarator_preproc, $._declarator, $._declaration_declarator],
 +    [$.macro_qualifier, $._macro_declaration_stmt],
 +    [$._macro_declaration_stmt, $.expression],
 +    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_type_specifier],
@@ -61,6 +68,10 @@
 +    [$.preproc_else, $.type_definition],
 +    [$.preproc_else, $.extension_expression],
 +    [$.preproc_else, $.type_qualifier, $.extension_expression],
++    [$.preproc_else_in_statement, $.type_qualifier],
++    [$.preproc_else_in_statement, $.type_definition],
++    [$.preproc_else_in_statement, $.extension_expression],
++    [$.preproc_else_in_statement, $.type_qualifier, $.extension_expression],
 +    [$.enumerator_list, $.expression],
 +    [$.enumerator, $.expression],
 +    [$.enumerator_list, $.extension_expression],
@@ -68,6 +79,10 @@
 +    [$.preproc_ifdef, $.type_definition],
 +    [$.preproc_ifdef, $.extension_expression],
 +    [$.preproc_ifdef, $.type_qualifier, $.extension_expression],
++    [$.preproc_ifdef_in_statement, $.type_qualifier],
++    [$.preproc_ifdef_in_statement, $.type_definition],
++    [$.preproc_ifdef_in_statement, $.extension_expression],
++    [$.preproc_ifdef_in_statement, $.type_qualifier, $.extension_expression],
 +    [$._string, $.concatenated_string],
 +    [$.preproc_else_in_initializer_list, $.field_expression],
 +    [$.preproc_ifdef_in_initializer_list, $.field_expression],
@@ -87,11 +102,9 @@
 +    [$.expression, $.concatenated_string],
 +    [$.attributed_declarator, $.parameter_declaration],
 +    [$.parameter_declaration],
-+    [$.macro_qualifier, $.type_specifier, $.sized_type_specifier],
 +    [$._declaration_modifiers, $.parenthesized_declarator, $.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator, $.type_specifier],
 +    [$.parenthesized_declarator, $.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator, $.type_specifier],
 +    [$.parenthesized_declarator, $.abstract_parenthesized_declarator, $.type_specifier],
-+    [$._declaration_specifiers, $.abstract_pointer_declarator],
 +    [$._declaration_modifiers, $.abstract_parenthesized_declarator, $.abstract_pointer_declarator, $.type_specifier],
 +    [$.abstract_parenthesized_declarator, $.abstract_pointer_declarator, $.type_specifier],
 +    [$.abstract_parenthesized_declarator, $.type_specifier],
@@ -123,12 +136,11 @@
 +    [$.macro_declaration, $.type_specifier],
 +    [$.macro_qualifier, $.macro_declaration],
 +    [$.macro_qualifier, $.type_specifier],
-+    [$.macro_qualifier, $._declarator, $.type_specifier],
 +    [$.macro_declaration, $.macro_qualifier],
    ],
  
    extras: $ => [
-@@ -89,6 +193,7 @@
+@@ -89,6 +203,7 @@ module.exports = grammar({
        $.function_definition,
        alias($._old_style_function_definition, $.function_definition),
        $.linkage_specification,
@@ -136,10 +148,11 @@
        $.declaration,
        $._top_level_statement,
        $.attributed_statement,
-@@ -100,12 +205,17 @@
+@@ -100,23 +215,30 @@ module.exports = grammar({
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
++      $.preproc_null,
 +      // `NAME(args)` / `NAME;` / `NAME(args);` only — see _macro_declaration_top.
 +      // A bare `NAME` alternative lets `NAME(args)` fragment into
 +      // macro_declaration(NAME) + parenthesized_expression(args) + MISSING ';'.
@@ -154,25 +167,48 @@
        $.declaration,
        $.statement,
        $.attributed_statement,
-@@ -135,7 +245,7 @@
+       $.type_definition,
+       $._empty_declaration,
+-      $.preproc_if,
+-      $.preproc_ifdef,
++      alias($.preproc_if_in_statement, $.preproc_if),
++      alias($.preproc_ifdef_in_statement, $.preproc_ifdef),
+       $.preproc_include,
+       $.preproc_def,
+       $.preproc_function_def,
+       $.preproc_call,
++      $.preproc_null,
+     ),
+ 
+     // Preprocesser
+@@ -129,42 +251,152 @@ module.exports = grammar({
+         $.identifier,
+         alias($.preproc_call_expression, $.call_expression),
+       )),
+-      token.immediate(/\r?\n/),
++      token.immediate(/[ \t]*\r?\n/),
+     ),
+ 
      preproc_def: $ => seq(
        preprocessor('define'),
        field('name', $.identifier),
 -      field('value', optional($.preproc_arg)),
+-      token.immediate(/\r?\n/),
 +      field('value', repeat(choice($.preproc_arg, $.comment))),
-       token.immediate(/\r?\n/),
++      token.immediate(/[ \t]*\r?\n/),
      ),
  
-@@ -143,24 +253,96 @@
+     preproc_function_def: $ => seq(
        preprocessor('define'),
        field('name', $.identifier),
        field('parameters', $.preproc_params),
 -      field('value', optional($.preproc_arg)),
+-      token.immediate(/\r?\n/),
 +      // A block comment inside the \-continued body splits preproc_arg
 +      // into pieces; let each piece be a value so the directive resumes
 +      // after the comment instead of ending it.
 +      field('value', repeat(choice($.preproc_arg, $.comment))),
-       token.immediate(/\r?\n/),
++      token.immediate(/[ \t]*\r?\n/),
      ),
  
      preproc_params: $ => seq(
@@ -185,15 +221,24 @@
      preproc_call: $ => seq(
        field('directive', $.preproc_directive),
 -      field('argument', optional($.preproc_arg)),
-+      field('argument', repeat(choice($.preproc_arg, $.comment))),
-       token.immediate(/\r?\n/),
-     ),
- 
+-      token.immediate(/\r?\n/),
+-    ),
+-
 -    ...preprocIf('', $ => $._block_item),
++      field('argument', repeat(choice($.preproc_arg, $.comment))),
++      token.immediate(/[ \t]*\r?\n/),
++    ),
++
 +    // Top-level preproc bodies hold top-level items (a guarded header can
 +    // contain declaration macros); nested bodies still accept every
 +    // statement shape through _top_level_statement -> statement.
 +    ...preprocIf('', $ => choice($._top_level_item, $.dangling_else, $.dangling_label, '__extension__')),
++    // Statement-context variant: a preproc group inside a function body
++    // holds statements/declarations, NOT top-level items — in particular
++    // `NAME(args);` there is a call_expression, never a macro_declaration
++    // (the file-scope fallback arm in _top_level_item). Used via
++    // _block_item and _statement_or_preproc.
++    ...preprocIf('_in_statement', $ => choice($._block_item, $.dangling_else, $.dangling_label, '__extension__')),
      ...preprocIf('_in_field_declaration_list', $ => $._field_declaration_list_item),
 -    ...preprocIf('_in_enumerator_list', $ => seq($.enumerator, ',')),
 -    ...preprocIf('_in_enumerator_list_no_comma', $ => $.enumerator, -1),
@@ -216,6 +261,7 @@
 +      // generated lookup tables redefine an X-macro between items.
 +      $.preproc_def,
 +      $.preproc_call,
++      $.preproc_null,
 +      seq(
 +        choice(
 +        '||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
@@ -241,6 +287,7 @@
 +      ',',
 +      $.preproc_def,
 +      $.preproc_call,
++      $.preproc_null,
 +      // A bare operator passed as a macro argument:
 +      // `assert_int(1, ==, call(...))`, `check(x, <=, y)`.
 +      choice(
@@ -262,11 +309,45 @@
 +        ),
 +      ),
 +    )),
++    // `T x =\n#if A v1;\n#else v2;\n#endif`: the initializer value and the
++    // declaration's terminating `;` live inside the preproc arms.
++    ...preprocIf('_in_init_declarator', $ => choice(
++      seq($.expression, ';'),
++      $.preproc_def,
++      $.preproc_call,
++      $.preproc_null,
++    )),
 +
  
      preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
      preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,
-@@ -199,7 +381,11 @@
+ 
++    // A `#` line that carries no directive name: the null directive (`#`
++    // alone or `#` + trailing space) and the pre-ANSI `# comment` banner
++    // idiom (`# /*`, `# *`, `# */`, `#---`). One token eats the whole line —
++    // a `preproc_arg` run here would let a trailing `*/` glue the *next*
++    // directive line into the argument stream (`\/[^*]` matches `/\n`).
++    // The text after `#` must start with a non-word, non-`#`, non-space
++    // char, so `#foo`/`# foo`/`#123` keep their existing reads.
++    // A `#` line that carries no directive name: the null directive (`#`
++    // alone or `#` + trailing blanks) and the pre-ANSI `# comment` banner
++    // idiom (`# /*`, `# *`, `# */`, `#---`). The banner arm is a single
++    // token eating the whole line - a `preproc_arg` run here would let a
++    // trailing `*/` glue the *next* directive line into the argument stream
++    // (`\/[^*]` matches `/\n`). The text after `#` must start with a
++    // non-word, non-`#`, non-space char, so `#foo`/`# foo`/`#123` keep their
++    // existing reads; a bare `#` goes through the `'#'` + newline arm so it
++    // never competes with `#`-starting tokens at lex time.
++    preproc_null: $ => choice(
++      token(/#[ \t]*[^a-zA-Z0-9#\s][^\n]*/),
++      seq('#', token.immediate(/\r?\n/)),
++      seq(token(/#[ \t]+/), token.immediate(/\r?\n/)),
++    ),
++
+     _preproc_expression: $ => choice(
+       $.identifier,
+       alias($.preproc_call_expression, $.call_expression),
+@@ -199,7 +431,20 @@ module.exports = grammar({
  
      preproc_argument_list: $ => seq(
        '(',
@@ -275,11 +356,20 @@
 +        $._preproc_expression,
 +        $.string_literal,
 +        $.system_lib_string,
++        // A leading comparison/operator token with an optional operand,
++        // for assertion-style and workaround macros that pass the
++        // comparison itself as an argument:
++        // `BOOST_WORKAROUND(BOOST_MSVC, < 1300)`, `CHECK(x, ==, y)`.
++        // Commas delimit items, so `a > b` still reads as one argument.
++        seq(
++          choice('==', '!=', '<=', '>=', '<', '>'),
++          optional($._preproc_expression),
++        ),
 +      )),
        ')',
      ),
  
-@@ -240,8 +426,13 @@
+@@ -240,8 +485,13 @@ module.exports = grammar({
      function_definition: $ => seq(
        optional($.ms_call_modifier),
        $._declaration_specifiers,
@@ -294,19 +384,50 @@
        field('body', $.compound_statement),
      ),
  
-@@ -257,24 +448,45 @@
-       $._declaration_specifiers,
-       commaSep1(field('declarator', choice(
-         seq(
+@@ -253,28 +503,84 @@ module.exports = grammar({
+       field('body', $.compound_statement),
+     ),
+ 
+-    declaration: $ => seq(
+-      $._declaration_specifiers,
+-      commaSep1(field('declarator', choice(
+-        seq(
 -          optional($.ms_call_modifier),
-+          repeat(choice($.ms_call_modifier, $.macro_attribute)),
-           $._declaration_declarator,
-           optional($.gnu_asm_expression),
-+          repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
-         ),
-         $.init_declarator,
-       ))),
-       ';',
+-          $._declaration_declarator,
+-          optional($.gnu_asm_expression),
+-        ),
+-        $.init_declarator,
+-      ))),
+-      ';',
++    declaration: $ => choice(
++      seq(
++        $._declaration_specifiers,
++        commaSep1(field('declarator', choice(
++          seq(
++            repeat(choice($.ms_call_modifier, $.macro_attribute)),
++            $._declaration_declarator,
++            optional($.gnu_asm_expression),
++            repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
++          ),
++          $.init_declarator,
++        ))),
++        ';',
++      ),
++      // `T x =\n#if A v1;\n#else v2;\n#endif`: the initializer and the
++      // terminating `;` live inside the preproc arms.
++      seq(
++        $._declaration_specifiers,
++        optional(seq(commaSep1(field('declarator', choice(
++          seq(
++            repeat(choice($.ms_call_modifier, $.macro_attribute)),
++            $._declaration_declarator,
++            optional($.gnu_asm_expression),
++            repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
++          ),
++          $.init_declarator,
++        ))), ',')),
++        field('declarator', alias($._init_declarator_preproc, $.init_declarator)),
++      ),
      ),
  
 -    type_definition: $ => seq(
@@ -316,6 +437,25 @@
 -      $._type_definition_declarators,
 -      repeat($.attribute_specifier),
 -      ';',
++    _init_declarator_preproc: $ => seq(
++      // Non-function declarators only: a `= #if` initializer can never be a
++      // function, and allowing function declarators collides with guarded
++      // signatures and old-style definitions.
++      field('declarator', choice(
++        $.identifier,
++        $.pointer_declarator,
++        $.array_declarator,
++        $.parenthesized_declarator,
++      )),
++      repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
++      '=',
++      field('value', choice(
++        alias($.preproc_if_in_init_declarator, $.preproc_if),
++        alias($.preproc_ifdef_in_init_declarator, $.preproc_ifdef),
++      )),
+     ),
+-    _type_definition_type: $ => seq(repeat($.type_qualifier), field('type', $.type_specifier), repeat($.type_qualifier)),
++
 +    type_definition: $ => choice(
 +      seq(
 +        optional('__extension__'),
@@ -337,8 +477,7 @@
 +        repeat($.attribute_specifier),
 +        ';',
 +      ),
-     ),
--    _type_definition_type: $ => seq(repeat($.type_qualifier), field('type', $.type_specifier), repeat($.type_qualifier)),
++    ),
 +    // Pre-type qualifiers also include a bare qualifier macro (`typedef
 +    // CONST char *PCSZ`) — without an argument list, because `VOID (*P)`
 +    // would otherwise swallow `(*P)` as its macro arguments and kill
@@ -349,7 +488,7 @@
      _type_definition_declarators: $ => commaSep1(field('declarator', $._type_declarator)),
  
      _declaration_modifiers: $ => choice(
-@@ -283,14 +495,189 @@
+@@ -283,14 +589,192 @@ module.exports = grammar({
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -506,6 +645,9 @@
 +        '[',
 +        ']',
 +        'const',
++        // Brace-init inside macro args: `M(name, T{})` / `M({a, b})`.
++        '{',
++        '}',
 +        $.macro_argument_list,
 +      )),
 +      ')',
@@ -539,7 +681,7 @@
      linkage_specification: $ => seq(
        'extern',
        field('value', $.string_literal),
-@@ -301,6 +688,27 @@
+@@ -301,6 +785,27 @@ module.exports = grammar({
        )),
      ),
  
@@ -567,7 +709,7 @@
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -341,6 +749,13 @@
+@@ -341,6 +846,13 @@ module.exports = grammar({
        '__vectorcall',
      ),
  
@@ -581,7 +723,7 @@
      ms_restrict_modifier: _ => '__restrict',
  
      ms_unsigned_ptr_modifier: _ => '__uptr',
-@@ -396,7 +811,7 @@
+@@ -396,7 +908,7 @@ module.exports = grammar({
        alias($.array_type_declarator, $.array_declarator),
        alias($.parenthesized_type_declarator, $.parenthesized_declarator),
        $._type_identifier,
@@ -590,7 +732,7 @@
        $.primitive_type,
      ),
  
-@@ -409,25 +824,25 @@
+@@ -409,25 +921,25 @@ module.exports = grammar({
  
      parenthesized_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
        '(',
@@ -620,7 +762,7 @@
        $._abstract_declarator,
        ')',
      )),
-@@ -448,28 +863,56 @@
+@@ -448,28 +960,56 @@ module.exports = grammar({
  
      pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
        optional($.ms_based_modifier),
@@ -686,7 +828,7 @@
        field('declarator', optional($._abstract_declarator)),
      ))),
  
-@@ -543,6 +986,8 @@
+@@ -543,6 +1083,8 @@ module.exports = grammar({
  
      init_declarator: $ => seq(
        field('declarator', $._declarator),
@@ -695,7 +837,7 @@
        '=',
        field('value', choice($.initializer_list, $.expression)),
      ),
-@@ -563,6 +1008,7 @@
+@@ -563,6 +1105,7 @@ module.exports = grammar({
        '__inline__',
        '__forceinline',
        'thread_local',
@@ -703,7 +845,7 @@
        '__thread',
      ),
  
-@@ -574,6 +1020,8 @@
+@@ -574,6 +1117,8 @@ module.exports = grammar({
        '__restrict__',
        '__extension__',
        '_Atomic',
@@ -712,7 +854,7 @@
        '_Noreturn',
        'noreturn',
        '_Nonnull',
-@@ -594,6 +1042,7 @@
+@@ -594,6 +1139,7 @@ module.exports = grammar({
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -720,7 +862,7 @@
        $._type_identifier,
      ),
  
-@@ -601,6 +1050,8 @@
+@@ -601,6 +1147,8 @@ module.exports = grammar({
        seq(
          repeat(choice(
            'signed',
@@ -729,7 +871,7 @@
            'unsigned',
            'long',
            'short',
-@@ -611,6 +1062,8 @@
+@@ -611,6 +1159,8 @@ module.exports = grammar({
          ))),
          repeat1(choice(
            'signed',
@@ -738,7 +880,7 @@
            'unsigned',
            'long',
            'short',
-@@ -619,6 +1072,8 @@
+@@ -619,6 +1169,8 @@ module.exports = grammar({
        seq(
          repeat1(choice(
            'signed',
@@ -747,7 +889,7 @@
            'unsigned',
            'long',
            'short',
-@@ -630,6 +1085,8 @@
+@@ -630,6 +1182,8 @@ module.exports = grammar({
          ))),
          repeat(choice(
            'signed',
@@ -756,7 +898,7 @@
            'unsigned',
            'long',
            'short',
-@@ -652,6 +1109,18 @@
+@@ -652,6 +1206,18 @@ module.exports = grammar({
        'charptr_t',
        'nullptr_t',
        'max_align_t',
@@ -775,7 +917,7 @@
        ...[8, 16, 32, 64].map(n => `int${n}_t`),
        ...[8, 16, 32, 64].map(n => `uint${n}_t`),
        ...[8, 16, 32, 64].map(n => `char${n}_t`),
-@@ -659,32 +1128,39 @@
+@@ -659,32 +1225,40 @@ module.exports = grammar({
  
      enum_specifier: $ => seq(
        'enum',
@@ -823,11 +965,12 @@
 +        alias($.preproc_ifdef_in_enumerator_list_no_comma, $.preproc_ifdef),
 +        $.preproc_def,
 +        $.preproc_call,
++        $.preproc_null,
 +        ',',
        )),
        '}',
      ),
-@@ -693,9 +1169,13 @@
+@@ -693,9 +1267,13 @@ module.exports = grammar({
        'struct',
        optional($.attribute_specifier),
        optional($.ms_declspec_modifier),
@@ -841,7 +984,7 @@
            field('body', optional($.field_declaration_list)),
          ),
          field('body', $.field_declaration_list),
-@@ -706,6 +1186,7 @@
+@@ -706,6 +1284,7 @@ module.exports = grammar({
      union_specifier: $ => prec.right(seq(
        'union',
        optional($.ms_declspec_modifier),
@@ -849,10 +992,11 @@
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -727,19 +1208,41 @@
+@@ -727,19 +1306,42 @@ module.exports = grammar({
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
++      $.preproc_null,
 +      $.macro_declaration,
 +      // MIDL brackets alone inside `#ifdef MIDL_PASS` while the field they
 +      // annotate sits after the `#endif` (`[size_is(...)]` guard pattern).
@@ -894,7 +1038,7 @@
      )),
  
      bitfield_clause: $ => seq(':', $.expression),
-@@ -751,10 +1254,37 @@
+@@ -751,10 +1353,37 @@ module.exports = grammar({
  
      variadic_parameter: _ => '...',
  
@@ -933,7 +1077,7 @@
          $.compound_statement,
        ),
        ')',
-@@ -766,7 +1296,8 @@
+@@ -766,7 +1395,8 @@ module.exports = grammar({
      ),
  
      parameter_declaration: $ => seq(
@@ -943,7 +1087,7 @@
        optional(field('declarator', choice(
          $._declarator,
          $._abstract_declarator,
-@@ -802,6 +1333,14 @@
+@@ -802,6 +1432,14 @@ module.exports = grammar({
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,
@@ -958,10 +1102,39 @@
      ),
  
      _top_level_statement: $ => choice(
-@@ -849,6 +1388,22 @@
+@@ -824,7 +1462,7 @@ module.exports = grammar({
+     labeled_statement: $ => seq(
+       field('label', $._statement_identifier),
+       ':',
+-      choice($.declaration, $.statement),
++      choice($.declaration, $._statement_or_preproc),
+     ),
+ 
+     // This is missing binary expressions, others were kept so that macro code can be parsed better and code examples
+@@ -841,14 +1479,40 @@ module.exports = grammar({
+       ';',
+     ),
+ 
++    // A statement slot that also accepts a whole `#if`/`#ifdef` group:
++    // `if (x)\n#ifdef MAC\n a();\n#else\n b();\n#endif` — the conditional
++    // group IS the (conditionally compiled) body. The `_in_statement`
++    // variant keeps `NAME(args);` inside the group a call_expression.
++    _statement_or_preproc: $ => choice(
++      $.statement,
++      alias($.preproc_if_in_statement, $.preproc_if),
++      alias($.preproc_ifdef_in_statement, $.preproc_ifdef),
++    ),
++
+     if_statement: $ => prec.right(seq(
+       'if',
+       field('condition', $.parenthesized_expression),
+-      field('consequence', $.statement),
++      field('consequence', $._statement_or_preproc),
+       optional(field('alternative', $.else_clause)),
      )),
  
-     else_clause: $ => seq('else', $.statement),
+-    else_clause: $ => seq('else', $.statement),
++    else_clause: $ => seq('else', $._statement_or_preproc),
 +    // `} else #endif { }`: a preproc block may end between `else` and
 +    // its body, leaving an if without an else-consequence inside the
 +    // block (the `{ ... }` after `#endif` then parses as a bare
@@ -969,7 +1142,7 @@
 +    dangling_else: $ => prec.right(seq(
 +      'if',
 +      field('condition', $.parenthesized_expression),
-+      field('consequence', $.statement),
++      field('consequence', $._statement_or_preproc),
 +      'else',
 +      optional($.dangling_else),
 +    )),
@@ -981,7 +1154,31 @@
  
      switch_statement: $ => seq(
        'switch',
-@@ -1003,22 +1558,44 @@
+@@ -872,12 +1536,12 @@ module.exports = grammar({
+     while_statement: $ => seq(
+       'while',
+       field('condition', $.parenthesized_expression),
+-      field('body', $.statement),
++      field('body', $._statement_or_preproc),
+     ),
+ 
+     do_statement: $ => seq(
+       'do',
+-      field('body', $.statement),
++      field('body', $._statement_or_preproc),
+       'while',
+       field('condition', $.parenthesized_expression),
+       ';',
+@@ -888,7 +1552,7 @@ module.exports = grammar({
+       '(',
+       $._for_statement_body,
+       ')',
+-      field('body', $.statement),
++      field('body', $._statement_or_preproc),
+     ),
+     _for_statement_body: $ => seq(
+       choice(
+@@ -1003,22 +1667,44 @@ module.exports = grammar({
        $.parenthesized_expression,
      ),
  
@@ -1042,7 +1239,7 @@
      )),
  
      pointer_expression: $ => prec.left(PREC.CAST, seq(
-@@ -1053,16 +1630,49 @@
+@@ -1053,16 +1739,49 @@ module.exports = grammar({
          ['>>', PREC.SHIFT],
        ];
  
@@ -1099,7 +1296,7 @@
      update_expression: $ => {
        const argument = field('argument', $.expression);
        const operator = field('operator', choice('--', '++'));
-@@ -1143,6 +1753,36 @@
+@@ -1143,6 +1862,36 @@ module.exports = grammar({
        ')',
      )),
  
@@ -1136,7 +1333,7 @@
      gnu_asm_qualifier: _ => choice(
        'volatile',
        '__volatile__',
-@@ -1197,7 +1837,57 @@
+@@ -1197,7 +1946,58 @@ module.exports = grammar({
      extension_expression: $ => seq('__extension__', $.expression),
  
      // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
@@ -1177,6 +1374,7 @@
 +      alias($.preproc_ifdef_in_argument_list, $.preproc_ifdef),
 +      $.preproc_def,
 +      $.preproc_call,
++      $.preproc_null,
 +    ),
 +
 +    // Real args need commas between them; preproc atoms stay a free stream.
@@ -1195,7 +1393,7 @@
  
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
-@@ -1216,18 +1906,47 @@
+@@ -1216,18 +2016,48 @@ module.exports = grammar({
  
      parenthesized_expression: $ => seq(
        '(',
@@ -1230,6 +1428,7 @@
 +      alias($.preproc_ifdef_in_initializer_list, $.preproc_ifdef),
 +      $.preproc_def,
 +      $.preproc_call,
++      $.preproc_null,
 +    ),
 +
 +    // Free-atom stream like argument_list: `{ #define TD(A) #A,
@@ -1249,7 +1448,7 @@
        '}',
      ),
  
-@@ -1246,6 +1965,15 @@
+@@ -1246,6 +2076,15 @@ module.exports = grammar({
          ':',
          field('value', choice($.expression, $.initializer_list)),
        ),
@@ -1265,7 +1464,7 @@
      ),
  
      subscript_designator: $ => seq('[', $.expression, ']'),
-@@ -1296,14 +2024,19 @@
+@@ -1296,14 +2135,19 @@ module.exports = grammar({
  
      // Must concatenate at least 2 nodes, one of which must be a string_literal.
      // Identifier is added to parse macros that are strings, like PRIu64.
@@ -1288,7 +1487,7 @@
  
      string_literal: $ => seq(
        choice('L"', 'u"', 'U"', 'u8"', '"'),
-@@ -1351,7 +2084,10 @@
+@@ -1351,7 +2195,10 @@ module.exports = grammar({
      ),
  
      macro_type_specifier: $ => prec.dynamic(-1, seq(

@@ -1,0 +1,186 @@
+==================================================================
+Template argument with `>=` relational expression
+==================================================================
+
+template<typename Op, typename... Ts, typename = std::enable_if_t<sizeof...(Ts) >= 1>>
+struct D {};
+
+template<int N> struct W {};
+W<3 >= 2> w1;
+template<typename T, T v> struct IC {};
+IC<int, sizeof(int) >= 4> ic;
+W<3> w2 = 4 > w1;
+
+---
+
+(translation_unit
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier))
+      (variadic_type_parameter_declaration
+        (type_identifier))
+      (optional_type_parameter_declaration
+        (qualified_identifier
+          (namespace_identifier)
+          (template_type
+            (type_identifier)
+            (template_argument_list
+              (binary_expression
+                (sizeof_expression
+                  (identifier))
+                (number_literal)))))))
+    (struct_specifier
+      (type_identifier)
+      (field_declaration_list)))
+  (template_declaration
+    (template_parameter_list
+      (parameter_declaration
+        (primitive_type)
+        (identifier)))
+    (struct_specifier
+      (type_identifier)
+      (field_declaration_list)))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (binary_expression
+          (number_literal)
+          (number_literal))))
+    (identifier))
+  (template_declaration
+    (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier))
+      (parameter_declaration
+        (type_identifier)
+        (identifier)))
+    (struct_specifier
+      (type_identifier)
+      (field_declaration_list)))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (type_descriptor
+          (primitive_type))
+        (binary_expression
+          (sizeof_expression
+            (type_descriptor
+              (primitive_type)))
+          (number_literal))))
+    (identifier))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (number_literal)))
+    (init_declarator
+      (identifier)
+      (binary_expression
+        (number_literal)
+        (identifier)))))
+
+==================================================================
+Adjacent `>=` vs spaced `> =` in template position
+==================================================================
+
+template<int N> struct W {};
+W<3>= 2> a;
+W<3> b = c;
+
+---
+
+(translation_unit
+  (template_declaration
+    (template_parameter_list
+      (parameter_declaration
+        (primitive_type)
+        (identifier)))
+    (struct_specifier
+      (type_identifier)
+      (field_declaration_list)))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (binary_expression
+          (number_literal)
+          (number_literal))))
+    (identifier))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (number_literal)))
+    (init_declarator
+      (identifier)
+      (identifier))))
+
+==================================================================
+Relational template argument continuations keep C++ grouping
+==================================================================
+
+template<bool B> struct WB {};
+WB<3 >= 2 && 0> w_and;
+WB<a >= b + c> w_add;
+WB<a >= b ? x : y> w_cond;
+WB<3 >= 2 || f() == g> w_mix;
+
+---
+
+(translation_unit
+  (template_declaration
+    (template_parameter_list
+      (parameter_declaration
+        (primitive_type)
+        (identifier)))
+    (struct_specifier
+      (type_identifier)
+      (field_declaration_list)))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (binary_expression
+          (binary_expression
+            (number_literal)
+            (number_literal))
+          (number_literal))))
+    (identifier))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (binary_expression
+          (identifier)
+          (binary_expression
+            (identifier)
+            (identifier)))))
+    (identifier))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (conditional_expression
+          (binary_expression
+            (identifier)
+            (identifier))
+          (identifier)
+          (identifier))))
+    (identifier))
+  (declaration
+    (template_type
+      (type_identifier)
+      (template_argument_list
+        (binary_expression
+          (binary_expression
+            (number_literal)
+            (number_literal))
+          (binary_expression
+            (call_expression
+              (identifier)
+              (argument_list))
+            (identifier)))))
+    (identifier)))

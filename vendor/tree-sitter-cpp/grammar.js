@@ -58,13 +58,13 @@ module.exports = grammar(C, {
   ],
 
   conflicts: $ => [
-    [$._linkage_guard, $.preproc_if],
-    [$._linkage_guard, $.preproc_ifdef],
+    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.expression],
+    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.expression],
+    [$.enumerator_list, $.expression],
     // `identifier (` opens a call, a declarator, a macro-type specifier, or
     // the generic macro_declaration/macro_qualifier fallbacks — all five can
     // coexist where declarations and statements interleave. Dynamic -1 on
     // the macro rules keeps real constructs winning at runtime.
-    [$.type_specifier, $._declarator, $.expression, $.macro_declaration, $.macro_qualifier],
     // `identifier ~` leads a destructor vs a macro fallback.
     [$.macro_declaration, $.macro_qualifier, $.type_specifier],
     // Bare `identifier` at statement start: expression vs macro fallback.
@@ -132,6 +132,24 @@ module.exports = grammar(C, {
     [$.type_specifier, $._class_name],
     [$._class_name, $.expression],
     [$.macro_declaration, $._declarator],
+    [$.preproc_ifdef, $.preproc_ifdef_in_guarded_signature, $.preproc_ifdef_in_guarded_class],
+    [$.preproc_else, $.preproc_else_in_guarded_signature, $.preproc_else_in_guarded_class],
+    [$.preproc_if, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
+    [$.preproc_elifdef, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
+    [$.preproc_elif, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
+    [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list, $.preproc_ifdef_in_guarded_signature, $.preproc_ifdef_in_guarded_class],
+    [$.preproc_else, $.preproc_else_in_initializer_list, $.preproc_else_in_guarded_signature, $.preproc_else_in_guarded_class],
+    [$.preproc_if, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
+    [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
+    [$.preproc_elif, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
+    [$._template_argument, $._template_relational_argument],
+    [$.expression, $._template_relational_operand],
+    [$.expression, $.template_type, $.template_method, $.template_function, $._template_relational_operand],
+    [$._string, $._template_relational_operand],
+    [$._string, $.concatenated_string, $._template_relational_operand],
+    [$.template_method, $.template_function],
+    [$.binary_expression, $._template_tight_binary],
+    [$._init_declarator_preproc, $._declarator],
     [$.pointer_declarator, $._init_pointer_declarator],
     [$._declarator, $._init_reference_declarator],
     [$.function_definition, $.pointer_declarator],
@@ -174,10 +192,7 @@ module.exports = grammar(C, {
     [$.expression, $.concatenated_string],
     [$._string, $.concatenated_string],
     [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list],
-    [$.preproc_else, $.preproc_else_in_initializer_list],
     [$.preproc_if, $.preproc_if_in_initializer_list],
-    [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list],
-    [$.preproc_elif, $.preproc_elif_in_initializer_list],
     [$._parameter_list_item],
     [$._field_initializer_list_item],
     [$.comma_expression, $._initializer_list_real],
@@ -212,7 +227,6 @@ module.exports = grammar(C, {
     [$.enumerator, $.expression],
     [$.enumerator, $.concatenated_string],
     [$.enumerator_list, $.concatenated_string],
-    [$.enumerator_list, $.expression, $.concatenated_string],
     [$.concatenated_string],
     [$.constructor_or_destructor_definition],
     [$._scope_resolution],
@@ -225,11 +239,9 @@ module.exports = grammar(C, {
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma],
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.extension_expression],
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.concatenated_string],
-    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.expression, $.concatenated_string],
     [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma],
     [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.extension_expression],
     [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.concatenated_string],
-    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.expression, $.concatenated_string],
     [$.extension_expression],
     [$._block_item, $.preproc_ifdef_in_initializer_list],
     [$.preproc_ifdef_in_initializer_list, $.comma_expression],
@@ -242,16 +254,9 @@ module.exports = grammar(C, {
     [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier],
     [$.macro_argument_list, $.template_type],
     [$.macro_argument_list, $.sized_type_specifier],
-    [$._argument_list_real, $._argument_list_type],
-    [$.call_expression, $._argument_list_real, $._argument_list_type],
-    [$._argument_list_real, $._argument_list_type, $.compound_literal_expression],
-    [$.sized_type_specifier, $._argument_list_real, $._argument_list_type],
     [$.sized_type_specifier, $.expression],
     [$._argument_list_type],
     [$.sized_type_specifier, $._argument_list_type],
-    [$.type_specifier, $._argument_list_real, $._argument_list_type],
-    [$.type_specifier, $.call_expression, $._argument_list_real, $._argument_list_type],
-    [$.macro_qualifier, $.sized_type_specifier, $.expression],
     [$._declaration_modifiers, $._argument_list_type],
     [$.type_specifier, $._argument_list_type],
     [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression],
@@ -266,20 +271,9 @@ module.exports = grammar(C, {
     [$._midl_attribute, $._lambda_capture_identifier],
     [$._midl_attribute, $.expression],
     [$._midl_attribute, $.expression, $.structured_binding_declarator],
-    [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
-    [$._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
-    [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
-    [$.macro_qualifier, $._declarator, $.type_specifier, $.macro_type_specifier],
-    [$.type_specifier, $.expression, $.macro_type_specifier],
-    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
     [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier, $.macro_type_specifier],
-    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_type_specifier],
-    [$.macro_qualifier, $.type_specifier, $.expression, $.macro_type_specifier],
     [$.macro_argument_list, $.type_qualifier],
     [$.macro_argument_list, $.type_specifier],
-    [$.macro_argument_list, $.type_specifier, $.macro_type_specifier],
-    [$._declaration_modifiers, $.pointer_field_declarator],
-    [$._declaration_modifiers, $.field_declaration],
     [$.call_expression, $._argument_list_type],
     [$._argument_list_type, $.compound_literal_expression],
     [$.type_specifier, $.call_expression, $._argument_list_type],
@@ -298,19 +292,8 @@ module.exports = grammar(C, {
     [$.macro_namespace, $._macro_declaration_literals],
     [$.preproc_ifdef, $._linkage_guard, $.preproc_ifdef_in_guarded_signature],
     [$.preproc_if, $._linkage_guard, $.preproc_if_in_guarded_signature],
-    [$.preproc_ifdef, $.preproc_ifdef_in_guarded_signature],
-    [$.preproc_else, $.preproc_else_in_guarded_signature],
-    [$.preproc_if, $.preproc_if_in_guarded_signature],
-    [$.preproc_elifdef, $.preproc_elifdef_in_guarded_signature],
     [$.function_definition, $.declaration, $.init_declarator, $._guarded_signature],
     [$.attributed_declarator, $._guarded_signature],
-    [$.preproc_elif, $.preproc_elif_in_guarded_signature],
-    [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list, $.preproc_ifdef_in_guarded_signature],
-    [$.preproc_else, $.preproc_else_in_initializer_list, $.preproc_else_in_guarded_signature],
-    [$.preproc_if, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature],
-    [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature],
-    [$.preproc_elif, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature],
-    [$.type_specifier],
     [$._macro_qualifier_bare, $.type_specifier],
     [$._macro_qualifier_bare, $.sized_type_specifier],
     [$._macro_qualifier_bare, $.type_specifier, $.expression],
@@ -322,6 +305,8 @@ module.exports = grammar(C, {
     [$.abstract_parenthesized_declarator, $.qualified_type_identifier],
     [$.abstract_parenthesized_declarator, $.qualified_identifier],
     [$.abstract_parenthesized_declarator, $.qualified_identifier, $.qualified_type_identifier],
+    [$._type_declarator, $.template_type],
+    [$.expression],
   ],
 
   inline: ($, original) => original.concat([
@@ -354,6 +339,7 @@ module.exports = grammar(C, {
       alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
       $.macro_namespace,
       $.guarded_function,
+      $.guarded_class,
     ),
 
     _block_item: ($, original) => choice(
@@ -370,6 +356,7 @@ module.exports = grammar(C, {
       alias($.operator_cast_definition, $.function_definition),
       alias($.operator_cast_declaration, $.declaration),
       $.guarded_function,
+      $.guarded_class,
       // No `macro_declaration` fallback here: top-level preproc bodies
       // get it via the preprocIf('', ...) item choice in the base
       // grammar, and inside real function bodies `NAME(args)` must
@@ -511,24 +498,61 @@ module.exports = grammar(C, {
           )),
     }),
 
-    declaration: $ => seq(
-      $._declaration_specifiers,
-      commaSep1(field('declarator', choice(
-        seq(
-          // C uses _declaration_declarator here for some nice macro parsing in function declarators,
-          // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
-          // The literal-only leading repeat covers `T __stdcall F(args);`
-          // (calling-convention modifier between specifiers and name);
-          // generic macro_qualifier must NOT join it — an identifier here is
-          // the declarator, and that fork is the pain the comment above means.
-          repeat(choice($.ms_call_modifier, $.macro_attribute)),
-          $._declarator,
-          optional($.gnu_asm_expression),
-          repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
-        ),
-        $.init_declarator,
-      ))),
-      ';',
+    declaration: $ => choice(
+      seq(
+        $._declaration_specifiers,
+        commaSep1(field('declarator', choice(
+          seq(
+            // C uses _declaration_declarator here for some nice macro parsing in function declarators,
+            // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
+            // The literal-only leading repeat covers `T __stdcall F(args);`
+            // (calling-convention modifier between specifiers and name);
+            // generic macro_qualifier must NOT join it — an identifier here is
+            // the declarator, and that fork is the pain the comment above means.
+            repeat(choice($.ms_call_modifier, $.macro_attribute)),
+            $._declarator,
+            optional($.gnu_asm_expression),
+            repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+          ),
+          $.init_declarator,
+        ))),
+        ';',
+      ),
+      // `T x =\n#if A v1;\n#else v2;\n#endif`: the initializer and the
+      // terminating `;` live inside the preproc arms.
+      seq(
+        $._declaration_specifiers,
+        optional(seq(commaSep1(field('declarator', choice(
+          seq(
+            repeat(choice($.ms_call_modifier, $.macro_attribute)),
+            $._declarator,
+            optional($.gnu_asm_expression),
+            repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+          ),
+          $.init_declarator,
+        ))), ',')),
+        field('declarator', alias($._init_declarator_preproc, $.init_declarator)),
+      ),
+    ),
+
+    _init_declarator_preproc: $ => seq(
+      // Non-function declarators only: a `= #if` initializer can never be a
+      // function, and allowing function declarators collides with guarded
+      // signatures / `= delete` (`= 0`, `= default`).
+      field('declarator', choice(
+        $.identifier,
+        $.qualified_identifier,
+        $.pointer_declarator,
+        $.reference_declarator,
+        $.array_declarator,
+        $.parenthesized_declarator,
+      )),
+      repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+      '=',
+      field('value', choice(
+        alias($.preproc_if_in_init_declarator, $.preproc_if),
+        alias($.preproc_ifdef_in_init_declarator, $.preproc_ifdef),
+      )),
     ),
 
     virtual_specifier: _ => choice(
@@ -1073,6 +1097,32 @@ module.exports = grammar(C, {
 
     ...preprocIf('_in_guarded_signature', $ => $._guarded_signature),
 
+    // `#if`/`#else`-split class heads: kddockwidgets gates the base list of
+    // `class DOCKS_EXPORT DockWidget` this way — each branch carries a head
+    // (keyword + name + optional bases, no body) and the shared
+    // field_declaration_list follows `#endif`.
+    guarded_class: $ => prec.dynamic(10, seq(
+      choice(
+        $.preproc_if_in_guarded_class,
+        $.preproc_ifdef_in_guarded_class,
+      ),
+      $.field_declaration_list,
+      ';',
+    )),
+
+    _guarded_class_head: $ => prec.right(seq(
+      choice('class', 'struct', 'union'),
+      repeat(choice($.attribute_specifier, $.alignas_qualifier)),
+      optional($.ms_declspec_modifier),
+      repeat($.attribute_declaration),
+      repeat(choice($.macro_attribute, $.macro_qualifier)),
+      field('name', $._class_name),
+      optional($.virtual_specifier),
+      optional($.base_class_clause),
+    )),
+
+    ...preprocIf('_in_guarded_class', $ => $._guarded_class_head),
+
     _macro_declaration_literals: $ => choice(
       'Q_OBJECT',
       'Q_GADGET',
@@ -1178,6 +1228,9 @@ module.exports = grammar(C, {
         '.*',
         '[',
         ']',
+        // Brace-init inside macro args: `M(name, T{})` / `M({a, b})`.
+        '{',
+        '}',
         'operator',
         'const',
         'noexcept',
@@ -1278,6 +1331,11 @@ module.exports = grammar(C, {
     _type_declarator: ($, original) => choice(
       original,
       alias($.reference_type_declarator, $.reference_declarator),
+      // `typedef void (dummy::*sb)()` — scoped member pointers inside
+      // parenthesized type declarators (inherited `parenthesized_type_declarator`
+      // wraps `_type_declarator`, which upstream leaves without
+      // qualified_identifier).
+      $.qualified_identifier,
     ),
 
     _abstract_declarator: ($, original) => choice(
@@ -1352,13 +1410,28 @@ module.exports = grammar(C, {
       ),
     )),
 
+    // Post-declarator qualifiers are bare names only (`f() Q_DECL_OVERRIDE`).
+    // An arg-carrying qualifier (`f() ATTR(x)`) makes consecutive
+    // `NAME(args)` lines read as a function declarator + attributes,
+    // which starves the macro-declaration read — bare names keep both.
+    // Uses the base grammar's `_macro_qualifier_bare` (dynamic -1), so real
+    // type/declarator reads still win — do not redefine it here without
+    // the negative precedence.
     _function_postfix: $ => prec.right(choice(
-      repeat1(choice($.virtual_specifier, $.macro_attribute, $.macro_qualifier)),
+      repeat1(choice($.virtual_specifier, $.macro_attribute, $._macro_qualifier_bare)),
       $.requires_clause,
     )),
 
     function_declarator: $ => prec.dynamic(1, seq(
       field('declarator', $._declarator),
+      $._function_declarator_seq,
+    )),
+
+    // The C base's function_type_declarator (aliased to function_declarator)
+    // ends at the parameter list — typedef'd function types may carry
+    // cv/ref/noexcept qualifiers (`typedef void (C::*f)() const;`).
+    function_type_declarator: $ => prec(1, seq(
+      field('declarator', $._type_declarator),
       $._function_declarator_seq,
     )),
 
@@ -1409,15 +1482,122 @@ module.exports = grammar(C, {
       field('arguments', $.template_argument_list),
     ),
 
+    _template_argument: $ => choice(
+      prec.dynamic(3, $.type_descriptor),
+      prec.dynamic(2, alias($.type_parameter_pack_expansion, $.parameter_pack_expansion)),
+      prec.dynamic(1, $.expression),
+    ),
+
     template_argument_list: $ => seq(
       '<',
-      commaSep(choice(
-        prec.dynamic(3, $.type_descriptor),
-        prec.dynamic(2, alias($.type_parameter_pack_expansion, $.parameter_pack_expansion)),
-        prec.dynamic(1, $.expression),
-      )),
-      alias(token(prec(1, '>')), '>'),
+      choice(
+        seq(
+          commaSep($._template_argument),
+          alias(token(prec(1, '>')), '>'),
+        ),
+        // `token(prec(1, '>'))` splits `>=` into `>` `=` even inside template
+        // arguments (`enable_if_t<N >= 1>`). Re-join the split tokens in the
+        // final argument: `token.immediate('=')` restricts the rejoin to a
+        // literally adjacent `>=` (a spaced `> =` keeps the close read).
+        seq(
+          optional(seq(commaSep($._template_argument), ',')),
+          $._template_relational_expression,
+          alias(token(prec(1, '>')), '>'),
+        ),
+      ),
     ),
+
+    // `a >= b` re-joined from the lexed `>` `=` split. The operand must
+    // bind tighter than `>=` (C++ parses `(a >= b) op c`, never
+    // `a >= (b op c)` for a looser `op`), and it carries real
+    // left/operator/right fields so the emitted binary_expression is
+    // structurally identical to one a normal expression produces.
+    _template_ge_operator: $ => seq(
+      token(prec(1, '>')),
+      token.immediate('='),
+    ),
+
+    _template_relational_argument: $ => seq(
+      field('left', $.expression),
+      field('operator', alias($._template_ge_operator, '>=')),
+      field('right', $._template_relational_operand),
+    ),
+
+    // Left-recursive continuation so `W<a >= b && c>` groups as
+    // `(a >= b) && c` like C++, and a `?:`/`=` tail keeps its C++ shape.
+    // The variants stay hidden; the alias at each reference site names the
+    // node (alias cannot wrap a seq), so the argument takes its real
+    // expression kind with no wrapper.
+    _template_relational_binary: $ => prec.left(PREC.LOGICAL_OR, seq(
+      field('left', $._template_relational_expression),
+      field('operator', choice(
+        '||', '&&', '|', '^', '&', '==', '!=', '<=', '<', '<=>',
+        'or', 'and', 'bitor', 'xor', 'bitand', 'not_eq',
+      )),
+      field('right', $.expression),
+    )),
+
+    _template_relational_conditional: $ => seq(
+      field('condition', $._template_relational_expression),
+      '?',
+      field('consequence', $.expression),
+      ':',
+      field('alternative', $.expression),
+    ),
+
+    _template_relational_assignment: $ => prec.right(PREC.ASSIGNMENT, seq(
+      field('left', $._template_relational_expression),
+      field('operator', choice('=', '+=', '-=', '*=', '/=', '%=', '<<=', '>>=', '&=', '|=', '^=')),
+      field('right', $.expression),
+    )),
+
+    _template_relational_expression: $ => choice(
+      alias($._template_relational_argument, $.binary_expression),
+      alias($._template_relational_binary, $.binary_expression),
+      alias($._template_relational_conditional, $.conditional_expression),
+      alias($._template_relational_assignment, $.assignment_expression),
+    ),
+
+    // Operand of a re-joined `>=`: unary-or-tighter expressions and binary
+    // chains whose operators all outrank relational (`* / % + - << >>`).
+    // Looser ops (`&&`, `==`, `?:`, ...) continue through
+    // _template_relational_expression instead.
+    _template_relational_operand: $ => choice(
+      $.identifier,
+      $.qualified_identifier,
+      $.number_literal,
+      $.char_literal,
+      $.string_literal,
+      $.concatenated_string,
+      $.raw_string_literal,
+      $.true,
+      $.false,
+      $.null,
+      $.call_expression,
+      $.unary_expression,
+      $.update_expression,
+      $.pointer_expression,
+      $.cast_expression,
+      $.sizeof_expression,
+      $.field_expression,
+      $.subscript_expression,
+      $.parenthesized_expression,
+      $.template_function,
+      $.template_method,
+      $.new_expression,
+      $.delete_expression,
+      $.co_await_expression,
+      $.requires_expression,
+      $.fold_expression,
+      $.user_defined_literal,
+      alias($._template_tight_binary, $.binary_expression),
+    ),
+
+    _template_tight_binary: $ => prec.left(PREC.SHIFT, seq(
+      field('left', $.expression),
+      field('operator', choice('*', '/', '%', '+', '-', '<<', '>>')),
+      field('right', $.expression),
+    )),
 
     namespace_definition: $ => seq(
       optional('inline'),
@@ -1527,21 +1707,23 @@ module.exports = grammar(C, {
     while_statement: $ => seq(
       'while',
       field('condition', $.condition_clause),
-      field('body', $.statement),
+      field('body', $._statement_or_preproc),
     ),
 
+    // `_statement_or_preproc` (base): the body slot also accepts a whole
+    // `#if`/`#ifdef` group, e.g. `if (x) #ifdef MAC a(); #else b(); #endif`.
     if_statement: $ => prec.right(seq(
       'if',
       optional('constexpr'),
       field('condition', $.condition_clause),
-      field('consequence', $.statement),
+      field('consequence', $._statement_or_preproc),
       optional(field('alternative', $.else_clause)),
     )),
     dangling_else: $ => prec.right(seq(
       'if',
       optional('constexpr'),
       field('condition', $.condition_clause),
-      field('consequence', $.statement),
+      field('consequence', $._statement_or_preproc),
       'else',
       optional($.dangling_else),
     )),
@@ -1556,7 +1738,7 @@ module.exports = grammar(C, {
       '(',
       $._for_range_loop_body,
       ')',
-      field('body', $.statement),
+      field('body', $._statement_or_preproc),
     ),
     _for_range_loop_body: $ => seq(
       field('initializer', optional($.init_statement)),
@@ -2269,6 +2451,7 @@ module.exports = grammar(C, {
         $._namespace_identifier,
         $.template_type,
         $.decltype,
+        $._type_identifier,
         alias($.dependent_type_identifier, $.dependent_name),
       ))),
       '::',
@@ -2387,6 +2570,12 @@ module.exports = grammar(C, {
         $.string_literal,
         $.system_lib_string,
         alias($._preproc_qualified_name, $.qualified_identifier),
+        // Operator-with-optional-operand item, for workaround/assertion
+        // macros: `BOOST_WORKAROUND(BOOST_MSVC, < 1300)`, `CHECK(x, ==, y)`.
+        seq(
+          choice('==', '!=', '<=', '>=', '<', '>'),
+          optional($._preproc_expression),
+        ),
       )),
       ')',
     ),
@@ -2410,9 +2599,6 @@ module.exports = grammar(C, {
           choice($.string_literal, $.raw_string_literal),
           choice($.identifier, $.call_expression),
         ),
-        // Stringification macros concatenate with each other:
-        // `XSTR(A) XSTR(B)`.
-        seq($.call_expression, $.call_expression),
       ),
       repeat(choice($.identifier, $.string_literal, $.raw_string_literal, $.call_expression)),
     ))),
@@ -2478,7 +2664,10 @@ module.exports = grammar(C, {
       $.literal_suffix,
     ),
 
-    _namespace_identifier: $ => alias($.identifier, $.namespace_identifier),
+    // `concept` doubles as a namespace name in pre-C++20 boost headers
+    // (`concept::check<T const>()`); the keyword token is accepted beside
+    // identifier wherever a `ns::name` scope is expected.
+    _namespace_identifier: $ => alias(choice($.identifier, 'concept'), $.namespace_identifier),
   },
 });
 
