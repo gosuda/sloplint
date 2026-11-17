@@ -2107,8 +2107,10 @@ module.exports = grammar({
       const decimal = /[0-9]/;
       const hexDigits = seq(repeat1(hex), repeat(seq(separator, repeat1(hex))));
       const decimalDigits = seq(repeat1(decimal), repeat(seq(separator, repeat1(decimal))));
+      // No leading sign: `-`/`+` must stay operator tokens so `f(1)-1` and
+      // `x -1` don't lex the `-1` as a literal where a merged
+      // macro_argument_list state also accepts a bare number.
       return token(seq(
-        optional(/[-\+]/),
         optional(choice(/0[xX]/, /0[bB]/)),
         choice(
           seq(

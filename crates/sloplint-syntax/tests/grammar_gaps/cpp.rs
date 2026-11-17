@@ -323,3 +323,20 @@ fn a_missing_semicolon_after_delete_still_reports_a_parse_error() {
         "a deleted operator needs its semicolon"
     );
 }
+
+#[test]
+fn call_operand_beside_signed_number_parses() {
+    // Same lex regression as C: `f(1)-1` read `-1` as a signed literal in
+    // states shared with macro_argument_list. number_literal is unsigned.
+    let analysis = run_clean(concat!(
+        "int f(int);\n",
+        "int h(void) {\n",
+        "  int x = f(1) - 1;\n",
+        "  int y = f(1)-1;\n",
+        "  int z = f(-1);\n",
+        "  int w = x - 1;\n",
+        "  return f(1) + 1;\n",
+        "}\n",
+    ));
+    assert!(analysis.parse_error.is_none());
+}

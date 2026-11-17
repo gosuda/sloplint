@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 7cdde6e..16f8a59 100644
+index 7cdde6e..921f618 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -36,8 +36,11 @@ module.exports = grammar({
@@ -1479,7 +1479,19 @@ index 7cdde6e..16f8a59 100644
      ),
  
      subscript_designator: $ => seq('[', $.expression, ']'),
-@@ -1296,14 +2143,19 @@ module.exports = grammar({
+@@ -1260,8 +2107,10 @@ module.exports = grammar({
+       const decimal = /[0-9]/;
+       const hexDigits = seq(repeat1(hex), repeat(seq(separator, repeat1(hex))));
+       const decimalDigits = seq(repeat1(decimal), repeat(seq(separator, repeat1(decimal))));
++      // No leading sign: `-`/`+` must stay operator tokens so `f(1)-1` and
++      // `x -1` don't lex the `-1` as a literal where a merged
++      // macro_argument_list state also accepts a bare number.
+       return token(seq(
+-        optional(/[-\+]/),
+         optional(choice(/0[xX]/, /0[bB]/)),
+         choice(
+           seq(
+@@ -1296,14 +2145,19 @@ module.exports = grammar({
  
      // Must concatenate at least 2 nodes, one of which must be a string_literal.
      // Identifier is added to parse macros that are strings, like PRIu64.
@@ -1502,7 +1514,7 @@ index 7cdde6e..16f8a59 100644
  
      string_literal: $ => seq(
        choice('L"', 'u"', 'U"', 'u8"', '"'),
-@@ -1351,7 +2203,10 @@ module.exports = grammar({
+@@ -1351,7 +2205,10 @@ module.exports = grammar({
      ),
  
      macro_type_specifier: $ => prec.dynamic(-1, seq(
