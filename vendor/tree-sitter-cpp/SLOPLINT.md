@@ -351,6 +351,18 @@ clang++ with `-std=c++23`.
   `#ifdef MIDL_PASS` guards; a declaratorless `typedef enum X {...};`
   under `#if`; `struct X : public Y` under `#ifdef __cplusplus`. The
   22,396-line `ntdll.h` Win32 SDK header parses with zero errors.
+- Member pointers in type position: `TypeMarker<Return (C::*)(Args...)>`,
+  `int (A::B::*)(int)` as template arguments, `using P = int (X::*)(int);`.
+  The scope-prefixed `*` lives only inside
+  `abstract_parenthesized_declarator` — putting it on
+  `_abstract_declarator` made `delete [] p` ambiguous with a lambda
+  capture list. Named member-pointer variables (`int C::* p`) stay
+  errors: rare, and the scope prefix on `pointer_declarator` resurrects
+  the same ambiguity. A parameter list may also take a parenthesized
+  declarator (`T (&arr)[N]`, `T (*arr)[N]`) — the pre-type qualifier in
+  a parameter is restricted to a bare identifier (`_parameter_specifiers`),
+  so the `(` is never read as a macro argument list; `decltype` accepts a
+  comma expression (`decltype(a, void())`).
 
 ## Constructs known still failing
 
@@ -372,12 +384,14 @@ parens steers it to an initialized declaration.
   and 4 controls. The published parser fails those 32 repros and passes
   the 4 controls.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 14 files, 71 cases, all passing with the patch
-  (`tree-sitter test` reports 72/72). The latest additions cover the
+  corpus is not vendored): 15 files, 72 cases, all passing with the patch
+  (`tree-sitter test` reports 73/73). The latest additions cover the
   Win32 SDK cluster (typedef qualifier macros, function-pointer typedefs
   with SAL-annotated parameters, MIDL brackets, declaratorless typedefs
   inside `#if`, `#ifdef`-guarded constructs), bare macro sentinels before
-  preproc blocks, and `NS_BEGIN`/`NS_END` namespace-macro pairs.
+  preproc blocks, `NS_BEGIN`/`NS_END` namespace-macro pairs, parenthesized
+  declarator parameters, `decltype` comma expressions, and member-pointer
+  function types `T (C::*)(Args...)`.
 
 ## Sweep result
 

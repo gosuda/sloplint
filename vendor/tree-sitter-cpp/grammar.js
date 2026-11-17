@@ -318,6 +318,10 @@ module.exports = grammar(C, {
     [$._macro_qualifier_bare, $.expression],
     [$._macro_qualifier_bare, $._declarator, $.type_specifier],
     [$._macro_qualifier_bare, $.type_specifier, $.sized_type_specifier],
+    [$._declaration_modifiers, $.abstract_parenthesized_declarator, $.type_specifier],
+    [$.abstract_parenthesized_declarator, $.qualified_type_identifier],
+    [$.abstract_parenthesized_declarator, $.qualified_identifier],
+    [$.abstract_parenthesized_declarator, $.qualified_identifier, $.qualified_type_identifier],
   ],
 
   inline: ($, original) => original.concat([
@@ -1280,6 +1284,34 @@ module.exports = grammar(C, {
       original,
       $.abstract_reference_declarator,
     ),
+
+    // Member pointers in type position (`R (C::*)(Args...)`): the C base has
+    // no scope prefix on `*`, so `C::*` fell into call-expression reads with a
+    // MISSING type. The scope-prefixed alternative lives only inside
+    // parenthesized declarators — not on `_abstract_declarator` itself —
+    // because a scope-starting abstract declarator makes `delete [] p`
+    // ambiguous with a lambda capture. `A::B::*` and global `::*` both cover;
+    // named member-pointer variables (`int C::* p`) are the accepted loss.
+    abstract_parenthesized_declarator: $ => prec(1, seq(
+      '(',
+      repeat(choice($.ms_call_modifier, $.macro_attribute)),
+      choice(
+        $._abstract_declarator,
+        seq(
+          repeat1($._scope_resolution),
+          '*',
+          repeat(choice(
+            $.ms_pointer_modifier,
+            $.type_qualifier,
+            $.ms_call_modifier,
+            $.far_ptr_modifier,
+            $.macro_attribute,
+          )),
+          optional($._abstract_declarator),
+        ),
+      ),
+      ')',
+    )),
 
     reference_declarator: $ => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._declarator))),
     reference_field_declarator: $ => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._field_declarator))),

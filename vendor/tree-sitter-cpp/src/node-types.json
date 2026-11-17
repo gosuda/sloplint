@@ -612,13 +612,40 @@
   {
     "type": "abstract_parenthesized_declarator",
     "named": true,
-    "fields": {},
+    "fields": {
+      "scope": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "decltype",
+            "named": true
+          },
+          {
+            "type": "dependent_name",
+            "named": true
+          },
+          {
+            "type": "namespace_identifier",
+            "named": true
+          },
+          {
+            "type": "template_type",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "_abstract_declarator",
+          "named": true
+        },
+        {
+          "type": "far_ptr_modifier",
           "named": true
         },
         {
@@ -627,6 +654,14 @@
         },
         {
           "type": "ms_call_modifier",
+          "named": true
+        },
+        {
+          "type": "ms_pointer_modifier",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         }
       ]
