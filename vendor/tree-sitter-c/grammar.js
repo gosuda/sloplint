@@ -2155,9 +2155,11 @@ module.exports = grammar({
         // concatenation: `XSTR(a) "." XSTR(b)`, `"v" FLATBUFFERS_STRING(x)`.
         seq($.call_expression, $.string_literal),
         seq($.string_literal, $.call_expression),
-        // sloplint: no `call_expression call_expression` first pair — adjacent
-        // `NAME(args)` lines at file scope otherwise merge into one fake
-        // concatenated_string instead of macro declarations / call statements.
+        // sloplint: `call call` may only open the concatenation when a
+        // literal follows (`XSTR(a) XSTR(b) "x"`). Without the literal,
+        // adjacent `NAME(args)` lines at file scope merge into one fake
+        // concatenated_string and emit phantom calls.
+        seq($.call_expression, $.call_expression, $.string_literal),
       ),
       repeat(choice($.string_literal, $.identifier, $.call_expression)),
     ))),

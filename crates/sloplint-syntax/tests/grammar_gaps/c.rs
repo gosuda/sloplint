@@ -298,3 +298,15 @@ fn call_literal_concatenation_still_parses() {
         "const char *v = XSTR(1) \".\" XSTR(2);\n",
     ));
 }
+
+/// Two calls leading a literal concatenate: `STR(a) STR(b) "x"` must not
+/// regress to a parse error (Devin Review, PR #25).
+#[test]
+fn two_calls_leading_a_literal_concatenate() {
+    run_clean(concat!(
+        "#define STR_(x) #x\n",
+        "#define STR(x) STR_(x)\n",
+        "void f(const char *s);\n",
+        "void g(void) { f(STR(a) STR(b) \"\\n\"); }\n",
+    ));
+}

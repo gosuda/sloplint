@@ -1,5 +1,5 @@
 --- /tmp/upstream-c-grammar.js	2026-11-17 18:43:57.324191533 +0000
-+++ grammar.js	2026-11-17 19:41:50.498612695 +0000
++++ grammar.js	2026-11-17 19:48:44.921129940 +0000
 @@ -36,8 +36,11 @@
    name: 'c',
  
@@ -1478,7 +1478,7 @@
      ),
  
      subscript_designator: $ => seq('[', $.expression, ']'),
-@@ -1296,14 +2146,21 @@
+@@ -1296,14 +2146,23 @@
  
      // Must concatenate at least 2 nodes, one of which must be a string_literal.
      // Identifier is added to parse macros that are strings, like PRIu64.
@@ -1492,9 +1492,11 @@
 +        // concatenation: `XSTR(a) "." XSTR(b)`, `"v" FLATBUFFERS_STRING(x)`.
 +        seq($.call_expression, $.string_literal),
 +        seq($.string_literal, $.call_expression),
-+        // sloplint: no `call_expression call_expression` first pair — adjacent
-+        // `NAME(args)` lines at file scope otherwise merge into one fake
-+        // concatenated_string instead of macro declarations / call statements.
++        // sloplint: `call call` may only open the concatenation when a
++        // literal follows (`XSTR(a) XSTR(b) "x"`). Without the literal,
++        // adjacent `NAME(args)` lines at file scope merge into one fake
++        // concatenated_string and emit phantom calls.
++        seq($.call_expression, $.call_expression, $.string_literal),
        ),
 -      repeat(choice($.string_literal, $.identifier)),
 -    )),
@@ -1503,7 +1505,7 @@
  
      string_literal: $ => seq(
        choice('L"', 'u"', 'U"', 'u8"', '"'),
-@@ -1351,7 +2208,10 @@
+@@ -1351,7 +2210,10 @@
      ),
  
      macro_type_specifier: $ => prec.dynamic(-1, seq(
