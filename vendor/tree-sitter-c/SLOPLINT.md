@@ -396,7 +396,8 @@ the size growth.
 - **`macro_argument_list` token soup** also accepts real expression
   rules (`$.pointer_expression`, `$.unary_expression`,
   `$.sizeof_expression`), the assignment/suffix operators `^=`, `<<=`,
-  `>>=`, `%=`, `&=`, `|=`, `++`, `--`, `[`, `]`, and nested
+  `>>=`, `%=`, `&=`, `|=`, `++`, `--`, `[`, `]`, `{`, `}` (brace-init
+  args such as `M(name, T{})` / `M({a, b})`), and nested
   `$.macro_argument_list` — otherwise `*x`-shaped first arguments
   compete with the expression reading and land in `ERROR`.
 

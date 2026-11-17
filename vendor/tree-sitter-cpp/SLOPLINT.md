@@ -463,6 +463,16 @@ enumeration of `macro_attribute` costs most of the size growth.
 - **`concatenated_string`** accepts `identifier` (macro names) at
   either edge of the literal chain — `"lit" MACRO`, `MACRO "lit"`, and
   interleaved forms — plus `raw_string_literal` anywhere in the chain.
+  The generic `call_expression + call_expression` arm was removed:
+  with it present, three or more consecutive `NAME(ident)` lines at
+  namespace/file scope (the nghttp2/kdbindings/7zip declaration-macro
+  run idiom — 61+ corpus files) always read as a string concat plus a
+  MISSING `;` instead of a run of `macro_declaration`s. The trade-off
+  is that adjacent call-with-args concatenation (`XSTR(A) XSTR(B)`)
+  no longer parses; the parse-rescue pipeline still analyses the
+  surrounding code. Restricting the arm to known stringify-macro names
+  was tried and reverted: a literal `'XSTR'` lexes as a keyword and
+  shadows the identifier in every expression position.
 
 - **Statement fragments inside preproc blocks** — inherited from the
   base: `dangling_else` (cpp override carries `constexpr` +
@@ -481,8 +491,10 @@ enumeration of `macro_attribute` costs most of the size growth.
   `value`/`argument` field is `repeat(choice($.preproc_arg,
   $.comment))`), and `macro_argument_list` accepts real expressions
   (`$.pointer_expression`, `$.unary_expression`, `$.sizeof_expression`),
-  assignment/suffix operators, `[`/`]`, and nested
-  `$.macro_argument_list`.
+  assignment/suffix operators, `[`/`]`, `{`/`}` (brace-init args such
+  as `M(name, T{})` / `M({a, b})` — the KDBindings `make_node` idiom),
+  and nested `$.macro_argument_list`. The same brace atoms are added
+  to `vendor/tree-sitter-c`'s own `macro_argument_list`.
 
 - **Access-modifier macros** (`JSON_PRIVATE_UNLESS_TESTED:`-style names
   in `private:`/`protected:` position) parse as `macro_access_label` in
@@ -510,9 +522,15 @@ enumeration of `macro_attribute` costs most of the size growth.
     start with these tokens, so argument position stays unambiguous.
 - **`macro_qualifier`/`macro_attribute` in `_function_postfix`** —
   `repeat1(choice($.virtual_specifier, $.macro_attribute,
-  $.macro_qualifier))`, so member declarations with a trailing
-  attribute macro (`int f() const FLATBUFFERS_OVERRIDE;`) parse on the
-  declaration path, not only on definitions.
+  $._macro_qualifier_bare))`. The qualifier slot takes the base
+  grammar's bare-identifier form, not the arg-carrying
+  `macro_qualifier`: with args allowed, `M(f3) M(f4) M(f5)` read as
+  one function declarator followed by qualifier macros, starving the
+  macro-declaration read. The base's `_macro_qualifier_bare` carries
+  `prec.dynamic(-1)` and must not be redefined here without it — a
+  zero-precedence version wins against `type + identifier` reads
+  inside `_parameter_specifiers` (`Foo bar` params degrade to
+  `macro_qualifier + type_identifier`).
 - **`macro_declaration` args are `macro_argument_list` only** —
   `optional($.macro_argument_list)` in both the literal-name and
   generic fallback forms (and in `qt_statement_macro`). Sharing
@@ -536,7 +554,12 @@ enumeration of `macro_attribute` costs most of the size growth.
   still loses to the `init_declarator` reinterpretation
   (`f = T(T(&arr))[N]`); `return x\n#endif\n? a : b;` expressions
   split across `#if` branches still error; a handful of generated
-  headers carry a lone stray-brace ERROR that parse-rescue excises.
+  headers carry a lone stray-brace ERROR that parse-rescue excises;
+  `XSTR(A) XSTR(B)`-style adjacent call concatenation is a documented
+  loss (see `concatenated_string` above); bare `>=`/`>` inside
+  template arguments (`enable_if_t<sizeof(T) >= 1>`) stays
+  unparseable — `token(prec(1, '>'))` splits the operator at lex time
+  and a context-free fix needs an external scanner.
 
 ## Packed generated parser
 

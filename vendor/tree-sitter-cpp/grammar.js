@@ -58,13 +58,13 @@ module.exports = grammar(C, {
   ],
 
   conflicts: $ => [
-    [$._linkage_guard, $.preproc_if],
-    [$._linkage_guard, $.preproc_ifdef],
+    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.expression],
+    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.expression],
+    [$.enumerator_list, $.expression],
     // `identifier (` opens a call, a declarator, a macro-type specifier, or
     // the generic macro_declaration/macro_qualifier fallbacks — all five can
     // coexist where declarations and statements interleave. Dynamic -1 on
     // the macro rules keeps real constructs winning at runtime.
-    [$.type_specifier, $._declarator, $.expression, $.macro_declaration, $.macro_qualifier],
     // `identifier ~` leads a destructor vs a macro fallback.
     [$.macro_declaration, $.macro_qualifier, $.type_specifier],
     // Bare `identifier` at statement start: expression vs macro fallback.
@@ -174,10 +174,7 @@ module.exports = grammar(C, {
     [$.expression, $.concatenated_string],
     [$._string, $.concatenated_string],
     [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list],
-    [$.preproc_else, $.preproc_else_in_initializer_list],
     [$.preproc_if, $.preproc_if_in_initializer_list],
-    [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list],
-    [$.preproc_elif, $.preproc_elif_in_initializer_list],
     [$._parameter_list_item],
     [$._field_initializer_list_item],
     [$.comma_expression, $._initializer_list_real],
@@ -212,7 +209,6 @@ module.exports = grammar(C, {
     [$.enumerator, $.expression],
     [$.enumerator, $.concatenated_string],
     [$.enumerator_list, $.concatenated_string],
-    [$.enumerator_list, $.expression, $.concatenated_string],
     [$.concatenated_string],
     [$.constructor_or_destructor_definition],
     [$._scope_resolution],
@@ -225,11 +221,9 @@ module.exports = grammar(C, {
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma],
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.extension_expression],
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.concatenated_string],
-    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.expression, $.concatenated_string],
     [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma],
     [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.extension_expression],
     [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.concatenated_string],
-    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.expression, $.concatenated_string],
     [$.extension_expression],
     [$._block_item, $.preproc_ifdef_in_initializer_list],
     [$.preproc_ifdef_in_initializer_list, $.comma_expression],
@@ -242,16 +236,9 @@ module.exports = grammar(C, {
     [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier],
     [$.macro_argument_list, $.template_type],
     [$.macro_argument_list, $.sized_type_specifier],
-    [$._argument_list_real, $._argument_list_type],
-    [$.call_expression, $._argument_list_real, $._argument_list_type],
-    [$._argument_list_real, $._argument_list_type, $.compound_literal_expression],
-    [$.sized_type_specifier, $._argument_list_real, $._argument_list_type],
     [$.sized_type_specifier, $.expression],
     [$._argument_list_type],
     [$.sized_type_specifier, $._argument_list_type],
-    [$.type_specifier, $._argument_list_real, $._argument_list_type],
-    [$.type_specifier, $.call_expression, $._argument_list_real, $._argument_list_type],
-    [$.macro_qualifier, $.sized_type_specifier, $.expression],
     [$._declaration_modifiers, $._argument_list_type],
     [$.type_specifier, $._argument_list_type],
     [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression],
@@ -266,20 +253,9 @@ module.exports = grammar(C, {
     [$._midl_attribute, $._lambda_capture_identifier],
     [$._midl_attribute, $.expression],
     [$._midl_attribute, $.expression, $.structured_binding_declarator],
-    [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
-    [$._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
-    [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
-    [$.macro_qualifier, $._declarator, $.type_specifier, $.macro_type_specifier],
-    [$.type_specifier, $.expression, $.macro_type_specifier],
-    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
     [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier, $.macro_type_specifier],
-    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_type_specifier],
-    [$.macro_qualifier, $.type_specifier, $.expression, $.macro_type_specifier],
     [$.macro_argument_list, $.type_qualifier],
     [$.macro_argument_list, $.type_specifier],
-    [$.macro_argument_list, $.type_specifier, $.macro_type_specifier],
-    [$._declaration_modifiers, $.pointer_field_declarator],
-    [$._declaration_modifiers, $.field_declaration],
     [$.call_expression, $._argument_list_type],
     [$._argument_list_type, $.compound_literal_expression],
     [$.type_specifier, $.call_expression, $._argument_list_type],
@@ -310,7 +286,6 @@ module.exports = grammar(C, {
     [$.preproc_if, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature],
     [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature],
     [$.preproc_elif, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature],
-    [$.type_specifier],
     [$._macro_qualifier_bare, $.type_specifier],
     [$._macro_qualifier_bare, $.sized_type_specifier],
     [$._macro_qualifier_bare, $.type_specifier, $.expression],
@@ -322,6 +297,7 @@ module.exports = grammar(C, {
     [$.abstract_parenthesized_declarator, $.qualified_type_identifier],
     [$.abstract_parenthesized_declarator, $.qualified_identifier],
     [$.abstract_parenthesized_declarator, $.qualified_identifier, $.qualified_type_identifier],
+    [$.expression],
   ],
 
   inline: ($, original) => original.concat([
@@ -1178,6 +1154,9 @@ module.exports = grammar(C, {
         '.*',
         '[',
         ']',
+        // Brace-init inside macro args: `M(name, T{})` / `M({a, b})`.
+        '{',
+        '}',
         'operator',
         'const',
         'noexcept',
@@ -1352,8 +1331,15 @@ module.exports = grammar(C, {
       ),
     )),
 
+    // Post-declarator qualifiers are bare names only (`f() Q_DECL_OVERRIDE`).
+    // An arg-carrying qualifier (`f() ATTR(x)`) makes consecutive
+    // `NAME(args)` lines read as a function declarator + attributes,
+    // which starves the macro-declaration read — bare names keep both.
+    // Uses the base grammar's `_macro_qualifier_bare` (dynamic -1), so real
+    // type/declarator reads still win — do not redefine it here without
+    // the negative precedence.
     _function_postfix: $ => prec.right(choice(
-      repeat1(choice($.virtual_specifier, $.macro_attribute, $.macro_qualifier)),
+      repeat1(choice($.virtual_specifier, $.macro_attribute, $._macro_qualifier_bare)),
       $.requires_clause,
     )),
 
@@ -2410,9 +2396,6 @@ module.exports = grammar(C, {
           choice($.string_literal, $.raw_string_literal),
           choice($.identifier, $.call_expression),
         ),
-        // Stringification macros concatenate with each other:
-        // `XSTR(A) XSTR(B)`.
-        seq($.call_expression, $.call_expression),
       ),
       repeat(choice($.identifier, $.string_literal, $.raw_string_literal, $.call_expression)),
     ))),
