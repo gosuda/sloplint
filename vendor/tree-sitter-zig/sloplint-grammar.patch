@@ -66,12 +66,15 @@
  
      if_expression: $ => prec.right(seq(
        $._if_prefix,
-@@ -851,7 +856,7 @@
+@@ -851,7 +856,10 @@
  
      builtin_identifier: _ => /@[A-Za-z_][A-Za-z0-9_]*/,
  
 -    identifier: $ => choice($._identifier, seq('@', $.string)),
-+    identifier: $ => choice($._identifier, seq('@', $.string), 'async', 'await'),
++    // sloplint: 'async'/'await' are contextual keywords, and 'bitpack'
++    // (zig 0.18's `packed` alias) stays usable as a plain name in code
++    // written for older zig releases.
++    identifier: $ => choice($._identifier, seq('@', $.string), 'async', 'await', 'bitpack'),
      _identifier: _ => /[A-Za-z_][A-Za-z0-9_]*/,
      _reserved_identifier: _ => choice(
        'undefined',
