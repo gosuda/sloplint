@@ -19146,6 +19146,23 @@
                       "name": "call_expression"
                     }
                   ]
+                },
+                {
+                  "type": "SEQ",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "call_expression"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "call_expression"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "string_literal"
+                    }
+                  ]
                 }
               ]
             },
