@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 9d530a1..90ce2bd 100644
+index 9d530a1..79f9ae9 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -7,10 +7,31 @@ const PREC = {
@@ -185,7 +185,7 @@ index 9d530a1..90ce2bd 100644
 +          // plain segments, as in $x"cat"$y — a single expandable word.
 +          new RegExp(
 +            /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
-+              /["']/.source +
++              '(' + WORD_SQ + '|' + WORD_DQ + ')' +
 +              wordTail(/[^&\s()}|;,]/.source),
 +          ),
 +        ),
