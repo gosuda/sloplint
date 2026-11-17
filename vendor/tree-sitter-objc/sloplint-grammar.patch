@@ -1,5 +1,5 @@
 --- /tmp/upstream-objc-grammar.js	2026-11-17 19:26:20.844389837 +0000
-+++ grammar.js	2026-11-17 19:25:56.169835130 +0000
++++ grammar.js	2026-11-17 19:45:06.976065202 +0000
 @@ -20,9 +20,13 @@
    ],
  
@@ -138,7 +138,30 @@
    ]),
  
    inline: ($, original) => original.concat([
-@@ -57,8 +177,81 @@
+@@ -48,6 +168,22 @@
+   ]),
+ 
+   rules: {
++    // Same as the C rule minus the `call_expression call_expression`
++    // first pair: adjacent `NAME(args)` lines at file scope
++    // (`DEBUG_OPTION_DECLARE_*` runs, member macro generators) otherwise
++    // merge into one fake concatenated_string at prec.dynamic(2),
++    // outranking the macro_declaration read and emitting phantom calls.
++    concatenated_string: $ => prec.dynamic(2, prec.right(seq(
++      choice(
++        seq($.identifier, $.string_literal),
++        seq($.string_literal, $.string_literal),
++        seq($.string_literal, $.identifier),
++        seq($.call_expression, $.string_literal),
++        seq($.string_literal, $.call_expression),
++      ),
++      repeat(choice($.string_literal, $.identifier, $.call_expression)),
++    ))),
++
+     _top_level_item: ($, original) => choice(
+       original,
+       $.class_declaration,
+@@ -57,8 +193,81 @@
        $.protocol_forward_declaration,
        $.module_import,
        $.compatibility_alias_declaration,
@@ -220,7 +243,7 @@
      ),
  
      _block_item: ($, original) => choice(
-@@ -70,8 +263,46 @@
+@@ -70,8 +279,46 @@
        $.protocol_forward_declaration,
        $.module_import,
        $.compatibility_alias_declaration,
@@ -267,7 +290,7 @@
      ),
  
      function_definition: $ => seq(
-@@ -88,19 +319,52 @@
+@@ -88,19 +335,52 @@
          $.init_declarator,
          seq($.type_qualifier, $.identifier),
        )))),
@@ -330,7 +353,7 @@
      ),
  
      _type_definition_type: $ => seq(
-@@ -114,6 +378,15 @@
+@@ -114,6 +394,15 @@
      _type_definition_declarators: $ => seq(
        commaSep1(field('declarator', $._type_declarator)),
        optional($._declaration_modifiers),
@@ -346,7 +369,7 @@
      ),
  
      _declaration_modifiers: ($, original) => choice(
-@@ -142,6 +415,12 @@
+@@ -142,6 +431,12 @@
        $.throw_statement,
        $.synchronized_statement,
        $.ms_asm_block,
@@ -359,7 +382,7 @@
      ),
  
      attribute: $ => seq(
-@@ -358,12 +637,84 @@
+@@ -358,12 +653,84 @@
      ...preprocIf('_in_interface_declaration', $ => $.interface_declaration),
      ...preprocIf('_in_enumerator', $ => seq($.enumerator, ',')),
  
@@ -445,7 +468,7 @@
      preproc_linemarker: $ => seq(
        '#',
        $.number_literal,
-@@ -422,6 +773,7 @@
+@@ -422,6 +789,7 @@
            'NS_EXTENSION_UNAVAILABLE_IOS',
            'NS_CLASS_AVAILABLE_IOS',
            'NS_CLASS_DEPRECATED_IOS',
@@ -453,7 +476,7 @@
            '__OSX_AVAILABLE_STARTING',
          ),
          '(',
-@@ -481,6 +833,9 @@
+@@ -481,6 +849,9 @@
  
      enumerator: $ => seq(
        field('name', $.identifier),
@@ -463,7 +486,7 @@
        optional(seq('=', field('value', $.expression))),
      ),
  
-@@ -590,7 +945,6 @@
+@@ -590,7 +961,6 @@
      instance_variable: $ => choice(
        $.visibility_specification,
        $.struct_declaration,
@@ -471,7 +494,7 @@
        $.preproc_ifdef,
        $.preproc_if,
      ),
-@@ -625,10 +979,16 @@
+@@ -625,10 +995,16 @@
        $.function_definition,
        $.type_definition,
        alias($.preproc_if_in_interface_declaration, $.preproc_if),
@@ -489,7 +512,7 @@
        seq($.struct_specifier, ';'),
      ),
  
-@@ -646,12 +1006,16 @@
+@@ -646,12 +1022,16 @@
        $.preproc_function_def,
        $.macro_type_specifier,
        $.type_definition,
@@ -509,7 +532,7 @@
  
      property_implementation: $ => choice(
        seq(
-@@ -681,7 +1045,11 @@
+@@ -681,7 +1061,11 @@
        ),
        optional(seq(',', choice('...', commaSep1(alias($.c_method_parameter, $.method_parameter))))),
        repeat($.declaration),
@@ -522,7 +545,7 @@
        optional(';'),
        $.compound_statement,
        optional(';'),
-@@ -718,7 +1086,7 @@
+@@ -718,7 +1102,7 @@
        '@property',
        optional($.property_attributes_declaration),
        optional(choice($.attribute_specifier, $.attribute_declaration)),
@@ -531,7 +554,7 @@
      )),
  
      property_attributes_declaration: $ => seq(
-@@ -745,7 +1113,7 @@
+@@ -745,7 +1129,7 @@
          $.method_parameter,
        )),
        optional(seq(',', choice('...', commaSep1(alias($.c_method_parameter, $.method_parameter))))),
@@ -540,7 +563,7 @@
        repeat1(prec.right(';')),
      ),
  
-@@ -768,17 +1136,47 @@
+@@ -768,17 +1152,47 @@
      struct_declaration: $ => seq(
        repeat1($.specifier_qualifier),
        commaSep1($.struct_declarator),
@@ -596,7 +619,7 @@
      ),
  
      preproc_block: $ => prec.right(seq(
-@@ -1050,6 +1448,7 @@
+@@ -1050,6 +1464,7 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -604,7 +627,7 @@
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
        $.atdef_field,
-@@ -1197,7 +1596,7 @@
+@@ -1197,7 +1612,7 @@
  
      ['preproc_ifdef' + suffix]: $ => seq(
        choice(preprocessor('ifdef'), preprocessor('ifndef')),
@@ -613,7 +636,7 @@
        repeat(prec(2, content($))),
        field('alternative', optional(choice(elseBlock($), $.preproc_elifdef))),
        preprocessor('endif'),
-@@ -1218,7 +1617,7 @@
+@@ -1218,7 +1633,7 @@
  
      ['preproc_elifdef' + suffix]: $ => seq(
        choice(preprocessor('elifdef'), preprocessor('elifndef')),

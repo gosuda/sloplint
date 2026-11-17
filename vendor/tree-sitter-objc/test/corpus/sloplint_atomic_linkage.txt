@@ -116,17 +116,15 @@ DEBUG_OPTION_DECLARE_FLAG(OPTDebugX);
 ---
 
 (translation_unit
-  (expression_statement
-    (concatenated_string
-      (call_expression
-        (identifier)
-        (argument_list
-          (identifier)))
-      (call_expression
-        (identifier)
-        (argument_list
-          (identifier)))
-      (call_expression
-        (identifier)
-        (argument_list
-          (identifier))))))
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier)))
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier)))
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier))))

@@ -168,6 +168,22 @@ module.exports = grammar(C, {
   ]),
 
   rules: {
+    // Same as the C rule minus the `call_expression call_expression`
+    // first pair: adjacent `NAME(args)` lines at file scope
+    // (`DEBUG_OPTION_DECLARE_*` runs, member macro generators) otherwise
+    // merge into one fake concatenated_string at prec.dynamic(2),
+    // outranking the macro_declaration read and emitting phantom calls.
+    concatenated_string: $ => prec.dynamic(2, prec.right(seq(
+      choice(
+        seq($.identifier, $.string_literal),
+        seq($.string_literal, $.string_literal),
+        seq($.string_literal, $.identifier),
+        seq($.call_expression, $.string_literal),
+        seq($.string_literal, $.call_expression),
+      ),
+      repeat(choice($.string_literal, $.identifier, $.call_expression)),
+    ))),
+
     _top_level_item: ($, original) => choice(
       original,
       $.class_declaration,
