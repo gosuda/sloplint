@@ -1,0 +1,134 @@
+================================================================================
+Member macro generator inside @interface
+================================================================================
+
+@interface AAOptions : NSObject
+AAPropSetFuncDeclare(NSString *, name)
+@property (nonatomic, copy) NSString *name;
+@end
+
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    (identifier)
+    (macro_declaration
+      (identifier)
+      (macro_argument_list
+        (identifier)
+        (identifier)))
+    (property_declaration
+      (property_attributes_declaration
+        (property_attribute
+          (identifier))
+        (property_attribute
+          (identifier)))
+      (struct_declaration
+        (type_identifier)
+        (struct_declarator
+          (pointer_declarator
+            (identifier)))))))
+
+================================================================================
+Member macro generator inside @implementation
+================================================================================
+
+@implementation Foo
+QMUISynthesizeBOOLProperty(isOn, setOn)
+- (void)done { }
+@end
+
+---
+
+(translation_unit
+  (class_implementation
+    (identifier)
+    (implementation_definition
+      (macro_declaration
+        (identifier)
+        (macro_argument_list
+          (identifier)
+          (identifier))))
+    (implementation_definition
+      (method_definition
+        (method_type
+          (type_name
+            (primitive_type)))
+        (identifier)
+        (compound_statement)))))
+
+================================================================================
+Attribute macro trailing a method signature
+================================================================================
+
+@interface Foo
+- (void)doThing SPU_OBJC_DIRECT;
+- (void)other API_AVAILABLE(ios(13.0));
+@end
+
+@implementation Foo
+- (void)doThing SPU_OBJC_DIRECT {
+}
+@end
+
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    (method_declaration
+      (method_type
+        (type_name
+          (primitive_type)))
+      (identifier)
+      (identifier))
+    (method_declaration
+      (method_type
+        (type_name
+          (primitive_type)))
+      (identifier)
+      (availability_attribute_specifier
+        (version
+          (platform)
+          (number_literal)))))
+  (class_implementation
+    (identifier)
+    (implementation_definition
+      (method_definition
+        (method_type
+          (type_name
+            (primitive_type)))
+        (identifier)
+        (macro_qualifier
+          (identifier))
+        (compound_statement)))))
+
+================================================================================
+Bare statement macro
+================================================================================
+
+@implementation F
+- (void)refresh {
+  MJRefreshCheckState
+  [self endRefreshing];
+}
+@end
+
+---
+
+(translation_unit
+  (class_implementation
+    (identifier)
+    (implementation_definition
+      (method_definition
+        (method_type
+          (type_name
+            (primitive_type)))
+        (identifier)
+        (compound_statement
+          (macro_declaration)
+          (expression_statement
+            (message_expression
+              (identifier)
+              (identifier))))))))

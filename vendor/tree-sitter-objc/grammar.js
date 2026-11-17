@@ -54,6 +54,104 @@ module.exports = grammar(C, {
     [$.macro_argument_list, $.generic_specifier],
     [$.expression, $.concatenated_string],
     [$._macro_declaration_top],
+    // `__weak`/`__extension__`-shaped macros in modifier position are
+    // simultaneously macro_attribute literals and type_qualifiers once
+    // macro_qualifier joins the modifier repeat.
+    [$.macro_attribute, $.type_qualifier],
+    [$.macro_attribute, $.storage_class_specifier],
+    // `^NAME(args)` in member position is a block declarator returning
+    // `NAME` vs a macro-type-specifier / plain-type read of `NAME(args)`.
+    [$._declarator, $.type_specifier, $.macro_type_specifier],
+    // `{ NAME` inside a block is a bare statement macro vs an expression
+    // or a declaration type start, e.g. followed by a `^` block or an
+    // `__extension__`-shaped modifier.
+    [$.statement, $.expression, $.type_specifier],
+    [$.statement, $.expression],
+    [$.statement, $.type_specifier],
+    // `{ NAME(args)` competes as a statement macro, a call expression, a
+    // declaration (`NAME` type + parenthesized declarator), and a
+    // macro-type-specifier.
+    [$._macro_declaration_stmt, $.type_specifier, $.statement, $.expression, $.macro_type_specifier],
+    // `{ NAME signed` is a bare statement macro vs a sized type specifier
+    // (`NAME signed int x` style declarations).
+    [$.sized_type_specifier, $.statement],
+    // `{ NAME @"str"` concatenated string vs bare statement macro.
+    [$.statement, $.concatenated_string],
+    // `NAME(args)` right after `@interface H` is a member macro vs a
+    // method type-specifier read.
+    [$.macro_declaration, $.type_specifier, $.macro_type_specifier],
+    // `NAME(args)` as the first member after an attributed ivar block is
+    // a member macro vs a method call/type read.
+    [$._macro_declaration_stmt, $.statement, $.expression],
+    // `default: NAME` — bare statement macro vs expression before a
+    // `#if` continuation.
+    // `default: NAME` / `case x: NAME` — bare statement macro vs
+    // declaration or expression arms inside switch bodies.
+    [$.case_statement, $.expression],
+    [$.case_statement, $.type_specifier],
+    [$.case_statement, $.sized_type_specifier],
+    [$.case_statement, $.concatenated_string],
+    [$.case_statement, $._macro_declaration_stmt],
+    [$.case_statement, $.type_specifier, $.expression],
+    [$.case_statement, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_type_specifier],
+    // `API_DEPRECATED_WITH_REPLACEMENT(...)` in the method-modifier
+    // repeat is the availability specifier vs a macro_qualifier
+    // argument list.
+    [$.expression, $.availability_attribute_specifier],
+    // `#ifdef X __extension__` inside a block is a preproc arm around
+    // statement macros vs an __extension__ typedef/qualifier chain.
+    [$.preproc_ifdef_in_statement, $.type_definition, $.type_qualifier],
+    // `_Atomic(T) __extension__` keeps two macro_type_specifier reads
+    // alive through the new modifier repeat.
+    [$.macro_type_specifier],
+    // After a `label:` a `NAME(args)` is a statement macro vs call /
+    // type-specifier reads.
+    [$._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_type_specifier],
+    // `#ifdef` arm inside an argument list followed by a `^{ }` block
+    // literal vs the same tokens as a preproc-in-args continuation.
+    [$.preproc_ifdef_in_argument_list, $.block_literal],
+    // After a `+`/`(` selector, `NAME __extension__` keeps two
+    // macro_qualifier reductions alive in the method modifier repeat.
+    [$.macro_qualifier],
+    // `+ NAME;` is a macro_qualifier ending the method modifiers vs a
+    // one-segment keyword selector.
+    [$.macro_qualifier, $.keyword_declarator],
+    // `+ NAME <modifier> __extension__` in @implementation — the
+    // pre-body declaration repeat vs the modifier repeat overlap.
+    [$._declaration_specifiers, $.method_definition],
+    // `#ifdef X ... #else __extension__` arm inside a block vs an
+    // __extension__ typedef/qualifier chain.
+    [$.preproc_else_in_statement, $.type_definition, $.type_qualifier],
+    // `enum { A = expr #ifdef` — the enumerator ends before the
+    // preproc arm vs the expression extending into it.
+    [$.enumerator, $.binary_expression],
+    // `#else` arm inside an argument list followed by a `^{ }` block
+    // literal.
+    [$.preproc_else_in_argument_list, $.block_literal],
+    // `expr #ifdef X ^id` — block declarator vs expression/type reads
+    // inside a preproc arm of an argument list.
+    [$._declarator, $.type_specifier, $.expression],
+    // `expr #ifdef X ^id<` — same reads plus `id<...>` generics.
+    [$._declarator, $.type_specifier, $.expression, $.generic_specifier],
+    // `expr #ifdef X ^id(` — same reads plus `id(...)` macro types.
+    [$._declarator, $.type_specifier, $.expression, $.macro_type_specifier],
+    // `expr #ifdef X ^^d` — nested block pointer vs type name inside a
+    // preproc arm.
+    [$.block_pointer_declarator, $.type_name],
+    // `expr #ifdef X ^^const` — same nested block pointer ambiguity
+    // through specifier_qualifier.
+    [$.specifier_qualifier, $.block_pointer_declarator],
+    // `expr #ifdef X ^*id` — block pointer declarator vs expression
+    // inside a preproc arm.
+    [$._declarator, $.expression],
+    // `expr #ifdef X ^(const` — block type-name modifiers vs typedef
+    // internals inside a preproc arm.
+    [$._declaration_modifiers, $.type_descriptor],
+    // `expr #ifdef X ^(type)` — same position one token later.
+    [$._declaration_specifiers, $.type_descriptor],
+    // `expr #ifdef X ^({...})` — GCC statement-expression vs block
+    // parameter list inside a preproc arm.
+    [$.parameter_list, $.parenthesized_expression],
   ]),
 
   inline: ($, original) => original.concat([
@@ -317,6 +415,12 @@ module.exports = grammar(C, {
       $.throw_statement,
       $.synchronized_statement,
       $.ms_asm_block,
+      // sloplint: a bare `NAME` on its own line in statement position is a
+      // no-arg/no-semicolon statement macro (MJRefreshCheckState,
+      // BeginIgnorePerformSelectorLeaksWarning). It is unreachable as an
+      // expression_statement (no `;`) and loses to a declaration whenever
+      // a declarator can follow, so dynamic -2 is safe.
+      alias(prec.dynamic(-2, $.identifier), $.macro_declaration),
     ),
 
     attribute: $ => seq(
@@ -881,6 +985,10 @@ module.exports = grammar(C, {
       $.preproc_undef,
       $.preproc_call,
       $.preproc_null,
+      // sloplint: member-position macro generators
+      // (`QMUISynthesizeBOOLProperty(...)`, `AAPropSetFuncImplementation(...)`)
+      // and bare annotation lines between declarations.
+      $.macro_declaration,
       seq($.struct_specifier, ';'),
     ),
 
@@ -904,6 +1012,9 @@ module.exports = grammar(C, {
       $.preproc_def,
       $.preproc_call,
       $.preproc_null,
+      // sloplint: member-position macro generators and bare annotation
+      // lines inside @implementation bodies.
+      $.macro_declaration,
     ),),
 
     property_implementation: $ => choice(
@@ -934,7 +1045,11 @@ module.exports = grammar(C, {
       ),
       optional(seq(',', choice('...', commaSep1(alias($.c_method_parameter, $.method_parameter))))),
       repeat($.declaration),
-      repeat($._declaration_modifiers),
+      // sloplint: annotation macros trailing the signature
+      // (`- (void)m SPU_OBJC_DIRECT`, `API_AVAILABLE(...)`) are
+      // identifier-shaped and land in macro_qualifier, not macro_attribute's
+      // literal list.
+      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
       optional(';'),
       $.compound_statement,
       optional(';'),
@@ -998,7 +1113,7 @@ module.exports = grammar(C, {
         $.method_parameter,
       )),
       optional(seq(',', choice('...', commaSep1(alias($.c_method_parameter, $.method_parameter))))),
-      repeat($._declaration_modifiers),
+      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
       repeat1(prec.right(';')),
     ),
 

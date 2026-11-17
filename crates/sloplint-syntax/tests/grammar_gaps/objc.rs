@@ -406,3 +406,53 @@ fn an_ns_enum_without_its_semicolon_still_reports_a_parse_error() {
         "an NS_ENUM typedef without `;` must not parse"
     );
 }
+
+#[test]
+fn member_macro_generators_parse_inside_interface_and_implementation() {
+    // `AAPropSetFuncImplementation(T, NSString *, name)` /
+    // `QMUISynthesizeBOOLProperty(...)` — whole member declarations produced
+    // by a bare `NAME(args)` line, seen in AAChartKit and QMUI_iOS.
+    let source = concat!(
+        "@interface AAOptions : NSObject\n",
+        "AAPropSetFuncDeclare(NSString *, name)\n",
+        "@property (nonatomic, copy) NSString *name;\n",
+        "@end\n",
+        "@implementation AAOptions\n",
+        "AAPropSetFuncImplementation(AAOptions, NSString *, name)\n",
+        "QMUISynthesizeBOOLProperty(isOn, setOn)\n",
+        "@end\n",
+    );
+    run_clean(source);
+}
+
+#[test]
+fn attribute_macros_trailing_a_method_signature_parse() {
+    // `- (void)m SPU_OBJC_DIRECT { ... }` — identifier-shaped attribute
+    // macros after the selector, seen in Sparkle (`SPU_OBJC_DIRECT`) and
+    // FLEX sources.
+    let source = concat!(
+        "@implementation Foo\n",
+        "- (void)doThing SPU_OBJC_DIRECT {\n",
+        "}\n",
+        "- (void)other API_AVAILABLE(ios(13.0)) {\n",
+        "}\n",
+        "@end\n",
+    );
+    run_clean(source);
+}
+
+#[test]
+fn bare_statement_macros_parse_inside_method_bodies() {
+    // `MJRefreshCheckState`, `BeginIgnorePerformSelectorLeaksWarning` —
+    // a bare identifier on its own line in statement position, seen in
+    // MJRefresh and Flex.
+    let source = concat!(
+        "@implementation F\n",
+        "- (void)refresh {\n",
+        "  MJRefreshCheckState\n",
+        "  [self endRefreshing];\n",
+        "}\n",
+        "@end\n",
+    );
+    run_clean(source);
+}
