@@ -24,6 +24,8 @@ mod global_write_scope_end;
 mod global_write_shadow;
 #[path = "analyze_facts/go_block_bindings.rs"]
 mod go_block_bindings;
+#[path = "analyze_facts/guarded_class.rs"]
+mod guarded_class;
 #[path = "analyze_facts/guarded_linkage.rs"]
 mod guarded_linkage;
 #[path = "analyze_facts/has_value_return.rs"]

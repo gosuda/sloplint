@@ -1392,6 +1392,14 @@ module.exports = grammar(C, {
       $._function_declarator_seq,
     )),
 
+    // The C base's function_type_declarator (aliased to function_declarator)
+    // ends at the parameter list — typedef'd function types may carry
+    // cv/ref/noexcept qualifiers (`typedef void (C::*f)() const;`).
+    function_type_declarator: $ => prec(1, seq(
+      field('declarator', $._type_declarator),
+      $._function_declarator_seq,
+    )),
+
     function_field_declarator: $ => prec.dynamic(1, seq(
       field('declarator', $._field_declarator),
       $._function_declarator_seq,

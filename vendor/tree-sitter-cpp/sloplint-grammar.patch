@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 77a89b2..ccb91bb 100644
+index 77a89b2..adef905 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -58,6 +58,38 @@ module.exports = grammar(C, {
@@ -1010,7 +1010,22 @@ index 77a89b2..ccb91bb 100644
        $.requires_clause,
      )),
  
-@@ -807,6 +1543,9 @@ module.exports = grammar(C, {
+@@ -656,6 +1392,14 @@ module.exports = grammar(C, {
+       $._function_declarator_seq,
+     )),
+ 
++    // The C base's function_type_declarator (aliased to function_declarator)
++    // ends at the parameter list — typedef'd function types may carry
++    // cv/ref/noexcept qualifiers (`typedef void (C::*f)() const;`).
++    function_type_declarator: $ => prec(1, seq(
++      field('declarator', $._type_declarator),
++      $._function_declarator_seq,
++    )),
++
+     function_field_declarator: $ => prec.dynamic(1, seq(
+       field('declarator', $._field_declarator),
+       $._function_declarator_seq,
+@@ -807,6 +1551,9 @@ module.exports = grammar(C, {
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
@@ -1020,7 +1035,7 @@ index 77a89b2..ccb91bb 100644
      ),
  
      switch_statement: $ => seq(
-@@ -818,16 +1557,27 @@ module.exports = grammar(C, {
+@@ -818,16 +1565,27 @@ module.exports = grammar(C, {
      while_statement: $ => seq(
        'while',
        field('condition', $.condition_clause),
@@ -1050,7 +1065,7 @@ index 77a89b2..ccb91bb 100644
  
      // Using prec(1) instead of prec.dynamic(1) causes issues with the
      // range loop's declaration specifiers if `int` is passed in, it'll
-@@ -838,7 +1588,7 @@ module.exports = grammar(C, {
+@@ -838,7 +1596,7 @@ module.exports = grammar(C, {
        '(',
        $._for_range_loop_body,
        ')',
@@ -1059,7 +1074,7 @@ index 77a89b2..ccb91bb 100644
      ),
      _for_range_loop_body: $ => seq(
        field('initializer', optional($.init_statement)),
-@@ -968,10 +1718,257 @@ module.exports = grammar(C, {
+@@ -968,10 +1726,257 @@ module.exports = grammar(C, {
        ']',
      ),
  
@@ -1321,7 +1336,7 @@ index 77a89b2..ccb91bb 100644
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1988,15 @@ module.exports = grammar(C, {
+@@ -991,9 +1996,15 @@ module.exports = grammar(C, {
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -1340,7 +1355,7 @@ index 77a89b2..ccb91bb 100644
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +2010,7 @@ module.exports = grammar(C, {
+@@ -1007,7 +2018,7 @@ module.exports = grammar(C, {
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -1349,7 +1364,7 @@ index 77a89b2..ccb91bb 100644
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +2018,7 @@ module.exports = grammar(C, {
+@@ -1015,6 +2026,7 @@ module.exports = grammar(C, {
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -1357,7 +1372,7 @@ index 77a89b2..ccb91bb 100644
        )),
      ),
  
-@@ -1215,13 +2219,66 @@ module.exports = grammar(C, {
+@@ -1215,13 +2227,66 @@ module.exports = grammar(C, {
              field('operator', operator),
              field('right', $.expression),
            ));
@@ -1426,7 +1441,7 @@ index 77a89b2..ccb91bb 100644
        ')',
      ),
  
-@@ -1230,7 +2287,7 @@ module.exports = grammar(C, {
+@@ -1230,7 +2295,7 @@ module.exports = grammar(C, {
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -1435,7 +1450,7 @@ index 77a89b2..ccb91bb 100644
          field('value', $.initializer_list),
        ),
      ),
-@@ -1244,6 +2301,7 @@ module.exports = grammar(C, {
+@@ -1244,6 +2309,7 @@ module.exports = grammar(C, {
          $._namespace_identifier,
          $.template_type,
          $.decltype,
@@ -1443,7 +1458,7 @@ index 77a89b2..ccb91bb 100644
          alias($.dependent_type_identifier, $.dependent_name),
        ))),
        '::',
-@@ -1256,6 +2314,7 @@ module.exports = grammar(C, {
+@@ -1256,6 +2322,7 @@ module.exports = grammar(C, {
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -1451,7 +1466,7 @@ index 77a89b2..ccb91bb 100644
        )),
      ),
  
-@@ -1296,10 +2355,20 @@ module.exports = grammar(C, {
+@@ -1296,10 +2363,20 @@ module.exports = grammar(C, {
        $.user_defined_literal,
      ),
  
@@ -1476,7 +1491,7 @@ index 77a89b2..ccb91bb 100644
      )),
  
      _assignment_expression_lhs: $ => seq(
-@@ -1342,11 +2411,47 @@ module.exports = grammar(C, {
+@@ -1342,11 +2419,47 @@ module.exports = grammar(C, {
  
      this: _ => 'this',
  
@@ -1529,7 +1544,7 @@ index 77a89b2..ccb91bb 100644
  
      number_literal: $ => {
        const sign = /[-\+]/;
-@@ -1409,7 +2514,10 @@ module.exports = grammar(C, {
+@@ -1409,7 +2522,10 @@ module.exports = grammar(C, {
        $.literal_suffix,
      ),
  
@@ -1541,7 +1556,7 @@ index 77a89b2..ccb91bb 100644
    },
  });
  
-@@ -1434,3 +2542,69 @@ function commaSep(rule) {
+@@ -1434,3 +2550,69 @@ function commaSep(rule) {
  function commaSep1(rule) {
    return seq(rule, repeat(seq(',', rule)));
  }

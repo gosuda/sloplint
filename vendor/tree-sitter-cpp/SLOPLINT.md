@@ -379,9 +379,12 @@ clang++ with `-std=c++23`.
   `typedef void (C::*sb)(int);` works because `_type_declarator` gained
   `qualified_identifier` and `_scope_resolution` accepts a plain
   `_type_identifier` as its scope (needed because `dummy` inside the
-  parens lexes as `type_identifier`, not `identifier`). Residual: a
-  trailing cv-qualifier on the typedef (`typedef void (C::*f)() const;`)
-  still errors. A parameter list may also take a parenthesized
+  parens lexes as `type_identifier`, not `identifier`). Trailing
+  qualifiers on the typedef also parse (`typedef void (C::*f)() const;`,
+  `noexcept`, `&`): `function_type_declarator` is overridden to take the
+  full `_function_declarator_seq` (parameters + cv/ref/noexcept/trailing
+  return) — the C base's version ends at the parameter list. A parameter
+  list may also take a parenthesized
   declarator (`T (&arr)[N]`, `T (*arr)[N]`) — the pre-type qualifier in
   a parameter is restricted to a bare identifier (`_parameter_specifiers`),
   so the `(` is never read as a macro argument list; `decltype` accepts a

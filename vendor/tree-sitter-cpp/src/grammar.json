@@ -8957,12 +8957,8 @@
             }
           },
           {
-            "type": "FIELD",
-            "name": "parameters",
-            "content": {
-              "type": "SYMBOL",
-              "name": "parameter_list"
-            }
+            "type": "SYMBOL",
+            "name": "_function_declarator_seq"
           }
         ]
       }
