@@ -142,6 +142,7 @@ module.exports = grammar(C, {
     [$.preproc_if, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
     [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
     [$.preproc_elif, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
+    [$._template_argument, $._template_relational_argument],
     [$.pointer_declarator, $._init_pointer_declarator],
     [$._declarator, $._init_reference_declarator],
     [$.function_definition, $.pointer_declarator],
@@ -284,18 +285,8 @@ module.exports = grammar(C, {
     [$.macro_namespace, $._macro_declaration_literals],
     [$.preproc_ifdef, $._linkage_guard, $.preproc_ifdef_in_guarded_signature],
     [$.preproc_if, $._linkage_guard, $.preproc_if_in_guarded_signature],
-    [$.preproc_ifdef, $.preproc_ifdef_in_guarded_signature],
-    [$.preproc_else, $.preproc_else_in_guarded_signature],
-    [$.preproc_if, $.preproc_if_in_guarded_signature],
-    [$.preproc_elifdef, $.preproc_elifdef_in_guarded_signature],
     [$.function_definition, $.declaration, $.init_declarator, $._guarded_signature],
     [$.attributed_declarator, $._guarded_signature],
-    [$.preproc_elif, $.preproc_elif_in_guarded_signature],
-    [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list, $.preproc_ifdef_in_guarded_signature],
-    [$.preproc_else, $.preproc_else_in_initializer_list, $.preproc_else_in_guarded_signature],
-    [$.preproc_if, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature],
-    [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature],
-    [$.preproc_elif, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature],
     [$._macro_qualifier_bare, $.type_specifier],
     [$._macro_qualifier_bare, $.sized_type_specifier],
     [$._macro_qualifier_bare, $.type_specifier, $.expression],
@@ -1447,14 +1438,36 @@ module.exports = grammar(C, {
       field('arguments', $.template_argument_list),
     ),
 
+    _template_argument: $ => choice(
+      prec.dynamic(3, $.type_descriptor),
+      prec.dynamic(2, alias($.type_parameter_pack_expansion, $.parameter_pack_expansion)),
+      prec.dynamic(1, $.expression),
+    ),
+
     template_argument_list: $ => seq(
       '<',
-      commaSep(choice(
-        prec.dynamic(3, $.type_descriptor),
-        prec.dynamic(2, alias($.type_parameter_pack_expansion, $.parameter_pack_expansion)),
-        prec.dynamic(1, $.expression),
-      )),
+      choice(
+        seq(
+          commaSep($._template_argument),
+          alias(token(prec(1, '>')), '>'),
+        ),
+        // `token(prec(1, '>'))` splits `>=` into `>` `=` even inside template
+        // arguments (`enable_if_t<N >= 1>`). Re-join the split tokens in the
+        // final argument: `token.immediate('=')` restricts the rejoin to a
+        // literally adjacent `>=` (a spaced `> =` keeps the close read).
+        seq(
+          optional(seq(commaSep($._template_argument), ',')),
+          alias($._template_relational_argument, $.binary_expression),
+          alias(token(prec(1, '>')), '>'),
+        ),
+      ),
+    ),
+
+    _template_relational_argument: $ => seq(
+      $.expression,
       alias(token(prec(1, '>')), '>'),
+      token.immediate('='),
+      $.expression,
     ),
 
     namespace_definition: $ => seq(

@@ -1182,7 +1182,7 @@
     "fields": {
       "left": {
         "multiple": false,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "expression",
@@ -1319,6 +1319,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "expression",
+          "named": true
+        },
         {
           "type": "preproc_if",
           "named": true

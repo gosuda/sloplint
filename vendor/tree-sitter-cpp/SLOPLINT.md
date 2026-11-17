@@ -389,6 +389,18 @@ clang++ with `-std=c++23`.
   a parameter is restricted to a bare identifier (`_parameter_specifiers`),
   so the `(` is never read as a macro argument list; `decltype` accepts a
   comma expression (`decltype(a, void())`).
+- Relational `>=` inside template arguments: `enable_if_t<sizeof...(Ts) >= 1>`,
+  `IC<int, sizeof(int) >= 4>`, `W<3 >= 2>`. The closing angle is
+  `token(prec(1, '>'))`, which outranks `>=` at lex time and splits it into
+  `>` `=`. `template_argument_list` gained a second alternative whose final
+  argument is `_template_relational_argument`
+  (`expression > = expression`, aliased to `binary_expression`) closed by a
+  further `>`. `token.immediate('=')` confines the rejoin to a literally
+  adjacent `>=`, so `W<3> b = c` keeps the close read, and a declared
+  `_template_argument`/`_template_relational_argument` conflict lets GLR
+  compare both readings. Residual: a `>=` argument only works in final
+  position (`X<a>=b, c>` still errors), and a spaced `3 > 2` still reads as
+  the close angle — matching C++, which rejects `W<3 > 2>` too.
 
 ## Constructs known still failing
 
@@ -410,8 +422,8 @@ parens steers it to an initialized declaration.
   and 4 controls. The published parser fails those 32 repros and passes
   the 4 controls.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 16 files, 81 cases, all passing with the patch
-  (`tree-sitter test` reports 81/81). The latest additions cover the
+  corpus is not vendored): 17 files, 83 cases, all passing with the patch
+  (`tree-sitter test` reports 83/83). The latest additions cover the
   Win32 SDK cluster (typedef qualifier macros, function-pointer typedefs
   with SAL-annotated parameters, MIDL brackets, declaratorless typedefs
   inside `#if`, `#ifdef`-guarded constructs), bare macro sentinels before
