@@ -38,6 +38,7 @@ Each change is a Zig construct that the published grammar rejects.
 1. **Z-C, bare error set as a container field.** `container_field` accepts `error_set_declaration` as its name alternative, so `struct { error{foo} }` parses. Zig 0.14.1 accepts this.
 2. **Z-A, struct-literal asm clobbers.** `asm_clobbers` accepts `.{ .name = expr, ... }` as well as a string list, so `: .{ .memory = true }` parses. Only `.name = expr` items are accepted; `:: .{ foo }` still errors.
 3. **Z-B, `async` and `await` as identifiers.** `identifier` accepts the bare tokens `'async'` and `'await'`. Two conflicts are declared: `[$.async_expression, $.identifier]` and `[$.await_expression, $.identifier]`. The bare tokens keep the identifier node flat; an aliased form nested an extra `identifier` node and changed trees of valid code.
+4. **Z-D, `bitpack` container declarations.** `struct`, `union`, `enum`, and `opaque` declarations accept `'bitpack'` where they already accepted `'packed'`. Zig 0.18 renamed `packed` to `bitpack` (ziglang/zig #12852, implemented by #30875); during the migration both spellings appear in real code (e.g. arocc `bitpack struct(u32)`), so the grammar accepts both.
 
 Controls that already parsed and still parse: `(-> T)` asm outputs, `[_]` output names, multiline `\\` templates with string clobbers.
 
