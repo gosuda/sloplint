@@ -1,6 +1,8 @@
+diff --git a/grammar.js b/grammar.js
+index f743300..ceeb8b4 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -23,6 +23,8 @@
+@@ -23,6 +23,8 @@ module.exports = grammar(C, {
      (e) => !(e.length == 2 && e[0].name == 'type_qualifier' && e[1].name == 'extension_expression'),
    ).concat([
      [$.enum_specifier],
@@ -9,23 +11,27 @@
      [$.expression, $.generic_specifier],
      [$._declarator, $.type_specifier, $.generic_specifier],
      [$._declarator, $.type_specifier, $.sized_type_specifier],
-@@ -57,6 +59,7 @@
+@@ -57,8 +59,10 @@ module.exports = grammar(C, {
        $.protocol_forward_declaration,
        $.module_import,
        $.compatibility_alias_declaration,
 +      $._standalone_annotation,
        $.preproc_undef,
        $.preproc_linemarker,
-     ),
-@@ -70,10 +73,46 @@
-       $.protocol_forward_declaration,
-       $.module_import,
-       $.compatibility_alias_declaration,
-+      $._standalone_annotation,
-       $.preproc_undef,
-       $.preproc_linemarker,
++      $.preproc_null,
      ),
  
+     _block_item: ($, original) => choice(
+@@ -70,8 +74,45 @@ module.exports = grammar(C, {
+       $.protocol_forward_declaration,
+       $.module_import,
+       $.compatibility_alias_declaration,
++      $._standalone_annotation,
+       $.preproc_undef,
+       $.preproc_linemarker,
++      $.preproc_null,
++    ),
++
 +    // A bare Apple annotation macro on its own line: `NS_ASSUME_NONNULL_BEGIN`
 +    // and `NS_ASSUME_NONNULL_END` bracket whole regions, while
 +    // `NS_SWIFT_NONISOLATED` and `NS_SWIFT_UI_ACTOR` prefix an `@interface`.
@@ -59,12 +65,10 @@
 +      'NS_SWIFT_NONISOLATED',
 +      'NS_SWIFT_UI_ACTOR',
 +      'API_DEPRECATED_WITH_REPLACEMENT',
-+    ),
-+
+     ),
+ 
      function_definition: $ => seq(
-       optional($.ms_call_modifier),
-       $._declaration_specifiers,
-@@ -88,21 +127,54 @@
+@@ -88,19 +129,52 @@ module.exports = grammar(C, {
          $.init_declarator,
          seq($.type_qualifier, $.identifier),
        )))),
@@ -107,8 +111,8 @@
 +        alias($._ns_enum_specifier, $.enum_specifier),
 +        ';',
 +      ),
-     ),
- 
++    ),
++
 +    _ns_enum_specifier: $ => seq(
 +      field('macro', choice(
 +        'NS_ENUM',
@@ -124,12 +128,10 @@
 +      field('name', $._type_identifier),
 +      ')',
 +      field('body', $.enumerator_list),
-+    ),
-+
+     ),
+ 
      _type_definition_type: $ => seq(
-       repeat($.type_qualifier),
-       optional($.attribute_specifier),
-@@ -114,6 +186,15 @@
+@@ -114,6 +188,15 @@ module.exports = grammar(C, {
      _type_definition_declarators: $ => seq(
        commaSep1(field('declarator', $._type_declarator)),
        optional($._declaration_modifiers),
@@ -145,8 +147,32 @@
      ),
  
      _declaration_modifiers: ($, original) => choice(
-@@ -360,10 +441,54 @@
+@@ -358,12 +441,78 @@ module.exports = grammar(C, {
+     ...preprocIf('_in_interface_declaration', $ => $.interface_declaration),
+     ...preprocIf('_in_enumerator', $ => seq($.enumerator, ',')),
  
++    // A `#` line that carries no directive name: the null directive (`#`
++    // alone or `#` + trailing space) and the pre-ANSI `# comment` banner
++    // idiom (`# /*`, `# *`, `# */`, `#---`). One token eats the whole line —
++    // a `preproc_arg` run here would let a trailing `*/` glue the *next*
++    // directive line into the argument stream (`\/[^*]` matches `/\n`).
++    // The text after `#` must start with a non-word, non-`#`, non-space
++    // char, so `#foo`/`# foo`/`#123` keep their existing reads.
++    // A `#` line that carries no directive name: the null directive (`#`
++    // alone or `#` + trailing blanks) and the pre-ANSI `# comment` banner
++    // idiom (`# /*`, `# *`, `# */`, `#---`). The banner arm is a single
++    // token eating the whole line - a `preproc_arg` run here would let a
++    // trailing `*/` glue the *next* directive line into the argument stream
++    // (`\/[^*]` matches `/\n`). The text after `#` must start with a
++    // non-word, non-`#`, non-space char, so `#foo`/`# foo`/`#123` keep their
++    // existing reads; a bare `#` goes through the `'#'` + newline arm so it
++    // never competes with `#`-starting tokens at lex time.
++    preproc_null: $ => choice(
++      token(/#[ \t]*[^a-zA-Z0-9#\s][^\n]*/),
++      seq('#', token.immediate(/\r?\n/)),
++      seq(token(/#[ \t]+/), token.immediate(/\r?\n/)),
++    ),
++
      preproc_undef: $ => seq(
        preprocessor('undef'),
 -      field('name', $.identifier),
@@ -201,7 +227,7 @@
      preproc_linemarker: $ => seq(
        '#',
        $.number_literal,
-@@ -422,6 +547,7 @@
+@@ -422,6 +571,7 @@ module.exports = grammar(C, {
            'NS_EXTENSION_UNAVAILABLE_IOS',
            'NS_CLASS_AVAILABLE_IOS',
            'NS_CLASS_DEPRECATED_IOS',
@@ -209,7 +235,7 @@
            '__OSX_AVAILABLE_STARTING',
          ),
          '(',
-@@ -481,6 +607,9 @@
+@@ -481,6 +631,9 @@ module.exports = grammar(C, {
  
      enumerator: $ => seq(
        field('name', $.identifier),
@@ -219,7 +245,7 @@
        optional(seq('=', field('value', $.expression))),
      ),
  
-@@ -625,8 +754,9 @@
+@@ -625,10 +778,12 @@ module.exports = grammar(C, {
        $.function_definition,
        $.type_definition,
        alias($.preproc_if_in_interface_declaration, $.preproc_if),
@@ -229,8 +255,11 @@
 -      $.preproc_ifdef,
        $.preproc_undef,
        $.preproc_call,
++      $.preproc_null,
        seq($.struct_specifier, ';'),
-@@ -646,12 +776,12 @@
+     ),
+ 
+@@ -646,12 +801,13 @@ module.exports = grammar(C, {
        $.preproc_function_def,
        $.macro_type_specifier,
        $.type_definition,
@@ -242,11 +271,12 @@
        $.preproc_def,
        $.preproc_call,
 -    )),
++      $.preproc_null,
 +    ),),
  
      property_implementation: $ => choice(
        seq(
-@@ -768,7 +898,8 @@
+@@ -768,7 +924,8 @@ module.exports = grammar(C, {
      struct_declaration: $ => seq(
        repeat1($.specifier_qualifier),
        commaSep1($.struct_declarator),
@@ -256,7 +286,15 @@
        ';',
      ),
  
-@@ -1197,7 +1328,7 @@
+@@ -1050,6 +1207,7 @@ module.exports = grammar(C, {
+       $.preproc_def,
+       $.preproc_function_def,
+       $.preproc_call,
++      $.preproc_null,
+       alias($.preproc_if_in_field_declaration_list, $.preproc_if),
+       alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
+       $.atdef_field,
+@@ -1197,7 +1355,7 @@ function preprocIf(suffix, content) {
  
      ['preproc_ifdef' + suffix]: $ => seq(
        choice(preprocessor('ifdef'), preprocessor('ifndef')),
@@ -265,7 +303,7 @@
        repeat(prec(2, content($))),
        field('alternative', optional(choice(elseBlock($), $.preproc_elifdef))),
        preprocessor('endif'),
-@@ -1218,7 +1349,7 @@
+@@ -1218,7 +1376,7 @@ function preprocIf(suffix, content) {
  
      ['preproc_elifdef' + suffix]: $ => seq(
        choice(preprocessor('elifdef'), preprocessor('elifndef')),

@@ -458,3 +458,19 @@ the size growth.
   $.macro_qualifier))`, covering `} worker_id_map SEC(".maps");` and
   `int x PACKED = v;`. Same permissive model as the
   `function_definition` trailing-macro repeat.
+- **`#` lines with no directive name** — new `preproc_null` rule is a member
+  of every item list that already takes `preproc_call`. It covers the null
+  directive (`#` alone or `#` + trailing blanks) and the pre-ANSI
+  `# comment` banner idiom (`# /*`, `# *`, `# */`, `#---`, `#anything
+  non-word`) that boost and BSD-derived sources use. The banner arm is one
+  token that eats the whole line on purpose: a `preproc_arg` run there would
+  let a trailing `*/` glue the *next* directive line into the argument
+  stream (upstream's `\/[^*]` arg char-class matches `/\n`, which swallows
+  the following `#define`/`#endif` and produces `MISSING` nodes — verified
+  empirically on an optional-directive-name variant and rejected). A bare
+  `#` goes through the `'#'` + immediate-newline arm so it never wins a
+  lex-time tie against `#`-starting tokens (objc's `preproc_linemarker`
+  showed why: same-length anonymous `'#'` stole the lex and the rule's
+  continuation then errored — a token-level `prec(1)` was also tried and
+  rejected: token precedence beats match length, so `#` shadowed every
+  `#if`/`#define` in the file).

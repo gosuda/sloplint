@@ -161,3 +161,50 @@ ifdef around a method definition inside an implementation
                 (primitive_type)))
             (identifier)
             (compound_statement)))))))
+
+================================================================================
+Null directive and `#`-comment lines (bare `#`, `# /* ... */`)
+================================================================================
+
+#
+# /* ****************************************************** */
+# * banner idiom                                            */
+# */
+#define A 1
+#if A
+int c(void);
+#endif
+#123 "marker.h"
+@interface D
+- (void)m;
+@end
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_null)
+  (preproc_null)
+  (preproc_null)
+  (preproc_null)
+  (preproc_def
+    (identifier)
+    (preproc_arg))
+  (preproc_if
+    (identifier)
+    (declaration
+      (primitive_type)
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (parameter_declaration
+            (primitive_type))))))
+  (preproc_call
+    (preproc_directive)
+    (preproc_arg))
+  (class_interface
+    (identifier)
+    (method_declaration
+      (method_type
+        (type_name
+          (primitive_type)))
+      (identifier))))

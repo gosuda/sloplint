@@ -71,6 +71,10 @@
           "name": "preproc_call"
         },
         {
+          "type": "SYMBOL",
+          "name": "preproc_null"
+        },
+        {
           "type": "ALIAS",
           "content": {
             "type": "PREC_DYNAMIC",
@@ -231,6 +235,10 @@
         {
           "type": "SYMBOL",
           "name": "preproc_call"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "preproc_null"
         },
         {
           "type": "SYMBOL",
@@ -2931,6 +2939,10 @@
                   "name": "preproc_call"
                 },
                 {
+                  "type": "SYMBOL",
+                  "name": "preproc_null"
+                },
+                {
                   "type": "SEQ",
                   "members": [
                     {
@@ -3244,6 +3256,10 @@
                   "name": "preproc_call"
                 },
                 {
+                  "type": "SYMBOL",
+                  "name": "preproc_null"
+                },
+                {
                   "type": "SEQ",
                   "members": [
                     {
@@ -3535,6 +3551,10 @@
                   "name": "preproc_call"
                 },
                 {
+                  "type": "SYMBOL",
+                  "name": "preproc_null"
+                },
+                {
                   "type": "SEQ",
                   "members": [
                     {
@@ -3783,6 +3803,10 @@
                 {
                   "type": "SYMBOL",
                   "name": "preproc_call"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "preproc_null"
                 },
                 {
                   "type": "SEQ",
@@ -4087,6 +4111,10 @@
                 {
                   "type": "SYMBOL",
                   "name": "preproc_call"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "preproc_null"
                 },
                 {
                   "type": "SEQ",
@@ -4734,6 +4762,53 @@
     "preproc_directive": {
       "type": "PATTERN",
       "value": "#[ \\t]*[a-zA-Z0-9]\\w*"
+    },
+    "preproc_null": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "TOKEN",
+          "content": {
+            "type": "PATTERN",
+            "value": "#[ \\t]*[^a-zA-Z0-9#\\s][^\\n]*"
+          }
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "#"
+            },
+            {
+              "type": "IMMEDIATE_TOKEN",
+              "content": {
+                "type": "PATTERN",
+                "value": "\\r?\\n"
+              }
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "TOKEN",
+              "content": {
+                "type": "PATTERN",
+                "value": "#[ \\t]+"
+              }
+            },
+            {
+              "type": "IMMEDIATE_TOKEN",
+              "content": {
+                "type": "PATTERN",
+                "value": "\\r?\\n"
+              }
+            }
+          ]
+        }
+      ]
     },
     "_preproc_expression": {
       "type": "CHOICE",
@@ -10051,6 +10126,10 @@
                 "name": "preproc_call"
               },
               {
+                "type": "SYMBOL",
+                "name": "preproc_null"
+              },
+              {
                 "type": "STRING",
                 "value": ","
               }
@@ -10130,6 +10209,10 @@
             {
               "type": "SYMBOL",
               "name": "preproc_call"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "preproc_null"
             },
             {
               "type": "SYMBOL",
@@ -17025,6 +17108,10 @@
         {
           "type": "SYMBOL",
           "name": "preproc_call"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "preproc_null"
         }
       ]
     },

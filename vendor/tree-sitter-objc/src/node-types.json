@@ -1682,6 +1682,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "preproc_undef",
           "named": true
         },
@@ -1856,6 +1860,10 @@
         },
         {
           "type": "preproc_linemarker",
+          "named": true
+        },
+        {
+          "type": "preproc_null",
           "named": true
         },
         {
@@ -2083,6 +2091,10 @@
         },
         {
           "type": "preproc_linemarker",
+          "named": true
+        },
+        {
+          "type": "preproc_null",
           "named": true
         },
         {
@@ -2523,6 +2535,10 @@
         },
         {
           "type": "preproc_ifdef",
+          "named": true
+        },
+        {
+          "type": "preproc_null",
           "named": true
         }
       ]
@@ -3264,6 +3280,10 @@
         },
         {
           "type": "preproc_ifdef",
+          "named": true
+        },
+        {
+          "type": "preproc_null",
           "named": true
         },
         {
@@ -4533,6 +4553,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "preproc_undef",
           "named": true
         },
@@ -4733,6 +4757,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "preproc_undef",
           "named": true
         },
@@ -4849,6 +4877,10 @@
         },
         {
           "type": "preproc_linemarker",
+          "named": true
+        },
+        {
+          "type": "preproc_null",
           "named": true
         },
         {
@@ -5132,6 +5164,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "preproc_undef",
           "named": true
         },
@@ -5344,6 +5380,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "preproc_undef",
           "named": true
         },
@@ -5461,6 +5501,11 @@
         }
       ]
     }
+  },
+  {
+    "type": "preproc_null",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "preproc_params",
@@ -5702,6 +5747,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "preproc_undef",
           "named": true
         },
@@ -5829,6 +5878,10 @@
         },
         {
           "type": "preproc_ifdef",
+          "named": true
+        },
+        {
+          "type": "preproc_null",
           "named": true
         },
         {
@@ -6319,6 +6372,10 @@
         },
         {
           "type": "preproc_linemarker",
+          "named": true
+        },
+        {
+          "type": "preproc_null",
           "named": true
         },
         {

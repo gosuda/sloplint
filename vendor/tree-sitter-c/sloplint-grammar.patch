@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 7cdde6e..9a44358 100644
+index 7cdde6e..271e72e 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -36,8 +36,11 @@ module.exports = grammar({
@@ -145,10 +145,11 @@ index 7cdde6e..9a44358 100644
        $.declaration,
        $._top_level_statement,
        $.attributed_statement,
-@@ -100,19 +212,24 @@ module.exports = grammar({
+@@ -100,23 +212,30 @@ module.exports = grammar({
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
++      $.preproc_null,
 +      // `NAME(args)` / `NAME;` / `NAME(args);` only — see _macro_declaration_top.
 +      // A bare `NAME` alternative lets `NAME(args)` fragment into
 +      // macro_declaration(NAME) + parenthesized_expression(args) + MISSING ';'.
@@ -172,7 +173,12 @@ index 7cdde6e..9a44358 100644
        $.preproc_include,
        $.preproc_def,
        $.preproc_function_def,
-@@ -135,7 +252,7 @@ module.exports = grammar({
+       $.preproc_call,
++      $.preproc_null,
+     ),
+ 
+     // Preprocesser
+@@ -135,7 +254,7 @@ module.exports = grammar({
      preproc_def: $ => seq(
        preprocessor('define'),
        field('name', $.identifier),
@@ -181,7 +187,7 @@ index 7cdde6e..9a44358 100644
        token.immediate(/\r?\n/),
      ),
  
-@@ -143,24 +260,102 @@ module.exports = grammar({
+@@ -143,28 +262,130 @@ module.exports = grammar({
        preprocessor('define'),
        field('name', $.identifier),
        field('parameters', $.preproc_params),
@@ -240,6 +246,7 @@ index 7cdde6e..9a44358 100644
 +      // generated lookup tables redefine an X-macro between items.
 +      $.preproc_def,
 +      $.preproc_call,
++      $.preproc_null,
 +      seq(
 +        choice(
 +        '||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
@@ -265,6 +272,7 @@ index 7cdde6e..9a44358 100644
 +      ',',
 +      $.preproc_def,
 +      $.preproc_call,
++      $.preproc_null,
 +      // A bare operator passed as a macro argument:
 +      // `assert_int(1, ==, call(...))`, `check(x, <=, y)`.
 +      choice(
@@ -290,7 +298,33 @@ index 7cdde6e..9a44358 100644
  
      preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
      preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,
-@@ -199,7 +394,11 @@ module.exports = grammar({
+ 
++    // A `#` line that carries no directive name: the null directive (`#`
++    // alone or `#` + trailing space) and the pre-ANSI `# comment` banner
++    // idiom (`# /*`, `# *`, `# */`, `#---`). One token eats the whole line —
++    // a `preproc_arg` run here would let a trailing `*/` glue the *next*
++    // directive line into the argument stream (`\/[^*]` matches `/\n`).
++    // The text after `#` must start with a non-word, non-`#`, non-space
++    // char, so `#foo`/`# foo`/`#123` keep their existing reads.
++    // A `#` line that carries no directive name: the null directive (`#`
++    // alone or `#` + trailing blanks) and the pre-ANSI `# comment` banner
++    // idiom (`# /*`, `# *`, `# */`, `#---`). The banner arm is a single
++    // token eating the whole line - a `preproc_arg` run here would let a
++    // trailing `*/` glue the *next* directive line into the argument stream
++    // (`\/[^*]` matches `/\n`). The text after `#` must start with a
++    // non-word, non-`#`, non-space char, so `#foo`/`# foo`/`#123` keep their
++    // existing reads; a bare `#` goes through the `'#'` + newline arm so it
++    // never competes with `#`-starting tokens at lex time.
++    preproc_null: $ => choice(
++      token(/#[ \t]*[^a-zA-Z0-9#\s][^\n]*/),
++      seq('#', token.immediate(/\r?\n/)),
++      seq(token(/#[ \t]+/), token.immediate(/\r?\n/)),
++    ),
++
+     _preproc_expression: $ => choice(
+       $.identifier,
+       alias($.preproc_call_expression, $.call_expression),
+@@ -199,7 +420,11 @@ module.exports = grammar({
  
      preproc_argument_list: $ => seq(
        '(',
@@ -303,7 +337,7 @@ index 7cdde6e..9a44358 100644
        ')',
      ),
  
-@@ -240,8 +439,13 @@ module.exports = grammar({
+@@ -240,8 +465,13 @@ module.exports = grammar({
      function_definition: $ => seq(
        optional($.ms_call_modifier),
        $._declaration_specifiers,
@@ -318,7 +352,7 @@ index 7cdde6e..9a44358 100644
        field('body', $.compound_statement),
      ),
  
-@@ -257,24 +461,45 @@ module.exports = grammar({
+@@ -257,24 +487,45 @@ module.exports = grammar({
        $._declaration_specifiers,
        commaSep1(field('declarator', choice(
          seq(
@@ -373,7 +407,7 @@ index 7cdde6e..9a44358 100644
      _type_definition_declarators: $ => commaSep1(field('declarator', $._type_declarator)),
  
      _declaration_modifiers: $ => choice(
-@@ -283,14 +508,192 @@ module.exports = grammar({
+@@ -283,14 +534,192 @@ module.exports = grammar({
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -566,7 +600,7 @@ index 7cdde6e..9a44358 100644
      linkage_specification: $ => seq(
        'extern',
        field('value', $.string_literal),
-@@ -301,6 +704,27 @@ module.exports = grammar({
+@@ -301,6 +730,27 @@ module.exports = grammar({
        )),
      ),
  
@@ -594,7 +628,7 @@ index 7cdde6e..9a44358 100644
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -341,6 +765,13 @@ module.exports = grammar({
+@@ -341,6 +791,13 @@ module.exports = grammar({
        '__vectorcall',
      ),
  
@@ -608,7 +642,7 @@ index 7cdde6e..9a44358 100644
      ms_restrict_modifier: _ => '__restrict',
  
      ms_unsigned_ptr_modifier: _ => '__uptr',
-@@ -396,7 +827,7 @@ module.exports = grammar({
+@@ -396,7 +853,7 @@ module.exports = grammar({
        alias($.array_type_declarator, $.array_declarator),
        alias($.parenthesized_type_declarator, $.parenthesized_declarator),
        $._type_identifier,
@@ -617,7 +651,7 @@ index 7cdde6e..9a44358 100644
        $.primitive_type,
      ),
  
-@@ -409,25 +840,25 @@ module.exports = grammar({
+@@ -409,25 +866,25 @@ module.exports = grammar({
  
      parenthesized_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
        '(',
@@ -647,7 +681,7 @@ index 7cdde6e..9a44358 100644
        $._abstract_declarator,
        ')',
      )),
-@@ -448,28 +879,56 @@ module.exports = grammar({
+@@ -448,28 +905,56 @@ module.exports = grammar({
  
      pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
        optional($.ms_based_modifier),
@@ -713,7 +747,7 @@ index 7cdde6e..9a44358 100644
        field('declarator', optional($._abstract_declarator)),
      ))),
  
-@@ -543,6 +1002,8 @@ module.exports = grammar({
+@@ -543,6 +1028,8 @@ module.exports = grammar({
  
      init_declarator: $ => seq(
        field('declarator', $._declarator),
@@ -722,7 +756,7 @@ index 7cdde6e..9a44358 100644
        '=',
        field('value', choice($.initializer_list, $.expression)),
      ),
-@@ -563,6 +1024,7 @@ module.exports = grammar({
+@@ -563,6 +1050,7 @@ module.exports = grammar({
        '__inline__',
        '__forceinline',
        'thread_local',
@@ -730,7 +764,7 @@ index 7cdde6e..9a44358 100644
        '__thread',
      ),
  
-@@ -574,6 +1036,8 @@ module.exports = grammar({
+@@ -574,6 +1062,8 @@ module.exports = grammar({
        '__restrict__',
        '__extension__',
        '_Atomic',
@@ -739,7 +773,7 @@ index 7cdde6e..9a44358 100644
        '_Noreturn',
        'noreturn',
        '_Nonnull',
-@@ -594,6 +1058,7 @@ module.exports = grammar({
+@@ -594,6 +1084,7 @@ module.exports = grammar({
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -747,7 +781,7 @@ index 7cdde6e..9a44358 100644
        $._type_identifier,
      ),
  
-@@ -601,6 +1066,8 @@ module.exports = grammar({
+@@ -601,6 +1092,8 @@ module.exports = grammar({
        seq(
          repeat(choice(
            'signed',
@@ -756,7 +790,7 @@ index 7cdde6e..9a44358 100644
            'unsigned',
            'long',
            'short',
-@@ -611,6 +1078,8 @@ module.exports = grammar({
+@@ -611,6 +1104,8 @@ module.exports = grammar({
          ))),
          repeat1(choice(
            'signed',
@@ -765,7 +799,7 @@ index 7cdde6e..9a44358 100644
            'unsigned',
            'long',
            'short',
-@@ -619,6 +1088,8 @@ module.exports = grammar({
+@@ -619,6 +1114,8 @@ module.exports = grammar({
        seq(
          repeat1(choice(
            'signed',
@@ -774,7 +808,7 @@ index 7cdde6e..9a44358 100644
            'unsigned',
            'long',
            'short',
-@@ -630,6 +1101,8 @@ module.exports = grammar({
+@@ -630,6 +1127,8 @@ module.exports = grammar({
          ))),
          repeat(choice(
            'signed',
@@ -783,7 +817,7 @@ index 7cdde6e..9a44358 100644
            'unsigned',
            'long',
            'short',
-@@ -652,6 +1125,18 @@ module.exports = grammar({
+@@ -652,6 +1151,18 @@ module.exports = grammar({
        'charptr_t',
        'nullptr_t',
        'max_align_t',
@@ -802,7 +836,7 @@ index 7cdde6e..9a44358 100644
        ...[8, 16, 32, 64].map(n => `int${n}_t`),
        ...[8, 16, 32, 64].map(n => `uint${n}_t`),
        ...[8, 16, 32, 64].map(n => `char${n}_t`),
-@@ -659,32 +1144,39 @@ module.exports = grammar({
+@@ -659,32 +1170,40 @@ module.exports = grammar({
  
      enum_specifier: $ => seq(
        'enum',
@@ -850,11 +884,12 @@ index 7cdde6e..9a44358 100644
 +        alias($.preproc_ifdef_in_enumerator_list_no_comma, $.preproc_ifdef),
 +        $.preproc_def,
 +        $.preproc_call,
++        $.preproc_null,
 +        ',',
        )),
        '}',
      ),
-@@ -693,9 +1185,13 @@ module.exports = grammar({
+@@ -693,9 +1212,13 @@ module.exports = grammar({
        'struct',
        optional($.attribute_specifier),
        optional($.ms_declspec_modifier),
@@ -868,7 +903,7 @@ index 7cdde6e..9a44358 100644
            field('body', optional($.field_declaration_list)),
          ),
          field('body', $.field_declaration_list),
-@@ -706,6 +1202,7 @@ module.exports = grammar({
+@@ -706,6 +1229,7 @@ module.exports = grammar({
      union_specifier: $ => prec.right(seq(
        'union',
        optional($.ms_declspec_modifier),
@@ -876,10 +911,11 @@ index 7cdde6e..9a44358 100644
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -727,19 +1224,41 @@ module.exports = grammar({
+@@ -727,19 +1251,42 @@ module.exports = grammar({
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
++      $.preproc_null,
 +      $.macro_declaration,
 +      // MIDL brackets alone inside `#ifdef MIDL_PASS` while the field they
 +      // annotate sits after the `#endif` (`[size_is(...)]` guard pattern).
@@ -921,7 +957,7 @@ index 7cdde6e..9a44358 100644
      )),
  
      bitfield_clause: $ => seq(':', $.expression),
-@@ -751,10 +1270,37 @@ module.exports = grammar({
+@@ -751,10 +1298,37 @@ module.exports = grammar({
  
      variadic_parameter: _ => '...',
  
@@ -960,7 +996,7 @@ index 7cdde6e..9a44358 100644
          $.compound_statement,
        ),
        ')',
-@@ -766,7 +1312,8 @@ module.exports = grammar({
+@@ -766,7 +1340,8 @@ module.exports = grammar({
      ),
  
      parameter_declaration: $ => seq(
@@ -970,7 +1006,7 @@ index 7cdde6e..9a44358 100644
        optional(field('declarator', choice(
          $._declarator,
          $._abstract_declarator,
-@@ -802,6 +1349,14 @@ module.exports = grammar({
+@@ -802,6 +1377,14 @@ module.exports = grammar({
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,
@@ -985,7 +1021,7 @@ index 7cdde6e..9a44358 100644
      ),
  
      _top_level_statement: $ => choice(
-@@ -824,7 +1379,7 @@ module.exports = grammar({
+@@ -824,7 +1407,7 @@ module.exports = grammar({
      labeled_statement: $ => seq(
        field('label', $._statement_identifier),
        ':',
@@ -994,7 +1030,7 @@ index 7cdde6e..9a44358 100644
      ),
  
      // This is missing binary expressions, others were kept so that macro code can be parsed better and code examples
-@@ -841,14 +1396,40 @@ module.exports = grammar({
+@@ -841,14 +1424,40 @@ module.exports = grammar({
        ';',
      ),
  
@@ -1037,7 +1073,7 @@ index 7cdde6e..9a44358 100644
  
      switch_statement: $ => seq(
        'switch',
-@@ -872,12 +1453,12 @@ module.exports = grammar({
+@@ -872,12 +1481,12 @@ module.exports = grammar({
      while_statement: $ => seq(
        'while',
        field('condition', $.parenthesized_expression),
@@ -1052,7 +1088,7 @@ index 7cdde6e..9a44358 100644
        'while',
        field('condition', $.parenthesized_expression),
        ';',
-@@ -888,7 +1469,7 @@ module.exports = grammar({
+@@ -888,7 +1497,7 @@ module.exports = grammar({
        '(',
        $._for_statement_body,
        ')',
@@ -1061,7 +1097,7 @@ index 7cdde6e..9a44358 100644
      ),
      _for_statement_body: $ => seq(
        choice(
-@@ -1003,22 +1584,44 @@ module.exports = grammar({
+@@ -1003,22 +1612,44 @@ module.exports = grammar({
        $.parenthesized_expression,
      ),
  
@@ -1122,7 +1158,7 @@ index 7cdde6e..9a44358 100644
      )),
  
      pointer_expression: $ => prec.left(PREC.CAST, seq(
-@@ -1053,16 +1656,49 @@ module.exports = grammar({
+@@ -1053,16 +1684,49 @@ module.exports = grammar({
          ['>>', PREC.SHIFT],
        ];
  
@@ -1179,7 +1215,7 @@ index 7cdde6e..9a44358 100644
      update_expression: $ => {
        const argument = field('argument', $.expression);
        const operator = field('operator', choice('--', '++'));
-@@ -1143,6 +1779,36 @@ module.exports = grammar({
+@@ -1143,6 +1807,36 @@ module.exports = grammar({
        ')',
      )),
  
@@ -1216,7 +1252,7 @@ index 7cdde6e..9a44358 100644
      gnu_asm_qualifier: _ => choice(
        'volatile',
        '__volatile__',
-@@ -1197,7 +1863,57 @@ module.exports = grammar({
+@@ -1197,7 +1891,58 @@ module.exports = grammar({
      extension_expression: $ => seq('__extension__', $.expression),
  
      // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
@@ -1257,6 +1293,7 @@ index 7cdde6e..9a44358 100644
 +      alias($.preproc_ifdef_in_argument_list, $.preproc_ifdef),
 +      $.preproc_def,
 +      $.preproc_call,
++      $.preproc_null,
 +    ),
 +
 +    // Real args need commas between them; preproc atoms stay a free stream.
@@ -1275,7 +1312,7 @@ index 7cdde6e..9a44358 100644
  
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
-@@ -1216,18 +1932,47 @@ module.exports = grammar({
+@@ -1216,18 +1961,48 @@ module.exports = grammar({
  
      parenthesized_expression: $ => seq(
        '(',
@@ -1310,6 +1347,7 @@ index 7cdde6e..9a44358 100644
 +      alias($.preproc_ifdef_in_initializer_list, $.preproc_ifdef),
 +      $.preproc_def,
 +      $.preproc_call,
++      $.preproc_null,
 +    ),
 +
 +    // Free-atom stream like argument_list: `{ #define TD(A) #A,
@@ -1329,7 +1367,7 @@ index 7cdde6e..9a44358 100644
        '}',
      ),
  
-@@ -1246,6 +1991,15 @@ module.exports = grammar({
+@@ -1246,6 +2021,15 @@ module.exports = grammar({
          ':',
          field('value', choice($.expression, $.initializer_list)),
        ),
@@ -1345,7 +1383,7 @@ index 7cdde6e..9a44358 100644
      ),
  
      subscript_designator: $ => seq('[', $.expression, ']'),
-@@ -1296,14 +2050,19 @@ module.exports = grammar({
+@@ -1296,14 +2080,19 @@ module.exports = grammar({
  
      // Must concatenate at least 2 nodes, one of which must be a string_literal.
      // Identifier is added to parse macros that are strings, like PRIu64.
@@ -1368,7 +1406,7 @@ index 7cdde6e..9a44358 100644
  
      string_literal: $ => seq(
        choice('L"', 'u"', 'U"', 'u8"', '"'),
-@@ -1351,7 +2110,10 @@ module.exports = grammar({
+@@ -1351,7 +2140,10 @@ module.exports = grammar({
      ),
  
      macro_type_specifier: $ => prec.dynamic(-1, seq(

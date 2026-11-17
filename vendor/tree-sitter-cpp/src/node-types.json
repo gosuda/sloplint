@@ -1883,6 +1883,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "statement",
           "named": true
         },
@@ -2462,6 +2466,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "statement",
           "named": true
         },
@@ -2807,6 +2815,10 @@
         {
           "type": "preproc_ifdef",
           "named": true
+        },
+        {
+          "type": "preproc_null",
+          "named": true
         }
       ]
     }
@@ -3044,6 +3056,10 @@
         },
         {
           "type": "preproc_ifdef",
+          "named": true
+        },
+        {
+          "type": "preproc_null",
           "named": true
         },
         {
@@ -4272,6 +4288,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "return_statement",
           "named": true
         },
@@ -4475,6 +4495,10 @@
         },
         {
           "type": "preproc_ifdef",
+          "named": true
+        },
+        {
+          "type": "preproc_null",
           "named": true
         }
       ]
@@ -4955,6 +4979,10 @@
         },
         {
           "type": "preproc_include",
+          "named": true
+        },
+        {
+          "type": "preproc_null",
           "named": true
         },
         {
@@ -6208,6 +6236,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "qt_section_label",
           "named": true
         },
@@ -6452,6 +6484,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "qt_section_label",
           "named": true
         },
@@ -6665,6 +6701,10 @@
         },
         {
           "type": "preproc_include",
+          "named": true
+        },
+        {
+          "type": "preproc_null",
           "named": true
         },
         {
@@ -6953,6 +6993,10 @@
         },
         {
           "type": "preproc_include",
+          "named": true
+        },
+        {
+          "type": "preproc_null",
           "named": true
         },
         {
@@ -7278,6 +7322,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "qt_section_label",
           "named": true
         },
@@ -7425,6 +7473,11 @@
         ]
       }
     }
+  },
+  {
+    "type": "preproc_null",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "preproc_params",
@@ -8876,6 +8929,10 @@
           "named": true
         },
         {
+          "type": "preproc_null",
+          "named": true
+        },
+        {
           "type": "return_statement",
           "named": true
         },
@@ -9442,6 +9499,10 @@
   },
   {
     "type": "\"\"",
+    "named": false
+  },
+  {
+    "type": "#",
     "named": false
   },
   {

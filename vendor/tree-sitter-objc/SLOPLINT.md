@@ -206,3 +206,10 @@ valid inputs.
   - `SDImageIOAnimatedCoder.m`, `UIView+WebCache.m`, `SDUtilsTests.m`:
     same-position failures under both grammars, not in the header lane scope;
     left for a `.m` follow-up, if ever.
+- **`#` lines with no directive name** — `preproc_null` (same shape as the
+  C grammar's: whole-line banner token + `'#'` + immediate-newline arm)
+  joins `_top_level_item`, `_block_item`, `interface_declaration`,
+  `implementation_definition` and `_field_declaration_list_item`. Covers
+  the null directive and the `# comment` banner idiom that BSD-derived
+  sources use; see the C grammar's SLOPLINT.md for why it is a dedicated
+  token/rule rather than an optional directive name or a `prec` token.

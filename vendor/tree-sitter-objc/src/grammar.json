@@ -119,6 +119,10 @@
         {
           "type": "SYMBOL",
           "name": "preproc_linemarker"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "preproc_null"
         }
       ]
     },
@@ -230,6 +234,10 @@
         {
           "type": "SYMBOL",
           "name": "preproc_linemarker"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "preproc_null"
         }
       ]
     },
@@ -6224,6 +6232,10 @@
         {
           "type": "SYMBOL",
           "name": "preproc_call"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "preproc_null"
         },
         {
           "type": "ALIAS",
@@ -12500,6 +12512,53 @@
         }
       ]
     },
+    "preproc_null": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "TOKEN",
+          "content": {
+            "type": "PATTERN",
+            "value": "#[ \\t]*[^a-zA-Z0-9#\\s][^\\n]*"
+          }
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "#"
+            },
+            {
+              "type": "IMMEDIATE_TOKEN",
+              "content": {
+                "type": "PATTERN",
+                "value": "\\r?\\n"
+              }
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "TOKEN",
+              "content": {
+                "type": "PATTERN",
+                "value": "#[ \\t]+"
+              }
+            },
+            {
+              "type": "IMMEDIATE_TOKEN",
+              "content": {
+                "type": "PATTERN",
+                "value": "\\r?\\n"
+              }
+            }
+          ]
+        }
+      ]
+    },
     "preproc_undef": {
       "type": "SEQ",
       "members": [
@@ -13906,6 +13965,10 @@
           "name": "preproc_call"
         },
         {
+          "type": "SYMBOL",
+          "name": "preproc_null"
+        },
+        {
           "type": "SEQ",
           "members": [
             {
@@ -14033,6 +14096,10 @@
           {
             "type": "SYMBOL",
             "name": "preproc_call"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "preproc_null"
           }
         ]
       }

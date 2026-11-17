@@ -212,6 +212,7 @@ module.exports = grammar({
       $.preproc_def,
       $.preproc_function_def,
       $.preproc_call,
+      $.preproc_null,
       // `NAME(args)` / `NAME;` / `NAME(args);` only — see _macro_declaration_top.
       // A bare `NAME` alternative lets `NAME(args)` fragment into
       // macro_declaration(NAME) + parenthesized_expression(args) + MISSING ';'.
@@ -234,6 +235,7 @@ module.exports = grammar({
       $.preproc_def,
       $.preproc_function_def,
       $.preproc_call,
+      $.preproc_null,
     ),
 
     // Preprocesser
@@ -309,6 +311,7 @@ module.exports = grammar({
       // generated lookup tables redefine an X-macro between items.
       $.preproc_def,
       $.preproc_call,
+      $.preproc_null,
       seq(
         choice(
         '||', '&&', '|', '^', '&', '==', '!=', '<', '<=', '>', '>=',
@@ -334,6 +337,7 @@ module.exports = grammar({
       ',',
       $.preproc_def,
       $.preproc_call,
+      $.preproc_null,
       // A bare operator passed as a macro argument:
       // `assert_int(1, ==, call(...))`, `check(x, <=, y)`.
       choice(
@@ -359,6 +363,28 @@ module.exports = grammar({
 
     preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
     preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,
+
+    // A `#` line that carries no directive name: the null directive (`#`
+    // alone or `#` + trailing space) and the pre-ANSI `# comment` banner
+    // idiom (`# /*`, `# *`, `# */`, `#---`). One token eats the whole line —
+    // a `preproc_arg` run here would let a trailing `*/` glue the *next*
+    // directive line into the argument stream (`\/[^*]` matches `/\n`).
+    // The text after `#` must start with a non-word, non-`#`, non-space
+    // char, so `#foo`/`# foo`/`#123` keep their existing reads.
+    // A `#` line that carries no directive name: the null directive (`#`
+    // alone or `#` + trailing blanks) and the pre-ANSI `# comment` banner
+    // idiom (`# /*`, `# *`, `# */`, `#---`). The banner arm is a single
+    // token eating the whole line - a `preproc_arg` run here would let a
+    // trailing `*/` glue the *next* directive line into the argument stream
+    // (`\/[^*]` matches `/\n`). The text after `#` must start with a
+    // non-word, non-`#`, non-space char, so `#foo`/`# foo`/`#123` keep their
+    // existing reads; a bare `#` goes through the `'#'` + newline arm so it
+    // never competes with `#`-starting tokens at lex time.
+    preproc_null: $ => choice(
+      token(/#[ \t]*[^a-zA-Z0-9#\s][^\n]*/),
+      seq('#', token.immediate(/\r?\n/)),
+      seq(token(/#[ \t]+/), token.immediate(/\r?\n/)),
+    ),
 
     _preproc_expression: $ => choice(
       $.identifier,
@@ -1176,6 +1202,7 @@ module.exports = grammar({
         alias($.preproc_ifdef_in_enumerator_list_no_comma, $.preproc_ifdef),
         $.preproc_def,
         $.preproc_call,
+        $.preproc_null,
         ',',
       )),
       '}',
@@ -1224,6 +1251,7 @@ module.exports = grammar({
       $.preproc_def,
       $.preproc_function_def,
       $.preproc_call,
+      $.preproc_null,
       $.macro_declaration,
       // MIDL brackets alone inside `#ifdef MIDL_PASS` while the field they
       // annotate sits after the `#endif` (`[size_is(...)]` guard pattern).
@@ -1899,6 +1927,7 @@ module.exports = grammar({
       alias($.preproc_ifdef_in_argument_list, $.preproc_ifdef),
       $.preproc_def,
       $.preproc_call,
+      $.preproc_null,
     ),
 
     // Real args need commas between them; preproc atoms stay a free stream.
@@ -1962,6 +1991,7 @@ module.exports = grammar({
       alias($.preproc_ifdef_in_initializer_list, $.preproc_ifdef),
       $.preproc_def,
       $.preproc_call,
+      $.preproc_null,
     ),
 
     // Free-atom stream like argument_list: `{ #define TD(A) #A,
