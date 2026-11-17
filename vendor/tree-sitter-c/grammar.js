@@ -58,6 +58,8 @@ module.exports = grammar({
     [$.type_qualifier, $.extension_expression],
     [$._declarator, $._declaration_declarator],
     [$._linkage_guard, $.preproc_if],
+    [$._linkage_guard, $.preproc_if_in_statement],
+    [$._linkage_guard, $.preproc_ifdef_in_statement],
     [$._declaration_modifiers, $.type_specifier],
     [$._linkage_guard, $.preproc_ifdef],
     [$._typedef_macro_qualifier, $.type_specifier, $.sized_type_specifier],
@@ -93,6 +95,10 @@ module.exports = grammar({
     [$.preproc_else, $.type_definition],
     [$.preproc_else, $.extension_expression],
     [$.preproc_else, $.type_qualifier, $.extension_expression],
+    [$.preproc_else_in_statement, $.type_qualifier],
+    [$.preproc_else_in_statement, $.type_definition],
+    [$.preproc_else_in_statement, $.extension_expression],
+    [$.preproc_else_in_statement, $.type_qualifier, $.extension_expression],
     [$.enumerator_list, $.expression],
     [$.enumerator, $.expression],
     [$.enumerator_list, $.extension_expression],
@@ -100,6 +106,10 @@ module.exports = grammar({
     [$.preproc_ifdef, $.type_definition],
     [$.preproc_ifdef, $.extension_expression],
     [$.preproc_ifdef, $.type_qualifier, $.extension_expression],
+    [$.preproc_ifdef_in_statement, $.type_qualifier],
+    [$.preproc_ifdef_in_statement, $.type_definition],
+    [$.preproc_ifdef_in_statement, $.extension_expression],
+    [$.preproc_ifdef_in_statement, $.type_qualifier, $.extension_expression],
     [$._string, $.concatenated_string],
     [$.preproc_else_in_initializer_list, $.field_expression],
     [$.preproc_ifdef_in_initializer_list, $.field_expression],
@@ -218,8 +228,8 @@ module.exports = grammar({
       $.attributed_statement,
       $.type_definition,
       $._empty_declaration,
-      $.preproc_if,
-      $.preproc_ifdef,
+      alias($.preproc_if_in_statement, $.preproc_if),
+      alias($.preproc_ifdef_in_statement, $.preproc_ifdef),
       $.preproc_include,
       $.preproc_def,
       $.preproc_function_def,
@@ -273,6 +283,12 @@ module.exports = grammar({
     // contain declaration macros); nested bodies still accept every
     // statement shape through _top_level_statement -> statement.
     ...preprocIf('', $ => choice($._top_level_item, $.dangling_else, $.dangling_label, '__extension__')),
+    // Statement-context variant: a preproc group inside a function body
+    // holds statements/declarations, NOT top-level items — in particular
+    // `NAME(args);` there is a call_expression, never a macro_declaration
+    // (the file-scope fallback arm in _top_level_item). Used via
+    // _block_item and _statement_or_preproc.
+    ...preprocIf('_in_statement', $ => choice($._block_item, $.dangling_else, $.dangling_label, '__extension__')),
     ...preprocIf('_in_field_declaration_list', $ => $._field_declaration_list_item),
     ...preprocIf('_in_enumerator_list', $ => choice(seq($.enumerator, ','), $.enumerator, $.call_expression, '__extension__', $.preproc_def)),
     ...preprocIf('_in_enumerator_list_no_comma', $ => choice($.enumerator, $.call_expression, '__extension__', $.preproc_def), -1),
@@ -1382,11 +1398,12 @@ module.exports = grammar({
 
     // A statement slot that also accepts a whole `#if`/`#ifdef` group:
     // `if (x)\n#ifdef MAC\n a();\n#else\n b();\n#endif` — the conditional
-    // group IS the (conditionally compiled) body.
+    // group IS the (conditionally compiled) body. The `_in_statement`
+    // variant keeps `NAME(args);` inside the group a call_expression.
     _statement_or_preproc: $ => choice(
       $.statement,
-      $.preproc_if,
-      $.preproc_ifdef,
+      alias($.preproc_if_in_statement, $.preproc_if),
+      alias($.preproc_ifdef_in_statement, $.preproc_ifdef),
     ),
 
     if_statement: $ => prec.right(seq(

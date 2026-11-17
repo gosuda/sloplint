@@ -3517,26 +3517,6 @@
       "required": false,
       "types": [
         {
-          "type": "attributed_statement",
-          "named": true
-        },
-        {
-          "type": "break_statement",
-          "named": true
-        },
-        {
-          "type": "case_statement",
-          "named": true
-        },
-        {
-          "type": "compound_statement",
-          "named": true
-        },
-        {
-          "type": "continue_statement",
-          "named": true
-        },
-        {
           "type": "dangling_else",
           "named": true
         },
@@ -3549,10 +3529,6 @@
           "named": true
         },
         {
-          "type": "do_statement",
-          "named": true
-        },
-        {
           "type": "enumerator",
           "named": true
         },
@@ -3561,15 +3537,7 @@
           "named": true
         },
         {
-          "type": "expression_statement",
-          "named": true
-        },
-        {
           "type": "field_declaration",
-          "named": true
-        },
-        {
-          "type": "for_statement",
           "named": true
         },
         {
@@ -3577,15 +3545,7 @@
           "named": true
         },
         {
-          "type": "goto_statement",
-          "named": true
-        },
-        {
           "type": "guarded_linkage",
-          "named": true
-        },
-        {
-          "type": "if_statement",
           "named": true
         },
         {
@@ -3597,15 +3557,7 @@
           "named": true
         },
         {
-          "type": "labeled_statement",
-          "named": true
-        },
-        {
           "type": "linkage_specification",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -3641,11 +3593,7 @@
           "named": true
         },
         {
-          "type": "return_statement",
-          "named": true
-        },
-        {
-          "type": "switch_statement",
+          "type": "statement",
           "named": true
         },
         {
@@ -3658,10 +3606,6 @@
         },
         {
           "type": "variadic_parameter",
-          "named": true
-        },
-        {
-          "type": "while_statement",
           "named": true
         }
       ]
@@ -3705,26 +3649,6 @@
       "required": false,
       "types": [
         {
-          "type": "attributed_statement",
-          "named": true
-        },
-        {
-          "type": "break_statement",
-          "named": true
-        },
-        {
-          "type": "case_statement",
-          "named": true
-        },
-        {
-          "type": "compound_statement",
-          "named": true
-        },
-        {
-          "type": "continue_statement",
-          "named": true
-        },
-        {
           "type": "dangling_else",
           "named": true
         },
@@ -3737,10 +3661,6 @@
           "named": true
         },
         {
-          "type": "do_statement",
-          "named": true
-        },
-        {
           "type": "enumerator",
           "named": true
         },
@@ -3749,15 +3669,7 @@
           "named": true
         },
         {
-          "type": "expression_statement",
-          "named": true
-        },
-        {
           "type": "field_declaration",
-          "named": true
-        },
-        {
-          "type": "for_statement",
           "named": true
         },
         {
@@ -3765,15 +3677,7 @@
           "named": true
         },
         {
-          "type": "goto_statement",
-          "named": true
-        },
-        {
           "type": "guarded_linkage",
-          "named": true
-        },
-        {
-          "type": "if_statement",
           "named": true
         },
         {
@@ -3785,15 +3689,7 @@
           "named": true
         },
         {
-          "type": "labeled_statement",
-          "named": true
-        },
-        {
           "type": "linkage_specification",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -3829,11 +3725,7 @@
           "named": true
         },
         {
-          "type": "return_statement",
-          "named": true
-        },
-        {
-          "type": "switch_statement",
+          "type": "statement",
           "named": true
         },
         {
@@ -3846,10 +3738,6 @@
         },
         {
           "type": "variadic_parameter",
-          "named": true
-        },
-        {
-          "type": "while_statement",
           "named": true
         }
       ]
@@ -3864,26 +3752,6 @@
       "required": false,
       "types": [
         {
-          "type": "attributed_statement",
-          "named": true
-        },
-        {
-          "type": "break_statement",
-          "named": true
-        },
-        {
-          "type": "case_statement",
-          "named": true
-        },
-        {
-          "type": "compound_statement",
-          "named": true
-        },
-        {
-          "type": "continue_statement",
-          "named": true
-        },
-        {
           "type": "dangling_else",
           "named": true
         },
@@ -3896,10 +3764,6 @@
           "named": true
         },
         {
-          "type": "do_statement",
-          "named": true
-        },
-        {
           "type": "enumerator",
           "named": true
         },
@@ -3908,15 +3772,7 @@
           "named": true
         },
         {
-          "type": "expression_statement",
-          "named": true
-        },
-        {
           "type": "field_declaration",
-          "named": true
-        },
-        {
-          "type": "for_statement",
           "named": true
         },
         {
@@ -3924,15 +3780,7 @@
           "named": true
         },
         {
-          "type": "goto_statement",
-          "named": true
-        },
-        {
           "type": "guarded_linkage",
-          "named": true
-        },
-        {
-          "type": "if_statement",
           "named": true
         },
         {
@@ -3944,15 +3792,7 @@
           "named": true
         },
         {
-          "type": "labeled_statement",
-          "named": true
-        },
-        {
           "type": "linkage_specification",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -3988,11 +3828,7 @@
           "named": true
         },
         {
-          "type": "return_statement",
-          "named": true
-        },
-        {
-          "type": "switch_statement",
+          "type": "statement",
           "named": true
         },
         {
@@ -4005,10 +3841,6 @@
         },
         {
           "type": "variadic_parameter",
-          "named": true
-        },
-        {
-          "type": "while_statement",
           "named": true
         }
       ]
@@ -4120,26 +3952,6 @@
       "required": false,
       "types": [
         {
-          "type": "attributed_statement",
-          "named": true
-        },
-        {
-          "type": "break_statement",
-          "named": true
-        },
-        {
-          "type": "case_statement",
-          "named": true
-        },
-        {
-          "type": "compound_statement",
-          "named": true
-        },
-        {
-          "type": "continue_statement",
-          "named": true
-        },
-        {
           "type": "dangling_else",
           "named": true
         },
@@ -4152,10 +3964,6 @@
           "named": true
         },
         {
-          "type": "do_statement",
-          "named": true
-        },
-        {
           "type": "enumerator",
           "named": true
         },
@@ -4164,15 +3972,7 @@
           "named": true
         },
         {
-          "type": "expression_statement",
-          "named": true
-        },
-        {
           "type": "field_declaration",
-          "named": true
-        },
-        {
-          "type": "for_statement",
           "named": true
         },
         {
@@ -4180,15 +3980,7 @@
           "named": true
         },
         {
-          "type": "goto_statement",
-          "named": true
-        },
-        {
           "type": "guarded_linkage",
-          "named": true
-        },
-        {
-          "type": "if_statement",
           "named": true
         },
         {
@@ -4200,15 +3992,7 @@
           "named": true
         },
         {
-          "type": "labeled_statement",
-          "named": true
-        },
-        {
           "type": "linkage_specification",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -4244,11 +4028,7 @@
           "named": true
         },
         {
-          "type": "return_statement",
-          "named": true
-        },
-        {
-          "type": "switch_statement",
+          "type": "statement",
           "named": true
         },
         {
@@ -4261,10 +4041,6 @@
         },
         {
           "type": "variadic_parameter",
-          "named": true
-        },
-        {
-          "type": "while_statement",
           "named": true
         }
       ]
@@ -4308,26 +4084,6 @@
       "required": false,
       "types": [
         {
-          "type": "attributed_statement",
-          "named": true
-        },
-        {
-          "type": "break_statement",
-          "named": true
-        },
-        {
-          "type": "case_statement",
-          "named": true
-        },
-        {
-          "type": "compound_statement",
-          "named": true
-        },
-        {
-          "type": "continue_statement",
-          "named": true
-        },
-        {
           "type": "dangling_else",
           "named": true
         },
@@ -4340,10 +4096,6 @@
           "named": true
         },
         {
-          "type": "do_statement",
-          "named": true
-        },
-        {
           "type": "enumerator",
           "named": true
         },
@@ -4352,15 +4104,7 @@
           "named": true
         },
         {
-          "type": "expression_statement",
-          "named": true
-        },
-        {
           "type": "field_declaration",
-          "named": true
-        },
-        {
-          "type": "for_statement",
           "named": true
         },
         {
@@ -4368,15 +4112,7 @@
           "named": true
         },
         {
-          "type": "goto_statement",
-          "named": true
-        },
-        {
           "type": "guarded_linkage",
-          "named": true
-        },
-        {
-          "type": "if_statement",
           "named": true
         },
         {
@@ -4388,15 +4124,7 @@
           "named": true
         },
         {
-          "type": "labeled_statement",
-          "named": true
-        },
-        {
           "type": "linkage_specification",
-          "named": true
-        },
-        {
-          "type": "macro_declaration",
           "named": true
         },
         {
@@ -4432,11 +4160,7 @@
           "named": true
         },
         {
-          "type": "return_statement",
-          "named": true
-        },
-        {
-          "type": "switch_statement",
+          "type": "statement",
           "named": true
         },
         {
@@ -4449,10 +4173,6 @@
         },
         {
           "type": "variadic_parameter",
-          "named": true
-        },
-        {
-          "type": "while_statement",
           "named": true
         }
       ]

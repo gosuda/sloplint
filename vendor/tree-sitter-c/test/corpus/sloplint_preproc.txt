@@ -452,33 +452,38 @@ void f() {
             (identifier)))
         (preproc_ifdef
           (identifier)
-          (macro_declaration
-            (identifier)
-            (macro_argument_list))
-          (preproc_else
-            (macro_declaration
+          (expression_statement
+            (call_expression
               (identifier)
-              (macro_argument_list)))))
+              (argument_list)))
+          (preproc_else
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list))))))
       (while_statement
         (parenthesized_expression
           (identifier))
         (preproc_ifdef
           (identifier)
-          (macro_declaration
-            (identifier)
-            (macro_argument_list))))
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list)))))
       (for_statement
         (preproc_ifdef
           (identifier)
-          (macro_declaration
-            (identifier)
-            (macro_argument_list))))
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list)))))
       (do_statement
         (preproc_ifdef
           (identifier)
-          (macro_declaration
-            (identifier)
-            (macro_argument_list)))
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list))))
         (parenthesized_expression
           (identifier)))
       (if_statement
@@ -491,17 +496,19 @@ void f() {
         (else_clause
           (preproc_ifdef
             (identifier)
-            (macro_declaration
-              (identifier)
-              (macro_argument_list)))))
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list))))))
       (if_statement
         (parenthesized_expression
           (identifier))
         (preproc_ifdef
           (identifier)
-          (macro_declaration
-            (identifier)
-            (macro_argument_list)))
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list))))
         (else_clause
           (expression_statement
             (call_expression

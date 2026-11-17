@@ -387,6 +387,16 @@ the size growth.
   a `preproc_if` is already a direct `_block_item`, so wrapping it in
   `statement` too would make every block-level `#ifdef` ambiguous.
 
+- **`NAME(args);` inside a function's `#ifdef` group is a call, not a
+  `macro_declaration`** — `preprocIf('')` items are shared between file
+  scope and function bodies, so `if (x) #ifdef MAC a(); #endif` used to
+  give `a();` the file-scope macro read and the C adapter lost the call.
+  `preprocIf('_in_statement', ...)` carries `_block_item` items (no
+  `_macro_declaration_top` arm); `_block_item` and
+  `_statement_or_preproc` alias it back to `preproc_if`/`preproc_ifdef`
+  at use sites, so the node names are unchanged. File-scope guarded
+  groups still use `_top_level_item` and keep the macro read.
+
 - **Preproc inside expressions** — `a + #ifdef X b + #endif c`,
   `a && #ifdef X b #endif`, `x = #ifdef v1 #else v2 #endif`, and
   `( #ifdef expr #else expr #endif )`: `binary_expression` and
