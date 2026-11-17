@@ -108,3 +108,28 @@ fn a_guarded_struct_defaults_members_public() {
         "struct members default public"
     );
 }
+
+const GUARDED_GENERIC_BASE: &str = "#ifdef WRAPPED
+class Item : public Wrap<int>
+#else
+class Item : public Wrap
+#endif
+{
+    void m() {}
+};
+";
+
+#[test]
+fn generic_and_plain_bases_of_one_name_both_survive() {
+    let analysis = run_clean(Lang::Cpp, "item.h", GUARDED_GENERIC_BASE);
+    let impls = &analysis.facts.impls;
+    let wraps: Vec<_> = impls.iter().filter(|i| i.name == "Wrap").collect();
+    assert!(
+        wraps.iter().any(|i| i.is_generic),
+        "Wrap<int> arm survives dedup: {impls:?}"
+    );
+    assert!(
+        wraps.iter().any(|i| !i.is_generic),
+        "concrete Wrap survives dedup next to Wrap<int>: {impls:?}"
+    );
+}

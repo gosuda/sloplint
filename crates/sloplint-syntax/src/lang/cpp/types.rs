@@ -101,7 +101,11 @@ pub(crate) fn guarded_class_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<
         if node.kind() == "base_class_clause" {
             for c in named_children(node) {
                 if let Some(found) = base_ref(cx, c, child_abstract)
-                    && seen.insert(found.name)
+                    // Generic and plain spellings of one short name are
+                    // distinct bases: `Base<int>` vs `Base` must both survive,
+                    // because generic impls are filtered downstream and would
+                    // otherwise swallow the concrete one.
+                    && seen.insert((found.name, found.is_generic))
                 {
                     impls.push(found);
                 }
