@@ -585,3 +585,98 @@ void f() {
                     (identifier)
                     (argument_list)))))))
         (compound_statement)))))
+
+================================================================================
+preproc group as an unbraced statement body (dangling if/while/for/do)
+================================================================================
+
+void f() {
+    if (!x)
+#ifdef MAC
+        a();
+#else
+        b();
+#endif
+    while (x)
+#ifdef MAC
+        y();
+#endif
+    for (;;)
+#ifdef MAC
+        z();
+#endif
+    do
+#ifdef MAC
+        w();
+#endif
+    while (x);
+    if (a) s1();
+    else
+#ifdef MAC
+        s2();
+#endif
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (if_statement
+        (condition_clause
+          (unary_expression
+            (identifier)))
+        (preproc_ifdef
+          (identifier)
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list)))
+          (preproc_else
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list))))))
+      (while_statement
+        (condition_clause
+          (identifier))
+        (preproc_ifdef
+          (identifier)
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list)))))
+      (for_statement
+        (preproc_ifdef
+          (identifier)
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list)))))
+      (do_statement
+        (preproc_ifdef
+          (identifier)
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list))))
+        (parenthesized_expression
+          (identifier)))
+      (if_statement
+        (condition_clause
+          (identifier))
+        (expression_statement
+          (call_expression
+            (identifier)
+            (argument_list)))
+        (else_clause
+          (preproc_ifdef
+            (identifier)
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))))))))

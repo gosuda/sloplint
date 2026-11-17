@@ -25,7 +25,14 @@ reproduced on real code. Every repro below was first accepted by
 
 ## Regenerating src/
 
-- Tool: tree-sitter-cli 0.27.1.
+- Tool: tree-sitter-cli 0.24.7 (`cargo install tree-sitter-cli --version
+  0.24.7 --locked`). 0.24.7 emits `LANGUAGE_VERSION` 14 and OLD-style
+  `TSFieldMapSlice` headers; a newer CLI (0.27.x) emits ABI 15 and
+  `TSMapSlice` headers — the generated `src/parser.c` and
+  `src/tree_sitter/*.h` must come from the SAME CLI version or the crate
+  fails to compile (`unknown type name 'TSFieldMapSlice'`). After
+  regenerating, purge `$XDG_CACHE_HOME/tree-sitter` — a stale cached
+  parser gives false greens.
 - The C++ `grammar.js` starts with `require('tree-sitter-c/grammar')`. For
   regeneration it resolves to a clone of
   https://github.com/tree-sitter/tree-sitter-c at tag v0.23.1 (commit
@@ -48,8 +55,9 @@ reproduced on real code. Every repro below was first accepted by
   `tree-sitter generate`, then `tree-sitter test`.
 - It rewrites `src/parser.c`, `src/grammar.json` and `src/node-types.json`.
   `src/scanner.c` is not generated and is untouched.
-- Regenerating the unpatched grammar with 0.27.1 already moves the parser
-  from ABI 14 to ABI 15. No node kind and no field is added or removed by
+- Regenerating the unpatched grammar with 0.27.x moves the parser from
+  ABI 14 to ABI 15; we stay on 0.24.7/ABI 14 for consistency. No node
+  kind and no field is added or removed by
   the patch. `node-types.json` gains the `guarded_linkage` node kind
   (`name` and `value` fields, same as `linkage_specification`) and the
   `macro_attribute` node kind, and keeps every other type and field.
@@ -478,6 +486,17 @@ enumeration of `macro_attribute` costs most of the size growth.
   base: `dangling_else` (cpp override carries `constexpr` +
   `condition_clause`) and `dangling_label` cover `} else #endif { }`
   and `#ifdef X fin: #endif stmt`.
+
+- **A whole `#if`/`#ifdef` group as an unbraced statement body** —
+  `if (x) #ifdef MAC a(); #else b(); #endif` (also `while`/`do`/`for`/
+  `for_range_loop` bodies, `else` consequences and labels). The base
+  defines `_statement_or_preproc = choice($.statement, $.preproc_if,
+  $.preproc_ifdef)`; the cpp overrides (`if_statement`, `dangling_else`,
+  `while_statement`, `for_range_loop`) point their body slots at it.
+  Deliberately NOT added to `_non_case_statement`: a `preproc_if` is
+  already a direct `_block_item`, so adding it inside `statement` would
+  make every block-level `#ifdef` ambiguous (block-item read vs
+  statement-wrapped read). The body slots are unambiguous positions.
 
 - **Preproc inside expressions** — the base's mid-split rows on
   `binary_expression` are mirrored for the cpp-only operators; the

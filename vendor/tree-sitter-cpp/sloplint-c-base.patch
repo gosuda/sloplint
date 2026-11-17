@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index db16bf8..b40f6ed 100644
+index db16bf8..63cba1a 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -36,6 +36,110 @@ module.exports = grammar({
@@ -840,10 +840,42 @@ index db16bf8..b40f6ed 100644
      ),
  
      _top_level_statement: $ => choice(
-@@ -849,6 +1361,22 @@ module.exports = grammar({
+@@ -824,9 +1336,14 @@ module.exports = grammar({
+     labeled_statement: $ => seq(
+       field('label', $._statement_identifier),
+       ':',
+-      choice($.declaration, $.statement),
++      choice($.declaration, $._statement_or_preproc),
+     ),
+ 
++    // A statement slot that also accepts a whole `#if`/`#ifdef` group:
++    // `if (x)\n#ifdef MAC\n a();\n#else\n b();\n#endif` — the conditional
++    // group IS the (conditionally compiled) body. Applies to every
++    // statement-bodied construct below.
++
+     // This is missing binary expressions, others were kept so that macro code can be parsed better and code examples
+     _top_level_expression_statement: $ => seq(
+       optional($._expression_not_binary),
+@@ -841,14 +1358,36 @@ module.exports = grammar({
+       ';',
+     ),
+ 
++    _statement_or_preproc: $ => choice(
++      $.statement,
++      $.preproc_if,
++      $.preproc_ifdef,
++    ),
++
+     if_statement: $ => prec.right(seq(
+       'if',
+       field('condition', $.parenthesized_expression),
+-      field('consequence', $.statement),
++      field('consequence', $._statement_or_preproc),
+       optional(field('alternative', $.else_clause)),
      )),
  
-     else_clause: $ => seq('else', $.statement),
+-    else_clause: $ => seq('else', $.statement),
++    else_clause: $ => seq('else', $._statement_or_preproc),
 +    // `} else #endif { }`: a preproc block may end between `else` and
 +    // its body, leaving an if without an else-consequence inside the
 +    // block (the `{ ... }` after `#endif` then parses as a bare
@@ -851,7 +883,7 @@ index db16bf8..b40f6ed 100644
 +    dangling_else: $ => prec.right(seq(
 +      'if',
 +      field('condition', $.parenthesized_expression),
-+      field('consequence', $.statement),
++      field('consequence', $._statement_or_preproc),
 +      'else',
 +      optional($.dangling_else),
 +    )),
@@ -863,7 +895,31 @@ index db16bf8..b40f6ed 100644
  
      switch_statement: $ => seq(
        'switch',
-@@ -1003,22 +1531,44 @@ module.exports = grammar({
+@@ -872,12 +1411,12 @@ module.exports = grammar({
+     while_statement: $ => seq(
+       'while',
+       field('condition', $.parenthesized_expression),
+-      field('body', $.statement),
++      field('body', $._statement_or_preproc),
+     ),
+ 
+     do_statement: $ => seq(
+       'do',
+-      field('body', $.statement),
++      field('body', $._statement_or_preproc),
+       'while',
+       field('condition', $.parenthesized_expression),
+       ';',
+@@ -888,7 +1427,7 @@ module.exports = grammar({
+       '(',
+       $._for_statement_body,
+       ')',
+-      field('body', $.statement),
++      field('body', $._statement_or_preproc),
+     ),
+     _for_statement_body: $ => seq(
+       choice(
+@@ -1003,22 +1542,44 @@ module.exports = grammar({
        $.parenthesized_expression,
      ),
  
@@ -924,7 +980,7 @@ index db16bf8..b40f6ed 100644
      )),
  
      pointer_expression: $ => prec.left(PREC.CAST, seq(
-@@ -1053,16 +1603,49 @@ module.exports = grammar({
+@@ -1053,16 +1614,49 @@ module.exports = grammar({
          ['>>', PREC.SHIFT],
        ];
  
@@ -981,7 +1037,7 @@ index db16bf8..b40f6ed 100644
      update_expression: $ => {
        const argument = field('argument', $.expression);
        const operator = field('operator', choice('--', '++'));
-@@ -1143,6 +1726,36 @@ module.exports = grammar({
+@@ -1143,6 +1737,36 @@ module.exports = grammar({
        ')',
      )),
  
@@ -1018,7 +1074,7 @@ index db16bf8..b40f6ed 100644
      gnu_asm_qualifier: _ => choice(
        'volatile',
        '__volatile__',
-@@ -1197,7 +1810,57 @@ module.exports = grammar({
+@@ -1197,7 +1821,57 @@ module.exports = grammar({
      extension_expression: $ => seq('__extension__', $.expression),
  
      // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
@@ -1077,7 +1133,7 @@ index db16bf8..b40f6ed 100644
  
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
-@@ -1216,18 +1879,47 @@ module.exports = grammar({
+@@ -1216,18 +1890,47 @@ module.exports = grammar({
  
      parenthesized_expression: $ => seq(
        '(',
@@ -1131,7 +1187,7 @@ index db16bf8..b40f6ed 100644
        '}',
      ),
  
-@@ -1246,6 +1938,15 @@ module.exports = grammar({
+@@ -1246,6 +1949,15 @@ module.exports = grammar({
          ':',
          field('value', choice($.expression, $.initializer_list)),
        ),
@@ -1147,7 +1203,7 @@ index db16bf8..b40f6ed 100644
      ),
  
      subscript_designator: $ => seq('[', $.expression, ']'),
-@@ -1296,14 +1997,19 @@ module.exports = grammar({
+@@ -1296,14 +2008,19 @@ module.exports = grammar({
  
      // Must concatenate at least 2 nodes, one of which must be a string_literal.
      // Identifier is added to parse macros that are strings, like PRIu64.

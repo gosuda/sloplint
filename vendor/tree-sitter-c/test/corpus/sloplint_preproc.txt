@@ -400,3 +400,110 @@ void f() {
                     (identifier)
                     (argument_list)))))))
         (compound_statement)))))
+
+================================================================================
+preproc group as an unbraced statement body (dangling if/while/for/do)
+================================================================================
+
+void f() {
+    if (!x)
+#ifdef MAC
+        a();
+#else
+        b();
+#endif
+    while (x)
+#ifdef MAC
+        y();
+#endif
+    for (;;)
+#ifdef MAC
+        z();
+#endif
+    do
+#ifdef MAC
+        w();
+#endif
+    while (x);
+    if (a) s1();
+    else
+#ifdef MAC
+        s2();
+#endif
+    if (c)
+#ifdef MAC
+        m();
+#endif
+    else n();
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (if_statement
+        (parenthesized_expression
+          (unary_expression
+            (identifier)))
+        (preproc_ifdef
+          (identifier)
+          (macro_declaration
+            (identifier)
+            (macro_argument_list))
+          (preproc_else
+            (macro_declaration
+              (identifier)
+              (macro_argument_list)))))
+      (while_statement
+        (parenthesized_expression
+          (identifier))
+        (preproc_ifdef
+          (identifier)
+          (macro_declaration
+            (identifier)
+            (macro_argument_list))))
+      (for_statement
+        (preproc_ifdef
+          (identifier)
+          (macro_declaration
+            (identifier)
+            (macro_argument_list))))
+      (do_statement
+        (preproc_ifdef
+          (identifier)
+          (macro_declaration
+            (identifier)
+            (macro_argument_list)))
+        (parenthesized_expression
+          (identifier)))
+      (if_statement
+        (parenthesized_expression
+          (identifier))
+        (expression_statement
+          (call_expression
+            (identifier)
+            (argument_list)))
+        (else_clause
+          (preproc_ifdef
+            (identifier)
+            (macro_declaration
+              (identifier)
+              (macro_argument_list)))))
+      (if_statement
+        (parenthesized_expression
+          (identifier))
+        (preproc_ifdef
+          (identifier)
+          (macro_declaration
+            (identifier)
+            (macro_argument_list)))
+        (else_clause
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list))))))))

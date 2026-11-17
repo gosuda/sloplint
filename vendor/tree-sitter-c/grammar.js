@@ -1363,7 +1363,7 @@ module.exports = grammar({
     labeled_statement: $ => seq(
       field('label', $._statement_identifier),
       ':',
-      choice($.declaration, $.statement),
+      choice($.declaration, $._statement_or_preproc),
     ),
 
     // This is missing binary expressions, others were kept so that macro code can be parsed better and code examples
@@ -1380,14 +1380,23 @@ module.exports = grammar({
       ';',
     ),
 
+    // A statement slot that also accepts a whole `#if`/`#ifdef` group:
+    // `if (x)\n#ifdef MAC\n a();\n#else\n b();\n#endif` — the conditional
+    // group IS the (conditionally compiled) body.
+    _statement_or_preproc: $ => choice(
+      $.statement,
+      $.preproc_if,
+      $.preproc_ifdef,
+    ),
+
     if_statement: $ => prec.right(seq(
       'if',
       field('condition', $.parenthesized_expression),
-      field('consequence', $.statement),
+      field('consequence', $._statement_or_preproc),
       optional(field('alternative', $.else_clause)),
     )),
 
-    else_clause: $ => seq('else', $.statement),
+    else_clause: $ => seq('else', $._statement_or_preproc),
     // `} else #endif { }`: a preproc block may end between `else` and
     // its body, leaving an if without an else-consequence inside the
     // block (the `{ ... }` after `#endif` then parses as a bare
@@ -1395,7 +1404,7 @@ module.exports = grammar({
     dangling_else: $ => prec.right(seq(
       'if',
       field('condition', $.parenthesized_expression),
-      field('consequence', $.statement),
+      field('consequence', $._statement_or_preproc),
       'else',
       optional($.dangling_else),
     )),
@@ -1427,12 +1436,12 @@ module.exports = grammar({
     while_statement: $ => seq(
       'while',
       field('condition', $.parenthesized_expression),
-      field('body', $.statement),
+      field('body', $._statement_or_preproc),
     ),
 
     do_statement: $ => seq(
       'do',
-      field('body', $.statement),
+      field('body', $._statement_or_preproc),
       'while',
       field('condition', $.parenthesized_expression),
       ';',
@@ -1443,7 +1452,7 @@ module.exports = grammar({
       '(',
       $._for_statement_body,
       ')',
-      field('body', $.statement),
+      field('body', $._statement_or_preproc),
     ),
     _for_statement_body: $ => seq(
       choice(

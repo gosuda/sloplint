@@ -2240,6 +2240,14 @@
         "required": true,
         "types": [
           {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
+            "named": true
+          },
+          {
             "type": "statement",
             "named": true
           }
@@ -2594,6 +2602,14 @@
         "required": true,
         "types": [
           {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
+            "named": true
+          },
+          {
             "type": "statement",
             "named": true
           }
@@ -2619,6 +2635,14 @@
       "multiple": false,
       "required": true,
       "types": [
+        {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        },
         {
           "type": "statement",
           "named": true
@@ -3383,6 +3407,14 @@
         "required": true,
         "types": [
           {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
+            "named": true
+          },
+          {
             "type": "statement",
             "named": true
           }
@@ -3476,6 +3508,14 @@
         "multiple": false,
         "required": true,
         "types": [
+          {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
+            "named": true
+          },
           {
             "type": "statement",
             "named": true
@@ -4307,6 +4347,14 @@
         "required": true,
         "types": [
           {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
+            "named": true
+          },
+          {
             "type": "statement",
             "named": true
           }
@@ -4495,6 +4543,14 @@
       "types": [
         {
           "type": "declaration",
+          "named": true
+        },
+        {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -9342,6 +9398,14 @@
         "multiple": false,
         "required": true,
         "types": [
+          {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
+            "named": true
+          },
           {
             "type": "statement",
             "named": true

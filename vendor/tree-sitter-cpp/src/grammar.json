@@ -11325,7 +11325,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "statement"
+              "name": "_statement_or_preproc"
             }
           ]
         }
@@ -11382,6 +11382,23 @@
         }
       ]
     },
+    "_statement_or_preproc": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "preproc_if"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "preproc_ifdef"
+        }
+      ]
+    },
     "if_statement": {
       "type": "PREC_RIGHT",
       "value": 0,
@@ -11417,7 +11434,7 @@
             "name": "consequence",
             "content": {
               "type": "SYMBOL",
-              "name": "statement"
+              "name": "_statement_or_preproc"
             }
           },
           {
@@ -11448,7 +11465,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "statement"
+          "name": "_statement_or_preproc"
         }
       ]
     },
@@ -11487,7 +11504,7 @@
             "name": "consequence",
             "content": {
               "type": "SYMBOL",
-              "name": "statement"
+              "name": "_statement_or_preproc"
             }
           },
           {
@@ -11630,7 +11647,7 @@
           "name": "body",
           "content": {
             "type": "SYMBOL",
-            "name": "statement"
+            "name": "_statement_or_preproc"
           }
         }
       ]
@@ -11647,7 +11664,7 @@
           "name": "body",
           "content": {
             "type": "SYMBOL",
-            "name": "statement"
+            "name": "_statement_or_preproc"
           }
         },
         {
@@ -11692,7 +11709,7 @@
           "name": "body",
           "content": {
             "type": "SYMBOL",
-            "name": "statement"
+            "name": "_statement_or_preproc"
           }
         }
       ]
@@ -22482,7 +22499,7 @@
           "name": "body",
           "content": {
             "type": "SYMBOL",
-            "name": "statement"
+            "name": "_statement_or_preproc"
           }
         }
       ]

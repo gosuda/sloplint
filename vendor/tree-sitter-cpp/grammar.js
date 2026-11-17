@@ -1513,21 +1513,23 @@ module.exports = grammar(C, {
     while_statement: $ => seq(
       'while',
       field('condition', $.condition_clause),
-      field('body', $.statement),
+      field('body', $._statement_or_preproc),
     ),
 
+    // `_statement_or_preproc` (base): the body slot also accepts a whole
+    // `#if`/`#ifdef` group, e.g. `if (x) #ifdef MAC a(); #else b(); #endif`.
     if_statement: $ => prec.right(seq(
       'if',
       optional('constexpr'),
       field('condition', $.condition_clause),
-      field('consequence', $.statement),
+      field('consequence', $._statement_or_preproc),
       optional(field('alternative', $.else_clause)),
     )),
     dangling_else: $ => prec.right(seq(
       'if',
       optional('constexpr'),
       field('condition', $.condition_clause),
-      field('consequence', $.statement),
+      field('consequence', $._statement_or_preproc),
       'else',
       optional($.dangling_else),
     )),
@@ -1542,7 +1544,7 @@ module.exports = grammar(C, {
       '(',
       $._for_range_loop_body,
       ')',
-      field('body', $.statement),
+      field('body', $._statement_or_preproc),
     ),
     _for_range_loop_body: $ => seq(
       field('initializer', optional($.init_statement)),

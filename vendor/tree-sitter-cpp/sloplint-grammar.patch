@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 77a89b2..45b5774 100644
+index 77a89b2..087eef9 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -58,6 +58,38 @@ module.exports = grammar(C, {
@@ -969,15 +969,29 @@ index 77a89b2..45b5774 100644
      ),
  
      switch_statement: $ => seq(
-@@ -828,6 +1523,15 @@ module.exports = grammar(C, {
-       field('consequence', $.statement),
+@@ -818,16 +1513,27 @@ module.exports = grammar(C, {
+     while_statement: $ => seq(
+       'while',
+       field('condition', $.condition_clause),
+-      field('body', $.statement),
++      field('body', $._statement_or_preproc),
+     ),
+ 
++    // `_statement_or_preproc` (base): the body slot also accepts a whole
++    // `#if`/`#ifdef` group, e.g. `if (x) #ifdef MAC a(); #else b(); #endif`.
+     if_statement: $ => prec.right(seq(
+       'if',
+       optional('constexpr'),
+       field('condition', $.condition_clause),
+-      field('consequence', $.statement),
++      field('consequence', $._statement_or_preproc),
        optional(field('alternative', $.else_clause)),
      )),
 +    dangling_else: $ => prec.right(seq(
 +      'if',
 +      optional('constexpr'),
 +      field('condition', $.condition_clause),
-+      field('consequence', $.statement),
++      field('consequence', $._statement_or_preproc),
 +      'else',
 +      optional($.dangling_else),
 +    )),
@@ -985,7 +999,16 @@ index 77a89b2..45b5774 100644
  
      // Using prec(1) instead of prec.dynamic(1) causes issues with the
      // range loop's declaration specifiers if `int` is passed in, it'll
-@@ -968,10 +1672,257 @@ module.exports = grammar(C, {
+@@ -838,7 +1544,7 @@ module.exports = grammar(C, {
+       '(',
+       $._for_range_loop_body,
+       ')',
+-      field('body', $.statement),
++      field('body', $._statement_or_preproc),
+     ),
+     _for_range_loop_body: $ => seq(
+       field('initializer', optional($.init_statement)),
+@@ -968,10 +1674,257 @@ module.exports = grammar(C, {
        ']',
      ),
  
@@ -1247,7 +1270,7 @@ index 77a89b2..45b5774 100644
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1942,15 @@ module.exports = grammar(C, {
+@@ -991,9 +1944,15 @@ module.exports = grammar(C, {
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -1266,7 +1289,7 @@ index 77a89b2..45b5774 100644
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +1964,7 @@ module.exports = grammar(C, {
+@@ -1007,7 +1966,7 @@ module.exports = grammar(C, {
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -1275,7 +1298,7 @@ index 77a89b2..45b5774 100644
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +1972,7 @@ module.exports = grammar(C, {
+@@ -1015,6 +1974,7 @@ module.exports = grammar(C, {
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -1283,7 +1306,7 @@ index 77a89b2..45b5774 100644
        )),
      ),
  
-@@ -1215,13 +2173,66 @@ module.exports = grammar(C, {
+@@ -1215,13 +2175,66 @@ module.exports = grammar(C, {
              field('operator', operator),
              field('right', $.expression),
            ));
@@ -1352,7 +1375,7 @@ index 77a89b2..45b5774 100644
        ')',
      ),
  
-@@ -1230,7 +2241,7 @@ module.exports = grammar(C, {
+@@ -1230,7 +2243,7 @@ module.exports = grammar(C, {
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -1361,7 +1384,7 @@ index 77a89b2..45b5774 100644
          field('value', $.initializer_list),
        ),
      ),
-@@ -1256,6 +2267,7 @@ module.exports = grammar(C, {
+@@ -1256,6 +2269,7 @@ module.exports = grammar(C, {
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -1369,7 +1392,7 @@ index 77a89b2..45b5774 100644
        )),
      ),
  
-@@ -1296,10 +2308,20 @@ module.exports = grammar(C, {
+@@ -1296,10 +2310,20 @@ module.exports = grammar(C, {
        $.user_defined_literal,
      ),
  
@@ -1394,7 +1417,7 @@ index 77a89b2..45b5774 100644
      )),
  
      _assignment_expression_lhs: $ => seq(
-@@ -1342,11 +2364,41 @@ module.exports = grammar(C, {
+@@ -1342,11 +2366,41 @@ module.exports = grammar(C, {
  
      this: _ => 'this',
  
@@ -1441,7 +1464,7 @@ index 77a89b2..45b5774 100644
  
      number_literal: $ => {
        const sign = /[-\+]/;
-@@ -1434,3 +2486,69 @@ function commaSep(rule) {
+@@ -1434,3 +2488,69 @@ function commaSep(rule) {
  function commaSep1(rule) {
    return seq(rule, repeat(seq(',', rule)));
  }

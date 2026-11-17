@@ -22,11 +22,15 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
 
 ## Regenerating src/
 
-- Tool: tree-sitter-cli 0.27.1.
+- Tool: tree-sitter-cli 0.24.7 (`cargo install tree-sitter-cli --version
+  0.24.7 --locked`). The generated `src/parser.c` and `src/tree_sitter/*.h`
+  must come from the SAME CLI version (0.24.7 emits `TSFieldMapSlice`
+  headers, 0.27.x emits `TSMapSlice`) or the crate fails to compile.
+  After regenerating, purge `$XDG_CACHE_HOME/tree-sitter`.
 - Command, run in this directory: `tree-sitter generate`
 - It rewrites `src/parser.c`, `src/grammar.json`, `src/node-types.json` and
   `src/tree_sitter/*.h`. There is no `src/scanner.c`.
-- Regenerating the unpatched grammar with 0.27.1 changes `src/parser.c` by 15 bytes
+- Regenerating the unpatched grammar with 0.27.x changes `src/parser.c` by 15 bytes
   (3,872,012 to 3,872,027) and refreshes `src/tree_sitter/array.h`. It adds or removes
   no node kind and no field.
 - Run `tree-sitter test` in an upstream clone with this `grammar.js` and the
@@ -374,6 +378,14 @@ the size growth.
   declaration macros parses at any nesting level. The matching
   `{ ... }` / statement after `#endif` parses as an ordinary
   block item.
+
+- **A whole `#if`/`#ifdef` group as an unbraced statement body** —
+  `if (x) #ifdef MAC a(); #else b(); #endif` (also `while`/`do`/`for`
+  bodies, `else` consequences and labels). `_statement_or_preproc =
+  choice($.statement, $.preproc_if, $.preproc_ifdef)` is the body slot
+  for those positions. Deliberately NOT added to `_non_case_statement`:
+  a `preproc_if` is already a direct `_block_item`, so wrapping it in
+  `statement` too would make every block-level `#ifdef` ambiguous.
 
 - **Preproc inside expressions** — `a + #ifdef X b + #endif c`,
   `a && #ifdef X b #endif`, `x = #ifdef v1 #else v2 #endif`, and
