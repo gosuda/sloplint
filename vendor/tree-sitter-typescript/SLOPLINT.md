@@ -62,6 +62,12 @@ The published crate extended tree-sitter-javascript 0.23.1.
 - Inherited from the vendored JS grammar: lenient escapes in templates, JSX reserved words,
   reserved words as export and import names, and the `await` precedence.
 
+- `export type *` and `export type * as ns`: `export_statement` accepts
+  `export type` with `*`, `* as ns`, or a named export clause
+  (`export type * from './t';`, `export type * as ns from './t';`,
+  `export type { A } from './t';`). TS 3.8+ syntax; same shape in the tsx
+  grammar via the shared `common/define-grammar.js`.
+
 ## Verified fixed
 
 - `using x = f();`, `await using x = f();`, `using a = 1, b = 2;`, typed `using`.

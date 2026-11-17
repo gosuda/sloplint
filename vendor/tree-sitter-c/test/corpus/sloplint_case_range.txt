@@ -1,0 +1,47 @@
+========================================
+GNU case range in a switch
+========================================
+
+int classify(char c) {
+  switch (c) {
+    case '0' ... '9': return 1;
+    case 'a' ... 'z':
+    case 'A' ... 'Z': return 2;
+    default: return 0;
+  }
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))))
+    body: (compound_statement
+      (switch_statement
+        condition: (parenthesized_expression (identifier))
+        body: (compound_statement
+          (case_statement
+            value: (char_literal
+              (character))
+            end: (char_literal
+              (character))
+            (return_statement (number_literal)))
+          (case_statement
+            value: (char_literal
+              (character))
+            end: (char_literal
+              (character)))
+          (case_statement
+            value: (char_literal
+              (character))
+            end: (char_literal
+              (character))
+            (return_statement (number_literal)))
+          (case_statement
+            (return_statement (number_literal))))))))

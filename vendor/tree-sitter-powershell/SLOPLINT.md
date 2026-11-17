@@ -125,6 +125,12 @@ More valid code that the same sweep files turned up, fixed because it blocked fi
 - Scanner: the end-of-statement token no longer ends a statement when the next line
   starts with `else` or `elseif`. Scanner: a backtick that ends a line is white space
   for the end-of-statement test.
+- `generic_token` has two more forms.
+  - A bare escape sequence used as a word: `` `r`n `` in
+    `Write-Host `r`n` — expandable-string content without quotes.
+  - A word that interleaves a variable head with quoted or plain segments:
+    `$x"cat"$y` is one `generic_token`. The variable head must be followed by
+    a quote, so `$x.Foo()` still parses as member access.
 - A text run in a double-quoted string has lexical precedence. A run that started at
   white space or `#` after a variable or an escape was read as a comment
   (`"`n## x"`, `"$a ## x"`). No scanner code is needed for this.

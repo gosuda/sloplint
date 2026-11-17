@@ -369,6 +369,16 @@ export default grammar({
           // sloplint: word that starts with a variable and continues as a
           // path, as in $env:TEMP\x.ps1 or ${root}/bin.
           /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/][^\&\s\(\)\}\|;,]*/,
+          // sloplint: bare escape sequence used as a word, as in
+          // Write-Host `r`n — expandable-string content without quotes.
+          new RegExp(WORD_ESC + wordTail(/[^&\s()}|;,"'`]/.source)),
+          // sloplint: word that interleaves a variable head with quoted or
+          // plain segments, as in $x"cat"$y — a single expandable word.
+          new RegExp(
+            /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
+              /["']/.source +
+              wordTail(/[^&\s()}|;,]/.source),
+          ),
         ),
       ),
 
