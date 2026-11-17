@@ -23,6 +23,18 @@ pub(crate) fn word<'s>(cx: &Cx<'_, 's>, n: Node<'_>, kinds: &[&str], words: &[&s
         kinds.contains(&c.kind()) && words.contains(&text(cx, c))
     })
 }
+/// `static` linkage spelled as a `storage_class_specifier` or as a
+/// `macro_attribute` whose name implies it (CMSIS `__STATIC_INLINE`,
+/// `__STATIC_FORCEINLINE` expand to `static inline`).
+pub(crate) fn has_static<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> bool {
+    word(cx, n, &["storage_class_specifier"], &["static"])
+        || word(
+            cx,
+            n,
+            &["macro_attribute"],
+            &["__STATIC_INLINE", "__STATIC_FORCEINLINE"],
+        )
+}
 pub(crate) fn inner(n: Node<'_>) -> Option<Node<'_>> {
     child_by_field(n, "declarator").or_else(|| first_named_child(n))
 }

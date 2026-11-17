@@ -1,0 +1,114 @@
+================================================================================
+Bare namespace-macro sentinels before preproc blocks
+================================================================================
+
+NS_BEGIN
+namespace d {
+int x;
+}
+NS_END
+
+#if defined(X)
+    #undef X
+#endif
+#define X 1
+int z;
+
+---
+
+(translation_unit
+  (macro_declaration
+    (identifier))
+  (namespace_definition
+    name: (namespace_identifier)
+    body: (declaration_list
+      (declaration
+        type: (primitive_type)
+        declarator: (identifier))))
+  (macro_declaration
+    (identifier))
+  (preproc_if
+    condition: (preproc_defined
+      (identifier))
+    (preproc_call
+      directive: (preproc_directive)
+      argument: (preproc_arg)))
+  (preproc_def
+    name: (identifier)
+    value: (preproc_arg))
+  (declaration
+    type: (primitive_type)
+    declarator: (identifier)))
+
+================================================================================
+Namespace BEGIN/END macro pairs wrap their contents
+================================================================================
+
+NLOHMANN_JSON_NAMESPACE_BEGIN
+namespace detail {
+int x;
+}
+NLOHMANN_JSON_NAMESPACE_END
+int z;
+
+---
+
+(translation_unit
+  (macro_namespace
+    (namespace_definition
+      name: (namespace_identifier)
+      body: (declaration_list
+        (declaration
+          type: (primitive_type)
+          declarator: (identifier)))))
+  (declaration
+    type: (primitive_type)
+    declarator: (identifier)))
+
+================================================================================
+Function signature split across #if/#else
+================================================================================
+
+#if COND
+    inline bool operator<(int lhs, int rhs) noexcept
+#else
+    inline bool operator==(int lhs, int rhs) noexcept
+#endif
+{
+    return true;
+}
+
+---
+
+(translation_unit
+  (guarded_function
+    (preproc_if_in_guarded_signature
+      condition: (identifier)
+      (storage_class_specifier)
+      type: (primitive_type)
+      (function_declarator
+        declarator: (operator_name)
+        parameters: (parameter_list
+          (parameter_declaration
+            type: (primitive_type)
+            declarator: (identifier))
+          (parameter_declaration
+            type: (primitive_type)
+            declarator: (identifier)))
+        (noexcept))
+      alternative: (preproc_else
+        (storage_class_specifier)
+        type: (primitive_type)
+        (function_declarator
+          declarator: (operator_name)
+          parameters: (parameter_list
+            (parameter_declaration
+              type: (primitive_type)
+              declarator: (identifier))
+            (parameter_declaration
+              type: (primitive_type)
+              declarator: (identifier)))
+          (noexcept))))
+    (compound_statement
+      (return_statement
+        (true)))))

@@ -306,8 +306,8 @@ fn invalid_go_still_reports_a_parse_error() {
             "{path} is invalid Go and must report a parse error"
         );
         assert!(
-            analysis.facts.functions.is_empty(),
-            "{path} yields no facts once the parse fails"
+            analysis.facts.functions.is_empty() || analysis.partial,
+            "{path} yields facts after a failed parse only when the rescue marks it partial"
         );
     }
 }

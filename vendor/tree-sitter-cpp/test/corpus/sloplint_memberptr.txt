@@ -1,0 +1,86 @@
+================================================================================
+Member-pointer function types: T (C::*)(Args...) in template args and using
+================================================================================
+
+struct X {};
+template<typename T> struct TypeMarker {};
+
+template<typename Return, typename Class, typename... Arguments>
+constexpr size_t get_arity(TypeMarker<Return (Class::*)(Arguments...) const>)
+{
+    return sizeof...(Arguments) + 1;
+}
+
+TypeMarker<int (X::*)(int)> m;
+using P = int (X::*)(int);
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list))
+  (template_declaration
+    parameters: (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier)))
+    (struct_specifier
+      name: (type_identifier)
+      body: (field_declaration_list)))
+  (template_declaration
+    parameters: (template_parameter_list
+      (type_parameter_declaration
+        (type_identifier))
+      (type_parameter_declaration
+        (type_identifier))
+      (variadic_type_parameter_declaration
+        (type_identifier)))
+    (function_definition
+      (type_qualifier)
+      type: (primitive_type)
+      declarator: (function_declarator
+        declarator: (identifier)
+        parameters: (parameter_list
+          (parameter_declaration
+            type: (template_type
+              name: (type_identifier)
+              arguments: (template_argument_list
+                (type_descriptor
+                  type: (type_identifier)
+                  declarator: (abstract_function_declarator
+                    declarator: (abstract_parenthesized_declarator
+                      scope: (namespace_identifier))
+                    parameters: (parameter_list
+                      (variadic_parameter_declaration
+                        type: (type_identifier)
+                        declarator: (variadic_declarator)))
+                    (type_qualifier))))))))
+      body: (compound_statement
+        (return_statement
+          (binary_expression
+            left: (sizeof_expression
+              value: (identifier))
+            right: (number_literal))))))
+  (declaration
+    type: (template_type
+      name: (type_identifier)
+      arguments: (template_argument_list
+        (type_descriptor
+          type: (primitive_type)
+          declarator: (abstract_function_declarator
+            declarator: (abstract_parenthesized_declarator
+              scope: (namespace_identifier))
+            parameters: (parameter_list
+              (parameter_declaration
+                type: (primitive_type)))))))
+    declarator: (identifier))
+  (alias_declaration
+    name: (type_identifier)
+    type: (type_descriptor
+      type: (primitive_type)
+      declarator: (abstract_function_declarator
+        declarator: (abstract_parenthesized_declarator
+          scope: (namespace_identifier))
+        parameters: (parameter_list
+          (parameter_declaration
+            type: (primitive_type)))))))

@@ -148,18 +148,22 @@ mod tests {
         let leaf = facts(None);
         let files = [
             WorldFile {
+                parsed: true,
                 path: "z.ts",
                 facts: &zed,
             },
             WorldFile {
+                parsed: true,
                 path: "a.ts",
                 facts: &ay,
             },
             WorldFile {
+                parsed: true,
                 path: "b.ts",
                 facts: &bee,
             },
             WorldFile {
+                parsed: true,
                 path: "leaf.ts",
                 facts: &leaf,
             },
@@ -185,6 +189,7 @@ mod tests {
         let rule = BarrelFile;
         let plain = facts(None);
         let files = [WorldFile {
+            parsed: true,
             path: "a.ts",
             facts: &plain,
         }];
@@ -203,10 +208,12 @@ mod tests {
         let package_only = facts(Some(vec![Vec::new()]));
         let files = [
             WorldFile {
+                parsed: true,
                 path: "a.ts",
                 facts: &top,
             },
             WorldFile {
+                parsed: true,
                 path: "b.ts",
                 facts: &package_only,
             },

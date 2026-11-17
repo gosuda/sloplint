@@ -1,0 +1,18 @@
+========================================
+Consecutive argument-macro declaration lines
+========================================
+
+munit_void_test_decl(test_nghttp2_bufs_add)
+munit_void_test_decl(test_nghttp2_bufs_reset)
+
+---
+
+(translation_unit
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier)))
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier))))

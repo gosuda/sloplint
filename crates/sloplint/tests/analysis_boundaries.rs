@@ -4,6 +4,12 @@ mod boundary_caps;
 mod cli_contract;
 #[path = "analysis_boundaries/eof_newline.rs"]
 mod eof_newline;
+#[path = "analysis_boundaries/foreign_xml.rs"]
+mod foreign_xml;
+#[path = "analysis_boundaries/parse_rescue.rs"]
+mod parse_rescue;
+#[path = "analysis_boundaries/parse_rescue_world.rs"]
+mod parse_rescue_world;
 
 use clap::Parser;
 use sloplint::cli::{Cli, Command};

@@ -1,0 +1,611 @@
+========================================
+Attribute-like macros in declaration specifiers
+========================================
+
+__IO uint32_t ISER[1];
+__STATIC_INLINE int clip(int x) { return x; }
+VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(void *ud);
+int WINAPI wWinMain(void *h, void *p, void *c, int s);
+
+---
+
+(translation_unit
+  (declaration
+    (macro_attribute)
+    type: (primitive_type)
+    declarator: (array_declarator
+      declarator: (identifier)
+      size: (number_literal)))
+  (function_definition
+    (macro_attribute)
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))))
+    body: (compound_statement
+      (return_statement
+        (identifier))))
+  (declaration
+    (macro_attribute)
+    type: (type_identifier)
+    (macro_attribute)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier))))))
+  (declaration
+    type: (primitive_type)
+    (macro_attribute)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier))))))
+
+========================================
+Calling-convention macro as a type position
+========================================
+
+NAPI_CDECL baz(int a);
+CALLBACK int handler(void);
+
+---
+
+(translation_unit
+  (declaration
+    type: (macro_attribute)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)))))
+  (declaration
+    (macro_attribute)
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type))))))
+
+========================================
+Diagnostic pragma macros stay statements
+========================================
+
+void f(void) {
+  __diag_push();
+  __diag_ignore("-Wunused");
+  work();
+  __diag_pop();
+}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list)))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (string_literal
+              (string_content)))))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list)))
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list))))))
+
+================================================================================
+Generic qualifier macros the literal lists cannot enumerate
+================================================================================
+
+ASIO_DECL int connect();
+FMT_API void report(const char* fmt, int code);
+
+class MYLIB_API Widget {
+public:
+    void m() {}
+};
+
+enum class EXPORT_ENUM Color { Red, Green };
+
+struct S {
+    CUSTOM_MARKER
+    int x;
+    OTHER_MACRO(x, y)
+    void n() {}
+};
+
+---
+
+(translation_unit
+  (declaration
+    (macro_qualifier
+      (identifier))
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list)))
+  (declaration
+    (macro_qualifier
+      (identifier))
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (primitive_type)
+          declarator: (pointer_declarator
+            declarator: (identifier)))
+        (parameter_declaration
+          type: (primitive_type)
+          declarator: (identifier)))))
+  (class_specifier
+    (macro_qualifier
+      (identifier))
+    name: (type_identifier)
+    body: (field_declaration_list
+      (access_specifier)
+      (function_definition
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list))
+        body: (compound_statement))))
+  (declaration
+    type: (enum_specifier
+      name: (type_identifier))
+    declarator: (init_declarator
+      declarator: (identifier)
+      value: (initializer_list
+        (identifier)
+        (identifier))))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        (macro_qualifier
+          (identifier))
+        type: (primitive_type)
+        declarator: (field_identifier))
+      (function_definition
+        (macro_qualifier
+          (identifier)
+          (macro_argument_list
+            (identifier)
+            (identifier)))
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (field_identifier)
+          parameters: (parameter_list))
+        body: (compound_statement)))))
+
+================================================================================
+Post-type identifiers are never qualifiers (controls)
+================================================================================
+
+struct S { int name : 3 { 0 }; };
+bool eq(const T& a, const T* b) { return a == *b; }
+int Foo = 1;
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier)
+        (bitfield_clause
+          (number_literal))
+        (initializer_list
+          (number_literal)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          (type_identifier)
+          (reference_declarator
+            (identifier)))
+        (parameter_declaration
+          (type_qualifier)
+          (type_identifier)
+          (pointer_declarator
+            (identifier)))))
+    (compound_statement
+      (return_statement
+        (binary_expression
+          (identifier)
+          (pointer_expression
+            (identifier))))))
+  (declaration
+    (primitive_type)
+    (init_declarator
+      (identifier)
+      (number_literal))))
+
+================================================================================
+Calling-convention and pointer-model macros inside declarators
+================================================================================
+
+extern void* __cdecl memset(void*, int, size_t);
+typedef VOID(NTAPI* PIO_APC_ROUTINE)(PVOID ApcContext, _In_ PIO_STATUS_BLOCK IoStatusBlock);
+int f(fd_set FAR* s, char NEAR* d);
+int WINAPI WinMain(HINSTANCE h, int s) { return 0; }
+void g(int n) { delete [] p; }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (storage_class_specifier)
+    (primitive_type)
+    (pointer_declarator
+      (ms_call_modifier)
+      (function_declarator
+        (identifier)
+        (parameter_list
+          (parameter_declaration
+            (primitive_type)
+            (abstract_pointer_declarator))
+          (parameter_declaration
+            (primitive_type))
+          (parameter_declaration
+            (primitive_type))))))
+  (type_definition
+    (type_identifier)
+    (function_declarator
+      (parenthesized_declarator
+        (pointer_declarator
+          (macro_attribute)
+          (type_identifier)))
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (identifier))
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          (type_identifier)
+          (identifier)))))
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (pointer_declarator
+            (far_ptr_modifier)
+            (identifier)))
+        (parameter_declaration
+          (primitive_type)
+          (pointer_declarator
+            (far_ptr_modifier)
+            (identifier))))))
+  (function_definition
+    (primitive_type)
+    (macro_attribute)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (type_identifier)
+          (identifier))
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (return_statement
+        (number_literal))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement
+      (expression_statement
+        (delete_expression
+          (identifier))))))
+
+================================================================================
+Mid-position nested template arg in a parameter list
+================================================================================
+
+void reschedule_addr(
+  std::priority_queue<DownstreamAddrEntry, std::vector<DownstreamAddrEntry>,
+                      DownstreamAddrEntryGreater> &pq,
+  DownstreamAddr *addr) {
+  pq.push(DownstreamAddrEntry{addr, addr->seq, addr->cycle});
+}
+void g(T<A, U<B>, C> x) { }
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (qualified_identifier
+            (namespace_identifier)
+            (template_type
+              (type_identifier)
+              (template_argument_list
+                (type_descriptor
+                  (type_identifier))
+                (type_descriptor
+                  (qualified_identifier
+                    (namespace_identifier)
+                    (template_type
+                      (type_identifier)
+                      (template_argument_list
+                        (type_descriptor
+                          (type_identifier))))))
+                (type_descriptor
+                  (type_identifier)))))
+          (reference_declarator
+            (identifier)))
+        (parameter_declaration
+          (type_identifier)
+          (pointer_declarator
+            (identifier)))))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (field_expression
+            (identifier)
+            (field_identifier))
+          (argument_list
+            (compound_literal_expression
+              (type_identifier)
+              (initializer_list
+                (identifier)
+                (field_expression
+                  (identifier)
+                  (field_identifier))
+                (field_expression
+                  (identifier)
+                  (field_identifier)))))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (template_type
+            (type_identifier)
+            (template_argument_list
+              (type_descriptor
+                (type_identifier))
+              (type_descriptor
+                (template_type
+                  (type_identifier)
+                  (template_argument_list
+                    (type_descriptor
+                      (type_identifier)))))
+              (type_descriptor
+                (type_identifier))))
+          (identifier))))
+    (compound_statement)))
+
+================================================================================
+Operator-token macro argument sequences (KDBINDINGS_DEFINE_*)
+================================================================================
+
+namespace KDBindings {
+KDBINDINGS_DEFINE_BINARY_OP(==)
+KDBINDINGS_DEFINE_BINARY_OP(!=)
+KDBINDINGS_DEFINE_BINARY_OP(&)
+KDBINDINGS_DEFINE_BINARY_OP(^)
+KDBINDINGS_DEFINE_BINARY_OP(|)
+KDBINDINGS_DEFINE_BINARY_OP(&&)
+KDBINDINGS_DEFINE_BINARY_OP(||)
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (namespace_definition
+    (namespace_identifier)
+    (declaration_list
+      (macro_declaration
+        (identifier)
+        (macro_argument_list))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list))
+      (macro_declaration
+        (identifier)
+        (macro_argument_list)))))
+
+================================================================================
+decltype functional-cast brace init
+================================================================================
+
+void f() {
+  auto i = decltype(i){0};
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (placeholder_type_specifier
+          (auto))
+        (init_declarator
+          (identifier)
+          (compound_literal_expression
+            (decltype
+              (identifier))
+            (initializer_list
+              (number_literal))))))))
+
+================================================================================
+Unnamed qualified pointer parameter with a default value
+================================================================================
+
+class A {
+  explicit A(Core::Object * = nullptr);
+  explicit B(int * = nullptr);
+};
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (class_specifier
+    (type_identifier)
+    (field_declaration_list
+      (declaration
+        (explicit_function_specifier)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (optional_parameter_declaration
+              (qualified_identifier
+                (namespace_identifier)
+                (type_identifier))
+              (abstract_pointer_declarator)
+              (null)))))
+      (declaration
+        (explicit_function_specifier)
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (optional_parameter_declaration
+              (primitive_type)
+              (abstract_pointer_declarator)
+              (null))))))))
+
+================================================================================
+MSVC __asm block
+================================================================================
+
+void f() {
+  __asm {
+    push ecx
+    mov eax, [ebx+4]
+    cpuid
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (ms_asm_statement
+        (ms_asm_block
+          (identifier)
+          (identifier)
+          (identifier)
+          (identifier)
+          (identifier)
+          (number_literal)
+          (identifier))))))
+
+================================================================================
+Qt SIGNAL/SLOT signature macros
+================================================================================
+
+void g() {
+  connect(w, SIGNAL(sendData(const char*,int)), this, SLOT(recvData(int)));
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier)
+            (call_expression
+              (qt_signature_call
+                (qt_signature
+                  (identifier)
+                  (qt_signature_type
+                    (type_qualifier)
+                    (primitive_type)
+                    (abstract_pointer_declarator))
+                  (qt_signature_type
+                    (primitive_type)))))
+            (this)
+            (call_expression
+              (qt_signature_call
+                (qt_signature
+                  (identifier)
+                  (qt_signature_type
+                    (primitive_type)))))))))))

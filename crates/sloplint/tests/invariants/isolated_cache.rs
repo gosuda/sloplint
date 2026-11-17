@@ -439,8 +439,8 @@ fn cache_keeps_the_same_bytes_apart_by_routed_path() {
     let home = CacheHome::new();
     let cold = home.check(&root, &["--no-cache"]);
     assert!(
-        cold.contains("src/stack.c:3:1") && cold.contains("[meta/parse-error]"),
-        "the `.c` file is a C parse error: {cold}"
+        cold.contains("src/stack.c:3:") && cold.contains("[meta/parse-error]"),
+        "the `.c` file is a C parse error on the template line: {cold}"
     );
     assert!(
         cold.contains("process_data")
@@ -473,7 +473,7 @@ fn cache_keeps_the_same_bytes_apart_by_routed_path() {
     plant(header, CPP_FINDING, CPP_PLANTED);
     let warm = home.check(&root, &[]);
     assert!(
-        warm.contains(CPP_PLANTED) && warm.contains("src/stack.c:3:1"),
+        warm.contains(CPP_PLANTED) && warm.contains("src/stack.c:3:"),
         "the warm run serves the stored header outcome and the stored parse error: {warm}"
     );
 }

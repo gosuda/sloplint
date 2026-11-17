@@ -1,0 +1,84 @@
+========================================
+Bare pointer type as a call argument
+========================================
+
+int g(void) {
+  SWAP(void *, &a, &b);
+  SWAP(const char *, &a, &b);
+  return 0;
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type))))
+    body: (compound_statement
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (primitive_type)
+            (pointer_expression
+              argument: (identifier))
+            (pointer_expression
+              argument: (identifier)))))
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (type_qualifier)
+            (primitive_type)
+            (pointer_expression
+              argument: (identifier))
+            (pointer_expression
+              argument: (identifier)))))
+      (return_statement
+        (number_literal)))))
+
+========================================
+Multi-word and struct types as call arguments
+========================================
+
+int g(void) {
+  SWAP(unsigned int, a, b);
+  SWAP(struct foo *, &a, &b);
+  return 0;
+}
+
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type))))
+    body: (compound_statement
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (sized_type_specifier
+              type: (primitive_type))
+            (identifier)
+            (identifier))))
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (struct_specifier
+              name: (type_identifier))
+            (pointer_expression
+              argument: (identifier))
+            (pointer_expression
+              argument: (identifier)))))
+      (return_statement
+        (number_literal)))))

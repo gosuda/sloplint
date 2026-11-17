@@ -92,10 +92,12 @@ fn world_rule_with_level_major_reports_its_major_findings() {
     let other_facts = world_facts(barrel_chains("src/index.ts"));
     let files = [
         WorldFile {
+            parsed: true,
             path: "src/index.ts",
             facts: &index_facts,
         },
         WorldFile {
+            parsed: true,
             path: "src/other.ts",
             facts: &other_facts,
         },
@@ -155,10 +157,12 @@ fn bench_role_finding_drops_when_policy_is_off() {
     bench_facts.role = CodeRole::Bench;
     let files = [
         WorldFile {
+            parsed: true,
             path: "src/bench.ts",
             facts: &bench_facts,
         },
         WorldFile {
+            parsed: true,
             path: "src/lib.ts",
             facts: &lib_facts,
         },
@@ -171,10 +175,12 @@ fn bench_role_finding_drops_when_policy_is_off() {
     let control_lib = world_facts(barrel_chains("src/deep.ts"));
     let control = [
         WorldFile {
+            parsed: true,
             path: "src/bench.ts",
             facts: &library_facts,
         },
         WorldFile {
+            parsed: true,
             path: "src/lib.ts",
             facts: &control_lib,
         },

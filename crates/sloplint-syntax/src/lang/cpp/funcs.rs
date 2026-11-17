@@ -3,7 +3,7 @@
 use tree_sitter::Node;
 
 use crate::hooks::{Cx, child_by_field, has_child_kind, named_children, text, trimmed};
-use crate::lang::c_family::{inner, span, word};
+use crate::lang::c_family::{self, inner, span};
 
 pub(crate) fn member_list<'t>(cx: &Cx<'t, '_>, n: Node<'_>) -> Option<Node<'t>> {
     let parent = cx.parent_of(n)?;
@@ -31,7 +31,7 @@ pub(crate) fn is_public<'s>(
         return found.public;
     }
     let Some(items) = list else {
-        return !word(cx, n, &["storage_class_specifier"], &["static"]);
+        return !c_family::has_static(cx, n);
     };
     let anchor = cx
         .parent()
@@ -46,9 +46,22 @@ pub(crate) fn is_public<'s>(
 }
 
 pub(crate) fn access_marker(cx: &Cx<'_, '_>, sib: Node<'_>) -> Option<bool> {
-    (sib.kind() == "access_specifier")
-        .then(|| trimmed(cx, sib))
-        .map(|label| label.starts_with("public") || label.starts_with("protected"))
+    if sib.kind() == "access_specifier" {
+        let label = trimmed(cx, sib);
+        return Some(label.starts_with("public") || label.starts_with("protected"));
+    }
+    // Qt resets access to private; legacy Unreal class/interface macros reset
+    // it to public. GENERATED_BODY and its USTRUCT alias preserve access.
+    if sib.kind() == "macro_declaration" {
+        return match sib.child(0).map(|name| name.kind()) {
+            Some("Q_OBJECT") | Some("Q_GADGET") => Some(false),
+            Some("GENERATED_UCLASS_BODY")
+            | Some("GENERATED_UINTERFACE_BODY")
+            | Some("GENERATED_IINTERFACE_BODY") => Some(true),
+            _ => None,
+        };
+    }
+    None
 }
 
 pub(crate) fn in_anonymous(cx: &Cx<'_, '_>) -> bool {

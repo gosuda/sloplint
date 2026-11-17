@@ -66,14 +66,17 @@ fn world_findings_shift_by_file_role() {
     let bench = world_facts(CodeRole::Bench);
     let files = [
         WorldFile {
+            parsed: true,
             path: "a.rs",
             facts: &library,
         },
         WorldFile {
+            parsed: true,
             path: "m.rs",
             facts: &tested,
         },
         WorldFile {
+            parsed: true,
             path: "z.rs",
             facts: &bench,
         },
@@ -351,10 +354,12 @@ fn barrel_finding_survives_a_leading_test_region() {
     prelude.barrel = Some(vec![vec!["external".to_string()]]);
     let files = [
         WorldFile {
+            parsed: true,
             path: "src/lib.rs",
             facts: &library,
         },
         WorldFile {
+            parsed: true,
             path: "src/prelude.rs",
             facts: &prelude,
         },
@@ -373,8 +378,8 @@ fn barrel_finding_survives_a_leading_test_region() {
         "the library barrel keeps its minor severity"
     );
     assert!(
-        !found[0].file_wide,
-        "graded findings leave the ruleset without the file-wide marker"
+        found[0].file_wide,
+        "whole-file findings keep their marker for partial-analysis filtering"
     );
 }
 

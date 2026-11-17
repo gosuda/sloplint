@@ -1,0 +1,167 @@
+========================================
+Win32 qualifier macros, MIDL brackets, declaratorless typedef, guarded constructs
+========================================
+
+typedef CONST char *PCSZ;
+typedef CONST STRING* PCOEM_STRING;
+typedef VOID(NTAPI *PIO_APC_ROUTINE)(IN PVOID ApcContext, IN ULONG Reserved);
+typedef VOID (*PRTL_CALLBACK)(IN PVOID Context);
+struct S { WOW64_POINTER(PVOID) Reserved1[54]; [size_is(Length/2)] PUCHAR Buf; [default] LONG D; };
+void f(IN ULONG Count, OUT PVOID Buf, [size_is(n)] UCHAR *p);
+PSLIST_ENTRY
+__fastcall
+RtlInterlockedPushListSList (
+     IN PSLIST_HEADER ListHead,
+     IN ULONG Count
+     );
+#if defined(_WINNT_)
+typedef enum POWER_INFORMATION_LEVEL {
+  PowerPolicyAc = 0x0,
+  PowerPolicyDc = 0x1
+};
+#endif
+struct MIDL_GUARD {
+#ifdef MIDL_PASS
+  [size_is(MaximumLength/2), length_is(Length/2)]
+#endif
+  PUCHAR Buffer;
+};
+
+---
+
+(translation_unit
+  (type_definition
+    (macro_qualifier
+      (identifier))
+    type: (primitive_type)
+    declarator: (pointer_declarator
+      declarator: (type_identifier)))
+  (type_definition
+    (macro_qualifier
+      (identifier))
+    type: (type_identifier)
+    declarator: (pointer_declarator
+      declarator: (type_identifier)))
+  (type_definition
+    type: (type_identifier)
+    declarator: (function_declarator
+      declarator: (parenthesized_declarator
+        (pointer_declarator
+          (macro_attribute)
+          declarator: (type_identifier)))
+      parameters: (parameter_list
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          type: (type_identifier)
+          declarator: (identifier))
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          type: (type_identifier)
+          declarator: (identifier)))))
+  (type_definition
+    type: (type_identifier)
+    declarator: (function_declarator
+      declarator: (parenthesized_declarator
+        (pointer_declarator
+          declarator: (type_identifier)))
+      parameters: (parameter_list
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          type: (type_identifier)
+          declarator: (identifier)))))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      type: (field_declaration
+        name: (identifier)
+        type: (type_descriptor
+          type: (type_identifier)))
+      declarator: (field_declaration
+        (array_declarator
+          declarator: (field_identifier)
+          size: (number_literal)))
+      (field_declaration)
+      (field_declaration
+        (midl_attribute_list
+          (identifier)
+          (macro_argument_list
+            (identifier)
+            (number_literal)))
+        type: (type_identifier)
+        declarator: (field_identifier))
+      (field_declaration
+        (midl_attribute_list)
+        type: (type_identifier)
+        declarator: (field_identifier))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          type: (type_identifier)
+          declarator: (identifier))
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          type: (type_identifier)
+          declarator: (identifier))
+        (parameter_declaration
+          (midl_attribute_list
+            (identifier)
+            (macro_argument_list
+              (identifier)))
+          type: (type_identifier)
+          declarator: (pointer_declarator
+            declarator: (identifier))))))
+  (declaration
+    type: (type_identifier)
+    declarator: (ms_call_modifier)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          type: (type_identifier)
+          declarator: (identifier))
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          type: (type_identifier)
+          declarator: (identifier)))))
+  (preproc_if
+    condition: (preproc_defined
+      (identifier))
+    (type_definition
+      type: (enum_specifier
+        name: (type_identifier)
+        body: (enumerator_list
+          (enumerator
+            name: (identifier)
+            value: (number_literal))
+          (enumerator
+            name: (identifier)
+            value: (number_literal))))))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (preproc_ifdef
+        name: (identifier)
+        (midl_attribute_list
+          (identifier)
+          (macro_argument_list
+            (identifier)
+            (number_literal))
+          (identifier)
+          (macro_argument_list
+            (identifier)
+            (number_literal))))
+      (field_declaration
+        type: (type_identifier)
+        declarator: (field_identifier)))))

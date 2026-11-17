@@ -13,11 +13,14 @@ __has_include with angle and quoted headers
   (preproc_if
     condition: (call_expression
       function: (identifier)
-      arguments: (argument_list (system_lib_string))))
+      arguments: (argument_list
+        (system_lib_string))))
   (preproc_if
     condition: (call_expression
       function: (identifier)
-      arguments: (argument_list (string_literal (string_content))))))
+      arguments: (argument_list
+        (string_literal
+          (string_content))))))
 
 ========================================
 __has_include combined with defined
@@ -31,10 +34,12 @@ __has_include combined with defined
 (translation_unit
   (preproc_if
     condition: (binary_expression
-      left: (preproc_defined (identifier))
+      left: (preproc_defined
+        (identifier))
       right: (call_expression
         function: (identifier)
-        arguments: (argument_list (system_lib_string))))))
+        arguments: (argument_list
+          (system_lib_string))))))
 
 ========================================
 defined without parentheses still parses
@@ -48,5 +53,350 @@ defined without parentheses still parses
 ---
 
 (translation_unit
-  (preproc_if condition: (preproc_defined (identifier)))
-  (preproc_ifdef name: (identifier)))
+  (preproc_if
+    condition: (preproc_defined
+      (identifier)))
+  (preproc_ifdef
+    name: (identifier)))
+
+==========================================
+extern "C" linkage inside preproc guards
+==========================================
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int a;
+
+#ifdef __cplusplus
+}
+#endif
+
+---
+
+(translation_unit
+  (guarded_linkage
+    (identifier)
+    (string_literal
+      (string_content))
+    (declaration
+      (primitive_type)
+      (identifier))
+    (identifier)))
+
+==========================================
+preproc block splitting parameter list
+==========================================
+
+void f(int a
+#ifdef X
+,
+int q, unsigned short s
+#endif
+, int c) {}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)
+          (identifier))
+        (preproc_ifdef
+          (identifier)
+          (parameter_declaration
+            (primitive_type)
+            (identifier))
+          (parameter_declaration
+            (sized_type_specifier)
+            (identifier)))
+        (parameter_declaration
+          (primitive_type)
+          (identifier))))
+    (compound_statement)))
+
+================================================================================
+preproc block splitting argument list: f(a #ifdef ,b,c #endif)
+================================================================================
+
+void caller() {
+  f(a
+#ifdef COND
+    ,b,c
+#endif
+    );
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (binary_expression
+              (identifier)
+              (preproc_ifdef
+                (identifier)
+                (identifier)
+                (identifier)))))))))
+
+================================================================================
+infix continuation: f(a | b #ifdef | c #endif)
+================================================================================
+
+void caller() {
+  f(a | b
+#ifdef COND
+    | c
+#endif
+    );
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (binary_expression
+              (binary_expression
+                (identifier)
+                (identifier))
+              (preproc_ifdef
+                (identifier)
+                (identifier)))))))))
+
+================================================================================
+infix continuation in designated initializer
+================================================================================
+
+struct hints { int flags; };
+void caller() {
+  struct hints h = {
+    .flags = A
+#ifdef COND
+             | B
+#endif
+    ,
+  };
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (field_identifier))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (struct_specifier
+          (type_identifier))
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (initializer_pair
+              (field_designator
+                (field_identifier))
+              (binary_expression
+                (identifier)
+                (preproc_ifdef
+                  (identifier)
+                  (identifier))))))))))
+
+================================================================================
+dangling else: } else #endif { }
+================================================================================
+
+void f() {
+  int n;
+#ifdef C
+  if (a) { n = 1; } else
+#endif
+  { n = 2; }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (declaration
+        (primitive_type)
+        (identifier))
+      (preproc_ifdef
+        (identifier)
+        (dangling_else
+          (parenthesized_expression
+            (identifier))
+          (compound_statement
+            (expression_statement
+              (assignment_expression
+                (identifier)
+                (number_literal))))))
+      (compound_statement
+        (expression_statement
+          (assignment_expression
+            (identifier)
+            (number_literal)))))))
+
+================================================================================
+dangling label: #ifdef fin: #endif stmt
+================================================================================
+
+void f() {
+#ifdef X
+fin:
+#endif
+  if (a) { g(); }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (preproc_ifdef
+        (identifier)
+        (dangling_label
+          (statement_identifier)))
+      (if_statement
+        (parenthesized_expression
+          (identifier))
+        (compound_statement
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list))))))))
+
+================================================================================
+mid-binary preproc split: a + #ifdef b + #endif c
+================================================================================
+
+int x[A +
+#ifdef C
+    B +
+#endif
+    C];
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (declaration
+    (primitive_type)
+    (array_declarator
+      (identifier)
+      (binary_expression
+        (identifier)
+        (preproc_ifdef
+          (identifier)
+          (identifier))
+        (identifier)))))
+
+================================================================================
+binary right operand inside preproc: x = #ifdef v1 #else v2 #endif
+================================================================================
+
+void f() {
+  x =
+#ifdef C
+      v1
+#else
+      v2
+#endif
+      ;
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (expression_statement
+        (assignment_expression
+          (identifier)
+          (preproc_ifdef
+            (identifier)
+            (identifier)
+            (preproc_else
+              (identifier))))))))
+
+================================================================================
+preproc block as sole paren content: (( #ifdef e1 #else e2 #endif ))
+================================================================================
+
+void f() {
+  while ((
+#ifdef C
+           c = g()
+#else
+           c = h()
+#endif
+       )) {
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (while_statement
+        (parenthesized_expression
+          (parenthesized_expression
+            (preproc_ifdef
+              (identifier)
+              (assignment_expression
+                (identifier)
+                (call_expression
+                  (identifier)
+                  (argument_list)))
+              (preproc_else
+                (assignment_expression
+                  (identifier)
+                  (call_expression
+                    (identifier)
+                    (argument_list)))))))
+        (compound_statement)))))

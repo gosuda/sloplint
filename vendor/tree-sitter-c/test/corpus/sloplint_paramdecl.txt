@@ -1,0 +1,41 @@
+========================================
+Parenthesized declarator parameters: T (*arr)[N] is not a macro call
+========================================
+
+void from_buf(const J j, T (*arr)[3]);
+int f(fd_set FAR* s, _In_ PUCHAR d);
+
+---
+
+(translation_unit
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          (type_qualifier)
+          type: (type_identifier)
+          declarator: (identifier))
+        (parameter_declaration
+          type: (type_identifier)
+          declarator: (array_declarator
+            declarator: (parenthesized_declarator
+              (pointer_declarator
+                declarator: (identifier)))
+            size: (number_literal))))))
+  (declaration
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (type_identifier)
+          declarator: (pointer_declarator
+            (far_ptr_modifier)
+            declarator: (identifier)))
+        (parameter_declaration
+          (macro_qualifier
+            (identifier))
+          type: (type_identifier)
+          declarator: (identifier))))))

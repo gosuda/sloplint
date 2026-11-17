@@ -1,5 +1,7 @@
 //! Per-file analysis, world facts, and the merge that produces the run's findings.
 
+mod world;
+
 use std::collections::{BTreeSet, HashSet};
 use std::io;
 use std::path::Path;
@@ -9,9 +11,10 @@ use rayon::prelude::*;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 use sloplint_core::baseline::Baseline;
-use sloplint_core::facts::{ManifestKind, WorldFacts, package_scope};
+use sloplint_core::facts::{ManifestKind, package_scope};
 use sloplint_core::finding::{SourceText, line_context, line_starts};
-use sloplint_core::rules::{CATALOG, RuleSet, WorldFile};
+use sloplint_core::lang::Lang;
+use sloplint_core::rules::{CATALOG, RuleSet};
 use sloplint_core::suppress::{self, RulePattern, Suppression};
 use sloplint_core::{Config, Finding};
 
@@ -153,6 +156,11 @@ fn process(
     if owned.starts_with('\u{feff}') {
         owned.drain(..'\u{feff}'.len_utf8());
     }
+    // Qt translation files share TypeScript's .ts extension but are XML; a
+    // TypeScript parse can only produce noise on them.
+    if entry.lang == Lang::TypeScript && owned.trim_start().starts_with("<?xml") {
+        return skipped("xml");
+    }
     // Several vendored grammars end line-oriented rules (preprocessor
     // directives, comments) in a required `\n`, so a source missing its
     // final newline mis-parses at EOF. Compilers treat the newline as
@@ -205,7 +213,7 @@ fn analyze_file(
         role: pipe.roles.role(entry.rel.as_str()),
     };
     let analysis = analyze(parsers, &input, pipe.custom);
-    let world = WorldFacts::from_facts(&analysis.facts);
+    let world = world::facts(&analysis);
     let text = SourceText {
         path: entry.rel.as_str(),
         source: probe.text,
@@ -215,9 +223,29 @@ fn analyze_file(
         suppress::parse_suppressions(&text, &analysis.comments, &|id: &str| {
             pipe.rules.is_known(id)
         });
+    // A rescued (partial) analysis still carries a parse_error: report it
+    // alongside the findings the salvaged parse produced rather than either
+    // or.
     let mut findings: Vec<Finding> = match analysis.parse_error {
-        Some(pos) => pipe.rules.parse_error(&text, pos).into_iter().collect(),
-        None => rule_findings(pipe, &analysis),
+        Some(pos) if !analysis.partial => pipe.rules.parse_error(&text, pos).into_iter().collect(),
+        _ => {
+            let mut found = rule_findings(pipe, &analysis);
+            if analysis.partial {
+                // On a rescued parse, file-wide aggregates miscount and
+                // findings inside excised constructs judge truncated code.
+                // meta/ findings describe the linter run itself — e.g.
+                // meta/custom-cap warns a custom query hit its limit — so
+                // they stay even when their anchor is line 1.
+                found.retain(|finding| {
+                    finding.rule.starts_with("meta/")
+                        || (!finding.file_wide && !analysis.tainted.contains(finding.line))
+                });
+            }
+            if let Some(pos) = analysis.parse_error {
+                found.extend(pipe.rules.parse_error(&text, pos));
+            }
+            found
+        }
     };
     pipe.rules.cap_levels(&mut meta);
     meta.retain(|finding| pipe.rules.is_active(&finding.rule));
@@ -281,12 +309,17 @@ pub(crate) fn merge(
     mut analyzed: Vec<Analyzed>,
     pool: &rayon::ThreadPool,
 ) -> Result<Vec<Finding>, RunError> {
-    let mut site = pool.install(|| world_findings(pipe, &analyzed));
+    let mut site = pool.install(|| world::findings(pipe, &analyzed));
     resolve_site_context(pipe, &analyzed, &mut site);
     let mut orphans = Vec::new();
     for finding in site {
         match analyzed.binary_search_by(|file| file.rel.as_str().cmp(&*finding.path)) {
-            Ok(index) => analyzed[index].output.findings.push(finding),
+            Ok(index) => {
+                let output = &mut analyzed[index].output;
+                if output.parsed || !finding.file_wide {
+                    output.findings.push(finding);
+                }
+            }
             Err(_) => orphans.push(finding),
         }
     }
@@ -370,17 +403,6 @@ fn fingerprinted(mut findings: Vec<Finding>) -> Vec<Finding> {
     findings.sort_by(report_order);
     Baseline::assign_fingerprints(&mut findings);
     findings
-}
-
-fn world_findings(pipe: &Pipeline<'_>, analyzed: &[Analyzed]) -> Vec<Finding> {
-    let files: Vec<WorldFile<'_>> = analyzed
-        .iter()
-        .map(|file| WorldFile {
-            path: file.rel.as_str(),
-            facts: &file.output.world,
-        })
-        .collect();
-    pipe.rules.check_world(&files)
 }
 
 fn finalize(pipe: &Pipeline<'_>, file: Analyzed) -> Result<Vec<Finding>, RunError> {

@@ -13,18 +13,22 @@ fn manifest_packages_scope_import_coverage_to_their_own_modules() {
     let probe_b = manifest(evidence(Lang::Python, "pkgb", &["pkgb/other"]));
     let files = [
         WorldFile {
+            parsed: true,
             path: "pkga/src/common.py",
             facts: &in_a,
         },
         WorldFile {
+            parsed: true,
             path: "pkgb/src/common.py",
             facts: &in_b,
         },
         WorldFile {
+            parsed: true,
             path: "pkga/tests/test_common.py",
             facts: &probe_a,
         },
         WorldFile {
+            parsed: true,
             path: "pkgb/tests/test_other.py",
             facts: &probe_b,
         },
@@ -44,14 +48,17 @@ fn unmanifested_packages_keep_the_cross_package_suffix_match() {
     let probe = evidence(Lang::Python, "tests", &["x"]);
     let files = [
         WorldFile {
+            parsed: true,
             path: "src/x.py",
             facts: &module,
         },
         WorldFile {
+            parsed: true,
             path: "src/test_helper.py",
             facts: &helper,
         },
         WorldFile {
+            parsed: true,
             path: "tests/test_x.py",
             facts: &probe,
         },
@@ -71,14 +78,17 @@ fn manifest_module_stays_covered_by_fallback_test_import() {
     let probe = evidence(Lang::Python, "tests", &["src.common"]);
     let files = [
         WorldFile {
+            parsed: true,
             path: "pkga/src/common.py",
             facts: &module,
         },
         WorldFile {
+            parsed: true,
             path: "pkga/tests/test_gate.py",
             facts: &gate,
         },
         WorldFile {
+            parsed: true,
             path: "tests/test_common.py",
             facts: &probe,
         },
@@ -98,14 +108,17 @@ fn fallback_module_stays_covered_by_manifest_test_import() {
     let probe = manifest(evidence(Lang::Python, "pkgb", &["pkg.common"]));
     let files = [
         WorldFile {
+            parsed: true,
             path: "pkg/common.py",
             facts: &module,
         },
         WorldFile {
+            parsed: true,
             path: "pkg/test_helper.py",
             facts: &helper,
         },
         WorldFile {
+            parsed: true,
             path: "pkgb/tests/test_common.py",
             facts: &probe,
         },
@@ -125,14 +138,17 @@ fn typescript_module_is_covered_by_javascript_test_import() {
     let other_test = manifest(test_file(Lang::TypeScript, "app"));
     let files = [
         WorldFile {
+            parsed: true,
             path: "src/foo.ts",
             facts: &foo,
         },
         WorldFile {
+            parsed: true,
             path: "src/foo.test.js",
             facts: &foo_test,
         },
         WorldFile {
+            parsed: true,
             path: "src/other.test.ts",
             facts: &other_test,
         },
@@ -152,14 +168,17 @@ fn javascript_module_is_covered_by_typescript_test_import() {
     let other_test = manifest(test_file(Lang::JavaScript, "app"));
     let files = [
         WorldFile {
+            parsed: true,
             path: "src/bar.js",
             facts: &bar,
         },
         WorldFile {
+            parsed: true,
             path: "src/bar.test.ts",
             facts: &bar_test,
         },
         WorldFile {
+            parsed: true,
             path: "src/other.test.js",
             facts: &other_test,
         },
@@ -179,14 +198,17 @@ fn tsx_module_is_covered_by_typescript_test_import() {
     let other_test = manifest(test_file(Lang::Tsx, "app"));
     let files = [
         WorldFile {
+            parsed: true,
             path: "src/view.tsx",
             facts: &view,
         },
         WorldFile {
+            parsed: true,
             path: "src/view.test.ts",
             facts: &view_test,
         },
         WorldFile {
+            parsed: true,
             path: "src/other.test.tsx",
             facts: &other_test,
         },
@@ -206,14 +228,17 @@ fn python_module_is_not_covered_by_matching_javascript_test() {
     let gate = test_file(Lang::Python, "pkg");
     let files = [
         WorldFile {
+            parsed: true,
             path: "src/util.py",
             facts: &util,
         },
         WorldFile {
+            parsed: true,
             path: "src/util.test.js",
             facts: &util_test,
         },
         WorldFile {
+            parsed: true,
             path: "src/other_test.py",
             facts: &gate,
         },
@@ -233,14 +258,17 @@ fn java_module_is_covered_by_kotlin_test_import() {
     let lexer_test = test_file(Lang::Java, "svc");
     let files = [
         WorldFile {
+            parsed: true,
             path: "svc/src/main/java/app/Parser.java",
             facts: &parser,
         },
         WorldFile {
+            parsed: true,
             path: "svc/src/test/kotlin/app/ParserTest.kt",
             facts: &parser_test,
         },
         WorldFile {
+            parsed: true,
             path: "svc/src/test/java/app/LexerTest.java",
             facts: &lexer_test,
         },
@@ -259,10 +287,12 @@ fn explicit_index_import_covers_the_index_module() {
     let widget_test = manifest(evidence(Lang::TypeScript, "app", &["../src/widget/index"]));
     let files = [
         WorldFile {
+            parsed: true,
             path: "src/widget/index.ts",
             facts: &widget,
         },
         WorldFile {
+            parsed: true,
             path: "tests/widget.test.ts",
             facts: &widget_test,
         },
@@ -281,10 +311,12 @@ fn index_import_does_not_cover_sibling_module() {
     let widget_test = manifest(evidence(Lang::TypeScript, "app", &["../src/widget/index"]));
     let files = [
         WorldFile {
+            parsed: true,
             path: "src/widget/other.ts",
             facts: &other,
         },
         WorldFile {
+            parsed: true,
             path: "tests/widget.test.ts",
             facts: &widget_test,
         },
@@ -326,17 +358,23 @@ fn demo_root(definitions: &[&str], reexports: &[(&str, &str)]) -> WorldFacts {
 fn demo_flagged(root: &WorldFacts, probes: &[(&str, &WorldFacts)]) -> Vec<String> {
     let module = lib(Lang::Rust, "crates/demo", 1);
     let mut files = vec![WorldFile {
+        parsed: true,
         path: DEMO_MODULES[0],
         facts: root,
     }];
     for &path in &DEMO_MODULES[1..] {
         files.push(WorldFile {
+            parsed: true,
             path,
             facts: &module,
         });
     }
     for &(path, facts) in probes {
-        files.push(WorldFile { path, facts });
+        files.push(WorldFile {
+            parsed: true,
+            path,
+            facts,
+        });
     }
     check(&rule(), &files)
 }

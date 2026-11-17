@@ -1,2 +1,9 @@
 src/a.cpp:1 minor grep/generic-name
 src/a.cpp:2 minor grep/generic-name
+src/a.cpp:8 minor grep/generic-name
+src/a.cpp:15 minor grep/generic-name
+src/a.cpp:20 minor grep/generic-name
+src/qt.cpp:4 minor grep/generic-name
+src/qt.cpp:11 minor grep/generic-name
+src/qt.cpp:19 minor grep/generic-name
+src/qt.cpp:27 minor grep/generic-name
