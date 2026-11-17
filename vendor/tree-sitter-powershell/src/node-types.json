@@ -147,6 +147,10 @@
         "required": true,
         "types": [
           {
+            "type": "attribute",
+            "named": true
+          },
+          {
             "type": "class_statement",
             "named": true
           },
@@ -1488,6 +1492,10 @@
       "required": true,
       "types": [
         {
+          "type": "attribute",
+          "named": true
+        },
+        {
           "type": "class_statement",
           "named": true
         },
@@ -2797,6 +2805,10 @@
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "attribute",
+          "named": true
+        },
         {
           "type": "class_statement",
           "named": true

@@ -1704,3 +1704,71 @@ param()
           (type_spec
             (type_name
               (type_identifier))))))))
+
+===
+sloplint: parameter default as a type literal before an attributed parameter
+===
+
+param(
+    [Type]
+    $ExceptionType = [Exception],
+
+    [Parameter(ParameterSetName = 'Default')]
+    [string]
+    $ExceptionMessage
+)
+
+---
+
+(program
+  (param_block
+    (parameter_list
+      (script_parameter
+        (attribute_list
+          (attribute
+            (type_literal
+              (type_spec
+                (type_name
+                  (type_identifier))))))
+        (variable)
+        (script_parameter_default
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (type_literal
+                              (type_spec
+                                (type_name
+                                  (type_identifier)))))))))))))))
+      (script_parameter
+        (attribute_list
+          (attribute
+            (attribute_name
+              (type_spec
+                (type_name
+                  (type_identifier))))
+            (attribute_arguments
+              (attribute_argument
+                (simple_name)
+                (logical_expression
+                  (bitwise_expression
+                    (comparison_expression
+                      (additive_expression
+                        (multiplicative_expression
+                          (format_expression
+                            (range_expression
+                              (array_literal_expression
+                                (unary_expression
+                                  (string_literal
+                                    (verbatim_string_characters))))))))))))))
+          (attribute
+            (type_literal
+              (type_spec
+                (type_name
+                  (type_identifier))))))
+        (variable)))))

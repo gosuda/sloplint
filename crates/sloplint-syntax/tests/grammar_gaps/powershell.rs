@@ -389,3 +389,12 @@ fn a_constructor_may_chain_to_the_base_class() {
     );
     run_clean("class Dog : Animal {\n    Dog() : this(\"rex\") {}\n}\n");
 }
+
+#[test]
+fn a_parameter_default_may_be_a_type_literal() {
+    run_clean(
+        "param(\n    [Type]\n    $ExceptionType = [Exception],\n\n    [Parameter(ParameterSetName = 'Default')]\n    [string]\n    $ExceptionMessage\n)\n",
+    );
+    run_clean("param(\n    $T = [Exception],\n    [string] $M\n)\n");
+    run_clean("param($a = 1, $b)\n");
+}
