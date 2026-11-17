@@ -150,7 +150,8 @@ fn embed_as_expression_operand_parses() {
         "#embed \"b\"\n",
         ";\n",
         "const int y =\n",
-        "#embed <c> limit(4) + 2;\n",
+        "#embed <c> limit(4)\n",
+        "+ 2;\n",
         "int main(void) { return x + y; }\n",
     );
     let analysis = run_clean(source);

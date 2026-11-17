@@ -85,7 +85,8 @@ const int x = 1 +
 ;
 
 const int y =
-#embed <c> limit(4) + 2;
+#embed <c> limit(4)
++ 2;
 
 ---
 
