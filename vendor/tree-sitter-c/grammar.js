@@ -424,6 +424,15 @@ module.exports = grammar({
         $._preproc_expression,
         $.string_literal,
         $.system_lib_string,
+        // A leading comparison/operator token with an optional operand,
+        // for assertion-style and workaround macros that pass the
+        // comparison itself as an argument:
+        // `BOOST_WORKAROUND(BOOST_MSVC, < 1300)`, `CHECK(x, ==, y)`.
+        // Commas delimit items, so `a > b` still reads as one argument.
+        seq(
+          choice('==', '!=', '<=', '>=', '<', '>'),
+          optional($._preproc_expression),
+        ),
       )),
       ')',
     ),

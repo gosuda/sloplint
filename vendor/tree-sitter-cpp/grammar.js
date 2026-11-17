@@ -2375,6 +2375,12 @@ module.exports = grammar(C, {
         $.string_literal,
         $.system_lib_string,
         alias($._preproc_qualified_name, $.qualified_identifier),
+        // Operator-with-optional-operand item, for workaround/assertion
+        // macros: `BOOST_WORKAROUND(BOOST_MSVC, < 1300)`, `CHECK(x, ==, y)`.
+        seq(
+          choice('==', '!=', '<=', '>=', '<', '>'),
+          optional($._preproc_expression),
+        ),
       )),
       ')',
     ),
@@ -2463,7 +2469,10 @@ module.exports = grammar(C, {
       $.literal_suffix,
     ),
 
-    _namespace_identifier: $ => alias($.identifier, $.namespace_identifier),
+    // `concept` doubles as a namespace name in pre-C++20 boost headers
+    // (`concept::check<T const>()`); the keyword token is accepted beside
+    // identifier wherever a `ns::name` scope is expected.
+    _namespace_identifier: $ => alias(choice($.identifier, 'concept'), $.namespace_identifier),
   },
 });
 

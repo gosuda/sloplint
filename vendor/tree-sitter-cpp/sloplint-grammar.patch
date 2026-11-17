@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 77a89b2..087eef9 100644
+index 77a89b2..c4b6775 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -58,6 +58,38 @@ module.exports = grammar(C, {
@@ -1417,7 +1417,7 @@ index 77a89b2..087eef9 100644
      )),
  
      _assignment_expression_lhs: $ => seq(
-@@ -1342,11 +2366,41 @@ module.exports = grammar(C, {
+@@ -1342,11 +2366,47 @@ module.exports = grammar(C, {
  
      this: _ => 'this',
  
@@ -1435,6 +1435,12 @@ index 77a89b2..087eef9 100644
 +        $.string_literal,
 +        $.system_lib_string,
 +        alias($._preproc_qualified_name, $.qualified_identifier),
++        // Operator-with-optional-operand item, for workaround/assertion
++        // macros: `BOOST_WORKAROUND(BOOST_MSVC, < 1300)`, `CHECK(x, ==, y)`.
++        seq(
++          choice('==', '!=', '<=', '>=', '<', '>'),
++          optional($._preproc_expression),
++        ),
 +      )),
 +      ')',
 +    ),
@@ -1464,7 +1470,7 @@ index 77a89b2..087eef9 100644
  
      number_literal: $ => {
        const sign = /[-\+]/;
-@@ -1434,3 +2488,69 @@ function commaSep(rule) {
+@@ -1434,3 +2494,69 @@ function commaSep(rule) {
  function commaSep1(rule) {
    return seq(rule, repeat(seq(',', rule)));
  }

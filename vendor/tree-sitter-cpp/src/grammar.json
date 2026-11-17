@@ -5035,6 +5035,52 @@
                       },
                       "named": true,
                       "value": "qualified_identifier"
+                    },
+                    {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "CHOICE",
+                          "members": [
+                            {
+                              "type": "STRING",
+                              "value": "=="
+                            },
+                            {
+                              "type": "STRING",
+                              "value": "!="
+                            },
+                            {
+                              "type": "STRING",
+                              "value": "<="
+                            },
+                            {
+                              "type": "STRING",
+                              "value": ">="
+                            },
+                            {
+                              "type": "STRING",
+                              "value": "<"
+                            },
+                            {
+                              "type": "STRING",
+                              "value": ">"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "CHOICE",
+                          "members": [
+                            {
+                              "type": "SYMBOL",
+                              "name": "_preproc_expression"
+                            },
+                            {
+                              "type": "BLANK"
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 },
@@ -5070,6 +5116,52 @@
                             },
                             "named": true,
                             "value": "qualified_identifier"
+                          },
+                          {
+                            "type": "SEQ",
+                            "members": [
+                              {
+                                "type": "CHOICE",
+                                "members": [
+                                  {
+                                    "type": "STRING",
+                                    "value": "=="
+                                  },
+                                  {
+                                    "type": "STRING",
+                                    "value": "!="
+                                  },
+                                  {
+                                    "type": "STRING",
+                                    "value": "<="
+                                  },
+                                  {
+                                    "type": "STRING",
+                                    "value": ">="
+                                  },
+                                  {
+                                    "type": "STRING",
+                                    "value": "<"
+                                  },
+                                  {
+                                    "type": "STRING",
+                                    "value": ">"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "CHOICE",
+                                "members": [
+                                  {
+                                    "type": "SYMBOL",
+                                    "name": "_preproc_expression"
+                                  },
+                                  {
+                                    "type": "BLANK"
+                                  }
+                                ]
+                              }
+                            ]
                           }
                         ]
                       }
@@ -26667,8 +26759,17 @@
     "_namespace_identifier": {
       "type": "ALIAS",
       "content": {
-        "type": "SYMBOL",
-        "name": "identifier"
+        "type": "CHOICE",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "identifier"
+          },
+          {
+            "type": "STRING",
+            "value": "concept"
+          }
+        ]
       },
       "named": true,
       "value": "namespace_identifier"

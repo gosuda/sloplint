@@ -213,3 +213,34 @@ valid inputs.
   the null directive and the `# comment` banner idiom that BSD-derived
   sources use; see the C grammar's SLOPLINT.md for why it is a dedicated
   token/rule rather than an optional directive name or a `prec` token.
+- **`extern "C"` braces split across preproc guards** — `guarded_linkage`
+  (ported from the C grammar; the stock C base lacks it) joins
+  `_top_level_item` and `_block_item`, covering the shared ObjC/C++ header
+  idiom `#ifdef __cplusplus` / `extern "C" {` / `#endif` … `#ifdef` / `}` /
+  `#endif`. Two new conflicts mirror the C grammar's: `_linkage_guard` vs
+  `preproc_if`, and `_preproc_macro_name` vs `_linkage_guard` (this
+  grammar's ifdef head uses `_preproc_macro_name`, not a bare identifier).
+- **`_Atomic (type)` as a type specifier** — `macro_type_specifier` gains
+  an `alias('_Atomic', $.identifier)` name arm (the C grammar's fix; the
+  stock C base's `name` is a plain identifier), so `_Atomic (BOOL)*` works
+  in ivars, method parameters, properties and casts. The dedicated
+  `atomic_declaration` rule was removed — it only covered the
+  `_Atomic (T) name;` ivar shape, not the pointer and parameter forms, and
+  `struct_declaration` + `macro_type_specifier` now parse all of them
+  uniformly.
+- **Operator tokens as preproc call arguments** — `preproc_argument_list`
+  gains the same comparison-operator item arm as the C grammar
+  (`BOOST_WORKAROUND(BOOST_MSVC, < 1300)`, `CHECK(x, ==, y)`).
+- **Bare top-level macro calls** — `_macro_declaration_top` +
+  `macro_argument_list` (ported from the C grammar; the stock C base lacks
+  them) join `_top_level_item` via `prec.dynamic(-2)`, covering
+  declaration-expanding macros like `DEBUG_OPTION_DECLARE_GROUP (name)`
+  and `DEBUG_OPTION_DECLARE_SWITCH_D (name)`. `NAME(args);` still prefers
+  the `expression_statement` + `call_expression` read (same as the C
+  grammar) — both parse clean. New conflicts mirror the C grammar's
+  `_macro_declaration_top` set plus `macro_argument_list` vs
+  `type_specifier`/`type_qualifier`/`sized_type_specifier`/
+  `generic_specifier`/`macro_type_specifier` and `expression` vs
+  `concatenated_string`; the inherited `type_specifier` ×
+  `_top_level_expression_statement` pair is now filtered out (made
+  redundant by the three-way that includes `_macro_declaration_top`).

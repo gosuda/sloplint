@@ -474,3 +474,9 @@ the size growth.
   continuation then errored — a token-level `prec(1)` was also tried and
   rejected: token precedence beats match length, so `#` shadowed every
   `#if`/`#define` in the file).
+- **Operator tokens as preproc call arguments** — `preproc_argument_list`
+  gains a `seq(choice('==','!=','<=','>=','<','>'),
+  optional($._preproc_expression))` item, for macros that pass a bare
+  comparison as an argument: `BOOST_WORKAROUND(BOOST_MSVC, < 1300)` and
+  assertion-style `CHECK(x, ==, y)`. No ambiguity is possible: items are
+  comma-delimited, so `a > b` still reads as one binary argument.

@@ -570,3 +570,36 @@ int d(void) {
       (preproc_null)
       (return_statement
         (number_literal)))))
+
+==================
+Comparison operator as a preproc call argument (BOOST_WORKAROUND)
+==================
+
+#if BOOST_WORKAROUND(BOOST_MSVC, < 1300)
+#  define OLD 1
+#endif
+#if CHECK(x, ==, y)
+int x;
+#endif
+
+---
+
+(translation_unit
+  (preproc_if
+    condition: (call_expression
+      function: (identifier)
+      arguments: (argument_list
+        (identifier)
+        (number_literal)))
+    (preproc_def
+      name: (identifier)
+      value: (preproc_arg)))
+  (preproc_if
+    condition: (call_expression
+      function: (identifier)
+      arguments: (argument_list
+        (identifier)
+        (identifier)))
+    (declaration
+      type: (primitive_type)
+      declarator: (identifier))))

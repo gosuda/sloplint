@@ -20,7 +20,9 @@ module.exports = grammar(C, {
   ],
 
   conflicts: ($, original) => original.filter(
-    (e) => !(e.length == 2 && e[0].name == 'type_qualifier' && e[1].name == 'extension_expression'),
+    (e) => !(e.length == 2 && e[0].name == 'type_qualifier' && e[1].name == 'extension_expression')
+      && !(e.length == 2
+        && e.map((x) => x.name).sort().join(',') == '_top_level_expression_statement,type_specifier'),
   ).concat([
     [$.enum_specifier],
     [$.enumerator],
@@ -34,6 +36,24 @@ module.exports = grammar(C, {
     [$.extension_expression, $.range_expression],
     [$.abstract_array_declarator, $.array_type_specifier],
     [$._type_definition_type],
+    // `#if…` / `#ifdef NAME` at the head of a `guarded_linkage` vs the
+    // standalone preproc rules (and, for ifdef, `_preproc_macro_name` vs
+    // the guard's `field('name', $.identifier)`).
+    [$._linkage_guard, $.preproc_if],
+    [$._preproc_macro_name, $._linkage_guard],
+    // `NAME(args)`/`NAME;` top-level macro vs type-specifier,
+    // expression-statement and macro_type_specifier reads of the same
+    // prefix — mirrors the C grammar's `_macro_declaration_top` set.
+    [$.type_specifier, $.expression, $.macro_type_specifier, $._macro_declaration_top],
+    [$.type_specifier, $._top_level_expression_statement, $._macro_declaration_top],
+    [$._top_level_expression_statement, $._macro_declaration_top],
+    [$.type_qualifier, $.macro_argument_list],
+    [$.type_specifier, $.macro_argument_list],
+    [$.sized_type_specifier, $.macro_argument_list],
+    [$.type_specifier, $.macro_type_specifier, $.macro_argument_list],
+    [$.macro_argument_list, $.generic_specifier],
+    [$.expression, $.concatenated_string],
+    [$._macro_declaration_top],
   ]),
 
   inline: ($, original) => original.concat([
@@ -63,6 +83,77 @@ module.exports = grammar(C, {
       $.preproc_undef,
       $.preproc_linemarker,
       $.preproc_null,
+      $.guarded_linkage,
+      // `NAME(args)` / `NAME;` as a whole top-level item — option-declaring
+      // macros (`DEBUG_OPTION_DECLARE_GROUP (PWFoundationDebugGroup)`).
+      // Same shape as the C grammar's `_macro_declaration_top`.
+      alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
+    ),
+
+    _macro_declaration_top: $ => seq(
+      $.identifier,
+      choice(
+        seq($.macro_argument_list, optional(';')),
+        ';',
+      ),
+    ),
+
+    // Macro arguments that are not expressions (types, member names, DSL
+    // keywords, operators) accepted as a permissive token list.
+    macro_argument_list: $ => seq(
+      '(',
+      repeat(choice(
+        $.identifier,
+        $.primitive_type,
+        $.sized_type_specifier,
+        $.number_literal,
+        $.pointer_expression,
+        $.unary_expression,
+        $.sizeof_expression,
+        $.string_literal,
+        $.char_literal,
+        ',',
+        '<',
+        '>',
+        '*',
+        '&',
+        '&&',
+        '|',
+        '=',
+        '!',
+        '?',
+        ':',
+        '.',
+        '->',
+        '~',
+        '+',
+        '-',
+        '/',
+        '%',
+        '==',
+        '!=',
+        '<<',
+        '>>',
+        '<=',
+        '>=',
+        '||',
+        '^',
+        '<<=',
+        '>>=',
+        '%=',
+        '&=',
+        '|=',
+        '^=',
+        '++',
+        '--',
+        '[',
+        ']',
+        'const',
+        '{',
+        '}',
+        $.macro_argument_list,
+      )),
+      ')',
     ),
 
     _block_item: ($, original) => choice(
@@ -78,6 +169,7 @@ module.exports = grammar(C, {
       $.preproc_undef,
       $.preproc_linemarker,
       $.preproc_null,
+      $.guarded_linkage,
     ),
 
     // A bare Apple annotation macro on its own line: `NS_ASSUME_NONNULL_BEGIN`
@@ -508,7 +600,13 @@ module.exports = grammar(C, {
       commaSep(choice(
         $._preproc_expression,
         $.string_literal,
-        $.system_lib_string,
+                $.system_lib_string,
+        // Operator-with-optional-operand item, for workaround/assertion
+        // macros: `BOOST_WORKAROUND(BOOST_MSVC, < 1300)`, `CHECK(x, ==, y)`.
+        seq(
+          choice('==', '!=', '<=', '>=', '<', '>'),
+          optional($._preproc_expression),
+        ),
       )),
       ')',
     ),
@@ -743,7 +841,6 @@ module.exports = grammar(C, {
     instance_variable: $ => choice(
       $.visibility_specification,
       $.struct_declaration,
-      $.atomic_declaration,
       $.preproc_ifdef,
       $.preproc_if,
     ),
@@ -874,7 +971,7 @@ module.exports = grammar(C, {
       '@property',
       optional($.property_attributes_declaration),
       optional(choice($.attribute_specifier, $.attribute_declaration)),
-      choice($.struct_declaration, $.atomic_declaration),
+      $.struct_declaration,
     )),
 
     property_attributes_declaration: $ => seq(
@@ -929,13 +1026,42 @@ module.exports = grammar(C, {
       ';',
     ),
 
-    atomic_declaration: $ => seq(
-      '_Atomic',
-      '(',
-      $.type_specifier,
-      ')',
-      $._field_identifier,
-      ';',
+    // `_Atomic (type)` as a type specifier (the C11 atomic type
+    // specifier): `_Atomic (BOOL)* target_;` in ivars, method
+    // parameters, properties and casts. The stock C base's `name` field
+    // is a plain identifier, so `_Atomic` never matched — same fix the
+    // C grammar carries.
+    macro_type_specifier: ($, original) => choice(
+      original,
+      seq(
+        field('name', alias('_Atomic', $.identifier)),
+        '(',
+        field('type', $.type_descriptor),
+        ')',
+      ),
+    ),
+
+    // `extern "C"` inside preproc guards: the braces live inside
+    // separate conditional blocks (`#ifdef __cplusplus` / `}` /
+    // `#endif`), the shared ObjC/C++ header idiom. Same shape as the C
+    // grammar's `guarded_linkage`; the stock C base has
+    // `linkage_specification` but not this.
+    guarded_linkage: $ => prec.dynamic(10, seq(
+      $._linkage_guard,
+      'extern',
+      field('value', $.string_literal),
+      '{',
+      alias(preprocessor('endif'), '#endif'),
+      repeat($._top_level_item),
+      $._linkage_guard,
+      '}',
+      alias(preprocessor('endif'), '#endif'),
+    )),
+
+    _linkage_guard: $ => choice(
+      seq(preprocessor('ifdef'), field('name', $.identifier)),
+      seq(preprocessor('ifndef'), field('name', $.identifier)),
+      seq(preprocessor('if'), field('condition', $._preproc_expression), '\n'),
     ),
 
     preproc_block: $ => prec.right(seq(

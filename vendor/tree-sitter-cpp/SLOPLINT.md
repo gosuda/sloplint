@@ -597,3 +597,8 @@ gzip -9 -c src/parser.c > src/parser.c.gz
   `# comment` banner idiom (heavy in boost `.hpp`/`.ipp` headers — the
   largest single parse-error class in the corpus recount). Same rule and
   rationale as in the C grammar's SLOPLINT.md.
+- **Operator tokens as preproc call arguments** — `preproc_argument_list`
+  gains the same comparison-operator item arm as the C grammar:
+  `BOOST_WORKAROUND(BOOST_MSVC, < 1300)` and `CHECK(x, ==, y)`. The boost
+  `.hpp` headers were the largest remaining parse-error class in the
+  corpus recount.
