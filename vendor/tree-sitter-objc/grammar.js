@@ -180,6 +180,10 @@ module.exports = grammar(C, {
         seq($.string_literal, $.identifier),
         seq($.call_expression, $.string_literal),
         seq($.string_literal, $.call_expression),
+        // `call call` opens the concatenation only when a literal
+        // follows (`XSTR(a) XSTR(b) "x"`); a bare run of NAME(args)
+        // lines still cannot merge. Same as the C rule, PR #25.
+        seq($.call_expression, $.call_expression, $.string_literal),
       ),
       repeat(choice($.string_literal, $.identifier, $.call_expression)),
     ))),
