@@ -376,7 +376,7 @@ export default grammar({
           // plain segments, as in $x"cat"$y — a single expandable word.
           new RegExp(
             /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
-              /["']/.source +
+              '(' + WORD_SQ + '|' + WORD_DQ + ')' +
               wordTail(/[^&\s()}|;,]/.source),
           ),
         ),

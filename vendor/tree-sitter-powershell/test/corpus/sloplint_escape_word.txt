@@ -33,3 +33,32 @@ Write-Output $x"cat"$y
           (command_elements
             (command_argument_sep)
             (generic_token)))))))
+
+===
+sloplint: variable word does not swallow a following command
+===
+
+Write-Output $x"cat"; Write-Host "ok"
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)))))
+    (empty_statement)
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (string_literal
+                  (expandable_string_literal))))))))))

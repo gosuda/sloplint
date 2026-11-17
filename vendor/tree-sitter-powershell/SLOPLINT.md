@@ -130,7 +130,8 @@ More valid code that the same sweep files turned up, fixed because it blocked fi
     `Write-Host `r`n` — expandable-string content without quotes.
   - A word that interleaves a variable head with quoted or plain segments:
     `$x"cat"$y` is one `generic_token`. The variable head must be followed by
-    a quote, so `$x.Foo()` still parses as member access.
+    a complete quoted segment, so `$x.Foo()` still parses as member access and
+    `Write-Output $x"cat"; Write-Host "ok"` keeps both commands.
 - A text run in a double-quoted string has lexical precedence. A run that started at
   white space or `#` after a variable or an escape was read as a comment
   (`"`n## x"`, `"$a ## x"`). No scanner code is needed for this.
