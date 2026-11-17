@@ -132,6 +132,16 @@ module.exports = grammar(C, {
     [$.type_specifier, $._class_name],
     [$._class_name, $.expression],
     [$.macro_declaration, $._declarator],
+    [$.preproc_ifdef, $.preproc_ifdef_in_guarded_signature, $.preproc_ifdef_in_guarded_class],
+    [$.preproc_else, $.preproc_else_in_guarded_signature, $.preproc_else_in_guarded_class],
+    [$.preproc_if, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
+    [$.preproc_elifdef, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
+    [$.preproc_elif, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
+    [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list, $.preproc_ifdef_in_guarded_signature, $.preproc_ifdef_in_guarded_class],
+    [$.preproc_else, $.preproc_else_in_initializer_list, $.preproc_else_in_guarded_signature, $.preproc_else_in_guarded_class],
+    [$.preproc_if, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
+    [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
+    [$.preproc_elif, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
     [$.pointer_declarator, $._init_pointer_declarator],
     [$._declarator, $._init_reference_declarator],
     [$.function_definition, $.pointer_declarator],
@@ -331,6 +341,7 @@ module.exports = grammar(C, {
       alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
       $.macro_namespace,
       $.guarded_function,
+      $.guarded_class,
     ),
 
     _block_item: ($, original) => choice(
@@ -347,6 +358,7 @@ module.exports = grammar(C, {
       alias($.operator_cast_definition, $.function_definition),
       alias($.operator_cast_declaration, $.declaration),
       $.guarded_function,
+      $.guarded_class,
       // No `macro_declaration` fallback here: top-level preproc bodies
       // get it via the preprocIf('', ...) item choice in the base
       // grammar, and inside real function bodies `NAME(args)` must
@@ -1049,6 +1061,32 @@ module.exports = grammar(C, {
     ),
 
     ...preprocIf('_in_guarded_signature', $ => $._guarded_signature),
+
+    // `#if`/`#else`-split class heads: kddockwidgets gates the base list of
+    // `class DOCKS_EXPORT DockWidget` this way — each branch carries a head
+    // (keyword + name + optional bases, no body) and the shared
+    // field_declaration_list follows `#endif`.
+    guarded_class: $ => prec.dynamic(10, seq(
+      choice(
+        $.preproc_if_in_guarded_class,
+        $.preproc_ifdef_in_guarded_class,
+      ),
+      $.field_declaration_list,
+      ';',
+    )),
+
+    _guarded_class_head: $ => prec.right(seq(
+      choice('class', 'struct', 'union'),
+      repeat(choice($.attribute_specifier, $.alignas_qualifier)),
+      optional($.ms_declspec_modifier),
+      repeat($.attribute_declaration),
+      repeat(choice($.macro_attribute, $.macro_qualifier)),
+      field('name', $._class_name),
+      optional($.virtual_specifier),
+      optional($.base_class_clause),
+    )),
+
+    ...preprocIf('_in_guarded_class', $ => $._guarded_class_head),
 
     _macro_declaration_literals: $ => choice(
       'Q_OBJECT',

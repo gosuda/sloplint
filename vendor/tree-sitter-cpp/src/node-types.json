@@ -1847,6 +1847,10 @@
           "named": true
         },
         {
+          "type": "guarded_class",
+          "named": true
+        },
+        {
           "type": "guarded_function",
           "named": true
         },
@@ -2427,6 +2431,10 @@
         },
         {
           "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "guarded_class",
           "named": true
         },
         {
@@ -4082,6 +4090,29 @@
     }
   },
   {
+    "type": "guarded_class",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "field_declaration_list",
+          "named": true
+        },
+        {
+          "type": "preproc_if_in_guarded_class",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef_in_guarded_class",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "guarded_function",
     "named": true,
     "fields": {},
@@ -4233,6 +4264,10 @@
         },
         {
           "type": "goto_statement",
+          "named": true
+        },
+        {
+          "type": "guarded_class",
           "named": true
         },
         {
@@ -4927,6 +4962,10 @@
         },
         {
           "type": "goto_statement",
+          "named": true
+        },
+        {
+          "type": "guarded_class",
           "named": true
         },
         {
@@ -6088,6 +6127,24 @@
           }
         ]
       },
+      "name": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "qualified_identifier",
+            "named": true
+          },
+          {
+            "type": "template_type",
+            "named": true
+          },
+          {
+            "type": "type_identifier",
+            "named": true
+          }
+        ]
+      },
       "type": {
         "multiple": true,
         "required": false,
@@ -6120,11 +6177,19 @@
           "named": true
         },
         {
+          "type": "alignas_qualifier",
+          "named": true
+        },
+        {
           "type": "attribute_declaration",
           "named": true
         },
         {
           "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "base_class_clause",
           "named": true
         },
         {
@@ -6165,6 +6230,10 @@
         },
         {
           "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "guarded_class",
           "named": true
         },
         {
@@ -6289,6 +6358,10 @@
         },
         {
           "type": "variadic_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "virtual_specifier",
           "named": true
         }
       ]
@@ -6327,11 +6400,23 @@
         ]
       },
       "name": {
-        "multiple": false,
+        "multiple": true,
         "required": true,
         "types": [
           {
             "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "qualified_identifier",
+            "named": true
+          },
+          {
+            "type": "template_type",
+            "named": true
+          },
+          {
+            "type": "type_identifier",
             "named": true
           }
         ]
@@ -6368,11 +6453,19 @@
           "named": true
         },
         {
+          "type": "alignas_qualifier",
+          "named": true
+        },
+        {
           "type": "attribute_declaration",
           "named": true
         },
         {
           "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "base_class_clause",
           "named": true
         },
         {
@@ -6413,6 +6506,10 @@
         },
         {
           "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "guarded_class",
           "named": true
         },
         {
@@ -6537,6 +6634,10 @@
         },
         {
           "type": "variadic_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "virtual_specifier",
           "named": true
         }
       ]
@@ -6556,6 +6657,24 @@
           }
         ]
       },
+      "name": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "qualified_identifier",
+            "named": true
+          },
+          {
+            "type": "template_type",
+            "named": true
+          },
+          {
+            "type": "type_identifier",
+            "named": true
+          }
+        ]
+      },
       "type": {
         "multiple": true,
         "required": false,
@@ -6588,11 +6707,19 @@
           "named": true
         },
         {
+          "type": "alignas_qualifier",
+          "named": true
+        },
+        {
           "type": "attribute_declaration",
           "named": true
         },
         {
           "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "base_class_clause",
           "named": true
         },
         {
@@ -6633,6 +6760,10 @@
         },
         {
           "type": "function_definition",
+          "named": true
+        },
+        {
+          "type": "guarded_class",
           "named": true
         },
         {
@@ -6757,6 +6888,10 @@
         },
         {
           "type": "variadic_parameter_declaration",
+          "named": true
+        },
+        {
+          "type": "virtual_specifier",
           "named": true
         }
       ]
@@ -6936,6 +7071,10 @@
           "named": true
         },
         {
+          "type": "guarded_class",
+          "named": true
+        },
+        {
           "type": "guarded_function",
           "named": true
         },
@@ -7041,6 +7180,124 @@
         },
         {
           "type": "variadic_parameter_declaration",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "preproc_if_in_guarded_class",
+    "named": true,
+    "fields": {
+      "alternative": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "preproc_elif",
+            "named": true
+          },
+          {
+            "type": "preproc_elifdef",
+            "named": true
+          },
+          {
+            "type": "preproc_else",
+            "named": true
+          }
+        ]
+      },
+      "condition": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "call_expression",
+            "named": true
+          },
+          {
+            "type": "char_literal",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "number_literal",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "preproc_defined",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "qualified_identifier",
+            "named": true
+          },
+          {
+            "type": "template_type",
+            "named": true
+          },
+          {
+            "type": "type_identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "alignas_qualifier",
+          "named": true
+        },
+        {
+          "type": "attribute_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "base_class_clause",
+          "named": true
+        },
+        {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
+          "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "virtual_specifier",
           "named": true
         }
       ]
@@ -7262,6 +7519,10 @@
           "named": true
         },
         {
+          "type": "guarded_class",
+          "named": true
+        },
+        {
           "type": "guarded_function",
           "named": true
         },
@@ -7367,6 +7628,90 @@
         },
         {
           "type": "variadic_parameter_declaration",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "preproc_ifdef_in_guarded_class",
+    "named": true,
+    "fields": {
+      "alternative": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "preproc_elif",
+            "named": true
+          },
+          {
+            "type": "preproc_elifdef",
+            "named": true
+          },
+          {
+            "type": "preproc_else",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": true,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "qualified_identifier",
+            "named": true
+          },
+          {
+            "type": "template_type",
+            "named": true
+          },
+          {
+            "type": "type_identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "alignas_qualifier",
+          "named": true
+        },
+        {
+          "type": "attribute_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "base_class_clause",
+          "named": true
+        },
+        {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
+          "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "virtual_specifier",
           "named": true
         }
       ]
@@ -8878,6 +9223,10 @@
         },
         {
           "type": "goto_statement",
+          "named": true
+        },
+        {
+          "type": "guarded_class",
           "named": true
         },
         {

@@ -296,6 +296,16 @@ reproduced on real code. Every repro below was first accepted by
   `operator<` idiom. `preprocIf`/`preprocessor` are inlined at the
   bottom of this file because the node_modules C base exports no
   helpers.
+- `guarded_class` does the same for a `#if`/`#else`-split class head
+  (`_guarded_class_head`: class/struct/union keyword, attributes, macro
+  qualifiers, name, optional `final`, optional `base_class_clause`,
+  inside `preproc_*_in_guarded_class` blocks) paired with the shared
+  `field_declaration_list` + `;` — the kddockwidgets
+  `#ifdef PYTHON_BINDINGS class X : public A #else class X : public B
+  #endif { }` idiom, where the two arms differ only in the base list.
+  It is registered in both `_top_level_item` and `_block_item` so the
+  form works inside namespace bodies (`declaration_list` items are
+  `_block_item`s) as well as at translation-unit level.
 - New conflicts for the Qt rules and the generic fallbacks:
   `argument_list`/`sized_type_specifier`/`expression`/
   `concatenated_string`/`_string`/`template_type`/`template_function`
@@ -397,14 +407,15 @@ parens steers it to an initialized declaration.
   and 4 controls. The published parser fails those 32 repros and passes
   the 4 controls.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 15 files, 72 cases, all passing with the patch
-  (`tree-sitter test` reports 73/73). The latest additions cover the
+  corpus is not vendored): 16 files, 81 cases, all passing with the patch
+  (`tree-sitter test` reports 81/81). The latest additions cover the
   Win32 SDK cluster (typedef qualifier macros, function-pointer typedefs
   with SAL-annotated parameters, MIDL brackets, declaratorless typedefs
   inside `#if`, `#ifdef`-guarded constructs), bare macro sentinels before
   preproc blocks, `NS_BEGIN`/`NS_END` namespace-macro pairs, parenthesized
-  declarator parameters, `decltype` comma expressions, and member-pointer
-  function types `T (C::*)(Args...)`.
+  declarator parameters, `decltype` comma expressions, member-pointer
+  function types `T (C::*)(Args...)`, named member-pointer typedefs, and
+  `#if`/`#else`-split class heads (`guarded_class`).
 
 ## Sweep result
 
