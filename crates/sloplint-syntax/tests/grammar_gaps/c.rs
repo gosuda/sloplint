@@ -144,6 +144,20 @@ fn embed_between_elements_parses() {
 }
 
 #[test]
+fn embed_as_expression_operand_parses() {
+    let source = concat!(
+        "const int x = 1 +\n",
+        "#embed \"b\"\n",
+        ";\n",
+        "const int y =\n",
+        "#embed <c> limit(4) + 2;\n",
+        "int main(void) { return x + y; }\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["main"]);
+}
+
+#[test]
 fn plain_initializer_lists_still_parse() {
     let analysis = run_clean("int a[] = {1, 2, 3};\nstruct P p = {.x = 1, .y = 2};\n");
     assert!(
