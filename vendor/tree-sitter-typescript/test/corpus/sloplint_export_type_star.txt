@@ -1,0 +1,25 @@
+========================================
+export type star re-exports
+========================================
+
+export type * from './types';
+export type * as ns from './types';
+export type { A } from './types';
+
+---
+
+(program
+  (export_statement
+    source: (string
+      (string_fragment)))
+  (export_statement
+    (namespace_export
+      (identifier))
+    source: (string
+      (string_fragment)))
+  (export_statement
+    (export_clause
+      (export_specifier
+        name: (identifier)))
+    source: (string
+      (string_fragment))))

@@ -1523,6 +1523,14 @@ module.exports = grammar({
     case_statement: $ => prec.right(seq(
       choice(
         seq('case', field('value', $.expression)),
+        // sloplint: GNU case range, `case '0' ... '9':` (gcc extension,
+        // accepted by gcc -std=gnu2x and clang).
+        seq(
+          'case',
+          field('value', $.expression),
+          '...',
+          field('end', $.expression),
+        ),
         'default',
       ),
       ':',

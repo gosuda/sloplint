@@ -1,0 +1,35 @@
+===
+sloplint: bare escape sequence as a command argument
+===
+
+Write-Host `r`n
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+sloplint: variable head mixed with quoted segments
+===
+
+Write-Output $x"cat"$y
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)))))))

@@ -212,6 +212,11 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
     `macro_declaration`/`_macro_declaration_stmt` and flips
     `SWAP(const char*, &a, &b)` to the macro read.
 
+- GNU case ranges: `case_statement` accepts
+  `case <expr> ... <expr>:` (`case '0' ... '9': return 1;`), the gcc/clang
+  extension accepted by `gcc -fsyntax-only -std=gnu2x`. The high bound gets
+  field `end`.
+
 ## Adapter impact
 
 Node kinds and fields that `crates/sloplint-syntax/src/lang/c.rs` depends on

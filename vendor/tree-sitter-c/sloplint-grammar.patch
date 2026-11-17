@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 7cdde6e..1553655 100644
+index 7cdde6e..16f8a59 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -36,8 +36,11 @@ module.exports = grammar({
@@ -1154,7 +1154,22 @@ index 7cdde6e..1553655 100644
  
      switch_statement: $ => seq(
        'switch',
-@@ -872,12 +1536,12 @@ module.exports = grammar({
+@@ -859,6 +1523,14 @@ module.exports = grammar({
+     case_statement: $ => prec.right(seq(
+       choice(
+         seq('case', field('value', $.expression)),
++        // sloplint: GNU case range, `case '0' ... '9':` (gcc extension,
++        // accepted by gcc -std=gnu2x and clang).
++        seq(
++          'case',
++          field('value', $.expression),
++          '...',
++          field('end', $.expression),
++        ),
+         'default',
+       ),
+       ':',
+@@ -872,12 +1544,12 @@ module.exports = grammar({
      while_statement: $ => seq(
        'while',
        field('condition', $.parenthesized_expression),
@@ -1169,7 +1184,7 @@ index 7cdde6e..1553655 100644
        'while',
        field('condition', $.parenthesized_expression),
        ';',
-@@ -888,7 +1552,7 @@ module.exports = grammar({
+@@ -888,7 +1560,7 @@ module.exports = grammar({
        '(',
        $._for_statement_body,
        ')',
@@ -1178,7 +1193,7 @@ index 7cdde6e..1553655 100644
      ),
      _for_statement_body: $ => seq(
        choice(
-@@ -1003,22 +1667,44 @@ module.exports = grammar({
+@@ -1003,22 +1675,44 @@ module.exports = grammar({
        $.parenthesized_expression,
      ),
  
@@ -1239,7 +1254,7 @@ index 7cdde6e..1553655 100644
      )),
  
      pointer_expression: $ => prec.left(PREC.CAST, seq(
-@@ -1053,16 +1739,49 @@ module.exports = grammar({
+@@ -1053,16 +1747,49 @@ module.exports = grammar({
          ['>>', PREC.SHIFT],
        ];
  
@@ -1296,7 +1311,7 @@ index 7cdde6e..1553655 100644
      update_expression: $ => {
        const argument = field('argument', $.expression);
        const operator = field('operator', choice('--', '++'));
-@@ -1143,6 +1862,36 @@ module.exports = grammar({
+@@ -1143,6 +1870,36 @@ module.exports = grammar({
        ')',
      )),
  
@@ -1333,7 +1348,7 @@ index 7cdde6e..1553655 100644
      gnu_asm_qualifier: _ => choice(
        'volatile',
        '__volatile__',
-@@ -1197,7 +1946,58 @@ module.exports = grammar({
+@@ -1197,7 +1954,58 @@ module.exports = grammar({
      extension_expression: $ => seq('__extension__', $.expression),
  
      // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
@@ -1393,7 +1408,7 @@ index 7cdde6e..1553655 100644
  
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
-@@ -1216,18 +2016,48 @@ module.exports = grammar({
+@@ -1216,18 +2024,48 @@ module.exports = grammar({
  
      parenthesized_expression: $ => seq(
        '(',
@@ -1448,7 +1463,7 @@ index 7cdde6e..1553655 100644
        '}',
      ),
  
-@@ -1246,6 +2076,15 @@ module.exports = grammar({
+@@ -1246,6 +2084,15 @@ module.exports = grammar({
          ':',
          field('value', choice($.expression, $.initializer_list)),
        ),
@@ -1464,7 +1479,7 @@ index 7cdde6e..1553655 100644
      ),
  
      subscript_designator: $ => seq('[', $.expression, ']'),
-@@ -1296,14 +2135,19 @@ module.exports = grammar({
+@@ -1296,14 +2143,19 @@ module.exports = grammar({
  
      // Must concatenate at least 2 nodes, one of which must be a string_literal.
      // Identifier is added to parse macros that are strings, like PRIu64.
@@ -1487,7 +1502,7 @@ index 7cdde6e..1553655 100644
  
      string_literal: $ => seq(
        choice('L"', 'u"', 'U"', 'u8"', '"'),
-@@ -1351,7 +2195,10 @@ module.exports = grammar({
+@@ -1351,7 +2203,10 @@ module.exports = grammar({
      ),
  
      macro_type_specifier: $ => prec.dynamic(-1, seq(
