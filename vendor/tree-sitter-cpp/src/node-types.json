@@ -494,6 +494,11 @@
     ]
   },
   {
+    "type": ">=",
+    "named": false,
+    "fields": {}
+  },
+  {
     "type": "abstract_array_declarator",
     "named": true,
     "fields": {
@@ -1182,7 +1187,7 @@
     "fields": {
       "left": {
         "multiple": false,
-        "required": false,
+        "required": true,
         "types": [
           {
             "type": "expression",
@@ -1311,6 +1316,10 @@
           {
             "type": "preproc_defined",
             "named": true
+          },
+          {
+            "type": "template_method",
+            "named": true
           }
         ]
       }
@@ -1319,10 +1328,6 @@
       "multiple": true,
       "required": false,
       "types": [
-        {
-          "type": "expression",
-          "named": true
-        },
         {
           "type": "preproc_if",
           "named": true

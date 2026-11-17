@@ -143,6 +143,12 @@ module.exports = grammar(C, {
     [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
     [$.preproc_elif, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
     [$._template_argument, $._template_relational_argument],
+    [$.expression, $._template_relational_operand],
+    [$.expression, $.template_type, $.template_method, $.template_function, $._template_relational_operand],
+    [$._string, $._template_relational_operand],
+    [$._string, $.concatenated_string, $._template_relational_operand],
+    [$.template_method, $.template_function],
+    [$.binary_expression, $._template_tight_binary],
     [$.pointer_declarator, $._init_pointer_declarator],
     [$._declarator, $._init_reference_declarator],
     [$.function_definition, $.pointer_declarator],
@@ -1457,18 +1463,103 @@ module.exports = grammar(C, {
         // literally adjacent `>=` (a spaced `> =` keeps the close read).
         seq(
           optional(seq(commaSep($._template_argument), ',')),
-          alias($._template_relational_argument, $.binary_expression),
+          $._template_relational_expression,
           alias(token(prec(1, '>')), '>'),
         ),
       ),
     ),
 
-    _template_relational_argument: $ => seq(
-      $.expression,
-      alias(token(prec(1, '>')), '>'),
+    // `a >= b` re-joined from the lexed `>` `=` split. The operand must
+    // bind tighter than `>=` (C++ parses `(a >= b) op c`, never
+    // `a >= (b op c)` for a looser `op`), and it carries real
+    // left/operator/right fields so the emitted binary_expression is
+    // structurally identical to one a normal expression produces.
+    _template_ge_operator: $ => seq(
+      token(prec(1, '>')),
       token.immediate('='),
-      $.expression,
     ),
+
+    _template_relational_argument: $ => seq(
+      field('left', $.expression),
+      field('operator', alias($._template_ge_operator, '>=')),
+      field('right', $._template_relational_operand),
+    ),
+
+    // Left-recursive continuation so `W<a >= b && c>` groups as
+    // `(a >= b) && c` like C++, and a `?:`/`=` tail keeps its C++ shape.
+    // The variants stay hidden; the alias at each reference site names the
+    // node (alias cannot wrap a seq), so the argument takes its real
+    // expression kind with no wrapper.
+    _template_relational_binary: $ => prec.left(PREC.LOGICAL_OR, seq(
+      field('left', $._template_relational_expression),
+      field('operator', choice(
+        '||', '&&', '|', '^', '&', '==', '!=', '<=', '<', '<=>',
+        'or', 'and', 'bitor', 'xor', 'bitand', 'not_eq',
+      )),
+      field('right', $.expression),
+    )),
+
+    _template_relational_conditional: $ => seq(
+      field('condition', $._template_relational_expression),
+      '?',
+      field('consequence', $.expression),
+      ':',
+      field('alternative', $.expression),
+    ),
+
+    _template_relational_assignment: $ => prec.right(PREC.ASSIGNMENT, seq(
+      field('left', $._template_relational_expression),
+      field('operator', choice('=', '+=', '-=', '*=', '/=', '%=', '<<=', '>>=', '&=', '|=', '^=')),
+      field('right', $.expression),
+    )),
+
+    _template_relational_expression: $ => choice(
+      alias($._template_relational_argument, $.binary_expression),
+      alias($._template_relational_binary, $.binary_expression),
+      alias($._template_relational_conditional, $.conditional_expression),
+      alias($._template_relational_assignment, $.assignment_expression),
+    ),
+
+    // Operand of a re-joined `>=`: unary-or-tighter expressions and binary
+    // chains whose operators all outrank relational (`* / % + - << >>`).
+    // Looser ops (`&&`, `==`, `?:`, ...) continue through
+    // _template_relational_expression instead.
+    _template_relational_operand: $ => choice(
+      $.identifier,
+      $.qualified_identifier,
+      $.number_literal,
+      $.char_literal,
+      $.string_literal,
+      $.concatenated_string,
+      $.raw_string_literal,
+      $.true,
+      $.false,
+      $.null,
+      $.call_expression,
+      $.unary_expression,
+      $.update_expression,
+      $.pointer_expression,
+      $.cast_expression,
+      $.sizeof_expression,
+      $.field_expression,
+      $.subscript_expression,
+      $.parenthesized_expression,
+      $.template_function,
+      $.template_method,
+      $.new_expression,
+      $.delete_expression,
+      $.co_await_expression,
+      $.requires_expression,
+      $.fold_expression,
+      $.user_defined_literal,
+      alias($._template_tight_binary, $.binary_expression),
+    ),
+
+    _template_tight_binary: $ => prec.left(PREC.SHIFT, seq(
+      field('left', $.expression),
+      field('operator', choice('*', '/', '%', '+', '-', '<<', '>>')),
+      field('right', $.expression),
+    )),
 
     namespace_definition: $ => seq(
       optional('inline'),
