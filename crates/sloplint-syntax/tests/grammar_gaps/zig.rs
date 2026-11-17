@@ -164,6 +164,15 @@ fn bitpack_union_enum_and_opaque_parse() {
     ));
 }
 
+#[test]
+fn bitpack_stays_usable_as_an_identifier() {
+    run_clean(concat!(
+        "const bitpack = 1;\n",
+        "fn bitpack(x: u32) u32 { return x; }\n",
+        "const z = bitpack(3);\n",
+    ));
+}
+
 // --- Controls that already parsed and must keep parsing -----------------------
 
 #[test]
