@@ -656,8 +656,11 @@ export default grammar({
         ')',
       ),
 
+    // sloplint: attributes may precede a function definition, like they may
+    // class and enum: [Alias('x')] function f {}, [OutputType([int])] f {}.
     function_statement: ($) =>
       seq(
+        optional($.attribute_list),
         choice(
           reservedWord('function'),
           reservedWord('filter'),

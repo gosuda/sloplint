@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 9d530a1..ac0d406 100644
+index 9d530a1..348be10 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -7,10 +7,31 @@ const PREC = {
@@ -263,7 +263,19 @@ index 9d530a1..ac0d406 100644
  
      foreach_statement: ($) =>
        seq(
-@@ -562,10 +666,19 @@ export default grammar({
+@@ -552,8 +656,11 @@ export default grammar({
+         ')',
+       ),
+ 
++    // sloplint: attributes may precede a function definition, like they may
++    // class and enum: [Alias('x')] function f {}, [OutputType([int])] f {}.
+     function_statement: ($) =>
+       seq(
++        optional($.attribute_list),
+         choice(
+           reservedWord('function'),
+           reservedWord('filter'),
+@@ -562,10 +669,19 @@ export default grammar({
          $.function_name,
          optional($.function_parameter_declaration),
          '{',
@@ -284,7 +296,7 @@ index 9d530a1..ac0d406 100644
      function_name: ($) => $._command_token,
  
      function_parameter_declaration: ($) =>
-@@ -582,7 +695,9 @@ export default grammar({
+@@ -582,7 +698,9 @@ export default grammar({
  
      label: ($) => token(seq(':', /[a-zA-Z_][a-zA-Z0-9_]*/)),
  
@@ -295,7 +307,7 @@ index 9d530a1..ac0d406 100644
  
      trap_statement: ($) =>
        seq(reservedWord('trap'), optional($.type_literal), $.statement_block),
-@@ -738,6 +853,18 @@ export default grammar({
+@@ -738,6 +856,18 @@ export default grammar({
            new RegExp(caseInsensitive('for-')),
            new RegExp(caseInsensitive('while-')),
            new RegExp(caseInsensitive('parallel-')),
@@ -314,7 +326,7 @@ index 9d530a1..ac0d406 100644
          ),
          repeat(
            choice(
-@@ -750,7 +877,8 @@ export default grammar({
+@@ -750,7 +880,8 @@ export default grammar({
          ),
        ),
  
@@ -324,7 +336,7 @@ index 9d530a1..ac0d406 100644
  
      // Use to parse command path
      path_command_name: ($) =>
-@@ -765,12 +893,23 @@ export default grammar({
+@@ -765,12 +896,23 @@ export default grammar({
        prec.right(
          choice(
            $.command_parameter,
@@ -349,7 +361,7 @@ index 9d530a1..ac0d406 100644
      // Stop parsing is a token that end the parsing of command line
      stop_parsing: ($) => /--%[^\r\n]*/,
  
-@@ -785,12 +924,35 @@ export default grammar({
+@@ -785,12 +927,35 @@ export default grammar({
          PREC.PARAM,
          choice(
            seq($.command_argument_sep, optional($.generic_token)),
@@ -386,7 +398,7 @@ index 9d530a1..ac0d406 100644
      verbatim_command_argument: ($) =>
        seq('--%', $._verbatim_command_argument_chars),
  
-@@ -802,8 +964,10 @@ export default grammar({
+@@ -802,8 +967,10 @@ export default grammar({
          seq($.file_redirection_operator, $.redirected_file_name),
        ),
  
@@ -398,7 +410,7 @@ index 9d530a1..ac0d406 100644
  
      // Class
      class_attribute: ($) =>
-@@ -832,13 +996,26 @@ export default grammar({
+@@ -832,13 +999,26 @@ export default grammar({
          '(',
          optional($.class_method_parameter_list),
          ')',
@@ -425,7 +437,7 @@ index 9d530a1..ac0d406 100644
          token(reservedWord('class')),
          $.simple_name,
          optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
-@@ -859,6 +1036,7 @@ export default grammar({
+@@ -859,6 +1039,7 @@ export default grammar({
      // Enums
      enum_statement: ($) =>
        seq(
@@ -433,7 +445,7 @@ index 9d530a1..ac0d406 100644
          token(reservedWord('enum')),
          $.simple_name,
          '{',
-@@ -870,7 +1048,20 @@ export default grammar({
+@@ -870,7 +1051,20 @@ export default grammar({
        seq($.simple_name, optional(seq('=', $.integer_literal))),
  
      // Expressions
@@ -455,7 +467,7 @@ index 9d530a1..ac0d406 100644
  
      logical_expression: ($) =>
        prec.left(
-@@ -983,7 +1174,35 @@ export default grammar({
+@@ -983,7 +1177,35 @@ export default grammar({
      pre_decrement_expression: ($) => seq('--', $.unary_expression),
  
      cast_expression: ($) =>
@@ -492,7 +504,7 @@ index 9d530a1..ac0d406 100644
  
      attributed_variable: ($) => seq($.type_literal, $.variable),
  
-@@ -1017,8 +1236,12 @@ export default grammar({
+@@ -1017,8 +1239,12 @@ export default grammar({
      array_expression: ($) =>
        seq('@(', field('statements', optional($.statement_list)), ')'),
  
@@ -506,7 +518,7 @@ index 9d530a1..ac0d406 100644
  
      hash_literal_expression: ($) =>
        seq('@{', optional($.hash_literal_body), '}'),
-@@ -1076,11 +1299,17 @@ export default grammar({
+@@ -1076,11 +1302,17 @@ export default grammar({
          $.invokation_foreach_expression,
        ),
  
@@ -526,7 +538,7 @@ index 9d530a1..ac0d406 100644
          $.script_block_expression,
        ),
  
-@@ -1120,10 +1349,13 @@ export default grammar({
+@@ -1120,10 +1352,13 @@ export default grammar({
            $.comparison_argument_expression,
            seq(
              $.bitwise_argument_expression,
@@ -543,7 +555,7 @@ index 9d530a1..ac0d406 100644
              ),
              $.comparison_argument_expression,
            ),
-@@ -1188,32 +1420,49 @@ export default grammar({
+@@ -1188,32 +1423,49 @@ export default grammar({
  
      type_literal: ($) => seq('[', $.type_spec, ']'),
  
