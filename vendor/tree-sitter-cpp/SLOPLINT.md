@@ -38,9 +38,10 @@ reproduced on real code. Every repro below was first accepted by
   parse state with the base's `preproc_if`/`preproc_ifdef` (the conflict
   declarations reported "unnecessary" and the rule never fired). Apply
   `sloplint-c-base.patch` with `git apply` inside that clone before
-  `tree-sitter generate`; it carries the `guarded_linkage` and
-  `_linkage_guard` rules, their `_top_level_item`/`_block_item` members and
-  the two conflicts. The same pair of conflicts is declared in this
+  `tree-sitter generate`; it carries every base change this grammar relies
+  on (`guarded_linkage`/`_linkage_guard`, the `macro_qualifier` family,
+  `_parameter_specifiers`/`_macro_qualifier_bare`, the MIDL/Win32 batch and
+  the preproc/item members and conflicts they need). The same pair of conflicts is declared in this
   grammar's own `conflicts:` because the generator reads only the child's
   conflict list.
 - Commands, run in this directory with that symlink in place:
@@ -98,6 +99,20 @@ reproduced on real code. Every repro below was first accepted by
 - `decltype(x){args}` functional-cast brace init (`auto i =
   decltype(n){0}`): `compound_literal_expression`'s type choice gained
   `decltype`.
+- `decltype` with a comma expression (`decltype(expr, void())`, the
+  canonical SFINAE well-formedness probe): the operand choice gained
+  `comma_expression`.
+- Parenthesized declarator parameters (`void f(const J& j, T (&arr)[N])`,
+  reference/pointer-to-array — the nlohmann `from_json` signature): in a
+  parameter list an identifier followed by `(` must read as type plus
+  parenthesized declarator, but the pre-type `macro_qualifier` swallowed
+  `(&arr)` as its argument list. The base gains `_parameter_specifiers`,
+  identical to `_declaration_specifiers` except the pre-type qualifier is
+  a bare identifier (aliased back to `macro_qualifier`) — and
+  `parameter_declaration`, `optional_parameter_declaration` and
+  `variadic_parameter_declaration` now use it. `MACRO(args) T p`
+  parameters are the accepted loss; `f(args)` calls and in-body macros
+  are unaffected.
 - Unnamed pointer parameters with defaults (`explicit A(Core::Object *
   = nullptr)`): `optional_parameter_declaration`'s declarator choice
   gained `$._abstract_declarator`; upstream rejects the `* =` shape for
@@ -357,8 +372,8 @@ parens steers it to an initialized declaration.
   and 4 controls. The published parser fails those 32 repros and passes
   the 4 controls.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 13 files, 70 cases, all passing with the patch
-  (`tree-sitter test` reports 71/71). The latest additions cover the
+  corpus is not vendored): 14 files, 71 cases, all passing with the patch
+  (`tree-sitter test` reports 72/72). The latest additions cover the
   Win32 SDK cluster (typedef qualifier macros, function-pointer typedefs
   with SAL-annotated parameters, MIDL brackets, declaratorless typedefs
   inside `#if`, `#ifdef`-guarded constructs), bare macro sentinels before

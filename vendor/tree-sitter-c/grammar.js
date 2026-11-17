@@ -36,6 +36,10 @@ module.exports = grammar({
   name: 'c',
 
   conflicts: $ => [
+    [$._macro_qualifier_bare, $._declarator, $.type_specifier],
+    [$._macro_qualifier_bare, $.type_specifier, $.sized_type_specifier],
+    [$._macro_qualifier_bare, $.sized_type_specifier],
+    [$.macro_qualifier, $._macro_qualifier_bare, $.type_specifier],
     [$.type_specifier, $._declarator],
     [$.type_specifier, $.expression],
     [$.type_specifier, $.expression, $.macro_type_specifier],
@@ -46,6 +50,7 @@ module.exports = grammar({
     [$._declaration_modifiers, $.attributed_statement],
     [$.enum_specifier],
     [$.type_specifier, $._old_style_parameter_list],
+    [$._macro_qualifier_bare, $.type_specifier],
     [$.parameter_list, $._old_style_parameter_list],
     [$.function_declarator, $._function_declaration_declarator],
     [$._block_item, $.statement],
@@ -655,6 +660,23 @@ module.exports = grammar({
       field('type', $.type_specifier),
       repeat($._declaration_modifiers),
     )),
+
+    // Parameter specifiers differ from _declaration_specifiers in one way:
+    // the pre-type qualifier is a bare identifier — no argument list. In a
+    // parameter list `T (&arr)[N]` is a parenthesized declarator
+    // (reference-to-array), never a macro call; taking args for the
+    // qualifier would swallow the declarator. `MACRO(args) T p` is the
+    // accepted loss.
+    _parameter_specifiers: $ => prec.right(seq(
+      repeat(choice(
+        $._declaration_modifiers,
+        alias($._macro_qualifier_bare, $.macro_qualifier),
+      )),
+      field('type', $.type_specifier),
+      repeat($._declaration_modifiers),
+    )),
+
+    _macro_qualifier_bare: $ => prec.dynamic(-1, seq($.identifier)),
 
     linkage_specification: $ => seq(
       'extern',
@@ -1275,7 +1297,7 @@ module.exports = grammar({
 
     parameter_declaration: $ => seq(
       repeat($.midl_attribute_list),
-      $._declaration_specifiers,
+      $._parameter_specifiers,
       optional(field('declarator', choice(
         $._declarator,
         $._abstract_declarator,

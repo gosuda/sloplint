@@ -188,6 +188,13 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
     `_midl_attribute` = `'default'` or `choice('case', $.identifier) +
     optional($.macro_argument_list)`) leads `field_declaration` and
     `parameter_declaration` for `[size_is(N)]`, `[case(A,B)]`, `[default]`
+  - Parenthesized declarator parameters (`void f(const J j, T (*arr)[N])`):
+    the pre-type `macro_qualifier` swallowed `(*arr)` as its argument
+    list. `parameter_declaration` now uses `_parameter_specifiers`,
+    identical to `_declaration_specifiers` except the pre-type qualifier
+    is a bare identifier (`_macro_qualifier_bare`, aliased back to
+    `macro_qualifier`). `MACRO(args) T p` parameters are the accepted
+    loss.
     members/params, and stands alone in `_field_declaration_list_item`
     for the `#ifdef MIDL_PASS` guard pattern where the bracket and the
     field it annotates sit in different preproc blocks.
@@ -243,6 +250,9 @@ Each was a parse error with the published crate and is valid for
   `typedef enum X {...};` inside `#if`, `struct X : public Y {...}`
   inside `#ifdef __cplusplus`, and `int (*F)(int)` keeping the
   function-declarator read under the widened argument list.
+- `void f(const J j, T (*arr)[N])` and `int f(fd_set FAR* s, _In_ PUCHAR d)`
+  — parenthesized declarator parameters and bare SAL qualifiers under
+  `_parameter_specifiers`.
 
 ## Constructs known still failing
 
@@ -268,8 +278,8 @@ Inputs that are not valid C and so stay errors: `int x = ;`, unterminated
 - Upstream `tree-sitter test` at tag v0.24.2, before: 85 of 85 pass.
 - After the patch: 85 of 85 upstream cases pass.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 13 files, 43 cases, all passing with the patch
-  (`tree-sitter test` reports 43/43). The latest additions cover the Win32
+  corpus is not vendored): 14 files, 44 cases, all passing with the patch
+  (`tree-sitter test` reports 44/44). The latest additions cover the Win32
   SDK cluster: typedef qualifier macros, function-pointer typedefs with
   SAL-annotated parameters, MIDL brackets, declaratorless typedefs inside
   `#if`, and `#ifdef`-guarded inheritance.

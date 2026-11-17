@@ -8317,6 +8317,64 @@
         ]
       }
     },
+    "_parameter_specifiers": {
+      "type": "PREC_RIGHT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_declaration_modifiers"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_qualifier_bare"
+                  },
+                  "named": true,
+                  "value": "macro_qualifier"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "type",
+            "content": {
+              "type": "SYMBOL",
+              "name": "type_specifier"
+            }
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_declaration_modifiers"
+            }
+          }
+        ]
+      }
+    },
+    "_macro_qualifier_bare": {
+      "type": "PREC_DYNAMIC",
+      "value": -1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "identifier"
+          }
+        ]
+      }
+    },
     "linkage_specification": {
       "type": "SEQ",
       "members": [
@@ -11807,7 +11865,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "_declaration_specifiers"
+          "name": "_parameter_specifiers"
         },
         {
           "type": "CHOICE",
@@ -17645,6 +17703,25 @@
   ],
   "conflicts": [
     [
+      "_macro_qualifier_bare",
+      "_declarator",
+      "type_specifier"
+    ],
+    [
+      "_macro_qualifier_bare",
+      "type_specifier",
+      "sized_type_specifier"
+    ],
+    [
+      "_macro_qualifier_bare",
+      "sized_type_specifier"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_qualifier_bare",
+      "type_specifier"
+    ],
+    [
       "type_specifier",
       "_declarator"
     ],
@@ -17681,6 +17758,10 @@
     [
       "type_specifier",
       "_old_style_parameter_list"
+    ],
+    [
+      "_macro_qualifier_bare",
+      "type_specifier"
     ],
     [
       "parameter_list",

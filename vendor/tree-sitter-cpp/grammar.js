@@ -310,6 +310,14 @@ module.exports = grammar(C, {
     [$.preproc_if, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature],
     [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature],
     [$.preproc_elif, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature],
+    [$.type_specifier],
+    [$._macro_qualifier_bare, $.type_specifier],
+    [$._macro_qualifier_bare, $.sized_type_specifier],
+    [$._macro_qualifier_bare, $.type_specifier, $.expression],
+    [$._macro_qualifier_bare, $.sized_type_specifier, $.expression],
+    [$._macro_qualifier_bare, $.expression],
+    [$._macro_qualifier_bare, $._declarator, $.type_specifier],
+    [$._macro_qualifier_bare, $.type_specifier, $.sized_type_specifier],
   ],
 
   inline: ($, original) => original.concat([
@@ -394,7 +402,9 @@ module.exports = grammar(C, {
     decltype: $ => seq(
       'decltype',
       '(',
-      $.expression,
+      // A comma expression is legal here — `decltype(expr, void())` is the
+      // canonical SFINAE "expression is well-formed" probe.
+      choice($.expression, $.comma_expression),
       ')',
     ),
 
@@ -709,14 +719,14 @@ module.exports = grammar(C, {
     ),
 
     optional_parameter_declaration: $ => seq(
-      $._declaration_specifiers,
+      $._parameter_specifiers,
       field('declarator', optional(choice($._declarator, $._abstract_declarator, $.abstract_reference_declarator))),
       '=',
       field('default_value', choice($.expression, $.initializer_list)),
     ),
 
     variadic_parameter_declaration: $ => seq(
-      $._declaration_specifiers,
+      $._parameter_specifiers,
       field('declarator', choice(
         $.variadic_declarator,
         alias($.variadic_reference_declarator, $.reference_declarator),
