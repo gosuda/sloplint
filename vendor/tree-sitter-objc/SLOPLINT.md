@@ -264,9 +264,14 @@ valid inputs.
   `macro_argument_list` (ported from the C grammar; the stock C base lacks
   them) join `_top_level_item` via `prec.dynamic(-2)`, covering
   declaration-expanding macros like `DEBUG_OPTION_DECLARE_GROUP (name)`
-  and `DEBUG_OPTION_DECLARE_SWITCH_D (name)`. `NAME(args);` still prefers
-  the `expression_statement` + `call_expression` read (same as the C
-  grammar) — both parse clean. New conflicts mirror the C grammar's
+  and `DEBUG_OPTION_DECLARE_SWITCH_D (name)`. Unlike C, `NAME(args);`
+  also resolves as `macro_declaration` (the macro read absorbs the `;`):
+  header lines of that shape are practically always generator macros, so
+  the macro fact is the more truthful record. `concatenated_string` is
+  overridden without the inherited `call_expression call_expression`
+  first pair — adjacent `NAME(args)` lines otherwise merged into one
+  fake concat at `prec.dynamic(2)`, outranking the macro read and
+  emitting phantom calls. New conflicts mirror the C grammar's
   `_macro_declaration_top` set plus `macro_argument_list` vs
   `type_specifier`/`type_qualifier`/`sized_type_specifier`/
   `generic_specifier`/`macro_type_specifier` and `expression` vs
