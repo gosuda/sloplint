@@ -14377,6 +14377,90 @@
         {
           "type": "SYMBOL",
           "name": "extension_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "preproc_embed"
+        }
+      ]
+    },
+    "preproc_embed": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "PATTERN",
+            "value": "#[ \t]*embed"
+          },
+          "named": false,
+          "value": "#embed"
+        },
+        {
+          "type": "FIELD",
+          "name": "path",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "string_literal"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "system_lib_string"
+              }
+            ]
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "FIELD",
+                "name": "parameter",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                }
+              },
+              {
+                "type": "SYMBOL",
+                "name": "embed_parameter_list"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "embed_parameter_list": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "expression"
+              },
+              {
+                "type": "STRING",
+                "value": ","
+              }
+            ]
+          }
+        },
+        {
+          "type": "STRING",
+          "value": ")"
         }
       ]
     },
@@ -19602,6 +19686,9 @@
     [
       "comma_expression",
       "binary_expression"
+    ],
+    [
+      "preproc_embed"
     ],
     [
       "preproc_ifdef_in_argument_list",

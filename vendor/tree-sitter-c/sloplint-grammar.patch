@@ -1,8 +1,6 @@
-diff --git a/grammar.js b/grammar.js
-index 7cdde6e..16f8a59 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -36,8 +36,11 @@ module.exports = grammar({
+@@ -36,8 +36,11 @@
    name: 'c',
  
    conflicts: $ => [
@@ -15,7 +13,7 @@ index 7cdde6e..16f8a59 100644
      [$.type_specifier, $.expression],
      [$.type_specifier, $.expression, $.macro_type_specifier],
      [$.type_specifier, $.macro_type_specifier],
-@@ -47,12 +50,123 @@ module.exports = grammar({
+@@ -47,12 +50,124 @@
      [$._declaration_modifiers, $.attributed_statement],
      [$.enum_specifier],
      [$.type_specifier, $._old_style_parameter_list],
@@ -88,6 +86,7 @@ index 7cdde6e..16f8a59 100644
 +    [$.preproc_ifdef_in_initializer_list, $.field_expression],
 +    [$.preproc_else_in_argument_list, $.field_expression],
 +    [$.comma_expression, $.binary_expression],
++    [$.preproc_embed],
 +    [$.preproc_ifdef_in_argument_list, $.field_expression],
 +    [$.parenthesized_expression],
 +    [$.binary_expression, $.parenthesized_expression],
@@ -140,7 +139,7 @@ index 7cdde6e..16f8a59 100644
    ],
  
    extras: $ => [
-@@ -89,6 +203,7 @@ module.exports = grammar({
+@@ -89,6 +204,7 @@
        $.function_definition,
        alias($._old_style_function_definition, $.function_definition),
        $.linkage_specification,
@@ -148,7 +147,7 @@ index 7cdde6e..16f8a59 100644
        $.declaration,
        $._top_level_statement,
        $.attributed_statement,
-@@ -100,23 +215,30 @@ module.exports = grammar({
+@@ -100,23 +216,30 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -181,7 +180,7 @@ index 7cdde6e..16f8a59 100644
      ),
  
      // Preprocesser
-@@ -129,42 +251,152 @@ module.exports = grammar({
+@@ -129,42 +252,152 @@
          $.identifier,
          alias($.preproc_call_expression, $.call_expression),
        )),
@@ -222,13 +221,11 @@ index 7cdde6e..16f8a59 100644
        field('directive', $.preproc_directive),
 -      field('argument', optional($.preproc_arg)),
 -      token.immediate(/\r?\n/),
--    ),
--
--    ...preprocIf('', $ => $._block_item),
 +      field('argument', repeat(choice($.preproc_arg, $.comment))),
 +      token.immediate(/[ \t]*\r?\n/),
-+    ),
-+
+     ),
+ 
+-    ...preprocIf('', $ => $._block_item),
 +    // Top-level preproc bodies hold top-level items (a guarded header can
 +    // contain declaration macros); nested bodies still accept every
 +    // statement shape through _top_level_statement -> statement.
@@ -347,7 +344,7 @@ index 7cdde6e..16f8a59 100644
      _preproc_expression: $ => choice(
        $.identifier,
        alias($.preproc_call_expression, $.call_expression),
-@@ -199,7 +431,20 @@ module.exports = grammar({
+@@ -199,7 +432,20 @@
  
      preproc_argument_list: $ => seq(
        '(',
@@ -369,7 +366,7 @@ index 7cdde6e..16f8a59 100644
        ')',
      ),
  
-@@ -240,8 +485,13 @@ module.exports = grammar({
+@@ -240,8 +486,13 @@
      function_definition: $ => seq(
        optional($.ms_call_modifier),
        $._declaration_specifiers,
@@ -384,7 +381,7 @@ index 7cdde6e..16f8a59 100644
        field('body', $.compound_statement),
      ),
  
-@@ -253,28 +503,84 @@ module.exports = grammar({
+@@ -253,28 +504,84 @@
        field('body', $.compound_statement),
      ),
  
@@ -488,7 +485,7 @@ index 7cdde6e..16f8a59 100644
      _type_definition_declarators: $ => commaSep1(field('declarator', $._type_declarator)),
  
      _declaration_modifiers: $ => choice(
-@@ -283,14 +589,192 @@ module.exports = grammar({
+@@ -283,14 +590,192 @@
        $.attribute_specifier,
        $.attribute_declaration,
        $.ms_declspec_modifier,
@@ -681,7 +678,7 @@ index 7cdde6e..16f8a59 100644
      linkage_specification: $ => seq(
        'extern',
        field('value', $.string_literal),
-@@ -301,6 +785,27 @@ module.exports = grammar({
+@@ -301,6 +786,27 @@
        )),
      ),
  
@@ -709,7 +706,7 @@ index 7cdde6e..16f8a59 100644
      attribute_specifier: $ => seq(
        choice('__attribute__', '__attribute'),
        '(',
-@@ -341,6 +846,13 @@ module.exports = grammar({
+@@ -341,6 +847,13 @@
        '__vectorcall',
      ),
  
@@ -723,7 +720,7 @@ index 7cdde6e..16f8a59 100644
      ms_restrict_modifier: _ => '__restrict',
  
      ms_unsigned_ptr_modifier: _ => '__uptr',
-@@ -396,7 +908,7 @@ module.exports = grammar({
+@@ -396,7 +909,7 @@
        alias($.array_type_declarator, $.array_declarator),
        alias($.parenthesized_type_declarator, $.parenthesized_declarator),
        $._type_identifier,
@@ -732,7 +729,7 @@ index 7cdde6e..16f8a59 100644
        $.primitive_type,
      ),
  
-@@ -409,25 +921,25 @@ module.exports = grammar({
+@@ -409,25 +922,25 @@
  
      parenthesized_declarator: $ => prec.dynamic(PREC.PAREN_DECLARATOR, seq(
        '(',
@@ -762,7 +759,7 @@ index 7cdde6e..16f8a59 100644
        $._abstract_declarator,
        ')',
      )),
-@@ -448,28 +960,56 @@ module.exports = grammar({
+@@ -448,28 +961,56 @@
  
      pointer_declarator: $ => prec.dynamic(1, prec.right(seq(
        optional($.ms_based_modifier),
@@ -828,7 +825,7 @@ index 7cdde6e..16f8a59 100644
        field('declarator', optional($._abstract_declarator)),
      ))),
  
-@@ -543,6 +1083,8 @@ module.exports = grammar({
+@@ -543,6 +1084,8 @@
  
      init_declarator: $ => seq(
        field('declarator', $._declarator),
@@ -837,7 +834,7 @@ index 7cdde6e..16f8a59 100644
        '=',
        field('value', choice($.initializer_list, $.expression)),
      ),
-@@ -563,6 +1105,7 @@ module.exports = grammar({
+@@ -563,6 +1106,7 @@
        '__inline__',
        '__forceinline',
        'thread_local',
@@ -845,7 +842,7 @@ index 7cdde6e..16f8a59 100644
        '__thread',
      ),
  
-@@ -574,6 +1117,8 @@ module.exports = grammar({
+@@ -574,6 +1118,8 @@
        '__restrict__',
        '__extension__',
        '_Atomic',
@@ -854,7 +851,7 @@ index 7cdde6e..16f8a59 100644
        '_Noreturn',
        'noreturn',
        '_Nonnull',
-@@ -594,6 +1139,7 @@ module.exports = grammar({
+@@ -594,6 +1140,7 @@
        $.macro_type_specifier,
        $.sized_type_specifier,
        $.primitive_type,
@@ -862,7 +859,7 @@ index 7cdde6e..16f8a59 100644
        $._type_identifier,
      ),
  
-@@ -601,6 +1147,8 @@ module.exports = grammar({
+@@ -601,6 +1148,8 @@
        seq(
          repeat(choice(
            'signed',
@@ -871,7 +868,7 @@ index 7cdde6e..16f8a59 100644
            'unsigned',
            'long',
            'short',
-@@ -611,6 +1159,8 @@ module.exports = grammar({
+@@ -611,6 +1160,8 @@
          ))),
          repeat1(choice(
            'signed',
@@ -880,7 +877,7 @@ index 7cdde6e..16f8a59 100644
            'unsigned',
            'long',
            'short',
-@@ -619,6 +1169,8 @@ module.exports = grammar({
+@@ -619,6 +1170,8 @@
        seq(
          repeat1(choice(
            'signed',
@@ -889,7 +886,7 @@ index 7cdde6e..16f8a59 100644
            'unsigned',
            'long',
            'short',
-@@ -630,6 +1182,8 @@ module.exports = grammar({
+@@ -630,6 +1183,8 @@
          ))),
          repeat(choice(
            'signed',
@@ -898,7 +895,7 @@ index 7cdde6e..16f8a59 100644
            'unsigned',
            'long',
            'short',
-@@ -652,6 +1206,18 @@ module.exports = grammar({
+@@ -652,6 +1207,18 @@
        'charptr_t',
        'nullptr_t',
        'max_align_t',
@@ -917,7 +914,7 @@ index 7cdde6e..16f8a59 100644
        ...[8, 16, 32, 64].map(n => `int${n}_t`),
        ...[8, 16, 32, 64].map(n => `uint${n}_t`),
        ...[8, 16, 32, 64].map(n => `char${n}_t`),
-@@ -659,32 +1225,40 @@ module.exports = grammar({
+@@ -659,32 +1226,40 @@
  
      enum_specifier: $ => seq(
        'enum',
@@ -970,7 +967,7 @@ index 7cdde6e..16f8a59 100644
        )),
        '}',
      ),
-@@ -693,9 +1267,13 @@ module.exports = grammar({
+@@ -693,9 +1268,13 @@
        'struct',
        optional($.attribute_specifier),
        optional($.ms_declspec_modifier),
@@ -984,7 +981,7 @@ index 7cdde6e..16f8a59 100644
            field('body', optional($.field_declaration_list)),
          ),
          field('body', $.field_declaration_list),
-@@ -706,6 +1284,7 @@ module.exports = grammar({
+@@ -706,6 +1285,7 @@
      union_specifier: $ => prec.right(seq(
        'union',
        optional($.ms_declspec_modifier),
@@ -992,7 +989,7 @@ index 7cdde6e..16f8a59 100644
        choice(
          seq(
            field('name', $._type_identifier),
-@@ -727,19 +1306,42 @@ module.exports = grammar({
+@@ -727,19 +1307,42 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -1038,7 +1035,7 @@ index 7cdde6e..16f8a59 100644
      )),
  
      bitfield_clause: $ => seq(':', $.expression),
-@@ -751,10 +1353,37 @@ module.exports = grammar({
+@@ -751,10 +1354,37 @@
  
      variadic_parameter: _ => '...',
  
@@ -1077,7 +1074,7 @@ index 7cdde6e..16f8a59 100644
          $.compound_statement,
        ),
        ')',
-@@ -766,7 +1395,8 @@ module.exports = grammar({
+@@ -766,7 +1396,8 @@
      ),
  
      parameter_declaration: $ => seq(
@@ -1087,7 +1084,7 @@ index 7cdde6e..16f8a59 100644
        optional(field('declarator', choice(
          $._declarator,
          $._abstract_declarator,
-@@ -802,6 +1432,14 @@ module.exports = grammar({
+@@ -802,6 +1433,14 @@
        $.goto_statement,
        $.seh_try_statement,
        $.seh_leave_statement,
@@ -1102,7 +1099,7 @@ index 7cdde6e..16f8a59 100644
      ),
  
      _top_level_statement: $ => choice(
-@@ -824,7 +1462,7 @@ module.exports = grammar({
+@@ -824,7 +1463,7 @@
      labeled_statement: $ => seq(
        field('label', $._statement_identifier),
        ':',
@@ -1111,7 +1108,7 @@ index 7cdde6e..16f8a59 100644
      ),
  
      // This is missing binary expressions, others were kept so that macro code can be parsed better and code examples
-@@ -841,14 +1479,40 @@ module.exports = grammar({
+@@ -841,14 +1480,40 @@
        ';',
      ),
  
@@ -1154,7 +1151,7 @@ index 7cdde6e..16f8a59 100644
  
      switch_statement: $ => seq(
        'switch',
-@@ -859,6 +1523,14 @@ module.exports = grammar({
+@@ -859,6 +1524,14 @@
      case_statement: $ => prec.right(seq(
        choice(
          seq('case', field('value', $.expression)),
@@ -1169,7 +1166,7 @@ index 7cdde6e..16f8a59 100644
          'default',
        ),
        ':',
-@@ -872,12 +1544,12 @@ module.exports = grammar({
+@@ -872,12 +1545,12 @@
      while_statement: $ => seq(
        'while',
        field('condition', $.parenthesized_expression),
@@ -1184,7 +1181,7 @@ index 7cdde6e..16f8a59 100644
        'while',
        field('condition', $.parenthesized_expression),
        ';',
-@@ -888,7 +1560,7 @@ module.exports = grammar({
+@@ -888,7 +1561,7 @@
        '(',
        $._for_statement_body,
        ')',
@@ -1193,7 +1190,34 @@ index 7cdde6e..16f8a59 100644
      ),
      _for_statement_body: $ => seq(
        choice(
-@@ -1003,22 +1675,44 @@ module.exports = grammar({
+@@ -973,6 +1646,26 @@
+       $.parenthesized_expression,
+       $.gnu_asm_expression,
+       $.extension_expression,
++      // sloplint: C23 #embed expands to a byte-sequence expression, so it
++      // is valid inside initializers and operands, e.g.
++      // `unsigned char a[] = { #embed "f" limit(4) };` or
++      // `const int x = 1 + #embed "b";`.
++      $.preproc_embed,
++    ),
++
++    preproc_embed: $ => seq(
++      preprocessor('embed'),
++      field('path', choice($.string_literal, $.system_lib_string)),
++      repeat(seq(
++        field('parameter', $.identifier),
++        $.embed_parameter_list,
++      )),
++    ),
++
++    embed_parameter_list: $ => seq(
++      '(',
++      repeat(choice($.expression, ',')),
++      ')',
+     ),
+ 
+     _string: $ => prec.left(choice(
+@@ -1003,22 +1696,44 @@
        $.parenthesized_expression,
      ),
  
@@ -1254,7 +1278,7 @@ index 7cdde6e..16f8a59 100644
      )),
  
      pointer_expression: $ => prec.left(PREC.CAST, seq(
-@@ -1053,16 +1747,49 @@ module.exports = grammar({
+@@ -1053,16 +1768,49 @@
          ['>>', PREC.SHIFT],
        ];
  
@@ -1311,7 +1335,7 @@ index 7cdde6e..16f8a59 100644
      update_expression: $ => {
        const argument = field('argument', $.expression);
        const operator = field('operator', choice('--', '++'));
-@@ -1143,6 +1870,36 @@ module.exports = grammar({
+@@ -1143,6 +1891,36 @@
        ')',
      )),
  
@@ -1348,7 +1372,7 @@ index 7cdde6e..16f8a59 100644
      gnu_asm_qualifier: _ => choice(
        'volatile',
        '__volatile__',
-@@ -1197,7 +1954,58 @@ module.exports = grammar({
+@@ -1197,7 +1975,58 @@
      extension_expression: $ => seq('__extension__', $.expression),
  
      // The compound_statement is added to parse macros taking statements as arguments, e.g. MYFORLOOP(1, 10, i, { foo(i); bar(i); })
@@ -1408,7 +1432,7 @@ index 7cdde6e..16f8a59 100644
  
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
-@@ -1216,18 +2024,48 @@ module.exports = grammar({
+@@ -1216,18 +2045,48 @@
  
      parenthesized_expression: $ => seq(
        '(',
@@ -1463,7 +1487,7 @@ index 7cdde6e..16f8a59 100644
        '}',
      ),
  
-@@ -1246,6 +2084,15 @@ module.exports = grammar({
+@@ -1246,6 +2105,15 @@
          ':',
          field('value', choice($.expression, $.initializer_list)),
        ),
@@ -1479,7 +1503,7 @@ index 7cdde6e..16f8a59 100644
      ),
  
      subscript_designator: $ => seq('[', $.expression, ']'),
-@@ -1296,14 +2143,19 @@ module.exports = grammar({
+@@ -1296,14 +2164,19 @@
  
      // Must concatenate at least 2 nodes, one of which must be a string_literal.
      // Identifier is added to parse macros that are strings, like PRIu64.
@@ -1502,7 +1526,7 @@ index 7cdde6e..16f8a59 100644
  
      string_literal: $ => seq(
        choice('L"', 'u"', 'U"', 'u8"', '"'),
-@@ -1351,7 +2203,10 @@ module.exports = grammar({
+@@ -1351,7 +2224,10 @@
      ),
  
      macro_type_specifier: $ => prec.dynamic(-1, seq(

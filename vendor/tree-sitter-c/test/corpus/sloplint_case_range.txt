@@ -24,14 +24,16 @@ int classify(char c) {
           declarator: (identifier))))
     body: (compound_statement
       (switch_statement
-        condition: (parenthesized_expression (identifier))
+        condition: (parenthesized_expression
+          (identifier))
         body: (compound_statement
           (case_statement
             value: (char_literal
               (character))
             end: (char_literal
               (character))
-            (return_statement (number_literal)))
+            (return_statement
+              (number_literal)))
           (case_statement
             value: (char_literal
               (character))
@@ -42,6 +44,8 @@ int classify(char c) {
               (character))
             end: (char_literal
               (character))
-            (return_statement (number_literal)))
+            (return_statement
+              (number_literal)))
           (case_statement
-            (return_statement (number_literal))))))))
+            (return_statement
+              (number_literal))))))))
