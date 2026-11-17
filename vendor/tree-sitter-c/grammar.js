@@ -165,6 +165,9 @@ module.exports = grammar({
     [$.macro_declaration, $.macro_qualifier, $.type_specifier],
     [$.macro_declaration, $.type_specifier],
     [$.macro_qualifier, $.macro_declaration],
+    [$.expression],
+    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.expression],
+    [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.expression],
     [$.macro_qualifier, $.type_specifier],
     [$.macro_declaration, $.macro_qualifier],
   ],
@@ -2152,7 +2155,9 @@ module.exports = grammar({
         // concatenation: `XSTR(a) "." XSTR(b)`, `"v" FLATBUFFERS_STRING(x)`.
         seq($.call_expression, $.string_literal),
         seq($.string_literal, $.call_expression),
-        seq($.call_expression, $.call_expression),
+        // sloplint: no `call_expression call_expression` first pair — adjacent
+        // `NAME(args)` lines at file scope otherwise merge into one fake
+        // concatenated_string instead of macro declarations / call statements.
       ),
       repeat(choice($.string_literal, $.identifier, $.call_expression)),
     ))),

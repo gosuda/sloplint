@@ -270,3 +270,31 @@ fn an_unterminated_struct_still_reports_a_parse_error() {
         "a missing struct closing must not parse"
     );
 }
+
+/// Adjacent `NAME(args)` lines must not merge into one
+/// `concatenated_string`: upstream intent requires a string literal in
+/// the first pair, and the call-call arm turned consecutive macro table
+/// rows into phantom calls.
+#[test]
+fn adjacent_macro_lines_do_not_concatenate() {
+    let analysis = run_clean(concat!(
+        "MUNIT_TEST_DECL(first_case)\n",
+        "MUNIT_TEST_DECL(second_case)\n",
+        "MUNIT_TEST_DECL(third_case)\n",
+    ));
+    assert!(
+        analysis.facts.calls.is_empty(),
+        "table-macro lines record no call facts: {:?}",
+        analysis.facts.calls
+    );
+}
+
+/// Stringification macros still concatenate through a real literal.
+#[test]
+fn call_literal_concatenation_still_parses() {
+    run_clean(concat!(
+        "#define XSTR_(x) #x\n",
+        "#define XSTR(x) XSTR_(x)\n",
+        "const char *v = XSTR(1) \".\" XSTR(2);\n",
+    ));
+}

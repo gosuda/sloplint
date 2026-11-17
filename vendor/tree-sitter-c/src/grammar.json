@@ -18889,19 +18889,6 @@
                       "name": "call_expression"
                     }
                   ]
-                },
-                {
-                  "type": "SEQ",
-                  "members": [
-                    {
-                      "type": "SYMBOL",
-                      "name": "call_expression"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "call_expression"
-                    }
-                  ]
                 }
               ]
             },
@@ -19793,6 +19780,19 @@
     [
       "macro_qualifier",
       "macro_declaration"
+    ],
+    [
+      "expression"
+    ],
+    [
+      "preproc_else_in_enumerator_list",
+      "preproc_else_in_enumerator_list_no_comma",
+      "expression"
+    ],
+    [
+      "preproc_ifdef_in_enumerator_list",
+      "preproc_ifdef_in_enumerator_list_no_comma",
+      "expression"
     ],
     [
       "macro_qualifier",

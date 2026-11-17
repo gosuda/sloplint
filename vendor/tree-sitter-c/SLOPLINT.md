@@ -509,3 +509,16 @@ the size growth.
   `immediate` entirely is not an option — `\n` is itself an extra
   (`/\s|\\\r?\n/`) and is consumed as one before it can terminate the
   rule.
+- **`concatenated_string` has no `call call` first pair** — the vendored
+  grammar previously let `seq($.call_expression, $.call_expression)`
+  open the concatenation. Adjacent `NAME(args)` lines on separate lines
+  (consecutive `munit_void_test_decl(x)`/KDBINDINGS table rows,
+  `DEBUG_OPTION_DECLARE_*` runs) then merged into a single
+  `concatenated_string` at `prec.dynamic(2)`, outranking the
+  `prec.dynamic(-2)` macro read — producing phantom call facts and
+  violating the rule's own "one item must be a string_literal"
+  invariant. The pair is removed; `call "lit"`, `"lit" call` and the
+  `repeat` tail still cover stringification macros such as
+  `XSTR(a) "." XSTR(b)` and `PRIu64 "x"` chains. Three new conflict
+  entries cover enumerator/preproc reads that no longer had the
+  call-call escape route.
