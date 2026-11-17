@@ -440,8 +440,8 @@ parens steers it to an initialized declaration.
   and 4 controls. The published parser fails those 32 repros and passes
   the 4 controls.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 18 files, 88 cases, all passing with the patch
-  (`tree-sitter test` reports 88/88). The latest additions cover the
+  corpus is not vendored): 19 files, 92 cases, all passing with the patch
+  (`tree-sitter test` reports 92/92). The latest additions cover the
   Win32 SDK cluster (typedef qualifier macros, function-pointer typedefs
   with SAL-annotated parameters, MIDL brackets, declaratorless typedefs
   inside `#if`, `#ifdef`-guarded constructs), bare macro sentinels before
@@ -651,3 +651,10 @@ gzip -9 -c src/parser.c > src/parser.c.gz
   `BOOST_WORKAROUND(BOOST_MSVC, < 1300)` and `CHECK(x, ==, y)`. The boost
   `.hpp` headers were the largest remaining parse-error class in the
   corpus recount.
+- **Directive terminators tolerate trailing blanks** — inherited from the
+  C base via `sloplint-c-base.patch`: the `token.immediate(/\r?\n/)` at
+  the end of `preproc_include`/`preproc_def`/`preproc_function_def`/
+  `preproc_call` widens to `/[ \t]*\r?\n/`, so a directive line ending in
+  blanks no longer eats the following `#endif` as `preproc_arg`. Same
+  rule and rationale as in the C grammar's SLOPLINT.md (the
+  kddockwidgets_export.h whole-file ERROR class).

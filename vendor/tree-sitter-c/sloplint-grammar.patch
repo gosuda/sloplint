@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 7cdde6e..a8f56b5 100644
+index 7cdde6e..1553655 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -36,8 +36,11 @@ module.exports = grammar({
@@ -181,25 +181,34 @@ index 7cdde6e..a8f56b5 100644
      ),
  
      // Preprocesser
-@@ -135,7 +257,7 @@ module.exports = grammar({
+@@ -129,42 +251,152 @@ module.exports = grammar({
+         $.identifier,
+         alias($.preproc_call_expression, $.call_expression),
+       )),
+-      token.immediate(/\r?\n/),
++      token.immediate(/[ \t]*\r?\n/),
+     ),
+ 
      preproc_def: $ => seq(
        preprocessor('define'),
        field('name', $.identifier),
 -      field('value', optional($.preproc_arg)),
+-      token.immediate(/\r?\n/),
 +      field('value', repeat(choice($.preproc_arg, $.comment))),
-       token.immediate(/\r?\n/),
++      token.immediate(/[ \t]*\r?\n/),
      ),
  
-@@ -143,28 +265,138 @@ module.exports = grammar({
+     preproc_function_def: $ => seq(
        preprocessor('define'),
        field('name', $.identifier),
        field('parameters', $.preproc_params),
 -      field('value', optional($.preproc_arg)),
+-      token.immediate(/\r?\n/),
 +      // A block comment inside the \-continued body splits preproc_arg
 +      // into pieces; let each piece be a value so the directive resumes
 +      // after the comment instead of ending it.
 +      field('value', repeat(choice($.preproc_arg, $.comment))),
-       token.immediate(/\r?\n/),
++      token.immediate(/[ \t]*\r?\n/),
      ),
  
      preproc_params: $ => seq(
@@ -212,11 +221,14 @@ index 7cdde6e..a8f56b5 100644
      preproc_call: $ => seq(
        field('directive', $.preproc_directive),
 -      field('argument', optional($.preproc_arg)),
-+      field('argument', repeat(choice($.preproc_arg, $.comment))),
-       token.immediate(/\r?\n/),
-     ),
- 
+-      token.immediate(/\r?\n/),
+-    ),
+-
 -    ...preprocIf('', $ => $._block_item),
++      field('argument', repeat(choice($.preproc_arg, $.comment))),
++      token.immediate(/[ \t]*\r?\n/),
++    ),
++
 +    // Top-level preproc bodies hold top-level items (a guarded header can
 +    // contain declaration macros); nested bodies still accept every
 +    // statement shape through _top_level_statement -> statement.
@@ -441,7 +453,8 @@ index 7cdde6e..a8f56b5 100644
 +        alias($.preproc_if_in_init_declarator, $.preproc_if),
 +        alias($.preproc_ifdef_in_init_declarator, $.preproc_ifdef),
 +      )),
-+    ),
+     ),
+-    _type_definition_type: $ => seq(repeat($.type_qualifier), field('type', $.type_specifier), repeat($.type_qualifier)),
 +
 +    type_definition: $ => choice(
 +      seq(
@@ -464,8 +477,7 @@ index 7cdde6e..a8f56b5 100644
 +        repeat($.attribute_specifier),
 +        ';',
 +      ),
-     ),
--    _type_definition_type: $ => seq(repeat($.type_qualifier), field('type', $.type_specifier), repeat($.type_qualifier)),
++    ),
 +    // Pre-type qualifiers also include a bare qualifier macro (`typedef
 +    // CONST char *PCSZ`) — without an argument list, because `VOID (*P)`
 +    // would otherwise swallow `(*P)` as its macro arguments and kill

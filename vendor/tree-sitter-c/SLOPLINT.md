@@ -291,8 +291,8 @@ Inputs that are not valid C and so stay errors: `int x = ;`, unterminated
 - Upstream `tree-sitter test` at tag v0.24.2, before: 85 of 85 pass.
 - After the patch: 85 of 85 upstream cases pass.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 15 files, 48 cases, all passing with the patch
-  (`tree-sitter test` reports 48/48). The latest additions cover the Win32
+  corpus is not vendored): 16 files, 52 cases, all passing with the patch
+  (`tree-sitter test` reports 52/52). The latest additions cover the Win32
   SDK cluster: typedef qualifier macros, function-pointer typedefs with
   SAL-annotated parameters, MIDL brackets, declaratorless typedefs inside
   `#if`, and `#ifdef`-guarded inheritance.
@@ -489,3 +489,18 @@ the size growth.
   comparison as an argument: `BOOST_WORKAROUND(BOOST_MSVC, < 1300)` and
   assertion-style `CHECK(x, ==, y)`. No ambiguity is possible: items are
   comma-delimited, so `a > b` still reads as one binary argument.
+- **Directive terminators tolerate trailing blanks** —
+  `preproc_include`/`preproc_def`/`preproc_function_def`/`preproc_call`
+  end in `token.immediate(/[ \t]*\r?\n/)` (upstream:
+  `token.immediate(/\r?\n/)`). A directive line ending in spaces or tabs
+  (`#define KDDOCKWIDGETS_EXPORT ` inside a nested `#ifdef` —
+  kddockwidgets_export.h) made the immediate token fail, the value
+  position fell back to `preproc_arg`, the `\s` extras skipped to the
+  next line and the next `#endif`/`#else` was eaten as the argument —
+  cascading `MISSING` nodes and a whole-file ERROR. Absorbing the blanks
+  inside the terminator token is safe: at `A B\n` the regex still fails
+  on `B`, so argument lexing is unchanged; a `\<newline>` continuation
+  still goes through `preproc_arg`'s `\\\r?\n` arm. Dropping
+  `immediate` entirely is not an option — `\n` is itself an extra
+  (`/\s|\\\r?\n/`) and is consumed as one before it can terminate the
+  rule.

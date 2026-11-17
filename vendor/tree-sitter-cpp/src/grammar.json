@@ -359,7 +359,7 @@
           "type": "IMMEDIATE_TOKEN",
           "content": {
             "type": "PATTERN",
-            "value": "\\r?\\n"
+            "value": "[ \\t]*\\r?\\n"
           }
         }
       ]
@@ -408,7 +408,7 @@
           "type": "IMMEDIATE_TOKEN",
           "content": {
             "type": "PATTERN",
-            "value": "\\r?\\n"
+            "value": "[ \\t]*\\r?\\n"
           }
         }
       ]
@@ -465,7 +465,7 @@
           "type": "IMMEDIATE_TOKEN",
           "content": {
             "type": "PATTERN",
-            "value": "\\r?\\n"
+            "value": "[ \\t]*\\r?\\n"
           }
         }
       ]
@@ -598,7 +598,7 @@
           "type": "IMMEDIATE_TOKEN",
           "content": {
             "type": "PATTERN",
-            "value": "\\r?\\n"
+            "value": "[ \\t]*\\r?\\n"
           }
         }
       ]
@@ -5309,7 +5309,7 @@
               "type": "IMMEDIATE_TOKEN",
               "content": {
                 "type": "PATTERN",
-                "value": "\\r?\\n"
+                "value": "[ \\t]*\\r?\\n"
               }
             }
           ]
@@ -5328,7 +5328,7 @@
               "type": "IMMEDIATE_TOKEN",
               "content": {
                 "type": "PATTERN",
-                "value": "\\r?\\n"
+                "value": "[ \\t]*\\r?\\n"
               }
             }
           ]

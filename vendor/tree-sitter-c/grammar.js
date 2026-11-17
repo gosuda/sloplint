@@ -251,14 +251,14 @@ module.exports = grammar({
         $.identifier,
         alias($.preproc_call_expression, $.call_expression),
       )),
-      token.immediate(/\r?\n/),
+      token.immediate(/[ \t]*\r?\n/),
     ),
 
     preproc_def: $ => seq(
       preprocessor('define'),
       field('name', $.identifier),
       field('value', repeat(choice($.preproc_arg, $.comment))),
-      token.immediate(/\r?\n/),
+      token.immediate(/[ \t]*\r?\n/),
     ),
 
     preproc_function_def: $ => seq(
@@ -269,7 +269,7 @@ module.exports = grammar({
       // into pieces; let each piece be a value so the directive resumes
       // after the comment instead of ending it.
       field('value', repeat(choice($.preproc_arg, $.comment))),
-      token.immediate(/\r?\n/),
+      token.immediate(/[ \t]*\r?\n/),
     ),
 
     preproc_params: $ => seq(
@@ -281,7 +281,7 @@ module.exports = grammar({
     preproc_call: $ => seq(
       field('directive', $.preproc_directive),
       field('argument', repeat(choice($.preproc_arg, $.comment))),
-      token.immediate(/\r?\n/),
+      token.immediate(/[ \t]*\r?\n/),
     ),
 
     // Top-level preproc bodies hold top-level items (a guarded header can

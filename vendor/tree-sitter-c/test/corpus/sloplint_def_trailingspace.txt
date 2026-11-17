@@ -1,0 +1,78 @@
+================================================================================
+preproc directive terminated by blanks + newline
+================================================================================
+
+#ifdef X
+#define A 
+#endif
+int x;
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_ifdef
+    (identifier)
+    (preproc_def
+      (identifier)))
+  (declaration
+    (primitive_type)
+    (identifier)))
+
+================================================================================
+indented preproc directive with trailing blanks
+================================================================================
+
+#ifdef X
+#  define B 
+#endif
+int y;
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_ifdef
+    (identifier)
+    (preproc_def
+      (identifier)))
+  (declaration
+    (primitive_type)
+    (identifier)))
+
+================================================================================
+define with value still parses
+================================================================================
+
+#ifdef X
+#define A B
+#endif
+int z;
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_ifdef
+    (identifier)
+    (preproc_def
+      (identifier)
+      (preproc_arg)))
+  (declaration
+    (primitive_type)
+    (identifier)))
+
+================================================================================
+line continuation with trailing blanks
+================================================================================
+
+#define C 1 \
+2
+int c;
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_def
+    (identifier)
+    (preproc_arg))
+  (declaration
+    (primitive_type)
+    (identifier)))
