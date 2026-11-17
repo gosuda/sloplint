@@ -9,9 +9,9 @@
 #define LANGUAGE_VERSION 15
 #define STATE_COUNT 1866
 #define LARGE_STATE_COUNT 944
-#define SYMBOL_COUNT 273
+#define SYMBOL_COUNT 274
 #define ALIAS_COUNT 1
-#define TOKEN_COUNT 154
+#define TOKEN_COUNT 155
 #define EXTERNAL_TOKEN_COUNT 0
 #define FIELD_COUNT 16
 #define MAX_ALIAS_SEQUENCE_LENGTH 11
@@ -61,238 +61,239 @@ enum ts_symbol_identifiers {
   anon_sym_LBRACE = 39,
   anon_sym_RBRACE = 40,
   anon_sym_packed = 41,
-  anon_sym_struct = 42,
-  anon_sym_opaque = 43,
-  anon_sym_enum = 44,
-  anon_sym_union = 45,
-  anon_sym_error = 46,
-  anon_sym_nosuspend = 47,
-  anon_sym_suspend = 48,
-  anon_sym_defer = 49,
-  anon_sym_errdefer = 50,
-  anon_sym_if = 51,
-  anon_sym_else = 52,
-  anon_sym_for = 53,
-  anon_sym_DOT_DOT = 54,
-  anon_sym_while = 55,
-  anon_sym_PIPE = 56,
-  anon_sym_STAR = 57,
-  anon_sym_align = 58,
-  anon_sym_addrspace = 59,
-  anon_sym_linksection = 60,
-  anon_sym_callconv = 61,
-  anon_sym_asm = 62,
-  anon_sym_volatile = 63,
-  anon_sym_LBRACK = 64,
-  anon_sym_RBRACK = 65,
-  anon_sym_DASH_GT = 66,
-  anon_sym_DOT = 67,
-  anon_sym_BANG = 68,
-  anon_sym_TILDE = 69,
-  anon_sym_DASH = 70,
-  anon_sym_DASH_PERCENT = 71,
-  anon_sym_AMP = 72,
-  anon_sym_or = 73,
-  anon_sym_and = 74,
-  anon_sym_EQ_EQ = 75,
-  anon_sym_BANG_EQ = 76,
-  anon_sym_GT = 77,
-  anon_sym_GT_EQ = 78,
-  anon_sym_LT_EQ = 79,
-  anon_sym_LT = 80,
-  anon_sym_CARET = 81,
-  anon_sym_orelse = 82,
-  anon_sym_LT_LT = 83,
-  anon_sym_GT_GT = 84,
-  anon_sym_LT_LT_PIPE = 85,
-  anon_sym_PLUS = 86,
-  anon_sym_PLUS_PLUS = 87,
-  anon_sym_PLUS_PERCENT = 88,
-  anon_sym_PLUS_PIPE = 89,
-  anon_sym_DASH_PIPE = 90,
-  anon_sym_SLASH = 91,
-  anon_sym_PERCENT = 92,
-  anon_sym_STAR_STAR = 93,
-  anon_sym_STAR_PERCENT = 94,
-  anon_sym_STAR_PIPE = 95,
-  anon_sym_PIPE_PIPE = 96,
-  anon_sym_async = 97,
-  anon_sym_await = 98,
-  anon_sym_continue = 99,
-  anon_sym_resume = 100,
-  anon_sym_return = 101,
-  anon_sym_break = 102,
-  anon_sym_try = 103,
-  anon_sym_catch = 104,
-  anon_sym_switch = 105,
-  anon_sym_EQ_GT = 106,
-  anon_sym_anyframe = 107,
-  anon_sym_unreachable = 108,
-  anon_sym_undefined = 109,
-  anon_sym_null = 110,
-  anon_sym_QMARK = 111,
-  anon_sym_allowzero = 112,
-  anon_sym_c = 113,
-  anon_sym_DOT_STAR = 114,
-  anon_sym_DOT_QMARK = 115,
-  anon_sym_DQUOTE = 116,
-  aux_sym_string_token1 = 117,
-  aux_sym_multiline_string_token1 = 118,
-  sym_escape_sequence = 119,
-  anon_sym_SQUOTE = 120,
-  aux_sym_character_token1 = 121,
-  sym_integer = 122,
-  sym_float = 123,
-  anon_sym_true = 124,
-  anon_sym_false = 125,
-  anon_sym_bool = 126,
-  anon_sym_f16 = 127,
-  anon_sym_f32 = 128,
-  anon_sym_f64 = 129,
-  anon_sym_f128 = 130,
-  anon_sym_void = 131,
-  anon_sym_type = 132,
-  anon_sym_anyerror = 133,
-  anon_sym_anyopaque = 134,
-  anon_sym_anytype = 135,
-  anon_sym_noreturn = 136,
-  anon_sym_isize = 137,
-  anon_sym_usize = 138,
-  anon_sym_comptime_int = 139,
-  anon_sym_comptime_float = 140,
-  anon_sym_c_short = 141,
-  anon_sym_c_ushort = 142,
-  anon_sym_c_int = 143,
-  anon_sym_c_uint = 144,
-  anon_sym_c_long = 145,
-  anon_sym_c_ulong = 146,
-  anon_sym_c_longlong = 147,
-  anon_sym_c_ulonglong = 148,
-  anon_sym_c_longdouble = 149,
-  aux_sym_builtin_type_token1 = 150,
-  sym_builtin_identifier = 151,
-  anon_sym_AT = 152,
-  sym_comment = 153,
-  sym_source_file = 154,
-  sym__container_members = 155,
-  sym_test_declaration = 156,
-  sym_comptime_declaration = 157,
-  sym_container_field = 158,
-  sym_variable_declaration = 159,
-  sym__variable_declaration_expression_statement = 160,
-  sym__variable_declaration_header = 161,
-  sym_function_declaration = 162,
-  sym__function_prototype = 163,
-  sym_parameters = 164,
-  sym_parameter = 165,
-  sym_using_namespace_declaration = 166,
-  sym_block = 167,
-  sym_struct_declaration = 168,
-  sym_opaque_declaration = 169,
-  sym_enum_declaration = 170,
-  sym_union_declaration = 171,
-  sym_error_set_declaration = 172,
-  sym_statement = 173,
-  sym_comptime_statement = 174,
-  sym_nosuspend_statement = 175,
-  sym_suspend_statement = 176,
-  sym_defer_statement = 177,
-  sym_errdefer_statement = 178,
-  sym__block_expr_statement = 179,
-  sym_block_expression = 180,
-  sym_labeled_statement = 181,
-  sym_expression_statement = 182,
-  sym_if_statement = 183,
-  sym__if_prefix = 184,
-  sym_else_clause = 185,
-  sym_for_statement = 186,
-  sym__for_prefix = 187,
-  sym_while_statement = 188,
-  sym__while_prefix = 189,
-  sym__conditional_body = 190,
-  sym_payload = 191,
-  sym_byte_alignment = 192,
-  sym_address_space = 193,
-  sym_link_section = 194,
-  sym_calling_convention = 195,
-  sym_expression = 196,
-  sym_asm_expression = 197,
-  sym_asm_output = 198,
-  sym_asm_output_item = 199,
-  sym_asm_input = 200,
-  sym_asm_input_item = 201,
-  sym_asm_clobbers = 202,
-  sym_if_expression = 203,
-  sym_for_expression = 204,
-  sym_while_expression = 205,
-  sym_assignment_expression = 206,
-  sym_unary_expression = 207,
-  sym_binary_expression = 208,
-  sym_comptime_expression = 209,
-  sym_async_expression = 210,
-  sym_await_expression = 211,
-  sym_nosuspend_expression = 212,
-  sym_continue_expression = 213,
-  sym_resume_expression = 214,
-  sym_return_expression = 215,
-  sym_break_expression = 216,
-  sym_try_expression = 217,
-  sym_catch_expression = 218,
-  sym_switch_expression = 219,
-  sym_switch_case = 220,
-  sym__switch_case_exp = 221,
-  sym_type_expression = 222,
-  sym_primary_type_expression = 223,
-  sym_nullable_type = 224,
-  sym_anyframe_type = 225,
-  sym_slice_type = 226,
-  sym_pointer_type = 227,
-  sym_array_type = 228,
-  sym_error_union_type = 229,
-  sym_field_expression = 230,
-  sym_index_expression = 231,
-  sym_dereference_expression = 232,
-  sym_null_coercion_expression = 233,
-  sym_range_expression = 234,
-  sym_call_expression = 235,
-  sym_anonymous_struct_initializer = 236,
-  sym_struct_initializer = 237,
-  sym_initializer_list = 238,
-  sym_field_initializer = 239,
-  sym_labeled_type_expression = 240,
-  sym_comptime_type_expression = 241,
-  sym_if_type_expression = 242,
-  sym_parenthesized_expression = 243,
-  sym_block_label = 244,
-  sym_break_label = 245,
-  sym_arguments = 246,
-  sym_builtin_function = 247,
-  sym_string = 248,
-  sym_multiline_string = 249,
-  sym_character = 250,
-  sym_boolean = 251,
-  sym_builtin_type = 252,
-  sym_error_type = 253,
-  sym_identifier = 254,
-  aux_sym__container_members_repeat1 = 255,
-  aux_sym__variable_declaration_expression_statement_repeat1 = 256,
-  aux_sym_parameters_repeat1 = 257,
-  aux_sym_block_repeat1 = 258,
-  aux_sym_error_set_declaration_repeat1 = 259,
-  aux_sym__for_prefix_repeat1 = 260,
-  aux_sym_payload_repeat1 = 261,
-  aux_sym_asm_output_repeat1 = 262,
-  aux_sym_asm_input_repeat1 = 263,
-  aux_sym_asm_clobbers_repeat1 = 264,
-  aux_sym_asm_clobbers_repeat2 = 265,
-  aux_sym_switch_expression_repeat1 = 266,
-  aux_sym__switch_case_exp_repeat1 = 267,
-  aux_sym_slice_type_repeat1 = 268,
-  aux_sym_pointer_type_repeat1 = 269,
-  aux_sym_call_expression_repeat1 = 270,
-  aux_sym_string_repeat1 = 271,
-  aux_sym_multiline_string_repeat1 = 272,
-  alias_sym_function_signature = 273,
+  anon_sym_bitpack = 42,
+  anon_sym_struct = 43,
+  anon_sym_opaque = 44,
+  anon_sym_enum = 45,
+  anon_sym_union = 46,
+  anon_sym_error = 47,
+  anon_sym_nosuspend = 48,
+  anon_sym_suspend = 49,
+  anon_sym_defer = 50,
+  anon_sym_errdefer = 51,
+  anon_sym_if = 52,
+  anon_sym_else = 53,
+  anon_sym_for = 54,
+  anon_sym_DOT_DOT = 55,
+  anon_sym_while = 56,
+  anon_sym_PIPE = 57,
+  anon_sym_STAR = 58,
+  anon_sym_align = 59,
+  anon_sym_addrspace = 60,
+  anon_sym_linksection = 61,
+  anon_sym_callconv = 62,
+  anon_sym_asm = 63,
+  anon_sym_volatile = 64,
+  anon_sym_LBRACK = 65,
+  anon_sym_RBRACK = 66,
+  anon_sym_DASH_GT = 67,
+  anon_sym_DOT = 68,
+  anon_sym_BANG = 69,
+  anon_sym_TILDE = 70,
+  anon_sym_DASH = 71,
+  anon_sym_DASH_PERCENT = 72,
+  anon_sym_AMP = 73,
+  anon_sym_or = 74,
+  anon_sym_and = 75,
+  anon_sym_EQ_EQ = 76,
+  anon_sym_BANG_EQ = 77,
+  anon_sym_GT = 78,
+  anon_sym_GT_EQ = 79,
+  anon_sym_LT_EQ = 80,
+  anon_sym_LT = 81,
+  anon_sym_CARET = 82,
+  anon_sym_orelse = 83,
+  anon_sym_LT_LT = 84,
+  anon_sym_GT_GT = 85,
+  anon_sym_LT_LT_PIPE = 86,
+  anon_sym_PLUS = 87,
+  anon_sym_PLUS_PLUS = 88,
+  anon_sym_PLUS_PERCENT = 89,
+  anon_sym_PLUS_PIPE = 90,
+  anon_sym_DASH_PIPE = 91,
+  anon_sym_SLASH = 92,
+  anon_sym_PERCENT = 93,
+  anon_sym_STAR_STAR = 94,
+  anon_sym_STAR_PERCENT = 95,
+  anon_sym_STAR_PIPE = 96,
+  anon_sym_PIPE_PIPE = 97,
+  anon_sym_async = 98,
+  anon_sym_await = 99,
+  anon_sym_continue = 100,
+  anon_sym_resume = 101,
+  anon_sym_return = 102,
+  anon_sym_break = 103,
+  anon_sym_try = 104,
+  anon_sym_catch = 105,
+  anon_sym_switch = 106,
+  anon_sym_EQ_GT = 107,
+  anon_sym_anyframe = 108,
+  anon_sym_unreachable = 109,
+  anon_sym_undefined = 110,
+  anon_sym_null = 111,
+  anon_sym_QMARK = 112,
+  anon_sym_allowzero = 113,
+  anon_sym_c = 114,
+  anon_sym_DOT_STAR = 115,
+  anon_sym_DOT_QMARK = 116,
+  anon_sym_DQUOTE = 117,
+  aux_sym_string_token1 = 118,
+  aux_sym_multiline_string_token1 = 119,
+  sym_escape_sequence = 120,
+  anon_sym_SQUOTE = 121,
+  aux_sym_character_token1 = 122,
+  sym_integer = 123,
+  sym_float = 124,
+  anon_sym_true = 125,
+  anon_sym_false = 126,
+  anon_sym_bool = 127,
+  anon_sym_f16 = 128,
+  anon_sym_f32 = 129,
+  anon_sym_f64 = 130,
+  anon_sym_f128 = 131,
+  anon_sym_void = 132,
+  anon_sym_type = 133,
+  anon_sym_anyerror = 134,
+  anon_sym_anyopaque = 135,
+  anon_sym_anytype = 136,
+  anon_sym_noreturn = 137,
+  anon_sym_isize = 138,
+  anon_sym_usize = 139,
+  anon_sym_comptime_int = 140,
+  anon_sym_comptime_float = 141,
+  anon_sym_c_short = 142,
+  anon_sym_c_ushort = 143,
+  anon_sym_c_int = 144,
+  anon_sym_c_uint = 145,
+  anon_sym_c_long = 146,
+  anon_sym_c_ulong = 147,
+  anon_sym_c_longlong = 148,
+  anon_sym_c_ulonglong = 149,
+  anon_sym_c_longdouble = 150,
+  aux_sym_builtin_type_token1 = 151,
+  sym_builtin_identifier = 152,
+  anon_sym_AT = 153,
+  sym_comment = 154,
+  sym_source_file = 155,
+  sym__container_members = 156,
+  sym_test_declaration = 157,
+  sym_comptime_declaration = 158,
+  sym_container_field = 159,
+  sym_variable_declaration = 160,
+  sym__variable_declaration_expression_statement = 161,
+  sym__variable_declaration_header = 162,
+  sym_function_declaration = 163,
+  sym__function_prototype = 164,
+  sym_parameters = 165,
+  sym_parameter = 166,
+  sym_using_namespace_declaration = 167,
+  sym_block = 168,
+  sym_struct_declaration = 169,
+  sym_opaque_declaration = 170,
+  sym_enum_declaration = 171,
+  sym_union_declaration = 172,
+  sym_error_set_declaration = 173,
+  sym_statement = 174,
+  sym_comptime_statement = 175,
+  sym_nosuspend_statement = 176,
+  sym_suspend_statement = 177,
+  sym_defer_statement = 178,
+  sym_errdefer_statement = 179,
+  sym__block_expr_statement = 180,
+  sym_block_expression = 181,
+  sym_labeled_statement = 182,
+  sym_expression_statement = 183,
+  sym_if_statement = 184,
+  sym__if_prefix = 185,
+  sym_else_clause = 186,
+  sym_for_statement = 187,
+  sym__for_prefix = 188,
+  sym_while_statement = 189,
+  sym__while_prefix = 190,
+  sym__conditional_body = 191,
+  sym_payload = 192,
+  sym_byte_alignment = 193,
+  sym_address_space = 194,
+  sym_link_section = 195,
+  sym_calling_convention = 196,
+  sym_expression = 197,
+  sym_asm_expression = 198,
+  sym_asm_output = 199,
+  sym_asm_output_item = 200,
+  sym_asm_input = 201,
+  sym_asm_input_item = 202,
+  sym_asm_clobbers = 203,
+  sym_if_expression = 204,
+  sym_for_expression = 205,
+  sym_while_expression = 206,
+  sym_assignment_expression = 207,
+  sym_unary_expression = 208,
+  sym_binary_expression = 209,
+  sym_comptime_expression = 210,
+  sym_async_expression = 211,
+  sym_await_expression = 212,
+  sym_nosuspend_expression = 213,
+  sym_continue_expression = 214,
+  sym_resume_expression = 215,
+  sym_return_expression = 216,
+  sym_break_expression = 217,
+  sym_try_expression = 218,
+  sym_catch_expression = 219,
+  sym_switch_expression = 220,
+  sym_switch_case = 221,
+  sym__switch_case_exp = 222,
+  sym_type_expression = 223,
+  sym_primary_type_expression = 224,
+  sym_nullable_type = 225,
+  sym_anyframe_type = 226,
+  sym_slice_type = 227,
+  sym_pointer_type = 228,
+  sym_array_type = 229,
+  sym_error_union_type = 230,
+  sym_field_expression = 231,
+  sym_index_expression = 232,
+  sym_dereference_expression = 233,
+  sym_null_coercion_expression = 234,
+  sym_range_expression = 235,
+  sym_call_expression = 236,
+  sym_anonymous_struct_initializer = 237,
+  sym_struct_initializer = 238,
+  sym_initializer_list = 239,
+  sym_field_initializer = 240,
+  sym_labeled_type_expression = 241,
+  sym_comptime_type_expression = 242,
+  sym_if_type_expression = 243,
+  sym_parenthesized_expression = 244,
+  sym_block_label = 245,
+  sym_break_label = 246,
+  sym_arguments = 247,
+  sym_builtin_function = 248,
+  sym_string = 249,
+  sym_multiline_string = 250,
+  sym_character = 251,
+  sym_boolean = 252,
+  sym_builtin_type = 253,
+  sym_error_type = 254,
+  sym_identifier = 255,
+  aux_sym__container_members_repeat1 = 256,
+  aux_sym__variable_declaration_expression_statement_repeat1 = 257,
+  aux_sym_parameters_repeat1 = 258,
+  aux_sym_block_repeat1 = 259,
+  aux_sym_error_set_declaration_repeat1 = 260,
+  aux_sym__for_prefix_repeat1 = 261,
+  aux_sym_payload_repeat1 = 262,
+  aux_sym_asm_output_repeat1 = 263,
+  aux_sym_asm_input_repeat1 = 264,
+  aux_sym_asm_clobbers_repeat1 = 265,
+  aux_sym_asm_clobbers_repeat2 = 266,
+  aux_sym_switch_expression_repeat1 = 267,
+  aux_sym__switch_case_exp_repeat1 = 268,
+  aux_sym_slice_type_repeat1 = 269,
+  aux_sym_pointer_type_repeat1 = 270,
+  aux_sym_call_expression_repeat1 = 271,
+  aux_sym_string_repeat1 = 272,
+  aux_sym_multiline_string_repeat1 = 273,
+  alias_sym_function_signature = 274,
 };
 
 static const char * const ts_symbol_names[] = {
@@ -338,6 +339,7 @@ static const char * const ts_symbol_names[] = {
   [anon_sym_LBRACE] = "{",
   [anon_sym_RBRACE] = "}",
   [anon_sym_packed] = "packed",
+  [anon_sym_bitpack] = "bitpack",
   [anon_sym_struct] = "struct",
   [anon_sym_opaque] = "opaque",
   [anon_sym_enum] = "enum",
@@ -615,6 +617,7 @@ static const TSSymbol ts_symbol_map[] = {
   [anon_sym_LBRACE] = anon_sym_LBRACE,
   [anon_sym_RBRACE] = anon_sym_RBRACE,
   [anon_sym_packed] = anon_sym_packed,
+  [anon_sym_bitpack] = anon_sym_bitpack,
   [anon_sym_struct] = anon_sym_struct,
   [anon_sym_opaque] = anon_sym_opaque,
   [anon_sym_enum] = anon_sym_enum,
@@ -1015,6 +1018,10 @@ static const TSSymbolMetadata ts_symbol_metadata[] = {
     .named = false,
   },
   [anon_sym_packed] = {
+    .visible = true,
+    .named = false,
+  },
+  [anon_sym_bitpack] = {
     .visible = true,
     .named = false,
   },
@@ -4929,1118 +4936,1137 @@ static bool ts_lex_keywords(TSLexer *lexer, TSStateId state) {
       if (lookahead == 'w') ADVANCE(22);
       END_STATE();
     case 2:
-      if (lookahead == 'o') ADVANCE(23);
-      if (lookahead == 'r') ADVANCE(24);
+      if (lookahead == 'i') ADVANCE(23);
+      if (lookahead == 'o') ADVANCE(24);
+      if (lookahead == 'r') ADVANCE(25);
       END_STATE();
     case 3:
       ACCEPT_TOKEN(anon_sym_c);
-      if (lookahead == '_') ADVANCE(25);
-      if (lookahead == 'a') ADVANCE(26);
-      if (lookahead == 'o') ADVANCE(27);
+      if (lookahead == '_') ADVANCE(26);
+      if (lookahead == 'a') ADVANCE(27);
+      if (lookahead == 'o') ADVANCE(28);
       END_STATE();
     case 4:
-      if (lookahead == 'e') ADVANCE(28);
+      if (lookahead == 'e') ADVANCE(29);
       END_STATE();
     case 5:
-      if (lookahead == 'l') ADVANCE(29);
-      if (lookahead == 'n') ADVANCE(30);
-      if (lookahead == 'r') ADVANCE(31);
-      if (lookahead == 'x') ADVANCE(32);
+      if (lookahead == 'l') ADVANCE(30);
+      if (lookahead == 'n') ADVANCE(31);
+      if (lookahead == 'r') ADVANCE(32);
+      if (lookahead == 'x') ADVANCE(33);
       END_STATE();
     case 6:
-      if (lookahead == '1') ADVANCE(33);
-      if (lookahead == '3') ADVANCE(34);
-      if (lookahead == '6') ADVANCE(35);
-      if (lookahead == 'a') ADVANCE(36);
-      if (lookahead == 'n') ADVANCE(37);
-      if (lookahead == 'o') ADVANCE(38);
+      if (lookahead == '1') ADVANCE(34);
+      if (lookahead == '3') ADVANCE(35);
+      if (lookahead == '6') ADVANCE(36);
+      if (lookahead == 'a') ADVANCE(37);
+      if (lookahead == 'n') ADVANCE(38);
+      if (lookahead == 'o') ADVANCE(39);
       END_STATE();
     case 7:
-      if (lookahead == 'f') ADVANCE(39);
-      if (lookahead == 'n') ADVANCE(40);
-      if (lookahead == 's') ADVANCE(41);
-      if (('1' <= lookahead && lookahead <= '9')) ADVANCE(42);
+      if (lookahead == 'f') ADVANCE(40);
+      if (lookahead == 'n') ADVANCE(41);
+      if (lookahead == 's') ADVANCE(42);
+      if (('1' <= lookahead && lookahead <= '9')) ADVANCE(43);
       END_STATE();
     case 8:
-      if (lookahead == 'i') ADVANCE(43);
+      if (lookahead == 'i') ADVANCE(44);
       END_STATE();
     case 9:
-      if (lookahead == 'o') ADVANCE(44);
-      if (lookahead == 'u') ADVANCE(45);
+      if (lookahead == 'o') ADVANCE(45);
+      if (lookahead == 'u') ADVANCE(46);
       END_STATE();
     case 10:
-      if (lookahead == 'p') ADVANCE(46);
-      if (lookahead == 'r') ADVANCE(47);
+      if (lookahead == 'p') ADVANCE(47);
+      if (lookahead == 'r') ADVANCE(48);
       END_STATE();
     case 11:
-      if (lookahead == 'a') ADVANCE(48);
-      if (lookahead == 'u') ADVANCE(49);
+      if (lookahead == 'a') ADVANCE(49);
+      if (lookahead == 'u') ADVANCE(50);
       END_STATE();
     case 12:
-      if (lookahead == 'e') ADVANCE(50);
+      if (lookahead == 'e') ADVANCE(51);
       END_STATE();
     case 13:
-      if (lookahead == 't') ADVANCE(51);
-      if (lookahead == 'u') ADVANCE(52);
-      if (lookahead == 'w') ADVANCE(53);
+      if (lookahead == 't') ADVANCE(52);
+      if (lookahead == 'u') ADVANCE(53);
+      if (lookahead == 'w') ADVANCE(54);
       END_STATE();
     case 14:
-      if (lookahead == 'e') ADVANCE(54);
-      if (lookahead == 'h') ADVANCE(55);
-      if (lookahead == 'r') ADVANCE(56);
-      if (lookahead == 'y') ADVANCE(57);
+      if (lookahead == 'e') ADVANCE(55);
+      if (lookahead == 'h') ADVANCE(56);
+      if (lookahead == 'r') ADVANCE(57);
+      if (lookahead == 'y') ADVANCE(58);
       END_STATE();
     case 15:
-      if (lookahead == 'n') ADVANCE(58);
-      if (lookahead == 's') ADVANCE(59);
-      if (('1' <= lookahead && lookahead <= '9')) ADVANCE(42);
+      if (lookahead == 'n') ADVANCE(59);
+      if (lookahead == 's') ADVANCE(60);
+      if (('1' <= lookahead && lookahead <= '9')) ADVANCE(43);
       END_STATE();
     case 16:
-      if (lookahead == 'a') ADVANCE(60);
-      if (lookahead == 'o') ADVANCE(61);
+      if (lookahead == 'a') ADVANCE(61);
+      if (lookahead == 'o') ADVANCE(62);
       END_STATE();
     case 17:
-      if (lookahead == 'h') ADVANCE(62);
+      if (lookahead == 'h') ADVANCE(63);
       END_STATE();
     case 18:
-      if (lookahead == 'd') ADVANCE(63);
+      if (lookahead == 'd') ADVANCE(64);
       END_STATE();
     case 19:
-      if (lookahead == 'i') ADVANCE(64);
-      if (lookahead == 'l') ADVANCE(65);
+      if (lookahead == 'i') ADVANCE(65);
+      if (lookahead == 'l') ADVANCE(66);
       END_STATE();
     case 20:
-      if (lookahead == 'd') ADVANCE(66);
-      if (lookahead == 'y') ADVANCE(67);
+      if (lookahead == 'd') ADVANCE(67);
+      if (lookahead == 'y') ADVANCE(68);
       END_STATE();
     case 21:
-      if (lookahead == 'm') ADVANCE(68);
-      if (lookahead == 'y') ADVANCE(69);
+      if (lookahead == 'm') ADVANCE(69);
+      if (lookahead == 'y') ADVANCE(70);
       END_STATE();
     case 22:
-      if (lookahead == 'a') ADVANCE(70);
+      if (lookahead == 'a') ADVANCE(71);
       END_STATE();
     case 23:
-      if (lookahead == 'o') ADVANCE(71);
+      if (lookahead == 't') ADVANCE(72);
       END_STATE();
     case 24:
-      if (lookahead == 'e') ADVANCE(72);
+      if (lookahead == 'o') ADVANCE(73);
       END_STATE();
     case 25:
-      if (lookahead == 'i') ADVANCE(73);
-      if (lookahead == 'l') ADVANCE(74);
-      if (lookahead == 's') ADVANCE(75);
-      if (lookahead == 'u') ADVANCE(76);
+      if (lookahead == 'e') ADVANCE(74);
       END_STATE();
     case 26:
-      if (lookahead == 'l') ADVANCE(77);
-      if (lookahead == 't') ADVANCE(78);
+      if (lookahead == 'i') ADVANCE(75);
+      if (lookahead == 'l') ADVANCE(76);
+      if (lookahead == 's') ADVANCE(77);
+      if (lookahead == 'u') ADVANCE(78);
       END_STATE();
     case 27:
-      if (lookahead == 'm') ADVANCE(79);
-      if (lookahead == 'n') ADVANCE(80);
+      if (lookahead == 'l') ADVANCE(79);
+      if (lookahead == 't') ADVANCE(80);
       END_STATE();
     case 28:
-      if (lookahead == 'f') ADVANCE(81);
+      if (lookahead == 'm') ADVANCE(81);
+      if (lookahead == 'n') ADVANCE(82);
       END_STATE();
     case 29:
-      if (lookahead == 's') ADVANCE(82);
+      if (lookahead == 'f') ADVANCE(83);
       END_STATE();
     case 30:
-      if (lookahead == 'u') ADVANCE(83);
+      if (lookahead == 's') ADVANCE(84);
       END_STATE();
     case 31:
-      if (lookahead == 'r') ADVANCE(84);
+      if (lookahead == 'u') ADVANCE(85);
       END_STATE();
     case 32:
-      if (lookahead == 'p') ADVANCE(85);
-      if (lookahead == 't') ADVANCE(86);
+      if (lookahead == 'r') ADVANCE(86);
       END_STATE();
     case 33:
-      if (lookahead == '2') ADVANCE(87);
-      if (lookahead == '6') ADVANCE(88);
+      if (lookahead == 'p') ADVANCE(87);
+      if (lookahead == 't') ADVANCE(88);
       END_STATE();
     case 34:
       if (lookahead == '2') ADVANCE(89);
+      if (lookahead == '6') ADVANCE(90);
       END_STATE();
     case 35:
-      if (lookahead == '4') ADVANCE(90);
+      if (lookahead == '2') ADVANCE(91);
       END_STATE();
     case 36:
-      if (lookahead == 'l') ADVANCE(91);
+      if (lookahead == '4') ADVANCE(92);
       END_STATE();
     case 37:
-      ACCEPT_TOKEN(anon_sym_fn);
-      END_STATE();
-    case 38:
-      if (lookahead == 'r') ADVANCE(92);
-      END_STATE();
-    case 39:
-      ACCEPT_TOKEN(anon_sym_if);
-      END_STATE();
-    case 40:
       if (lookahead == 'l') ADVANCE(93);
       END_STATE();
+    case 38:
+      ACCEPT_TOKEN(anon_sym_fn);
+      END_STATE();
+    case 39:
+      if (lookahead == 'r') ADVANCE(94);
+      END_STATE();
+    case 40:
+      ACCEPT_TOKEN(anon_sym_if);
+      END_STATE();
     case 41:
-      if (lookahead == 'i') ADVANCE(94);
+      if (lookahead == 'l') ADVANCE(95);
       END_STATE();
     case 42:
-      ACCEPT_TOKEN(aux_sym_builtin_type_token1);
-      if (('0' <= lookahead && lookahead <= '9')) ADVANCE(42);
+      if (lookahead == 'i') ADVANCE(96);
       END_STATE();
     case 43:
-      if (lookahead == 'n') ADVANCE(95);
+      ACCEPT_TOKEN(aux_sym_builtin_type_token1);
+      if (('0' <= lookahead && lookahead <= '9')) ADVANCE(43);
       END_STATE();
     case 44:
-      if (lookahead == 'a') ADVANCE(96);
-      if (lookahead == 'i') ADVANCE(97);
-      if (lookahead == 'r') ADVANCE(98);
-      if (lookahead == 's') ADVANCE(99);
+      if (lookahead == 'n') ADVANCE(97);
       END_STATE();
     case 45:
-      if (lookahead == 'l') ADVANCE(100);
+      if (lookahead == 'a') ADVANCE(98);
+      if (lookahead == 'i') ADVANCE(99);
+      if (lookahead == 'r') ADVANCE(100);
+      if (lookahead == 's') ADVANCE(101);
       END_STATE();
     case 46:
-      if (lookahead == 'a') ADVANCE(101);
+      if (lookahead == 'l') ADVANCE(102);
       END_STATE();
     case 47:
-      ACCEPT_TOKEN(anon_sym_or);
-      if (lookahead == 'e') ADVANCE(102);
+      if (lookahead == 'a') ADVANCE(103);
       END_STATE();
     case 48:
-      if (lookahead == 'c') ADVANCE(103);
+      ACCEPT_TOKEN(anon_sym_or);
+      if (lookahead == 'e') ADVANCE(104);
       END_STATE();
     case 49:
-      if (lookahead == 'b') ADVANCE(104);
+      if (lookahead == 'c') ADVANCE(105);
       END_STATE();
     case 50:
-      if (lookahead == 's') ADVANCE(105);
-      if (lookahead == 't') ADVANCE(106);
+      if (lookahead == 'b') ADVANCE(106);
       END_STATE();
     case 51:
-      if (lookahead == 'r') ADVANCE(107);
+      if (lookahead == 's') ADVANCE(107);
+      if (lookahead == 't') ADVANCE(108);
       END_STATE();
     case 52:
-      if (lookahead == 's') ADVANCE(108);
+      if (lookahead == 'r') ADVANCE(109);
       END_STATE();
     case 53:
-      if (lookahead == 'i') ADVANCE(109);
-      END_STATE();
-    case 54:
       if (lookahead == 's') ADVANCE(110);
       END_STATE();
+    case 54:
+      if (lookahead == 'i') ADVANCE(111);
+      END_STATE();
     case 55:
-      if (lookahead == 'r') ADVANCE(111);
+      if (lookahead == 's') ADVANCE(112);
       END_STATE();
     case 56:
-      if (lookahead == 'u') ADVANCE(112);
-      if (lookahead == 'y') ADVANCE(113);
+      if (lookahead == 'r') ADVANCE(113);
       END_STATE();
     case 57:
-      if (lookahead == 'p') ADVANCE(114);
+      if (lookahead == 'u') ADVANCE(114);
+      if (lookahead == 'y') ADVANCE(115);
       END_STATE();
     case 58:
-      if (lookahead == 'd') ADVANCE(115);
-      if (lookahead == 'i') ADVANCE(116);
-      if (lookahead == 'r') ADVANCE(117);
+      if (lookahead == 'p') ADVANCE(116);
       END_STATE();
     case 59:
+      if (lookahead == 'd') ADVANCE(117);
       if (lookahead == 'i') ADVANCE(118);
-      END_STATE();
-    case 60:
       if (lookahead == 'r') ADVANCE(119);
       END_STATE();
-    case 61:
+    case 60:
       if (lookahead == 'i') ADVANCE(120);
-      if (lookahead == 'l') ADVANCE(121);
+      END_STATE();
+    case 61:
+      if (lookahead == 'r') ADVANCE(121);
       END_STATE();
     case 62:
       if (lookahead == 'i') ADVANCE(122);
+      if (lookahead == 'l') ADVANCE(123);
       END_STATE();
     case 63:
-      if (lookahead == 'r') ADVANCE(123);
+      if (lookahead == 'i') ADVANCE(124);
       END_STATE();
     case 64:
-      if (lookahead == 'g') ADVANCE(124);
+      if (lookahead == 'r') ADVANCE(125);
       END_STATE();
     case 65:
-      if (lookahead == 'o') ADVANCE(125);
+      if (lookahead == 'g') ADVANCE(126);
       END_STATE();
     case 66:
-      ACCEPT_TOKEN(anon_sym_and);
+      if (lookahead == 'o') ADVANCE(127);
       END_STATE();
     case 67:
-      if (lookahead == 'e') ADVANCE(126);
-      if (lookahead == 'f') ADVANCE(127);
-      if (lookahead == 'o') ADVANCE(128);
-      if (lookahead == 't') ADVANCE(129);
+      ACCEPT_TOKEN(anon_sym_and);
       END_STATE();
     case 68:
-      ACCEPT_TOKEN(anon_sym_asm);
+      if (lookahead == 'e') ADVANCE(128);
+      if (lookahead == 'f') ADVANCE(129);
+      if (lookahead == 'o') ADVANCE(130);
+      if (lookahead == 't') ADVANCE(131);
       END_STATE();
     case 69:
-      if (lookahead == 'n') ADVANCE(130);
+      ACCEPT_TOKEN(anon_sym_asm);
       END_STATE();
     case 70:
-      if (lookahead == 'i') ADVANCE(131);
+      if (lookahead == 'n') ADVANCE(132);
       END_STATE();
     case 71:
-      if (lookahead == 'l') ADVANCE(132);
+      if (lookahead == 'i') ADVANCE(133);
       END_STATE();
     case 72:
-      if (lookahead == 'a') ADVANCE(133);
+      if (lookahead == 'p') ADVANCE(134);
       END_STATE();
     case 73:
-      if (lookahead == 'n') ADVANCE(134);
+      if (lookahead == 'l') ADVANCE(135);
       END_STATE();
     case 74:
-      if (lookahead == 'o') ADVANCE(135);
+      if (lookahead == 'a') ADVANCE(136);
       END_STATE();
     case 75:
-      if (lookahead == 'h') ADVANCE(136);
+      if (lookahead == 'n') ADVANCE(137);
       END_STATE();
     case 76:
-      if (lookahead == 'i') ADVANCE(137);
-      if (lookahead == 'l') ADVANCE(138);
-      if (lookahead == 's') ADVANCE(139);
+      if (lookahead == 'o') ADVANCE(138);
       END_STATE();
     case 77:
-      if (lookahead == 'l') ADVANCE(140);
+      if (lookahead == 'h') ADVANCE(139);
       END_STATE();
     case 78:
-      if (lookahead == 'c') ADVANCE(141);
+      if (lookahead == 'i') ADVANCE(140);
+      if (lookahead == 'l') ADVANCE(141);
+      if (lookahead == 's') ADVANCE(142);
       END_STATE();
     case 79:
-      if (lookahead == 'p') ADVANCE(142);
+      if (lookahead == 'l') ADVANCE(143);
       END_STATE();
     case 80:
-      if (lookahead == 's') ADVANCE(143);
-      if (lookahead == 't') ADVANCE(144);
+      if (lookahead == 'c') ADVANCE(144);
       END_STATE();
     case 81:
-      if (lookahead == 'e') ADVANCE(145);
+      if (lookahead == 'p') ADVANCE(145);
       END_STATE();
     case 82:
-      if (lookahead == 'e') ADVANCE(146);
+      if (lookahead == 's') ADVANCE(146);
+      if (lookahead == 't') ADVANCE(147);
       END_STATE();
     case 83:
-      if (lookahead == 'm') ADVANCE(147);
+      if (lookahead == 'e') ADVANCE(148);
       END_STATE();
     case 84:
-      if (lookahead == 'd') ADVANCE(148);
-      if (lookahead == 'o') ADVANCE(149);
+      if (lookahead == 'e') ADVANCE(149);
       END_STATE();
     case 85:
-      if (lookahead == 'o') ADVANCE(150);
+      if (lookahead == 'm') ADVANCE(150);
       END_STATE();
     case 86:
-      if (lookahead == 'e') ADVANCE(151);
+      if (lookahead == 'd') ADVANCE(151);
+      if (lookahead == 'o') ADVANCE(152);
       END_STATE();
     case 87:
-      if (lookahead == '8') ADVANCE(152);
+      if (lookahead == 'o') ADVANCE(153);
       END_STATE();
     case 88:
-      ACCEPT_TOKEN(anon_sym_f16);
+      if (lookahead == 'e') ADVANCE(154);
       END_STATE();
     case 89:
-      ACCEPT_TOKEN(anon_sym_f32);
+      if (lookahead == '8') ADVANCE(155);
       END_STATE();
     case 90:
-      ACCEPT_TOKEN(anon_sym_f64);
+      ACCEPT_TOKEN(anon_sym_f16);
       END_STATE();
     case 91:
-      if (lookahead == 's') ADVANCE(153);
+      ACCEPT_TOKEN(anon_sym_f32);
       END_STATE();
     case 92:
-      ACCEPT_TOKEN(anon_sym_for);
+      ACCEPT_TOKEN(anon_sym_f64);
       END_STATE();
     case 93:
-      if (lookahead == 'i') ADVANCE(154);
+      if (lookahead == 's') ADVANCE(156);
       END_STATE();
     case 94:
-      if (lookahead == 'z') ADVANCE(155);
+      ACCEPT_TOKEN(anon_sym_for);
       END_STATE();
     case 95:
-      if (lookahead == 'k') ADVANCE(156);
+      if (lookahead == 'i') ADVANCE(157);
       END_STATE();
     case 96:
-      if (lookahead == 'l') ADVANCE(157);
+      if (lookahead == 'z') ADVANCE(158);
       END_STATE();
     case 97:
-      if (lookahead == 'n') ADVANCE(158);
+      if (lookahead == 'k') ADVANCE(159);
       END_STATE();
     case 98:
-      if (lookahead == 'e') ADVANCE(159);
+      if (lookahead == 'l') ADVANCE(160);
       END_STATE();
     case 99:
-      if (lookahead == 'u') ADVANCE(160);
+      if (lookahead == 'n') ADVANCE(161);
       END_STATE();
     case 100:
-      if (lookahead == 'l') ADVANCE(161);
+      if (lookahead == 'e') ADVANCE(162);
       END_STATE();
     case 101:
-      if (lookahead == 'q') ADVANCE(162);
+      if (lookahead == 'u') ADVANCE(163);
       END_STATE();
     case 102:
-      if (lookahead == 'l') ADVANCE(163);
+      if (lookahead == 'l') ADVANCE(164);
       END_STATE();
     case 103:
-      if (lookahead == 'k') ADVANCE(164);
+      if (lookahead == 'q') ADVANCE(165);
       END_STATE();
     case 104:
-      ACCEPT_TOKEN(anon_sym_pub);
+      if (lookahead == 'l') ADVANCE(166);
       END_STATE();
     case 105:
-      if (lookahead == 'u') ADVANCE(165);
+      if (lookahead == 'k') ADVANCE(167);
       END_STATE();
     case 106:
-      if (lookahead == 'u') ADVANCE(166);
+      ACCEPT_TOKEN(anon_sym_pub);
       END_STATE();
     case 107:
-      if (lookahead == 'u') ADVANCE(167);
+      if (lookahead == 'u') ADVANCE(168);
       END_STATE();
     case 108:
-      if (lookahead == 'p') ADVANCE(168);
+      if (lookahead == 'u') ADVANCE(169);
       END_STATE();
     case 109:
-      if (lookahead == 't') ADVANCE(169);
+      if (lookahead == 'u') ADVANCE(170);
       END_STATE();
     case 110:
-      if (lookahead == 't') ADVANCE(170);
+      if (lookahead == 'p') ADVANCE(171);
       END_STATE();
     case 111:
-      if (lookahead == 'e') ADVANCE(171);
+      if (lookahead == 't') ADVANCE(172);
       END_STATE();
     case 112:
-      if (lookahead == 'e') ADVANCE(172);
+      if (lookahead == 't') ADVANCE(173);
       END_STATE();
     case 113:
-      ACCEPT_TOKEN(anon_sym_try);
-      END_STATE();
-    case 114:
-      if (lookahead == 'e') ADVANCE(173);
-      END_STATE();
-    case 115:
       if (lookahead == 'e') ADVANCE(174);
       END_STATE();
-    case 116:
-      if (lookahead == 'o') ADVANCE(175);
+    case 114:
+      if (lookahead == 'e') ADVANCE(175);
       END_STATE();
-    case 117:
+    case 115:
+      ACCEPT_TOKEN(anon_sym_try);
+      END_STATE();
+    case 116:
       if (lookahead == 'e') ADVANCE(176);
       END_STATE();
+    case 117:
+      if (lookahead == 'e') ADVANCE(177);
+      END_STATE();
     case 118:
-      if (lookahead == 'n') ADVANCE(177);
-      if (lookahead == 'z') ADVANCE(178);
+      if (lookahead == 'o') ADVANCE(178);
       END_STATE();
     case 119:
-      ACCEPT_TOKEN(anon_sym_var);
+      if (lookahead == 'e') ADVANCE(179);
       END_STATE();
     case 120:
-      if (lookahead == 'd') ADVANCE(179);
+      if (lookahead == 'n') ADVANCE(180);
+      if (lookahead == 'z') ADVANCE(181);
       END_STATE();
     case 121:
-      if (lookahead == 'a') ADVANCE(180);
+      ACCEPT_TOKEN(anon_sym_var);
       END_STATE();
     case 122:
-      if (lookahead == 'l') ADVANCE(181);
+      if (lookahead == 'd') ADVANCE(182);
       END_STATE();
     case 123:
-      if (lookahead == 's') ADVANCE(182);
+      if (lookahead == 'a') ADVANCE(183);
       END_STATE();
     case 124:
-      if (lookahead == 'n') ADVANCE(183);
+      if (lookahead == 'l') ADVANCE(184);
       END_STATE();
     case 125:
-      if (lookahead == 'w') ADVANCE(184);
+      if (lookahead == 's') ADVANCE(185);
       END_STATE();
     case 126:
-      if (lookahead == 'r') ADVANCE(185);
+      if (lookahead == 'n') ADVANCE(186);
       END_STATE();
     case 127:
-      if (lookahead == 'r') ADVANCE(186);
+      if (lookahead == 'w') ADVANCE(187);
       END_STATE();
     case 128:
-      if (lookahead == 'p') ADVANCE(187);
+      if (lookahead == 'r') ADVANCE(188);
       END_STATE();
     case 129:
-      if (lookahead == 'y') ADVANCE(188);
+      if (lookahead == 'r') ADVANCE(189);
       END_STATE();
     case 130:
-      if (lookahead == 'c') ADVANCE(189);
+      if (lookahead == 'p') ADVANCE(190);
       END_STATE();
     case 131:
-      if (lookahead == 't') ADVANCE(190);
+      if (lookahead == 'y') ADVANCE(191);
       END_STATE();
     case 132:
-      ACCEPT_TOKEN(anon_sym_bool);
+      if (lookahead == 'c') ADVANCE(192);
       END_STATE();
     case 133:
-      if (lookahead == 'k') ADVANCE(191);
+      if (lookahead == 't') ADVANCE(193);
       END_STATE();
     case 134:
-      if (lookahead == 't') ADVANCE(192);
+      if (lookahead == 'a') ADVANCE(194);
       END_STATE();
     case 135:
-      if (lookahead == 'n') ADVANCE(193);
+      ACCEPT_TOKEN(anon_sym_bool);
       END_STATE();
     case 136:
-      if (lookahead == 'o') ADVANCE(194);
+      if (lookahead == 'k') ADVANCE(195);
       END_STATE();
     case 137:
-      if (lookahead == 'n') ADVANCE(195);
+      if (lookahead == 't') ADVANCE(196);
       END_STATE();
     case 138:
-      if (lookahead == 'o') ADVANCE(196);
+      if (lookahead == 'n') ADVANCE(197);
       END_STATE();
     case 139:
-      if (lookahead == 'h') ADVANCE(197);
+      if (lookahead == 'o') ADVANCE(198);
       END_STATE();
     case 140:
-      if (lookahead == 'c') ADVANCE(198);
+      if (lookahead == 'n') ADVANCE(199);
       END_STATE();
     case 141:
-      if (lookahead == 'h') ADVANCE(199);
+      if (lookahead == 'o') ADVANCE(200);
       END_STATE();
     case 142:
-      if (lookahead == 't') ADVANCE(200);
+      if (lookahead == 'h') ADVANCE(201);
       END_STATE();
     case 143:
-      if (lookahead == 't') ADVANCE(201);
+      if (lookahead == 'c') ADVANCE(202);
       END_STATE();
     case 144:
-      if (lookahead == 'i') ADVANCE(202);
+      if (lookahead == 'h') ADVANCE(203);
       END_STATE();
     case 145:
-      if (lookahead == 'r') ADVANCE(203);
+      if (lookahead == 't') ADVANCE(204);
       END_STATE();
     case 146:
-      ACCEPT_TOKEN(anon_sym_else);
+      if (lookahead == 't') ADVANCE(205);
       END_STATE();
     case 147:
-      ACCEPT_TOKEN(anon_sym_enum);
+      if (lookahead == 'i') ADVANCE(206);
       END_STATE();
     case 148:
-      if (lookahead == 'e') ADVANCE(204);
-      END_STATE();
-    case 149:
-      if (lookahead == 'r') ADVANCE(205);
-      END_STATE();
-    case 150:
-      if (lookahead == 'r') ADVANCE(206);
-      END_STATE();
-    case 151:
       if (lookahead == 'r') ADVANCE(207);
       END_STATE();
-    case 152:
-      ACCEPT_TOKEN(anon_sym_f128);
+    case 149:
+      ACCEPT_TOKEN(anon_sym_else);
       END_STATE();
-    case 153:
+    case 150:
+      ACCEPT_TOKEN(anon_sym_enum);
+      END_STATE();
+    case 151:
       if (lookahead == 'e') ADVANCE(208);
       END_STATE();
+    case 152:
+      if (lookahead == 'r') ADVANCE(209);
+      END_STATE();
+    case 153:
+      if (lookahead == 'r') ADVANCE(210);
+      END_STATE();
     case 154:
-      if (lookahead == 'n') ADVANCE(209);
+      if (lookahead == 'r') ADVANCE(211);
       END_STATE();
     case 155:
-      if (lookahead == 'e') ADVANCE(210);
+      ACCEPT_TOKEN(anon_sym_f128);
       END_STATE();
     case 156:
-      if (lookahead == 's') ADVANCE(211);
+      if (lookahead == 'e') ADVANCE(212);
       END_STATE();
     case 157:
-      if (lookahead == 'i') ADVANCE(212);
+      if (lookahead == 'n') ADVANCE(213);
       END_STATE();
     case 158:
-      if (lookahead == 'l') ADVANCE(213);
+      if (lookahead == 'e') ADVANCE(214);
       END_STATE();
     case 159:
-      if (lookahead == 't') ADVANCE(214);
-      END_STATE();
-    case 160:
       if (lookahead == 's') ADVANCE(215);
       END_STATE();
+    case 160:
+      if (lookahead == 'i') ADVANCE(216);
+      END_STATE();
     case 161:
-      ACCEPT_TOKEN(anon_sym_null);
+      if (lookahead == 'l') ADVANCE(217);
       END_STATE();
     case 162:
-      if (lookahead == 'u') ADVANCE(216);
+      if (lookahead == 't') ADVANCE(218);
       END_STATE();
     case 163:
-      if (lookahead == 's') ADVANCE(217);
+      if (lookahead == 's') ADVANCE(219);
       END_STATE();
     case 164:
-      if (lookahead == 'e') ADVANCE(218);
+      ACCEPT_TOKEN(anon_sym_null);
       END_STATE();
     case 165:
-      if (lookahead == 'm') ADVANCE(219);
+      if (lookahead == 'u') ADVANCE(220);
       END_STATE();
     case 166:
-      if (lookahead == 'r') ADVANCE(220);
+      if (lookahead == 's') ADVANCE(221);
       END_STATE();
     case 167:
-      if (lookahead == 'c') ADVANCE(221);
-      END_STATE();
-    case 168:
       if (lookahead == 'e') ADVANCE(222);
       END_STATE();
+    case 168:
+      if (lookahead == 'm') ADVANCE(223);
+      END_STATE();
     case 169:
-      if (lookahead == 'c') ADVANCE(223);
+      if (lookahead == 'r') ADVANCE(224);
       END_STATE();
     case 170:
-      ACCEPT_TOKEN(anon_sym_test);
+      if (lookahead == 'c') ADVANCE(225);
       END_STATE();
     case 171:
-      if (lookahead == 'a') ADVANCE(224);
+      if (lookahead == 'e') ADVANCE(226);
       END_STATE();
     case 172:
-      ACCEPT_TOKEN(anon_sym_true);
+      if (lookahead == 'c') ADVANCE(227);
       END_STATE();
     case 173:
-      ACCEPT_TOKEN(anon_sym_type);
+      ACCEPT_TOKEN(anon_sym_test);
       END_STATE();
     case 174:
-      if (lookahead == 'f') ADVANCE(225);
+      if (lookahead == 'a') ADVANCE(228);
       END_STATE();
     case 175:
-      if (lookahead == 'n') ADVANCE(226);
+      ACCEPT_TOKEN(anon_sym_true);
       END_STATE();
     case 176:
-      if (lookahead == 'a') ADVANCE(227);
+      ACCEPT_TOKEN(anon_sym_type);
       END_STATE();
     case 177:
-      if (lookahead == 'g') ADVANCE(228);
+      if (lookahead == 'f') ADVANCE(229);
       END_STATE();
     case 178:
-      if (lookahead == 'e') ADVANCE(229);
+      if (lookahead == 'n') ADVANCE(230);
       END_STATE();
     case 179:
-      ACCEPT_TOKEN(anon_sym_void);
+      if (lookahead == 'a') ADVANCE(231);
       END_STATE();
     case 180:
-      if (lookahead == 't') ADVANCE(230);
+      if (lookahead == 'g') ADVANCE(232);
       END_STATE();
     case 181:
-      if (lookahead == 'e') ADVANCE(231);
+      if (lookahead == 'e') ADVANCE(233);
       END_STATE();
     case 182:
-      if (lookahead == 'p') ADVANCE(232);
+      ACCEPT_TOKEN(anon_sym_void);
       END_STATE();
     case 183:
-      ACCEPT_TOKEN(anon_sym_align);
+      if (lookahead == 't') ADVANCE(234);
       END_STATE();
     case 184:
-      if (lookahead == 'z') ADVANCE(233);
+      if (lookahead == 'e') ADVANCE(235);
       END_STATE();
     case 185:
-      if (lookahead == 'r') ADVANCE(234);
+      if (lookahead == 'p') ADVANCE(236);
       END_STATE();
     case 186:
-      if (lookahead == 'a') ADVANCE(235);
+      ACCEPT_TOKEN(anon_sym_align);
       END_STATE();
     case 187:
-      if (lookahead == 'a') ADVANCE(236);
+      if (lookahead == 'z') ADVANCE(237);
       END_STATE();
     case 188:
-      if (lookahead == 'p') ADVANCE(237);
+      if (lookahead == 'r') ADVANCE(238);
       END_STATE();
     case 189:
-      ACCEPT_TOKEN(anon_sym_async);
+      if (lookahead == 'a') ADVANCE(239);
       END_STATE();
     case 190:
-      ACCEPT_TOKEN(anon_sym_await);
+      if (lookahead == 'a') ADVANCE(240);
       END_STATE();
     case 191:
-      ACCEPT_TOKEN(anon_sym_break);
+      if (lookahead == 'p') ADVANCE(241);
       END_STATE();
     case 192:
-      ACCEPT_TOKEN(anon_sym_c_int);
+      ACCEPT_TOKEN(anon_sym_async);
       END_STATE();
     case 193:
-      if (lookahead == 'g') ADVANCE(238);
+      ACCEPT_TOKEN(anon_sym_await);
       END_STATE();
     case 194:
-      if (lookahead == 'r') ADVANCE(239);
+      if (lookahead == 'c') ADVANCE(242);
       END_STATE();
     case 195:
-      if (lookahead == 't') ADVANCE(240);
+      ACCEPT_TOKEN(anon_sym_break);
       END_STATE();
     case 196:
-      if (lookahead == 'n') ADVANCE(241);
+      ACCEPT_TOKEN(anon_sym_c_int);
       END_STATE();
     case 197:
-      if (lookahead == 'o') ADVANCE(242);
+      if (lookahead == 'g') ADVANCE(243);
       END_STATE();
     case 198:
-      if (lookahead == 'o') ADVANCE(243);
+      if (lookahead == 'r') ADVANCE(244);
       END_STATE();
     case 199:
-      ACCEPT_TOKEN(anon_sym_catch);
+      if (lookahead == 't') ADVANCE(245);
       END_STATE();
     case 200:
-      if (lookahead == 'i') ADVANCE(244);
+      if (lookahead == 'n') ADVANCE(246);
       END_STATE();
     case 201:
-      ACCEPT_TOKEN(anon_sym_const);
+      if (lookahead == 'o') ADVANCE(247);
       END_STATE();
     case 202:
-      if (lookahead == 'n') ADVANCE(245);
+      if (lookahead == 'o') ADVANCE(248);
       END_STATE();
     case 203:
-      ACCEPT_TOKEN(anon_sym_defer);
+      ACCEPT_TOKEN(anon_sym_catch);
       END_STATE();
     case 204:
-      if (lookahead == 'f') ADVANCE(246);
+      if (lookahead == 'i') ADVANCE(249);
       END_STATE();
     case 205:
-      ACCEPT_TOKEN(anon_sym_error);
+      ACCEPT_TOKEN(anon_sym_const);
       END_STATE();
     case 206:
-      if (lookahead == 't') ADVANCE(247);
+      if (lookahead == 'n') ADVANCE(250);
       END_STATE();
     case 207:
-      if (lookahead == 'n') ADVANCE(248);
+      ACCEPT_TOKEN(anon_sym_defer);
       END_STATE();
     case 208:
-      ACCEPT_TOKEN(anon_sym_false);
+      if (lookahead == 'f') ADVANCE(251);
       END_STATE();
     case 209:
-      if (lookahead == 'e') ADVANCE(249);
+      ACCEPT_TOKEN(anon_sym_error);
       END_STATE();
     case 210:
-      ACCEPT_TOKEN(anon_sym_isize);
+      if (lookahead == 't') ADVANCE(252);
       END_STATE();
     case 211:
-      if (lookahead == 'e') ADVANCE(250);
+      if (lookahead == 'n') ADVANCE(253);
       END_STATE();
     case 212:
-      if (lookahead == 'a') ADVANCE(251);
+      ACCEPT_TOKEN(anon_sym_false);
       END_STATE();
     case 213:
-      if (lookahead == 'i') ADVANCE(252);
+      if (lookahead == 'e') ADVANCE(254);
       END_STATE();
     case 214:
-      if (lookahead == 'u') ADVANCE(253);
+      ACCEPT_TOKEN(anon_sym_isize);
       END_STATE();
     case 215:
-      if (lookahead == 'p') ADVANCE(254);
-      END_STATE();
-    case 216:
       if (lookahead == 'e') ADVANCE(255);
       END_STATE();
+    case 216:
+      if (lookahead == 'a') ADVANCE(256);
+      END_STATE();
     case 217:
-      if (lookahead == 'e') ADVANCE(256);
+      if (lookahead == 'i') ADVANCE(257);
       END_STATE();
     case 218:
-      if (lookahead == 'd') ADVANCE(257);
+      if (lookahead == 'u') ADVANCE(258);
       END_STATE();
     case 219:
-      if (lookahead == 'e') ADVANCE(258);
+      if (lookahead == 'p') ADVANCE(259);
       END_STATE();
     case 220:
-      if (lookahead == 'n') ADVANCE(259);
+      if (lookahead == 'e') ADVANCE(260);
       END_STATE();
     case 221:
-      if (lookahead == 't') ADVANCE(260);
+      if (lookahead == 'e') ADVANCE(261);
       END_STATE();
     case 222:
-      if (lookahead == 'n') ADVANCE(261);
+      if (lookahead == 'd') ADVANCE(262);
       END_STATE();
     case 223:
-      if (lookahead == 'h') ADVANCE(262);
+      if (lookahead == 'e') ADVANCE(263);
       END_STATE();
     case 224:
-      if (lookahead == 'd') ADVANCE(263);
+      if (lookahead == 'n') ADVANCE(264);
       END_STATE();
     case 225:
-      if (lookahead == 'i') ADVANCE(264);
+      if (lookahead == 't') ADVANCE(265);
       END_STATE();
     case 226:
-      ACCEPT_TOKEN(anon_sym_union);
-      END_STATE();
-    case 227:
-      if (lookahead == 'c') ADVANCE(265);
-      END_STATE();
-    case 228:
       if (lookahead == 'n') ADVANCE(266);
       END_STATE();
+    case 227:
+      if (lookahead == 'h') ADVANCE(267);
+      END_STATE();
+    case 228:
+      if (lookahead == 'd') ADVANCE(268);
+      END_STATE();
     case 229:
-      ACCEPT_TOKEN(anon_sym_usize);
+      if (lookahead == 'i') ADVANCE(269);
       END_STATE();
     case 230:
-      if (lookahead == 'i') ADVANCE(267);
+      ACCEPT_TOKEN(anon_sym_union);
       END_STATE();
     case 231:
-      ACCEPT_TOKEN(anon_sym_while);
+      if (lookahead == 'c') ADVANCE(270);
       END_STATE();
     case 232:
-      if (lookahead == 'a') ADVANCE(268);
+      if (lookahead == 'n') ADVANCE(271);
       END_STATE();
     case 233:
-      if (lookahead == 'e') ADVANCE(269);
+      ACCEPT_TOKEN(anon_sym_usize);
       END_STATE();
     case 234:
-      if (lookahead == 'o') ADVANCE(270);
+      if (lookahead == 'i') ADVANCE(272);
       END_STATE();
     case 235:
-      if (lookahead == 'm') ADVANCE(271);
+      ACCEPT_TOKEN(anon_sym_while);
       END_STATE();
     case 236:
-      if (lookahead == 'q') ADVANCE(272);
+      if (lookahead == 'a') ADVANCE(273);
       END_STATE();
     case 237:
-      if (lookahead == 'e') ADVANCE(273);
+      if (lookahead == 'e') ADVANCE(274);
       END_STATE();
     case 238:
-      ACCEPT_TOKEN(anon_sym_c_long);
-      if (lookahead == 'd') ADVANCE(274);
-      if (lookahead == 'l') ADVANCE(275);
+      if (lookahead == 'o') ADVANCE(275);
       END_STATE();
     case 239:
-      if (lookahead == 't') ADVANCE(276);
+      if (lookahead == 'm') ADVANCE(276);
       END_STATE();
     case 240:
-      ACCEPT_TOKEN(anon_sym_c_uint);
+      if (lookahead == 'q') ADVANCE(277);
       END_STATE();
     case 241:
-      if (lookahead == 'g') ADVANCE(277);
+      if (lookahead == 'e') ADVANCE(278);
       END_STATE();
     case 242:
-      if (lookahead == 'r') ADVANCE(278);
+      if (lookahead == 'k') ADVANCE(279);
       END_STATE();
     case 243:
-      if (lookahead == 'n') ADVANCE(279);
+      ACCEPT_TOKEN(anon_sym_c_long);
+      if (lookahead == 'd') ADVANCE(280);
+      if (lookahead == 'l') ADVANCE(281);
       END_STATE();
     case 244:
-      if (lookahead == 'm') ADVANCE(280);
+      if (lookahead == 't') ADVANCE(282);
       END_STATE();
     case 245:
-      if (lookahead == 'u') ADVANCE(281);
+      ACCEPT_TOKEN(anon_sym_c_uint);
       END_STATE();
     case 246:
-      if (lookahead == 'e') ADVANCE(282);
+      if (lookahead == 'g') ADVANCE(283);
       END_STATE();
     case 247:
-      ACCEPT_TOKEN(anon_sym_export);
+      if (lookahead == 'r') ADVANCE(284);
       END_STATE();
     case 248:
-      ACCEPT_TOKEN(anon_sym_extern);
-      END_STATE();
-    case 249:
-      ACCEPT_TOKEN(anon_sym_inline);
-      END_STATE();
-    case 250:
-      if (lookahead == 'c') ADVANCE(283);
-      END_STATE();
-    case 251:
-      if (lookahead == 's') ADVANCE(284);
-      END_STATE();
-    case 252:
       if (lookahead == 'n') ADVANCE(285);
       END_STATE();
+    case 249:
+      if (lookahead == 'm') ADVANCE(286);
+      END_STATE();
+    case 250:
+      if (lookahead == 'u') ADVANCE(287);
+      END_STATE();
+    case 251:
+      if (lookahead == 'e') ADVANCE(288);
+      END_STATE();
+    case 252:
+      ACCEPT_TOKEN(anon_sym_export);
+      END_STATE();
     case 253:
-      if (lookahead == 'r') ADVANCE(286);
+      ACCEPT_TOKEN(anon_sym_extern);
       END_STATE();
     case 254:
-      if (lookahead == 'e') ADVANCE(287);
+      ACCEPT_TOKEN(anon_sym_inline);
       END_STATE();
     case 255:
-      ACCEPT_TOKEN(anon_sym_opaque);
+      if (lookahead == 'c') ADVANCE(289);
       END_STATE();
     case 256:
-      ACCEPT_TOKEN(anon_sym_orelse);
+      if (lookahead == 's') ADVANCE(290);
       END_STATE();
     case 257:
-      ACCEPT_TOKEN(anon_sym_packed);
+      if (lookahead == 'n') ADVANCE(291);
       END_STATE();
     case 258:
-      ACCEPT_TOKEN(anon_sym_resume);
+      if (lookahead == 'r') ADVANCE(292);
       END_STATE();
     case 259:
-      ACCEPT_TOKEN(anon_sym_return);
+      if (lookahead == 'e') ADVANCE(293);
       END_STATE();
     case 260:
-      ACCEPT_TOKEN(anon_sym_struct);
+      ACCEPT_TOKEN(anon_sym_opaque);
       END_STATE();
     case 261:
-      if (lookahead == 'd') ADVANCE(288);
+      ACCEPT_TOKEN(anon_sym_orelse);
       END_STATE();
     case 262:
-      ACCEPT_TOKEN(anon_sym_switch);
+      ACCEPT_TOKEN(anon_sym_packed);
       END_STATE();
     case 263:
-      if (lookahead == 'l') ADVANCE(289);
+      ACCEPT_TOKEN(anon_sym_resume);
       END_STATE();
     case 264:
-      if (lookahead == 'n') ADVANCE(290);
+      ACCEPT_TOKEN(anon_sym_return);
       END_STATE();
     case 265:
-      if (lookahead == 'h') ADVANCE(291);
+      ACCEPT_TOKEN(anon_sym_struct);
       END_STATE();
     case 266:
-      if (lookahead == 'a') ADVANCE(292);
+      if (lookahead == 'd') ADVANCE(294);
       END_STATE();
     case 267:
-      if (lookahead == 'l') ADVANCE(293);
+      ACCEPT_TOKEN(anon_sym_switch);
       END_STATE();
     case 268:
-      if (lookahead == 'c') ADVANCE(294);
+      if (lookahead == 'l') ADVANCE(295);
       END_STATE();
     case 269:
-      if (lookahead == 'r') ADVANCE(295);
+      if (lookahead == 'n') ADVANCE(296);
       END_STATE();
     case 270:
-      if (lookahead == 'r') ADVANCE(296);
+      if (lookahead == 'h') ADVANCE(297);
       END_STATE();
     case 271:
-      if (lookahead == 'e') ADVANCE(297);
+      if (lookahead == 'a') ADVANCE(298);
       END_STATE();
     case 272:
-      if (lookahead == 'u') ADVANCE(298);
+      if (lookahead == 'l') ADVANCE(299);
       END_STATE();
     case 273:
-      ACCEPT_TOKEN(anon_sym_anytype);
+      if (lookahead == 'c') ADVANCE(300);
       END_STATE();
     case 274:
-      if (lookahead == 'o') ADVANCE(299);
+      if (lookahead == 'r') ADVANCE(301);
       END_STATE();
     case 275:
-      if (lookahead == 'o') ADVANCE(300);
+      if (lookahead == 'r') ADVANCE(302);
       END_STATE();
     case 276:
-      ACCEPT_TOKEN(anon_sym_c_short);
+      if (lookahead == 'e') ADVANCE(303);
       END_STATE();
     case 277:
-      ACCEPT_TOKEN(anon_sym_c_ulong);
-      if (lookahead == 'l') ADVANCE(301);
+      if (lookahead == 'u') ADVANCE(304);
       END_STATE();
     case 278:
-      if (lookahead == 't') ADVANCE(302);
+      ACCEPT_TOKEN(anon_sym_anytype);
       END_STATE();
     case 279:
-      if (lookahead == 'v') ADVANCE(303);
+      ACCEPT_TOKEN(anon_sym_bitpack);
       END_STATE();
     case 280:
-      if (lookahead == 'e') ADVANCE(304);
+      if (lookahead == 'o') ADVANCE(305);
       END_STATE();
     case 281:
-      if (lookahead == 'e') ADVANCE(305);
+      if (lookahead == 'o') ADVANCE(306);
       END_STATE();
     case 282:
-      if (lookahead == 'r') ADVANCE(306);
+      ACCEPT_TOKEN(anon_sym_c_short);
       END_STATE();
     case 283:
-      if (lookahead == 't') ADVANCE(307);
+      ACCEPT_TOKEN(anon_sym_c_ulong);
+      if (lookahead == 'l') ADVANCE(307);
       END_STATE();
     case 284:
-      ACCEPT_TOKEN(anon_sym_noalias);
+      if (lookahead == 't') ADVANCE(308);
       END_STATE();
     case 285:
-      if (lookahead == 'e') ADVANCE(308);
+      if (lookahead == 'v') ADVANCE(309);
       END_STATE();
     case 286:
-      if (lookahead == 'n') ADVANCE(309);
+      if (lookahead == 'e') ADVANCE(310);
       END_STATE();
     case 287:
-      if (lookahead == 'n') ADVANCE(310);
+      if (lookahead == 'e') ADVANCE(311);
       END_STATE();
     case 288:
-      ACCEPT_TOKEN(anon_sym_suspend);
+      if (lookahead == 'r') ADVANCE(312);
       END_STATE();
     case 289:
-      if (lookahead == 'o') ADVANCE(311);
+      if (lookahead == 't') ADVANCE(313);
       END_STATE();
     case 290:
-      if (lookahead == 'e') ADVANCE(312);
+      ACCEPT_TOKEN(anon_sym_noalias);
       END_STATE();
     case 291:
-      if (lookahead == 'a') ADVANCE(313);
+      if (lookahead == 'e') ADVANCE(314);
       END_STATE();
     case 292:
-      if (lookahead == 'm') ADVANCE(314);
+      if (lookahead == 'n') ADVANCE(315);
       END_STATE();
     case 293:
-      if (lookahead == 'e') ADVANCE(315);
+      if (lookahead == 'n') ADVANCE(316);
       END_STATE();
     case 294:
-      if (lookahead == 'e') ADVANCE(316);
+      ACCEPT_TOKEN(anon_sym_suspend);
       END_STATE();
     case 295:
       if (lookahead == 'o') ADVANCE(317);
       END_STATE();
     case 296:
-      ACCEPT_TOKEN(anon_sym_anyerror);
-      END_STATE();
-    case 297:
-      ACCEPT_TOKEN(anon_sym_anyframe);
-      END_STATE();
-    case 298:
       if (lookahead == 'e') ADVANCE(318);
       END_STATE();
+    case 297:
+      if (lookahead == 'a') ADVANCE(319);
+      END_STATE();
+    case 298:
+      if (lookahead == 'm') ADVANCE(320);
+      END_STATE();
     case 299:
-      if (lookahead == 'u') ADVANCE(319);
+      if (lookahead == 'e') ADVANCE(321);
       END_STATE();
     case 300:
-      if (lookahead == 'n') ADVANCE(320);
+      if (lookahead == 'e') ADVANCE(322);
       END_STATE();
     case 301:
-      if (lookahead == 'o') ADVANCE(321);
+      if (lookahead == 'o') ADVANCE(323);
       END_STATE();
     case 302:
-      ACCEPT_TOKEN(anon_sym_c_ushort);
+      ACCEPT_TOKEN(anon_sym_anyerror);
       END_STATE();
     case 303:
-      ACCEPT_TOKEN(anon_sym_callconv);
+      ACCEPT_TOKEN(anon_sym_anyframe);
       END_STATE();
     case 304:
-      ACCEPT_TOKEN(anon_sym_comptime);
-      if (lookahead == '_') ADVANCE(322);
+      if (lookahead == 'e') ADVANCE(324);
       END_STATE();
     case 305:
-      ACCEPT_TOKEN(anon_sym_continue);
+      if (lookahead == 'u') ADVANCE(325);
       END_STATE();
     case 306:
-      ACCEPT_TOKEN(anon_sym_errdefer);
+      if (lookahead == 'n') ADVANCE(326);
       END_STATE();
     case 307:
-      if (lookahead == 'i') ADVANCE(323);
+      if (lookahead == 'o') ADVANCE(327);
       END_STATE();
     case 308:
-      ACCEPT_TOKEN(anon_sym_noinline);
+      ACCEPT_TOKEN(anon_sym_c_ushort);
       END_STATE();
     case 309:
-      ACCEPT_TOKEN(anon_sym_noreturn);
+      ACCEPT_TOKEN(anon_sym_callconv);
       END_STATE();
     case 310:
-      if (lookahead == 'd') ADVANCE(324);
+      ACCEPT_TOKEN(anon_sym_comptime);
+      if (lookahead == '_') ADVANCE(328);
       END_STATE();
     case 311:
-      if (lookahead == 'c') ADVANCE(325);
+      ACCEPT_TOKEN(anon_sym_continue);
       END_STATE();
     case 312:
-      if (lookahead == 'd') ADVANCE(326);
+      ACCEPT_TOKEN(anon_sym_errdefer);
       END_STATE();
     case 313:
-      if (lookahead == 'b') ADVANCE(327);
+      if (lookahead == 'i') ADVANCE(329);
       END_STATE();
     case 314:
-      if (lookahead == 'e') ADVANCE(328);
+      ACCEPT_TOKEN(anon_sym_noinline);
       END_STATE();
     case 315:
-      ACCEPT_TOKEN(anon_sym_volatile);
+      ACCEPT_TOKEN(anon_sym_noreturn);
       END_STATE();
     case 316:
-      ACCEPT_TOKEN(anon_sym_addrspace);
+      if (lookahead == 'd') ADVANCE(330);
       END_STATE();
     case 317:
-      ACCEPT_TOKEN(anon_sym_allowzero);
+      if (lookahead == 'c') ADVANCE(331);
       END_STATE();
     case 318:
-      ACCEPT_TOKEN(anon_sym_anyopaque);
+      if (lookahead == 'd') ADVANCE(332);
       END_STATE();
     case 319:
-      if (lookahead == 'b') ADVANCE(329);
+      if (lookahead == 'b') ADVANCE(333);
       END_STATE();
     case 320:
-      if (lookahead == 'g') ADVANCE(330);
+      if (lookahead == 'e') ADVANCE(334);
       END_STATE();
     case 321:
-      if (lookahead == 'n') ADVANCE(331);
+      ACCEPT_TOKEN(anon_sym_volatile);
       END_STATE();
     case 322:
-      if (lookahead == 'f') ADVANCE(332);
-      if (lookahead == 'i') ADVANCE(333);
+      ACCEPT_TOKEN(anon_sym_addrspace);
       END_STATE();
     case 323:
-      if (lookahead == 'o') ADVANCE(334);
+      ACCEPT_TOKEN(anon_sym_allowzero);
       END_STATE();
     case 324:
-      ACCEPT_TOKEN(anon_sym_nosuspend);
+      ACCEPT_TOKEN(anon_sym_anyopaque);
       END_STATE();
     case 325:
-      if (lookahead == 'a') ADVANCE(335);
+      if (lookahead == 'b') ADVANCE(335);
       END_STATE();
     case 326:
-      ACCEPT_TOKEN(anon_sym_undefined);
+      if (lookahead == 'g') ADVANCE(336);
       END_STATE();
     case 327:
-      if (lookahead == 'l') ADVANCE(336);
+      if (lookahead == 'n') ADVANCE(337);
       END_STATE();
     case 328:
-      if (lookahead == 's') ADVANCE(337);
+      if (lookahead == 'f') ADVANCE(338);
+      if (lookahead == 'i') ADVANCE(339);
       END_STATE();
     case 329:
-      if (lookahead == 'l') ADVANCE(338);
+      if (lookahead == 'o') ADVANCE(340);
       END_STATE();
     case 330:
-      ACCEPT_TOKEN(anon_sym_c_longlong);
+      ACCEPT_TOKEN(anon_sym_nosuspend);
       END_STATE();
     case 331:
-      if (lookahead == 'g') ADVANCE(339);
+      if (lookahead == 'a') ADVANCE(341);
       END_STATE();
     case 332:
-      if (lookahead == 'l') ADVANCE(340);
+      ACCEPT_TOKEN(anon_sym_undefined);
       END_STATE();
     case 333:
-      if (lookahead == 'n') ADVANCE(341);
+      if (lookahead == 'l') ADVANCE(342);
       END_STATE();
     case 334:
-      if (lookahead == 'n') ADVANCE(342);
+      if (lookahead == 's') ADVANCE(343);
       END_STATE();
     case 335:
-      if (lookahead == 'l') ADVANCE(343);
+      if (lookahead == 'l') ADVANCE(344);
       END_STATE();
     case 336:
-      if (lookahead == 'e') ADVANCE(344);
+      ACCEPT_TOKEN(anon_sym_c_longlong);
       END_STATE();
     case 337:
-      if (lookahead == 'p') ADVANCE(345);
+      if (lookahead == 'g') ADVANCE(345);
       END_STATE();
     case 338:
-      if (lookahead == 'e') ADVANCE(346);
+      if (lookahead == 'l') ADVANCE(346);
       END_STATE();
     case 339:
-      ACCEPT_TOKEN(anon_sym_c_ulonglong);
+      if (lookahead == 'n') ADVANCE(347);
       END_STATE();
     case 340:
-      if (lookahead == 'o') ADVANCE(347);
+      if (lookahead == 'n') ADVANCE(348);
       END_STATE();
     case 341:
-      if (lookahead == 't') ADVANCE(348);
+      if (lookahead == 'l') ADVANCE(349);
       END_STATE();
     case 342:
-      ACCEPT_TOKEN(anon_sym_linksection);
+      if (lookahead == 'e') ADVANCE(350);
       END_STATE();
     case 343:
-      ACCEPT_TOKEN(anon_sym_threadlocal);
+      if (lookahead == 'p') ADVANCE(351);
       END_STATE();
     case 344:
-      ACCEPT_TOKEN(anon_sym_unreachable);
+      if (lookahead == 'e') ADVANCE(352);
       END_STATE();
     case 345:
-      if (lookahead == 'a') ADVANCE(349);
+      ACCEPT_TOKEN(anon_sym_c_ulonglong);
       END_STATE();
     case 346:
-      ACCEPT_TOKEN(anon_sym_c_longdouble);
+      if (lookahead == 'o') ADVANCE(353);
       END_STATE();
     case 347:
-      if (lookahead == 'a') ADVANCE(350);
+      if (lookahead == 't') ADVANCE(354);
       END_STATE();
     case 348:
-      ACCEPT_TOKEN(anon_sym_comptime_int);
+      ACCEPT_TOKEN(anon_sym_linksection);
       END_STATE();
     case 349:
-      if (lookahead == 'c') ADVANCE(351);
+      ACCEPT_TOKEN(anon_sym_threadlocal);
       END_STATE();
     case 350:
-      if (lookahead == 't') ADVANCE(352);
+      ACCEPT_TOKEN(anon_sym_unreachable);
       END_STATE();
     case 351:
-      if (lookahead == 'e') ADVANCE(353);
+      if (lookahead == 'a') ADVANCE(355);
       END_STATE();
     case 352:
-      ACCEPT_TOKEN(anon_sym_comptime_float);
+      ACCEPT_TOKEN(anon_sym_c_longdouble);
       END_STATE();
     case 353:
+      if (lookahead == 'a') ADVANCE(356);
+      END_STATE();
+    case 354:
+      ACCEPT_TOKEN(anon_sym_comptime_int);
+      END_STATE();
+    case 355:
+      if (lookahead == 'c') ADVANCE(357);
+      END_STATE();
+    case 356:
+      if (lookahead == 't') ADVANCE(358);
+      END_STATE();
+    case 357:
+      if (lookahead == 'e') ADVANCE(359);
+      END_STATE();
+    case 358:
+      ACCEPT_TOKEN(anon_sym_comptime_float);
+      END_STATE();
+    case 359:
       ACCEPT_TOKEN(anon_sym_usingnamespace);
       END_STATE();
     default:
@@ -7961,6 +7987,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1),
     [anon_sym_RBRACE] = ACTIONS(1),
     [anon_sym_packed] = ACTIONS(1),
+    [anon_sym_bitpack] = ACTIONS(1),
     [anon_sym_struct] = ACTIONS(1),
     [anon_sym_opaque] = ACTIONS(1),
     [anon_sym_enum] = ACTIONS(1),
@@ -8159,6 +8186,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -8317,6 +8345,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(109),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -8510,6 +8539,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(147),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -8702,6 +8732,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(158),
     [anon_sym_RBRACE] = ACTIONS(151),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -8894,6 +8925,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(158),
     [anon_sym_RBRACE] = ACTIONS(151),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -9086,6 +9118,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(158),
     [anon_sym_RBRACE] = ACTIONS(151),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -9278,6 +9311,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(158),
     [anon_sym_RBRACE] = ACTIONS(151),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -9469,6 +9503,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(186),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -9660,6 +9695,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(190),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -9851,6 +9887,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(194),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -10042,6 +10079,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(198),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -10235,6 +10273,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(147),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -10425,6 +10464,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(109),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -10613,6 +10653,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(190),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -10801,6 +10842,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(194),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -10989,6 +11031,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(198),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -11176,6 +11219,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(147),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -11362,6 +11406,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(109),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -11548,6 +11593,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(109),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -11734,6 +11780,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(147),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -11919,6 +11966,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(151),
     [anon_sym_LBRACE] = ACTIONS(313),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -12104,6 +12152,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(151),
     [anon_sym_LBRACE] = ACTIONS(313),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -12289,6 +12338,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(151),
     [anon_sym_LBRACE] = ACTIONS(158),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -12474,6 +12524,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(109),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -12659,6 +12710,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(147),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -12844,6 +12896,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(151),
     [anon_sym_LBRACE] = ACTIONS(313),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -13029,6 +13082,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(151),
     [anon_sym_LBRACE] = ACTIONS(313),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -13214,6 +13268,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(151),
     [anon_sym_LBRACE] = ACTIONS(158),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -13399,6 +13454,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(147),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -13584,6 +13640,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(109),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -13768,6 +13825,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(190),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -13952,6 +14010,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(186),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -14136,6 +14195,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(194),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -14320,6 +14380,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(198),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -14504,6 +14565,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(151),
     [anon_sym_LBRACE] = ACTIONS(158),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -14688,6 +14750,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(186),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -14872,6 +14935,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(190),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -15056,6 +15120,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(190),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -15240,6 +15305,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(194),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -15424,6 +15490,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(198),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -15608,6 +15675,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(151),
     [anon_sym_LBRACE] = ACTIONS(158),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -15792,6 +15860,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(194),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -15976,6 +16045,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(151),
     [anon_sym_LBRACE] = ACTIONS(158),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -16160,6 +16230,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(151),
     [anon_sym_LBRACE] = ACTIONS(158),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -16344,6 +16415,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(198),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -16528,6 +16600,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(190),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -16712,6 +16785,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(198),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -16896,6 +16970,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(194),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -17080,6 +17155,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(186),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -17262,6 +17338,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(186),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -17444,6 +17521,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(417),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -17593,6 +17671,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -17747,6 +17826,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(433),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -17900,6 +17980,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(435),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -18052,6 +18133,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -18206,6 +18288,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(437),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -18358,6 +18441,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -18515,6 +18599,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(480),
     [anon_sym_RBRACE] = ACTIONS(439),
     [anon_sym_packed] = ACTIONS(483),
+    [anon_sym_bitpack] = ACTIONS(483),
     [anon_sym_struct] = ACTIONS(486),
     [anon_sym_opaque] = ACTIONS(489),
     [anon_sym_enum] = ACTIONS(492),
@@ -18665,6 +18750,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(594),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -18818,6 +18904,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(617),
     [anon_sym_RBRACE] = ACTIONS(620),
     [anon_sym_packed] = ACTIONS(602),
+    [anon_sym_bitpack] = ACTIONS(602),
     [anon_sym_struct] = ACTIONS(622),
     [anon_sym_opaque] = ACTIONS(625),
     [anon_sym_enum] = ACTIONS(628),
@@ -18970,6 +19057,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -19123,6 +19211,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -19276,6 +19365,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -19429,6 +19519,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -19582,6 +19673,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -19736,6 +19828,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(736),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -19888,6 +19981,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -20042,6 +20136,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(738),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -20197,6 +20292,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -20349,6 +20445,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -20501,6 +20598,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -20653,6 +20751,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -20805,6 +20904,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -20957,6 +21057,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -21109,6 +21210,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -21261,6 +21363,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -21413,6 +21516,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -21565,6 +21669,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -21717,6 +21822,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -21869,6 +21975,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -22021,6 +22128,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -22173,6 +22281,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -22325,6 +22434,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -22477,6 +22587,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -22629,6 +22740,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -22781,6 +22893,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -22933,6 +23046,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -23085,6 +23199,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -23237,6 +23352,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -23389,6 +23505,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -23541,6 +23658,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -23693,6 +23811,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -23845,6 +23964,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -23997,6 +24117,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -24149,6 +24270,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -24301,6 +24423,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -24453,6 +24576,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -24605,6 +24729,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -24757,6 +24882,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -24909,6 +25035,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_usingnamespace] = ACTIONS(31),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -25057,6 +25184,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -25208,6 +25336,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -25359,6 +25488,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -25510,6 +25640,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -25661,6 +25792,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -25812,6 +25944,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -25923,6 +26056,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(740),
     [anon_sym_RBRACE] = ACTIONS(740),
     [anon_sym_packed] = ACTIONS(742),
+    [anon_sym_bitpack] = ACTIONS(742),
     [anon_sym_struct] = ACTIONS(742),
     [anon_sym_opaque] = ACTIONS(742),
     [anon_sym_enum] = ACTIONS(742),
@@ -26069,6 +26203,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(744),
     [anon_sym_RBRACE] = ACTIONS(744),
     [anon_sym_packed] = ACTIONS(746),
+    [anon_sym_bitpack] = ACTIONS(746),
     [anon_sym_struct] = ACTIONS(746),
     [anon_sym_opaque] = ACTIONS(746),
     [anon_sym_enum] = ACTIONS(746),
@@ -26246,6 +26381,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -26389,6 +26525,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -26532,6 +26669,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -26675,6 +26813,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -26818,6 +26957,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -26959,6 +27099,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -27102,6 +27243,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -27245,6 +27387,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -27390,6 +27533,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -27533,6 +27677,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -27676,6 +27821,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -27817,6 +27963,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -27958,6 +28105,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -28099,6 +28247,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -28240,6 +28389,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -28381,6 +28531,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -28523,6 +28674,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -28663,6 +28815,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -28805,6 +28958,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -28945,6 +29099,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -29087,6 +29242,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -29227,6 +29383,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -29368,6 +29525,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -29510,6 +29668,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -29650,6 +29809,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -29792,6 +29952,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -29932,6 +30093,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -30074,6 +30236,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -30214,6 +30377,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -30356,6 +30520,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -30497,6 +30662,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -30636,6 +30802,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -30776,6 +30943,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -30916,6 +31084,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -31056,6 +31225,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -31196,6 +31366,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -31302,6 +31473,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(824),
     [anon_sym_RBRACE] = ACTIONS(824),
     [anon_sym_packed] = ACTIONS(826),
+    [anon_sym_bitpack] = ACTIONS(826),
     [anon_sym_struct] = ACTIONS(826),
     [anon_sym_opaque] = ACTIONS(826),
     [anon_sym_enum] = ACTIONS(826),
@@ -31476,6 +31648,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -31582,6 +31755,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(828),
     [anon_sym_RBRACE] = ACTIONS(828),
     [anon_sym_packed] = ACTIONS(830),
+    [anon_sym_bitpack] = ACTIONS(830),
     [anon_sym_struct] = ACTIONS(830),
     [anon_sym_opaque] = ACTIONS(830),
     [anon_sym_enum] = ACTIONS(830),
@@ -31756,6 +31930,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -31862,6 +32037,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(832),
     [anon_sym_RBRACE] = ACTIONS(832),
     [anon_sym_packed] = ACTIONS(834),
+    [anon_sym_bitpack] = ACTIONS(834),
     [anon_sym_struct] = ACTIONS(834),
     [anon_sym_opaque] = ACTIONS(834),
     [anon_sym_enum] = ACTIONS(834),
@@ -32036,6 +32212,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -32142,6 +32319,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(836),
     [anon_sym_RBRACE] = ACTIONS(836),
     [anon_sym_packed] = ACTIONS(838),
+    [anon_sym_bitpack] = ACTIONS(838),
     [anon_sym_struct] = ACTIONS(838),
     [anon_sym_opaque] = ACTIONS(838),
     [anon_sym_enum] = ACTIONS(838),
@@ -32316,6 +32494,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -32456,6 +32635,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -32596,6 +32776,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -32736,6 +32917,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -32876,6 +33058,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -33016,6 +33199,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -33156,6 +33340,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -33296,6 +33481,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -33436,6 +33622,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -33576,6 +33763,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -33716,6 +33904,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -33856,6 +34045,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -33996,6 +34186,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -34102,6 +34293,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(852),
     [anon_sym_RBRACE] = ACTIONS(852),
     [anon_sym_packed] = ACTIONS(854),
+    [anon_sym_bitpack] = ACTIONS(854),
     [anon_sym_struct] = ACTIONS(854),
     [anon_sym_opaque] = ACTIONS(854),
     [anon_sym_enum] = ACTIONS(854),
@@ -34276,6 +34468,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -34416,6 +34609,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -34556,6 +34750,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -34697,6 +34892,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -34838,6 +35034,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(864),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -34975,6 +35172,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -35114,6 +35312,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -35255,6 +35454,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(864),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -35392,6 +35592,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -35531,6 +35732,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -35670,6 +35872,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -35809,6 +36012,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -35948,6 +36152,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -36087,6 +36292,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -36228,6 +36434,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -36365,6 +36572,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -36506,6 +36714,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(864),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -36643,6 +36852,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -36782,6 +36992,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -36921,6 +37132,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -37060,6 +37272,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -37199,6 +37412,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -37338,6 +37552,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -37478,6 +37693,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(864),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -37581,6 +37797,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(870),
     [anon_sym_RBRACE] = ACTIONS(870),
     [anon_sym_packed] = ACTIONS(872),
+    [anon_sym_bitpack] = ACTIONS(872),
     [anon_sym_struct] = ACTIONS(872),
     [anon_sym_opaque] = ACTIONS(872),
     [anon_sym_enum] = ACTIONS(872),
@@ -37719,6 +37936,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(874),
     [anon_sym_RBRACE] = ACTIONS(874),
     [anon_sym_packed] = ACTIONS(876),
+    [anon_sym_bitpack] = ACTIONS(876),
     [anon_sym_struct] = ACTIONS(876),
     [anon_sym_opaque] = ACTIONS(876),
     [anon_sym_enum] = ACTIONS(876),
@@ -37890,6 +38108,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -38027,6 +38246,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_RBRACE] = ACTIONS(880),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -38164,6 +38384,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_RBRACE] = ACTIONS(886),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -38301,6 +38522,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -38438,6 +38660,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -38575,6 +38798,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_RBRACE] = ACTIONS(888),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -38712,6 +38936,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -38849,6 +39074,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -38986,6 +39212,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_RBRACE] = ACTIONS(890),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -39123,6 +39350,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -39260,6 +39488,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_RBRACE] = ACTIONS(892),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -39397,6 +39626,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -39534,6 +39764,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_RBRACE] = ACTIONS(894),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -39671,6 +39902,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -39808,6 +40040,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -39945,6 +40178,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_RBRACE] = ACTIONS(896),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -40082,6 +40316,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_RBRACE] = ACTIONS(898),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -40219,6 +40454,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_RBRACE] = ACTIONS(900),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -40356,6 +40592,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -40493,6 +40730,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -40630,6 +40868,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -40767,6 +41006,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -40904,6 +41144,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -41041,6 +41282,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -41178,6 +41420,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -41315,6 +41558,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -41452,6 +41696,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -41589,6 +41834,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -41726,6 +41972,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -41863,6 +42110,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -42000,6 +42248,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -42137,6 +42386,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -42274,6 +42524,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -42411,6 +42662,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -42548,6 +42800,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_RBRACE] = ACTIONS(902),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -42684,6 +42937,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -42821,6 +43075,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -42956,6 +43211,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -43056,6 +43312,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(151),
     [anon_sym_RBRACE] = ACTIONS(151),
     [anon_sym_packed] = ACTIONS(153),
+    [anon_sym_bitpack] = ACTIONS(153),
     [anon_sym_struct] = ACTIONS(153),
     [anon_sym_opaque] = ACTIONS(153),
     [anon_sym_enum] = ACTIONS(153),
@@ -43226,6 +43483,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -43361,6 +43619,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -43496,6 +43755,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -43631,6 +43891,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -43766,6 +44027,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -43900,6 +44162,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -44036,6 +44299,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -44170,6 +44434,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -44306,6 +44571,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(908),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -44441,6 +44707,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -44575,6 +44842,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -44711,6 +44979,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -44846,6 +45115,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -44981,6 +45251,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -45116,6 +45387,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -45250,6 +45522,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -45386,6 +45659,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -45521,6 +45795,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -45656,6 +45931,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -45791,6 +46067,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -45926,6 +46203,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -46061,6 +46339,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -46196,6 +46475,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -46331,6 +46611,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(920),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -46466,6 +46747,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -46601,6 +46883,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -46736,6 +47019,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -46870,6 +47154,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -47006,6 +47291,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -47141,6 +47427,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -47276,6 +47563,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -47411,6 +47699,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -47545,6 +47834,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -47680,6 +47970,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -47815,6 +48106,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -47950,6 +48242,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -48086,6 +48379,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -48220,6 +48514,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -48356,6 +48651,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -48491,6 +48787,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -48591,6 +48888,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(922),
     [anon_sym_RBRACE] = ACTIONS(922),
     [anon_sym_packed] = ACTIONS(924),
+    [anon_sym_bitpack] = ACTIONS(924),
     [anon_sym_struct] = ACTIONS(924),
     [anon_sym_opaque] = ACTIONS(924),
     [anon_sym_enum] = ACTIONS(924),
@@ -48760,6 +49058,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -48896,6 +49195,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -49031,6 +49331,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -49166,6 +49467,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -49300,6 +49602,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -49435,6 +49738,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -49571,6 +49875,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -49706,6 +50011,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -49841,6 +50147,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -49976,6 +50283,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -50111,6 +50419,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -50245,6 +50554,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -50346,6 +50656,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(926),
     [anon_sym_RBRACE] = ACTIONS(926),
     [anon_sym_packed] = ACTIONS(928),
+    [anon_sym_bitpack] = ACTIONS(928),
     [anon_sym_struct] = ACTIONS(928),
     [anon_sym_opaque] = ACTIONS(928),
     [anon_sym_enum] = ACTIONS(928),
@@ -50515,6 +50826,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -50650,6 +50962,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -50785,6 +51098,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -50920,6 +51234,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -51055,6 +51370,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -51190,6 +51506,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -51325,6 +51642,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -51460,6 +51778,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -51595,6 +51914,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -51730,6 +52050,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -51866,6 +52187,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -52001,6 +52323,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -52135,6 +52458,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -52270,6 +52594,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -52405,6 +52730,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -52540,6 +52866,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -52676,6 +53003,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -52811,6 +53139,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -52945,6 +53274,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -53080,6 +53410,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -53216,6 +53547,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -53351,6 +53683,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -53485,6 +53818,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -53620,6 +53954,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -53756,6 +54091,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -53891,6 +54227,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -54026,6 +54363,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -54160,6 +54498,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -54296,6 +54635,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -54431,6 +54771,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -54566,6 +54907,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -54701,6 +55043,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -54836,6 +55179,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -54971,6 +55315,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -55106,6 +55451,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -55240,6 +55586,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -55376,6 +55723,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -55510,6 +55858,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -55645,6 +55994,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -55780,6 +56130,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -55915,6 +56266,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -56050,6 +56402,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -56185,6 +56538,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -56320,6 +56674,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -56455,6 +56810,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -56590,6 +56946,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -56726,6 +57083,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -56860,6 +57218,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -56995,6 +57354,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -57131,6 +57491,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -57266,6 +57627,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -57400,6 +57762,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -57536,6 +57899,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -57671,6 +58035,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -57806,6 +58171,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -57941,6 +58307,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -58076,6 +58443,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -58210,6 +58578,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -58344,6 +58713,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -58478,6 +58848,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -58613,6 +58984,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(956),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -58747,6 +59119,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(958),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -58881,6 +59254,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(960),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -59015,6 +59389,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(962),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -59148,6 +59523,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -59283,6 +59659,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(966),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -59417,6 +59794,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(968),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -59550,6 +59928,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -59685,6 +60064,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(972),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -59819,6 +60199,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(974),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -59953,6 +60334,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(976),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -60087,6 +60469,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(978),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -60220,6 +60603,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -60354,6 +60738,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -60489,6 +60874,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(984),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -60623,6 +61009,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(986),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -60757,6 +61144,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(988),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -60891,6 +61279,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(990),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -61025,6 +61414,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(992),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -61159,6 +61549,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(994),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -61293,6 +61684,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(996),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -61427,6 +61819,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_RBRACE] = ACTIONS(998),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -61561,6 +61954,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(1000),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -61695,6 +62089,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_RPAREN] = ACTIONS(1002),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -61828,6 +62223,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -61961,6 +62357,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -62094,6 +62491,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -62227,6 +62625,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -62360,6 +62759,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -62493,6 +62893,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -62626,6 +63027,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -62759,6 +63161,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -62892,6 +63295,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -63025,6 +63429,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -63158,6 +63563,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -63291,6 +63697,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -63424,6 +63831,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -63557,6 +63965,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -63690,6 +64099,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -63823,6 +64233,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -63956,6 +64367,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -64089,6 +64501,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -64222,6 +64635,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -64355,6 +64769,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -64488,6 +64903,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -64621,6 +65037,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -64754,6 +65171,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -64887,6 +65305,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -65020,6 +65439,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -65153,6 +65573,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -65286,6 +65707,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -65419,6 +65841,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -65552,6 +65975,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -65685,6 +66109,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -65818,6 +66243,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -65951,6 +66377,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -66084,6 +66511,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -66217,6 +66645,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -66350,6 +66779,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -66483,6 +66913,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -66616,6 +67047,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -66749,6 +67181,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -66882,6 +67315,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -67015,6 +67449,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -67148,6 +67583,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -67281,6 +67717,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -67414,6 +67851,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -67547,6 +67985,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -67680,6 +68119,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -67813,6 +68253,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -67946,6 +68387,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -68079,6 +68521,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -68212,6 +68655,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -68345,6 +68789,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -68478,6 +68923,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -68611,6 +69057,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -68744,6 +69191,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -68877,6 +69325,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -69010,6 +69459,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -69143,6 +69593,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -69276,6 +69727,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -69409,6 +69861,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -69542,6 +69995,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -69675,6 +70129,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -69808,6 +70263,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -69941,6 +70397,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -70074,6 +70531,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -70207,6 +70665,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -70340,6 +70799,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -70473,6 +70933,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -70606,6 +71067,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -70739,6 +71201,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -70872,6 +71335,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -71005,6 +71469,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -71138,6 +71603,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -71271,6 +71737,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -71404,6 +71871,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -71537,6 +72005,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -71670,6 +72139,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -71803,6 +72273,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -71936,6 +72407,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -72069,6 +72541,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -72202,6 +72675,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -72335,6 +72809,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -72468,6 +72943,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -72601,6 +73077,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -72734,6 +73211,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -72867,6 +73345,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -73000,6 +73479,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -73133,6 +73613,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -73266,6 +73747,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -73399,6 +73881,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -73532,6 +74015,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -73665,6 +74149,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -73798,6 +74283,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -73931,6 +74417,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -74064,6 +74551,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -74197,6 +74685,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -74330,6 +74819,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -74463,6 +74953,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -74596,6 +75087,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -74729,6 +75221,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -74862,6 +75355,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -74995,6 +75489,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -75128,6 +75623,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -75261,6 +75757,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -75394,6 +75891,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -75527,6 +76025,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -75660,6 +76159,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -75793,6 +76293,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -75926,6 +76427,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -76059,6 +76561,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -76192,6 +76695,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -76325,6 +76829,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -76458,6 +76963,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -76591,6 +77097,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -76724,6 +77231,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -76857,6 +77365,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -76990,6 +77499,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -77123,6 +77633,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -77256,6 +77767,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -77389,6 +77901,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -77522,6 +78035,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -77655,6 +78169,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -77788,6 +78303,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -77921,6 +78437,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -78054,6 +78571,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -78187,6 +78705,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -78320,6 +78839,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -78453,6 +78973,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -78586,6 +79107,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -78719,6 +79241,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -78852,6 +79375,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -78985,6 +79509,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -79118,6 +79643,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -79251,6 +79777,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -79384,6 +79911,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -79517,6 +80045,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -79650,6 +80179,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -79783,6 +80313,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -79916,6 +80447,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -80049,6 +80581,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -80182,6 +80715,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -80315,6 +80849,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -80448,6 +80983,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -80581,6 +81117,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -80714,6 +81251,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -80847,6 +81385,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -80980,6 +81519,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -81113,6 +81653,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -81246,6 +81787,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -81379,6 +81921,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -81512,6 +82055,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -81645,6 +82189,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -81778,6 +82323,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -81911,6 +82457,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -82044,6 +82591,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -82177,6 +82725,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -82310,6 +82859,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -82443,6 +82993,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -82576,6 +83127,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -82709,6 +83261,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -82842,6 +83395,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -82975,6 +83529,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -83108,6 +83663,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -83241,6 +83797,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -83374,6 +83931,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -83507,6 +84065,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -83640,6 +84199,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -83773,6 +84333,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -83906,6 +84467,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -84039,6 +84601,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -84172,6 +84735,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -84305,6 +84869,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -84438,6 +85003,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -84571,6 +85137,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -84704,6 +85271,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -84837,6 +85405,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -84970,6 +85539,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -85103,6 +85673,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -85236,6 +85807,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -85369,6 +85941,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -85502,6 +86075,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -85635,6 +86209,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -85768,6 +86343,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -85901,6 +86477,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -86034,6 +86611,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -86167,6 +86745,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -86300,6 +86879,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -86433,6 +87013,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -86566,6 +87147,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -86699,6 +87281,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -86832,6 +87415,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -86965,6 +87549,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -87098,6 +87683,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -87231,6 +87817,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -87364,6 +87951,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -87497,6 +88085,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -87630,6 +88219,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -87763,6 +88353,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -87896,6 +88487,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -88029,6 +88621,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -88162,6 +88755,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -88295,6 +88889,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -88428,6 +89023,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -88561,6 +89157,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -88694,6 +89291,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -88827,6 +89425,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -88960,6 +89559,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -89093,6 +89693,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -89226,6 +89827,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -89359,6 +89961,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -89492,6 +90095,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -89625,6 +90229,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -89758,6 +90363,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -89891,6 +90497,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -90024,6 +90631,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -90157,6 +90765,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -90290,6 +90899,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -90423,6 +91033,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -90556,6 +91167,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -90689,6 +91301,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(1004),
@@ -90822,6 +91435,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -90955,6 +91569,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -91088,6 +91703,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -91221,6 +91837,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -91354,6 +91971,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -91487,6 +92105,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -91620,6 +92239,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -91753,6 +92373,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -91886,6 +92507,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -92019,6 +92641,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -92152,6 +92775,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -92285,6 +92909,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -92418,6 +93043,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -92551,6 +93177,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -92684,6 +93311,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -92817,6 +93445,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -92950,6 +93579,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -93083,6 +93713,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -93216,6 +93847,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -93349,6 +93981,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -93482,6 +94115,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -93615,6 +94249,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -93748,6 +94383,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -93881,6 +94517,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -94014,6 +94651,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -94118,6 +94756,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1006),
     [anon_sym_RBRACE] = ACTIONS(1006),
     [anon_sym_packed] = ACTIONS(1008),
+    [anon_sym_bitpack] = ACTIONS(1008),
     [anon_sym_struct] = ACTIONS(1008),
     [anon_sym_opaque] = ACTIONS(1008),
     [anon_sym_enum] = ACTIONS(1008),
@@ -94280,6 +94919,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -94413,6 +95053,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -94546,6 +95187,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -94679,6 +95321,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -94812,6 +95455,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -94945,6 +95589,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -95078,6 +95723,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -95211,6 +95857,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -95344,6 +95991,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -95477,6 +96125,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -95610,6 +96259,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -95743,6 +96393,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -95876,6 +96527,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -96009,6 +96661,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -96142,6 +96795,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -96275,6 +96929,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -96408,6 +97063,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -96541,6 +97197,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -96674,6 +97331,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -96807,6 +97465,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -96940,6 +97599,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -97073,6 +97733,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -97206,6 +97867,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -97339,6 +98001,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -97472,6 +98135,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -97605,6 +98269,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -97738,6 +98403,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -97871,6 +98537,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -98004,6 +98671,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -98137,6 +98805,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -98270,6 +98939,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -98403,6 +99073,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -98536,6 +99207,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -98669,6 +99341,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -98802,6 +99475,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -98935,6 +99609,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -99068,6 +99743,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -99201,6 +99877,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -99334,6 +100011,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -99467,6 +100145,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -99600,6 +100279,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(1014),
@@ -99733,6 +100413,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(216),
     [anon_sym_LBRACE] = ACTIONS(218),
     [anon_sym_packed] = ACTIONS(210),
+    [anon_sym_bitpack] = ACTIONS(210),
     [anon_sym_struct] = ACTIONS(220),
     [anon_sym_opaque] = ACTIONS(222),
     [anon_sym_enum] = ACTIONS(224),
@@ -99866,6 +100547,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -99999,6 +100681,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -100132,6 +100815,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -100265,6 +100949,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -100398,6 +101083,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -100531,6 +101217,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -100664,6 +101351,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -100797,6 +101485,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -100930,6 +101619,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -101063,6 +101753,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -101196,6 +101887,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -101329,6 +102021,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -101462,6 +102155,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -101595,6 +102289,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -101728,6 +102423,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -101861,6 +102557,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -101994,6 +102691,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -102127,6 +102825,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -102260,6 +102959,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -102393,6 +103093,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(1016),
@@ -102526,6 +103227,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -102659,6 +103361,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -102792,6 +103495,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(1018),
@@ -102925,6 +103629,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -103058,6 +103763,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -103191,6 +103897,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(29),
     [anon_sym_LBRACE] = ACTIONS(33),
     [anon_sym_packed] = ACTIONS(35),
+    [anon_sym_bitpack] = ACTIONS(35),
     [anon_sym_struct] = ACTIONS(37),
     [anon_sym_opaque] = ACTIONS(39),
     [anon_sym_enum] = ACTIONS(41),
@@ -103290,6 +103997,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1022),
     [anon_sym_RBRACE] = ACTIONS(1022),
     [anon_sym_packed] = ACTIONS(1020),
+    [anon_sym_bitpack] = ACTIONS(1020),
     [anon_sym_struct] = ACTIONS(1020),
     [anon_sym_opaque] = ACTIONS(1020),
     [anon_sym_enum] = ACTIONS(1020),
@@ -103422,6 +104130,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1030),
     [anon_sym_RBRACE] = ACTIONS(1030),
     [anon_sym_packed] = ACTIONS(1024),
+    [anon_sym_bitpack] = ACTIONS(1024),
     [anon_sym_struct] = ACTIONS(1024),
     [anon_sym_opaque] = ACTIONS(1024),
     [anon_sym_enum] = ACTIONS(1024),
@@ -103554,6 +104263,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1034),
     [anon_sym_RBRACE] = ACTIONS(1034),
     [anon_sym_packed] = ACTIONS(1032),
+    [anon_sym_bitpack] = ACTIONS(1032),
     [anon_sym_struct] = ACTIONS(1032),
     [anon_sym_opaque] = ACTIONS(1032),
     [anon_sym_enum] = ACTIONS(1032),
@@ -103685,6 +104395,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1038),
     [anon_sym_RBRACE] = ACTIONS(1038),
     [anon_sym_packed] = ACTIONS(1036),
+    [anon_sym_bitpack] = ACTIONS(1036),
     [anon_sym_struct] = ACTIONS(1036),
     [anon_sym_opaque] = ACTIONS(1036),
     [anon_sym_enum] = ACTIONS(1036),
@@ -103816,6 +104527,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1042),
     [anon_sym_RBRACE] = ACTIONS(1042),
     [anon_sym_packed] = ACTIONS(1040),
+    [anon_sym_bitpack] = ACTIONS(1040),
     [anon_sym_struct] = ACTIONS(1040),
     [anon_sym_opaque] = ACTIONS(1040),
     [anon_sym_enum] = ACTIONS(1040),
@@ -103947,6 +104659,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1046),
     [anon_sym_RBRACE] = ACTIONS(1046),
     [anon_sym_packed] = ACTIONS(1044),
+    [anon_sym_bitpack] = ACTIONS(1044),
     [anon_sym_struct] = ACTIONS(1044),
     [anon_sym_opaque] = ACTIONS(1044),
     [anon_sym_enum] = ACTIONS(1044),
@@ -104078,6 +104791,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1054),
     [anon_sym_RBRACE] = ACTIONS(1054),
     [anon_sym_packed] = ACTIONS(1048),
+    [anon_sym_bitpack] = ACTIONS(1048),
     [anon_sym_struct] = ACTIONS(1048),
     [anon_sym_opaque] = ACTIONS(1048),
     [anon_sym_enum] = ACTIONS(1048),
@@ -104207,6 +104921,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(874),
     [anon_sym_LBRACE] = ACTIONS(874),
     [anon_sym_packed] = ACTIONS(876),
+    [anon_sym_bitpack] = ACTIONS(876),
     [anon_sym_struct] = ACTIONS(876),
     [anon_sym_opaque] = ACTIONS(876),
     [anon_sym_enum] = ACTIONS(876),
@@ -104335,6 +105050,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(151),
     [anon_sym_LBRACE] = ACTIONS(151),
     [anon_sym_packed] = ACTIONS(153),
+    [anon_sym_bitpack] = ACTIONS(153),
     [anon_sym_struct] = ACTIONS(153),
     [anon_sym_opaque] = ACTIONS(153),
     [anon_sym_enum] = ACTIONS(153),
@@ -104463,6 +105179,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(922),
     [anon_sym_LBRACE] = ACTIONS(922),
     [anon_sym_packed] = ACTIONS(924),
+    [anon_sym_bitpack] = ACTIONS(924),
     [anon_sym_struct] = ACTIONS(924),
     [anon_sym_opaque] = ACTIONS(924),
     [anon_sym_enum] = ACTIONS(924),
@@ -104591,6 +105308,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(870),
     [anon_sym_LBRACE] = ACTIONS(870),
     [anon_sym_packed] = ACTIONS(872),
+    [anon_sym_bitpack] = ACTIONS(872),
     [anon_sym_struct] = ACTIONS(872),
     [anon_sym_opaque] = ACTIONS(872),
     [anon_sym_enum] = ACTIONS(872),
@@ -104718,6 +105436,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_DOT_DOT_DOT] = ACTIONS(926),
     [anon_sym_LBRACE] = ACTIONS(926),
     [anon_sym_packed] = ACTIONS(928),
+    [anon_sym_bitpack] = ACTIONS(928),
     [anon_sym_struct] = ACTIONS(928),
     [anon_sym_opaque] = ACTIONS(928),
     [anon_sym_enum] = ACTIONS(928),
@@ -104831,6 +105550,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1056),
     [anon_sym_RBRACE] = ACTIONS(1056),
     [anon_sym_packed] = ACTIONS(1058),
+    [anon_sym_bitpack] = ACTIONS(1058),
     [anon_sym_struct] = ACTIONS(1058),
     [anon_sym_opaque] = ACTIONS(1058),
     [anon_sym_enum] = ACTIONS(1058),
@@ -104923,6 +105643,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1060),
     [anon_sym_RBRACE] = ACTIONS(1060),
     [anon_sym_packed] = ACTIONS(1062),
+    [anon_sym_bitpack] = ACTIONS(1062),
     [anon_sym_struct] = ACTIONS(1062),
     [anon_sym_opaque] = ACTIONS(1062),
     [anon_sym_enum] = ACTIONS(1062),
@@ -105009,6 +105730,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1064),
     [anon_sym_RBRACE] = ACTIONS(1064),
     [anon_sym_packed] = ACTIONS(1066),
+    [anon_sym_bitpack] = ACTIONS(1066),
     [anon_sym_struct] = ACTIONS(1066),
     [anon_sym_opaque] = ACTIONS(1066),
     [anon_sym_enum] = ACTIONS(1066),
@@ -105095,6 +105817,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1068),
     [anon_sym_RBRACE] = ACTIONS(1068),
     [anon_sym_packed] = ACTIONS(1070),
+    [anon_sym_bitpack] = ACTIONS(1070),
     [anon_sym_struct] = ACTIONS(1070),
     [anon_sym_opaque] = ACTIONS(1070),
     [anon_sym_enum] = ACTIONS(1070),
@@ -105181,6 +105904,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1072),
     [anon_sym_RBRACE] = ACTIONS(1072),
     [anon_sym_packed] = ACTIONS(1074),
+    [anon_sym_bitpack] = ACTIONS(1074),
     [anon_sym_struct] = ACTIONS(1074),
     [anon_sym_opaque] = ACTIONS(1074),
     [anon_sym_enum] = ACTIONS(1074),
@@ -105267,6 +105991,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1076),
     [anon_sym_RBRACE] = ACTIONS(1076),
     [anon_sym_packed] = ACTIONS(1078),
+    [anon_sym_bitpack] = ACTIONS(1078),
     [anon_sym_struct] = ACTIONS(1078),
     [anon_sym_opaque] = ACTIONS(1078),
     [anon_sym_enum] = ACTIONS(1078),
@@ -105353,6 +106078,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1076),
     [anon_sym_RBRACE] = ACTIONS(1076),
     [anon_sym_packed] = ACTIONS(1078),
+    [anon_sym_bitpack] = ACTIONS(1078),
     [anon_sym_struct] = ACTIONS(1078),
     [anon_sym_opaque] = ACTIONS(1078),
     [anon_sym_enum] = ACTIONS(1078),
@@ -105439,6 +106165,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1064),
     [anon_sym_RBRACE] = ACTIONS(1064),
     [anon_sym_packed] = ACTIONS(1066),
+    [anon_sym_bitpack] = ACTIONS(1066),
     [anon_sym_struct] = ACTIONS(1066),
     [anon_sym_opaque] = ACTIONS(1066),
     [anon_sym_enum] = ACTIONS(1066),
@@ -105525,6 +106252,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1068),
     [anon_sym_RBRACE] = ACTIONS(1068),
     [anon_sym_packed] = ACTIONS(1070),
+    [anon_sym_bitpack] = ACTIONS(1070),
     [anon_sym_struct] = ACTIONS(1070),
     [anon_sym_opaque] = ACTIONS(1070),
     [anon_sym_enum] = ACTIONS(1070),
@@ -105611,6 +106339,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1072),
     [anon_sym_RBRACE] = ACTIONS(1072),
     [anon_sym_packed] = ACTIONS(1074),
+    [anon_sym_bitpack] = ACTIONS(1074),
     [anon_sym_struct] = ACTIONS(1074),
     [anon_sym_opaque] = ACTIONS(1074),
     [anon_sym_enum] = ACTIONS(1074),
@@ -105697,6 +106426,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1080),
     [anon_sym_RBRACE] = ACTIONS(1080),
     [anon_sym_packed] = ACTIONS(1082),
+    [anon_sym_bitpack] = ACTIONS(1082),
     [anon_sym_struct] = ACTIONS(1082),
     [anon_sym_opaque] = ACTIONS(1082),
     [anon_sym_enum] = ACTIONS(1082),
@@ -105783,6 +106513,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1064),
     [anon_sym_RBRACE] = ACTIONS(1064),
     [anon_sym_packed] = ACTIONS(1066),
+    [anon_sym_bitpack] = ACTIONS(1066),
     [anon_sym_struct] = ACTIONS(1066),
     [anon_sym_opaque] = ACTIONS(1066),
     [anon_sym_enum] = ACTIONS(1066),
@@ -105869,6 +106600,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1068),
     [anon_sym_RBRACE] = ACTIONS(1068),
     [anon_sym_packed] = ACTIONS(1070),
+    [anon_sym_bitpack] = ACTIONS(1070),
     [anon_sym_struct] = ACTIONS(1070),
     [anon_sym_opaque] = ACTIONS(1070),
     [anon_sym_enum] = ACTIONS(1070),
@@ -105955,6 +106687,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1072),
     [anon_sym_RBRACE] = ACTIONS(1072),
     [anon_sym_packed] = ACTIONS(1074),
+    [anon_sym_bitpack] = ACTIONS(1074),
     [anon_sym_struct] = ACTIONS(1074),
     [anon_sym_opaque] = ACTIONS(1074),
     [anon_sym_enum] = ACTIONS(1074),
@@ -106041,6 +106774,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1064),
     [anon_sym_RBRACE] = ACTIONS(1064),
     [anon_sym_packed] = ACTIONS(1066),
+    [anon_sym_bitpack] = ACTIONS(1066),
     [anon_sym_struct] = ACTIONS(1066),
     [anon_sym_opaque] = ACTIONS(1066),
     [anon_sym_enum] = ACTIONS(1066),
@@ -106127,6 +106861,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1068),
     [anon_sym_RBRACE] = ACTIONS(1068),
     [anon_sym_packed] = ACTIONS(1070),
+    [anon_sym_bitpack] = ACTIONS(1070),
     [anon_sym_struct] = ACTIONS(1070),
     [anon_sym_opaque] = ACTIONS(1070),
     [anon_sym_enum] = ACTIONS(1070),
@@ -106213,6 +106948,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1072),
     [anon_sym_RBRACE] = ACTIONS(1072),
     [anon_sym_packed] = ACTIONS(1074),
+    [anon_sym_bitpack] = ACTIONS(1074),
     [anon_sym_struct] = ACTIONS(1074),
     [anon_sym_opaque] = ACTIONS(1074),
     [anon_sym_enum] = ACTIONS(1074),
@@ -106299,6 +107035,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1068),
     [anon_sym_RBRACE] = ACTIONS(1068),
     [anon_sym_packed] = ACTIONS(1070),
+    [anon_sym_bitpack] = ACTIONS(1070),
     [anon_sym_struct] = ACTIONS(1070),
     [anon_sym_opaque] = ACTIONS(1070),
     [anon_sym_enum] = ACTIONS(1070),
@@ -106385,6 +107122,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1072),
     [anon_sym_RBRACE] = ACTIONS(1072),
     [anon_sym_packed] = ACTIONS(1074),
+    [anon_sym_bitpack] = ACTIONS(1074),
     [anon_sym_struct] = ACTIONS(1074),
     [anon_sym_opaque] = ACTIONS(1074),
     [anon_sym_enum] = ACTIONS(1074),
@@ -106471,6 +107209,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1084),
     [anon_sym_RBRACE] = ACTIONS(1084),
     [anon_sym_packed] = ACTIONS(1086),
+    [anon_sym_bitpack] = ACTIONS(1086),
     [anon_sym_struct] = ACTIONS(1086),
     [anon_sym_opaque] = ACTIONS(1086),
     [anon_sym_enum] = ACTIONS(1086),
@@ -106557,6 +107296,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1088),
     [anon_sym_RBRACE] = ACTIONS(1088),
     [anon_sym_packed] = ACTIONS(1090),
+    [anon_sym_bitpack] = ACTIONS(1090),
     [anon_sym_struct] = ACTIONS(1090),
     [anon_sym_opaque] = ACTIONS(1090),
     [anon_sym_enum] = ACTIONS(1090),
@@ -106643,6 +107383,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(744),
     [anon_sym_RBRACE] = ACTIONS(744),
     [anon_sym_packed] = ACTIONS(746),
+    [anon_sym_bitpack] = ACTIONS(746),
     [anon_sym_struct] = ACTIONS(746),
     [anon_sym_opaque] = ACTIONS(746),
     [anon_sym_enum] = ACTIONS(746),
@@ -106729,6 +107470,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1092),
     [anon_sym_RBRACE] = ACTIONS(1092),
     [anon_sym_packed] = ACTIONS(1094),
+    [anon_sym_bitpack] = ACTIONS(1094),
     [anon_sym_struct] = ACTIONS(1094),
     [anon_sym_opaque] = ACTIONS(1094),
     [anon_sym_enum] = ACTIONS(1094),
@@ -106815,6 +107557,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1096),
     [anon_sym_RBRACE] = ACTIONS(1096),
     [anon_sym_packed] = ACTIONS(1098),
+    [anon_sym_bitpack] = ACTIONS(1098),
     [anon_sym_struct] = ACTIONS(1098),
     [anon_sym_opaque] = ACTIONS(1098),
     [anon_sym_enum] = ACTIONS(1098),
@@ -106901,6 +107644,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1100),
     [anon_sym_RBRACE] = ACTIONS(1100),
     [anon_sym_packed] = ACTIONS(1102),
+    [anon_sym_bitpack] = ACTIONS(1102),
     [anon_sym_struct] = ACTIONS(1102),
     [anon_sym_opaque] = ACTIONS(1102),
     [anon_sym_enum] = ACTIONS(1102),
@@ -106987,6 +107731,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1092),
     [anon_sym_RBRACE] = ACTIONS(1092),
     [anon_sym_packed] = ACTIONS(1094),
+    [anon_sym_bitpack] = ACTIONS(1094),
     [anon_sym_struct] = ACTIONS(1094),
     [anon_sym_opaque] = ACTIONS(1094),
     [anon_sym_enum] = ACTIONS(1094),
@@ -107073,6 +107818,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1104),
     [anon_sym_RBRACE] = ACTIONS(1104),
     [anon_sym_packed] = ACTIONS(1106),
+    [anon_sym_bitpack] = ACTIONS(1106),
     [anon_sym_struct] = ACTIONS(1106),
     [anon_sym_opaque] = ACTIONS(1106),
     [anon_sym_enum] = ACTIONS(1106),
@@ -107159,6 +107905,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1108),
     [anon_sym_RBRACE] = ACTIONS(1108),
     [anon_sym_packed] = ACTIONS(1110),
+    [anon_sym_bitpack] = ACTIONS(1110),
     [anon_sym_struct] = ACTIONS(1110),
     [anon_sym_opaque] = ACTIONS(1110),
     [anon_sym_enum] = ACTIONS(1110),
@@ -107245,6 +107992,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1112),
     [anon_sym_RBRACE] = ACTIONS(1112),
     [anon_sym_packed] = ACTIONS(1114),
+    [anon_sym_bitpack] = ACTIONS(1114),
     [anon_sym_struct] = ACTIONS(1114),
     [anon_sym_opaque] = ACTIONS(1114),
     [anon_sym_enum] = ACTIONS(1114),
@@ -107331,6 +108079,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1116),
     [anon_sym_RBRACE] = ACTIONS(1116),
     [anon_sym_packed] = ACTIONS(1118),
+    [anon_sym_bitpack] = ACTIONS(1118),
     [anon_sym_struct] = ACTIONS(1118),
     [anon_sym_opaque] = ACTIONS(1118),
     [anon_sym_enum] = ACTIONS(1118),
@@ -107417,6 +108166,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1108),
     [anon_sym_RBRACE] = ACTIONS(1108),
     [anon_sym_packed] = ACTIONS(1110),
+    [anon_sym_bitpack] = ACTIONS(1110),
     [anon_sym_struct] = ACTIONS(1110),
     [anon_sym_opaque] = ACTIONS(1110),
     [anon_sym_enum] = ACTIONS(1110),
@@ -107503,6 +108253,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1112),
     [anon_sym_RBRACE] = ACTIONS(1112),
     [anon_sym_packed] = ACTIONS(1114),
+    [anon_sym_bitpack] = ACTIONS(1114),
     [anon_sym_struct] = ACTIONS(1114),
     [anon_sym_opaque] = ACTIONS(1114),
     [anon_sym_enum] = ACTIONS(1114),
@@ -107589,6 +108340,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1116),
     [anon_sym_RBRACE] = ACTIONS(1116),
     [anon_sym_packed] = ACTIONS(1118),
+    [anon_sym_bitpack] = ACTIONS(1118),
     [anon_sym_struct] = ACTIONS(1118),
     [anon_sym_opaque] = ACTIONS(1118),
     [anon_sym_enum] = ACTIONS(1118),
@@ -107675,6 +108427,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1108),
     [anon_sym_RBRACE] = ACTIONS(1108),
     [anon_sym_packed] = ACTIONS(1110),
+    [anon_sym_bitpack] = ACTIONS(1110),
     [anon_sym_struct] = ACTIONS(1110),
     [anon_sym_opaque] = ACTIONS(1110),
     [anon_sym_enum] = ACTIONS(1110),
@@ -107761,6 +108514,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1112),
     [anon_sym_RBRACE] = ACTIONS(1112),
     [anon_sym_packed] = ACTIONS(1114),
+    [anon_sym_bitpack] = ACTIONS(1114),
     [anon_sym_struct] = ACTIONS(1114),
     [anon_sym_opaque] = ACTIONS(1114),
     [anon_sym_enum] = ACTIONS(1114),
@@ -107847,6 +108601,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1116),
     [anon_sym_RBRACE] = ACTIONS(1116),
     [anon_sym_packed] = ACTIONS(1118),
+    [anon_sym_bitpack] = ACTIONS(1118),
     [anon_sym_struct] = ACTIONS(1118),
     [anon_sym_opaque] = ACTIONS(1118),
     [anon_sym_enum] = ACTIONS(1118),
@@ -107933,6 +108688,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1120),
     [anon_sym_RBRACE] = ACTIONS(1120),
     [anon_sym_packed] = ACTIONS(1122),
+    [anon_sym_bitpack] = ACTIONS(1122),
     [anon_sym_struct] = ACTIONS(1122),
     [anon_sym_opaque] = ACTIONS(1122),
     [anon_sym_enum] = ACTIONS(1122),
@@ -108019,6 +108775,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1124),
     [anon_sym_RBRACE] = ACTIONS(1124),
     [anon_sym_packed] = ACTIONS(1126),
+    [anon_sym_bitpack] = ACTIONS(1126),
     [anon_sym_struct] = ACTIONS(1126),
     [anon_sym_opaque] = ACTIONS(1126),
     [anon_sym_enum] = ACTIONS(1126),
@@ -108105,6 +108862,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1128),
     [anon_sym_RBRACE] = ACTIONS(1128),
     [anon_sym_packed] = ACTIONS(1130),
+    [anon_sym_bitpack] = ACTIONS(1130),
     [anon_sym_struct] = ACTIONS(1130),
     [anon_sym_opaque] = ACTIONS(1130),
     [anon_sym_enum] = ACTIONS(1130),
@@ -108191,6 +108949,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1128),
     [anon_sym_RBRACE] = ACTIONS(1128),
     [anon_sym_packed] = ACTIONS(1130),
+    [anon_sym_bitpack] = ACTIONS(1130),
     [anon_sym_struct] = ACTIONS(1130),
     [anon_sym_opaque] = ACTIONS(1130),
     [anon_sym_enum] = ACTIONS(1130),
@@ -108277,6 +109036,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1132),
     [anon_sym_RBRACE] = ACTIONS(1132),
     [anon_sym_packed] = ACTIONS(1134),
+    [anon_sym_bitpack] = ACTIONS(1134),
     [anon_sym_struct] = ACTIONS(1134),
     [anon_sym_opaque] = ACTIONS(1134),
     [anon_sym_enum] = ACTIONS(1134),
@@ -108363,6 +109123,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1136),
     [anon_sym_RBRACE] = ACTIONS(1136),
     [anon_sym_packed] = ACTIONS(1138),
+    [anon_sym_bitpack] = ACTIONS(1138),
     [anon_sym_struct] = ACTIONS(1138),
     [anon_sym_opaque] = ACTIONS(1138),
     [anon_sym_enum] = ACTIONS(1138),
@@ -108449,6 +109210,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1140),
     [anon_sym_RBRACE] = ACTIONS(1140),
     [anon_sym_packed] = ACTIONS(1142),
+    [anon_sym_bitpack] = ACTIONS(1142),
     [anon_sym_struct] = ACTIONS(1142),
     [anon_sym_opaque] = ACTIONS(1142),
     [anon_sym_enum] = ACTIONS(1142),
@@ -108535,6 +109297,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(439),
     [anon_sym_RBRACE] = ACTIONS(439),
     [anon_sym_packed] = ACTIONS(1144),
+    [anon_sym_bitpack] = ACTIONS(1144),
     [anon_sym_struct] = ACTIONS(1144),
     [anon_sym_opaque] = ACTIONS(1144),
     [anon_sym_enum] = ACTIONS(1144),
@@ -108621,6 +109384,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1140),
     [anon_sym_RBRACE] = ACTIONS(1140),
     [anon_sym_packed] = ACTIONS(1142),
+    [anon_sym_bitpack] = ACTIONS(1142),
     [anon_sym_struct] = ACTIONS(1142),
     [anon_sym_opaque] = ACTIONS(1142),
     [anon_sym_enum] = ACTIONS(1142),
@@ -108707,6 +109471,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1140),
     [anon_sym_RBRACE] = ACTIONS(1140),
     [anon_sym_packed] = ACTIONS(1142),
+    [anon_sym_bitpack] = ACTIONS(1142),
     [anon_sym_struct] = ACTIONS(1142),
     [anon_sym_opaque] = ACTIONS(1142),
     [anon_sym_enum] = ACTIONS(1142),
@@ -108793,6 +109558,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1140),
     [anon_sym_RBRACE] = ACTIONS(1140),
     [anon_sym_packed] = ACTIONS(1142),
+    [anon_sym_bitpack] = ACTIONS(1142),
     [anon_sym_struct] = ACTIONS(1142),
     [anon_sym_opaque] = ACTIONS(1142),
     [anon_sym_enum] = ACTIONS(1142),
@@ -108879,6 +109645,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1146),
     [anon_sym_RBRACE] = ACTIONS(1146),
     [anon_sym_packed] = ACTIONS(1148),
+    [anon_sym_bitpack] = ACTIONS(1148),
     [anon_sym_struct] = ACTIONS(1148),
     [anon_sym_opaque] = ACTIONS(1148),
     [anon_sym_enum] = ACTIONS(1148),
@@ -108965,6 +109732,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1150),
     [anon_sym_RBRACE] = ACTIONS(1150),
     [anon_sym_packed] = ACTIONS(1152),
+    [anon_sym_bitpack] = ACTIONS(1152),
     [anon_sym_struct] = ACTIONS(1152),
     [anon_sym_opaque] = ACTIONS(1152),
     [anon_sym_enum] = ACTIONS(1152),
@@ -109051,6 +109819,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1154),
     [anon_sym_RBRACE] = ACTIONS(1154),
     [anon_sym_packed] = ACTIONS(1156),
+    [anon_sym_bitpack] = ACTIONS(1156),
     [anon_sym_struct] = ACTIONS(1156),
     [anon_sym_opaque] = ACTIONS(1156),
     [anon_sym_enum] = ACTIONS(1156),
@@ -109137,6 +109906,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1092),
     [anon_sym_RBRACE] = ACTIONS(1092),
     [anon_sym_packed] = ACTIONS(1094),
+    [anon_sym_bitpack] = ACTIONS(1094),
     [anon_sym_struct] = ACTIONS(1094),
     [anon_sym_opaque] = ACTIONS(1094),
     [anon_sym_enum] = ACTIONS(1094),
@@ -109217,6 +109987,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1160),
     [anon_sym_LBRACE] = ACTIONS(1160),
     [anon_sym_packed] = ACTIONS(1158),
+    [anon_sym_bitpack] = ACTIONS(1158),
     [anon_sym_struct] = ACTIONS(1158),
     [anon_sym_opaque] = ACTIONS(1158),
     [anon_sym_enum] = ACTIONS(1158),
@@ -109309,6 +110080,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(740),
     [anon_sym_RBRACE] = ACTIONS(740),
     [anon_sym_packed] = ACTIONS(742),
+    [anon_sym_bitpack] = ACTIONS(742),
     [anon_sym_struct] = ACTIONS(742),
     [anon_sym_opaque] = ACTIONS(742),
     [anon_sym_enum] = ACTIONS(742),
@@ -109389,6 +110161,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1164),
     [anon_sym_RBRACE] = ACTIONS(1164),
     [anon_sym_packed] = ACTIONS(1162),
+    [anon_sym_bitpack] = ACTIONS(1162),
     [anon_sym_struct] = ACTIONS(1162),
     [anon_sym_opaque] = ACTIONS(1162),
     [anon_sym_enum] = ACTIONS(1162),
@@ -109473,6 +110246,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1173),
     [anon_sym_LBRACE] = ACTIONS(1173),
     [anon_sym_packed] = ACTIONS(1168),
+    [anon_sym_bitpack] = ACTIONS(1168),
     [anon_sym_struct] = ACTIONS(1168),
     [anon_sym_opaque] = ACTIONS(1168),
     [anon_sym_enum] = ACTIONS(1168),
@@ -109556,6 +110330,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1186),
     [anon_sym_LBRACE] = ACTIONS(1186),
     [anon_sym_packed] = ACTIONS(1181),
+    [anon_sym_bitpack] = ACTIONS(1181),
     [anon_sym_struct] = ACTIONS(1181),
     [anon_sym_opaque] = ACTIONS(1181),
     [anon_sym_enum] = ACTIONS(1181),
@@ -109639,6 +110414,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1196),
     [anon_sym_RBRACE] = ACTIONS(1196),
     [anon_sym_packed] = ACTIONS(1194),
+    [anon_sym_bitpack] = ACTIONS(1194),
     [anon_sym_struct] = ACTIONS(1194),
     [anon_sym_opaque] = ACTIONS(1194),
     [anon_sym_enum] = ACTIONS(1194),
@@ -109721,6 +110497,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1200),
     [anon_sym_RBRACE] = ACTIONS(1200),
     [anon_sym_packed] = ACTIONS(1198),
+    [anon_sym_bitpack] = ACTIONS(1198),
     [anon_sym_struct] = ACTIONS(1198),
     [anon_sym_opaque] = ACTIONS(1198),
     [anon_sym_enum] = ACTIONS(1198),
@@ -109803,6 +110580,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1054),
     [anon_sym_RBRACE] = ACTIONS(1054),
     [anon_sym_packed] = ACTIONS(1048),
+    [anon_sym_bitpack] = ACTIONS(1048),
     [anon_sym_struct] = ACTIONS(1048),
     [anon_sym_opaque] = ACTIONS(1048),
     [anon_sym_enum] = ACTIONS(1048),
@@ -109885,6 +110663,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1034),
     [anon_sym_RBRACE] = ACTIONS(1034),
     [anon_sym_packed] = ACTIONS(1032),
+    [anon_sym_bitpack] = ACTIONS(1032),
     [anon_sym_struct] = ACTIONS(1032),
     [anon_sym_opaque] = ACTIONS(1032),
     [anon_sym_enum] = ACTIONS(1032),
@@ -109967,6 +110746,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1204),
     [anon_sym_RBRACE] = ACTIONS(1204),
     [anon_sym_packed] = ACTIONS(1202),
+    [anon_sym_bitpack] = ACTIONS(1202),
     [anon_sym_struct] = ACTIONS(1202),
     [anon_sym_opaque] = ACTIONS(1202),
     [anon_sym_enum] = ACTIONS(1202),
@@ -110049,6 +110829,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1208),
     [anon_sym_RBRACE] = ACTIONS(1208),
     [anon_sym_packed] = ACTIONS(1206),
+    [anon_sym_bitpack] = ACTIONS(1206),
     [anon_sym_struct] = ACTIONS(1206),
     [anon_sym_opaque] = ACTIONS(1206),
     [anon_sym_enum] = ACTIONS(1206),
@@ -110131,6 +110912,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1212),
     [anon_sym_RBRACE] = ACTIONS(1212),
     [anon_sym_packed] = ACTIONS(1210),
+    [anon_sym_bitpack] = ACTIONS(1210),
     [anon_sym_struct] = ACTIONS(1210),
     [anon_sym_opaque] = ACTIONS(1210),
     [anon_sym_enum] = ACTIONS(1210),
@@ -110213,6 +110995,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1216),
     [anon_sym_RBRACE] = ACTIONS(1216),
     [anon_sym_packed] = ACTIONS(1214),
+    [anon_sym_bitpack] = ACTIONS(1214),
     [anon_sym_struct] = ACTIONS(1214),
     [anon_sym_opaque] = ACTIONS(1214),
     [anon_sym_enum] = ACTIONS(1214),
@@ -110295,6 +111078,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1220),
     [anon_sym_LBRACE] = ACTIONS(1220),
     [anon_sym_packed] = ACTIONS(1218),
+    [anon_sym_bitpack] = ACTIONS(1218),
     [anon_sym_struct] = ACTIONS(1218),
     [anon_sym_opaque] = ACTIONS(1218),
     [anon_sym_enum] = ACTIONS(1218),
@@ -110377,6 +111161,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1224),
     [anon_sym_RBRACE] = ACTIONS(1224),
     [anon_sym_packed] = ACTIONS(1222),
+    [anon_sym_bitpack] = ACTIONS(1222),
     [anon_sym_struct] = ACTIONS(1222),
     [anon_sym_opaque] = ACTIONS(1222),
     [anon_sym_enum] = ACTIONS(1222),
@@ -110459,6 +111244,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1228),
     [anon_sym_RBRACE] = ACTIONS(1228),
     [anon_sym_packed] = ACTIONS(1226),
+    [anon_sym_bitpack] = ACTIONS(1226),
     [anon_sym_struct] = ACTIONS(1226),
     [anon_sym_opaque] = ACTIONS(1226),
     [anon_sym_enum] = ACTIONS(1226),
@@ -110541,6 +111327,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1232),
     [anon_sym_RBRACE] = ACTIONS(1232),
     [anon_sym_packed] = ACTIONS(1230),
+    [anon_sym_bitpack] = ACTIONS(1230),
     [anon_sym_struct] = ACTIONS(1230),
     [anon_sym_opaque] = ACTIONS(1230),
     [anon_sym_enum] = ACTIONS(1230),
@@ -110623,6 +111410,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1236),
     [anon_sym_RBRACE] = ACTIONS(1236),
     [anon_sym_packed] = ACTIONS(1234),
+    [anon_sym_bitpack] = ACTIONS(1234),
     [anon_sym_struct] = ACTIONS(1234),
     [anon_sym_opaque] = ACTIONS(1234),
     [anon_sym_enum] = ACTIONS(1234),
@@ -110705,6 +111493,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1240),
     [anon_sym_RBRACE] = ACTIONS(1240),
     [anon_sym_packed] = ACTIONS(1238),
+    [anon_sym_bitpack] = ACTIONS(1238),
     [anon_sym_struct] = ACTIONS(1238),
     [anon_sym_opaque] = ACTIONS(1238),
     [anon_sym_enum] = ACTIONS(1238),
@@ -110787,6 +111576,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1244),
     [anon_sym_RBRACE] = ACTIONS(1244),
     [anon_sym_packed] = ACTIONS(1242),
+    [anon_sym_bitpack] = ACTIONS(1242),
     [anon_sym_struct] = ACTIONS(1242),
     [anon_sym_opaque] = ACTIONS(1242),
     [anon_sym_enum] = ACTIONS(1242),
@@ -110869,6 +111659,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1248),
     [anon_sym_RBRACE] = ACTIONS(1248),
     [anon_sym_packed] = ACTIONS(1246),
+    [anon_sym_bitpack] = ACTIONS(1246),
     [anon_sym_struct] = ACTIONS(1246),
     [anon_sym_opaque] = ACTIONS(1246),
     [anon_sym_enum] = ACTIONS(1246),
@@ -110951,6 +111742,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1252),
     [anon_sym_RBRACE] = ACTIONS(1252),
     [anon_sym_packed] = ACTIONS(1250),
+    [anon_sym_bitpack] = ACTIONS(1250),
     [anon_sym_struct] = ACTIONS(1250),
     [anon_sym_opaque] = ACTIONS(1250),
     [anon_sym_enum] = ACTIONS(1250),
@@ -111033,6 +111825,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1256),
     [anon_sym_RBRACE] = ACTIONS(1256),
     [anon_sym_packed] = ACTIONS(1254),
+    [anon_sym_bitpack] = ACTIONS(1254),
     [anon_sym_struct] = ACTIONS(1254),
     [anon_sym_opaque] = ACTIONS(1254),
     [anon_sym_enum] = ACTIONS(1254),
@@ -111115,6 +111908,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1260),
     [anon_sym_RBRACE] = ACTIONS(1260),
     [anon_sym_packed] = ACTIONS(1258),
+    [anon_sym_bitpack] = ACTIONS(1258),
     [anon_sym_struct] = ACTIONS(1258),
     [anon_sym_opaque] = ACTIONS(1258),
     [anon_sym_enum] = ACTIONS(1258),
@@ -111197,6 +111991,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1264),
     [anon_sym_RBRACE] = ACTIONS(1264),
     [anon_sym_packed] = ACTIONS(1262),
+    [anon_sym_bitpack] = ACTIONS(1262),
     [anon_sym_struct] = ACTIONS(1262),
     [anon_sym_opaque] = ACTIONS(1262),
     [anon_sym_enum] = ACTIONS(1262),
@@ -111279,6 +112074,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1268),
     [anon_sym_LBRACE] = ACTIONS(1268),
     [anon_sym_packed] = ACTIONS(1266),
+    [anon_sym_bitpack] = ACTIONS(1266),
     [anon_sym_struct] = ACTIONS(1266),
     [anon_sym_opaque] = ACTIONS(1266),
     [anon_sym_enum] = ACTIONS(1266),
@@ -111361,6 +112157,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1272),
     [anon_sym_RBRACE] = ACTIONS(1272),
     [anon_sym_packed] = ACTIONS(1270),
+    [anon_sym_bitpack] = ACTIONS(1270),
     [anon_sym_struct] = ACTIONS(1270),
     [anon_sym_opaque] = ACTIONS(1270),
     [anon_sym_enum] = ACTIONS(1270),
@@ -111443,6 +112240,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1276),
     [anon_sym_LBRACE] = ACTIONS(1276),
     [anon_sym_packed] = ACTIONS(1274),
+    [anon_sym_bitpack] = ACTIONS(1274),
     [anon_sym_struct] = ACTIONS(1274),
     [anon_sym_opaque] = ACTIONS(1274),
     [anon_sym_enum] = ACTIONS(1274),
@@ -111525,6 +112323,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1280),
     [anon_sym_RBRACE] = ACTIONS(1280),
     [anon_sym_packed] = ACTIONS(1278),
+    [anon_sym_bitpack] = ACTIONS(1278),
     [anon_sym_struct] = ACTIONS(1278),
     [anon_sym_opaque] = ACTIONS(1278),
     [anon_sym_enum] = ACTIONS(1278),
@@ -111607,6 +112406,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1284),
     [anon_sym_RBRACE] = ACTIONS(1284),
     [anon_sym_packed] = ACTIONS(1282),
+    [anon_sym_bitpack] = ACTIONS(1282),
     [anon_sym_struct] = ACTIONS(1282),
     [anon_sym_opaque] = ACTIONS(1282),
     [anon_sym_enum] = ACTIONS(1282),
@@ -111689,6 +112489,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1046),
     [anon_sym_RBRACE] = ACTIONS(1046),
     [anon_sym_packed] = ACTIONS(1044),
+    [anon_sym_bitpack] = ACTIONS(1044),
     [anon_sym_struct] = ACTIONS(1044),
     [anon_sym_opaque] = ACTIONS(1044),
     [anon_sym_enum] = ACTIONS(1044),
@@ -111771,6 +112572,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1288),
     [anon_sym_LBRACE] = ACTIONS(1288),
     [anon_sym_packed] = ACTIONS(1286),
+    [anon_sym_bitpack] = ACTIONS(1286),
     [anon_sym_struct] = ACTIONS(1286),
     [anon_sym_opaque] = ACTIONS(1286),
     [anon_sym_enum] = ACTIONS(1286),
@@ -111853,6 +112655,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LBRACE] = ACTIONS(1292),
     [anon_sym_RBRACE] = ACTIONS(1292),
     [anon_sym_packed] = ACTIONS(1290),
+    [anon_sym_bitpack] = ACTIONS(1290),
     [anon_sym_struct] = ACTIONS(1290),
     [anon_sym_opaque] = ACTIONS(1290),
     [anon_sym_enum] = ACTIONS(1290),
@@ -111933,6 +112736,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1296),
     [anon_sym_LBRACE] = ACTIONS(1296),
     [anon_sym_packed] = ACTIONS(1294),
+    [anon_sym_bitpack] = ACTIONS(1294),
     [anon_sym_struct] = ACTIONS(1294),
     [anon_sym_opaque] = ACTIONS(1294),
     [anon_sym_enum] = ACTIONS(1294),
@@ -112014,6 +112818,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1300),
     [anon_sym_LBRACE] = ACTIONS(1300),
     [anon_sym_packed] = ACTIONS(1298),
+    [anon_sym_bitpack] = ACTIONS(1298),
     [anon_sym_struct] = ACTIONS(1298),
     [anon_sym_opaque] = ACTIONS(1298),
     [anon_sym_enum] = ACTIONS(1298),
@@ -112094,6 +112899,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1304),
     [anon_sym_LBRACE] = ACTIONS(1304),
     [anon_sym_packed] = ACTIONS(1302),
+    [anon_sym_bitpack] = ACTIONS(1302),
     [anon_sym_struct] = ACTIONS(1302),
     [anon_sym_opaque] = ACTIONS(1302),
     [anon_sym_enum] = ACTIONS(1302),
@@ -112174,6 +112980,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1308),
     [anon_sym_LBRACE] = ACTIONS(1308),
     [anon_sym_packed] = ACTIONS(1306),
+    [anon_sym_bitpack] = ACTIONS(1306),
     [anon_sym_struct] = ACTIONS(1306),
     [anon_sym_opaque] = ACTIONS(1306),
     [anon_sym_enum] = ACTIONS(1306),
@@ -112257,6 +113064,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1312),
     [anon_sym_LBRACE] = ACTIONS(1312),
     [anon_sym_packed] = ACTIONS(1310),
+    [anon_sym_bitpack] = ACTIONS(1310),
     [anon_sym_struct] = ACTIONS(1310),
     [anon_sym_opaque] = ACTIONS(1310),
     [anon_sym_enum] = ACTIONS(1310),
@@ -112334,6 +113142,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1316),
     [anon_sym_LBRACE] = ACTIONS(1316),
     [anon_sym_packed] = ACTIONS(1314),
+    [anon_sym_bitpack] = ACTIONS(1314),
     [anon_sym_struct] = ACTIONS(1314),
     [anon_sym_opaque] = ACTIONS(1314),
     [anon_sym_enum] = ACTIONS(1314),
@@ -112414,6 +113223,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1320),
     [anon_sym_LBRACE] = ACTIONS(1320),
     [anon_sym_packed] = ACTIONS(1318),
+    [anon_sym_bitpack] = ACTIONS(1318),
     [anon_sym_struct] = ACTIONS(1318),
     [anon_sym_opaque] = ACTIONS(1318),
     [anon_sym_enum] = ACTIONS(1318),
@@ -112496,6 +113306,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1326),
     [anon_sym_LBRACE] = ACTIONS(1326),
     [anon_sym_packed] = ACTIONS(1322),
+    [anon_sym_bitpack] = ACTIONS(1322),
     [anon_sym_struct] = ACTIONS(1322),
     [anon_sym_opaque] = ACTIONS(1322),
     [anon_sym_enum] = ACTIONS(1322),
@@ -112574,6 +113385,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1330),
     [anon_sym_LBRACE] = ACTIONS(1330),
     [anon_sym_packed] = ACTIONS(1328),
+    [anon_sym_bitpack] = ACTIONS(1328),
     [anon_sym_struct] = ACTIONS(1328),
     [anon_sym_opaque] = ACTIONS(1328),
     [anon_sym_enum] = ACTIONS(1328),
@@ -112652,6 +113464,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1336),
     [anon_sym_LBRACE] = ACTIONS(1336),
     [anon_sym_packed] = ACTIONS(1332),
+    [anon_sym_bitpack] = ACTIONS(1332),
     [anon_sym_struct] = ACTIONS(1332),
     [anon_sym_opaque] = ACTIONS(1332),
     [anon_sym_enum] = ACTIONS(1332),
@@ -112728,6 +113541,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1340),
     [anon_sym_LBRACE] = ACTIONS(1340),
     [anon_sym_packed] = ACTIONS(1338),
+    [anon_sym_bitpack] = ACTIONS(1338),
     [anon_sym_struct] = ACTIONS(1338),
     [anon_sym_opaque] = ACTIONS(1338),
     [anon_sym_enum] = ACTIONS(1338),
@@ -112804,6 +113618,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1344),
     [anon_sym_LBRACE] = ACTIONS(1344),
     [anon_sym_packed] = ACTIONS(1342),
+    [anon_sym_bitpack] = ACTIONS(1342),
     [anon_sym_struct] = ACTIONS(1342),
     [anon_sym_opaque] = ACTIONS(1342),
     [anon_sym_enum] = ACTIONS(1342),
@@ -112880,6 +113695,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1348),
     [anon_sym_LBRACE] = ACTIONS(1348),
     [anon_sym_packed] = ACTIONS(1346),
+    [anon_sym_bitpack] = ACTIONS(1346),
     [anon_sym_struct] = ACTIONS(1346),
     [anon_sym_opaque] = ACTIONS(1346),
     [anon_sym_enum] = ACTIONS(1346),
@@ -112956,6 +113772,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1352),
     [anon_sym_LBRACE] = ACTIONS(1352),
     [anon_sym_packed] = ACTIONS(1350),
+    [anon_sym_bitpack] = ACTIONS(1350),
     [anon_sym_struct] = ACTIONS(1350),
     [anon_sym_opaque] = ACTIONS(1350),
     [anon_sym_enum] = ACTIONS(1350),
@@ -113032,6 +113849,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1356),
     [anon_sym_LBRACE] = ACTIONS(1356),
     [anon_sym_packed] = ACTIONS(1354),
+    [anon_sym_bitpack] = ACTIONS(1354),
     [anon_sym_struct] = ACTIONS(1354),
     [anon_sym_opaque] = ACTIONS(1354),
     [anon_sym_enum] = ACTIONS(1354),
@@ -113108,6 +113926,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1360),
     [anon_sym_LBRACE] = ACTIONS(1360),
     [anon_sym_packed] = ACTIONS(1358),
+    [anon_sym_bitpack] = ACTIONS(1358),
     [anon_sym_struct] = ACTIONS(1358),
     [anon_sym_opaque] = ACTIONS(1358),
     [anon_sym_enum] = ACTIONS(1358),
@@ -113184,6 +114003,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1364),
     [anon_sym_LBRACE] = ACTIONS(1364),
     [anon_sym_packed] = ACTIONS(1362),
+    [anon_sym_bitpack] = ACTIONS(1362),
     [anon_sym_struct] = ACTIONS(1362),
     [anon_sym_opaque] = ACTIONS(1362),
     [anon_sym_enum] = ACTIONS(1362),
@@ -113260,6 +114080,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1368),
     [anon_sym_LBRACE] = ACTIONS(1368),
     [anon_sym_packed] = ACTIONS(1366),
+    [anon_sym_bitpack] = ACTIONS(1366),
     [anon_sym_struct] = ACTIONS(1366),
     [anon_sym_opaque] = ACTIONS(1366),
     [anon_sym_enum] = ACTIONS(1366),
@@ -113336,6 +114157,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1372),
     [anon_sym_LBRACE] = ACTIONS(1372),
     [anon_sym_packed] = ACTIONS(1370),
+    [anon_sym_bitpack] = ACTIONS(1370),
     [anon_sym_struct] = ACTIONS(1370),
     [anon_sym_opaque] = ACTIONS(1370),
     [anon_sym_enum] = ACTIONS(1370),
@@ -113412,6 +114234,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [anon_sym_LPAREN] = ACTIONS(1376),
     [anon_sym_LBRACE] = ACTIONS(1376),
     [anon_sym_packed] = ACTIONS(1374),
+    [anon_sym_bitpack] = ACTIONS(1374),
     [anon_sym_struct] = ACTIONS(1374),
     [anon_sym_opaque] = ACTIONS(1374),
     [anon_sym_enum] = ACTIONS(1374),

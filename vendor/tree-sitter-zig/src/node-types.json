@@ -2868,6 +2868,10 @@
     "named": false
   },
   {
+    "type": "bitpack",
+    "named": false
+  },
+  {
     "type": "bool",
     "named": false
   },
