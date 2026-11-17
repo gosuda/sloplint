@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 77a89b2..1c2ffb4 100644
+index 77a89b2..113f1c2 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -58,6 +58,38 @@ module.exports = grammar(C, {
@@ -57,7 +57,7 @@ index 77a89b2..1c2ffb4 100644
      [$._declaration_specifiers, $._constructor_specifiers],
      [$._binary_fold_operator, $._fold_operator],
      [$._function_declarator_seq],
-@@ -94,6 +126,189 @@ module.exports = grammar(C, {
+@@ -94,6 +126,179 @@ module.exports = grammar(C, {
      [$.init_statement, $._for_statement_body],
      [$.field_expression, $.template_method, $.template_type],
      [$.qualified_field_identifier, $.template_method, $.template_type],
@@ -67,20 +67,9 @@ index 77a89b2..1c2ffb4 100644
 +    [$.type_specifier, $._class_name],
 +    [$._class_name, $.expression],
 +    [$.macro_declaration, $._declarator],
-+    [$.abstract_parenthesized_declarator, $.pointer_declarator, $.abstract_pointer_declarator],
 +    [$.pointer_declarator, $._init_pointer_declarator],
-+    // `C::*name` member-pointer declarator vs a qualified name that keeps
-+    // consuming `::*` — the scope arm on pointer_declarator.
-+    [$.pointer_declarator, $.qualified_identifier],
-+    [$.pointer_declarator, $.qualified_identifier, $.qualified_type_identifier, $.qualified_operator_cast_identifier],
-+    [$.pointer_declarator, $.qualified_identifier, $.qualified_type_identifier],
-+    [$.pointer_declarator, $.qualified_identifier, $.qualified_operator_cast_identifier],
 +    [$._declarator, $._init_reference_declarator],
 +    [$.function_definition, $.pointer_declarator],
-+    [$.pointer_declarator, $.function_declarator],
-+    [$.attributed_declarator, $.pointer_declarator],
-+    [$.abstract_parenthesized_declarator, $.pointer_declarator, $.qualified_identifier],
-+    [$.abstract_parenthesized_declarator, $.pointer_declarator, $.qualified_identifier, $.qualified_type_identifier],
 +    [$.parenthesized_declarator, $.pointer_declarator],
 +    [$.pointer_declarator],
 +    [$.abstract_parenthesized_declarator, $.abstract_pointer_declarator],
@@ -243,11 +232,12 @@ index 77a89b2..1c2ffb4 100644
 +    [$.abstract_parenthesized_declarator, $.qualified_type_identifier],
 +    [$.abstract_parenthesized_declarator, $.qualified_identifier],
 +    [$.abstract_parenthesized_declarator, $.qualified_identifier, $.qualified_type_identifier],
++    [$._type_declarator, $.template_type],
 +    [$.expression],
    ],
  
    inline: ($, original) => original.concat([
-@@ -119,6 +334,13 @@ module.exports = grammar(C, {
+@@ -119,6 +324,13 @@ module.exports = grammar(C, {
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -261,7 +251,7 @@ index 77a89b2..1c2ffb4 100644
      ),
  
      _block_item: ($, original) => choice(
-@@ -134,6 +356,24 @@ module.exports = grammar(C, {
+@@ -134,6 +346,24 @@ module.exports = grammar(C, {
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -286,7 +276,7 @@ index 77a89b2..1c2ffb4 100644
      ),
  
      // Types
-@@ -153,7 +393,9 @@ module.exports = grammar(C, {
+@@ -153,7 +383,9 @@ module.exports = grammar(C, {
      decltype: $ => seq(
        'decltype',
        '(',
@@ -297,7 +287,7 @@ index 77a89b2..1c2ffb4 100644
        ')',
      ),
  
-@@ -168,14 +410,27 @@ module.exports = grammar(C, {
+@@ -168,14 +400,27 @@ module.exports = grammar(C, {
        $.dependent_type,
        $.placeholder_type_specifier,
        $.decltype,
@@ -327,7 +317,7 @@ index 77a89b2..1c2ffb4 100644
        'mutable',
        'constinit',
        'consteval',
-@@ -193,6 +448,11 @@ module.exports = grammar(C, {
+@@ -193,6 +438,11 @@ module.exports = grammar(C, {
        $._class_declaration_item,
      ),
      _class_declaration_item: $ => prec.right(seq(
@@ -339,7 +329,7 @@ index 77a89b2..1c2ffb4 100644
        choice(
          field('name', $._class_name),
          seq(
-@@ -226,12 +486,16 @@ module.exports = grammar(C, {
+@@ -226,12 +476,16 @@ module.exports = grammar(C, {
        alias($.qualified_type_identifier, $.qualified_identifier),
      )),
  
@@ -357,7 +347,7 @@ index 77a89b2..1c2ffb4 100644
      }),
  
      declaration: $ => seq(
-@@ -240,8 +504,14 @@ module.exports = grammar(C, {
+@@ -240,8 +494,14 @@ module.exports = grammar(C, {
          seq(
            // C uses _declaration_declarator here for some nice macro parsing in function declarators,
            // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
@@ -372,7 +362,7 @@ index 77a89b2..1c2ffb4 100644
          ),
          $.init_declarator,
        ))),
-@@ -284,14 +554,24 @@ module.exports = grammar(C, {
+@@ -284,14 +544,24 @@ module.exports = grammar(C, {
  
      enum_specifier: $ => prec.right(seq(
        'enum',
@@ -402,7 +392,7 @@ index 77a89b2..1c2ffb4 100644
        ),
        optional($.attribute_specifier),
      )),
-@@ -339,9 +619,16 @@ module.exports = grammar(C, {
+@@ -339,9 +609,16 @@ module.exports = grammar(C, {
      ),
  
      template_instantiation: $ => seq(
@@ -421,7 +411,7 @@ index 77a89b2..1c2ffb4 100644
        ';',
      ),
  
-@@ -387,26 +674,50 @@ module.exports = grammar(C, {
+@@ -387,26 +664,50 @@ module.exports = grammar(C, {
        ),
      ),
  
@@ -482,7 +472,7 @@ index 77a89b2..1c2ffb4 100644
        field('declarator', choice(
          $.variadic_declarator,
          alias($.variadic_reference_declarator, $.reference_declarator),
-@@ -432,6 +743,23 @@ module.exports = grammar(C, {
+@@ -432,6 +733,23 @@ module.exports = grammar(C, {
            $.initializer_list,
          )),
        ),
@@ -506,7 +496,7 @@ index 77a89b2..1c2ffb4 100644
      ),
  
      operator_cast: $ => prec.right(1, seq(
-@@ -444,9 +772,31 @@ module.exports = grammar(C, {
+@@ -444,9 +762,31 @@ module.exports = grammar(C, {
      //   A b {};
      compound_statement: (_, original) => prec(-1, original),
  
@@ -539,7 +529,7 @@ index 77a89b2..1c2ffb4 100644
      ),
  
      field_initializer: $ => prec(1, seq(
-@@ -469,22 +819,43 @@ module.exports = grammar(C, {
+@@ -469,22 +809,43 @@ module.exports = grammar(C, {
        alias($.operator_cast_declaration, $.declaration),
        $.friend_declaration,
        seq($.access_specifier, ':'),
@@ -590,7 +580,7 @@ index 77a89b2..1c2ffb4 100644
        )),
        optional($.attribute_specifier),
        ';',
-@@ -493,6 +864,8 @@ module.exports = grammar(C, {
+@@ -493,6 +854,8 @@ module.exports = grammar(C, {
      inline_method_definition: $ => seq(
        $._declaration_specifiers,
        field('declarator', $._field_declarator),
@@ -599,7 +589,7 @@ index 77a89b2..1c2ffb4 100644
        choice(
          field('body', choice($.compound_statement, $.try_statement)),
          $.default_method_clause,
-@@ -512,6 +885,7 @@ module.exports = grammar(C, {
+@@ -512,6 +875,7 @@ module.exports = grammar(C, {
          $.operator_cast,
          alias($.qualified_operator_cast_identifier, $.qualified_identifier),
        )),
@@ -607,7 +597,7 @@ index 77a89b2..1c2ffb4 100644
        field('body', choice($.compound_statement, $.try_statement)),
      ),
  
-@@ -535,9 +909,11 @@ module.exports = grammar(C, {
+@@ -535,9 +899,11 @@ module.exports = grammar(C, {
      constructor_or_destructor_definition: $ => seq(
        repeat($._constructor_specifiers),
        field('declarator', $.function_declarator),
@@ -619,7 +609,7 @@ index 77a89b2..1c2ffb4 100644
            field('body', $.compound_statement),
          ),
          alias($.constructor_try_statement, $.try_statement),
-@@ -580,6 +956,298 @@ module.exports = grammar(C, {
+@@ -580,6 +946,298 @@ module.exports = grammar(C, {
        'protected',
      ),
  
@@ -918,7 +908,19 @@ index 77a89b2..1c2ffb4 100644
      _declarator: ($, original) => choice(
        original,
        $.reference_declarator,
-@@ -607,6 +1275,54 @@ module.exports = grammar(C, {
+@@ -600,6 +1258,11 @@ module.exports = grammar(C, {
+     _type_declarator: ($, original) => choice(
+       original,
+       alias($.reference_type_declarator, $.reference_declarator),
++      // `typedef void (dummy::*sb)()` — scoped member pointers inside
++      // parenthesized type declarators (inherited `parenthesized_type_declarator`
++      // wraps `_type_declarator`, which upstream leaves without
++      // qualified_identifier).
++      $.qualified_identifier,
+     ),
+ 
+     _abstract_declarator: ($, original) => choice(
+@@ -607,6 +1270,34 @@ module.exports = grammar(C, {
        $.abstract_reference_declarator,
      ),
  
@@ -950,30 +952,10 @@ index 77a89b2..1c2ffb4 100644
 +      ')',
 +    )),
 +
-+    // Named pointer-to-member: `dummy::*safe_bool` inside
-+    // `(dummy::*safe_bool)` — e.g. `typedef void (dummy::*safe_bool)()`.
-+    // The anonymous `scope::*` case already parses through
-+    // abstract_parenthesized_declarator; this arm adds the name slot.
-+    pointer_declarator: ($, original) => choice(
-+      original,
-+      seq(
-+        repeat1($._scope_resolution),
-+        '*',
-+        repeat(choice(
-+          $.ms_pointer_modifier,
-+          $.type_qualifier,
-+          $.ms_call_modifier,
-+          $.far_ptr_modifier,
-+          $.macro_attribute,
-+        )),
-+        field('declarator', $._declarator),
-+      ),
-+    ),
-+
      reference_declarator: $ => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._declarator))),
      reference_field_declarator: $ => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._field_declarator))),
      reference_type_declarator: $ => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._type_declarator))),
-@@ -646,8 +1362,15 @@ module.exports = grammar(C, {
+@@ -646,8 +1337,15 @@ module.exports = grammar(C, {
        ),
      )),
  
@@ -990,7 +972,7 @@ index 77a89b2..1c2ffb4 100644
        $.requires_clause,
      )),
  
-@@ -807,6 +1530,9 @@ module.exports = grammar(C, {
+@@ -807,6 +1505,9 @@ module.exports = grammar(C, {
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
@@ -1000,7 +982,7 @@ index 77a89b2..1c2ffb4 100644
      ),
  
      switch_statement: $ => seq(
-@@ -818,16 +1544,27 @@ module.exports = grammar(C, {
+@@ -818,16 +1519,27 @@ module.exports = grammar(C, {
      while_statement: $ => seq(
        'while',
        field('condition', $.condition_clause),
@@ -1030,7 +1012,7 @@ index 77a89b2..1c2ffb4 100644
  
      // Using prec(1) instead of prec.dynamic(1) causes issues with the
      // range loop's declaration specifiers if `int` is passed in, it'll
-@@ -838,7 +1575,7 @@ module.exports = grammar(C, {
+@@ -838,7 +1550,7 @@ module.exports = grammar(C, {
        '(',
        $._for_range_loop_body,
        ')',
@@ -1039,7 +1021,7 @@ index 77a89b2..1c2ffb4 100644
      ),
      _for_range_loop_body: $ => seq(
        field('initializer', optional($.init_statement)),
-@@ -968,10 +1705,257 @@ module.exports = grammar(C, {
+@@ -968,10 +1680,257 @@ module.exports = grammar(C, {
        ']',
      ),
  
@@ -1301,7 +1283,7 @@ index 77a89b2..1c2ffb4 100644
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +1975,15 @@ module.exports = grammar(C, {
+@@ -991,9 +1950,15 @@ module.exports = grammar(C, {
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -1320,7 +1302,7 @@ index 77a89b2..1c2ffb4 100644
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +1997,7 @@ module.exports = grammar(C, {
+@@ -1007,7 +1972,7 @@ module.exports = grammar(C, {
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -1329,7 +1311,7 @@ index 77a89b2..1c2ffb4 100644
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +2005,7 @@ module.exports = grammar(C, {
+@@ -1015,6 +1980,7 @@ module.exports = grammar(C, {
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -1337,7 +1319,7 @@ index 77a89b2..1c2ffb4 100644
        )),
      ),
  
-@@ -1215,13 +2206,66 @@ module.exports = grammar(C, {
+@@ -1215,13 +2181,66 @@ module.exports = grammar(C, {
              field('operator', operator),
              field('right', $.expression),
            ));
@@ -1406,7 +1388,7 @@ index 77a89b2..1c2ffb4 100644
        ')',
      ),
  
-@@ -1230,7 +2274,7 @@ module.exports = grammar(C, {
+@@ -1230,7 +2249,7 @@ module.exports = grammar(C, {
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -1415,7 +1397,15 @@ index 77a89b2..1c2ffb4 100644
          field('value', $.initializer_list),
        ),
      ),
-@@ -1256,6 +2300,7 @@ module.exports = grammar(C, {
+@@ -1244,6 +2263,7 @@ module.exports = grammar(C, {
+         $._namespace_identifier,
+         $.template_type,
+         $.decltype,
++        $._type_identifier,
+         alias($.dependent_type_identifier, $.dependent_name),
+       ))),
+       '::',
+@@ -1256,6 +2276,7 @@ module.exports = grammar(C, {
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -1423,7 +1413,7 @@ index 77a89b2..1c2ffb4 100644
        )),
      ),
  
-@@ -1296,10 +2341,20 @@ module.exports = grammar(C, {
+@@ -1296,10 +2317,20 @@ module.exports = grammar(C, {
        $.user_defined_literal,
      ),
  
@@ -1448,7 +1438,7 @@ index 77a89b2..1c2ffb4 100644
      )),
  
      _assignment_expression_lhs: $ => seq(
-@@ -1342,11 +2397,47 @@ module.exports = grammar(C, {
+@@ -1342,11 +2373,47 @@ module.exports = grammar(C, {
  
      this: _ => 'this',
  
@@ -1501,7 +1491,7 @@ index 77a89b2..1c2ffb4 100644
  
      number_literal: $ => {
        const sign = /[-\+]/;
-@@ -1409,7 +2500,10 @@ module.exports = grammar(C, {
+@@ -1409,7 +2476,10 @@ module.exports = grammar(C, {
        $.literal_suffix,
      ),
  
@@ -1513,7 +1503,7 @@ index 77a89b2..1c2ffb4 100644
    },
  });
  
-@@ -1434,3 +2528,69 @@ function commaSep(rule) {
+@@ -1434,3 +2504,69 @@ function commaSep(rule) {
  function commaSep1(rule) {
    return seq(rule, repeat(seq(',', rule)));
  }

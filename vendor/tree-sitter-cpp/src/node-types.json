@@ -150,6 +150,10 @@
         "named": true
       },
       {
+        "type": "qualified_identifier",
+        "named": true
+      },
+      {
         "type": "reference_declarator",
         "named": true
       },
@@ -631,6 +635,10 @@
           },
           {
             "type": "template_type",
+            "named": true
+          },
+          {
+            "type": "type_identifier",
             "named": true
           }
         ]
@@ -7873,6 +7881,10 @@
           },
           {
             "type": "template_type",
+            "named": true
+          },
+          {
+            "type": "type_identifier",
             "named": true
           }
         ]

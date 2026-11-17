@@ -8194,6 +8194,10 @@
           },
           "named": true,
           "value": "reference_declarator"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "qualified_identifier"
         }
       ]
     },
@@ -26116,6 +26120,10 @@
                       "name": "decltype"
                     },
                     {
+                      "type": "SYMBOL",
+                      "name": "_type_identifier"
+                    },
+                    {
                       "type": "ALIAS",
                       "content": {
                         "type": "SYMBOL",
@@ -27707,6 +27715,10 @@
       "abstract_parenthesized_declarator",
       "qualified_identifier",
       "qualified_type_identifier"
+    ],
+    [
+      "_type_declarator",
+      "template_type"
     ],
     [
       "expression"

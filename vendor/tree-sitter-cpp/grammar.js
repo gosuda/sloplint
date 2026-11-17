@@ -297,6 +297,7 @@ module.exports = grammar(C, {
     [$.abstract_parenthesized_declarator, $.qualified_type_identifier],
     [$.abstract_parenthesized_declarator, $.qualified_identifier],
     [$.abstract_parenthesized_declarator, $.qualified_identifier, $.qualified_type_identifier],
+    [$._type_declarator, $.template_type],
     [$.expression],
   ],
 
@@ -1257,6 +1258,11 @@ module.exports = grammar(C, {
     _type_declarator: ($, original) => choice(
       original,
       alias($.reference_type_declarator, $.reference_declarator),
+      // `typedef void (dummy::*sb)()` — scoped member pointers inside
+      // parenthesized type declarators (inherited `parenthesized_type_declarator`
+      // wraps `_type_declarator`, which upstream leaves without
+      // qualified_identifier).
+      $.qualified_identifier,
     ),
 
     _abstract_declarator: ($, original) => choice(
@@ -2257,6 +2263,7 @@ module.exports = grammar(C, {
         $._namespace_identifier,
         $.template_type,
         $.decltype,
+        $._type_identifier,
         alias($.dependent_type_identifier, $.dependent_name),
       ))),
       '::',

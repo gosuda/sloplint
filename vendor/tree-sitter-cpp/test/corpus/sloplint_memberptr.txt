@@ -84,3 +84,57 @@ using P = int (X::*)(int);
         parameters: (parameter_list
           (parameter_declaration
             type: (primitive_type)))))))
+
+================================================================================
+Named member-pointer typedefs: typedef void (C::*name)(Args)
+================================================================================
+
+struct dummy {};
+
+typedef void (dummy::*safe_bool)();
+typedef void (dummy::*safe_bool2)(int);
+
+class C {
+    typedef void (dummy::*sb2)(int);
+};
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list))
+  (type_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (parenthesized_declarator
+        (qualified_identifier
+          scope: (namespace_identifier)
+          name: (pointer_type_declarator
+            declarator: (type_identifier))))
+      parameters: (parameter_list)))
+  (type_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (parenthesized_declarator
+        (qualified_identifier
+          scope: (namespace_identifier)
+          name: (pointer_type_declarator
+            declarator: (type_identifier))))
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)))))
+  (class_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (type_definition
+        type: (primitive_type)
+        declarator: (function_declarator
+          declarator: (parenthesized_declarator
+            (qualified_identifier
+              scope: (namespace_identifier)
+              name: (pointer_type_declarator
+                declarator: (type_identifier))))
+          parameters: (parameter_list
+            (parameter_declaration
+              type: (primitive_type))))))))

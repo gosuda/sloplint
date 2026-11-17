@@ -364,9 +364,14 @@ clang++ with `-std=c++23`.
   The scope-prefixed `*` lives only inside
   `abstract_parenthesized_declarator` — putting it on
   `_abstract_declarator` made `delete [] p` ambiguous with a lambda
-  capture list. Named member-pointer variables (`int C::* p`) stay
-  errors: rare, and the scope prefix on `pointer_declarator` resurrects
-  the same ambiguity. A parameter list may also take a parenthesized
+  capture list. Named member-pointer declarators also parse:
+  `int C::* p;` worked already via `qualified_identifier`, and
+  `typedef void (C::*sb)(int);` works because `_type_declarator` gained
+  `qualified_identifier` and `_scope_resolution` accepts a plain
+  `_type_identifier` as its scope (needed because `dummy` inside the
+  parens lexes as `type_identifier`, not `identifier`). Residual: a
+  trailing cv-qualifier on the typedef (`typedef void (C::*f)() const;`)
+  still errors. A parameter list may also take a parenthesized
   declarator (`T (&arr)[N]`, `T (*arr)[N]`) — the pre-type qualifier in
   a parameter is restricted to a bare identifier (`_parameter_specifiers`),
   so the `(` is never read as a macro argument list; `decltype` accepts a
