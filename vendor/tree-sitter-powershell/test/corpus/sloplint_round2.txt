@@ -1772,3 +1772,75 @@ param(
                 (type_name
                   (type_identifier))))))
         (variable)))))
+
+================================================================================
+sloplint: attribute list before a function statement
+================================================================================
+
+[Alias('x')] function f { }
+[OutputType([int])]
+function g { $true }
+
+--------------------------------------------------------------------------------
+
+(program
+  (statement_list
+    (function_statement
+      (attribute_list
+        (attribute
+          (attribute_name
+            (type_spec
+              (type_name
+                (type_identifier))))
+          (attribute_arguments
+            (attribute_argument
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (string_literal
+                                  (verbatim_string_characters)))))))))))))))
+      (function_name))
+    (function_statement
+      (attribute_list
+        (attribute
+          (attribute_name
+            (type_spec
+              (type_name
+                (type_identifier))))
+          (attribute_arguments
+            (attribute_argument
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (type_literal
+                                  (type_spec
+                                    (type_name
+                                      (type_identifier)))))))))))))))))
+      (function_name)
+      (script_block
+        (script_block_body
+          (statement_list
+            (pipeline
+              (pipeline_chain
+                (logical_expression
+                  (bitwise_expression
+                    (comparison_expression
+                      (additive_expression
+                        (multiplicative_expression
+                          (format_expression
+                            (range_expression
+                              (array_literal_expression
+                                (unary_expression
+                                  (variable))))))))))))))))))

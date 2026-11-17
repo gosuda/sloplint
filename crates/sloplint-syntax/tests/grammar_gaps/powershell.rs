@@ -398,3 +398,9 @@ fn a_parameter_default_may_be_a_type_literal() {
     run_clean("param(\n    $T = [Exception],\n    [string] $M\n)\n");
     run_clean("param($a = 1, $b)\n");
 }
+
+#[test]
+fn an_attribute_list_may_precede_a_function_statement() {
+    run_clean("[Alias('x')] function f { }\n");
+    run_clean("[OutputType([int])]\nfunction g { $true }\n");
+}

@@ -29,7 +29,7 @@ and loses every other finding for that file.
   `patch -p1` (it holds the grammar.js and src/scanner.c diffs), then run
   `tree-sitter generate` and `tree-sitter test`. Regenerating from the committed
   grammar.js and scanner.c gives a byte-identical parser.c.
-- Sizes: parser.c 6,038,243 bytes (published: 4,697,445), 2651 states (published: 2142).
+- Sizes: parser.c 6,102,326 bytes (published: 4,697,445), 2683 states (published: 2142).
 
 ## Round 1 grammar changes
 
@@ -142,10 +142,14 @@ More valid code that the same sweep files turned up, fixed because it blocked fi
 ## Round 3 grammar changes
 
 - Attributes may stand before any statement, not only `class` and `enum`:
-  `[SuppressMessageAttribute('x','')] $x = 1`, `[Alias('x')] function f { }`. The
-  `[Name(args)]` form is the hidden rule `_parenthesized_attribute`, aliased to
-  `attribute`; a bare `[Name]` stays the `type_literal` attribute alternative.
-  One conflict `[_statement, attribute]` is declared.
+  `[SuppressMessageAttribute('x','')] $x = 1`. The `[Name(args)]` form is the
+  hidden rule `_parenthesized_attribute`, aliased to `attribute`; a bare
+  `[Name]` stays the `type_literal` attribute alternative. One conflict
+  `[_statement, attribute]` is declared. An attribute before `function`,
+  `filter` or `workflow` (`[Alias('x')] function f { }`) is not the statement
+  form: it attaches inside `function_statement` via `optional(attribute_list)`,
+  as `class` and `enum` already did, so the parse keeps the declaration rather
+  than a command named `function`.
 - `type_identifier` accepts a generic arity of more than one digit: `[Action``2]`.
   The backtick run is ``[`+]+``, not a single `` ` ``.
 - A redirect may follow its operator with no separator, `'/r'>null`: the file
@@ -274,7 +278,7 @@ Round 1 and round 2 together. Each is valid PowerShell unless noted.
 ## Upstream corpus (`tree-sitter test`)
 
 - Stock grammar.js regenerated with 0.27.1: 139 of 139 pass.
-- Patched: 139 of 139 upstream cases pass, plus 51 `sloplint:` cases. 190 of 190.
+- Patched: 139 of 139 upstream cases pass, plus 52 `sloplint:` cases. 191 of 191.
 - The new cases are in `test/corpus/sloplint_*.txt`. Each one is named `sloplint: ...`.
 - Round 2 trees were produced with `tree-sitter test -u -i sloplint` and then read: no
   `ERROR` or `MISSING` node in any file, and the `sloplint_*` snapshots of round 1 did
@@ -329,7 +333,7 @@ paths, so scripts under `~/compiler/bamTiScript/.references` and
 
 ## Rust regression test
 
-`crates/sloplint-syntax/tests/grammar_gaps/powershell.rs`. 29 tests. Against the stock
-crate 28 of them fail; the one that passes is the test that invalid snippets still
+`crates/sloplint-syntax/tests/grammar_gaps/powershell.rs`. 30 tests. Against the stock
+crate 29 of them fail; the one that passes is the test that invalid snippets still
 report a parse error. Round 3 removed `[Flags()] function f { }` from the invalid
 list, since attributes before a statement are real PowerShell.
