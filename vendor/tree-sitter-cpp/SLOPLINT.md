@@ -409,6 +409,16 @@ clang++ with `-std=c++23`.
   Residual: a `>=` argument only works in final position
   (`X<a>=b, c>` still errors), and a spaced `3 > 2` still reads as
   the close angle — matching C++, which rejects `W<3 > 2>` too.
+- Initializer value and the declaration's `;` carried inside preproc
+  arms: `T x =\n#if A v1;\n#else v2;\n#endif`. `declaration` gained a
+  second alternative ending in `_init_declarator_preproc` (aliased to
+  `init_declarator`), whose value is `preproc_if`/`preproc_ifdef`
+  `_in_init_declarator` — a new `preprocIf` suite whose arm items are
+  `expression ';'`, `preproc_def`, `preproc_call`, `preproc_null`. The
+  declarator is restricted to non-function forms (identifier,
+  qualified, pointer, reference, array, parenthesized): a `= #if`
+  initializer is never a function, and allowing function declarators
+  collided with guarded signatures and `= delete`/`= default`.
 
 ## Constructs known still failing
 
@@ -430,8 +440,8 @@ parens steers it to an initialized declaration.
   and 4 controls. The published parser fails those 32 repros and passes
   the 4 controls.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 17 files, 84 cases, all passing with the patch
-  (`tree-sitter test` reports 84/84). The latest additions cover the
+  corpus is not vendored): 18 files, 88 cases, all passing with the patch
+  (`tree-sitter test` reports 88/88). The latest additions cover the
   Win32 SDK cluster (typedef qualifier macros, function-pointer typedefs
   with SAL-annotated parameters, MIDL brackets, declaratorless typedefs
   inside `#if`, `#ifdef`-guarded constructs), bare macro sentinels before

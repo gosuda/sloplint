@@ -149,6 +149,7 @@ module.exports = grammar(C, {
     [$._string, $.concatenated_string, $._template_relational_operand],
     [$.template_method, $.template_function],
     [$.binary_expression, $._template_tight_binary],
+    [$._init_declarator_preproc, $._declarator],
     [$.pointer_declarator, $._init_pointer_declarator],
     [$._declarator, $._init_reference_declarator],
     [$.function_definition, $.pointer_declarator],
@@ -497,24 +498,61 @@ module.exports = grammar(C, {
           )),
     }),
 
-    declaration: $ => seq(
-      $._declaration_specifiers,
-      commaSep1(field('declarator', choice(
-        seq(
-          // C uses _declaration_declarator here for some nice macro parsing in function declarators,
-          // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
-          // The literal-only leading repeat covers `T __stdcall F(args);`
-          // (calling-convention modifier between specifiers and name);
-          // generic macro_qualifier must NOT join it — an identifier here is
-          // the declarator, and that fork is the pain the comment above means.
-          repeat(choice($.ms_call_modifier, $.macro_attribute)),
-          $._declarator,
-          optional($.gnu_asm_expression),
-          repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
-        ),
-        $.init_declarator,
-      ))),
-      ';',
+    declaration: $ => choice(
+      seq(
+        $._declaration_specifiers,
+        commaSep1(field('declarator', choice(
+          seq(
+            // C uses _declaration_declarator here for some nice macro parsing in function declarators,
+            // but this causes a world of pain for C++ so we'll just stick to the normal _declarator here.
+            // The literal-only leading repeat covers `T __stdcall F(args);`
+            // (calling-convention modifier between specifiers and name);
+            // generic macro_qualifier must NOT join it — an identifier here is
+            // the declarator, and that fork is the pain the comment above means.
+            repeat(choice($.ms_call_modifier, $.macro_attribute)),
+            $._declarator,
+            optional($.gnu_asm_expression),
+            repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+          ),
+          $.init_declarator,
+        ))),
+        ';',
+      ),
+      // `T x =\n#if A v1;\n#else v2;\n#endif`: the initializer and the
+      // terminating `;` live inside the preproc arms.
+      seq(
+        $._declaration_specifiers,
+        optional(seq(commaSep1(field('declarator', choice(
+          seq(
+            repeat(choice($.ms_call_modifier, $.macro_attribute)),
+            $._declarator,
+            optional($.gnu_asm_expression),
+            repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+          ),
+          $.init_declarator,
+        ))), ',')),
+        field('declarator', alias($._init_declarator_preproc, $.init_declarator)),
+      ),
+    ),
+
+    _init_declarator_preproc: $ => seq(
+      // Non-function declarators only: a `= #if` initializer can never be a
+      // function, and allowing function declarators collides with guarded
+      // signatures / `= delete` (`= 0`, `= default`).
+      field('declarator', choice(
+        $.identifier,
+        $.qualified_identifier,
+        $.pointer_declarator,
+        $.reference_declarator,
+        $.array_declarator,
+        $.parenthesized_declarator,
+      )),
+      repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+      '=',
+      field('value', choice(
+        alias($.preproc_if_in_init_declarator, $.preproc_if),
+        alias($.preproc_ifdef_in_init_declarator, $.preproc_ifdef),
+      )),
     ),
 
     virtual_specifier: _ => choice(

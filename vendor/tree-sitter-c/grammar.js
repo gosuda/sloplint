@@ -66,6 +66,9 @@ module.exports = grammar({
     [$._typedef_macro_qualifier, $.type_specifier],
     [$._field_declaration_list_item, $.field_declaration],
     [$._midl_attribute, $.expression],
+    [$._init_declarator_preproc, $._declarator],
+    [$._init_declarator_preproc, $.macro_qualifier, $._declarator, $._declaration_declarator],
+    [$._init_declarator_preproc, $._declarator, $._declaration_declarator],
     [$.macro_qualifier, $._macro_declaration_stmt],
     [$._macro_declaration_stmt, $.expression],
     [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_type_specifier],
@@ -359,6 +362,14 @@ module.exports = grammar({
         ),
       ),
     )),
+    // `T x =\n#if A v1;\n#else v2;\n#endif`: the initializer value and the
+    // declaration's terminating `;` live inside the preproc arms.
+    ...preprocIf('_in_init_declarator', $ => choice(
+      seq($.expression, ';'),
+      $.preproc_def,
+      $.preproc_call,
+      $.preproc_null,
+    )),
 
 
     preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
@@ -492,18 +503,53 @@ module.exports = grammar({
       field('body', $.compound_statement),
     ),
 
-    declaration: $ => seq(
-      $._declaration_specifiers,
-      commaSep1(field('declarator', choice(
-        seq(
-          repeat(choice($.ms_call_modifier, $.macro_attribute)),
-          $._declaration_declarator,
-          optional($.gnu_asm_expression),
-          repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
-        ),
-        $.init_declarator,
-      ))),
-      ';',
+    declaration: $ => choice(
+      seq(
+        $._declaration_specifiers,
+        commaSep1(field('declarator', choice(
+          seq(
+            repeat(choice($.ms_call_modifier, $.macro_attribute)),
+            $._declaration_declarator,
+            optional($.gnu_asm_expression),
+            repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+          ),
+          $.init_declarator,
+        ))),
+        ';',
+      ),
+      // `T x =\n#if A v1;\n#else v2;\n#endif`: the initializer and the
+      // terminating `;` live inside the preproc arms.
+      seq(
+        $._declaration_specifiers,
+        optional(seq(commaSep1(field('declarator', choice(
+          seq(
+            repeat(choice($.ms_call_modifier, $.macro_attribute)),
+            $._declaration_declarator,
+            optional($.gnu_asm_expression),
+            repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+          ),
+          $.init_declarator,
+        ))), ',')),
+        field('declarator', alias($._init_declarator_preproc, $.init_declarator)),
+      ),
+    ),
+
+    _init_declarator_preproc: $ => seq(
+      // Non-function declarators only: a `= #if` initializer can never be a
+      // function, and allowing function declarators collides with guarded
+      // signatures and old-style definitions.
+      field('declarator', choice(
+        $.identifier,
+        $.pointer_declarator,
+        $.array_declarator,
+        $.parenthesized_declarator,
+      )),
+      repeat(choice($.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+      '=',
+      field('value', choice(
+        alias($.preproc_if_in_init_declarator, $.preproc_if),
+        alias($.preproc_ifdef_in_init_declarator, $.preproc_ifdef),
+      )),
     ),
 
     type_definition: $ => choice(

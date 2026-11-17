@@ -2675,6 +2675,14 @@
           {
             "type": "initializer_list",
             "named": true
+          },
+          {
+            "type": "preproc_if",
+            "named": true
+          },
+          {
+            "type": "preproc_ifdef",
+            "named": true
           }
         ]
       }

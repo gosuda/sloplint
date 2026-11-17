@@ -257,6 +257,15 @@ Each was a parse error with the published crate and is valid for
 - `void f(const J j, T (*arr)[N])` and `int f(fd_set FAR* s, _In_ PUCHAR d)`
   — parenthesized declarator parameters and bare SAL qualifiers under
   `_parameter_specifiers`.
+- Initializer value and the declaration's `;` carried inside preproc
+  arms: `T x =\n#if A v1;\n#else v2;\n#endif`. `declaration` gained a
+  second alternative ending in `_init_declarator_preproc` (aliased to
+  `init_declarator`), whose value is `preproc_if`/`preproc_ifdef`
+  `_in_init_declarator` — a new `preprocIf` suite whose arm items are
+  `expression ';'`, `preproc_def`, `preproc_call`, `preproc_null`. The
+  declarator is restricted to non-function forms (identifier, pointer,
+  array, parenthesized): a `= #if` initializer is never a function, and
+  allowing function declarators collided with old-style definitions.
 
 ## Constructs known still failing
 
@@ -282,8 +291,8 @@ Inputs that are not valid C and so stay errors: `int x = ;`, unterminated
 - Upstream `tree-sitter test` at tag v0.24.2, before: 85 of 85 pass.
 - After the patch: 85 of 85 upstream cases pass.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 14 files, 44 cases, all passing with the patch
-  (`tree-sitter test` reports 44/44). The latest additions cover the Win32
+  corpus is not vendored): 15 files, 48 cases, all passing with the patch
+  (`tree-sitter test` reports 48/48). The latest additions cover the Win32
   SDK cluster: typedef qualifier macros, function-pointer typedefs with
   SAL-annotated parameters, MIDL brackets, declaratorless typedefs inside
   `#if`, and `#ifdef`-guarded inheritance.
