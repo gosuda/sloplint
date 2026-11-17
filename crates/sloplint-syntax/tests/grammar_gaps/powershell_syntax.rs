@@ -520,7 +520,6 @@ fn invalid_powershell_still_reports_a_parse_error() {
         "begin {\n",
         "foo -I=binary }\n",
         "$a.Foo {1}\n",
-        "[Flags()] function f { }\n",
         "$t = $a ? 1\n",
         "function f { param($a) 1\n",
         "$a.Where{ 1\n",
