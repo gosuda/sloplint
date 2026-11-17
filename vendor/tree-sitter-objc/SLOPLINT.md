@@ -122,6 +122,22 @@ headers (`NSObjCRuntime.h`, `NSAvailability.h`), not the preprocessor output.
   alongside: keeping both parses `- (void)bar;` two ways and the expression
   shaped one reports phantom calls.
 
+- Member macro generators: `interface_declaration` and
+  `implementation_definition` accept `$.macro_declaration`, so a bare
+  `NAME(args)` line between members parses as a declaration macro
+  (`AAPropSetFuncImplementation(AAOptions, NSString *, name)` in AAChartKit,
+  `QMUISynthesizeBOOLProperty(isOn, setOn)` in QMUI_iOS).
+- Trailing method attributes: `method_definition` and `method_declaration`
+  take `repeat(choice($._declaration_modifiers, $.macro_qualifier))`, so
+  identifier-shaped attribute macros after the selector parse
+  (`- (void)m SPU_OBJC_DIRECT { ... }` in Sparkle).
+- Bare statement macros: `_non_case_statement` gains
+  `alias(prec.dynamic(-2, $.identifier), $.macro_declaration)`, so a lone
+  identifier on its own line inside a method body parses as a statement
+  macro (`MJRefreshCheckState`, `BeginIgnorePerformSelectorLeaksWarning`).
+  Unreachable as an `expression_statement` (no `;`) and dynamic -2 keeps any
+  declarable read ahead of it.
+
 ## Adapter impact
 
 Node kinds and fields that `crates/sloplint-syntax/src/lang/objc.rs` depends
@@ -173,6 +189,19 @@ Gap tests (`crates/sloplint-syntax/tests/grammar_gaps/objc.rs`): 23 pass
 vendored; 14 of them fail against the published crate, 5 pin already-clean
 inputs, 4 pin invalid inputs that stay errors. Full `sloplint-syntax` and
 `sloplint-core` suites pass.
+
+## Sweep evidence (second corpus, 2026-11-18)
+
+Recount over the ObjC error-cluster repositories of the 23-language corpus
+(`meta/parse-error` findings, vendored grammar vs the previous vendored
+revision): AAChartKit 114 to 34, QMUI_iOS 62 to 22, Sparkle 127 to 69,
+SDAutoLayout 30 to 10, MJRefresh 26 to 11, JXCategoryView 18 to 7, FLEX 23 to
+16, HexFiend 16 to 12, EarlGrey 31 to 26, Darling 240 to 226, Masonry
+unchanged. Residual clusters are `SHADER_STRING(...)` raw-GLSL bodies
+(GPUImage, 134 files; the macro argument is GLSL, not ObjC) and `#if` arms
+splitting binary expressions (Masonry's `MASAttribute` bitmask chain): both
+need the real preprocessor and stay errors by design. Upstream corpus plus
+`sloplint_*.txt`: 103 of 103.
 
 ## Still failing (honest residuals)
 
