@@ -137,6 +137,18 @@ pub(crate) fn named_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead
 pub(crate) fn alias_typedef<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<TypeHead<'s>> {
     let mut current = child_by_field(n, "declarator")?;
     loop {
+        if current.kind() == "qualified_identifier" {
+            // Member-pointer declarators: `typedef void (C::*name)()` stores the
+            // typedef name inside the qualified name's `name` field; the scope
+            // is the class, not the alias.
+            match child_by_field(current, "name") {
+                Some(name) => {
+                    current = name;
+                    continue;
+                }
+                None => return None,
+            }
+        }
         if current.kind() == "type_identifier" || current.kind() == "identifier" {
             let public = !in_anonymous(cx) && !in_function(cx);
             return Some(TypeHead {

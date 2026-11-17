@@ -40,6 +40,8 @@ mod java_scopes;
 mod kotlin_scopes;
 #[path = "analyze_facts/macro_attr.rs"]
 mod macro_attr;
+#[path = "analyze_facts/member_pointer.rs"]
+mod member_pointer;
 #[path = "analyze_facts/objc_scopes.rs"]
 mod objc_scopes;
 #[path = "analyze_facts/ocaml_r_scopes.rs"]
