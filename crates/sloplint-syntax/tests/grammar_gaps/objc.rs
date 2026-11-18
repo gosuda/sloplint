@@ -491,4 +491,3 @@ fn macro_arg_block_literal_and_selector_parses() {
     ));
     assert_eq!(function_names(&analysis), ["f"]);
 }
-
