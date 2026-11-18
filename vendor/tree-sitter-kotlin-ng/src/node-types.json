@@ -441,6 +441,29 @@
     }
   },
   {
+    "type": "backing_field",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "expression",
+          "named": true
+        },
+        {
+          "type": "modifiers",
+          "named": true
+        },
+        {
+          "type": "type",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "binary_expression",
     "named": true,
     "fields": {
@@ -1785,6 +1808,10 @@
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "backing_field",
+          "named": true
+        },
         {
           "type": "context_parameters",
           "named": true

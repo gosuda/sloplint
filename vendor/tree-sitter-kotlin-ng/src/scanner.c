@@ -72,6 +72,47 @@ static bool get_call_follows(TSLexer *lexer) {
     return lexer->lookahead != ')';
 }
 
+// Skips whitespace and comments. Returns whether at least one comment was
+// skipped, so callers can tell comment-crossed tokens from adjacent ones.
+static bool skip_ws_comments(TSLexer *lexer) {
+    bool comment = false;
+    for (;;) {
+        while (iswspace(lexer->lookahead)) {
+            skip(lexer);
+        }
+        if (lexer->lookahead != '/') {
+            return comment;
+        }
+        skip(lexer);
+        if (lexer->lookahead == '/') {
+            while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
+                skip(lexer);
+            }
+            comment = true;
+            continue;
+        }
+        if (lexer->lookahead != '*') {
+            return comment;
+        }
+        comment = true;
+        // Consume the `*` of `/*` before nesting so `/*/x*/` cannot close early.
+        skip(lexer);
+        // Block comments may nest in Kotlin.
+        unsigned depth = 1;
+        while (depth > 0 && !lexer->eof(lexer)) {
+            wchar_t c = lexer->lookahead;
+            skip(lexer);
+            if (c == '/' && lexer->lookahead == '*') {
+                depth++;
+                skip(lexer);
+            } else if (c == '*' && lexer->lookahead == '/') {
+                depth--;
+                skip(lexer);
+            }
+        }
+    }
+}
+
 void *tree_sitter_kotlin_external_scanner_create() { return NULL; }
 
 void tree_sitter_kotlin_external_scanner_destroy(void *payload) {}
@@ -253,22 +294,29 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
             case 'c':
             case 'b':
             case 'w':
+                bool crossed_comment = false;
                 while (scan_words(lexer,
                                   (const char[16][16]){"public", "private", "protected", "internal", "abstract",
                                                        "final", "open", "override", "lateinit", "vararg", "noinline",
                                                        "crossinline", "external", "suspend", "inline"},
                                   scanned_word, NULL)) {
                     memset(scanned_word, 0, MAX_WORD_SIZE);
-                    while (iswspace(lexer->lookahead)) {
-                        skip(lexer);
-                    }
+                    crossed_comment |= skip_ws_comments(lexer);
                 }
 
                 uint8_t index = -1;
                 bool res = scan_words(
                     lexer,
-                    (const char[16][16]){"else", "in", "instanceof", "get", "set", "constructor", "by", "as", "where"},
+                    (const char[16][16]){"else", "in", "instanceof", "get", "set", "constructor", "by", "as",
+                                        "where", "field"},
                     scanned_word, &index);
+
+                // A continuation keyword (else/in/instanceof/by/as/where) after a comment crossed in the
+                // modifier loop means the preceding word was an identifier, not a member modifier, so
+                // this line is a new statement rather than a continuation of the previous expression.
+                if (crossed_comment && (index <= 2 || (index >= 6 && index <= 8))) {
+                    return true;
+                }
 
                 // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
                 // we found a variable named constructor whose field is being accessed
@@ -324,6 +372,33 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 // If `in` was found and this specific external keyword is valid,
                 // return a semi since it's being used in a range test
                 else if (index == 1 && valid_symbols[IN]) {
+                    return true;
+                }
+                // If `field` was found at class member position and a `:` or `=`
+                // follows (comments permitted between), this is a Kotlin 2.x explicit
+                // backing field continuing the property declaration — no semi.
+                else if (index == 9) {
+                    // A `field: T = expr` tail can only be a Kotlin 2.x explicit
+                    // backing field — a `field:` statement is never valid — so the
+                    // semi is suppressed wherever a statement separator is allowed.
+                    // A `field = expr` tail is ambiguous with a plain assignment to
+                    // an identifier named `field`, so it suppresses only at class
+                    // member position, where a bare identifier cannot start a member.
+                    if (!valid_symbols[SEMI] && !valid_symbols[CLASS_MEMBER_SEMI]) {
+                        return true;
+                    }
+                    skip_ws_comments(lexer);
+                    if (lexer->lookahead == ':') {
+                        skip(lexer);
+                        return lexer->lookahead == ':';
+                    }
+                    if (lexer->lookahead == '=') {
+                        if (!valid_symbols[CLASS_MEMBER_SEMI]) {
+                            return true;
+                        }
+                        skip(lexer);
+                        return lexer->lookahead == '=';
+                    }
                     return true;
                 }
                 return !res;

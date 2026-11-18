@@ -1,2 +1,5 @@
 # Positive: Collection arg spans lines 3-19 (17 lines >= strict Minor(15)); finding at the call.
 src/render.kt:2 info grep/multiline-argument
+# Control: the backing-field initializer `field = buildList(...)` initializes a binding and
+# stays silent, while the same call shape in `return` position still flags.
+src/backing.kt:25 info grep/multiline-argument

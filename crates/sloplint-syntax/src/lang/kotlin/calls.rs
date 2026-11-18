@@ -98,8 +98,10 @@ fn kotlin_simple(n: Node<'_>) -> bool {
 }
 
 fn declares_value(cx: &Cx<'_, '_>) -> bool {
-    cx.parent().is_some_and(|p| {
-        p.kind() == "property_declaration" && !has_child_kind(p, "multi_variable_declaration")
+    cx.parent().is_some_and(|p| match p.kind() {
+        "property_declaration" => !has_child_kind(p, "multi_variable_declaration"),
+        "backing_field" => true,
+        _ => false,
     })
 }
 

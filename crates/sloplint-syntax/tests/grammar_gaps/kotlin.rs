@@ -182,3 +182,32 @@ fn invalid_local_class_without_a_separator_still_reports_an_error() {
 fn invalid_enum_entry_body_without_a_separator_still_reports_an_error() {
     run_invalid("enum class E { A { fun f() = 1 } B }\n");
 }
+
+#[test]
+fn explicit_backing_field_with_a_type_parses() {
+    run_clean(
+        "class C {\n    val ready: kotlinx.coroutines.flow.MutableStateFlow<Boolean>\n        field: MutableStateFlow<Boolean> = MutableStateFlow(false)\n}\n",
+    );
+}
+
+#[test]
+fn explicit_backing_field_without_a_type_parses() {
+    run_clean("class C {\n    var flag: Boolean\n        field = false\n}\n");
+}
+
+#[test]
+fn field_as_a_plain_expression_still_splits_statements() {
+    run_clean("fun f(field: Int): Int {\n    val x = 1\n    field + x\n}\n");
+}
+
+#[test]
+fn modified_and_comment_backing_fields_parse() {
+    run_clean(
+        "class C {\n    val a: Boolean\n        private field = false\n    val b: Boolean\n        field /* c */ = false\n}\n",
+    );
+}
+
+#[test]
+fn field_assignment_in_a_body_stays_a_statement() {
+    run_clean("fun f(field: Boolean) {\n    val x = false\n    field = true\n}\n");
+}

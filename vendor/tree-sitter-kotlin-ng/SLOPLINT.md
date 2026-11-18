@@ -1,6 +1,6 @@
 # tree-sitter-kotlin-ng, vendored for sloplint
 
-Status: PARTIAL. 11 of the 17 named Kotlin clusters are fixed for their repro shapes. 6 are open. The residual files below are listed by file, with their shape.
+Status: PARTIAL. 12 of the 18 named Kotlin clusters are fixed for their repro shapes. 6 are open. The residual files below are listed by file, with their shape.
 
 ## Origin
 
@@ -9,7 +9,7 @@ Status: PARTIAL. 11 of the 17 named Kotlin clusters are fixed for their repro sh
 - Copied unchanged from the published crate: `Cargo.toml`, `Cargo.toml.orig`, `Cargo.lock`, `README.md`, `bindings/rust/`, `tree-sitter.json`.
 - Copied from the upstream tag, because the published crate does not ship it: `LICENSE` (MIT).
 - Copied from the upstream tag: `test/corpus/declarations.txt`, `expressions.txt`, `semi.txt`.
-- Added: `test/corpus/sloplint_kotlin.txt` (14 cases, one per fixed repro) and `test/corpus/sloplint_kotlin_same_line.txt` (4 cases for same-line bodies).
+- Added: `test/corpus/sloplint_kotlin.txt` (15 cases, one per fixed repro) and `test/corpus/sloplint_kotlin_same_line.txt` (4 cases for same-line bodies).
 - Changed by hand: `grammar.js`, `src/scanner.c`.
 - Regenerated: `src/parser.c`, `src/grammar.json`, `src/node-types.json`, `src/tree_sitter/*`.
 - `sloplint-grammar.patch` is the diff of `grammar.js` and `src/scanner.c` against the upstream tag. It applies with `git apply --check` in a checkout of that tag.
@@ -29,9 +29,9 @@ A class member followed by `}` on the same line. The scanner emitted `_class_mem
 
 This one change also fixes enum entries whose bodies close on the same line (K22b), one-line local classes (K08, K08b, K08c), and `class A { fun f(): Int = 1 }`.
 
-## Fixed (11 named clusters, for their repro shapes)
+## Fixed (12 named clusters, for their repro shapes)
 
-KCTX, KSUSP-L, KNULLREF, KDCOLON, KSTR5, KDOLLAR, KENUMENTRY, KGUARD (one condition before `if`), KGETVAL, KSETNEST, KENUMBODY.
+KCTX, KSUSP-L, KNULLREF, KDCOLON, KSTR5, KDOLLAR, KENUMENTRY, KGUARD (one condition before `if`), KGETVAL, KSETNEST, KENUMBODY, KBFIELD.
 
 Per-cluster corpus attribution was not measured. The corpus differential is file-level, and a file's first error cannot be assigned to a cluster without a per-cluster triage that I did not complete. The fixed status is established by the repro shapes only.
 
@@ -39,6 +39,9 @@ Limits:
 - KGUARD accepts one condition before `if`. A guard after a comma-separated condition list is not handled.
 - KGETVAL and KSETNEST are fixed for the repro shapes.
 - KCTX is fixed for `context(...)` before a declaration, a function type, and a parenthesized receiver. `context(...)` after an annotation is not handled (see residual ERROR files).
+- KBFIELD covers the Kotlin 2.x explicit backing field in the accessor position: `val x: T` followed on the next line by `field = expr` or `field: U = expr`, optionally with modifiers (`private field = false`), annotations, or comments between `field` and its `:`/`=` (`field /* c */ = x`, `field /*/a/b*/ = x`, `private /* note */ field = x`). The grammar gains a named `backing_field` rule beside `getter`/`setter` in `property_declaration` that accepts `optional($.modifiers)`, `optional(':' $.type)`, `= $.expression`. The semicolon scanner suppresses the auto-semi before `field` when, after skipping whitespace and `//` or nested `/* */` comments, a `:` or `=` follows (`::` and `==` still split). A typed `field:` tail suppresses wherever `_semi` is valid (a `field:` statement is never legal), while a `field =` tail suppresses only at class member position because it is ambiguous with a plain assignment to an identifier named `field` — a bare identifier cannot start a class member. An untyped `field = v` at top level therefore stays an assignment statement, which parses without error but does not produce a `backing_field` node; and `field = v` inside a function body stays an assignment.
+
+The modifier word scan also skips comments so `private /* note */ field = v` still attaches, but a comment crossed there no longer lets a continuation keyword suppress the separator: `else`/`in`/`instanceof`/`by`/`as`/`where` after a comment-crossed modifier word emit the semi exactly as upstream does when a comment ends the word scan (`x\nfoo /* c */ as Int` splits instead of merging). The accessor keywords `get`/`set`/`constructor`/`field` keep their own checks after a comment, which is an improvement over upstream, where a comment between a modifier and `get`/`set` already broke the chain.
 
 ## Open named clusters (6)
 
@@ -97,13 +100,13 @@ Transitions, published to vendored, over the 3688 corpus files: clean to clean 3
 
 Repros: all 27 are raw errors on the published grammar. On the vendored grammar, 19 are clean (K01, K02, K03, K04, K06, K07, K08, K08b, K08c, K09, K10, K11, K12, K15, K16, K17, K18, K22, K22b), 5 are ERROR (K05, K13, K14, K19, K20), and 3 are MISSING only (K21b, K21c, K23). The 8 open repros are 6 named clusters plus the KFILEANN pair.
 
-Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (23 tests, each clean check asserting the raw tree and each invalid control asserting the raw tree has an error):
-- Vendored path dependency: 23 pass.
-- Published `tree-sitter-kotlin-ng` 1.1.0: 20 fail and 3 pass. The 3 that pass are the invalid controls.
+Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (28 tests, each clean check asserting the raw tree and each invalid control asserting the raw tree has an error):
+- Vendored path dependency: 28 pass.
+- Published `tree-sitter-kotlin-ng` 1.1.0: 23 fail and 5 pass. The 5 that pass are the invalid controls and the `field` plain-identifier controls, which the published grammar also splits correctly.
 
 Corpus cases (`tree-sitter test`, fresh `HOME`):
-- Vendored: 40 of 40. These are the 22 upstream cases, the 14 `sloplint_kotlin.txt` cases, and the 4 `sloplint_kotlin_same_line.txt` cases. The expected trees have no `ERROR` or `MISSING`.
-- Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 18 pass (the 14 sloplint cases and the 4 same-line cases). The 22 upstream cases passed on the published grammar before any change.
+- Vendored: 43 of 43. These are the 22 upstream cases, the 17 `sloplint_kotlin.txt` cases, and the 4 `sloplint_kotlin_same_line.txt` cases. The expected trees have no `ERROR` or `MISSING`.
+- Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 21 pass (the 17 sloplint cases and the 4 same-line cases). The 22 upstream cases passed on the published grammar before any change.
 
 ## Code notes
 
