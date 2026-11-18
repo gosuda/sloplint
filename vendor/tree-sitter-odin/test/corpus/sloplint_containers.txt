@@ -17,56 +17,58 @@ Cfg :: struct {
 
 --------------------------------------------------------------------------------
 
-(source_file [0, 0] - [12, 0]
-  (procedure_declaration [0, 0] - [3, 1]
-    (identifier [0, 0] - [0, 1])
-    (procedure [0, 5] - [3, 1]
-      (parameters [0, 9] - [0, 11])
-      (block [0, 12] - [3, 1]
-        (call_expression [1, 4] - [1, 30]
-            (struct_type [1, 9] - [1, 26]
-              (struct_member [1, 18] - [1, 24]
-                (identifier [1, 18] - [1, 19])
-                (type [1, 21] - [1, 24]
-                  (identifier [1, 21] - [1, 24]))))
-            (struct_field [1, 27] - [1, 28]
-              (number [1, 27] - [1, 28]))))
-        (call_expression [2, 4] - [2, 41]
-            (union_type [2, 9] - [2, 33]
-              (named_type [2, 17] - [2, 23]
-                (identifier [2, 17] - [2, 18])
-                (type [2, 20] - [2, 23]
-                  (identifier [2, 20] - [2, 23])))
-              (named_type [2, 25] - [2, 31]
-                (identifier [2, 25] - [2, 26])
-                (type [2, 28] - [2, 31]
-                  (identifier [2, 28] - [2, 31]))))
-            (struct_field [2, 34] - [2, 39]
-              (identifier [2, 34] - [2, 35])
-              (number [2, 38] - [2, 39])))))))
-  (const_declaration [5, 0] - [5, 19]
-    (identifier [5, 0] - [5, 1])
-    (array_type [5, 5] - [5, 19]
-      (tag [5, 5] - [5, 9])
-      (type [5, 11] - [5, 19]
-        (identifier [5, 11] - [5, 19]))))
-  (const_declaration [6, 0] - [6, 21]
-    (identifier [6, 0] - [6, 1])
-    (array_type [6, 5] - [6, 21]
-      (tag [6, 5] - [6, 9])
-      (number [6, 10] - [6, 12])
-      (type [6, 13] - [6, 21]
-        (identifier [6, 13] - [6, 21]))))
-  (struct_declaration [8, 0] - [11, 1]
-    (identifier [8, 0] - [8, 3])
-    (field [9, 4] - [9, 20]
-      (identifier [9, 4] - [9, 11])
-      (type [9, 13] - [9, 16]
-        (identifier [9, 13] - [9, 16]))
-      (number [9, 19] - [9, 20]))
-    (field [10, 4] - [10, 16]
-      (identifier [10, 4] - [10, 8])
-      (type [10, 10] - [10, 16]
-        (identifier [10, 10] - [10, 16])))))
-
-================================================================================
+(source_file
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters)
+      (block
+        (call_expression
+          (identifier)
+          (struct
+            (struct_type
+              (struct_member
+                (identifier)
+                (type
+                  (identifier))))
+            (struct_field
+              (number))))
+        (call_expression
+          (identifier)
+          (struct
+            (union_type
+              (named_type
+                (identifier)
+                (type
+                  (identifier)))
+              (named_type
+                (identifier)
+                (type
+                  (identifier))))
+            (struct_field
+              (identifier)
+              (number)))))))
+  (const_declaration
+    (identifier)
+    (array_type
+      (tag)
+      (type
+        (identifier))))
+  (const_declaration
+    (identifier)
+    (array_type
+      (tag)
+      (number)
+      (type
+        (identifier))))
+  (struct_declaration
+    (identifier)
+    (field
+      (identifier)
+      (type
+        (identifier))
+      (number))
+    (field
+      (identifier)
+      (type
+        (identifier)))))

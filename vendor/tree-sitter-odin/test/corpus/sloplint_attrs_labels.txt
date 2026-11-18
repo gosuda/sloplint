@@ -25,87 +25,96 @@ loc_of :: proc(program: u32, name: string) -> i32 {
 
 --------------------------------------------------------------------------------
 
-(source_file [0, 0] - [20, 0]
-  (struct_declaration [0, 0] - [3, 1]
-    (attributes [0, 0] - [0, 74]
-      (attribute [0, 0] - [0, 74]
-        (identifier [0, 2] - [0, 9])
-        (identifier [0, 11] - [0, 25])
-        (identifier [0, 27] - [0, 37])
-        (string [0, 40] - [0, 43]
-          (string_content [0, 41] - [0, 42]))
-        (identifier [0, 45] - [0, 60])
-        (member_expression [0, 63] - [0, 72]
-          (identifier [0, 63] - [0, 65])
-          (identifier [0, 66] - [0, 72]))))
-    (identifier [1, 0] - [1, 1])
-    (field [2, 4] - [2, 22]
-      (identifier [2, 10] - [2, 11])
-      (type [2, 13] - [2, 22]
-        (field_type [2, 13] - [2, 22]
-          (identifier [2, 13] - [2, 15])
-          (identifier [2, 16] - [2, 22])))))
-  (procedure_declaration [5, 0] - [10, 1]
-    (identifier [5, 0] - [5, 5])
-    (procedure [5, 9] - [10, 1]
-      (parameters [5, 13] - [5, 26]
-        (parameter [5, 14] - [5, 25]
-          (identifier [5, 14] - [5, 18])
-          (type [5, 20] - [5, 25]
-            (pointer_type [5, 20] - [5, 25]
-              (type [5, 21] - [5, 25]
-                (identifier [5, 21] - [5, 25]))))))
-      (block [5, 27] - [10, 1]
-        (label_statement [6, 4] - [9, 5]
-          (identifier [6, 4] - [6, 12])
-          (partial_switch_statement [6, 14] - [9, 5]
-            (switch_statement [6, 23] - [9, 5]
-                (identifier [6, 30] - [6, 34])
-                (identifier [6, 35] - [6, 39]))
-              (switch_case [7, 4] - [9, 0]
-                  (identifier [7, 10] - [7, 16]))
-                (call_expression [8, 8] - [8, 20]
-  (procedure_declaration [12, 0] - [14, 1]
-    (identifier [12, 0] - [12, 4])
-    (procedure [12, 8] - [14, 1]
-      (parameters [12, 12] - [12, 91]
-        (parameter [12, 13] - [12, 32]
-          (identifier [12, 19] - [12, 22])
-          (type [12, 24] - [12, 32]
-            (pointer_type [12, 24] - [12, 32]
-              (type [12, 25] - [12, 32]
-                (identifier [12, 25] - [12, 32])))))
-        (parameter [12, 34] - [12, 61]
-          (identifier [12, 44] - [12, 56])
-          (type [12, 58] - [12, 61]
-            (identifier [12, 58] - [12, 61])))
-        (default_parameter [12, 63] - [12, 90]
-          (identifier [12, 73] - [12, 85])
-          (number [12, 89] - [12, 90])))
-      (block [12, 92] - [14, 1]
-        (call_expression [13, 4] - [13, 21]
-  (procedure_declaration [16, 0] - [19, 1]
-    (identifier [16, 0] - [16, 6])
-    (procedure [16, 10] - [19, 1]
-      (parameters [16, 14] - [16, 42]
-        (parameter [16, 15] - [16, 27]
-          (identifier [16, 15] - [16, 22])
-          (type [16, 24] - [16, 27]
-            (identifier [16, 24] - [16, 27])))
-        (parameter [16, 29] - [16, 41]
-          (identifier [16, 29] - [16, 33])
-          (type [16, 35] - [16, 41]
-            (identifier [16, 35] - [16, 41]))))
-      (type [16, 46] - [16, 49]
-        (identifier [16, 46] - [16, 49]))
-      (block [16, 50] - [19, 1]
-        (assignment_statement [17, 4] - [17, 60]
-          (identifier [17, 4] - [17, 7])
-          (tag [17, 11] - [17, 24])
-          (member_expression [17, 25] - [17, 60]
-            (identifier [17, 25] - [17, 27])
-            (call_expression [17, 28] - [17, 60]
-        (return_statement [18, 4] - [18, 19]
-          (call_expression [18, 11] - [18, 19]
-
-================================================================================
+(source_file
+  (struct_declaration
+    (attributes
+      (attribute
+        (identifier)
+        (identifier)
+        (identifier)
+        (string
+          (string_content))
+        (identifier)
+        (member_expression
+          (identifier)
+          (identifier))))
+    (identifier)
+    (field
+      (identifier)
+      (type
+        (field_type
+          (identifier)
+          (identifier)))))
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters
+        (parameter
+          (identifier)
+          (type
+            (pointer_type
+              (type
+                (identifier))))))
+      (block
+        (label_statement
+          (identifier)
+          (partial_switch_statement
+            (switch_statement
+              (member_expression
+                (identifier)
+                (identifier))
+              (switch_case
+                (member_expression
+                  (identifier))
+                (call_expression
+                  (identifier)
+                  (identifier)))))))))
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters
+        (parameter
+          (identifier)
+          (type
+            (pointer_type
+              (type
+                (identifier)))))
+        (parameter
+          (identifier)
+          (type
+            (identifier)))
+        (default_parameter
+          (identifier)
+          (number)))
+      (block
+        (call_expression
+          (identifier)
+          (identifier)))))
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters
+        (parameter
+          (identifier)
+          (type
+            (identifier)))
+        (parameter
+          (identifier)
+          (type
+            (identifier))))
+      (type
+        (identifier))
+      (block
+        (assignment_statement
+          (identifier)
+          (tag)
+          (member_expression
+            (identifier)
+            (call_expression
+              (identifier)
+              (identifier)
+              (identifier))))
+        (return_statement
+          (call_expression
+            (identifier)
+            (identifier)))))))

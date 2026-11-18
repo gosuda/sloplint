@@ -2948,6 +2948,10 @@
           "named": true
         },
         {
+          "type": "number",
+          "named": true
+        },
+        {
           "type": "polymorphic_parameters",
           "named": true
         },

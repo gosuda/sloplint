@@ -273,7 +273,7 @@ module.exports = grammar({
       '::',
       'union',
       optional($.polymorphic_parameters),
-      optional($.tag),
+      repeat(seq($.tag, optional($._tag_operand))), // union #align 16, #align (16)
       '{',
       optional(seq(
         commaSep1($.type),
@@ -487,15 +487,17 @@ module.exports = grammar({
       field('condition', $.expression),
       choice(
         field('consequence', $.block),
-        // `if a do g(); else ...` — the `;` before `else` is legal Odin and
-        // must not detach the clause as a statement separator.
-        seq('do', field('consequence', $.statement), optional(';')),
+        seq('do', field('consequence', $.statement)),
       ),
       repeat($.else_if_clause),
       optional($.else_clause),
     )),
 
-    else_if_clause: $ => prec.right(seq(
+    // `;` before/after an else-branch is legal Odin (`do g(); else ...`,
+    // `else do pos = 1;`). The external scanner already suppresses a newline
+    // before `else`, so only `;` needs absorbing inside the clause.
+    else_if_clause: $ => prec.left(seq(
+      optional(';'),
       'else',
       'if',
       optional(seq(
@@ -505,31 +507,39 @@ module.exports = grammar({
       field('condition', $.expression),
       choice(
         field('consequence', $.block),
-        seq('do', field('consequence', $.statement), optional(';')),
+        seq('do', field('consequence', $.statement)),
       ),
+      optional(';'),
     )),
 
-    else_clause: $ => seq(
+    // prec.left: a `;` after the else-branch belongs to the statement list,
+    // not to this clause.
+    else_clause: $ => prec.left(seq(
+      optional(';'),
       'else',
       choice(
         field('consequence', $.block),
         seq('do', field('consequence', $.statement)),
       ),
-    ),
+      optional(';'),
+    )),
 
     when_statement: $ => prec.right(seq(
       'when',
       $.expression,
-      choice($.block, seq('do', $.statement, optional(';'))),
+      choice($.block, seq('do', $.statement)),
       repeat($.else_when_clause),
       optional($.else_clause),
     )),
 
-    else_when_clause: $ => prec.right(seq(
+    // `else when X do stmt` is real Odin (upstream only allows a block).
+    else_when_clause: $ => prec.left(seq(
+      optional(';'),
       'else',
       'when',
       $.expression,
-      choice($.block, seq('do', $.statement, optional(';'))),
+      choice($.block, seq('do', $.statement)),
+      optional(';'),
     )),
 
     for_statement: $ => seq(
@@ -552,8 +562,6 @@ module.exports = grammar({
             ),
           )),
         ),
-        // `for it := hm.iterator(...) { }` — init-only iterator loop
-        seq(field('initializer', choice($.assignment_statement, $.var_declaration))),
         // `for it := make(&x); vo, _ in next(&it) { }` — the init sets up a
         // manual iterator and the in-clause must carry at least two names,
         // otherwise a lone `v in e` is just a C-style condition.

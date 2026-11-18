@@ -8,49 +8,63 @@ f :: proc(a: bool) {
 }
 
 p :: proc() -> string {
-    when ODIN_OS == .Darwin do return "darwin"
-    else when ODIN_OS == .Linux do return "linux"
-    else do return "unknown"
+    when ODIN_OS == .Darwin do return "darwin"; else when ODIN_OS == .Linux do return "linux"; else do return "unknown"
 }
 
 --------------------------------------------------------------------------------
 
-(source_file [0, 0] - [10, 0]
-  (procedure_declaration [0, 0] - [3, 1]
-    (identifier [0, 0] - [0, 1])
-    (procedure [0, 5] - [3, 1]
-      (parameters [0, 9] - [0, 18]
-        (parameter [0, 10] - [0, 17]
-          (identifier [0, 10] - [0, 11])
-          (type [0, 13] - [0, 17]
-            (identifier [0, 13] - [0, 17]))))
-      (block [0, 19] - [3, 1]
-        (if_statement [1, 4] - [1, 28]
-          (else_clause [1, 17] - [1, 28]
-        (if_statement [2, 4] - [2, 46]
-          (else_if_clause [2, 17] - [2, 34]
-          (else_clause [2, 35] - [2, 46]
-  (procedure_declaration [5, 0] - [9, 1]
-    (identifier [5, 0] - [5, 1])
-    (procedure [5, 5] - [9, 1]
-      (parameters [5, 9] - [5, 11])
-      (type [5, 15] - [5, 21]
-        (identifier [5, 15] - [5, 21]))
-      (block [5, 22] - [9, 1]
-        (when_statement [6, 4] - [8, 28]
-          (binary_expression [6, 9] - [6, 27]
-              (identifier [6, 21] - [6, 27])))
-          (return_statement [6, 31] - [6, 46]
-            (string [6, 38] - [6, 46]
-              (string_content [6, 39] - [6, 45])))
-          (else_when_clause [7, 4] - [7, 49]
-            (binary_expression [7, 14] - [7, 31]
-                (identifier [7, 26] - [7, 31])))
-            (return_statement [7, 35] - [7, 49]
-              (string [7, 42] - [7, 49]
-                (string_content [7, 43] - [7, 48]))))
-          (else_clause [8, 4] - [8, 28]
-              (string [8, 19] - [8, 28]
-                (string_content [8, 20] - [8, 27])))))))))
-
-================================================================================
+(source_file
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters
+        (parameter
+          (identifier)
+          (type
+            (identifier))))
+      (block
+        (if_statement
+          (identifier)
+          (call_expression
+            (identifier))
+          (else_clause
+            (call_expression
+              (identifier))))
+        (if_statement
+          (identifier)
+          (call_expression
+            (identifier))
+          (else_if_clause
+            (identifier)
+            (call_expression
+              (identifier)))
+          (else_clause
+            (call_expression
+              (identifier)))))))
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters)
+      (type
+        (identifier))
+      (block
+        (when_statement
+          (binary_expression
+            (identifier)
+            (member_expression
+              (identifier)))
+          (return_statement
+            (string
+              (string_content)))
+          (else_when_clause
+            (binary_expression
+              (identifier)
+              (member_expression
+                (identifier)))
+            (return_statement
+              (string
+                (string_content))))
+          (else_clause
+            (return_statement
+              (string
+                (string_content)))))))))

@@ -1,5 +1,5 @@
---- a/grammar.js	2026-11-18 11:03:28.142596599 +0000
-+++ b/grammar.js	2026-11-18 12:56:25.979179524 +0000
+--- a/grammar.js
++++ b/grammar.js
 @@ -41,6 +41,47 @@
      [$.array_type],
      // lol: size_of(Map_Cell(T){}.data) / size_of(T) when size_of(T) > 0 else 1
@@ -126,6 +126,15 @@
        optional($.where_clause),
        '{',
        optional(seq(
+@@ -206,7 +273,7 @@
+       '::',
+       'union',
+       optional($.polymorphic_parameters),
+-      optional($.tag),
++      repeat(seq($.tag, optional($._tag_operand))), // union #align 16, #align (16)
+       '{',
+       optional(seq(
+         commaSep1($.type),
 @@ -245,12 +312,21 @@
        commaSep1(
          choice(
@@ -211,64 +220,66 @@
      assignment_statement: $ => prec(PREC.ASSIGNMENT, seq(
        optional(seq($.attributes, optional($.tag))),
        commaSep1($.expression),
-@@ -396,13 +487,15 @@
-       field('condition', $.expression),
-       choice(
-         field('consequence', $.block),
--        seq('do', field('consequence', $.statement)),
-+        // `if a do g(); else ...` — the `;` before `else` is legal Odin and
-+        // must not detach the clause as a statement separator.
-+        seq('do', field('consequence', $.statement), optional(';')),
-       ),
-       repeat($.else_if_clause),
+@@ -402,7 +493,11 @@
        optional($.else_clause),
      )),
  
 -    else_if_clause: $ => seq(
-+    else_if_clause: $ => prec.right(seq(
++    // `;` before/after an else-branch is legal Odin (`do g(); else ...`,
++    // `else do pos = 1;`). The external scanner already suppresses a newline
++    // before `else`, so only `;` needs absorbing inside the clause.
++    else_if_clause: $ => prec.left(seq(
++      optional(';'),
        'else',
        'if',
        optional(seq(
-@@ -412,9 +505,9 @@
-       field('condition', $.expression),
-       choice(
+@@ -414,15 +509,20 @@
          field('consequence', $.block),
--        seq('do', field('consequence', $.statement)),
-+        seq('do', field('consequence', $.statement), optional(';')),
+         seq('do', field('consequence', $.statement)),
        ),
 -    ),
++      optional(';'),
 +    )),
  
-     else_clause: $ => seq(
+-    else_clause: $ => seq(
++    // prec.left: a `;` after the else-branch belongs to the statement list,
++    // not to this clause.
++    else_clause: $ => prec.left(seq(
++      optional(';'),
        'else',
-@@ -427,17 +520,17 @@
+       choice(
+         field('consequence', $.block),
+         seq('do', field('consequence', $.statement)),
+       ),
+-    ),
++      optional(';'),
++    )),
+ 
      when_statement: $ => prec.right(seq(
        'when',
-       $.expression,
--      choice($.block, seq('do', $.statement)),
-+      choice($.block, seq('do', $.statement, optional(';'))),
-       repeat($.else_when_clause),
+@@ -432,12 +532,15 @@
        optional($.else_clause),
      )),
  
 -    else_when_clause: $ => seq(
-+    else_when_clause: $ => prec.right(seq(
++    // `else when X do stmt` is real Odin (upstream only allows a block).
++    else_when_clause: $ => prec.left(seq(
++      optional(';'),
        'else',
        'when',
        $.expression,
 -      $.block,
 -    ),
-+      choice($.block, seq('do', $.statement, optional(';'))),
++      choice($.block, seq('do', $.statement)),
++      optional(';'),
 +    )),
  
      for_statement: $ => seq(
        'for',
-@@ -459,6 +552,20 @@
+@@ -459,6 +562,18 @@
              ),
            )),
          ),
-+        // `for it := hm.iterator(...) { }` — init-only iterator loop
-+        seq(field('initializer', choice($.assignment_statement, $.var_declaration))),
 +        // `for it := make(&x); vo, _ in next(&it) { }` — the init sets up a
 +        // manual iterator and the in-clause must carry at least two names,
 +        // otherwise a lone `v in e` is just a C-style condition.
@@ -284,7 +295,7 @@
          $._for_in_expression,
        )),
        field('consequence', choice($.block, seq('do', $.statement))),
-@@ -497,7 +604,21 @@
+@@ -497,7 +612,21 @@
        sep(seq(optional($.tag), $.statement), $._separator),
      ),
  
@@ -307,7 +318,7 @@
  
      break_statement: $ => seq('break', optional($.identifier)),
  
-@@ -512,7 +633,8 @@
+@@ -512,7 +641,8 @@
        optional($.tag),
        choice(
          seq($.type, optional(seq(choice('=', ':'), commaSep1($.expression)))),
@@ -317,7 +328,7 @@
        ),
      )),
  
-@@ -528,23 +650,37 @@
+@@ -528,23 +658,37 @@
      label_statement: $ => seq(
        $.expression,
        ':',
@@ -358,7 +369,7 @@
        $.index_expression,
        $.slice_expression,
        $.range_expression,
-@@ -560,12 +696,13 @@
+@@ -560,12 +704,13 @@
        $.map_type,
        $.distinct_type,
        $.matrix_type,
@@ -373,7 +384,7 @@
        field('argument', $.expression),
      )),
  
-@@ -624,9 +761,11 @@
+@@ -624,9 +769,11 @@
      )),
  
      call_expression: $ => prec.left(PREC.CALL, seq(
@@ -386,7 +397,7 @@
          commaSep1(seq(
            field('argument', choice($.expression, $.array_type, $.struct_type, $.pointer_type, $.procedure)),
            optional(seq('=', choice($.expression))),
-@@ -674,7 +813,8 @@
+@@ -674,7 +821,8 @@
      cast_expression: $ => prec.left(PREC.CAST, seq(
        choice(
          seq('(', choice($.pointer_type, $.array_type, $._procedure_type), ')', optional($.expression)),
@@ -396,7 +407,7 @@
          seq('auto_cast', $.expression),
        ),
      )),
-@@ -718,24 +858,59 @@
+@@ -718,24 +866,59 @@
        $.empty_type,
        $.polymorphic_type,
        $.conditional_type,
@@ -459,7 +470,7 @@
  
      bit_set_type: $ => seq(
        'bit_set',
-@@ -760,7 +935,7 @@
+@@ -760,7 +943,7 @@
      tuple_type: $ => seq(
        '(',
        optional(seq(
@@ -468,7 +479,7 @@
          optional(','),
        )),
        ')',
-@@ -769,7 +944,7 @@
+@@ -769,7 +952,7 @@
      struct_type: $ => prec(1, seq(
        'struct',
        optional($.polymorphic_parameters),
@@ -477,7 +488,7 @@
        repeat1(seq(
          '{',
          optional($._struct_members),
-@@ -785,9 +960,12 @@
+@@ -785,9 +968,12 @@
      struct_member: $ => seq(
        commaSep1(seq(optional('using'), $.identifier)),
        ':',
@@ -491,7 +502,7 @@
  
      ),
  
-@@ -844,7 +1022,24 @@
+@@ -844,7 +1030,24 @@
      struct: $ => seq(
        optional(choice(
          seq('[', optional(choice('dynamic', '^', '?', $.expression)), ']', $.type),
@@ -517,7 +528,7 @@
        )),
        // $.type,
        '{',
-@@ -893,7 +1088,7 @@
+@@ -893,7 +1096,7 @@
        $.type,
        '{',
        optional(seq(
@@ -526,7 +537,7 @@
          optional(','),
        )),
        '}',
-@@ -975,7 +1170,10 @@
+@@ -975,7 +1178,10 @@
  
      uninitialized: _ => '---',
  

@@ -22,7 +22,7 @@ The published grammar reports a parse error on valid Odin. sloplint skips a whol
 
 Each change is an Odin construct the published grammar rejects.
 
-1. **`do`-consequence `;` before `else`/`else if`/`else when`.** `if a do g(); else do h()` is legal Odin — the `;` terminates the do-statement but must not detach the else. `if_statement`, `else_if_clause`, `when_statement`, and `else_when_clause` take `seq('do', $.statement, optional(';'))`, and `else_if_clause`/`else_when_clause` are `prec.right` so a trailing `;` binds to the clause.
+1. **Newline/`;` before `else`/`else if`/`else when`.** `if a do g()\nelse do h()`, `if a do g(); else do h()`, and `else do pos = 1;` at the end of a chain are legal Odin. The external scanner already suppresses the newline token when the next word is `else` (or `where`), so the clause rules only need to absorb a `;`: `else_if_clause`, `else_when_clause`, and `else_clause` take a leading `optional(';')`, and `prec.left` keeps a `;` after a clause on the statement list instead of inside the clause. `when_statement`/`else_when_clause` also accept the `do` consequence form upstream lacks.
 2. **For-loop `init; names in expr`.** `for it := iter_make(&x); vo, _ in iterate(&it)` iterates with an initializer. The alternative requires at least two names before `in` so `for a in b` (an `in_expression` condition) stays unambiguous.
 3. **Anonymous container literal in call args.** `struct { a: int }{1}`, `union{..}{..}`, `enum{..}`, and `bit_field{..}` in expression position now head a `struct` literal via the type-prefix choice.
 4. **`#soa` collection types.** `soa_type` covers `#soa[]T`, `#soa[N]T` in type position; matching conflicts keep `#soa` literals working.
@@ -38,6 +38,7 @@ Each change is an Odin construct the published grammar rejects.
 14. **Literal directive tokens.** `alias('#partial', $.tag)` etc. accepted any `#word` token, so `#force_inline gl.g()` was swallowed by the `#partial` struct-literal prefix. All `alias('#X', $.tag)` sites are literal `'#X'` tokens now.
 15. **`union` members take `named_type`.** `union { a: int, b: f32 }{a = 1}` — members are `choice($.named_type, $.type)`.
 16. **Directive tag as expression operand.** `x := #procedure + " expr"` — `tag` is an `_expression_no_tag` alternative so directive constants compose with operators. Declared conflicts cover the statement-tag prefix cases this creates.
+17. **`union` tag operand.** `U :: union #align(16) {..}` — `union_declaration` repeats `seq($.tag, optional($._tag_operand))` so a tag may carry a parenthesized operand.
 
 ## Known remaining gaps
 
