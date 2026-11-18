@@ -72,24 +72,29 @@ static bool get_call_follows(TSLexer *lexer) {
     return lexer->lookahead != ')';
 }
 
-static void skip_ws_comments(TSLexer *lexer) {
+// Skips whitespace and comments. Returns whether at least one comment was
+// skipped, so callers can tell comment-crossed tokens from adjacent ones.
+static bool skip_ws_comments(TSLexer *lexer) {
+    bool comment = false;
     for (;;) {
         while (iswspace(lexer->lookahead)) {
             skip(lexer);
         }
         if (lexer->lookahead != '/') {
-            return;
+            return comment;
         }
         skip(lexer);
         if (lexer->lookahead == '/') {
             while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
                 skip(lexer);
             }
+            comment = true;
             continue;
         }
         if (lexer->lookahead != '*') {
-            return;
+            return comment;
         }
+        comment = true;
         // Consume the `*` of `/*` before nesting so `/*/x*/` cannot close early.
         skip(lexer);
         // Block comments may nest in Kotlin.
@@ -289,13 +294,14 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
             case 'c':
             case 'b':
             case 'w':
+                bool crossed_comment = false;
                 while (scan_words(lexer,
                                   (const char[16][16]){"public", "private", "protected", "internal", "abstract",
                                                        "final", "open", "override", "lateinit", "vararg", "noinline",
                                                        "crossinline", "external", "suspend", "inline"},
                                   scanned_word, NULL)) {
                     memset(scanned_word, 0, MAX_WORD_SIZE);
-                    skip_ws_comments(lexer);
+                    crossed_comment |= skip_ws_comments(lexer);
                 }
 
                 uint8_t index = -1;
@@ -304,6 +310,13 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                     (const char[16][16]){"else", "in", "instanceof", "get", "set", "constructor", "by", "as",
                                         "where", "field"},
                     scanned_word, &index);
+
+                // A continuation keyword (else/in/instanceof/by/as/where) after a comment crossed in the
+                // modifier loop means the preceding word was an identifier, not a member modifier, so
+                // this line is a new statement rather than a continuation of the previous expression.
+                if (crossed_comment && (index <= 2 || (index >= 6 && index <= 8))) {
+                    return true;
+                }
 
                 // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
                 // we found a variable named constructor whose field is being accessed
