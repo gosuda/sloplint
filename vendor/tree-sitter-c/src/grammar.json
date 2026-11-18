@@ -18972,6 +18972,10 @@
                     {
                       "type": "SYMBOL",
                       "name": "call_expression"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "string_literal"
                     }
                   ]
                 }
@@ -19868,6 +19872,19 @@
     [
       "macro_qualifier",
       "macro_declaration"
+    ],
+    [
+      "expression"
+    ],
+    [
+      "preproc_else_in_enumerator_list",
+      "preproc_else_in_enumerator_list_no_comma",
+      "expression"
+    ],
+    [
+      "preproc_ifdef_in_enumerator_list",
+      "preproc_ifdef_in_enumerator_list_no_comma",
+      "expression"
     ],
     [
       "macro_qualifier",

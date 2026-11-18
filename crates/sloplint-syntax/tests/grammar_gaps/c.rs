@@ -286,6 +286,46 @@ fn an_unterminated_struct_still_reports_a_parse_error() {
     );
 }
 
+/// Adjacent `NAME(args)` lines must not merge into one
+/// `concatenated_string`: upstream intent requires a string literal in
+/// the first pair, and the call-call arm turned consecutive macro table
+/// rows into phantom calls.
+#[test]
+fn adjacent_macro_lines_do_not_concatenate() {
+    let analysis = run_clean(concat!(
+        "MUNIT_TEST_DECL(first_case)\n",
+        "MUNIT_TEST_DECL(second_case)\n",
+        "MUNIT_TEST_DECL(third_case)\n",
+    ));
+    assert!(
+        analysis.facts.calls.is_empty(),
+        "table-macro lines record no call facts: {:?}",
+        analysis.facts.calls
+    );
+}
+
+/// Stringification macros still concatenate through a real literal.
+#[test]
+fn call_literal_concatenation_still_parses() {
+    run_clean(concat!(
+        "#define XSTR_(x) #x\n",
+        "#define XSTR(x) XSTR_(x)\n",
+        "const char *v = XSTR(1) \".\" XSTR(2);\n",
+    ));
+}
+
+/// Two calls leading a literal concatenate: `STR(a) STR(b) "x"` must not
+/// regress to a parse error (Devin Review, PR #25).
+#[test]
+fn two_calls_leading_a_literal_concatenate() {
+    run_clean(concat!(
+        "#define STR_(x) #x\n",
+        "#define STR(x) STR_(x)\n",
+        "void f(const char *s);\n",
+        "void g(void) { f(STR(a) STR(b) \"\\n\"); }\n",
+    ));
+}
+
 #[test]
 fn call_operand_beside_signed_number_parses() {
     // `f(1)-1` and `s + sdslen(s) - 1` lexed `-1` as a signed literal when
