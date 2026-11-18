@@ -1,0 +1,114 @@
+================================================================================
+sloplint: instantiation expression as tagged-template function (styled(Link)<T>`...`)
+================================================================================
+
+const NavLink = styled(Link)<{ active: boolean }>`color: red;`;
+
+--------------------------------------------------------------------------------
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (call_expression
+        function: (instantiation_expression
+          (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (identifier)))
+          type_arguments: (type_arguments
+            (object_type
+              (property_signature
+                name: (property_identifier)
+                type: (type_annotation
+                  (predefined_type))))))
+        arguments: (template_string
+          (string_fragment))))))
+
+================================================================================
+sloplint: instantiation expression with typeof member query as tag (sql<typeof x>`...`)
+================================================================================
+
+const row = sql<typeof projects.$inferSelect.meta>`null`;
+
+--------------------------------------------------------------------------------
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (call_expression
+        function: (instantiation_expression
+          (identifier)
+          type_arguments: (type_arguments
+            (type_query
+              (member_expression
+                object: (member_expression
+                  object: (identifier)
+                  property: (property_identifier))
+                property: (property_identifier)))))
+        arguments: (template_string
+          (string_fragment))))))
+
+================================================================================
+sloplint: import("m").T[] in a type annotation
+================================================================================
+
+let e: import("node:fs").Dirent[];
+function f(d: string): import("node:fs").Dirent[] { return []; }
+
+--------------------------------------------------------------------------------
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      type: (type_annotation
+        (array_type
+          (member_expression
+            object: (call_expression
+              function: (import)
+              arguments: (arguments
+                (string
+                  (string_fragment))))
+            property: (property_identifier))))))
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type))))
+    return_type: (type_annotation
+      (array_type
+        (member_expression
+          object: (call_expression
+            function: (import)
+            arguments: (arguments
+              (string
+                (string_fragment))))
+          property: (property_identifier))))
+    body: (statement_block
+      (return_statement
+        (array)))))
+
+================================================================================
+sloplint: import("m").T[K] lookup type
+================================================================================
+
+type Row = import("m").Schema[number];
+
+--------------------------------------------------------------------------------
+
+(program
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (lookup_type
+      (member_expression
+        object: (call_expression
+          function: (import)
+          arguments: (arguments
+            (string
+              (string_fragment))))
+        property: (property_identifier))
+      (predefined_type))))

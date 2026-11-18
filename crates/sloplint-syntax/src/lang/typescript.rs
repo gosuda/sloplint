@@ -187,7 +187,12 @@ impl LangHooks for TypeScriptHooks {
         if n.kind() == "new_expression" {
             return ts_new_call(cx, n);
         }
-        let func = child_by_field(n, "function")?;
+        let mut func = child_by_field(n, "function")?;
+        // `foo<T>`tpl`` / `foo<T>(x)`: the callee is the instantiation's inner
+        // expression so `logger.info<T>` still reports `logger.info`.
+        if func.kind() == "instantiation_expression" {
+            func = func.named_child(0)?;
+        }
         let args = child_by_field(n, "arguments").map_or(Vec::new(), |a| ts_args(cx, a));
         Some(CallHead {
             callee: collapsed_callee(cx, func).unwrap_or_else(|| text(cx, func)),

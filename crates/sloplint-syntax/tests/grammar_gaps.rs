@@ -24,6 +24,8 @@ mod go;
 mod java;
 #[path = "grammar_gaps/javascript_typescript.rs"]
 mod javascript_typescript;
+#[path = "grammar_gaps/javascript_typescript_type_syntax.rs"]
+mod javascript_typescript_type_syntax;
 #[path = "grammar_gaps/kotlin.rs"]
 mod kotlin;
 #[path = "grammar_gaps/objc.rs"]

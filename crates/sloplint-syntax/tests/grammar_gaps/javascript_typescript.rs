@@ -19,7 +19,7 @@ const SCRIPT_LANGS: [(Lang, &str); 3] = [
 ];
 
 /// The TypeScript grammars only.
-const TS_LANGS: [(Lang, &str); 2] = [(Lang::TypeScript, "a.ts"), (Lang::Tsx, "a.tsx")];
+pub(super) const TS_LANGS: [(Lang, &str); 2] = [(Lang::TypeScript, "a.ts"), (Lang::Tsx, "a.tsx")];
 
 static NO_CUSTOM: LazyLock<CustomRules> =
     LazyLock::new(|| CustomRules::compile(&[]).expect("empty custom rules compile"));
@@ -66,7 +66,7 @@ fn assert_raw_clean(lang: Lang, source: &str) {
     );
 }
 
-fn run_clean<'s>(lang: Lang, path: &'s str, source: &'s str) -> Analysis<'s> {
+pub(super) fn run_clean<'s>(lang: Lang, path: &'s str, source: &'s str) -> Analysis<'s> {
     assert_raw_clean(lang, source);
     let analysis = run(lang, path, source);
     assert!(
@@ -101,7 +101,7 @@ fn query_spec(language: &str, query: &str) -> CustomRuleSpec {
 }
 
 /// Texts captured as `@name` by `query` on a clean parse of `source`, in match order.
-fn captures(lang: Lang, path: &str, source: &str, query: &str) -> Vec<String> {
+pub(super) fn captures(lang: Lang, path: &str, source: &str, query: &str) -> Vec<String> {
     let key = if lang == Lang::JavaScript {
         "javascript"
     } else {
@@ -527,39 +527,6 @@ fn environment_near_misses_stay_reads_or_silent() {
         assert!(
             foreign.is_empty(),
             "{lang:?}: `my.process` is not the process"
-        );
-    }
-}
-
-#[test]
-fn import_calls_inside_call_type_arguments_parse() {
-    // upstream 0.23.2 bug: in `foo<T>()`, `typeof import("m")` and a bare
-    // `import("m")` type argument died in the merged type/expression state;
-    // vitest's `importOriginal<typeof import("...")>` hits it.
-    let sources = [
-        "const a = foo<typeof import(\"m\")>();\n",
-        "const a = foo<import(\"m\")>();\n",
-        "const a = foo<typeof import(\"m\").T>();\n",
-        "const a = foo<import(\"m\").T>();\n",
-        "const a = foo<typeof import(\"m\"), number>();\n",
-        "const a = await foo<typeof import(\"m\")>();\n",
-        "const a: Foo<Bar<typeof bar>> = x;\n",
-    ];
-    for (lang, path) in TS_LANGS {
-        for source in sources {
-            run_clean(lang, path, source);
-        }
-    }
-}
-
-#[test]
-fn import_call_type_argument_keeps_call_shape() {
-    let query = "(call_expression function: (import) @name) @match";
-    for (lang, path) in TS_LANGS {
-        assert_eq!(
-            captures(lang, path, "const a = foo<import(\"m\")>();\n", query),
-            ["import"],
-            "{lang:?}: the bare import() type argument is a call"
         );
     }
 }

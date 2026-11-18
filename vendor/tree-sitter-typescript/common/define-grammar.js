@@ -184,7 +184,7 @@ export default function defineGrammar(dialect) {
           field('arguments', $.arguments),
         )),
         prec('template_call', seq(
-          field('function', choice($.primary_expression, $.new_expression)),
+          field('function', choice($.primary_expression, $.new_expression, $.instantiation_expression)),
           field('arguments', $.template_string),
         )),
         // sloplint: every '?.' in this grammar goes through the JS `optional_chain`
@@ -937,7 +937,12 @@ export default function defineGrammar(dialect) {
       ),
 
       lookup_type: $ => seq(
-        $.primary_type,
+        choice(
+          $.primary_type,
+          // sloplint: `import('x').T[K]` — same in-annotation member-chain gap
+          // as `array_type` (upstream v0.23.2 bug).
+          alias($._type_query_member_expression_in_type_annotation, $.member_expression),
+        ),
         '[',
         $.type,
         ']',
@@ -1089,7 +1094,16 @@ export default function defineGrammar(dialect) {
         )),
       ),
 
-      array_type: $ => seq($.primary_type, '[', ']'),
+      array_type: $ => seq(
+        choice(
+          $.primary_type,
+          // sloplint: `import('x').T[]` — the in-annotation member alias is a
+          // `type` member, not `primary_type`, so the plain rule could not
+          // take the `[]` suffix (upstream v0.23.2 bug).
+          alias($._type_query_member_expression_in_type_annotation, $.member_expression),
+        ),
+        '[', ']',
+      ),
       tuple_type: $ => seq(
         '[', commaSep($._tuple_type_member), optional(','), ']',
       ),
