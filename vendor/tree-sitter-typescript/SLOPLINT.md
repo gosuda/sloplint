@@ -84,14 +84,18 @@ The published crate extended tree-sitter-javascript 0.23.1.
   `$.call_expression`-as-operand route was rejected because it killed that
   nested-generic `typeof` case.
 
-- `foo<T>` tagged templates and `import("m").T[]`: upstream v0.23.2 rejects
-  `styled(Link)<P>\`...\`` / `sql<T>\`...\`` (instantiation expressions could not
-  be a template_call function — a `!` was demanded) and `import("m").T[]`
-  (`array_type` only wrapped `primary_type`, so the in-annotation import member
-  chain could not take `[]`). `instantiation_expression` joins the template_call
-  function choice; `array_type` also wraps the `_type_query_*_in_type_annotation`
-  member/call aliases. Trees: `call_expression(function: instantiation_expression,
-  arguments: template_string)` and `array_type(member_expression(call(import)))`.
+- `foo<T>` tagged templates, `import("m").T[]` and `import("m").T[K]`: upstream
+  v0.23.2 rejects `styled(Link)<P>\`...\`` / `sql<T>\`...\`` (instantiation
+  expressions could not be a template_call function — a `!` was demanded) and
+  cannot suffix `import("m").T` with `[]` or `[K]` (`array_type`/`lookup_type`
+  only wrapped `primary_type`, while the in-annotation member chain is a `type`
+  member). `instantiation_expression` joins the template_call function choice;
+  both rules also wrap the `_type_query_member_expression_in_type_annotation`
+  member alias. Trees: `call_expression(function: instantiation_expression,
+  arguments: template_string)`, `array_type(member_expression(call(import)))`
+  and `lookup_type(member_expression(call(import)), index)`. The TS adapter
+  unwraps `instantiation_expression` when computing a call's callee, so
+  `logger.info<T>\`msg\`` still reports `logger.info`.
 
 ## Verified fixed
 
@@ -122,8 +126,8 @@ The published crate extended tree-sitter-javascript 0.23.1.
 - All counts use `tree-sitter test -r` (forced rebuild; a cached library gave a false pass once).
 - Before (published sources regenerated on JS 0.23.1 with CLI 0.27.1): 112 of 112 pass.
 - On JS 0.25.0 with only the `using` hack removed: 111 of 112 pass (the decorator case fails).
-- After: 129 of 129 pass in `typescript`. 112 upstream cases (one expectation changed, see above)
-  and 17 sloplint cases.
+- After: 130 of 130 pass in `typescript`. 112 upstream cases (one expectation changed, see above)
+  and 18 sloplint cases.
 - tsx: the upstream corpus run through the tsx grammar gives 48 of 48 before and after.
   The 4 sloplint tsx cases pass (run `tree-sitter test` inside `tsx/`).
 

@@ -585,3 +585,18 @@ fn write_before_var_decl_in_same_fn_is_local() {
         });
     }
 }
+
+#[test]
+fn generic_tagged_template_reports_plain_callee() {
+    let source = "logger.info<string>`hello`;\nlogger.info<string>(\"hi\");\n";
+    for lang in [Lang::TypeScript] {
+        with_harness(lang, "a.ts", source, |analysis| {
+            assert_eq!(analysis.facts.calls.len(), 2, "{lang:?}");
+            assert_eq!(
+                analysis.facts.calls[0].callee, "logger.info",
+                "{lang:?}: generic tag must unwrap the instantiation"
+            );
+            assert_eq!(analysis.facts.calls[0].callee_root, Some("logger"));
+        });
+    }
+}

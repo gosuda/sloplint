@@ -19,7 +19,7 @@ const SCRIPT_LANGS: [(Lang, &str); 3] = [
 ];
 
 /// The TypeScript grammars only.
-const TS_LANGS: [(Lang, &str); 2] = [(Lang::TypeScript, "a.ts"), (Lang::Tsx, "a.tsx")];
+pub(super) const TS_LANGS: [(Lang, &str); 2] = [(Lang::TypeScript, "a.ts"), (Lang::Tsx, "a.tsx")];
 
 static NO_CUSTOM: LazyLock<CustomRules> =
     LazyLock::new(|| CustomRules::compile(&[]).expect("empty custom rules compile"));
@@ -66,7 +66,7 @@ fn assert_raw_clean(lang: Lang, source: &str) {
     );
 }
 
-fn run_clean<'s>(lang: Lang, path: &'s str, source: &'s str) -> Analysis<'s> {
+pub(super) fn run_clean<'s>(lang: Lang, path: &'s str, source: &'s str) -> Analysis<'s> {
     assert_raw_clean(lang, source);
     let analysis = run(lang, path, source);
     assert!(
@@ -101,7 +101,7 @@ fn query_spec(language: &str, query: &str) -> CustomRuleSpec {
 }
 
 /// Texts captured as `@name` by `query` on a clean parse of `source`, in match order.
-fn captures(lang: Lang, path: &str, source: &str, query: &str) -> Vec<String> {
+pub(super) fn captures(lang: Lang, path: &str, source: &str, query: &str) -> Vec<String> {
     let key = if lang == Lang::JavaScript {
         "javascript"
     } else {
@@ -532,39 +532,6 @@ fn environment_near_misses_stay_reads_or_silent() {
 }
 
 #[test]
-fn import_calls_inside_call_type_arguments_parse() {
-    // upstream 0.23.2 bug: in `foo<T>()`, `typeof import("m")` and a bare
-    // `import("m")` type argument died in the merged type/expression state;
-    // vitest's `importOriginal<typeof import("...")>` hits it.
-    let sources = [
-        "const a = foo<typeof import(\"m\")>();\n",
-        "const a = foo<import(\"m\")>();\n",
-        "const a = foo<typeof import(\"m\").T>();\n",
-        "const a = foo<import(\"m\").T>();\n",
-        "const a = foo<typeof import(\"m\"), number>();\n",
-        "const a = await foo<typeof import(\"m\")>();\n",
-        "const a: Foo<Bar<typeof bar>> = x;\n",
-    ];
-    for (lang, path) in TS_LANGS {
-        for source in sources {
-            run_clean(lang, path, source);
-        }
-    }
-}
-
-#[test]
-fn import_call_type_argument_keeps_call_shape() {
-    let query = "(call_expression function: (import) @name) @match";
-    for (lang, path) in TS_LANGS {
-        assert_eq!(
-            captures(lang, path, "const a = foo<import(\"m\")>();\n", query),
-            ["import"],
-            "{lang:?}: the bare import() type argument is a call"
-        );
-    }
-}
-
-#[test]
 fn invalid_code_still_reports_a_parse_error() {
     for (lang, path) in SCRIPT_LANGS {
         assert_parse_error(lang, path, "function (\n");
@@ -574,47 +541,5 @@ fn invalid_code_still_reports_a_parse_error() {
     for (lang, path) in TS_LANGS {
         assert_parse_error(lang, path, "using x f();\n");
         assert_parse_error(lang, path, "await using = 1 2;\n");
-    }
-}
-
-#[test]
-fn instantiation_expression_tagged_template_parses() {
-    // upstream 0.23.2 bug: `foo<T>\`tpl\`` demanded a non-null `!` before the
-    // template; styled-components `styled(Link)<P>\`...\`` and drizzle
-    // `sql<T>\`...\`` hit it.
-    let sources = [
-        "const n = styled(Link)<{ active: boolean }>`color: red;`;\n",
-        "const r = sql<typeof projects.$inferSelect.meta>`null`;\n",
-        "const n = f<T>!`x`;\n",
-    ];
-    for (lang, path) in TS_LANGS {
-        for source in sources {
-            run_clean(lang, path, source);
-        }
-    }
-}
-
-#[test]
-fn import_type_array_suffix_parses() {
-    // upstream 0.23.2 bug: `import("m").T[]` — the `[]` suffix could not attach
-    // to the in-annotation import member chain.
-    let sources = [
-        "let e: import(\"node:fs\").Dirent[];\n",
-        "function f(d: string): import(\"node:fs\").Dirent[] { return []; }\n",
-        "let e: import(\"m\").T.U[];\n",
-    ];
-    for (lang, path) in TS_LANGS {
-        for source in sources {
-            run_clean(lang, path, source);
-        }
-    }
-}
-
-#[test]
-fn instantiation_tagged_template_keeps_call_shape() {
-    let query = "(call_expression function: (instantiation_expression) @name arguments: (template_string)) @match";
-    for (lang, path) in TS_LANGS {
-        let got = captures(lang, path, "const n = f<T>`x`;\n", query);
-        assert_eq!(got, ["f<T>"], "{lang:?}: instantiation tag wraps the template call");
     }
 }

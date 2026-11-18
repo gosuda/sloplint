@@ -91,3 +91,24 @@ function f(d: string): import("node:fs").Dirent[] { return []; }
     body: (statement_block
       (return_statement
         (array)))))
+
+================================================================================
+sloplint: import("m").T[K] lookup type
+================================================================================
+
+type Row = import("m").Schema[number];
+
+--------------------------------------------------------------------------------
+
+(program
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (lookup_type
+      (member_expression
+        object: (call_expression
+          function: (import)
+          arguments: (arguments
+            (string
+              (string_fragment))))
+        property: (property_identifier))
+      (predefined_type))))

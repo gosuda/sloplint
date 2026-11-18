@@ -937,7 +937,12 @@ export default function defineGrammar(dialect) {
       ),
 
       lookup_type: $ => seq(
-        $.primary_type,
+        choice(
+          $.primary_type,
+          // sloplint: `import('x').T[K]` — same in-annotation member-chain gap
+          // as `array_type` (upstream v0.23.2 bug).
+          alias($._type_query_member_expression_in_type_annotation, $.member_expression),
+        ),
         '[',
         $.type,
         ']',
@@ -1092,12 +1097,10 @@ export default function defineGrammar(dialect) {
       array_type: $ => seq(
         choice(
           $.primary_type,
-          // sloplint: `import('x').T[]` — the in-annotation member/call aliases
-          // are `type` members, not `primary_type`, so the plain rule could not
+          // sloplint: `import('x').T[]` — the in-annotation member alias is a
+          // `type` member, not `primary_type`, so the plain rule could not
           // take the `[]` suffix (upstream v0.23.2 bug).
           alias($._type_query_member_expression_in_type_annotation, $.member_expression),
-          alias($._type_query_call_expression_in_type_annotation, $.call_expression),
-          alias($._type_query_import_call_expression_in_type_annotation, $.call_expression),
         ),
         '[', ']',
       ),
