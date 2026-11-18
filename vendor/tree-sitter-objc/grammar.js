@@ -1501,7 +1501,6 @@ module.exports = grammar(C, {
       const hexDigits = seq(repeat1(hex), repeat(seq(separator, repeat1(hex))));
       const decimalDigits = seq(repeat1(decimal), repeat(seq(separator, repeat1(decimal))));
       return token(seq(
-        optional(/[-\+]/),
         optional(choice('0x', '0b')),
         choice(
           seq(

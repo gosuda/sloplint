@@ -30,7 +30,8 @@ double a = {
         (number_literal)
         (number_literal)
         (number_literal)
-        (number_literal)
+        (unary_expression
+          (number_literal))
         (number_literal)
         (number_literal)
         (number_literal)

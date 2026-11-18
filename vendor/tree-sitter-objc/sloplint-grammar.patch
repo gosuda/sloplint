@@ -1,5 +1,5 @@
 --- /tmp/upstream-objc-grammar.js	2026-11-17 19:26:20.844389837 +0000
-+++ grammar.js	2026-11-17 19:50:20.929396397 +0000
++++ grammar.js
 @@ -20,9 +20,13 @@
    ],
  
@@ -631,7 +631,15 @@
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
        $.atdef_field,
-@@ -1197,7 +1616,7 @@
+@@ -1082,7 +1501,6 @@
+       const hexDigits = seq(repeat1(hex), repeat(seq(separator, repeat1(hex))));
+       const decimalDigits = seq(repeat1(decimal), repeat(seq(separator, repeat1(decimal))));
+       return token(seq(
+-        optional(/[-\+]/),
+         optional(choice('0x', '0b')),
+         choice(
+           seq(
+@@ -1197,7 +1615,7 @@
  
      ['preproc_ifdef' + suffix]: $ => seq(
        choice(preprocessor('ifdef'), preprocessor('ifndef')),
@@ -640,7 +648,7 @@
        repeat(prec(2, content($))),
        field('alternative', optional(choice(elseBlock($), $.preproc_elifdef))),
        preprocessor('endif'),
-@@ -1218,7 +1637,7 @@
+@@ -1218,7 +1636,7 @@
  
      ['preproc_elifdef' + suffix]: $ => seq(
        choice(preprocessor('elifdef'), preprocessor('elifndef')),
