@@ -4,7 +4,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use sloplint_core::finding::{Confidence, FailOn};
 use sloplint_core::{Mode, RulePattern, Strictness};
 
-/// Agent-first code quality linter for twenty-three languages.
+/// Agent-first code quality linter for twenty-four languages.
 #[derive(Debug, Parser)]
 #[command(name = "sloplint", version, args_conflicts_with_subcommands = true)]
 pub struct Cli {

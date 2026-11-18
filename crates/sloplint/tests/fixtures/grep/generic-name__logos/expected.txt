@@ -1,0 +1,2 @@
+a.lgo:2 minor grep/generic-name
+a.lgo:3 minor grep/generic-name

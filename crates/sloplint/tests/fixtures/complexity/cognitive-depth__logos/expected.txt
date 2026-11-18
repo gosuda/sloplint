@@ -1,0 +1,2 @@
+a.lgo:2 info complexity/cognitive-depth
+switch_scored.lgo:2 info complexity/cognitive-depth

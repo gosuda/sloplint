@@ -1,0 +1,94 @@
+================================================================================
+generic method declaration
+================================================================================
+
+package main
+
+type O[T any] struct{}
+
+func (O[T]) G[U any](u U) U { return u }
+
+func (o *O[T]) H[A, B comparable](a A, b B) {}
+
+func (O[T]) _[_ any]() {}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (type_declaration
+    (type_spec
+      name: (type_identifier)
+      type_parameters: (type_parameter_list
+        (type_parameter_declaration
+          name: (identifier)
+          type: (type_constraint
+            (type_identifier))))
+      type: (struct_type
+        (field_declaration_list))))
+  (method_declaration
+    receiver: (parameter_list
+      (parameter_declaration
+        type: (generic_type
+          type: (type_identifier)
+          type_arguments: (type_arguments
+            (type_elem
+              (type_identifier))))))
+    name: (field_identifier)
+    type_parameters: (type_parameter_list
+      (type_parameter_declaration
+        name: (identifier)
+        type: (type_constraint
+          (type_identifier))))
+    parameters: (parameter_list
+      (parameter_declaration
+        name: (identifier)
+        type: (type_identifier)))
+    result: (type_identifier)
+    body: (block
+      (statement_list
+        (return_statement
+          (expression_list
+            (identifier))))))
+  (method_declaration
+    receiver: (parameter_list
+      (parameter_declaration
+        name: (identifier)
+        type: (pointer_type
+          (generic_type
+            type: (type_identifier)
+            type_arguments: (type_arguments
+              (type_elem
+                (type_identifier)))))))
+    name: (field_identifier)
+    type_parameters: (type_parameter_list
+      (type_parameter_declaration
+        name: (identifier)
+        name: (identifier)
+        type: (type_constraint
+          (type_identifier))))
+    parameters: (parameter_list
+      (parameter_declaration
+        name: (identifier)
+        type: (type_identifier))
+      (parameter_declaration
+        name: (identifier)
+        type: (type_identifier)))
+    body: (block))
+  (method_declaration
+    receiver: (parameter_list
+      (parameter_declaration
+        type: (generic_type
+          type: (type_identifier)
+          type_arguments: (type_arguments
+            (type_elem
+              (type_identifier))))))
+    name: (field_identifier)
+    type_parameters: (type_parameter_list
+      (type_parameter_declaration
+        name: (identifier)
+        type: (type_constraint
+          (type_identifier))))
+    parameters: (parameter_list)
+    body: (block)))

@@ -1,0 +1,1 @@
+# Plain return err propagates without logging: no finding for Go.

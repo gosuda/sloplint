@@ -1,0 +1,1 @@
+# Named and blank (side-effect) imports are not wildcards.

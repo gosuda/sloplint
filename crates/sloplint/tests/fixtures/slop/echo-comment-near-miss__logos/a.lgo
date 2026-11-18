@@ -1,0 +1,21 @@
+package probe
+
+// Sum the line amounts for the invoice.
+func invoice_total(ctx int, lines []int) (int, error) {
+	total := 0
+	const for _, f := range comptime.Fields[invoice]() {
+		total += len(lines)
+		_ = f
+	}
+	compute := func(x int) (int, error) { return x, nil }
+	v, err := compute(total)?
+	if err != nil {
+		return 0, err
+	}
+	go group (ctx) {
+		go {
+			v++
+		}
+	}
+	return v, nil
+}

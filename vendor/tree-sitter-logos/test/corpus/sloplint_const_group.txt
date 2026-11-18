@@ -1,0 +1,78 @@
+================================================================================
+single-line const group
+================================================================================
+
+package main
+
+const ( F = 1 )
+
+const ( G = 1; H = 2 )
+
+const ( I int = 1; J; )
+
+const ( )
+
+func f() { const ( K = 3 ) }
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (const_declaration
+    (const_spec
+      name: (identifier)
+      value: (expression_list
+        (int_literal))))
+  (const_declaration
+    (const_spec
+      name: (identifier)
+      value: (expression_list
+        (int_literal)))
+    (const_spec
+      name: (identifier)
+      value: (expression_list
+        (int_literal))))
+  (const_declaration
+    (const_spec
+      name: (identifier)
+      type: (type_identifier)
+      value: (expression_list
+        (int_literal)))
+    (const_spec
+      name: (identifier)))
+  (const_declaration)
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (statement_list
+        (const_declaration
+          (const_spec
+            name: (identifier)
+            value: (expression_list
+              (int_literal))))))))
+
+================================================================================
+multi-line const group
+================================================================================
+
+package main
+
+const (
+	A = iota
+	B
+)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (const_declaration
+    (const_spec
+      name: (identifier)
+      value: (expression_list
+        (iota)))
+    (const_spec
+      name: (identifier))))

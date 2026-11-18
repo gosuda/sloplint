@@ -1,0 +1,930 @@
+================================================================================
+LoGOs spread in composite literals
+================================================================================
+
+package p
+
+type Tri struct{ A, B, C int }
+type Config struct{ Name string }
+
+func spreads(base Tri, cfg Tri, named func(string) Config) {
+	a := Tri{..base, A: 1}
+	b := &Tri{B: 5, ..cfg}
+	c := Config{..named("first")}
+	d := Tri{A: 9, ..base}
+	_, _, _, _ = a, b, c, d
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (type_declaration
+    (type_spec
+      (type_identifier)
+      (struct_type
+        (field_declaration_list
+          (field_declaration
+            (field_identifier)
+            (field_identifier)
+            (field_identifier)
+            (type_identifier))))))
+  (type_declaration
+    (type_spec
+      (type_identifier)
+      (struct_type
+        (field_declaration_list
+          (field_declaration
+            (field_identifier)
+            (type_identifier))))))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter_declaration
+        (identifier)
+        (type_identifier))
+      (parameter_declaration
+        (identifier)
+        (type_identifier))
+      (parameter_declaration
+        (identifier)
+        (function_type
+          (parameter_list
+            (parameter_declaration
+              (type_identifier)))
+          (type_identifier))))
+    (block
+      (statement_list
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (composite_literal
+              (type_identifier)
+              (literal_value
+                (literal_element
+                  (spread_element
+                    (identifier)))
+                (keyed_element
+                  (literal_element
+                    (identifier))
+                  (literal_element
+                    (int_literal)))))))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (unary_expression
+              (composite_literal
+                (type_identifier)
+                (literal_value
+                  (keyed_element
+                    (literal_element
+                      (identifier))
+                    (literal_element
+                      (int_literal)))
+                  (literal_element
+                    (spread_element
+                      (identifier))))))))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (composite_literal
+              (type_identifier)
+              (literal_value
+                (literal_element
+                  (spread_element
+                    (call_expression
+                      (identifier)
+                      (argument_list
+                        (interpreted_string_literal
+                          (interpreted_string_literal_content))))))))))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (composite_literal
+              (type_identifier)
+              (literal_value
+                (keyed_element
+                  (literal_element
+                    (identifier))
+                  (literal_element
+                    (int_literal)))
+                (literal_element
+                  (spread_element
+                    (identifier)))))))
+        (assignment_statement
+          (expression_list
+            (identifier)
+            (identifier)
+            (identifier)
+            (identifier))
+          (expression_list
+            (identifier)
+            (identifier)
+            (identifier)
+            (identifier)))))))
+
+================================================================================
+LoGOs contextual words as names and labels
+================================================================================
+
+package p
+
+func words() int {
+	errdefer := 1
+	yield := 2
+	group := 3
+	scope := 4
+errdefer:
+	for i := 0; i < 1; i++ {
+		break errdefer
+	}
+yield:
+	for i := 0; i < 1; i++ {
+		break yield
+	}
+scope:
+	for i := 0; i < 1; i++ {
+		break scope
+	}
+group:
+	for i := 0; i < 1; i++ {
+		break group
+	}
+	return errdefer + yield + group + scope
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    (identifier)
+    (parameter_list)
+    (type_identifier)
+    (block
+      (statement_list
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (int_literal)))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (int_literal)))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (int_literal)))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (int_literal)))
+        (labeled_statement
+          (label_name)
+          (for_statement
+            (for_clause
+              (short_var_declaration
+                (expression_list
+                  (identifier))
+                (expression_list
+                  (int_literal)))
+              (binary_expression
+                (identifier)
+                (int_literal))
+              (inc_statement
+                (identifier)))
+            (block
+              (statement_list
+                (break_statement
+                  (label_name))))))
+        (labeled_statement
+          (label_name)
+          (for_statement
+            (for_clause
+              (short_var_declaration
+                (expression_list
+                  (identifier))
+                (expression_list
+                  (int_literal)))
+              (binary_expression
+                (identifier)
+                (int_literal))
+              (inc_statement
+                (identifier)))
+            (block
+              (statement_list
+                (break_statement
+                  (label_name))))))
+        (labeled_statement
+          (label_name)
+          (for_statement
+            (for_clause
+              (short_var_declaration
+                (expression_list
+                  (identifier))
+                (expression_list
+                  (int_literal)))
+              (binary_expression
+                (identifier)
+                (int_literal))
+              (inc_statement
+                (identifier)))
+            (block
+              (statement_list
+                (break_statement
+                  (label_name))))))
+        (labeled_statement
+          (label_name)
+          (for_statement
+            (for_clause
+              (short_var_declaration
+                (expression_list
+                  (identifier))
+                (expression_list
+                  (int_literal)))
+              (binary_expression
+                (identifier)
+                (int_literal))
+              (inc_statement
+                (identifier)))
+            (block
+              (statement_list
+                (break_statement
+                  (label_name))))))
+        (return_statement
+          (expression_list
+            (binary_expression
+              (binary_expression
+                (binary_expression
+                  (identifier)
+                  (identifier))
+                (identifier))
+              (identifier))))))))
+
+================================================================================
+LoGOs lambda parameter shapes
+================================================================================
+
+package p
+
+func lambdas(x int) int {
+	var g func() int = () => x
+	h := () => 1
+	add := (a, b) => a + b
+	k := (a,) => a
+	m := x => { return x }
+	return g() + h() + add(1, 2) + k(3) + m(4)
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter_declaration
+        (identifier)
+        (type_identifier)))
+    (type_identifier)
+    (block
+      (statement_list
+        (var_declaration
+          (var_spec
+            (identifier)
+            (function_type
+              (parameter_list)
+              (type_identifier))
+            (expression_list
+              (lambda_expression
+                (identifier)))))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (lambda_expression
+              (int_literal))))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (lambda_expression
+              (identifier)
+              (identifier)
+              (binary_expression
+                (identifier)
+                (identifier)))))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (lambda_expression
+              (identifier)
+              (identifier))))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (lambda_expression
+              (identifier)
+              (block
+                (statement_list
+                  (return_statement
+                    (expression_list
+                      (identifier))))))))
+        (return_statement
+          (expression_list
+            (binary_expression
+              (binary_expression
+                (binary_expression
+                  (binary_expression
+                    (call_expression
+                      (identifier)
+                      (argument_list))
+                    (call_expression
+                      (identifier)
+                      (argument_list)))
+                  (call_expression
+                    (identifier)
+                    (argument_list
+                      (int_literal)
+                      (int_literal))))
+                (call_expression
+                  (identifier)
+                  (argument_list
+                    (int_literal))))
+              (call_expression
+                (identifier)
+                (argument_list
+                  (int_literal))))))))))
+
+================================================================================
+LoGOs go group with block and plain call
+================================================================================
+
+package p
+
+func groups(ctx int, group func(int)) {
+	go group (ctx) {
+		go group(1)
+		go {
+			group(2)
+		}
+	}
+	go group(3)
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter_declaration
+        (identifier)
+        (type_identifier))
+      (parameter_declaration
+        (identifier)
+        (function_type
+          (parameter_list
+            (parameter_declaration
+              (type_identifier))))))
+    (block
+      (statement_list
+        (go_group_statement
+          (identifier)
+          (block
+            (statement_list
+              (go_statement
+                (call_expression
+                  (identifier)
+                  (argument_list
+                    (int_literal))))
+              (group_child_statement
+                (block
+                  (statement_list
+                    (expression_statement
+                      (call_expression
+                        (identifier)
+                        (argument_list
+                          (int_literal))))))))))
+        (go_statement
+          (call_expression
+            (identifier)
+            (argument_list
+              (int_literal))))))))
+
+================================================================================
+LoGOs switch expression arms
+================================================================================
+
+package p
+
+func load(s string, v int) (int, error) { return v, nil }
+
+func arms(v int, in chan int, skip bool) {
+	r := switch n := load("s", v)?; n { case 7 => 70; default => 1 }
+	_ = r
+	x := switch skip { case true => 3; default => <-in }
+	_ = x
+	y := switch v { case 1 => 1
+	case 2 => 2
+	default => 0 }
+	_ = y
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter_declaration
+        (identifier)
+        (type_identifier))
+      (parameter_declaration
+        (identifier)
+        (type_identifier)))
+    (parameter_list
+      (parameter_declaration
+        (type_identifier))
+      (parameter_declaration
+        (type_identifier)))
+    (block
+      (statement_list
+        (return_statement
+          (expression_list
+            (identifier)
+            (nil))))))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter_declaration
+        (identifier)
+        (type_identifier))
+      (parameter_declaration
+        (identifier)
+        (channel_type
+          (type_identifier)))
+      (parameter_declaration
+        (identifier)
+        (type_identifier)))
+    (block
+      (statement_list
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (switch_expression
+              (short_var_declaration
+                (expression_list
+                  (identifier))
+                (expression_list
+                  (try_expression
+                    (call_expression
+                      (identifier)
+                      (argument_list
+                        (interpreted_string_literal
+                          (interpreted_string_literal_content))
+                        (identifier))))))
+              (identifier)
+              (switch_arm
+                (int_literal)
+                (int_literal))
+              (switch_default_arm
+                (int_literal)))))
+        (assignment_statement
+          (expression_list
+            (identifier))
+          (expression_list
+            (identifier)))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (switch_expression
+              (identifier)
+              (switch_arm
+                (true)
+                (int_literal))
+              (switch_default_arm
+                (unary_expression
+                  (identifier))))))
+        (assignment_statement
+          (expression_list
+            (identifier))
+          (expression_list
+            (identifier)))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (switch_expression
+              (identifier)
+              (switch_arm
+                (int_literal)
+                (int_literal))
+              (switch_arm
+                (int_literal)
+                (int_literal))
+              (switch_default_arm
+                (int_literal)))))
+        (assignment_statement
+          (expression_list
+            (identifier))
+          (expression_list
+            (identifier)))))))
+
+================================================================================
+LoGOs option types and try
+================================================================================
+
+package p
+
+func options(s string?, p *int, m map[string]int?) {
+	a := s?.Len()
+	b := s ?? "none"
+	c, err := mayFail()?
+	_ = a
+	_ = b
+	_ = c
+	_ = err
+	_ = p
+	_ = m
+}
+
+func mayFail() (int, error) { return 1, nil }
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter_declaration
+        (identifier)
+        (option_type
+          (type_identifier)))
+      (parameter_declaration
+        (identifier)
+        (pointer_type
+          (type_identifier)))
+      (parameter_declaration
+        (identifier)
+        (map_type
+          (type_identifier)
+          (option_type
+            (type_identifier)))))
+    (block
+      (statement_list
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (call_expression
+              (opt_selector_expression
+                (identifier)
+                (field_identifier))
+              (argument_list))))
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (coalesce_expression
+              (identifier)
+              (interpreted_string_literal
+                (interpreted_string_literal_content)))))
+        (short_var_declaration
+          (expression_list
+            (identifier)
+            (identifier))
+          (expression_list
+            (try_expression
+              (call_expression
+                (identifier)
+                (argument_list)))))
+        (assignment_statement
+          (expression_list
+            (identifier))
+          (expression_list
+            (identifier)))
+        (assignment_statement
+          (expression_list
+            (identifier))
+          (expression_list
+            (identifier)))
+        (assignment_statement
+          (expression_list
+            (identifier))
+          (expression_list
+            (identifier)))
+        (assignment_statement
+          (expression_list
+            (identifier))
+          (expression_list
+            (identifier)))
+        (assignment_statement
+          (expression_list
+            (identifier))
+          (expression_list
+            (identifier)))
+        (assignment_statement
+          (expression_list
+            (identifier))
+          (expression_list
+            (identifier))))))
+  (function_declaration
+    (identifier)
+    (parameter_list)
+    (parameter_list
+      (parameter_declaration
+        (type_identifier))
+      (parameter_declaration
+        (type_identifier)))
+    (block
+      (statement_list
+        (return_statement
+          (expression_list
+            (int_literal)
+            (nil)))))))
+
+================================================================================
+LoGOs const views, unions, defaults, comptime
+================================================================================
+
+package p
+
+type Reader interface {
+	Read() (n int, err error)
+	const Size() int
+	Name string
+	~int | ~string
+}
+
+type S struct : Reader {
+	Port int = 8080
+	Host string
+}
+
+type ViewSlice = const []int
+
+func views(xs []int, v S) (const []int, error) {
+	var out const []int = xs
+	var total int
+	const if v.Port == 8080 {
+		total = 1
+	} else const if v.Host == "x" {
+		total = 2
+	}
+	const for _, f := range comptime.Fields[S]() {
+		_ = f.Name
+	}
+	const switch S {
+	case Reader:
+		total = 3
+	case ~int:
+		total = 4
+	}
+	return out, nil
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (type_declaration
+    (type_spec
+      (type_identifier)
+      (interface_type
+        (method_elem
+          (field_identifier)
+          (parameter_list)
+          (parameter_list
+            (parameter_declaration
+              (identifier)
+              (type_identifier))
+            (parameter_declaration
+              (identifier)
+              (type_identifier))))
+        (method_elem
+          (field_identifier)
+          (parameter_list)
+          (type_identifier))
+        (property_elem
+          (identifier)
+          (type_identifier))
+        (type_elem
+          (negated_type
+            (type_identifier))
+          (negated_type
+            (type_identifier))))))
+  (type_declaration
+    (type_spec
+      (type_identifier)
+      (struct_type
+        (type_identifier)
+        (field_declaration_list
+          (field_declaration
+            (field_identifier)
+            (type_identifier)
+            (int_literal))
+          (field_declaration
+            (field_identifier)
+            (type_identifier))))))
+  (type_declaration
+    (type_alias
+      (type_identifier)
+      (const_view_type
+        (slice_type
+          (type_identifier)))))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter_declaration
+        (identifier)
+        (slice_type
+          (type_identifier)))
+      (parameter_declaration
+        (identifier)
+        (type_identifier)))
+    (parameter_list
+      (parameter_declaration
+        (const_view_type
+          (slice_type
+            (type_identifier))))
+      (parameter_declaration
+        (type_identifier)))
+    (block
+      (statement_list
+        (var_declaration
+          (var_spec
+            (identifier)
+            (const_view_type
+              (slice_type
+                (type_identifier)))
+            (expression_list
+              (identifier))))
+        (var_declaration
+          (var_spec
+            (identifier)
+            (type_identifier)))
+        (const_if_statement
+          (binary_expression
+            (selector_expression
+              (identifier)
+              (field_identifier))
+            (int_literal))
+          (block
+            (statement_list
+              (assignment_statement
+                (expression_list
+                  (identifier))
+                (expression_list
+                  (int_literal)))))
+          (const_if_statement
+            (binary_expression
+              (selector_expression
+                (identifier)
+                (field_identifier))
+              (interpreted_string_literal
+                (interpreted_string_literal_content)))
+            (block
+              (statement_list
+                (assignment_statement
+                  (expression_list
+                    (identifier))
+                  (expression_list
+                    (int_literal)))))))
+        (const_for_statement
+          (expression_list
+            (identifier)
+            (identifier))
+          (call_expression
+            (index_expression
+              (selector_expression
+                (identifier)
+                (field_identifier))
+              (identifier))
+            (argument_list))
+          (block
+            (statement_list
+              (assignment_statement
+                (expression_list
+                  (identifier))
+                (expression_list
+                  (selector_expression
+                    (identifier)
+                    (field_identifier)))))))
+        (const_switch_statement
+          (type_identifier)
+          (const_case
+            (type_identifier)
+            (statement_list
+              (assignment_statement
+                (expression_list
+                  (identifier))
+                (expression_list
+                  (int_literal)))))
+          (const_case
+            (negated_type
+              (type_identifier))
+            (statement_list
+              (assignment_statement
+                (expression_list
+                  (identifier))
+                (expression_list
+                  (int_literal))))))
+        (return_statement
+          (expression_list
+            (identifier)
+            (nil)))))))
+
+================================================================================
+LoGOs interpolation and tuples
+================================================================================
+
+package p
+
+import "fmt"
+
+func interp(name string, n int) string {
+	return $"hello {name}, {n + 1} items ({fmt.Sprintf("%d", n)})"
+}
+
+func tuples() {
+	pair := (1, "a")
+	var t (int, string) = pair
+	_, _ = pair, t
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (import_declaration
+    (import_spec
+      (interpreted_string_literal
+        (interpreted_string_literal_content))))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter_declaration
+        (identifier)
+        (type_identifier))
+      (parameter_declaration
+        (identifier)
+        (type_identifier)))
+    (type_identifier)
+    (block
+      (statement_list
+        (return_statement
+          (expression_list
+            (interp_string_literal))))))
+  (function_declaration
+    (identifier)
+    (parameter_list)
+    (block
+      (statement_list
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (tuple_literal
+              (int_literal)
+              (interpreted_string_literal
+                (interpreted_string_literal_content)))))
+        (var_declaration
+          (var_spec
+            (identifier)
+            (parenthesized_type
+              (tuple_type
+                (type_identifier)
+                (type_identifier)))
+            (expression_list
+              (identifier))))
+        (assignment_statement
+          (expression_list
+            (identifier)
+            (identifier))
+          (expression_list
+            (identifier)
+            (identifier)))))))
