@@ -518,3 +518,13 @@ the size growth.
   `immediate` entirely is not an option — `\n` is itself an extra
   (`/\s|\\\r?\n/`) and is consumed as one before it can terminate the
   rule.
+- **`number_literal` drops its leading sign** — upstream lexes `-1`/`+1` as
+  one signed literal. The vendored `macro_argument_list` free-atom stream
+  (above) makes `number_literal` valid after an operand inside `(`, and the
+  `_macro_declaration_*` statement-start rules make it valid after a
+  `call_expression` too, so `f(1)-1`, `f(1) -1`, `f(1)+1` and
+  `s + sdslen(s) - 1` lexed the signed literal and left binary `-`/`+`
+  with no operator — a whole-file ERROR (sds.c, 7zip). Signed operands
+  still parse through `unary_expression` (`f(-1)`, `x - 1`), which
+  upstream already defines for all four sites. `x -1` in a macro body is
+  unaffected: there `-` lexes via the free-atom stream's operator arm.
