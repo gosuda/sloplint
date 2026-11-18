@@ -68,6 +68,22 @@ The published crate extended tree-sitter-javascript 0.23.1.
   `export type { A } from './t';`). TS 3.8+ syntax; same shape in the tsx
   grammar via the shared `common/define-grammar.js`.
 
+- `import(...)` inside `foo<T>()`: upstream v0.23.2 drops the type-side fork when
+  `call_expression`'s `$.import` and the hidden type-query rules share the `import`
+  shift in a merged state, so `foo<typeof import("m")>()` and `foo<import("m")>()`
+  failed (vitest's `importOriginal<typeof import("...")>` pattern). `import` moved
+  out of the multi-choice function fields of `_type_query_call_expression` and
+  `_type_query_call_expression_in_type_annotation` into two dedicated hidden rules
+  `_type_query_import_call_expression` and `_type_query_import_call_expression_in_type_annotation`
+  (single production `seq(import, arguments)`, each aliased to `call_expression`).
+  The new aliases appear next to every `alias($._type_query_call_expression*, $.call_expression)`
+  use site. Conflicts added: `[call_expression, _type_query_import_call_expression]`,
+  `[call_expression, _type_query_import_call_expression_in_type_annotation]`,
+  `[call_expression, instantiation_expression, binary_expression, unary_expression]`,
+  `[type_query, unary_expression]`. `Foo<Bar<typeof bar>>` still parses; the
+  `$.call_expression`-as-operand route was rejected because it killed that
+  nested-generic `typeof` case.
+
 ## Verified fixed
 
 - `using x = f();`, `await using x = f();`, `using a = 1, b = 2;`, typed `using`.

@@ -532,6 +532,39 @@ fn environment_near_misses_stay_reads_or_silent() {
 }
 
 #[test]
+fn import_calls_inside_call_type_arguments_parse() {
+    // upstream 0.23.2 bug: in `foo<T>()`, `typeof import("m")` and a bare
+    // `import("m")` type argument died in the merged type/expression state;
+    // vitest's `importOriginal<typeof import("...")>` hits it.
+    let sources = [
+        "const a = foo<typeof import(\"m\")>();\n",
+        "const a = foo<import(\"m\")>();\n",
+        "const a = foo<typeof import(\"m\").T>();\n",
+        "const a = foo<import(\"m\").T>();\n",
+        "const a = foo<typeof import(\"m\"), number>();\n",
+        "const a = await foo<typeof import(\"m\")>();\n",
+        "const a: Foo<Bar<typeof bar>> = x;\n",
+    ];
+    for (lang, path) in TS_LANGS {
+        for source in sources {
+            run_clean(lang, path, source);
+        }
+    }
+}
+
+#[test]
+fn import_call_type_argument_keeps_call_shape() {
+    let query = "(call_expression function: (import) @name) @match";
+    for (lang, path) in TS_LANGS {
+        assert_eq!(
+            captures(lang, path, "const a = foo<import(\"m\")>();\n", query),
+            ["import"],
+            "{lang:?}: the bare import() type argument is a call"
+        );
+    }
+}
+
+#[test]
 fn invalid_code_still_reports_a_parse_error() {
     for (lang, path) in SCRIPT_LANGS {
         assert_parse_error(lang, path, "function (\n");

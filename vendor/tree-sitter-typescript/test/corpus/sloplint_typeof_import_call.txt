@@ -1,0 +1,95 @@
+================================================================================
+typeof import() and bare import() inside call type_arguments
+================================================================================
+
+const a = foo<typeof import("m")>();
+const b = foo<import("m")>();
+const c = foo<typeof import("m").T>();
+const d = foo<typeof import("m"), number>();
+const e = await foo<typeof import("m")>();
+const f: Foo<Bar<typeof bar>> = x;
+
+---
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (call_expression
+        function: (identifier)
+        type_arguments: (type_arguments
+          (type_query
+            (call_expression
+              function: (import)
+              arguments: (arguments
+                (string
+                  (string_fragment))))))
+        arguments: (arguments))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (call_expression
+        function: (identifier)
+        type_arguments: (type_arguments
+          (call_expression
+            function: (import)
+            arguments: (arguments
+              (string
+                (string_fragment)))))
+        arguments: (arguments))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (call_expression
+        function: (identifier)
+        type_arguments: (type_arguments
+          (type_query
+            (member_expression
+              object: (call_expression
+                function: (import)
+                arguments: (arguments
+                  (string
+                    (string_fragment))))
+              property: (property_identifier))))
+        arguments: (arguments))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (call_expression
+        function: (identifier)
+        type_arguments: (type_arguments
+          (type_query
+            (call_expression
+              function: (import)
+              arguments: (arguments
+                (string
+                  (string_fragment)))))
+          (predefined_type))
+        arguments: (arguments))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (call_expression
+        function: (await_expression
+          (identifier))
+        type_arguments: (type_arguments
+          (type_query
+            (call_expression
+              function: (import)
+              arguments: (arguments
+                (string
+                  (string_fragment))))))
+        arguments: (arguments))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      type: (type_annotation
+        (generic_type
+          name: (type_identifier)
+          type_arguments: (type_arguments
+            (generic_type
+              name: (type_identifier)
+              type_arguments: (type_arguments
+                (type_query
+                  (identifier)))))))
+      value: (identifier))))
