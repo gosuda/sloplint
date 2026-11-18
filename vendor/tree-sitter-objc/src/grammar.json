@@ -9624,6 +9624,22 @@
                 "value": "}"
               },
               {
+                "type": "STRING",
+                "value": ";"
+              },
+              {
+                "type": "STRING",
+                "value": "__kindof"
+              },
+              {
+                "type": "STRING",
+                "value": "@selector"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "block_literal"
+              },
+              {
                 "type": "SYMBOL",
                 "name": "macro_argument_list"
               }
@@ -25776,6 +25792,19 @@
       "macro_declaration"
     ],
     [
+      "expression"
+    ],
+    [
+      "preproc_else_in_enumerator_list",
+      "preproc_else_in_enumerator_list_no_comma",
+      "expression"
+    ],
+    [
+      "preproc_ifdef_in_enumerator_list",
+      "preproc_ifdef_in_enumerator_list_no_comma",
+      "expression"
+    ],
+    [
       "macro_qualifier",
       "type_specifier"
     ],
@@ -25982,6 +26011,10 @@
     ],
     [
       "preproc_ifdef_in_argument_list",
+      "block_literal"
+    ],
+    [
+      "macro_argument_list",
       "block_literal"
     ],
     [

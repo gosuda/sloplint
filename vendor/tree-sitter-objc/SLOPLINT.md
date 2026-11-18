@@ -287,3 +287,21 @@ valid inputs.
   `unary_expression` (`f(-1)`, `x - 1`); exponent tails keep their own
   `optional(/[-\+]/)`. The C corpus `Number literals` case now expects
   `-0.1f` as `unary_expression(number_literal)`.
+- **`macro_argument_list` accepts `'__kindof'`, `'@selector'` and
+  `block_literal`** — macro invocations like QMUI's
+  `ExtendImplementationOfNonVoidMethodWithoutArguments([C class],
+  @selector(init), __kindof C *, ^__kindof C *(C *s, __kindof C *r) {
+  ... })` carry `__kindof`/`@selector` keywords and a
+  `^type(params){body}` block literal as plain arguments; `';'` joined
+  the token set for the bodies that ride the raw stream. Without them
+  the `NAME(...)` read fell back to `call_expression`, whose
+  expression-only `argument_list` dies on the type tokens
+  (`__kindof C *`). The `@selector`/`__kindof`/`block_literal` keeps
+  the parse inside `macro_argument_list` so the statement is a
+  `macro_declaration`; the block still builds a real `block_literal`
+  node. New conflict: `macro_argument_list` vs `block_literal` (a `^`
+  token vs block start). Note: injecting the `preproc_*` directive
+  rules into `enumerator_list` (X-macro enum bodies, whisper.cpp /
+  CocoaAsyncSocket) was tried and reverted — it inflates the generated
+  `parser.c` past GitHub's 100 MB file cap; those enum-directive
+  clusters stay a known residual.
