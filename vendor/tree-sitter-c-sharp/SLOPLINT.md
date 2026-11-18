@@ -37,11 +37,12 @@ Date: 2026-10-20.
   with the published `src/`; the latter matches Roslyn, so the patch pins
   it with `prec.right(1, ...)` on `type_pattern` (verified against
   `dotnet`/Roslyn CSC: zero CS1xxx). No upstream expectation file changed.
-- Patched: STATE_COUNT 13129, parser.c 52977877 bytes. The growth over the
-  pristine regen comes from the assignment-target and dereference
-  alternatives below pulling the expression automaton into more states;
-  per-hunk attribution showed no single hunk responsible (reserved words,
-  extension rule, and misc fixes each add <150 states).
+- Patched: STATE_COUNT 15944, parser.c 67249004 bytes. The growth over the
+  pristine regen comes from the assignment-target, dereference, contextual
+  identifier, and preprocessor-slot alternatives below pulling the
+  expression/declaration automaton into more states; per-hunk attribution
+  showed no single hunk responsible (reserved words, extension rule, preproc
+  slots, and misc fixes each add <150 states).
 
 ## Grammar.js changes
 
@@ -106,6 +107,34 @@ were left failing on purpose (see controls).
 - Switch `case int when i < 5`: `prec.right(1, ...)` on `type_pattern`
   (see toolchain note above); the now-redundant
   `[tuple_element, type_pattern]` conflict entry was removed.
+- CS-ASYNCIDENT: `async` joins `_reserved_identifier`, so `bool async`
+  parameters, `if (async)`, `(async, x)` tuples and `x.async` members
+  parse (sbox DevTools.Passes, prism). Two forks must coexist at
+  statement start: `async` as lambda modifier (`async x =>`, still a
+  `(modifier)` node via `prec(1)` on the alias) and `async` as a
+  local-function modifier (`async void Sample() {}`).
+  `_local_function_declaration` therefore repeats
+  `choice($.modifier, prec(1, alias(choice('static','async'), $.modifier)))`
+  and a dozen narrow `modifier`/`_local_function_declaration`/
+  `_lambda_expression_init`/declaration-initializer conflict entries keep
+  GLR forks alive until `(` resolves them.
+  Without the local-function choice, the lambda modifier's prec(1)
+  stole every statement-start `async` and every `async` local function
+  errored.
+- CS-SPLITPP, ctor initializers: `preproc_if_in_constructor_initializer`
+  (branches: `constructor_initializer`) is accepted in
+  `_constructor_declaration_initializer`, so
+  `public C() #if X : this() #else : base() #endif {}` parses.
+- CS-SPLITPP, initializer/collection elements:
+  `preproc_if_in_initializer_expression` and
+  `preproc_if_in_collection_element` sit inside `initializer_expression`
+  and `collection_expression` element lists. Because the comma after the
+  last element lives inside a `#if` branch, both element lists now treat
+  the `,` separator as optional (documented over-acceptance: `{1 2}` and
+  `[1 2]` also parse; Roslyn still rejects them).
+- CS-SPLITPP, else clauses: `preproc_if_in_else_clause` (branches:
+  `'else' statement`) is accepted alongside `else` alternatives in
+  `if_statement`, so `if (q) {} #if X else {} #endif` parses.
 
 ## Adapter stability
 
@@ -122,7 +151,7 @@ constraints), and   `preproc_if` in body/initializer/accessor positions is skipp
 ## Corpus results with tree-sitter-cli 0.27.1 `tree-sitter test`
 
 - Before (pristine v0.23.5 checkout + regen): 168/168 pass.
-- After (patched): 168/168 pass, plus 12/12 new sloplint cases.
+- After (patched): 168/168 pass, plus 14/14 sloplint cases.
 - No upstream expectation file changed.
 
 ## Differential sweep (raw trees, never analyze-only)

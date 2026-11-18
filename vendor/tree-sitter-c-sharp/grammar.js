@@ -95,6 +95,18 @@ export default grammar({
     [$._reserved_identifier, $.type_parameter_constraint],
     [$._reserved_identifier, $.parameter, $.scoped_type],
     [$._reserved_identifier, $.parameter],
+    [$.modifier, $._local_function_declaration, $._lambda_expression_init, $.anonymous_method_expression, $._reserved_identifier],
+    [$.modifier, $._local_function_declaration, $._lambda_expression_init, $.anonymous_method_expression],
+    [$._class_declaration_initializer, $._struct_declaration_initializer, $._enum_declaration_initializer, $._interface_declaration_initializer, $._delegate_declaration_initializer, $._record_declaration_initializer, $.local_declaration_statement, $._local_function_declaration],
+    [$.local_declaration_statement, $._local_function_declaration],
+    [$.modifier, $._local_function_declaration, $._lambda_expression_init, $._reserved_identifier],
+    [$.modifier, $._local_function_declaration, $._lambda_expression_init],
+    [$._class_declaration_initializer, $._struct_declaration_initializer, $._enum_declaration_initializer, $._interface_declaration_initializer, $._delegate_declaration_initializer, $._record_declaration_initializer, $._local_function_declaration],
+    [$._constructor_declaration_initializer],
+    [$.preproc_if_in_top_level, $.preproc_if_in_expression, $.preproc_if_in_initializer_expression],
+    [$.preproc_else_in_top_level, $.preproc_else_in_expression, $.preproc_else_in_attribute_list, $.preproc_else_in_initializer_expression],
+    [$.preproc_elif_in_top_level, $.preproc_elif_in_expression, $.preproc_elif_in_attribute_list, $.preproc_elif_in_initializer_expression],
+    [$.preproc_if_in_top_level, $.preproc_if_in_expression, $.preproc_if_in_attribute_list, $.preproc_if_in_initializer_expression],
     [$._simple_name, $.parameter],
     [$.tuple_element, $.parameter, $.declaration_expression],
     [$.parameter, $.tuple_element],
@@ -551,7 +563,10 @@ export default grammar({
       repeat($.modifier),
       field('name', $.identifier),
       field('parameters', $.parameter_list),
-      optional($.constructor_initializer),
+      optional(choice(
+        $.constructor_initializer,
+        alias($.preproc_if_in_constructor_initializer, $.preproc_if),
+      )),
     ),
 
     extension_block: $ => seq(
@@ -1137,9 +1152,12 @@ export default grammar({
       field('condition', $.expression),
       ')',
       field('consequence', $.statement),
-      optional(seq(
-        'else',
-        field('alternative', $.statement),
+      repeat(choice(
+        seq(
+          'else',
+          field('alternative', $.statement),
+        ),
+        alias($.preproc_if_in_else_clause, $.preproc_if),
       )),
     )),
 
@@ -1167,7 +1185,7 @@ export default grammar({
 
     _local_function_declaration: $ => seq(
       repeat($._attribute_list),
-      repeat($.modifier),
+      repeat(choice($.modifier, prec(1, alias(choice('static', 'async'), $.modifier)))),
       field('type', $.type),
       field('name', $.identifier),
       field('type_parameters', optional($.type_parameter_list)),
@@ -1755,7 +1773,7 @@ export default grammar({
 
     _lambda_expression_init: $ => prec(-1, seq(
       repeat($._attribute_list),
-      repeat(prec(-1, alias(choice('static', 'async'), $.modifier))),
+      repeat(prec(1, alias(choice('static', 'async'), $.modifier))),
       optional(field('type', $.type)),
       field('parameters', $._lambda_parameters),
     ),
@@ -1773,7 +1791,7 @@ export default grammar({
     )),
 
     anonymous_method_expression: $ => seq(
-      repeat(prec(-1, alias(choice('static', 'async'), $.modifier))),
+      repeat(prec(1, alias(choice('static', 'async'), $.modifier))),
       'delegate',
       optional(field('parameters', $.parameter_list)),
       $.block,
@@ -1815,16 +1833,14 @@ export default grammar({
 
     collection_expression: $ => seq(
       '[',
-      optional(seq(
-        commaSep1($.collection_element),
-        optional(','),
-      )),
+      optional(repeat(seq($.collection_element, optional(',')))),
       ']',
     ),
 
     collection_element: $ => choice(
       $.expression_element,
       $.spread_element,
+      alias($.preproc_if_in_collection_element, $.preproc_if),
     ),
 
     expression_element: $ => prec(1, $.expression),
@@ -1833,8 +1849,12 @@ export default grammar({
 
     initializer_expression: $ => seq(
       '{',
-      commaSep($.expression),
-      optional(','),
+      // Commas are optional between elements so an element following a
+      // preproc_if (whose branch carried the comma) still parses.
+      repeat(seq(choice(
+        $.expression,
+        alias($.preproc_if_in_initializer_expression, $.preproc_if),
+      ), optional(','))),
       '}',
     ),
 
@@ -2032,6 +2052,7 @@ export default grammar({
       'alias',
       'allows',
       'ascending',
+      'async',
       'by',
       'descending',
       'equals',
@@ -2075,6 +2096,10 @@ export default grammar({
       seq($.expression, ';'),
     )),
     ...preprocIf('_in_field_value', $ => seq($.expression, ';')),
+    ...preprocIf('_in_constructor_initializer', $ => $.constructor_initializer, 0, false),
+    ...preprocIf('_in_initializer_expression', $ => seq($.expression, optional(','))),
+    ...preprocIf('_in_collection_element', $ => seq($.collection_element, optional(','))),
+    ...preprocIf('_in_else_clause', $ => seq('else', $.statement)),
     ...preprocIf('_in_accessor', $ => seq(
       repeat($.modifier),
       field('name', choice('get', 'set', 'add', 'remove', 'init', $.identifier)),
