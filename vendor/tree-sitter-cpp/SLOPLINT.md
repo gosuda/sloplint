@@ -477,8 +477,8 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 
 ## Size
 
-`src/parser.c`: 118,131,300 bytes (published: 17,299,078). States: 20818
-(published: 8637). Language version: 15 (published: 14). The literal
+`src/parser.c`: 192,883,783 bytes (published: 17,299,078). States: 29043
+(published: 8637). Language version: 14 (published: 14). The literal
 enumeration of `macro_attribute` costs most of the size growth.
 
 - **MSVC `__asm {}` / `_asm {}` blocks** inherit from the patched C base:
@@ -643,8 +643,8 @@ enumeration of `macro_attribute` costs most of the size growth.
 
 ## Packed generated parser
 
-The generated `src/parser.c` (~118MB) exceeds GitHub's 100MB blob limit,
-so the committed artifact is `src/parser.c.gz` (`gzip -9`, ~8MB) and
+The generated `src/parser.c` (~193MB) exceeds GitHub's 100MB blob limit,
+so the committed artifact is `src/parser.c.gz` (`gzip -9`, ~13MB) and
 `src/parser.c` is gitignored. `bindings/rust/build.rs` compiles
 `src/parser.c` when present (a fresh `tree-sitter generate` output) and
 otherwise decompresses `src/parser.c.gz` into `OUT_DIR` with the `flate2`
