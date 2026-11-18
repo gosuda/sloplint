@@ -1,1 +1,2 @@
 src/mod.ts:2 info grep/contiguous-log-literal
+src/mod.ts:6 info grep/contiguous-log-literal
