@@ -325,3 +325,25 @@ fn two_calls_leading_a_literal_concatenate() {
         "void g(void) { f(STR(a) STR(b) \"\\n\"); }\n",
     ));
 }
+
+#[test]
+fn call_operand_beside_signed_number_parses() {
+    // `f(1)-1` and `s + sdslen(s) - 1` lexed `-1` as a signed literal when
+    // merged macro_argument_list states accepted a bare number after an
+    // operand. number_literal is unsigned; the `-` must survive as the
+    // binary operator.
+    let analysis = run_clean(concat!(
+        "int f(int);\n",
+        "int sdslen(char *);\n",
+        "int h(void) {\n",
+        "  int x = f(1) - 1;\n",
+        "  int y = f(1)-1;\n",
+        "  char *s;\n",
+        "  char *ep = s + sdslen(s) - 1;\n",
+        "  int z = f(-1);\n",
+        "  int w = x - 1;\n",
+        "  return f(1) + 1;\n",
+        "}\n",
+    ));
+    assert_eq!(function_names(&analysis), ["h"]);
+}

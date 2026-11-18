@@ -2960,6 +2960,10 @@
       "required": false,
       "types": [
         {
+          "type": "array_declarator",
+          "named": true
+        },
+        {
           "type": "attribute_declaration",
           "named": true
         },
@@ -2968,7 +2972,19 @@
           "named": true
         },
         {
+          "type": "attributed_declarator",
+          "named": true
+        },
+        {
           "type": "bitfield_clause",
+          "named": true
+        },
+        {
+          "type": "field_identifier",
+          "named": true
+        },
+        {
+          "type": "function_declarator",
           "named": true
         },
         {
@@ -2988,7 +3004,27 @@
           "named": true
         },
         {
+          "type": "operator_name",
+          "named": true
+        },
+        {
+          "type": "parenthesized_declarator",
+          "named": true
+        },
+        {
+          "type": "pointer_declarator",
+          "named": true
+        },
+        {
+          "type": "reference_declarator",
+          "named": true
+        },
+        {
           "type": "storage_class_specifier",
+          "named": true
+        },
+        {
+          "type": "template_method",
           "named": true
         },
         {
@@ -10068,10 +10104,6 @@
     "named": false
   },
   {
-    "type": ">=",
-    "named": false
-  },
-  {
     "type": ">>",
     "named": false
   },
@@ -11325,7 +11357,8 @@
   },
   {
     "type": "comment",
-    "named": true
+    "named": true,
+    "extra": true
   },
   {
     "type": "compl",

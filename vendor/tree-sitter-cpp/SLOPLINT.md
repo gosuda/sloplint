@@ -658,3 +658,11 @@ gzip -9 -c src/parser.c > src/parser.c.gz
   blanks no longer eats the following `#endif` as `preproc_arg`. Same
   rule and rationale as in the C grammar's SLOPLINT.md (the
   kddockwidgets_export.h whole-file ERROR class).
+- **`number_literal` drops its leading sign** — same fix as the C grammar:
+  `f(1)-1`, `f(1) -1` and `f(1)+1` lexed `-1`/`+1` as a signed literal in
+  states shared with `macro_argument_list`, leaving the binary operator
+  absent. This grammar defines its own `number_literal` (not inherited
+  from the C base), so the change is applied here directly; the
+  `sloplint-c-base.patch` copy carries it too for consistency. The
+  `const sign = /[-\+]/` helper stays for the exponent tails. Signed
+  operands parse through `unary_expression`.

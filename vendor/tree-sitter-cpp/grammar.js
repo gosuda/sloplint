@@ -2621,8 +2621,10 @@ module.exports = grammar(C, {
       const intSuffix = /(ll|LL)[uU]?|[uU](ll|LL)?|[uU][lL]?|[uU][zZ]?|[lL][uU]?|[zZ][uU]?/;
       const floatSuffix = /([fF](16|32|64|128)?)|[lL]|(bf16|BF16)/;
 
+      // No leading sign: `-`/`+` must stay operator tokens so `f(1)-1`
+      // and `x -1` don't lex the `-1` as a literal where a merged
+      // macro_argument_list state also accepts a bare number.
       return token(seq(
-        optional(sign),
         choice(
           seq(
             choice(
