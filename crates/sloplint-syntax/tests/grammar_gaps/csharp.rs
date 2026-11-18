@@ -373,3 +373,64 @@ fn preview_and_invalid_still_error() {
         "#:property PublishAot=false\nusing System;\nclass C {}\n",
     );
 }
+
+#[test]
+fn async_identifier_and_local_function() {
+    // `async` is a modifier on the top-level local function, a parameter
+    // name, an if-condition, and a tuple element (sbox DevTools.Passes).
+    let source = "async void Sample() {\n\
+        \tvar x = 1;\n\
+        }\n\
+        class C {\n\
+        \tstatic string KeyOf(bool async, string path) => (async ? \"a\" : \"b\") + path;\n\
+        \tvoid M() {\n\
+        \t\tif (async) { }\n\
+        \t\tvar t = (async, 1);\n\
+        \t}\n\
+        }\n";
+    let analysis = run_clean("async_ident.cs", source);
+    for name in ["KeyOf", "M"] {
+        assert!(
+            function_names(&analysis).contains(&name),
+            "method {name} recorded: {:?}",
+            function_names(&analysis)
+        );
+    }
+}
+
+#[test]
+fn preproc_ctor_init_initializer_collection_else() {
+    // `preproc_if` in the ctor-initializer slot, inside `{...}` and `[...]`
+    // elements (element after `#endif` keeps no comma: the branch carries
+    // it), and wrapping an `else` clause (prism, dapper, sbox hits).
+    let source = "class C {\n\
+        \tpublic C(int x)\n\
+        #if DEBUG\n\
+        \t\t: this()\n\
+        #else\n\
+        \t\t: base()\n\
+        #endif\n\
+        \t{ }\n\
+        \tint[] a = {\n\
+        #if X\n\
+        \t\t1,\n\
+        #else\n\
+        \t\t2,\n\
+        #endif\n\
+        \t\t3\n\
+        \t};\n\
+        \tvoid M() {\n\
+        \t\tvar s = new[] {\n\
+        #if Y\n\
+        \t\t\t4,\n\
+        #endif\n\
+        \t\t\t5\n\
+        \t\t};\n\
+        \t\tif (q) { }\n\
+        #if Z\n\
+        \t\telse { }\n\
+        #endif\n\
+        \t}\n\
+        }\n";
+    run_clean("preproc_slots.cs", source);
+}

@@ -652,3 +652,169 @@ class C {
             (preproc_else
               (arrow_expression_clause
                 (integer_literal)))))))))
+
+================================================================================
+async as modifier and contextual identifier
+================================================================================
+
+async void Sample() {
+  var x = 1;
+}
+class C {
+  static string KeyOf(bool async, string path) => (async ? "a" : "b") + path;
+  void M() {
+    if (async) { }
+    var t = (async, 1);
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (global_statement
+    (local_function_statement
+      (modifier)
+      type: (predefined_type)
+      name: (identifier)
+      parameters: (parameter_list)
+      body: (block
+        (local_declaration_statement
+          (variable_declaration
+            type: (implicit_type)
+            (variable_declarator
+              name: (identifier)
+              (integer_literal)))))))
+  (class_declaration
+    name: (identifier)
+    body: (declaration_list
+      (method_declaration
+        (modifier)
+        returns: (predefined_type)
+        name: (identifier)
+        parameters: (parameter_list
+          (parameter
+            type: (predefined_type)
+            name: (identifier))
+          (parameter
+            type: (predefined_type)
+            name: (identifier)))
+        body: (arrow_expression_clause
+          (binary_expression
+            left: (parenthesized_expression
+              (conditional_expression
+                condition: (identifier)
+                consequence: (string_literal
+                  (string_literal_content))
+                alternative: (string_literal
+                  (string_literal_content))))
+            right: (identifier))))
+      (method_declaration
+        returns: (predefined_type)
+        name: (identifier)
+        parameters: (parameter_list)
+        body: (block
+          (if_statement
+            condition: (identifier)
+            consequence: (block))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (tuple_expression
+                  (argument
+                    (identifier))
+                  (argument
+                    (integer_literal)))))))))))
+
+================================================================================
+preproc in ctor initializer, initializers, collections, else clauses
+================================================================================
+
+class C {
+  public C(int x)
+#if DEBUG
+    : this()
+#else
+    : base()
+#endif
+  { }
+  int[] a = {
+#if X
+    1,
+#else
+    2,
+#endif
+    3
+  };
+  void M() {
+    var s = new[] {
+#if Y
+      4,
+#endif
+      5
+    };
+    if (q) { }
+#if Z
+    else { }
+#endif
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_declaration
+    name: (identifier)
+    body: (declaration_list
+      (constructor_declaration
+        (modifier)
+        name: (identifier)
+        parameters: (parameter_list
+          (parameter
+            type: (predefined_type)
+            name: (identifier)))
+        (preproc_if
+          condition: (identifier)
+          (constructor_initializer
+            (argument_list))
+          alternative: (preproc_else
+            (constructor_initializer
+              (argument_list))))
+        body: (block))
+      (field_declaration
+        (variable_declaration
+          type: (array_type
+            type: (predefined_type)
+            rank: (array_rank_specifier))
+          (variable_declarator
+            name: (identifier)
+            (initializer_expression
+              (preproc_if
+                condition: (identifier)
+                (integer_literal)
+                alternative: (preproc_else
+                  (integer_literal)))
+              (integer_literal)))))
+      (method_declaration
+        returns: (predefined_type)
+        name: (identifier)
+        parameters: (parameter_list)
+        body: (block
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (implicit_array_creation_expression
+                  (initializer_expression
+                    (preproc_if
+                      condition: (identifier)
+                      (integer_literal))
+                    (integer_literal))))))
+          (if_statement
+            condition: (identifier)
+            consequence: (block)
+            (preproc_if
+              condition: (identifier)
+              (block))))))))
