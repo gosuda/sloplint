@@ -1100,6 +1100,458 @@
         ]
       }
     },
+    "preproc_if_in_declaration_specifiers": {
+      "type": "PREC",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "PATTERN",
+              "value": "#[ \t]*if"
+            },
+            "named": false,
+            "value": "#if"
+          },
+          {
+            "type": "FIELD",
+            "name": "condition",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_preproc_expression"
+            }
+          },
+          {
+            "type": "STRING",
+            "value": "\n"
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_declaration_modifiers"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_qualifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "type_specifier"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "alternative",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "preproc_else_in_declaration_specifiers"
+                      },
+                      "named": true,
+                      "value": "preproc_else"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "preproc_elif_in_declaration_specifiers"
+                      },
+                      "named": true,
+                      "value": "preproc_elif"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "preproc_elifdef_in_declaration_specifiers"
+                      },
+                      "named": true,
+                      "value": "preproc_elifdef"
+                    }
+                  ]
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "PATTERN",
+              "value": "#[ \t]*endif"
+            },
+            "named": false,
+            "value": "#endif"
+          }
+        ]
+      }
+    },
+    "preproc_ifdef_in_declaration_specifiers": {
+      "type": "PREC",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*ifdef"
+                },
+                "named": false,
+                "value": "#ifdef"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*ifndef"
+                },
+                "named": false,
+                "value": "#ifndef"
+              }
+            ]
+          },
+          {
+            "type": "FIELD",
+            "name": "name",
+            "content": {
+              "type": "SYMBOL",
+              "name": "identifier"
+            }
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_declaration_modifiers"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_qualifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "type_specifier"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "alternative",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "preproc_else_in_declaration_specifiers"
+                      },
+                      "named": true,
+                      "value": "preproc_else"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "preproc_elif_in_declaration_specifiers"
+                      },
+                      "named": true,
+                      "value": "preproc_elif"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "preproc_elifdef_in_declaration_specifiers"
+                      },
+                      "named": true,
+                      "value": "preproc_elifdef"
+                    }
+                  ]
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "PATTERN",
+              "value": "#[ \t]*endif"
+            },
+            "named": false,
+            "value": "#endif"
+          }
+        ]
+      }
+    },
+    "preproc_else_in_declaration_specifiers": {
+      "type": "PREC",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "PATTERN",
+              "value": "#[ \t]*else"
+            },
+            "named": false,
+            "value": "#else"
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_declaration_modifiers"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_qualifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "type_specifier"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "preproc_elif_in_declaration_specifiers": {
+      "type": "PREC",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "PATTERN",
+              "value": "#[ \t]*elif"
+            },
+            "named": false,
+            "value": "#elif"
+          },
+          {
+            "type": "FIELD",
+            "name": "condition",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_preproc_expression"
+            }
+          },
+          {
+            "type": "STRING",
+            "value": "\n"
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_declaration_modifiers"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_qualifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "type_specifier"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "alternative",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "preproc_else_in_declaration_specifiers"
+                      },
+                      "named": true,
+                      "value": "preproc_else"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "preproc_elif_in_declaration_specifiers"
+                      },
+                      "named": true,
+                      "value": "preproc_elif"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "preproc_elifdef_in_declaration_specifiers"
+                      },
+                      "named": true,
+                      "value": "preproc_elifdef"
+                    }
+                  ]
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "preproc_elifdef_in_declaration_specifiers": {
+      "type": "PREC",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*elifdef"
+                },
+                "named": false,
+                "value": "#elifdef"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "PATTERN",
+                  "value": "#[ \t]*elifndef"
+                },
+                "named": false,
+                "value": "#elifndef"
+              }
+            ]
+          },
+          {
+            "type": "FIELD",
+            "name": "name",
+            "content": {
+              "type": "SYMBOL",
+              "name": "identifier"
+            }
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_declaration_modifiers"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_qualifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "type_specifier"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "alternative",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "preproc_else_in_declaration_specifiers"
+                      },
+                      "named": true,
+                      "value": "preproc_else"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "preproc_elif_in_declaration_specifiers"
+                      },
+                      "named": true,
+                      "value": "preproc_elif"
+                    },
+                    {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "preproc_elifdef_in_declaration_specifiers"
+                      },
+                      "named": true,
+                      "value": "preproc_elifdef"
+                    }
+                  ]
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
     "preproc_if_in_field_declaration_list": {
       "type": "PREC",
       "value": 0,
@@ -7242,6 +7694,10 @@
             },
             {
               "type": "STRING",
+              "value": "__packed"
+            },
+            {
+              "type": "STRING",
               "value": "__NO_RETURN"
             },
             {
@@ -8185,6 +8641,24 @@
                 {
                   "type": "SYMBOL",
                   "name": "macro_qualifier"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "preproc_if_in_declaration_specifiers"
+                  },
+                  "named": true,
+                  "value": "preproc_if"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "preproc_ifdef_in_declaration_specifiers"
+                  },
+                  "named": true,
+                  "value": "preproc_ifdef"
                 }
               ]
             }
@@ -10698,14 +11172,6 @@
           {
             "type": "STRING",
             "value": "_Bool"
-          },
-          {
-            "type": "STRING",
-            "value": "__fp16"
-          },
-          {
-            "type": "STRING",
-            "value": "__bf16"
           },
           {
             "type": "STRING",
@@ -16888,6 +17354,10 @@
               {
                 "type": "STRING",
                 "value": "__asm"
+              },
+              {
+                "type": "STRING",
+                "value": "__ASM"
               }
             ]
           },
@@ -28674,6 +29144,188 @@
   ],
   "conflicts": [
     [
+      "preproc_ifdef",
+      "preproc_ifdef_in_declaration_specifiers",
+      "_linkage_guard",
+      "preproc_ifdef_in_guarded_signature"
+    ],
+    [
+      "preproc_if",
+      "preproc_if_in_declaration_specifiers",
+      "_linkage_guard",
+      "preproc_if_in_guarded_signature"
+    ],
+    [
+      "preproc_ifdef",
+      "preproc_ifdef_in_declaration_specifiers"
+    ],
+    [
+      "preproc_else",
+      "preproc_else_in_declaration_specifiers",
+      "preproc_else_in_guarded_signature",
+      "preproc_else_in_guarded_class"
+    ],
+    [
+      "preproc_ifdef_in_declaration_specifiers",
+      "_declaration_specifiers",
+      "_constructor_specifiers"
+    ],
+    [
+      "preproc_ifdef_in_declaration_specifiers",
+      "_declaration_specifiers"
+    ],
+    [
+      "preproc_if",
+      "preproc_if_in_declaration_specifiers"
+    ],
+    [
+      "preproc_else",
+      "preproc_else_in_declaration_specifiers"
+    ],
+    [
+      "preproc_else_in_declaration_specifiers",
+      "_declaration_specifiers",
+      "_constructor_specifiers"
+    ],
+    [
+      "preproc_else_in_declaration_specifiers",
+      "_declaration_specifiers"
+    ],
+    [
+      "preproc_elifdef",
+      "preproc_elifdef_in_declaration_specifiers",
+      "preproc_elifdef_in_guarded_signature",
+      "preproc_elifdef_in_guarded_class"
+    ],
+    [
+      "_class_declaration_item",
+      "_guarded_class_head"
+    ],
+    [
+      "type_qualifier"
+    ],
+    [
+      "type_definition"
+    ],
+    [
+      "preproc_else",
+      "preproc_else_in_declaration_specifiers",
+      "preproc_else_in_initializer_list",
+      "preproc_else_in_guarded_signature",
+      "preproc_else_in_guarded_class"
+    ],
+    [
+      "preproc_if",
+      "preproc_if_in_declaration_specifiers",
+      "preproc_if_in_initializer_list",
+      "preproc_if_in_guarded_signature",
+      "preproc_if_in_guarded_class"
+    ],
+    [
+      "preproc_ifdef",
+      "preproc_ifdef_in_declaration_specifiers",
+      "preproc_ifdef_in_initializer_list",
+      "preproc_ifdef_in_guarded_signature",
+      "preproc_ifdef_in_guarded_class"
+    ],
+    [
+      "preproc_elif",
+      "preproc_elif_in_declaration_specifiers",
+      "preproc_elif_in_initializer_list",
+      "preproc_elif_in_guarded_signature",
+      "preproc_elif_in_guarded_class"
+    ],
+    [
+      "preproc_elifdef",
+      "preproc_elifdef_in_declaration_specifiers",
+      "preproc_elifdef_in_initializer_list",
+      "preproc_elifdef_in_guarded_signature",
+      "preproc_elifdef_in_guarded_class"
+    ],
+    [
+      "preproc_if",
+      "preproc_if_in_declaration_specifiers",
+      "preproc_if_in_initializer_list"
+    ],
+    [
+      "preproc_ifdef",
+      "preproc_ifdef_in_declaration_specifiers",
+      "preproc_ifdef_in_initializer_list"
+    ],
+    [
+      "preproc_elif",
+      "preproc_elif_in_declaration_specifiers",
+      "preproc_elif_in_initializer_list"
+    ],
+    [
+      "preproc_elifdef",
+      "preproc_elifdef_in_declaration_specifiers",
+      "preproc_elifdef_in_initializer_list"
+    ],
+    [
+      "preproc_else",
+      "preproc_else_in_declaration_specifiers",
+      "preproc_else_in_initializer_list"
+    ],
+    [
+      "preproc_ifdef_in_declaration_specifiers",
+      "preproc_ifdef_in_field_declaration_list"
+    ],
+    [
+      "preproc_if_in_declaration_specifiers",
+      "preproc_if_in_field_declaration_list"
+    ],
+    [
+      "preproc_else_in_declaration_specifiers",
+      "preproc_else_in_field_declaration_list"
+    ],
+    [
+      "preproc_elif_in_declaration_specifiers",
+      "preproc_elif_in_field_declaration_list"
+    ],
+    [
+      "preproc_elifdef_in_declaration_specifiers",
+      "preproc_elifdef_in_field_declaration_list"
+    ],
+    [
+      "preproc_elif",
+      "preproc_elif_in_declaration_specifiers",
+      "preproc_elif_in_guarded_signature",
+      "preproc_elif_in_guarded_class"
+    ],
+    [
+      "preproc_if_in_declaration_specifiers",
+      "_declaration_specifiers"
+    ],
+    [
+      "preproc_if",
+      "preproc_if_in_declaration_specifiers"
+    ],
+    [
+      "preproc_ifdef",
+      "preproc_ifdef_in_declaration_specifiers"
+    ],
+    [
+      "preproc_elif_in_declaration_specifiers",
+      "_declaration_specifiers"
+    ],
+    [
+      "preproc_elifdef_in_declaration_specifiers",
+      "_declaration_specifiers"
+    ],
+    [
+      "preproc_elif",
+      "preproc_elif_in_declaration_specifiers"
+    ],
+    [
+      "preproc_elifdef",
+      "preproc_elifdef_in_declaration_specifiers"
+    ],
+    [
+      "preproc_else",
+      "preproc_else_in_declaration_specifiers"
+    ],
+    [
       "preproc_else_in_enumerator_list",
       "preproc_else_in_enumerator_list_no_comma",
       "expression"
@@ -29698,6 +30350,5 @@
     "_field_declarator",
     "_type_declarator",
     "_abstract_declarator"
-  ],
-  "reserved": {}
+  ]
 }

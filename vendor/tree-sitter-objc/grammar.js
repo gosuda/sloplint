@@ -24,6 +24,16 @@ module.exports = grammar(C, {
       && !(e.length == 2
         && e.map((x) => x.name).sort().join(',') == '_top_level_expression_statement,type_specifier'),
   ).concat([
+    // `IDENT [` — subscript/message vs a specifier-starting macro before
+    // `[` (parameterized decl shapes).
+    [$.macro_qualifier, $.type_specifier, $.expression],
+    // A specifier run can head a plain declaration or a `@`-header after
+    // `__extension__`/modifier macros.
+    [$._declaration_specifiers, $.protocol_forward_declaration, $._class_interface_header, $._class_implementation_header, $.protocol_declaration],
+    [$.macro_qualifier, $.type_specifier, $.statement],
+    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.statement, $.expression, $.macro_type_specifier],
+    [$.macro_qualifier, $.type_specifier, $.statement, $.expression],
+    [$.macro_qualifier, $.statement],
     [$.enum_specifier],
     [$.enumerator],
     [$._preproc_expression, $.preproc_argument_list],
@@ -669,6 +679,9 @@ module.exports = grammar(C, {
     ...preprocIf('_in_implementation_definition', $ => $.implementation_definition),
     ...preprocIf('_in_interface_declaration', $ => $.interface_declaration),
     ...preprocIf('_in_enumerator', $ => seq($.enumerator, ',')),
+    // `#if` between the selector parts of a method signature
+    // (`- (void)a:(T)x\n#if F\n b:(T)y\n#endif c:(T)z;`).
+    ...preprocIf('_in_method_signature', $ => repeat1(choice(seq(optional($.method_selector), $.method_parameter), seq(',', '...')))),
 
     // A `#` line that carries no directive name: the null directive (`#`
     // alone or `#` + trailing space) and the pre-ANSI `# comment` banner
@@ -887,7 +900,10 @@ module.exports = grammar(C, {
     )),
 
     protocol_forward_declaration: $ => seq(
-      repeat($._declaration_modifiers),
+      // A bare marker macro may prefix the declaration: `FOO @protocol A;`
+      // and `SPU_OBJC_DIRECT_MEMBERS @interface`. `@` right after the name
+      // keeps it unambiguous.
+      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
       '@protocol',
       commaSep1($.identifier),
       ';',
@@ -911,7 +927,7 @@ module.exports = grammar(C, {
     ),
 
     _class_interface_header: $ => seq(
-      repeat($._declaration_modifiers),
+      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
       '@interface',
       $.identifier,
       optional(';'),
@@ -937,7 +953,7 @@ module.exports = grammar(C, {
     ),
 
     _class_implementation_header: $ => seq(
-      repeat($._declaration_modifiers),
+      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
       '@implementation',
       $.identifier,
       optional(';'),
@@ -990,7 +1006,7 @@ module.exports = grammar(C, {
     ),
 
     protocol_declaration: $ => seq(
-      repeat($._declaration_modifiers),
+      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
       '@protocol',
       $.identifier,
       optional($.protocol_reference_list),
@@ -1068,12 +1084,12 @@ module.exports = grammar(C, {
           $.method_selector_no_list,
           optional(seq(
             $.method_parameter,
-            repeat(seq(optional($.method_selector), $.method_parameter)),
+            repeat(choice(seq(optional($.method_selector), $.method_parameter), alias($.preproc_if_in_method_signature, $.preproc_if), alias($.preproc_ifdef_in_method_signature, $.preproc_ifdef))),
           )),
         ),
         seq(
           $.method_parameter,
-          repeat(seq(optional($.method_selector), $.method_parameter)),
+          repeat(choice(seq(optional($.method_selector), $.method_parameter), alias($.preproc_if_in_method_signature, $.preproc_if), alias($.preproc_ifdef_in_method_signature, $.preproc_ifdef))),
         ),
       ),
       optional(seq(',', choice('...', commaSep1(alias($.c_method_parameter, $.method_parameter))))),
@@ -1144,6 +1160,8 @@ module.exports = grammar(C, {
           optional($.method_parameter),
         ),
         $.method_parameter,
+        alias($.preproc_if_in_method_signature, $.preproc_if),
+        alias($.preproc_ifdef_in_method_signature, $.preproc_ifdef),
       )),
       optional(seq(',', choice('...', commaSep1(alias($.c_method_parameter, $.method_parameter))))),
       repeat(choice($._declaration_modifiers, $.macro_qualifier)),

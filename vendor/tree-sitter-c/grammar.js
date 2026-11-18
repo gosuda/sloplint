@@ -171,6 +171,63 @@ module.exports = grammar({
     [$.preproc_ifdef_in_enumerator_list, $.preproc_ifdef_in_enumerator_list_no_comma, $.expression],
     [$.macro_qualifier, $.type_specifier],
     [$.macro_declaration, $.macro_qualifier],
+    // `IDENT\n#ifdef` — statement expr vs a decl whose specifiers start
+    // with a macro and carry a preproc arm (mig_external headers).
+    [$.macro_qualifier, $.expression],
+    [$.preproc_ifdef, $.macro_qualifier, $.expression],
+    [$.preproc_ifdef, $.macro_qualifier, $.type_specifier],
+    [$.preproc_ifdef, $.expression],
+    [$.macro_qualifier],
+    [$.macro_qualifier, $.sized_type_specifier],
+    [$.type_specifier],
+    [$.preproc_else, $.concatenated_string],
+    [$.preproc_else, $.macro_qualifier, $.type_specifier, $.sized_type_specifier],
+    [$.preproc_else, $.type_specifier],
+    [$.preproc_else, $.macro_qualifier, $._macro_declaration_top, $.type_specifier, $.expression, $.macro_type_specifier],
+    [$.preproc_else, $._macro_declaration_top, $.type_specifier, $._top_level_expression_statement],
+    [$.preproc_else, $.type_specifier, $.expression],
+    [$.preproc_else, $.expression],
+    [$.preproc_else, $.macro_qualifier, $.type_specifier],
+    [$.preproc_else, $.macro_qualifier, $.expression],
+    [$.preproc_ifdef, $.concatenated_string],
+    [$.preproc_ifdef, $.macro_qualifier, $.type_specifier, $.sized_type_specifier],
+    [$.preproc_ifdef, $.type_specifier],
+    [$.preproc_ifdef, $.macro_qualifier, $._macro_declaration_top, $.type_specifier, $.expression, $.macro_type_specifier],
+    [$.preproc_ifdef, $._macro_declaration_top, $.type_specifier, $._top_level_expression_statement],
+    [$.preproc_ifdef, $.type_specifier, $.expression],
+    [$.expression, $.macro_argument_list],
+    // An `#ifdef` arm carrying only specifiers vs a linkage guard's
+    // `#ifdef` header block.
+    [$.preproc_ifdef, $.preproc_ifdef_in_declaration_specifiers, $._linkage_guard],
+    [$.preproc_if, $.preproc_if_in_declaration_specifiers, $._linkage_guard],
+    [$.preproc_ifdef, $.preproc_ifdef_in_declaration_specifiers],
+    [$.preproc_else, $.preproc_else_in_declaration_specifiers],
+    [$.macro_qualifier, $.type_specifier, $.sized_type_specifier],
+    [$.preproc_ifdef_in_declaration_specifiers, $._declaration_specifiers],
+    [$.preproc_ifdef_in_statement, $.preproc_ifdef_in_declaration_specifiers, $._linkage_guard],
+    [$.preproc_if, $.preproc_if_in_declaration_specifiers],
+    [$.preproc_else_in_declaration_specifiers, $._declaration_specifiers],
+    [$.preproc_elifdef, $.preproc_elifdef_in_declaration_specifiers],
+    [$.type_qualifier],
+    [$.type_definition],
+    [$.macro_qualifier, $.macro_declaration, $.type_specifier, $.sized_type_specifier],
+    [$.preproc_ifdef_in_declaration_specifiers, $.preproc_ifdef_in_field_declaration_list],
+    [$.preproc_if_in_declaration_specifiers, $.preproc_if_in_field_declaration_list],
+    [$.preproc_else_in_declaration_specifiers, $.preproc_else_in_field_declaration_list],
+    [$.preproc_elif_in_declaration_specifiers, $.preproc_elif_in_field_declaration_list],
+    [$.preproc_elifdef_in_declaration_specifiers, $.preproc_elifdef_in_field_declaration_list],
+    [$.preproc_if_in_statement, $.preproc_if_in_declaration_specifiers, $._linkage_guard],
+    [$.preproc_ifdef_in_statement, $.preproc_ifdef_in_declaration_specifiers],
+    [$.preproc_elif, $.preproc_elif_in_declaration_specifiers],
+    [$.preproc_elifdef, $.preproc_elifdef_in_declaration_specifiers],
+    [$.preproc_else, $.preproc_else_in_declaration_specifiers],
+    [$.preproc_else_in_statement, $.preproc_else_in_declaration_specifiers],
+    [$.preproc_if_in_statement, $.preproc_if_in_declaration_specifiers],
+    [$.preproc_elif_in_statement, $.preproc_elif_in_declaration_specifiers],
+    [$.preproc_elifdef_in_statement, $.preproc_elifdef_in_declaration_specifiers],
+    [$.preproc_elif_in_declaration_specifiers, $._declaration_specifiers],
+    [$.preproc_elifdef_in_declaration_specifiers, $._declaration_specifiers],
+    [$.preproc_if_in_declaration_specifiers, $._declaration_specifiers],
   ],
 
   extras: $ => [
@@ -291,13 +348,20 @@ module.exports = grammar({
     // Top-level preproc bodies hold top-level items (a guarded header can
     // contain declaration macros); nested bodies still accept every
     // statement shape through _top_level_statement -> statement.
-    ...preprocIf('', $ => choice($._top_level_item, $.dangling_else, $.dangling_label, '__extension__')),
+    ...preprocIf('', $ => choice($._top_level_item, $.dangling_else, $.dangling_label, '__extension__', $.identifier)),
     // Statement-context variant: a preproc group inside a function body
     // holds statements/declarations, NOT top-level items — in particular
     // `NAME(args);` there is a call_expression, never a macro_declaration
     // (the file-scope fallback arm in _top_level_item). Used via
     // _block_item and _statement_or_preproc.
     ...preprocIf('_in_statement', $ => choice($._block_item, $.dangling_else, $.dangling_label, '__extension__')),
+    // `#ifdef X\nextern\n#else\nIDENT\n#endif` arms inside declaration
+    // specifiers (MiG-generated headers switch the linkage qualifier).
+    ...preprocIf('_in_declaration_specifiers', $ => choice(
+      $._declaration_modifiers,
+      $.macro_qualifier,
+      $.type_specifier,
+    )),
     ...preprocIf('_in_field_declaration_list', $ => $._field_declaration_list_item),
     ...preprocIf('_in_enumerator_list', $ => choice(seq($.enumerator, ','), $.enumerator, $.call_expression, '__extension__', $.preproc_def)),
     ...preprocIf('_in_enumerator_list_no_comma', $ => choice($.enumerator, $.call_expression, '__extension__', $.preproc_def), -1),
@@ -611,7 +675,7 @@ module.exports = grammar({
       // CMSIS / ARM
       '__IO', '__I', '__O', '__IM', '__OM', '__IOM', '__ASM', '__INLINE',
       '__STATIC_INLINE', '__STATIC_FORCEINLINE', '__WEAK', '__IRQ',
-      '__PACKED', '__NO_RETURN', '__ALIGNED', '__COMPILER_BARRIER',
+      '__PACKED', '__packed', '__NO_RETURN', '__ALIGNED', '__COMPILER_BARRIER',
       '__PROGRAM_START', '__VECTOR_TABLE',
       // Linux sparse / GCC attributes
       '__user', '__kernel', '__iomem', '__maybe_unused', '__always_inline',
@@ -757,7 +821,14 @@ module.exports = grammar({
     _declaration_specifiers: $ => prec.right(seq(
       // macro_qualifier is allowed only before the type: a bare identifier
       // after the type is always a declarator name, never a macro.
-      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
+      repeat(choice(
+        $._declaration_modifiers,
+        $.macro_qualifier,
+        // `#ifdef mig_external\nmig_external\n#else\nextern\n#endif T f()`: a
+        // preproc group supplying only specifiers (MiG-generated headers).
+        alias($.preproc_if_in_declaration_specifiers, $.preproc_if),
+        alias($.preproc_ifdef_in_declaration_specifiers, $.preproc_ifdef),
+      )),
       field('type', $.type_specifier),
       repeat($._declaration_modifiers),
     )),
@@ -1213,8 +1284,10 @@ module.exports = grammar({
       // Reserved/builtin spellings (underscore- or _Capital-prefixed) that
       // cannot be user typedefs: MSVC ints, GCC/Clang vectors, ISO _FloatN.
       '_Bool',
-      '__fp16',
-      '__bf16',
+      // `__fp16`/`__bf16` are NOT literals: ARM/MSVC shims name a user type
+      // `struct __fp16`, and a keyword there can never be a class name or a
+      // ctor. As plain identifiers `__fp16 x;` still parses as a typedef
+      // declaration.
       '__vector',
       '__pixel',
       '__int128_t',
@@ -1877,7 +1950,10 @@ module.exports = grammar({
     )),
 
     gnu_asm_expression: $ => prec(PREC.CALL, seq(
-      choice('asm', '__asm__', '__asm'),
+      // ARM/Keil CMSIS reach `asm` through a macro name: `__ASM volatile
+      // ("...")`, `__ASM("..." : "=r"(x))`. A literal keyword, not a regex
+      // token — the `word` token would out-lex it.
+      choice('asm', '__asm__', '__asm', '__ASM'),
       repeat($.gnu_asm_qualifier),
       '(',
       field('assembly_code', $._string),

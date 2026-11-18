@@ -1,6 +1,6 @@
---- /tmp/upstream-objc-grammar.js	2026-11-17 19:26:20.844389837 +0000
-+++ vendor/tree-sitter-objc/grammar.js	2026-11-18 01:54:21.788137393 +0000
-@@ -20,9 +20,13 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -20,9 +20,23 @@
    ],
  
    conflicts: ($, original) => original.filter(
@@ -9,13 +9,23 @@
 +      && !(e.length == 2
 +        && e.map((x) => x.name).sort().join(',') == '_top_level_expression_statement,type_specifier'),
    ).concat([
++    // `IDENT [` — subscript/message vs a specifier-starting macro before
++    // `[` (parameterized decl shapes).
++    [$.macro_qualifier, $.type_specifier, $.expression],
++    // A specifier run can head a plain declaration or a `@`-header after
++    // `__extension__`/modifier macros.
++    [$._declaration_specifiers, $.protocol_forward_declaration, $._class_interface_header, $._class_implementation_header, $.protocol_declaration],
++    [$.macro_qualifier, $.type_specifier, $.statement],
++    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.statement, $.expression, $.macro_type_specifier],
++    [$.macro_qualifier, $.type_specifier, $.statement, $.expression],
++    [$.macro_qualifier, $.statement],
      [$.enum_specifier],
 +    [$.enumerator],
 +    [$._preproc_expression, $.preproc_argument_list],
      [$.expression, $.generic_specifier],
      [$._declarator, $.type_specifier, $.generic_specifier],
      [$._declarator, $.type_specifier, $.sized_type_specifier],
-@@ -32,6 +36,125 @@
+@@ -32,6 +46,125 @@
      [$.extension_expression, $.range_expression],
      [$.abstract_array_declarator, $.array_type_specifier],
      [$._type_definition_type],
@@ -141,7 +151,7 @@
    ]),
  
    inline: ($, original) => original.concat([
-@@ -48,6 +171,26 @@
+@@ -48,6 +181,26 @@
    ]),
  
    rules: {
@@ -168,7 +178,7 @@
      _top_level_item: ($, original) => choice(
        original,
        $.class_declaration,
-@@ -57,8 +200,91 @@
+@@ -57,8 +210,91 @@
        $.protocol_forward_declaration,
        $.module_import,
        $.compatibility_alias_declaration,
@@ -260,7 +270,7 @@
      ),
  
      _block_item: ($, original) => choice(
-@@ -70,8 +296,46 @@
+@@ -70,8 +306,46 @@
        $.protocol_forward_declaration,
        $.module_import,
        $.compatibility_alias_declaration,
@@ -307,7 +317,7 @@
      ),
  
      function_definition: $ => seq(
-@@ -88,19 +352,52 @@
+@@ -88,19 +362,52 @@
          $.init_declarator,
          seq($.type_qualifier, $.identifier),
        )))),
@@ -370,7 +380,7 @@
      ),
  
      _type_definition_type: $ => seq(
-@@ -114,6 +411,15 @@
+@@ -114,6 +421,15 @@
      _type_definition_declarators: $ => seq(
        commaSep1(field('declarator', $._type_declarator)),
        optional($._declaration_modifiers),
@@ -386,7 +396,7 @@
      ),
  
      _declaration_modifiers: ($, original) => choice(
-@@ -142,6 +448,12 @@
+@@ -142,6 +458,12 @@
        $.throw_statement,
        $.synchronized_statement,
        $.ms_asm_block,
@@ -399,10 +409,14 @@
      ),
  
      attribute: $ => seq(
-@@ -358,12 +670,84 @@
+@@ -357,13 +679,88 @@
+     ...preprocIf('_in_implementation_definition', $ => $.implementation_definition),
      ...preprocIf('_in_interface_declaration', $ => $.interface_declaration),
      ...preprocIf('_in_enumerator', $ => seq($.enumerator, ',')),
- 
++    // `#if` between the selector parts of a method signature
++    // (`- (void)a:(T)x\n#if F\n b:(T)y\n#endif c:(T)z;`).
++    ...preprocIf('_in_method_signature', $ => repeat1(choice(seq(optional($.method_selector), $.method_parameter), seq(',', '...')))),
++
 +    // A `#` line that carries no directive name: the null directive (`#`
 +    // alone or `#` + trailing space) and the pre-ANSI `# comment` banner
 +    // idiom (`# /*`, `# *`, `# */`, `#---`). One token eats the whole line —
@@ -424,7 +438,7 @@
 +      seq('#', token.immediate(/\r?\n/)),
 +      seq(token(/#[ \t]+/), token.immediate(/\r?\n/)),
 +    ),
-+
+ 
      preproc_undef: $ => seq(
        preprocessor('undef'),
 -      field('name', $.identifier),
@@ -436,17 +450,17 @@
 +      preprocessor('define'),
 +      field('name', $._preproc_macro_name),
 +      field('value', optional($.preproc_arg)),
-+      token.immediate(/\r?\n/),
-+    ),
-+
+       token.immediate(/\r?\n/),
+     ),
+ 
 +    preproc_function_def: $ => seq(
 +      preprocessor('define'),
 +      field('name', $._preproc_macro_name),
 +      field('parameters', $.preproc_params),
 +      field('value', optional($.preproc_arg)),
-       token.immediate(/\r?\n/),
-     ),
- 
++      token.immediate(/\r?\n/),
++    ),
++
 +    // The generic `#ifdef` / `#elifdef` with the macro-name rule above, so
 +    // `#ifndef NS_ENUM` keeps parsing once `NS_ENUM` is a keyword.
 +    preproc_ifdef: $ => seq(
@@ -485,7 +499,7 @@
      preproc_linemarker: $ => seq(
        '#',
        $.number_literal,
-@@ -422,6 +806,7 @@
+@@ -422,6 +819,7 @@
            'NS_EXTENSION_UNAVAILABLE_IOS',
            'NS_CLASS_AVAILABLE_IOS',
            'NS_CLASS_DEPRECATED_IOS',
@@ -493,7 +507,7 @@
            '__OSX_AVAILABLE_STARTING',
          ),
          '(',
-@@ -481,6 +866,9 @@
+@@ -481,6 +879,9 @@
  
      enumerator: $ => seq(
        field('name', $.identifier),
@@ -503,7 +517,37 @@
        optional(seq('=', field('value', $.expression))),
      ),
  
-@@ -590,7 +978,6 @@
+@@ -499,7 +900,10 @@
+     )),
+ 
+     protocol_forward_declaration: $ => seq(
+-      repeat($._declaration_modifiers),
++      // A bare marker macro may prefix the declaration: `FOO @protocol A;`
++      // and `SPU_OBJC_DIRECT_MEMBERS @interface`. `@` right after the name
++      // keeps it unambiguous.
++      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
+       '@protocol',
+       commaSep1($.identifier),
+       ';',
+@@ -523,7 +927,7 @@
+     ),
+ 
+     _class_interface_header: $ => seq(
+-      repeat($._declaration_modifiers),
++      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
+       '@interface',
+       $.identifier,
+       optional(';'),
+@@ -549,7 +953,7 @@
+     ),
+ 
+     _class_implementation_header: $ => seq(
+-      repeat($._declaration_modifiers),
++      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
+       '@implementation',
+       $.identifier,
+       optional(';'),
+@@ -590,7 +994,6 @@
      instance_variable: $ => choice(
        $.visibility_specification,
        $.struct_declaration,
@@ -511,7 +555,16 @@
        $.preproc_ifdef,
        $.preproc_if,
      ),
-@@ -625,10 +1012,16 @@
+@@ -603,7 +1006,7 @@
+     ),
+ 
+     protocol_declaration: $ => seq(
+-      repeat($._declaration_modifiers),
++      repeat(choice($._declaration_modifiers, $.macro_qualifier)),
+       '@protocol',
+       $.identifier,
+       optional($.protocol_reference_list),
+@@ -625,10 +1028,16 @@
        $.function_definition,
        $.type_definition,
        alias($.preproc_if_in_interface_declaration, $.preproc_if),
@@ -529,7 +582,7 @@
        seq($.struct_specifier, ';'),
      ),
  
-@@ -646,12 +1039,16 @@
+@@ -646,12 +1055,16 @@
        $.preproc_function_def,
        $.macro_type_specifier,
        $.type_definition,
@@ -549,7 +602,19 @@
  
      property_implementation: $ => choice(
        seq(
-@@ -681,7 +1078,11 @@
+@@ -671,17 +1084,21 @@
+           $.method_selector_no_list,
+           optional(seq(
+             $.method_parameter,
+-            repeat(seq(optional($.method_selector), $.method_parameter)),
++            repeat(choice(seq(optional($.method_selector), $.method_parameter), alias($.preproc_if_in_method_signature, $.preproc_if), alias($.preproc_ifdef_in_method_signature, $.preproc_ifdef))),
+           )),
+         ),
+         seq(
+           $.method_parameter,
+-          repeat(seq(optional($.method_selector), $.method_parameter)),
++          repeat(choice(seq(optional($.method_selector), $.method_parameter), alias($.preproc_if_in_method_signature, $.preproc_if), alias($.preproc_ifdef_in_method_signature, $.preproc_ifdef))),
+         ),
        ),
        optional(seq(',', choice('...', commaSep1(alias($.c_method_parameter, $.method_parameter))))),
        repeat($.declaration),
@@ -562,7 +627,7 @@
        optional(';'),
        $.compound_statement,
        optional(';'),
-@@ -718,7 +1119,7 @@
+@@ -718,7 +1135,7 @@
        '@property',
        optional($.property_attributes_declaration),
        optional(choice($.attribute_specifier, $.attribute_declaration)),
@@ -571,8 +636,12 @@
      )),
  
      property_attributes_declaration: $ => seq(
-@@ -745,7 +1146,7 @@
+@@ -743,9 +1160,11 @@
+           optional($.method_parameter),
+         ),
          $.method_parameter,
++        alias($.preproc_if_in_method_signature, $.preproc_if),
++        alias($.preproc_ifdef_in_method_signature, $.preproc_ifdef),
        )),
        optional(seq(',', choice('...', commaSep1(alias($.c_method_parameter, $.method_parameter))))),
 -      repeat($._declaration_modifiers),
@@ -580,7 +649,7 @@
        repeat1(prec.right(';')),
      ),
  
-@@ -768,17 +1169,47 @@
+@@ -768,17 +1187,47 @@
      struct_declaration: $ => seq(
        repeat1($.specifier_qualifier),
        commaSep1($.struct_declarator),
@@ -636,7 +705,7 @@
      ),
  
      preproc_block: $ => prec.right(seq(
-@@ -1050,6 +1481,7 @@
+@@ -1050,6 +1499,7 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -644,7 +713,7 @@
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
        $.atdef_field,
-@@ -1082,7 +1514,6 @@
+@@ -1082,7 +1532,6 @@
        const hexDigits = seq(repeat1(hex), repeat(seq(separator, repeat1(hex))));
        const decimalDigits = seq(repeat1(decimal), repeat(seq(separator, repeat1(decimal))));
        return token(seq(
@@ -652,7 +721,7 @@
          optional(choice('0x', '0b')),
          choice(
            seq(
-@@ -1197,7 +1628,7 @@
+@@ -1197,7 +1646,7 @@
  
      ['preproc_ifdef' + suffix]: $ => seq(
        choice(preprocessor('ifdef'), preprocessor('ifndef')),
@@ -661,7 +730,7 @@
        repeat(prec(2, content($))),
        field('alternative', optional(choice(elseBlock($), $.preproc_elifdef))),
        preprocessor('endif'),
-@@ -1218,7 +1649,7 @@
+@@ -1218,7 +1667,7 @@
  
      ['preproc_elifdef' + suffix]: $ => seq(
        choice(preprocessor('elifdef'), preprocessor('elifndef')),
