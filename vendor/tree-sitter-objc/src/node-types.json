@@ -4020,6 +4020,10 @@
       "required": false,
       "types": [
         {
+          "type": "block_literal",
+          "named": true
+        },
+        {
           "type": "char_literal",
           "named": true
         },

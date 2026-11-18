@@ -110,6 +110,9 @@ module.exports = grammar(C, {
     // `#ifdef` arm inside an argument list followed by a `^{ }` block
     // literal vs the same tokens as a preproc-in-args continuation.
     [$.preproc_ifdef_in_argument_list, $.block_literal],
+    // `MACRO(^ret(args){...})` — `^` in the macro-argument token stream
+    // vs the start of a block literal argument.
+    [$.macro_argument_list, $.block_literal],
     // After a `+`/`(` selector, `NAME __extension__` keeps two
     // macro_qualifier reductions alive in the method modifier repeat.
     [$.macro_qualifier],
@@ -269,6 +272,16 @@ module.exports = grammar(C, {
         'const',
         '{',
         '}',
+        ';',
+        // `__kindof` keyword used as an argument token, the `@selector`
+        // keyword (its `(...)` rides the nested argument-list rule),
+        // and `^type(args){body}` block literals
+        // (`ExtendImplementationOf*` in QMUI). Without them the
+        // `NAME(...)` read falls back to `call_expression` and dies on
+        // the type tokens.
+        '__kindof',
+        '@selector',
+        $.block_literal,
         $.macro_argument_list,
       )),
       ')',

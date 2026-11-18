@@ -474,3 +474,21 @@ fn call_operand_beside_signed_number_parses() {
     ));
     assert_eq!(function_names(&analysis), ["h"]);
 }
+
+/// `NAME([C class], @selector(init), __kindof C *, ^ret(args){...})` —
+/// QMUI's ExtendImplementation macros pass type tokens, `@selector` and a
+/// block literal as plain arguments. The `NAME(...)` read must be a
+/// `macro_declaration`, not a `call_expression` that dies on `__kindof C *`.
+#[test]
+fn macro_arg_block_literal_and_selector_parses() {
+    let analysis = run_clean(concat!(
+        "void f(void) {\n",
+        "  ExtendImplementationOfNonVoidMethodWithoutArguments([UIBarItem class], @selector(init), __kindof UIBarItem *, ^__kindof UIBarItem *(UIBarItem *selfObject, __kindof UIBarItem *originReturnValue) {\n",
+        "    [selfObject qmui_didInitialize];\n",
+        "    return originReturnValue;\n",
+        "  });\n",
+        "}\n",
+    ));
+    assert_eq!(function_names(&analysis), ["f"]);
+}
+

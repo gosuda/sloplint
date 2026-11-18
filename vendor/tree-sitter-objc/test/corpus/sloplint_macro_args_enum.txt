@@ -1,0 +1,55 @@
+================================================================================
+Type tokens, @selector and a block literal inside a macro argument list
+================================================================================
+
+void f(void) {
+    ExtendImplementationOfNonVoidMethodWithoutArguments([UIBarItem class], @selector(init), __kindof UIBarItem *, ^__kindof UIBarItem *(UIBarItem *selfObject, __kindof UIBarItem *originReturnValue) {
+        [selfObject qmui_didInitialize];
+        return originReturnValue;
+    });
+}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (macro_declaration
+        (identifier)
+        (macro_argument_list
+          (identifier)
+          (identifier)
+          (macro_argument_list
+            (identifier))
+          (identifier)
+          (block_literal
+            (type_name
+              (type_qualifier)
+              (type_identifier)
+              (abstract_pointer_declarator
+                (abstract_function_declarator
+                  (parameter_list
+                    (parameter_declaration
+                      (type_identifier)
+                      (pointer_declarator
+                        (identifier)))
+                    (parameter_declaration
+                      (type_qualifier)
+                      (type_identifier)
+                      (pointer_declarator
+                        (identifier)))))))
+            (compound_statement
+              (expression_statement
+                (message_expression
+                  (identifier)
+                  (identifier)))
+              (return_statement
+                (identifier))))))
+          (expression_statement))))
+
