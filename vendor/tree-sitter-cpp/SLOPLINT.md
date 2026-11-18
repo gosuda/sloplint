@@ -321,6 +321,14 @@ reproduced on real code. Every repro below was first accepted by
   reported subset — and `prec.dynamic(-1)` on the generic rules keeps
   real reads preferred, so no clean-input parse changes.
 
+- C-base drift picked up with the vendored `node_modules/tree-sitter-c`
+  (and `sloplint-c-base.patch` regenerated): `__fp16`/`__bf16` out of
+  `primitive_type` (user `struct __fp16` in ncnn headers), `'__packed'`
+  in the CMSIS `macro_attribute` group, `__ASM` as a `gnu_asm_expression`
+  keyword, the `_in_declaration_specifiers` preprocIf suite (MiG
+  `#ifdef mig_external`/`extern` arms), and bare `NAME` marker arms via
+  `_macro_declaration_top` with an optional tail.
+
 ## Constructs verified fixed
 
 Each was a parse error with the published crate and is valid for g++ and
@@ -328,6 +336,10 @@ clang++ with `-std=c++23`.
 
 - `#if __has_include(<endian.h>)`, with quotes, after `defined`, with `||`
   and `&&`, in `#elif`; `__has_attribute(x)`; `__has_cpp_attribute(ns::x)`;
+- C header shapes shared with the C grammar: `__ASM volatile ("..." : : :
+  "memory")`, `__packed struct S { ... } v;`, `#ifdef GUARD`/`NAME`/`#endif`
+  marker arms, `#ifdef`-switched declaration specifiers
+  (`mig_external`/`extern`), `struct __fp16 { ... };` and `__fp16 h;`.
   `__has_embed("x")`; `__has_warning("-Wx")`
 - `enum : unsigned short {A=2};`, `enum : int {B};`
 - `struct S{unsigned:0; int x;};`, `struct T{int a:3; int :5; int b:2;};`

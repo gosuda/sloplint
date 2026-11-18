@@ -2408,6 +2408,14 @@
           "named": true
         },
         {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        },
+        {
           "type": "storage_class_specifier",
           "named": true
         },
@@ -2960,10 +2968,6 @@
       "required": false,
       "types": [
         {
-          "type": "array_declarator",
-          "named": true
-        },
-        {
           "type": "attribute_declaration",
           "named": true
         },
@@ -2972,19 +2976,7 @@
           "named": true
         },
         {
-          "type": "attributed_declarator",
-          "named": true
-        },
-        {
           "type": "bitfield_clause",
-          "named": true
-        },
-        {
-          "type": "field_identifier",
-          "named": true
-        },
-        {
-          "type": "function_declarator",
           "named": true
         },
         {
@@ -3004,27 +2996,15 @@
           "named": true
         },
         {
-          "type": "operator_name",
+          "type": "preproc_if",
           "named": true
         },
         {
-          "type": "parenthesized_declarator",
-          "named": true
-        },
-        {
-          "type": "pointer_declarator",
-          "named": true
-        },
-        {
-          "type": "reference_declarator",
+          "type": "preproc_ifdef",
           "named": true
         },
         {
           "type": "storage_class_specifier",
-          "named": true
-        },
-        {
-          "type": "template_method",
           "named": true
         },
         {
@@ -3567,6 +3547,14 @@
           "named": true
         },
         {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        },
+        {
           "type": "storage_class_specifier",
           "named": true
         },
@@ -3855,6 +3843,14 @@
         },
         {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -5553,6 +5549,14 @@
           "named": true
         },
         {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        },
+        {
           "type": "storage_class_specifier",
           "named": true
         },
@@ -7084,6 +7088,14 @@
           "named": true
         },
         {
+          "type": "attribute_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_specifier",
+          "named": true
+        },
+        {
           "type": "concept_definition",
           "named": true
         },
@@ -7152,7 +7164,15 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "midl_attribute_list",
+          "named": true
+        },
+        {
+          "type": "ms_declspec_modifier",
           "named": true
         },
         {
@@ -7212,6 +7232,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
           "named": true
         },
@@ -7221,6 +7245,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -7456,6 +7484,14 @@
           "named": true
         },
         {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        },
+        {
           "type": "storage_class_specifier",
           "named": true
         },
@@ -7532,6 +7568,14 @@
           "named": true
         },
         {
+          "type": "attribute_declaration",
+          "named": true
+        },
+        {
+          "type": "attribute_specifier",
+          "named": true
+        },
+        {
           "type": "concept_definition",
           "named": true
         },
@@ -7600,7 +7644,15 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "midl_attribute_list",
+          "named": true
+        },
+        {
+          "type": "ms_declspec_modifier",
           "named": true
         },
         {
@@ -7660,6 +7712,10 @@
           "named": true
         },
         {
+          "type": "storage_class_specifier",
+          "named": true
+        },
+        {
           "type": "template_declaration",
           "named": true
         },
@@ -7669,6 +7725,10 @@
         },
         {
           "type": "type_definition",
+          "named": true
+        },
+        {
+          "type": "type_qualifier",
           "named": true
         },
         {
@@ -7842,6 +7902,14 @@
           "named": true
         },
         {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        },
+        {
           "type": "storage_class_specifier",
           "named": true
         },
@@ -8007,6 +8075,14 @@
         },
         {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -9018,6 +9094,14 @@
         },
         {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -10104,6 +10188,10 @@
     "named": false
   },
   {
+    "type": ">=",
+    "named": false
+  },
+  {
     "type": ">>",
     "named": false
   },
@@ -11168,6 +11256,10 @@
     "named": false
   },
   {
+    "type": "__packed",
+    "named": false
+  },
+  {
     "type": "__percpu",
     "named": false
   },
@@ -11357,8 +11449,7 @@
   },
   {
     "type": "comment",
-    "named": true,
-    "extra": true
+    "named": true
   },
   {
     "type": "compl",
