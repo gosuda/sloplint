@@ -63,6 +63,7 @@ export default function defineGrammar(dialect) {
       [$._type_query_call_expression, $.primary_expression],
       [$._type_query_instantiation_expression, $.primary_expression],
       [$.type_query, $.primary_expression],
+      [$.type_query, $.unary_expression],
       [$.override_modifier, $.primary_expression],
       [$.decorator_call_expression, $.decorator],
       [$.literal_type, $.pattern],
@@ -77,6 +78,8 @@ export default function defineGrammar(dialect) {
     conflicts: ($, previous) => previous.concat([
       [$.call_expression, $.instantiation_expression, $.binary_expression],
       [$.call_expression, $.instantiation_expression, $.binary_expression, $.unary_expression],
+      [$.call_expression, $._type_query_import_call_expression],
+      [$.call_expression, $._type_query_import_call_expression_in_type_annotation],
       [$.call_expression, $.instantiation_expression, $.binary_expression, $.update_expression],
       [$.call_expression, $.instantiation_expression, $.binary_expression, $.await_expression],
 
@@ -709,6 +712,7 @@ export default function defineGrammar(dialect) {
           $.import,
           alias($._type_query_member_expression_in_type_annotation, $.member_expression),
           alias($._type_query_call_expression_in_type_annotation, $.call_expression),
+          alias($._type_query_import_call_expression_in_type_annotation, $.call_expression),
         )),
         '.',
         // sloplint: reserved('properties') as in the JS member_expression, so that
@@ -718,9 +722,12 @@ export default function defineGrammar(dialect) {
           reserved('properties', alias($.identifier, $.property_identifier)),
         )),
       ),
+      _type_query_import_call_expression_in_type_annotation: $ => seq(
+        field('function', $.import),
+        field('arguments', $.arguments),
+      ),
       _type_query_call_expression_in_type_annotation: $ => seq(
         field('function', choice(
-          $.import,
           alias($._type_query_member_expression_in_type_annotation, $.member_expression),
         )),
         field('arguments', $.arguments),
@@ -743,6 +750,7 @@ export default function defineGrammar(dialect) {
         $.infer_type,
         prec(-1, alias($._type_query_member_expression_in_type_annotation, $.member_expression)),
         prec(-1, alias($._type_query_call_expression_in_type_annotation, $.call_expression)),
+        prec(-1, alias($._type_query_import_call_expression_in_type_annotation, $.call_expression)),
       ),
 
       tuple_parameter: $ => seq(
@@ -867,6 +875,7 @@ export default function defineGrammar(dialect) {
           alias($._type_query_subscript_expression, $.subscript_expression),
           alias($._type_query_member_expression, $.member_expression),
           alias($._type_query_call_expression, $.call_expression),
+          alias($._type_query_import_call_expression, $.call_expression),
         )),
         choice('.', alias($.optional_chain, '?.')),
         // sloplint: reserved('properties') as in the JS member_expression, so that
@@ -883,13 +892,17 @@ export default function defineGrammar(dialect) {
           alias($._type_query_subscript_expression, $.subscript_expression),
           alias($._type_query_member_expression, $.member_expression),
           alias($._type_query_call_expression, $.call_expression),
+          alias($._type_query_import_call_expression, $.call_expression),
         )),
         optional(alias($.optional_chain, '?.')),
         '[', field('index', choice($.predefined_type, $.string, $.number)), ']',
       ),
+      _type_query_import_call_expression: $ => seq(
+        field('function', $.import),
+        field('arguments', $.arguments),
+      ),
       _type_query_call_expression: $ => seq(
         field('function', choice(
-          $.import,
           $.identifier,
           alias($._type_query_member_expression, $.member_expression),
           alias($._type_query_subscript_expression, $.subscript_expression),
@@ -910,6 +923,7 @@ export default function defineGrammar(dialect) {
         choice(
           alias($._type_query_subscript_expression, $.subscript_expression),
           alias($._type_query_member_expression, $.member_expression),
+          alias($._type_query_import_call_expression, $.call_expression),
           alias($._type_query_call_expression, $.call_expression),
           alias($._type_query_instantiation_expression, $.instantiation_expression),
           $.identifier,

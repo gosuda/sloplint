@@ -9208,6 +9208,15 @@
                 },
                 "named": true,
                 "value": "call_expression"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_type_query_import_call_expression_in_type_annotation"
+                },
+                "named": true,
+                "value": "call_expression"
               }
             ]
           }
@@ -9244,6 +9253,27 @@
         }
       ]
     },
+    "_type_query_import_call_expression_in_type_annotation": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "function",
+          "content": {
+            "type": "SYMBOL",
+            "name": "import"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "arguments",
+          "content": {
+            "type": "SYMBOL",
+            "name": "arguments"
+          }
+        }
+      ]
+    },
     "_type_query_call_expression_in_type_annotation": {
       "type": "SEQ",
       "members": [
@@ -9253,10 +9283,6 @@
           "content": {
             "type": "CHOICE",
             "members": [
-              {
-                "type": "SYMBOL",
-                "name": "import"
-              },
               {
                 "type": "ALIAS",
                 "content": {
@@ -9367,6 +9393,19 @@
             "content": {
               "type": "SYMBOL",
               "name": "_type_query_call_expression_in_type_annotation"
+            },
+            "named": true,
+            "value": "call_expression"
+          }
+        },
+        {
+          "type": "PREC",
+          "value": -1,
+          "content": {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_type_query_import_call_expression_in_type_annotation"
             },
             "named": true,
             "value": "call_expression"
@@ -9934,6 +9973,15 @@
                 },
                 "named": true,
                 "value": "call_expression"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_type_query_import_call_expression"
+                },
+                "named": true,
+                "value": "call_expression"
               }
             ]
           }
@@ -10027,6 +10075,15 @@
                 },
                 "named": true,
                 "value": "call_expression"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_type_query_import_call_expression"
+                },
+                "named": true,
+                "value": "call_expression"
               }
             ]
           }
@@ -10079,6 +10136,27 @@
         }
       ]
     },
+    "_type_query_import_call_expression": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "function",
+          "content": {
+            "type": "SYMBOL",
+            "name": "import"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "arguments",
+          "content": {
+            "type": "SYMBOL",
+            "name": "arguments"
+          }
+        }
+      ]
+    },
     "_type_query_call_expression": {
       "type": "SEQ",
       "members": [
@@ -10088,10 +10166,6 @@
           "content": {
             "type": "CHOICE",
             "members": [
-              {
-                "type": "SYMBOL",
-                "name": "import"
-              },
               {
                 "type": "SYMBOL",
                 "name": "identifier"
@@ -10205,6 +10279,15 @@
                 },
                 "named": true,
                 "value": "member_expression"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_type_query_import_call_expression"
+                },
+                "named": true,
+                "value": "call_expression"
               },
               {
                 "type": "ALIAS",
@@ -11454,6 +11537,14 @@
     ],
     [
       "call_expression",
+      "_type_query_import_call_expression"
+    ],
+    [
+      "call_expression",
+      "_type_query_import_call_expression_in_type_annotation"
+    ],
+    [
+      "call_expression",
       "instantiation_expression",
       "binary_expression",
       "update_expression"
@@ -12094,6 +12185,16 @@
       {
         "type": "SYMBOL",
         "name": "primary_expression"
+      }
+    ],
+    [
+      {
+        "type": "SYMBOL",
+        "name": "type_query"
+      },
+      {
+        "type": "SYMBOL",
+        "name": "unary_expression"
       }
     ],
     [
