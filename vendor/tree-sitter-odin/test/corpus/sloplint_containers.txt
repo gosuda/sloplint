@@ -1,0 +1,74 @@
+================================================================================
+anonymous container literal in call args, soa types, member defaults
+================================================================================
+
+f :: proc() {
+    push(struct { a: int }{1})
+    push(union { a: int, b: f32 }{a = 1})
+}
+
+A :: #soa[]Particle
+B :: #soa[64]Particle
+
+Cfg :: struct {
+    retries: int = 3,
+    name: string,
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters)
+      (block
+        (call_expression
+          (identifier)
+          (struct
+            (struct_type
+              (struct_member
+                (identifier)
+                (type
+                  (identifier))))
+            (struct_field
+              (number))))
+        (call_expression
+          (identifier)
+          (struct
+            (union_type
+              (named_type
+                (identifier)
+                (type
+                  (identifier)))
+              (named_type
+                (identifier)
+                (type
+                  (identifier))))
+            (struct_field
+              (identifier)
+              (number)))))))
+  (const_declaration
+    (identifier)
+    (array_type
+      (tag)
+      (type
+        (identifier))))
+  (const_declaration
+    (identifier)
+    (array_type
+      (tag)
+      (number)
+      (type
+        (identifier))))
+  (struct_declaration
+    (identifier)
+    (field
+      (identifier)
+      (type
+        (identifier))
+      (number))
+    (field
+      (identifier)
+      (type
+        (identifier)))))

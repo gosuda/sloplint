@@ -1,0 +1,60 @@
+================================================================================
+for-init iterator form and matrix keyed literal
+================================================================================
+
+walk :: proc() {
+    for it := iter_make(&c); vo, _ in iterate(&it) {
+        use(vo)
+    }
+}
+
+main :: proc() {
+    foo := #row_major matrix[4, 4]int{4 ..< 8 = 1, 1 ..< 2 = 2}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters)
+      (block
+        (for_statement
+          (assignment_statement
+            (identifier)
+            (call_expression
+              (identifier)
+              (unary_expression
+                (identifier))))
+          (identifier)
+          (identifier)
+          (call_expression
+            (identifier)
+            (unary_expression
+              (identifier)))
+          (block
+            (call_expression
+              (identifier)
+              (identifier)))))))
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters)
+      (block
+        (assignment_statement
+          (identifier)
+          (tag)
+          (matrix
+            (number)
+            (number)
+            (type
+              (identifier))
+            (range_expression
+              (number)
+              (number))
+            (number)
+            (range_expression
+              (number)
+              (number))
+            (number)))))))
