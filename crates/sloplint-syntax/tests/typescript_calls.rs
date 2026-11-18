@@ -42,6 +42,11 @@ fn generic_tagged_template_reports_plain_callee() {
                 "{lang:?}: generic tag must unwrap the instantiation"
             );
             assert_eq!(analysis.facts.calls[0].callee_root, Some("logger"));
+            assert_eq!(
+                analysis.facts.calls[1].callee, "logger.info",
+                "{lang:?}: ordinary generic call keeps the member callee"
+            );
+            assert_eq!(analysis.facts.calls[1].callee_root, Some("logger"));
         });
     }
 }
