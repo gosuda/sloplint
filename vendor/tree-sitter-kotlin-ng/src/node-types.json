@@ -1806,19 +1806,15 @@
           "named": true
         },
         {
-          "type": "nullable_type",
-          "named": true
-        },
-        {
-          "type": "parenthesized_type",
-          "named": true
-        },
-        {
           "type": "property_delegate",
           "named": true
         },
         {
           "type": "setter",
+          "named": true
+        },
+        {
+          "type": "type",
           "named": true
         },
         {
@@ -1831,10 +1827,6 @@
         },
         {
           "type": "type_parameters",
-          "named": true
-        },
-        {
-          "type": "user_type",
           "named": true
         },
         {

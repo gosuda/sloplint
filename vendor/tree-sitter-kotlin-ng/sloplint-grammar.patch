@@ -26,7 +26,15 @@
        optional($.modifiers),
        choice('val', 'var'),
        optional($.type_parameters),
-@@ -191,6 +196,13 @@
+@@ -186,11 +191,21 @@
+       )),
+       optional(';'),
+       optional(choice(
++        // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
++        // where an accessor would sit (upstream v1.1.0 gap).
++        seq('field', optional(seq(':', $.type)), '=', $.expression),
+         seq($.getter, optional($.setter)),
+         seq($.setter, optional($.getter)),
        )),
      )),
  
@@ -40,7 +48,7 @@
      type_alias: $ => prec.right(seq(
        optional($.modifiers),
        'typealias',
-@@ -265,6 +277,7 @@
+@@ -265,6 +280,7 @@
      constructor_invocation: $ => seq($.type, $.value_arguments),
  
      function_declaration: $ => prec.right(1, seq(
@@ -48,7 +56,7 @@
        optional($.modifiers),
        'fun',
        optional($.type_parameters),
-@@ -415,7 +428,7 @@
+@@ -415,7 +431,7 @@
  
      enum_entry: $ => seq(
        optional($.modifiers),
@@ -57,7 +65,7 @@
        optional($.value_arguments),
        optional($.class_body),
      ),
-@@ -427,7 +440,7 @@
+@@ -427,7 +443,7 @@
      ),
  
      value_argument: $ => seq(
@@ -66,7 +74,7 @@
        optional('*'),
        $.expression,
      ),
-@@ -593,6 +606,7 @@
+@@ -593,6 +609,7 @@
  
      function_type: $ => seq(
        optional($.type_modifiers),
@@ -74,7 +82,7 @@
        optional(seq($._receiver_type, '.')),
        $.function_type_parameters,
        '->',
-@@ -752,6 +766,7 @@
+@@ -752,6 +769,7 @@
      ),
  
      lambda_literal: $ => seq(
@@ -82,7 +90,7 @@
        '{',
        optional(seq(optional($.lambda_parameters), '->')),
        optionalSep1($.statement, $._semi),
-@@ -853,6 +868,11 @@
+@@ -853,6 +871,11 @@
            commaSep1(field('condition', $._when_condition)),
            optional(','),
          ),
@@ -94,7 +102,7 @@
          'else',
        ),
        '->',
-@@ -929,7 +949,7 @@
+@@ -929,7 +952,7 @@
  
      navigation_expression: $ => prec(PREC.CALL, seq(
        $.expression,
@@ -103,7 +111,7 @@
        $.identifier,
      )),
  
-@@ -940,6 +960,7 @@
+@@ -940,6 +963,7 @@
      ),
  
      string_literal: $ => seq(
@@ -111,7 +119,7 @@
        '"',
        repeat(choice(
          alias(choice(
-@@ -956,14 +977,17 @@
+@@ -956,14 +980,17 @@
      ),
  
      multiline_string_literal: $ => seq(
@@ -130,7 +138,7 @@
      interpolation: $ => choice(
        seq('$', $._identifier),
        seq('${', $.expression, '}'),
-@@ -1059,6 +1083,7 @@
+@@ -1059,6 +1086,7 @@
          'set',
          'operator',
          'value',
@@ -180,7 +188,17 @@
              case '*':
              case '%':
              case '>':
-@@ -279,18 +294,22 @@
+@@ -252,7 +267,8 @@
+                 uint8_t index = -1;
+                 bool res = scan_words(
+                     lexer,
+-                    (const char[16][16]){"else", "in", "instanceof", "get", "set", "constructor", "by", "as", "where"},
++                    (const char[16][16]){"else", "in", "instanceof", "get", "set", "constructor", "by", "as",
++                                        "where", "field"},
+                     scanned_word, &index);
+ 
+                 // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
+@@ -279,18 +295,22 @@
                      }
                  }
                  // If `get` was found and the keyword is not valid, return a semi since it's being used as an identifier
@@ -208,3 +226,21 @@
  
                          while (iswspace(lexer->lookahead)) {
                              if (lexer->lookahead == '\n') {
+@@ -307,6 +327,17 @@
+                 else if (index == 1 && valid_symbols[IN]) {
+                     return true;
+                 }
++                // If `field` was found and a `:` or `=` follows, this is a Kotlin 2.x
++                // explicit backing field continuing the property declaration — no semi.
++                else if (index == 9) {
++                    while (iswspace(lexer->lookahead)) {
++                        skip(lexer);
++                    }
++                    if (lexer->lookahead == ':' || lexer->lookahead == '=') {
++                        return false;
++                    }
++                    return true;
++                }
+                 return !res;
+             case ';':
+                 advance(lexer);

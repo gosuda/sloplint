@@ -474,3 +474,47 @@ fun f() {
                 (value_arguments
                   (value_argument
                     (identifier)))))))))))
+
+================================================================================
+explicit backing field
+================================================================================
+
+class State {
+    val state: StateFlow<Boolean>
+        field: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val flag: Boolean
+        field = false
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier)
+          (user_type
+            (identifier)
+            (type_arguments
+              (type_projection
+                (user_type
+                  (identifier))))))
+        (user_type
+          (identifier)
+          (type_arguments
+            (type_projection
+              (user_type
+                (identifier)))))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (identifier)))))
+      (property_declaration
+        (variable_declaration
+          (identifier)
+          (user_type
+            (identifier)))
+        (identifier)))))

@@ -267,7 +267,8 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 uint8_t index = -1;
                 bool res = scan_words(
                     lexer,
-                    (const char[16][16]){"else", "in", "instanceof", "get", "set", "constructor", "by", "as", "where"},
+                    (const char[16][16]){"else", "in", "instanceof", "get", "set", "constructor", "by", "as",
+                                        "where", "field"},
                     scanned_word, &index);
 
                 // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
@@ -324,6 +325,17 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 // If `in` was found and this specific external keyword is valid,
                 // return a semi since it's being used in a range test
                 else if (index == 1 && valid_symbols[IN]) {
+                    return true;
+                }
+                // If `field` was found and a `:` or `=` follows, this is a Kotlin 2.x
+                // explicit backing field continuing the property declaration — no semi.
+                else if (index == 9) {
+                    while (iswspace(lexer->lookahead)) {
+                        skip(lexer);
+                    }
+                    if (lexer->lookahead == ':' || lexer->lookahead == '=') {
+                        return false;
+                    }
                     return true;
                 }
                 return !res;
