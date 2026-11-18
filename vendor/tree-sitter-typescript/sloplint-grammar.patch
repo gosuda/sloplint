@@ -31,8 +31,12 @@ diff --git a/common/define-grammar.js b/common/define-grammar.js
        [$.call_expression, $.instantiation_expression, $.binary_expression, $.update_expression],
        [$.call_expression, $.instantiation_expression, $.binary_expression, $.await_expression],
  
-@@ -180,9 +187,14 @@
-           field('function', choice($.primary_expression, $.new_expression)),
+@@ -177,12 +184,17 @@
+           field('arguments', $.arguments),
+         )),
+         prec('template_call', seq(
+-          field('function', choice($.primary_expression, $.new_expression)),
++          field('function', choice($.primary_expression, $.new_expression, $.instantiation_expression)),
            field('arguments', $.template_string),
          )),
 +        // sloplint: every '?.' in this grammar goes through the JS `optional_chain`
@@ -190,7 +194,27 @@ diff --git a/common/define-grammar.js b/common/define-grammar.js
            alias($._type_query_call_expression, $.call_expression),
            alias($._type_query_instantiation_expression, $.instantiation_expression),
            $.identifier,
-@@ -1096,7 +1130,7 @@
+@@ -1055,7 +1089,18 @@
+         )),
+       ),
+ 
+-      array_type: $ => seq($.primary_type, '[', ']'),
++      array_type: $ => seq(
++        choice(
++          $.primary_type,
++          // sloplint: `import('x').T[]` — the in-annotation member/call aliases
++          // are `type` members, not `primary_type`, so the plain rule could not
++          // take the `[]` suffix (upstream v0.23.2 bug).
++          alias($._type_query_member_expression_in_type_annotation, $.member_expression),
++          alias($._type_query_call_expression_in_type_annotation, $.call_expression),
++          alias($._type_query_import_call_expression_in_type_annotation, $.call_expression),
++        ),
++        '[', ']',
++      ),
+       tuple_type: $ => seq(
+         '[', commaSep($._tuple_type_member), optional(','), ']',
+       ),
+@@ -1096,7 +1141,7 @@
        ),
      },
    });

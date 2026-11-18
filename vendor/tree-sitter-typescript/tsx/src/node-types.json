@@ -730,6 +730,14 @@
       "required": true,
       "types": [
         {
+          "type": "call_expression",
+          "named": true
+        },
+        {
+          "type": "member_expression",
+          "named": true
+        },
+        {
           "type": "primary_type",
           "named": true
         }

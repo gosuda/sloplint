@@ -576,3 +576,45 @@ fn invalid_code_still_reports_a_parse_error() {
         assert_parse_error(lang, path, "await using = 1 2;\n");
     }
 }
+
+#[test]
+fn instantiation_expression_tagged_template_parses() {
+    // upstream 0.23.2 bug: `foo<T>\`tpl\`` demanded a non-null `!` before the
+    // template; styled-components `styled(Link)<P>\`...\`` and drizzle
+    // `sql<T>\`...\`` hit it.
+    let sources = [
+        "const n = styled(Link)<{ active: boolean }>`color: red;`;\n",
+        "const r = sql<typeof projects.$inferSelect.meta>`null`;\n",
+        "const n = f<T>!`x`;\n",
+    ];
+    for (lang, path) in TS_LANGS {
+        for source in sources {
+            run_clean(lang, path, source);
+        }
+    }
+}
+
+#[test]
+fn import_type_array_suffix_parses() {
+    // upstream 0.23.2 bug: `import("m").T[]` — the `[]` suffix could not attach
+    // to the in-annotation import member chain.
+    let sources = [
+        "let e: import(\"node:fs\").Dirent[];\n",
+        "function f(d: string): import(\"node:fs\").Dirent[] { return []; }\n",
+        "let e: import(\"m\").T.U[];\n",
+    ];
+    for (lang, path) in TS_LANGS {
+        for source in sources {
+            run_clean(lang, path, source);
+        }
+    }
+}
+
+#[test]
+fn instantiation_tagged_template_keeps_call_shape() {
+    let query = "(call_expression function: (instantiation_expression) @name arguments: (template_string)) @match";
+    for (lang, path) in TS_LANGS {
+        let got = captures(lang, path, "const n = f<T>`x`;\n", query);
+        assert_eq!(got, ["f<T>"], "{lang:?}: instantiation tag wraps the template call");
+    }
+}

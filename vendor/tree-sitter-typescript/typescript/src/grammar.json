@@ -4044,6 +4044,10 @@
                     {
                       "type": "SYMBOL",
                       "name": "new_expression"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "instantiation_expression"
                     }
                   ]
                 }
@@ -11225,8 +11229,40 @@
       "type": "SEQ",
       "members": [
         {
-          "type": "SYMBOL",
-          "name": "primary_type"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "primary_type"
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_type_query_member_expression_in_type_annotation"
+              },
+              "named": true,
+              "value": "member_expression"
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_type_query_call_expression_in_type_annotation"
+              },
+              "named": true,
+              "value": "call_expression"
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_type_query_import_call_expression_in_type_annotation"
+              },
+              "named": true,
+              "value": "call_expression"
+            }
+          ]
         },
         {
           "type": "STRING",
