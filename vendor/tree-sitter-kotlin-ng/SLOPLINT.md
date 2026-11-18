@@ -39,7 +39,7 @@ Limits:
 - KGUARD accepts one condition before `if`. A guard after a comma-separated condition list is not handled.
 - KGETVAL and KSETNEST are fixed for the repro shapes.
 - KCTX is fixed for `context(...)` before a declaration, a function type, and a parenthesized receiver. `context(...)` after an annotation is not handled (see residual ERROR files).
-- KBFIELD covers the Kotlin 2.x explicit backing field in the accessor position: `val x: T` followed on the next line by `field = expr` or `field: U = expr`, optionally with modifiers (`private field = false`) or comments between `field` and its `:`/`=` (`field /* c */ = x`). The grammar gains a named `backing_field` rule beside `getter`/`setter` in `property_declaration` that accepts `optional($.modifiers)`, `optional(':' $.type)`, `= $.expression`. The semicolon scanner suppresses the auto-semi before `field` only at class member position (a `CLASS_MEMBER_SEMI` may not be followed by one) and only when, after skipping whitespace and `//` or nested `/* */` comments, a `:` or `=` follows (`::` and `==` still split), so a bare `field` expression statement still splits and `field = v` inside a function body stays an assignment.
+- KBFIELD covers the Kotlin 2.x explicit backing field in the accessor position: `val x: T` followed on the next line by `field = expr` or `field: U = expr`, optionally with modifiers (`private field = false`), annotations, or comments between `field` and its `:`/`=` (`field /* c */ = x`, `field /*/a/b*/ = x`, `private /* note */ field = x`). The grammar gains a named `backing_field` rule beside `getter`/`setter` in `property_declaration` that accepts `optional($.modifiers)`, `optional(':' $.type)`, `= $.expression`. The semicolon scanner suppresses the auto-semi before `field` when, after skipping whitespace and `//` or nested `/* */` comments, a `:` or `=` follows (`::` and `==` still split). A typed `field:` tail suppresses wherever `_semi` is valid (a `field:` statement is never legal), while a `field =` tail suppresses only at class member position because it is ambiguous with a plain assignment to an identifier named `field` — a bare identifier cannot start a class member. An untyped `field = v` at top level therefore stays an assignment statement, which parses without error but does not produce a `backing_field` node; and `field = v` inside a function body stays an assignment.
 
 ## Open named clusters (6)
 
@@ -100,11 +100,11 @@ Repros: all 27 are raw errors on the published grammar. On the vendored grammar,
 
 Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (28 tests, each clean check asserting the raw tree and each invalid control asserting the raw tree has an error):
 - Vendored path dependency: 28 pass.
-- Published `tree-sitter-kotlin-ng` 1.1.0: 25 fail and 3 pass. The 3 that pass are the invalid controls.
+- Published `tree-sitter-kotlin-ng` 1.1.0: 23 fail and 5 pass. The 5 that pass are the invalid controls and the `field` plain-identifier controls, which the published grammar also splits correctly.
 
 Corpus cases (`tree-sitter test`, fresh `HOME`):
-- Vendored: 42 of 42. These are the 22 upstream cases, the 16 `sloplint_kotlin.txt` cases, and the 4 `sloplint_kotlin_same_line.txt` cases. The expected trees have no `ERROR` or `MISSING`.
-- Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 20 pass (the 16 sloplint cases and the 4 same-line cases). The 22 upstream cases passed on the published grammar before any change.
+- Vendored: 43 of 43. These are the 22 upstream cases, the 17 `sloplint_kotlin.txt` cases, and the 4 `sloplint_kotlin_same_line.txt` cases. The expected trees have no `ERROR` or `MISSING`.
+- Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 21 pass (the 17 sloplint cases and the 4 same-line cases). The 22 upstream cases passed on the published grammar before any change.
 
 ## Code notes
 

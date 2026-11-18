@@ -575,3 +575,59 @@ class State {
             (assignment
               (identifier)
               (identifier))))))))
+
+================================================================================
+backing fields across comments and visibility; top-level typed form
+================================================================================
+
+class C {
+    val a: Boolean
+        private /* note */ field = false
+    val b: Boolean
+        field /*/default/path*/ = false
+}
+val t: T
+    field: U = v
+val u = x
+    field = y
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier)
+          (user_type
+            (identifier)))
+        (backing_field
+          (modifiers
+            (visibility_modifier))
+          (block_comment)
+          (identifier)))
+      (property_declaration
+        (variable_declaration
+          (identifier)
+          (user_type
+            (identifier)))
+        (backing_field
+          (block_comment)
+          (identifier)))))
+  (property_declaration
+    (variable_declaration
+      (identifier)
+      (user_type
+        (identifier)))
+    (backing_field
+      (user_type
+        (identifier))
+      (identifier)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (identifier))
+  (assignment
+    (identifier)
+    (identifier)))

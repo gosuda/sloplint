@@ -72,6 +72,42 @@ static bool get_call_follows(TSLexer *lexer) {
     return lexer->lookahead != ')';
 }
 
+static void skip_ws_comments(TSLexer *lexer) {
+    for (;;) {
+        while (iswspace(lexer->lookahead)) {
+            skip(lexer);
+        }
+        if (lexer->lookahead != '/') {
+            return;
+        }
+        skip(lexer);
+        if (lexer->lookahead == '/') {
+            while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
+                skip(lexer);
+            }
+            continue;
+        }
+        if (lexer->lookahead != '*') {
+            return;
+        }
+        // Consume the `*` of `/*` before nesting so `/*/x*/` cannot close early.
+        skip(lexer);
+        // Block comments may nest in Kotlin.
+        unsigned depth = 1;
+        while (depth > 0 && !lexer->eof(lexer)) {
+            wchar_t c = lexer->lookahead;
+            skip(lexer);
+            if (c == '/' && lexer->lookahead == '*') {
+                depth++;
+                skip(lexer);
+            } else if (c == '*' && lexer->lookahead == '/') {
+                depth--;
+                skip(lexer);
+            }
+        }
+    }
+}
+
 void *tree_sitter_kotlin_external_scanner_create() { return NULL; }
 
 void tree_sitter_kotlin_external_scanner_destroy(void *payload) {}
@@ -259,9 +295,7 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                                                        "crossinline", "external", "suspend", "inline"},
                                   scanned_word, NULL)) {
                     memset(scanned_word, 0, MAX_WORD_SIZE);
-                    while (iswspace(lexer->lookahead)) {
-                        skip(lexer);
-                    }
+                    skip_ws_comments(lexer);
                 }
 
                 uint8_t index = -1;
@@ -331,46 +365,24 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 // follows (comments permitted between), this is a Kotlin 2.x explicit
                 // backing field continuing the property declaration — no semi.
                 else if (index == 9) {
-                    if (!valid_symbols[CLASS_MEMBER_SEMI]) {
+                    // A `field: T = expr` tail can only be a Kotlin 2.x explicit
+                    // backing field — a `field:` statement is never valid — so the
+                    // semi is suppressed wherever a statement separator is allowed.
+                    // A `field = expr` tail is ambiguous with a plain assignment to
+                    // an identifier named `field`, so it suppresses only at class
+                    // member position, where a bare identifier cannot start a member.
+                    if (!valid_symbols[SEMI] && !valid_symbols[CLASS_MEMBER_SEMI]) {
                         return true;
                     }
-                    for (;;) {
-                        while (iswspace(lexer->lookahead)) {
-                            skip(lexer);
-                        }
-                        if (lexer->lookahead != '/') {
-                            break;
-                        }
-                        skip(lexer);
-                        if (lexer->lookahead == '/') {
-                            while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
-                                skip(lexer);
-                            }
-                            continue;
-                        }
-                        if (lexer->lookahead == '*') {
-                            // Block comments may nest in Kotlin.
-                            unsigned depth = 1;
-                            while (depth > 0 && !lexer->eof(lexer)) {
-                                wchar_t c = lexer->lookahead;
-                                skip(lexer);
-                                if (c == '/' && lexer->lookahead == '*') {
-                                    depth++;
-                                    skip(lexer);
-                                } else if (c == '*' && lexer->lookahead == '/') {
-                                    depth--;
-                                    skip(lexer);
-                                }
-                            }
-                            continue;
-                        }
-                        return true;
-                    }
+                    skip_ws_comments(lexer);
                     if (lexer->lookahead == ':') {
                         skip(lexer);
                         return lexer->lookahead == ':';
                     }
                     if (lexer->lookahead == '=') {
+                        if (!valid_symbols[CLASS_MEMBER_SEMI]) {
+                            return true;
+                        }
                         skip(lexer);
                         return lexer->lookahead == '=';
                     }
