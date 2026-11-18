@@ -227,6 +227,13 @@ fn matrix_keyed_literal_parses() {
     ));
 }
 
+// --- `union` tag operand (`union #align(16) {..}`) ----------------------------
+
+#[test]
+fn union_declaration_tag_operand_parses() {
+    run_clean("U :: union #align(16) {\n    u64,\n    f64,\n}\n");
+}
+
 // --- Controls: still invalid ---------------------------------------------------
 
 #[test]
