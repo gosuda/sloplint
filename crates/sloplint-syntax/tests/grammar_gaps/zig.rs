@@ -143,6 +143,36 @@ fn async_and_await_as_field_values_parse() {
     ));
 }
 
+// --- bitpack containers (zig 0.18 alias for packed) ---------------------------
+
+#[test]
+fn bitpack_struct_with_backing_type_parses() {
+    run_clean(concat!(
+        "pub const Id = bitpack struct(u32) {\n",
+        "    index: enum(u31) { unused = 0, _ },\n",
+        "    alias: bool = false,\n",
+        "};\n",
+    ));
+}
+
+#[test]
+fn bitpack_union_enum_and_opaque_parse() {
+    run_clean(concat!(
+        "const U = bitpack union(enum) { a: u32, b: u8 };\n",
+        "const E = bitpack enum(u2) { x, y, _ };\n",
+        "const O = bitpack opaque { p: *anyopaque };\n",
+    ));
+}
+
+#[test]
+fn bitpack_stays_usable_as_an_identifier() {
+    run_clean(concat!(
+        "const bitpack = 1;\n",
+        "fn bitpack(x: u32) u32 { return x; }\n",
+        "const z = bitpack(3);\n",
+    ));
+}
+
 // --- Controls that already parsed and must keep parsing -----------------------
 
 #[test]

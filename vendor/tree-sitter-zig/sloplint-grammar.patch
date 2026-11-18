@@ -1,15 +1,6 @@
-diff --git a/grammar.js b/grammar.js
-index 6d1e087..e83c591 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -56,20 +56,22 @@ module.exports = grammar({
- 
-   conflicts: $ => [
-     [$.for_expression],
-     [$.while_expression],
- 
-     [$.expression, $._function_prototype],
-     [$.expression, $.if_type_expression],
+@@ -63,6 +63,8 @@
  
      [$.comptime_type_expression, $.expression],
      [$.comptime_type_expression, $.parameter],
@@ -18,21 +9,7 @@ index 6d1e087..e83c591 100644
    ],
  
    extras: $ => [
-     $.comment,
-     /\s/,
-   ],
- 
-   inline: $ => [
-     $._reserved_identifier,
-   ],
-@@ -119,21 +121,21 @@ module.exports = grammar({
-     )),
- 
-     container_field: $ => prec.right(prec.dynamic(1, seq(
-       optional('comptime'),
-       choice(
-         seq(
-           field('name', choice($.identifier, $._reserved_identifier, alias($.builtin_type, $.identifier))),
+@@ -126,7 +128,7 @@
            ':',
            field('type', choice($.primary_type_expression, $.if_type_expression, $.comptime_type_expression)),
          ),
@@ -41,21 +18,43 @@ index 6d1e087..e83c591 100644
        ),
        optional($.byte_alignment),
        optional(seq('=', $.expression)),
-     ))),
+@@ -239,7 +241,7 @@
+     ),
  
-     variable_declaration: $ => seq(
-       optional('pub'),
-       optional(choice(
-         'export',
-         seq('extern', optional($.string)),
-@@ -447,21 +449,24 @@ module.exports = grammar({
-     asm_input: $ => seq(':', optionalCommaSep($.asm_input_item), optional($.asm_clobbers)),
-     asm_input_item: $ => seq(
-       '[',
-       $.identifier,
-       ']',
-       choice($.string, $.multiline_string),
-       '(',
+     struct_declaration: $ => seq(
+-      optional(choice('extern', 'packed')),
++      optional(choice('extern', 'packed', 'bitpack')),
+       'struct',
+       optional(seq('(', $.expression, ')')),
+       '{',
+@@ -248,7 +250,7 @@
+     ),
+ 
+     opaque_declaration: $ => seq(
+-      optional(choice('extern', 'packed')),
++      optional(choice('extern', 'packed', 'bitpack')),
+       'opaque',
+       '{',
+       $._container_members,
+@@ -256,7 +258,7 @@
+     ),
+ 
+     enum_declaration: $ => seq(
+-      optional(choice('extern', 'packed')),
++      optional(choice('extern', 'packed', 'bitpack')),
+       'enum',
+       optional(seq('(', $.expression, ')')),
+       '{',
+@@ -265,7 +267,7 @@
+     ),
+ 
+     union_declaration: $ => seq(
+-      optional(choice('extern', 'packed')),
++      optional(choice('extern', 'packed', 'bitpack')),
+       'union',
+       optional(seq(
+         '(',
+@@ -454,7 +456,10 @@
        $.expression,
        ')',
      ),
@@ -67,33 +66,15 @@ index 6d1e087..e83c591 100644
  
      if_expression: $ => prec.right(seq(
        $._if_prefix,
-       $.expression,
-       optional(seq('else', optional($.payload), $.expression)),
-     )),
- 
-     for_expression: $ => prec.right(seq(
-       optional($.block_label),
-       optional('inline'),
-@@ -844,21 +849,21 @@ module.exports = grammar({
-     },
- 
-     boolean: _ => choice('true', 'false'),
- 
-     builtin_type: _ => choice(...builtinTypes),
- 
-     error_type: $ => seq('error', '.', $.identifier),
+@@ -851,7 +856,10 @@
  
      builtin_identifier: _ => /@[A-Za-z_][A-Za-z0-9_]*/,
  
 -    identifier: $ => choice($._identifier, seq('@', $.string)),
-+    identifier: $ => choice($._identifier, seq('@', $.string), 'async', 'await'),
++    // sloplint: 'async'/'await' are contextual keywords, and 'bitpack'
++    // (zig 0.18's `packed` alias) stays usable as a plain name in code
++    // written for older zig releases.
++    identifier: $ => choice($._identifier, seq('@', $.string), 'async', 'await', 'bitpack'),
      _identifier: _ => /[A-Za-z_][A-Za-z0-9_]*/,
      _reserved_identifier: _ => choice(
        'undefined',
-       'null',
-       'true',
-       'false',
-     ),
- 
-     comment: _ => token(seq('//', /.*/)),
-   },

@@ -118,6 +118,7 @@ module.exports = grammar({
     [$.preproc_ifdef_in_initializer_list, $.field_expression],
     [$.preproc_else_in_argument_list, $.field_expression],
     [$.comma_expression, $.binary_expression],
+    [$.preproc_embed],
     [$.preproc_ifdef_in_argument_list, $.field_expression],
     [$.parenthesized_expression],
     [$.binary_expression, $.parenthesized_expression],
@@ -1648,6 +1649,26 @@ module.exports = grammar({
       $.parenthesized_expression,
       $.gnu_asm_expression,
       $.extension_expression,
+      // sloplint: C23 #embed expands to a byte-sequence expression, so it
+      // is valid inside initializers and operands, e.g.
+      // `unsigned char a[] = { #embed "f" limit(4) };` or
+      // `const int x = 1 + #embed "b";`.
+      $.preproc_embed,
+    ),
+
+    preproc_embed: $ => seq(
+      preprocessor('embed'),
+      field('path', choice($.string_literal, $.system_lib_string)),
+      repeat(seq(
+        field('parameter', $.identifier),
+        $.embed_parameter_list,
+      )),
+    ),
+
+    embed_parameter_list: $ => seq(
+      '(',
+      repeat(choice($.expression, ',')),
+      ')',
     ),
 
     _string: $ => prec.left(choice(

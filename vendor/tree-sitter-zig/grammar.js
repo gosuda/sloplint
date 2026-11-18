@@ -241,7 +241,7 @@ module.exports = grammar({
     ),
 
     struct_declaration: $ => seq(
-      optional(choice('extern', 'packed')),
+      optional(choice('extern', 'packed', 'bitpack')),
       'struct',
       optional(seq('(', $.expression, ')')),
       '{',
@@ -250,7 +250,7 @@ module.exports = grammar({
     ),
 
     opaque_declaration: $ => seq(
-      optional(choice('extern', 'packed')),
+      optional(choice('extern', 'packed', 'bitpack')),
       'opaque',
       '{',
       $._container_members,
@@ -258,7 +258,7 @@ module.exports = grammar({
     ),
 
     enum_declaration: $ => seq(
-      optional(choice('extern', 'packed')),
+      optional(choice('extern', 'packed', 'bitpack')),
       'enum',
       optional(seq('(', $.expression, ')')),
       '{',
@@ -267,7 +267,7 @@ module.exports = grammar({
     ),
 
     union_declaration: $ => seq(
-      optional(choice('extern', 'packed')),
+      optional(choice('extern', 'packed', 'bitpack')),
       'union',
       optional(seq(
         '(',
@@ -856,7 +856,10 @@ module.exports = grammar({
 
     builtin_identifier: _ => /@[A-Za-z_][A-Za-z0-9_]*/,
 
-    identifier: $ => choice($._identifier, seq('@', $.string), 'async', 'await'),
+    // sloplint: 'async'/'await' are contextual keywords, and 'bitpack'
+    // (zig 0.18's `packed` alias) stays usable as a plain name in code
+    // written for older zig releases.
+    identifier: $ => choice($._identifier, seq('@', $.string), 'async', 'await', 'bitpack'),
     _identifier: _ => /[A-Za-z_][A-Za-z0-9_]*/,
     _reserved_identifier: _ => choice(
       'undefined',

@@ -29,7 +29,7 @@ and loses every other finding for that file.
   `patch -p1` (it holds the grammar.js and src/scanner.c diffs), then run
   `tree-sitter generate` and `tree-sitter test`. Regenerating from the committed
   grammar.js and scanner.c gives a byte-identical parser.c.
-- Sizes: parser.c 5,629,881 bytes (published: 4,697,445), 2495 states (published: 2142).
+- Sizes: parser.c 6,102,326 bytes (published: 4,697,445), 2683 states (published: 2142).
 
 ## Round 1 grammar changes
 
@@ -138,6 +138,31 @@ More valid code that the same sweep files turned up, fixed because it blocked fi
 - Here-strings: a line that starts with a backtick pair keeps the pair.
   ``` ``````PowerShell ``` inside `@" "@` failed, and `` `$x `` at the start of a
   line produced a phantom `variable` node.
+
+## Round 3 grammar changes
+
+- Attributes may stand before any statement, not only `class` and `enum`:
+  `[SuppressMessageAttribute('x','')] $x = 1`. The `[Name(args)]` form is the
+  hidden rule `_parenthesized_attribute`, aliased to `attribute`; a bare
+  `[Name]` stays the `type_literal` attribute alternative. One conflict
+  `[_statement, attribute]` is declared. An attribute before `function`,
+  `filter` or `workflow` (`[Alias('x')] function f { }`) is not the statement
+  form: it attaches inside `function_statement` via `optional(attribute_list)`,
+  as `class` and `enum` already did, so the parse keeps the declaration rather
+  than a command named `function`.
+- `type_identifier` accepts a generic arity of more than one digit: `[Action``2]`.
+  The backtick run is ``[`+]+``, not a single `` ` ``.
+- A redirect may follow its operator with no separator, `'/r'>null`: the file
+  name then lexes as `generic_token` and is a `redirected_file_name` alternative.
+- A cast operand may no longer begin with `,`. Before, `param($T = [Exception],`
+  read the comma as the comma-prefix unary inside the cast and `param($a = 1, $b)`
+  worked only because `1` cannot head a cast. `script_parameter_default` keeps
+  `_expression`, so `= 1,2` inside `param(...)` still errors (upstream behaviour
+  for a number default: `,` is the parameter separator). The operand is the hidden
+  `_cast_operand`, aliased to `unary_expression`, so node kinds are unchanged;
+  two conflicts (`[_cast_operand, member_access, invokation_expression]`,
+  `[_cast_operand, invokation_foreach_expression]`) cover the member-access
+  ambiguity the shadow rule introduces.
 
 ## node-types.json changes
 
@@ -253,7 +278,7 @@ Round 1 and round 2 together. Each is valid PowerShell unless noted.
 ## Upstream corpus (`tree-sitter test`)
 
 - Stock grammar.js regenerated with 0.27.1: 139 of 139 pass.
-- Patched: 139 of 139 upstream cases pass, plus 47 `sloplint:` cases. 186 of 186.
+- Patched: 139 of 139 upstream cases pass, plus 52 `sloplint:` cases. 191 of 191.
 - The new cases are in `test/corpus/sloplint_*.txt`. Each one is named `sloplint: ...`.
 - Round 2 trees were produced with `tree-sitter test -u -i sloplint` and then read: no
   `ERROR` or `MISSING` node in any file, and the `sloplint_*` snapshots of round 1 did
@@ -308,6 +333,7 @@ paths, so scripts under `~/compiler/bamTiScript/.references` and
 
 ## Rust regression test
 
-`crates/sloplint-syntax/tests/grammar_gaps/powershell.rs`. 28 tests. Against the stock
-crate 27 of them fail; the one that passes is the test that invalid snippets still
-report a parse error.
+`crates/sloplint-syntax/tests/grammar_gaps/powershell.rs`. 30 tests. Against the stock
+crate 29 of them fail; the one that passes is the test that invalid snippets still
+report a parse error. Round 3 removed `[Flags()] function f { }` from the invalid
+list, since attributes before a statement are real PowerShell.

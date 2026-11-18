@@ -256,19 +256,17 @@ DEFINE_SOMETHING(THING_B, "this is a thing b", "thanks");
 --------------------------------------------------------------------------------
 
 (translation_unit
-  (expression_statement
-    (call_expression
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
       (identifier)
-      (argument_list
-        (identifier)
-        (string_literal
-          (string_content)))))
-  (expression_statement
-    (call_expression
+      (string_literal
+        (string_content))))
+  (macro_declaration
+    (identifier)
+    (macro_argument_list
       (identifier)
-      (argument_list
-        (identifier)
-        (string_literal
-          (string_content))
-        (string_literal
-          (string_content))))))
+      (string_literal
+        (string_content))
+      (string_literal
+        (string_content)))))

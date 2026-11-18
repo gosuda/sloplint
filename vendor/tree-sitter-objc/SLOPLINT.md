@@ -122,6 +122,22 @@ headers (`NSObjCRuntime.h`, `NSAvailability.h`), not the preprocessor output.
   alongside: keeping both parses `- (void)bar;` two ways and the expression
   shaped one reports phantom calls.
 
+- Member macro generators: `interface_declaration` and
+  `implementation_definition` accept `$.macro_declaration`, so a bare
+  `NAME(args)` line between members parses as a declaration macro
+  (`AAPropSetFuncImplementation(AAOptions, NSString *, name)` in AAChartKit,
+  `QMUISynthesizeBOOLProperty(isOn, setOn)` in QMUI_iOS).
+- Trailing method attributes: `method_definition` and `method_declaration`
+  take `repeat(choice($._declaration_modifiers, $.macro_qualifier))`, so
+  identifier-shaped attribute macros after the selector parse
+  (`- (void)m SPU_OBJC_DIRECT { ... }` in Sparkle).
+- Bare statement macros: `_non_case_statement` gains
+  `alias(prec.dynamic(-2, $.identifier), $.macro_declaration)`, so a lone
+  identifier on its own line inside a method body parses as a statement
+  macro (`MJRefreshCheckState`, `BeginIgnorePerformSelectorLeaksWarning`).
+  Unreachable as an `expression_statement` (no `;`) and dynamic -2 keeps any
+  declarable read ahead of it.
+
 ## Adapter impact
 
 Node kinds and fields that `crates/sloplint-syntax/src/lang/objc.rs` depends
@@ -173,6 +189,19 @@ Gap tests (`crates/sloplint-syntax/tests/grammar_gaps/objc.rs`): 23 pass
 vendored; 14 of them fail against the published crate, 5 pin already-clean
 inputs, 4 pin invalid inputs that stay errors. Full `sloplint-syntax` and
 `sloplint-core` suites pass.
+
+## Sweep evidence (second corpus, 2026-11-18)
+
+Recount over the ObjC error-cluster repositories of the 23-language corpus
+(`meta/parse-error` findings, vendored grammar vs the previous vendored
+revision): AAChartKit 114 to 34, QMUI_iOS 62 to 22, Sparkle 127 to 69,
+SDAutoLayout 30 to 10, MJRefresh 26 to 11, JXCategoryView 18 to 7, FLEX 23 to
+16, HexFiend 16 to 12, EarlGrey 31 to 26, Darling 240 to 226, Masonry
+unchanged. Residual clusters are `SHADER_STRING(...)` raw-GLSL bodies
+(GPUImage, 134 files; the macro argument is GLSL, not ObjC) and `#if` arms
+splitting binary expressions (Masonry's `MASAttribute` bitmask chain): both
+need the real preprocessor and stay errors by design. Upstream corpus plus
+`sloplint_*.txt`: 103 of 103.
 
 ## Still failing (honest residuals)
 
@@ -235,9 +264,14 @@ valid inputs.
   `macro_argument_list` (ported from the C grammar; the stock C base lacks
   them) join `_top_level_item` via `prec.dynamic(-2)`, covering
   declaration-expanding macros like `DEBUG_OPTION_DECLARE_GROUP (name)`
-  and `DEBUG_OPTION_DECLARE_SWITCH_D (name)`. `NAME(args);` still prefers
-  the `expression_statement` + `call_expression` read (same as the C
-  grammar) — both parse clean. New conflicts mirror the C grammar's
+  and `DEBUG_OPTION_DECLARE_SWITCH_D (name)`. Unlike C, `NAME(args);`
+  also resolves as `macro_declaration` (the macro read absorbs the `;`):
+  header lines of that shape are practically always generator macros, so
+  the macro fact is the more truthful record. `concatenated_string` is
+  overridden without the inherited `call_expression call_expression`
+  first pair — adjacent `NAME(args)` lines otherwise merged into one
+  fake concat at `prec.dynamic(2)`, outranking the macro read and
+  emitting phantom calls. New conflicts mirror the C grammar's
   `_macro_declaration_top` set plus `macro_argument_list` vs
   `type_specifier`/`type_qualifier`/`sized_type_specifier`/
   `generic_specifier`/`macro_type_specifier` and `expression` vs
