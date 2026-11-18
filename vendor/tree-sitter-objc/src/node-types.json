@@ -236,6 +236,10 @@
         "named": true
       },
       {
+        "type": "preproc_embed",
+        "named": true
+      },
+      {
         "type": "range_expression",
         "named": true
       },
@@ -2341,6 +2345,21 @@
         },
         {
           "type": "statement",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "embed_parameter_list",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "expression",
           "named": true
         }
       ]
@@ -5618,6 +5637,46 @@
     }
   },
   {
+    "type": "preproc_embed",
+    "named": true,
+    "fields": {
+      "parameter": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "path": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "system_lib_string",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "embed_parameter_list",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "preproc_function_def",
     "named": true,
     "fields": {
@@ -7651,6 +7710,10 @@
   },
   {
     "type": "#else",
+    "named": false
+  },
+  {
+    "type": "#embed",
     "named": false
   },
   {

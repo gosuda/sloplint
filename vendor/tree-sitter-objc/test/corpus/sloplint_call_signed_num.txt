@@ -1,0 +1,66 @@
+================================================================================
+Call-expression operand beside a signed number keeps the operator
+================================================================================
+
+int f(int);
+int h(void) {
+  int x = f(1) - 1;
+  int y = f(1)-1;
+  int z = f(-1);
+  int w = x - 1;
+}
+
+---
+
+(translation_unit
+  (declaration
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type)))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (binary_expression
+            (call_expression
+              (identifier)
+              (argument_list
+                (number_literal)))
+            (number_literal))))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (binary_expression
+            (call_expression
+              (identifier)
+              (argument_list
+                (number_literal)))
+            (number_literal))))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (call_expression
+            (identifier)
+            (argument_list
+              (unary_expression
+                (number_literal))))))
+      (declaration
+        (primitive_type)
+        (init_declarator
+          (identifier)
+          (binary_expression
+            (identifier)
+            (number_literal)))))))

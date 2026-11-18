@@ -456,3 +456,21 @@ fn bare_statement_macros_parse_inside_method_bodies() {
     );
     run_clean(source);
 }
+
+/// `f(1)-1` and `s + sdslen(s) - 1` lexed `-1` as a signed literal —
+/// the same macro_argument_list merge as C. `number_literal` is now
+/// unsigned so `-`/`+` survive as binary operators.
+#[test]
+fn call_operand_beside_signed_number_parses() {
+    let analysis = run_clean(concat!(
+        "int f(int);\n",
+        "int h(void) {\n",
+        "  int x = f(1) - 1;\n",
+        "  int y = f(1)-1;\n",
+        "  int z = f(-1);\n",
+        "  int w = x - 1;\n",
+        "  return f(1) + 1;\n",
+        "}\n",
+    ));
+    assert_eq!(function_names(&analysis), ["h"]);
+}

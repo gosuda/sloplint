@@ -278,3 +278,12 @@ valid inputs.
   `concatenated_string`; the inherited `type_specifier` ×
   `_top_level_expression_statement` pair is now filtered out (made
   redundant by the three-way that includes `_macro_declaration_top`).
+- **`number_literal` drops its leading sign** — same fix as the C grammar
+  (see `vendor/tree-sitter-c/SLOPLINT.md`): the inherited
+  `macro_argument_list` free-atom stream makes `number_literal` valid
+  after an operand, so `f(1)-1`, `f(1) -1` and `s + sdslen(s) - 1` lexed
+  the signed literal and left binary `-`/`+` with no operator — a
+  whole-file ERROR. Signed operands still parse through
+  `unary_expression` (`f(-1)`, `x - 1`); exponent tails keep their own
+  `optional(/[-\+]/)`. The C corpus `Number literals` case now expects
+  `-0.1f` as `unary_expression(number_literal)`.
