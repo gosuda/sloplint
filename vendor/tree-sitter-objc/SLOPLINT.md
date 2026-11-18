@@ -52,7 +52,7 @@ headers (`NSObjCRuntime.h`, `NSAvailability.h`), not the preprocessor output.
   `src/tree_sitter/*.h`. There is no `src/scanner.c`.
 - Regenerating the unpatched grammar with 0.27.1 moves the parser from ABI 14
   to ABI 15 with no rule and no node-kind change (454 kinds before and after).
-- `test/corpus/sloplint_*.txt` holds 20 new guard cases (upstream corpus
+- `test/corpus/sloplint_*.txt` holds 21 new guard cases (upstream corpus
   format: 5 enum, 4 string-enum, 6 annotation, 5 preproc). They were produced
   by `tree-sitter test --update` and read by hand: none contains an ERROR or
   MISSING node, and the `enum_specifier` alias yields exactly one node per
@@ -138,6 +138,16 @@ headers (`NSObjCRuntime.h`, `NSAvailability.h`), not the preprocessor output.
   Unreachable as an `expression_statement` (no `;`) and dynamic -2 keeps any
   declarable read ahead of it.
 
+- `#if` inside a method signature's selector list: a new
+  `preprocIf('_in_method_signature')` suite whose arm items are
+  `selector ':' param` pairs or `, ...`, aliased into the
+  `method_declaration`/`method_definition` parameter repeats —
+  `- (instancetype)initWithEd:(NSString *)ed\n#if LEGACY\n
+  dsa:(NSString *)dsa\n#endif\n error:(NSError **)e;` (Sparkle).
+- The `preprocIf('')` arm set and C-base rules ride the vendored C
+  grammar via `node_modules/tree-sitter-c`; regenerating pulls in the
+  latest C fixes (bare `NAME` arms, `__ASM`, declaration-specifier arms).
+
 ## Adapter impact
 
 Node kinds and fields that `crates/sloplint-syntax/src/lang/objc.rs` depends
@@ -168,6 +178,9 @@ MISSING scan); each is clean now.
   `API_DEPRECATED_WITH_REPLACEMENT("..", ios(..), ..)` on a method,
   `API_AVAILABLE(macos(..), ..)` on a property
 - `Foo API_DEPRECATED("...", macos(10.10, 10.10)) = 1 << 18` in an enum body
+- `- (instancetype)initWithEd:(NSString * _Nullable)ed` newline `#if
+  SPARKLE_BUILD_LEGACY_DSA_SUPPORT` newline `dsa:(NSString *
+  _Nullable)dsa` newline `#endif` newline `error:(NSError **)error;`
 - `#if __has_warning("...")`, `#if __has_include(<...>)/("...")`
 - `#ifdef` around `@property` in `@interface` and around a method definition
   in `@implementation`

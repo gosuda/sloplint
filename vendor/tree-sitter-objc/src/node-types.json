@@ -1629,6 +1629,10 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "ms_declspec_modifier",
           "named": true
         },
@@ -1714,6 +1718,10 @@
         },
         {
           "type": "macro_declaration",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         },
         {
@@ -4224,6 +4232,14 @@
           "named": true
         },
         {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
+          "named": true
+        },
+        {
           "type": "storage_class_specifier",
           "named": true
         },
@@ -4288,6 +4304,14 @@
         },
         {
           "type": "ms_declspec_modifier",
+          "named": true
+        },
+        {
+          "type": "preproc_if",
+          "named": true
+        },
+        {
+          "type": "preproc_ifdef",
           "named": true
         },
         {
@@ -5163,11 +5187,19 @@
           "named": true
         },
         {
+          "type": "keyword_declarator",
+          "named": true
+        },
+        {
           "type": "linkage_specification",
           "named": true
         },
         {
           "type": "method_declaration",
+          "named": true
+        },
+        {
+          "type": "method_parameter",
           "named": true
         },
         {
@@ -5554,11 +5586,19 @@
           "named": true
         },
         {
+          "type": "keyword_declarator",
+          "named": true
+        },
+        {
           "type": "linkage_specification",
           "named": true
         },
         {
           "type": "method_declaration",
+          "named": true
+        },
+        {
+          "type": "method_parameter",
           "named": true
         },
         {
@@ -5910,11 +5950,19 @@
           "named": true
         },
         {
+          "type": "keyword_declarator",
+          "named": true
+        },
+        {
           "type": "linkage_specification",
           "named": true
         },
         {
           "type": "method_declaration",
+          "named": true
+        },
+        {
+          "type": "method_parameter",
           "named": true
         },
         {
@@ -6158,11 +6206,19 @@
           "named": true
         },
         {
+          "type": "keyword_declarator",
+          "named": true
+        },
+        {
           "type": "linkage_specification",
           "named": true
         },
         {
           "type": "method_declaration",
+          "named": true
+        },
+        {
+          "type": "method_parameter",
           "named": true
         },
         {
@@ -6557,6 +6613,10 @@
           "named": true
         },
         {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
           "type": "method_declaration",
           "named": true
         },
@@ -6645,6 +6705,10 @@
         },
         {
           "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
           "named": true
         },
         {
@@ -8930,6 +8994,10 @@
   },
   {
     "type": "__nullable",
+    "named": false
+  },
+  {
+    "type": "__packed",
     "named": false
   },
   {

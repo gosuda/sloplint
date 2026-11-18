@@ -32,6 +32,8 @@ mod kotlin;
 mod logos;
 #[path = "grammar_gaps/objc.rs"]
 mod objc;
+#[path = "grammar_gaps/odin.rs"]
+mod odin;
 #[path = "grammar_gaps/php.rs"]
 mod php;
 #[path = "grammar_gaps/powershell.rs"]

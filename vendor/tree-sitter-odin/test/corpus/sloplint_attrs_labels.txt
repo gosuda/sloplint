@@ -1,0 +1,120 @@
+================================================================================
+attribute trailing comma, labeled #partial switch, auto_cast default, tagged call
+================================================================================
+
+@(private, objc_implement, objc_class = "X", objc_superclass = NS.Object,)
+T :: struct {
+    using _: NS.Object,
+}
+
+visit :: proc(node: ^Node) {
+    visitors: #partial switch node.kind {
+    case .Binary:
+        handle(node)
+    }
+}
+
+draw :: proc(using ctx: ^Context, auto_cast vertex_count: int, auto_cast first_vertex := 0) {
+    use(first_vertex)
+}
+
+loc_of :: proc(program: u32, name: string) -> i32 {
+    loc := #force_inline gl.GetAttribLocation(program, name)
+    return i32(loc)
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (struct_declaration
+    (attributes
+      (attribute
+        (identifier)
+        (identifier)
+        (identifier)
+        (string
+          (string_content))
+        (identifier)
+        (member_expression
+          (identifier)
+          (identifier))))
+    (identifier)
+    (field
+      (identifier)
+      (type
+        (field_type
+          (identifier)
+          (identifier)))))
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters
+        (parameter
+          (identifier)
+          (type
+            (pointer_type
+              (type
+                (identifier))))))
+      (block
+        (label_statement
+          (identifier)
+          (partial_switch_statement
+            (switch_statement
+              (member_expression
+                (identifier)
+                (identifier))
+              (switch_case
+                (member_expression
+                  (identifier))
+                (call_expression
+                  (identifier)
+                  (identifier)))))))))
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters
+        (parameter
+          (identifier)
+          (type
+            (pointer_type
+              (type
+                (identifier)))))
+        (parameter
+          (identifier)
+          (type
+            (identifier)))
+        (default_parameter
+          (identifier)
+          (number)))
+      (block
+        (call_expression
+          (identifier)
+          (identifier)))))
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters
+        (parameter
+          (identifier)
+          (type
+            (identifier)))
+        (parameter
+          (identifier)
+          (type
+            (identifier))))
+      (type
+        (identifier))
+      (block
+        (assignment_statement
+          (identifier)
+          (tag)
+          (member_expression
+            (identifier)
+            (call_expression
+              (identifier)
+              (identifier)
+              (identifier))))
+        (return_statement
+          (call_expression
+            (identifier)
+            (identifier)))))))
