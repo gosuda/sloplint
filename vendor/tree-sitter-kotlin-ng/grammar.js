@@ -193,7 +193,7 @@ module.exports = grammar({
       optional(choice(
         // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
         // where an accessor would sit (upstream v1.1.0 gap).
-        seq('field', optional(seq(':', $.type)), '=', $.expression),
+        $.backing_field,
         seq($.getter, optional($.setter)),
         seq($.setter, optional($.getter)),
       )),
@@ -336,6 +336,14 @@ module.exports = grammar({
       $.type,
       'by',
       $.primary_expression,
+    ),
+
+    backing_field: $ => seq(
+      optional($.modifiers),
+      'field',
+      optional(seq(':', $.type)),
+      '=',
+      $.expression,
     ),
 
     getter: $ => prec.right(seq(

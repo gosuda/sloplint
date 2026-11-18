@@ -327,14 +327,52 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 else if (index == 1 && valid_symbols[IN]) {
                     return true;
                 }
-                // If `field` was found and a `:` or `=` follows, this is a Kotlin 2.x
-                // explicit backing field continuing the property declaration — no semi.
+                // If `field` was found at class member position and a `:` or `=`
+                // follows (comments permitted between), this is a Kotlin 2.x explicit
+                // backing field continuing the property declaration — no semi.
                 else if (index == 9) {
-                    while (iswspace(lexer->lookahead)) {
-                        skip(lexer);
+                    if (!valid_symbols[CLASS_MEMBER_SEMI]) {
+                        return true;
                     }
-                    if (lexer->lookahead == ':' || lexer->lookahead == '=') {
-                        return false;
+                    for (;;) {
+                        while (iswspace(lexer->lookahead)) {
+                            skip(lexer);
+                        }
+                        if (lexer->lookahead != '/') {
+                            break;
+                        }
+                        skip(lexer);
+                        if (lexer->lookahead == '/') {
+                            while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
+                                skip(lexer);
+                            }
+                            continue;
+                        }
+                        if (lexer->lookahead == '*') {
+                            // Block comments may nest in Kotlin.
+                            unsigned depth = 1;
+                            while (depth > 0 && !lexer->eof(lexer)) {
+                                wchar_t c = lexer->lookahead;
+                                skip(lexer);
+                                if (c == '/' && lexer->lookahead == '*') {
+                                    depth++;
+                                    skip(lexer);
+                                } else if (c == '*' && lexer->lookahead == '/') {
+                                    depth--;
+                                    skip(lexer);
+                                }
+                            }
+                            continue;
+                        }
+                        return true;
+                    }
+                    if (lexer->lookahead == ':') {
+                        skip(lexer);
+                        return lexer->lookahead == ':';
+                    }
+                    if (lexer->lookahead == '=') {
+                        skip(lexer);
+                        return lexer->lookahead == '=';
                     }
                     return true;
                 }

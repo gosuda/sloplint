@@ -32,7 +32,7 @@
        optional(choice(
 +        // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
 +        // where an accessor would sit (upstream v1.1.0 gap).
-+        seq('field', optional(seq(':', $.type)), '=', $.expression),
++        $.backing_field,
          seq($.getter, optional($.setter)),
          seq($.setter, optional($.getter)),
        )),
@@ -56,7 +56,22 @@
        optional($.modifiers),
        'fun',
        optional($.type_parameters),
-@@ -415,7 +431,7 @@
+@@ -322,6 +338,14 @@
+       $.primary_expression,
+     ),
+ 
++    backing_field: $ => seq(
++      optional($.modifiers),
++      'field',
++      optional(seq(':', $.type)),
++      '=',
++      $.expression,
++    ),
++
+     getter: $ => prec.right(seq(
+       optional($.modifiers),
+       'get',
+@@ -415,7 +439,7 @@
  
      enum_entry: $ => seq(
        optional($.modifiers),
@@ -65,7 +80,7 @@
        optional($.value_arguments),
        optional($.class_body),
      ),
-@@ -427,7 +443,7 @@
+@@ -427,7 +451,7 @@
      ),
  
      value_argument: $ => seq(
@@ -74,7 +89,7 @@
        optional('*'),
        $.expression,
      ),
-@@ -593,6 +609,7 @@
+@@ -593,6 +617,7 @@
  
      function_type: $ => seq(
        optional($.type_modifiers),
@@ -82,7 +97,7 @@
        optional(seq($._receiver_type, '.')),
        $.function_type_parameters,
        '->',
-@@ -752,6 +769,7 @@
+@@ -752,6 +777,7 @@
      ),
  
      lambda_literal: $ => seq(
@@ -90,7 +105,7 @@
        '{',
        optional(seq(optional($.lambda_parameters), '->')),
        optionalSep1($.statement, $._semi),
-@@ -853,6 +871,11 @@
+@@ -853,6 +879,11 @@
            commaSep1(field('condition', $._when_condition)),
            optional(','),
          ),
@@ -102,7 +117,7 @@
          'else',
        ),
        '->',
-@@ -929,7 +952,7 @@
+@@ -929,7 +960,7 @@
  
      navigation_expression: $ => prec(PREC.CALL, seq(
        $.expression,
@@ -111,7 +126,7 @@
        $.identifier,
      )),
  
-@@ -940,6 +963,7 @@
+@@ -940,6 +971,7 @@
      ),
  
      string_literal: $ => seq(
@@ -119,7 +134,7 @@
        '"',
        repeat(choice(
          alias(choice(
-@@ -956,14 +980,17 @@
+@@ -956,14 +988,17 @@
      ),
  
      multiline_string_literal: $ => seq(
@@ -138,7 +153,7 @@
      interpolation: $ => choice(
        seq('$', $._identifier),
        seq('${', $.expression, '}'),
-@@ -1059,6 +1086,7 @@
+@@ -1059,6 +1094,7 @@
          'set',
          'operator',
          'value',
@@ -226,18 +241,56 @@
  
                          while (iswspace(lexer->lookahead)) {
                              if (lexer->lookahead == '\n') {
-@@ -307,6 +327,17 @@
+@@ -307,6 +327,55 @@
                  else if (index == 1 && valid_symbols[IN]) {
                      return true;
                  }
-+                // If `field` was found and a `:` or `=` follows, this is a Kotlin 2.x
-+                // explicit backing field continuing the property declaration — no semi.
++                // If `field` was found at class member position and a `:` or `=`
++                // follows (comments permitted between), this is a Kotlin 2.x explicit
++                // backing field continuing the property declaration — no semi.
 +                else if (index == 9) {
-+                    while (iswspace(lexer->lookahead)) {
-+                        skip(lexer);
++                    if (!valid_symbols[CLASS_MEMBER_SEMI]) {
++                        return true;
 +                    }
-+                    if (lexer->lookahead == ':' || lexer->lookahead == '=') {
-+                        return false;
++                    for (;;) {
++                        while (iswspace(lexer->lookahead)) {
++                            skip(lexer);
++                        }
++                        if (lexer->lookahead != '/') {
++                            break;
++                        }
++                        skip(lexer);
++                        if (lexer->lookahead == '/') {
++                            while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
++                                skip(lexer);
++                            }
++                            continue;
++                        }
++                        if (lexer->lookahead == '*') {
++                            // Block comments may nest in Kotlin.
++                            unsigned depth = 1;
++                            while (depth > 0 && !lexer->eof(lexer)) {
++                                wchar_t c = lexer->lookahead;
++                                skip(lexer);
++                                if (c == '/' && lexer->lookahead == '*') {
++                                    depth++;
++                                    skip(lexer);
++                                } else if (c == '*' && lexer->lookahead == '/') {
++                                    depth--;
++                                    skip(lexer);
++                                }
++                            }
++                            continue;
++                        }
++                        return true;
++                    }
++                    if (lexer->lookahead == ':') {
++                        skip(lexer);
++                        return lexer->lookahead == ':';
++                    }
++                    if (lexer->lookahead == '=') {
++                        skip(lexer);
++                        return lexer->lookahead == '=';
 +                    }
 +                    return true;
 +                }

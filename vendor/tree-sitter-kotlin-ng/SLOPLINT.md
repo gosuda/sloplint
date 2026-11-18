@@ -39,7 +39,7 @@ Limits:
 - KGUARD accepts one condition before `if`. A guard after a comma-separated condition list is not handled.
 - KGETVAL and KSETNEST are fixed for the repro shapes.
 - KCTX is fixed for `context(...)` before a declaration, a function type, and a parenthesized receiver. `context(...)` after an annotation is not handled (see residual ERROR files).
-- KBFIELD covers the Kotlin 2.x explicit backing field in the accessor position: `val x: T` followed on the next line by `field = expr` or `field: U = expr`. The grammar gains a `field` choice beside `getter`/`setter` in `property_declaration`, and the semicolon scanner suppresses the auto-semi before `field` only when a `:` or `=` follows, so a bare `field` expression statement still splits.
+- KBFIELD covers the Kotlin 2.x explicit backing field in the accessor position: `val x: T` followed on the next line by `field = expr` or `field: U = expr`, optionally with modifiers (`private field = false`) or comments between `field` and its `:`/`=` (`field /* c */ = x`). The grammar gains a named `backing_field` rule beside `getter`/`setter` in `property_declaration` that accepts `optional($.modifiers)`, `optional(':' $.type)`, `= $.expression`. The semicolon scanner suppresses the auto-semi before `field` only at class member position (a `CLASS_MEMBER_SEMI` may not be followed by one) and only when, after skipping whitespace and `//` or nested `/* */` comments, a `:` or `=` follows (`::` and `==` still split), so a bare `field` expression statement still splits and `field = v` inside a function body stays an assignment.
 
 ## Open named clusters (6)
 
@@ -98,13 +98,13 @@ Transitions, published to vendored, over the 3688 corpus files: clean to clean 3
 
 Repros: all 27 are raw errors on the published grammar. On the vendored grammar, 19 are clean (K01, K02, K03, K04, K06, K07, K08, K08b, K08c, K09, K10, K11, K12, K15, K16, K17, K18, K22, K22b), 5 are ERROR (K05, K13, K14, K19, K20), and 3 are MISSING only (K21b, K21c, K23). The 8 open repros are 6 named clusters plus the KFILEANN pair.
 
-Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (23 tests, each clean check asserting the raw tree and each invalid control asserting the raw tree has an error):
-- Vendored path dependency: 23 pass.
-- Published `tree-sitter-kotlin-ng` 1.1.0: 20 fail and 3 pass. The 3 that pass are the invalid controls.
+Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (28 tests, each clean check asserting the raw tree and each invalid control asserting the raw tree has an error):
+- Vendored path dependency: 28 pass.
+- Published `tree-sitter-kotlin-ng` 1.1.0: 25 fail and 3 pass. The 3 that pass are the invalid controls.
 
 Corpus cases (`tree-sitter test`, fresh `HOME`):
-- Vendored: 41 of 41. These are the 22 upstream cases, the 15 `sloplint_kotlin.txt` cases, and the 4 `sloplint_kotlin_same_line.txt` cases. The expected trees have no `ERROR` or `MISSING`.
-- Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 19 pass (the 15 sloplint cases and the 4 same-line cases). The 22 upstream cases passed on the published grammar before any change.
+- Vendored: 42 of 42. These are the 22 upstream cases, the 16 `sloplint_kotlin.txt` cases, and the 4 `sloplint_kotlin_same_line.txt` cases. The expected trees have no `ERROR` or `MISSING`.
+- Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 20 pass (the 16 sloplint cases and the 4 same-line cases). The 22 upstream cases passed on the published grammar before any change.
 
 ## Code notes
 

@@ -501,20 +501,77 @@ class State {
               (type_projection
                 (user_type
                   (identifier))))))
-        (user_type
-          (identifier)
-          (type_arguments
-            (type_projection
-              (user_type
-                (identifier)))))
-        (call_expression
-          (identifier)
-          (value_arguments
-            (value_argument
-              (identifier)))))
+        (backing_field
+          (user_type
+            (identifier)
+            (type_arguments
+              (type_projection
+                (user_type
+                  (identifier)))))
+          (call_expression
+            (identifier)
+            (value_arguments
+              (value_argument
+                (identifier))))))
       (property_declaration
         (variable_declaration
           (identifier)
           (user_type
             (identifier)))
-        (identifier)))))
+        (backing_field
+          (identifier))))))
+
+================================================================================
+explicit backing field with modifier and comment; field as body assignment
+================================================================================
+
+class State {
+    val a: Boolean
+        private field = false
+    val b: Boolean
+        field /* c */ = false
+    fun f(field: Boolean) {
+        val x = false
+        field = true
+    }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier)
+          (user_type
+            (identifier)))
+        (backing_field
+          (modifiers
+            (visibility_modifier))
+          (identifier)))
+      (property_declaration
+        (variable_declaration
+          (identifier)
+          (user_type
+            (identifier)))
+        (backing_field
+          (block_comment)
+          (identifier)))
+      (function_declaration
+        (identifier)
+        (function_value_parameters
+          (parameter
+            (identifier)
+            (user_type
+              (identifier))))
+        (function_body
+          (block
+            (property_declaration
+              (variable_declaration
+                (identifier))
+              (identifier))
+            (assignment
+              (identifier)
+              (identifier))))))))
