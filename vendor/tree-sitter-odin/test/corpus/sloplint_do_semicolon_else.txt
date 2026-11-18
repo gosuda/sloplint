@@ -1,0 +1,70 @@
+================================================================================
+if/when do-consequence with `;` before else
+================================================================================
+
+f :: proc(a: bool) {
+    if a do g(); else do h()
+    if a do g(); else if a do i(); else do j()
+}
+
+p :: proc() -> string {
+    when ODIN_OS == .Darwin do return "darwin"; else when ODIN_OS == .Linux do return "linux"; else do return "unknown"
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters
+        (parameter
+          (identifier)
+          (type
+            (identifier))))
+      (block
+        (if_statement
+          (identifier)
+          (call_expression
+            (identifier))
+          (else_clause
+            (call_expression
+              (identifier))))
+        (if_statement
+          (identifier)
+          (call_expression
+            (identifier))
+          (else_if_clause
+            (identifier)
+            (call_expression
+              (identifier)))
+          (else_clause
+            (call_expression
+              (identifier)))))))
+  (procedure_declaration
+    (identifier)
+    (procedure
+      (parameters)
+      (type
+        (identifier))
+      (block
+        (when_statement
+          (binary_expression
+            (identifier)
+            (member_expression
+              (identifier)))
+          (return_statement
+            (string
+              (string_content)))
+          (else_when_clause
+            (binary_expression
+              (identifier)
+              (member_expression
+                (identifier)))
+            (return_statement
+              (string
+                (string_content))))
+          (else_clause
+            (return_statement
+              (string
+                (string_content)))))))))

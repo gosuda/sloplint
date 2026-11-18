@@ -1,0 +1,47 @@
+========================================
+#if inside a method signature's selector list
+========================================
+
+@interface SUValidator : NSObject
+- (instancetype)initWithEd:(NSString * _Nullable)ed
+#if SPARKLE_BUILD_LEGACY_DSA_SUPPORT
+                       dsa:(NSString * _Nullable)dsa
+#endif
+                       error:(NSError **)error;
+@end
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    superclass: (identifier)
+    (method_declaration
+      (method_type
+        (type_name
+          (type_identifier)))
+      (identifier)
+      (method_parameter
+        (method_type
+          (type_name
+            (type_identifier)
+            (abstract_pointer_declarator
+              (type_qualifier))))
+        (identifier))
+      (preproc_if
+        condition: (identifier)
+        (identifier)
+        (method_parameter
+          (method_type
+            (type_name
+              (type_identifier)
+              (abstract_pointer_declarator
+                (type_qualifier))))
+          (identifier)))
+      (identifier)
+      (method_parameter
+        (method_type
+          (type_name
+            (type_identifier)
+            (abstract_pointer_declarator
+              declarator: (abstract_pointer_declarator))))
+        (identifier)))))

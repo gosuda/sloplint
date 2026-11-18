@@ -1,0 +1,84 @@
+========================================
+CMSIS __ASM macro, __packed struct, MiG preproc specifier arms
+========================================
+
+__STATIC_INLINE void __enable_irq(void)
+{
+  __ASM volatile ("cpsie i" : : : "memory");
+  __ASM("dsb" : : : "memory");
+}
+__packed struct foo { int a; } g;
+#ifdef __BeforeMigUserHeader
+__BeforeMigUserHeader
+#endif
+#ifdef mig_external
+mig_external
+#else
+extern
+#endif
+void kern_mach_host_self(void);
+struct __fp16 { int x; };
+__fp16 h;
+---
+
+(function_definition
+    (macro_attribute)
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type))))
+    body: (compound_statement
+      (expression_statement
+        (gnu_asm_expression
+          (gnu_asm_qualifier)
+          assembly_code: (string_literal
+            (string_content))
+          output_operands: (gnu_asm_output_operand_list)
+          input_operands: (gnu_asm_input_operand_list)
+          clobbers: (gnu_asm_clobber_list
+            register: (string_literal
+              (string_content)))))
+      (expression_statement
+        (gnu_asm_expression
+          assembly_code: (string_literal
+            (string_content))
+          output_operands: (gnu_asm_output_operand_list)
+          input_operands: (gnu_asm_input_operand_list)
+          clobbers: (gnu_asm_clobber_list
+            register: (string_literal
+              (string_content)))))))
+  (declaration
+    (macro_attribute)
+    type: (struct_specifier
+      name: (type_identifier)
+      body: (field_declaration_list
+        (field_declaration
+          type: (primitive_type)
+          declarator: (field_identifier))))
+    declarator: (identifier))
+  (declaration
+    (preproc_ifdef
+      name: (identifier)
+      (type_identifier))
+    (preproc_ifdef
+      name: (identifier)
+      (type_identifier)
+      alternative: (preproc_else
+        (storage_class_specifier)))
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list
+        (parameter_declaration
+          type: (primitive_type)))))
+  (struct_specifier
+    name: (type_identifier)
+    body: (field_declaration_list
+      (field_declaration
+        type: (primitive_type)
+        declarator: (field_identifier))))
+  (declaration
+    type: (type_identifier)
+    declarator: (identifier)))

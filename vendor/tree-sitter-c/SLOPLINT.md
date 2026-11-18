@@ -226,6 +226,27 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
   extension accepted by `gcc -fsyntax-only -std=gnu2x`. The high bound gets
   field `end`.
 
+- `__fp16`/`__bf16` dropped from `primitive_type` (reverses an earlier
+  sloplint addition): ARM/MSVC shim headers legitimately name user types
+  `struct __fp16`/`struct __bf16` (ncnn's `arm_usability.h`), and a
+  `__fp16 x;` declaration still parses through the `type_identifier`
+  read.
+- `__ASM` joins the `gnu_asm_expression` keyword choice (CMSIS reaches
+  `asm` through that macro name: `__ASM volatile ("cpsie i" : : :
+  "memory")`, `__ASM("dsb" : : : "memory")`). A literal keyword, not a
+  regex token — the `word` token out-lexes any identifier-shaped regex.
+- `'__packed'` (lowercase) joins the CMSIS `macro_attribute` group next
+  to `'__PACKED'` (`__packed struct S { ... } g;`).
+- `#if` arms inside declaration specifiers: a new
+  `preprocIf('_in_declaration_specifiers')` suite whose arm items are
+  `_declaration_modifiers`, `macro_qualifier` and `type_specifier`,
+  aliased into `_declaration_specifiers` — MiG-generated headers switch
+  the linkage qualifier (`#ifdef mig_external mig_external #else extern
+  #endif void kern_mach_host_self(void);`).
+- Bare `NAME` preproc arms at top level: the `preprocIf('')` body
+  accepts `$.identifier`, covering `#ifdef GUARD`/`NAME`/`#endif`
+  marker-macro blocks (`__BeforeMigUserHeader` in the same headers).
+
 ## Adapter impact
 
 Node kinds and fields that `crates/sloplint-syntax/src/lang/c.rs` depends on
@@ -271,6 +292,11 @@ Each was a parse error with the published crate and is valid for
 - `void f(const J j, T (*arr)[N])` and `int f(fd_set FAR* s, _In_ PUCHAR d)`
   — parenthesized declarator parameters and bare SAL qualifiers under
   `_parameter_specifiers`.
+- `__ASM volatile ("cpsie i" : : : "memory");` inside a body,
+  `__ASM("dsb" : : : "memory");`, `__packed struct foo { int a; } g;`,
+  `#ifdef __BeforeMigUserHeader`/`__BeforeMigUserHeader`/`#endif` marker
+  arms, `#ifdef mig_external`/`mig_external`/`#else`/`extern`/`#endif`
+  in specifier position, `struct __fp16 { int x; };` and `__fp16 h;`.
 - Initializer value and the declaration's `;` carried inside preproc
   arms: `T x =\n#if A v1;\n#else v2;\n#endif`. `declaration` gained a
   second alternative ending in `_init_declarator_preproc` (aliased to
@@ -291,6 +317,9 @@ Each was a parse error with the published crate and is valid for
   keyword because the assigned `double complex` repro needs it.
 - Two `#embed` directives in a row with no separating comma.
 - `vector` type names (AltiVec, target-specific and contextual; out of scope).
+- A declaratorless `__packed struct S { ... };` (attribute prefix routes
+  to `declaration`, which requires a declarator — same gap as upstream
+  for `__attribute__((x)) struct S { ... };`).
 - `__kconfig` (a BPF section-attribute macro, not a language construct).
 - `typedef enum : unsigned char t;` (anonymous enum with an underlying type
   but no body). gcc and clang both reject this, so it correctly stays an error.
@@ -305,8 +334,8 @@ Inputs that are not valid C and so stay errors: `int x = ;`, unterminated
 - Upstream `tree-sitter test` at tag v0.24.2, before: 85 of 85 pass.
 - After the patch: 85 of 85 upstream cases pass.
 - This vendor dir ships only the `sloplint_*.txt` corpus files (upstream
-  corpus is not vendored): 16 files, 52 cases, all passing with the patch
-  (`tree-sitter test` reports 52/52). The latest additions cover the Win32
+  corpus is not vendored): 17 files, 61 cases, all passing with the patch
+  (`tree-sitter test` reports 61/61). The latest additions cover the Win32
   SDK cluster: typedef qualifier macros, function-pointer typedefs with
   SAL-annotated parameters, MIDL brackets, declaratorless typedefs inside
   `#if`, and `#ifdef`-guarded inheritance.
