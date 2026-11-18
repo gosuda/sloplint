@@ -1,0 +1,540 @@
+--- a/grammar.js	2026-11-18 11:03:28.142596599 +0000
++++ b/grammar.js	2026-11-18 12:56:25.979179524 +0000
+@@ -41,6 +41,47 @@
+     [$.array_type],
+     // lol: size_of(Map_Cell(T){}.data) / size_of(T) when size_of(T) > 0 else 1
+     [$._expression_no_tag, $.struct],
++    // `#simd[N]T` is both a type and an expression-position operand
++    [$.simd_type, $.polymorphic_type],
++    [$.simd_type, $.specialized_type],
++    [$.simd_type, $.struct],
++    // `#soa[N]T` / `#soa[]T` — same type-vs-expression ambiguity as #simd
++    [$.soa_type, $.polymorphic_type],
++    [$.soa_type, $.specialized_type],
++    // `tag(args)` at declaration scope vs a call on a tag expression
++    [$.tag_call, $.call_expression],
++    // `X :: union #tag {..}` — container declaration vs an anonymous
++    // container type heading a literal
++    [$.union_declaration, $.union_type],
++    // `struct{ a, b: T }` — field-name list vs member list shares a prefix
++    [$.field, $.struct_member],
++    // `#tag matrix[..]{..}` — a tag may lead a literal vs tag as expression
++    [$.const_declaration, $.literal],
++    // `#partial #sparse [T]{..}` — stacked tags make the prefix ambiguous
++    [$.struct],
++    // `#tag (expr)` operand vs a parenthesized type after a tag
++    [$.type, $._tag_operand],
++    [$._expression_no_tag, $.type, $.struct],
++    [$._expression_no_tag, $.type],
++    [$._expression_no_tag, $._procedure_type],
++    // `x := proc(){}, ..` — proc literal in a `:=` RHS list vs expression
++    [$.variable_declaration, $._expression_no_tag],
++    [$.defer_statement, $._expression_no_tag],
++    [$._expression_no_tag, $.call_expression],
++    [$.assignment_statement, $._expression_no_tag],
++    [$.tagged_call_expression, $._expression_no_tag],
++    // `#word a.b(...)` — a directive-led call vs the `#partial`-literal
++    // struct prefix whose `'#partial'` accepts any tag token
++    [$.tagged_call_expression, $.struct],
++    [$.field_identifier, $.member_expression],
++    // `X :: #tag ^T` — tag-prefixed type in a const RHS vs tag as expression
++    // operand followed by postfix `^`
++    [$.const_declaration, $._expression_no_tag],
++    // `#tag when ...` inside a block — tag leading a statement vs tag as an
++    // expression operand
++    [$.block, $._expression_no_tag],
++    // `case: #tag when ...` — tag as case body expression vs tagged statement
++    [$.switch_case, $._expression_no_tag],
+   ],
+ 
+   externals: $ => [
+@@ -82,6 +123,7 @@
+ 
+     declaration: $ => choice(
+       $.build_tag,
++      $.tag_call,
+       $.package_declaration,
+       $.import_declaration,
+       $.procedure_declaration,
+@@ -97,10 +139,23 @@
+       $.foreign_block,
+       $.when_statement,
+       $._expression_no_tag,
++      $.shebang,
+     ),
+ 
++    // `#!/usr/bin/env -S odin-run` on line 1 of scripts
++    shebang: _ => token(seq('#!', /[^\r\n]*/)),
++
+     build_tag: $ => seq('#+', /.+/),
+ 
++    // File-scope directives: `#assert(expr[, msg])`, `#config(name, default)`.
++    tag_call: $ => seq(
++      $.tag,
++      '(',
++      commaSep1($.expression),
++      optional(','),
++      ')',
++    ),
++
+     package_declaration: $ => seq('package', $.identifier),
+ 
+     import_declaration: $ => seq(
+@@ -112,20 +167,32 @@
+         $.string,
+         seq(
+           '{',
+-          commaSep1(choice($.string, $.identifier)),
++          commaSep1(choice(
++            $.string,
++            $.identifier,
++            // `{ "a.so" when COND else "b.so" }` — conditional entries
++            seq(
++              choice($.string, $.identifier),
++              'when',
++              $.expression,
++              'else',
++              choice($.string, $.identifier),
++            ),
++          )),
+           optional(','),
+           '}',
+         ),
+       ),
+     ),
+ 
+-    procedure_declaration: $ => seq(
++    procedure_declaration: $ => prec(1, seq(
+       optional($.attributes),
+       $.expression,
+       '::',
+-      optional($.tag),
++      // `X :: inline proc(..)` / `X :: #force_inline proc(..)`
++      repeat(choice('inline', $.tag)),
+       $.procedure,
+-    ),
++    )),
+     procedure: $ => prec.right(seq(
+       'proc',
+       optional($.calling_convention),
+@@ -175,7 +242,7 @@
+       '::',
+       'struct',
+       optional($.polymorphic_parameters),
+-      repeat(seq($.tag, optional(choice($.identifier, $.number)))), // #align 16
++      repeat(seq($.tag, optional($._tag_operand))), // #align 16, #align (16)
+       optional($.where_clause),
+       '{',
+       optional(seq(
+@@ -245,12 +312,21 @@
+       commaSep1(
+         choice(
+           $.expression,
+-          seq(alias('#type', $.tag), $.type),
++          seq('#type', $.type),
++          // `#row_major matrix[..]T{..}` — a tag may lead a literal
++          seq($.tag, $.matrix),
+           $.array_type,
+           $.bit_set_type,
+           $.pointer_type,
+         ),
+       ),
++      // `X :: [N]u8 when COND else [M]u8` — a `when`/`else` picks the value
++      optional(seq(
++        'when',
++        $.expression,
++        'else',
++        choice($.expression, $.array_type, $.pointer_type, $._procedure_type),
++      )),
+     ),
+ 
+     const_type_declaration: $ => prec(1, seq(
+@@ -278,6 +354,7 @@
+         seq(
+           '(',
+           commaSep1(seq($.identifier, optional(seq('=', $.expression)))),
++          optional(','),
+           ')',
+         ),
+       ),
+@@ -286,7 +363,7 @@
+     parameters: $ => seq(
+       '(',
+       optional(seq(
+-        commaSep1(choice($.parameter, $.default_parameter)),
++        commaSep1(choice($.parameter, $.default_parameter, '..')),
+         optional(','),
+       )),
+       ')',
+@@ -298,6 +375,7 @@
+     _param_header: $ => seq(
+       optional($.tag),
+       optional('using'),
++      optional(choice('auto_cast', 'no_alias', 'no_broadcast')),
+       optional('$'),
+       choice(
+         $.identifier,
+@@ -320,6 +398,7 @@
+     default_parameter: $ => seq(
+       optional($.tag),
+       optional('using'),
++      optional(choice('auto_cast', 'no_alias', 'no_broadcast')),
+       $.identifier,
+       ':=',
+       $.expression,
+@@ -340,6 +419,7 @@
+       ':',
+       optional($.tag),
+       $.type,
++      optional(seq('=', $.expression)),
+       optional($.string),
+     )),
+ 
+@@ -369,9 +449,20 @@
+       $.var_declaration,
+       $.foreign_block,
+       $.tagged_block,
++      $.partial_switch_statement,
+       $.block,
+     )),
+ 
++    // `#partial switch` opts a switch into non-exhaustive matching. `#partial`
++    // is a dedicated token for struct literals, so a plain `tag` slot cannot
++    // see it.
++    partial_switch_statement: $ => seq(
++      '#partial',
++      // `#partial label: switch` — a label may sit between tag and switch
++      optional(seq($.expression, ':')),
++      $.switch_statement,
++    ),
++
+     assignment_statement: $ => prec(PREC.ASSIGNMENT, seq(
+       optional(seq($.attributes, optional($.tag))),
+       commaSep1($.expression),
+@@ -396,13 +487,15 @@
+       field('condition', $.expression),
+       choice(
+         field('consequence', $.block),
+-        seq('do', field('consequence', $.statement)),
++        // `if a do g(); else ...` — the `;` before `else` is legal Odin and
++        // must not detach the clause as a statement separator.
++        seq('do', field('consequence', $.statement), optional(';')),
+       ),
+       repeat($.else_if_clause),
+       optional($.else_clause),
+     )),
+ 
+-    else_if_clause: $ => seq(
++    else_if_clause: $ => prec.right(seq(
+       'else',
+       'if',
+       optional(seq(
+@@ -412,9 +505,9 @@
+       field('condition', $.expression),
+       choice(
+         field('consequence', $.block),
+-        seq('do', field('consequence', $.statement)),
++        seq('do', field('consequence', $.statement), optional(';')),
+       ),
+-    ),
++    )),
+ 
+     else_clause: $ => seq(
+       'else',
+@@ -427,17 +520,17 @@
+     when_statement: $ => prec.right(seq(
+       'when',
+       $.expression,
+-      choice($.block, seq('do', $.statement)),
++      choice($.block, seq('do', $.statement, optional(';'))),
+       repeat($.else_when_clause),
+       optional($.else_clause),
+     )),
+ 
+-    else_when_clause: $ => seq(
++    else_when_clause: $ => prec.right(seq(
+       'else',
+       'when',
+       $.expression,
+-      $.block,
+-    ),
++      choice($.block, seq('do', $.statement, optional(';'))),
++    )),
+ 
+     for_statement: $ => seq(
+       'for',
+@@ -459,6 +552,20 @@
+             ),
+           )),
+         ),
++        // `for it := hm.iterator(...) { }` — init-only iterator loop
++        seq(field('initializer', choice($.assignment_statement, $.var_declaration))),
++        // `for it := make(&x); vo, _ in next(&it) { }` — the init sets up a
++        // manual iterator and the in-clause must carry at least two names,
++        // otherwise a lone `v in e` is just a C-style condition.
++        seq(
++          field('initializer', choice($.assignment_statement, $.var_declaration)),
++          ';',
++          $.expression,
++          ',',
++          commaSep1($.expression),
++          'in',
++          $.expression,
++        ),
+         $._for_in_expression,
+       )),
+       field('consequence', choice($.block, seq('do', $.statement))),
+@@ -497,7 +604,21 @@
+       sep(seq(optional($.tag), $.statement), $._separator),
+     ),
+ 
+-    defer_statement: $ => seq('defer', $.statement),
++    // `defer proc(...) { ... }` defers an anonymous procedure, optionally
++    // called immediately as `defer proc(...) { ... }(args)`.
++    defer_statement: $ => seq(
++      'defer',
++      choice(
++        $.statement,
++        $.procedure,
++        seq(
++          $.procedure,
++          '(',
++          optional(seq(commaSep1($.expression), optional(','))),
++          ')',
++        ),
++      ),
++    ),
+ 
+     break_statement: $ => seq('break', optional($.identifier)),
+ 
+@@ -512,7 +633,8 @@
+       optional($.tag),
+       choice(
+         seq($.type, optional(seq(choice('=', ':'), commaSep1($.expression)))),
+-        // seq('=', $.expression), // +2k state count no ty
++        // `x: = expr` — the type slot may be empty (spelled `: =` in the wild)
++        seq('=', commaSep1($.expression)),
+       ),
+     )),
+ 
+@@ -528,23 +650,37 @@
+     label_statement: $ => seq(
+       $.expression,
+       ':',
+-      choice($.if_statement, $.for_statement, $.switch_statement, $.block),
++      choice($.if_statement, $.for_statement, $.switch_statement, $.partial_switch_statement, $.when_statement, $.block),
+     ),
+ 
+-    using_statement: $ => seq('using', $.expression),
++    // `using strings, fmt` — several names may be bound in one statement
++    using_statement: $ => seq(
++      'using',
++      choice(
++        commaSep1($.expression),
++        // `using state := get(..)` — the modifier may prefix a declaration
++        $.var_declaration,
++        $.assignment_statement,
++      ),
++    ),
+ 
+     expression: $ => prec.left(choice(
+       $._expression_no_tag,
+-      $.tag,
++      $.tagged_call_expression,
+     )),
+ 
++    // `#force_inline call(..)` — a directive may lead a call operand
++    tagged_call_expression: $ => seq($.tag, choice($.call_expression, $.selector_call_expression)),
++
+     _expression_no_tag: $ => choice(
++      $.tag,
+       $.unary_expression,
+       $.binary_expression,
+       $.ternary_expression,
+       $.call_expression,
+       $.selector_call_expression,
+       $.member_expression,
++      $.procedure,
+       $.index_expression,
+       $.slice_expression,
+       $.range_expression,
+@@ -560,12 +696,13 @@
+       $.map_type,
+       $.distinct_type,
+       $.matrix_type,
++      $.simd_type,
+       $.literal,
+       '?',
+     ),
+ 
+     unary_expression: $ => prec.right(PREC.UNARY, seq(
+-      field('operator', choice('+', '-', '~', '!', '&')),
++      field('operator', choice('+', '-', '~', '!', '&', '**')),
+       field('argument', $.expression),
+     )),
+ 
+@@ -624,9 +761,11 @@
+     )),
+ 
+     call_expression: $ => prec.left(PREC.CALL, seq(
+-      field('function', choice(seq($.tag, $.identifier), $._expression_no_tag, $.tag)),
++      field('function', choice(seq($.tag, choice($.identifier, $.member_expression)), $._expression_no_tag, $.tag)),
+       '(',
+       optional(seq(
++        // `f(, x)` — an empty first argument (ObjC runtime calls)
++        optional(','),
+         commaSep1(seq(
+           field('argument', choice($.expression, $.array_type, $.struct_type, $.pointer_type, $.procedure)),
+           optional(seq('=', choice($.expression))),
+@@ -674,7 +813,8 @@
+     cast_expression: $ => prec.left(PREC.CAST, seq(
+       choice(
+         seq('(', choice($.pointer_type, $.array_type, $._procedure_type), ')', optional($.expression)),
+-        seq(choice('cast', 'transmute'), '(', $.type, ')', $.expression),
++        // `cast(type_of(x))v` — the operand may also be an expression
++        seq(choice('cast', 'transmute'), '(', choice($.type, $.call_expression), ')', $.expression),
+         seq('auto_cast', $.expression),
+       ),
+     )),
+@@ -718,24 +858,59 @@
+       $.empty_type,
+       $.polymorphic_type,
+       $.conditional_type,
++      $.simd_type,
++      $.soa_type,
+       '...',
+     )),
+ 
+-    pointer_type: $ => prec.left(seq('^', $.type)),
++    simd_type: $ => seq('#simd', '[', optional('$'), $.expression, ']', $.type),
++
++    // `#soa[N]T` / `#soa[]T` / `#soa^#soa[N]T` — SoA layout tag on any type
++    soa_type: $ => seq('#soa', $.type),
++
++    // Operand of a struct tag: `#align 16`, `#align (16)` (space before parens
++    // defeats the contiguous `tag` token).
++    _tag_operand: $ => choice(
++      $.identifier,
++      $.number,
++      // `#align (8)` / `#align(size_of(T))` — an expression in parens
++      $.parenthesized_expression,
++    ),
++
++    pointer_type: $ => prec.left(choice(
++      seq('^', $.type),
++      // `#soa^/Soa_Array(..)` — the #soa pointer-collection form
++      seq('^', '/', $.type),
++    )),
+ 
+     variadic_type: $ => prec.left(seq('..', $.type)),
+ 
+     array_type: $ => prec(1, seq(
+       optional($.tag),
+       '[',
+-      optional(seq(optional('$'), choice('dynamic', '^', '?', $.expression))),
++      optional(seq(optional('$'), choice(
++        'dynamic',
++        '^',
++        '?',
++        $.expression,
++        // `[dynamic; N]T` — dynamic array with an explicit capacity bound
++        seq('dynamic', ';', optional('$'), $.expression),
++      ))),
+       ']',
+       optional($.type),
+     )),
+ 
+     map_type: $ => prec.right(seq('map', '[', $.type, ']', $.type)),
+ 
+-    union_type: $ => prec.right(seq('union', '{', commaSep1($.type), optional(','), '}')),
++    union_type: $ => prec.right(seq(
++      'union',
++      // `union #no_nil { .. }` / `union #shared_nil { .. }`
++      repeat(seq($.tag, optional($._tag_operand))),
++      '{',
++      commaSep1(choice($.named_type, $.type)),
++      optional(','),
++      '}',
++    )),
+ 
+     bit_set_type: $ => seq(
+       'bit_set',
+@@ -760,7 +935,7 @@
+     tuple_type: $ => seq(
+       '(',
+       optional(seq(
+-        commaSep1(choice($.type, $.named_type, $.default_type)),
++        commaSep1(choice($.type, $.named_type, $.default_type, '..')),
+         optional(','),
+       )),
+       ')',
+@@ -769,7 +944,7 @@
+     struct_type: $ => prec(1, seq(
+       'struct',
+       optional($.polymorphic_parameters),
+-      repeat(seq($.tag, optional($.number))), // #align 16
++      repeat(seq($.tag, optional($._tag_operand))), // #align 16, #align (16)
+       repeat1(seq(
+         '{',
+         optional($._struct_members),
+@@ -785,9 +960,12 @@
+     struct_member: $ => seq(
+       commaSep1(seq(optional('using'), $.identifier)),
+       ':',
+-      optional($.tag),
++      // `#relative(i16)` / `#align n` operands may ride the member tag
++      optional(seq($.tag, optional($._tag_operand))),
+       $.type,
+       optional($.string),
++      // `x: int = 3` — a struct member may carry a default value
++      optional(seq('=', $.expression)),
+ 
+     ),
+ 
+@@ -844,7 +1022,24 @@
+     struct: $ => seq(
+       optional(choice(
+         seq('[', optional(choice('dynamic', '^', '?', $.expression)), ']', $.type),
+-        seq(choice($.identifier, $.field_identifier), optional(seq('(', commaSep($.identifier), ')'))),
++        seq(choice($.identifier, $.field_identifier), optional(seq('(', commaSep(choice($.identifier, $.field_identifier)), ')'))),
++        seq('#simd', '[', $.expression, ']', $.type),
++        seq(optional(choice(
++          seq('[', optional(choice('dynamic', '^', '?', $.expression)), ']', $.type),
++          seq(choice($.identifier, $.field_identifier), optional(seq('(', commaSep(choice($.identifier, $.field_identifier)), ')'))),
++        )), '#partial'),
++        // `#partial [V]T { ... }` — the tag also leads the type; more tags
++        // (`#sparse`, `#no_bounds_check`, ...) may stack after it
++        seq('#partial', repeat($.tag), choice(
++          seq('[', optional(choice('dynamic', '^', '?', $.expression)), ']', $.type),
++          seq(choice($.identifier, $.field_identifier), optional(seq('(', commaSep(choice($.identifier, $.field_identifier)), ')'))),
++        )),
++        // `struct{ a: int }{1}` / `union{A,B}{v}` — an anonymous container
++        // type heading a literal
++        $.struct_type,
++        $.union_type,
++        $.enum_type,
++        $.bit_field_type,
+       )),
+       // $.type,
+       '{',
+@@ -893,7 +1088,7 @@
+       $.type,
+       '{',
+       optional(seq(
+-        commaSep1($.expression),
++        commaSep1(choice(seq($.expression, '=', $.expression), $.expression)),
+         optional(','),
+       )),
+       '}',
+@@ -975,7 +1170,10 @@
+ 
+     uninitialized: _ => '---',
+ 
+-    tag: _ => token(seq(/#[a-zA-Z_][a-zA-Z0-9_]*/, optional(seq('(', /\w*/, ')')))),
++    // The parenthesized part lives in the grammar rules, not the token, so
++    // `#assert(...)`/`#config(...)` at declaration scope and `#align (8)` with
++    // whitespace all reach real argument lists instead of one opaque token.
++    tag: _ => token(/#[a-zA-Z_][a-zA-Z0-9_]*/),
+ 
+     identifier: _ => /[_\p{XID_Start}][_\p{XID_Continue}]*/u,
+ 

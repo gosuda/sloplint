@@ -1,0 +1,52 @@
+================================================================================
+for-init iterator form and matrix keyed literal
+================================================================================
+
+walk :: proc() {
+    for it := iter_make(&c); vo, _ in iterate(&it) {
+        use(vo)
+    }
+}
+
+main :: proc() {
+    foo := #row_major matrix[4, 4]int{4 ..< 8 = 1, 1 ..< 2 = 2}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file [0, 0] - [9, 0]
+  (procedure_declaration [0, 0] - [4, 1]
+    (identifier [0, 0] - [0, 4])
+    (procedure [0, 8] - [4, 1]
+      (parameters [0, 12] - [0, 14])
+      (block [0, 15] - [4, 1]
+        (for_statement [1, 4] - [3, 5]
+            (identifier [1, 8] - [1, 10])
+            (call_expression [1, 14] - [1, 27]
+          (identifier [1, 29] - [1, 31])
+          (identifier [1, 33] - [1, 34])
+          (call_expression [1, 38] - [1, 50]
+            (call_expression [2, 8] - [2, 15]
+  (procedure_declaration [6, 0] - [8, 1]
+    (identifier [6, 0] - [6, 4])
+    (procedure [6, 8] - [8, 1]
+      (parameters [6, 12] - [6, 14])
+      (block [6, 15] - [8, 1]
+        (assignment_statement [7, 4] - [7, 63]
+          (identifier [7, 4] - [7, 7])
+          (tag [7, 11] - [7, 21])
+          (matrix [7, 22] - [7, 63]
+            (number [7, 29] - [7, 30])
+            (number [7, 32] - [7, 33])
+            (type [7, 34] - [7, 37]
+              (identifier [7, 34] - [7, 37]))
+            (range_expression [7, 38] - [7, 45]
+              (number [7, 38] - [7, 39])
+              (number [7, 44] - [7, 45]))
+            (number [7, 48] - [7, 49])
+            (range_expression [7, 51] - [7, 58]
+              (number [7, 51] - [7, 52])
+              (number [7, 57] - [7, 58]))
+            (number [7, 61] - [7, 62])))))))
+
+================================================================================
