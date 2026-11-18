@@ -58,6 +58,15 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
   (`char d[]={` newline `#embed "x" limit(5)` newline `};`,
   `{1,` newline `#embed <x>` newline `, 2}`). Two embeds in a row with no comma
   between them are still rejected.
+- C23 `#embed` as an expression: `_expression_not_binary` accepts
+  `$.preproc_embed`, which matches `#embed <path> (param(args) ...)*` with
+  `path` a `string_literal` or `system_lib_string` and each parameter an
+  `identifier` followed by `embed_parameter_list` (a parenthesized,
+  comma-separated expression list). This covers the operand positions the
+  `preproc_call` form cannot reach, e.g. `const int x = 1 +` newline
+  `#embed "b"` newline `;` and `#embed <c> limit(4) + 2`. One conflict is
+  declared: `[$.preproc_embed]` — an embed parameter name plus parens is
+  otherwise ambiguous with a call expression.
 - Feature checks in `#if`: `preproc_argument_list` accepts `$.string_literal`
   and `$.system_lib_string`, so `__has_include(<endian.h>)`,
   `__has_include("x.h")`, `__has_include_next(<x.h>)` and

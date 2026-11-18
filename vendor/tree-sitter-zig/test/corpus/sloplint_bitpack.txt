@@ -1,0 +1,61 @@
+================================================================================
+bitpack container declarations (zig 0.18 alias for packed)
+================================================================================
+
+pub const Id = bitpack struct(u32) {
+    index: enum(u31) { unused = 0, _ },
+    alias: bool = false,
+};
+
+const U = bitpack union(enum) { a: u32, b: u8 };
+
+const E = bitpack enum(u2) { x, y, _ };
+
+const O = bitpack opaque { p: *anyopaque };
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (variable_declaration
+    (identifier)
+    (struct_declaration
+      (builtin_type)
+      (container_field
+        name: (identifier)
+        type: (enum_declaration
+          (builtin_type)
+          (container_field
+            name: (identifier)
+            (integer))
+          (container_field
+            name: (identifier))))
+      (container_field
+        name: (identifier)
+        type: (builtin_type)
+        (boolean))))
+  (variable_declaration
+    (identifier)
+    (union_declaration
+      (container_field
+        name: (identifier)
+        type: (builtin_type))
+      (container_field
+        name: (identifier)
+        type: (builtin_type))))
+  (variable_declaration
+    (identifier)
+    (enum_declaration
+      (builtin_type)
+      (container_field
+        name: (identifier))
+      (container_field
+        name: (identifier))
+      (container_field
+        name: (identifier))))
+  (variable_declaration
+    (identifier)
+    (opaque_declaration
+      (container_field
+        name: (identifier)
+        type: (pointer_type
+          (builtin_type))))))

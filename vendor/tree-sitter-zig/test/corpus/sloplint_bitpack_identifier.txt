@@ -1,0 +1,32 @@
+================================================================================
+bitpack stays usable as an identifier (pre-0.18 code)
+================================================================================
+
+const bitpack = 1;
+
+fn bitpack(x: u32) u32 { return x; }
+
+const z = bitpack(3);
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (variable_declaration
+    (identifier)
+    (integer))
+  (function_declaration
+    name: (identifier)
+    (parameters
+      (parameter
+        name: (identifier)
+        type: (builtin_type)))
+    type: (builtin_type)
+    body: (block
+      (expression_statement
+        (return_expression
+          (identifier)))))
+  (variable_declaration
+    (identifier)
+    (call_expression
+      function: (identifier)
+      (integer))))

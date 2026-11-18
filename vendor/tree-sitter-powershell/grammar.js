@@ -42,11 +42,16 @@ export default grammar({
   ],
 
   conflicts: ($) => [
+    [$._cast_operand, $.invokation_foreach_expression],
     [$._literal, $.member_name],
     [$.class_property_definition, $.attribute],
     [$.class_method_definition, $.attribute],
     [$.expandable_string_literal],
     [$.path_command_name, $._value],
+    [$._statement, $.attribute],
+    // sloplint: `[T]` after a parameter comma may be the next
+    // parameter's attribute or a cast inside the default's array literal.
+    [$._cast_operand, $.member_access, $.invokation_expression],
   ],
 
   rules: {
@@ -189,7 +194,7 @@ export default grammar({
     // sloplint: a type name may hold nested-type `+` and generic-arity
     // backtick parts: System.Environment+SpecialFolder, System.Func`1,
     // Dictionary`2+Enumerator.
-    type_identifier: ($) => /[a-zA-Z0-9_]+([`+][a-zA-Z0-9_]+)*/,
+    type_identifier: ($) => /[a-zA-Z0-9_]+([`+]+[a-zA-Z0-9_]+)*/,
 
     type_name: ($) =>
       choice($.type_identifier, seq($.type_name, '.', $.type_identifier)),
@@ -477,6 +482,13 @@ export default grammar({
           $.inlinescript_statement,
           $.parallel_statement,
           $.sequence_statement,
+          // sloplint: attributes may precede any statement (PSSA
+            // suppression is written this way): [Attr('x','')] $x = 1.
+          seq(
+            repeat1(alias($._parenthesized_attribute, $.attribute)),
+            $.pipeline,
+            $._statement_terminator,
+          ),
           seq($.pipeline, $._statement_terminator),
           $.empty_statement,
         ),
@@ -644,8 +656,11 @@ export default grammar({
         ')',
       ),
 
+    // sloplint: attributes may precede a function definition, like they may
+    // class and enum: [Alias('x')] function f {}, [OutputType([int])] f {}.
     function_statement: ($) =>
       seq(
+        optional($.attribute_list),
         choice(
           reservedWord('function'),
           reservedWord('filter'),
@@ -952,8 +967,10 @@ export default grammar({
         seq($.file_redirection_operator, $.redirected_file_name),
       ),
 
+    // sloplint: a redirect may follow its operator with no separator, as
+    // in '/r'>null — a bare word target then lexes as generic_token.
     redirected_file_name: ($) =>
-      choice($._command_argument, $._primary_expression),
+      choice($._command_argument, $._primary_expression, $.generic_token),
 
     // Class
     class_attribute: ($) =>
@@ -1160,7 +1177,35 @@ export default grammar({
     pre_decrement_expression: ($) => seq('--', $.unary_expression),
 
     cast_expression: ($) =>
-      prec(PREC.CAST, seq($.type_literal, $.unary_expression)),
+      prec(
+        PREC.CAST,
+        seq($.type_literal, alias($._cast_operand, $.unary_expression)),
+      ),
+
+    // sloplint: a cast operand may not begin with `,` — that comma is a
+    // parameter or array separator, as in param($T = [Exception], $M).
+    _cast_operand: ($) =>
+      choice(
+        $._primary_expression,
+        alias(
+          $._expression_with_unary_operator_no_comma,
+          $.expression_with_unary_operator,
+        ),
+      ),
+
+    _expression_with_unary_operator_no_comma: ($) =>
+      choice(
+        seq(reservedWord('-not'), $.unary_expression),
+        seq('!', $.unary_expression),
+        seq(reservedWord('-bnot'), $.unary_expression),
+        seq('+', $.unary_expression),
+        seq('-', $.unary_expression),
+        $.pre_increment_expression,
+        $.pre_decrement_expression,
+        $.cast_expression,
+        seq(reservedWord('-split'), $.unary_expression),
+        seq(reservedWord('-join'), $.unary_expression),
+      ),
 
     attributed_variable: ($) => seq($.type_literal, $.variable),
 
@@ -1410,16 +1455,17 @@ export default grammar({
     attribute_list: ($) => repeat1($.attribute),
 
     attribute: ($) =>
-      choice(
-        seq(
-          '[',
-          $.attribute_name,
-          '(',
-          optional($.attribute_arguments),
-          ')',
-          ']',
-        ),
-        $.type_literal,
+      choice($._parenthesized_attribute, $.type_literal),
+
+    // sloplint: the `[Name(args)]` form may also stand before a statement.
+    _parenthesized_attribute: ($) =>
+      seq(
+        '[',
+        $.attribute_name,
+        '(',
+        optional($.attribute_arguments),
+        ')',
+        ']',
       ),
 
     attribute_name: ($) => $.type_spec,
