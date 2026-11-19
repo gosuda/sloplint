@@ -146,7 +146,6 @@ module.exports = grammar(C, {
     [$._macro_declaration_stmt, $.expression, $.macro_braced_statement, $.macro_braced_expression],
     [$.expression, $.concatenated_string, $.macro_braced_expression],
     [$.type_specifier, $.expression, $.macro_braced_expression],
-    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_declaration, $.macro_braced_expression],
     [$.enumerator, $.expression, $.macro_braced_expression],
     [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
     [$.macro_qualifier, $.type_specifier, $.expression, $.macro_braced_expression],
@@ -170,24 +169,10 @@ module.exports = grammar(C, {
     [$.macro_qualifier, $._declarator, $._field_declarator, $._init_pointer_declarator],
     [$._declarator, $._field_declarator, $._init_reference_declarator],
     [$.macro_argument_list, $.type_specifier, $._macro_argument_list_nonempty],
-    [$.macro_argument_list, $._macro_argument_list_nonempty],
     [$._init_declarator_preproc, $._declarator, $._field_declarator],
     [$._declarator, $._field_declarator],
     [$.labeled_statement, $.macro_access_label],
     [$._midl_attribute, $.structured_binding_declarator, $._lambda_capture_identifier],
-                    // `NAME(args)` forks: call/declarator/macro_declaration vs a
-    // `MACRO(args) { members };` braced declaration — decided only by
-    // whether `_macro_braced_open` lexes after the `)`.
-        [
-      $.macro_qualifier,
-      $._macro_declaration_top,
-      $._declarator,
-      $.type_specifier,
-      $.expression,
-      $.macro_braced_statement,
-      $.macro_braced_declaration,
-      $.macro_braced_expression,
-    ],
         [
       $.macro_qualifier,
       $.macro_declaration,
@@ -400,6 +385,15 @@ module.exports = grammar(C, {
     [$.abstract_parenthesized_declarator, $.qualified_identifier, $.qualified_type_identifier],
     [$._type_declarator, $.template_type],
     [$.expression],
+    // `NAME(args)` forks: call/declarator/macro_declaration vs a
+    // `MACRO(args) { members };` braced declaration — decided only by
+    // whether `_macro_braced_open` lexes after the `)`. The loose
+    // `_macro_braced_declaration_loose` variant (empty `()` allowed)
+    // takes the file/namespace/statement positions.
+    [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $._macro_braced_declaration_loose, $.macro_braced_expression],
+    [$._macro_braced_declaration_loose],
+    [$.macro_argument_list, $.template_type],
+    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $._macro_braced_declaration_loose, $.macro_braced_expression],
   ],
 
   inline: ($, original) => original.concat([
@@ -431,7 +425,7 @@ module.exports = grammar(C, {
       // `parenthesized_expression(args)` statement (MISSING `;`).
       alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
       $.macro_namespace,
-      $.macro_braced_declaration,
+      alias($._macro_braced_declaration_loose, $.macro_braced_declaration),
       $.guarded_function,
       $.guarded_class,
     ),
@@ -470,7 +464,7 @@ module.exports = grammar(C, {
       '{',
       repeat(choice(
         $._block_item,
-        $.macro_braced_declaration,
+        alias($._macro_braced_declaration_loose, $.macro_braced_declaration),
         alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
       )),
       '}',
@@ -1901,6 +1895,16 @@ module.exports = grammar(C, {
     macro_braced_declaration: $ => prec.dynamic(1, prec.right(seq(
       field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
       optional(alias($._macro_argument_list_nonempty, $.macro_argument_list)),
+      alias($._macro_braced_members, $.field_declaration_list),
+      optional(';'),
+    ))),
+
+    // Same shape with the base (empty-matching) `macro_argument_list` —
+    // used at file/namespace/statement scope, where `NAME() {}` can
+    // never be a constructor, so empty `()` is unambiguously a macro.
+    _macro_braced_declaration_loose: $ => prec.dynamic(1, prec.right(seq(
+      field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
+      optional($.macro_argument_list),
       alias($._macro_braced_members, $.field_declaration_list),
       optional(';'),
     ))),

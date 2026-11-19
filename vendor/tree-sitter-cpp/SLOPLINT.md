@@ -478,7 +478,7 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 
 ## Size
 
-`src/parser.c`: 203,934,955 bytes (published: 17,299,078). States: 30267
+`src/parser.c`: 203,898,833 bytes (published: 17,299,078). States: 30259
 (published: 8637). Language version: 14 (published: 14). The literal
 enumeration of `macro_attribute` costs most of the size growth.
 
@@ -644,8 +644,8 @@ enumeration of `macro_attribute` costs most of the size growth.
 
 ## Packed generated parser
 
-The generated `src/parser.c` (~193MB) exceeds GitHub's 100MB blob limit,
-so the committed artifact is `src/parser.c.gz` (`gzip -9`, ~13MB) and
+The generated `src/parser.c` (~204MB) exceeds GitHub's 100MB blob limit,
+so the committed artifact is `src/parser.c.gz` (`gzip -9`, ~14MB) and
 `src/parser.c` is gitignored. `bindings/rust/build.rs` compiles
 `src/parser.c` when present (a fresh `tree-sitter generate` output) and
 otherwise decompresses `src/parser.c.gz` into `OUT_DIR` with the `flate2`
@@ -767,4 +767,15 @@ first with `rm -f src/parser.c`.
   `declaration_list` and member positions and carries `prec.dynamic(1)`
   to win those positions over the struct/`function_definition` reads.
   The name may carry a `macro_argument_list`; `;` after the closing
-  `}` is optional on the declaration form.
+  `}` is optional on the declaration form. File/namespace/statement
+  scope uses the `_macro_braced_declaration_loose` alias of the same
+  node — identical but with `optional($.macro_argument_list)`, so
+  `WIDGET() { ... };` with empty parens parses too; member position
+  keeps the strict variant (nonempty args only) because `S() { ... }`
+  inside a class is a constructor, not a macro. The scanner's
+  `prev_was_operator` flag (set on the `operator` keyword so a
+  following `]` doesn't mark a lambda capture) is cleared at the top
+  of the scan loop for every character except whitespace and `[` —
+  exactly the characters legal between `operator` and `]` — so
+  `factory.operator()([] { return 1; })` keeps its real lambda
+  capture instead of being swallowed into a macro read.

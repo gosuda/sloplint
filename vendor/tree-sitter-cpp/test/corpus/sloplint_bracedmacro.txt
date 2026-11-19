@@ -368,3 +368,142 @@ void f(void) {
               (identifier)
               (argument_list)))))
       (expression_statement))))
+
+================================================================================
+Braced-macro members: bit-fields, friends, access labels
+================================================================================
+
+struct Widget {
+  PRIVILEGED_MEMBERS(int tag) {
+    int flags : 3;
+    friend class Helper;
+  public:
+    int value;
+  };
+};
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (macro_braced_declaration
+        (identifier)
+        (macro_argument_list
+          (primitive_type)
+          (identifier))
+        (field_declaration_list
+          (field_declaration
+            (primitive_type)
+            (field_identifier)
+            (bitfield_clause
+              (number_literal)))
+          (friend_declaration
+            (type_identifier))
+          (access_specifier)
+          (field_declaration
+            (primitive_type)
+            (field_identifier)))))))
+
+================================================================================
+Empty-argument braced macro at file scope vs member constructor
+================================================================================
+
+WIDGET() {
+  int make();
+};
+
+struct S {
+  S() { this->x = 1; };
+};
+
+---
+
+(translation_unit
+  (macro_braced_declaration
+    (identifier)
+    (macro_argument_list)
+    (field_declaration_list
+      (field_declaration
+        (primitive_type)
+        (function_declarator
+          (field_identifier)
+          (parameter_list)))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (function_definition
+        (function_declarator
+          (identifier)
+          (parameter_list))
+        (compound_statement
+          (expression_statement
+            (assignment_expression
+              (field_expression
+                (this)
+                (field_identifier))
+              (number_literal))))))))
+
+================================================================================
+operator[] inside a class macro vs lambda captures elsewhere
+================================================================================
+
+struct S {
+  MACRO(int t) {
+    int operator[](int i) { return t[i]; }
+  };
+};
+
+void f(void) {
+  Widget{factory.operator()([] { return 1; })};
+}
+
+---
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (macro_braced_declaration
+        (identifier)
+        (macro_argument_list
+          (primitive_type)
+          (identifier))
+        (field_declaration_list
+          (function_definition
+            (primitive_type)
+            (function_declarator
+              (operator_name)
+              (parameter_list
+                (parameter_declaration
+                  (primitive_type)
+                  (identifier))))
+            (compound_statement
+              (return_statement
+                (subscript_expression
+                  (identifier)
+                  (subscript_argument_list
+                    (identifier))))))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (expression_statement
+        (compound_literal_expression
+          (type_identifier)
+          (initializer_list
+            (call_expression
+              (field_expression
+                (identifier)
+                (operator_name))
+              (argument_list
+                (lambda_expression
+                  (lambda_capture_specifier)
+                  (compound_statement
+                    (return_statement
+                      (number_literal))))))))))))

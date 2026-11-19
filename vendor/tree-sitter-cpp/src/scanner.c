@@ -319,6 +319,14 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
             return false;
         }
         int32_t c = lexer->lookahead;
+        // `prev_was_operator` survives only whitespace and `[` —
+        // exactly the chars allowed between `operator` and `]` in
+        // `operator[]`. Anything else (`(`, `'`, `/`, ident chars)
+        // means the upcoming `]` belongs to a real lambda capture.
+        if (c != '[' && c != ']' && c != ' ' && c != '\t' && c != '\n' &&
+            c != '\r') {
+            prev_was_operator = false;
+        }
         if (c == '"') {
             advance(lexer);
             skip_dq(lexer);
@@ -478,9 +486,6 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
             (c == ',' || c == '=' || c == '?' || c == '|' || c == '^' ||
              c == '%' || c == '!' || c == '#')) {
             maybe_lambda = false;
-        }
-        if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
-            prev_was_operator = false;
         }
         advance(lexer);
         after_number = (c >= '0' && c <= '9');

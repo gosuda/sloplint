@@ -14,6 +14,8 @@ mod bash;
 mod c;
 #[path = "grammar_gaps/cpp.rs"]
 mod cpp;
+#[path = "grammar_gaps/cpp_macros.rs"]
+mod cpp_macros;
 #[path = "grammar_gaps/csharp.rs"]
 mod csharp;
 #[path = "grammar_gaps/dart.rs"]
