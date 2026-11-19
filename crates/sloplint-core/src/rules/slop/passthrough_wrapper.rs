@@ -126,9 +126,7 @@ fn shadowed(facts: &FileFacts<'_>, line: u32, name: &str) -> bool {
         return true;
     }
     facts.bindings.iter().any(|binding| {
-        binding.name == name
-            && function.pos.line <= binding.pos.line
-            && binding.pos.line <= line
+        binding.name == name && function.pos.line <= binding.pos.line && binding.pos.line <= line
     })
 }
 
@@ -545,7 +543,11 @@ mod tests {
             }],
         };
         assert_eq!(
-            flagged("fn render() {}\n", vec![render, show], vec![format_call, display_call]),
+            flagged(
+                "fn render() {}\n",
+                vec![render, show],
+                vec![format_call, display_call]
+            ),
             1,
             "a named value shadowed by a parameter is no use of the wrapper"
         );

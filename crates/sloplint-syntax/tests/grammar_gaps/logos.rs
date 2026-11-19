@@ -765,8 +765,7 @@ fn comment_before_interp_string_stays_a_comment_node() {
     // A single-line block comment between `return` and an interpolated
     // string is not a separator, so it must survive as an ordinary comment
     // node instead of being swallowed into the string token.
-    let source =
-        "package p\n\nfunc f(x string) string {\n\treturn /* why */ $\"value {x}\"\n}\n";
+    let source = "package p\n\nfunc f(x string) string {\n\treturn /* why */ $\"value {x}\"\n}\n";
     let tree = parse_raw(source);
     assert!(
         !tree.root_node().has_error(),
@@ -789,7 +788,10 @@ fn comment_before_interp_string_stays_a_comment_node() {
         let mut cursor = node.walk();
         stack.extend(node.children(&mut cursor));
     }
-    assert!(seen_interp, "the interpolated string must stay a string node");
+    assert!(
+        seen_interp,
+        "the interpolated string must stay a string node"
+    );
     assert!(
         seen_comment,
         "the comment before the interpolated string must stay a comment node"
