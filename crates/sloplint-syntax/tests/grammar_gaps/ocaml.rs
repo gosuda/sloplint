@@ -706,6 +706,26 @@ fn variant_arm_with_literal_body_stays_arm() {
     ));
 }
 
+// A literal inside the guard (`| #error when "ok" = status -> 2`)
+// must not read as a `when =` cppo condition — same-line and
+// next-line arrows both stay arms.
+#[test]
+fn guarded_variant_arm_with_literal_guard_stays_arm() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "  | #error when \"ok\" = status -> 2\n",
+        "let g = 2\n",
+    ));
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "  | #error when 'a' = x\n",
+        "    -> 2\n",
+        "let g = 2\n",
+    ));
+}
+
 // `#if when = 1` is a cppo condition over a macro named `when`, not a
 // pattern guard — it stays a directive before an enclosing arrow.
 #[test]

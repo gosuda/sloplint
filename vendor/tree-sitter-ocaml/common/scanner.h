@@ -512,8 +512,11 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
     if (c == '"') {
       in_str = true;
       // Only literals in the arm prefix count — a string in the body
-      // (`| #error -> "boom"`) must not disqualify the arm.
+      // (`| #error -> "boom"`) must not disqualify the arm. Keep a
+      // `"` placeholder in the buffer so `when "ok" = x` still reads
+      // as a guard, not a `when =` cppo condition.
       if (arrow_off == (size_t)-1) saw_literal = true;
+      if (n + 1 < sizeof(buf)) buf[n++] = '"';
       advance(lexer);
       continue;
     }
@@ -531,8 +534,10 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
       }
       // Otherwise a possible char literal (`')'`, `'\n'`): its
       // contents must not count toward paren depth or arrows. As
-      // above, only a literal in the prefix counts.
+      // above, only a literal in the prefix counts; keep a `'`
+      // placeholder in the buffer for the same reason.
       if (arrow_off == (size_t)-1) saw_literal = true;
+      if (n + 1 < sizeof(buf)) buf[n++] = '\'';
       advance(lexer);
       if (lexer->lookahead == '\\') {
         advance(lexer);

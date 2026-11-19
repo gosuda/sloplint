@@ -239,7 +239,7 @@
  });
  
 --- common/scanner.h	2006-07-24 01:21:28.000000000 +0000
-+++ common/scanner.h	2026-11-19 07:25:11.274669417 +0000
++++ common/scanner.h	2026-11-19 07:30:27.091946764 +0000
 @@ -16,6 +16,9 @@
    LINE_NUMBER_DIRECTIVE,
    NULL_CHARACTER,
@@ -264,7 +264,7 @@
  static inline bool is_identchar(const int32_t c) {
    return is_identstart(c) || (c >= '0' && c <= '9') || c == '\'';
  }
-@@ -390,6 +400,227 @@
+@@ -390,6 +400,232 @@
    return false;
  }
  
@@ -380,8 +380,11 @@
 +    if (c == '"') {
 +      in_str = true;
 +      // Only literals in the arm prefix count — a string in the body
-+      // (`| #error -> "boom"`) must not disqualify the arm.
++      // (`| #error -> "boom"`) must not disqualify the arm. Keep a
++      // `"` placeholder in the buffer so `when "ok" = x` still reads
++      // as a guard, not a `when =` cppo condition.
 +      if (arrow_off == (size_t)-1) saw_literal = true;
++      if (n + 1 < sizeof(buf)) buf[n++] = '"';
 +      advance(lexer);
 +      continue;
 +    }
@@ -399,8 +402,10 @@
 +      }
 +      // Otherwise a possible char literal (`')'`, `'\n'`): its
 +      // contents must not count toward paren depth or arrows. As
-+      // above, only a literal in the prefix counts.
++      // above, only a literal in the prefix counts; keep a `'`
++      // placeholder in the buffer for the same reason.
 +      if (arrow_off == (size_t)-1) saw_literal = true;
++      if (n + 1 < sizeof(buf)) buf[n++] = '\'';
 +      advance(lexer);
 +      if (lexer->lookahead == '\\') {
 +        advance(lexer);
@@ -492,7 +497,7 @@
  static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
    int32_t last = 0;
  
-@@ -521,7 +752,9 @@
+@@ -521,7 +757,9 @@
      return true;
    }
  
@@ -502,7 +507,7 @@
      skip(lexer);
    }
  
-@@ -533,39 +766,100 @@
+@@ -533,39 +771,100 @@
      return true;
    }
  
