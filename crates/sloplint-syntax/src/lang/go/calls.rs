@@ -25,7 +25,7 @@ pub(crate) fn go_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
                 .and_then(|s| s.strip_suffix('"'))
                 .unwrap_or(raw);
             ArgShape::Str {
-                longest_static: sloplint_core::text::longest_static_chunk(&[inner]),
+                longest_static: sloplint_core::text::longest_static_chunk_interp(inner),
             }
         }
         _ if binary_concat(
@@ -100,10 +100,12 @@ fn go_collection_shape<'s>(n: Node<'_>) -> ArgShape<'s> {
 }
 
 pub(crate) fn go_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
-    let value = (n.kind() == "named_argument")
-        .then(|| child_by_field(n, "value"))
-        .flatten()
-        .unwrap_or(n);
+    let value = match n.kind() {
+        "named_argument" => child_by_field(n, "value"),
+        "spread_element" => code_children(n).into_iter().next(),
+        _ => None,
+    }
+    .unwrap_or(n);
     Arg {
         shape: go_shape(cx, value),
         start_line: pos_of(value).line,

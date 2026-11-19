@@ -55,6 +55,155 @@ pub fn longest_static_chunk(segments: &[&str]) -> u32 {
         .unwrap_or(0)
 }
 
+/// Longest static run inside a LoGOs `$"..."` literal body (the text between
+/// `$"` and the closing quote), using the same hole rules as the
+/// tree-sitter-logos external scanner: `{expr}` holes nest, and quotes,
+/// comments, escapes and nested `$"..."` literals inside a hole never end
+/// it early. Only the literal runs between holes are measured.
+pub fn longest_static_chunk_interp(inner: &str) -> u32 {
+    longest_static_chunk(&interp_literal_runs(inner))
+}
+
+fn interp_literal_runs(inner: &str) -> Vec<&str> {
+    let bytes = inner.as_bytes();
+    let mut runs = Vec::new();
+    let mut start = 0usize;
+    let mut i = 0usize;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'{' => {
+                if bytes.get(i + 1) == Some(&b'{') {
+                    i += 2;
+                    continue;
+                }
+                if start < i {
+                    runs.push(&inner[start..i]);
+                }
+                i = skip_interp_hole(bytes, i + 1);
+                start = i;
+            }
+            b'\\' => {
+                i += 1;
+                if i < bytes.len() {
+                    i += utf8_len(bytes[i]);
+                }
+            }
+            _ => {
+                i += utf8_len(bytes[i]);
+            }
+        }
+    }
+    if start < inner.len() {
+        runs.push(&inner[start..]);
+    }
+    runs
+}
+
+fn skip_interp_hole(bytes: &[u8], mut i: usize) -> usize {
+    let mut nesting = 1u32;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'{' => {
+                nesting += 1;
+                i += 1;
+            }
+            b'}' => {
+                nesting -= 1;
+                i += 1;
+                if nesting == 0 {
+                    return i;
+                }
+            }
+            b'/' => {
+                if bytes.get(i + 1) == Some(&b'/') {
+                    i += 2;
+                    while i < bytes.len() && bytes[i] != b'\n' {
+                        i += utf8_len(bytes[i]);
+                    }
+                } else if bytes.get(i + 1) == Some(&b'*') {
+                    i += 2;
+                    let mut prev = 0u8;
+                    while i < bytes.len() {
+                        let c = bytes[i];
+                        i += 1;
+                        if prev == b'*' && c == b'/' {
+                            break;
+                        }
+                        prev = c;
+                    }
+                } else {
+                    i += 1;
+                }
+            }
+            b'"' | b'\'' | b'`' => {
+                i = skip_quoted_bytes(bytes, i);
+            }
+            b'$' => {
+                if bytes.get(i + 1) == Some(&b'"') {
+                    i = skip_interp_body(bytes, i + 2);
+                } else {
+                    i += 1;
+                }
+            }
+            b'\\' => {
+                i += 1;
+                if i < bytes.len() {
+                    i += utf8_len(bytes[i]);
+                }
+            }
+            _ => {
+                i += utf8_len(bytes[i]);
+            }
+        }
+    }
+    i
+}
+
+fn skip_quoted_bytes(bytes: &[u8], mut i: usize) -> usize {
+    let quote = bytes[i];
+    i += 1;
+    while i < bytes.len() {
+        let c = bytes[i];
+        if c == b'\\' && quote != b'`' {
+            i += 1;
+            if i < bytes.len() {
+                i += utf8_len(bytes[i]);
+            }
+            continue;
+        }
+        i += utf8_len(c);
+        if c == quote {
+            break;
+        }
+    }
+    i
+}
+
+fn skip_interp_body(bytes: &[u8], mut i: usize) -> usize {
+    while i < bytes.len() {
+        match bytes[i] {
+            b'"' => return i + 1,
+            b'\\' => {
+                i += 1;
+                if i < bytes.len() {
+                    i += utf8_len(bytes[i]);
+                }
+            }
+            b'{' => {
+                if bytes.get(i + 1) == Some(&b'{') {
+                    i += 2;
+                } else {
+                    i = skip_interp_hole(bytes, i + 1);
+                }
+            }
+            _ => {
+                i += utf8_len(bytes[i]);
+            }
+        }
+    }
+    i
+}
+
 struct Scan {
     best: u32,
     run: u32,
@@ -182,6 +331,16 @@ mod tests {
         assert_eq!(longest_static_chunk(&["a\\nb"]), 1);
         assert_eq!(longest_static_chunk(&["%5.2f|tail"]), 5);
         assert_eq!(longest_static_chunk(&["50% off", "plain"]), 5);
+    }
+
+    #[test]
+    fn interp_chunks_measure_only_literal_runs() {
+        assert_eq!(longest_static_chunk_interp("service started: {name}"), 17);
+        assert_eq!(longest_static_chunk_interp("{n /* } explanation */}"), 0);
+        assert_eq!(longest_static_chunk_interp("{[]int{1, 2}} tail"), 5);
+        assert_eq!(longest_static_chunk_interp("{f(\"}\")}!"), 1);
+        assert_eq!(longest_static_chunk_interp("code {{x}} done"), 13);
+        assert_eq!(longest_static_chunk_interp("{$\"a {x} b\"} tail"), 5);
     }
 
     #[test]

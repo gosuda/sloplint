@@ -247,7 +247,11 @@ fn go_bound_is_error_result(cx: &Cx<'_, '_>, bound: &str) -> bool {
 fn go_in_deferred_closure(cx: &Cx<'_, '_>) -> bool {
     for ancestor in cx.ancestors() {
         match ancestor.kind() {
-            "func_literal" => {
+            // A lambda is its own function boundary: a saved callback must not
+            // inherit cleanup status from an enclosing deferred closure. Only a
+            // lambda that is itself the deferred call counts as cleanup, by the
+            // same direct-invocation check as a function literal.
+            "func_literal" | "lambda_expression" => {
                 let Some(call) = cx.parent_of(ancestor) else {
                     return false;
                 };

@@ -73,25 +73,53 @@ fn first_problem(tree: &tree_sitter::Tree) -> Option<String> {
         }
     }
 }
-
-#[test]
-fn run_corpus_parses_clean() {
-    let dir = std::env::var("LOGOS_RUN_DIR").unwrap_or_else(|_| {
-        "/home/alpha/repos-devtool/LoGOs/.outline/worktree/spira-upstream-plain/test/logos/run"
-            .to_string()
-    });
-    let entries = match std::fs::read_dir(&dir) {
+/// Reads the corpus directory for `run_corpus_parses_clean`. An unreadable
+/// default checkout is a skip (`None`); an unreadable directory the developer
+/// explicitly requested through `LOGOS_RUN_DIR` is a setup failure and panics.
+fn corpus_paths(dir: &str, explicit: bool) -> Option<Vec<std::path::PathBuf>> {
+    let entries = match std::fs::read_dir(dir) {
         Ok(entries) => entries,
-        Err(e) => {
+        Err(e) if !explicit => {
             eprintln!("skipping run_corpus_parses_clean: LOGOS_RUN_DIR {dir} is not readable: {e}");
-            return;
+            return None;
         }
+        Err(e) => panic!("LOGOS_RUN_DIR {dir} must be readable: {e}"),
     };
     let mut paths: Vec<std::path::PathBuf> = entries
         .filter_map(|e| e.ok().map(|e| e.path()))
         .filter(|p| p.extension().is_some_and(|e| e == "lgo"))
         .collect();
     paths.sort();
+    Some(paths)
+}
+
+#[test]
+fn corpus_paths_skips_unreadable_default() {
+    assert!(
+        corpus_paths("/nonexistent-sloplint-corpus-dir", false).is_none(),
+        "an unreadable default checkout must skip, not fail"
+    );
+}
+
+#[test]
+#[should_panic(expected = "must be readable")]
+fn corpus_paths_fails_explicit_unreadable() {
+    corpus_paths("/nonexistent-sloplint-corpus-dir", true);
+}
+
+#[test]
+fn run_corpus_parses_clean() {
+    let (dir, explicit) = match std::env::var("LOGOS_RUN_DIR") {
+        Ok(dir) => (dir, true),
+        Err(_) => (
+            "/home/alpha/repos-devtool/LoGOs/.outline/worktree/spira-upstream-plain/test/logos/run"
+                .to_string(),
+            false,
+        ),
+    };
+    let Some(paths) = corpus_paths(&dir, explicit) else {
+        return;
+    };
     assert!(
         paths.len() >= 100,
         "run corpus must be present, got {}",
@@ -395,5 +423,56 @@ fn nested_interp_depth_is_bounded() {
     run_clean(
         "src/shallow.lgo",
         "package p\n\nfunc f() string {\n\treturn $\"a{\"b\", $\"c\"}\"\n}\n",
+    );
+}
+
+#[test]
+fn spread_collection_arg_keeps_collection_shape() {
+    let analysis = run_clean(
+        "src/spread.lgo",
+        "package p\n\nfunc consume(vals []int) int {\n\treturn 0\n}\n\nfunc f() int {\n\treturn consume(..[]int{1, 2})\n}\n",
+    );
+    let call = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "consume")
+        .expect("consume must be a call fact");
+    assert_eq!(
+        call.args.first().map(|a| &a.shape),
+        Some(&ArgShape::Collection),
+        "a spread inline collection stays a collection, got {:?}",
+        call.args.first().map(|a| &a.shape)
+    );
+}
+
+#[test]
+fn saved_lambda_inside_deferred_closure_is_not_cleanup() {
+    let analysis = run_clean(
+        "src/savedlambda.lgo",
+        "package p\n\nfunc save(f func()) {}\n\nfunc work() error {\n\treturn nil\n}\n\nfunc f() {\n\tscope defer func() {\n\t\tsave(() => {\n\t\t\tif err := work(); err != nil {\n\t\t\t}\n\t\t})\n\t}()\n}\n",
+    );
+    assert!(
+        !analysis.facts.handlers.iter().any(|h| h.in_cleanup),
+        "a handler in a saved lambda must not inherit deferred cleanup"
+    );
+}
+
+#[test]
+fn interp_hole_with_comment_brace_stays_dynamic() {
+    let analysis = run_clean(
+        "src/interphole.lgo",
+        "package p\n\nimport \"log\"\n\nfunc f(n int) {\n\tlog.Print($\"{n /* } explanation */}\")\n}\n",
+    );
+    let call = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "log.Print")
+        .expect("log.Print must be a call fact");
+    let shape = call.args.first().map(|a| &a.shape);
+    assert!(
+        matches!(shape, Some(ArgShape::Str { longest_static }) if *longest_static < 8),
+        "expression source after a comment brace must not read as fixed text, got {shape:?}"
     );
 }
