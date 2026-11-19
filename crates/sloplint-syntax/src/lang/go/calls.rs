@@ -54,15 +54,18 @@ fn go_string_operand(kind: &str) -> bool {
 fn go_is_concat(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     let mut stack = vec![go_unparen(n)];
     while let Some(current) = stack.pop() {
-        if current.kind() != "binary_expression" || current.child_count() != 3 {
+        if current.kind() != "binary_expression" {
             continue;
         }
-        let (Some(left), Some(op), Some(right)) =
-            (current.child(0), current.child(1), current.child(2))
-        else {
+        // Comments are extra children, so positional reads shift: use
+        // the named fields, which skip them.
+        let (Some(left), Some(right)) = (
+            child_by_field(current, "left"),
+            child_by_field(current, "right"),
+        ) else {
             continue;
         };
-        if text(cx, op) != "+" {
+        if !child_by_field(current, "operator").is_some_and(|o| text(cx, o) == "+") {
             continue;
         }
         let left = go_unparen(left);
