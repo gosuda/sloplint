@@ -349,8 +349,43 @@ fn gnu_asm_fused_sections_parse() {
         "  __asm__ volatile(\"b code\" ::: \"memory\");\n",
         "  int out, in = 1;\n",
         "  __asm__(\"mov %0, %1\" : \"=r\"(out) : \"r\"(in) : \"r0\");\n",
+        "  __asm__ volatile(\"x\" :: \"i\"(in), \"j\"(out) : \"m1\", \"m2\");\n",
         "}\n",
     ));
+}
+
+// Fused `::::` opens the goto-label section: labels emit under a
+// `gnu_asm_goto_list` node like the structured `:`-led branch, and only
+// bare identifiers are allowed there.
+#[test]
+fn gnu_asm_fused_goto_labels_parse() {
+    let language: tree_sitter::Language = tree_sitter_cpp::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).expect("cpp language loads");
+    let source = concat!(
+        "void f(void) {\n",
+        "  __asm__ goto(\"j\" :::: done, fail);\n",
+        "done:\n  return;\nfail:\n  return;\n",
+        "}\n",
+    );
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        !tree.root_node().has_error() && !sexp.contains("MISSING"),
+        "must parse clean, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("gnu_asm_goto_list"),
+        "fused goto labels must emit gnu_asm_goto_list, sexp: {sexp}"
+    );
+    // A fifth section can't parse: `code : out : in : clob : goto` is
+    // already four colons — `::` after clobbers must error.
+    let bad = "void f(void) {\n  __asm__(\"x\" : \"o\"(a) : \"i\"(b) : \"m\" : l : e);\n}\n";
+    let bad_tree = parser.parse(bad, None).expect("parser returns a tree");
+    assert!(
+        bad_tree.root_node().has_error(),
+        "five-section asm must error"
+    );
 }
 
 // `IDENT {` opens a braced temporary (`T{}.m()`, `T{arg} << x`), never a
@@ -368,7 +403,7 @@ fn braced_temporary_statements_parse() {
 
 // `NAME { stmts };` is a statement-block macro (`ON_SCOPE_EXIT { f(); };`),
 // not a braced temporary — the `_macro_braced_open` external token claims
-// `{` only when the region contains a `;`.
+// `{` when the region contains a `;` or opens with a statement keyword.
 #[test]
 fn macro_braced_statements_parse() {
     for source in [
@@ -376,6 +411,11 @@ fn macro_braced_statements_parse() {
         "void f(void) {\n  if (cond) ON_SCOPE_EXIT { g(); };\n}\n",
         "ON_SCOPE_EXIT{g();};\n",
         "void f(void) {\n  lower_name { g(); };\n}\n",
+        // `1'000`: a digit separator must not hide the `;` from the probe.
+        "void f(void) {\n  MACRO { x = 1'000; };\n}\n",
+        // Keyword-led bodies open a block even without a `;` inside.
+        "void f(void) {\n  ON_SCOPE_EXIT { if (ready) {} };\n}\n",
+        "void f(void) {\n  GUARD { return; };\n}\n",
     ] {
         let language: tree_sitter::Language = tree_sitter_cpp::LANGUAGE.into();
         let mut parser = tree_sitter::Parser::new();
@@ -389,6 +429,31 @@ fn macro_braced_statements_parse() {
         assert!(
             sexp.contains("macro_braced_statement"),
             "must claim macro_braced_statement, sexp: {sexp}"
+        );
+    }
+}
+
+// Braced temporaries stay initializer lists even when the braces hold
+// tricky content: lambdas (`Widget{[&]{init();}}`) and raw strings whose
+// bodies contain `;`/`"` (`R"x(a "b" ; c)x"`).
+#[test]
+fn braced_temporary_with_lambda_or_raw_string_stays_init() {
+    for source in [
+        "void f(void) {\n  Widget w{[&]{init();}};\n}\n",
+        "void f(void) {\n  auto w = Widget{R\"x(a \"b\" ; c)x\"};\n}\n",
+    ] {
+        let language: tree_sitter::Language = tree_sitter_cpp::LANGUAGE.into();
+        let mut parser = tree_sitter::Parser::new();
+        parser.set_language(&language).expect("cpp language loads");
+        let tree = parser.parse(source, None).expect("parser returns a tree");
+        let sexp = tree.root_node().to_sexp();
+        assert!(
+            !tree.root_node().has_error() && !sexp.contains("MISSING"),
+            "must parse clean, sexp: {sexp}"
+        );
+        assert!(
+            !sexp.contains("macro_braced_statement"),
+            "must stay an initializer, sexp: {sexp}"
         );
     }
 }

@@ -478,7 +478,7 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 
 ## Size
 
-`src/parser.c`: 192,883,783 bytes (published: 17,299,078). States: 29043
+`src/parser.c`: 193,621,140 bytes (published: 17,299,078). States: 29208
 (published: 8637). Language version: 14 (published: 14). The literal
 enumeration of `macro_attribute` costs most of the size growth.
 
@@ -688,21 +688,37 @@ first with `rm -f src/parser.c`.
   `const sign = /[-\+]/` helper stays for the exponent tails. Signed
   operands parse through `unary_expression`.
 - **GNU extended asm with fused `::` sections** — `asm(code ::: "memory")`
-  fuses the operand-section separators into one `::` token, which the base
-  grammar reads as three colons and fails on. `gnu_asm_expression` now also
-  accepts `_gnu_asm_fused_sections`: `::` plus the four-section operand
-  lists. `asm(s : :: : x)` still parses as classic sections (the fused arm
-  requires `::` immediately, so the second `:` can't reach it). Repro:
-  atmosphere's `kern_init_loader_board_default_setup.arch.arm64.cpp` and
-  friends — verified with `g++ -fsyntax-only`.
+  fuses operand-section separators into `::`/`:::` tokens, which the base
+  grammar's `:`-led list rules can't match. `gnu_asm_expression` now also
+  accepts `_gnu_asm_fused_sections`, enumerated positionally over `:`/`::`
+  tokens (outputs : inputs : clobbers : goto labels — at most four colons,
+  so a fifth fails). Which section a fused list lands in depends on the
+  separators that FOLLOW it, so middle sections take the
+  operand|`string_literal` union while the trailing goto slot is strict:
+  bare identifiers only, emitted as a `gnu_asm_goto_list` node exactly
+  like the structured `:`-led branch (`asm goto("x" :::: lbl1, lbl2)`).
+  A bare identifier in a non-goto slot fails like GCC. `asm(s : :: : x)`
+  still parses as classic sections — the fused arm needs a literal `::`
+  token. Repro: atmosphere's
+  `kern_init_loader_board_default_setup.arch.arm64.cpp` and friends —
+  verified with `g++ -fsyntax-only`.
 - **`macro_braced_statement`** — `NAME { stmts };` statement-block macros
   (`ON_SCOPE_EXIT { VerifyAndClearTpidrEl1(...); };` in atmosphere, Qt
   `Q_FOREACH`-style bodies, `LOG { ... };`). The ambiguity against braced
   temporaries (`OStream{&buf}`, `Foo{a,b}`, `erase_fixture{}.m()`) is
   resolved by the `_macro_braced_open` external token in `src/scanner.c`:
-  it claims `{` only when a `;` occurs inside the brace region — braced
-  initializer lists never contain `;` — so `Type{args}` can never open a
-  macro block. The name position accepts `identifier` and C++'s
+  it claims `{` when a `;` occurs inside the brace region — braced
+  initializer lists never contain `;` — or when the body starts with a
+  statement keyword (`if`, `for`, `return`, ...), so `Type{args}` can
+  never open a macro block. While probing it skips `"..."`/`'...'`/raw
+  `R"delim(...)delim"` literals (digit separators like `1'000` are
+  handled speculatively: a `'x` that can't complete as a character
+  literal doesn't hide a `;`), `//`/`/* */` comments and balanced
+  `(...)`/`[...]` runs, so `Widget{R"x(a "b" ; c)x"}`, `MACRO { x =
+  1'000; }` and `Widget{[&]{init();}}` (a lambda — the `;` lives inside
+  `[&]{...}`) all stay initializer lists, while
+  `ON_SCOPE_EXIT { if (ready) {} };` still opens a block on the
+  keyword. The name position accepts `identifier` and C++'s
   `type_identifier` (all-caps macro names like `ON_SCOPE_EXIT` lex as
   type tokens). Usable at top level and as an unbraced `if`/`for`
   consequence. `;` after the closing `}` is optional.

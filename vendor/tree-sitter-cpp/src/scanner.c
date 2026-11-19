@@ -97,10 +97,183 @@ static bool scan_raw_string_content(Scanner *scanner, TSLexer *lexer) {
     }
 }
 
-/// `{` that opens a macro block (`ON_SCOPE_EXIT { f(); };`): it is
-/// only a macro block when a `;` appears before the matching `}`.
-/// Braced initializer lists (`Type{arg}`, `Type{arg}.m()`) never
-/// contain `;`, so they always fall back to the regular `{` token.
+static bool is_ident_start(int32_t c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c > 127;
+}
+
+static bool is_ident_char(int32_t c) {
+    return is_ident_start(c) || (c >= '0' && c <= '9');
+}
+
+// Consume the rest of a "..." string (the opening quote is already
+// consumed). Stops after the closing quote or at EOF.
+static void skip_dq(TSLexer *lexer) {
+    while (!lexer->eof(lexer)) {
+        if (lexer->lookahead == '\\') {
+            advance(lexer);
+            if (!lexer->eof(lexer)) advance(lexer);
+            continue;
+        }
+        if (lexer->lookahead == '"') {
+            advance(lexer);
+            break;
+        }
+        advance(lexer);
+    }
+}
+
+// Consume a '...' char literal inside a region whose contents don't
+// matter (skipped lambda bodies, skipped statement expressions): the
+// opening quote is already consumed; consume the literal if it
+// completes, else just one more char (digit separator like 1'000).
+static void skip_sq(TSLexer *lexer) {
+    if (lexer->lookahead == '\\') {
+        advance(lexer);
+        if (!lexer->eof(lexer)) advance(lexer);
+    } else if (!lexer->eof(lexer)) {
+        advance(lexer);
+    }
+    if (lexer->lookahead == '\'') advance(lexer);
+}
+
+// Consume a raw string after `R"` (the R and the quote are already
+// consumed): delimiter up to `(`, then contents up to `)delim"`.
+// Malformed opens bail out having consumed only delimiter-legal chars
+// (no `;`, `{`, `}`), which is safe to resume scanning from.
+static void skip_raw_string(TSLexer *lexer) {
+    char delim[16];
+    int dlen = 0;
+    while (dlen < 16) {
+        int32_t d = lexer->lookahead;
+        if (d == '(') break;
+        if (d == ')' || d == '"' || d == ' ' || d == '\\' || d == '\t' ||
+            d == '\n' || d == '\r' || d == '\f' || d == '\v' ||
+            lexer->eof(lexer)) {
+            return;
+        }
+        delim[dlen++] = (char)d;
+        advance(lexer);
+    }
+    if (lexer->lookahead != '(') return;
+    advance(lexer);
+    while (!lexer->eof(lexer)) {
+        if (lexer->lookahead == ')') {
+            advance(lexer);
+            int i = 0;
+            while (i < dlen && lexer->lookahead == delim[i]) {
+                advance(lexer);
+                i++;
+            }
+            if (i == dlen && lexer->lookahead == '"') {
+                advance(lexer);
+                return;
+            }
+            continue;
+        }
+        advance(lexer);
+    }
+}
+
+// Skip // and /* */ comments; returns false when the `/` was division.
+static bool skip_comment(TSLexer *lexer) {
+    advance(lexer);
+    if (lexer->lookahead == '/') {
+        while (!lexer->eof(lexer) && lexer->lookahead != '\n') advance(lexer);
+        return true;
+    }
+    if (lexer->lookahead == '*') {
+        advance(lexer);
+        while (!lexer->eof(lexer)) {
+            if (lexer->lookahead == '*') {
+                advance(lexer);
+                if (lexer->lookahead == '/') {
+                    advance(lexer);
+                    break;
+                }
+                continue;
+            }
+            advance(lexer);
+        }
+        return true;
+    }
+    return false;
+}
+
+// Skip a `({ ... })` GNU statement expression: the `(` and `{` are
+// already consumed; runs to the paren matching the opener. Contents
+// (including interior `;`) are ignored — a statement expression is
+// legal inside an initializer, so its semicolons are no macro signal.
+static void skip_paren_body(TSLexer *lexer) {
+    int parens = 1;
+    while (!lexer->eof(lexer) && parens > 0) {
+        int32_t c = lexer->lookahead;
+        if (c == '"') { advance(lexer); skip_dq(lexer); continue; }
+        if (c == '\'') { advance(lexer); skip_sq(lexer); continue; }
+        if (c == 'R') {
+            advance(lexer);
+            if (lexer->lookahead == '"') { advance(lexer); skip_raw_string(lexer); }
+            continue;
+        }
+        if (c == '/') { if (skip_comment(lexer)) continue; continue; }
+        if (c == '(') parens++;
+        if (c == ')') parens--;
+        advance(lexer);
+    }
+}
+
+// Skip a `{ ... }` region whose contents must not be probed (a lambda
+// body inside a braced initializer): the `{` is already consumed.
+static void skip_brace_body(TSLexer *lexer) {
+    int depth = 1;
+    while (!lexer->eof(lexer) && depth > 0) {
+        int32_t c = lexer->lookahead;
+        if (c == '"') { advance(lexer); skip_dq(lexer); continue; }
+        if (c == '\'') { advance(lexer); skip_sq(lexer); continue; }
+        if (c == 'R') {
+            advance(lexer);
+            if (lexer->lookahead == '"') { advance(lexer); skip_raw_string(lexer); }
+            continue;
+        }
+        if (c == '/') { if (skip_comment(lexer)) continue; continue; }
+        if (c == '{') depth++;
+        if (c == '}') depth--;
+        advance(lexer);
+    }
+}
+
+static bool is_block_keyword(const char *word, int len) {
+    // Statement- and declaration-only keywords: none can begin an
+    // initializer-list element, so seeing one inside the brace region
+    // proves a macro block. Expression-valid keywords (new, delete,
+    // throw, noexcept, sizeof, decltype, requires, co_await, co_yield,
+    // this, *_cast, operator), elaborated-type-specifier leads
+    // (struct/class/union/enum/typename — `struct S(x)` is a legal
+    // functional cast), contextual identifiers (import/module/export/
+    // concept/final/override) and primitive types (int, char, ...
+    // `int(x)` casts) are all excluded on purpose.
+    static const char *kw[] = {
+        "if", "else", "do", "for", "while", "switch", "case", "default",
+        "try", "catch", "return", "break", "continue", "goto",
+        "co_return", "asm", "__asm__", "__asm",
+        "typedef", "using", "namespace", "friend", "virtual", "explicit",
+        "static", "extern", "register", "thread_local", "mutable", "auto",
+        "const", "volatile", "constexpr", "consteval", "constinit",
+        "static_assert", "alignas", "inline", "public", "private",
+        "protected",
+    };
+    for (size_t i = 0; i < sizeof(kw) / sizeof(kw[0]); i++) {
+        if ((int)strlen(kw[i]) == len && memcmp(word, kw[i], len) == 0) return true;
+    }
+    return false;
+}
+
+/// `{` that opens a macro block (`ON_SCOPE_EXIT { f(); };`,
+/// `R_TRY_CATCH(e) { try { ... } catch { ... } }`,
+/// `MACRO { if (ok) {} }`): it is a macro block when the region holds
+/// statement evidence — a `;` or a statement-only keyword — before the
+/// matching `}`. Braced initializer lists (`Type{arg}`) contain neither
+/// outside lambdas and `({ ... })` statement expressions, so they fall
+/// back to the regular `{` token.
 /// The token covers just the `{` itself; the look-ahead chars are
 /// re-lexed afterwards via mark_end.
 static bool scan_macro_braced_open(TSLexer *lexer) {
@@ -117,62 +290,142 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
     lexer->mark_end(lexer);
 
     int depth = 1;
+    // `[captures] (params) qualifiers { body }` inside a braced init is a
+    // lambda: its body's `;`/keywords are not macro evidence. A `]` sets
+    // maybe_lambda; `(`, `)`, qualifier idents and trailing-return-type
+    // chars keep it; the clearing set drops it.
+    bool maybe_lambda = false;
+    int pdepth = 0;
+    char word[64];
     size_t scanned = 0;
     for (;;) {
         if (lexer->eof(lexer) || scanned++ > MACRO_BRACE_SCAN_LIMIT) {
             return false;
         }
         int32_t c = lexer->lookahead;
-        if (c == '"' || c == '\'') {
-            // Skip string/char literals so their contents can't count
-            // toward the `;` or `}` search.
-            int32_t quote = c;
+        if (c == 'R') {
             advance(lexer);
-            while (!lexer->eof(lexer)) {
-                if (lexer->lookahead == '\\') {
-                    advance(lexer);
-                    if (!lexer->eof(lexer)) advance(lexer);
-                    continue;
-                }
-                if (lexer->lookahead == quote) {
-                    advance(lexer);
-                    break;
-                }
-                if (lexer->lookahead == '\n' && quote == '\'') break;
+            if (lexer->lookahead == '"') {
                 advance(lexer);
+                skip_raw_string(lexer);
             }
             continue;
+        }
+        if (c == '"') {
+            advance(lexer);
+            skip_dq(lexer);
+            continue;
+        }
+        if (c == '\'') {
+            // Char literal or digit separator (1'000): consume `'` then
+            // one char; a following `'` completes a real literal. A `;`,
+            // `{` or `}` in the middle is real when no closing `'` sits
+            // right after it.
+            advance(lexer);
+            int32_t x = lexer->lookahead;
+            if (x == '\\') {
+                advance(lexer);
+                if (!lexer->eof(lexer)) advance(lexer);
+                if (lexer->lookahead == '\'') advance(lexer);
+                continue;
+            }
+            if (x == ';') {
+                advance(lexer);
+                if (lexer->lookahead == '\'') {
+                    advance(lexer);
+                    continue;  // ';' literal
+                }
+                return true;   // real semicolon
+            }
+            if (x == '{') {
+                advance(lexer);
+                if (lexer->lookahead == '\'') { advance(lexer); continue; }
+                depth++;
+                maybe_lambda = false;
+                continue;
+            }
+            if (x == '}') {
+                advance(lexer);
+                if (lexer->lookahead == '\'') { advance(lexer); continue; }
+                depth--;
+                maybe_lambda = false;
+                if (depth == 0) return false;
+                continue;
+            }
+            if (x == '\n' || x == '\r') continue;
+            if (x == '\'') { advance(lexer); continue; }
+            advance(lexer);
+            if (lexer->lookahead == '\'') advance(lexer);  // 'x' complete
+            continue;  // else: digit separator / malformed — rescan normally
         }
         if (c == '/') {
-            // Skip // and /* */ comments.
-            advance(lexer);
-            if (lexer->lookahead == '/') {
-                while (!lexer->eof(lexer) && lexer->lookahead != '\n') advance(lexer);
-                continue;
-            }
-            if (lexer->lookahead == '*') {
-                advance(lexer);
-                while (!lexer->eof(lexer)) {
-                    if (lexer->lookahead == '*') {
-                        advance(lexer);
-                        if (lexer->lookahead == '/') {
-                            advance(lexer);
-                            break;
-                        }
-                        continue;
-                    }
-                    advance(lexer);
-                }
-                continue;
-            }
+            if (skip_comment(lexer)) continue;
+            maybe_lambda = false;  // `/` division can't lead a lambda
             continue;
         }
-        if (c == '{') depth++;
+        if (c == '(') {
+            advance(lexer);
+            while (lexer->lookahead == ' ' || lexer->lookahead == '\t' ||
+                   lexer->lookahead == '\n' || lexer->lookahead == '\r') {
+                advance(lexer);
+            }
+            if (lexer->lookahead == '{') {
+                advance(lexer);
+                skip_paren_body(lexer);   // GNU ({ stmts }) — ignore contents
+                continue;
+            }
+            if (maybe_lambda) pdepth++;
+            continue;
+        }
+        if (c == ')') {
+            if (pdepth > 0) pdepth--;
+            advance(lexer);
+            continue;
+        }
+        if (c == ']') {
+            maybe_lambda = true;
+            pdepth = 0;
+            advance(lexer);
+            continue;
+        }
+        if (c == '{') {
+            if (maybe_lambda && pdepth == 0) {
+                advance(lexer);
+                skip_brace_body(lexer);   // lambda body — ignore contents
+                maybe_lambda = false;
+                continue;
+            }
+            depth++;
+            maybe_lambda = false;
+            advance(lexer);
+            continue;
+        }
         if (c == '}') {
             depth--;
+            maybe_lambda = false;
             if (depth == 0) return false;
+            advance(lexer);
+            continue;
         }
         if (c == ';') return true;
+        if (is_ident_start(c)) {
+            int len = 0;
+            while (is_ident_char(lexer->lookahead) && len < 63) {
+                word[len++] = (char)lexer->lookahead;
+                advance(lexer);
+            }
+            while (is_ident_char(lexer->lookahead)) advance(lexer);
+            word[len] = '\0';
+            // Inside `[...]` a possible lambda is collecting its
+            // qualifiers (mutable/constexpr/noexcept -> T) — those names
+            // must not fire the statement-keyword check.
+            if (!maybe_lambda && is_block_keyword(word, len)) return true;
+            continue;
+        }
+        if (c == ',' || c == '=' || c == '?' || c == '|' || c == '^' ||
+            c == '%' || c == '!' || c == '#') {
+            maybe_lambda = false;   // init-clause separators / operators
+        }
         advance(lexer);
     }
 }

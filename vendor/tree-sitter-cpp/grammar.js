@@ -140,9 +140,7 @@ module.exports = grammar(C, {
     [$.attributed_statement],
     [$._declaration_modifiers, $.attributed_statement],
     [$._top_level_item, $._top_level_statement],
-    [$.expression, $._class_name, $.macro_braced_statement],
     [$.macro_braced_statement],
-    [$._macro_declaration_top, $.expression, $._class_name, $.macro_braced_statement],
     [$._block_item, $.statement],
     [$.type_qualifier, $.extension_expression],
 
@@ -300,21 +298,14 @@ module.exports = grammar(C, {
     // `asm(s : :: : x)` — the second `:` could extend the classic
     // operand lists or the fused `::` sections; fused wins only when a
     // real `::` token follows (it is the dynamic(-1) fallback).
-    [$.gnu_asm_output_operand_list, $._gnu_asm_fused_sections],
     // `IDENT {` — braced statement macro vs class name / brace
     // initializer; the dynamic(-1) macro read only survives when the
     // braces hold statements.
     // `:: "lit" (` — fused operand: string+constraint vs
     // concatenated-string call operand.
-    [$._string, $.gnu_asm_output_operand, $.gnu_asm_input_operand, $.concatenated_string],
-    [$.gnu_asm_output_operand_list, $._gnu_asm_operand],
-    [$.gnu_asm_output_operand, $.gnu_asm_input_operand, $._lambda_capture_identifier],
     // `::`-fused sections vs global-scope `::expr` inside operands.
-    [$.delete_expression],
-    [$.new_expression],
     // In fused `::` sections a `"lit"(expr)` operand can't statically
     // tell input vs output — output wins deterministically.
-    [$.gnu_asm_output_operand, $.gnu_asm_input_operand],
     [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier],
     [$.macro_argument_list, $.template_type],
     [$.macro_argument_list, $.sized_type_specifier],
@@ -351,7 +342,6 @@ module.exports = grammar(C, {
     [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier],
     [$.macro_qualifier, $._macro_declaration_top, $.type_specifier, $.expression],
     [$._macro_declaration_top, $.expression, $._class_name],
-    [$.macro_qualifier, $._macro_declaration_top, $.expression],
     [$._macro_declaration_top, $.expression, $.concatenated_string],
     [$.macro_namespace, $._macro_declaration_literals],
     [$.preproc_ifdef, $._linkage_guard, $.preproc_ifdef_in_guarded_signature],
@@ -1379,22 +1369,52 @@ module.exports = grammar(C, {
       ')',
     )),
 
-    _gnu_asm_fused_sections: $ => prec.dynamic(-1, seq(
-      repeat(seq(':', commaSep(field('operand', $._gnu_asm_operand)))),
-      '::',
-      commaSep(field('operand', $._gnu_asm_operand)),
-      repeat(seq(
-        choice(':', '::'),
-        commaSep(field('operand', $._gnu_asm_operand)),
-      )),
+    // Which section a fused list lands in depends on the separators
+    // that FOLLOW it, so middle sections take the operand|string union
+    // while the trailing goto slot is typed strictly (bare identifiers
+    // only, emitted as `gnu_asm_goto_list` like the structured branch).
+    // Separators are enumerated, so a fifth colon can't parse.
+    _gnu_asm_fused_sections: $ => prec.dynamic(-1, choice(
+      // `::`-led: `x :: i`, `x :: i : c`, `x :: i : c : g`,
+      // `x ::: clobbers`, `x :: c :: goto` (`::::`).
+      seq('::', optional($._fused_asm_items), optional(choice(
+        seq(':', optional($._fused_asm_items), optional(seq(
+          ':',
+          optional(field('goto_labels', $._gnu_asm_goto_items)),
+        ))),
+        seq('::', optional(field('goto_labels', $._gnu_asm_goto_items))),
+      ))),
+      // `x : outputs :: clobbers [: goto]`.
+      seq(
+        $.gnu_asm_output_operand_list,
+        '::',
+        optional($._fused_asm_items),
+        optional(seq(':', optional(field('goto_labels', $._gnu_asm_goto_items)))),
+      ),
+      // `x : outputs : inputs :: goto` (clobbers empty).
+      seq(
+        $.gnu_asm_output_operand_list,
+        $.gnu_asm_input_operand_list,
+        '::',
+        optional(field('goto_labels', $._gnu_asm_goto_items)),
+      ),
     )),
 
-    _gnu_asm_operand: $ => choice(
-      prec.dynamic(1, $.gnu_asm_output_operand),
-      $.gnu_asm_input_operand,
-      $._string,
-      $.identifier,
+    // Middle-section items in fused sections: `"c"(expr)` operands or
+    // clobber string literals. A bare identifier can't live here — only goto
+    // labels take those — so `asm("x" :: ident)` fails like GCC.
+    _fused_asm_items: $ => commaSep1(field('operand', choice(
+      prec.dynamic(1, $.gnu_asm_input_operand),
+      $.string_literal,
+    ))),
+
+    // Goto labels in fused sections; aliased so emitted nodes keep the
+    // `gnu_asm_goto_list` name queries match.
+    _gnu_asm_goto_items: $ => alias(
+      $._gnu_asm_goto_list_body,
+      $.gnu_asm_goto_list,
     ),
+    _gnu_asm_goto_list_body: $ => commaSep1(field('label', $.identifier)),
 
     macro_attribute: ($, original) => choice(
       original,

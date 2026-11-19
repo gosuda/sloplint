@@ -9,6 +9,10 @@ void f(void) {
   erase_fixture{}.run();
   if (cond) ON_SCOPE_EXIT { g(); };
   for (;;) LOG { flush(); };
+  MACRO { x = 1'000; };
+  ON_SCOPE_EXIT { if (ready) {} };
+  Widget w{[&]{init();}};
+  auto w2 = Widget{R"x(a "b" ; c)x"};
 }
 
 ---
@@ -68,4 +72,43 @@ void f(void) {
             (expression_statement
               (call_expression
                 (identifier)
-                (argument_list)))))))))
+                (argument_list))))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (expression_statement
+            (assignment_expression
+              (identifier)
+              (number_literal)))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (if_statement
+            (condition_clause
+              (identifier))
+            (compound_statement))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (lambda_expression
+              (lambda_capture_specifier
+                (lambda_default_capture))
+              (compound_statement
+                (expression_statement
+                  (call_expression
+                    (identifier)
+                    (argument_list))))))))
+      (declaration
+        (placeholder_type_specifier
+          (auto))
+        (init_declarator
+          (identifier)
+          (compound_literal_expression
+            (type_identifier)
+            (initializer_list
+              (raw_string_literal
+                (raw_string_delimiter)
+                (raw_string_content)
+                (raw_string_delimiter)))))))))

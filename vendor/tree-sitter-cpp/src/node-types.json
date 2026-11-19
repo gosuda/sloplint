@@ -3980,23 +3980,7 @@
         "required": false,
         "types": [
           {
-            "type": "concatenated_string",
-            "named": true
-          },
-          {
             "type": "gnu_asm_input_operand",
-            "named": true
-          },
-          {
-            "type": "gnu_asm_output_operand",
-            "named": true
-          },
-          {
-            "type": "identifier",
-            "named": true
-          },
-          {
-            "type": "raw_string_literal",
             "named": true
           },
           {
@@ -4020,6 +4004,14 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "gnu_asm_input_operand_list",
+          "named": true
+        },
+        {
+          "type": "gnu_asm_output_operand_list",
+          "named": true
+        },
         {
           "type": "gnu_asm_qualifier",
           "named": true
