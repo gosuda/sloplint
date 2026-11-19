@@ -1,0 +1,57 @@
+========================
+cardinality binds loosely around dot
+========================
+
+fact { #b.addr > 1 }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (cardinality_expression
+          (dot_expression
+            (qual_name (name))
+            (qual_name (name))))
+        (number)))))
+
+========================
+cardinality of simple name
+========================
+
+fact { #x > 0 }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (cardinality_expression
+          (qual_name (name)))
+        (number)))))
+
+========================
+primed identifier with dot
+========================
+
+pred f [s, s": T] { s".x = 1 }
+
+---
+
+(source_file
+  (pred_decl
+    name: (name)
+    (decl_list
+      (decl
+        (name_list
+          (name)
+          (name))
+        (qual_name (name))))
+    (block_expression
+      (compare_expression
+        (dot_expression
+          (qual_name (name))
+          (qual_name (name)))
+        (number)))))

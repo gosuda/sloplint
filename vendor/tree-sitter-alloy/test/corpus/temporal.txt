@@ -1,0 +1,65 @@
+========================
+until binary
+========================
+
+fact { a until b }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (temporal_binary_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+since binary
+========================
+
+fact { a since b }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (temporal_binary_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+releases and triggered
+========================
+
+fact { a releases b  c triggered d }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (temporal_binary_expression
+        (qual_name (name))
+        (qual_name (name)))
+      (temporal_binary_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+temporal unary operators
+========================
+
+fact { always a  eventually b  after c  before d  historically e  once f }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (unary_expression (qual_name (name)))
+      (unary_expression (qual_name (name)))
+      (unary_expression (qual_name (name)))
+      (unary_expression (qual_name (name)))
+      (unary_expression (qual_name (name)))
+      (unary_expression (qual_name (name))))))

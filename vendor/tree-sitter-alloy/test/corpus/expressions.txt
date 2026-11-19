@@ -1,0 +1,407 @@
+========================
+or expression
+========================
+
+fact { a || b }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (or_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+or expression: word form
+========================
+
+fact { a or b }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (or_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+iff expression
+========================
+
+fact { a <=> b }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (iff_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+implies expression with else
+========================
+
+fact { a => b else c }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (implies_expression
+        (qual_name (name))
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+and expression
+========================
+
+fact { a && b }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (and_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+not expression
+========================
+
+fact { !a }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (unary_expression
+        (qual_name (name))))))
+
+========================
+not expression: word form
+========================
+
+fact { not a }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (unary_expression
+        (qual_name (name))))))
+
+========================
+set union and difference
+========================
+
+fact { A + B - C }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (plus_minus_expression
+        (plus_minus_expression
+          (qual_name (name))
+          (qual_name (name)))
+        (qual_name (name))))))
+
+========================
+override expression
+========================
+
+fact { f ++ g }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (override_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+intersection expression
+========================
+
+fact { A & B }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (intersect_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+domain restriction
+========================
+
+fact { A <: r }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (domain_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+range restriction
+========================
+
+fact { r :> B }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (range_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+closure operators
+========================
+
+fact { ~r  ^r  *r }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (closure_expression (qual_name (name)))
+      (closure_expression (qual_name (name)))
+      (closure_expression (qual_name (name))))))
+
+========================
+arrow expression: plain
+========================
+
+fact { A -> B }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (arrow_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+arrow expression: with multiplicities
+========================
+
+fact { A some -> lone B }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (arrow_expression
+        (qual_name (name))
+        operator: (some_arrow_op)
+        (qual_name (name))))))
+
+========================
+box join expression
+========================
+
+fact { a[b] }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (box_join_expression
+        (qual_name (name))
+        (expr_list (qual_name (name)))))))
+
+========================
+let expression: with bar
+========================
+
+fact { let x = a | x in b }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (let_expression
+        (let_binding (name) (qual_name (name)))
+        (compare_expression
+          (qual_name (name))
+          (qual_name (name)))))))
+
+========================
+let expression: with block
+========================
+
+fact { let x = a { x in b } }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (let_expression
+        (let_binding (name) (qual_name (name)))
+        (block_expression
+          (compare_expression
+            (qual_name (name))
+            (qual_name (name))))))))
+
+========================
+set comprehension
+========================
+
+fact { { x: A | x in B } in C }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (set_comprehension
+          (decl_list
+            (decl (name_list (name)) (qual_name (name))))
+          (compare_expression
+            (qual_name (name))
+            (qual_name (name))))
+        (qual_name (name))))))
+
+========================
+parenthesized expression
+========================
+
+fact { (a + b) & c }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (intersect_expression
+        (paren_expression
+          (plus_minus_expression
+            (qual_name (name))
+            (qual_name (name))))
+        (qual_name (name))))))
+
+========================
+seq expression
+========================
+
+fact { a ; b }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (seq_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+dot expression chain
+========================
+
+fact { a.b.c }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (dot_expression
+        (dot_expression
+          (qual_name (name))
+          (qual_name (name)))
+        (qual_name (name))))))
+
+========================
+prime expression
+========================
+
+fact { x' }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (prime_expression
+        (qual_name (name))))))
+
+========================
+cardinality expression
+========================
+
+fact { #x }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (cardinality_expression
+        (qual_name (name))))))
+
+========================
+shift expressions
+========================
+
+fact { a << b  c >> d  e >>> f }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (shift_expression (qual_name (name)) (qual_name (name)))
+      (shift_expression (qual_name (name)) (qual_name (name)))
+      (shift_expression (qual_name (name)) (qual_name (name))))))
+
+========================
+multiplicity expressions
+========================
+
+fact { some x  lone y  one z  no w  set v  seq u }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (multiplicity_expression (qual_name (name)))
+      (multiplicity_expression (qual_name (name)))
+      (multiplicity_expression (qual_name (name)))
+      (multiplicity_expression (qual_name (name)))
+      (multiplicity_expression (qual_name (name)))
+      (multiplicity_expression (qual_name (name))))))

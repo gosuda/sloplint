@@ -1,0 +1,89 @@
+========================
+some quantifier after other expression in block
+========================
+
+pred f [b: Book] {
+  #b.addr > 1
+  some n: Name | n.x = 1
+}
+
+---
+
+(source_file
+  (pred_decl
+    name: (name)
+    (decl_list
+      (decl
+        (name_list (name))
+        (qual_name (name))))
+    (block_expression
+      (compare_expression
+        (cardinality_expression
+          (dot_expression
+            (qual_name (name))
+            (qual_name (name))))
+        (number))
+      (quantified_expression
+        (decl_list
+          (decl
+            (name_list (name))
+            (qual_name (name))))
+        (compare_expression
+          (dot_expression
+            (qual_name (name))
+            (qual_name (name)))
+          (number))))))
+
+========================
+all quantifier with bar
+========================
+
+fact { all x: A | x in B }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (quantified_expression
+        (decl_list
+          (decl
+            (name_list (name))
+            (qual_name (name))))
+        (compare_expression
+          (qual_name (name))
+          (qual_name (name)))))))
+
+========================
+no quantifier with bar
+========================
+
+fact { no x: A | x in B }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (quantified_expression
+        (decl_list
+          (decl
+            (name_list (name))
+            (qual_name (name))))
+        (compare_expression
+          (qual_name (name))
+          (qual_name (name)))))))
+
+========================
+some as multiplicity test
+========================
+
+fact { some x }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (multiplicity_expression
+        (qual_name (name))))))
