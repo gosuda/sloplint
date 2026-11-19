@@ -169,3 +169,35 @@ fn js_write_after_switch_reaches_the_outer_let() {
         );
     });
 }
+
+#[test]
+fn js_outer_const_survives_a_closed_inner_let_scope() {
+    let source = "function f() {\nconst x = 1;\n{\nlet x = 2;\n}\nuse(x);\n}\n";
+    with_js(source, |found| {
+        assert_eq!(found.len(), 2, "const plus the block let: {found:?}");
+        let outer = found
+            .iter()
+            .find(|binding| binding.pos.line == 2)
+            .unwrap_or_else(|| panic!("no const binding in {found:?}"));
+        assert_eq!(
+            outer.end_line, 7,
+            "the const binding spans the function: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn ts_outer_const_survives_a_closed_inner_let_scope() {
+    let source = "function f() {\nconst x = 1;\n{\nlet x = 2;\n}\nuse(x);\n}\n";
+    with_ts(source, |found| {
+        assert_eq!(found.len(), 2, "const plus the block let: {found:?}");
+        let outer = found
+            .iter()
+            .find(|binding| binding.pos.line == 2)
+            .unwrap_or_else(|| panic!("no const binding in {found:?}"));
+        assert_eq!(
+            outer.end_line, 7,
+            "the const binding spans the function: {found:?}"
+        );
+    });
+}

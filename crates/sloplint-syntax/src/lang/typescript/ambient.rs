@@ -110,7 +110,7 @@ pub(crate) fn decl_names_for<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'
         return;
     }
     if n.kind() == "lexical_declaration"
-        && !child_by_field(n, "kind").is_some_and(|k| text(cx, k) == "let")
+        && !child_by_field(n, "kind").is_some_and(|k| matches!(text(cx, k), "let" | "const"))
     {
         return;
     }

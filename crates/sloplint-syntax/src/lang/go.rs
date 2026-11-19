@@ -93,7 +93,8 @@ impl LangHooks for GoHooks {
         if node.kind() == "type_switch_statement" {
             return depth;
         }
-        if cx.parent().is_some_and(|p| p.kind() == "for_clause") {
+        let parent = cx.parent();
+        if parent.is_some_and(|p| p.kind() == "for_clause" || p.kind() == "labeled_statement") {
             depth.saturating_sub(2)
         } else {
             depth.saturating_sub(1)
