@@ -35,5 +35,6 @@ tree-sitter-scala = { workspace = true }
 tree-sitter-starlark = { workspace = true }
 tree-sitter-lean = { workspace = true }
 tree-sitter-swift = { workspace = true }
+tree-sitter-tlaplus = { workspace = true }
 tree-sitter-typescript = { workspace = true }
 tree-sitter-zig = { workspace = true }

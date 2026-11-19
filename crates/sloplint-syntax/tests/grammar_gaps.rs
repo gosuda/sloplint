@@ -62,5 +62,7 @@ mod scala;
 mod starlark;
 #[path = "grammar_gaps/swift.rs"]
 mod swift;
+#[path = "grammar_gaps/tlaplus.rs"]
+mod tlaplus;
 #[path = "grammar_gaps/zig.rs"]
 mod zig;
