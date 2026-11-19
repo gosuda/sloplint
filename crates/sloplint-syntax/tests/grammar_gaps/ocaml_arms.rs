@@ -374,17 +374,27 @@ fn unclosed_raw_string_opener_in_cppo_comment_stays_hidden() {
     parser
         .set_language(&language)
         .expect("ocaml language loads");
-    let source = "let f x =\n  match x with\n  | A -> 1\n#if FOO\n  (* note {x1| \
-                  has no closer *)\n  | B -> 2\n#endif\n  | C -> 3\nlet g = 4\nlet h = 5\n";
+    // The comment sits inside the directive's tail (after `#error
+    // when`), so the opener is inside the very region the tail scans.
+    let source = "let f x =\n  match x with\n  | A -> 1\n  | #error when (* note \
+                  {x1| no closer *) s = x -> e\n  | B -> 2\nlet g = 4\nlet h = 5\n";
     let tree = parser.parse(source, None).expect("parser returns a tree");
     let sexp = tree.root_node().to_sexp();
     assert!(
         !tree.root_node().has_error() && !sexp.contains("MISSING"),
         "must parse clean, sexp: {sexp}"
     );
-    assert!(
-        sexp.contains("let_binding") || sexp.contains("value_specification"),
-        "declarations after the directive must survive, sexp: {sexp}"
+    // All three bindings AND all three match arms must survive —
+    // counting nodes, not just their presence.
+    assert_eq!(
+        sexp.matches("let_binding").count(),
+        3,
+        "every declaration must survive, sexp: {sexp}"
+    );
+    assert_eq!(
+        sexp.matches("match_case").count(),
+        3,
+        "every arm must survive, sexp: {sexp}"
     );
 }
 
