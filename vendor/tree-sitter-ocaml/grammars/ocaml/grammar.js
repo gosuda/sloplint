@@ -2665,32 +2665,21 @@ export default grammar({
     directive: $ => seq(/#/, choice($._lowercase_identifier, $._uppercase_identifier)),
 
     // cppo-style preprocessor directives (`#define`, `#include`, `#if`, ...).
-    // The payload is preprocessor syntax, not OCaml, so it is consumed to
-    // end of line. Restricted to structure/signature positions so `#` keeps
-    // lexing as the method-call operator inside expressions (`obj #m`).
-    cppo_directive: $ => token(seq(
-      '#',
-      /(?:define|include|if|ifdef|ifndef|elif|else|endif|undef|error|warning|pragma|line|ext|endext|stop|localization)/,
-      // `\<newline>` continues a cppo directive onto the next line.
-      /(?:[^\n\\]|\\[\s\S])*/,
-    )),
-
-    // Match-case-position cppo directives. A match arm can also start
-    // with a polymorphic-variant type pattern (`| #error as e -> pp`,
-    // mirage-tcpip/ocaml-git/...), so the directive token must be
-    // all-or-nothing: it requires the rest of the line with no `->`
-    // in it. `| #error as e -> ...` then fails the whole token and the
-    // `#` + `error` tokens are free for the pattern parse. Real cppo
-    // directives do not carry `->` on their line; the accepted casualty
-    // is a `->`-bearing `#define` placed between match arms.
-    cppo_directive_no_arrow: $ => token(seq(
-      '#',
-      /(?:define|include|if|ifdef|ifndef|elif|else|endif|undef|error|warning|pragma|line|ext|endext|stop|localization)/,
-      // `-` is consumed only when not followed by `>`; a trailing `-`
-      // before the newline is allowed by the final `-?`.
-      /(?:[^\n\\-]|\\[\s\S]|-[^\n\\>-]|--)*-?/,
-      '\n',
-    )),
+    // `cppo_directive`, `cppo_directive_no_arrow` and `opa_directive` are
+    // external tokens (common/scanner.h): they only claim `#`/`##` when it
+    // is the first non-whitespace character of a line, so `#`-method calls
+    // (`o#error x`) and `##` hash-operator reads (`o##name`) can never be
+    // stolen mid-line. The no-arrow variant additionally refuses lines
+    // containing a literal `->`, keeping `| #error as e -> ...`
+    // polymorphic-variant arms free of the directive parse; when the
+    // match-position variant is expected, the refusal applies even where
+    // the structure-level variant is also valid.
+    //
+    // cppo directive names: define, include, if, ifdef, ifndef, elif,
+    // else, endif, undef, error, warning, pragma, line, ext, endext,
+    // stop, localization. `\<newline>` continues a directive onto the
+    // next line; the accepted casualty is a `->`-bearing `#define`
+    // placed between match arms.
 
     // camlp4 directives `#<If:TESTING>`, `#<Else>`, `#<End>`. `#<` can never
     // begin a method call, so these are also valid inside expressions.
@@ -2721,8 +2710,6 @@ export default grammar({
     // `#<< ... >>#` bypass quotations (opaque payloads, e.g. opalang).
     // `##` must be followed by an identifier char so Js_of_ocaml-style
     // `##.` / `##x.y` expressions can never lex as directives.
-    opa_directive: $ => token(seq('#', '#', /[a-zA-Z_][^\n]*/)),
-
     opa_quotation: $ => token(seq(
       '#<<',
       /(?:[^>]|>[^>]|>>[^#])*/,
@@ -2774,6 +2761,9 @@ export default grammar({
     $.line_number_directive,
     $._null,
     $._error_sentinel,
+    $.cppo_directive,
+    $.cppo_directive_no_arrow,
+    $.opa_directive,
   ],
 });
 

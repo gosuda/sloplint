@@ -241,11 +241,7 @@ fn opa_directive_and_quotation_parse() {
 
 #[test]
 fn cppo_directive_line_continuation_parses() {
-    run_clean(concat!(
-        "#define FOO a \\\n",
-        "  b c\n",
-        "let x = 1\n",
-    ));
+    run_clean(concat!("#define FOO a \\\n", "  b c\n", "let x = 1\n",));
 }
 
 #[test]
@@ -296,5 +292,53 @@ fn error_keyword_polymorphic_variant_pattern_arm_parses() {
         "  | `A -> 1\n",
         "  | #error as e -> pp_error ppf e\n",
         "let g = 2\n",
+    ));
+}
+
+// --- `#`/`##` method calls vs directives -----------------------------------------
+
+// A `#` butted against the previous token is a method call, never a
+// directive: `o#error (fun y -> y)` must not let a structure-level
+// cppo_directive steal the arm body. The external scanner only
+// dispatches `#` when it starts a line or follows whitespace.
+#[test]
+fn hash_method_call_inside_match_arm_stays_method_call() {
+    let source = concat!(
+        "let f x = match x with\n",
+        "  | A -> log#error (fun y -> y)\n",
+        "  | B -> 1\n",
+        "let g = 2\n",
+    );
+    run_clean(source);
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    assert!(
+        tree.root_node().to_sexp().contains("method_invocation"),
+        "`log#error` must parse as a method call, sexp: {}",
+        tree.root_node().to_sexp()
+    );
+}
+
+// `o##name` is the `##` hash operator, not an opa bypass directive.
+#[test]
+fn double_hash_method_call_stays_method_call() {
+    run_clean(concat!("let f = o##name\n", "let g = 2\n",));
+}
+
+// A `-\`-newline continuation inside a `#define` between match arms is
+// part of the directive, not the start of a subtraction.
+#[test]
+fn cppo_directive_minus_backslash_continuation_between_arms_parses() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A a -> a\n",
+        "#define F(x) x -\\\n",
+        "  1\n",
+        "  | `B -> 2\n",
+        "let g = 1\n",
     ));
 }

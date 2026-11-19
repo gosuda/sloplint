@@ -16,6 +16,9 @@ enum TokenType {
   LINE_NUMBER_DIRECTIVE,
   NULL_CHARACTER,
   ERROR_SENTINEL,
+  CPPO_DIRECTIVE,
+  CPPO_DIRECTIVE_NO_ARROW,
+  OPA_DIRECTIVE,
 };
 
 typedef struct {
@@ -390,6 +393,56 @@ static inline bool scan_extattrident(TSLexer *lexer) {
   return false;
 }
 
+static const char *CPPO_NAMES[] = {
+    "define", "include",  "if",     "ifdef", "ifndef", "elif",
+    "else",   "endif",    "undef",  "error", "warning", "pragma",
+    "line",   "ext",      "endext", "stop",  "localization",
+};
+
+// Matches the cppo name regex prefix: the directive name only needs to be
+// a prefix of the `#`-word (`#ifdefx` still claims `if` + tail `defx`,
+// mirroring the regex alternation).
+static bool scan_cppo_name(TSLexer *lexer) {
+  char word[64];
+  size_t n = 0;
+
+  while (lexer->lookahead >= 'a' && lexer->lookahead <= 'z') {
+    if (n + 1 < sizeof(word)) word[n++] = (char)lexer->lookahead;
+    advance(lexer);
+  }
+  word[n] = '\0';
+
+  if (n == 0) return false;
+
+  for (size_t i = 0; i < sizeof(CPPO_NAMES) / sizeof(CPPO_NAMES[0]); i++) {
+    if (strncmp(word, CPPO_NAMES[i], strlen(CPPO_NAMES[i])) == 0) return true;
+  }
+  return false;
+}
+
+// Directive tail: consumes to end of line; `\<anything>` is a cppo
+// continuation/escape pair. Tracks whether a literal `->` occurs (a `-`
+// directly before `>`), which cppo directives never carry between match
+// arms. Returns false only on `->` when `no_arrow` is forced by the
+// caller for the whole line.
+static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow) {
+  for (;;) {
+    int32_t c = lexer->lookahead;
+    if (c == '\n' || (c == '\0' && eof(lexer))) return;
+    if (c == '\\') {
+      advance(lexer);
+      if (!eof(lexer)) advance(lexer);
+      continue;
+    }
+    if (c == '-') {
+      advance(lexer);
+      if (lexer->lookahead == '>') *has_arrow = true;
+      continue;
+    }
+    advance(lexer);
+  }
+}
+
 static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
   int32_t last = 0;
 
@@ -521,7 +574,9 @@ static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     return true;
   }
 
+  bool skipped_ws = false;
   while (iswspace(lexer->lookahead)) {
+    skipped_ws = true;
     skip(lexer);
   }
 
@@ -533,39 +588,81 @@ static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     return true;
   }
 
-  if (!scanner->in_string && valid_symbols[LINE_NUMBER_DIRECTIVE] &&
-      lexer->lookahead == '#' && lexer->get_column(lexer) == 0) {
+  // Unified `#` dispatch: cppo/opa directives and the `# N "file"`
+  // line directive share one `#` consumption. A `#` reached only at a
+  // line start or after whitespace (`| #ifdef`, `  ##name`) can be a
+  // directive; a `#` butted against the previous token (`o#error x`,
+  // `o##name`) is a `#`/`##` method call or hash operator and never
+  // lexes as a directive.
+  if (!scanner->in_string && lexer->lookahead == '#' &&
+      (skipped_ws || lexer->get_column(lexer) == 0)) {
+    bool hash_col0 = lexer->get_column(lexer) == 0;
     advance(lexer);
 
-    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-      advance(lexer);
+    if ((valid_symbols[CPPO_DIRECTIVE] ||
+         valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) &&
+        scan_cppo_name(lexer)) {
+      bool has_arrow = false;
+      scan_cppo_tail(lexer, &has_arrow);
+      if (!has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
+        if (lexer->lookahead == '\n') advance(lexer);
+        lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
+        return true;
+      }
+      // A `->`-bearing directive line where the match-position variant
+      // is expected is a polymorphic-variant arm, never a directive —
+      // refuse rather than letting the structure-level variant steal
+      // it mid-item.
+      if (has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
+        return false;
+      }
+      if (valid_symbols[CPPO_DIRECTIVE]) {
+        lexer->result_symbol = CPPO_DIRECTIVE;
+        return true;
+      }
+      return false;
     }
 
-    if (!iswdigit(lexer->lookahead)) return false;
-    while (iswdigit(lexer->lookahead)) advance(lexer);
-
-    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+    if (valid_symbols[OPA_DIRECTIVE] && lexer->lookahead == '#') {
       advance(lexer);
+      if (!is_identstart(lexer->lookahead)) return false;
+      while (lexer->lookahead != '\n' && !eof(lexer)) advance(lexer);
+      lexer->result_symbol = OPA_DIRECTIVE;
+      return true;
     }
 
-    if (lexer->lookahead != '"') return false;
-    advance(lexer);
+    if (hash_col0 && valid_symbols[LINE_NUMBER_DIRECTIVE]) {
+      while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+        advance(lexer);
+      }
 
-    while (lexer->lookahead != '\n' && lexer->lookahead != '\r' &&
-           lexer->lookahead != '"' && !eof(lexer)) {
+      if (!iswdigit(lexer->lookahead)) return false;
+      while (iswdigit(lexer->lookahead)) advance(lexer);
+
+      while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+        advance(lexer);
+      }
+
+      if (lexer->lookahead != '"') return false;
       advance(lexer);
-    }
 
-    if (lexer->lookahead != '"') return false;
-    advance(lexer);
+      while (lexer->lookahead != '\n' && lexer->lookahead != '\r' &&
+             lexer->lookahead != '"' && !eof(lexer)) {
+        advance(lexer);
+      }
 
-    while (lexer->lookahead != '\n' && lexer->lookahead != '\r' &&
-           !eof(lexer)) {
+      if (lexer->lookahead != '"') return false;
       advance(lexer);
-    }
 
-    lexer->result_symbol = LINE_NUMBER_DIRECTIVE;
-    return true;
+      while (lexer->lookahead != '\n' && lexer->lookahead != '\r' &&
+             !eof(lexer)) {
+        advance(lexer);
+      }
+
+      lexer->result_symbol = LINE_NUMBER_DIRECTIVE;
+      return true;
+    }
+    return false;
   }
 
   if (!scanner->in_string && valid_symbols[COMMENT] &&
