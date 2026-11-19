@@ -307,6 +307,11 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
     // `0xAB'CD`), not a character constant. Set on digits; kept across
     // ident runs that follow them (`xAB`, `e5`, `ul` tails).
     bool after_number = false;
+    // `operator[]` is not a lambda capture — when the last identifier
+    // scanned was `operator`, a following `]` must not mark maybe_lambda
+    // or the operator's `{` body gets skipped as a lambda body and its
+    // `;` evidence is lost.
+    bool prev_was_operator = false;
     char word[64];
     size_t scanned = 0;
     for (;;) {
@@ -399,9 +404,12 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
             continue;
         }
         if (c == ']') {
-            maybe_lambda = true;
-            capture_done = true;
-            pdepth = 0;
+            if (!prev_was_operator) {
+                maybe_lambda = true;
+                capture_done = true;
+                pdepth = 0;
+            }
+            prev_was_operator = false;
             advance(lexer);
             after_number = false;
             continue;
@@ -456,6 +464,7 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
             // qualifiers (mutable/constexpr/noexcept -> T) — those names
             // must not fire the statement-keyword check.
             if (!maybe_lambda && is_block_keyword(word, len)) return true;
+            prev_was_operator = (len == 8 && memcmp(word, "operator", 8) == 0);
             // An ident right after digits is a numeric tail (`0xAB`,
             // `1e5`, `42ul`) — the number continues.
             after_number = was_num;
@@ -469,6 +478,9 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
             (c == ',' || c == '=' || c == '?' || c == '|' || c == '^' ||
              c == '%' || c == '!' || c == '#')) {
             maybe_lambda = false;
+        }
+        if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
+            prev_was_operator = false;
         }
         advance(lexer);
         after_number = (c >= '0' && c <= '9');

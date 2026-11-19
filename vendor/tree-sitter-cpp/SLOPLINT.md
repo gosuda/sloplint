@@ -478,7 +478,7 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 
 ## Size
 
-`src/parser.c`: 196,815,915 bytes (published: 17,299,078). States: 29514
+`src/parser.c`: 203,934,955 bytes (published: 17,299,078). States: 30267
 (published: 8637). Language version: 14 (published: 14). The literal
 enumeration of `macro_attribute` costs most of the size growth.
 

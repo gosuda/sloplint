@@ -163,6 +163,18 @@ module.exports = grammar(C, {
     [$._midl_attribute, $.expression, $.macro_braced_expression],
     [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
     [$._macro_braced_body, $._macro_braced_members],
+    [$._block_item, $._macro_braced_members],
+    [$.macro_argument_list, $.sized_type_specifier, $._macro_argument_list_nonempty],
+    [$.macro_argument_list, $.template_type, $._macro_argument_list_nonempty],
+    [$.macro_qualifier, $._declarator, $._field_declarator],
+    [$.macro_qualifier, $._declarator, $._field_declarator, $._init_pointer_declarator],
+    [$._declarator, $._field_declarator, $._init_reference_declarator],
+    [$.macro_argument_list, $.type_specifier, $._macro_argument_list_nonempty],
+    [$.macro_argument_list, $._macro_argument_list_nonempty],
+    [$._init_declarator_preproc, $._declarator, $._field_declarator],
+    [$._declarator, $._field_declarator],
+    [$.labeled_statement, $.macro_access_label],
+    [$._midl_attribute, $.structured_binding_declarator, $._lambda_capture_identifier],
                     // `NAME(args)` forks: call/declarator/macro_declaration vs a
     // `MACRO(args) { members };` braced declaration — decided only by
     // whether `_macro_braced_open` lexes after the `)`.
@@ -342,7 +354,6 @@ module.exports = grammar(C, {
     // In fused `::` sections a `"lit"(expr)` operand can't statically
     // tell input vs output — output wins deterministically.
     [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier],
-    [$.macro_argument_list, $.template_type],
     [$.macro_argument_list, $.sized_type_specifier],
     [$.sized_type_specifier, $.expression],
     [$._argument_list_type],
@@ -1889,10 +1900,70 @@ module.exports = grammar(C, {
     // keeps its call visible instead of reading as a phantom member.
     macro_braced_declaration: $ => prec.dynamic(1, prec.right(seq(
       field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
-      optional($.macro_argument_list),
+      optional(alias($._macro_argument_list_nonempty, $.macro_argument_list)),
       alias($._macro_braced_members, $.field_declaration_list),
       optional(';'),
     ))),
+
+    // The base `macro_argument_list` also matches `()` — with empty
+    // parens the braced read would steal `S() { this->x = 1; };`
+    // constructors, so the declaration form demands ≥1 argument.
+    _macro_argument_list_nonempty: $ => seq(
+      '(',
+      repeat1(choice(
+        $.identifier,
+        $.primitive_type,
+        $.sized_type_specifier,
+        $.template_type,
+        $.qualified_identifier,
+        $.number_literal,
+        $.pointer_expression,
+        $.unary_expression,
+        $.sizeof_expression,
+        $.string_literal,
+        $.char_literal,
+        ',',
+        '::',
+        '<',
+        '>',
+        '*',
+        '&',
+        '&&',
+        '|',
+        '=',
+        '!',
+        '?',
+        ':',
+        '.',
+        '->',
+        '~',
+        '+',
+        '-',
+        '/',
+        '%',
+        '==',
+        '!=',
+        '<<',
+        '>>',
+        '<=',
+        '>=',
+        '||',
+        '^',
+        '<<=',
+        '>>=',
+        '->*',
+        '.*',
+        '[',
+        ']',
+        '{',
+        '}',
+        'operator',
+        'const',
+        'noexcept',
+        $.macro_argument_list,
+      )),
+      ')',
+    ),
 
     // `auto g = SCOPE_GUARD { stmts };` — the braced block sits in
     // expression position. `_expression` lives in the C base, so it's
@@ -1913,7 +1984,24 @@ module.exports = grammar(C, {
     // do, so they always take the regular `{`.
     _macro_braced_body: $ => seq(alias($._macro_braced_open, '{'), repeat1($._block_item), '}'),
 
-    _macro_braced_members: $ => seq(alias($._macro_braced_open, '{'), repeat($._block_item), '}'),
+    // Member-only forms that `_block_item` lacks: bit-fields
+    // (`int x : 3;`), `friend class T;`, `private:` access labels.
+    // `f(x);` still reads as a call — `field_declaration` requires a
+    // type specifier and `constructor_or_destructor_declaration`
+    // (which would phantom-read it) is deliberately not offered.
+    _macro_braced_members: $ => seq(
+      alias($._macro_braced_open, '{'),
+      repeat(choice(
+        $._block_item,
+        $.field_declaration,
+        $.friend_declaration,
+        seq($.access_specifier, ':'),
+        seq(optional($.access_specifier), $.qt_section_label, ':'),
+        $.macro_access_label,
+        $.type_definition,
+      )),
+      '}',
+    ),
 
     // Statements
 
