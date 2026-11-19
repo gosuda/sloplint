@@ -18,7 +18,7 @@ The published grammar reports a parse error on valid OCaml written for camlp5-st
 
 ## Regeneration
 
-`src/` is regenerated with tree-sitter-cli 0.27.x (`tree-sitter-0.27.1 generate`); the grammar uses `reserved`, which CLI 0.24 cannot emit. Run `generate` inside each of `grammars/ocaml`, `grammars/interface`, and `grammars/type`. `grammar.js` is the only patched input; `src/grammar.json`, `src/node-types.json`, and `src/parser.c` are regenerated artifacts and are not part of `sloplint-grammar.patch`.
+`src/` is regenerated with tree-sitter-cli 0.27.x (`tree-sitter-0.27.1 generate`); the grammar uses `reserved`, which CLI 0.24 cannot emit. Run `generate` inside each of `grammars/ocaml`, `grammars/interface`, and `grammars/type`. The patched inputs are `grammars/ocaml/grammar.js` and `common/scanner.h`; `src/grammar.json`, `src/node-types.json`, and `src/parser.c` are regenerated artifacts and are not part of `sloplint-grammar.patch`. The patch applies to a pristine crate checkout with `patch -p0` run from the crate root (the `+++` paths are crate-root-relative: `grammars/ocaml/grammar.js`, `common/scanner.h`).
 
 ## Changes (`grammars/ocaml/grammar.js`, see `sloplint-grammar.patch`)
 
