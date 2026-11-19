@@ -36,7 +36,7 @@
      // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
      // identifier `export` beginning an expression statement. Each reading
      // dies on the next token ('.' vs a name), so forking settles it. The
-@@ -532,13 +536,26 @@
+@@ -532,20 +536,36 @@
      [$._constructor_annotation],
      [$._constructor_annotation_arguments, $.arguments],
      [$._constructor_annotation, $.applied_constructor_type],
@@ -65,18 +65,48 @@
 +    [$.self_type, $._simple_expression, $.lambda_expression, $._braced_typed_lambda],
 +    [$._type_identifier, $.lambda_expression],
 +    [$._self_type_ascription, $.lambda_expression, $._braced_typed_lambda],
++    // '['  name  '{'  wildcard  ':'  … — a typed wildcard can now open a
++    // lambda (`_: T =>`), a self-type, an annotated wildcard type, or a
++    // plain expression.
++    [$.self_type, $._annotated_type, $._simple_expression, $.lambda_expression],
++    [$.lambda_expression, $._annotated_type, $._simple_expression, $.binding],
      [$.binding, $._simple_expression, $._type_identifier],
      [$.class_parameter, $._type_identifier],
      // '{'  _single_lambda_param  '=>'  expression  •  '}'  …
-@@ -555,7 +572,6 @@
+     [$._block_statements, $._indentable_expression],
+     [$.match_expression, $._simple_expression],
+-    // _  :  Type  •  '=>'  …
+-    [$.self_type, $._simple_expression],
+     // _simple_expression  ':'  '('  name_and_type  ')'  •  '=>'
+     // The parenthesized list is either the lambda parameters of a colon
+     // argument or a named tuple type on the ascription reading. What follows
+@@ -555,9 +575,6 @@
      [$._annotated_type, $.binding],
      // '['  identifier  ':'  '{'  identifier  •  ':'  — a braced context
      // bound reuses the self-type head shapes.
 -    [$.self_type, $._type_identifier, $._simple_expression],
-     // '['  identifier  ':'  '{'  wildcard  •  ':'  …
-     [$.self_type, $._annotated_type, $._simple_expression],
+-    // '['  identifier  ':'  '{'  wildcard  •  ':'  …
+-    [$.self_type, $._annotated_type, $._simple_expression],
      // '['  identifier  ':'  '{'  '('  wildcard  •  ':'  …
-@@ -2019,7 +2035,10 @@
+     [$.binding, $._annotated_type, $._simple_expression],
+     // '['  identifier  ':'  '{'  wildcard  •  '{'  …
+@@ -636,7 +653,14 @@
+     compilation_unit: $ =>
+       seq(
+         optional($._shebang),
+-        optional(trailingSep1($._semicolon, $._top_level_definition)),
++        // scalac skips stray `;` (breeze's `package breeze.plot;;;`), so a
++        // top-level separator may be a run of literal semicolons.
++        optional(
++          trailingSep1(
++            seq(choice(";", $._automatic_semicolon), repeat(";")),
++            $._top_level_definition,
++          ),
++        ),
+       ),
+ 
+     _top_level_definition: $ => choice($._definition, statementExpression($)),
+@@ -2019,7 +2043,10 @@
          PREC.infix,
          seq(
            field("left", $._definition_pattern),
@@ -88,7 +118,7 @@
            field("right", $._definition_pattern),
          ),
        ),
-@@ -2151,10 +2170,17 @@
+@@ -2151,10 +2178,17 @@
                ),
                field(
                  "parameters",
@@ -105,12 +135,12 @@
 +                  // (-1) readings, which keep their upstream trees where both
 +                  // can apply; this only wins where the tail cannot parse as
 +                  // a type (`=> new …`, `=> { … }` as expression bodies).
-+                  prec.right(prec.dynamic(-5, seq(optional("implicit"), operandName($), ":", $._type))),
++                  prec.right(prec.dynamic(-5, seq(optional("implicit"), choice(operandName($), $.wildcard), ":", $._type))),
 +                ),
                ),
                anyArrow(),
                $._indentable_expression,
-@@ -2215,7 +2241,7 @@
+@@ -2215,14 +2249,14 @@
      // the reading of `x: T` as a statement taking a colon argument.
      _braced_typed_lambda: $ =>
        prec.dynamic(
@@ -119,7 +149,15 @@
          prec.right(
            "lambda",
            seq(
-@@ -2283,19 +2309,37 @@
+             field(
+               "parameters",
+               prec.right(
+-                seq(optional("implicit"), operandName($), ":", $._type),
++                seq(optional("implicit"), choice(operandName($), $.wildcard), ":", $._type),
+               ),
+             ),
+             anyArrow(),
+@@ -2283,19 +2317,37 @@
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -167,7 +205,7 @@
      /*
       *   MatchClause       ::=  'match' <<< CaseClauses >>>
       *
-@@ -2529,6 +2573,17 @@
+@@ -2529,6 +2581,17 @@
              optional($._end_marker_kw_tail),
            ),
          ),
@@ -185,3 +223,17 @@
          prec(
            "new",
            seq("new", $.template_body, optional($._end_marker_kw_tail)),
+@@ -2779,6 +2842,13 @@
+               "]",
+             ),
+             $.identifier,
++            // `'op` reads an operator name (Scala 2 symbol literal `'*`,
++            // scalding's `x == '*)`); the choice sits with the identifier
++            // branch for the same reason.
++            $.operator_identifier,
++            // `'val` — a keyword can still name a Scala 2 symbol literal
++            // (scalding's `'row, 'col, 'val` column literals).
++            alias("val", $.identifier),
+             $.null_literal,
+             $.boolean_literal,
+           ),

@@ -240,3 +240,40 @@ fn unparenthesized_typed_lambda_parses() {
     let analysis = run_clean(source);
     assert_eq!(function_names(&analysis), ["m"]);
 }
+
+#[test]
+fn wildcard_typed_lambda_parses() {
+    // algebird Aggregator: `{ _: Any => () }` — a wildcard may carry a type
+    // ascription inside a braced lambda.
+    let source = concat!(
+        "object O {\n",
+        "  def const[T](t: T) = prepareMonoid { _: Any => () }.andThenPresent(_ => t)\n",
+        "  def prepareMonoid[A, B](f: A => B) = f\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["const", "prepareMonoid"]);
+}
+
+#[test]
+fn keyword_and_operator_symbol_literals_parse() {
+    // scalding writes `'row, 'col, 'val` column literals and `x == '*)`:
+    // a quote head can name `val` or an operator.
+    let source = concat!(
+        "object M {\n",
+        "  implicit def symbolToFields(x: Symbol) =\n",
+        "    if (x == '*) x else x\n",
+        "  val m = new Matrix('row, 'col, 'val, p)\n",
+        "}\n",
+        "class Matrix(a: Any, b: Any, c: Any, d: Any)\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["symbolToFields"]);
+}
+
+#[test]
+fn stray_semicolons_after_package_parse() {
+    // breeze ships `package breeze.plot;;;` — scalac skips the extra `;`.
+    let source = concat!("package breeze.plot;;;\n", "\n", "trait Dataset\n");
+    run_clean(source);
+}

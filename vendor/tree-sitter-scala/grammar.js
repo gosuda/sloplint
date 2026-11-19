@@ -556,13 +556,16 @@ module.exports = grammar({
     [$.self_type, $._simple_expression, $.lambda_expression, $._braced_typed_lambda],
     [$._type_identifier, $.lambda_expression],
     [$._self_type_ascription, $.lambda_expression, $._braced_typed_lambda],
+    // '['  name  '{'  wildcard  ':'  … — a typed wildcard can now open a
+    // lambda (`_: T =>`), a self-type, an annotated wildcard type, or a
+    // plain expression.
+    [$.self_type, $._annotated_type, $._simple_expression, $.lambda_expression],
+    [$.lambda_expression, $._annotated_type, $._simple_expression, $.binding],
     [$.binding, $._simple_expression, $._type_identifier],
     [$.class_parameter, $._type_identifier],
     // '{'  _single_lambda_param  '=>'  expression  •  '}'  …
     [$._block_statements, $._indentable_expression],
     [$.match_expression, $._simple_expression],
-    // _  :  Type  •  '=>'  …
-    [$.self_type, $._simple_expression],
     // _simple_expression  ':'  '('  name_and_type  ')'  •  '=>'
     // The parenthesized list is either the lambda parameters of a colon
     // argument or a named tuple type on the ascription reading. What follows
@@ -572,8 +575,6 @@ module.exports = grammar({
     [$._annotated_type, $.binding],
     // '['  identifier  ':'  '{'  identifier  •  ':'  — a braced context
     // bound reuses the self-type head shapes.
-    // '['  identifier  ':'  '{'  wildcard  •  ':'  …
-    [$.self_type, $._annotated_type, $._simple_expression],
     // '['  identifier  ':'  '{'  '('  wildcard  •  ':'  …
     [$.binding, $._annotated_type, $._simple_expression],
     // '['  identifier  ':'  '{'  wildcard  •  '{'  …
@@ -652,7 +653,14 @@ module.exports = grammar({
     compilation_unit: $ =>
       seq(
         optional($._shebang),
-        optional(trailingSep1($._semicolon, $._top_level_definition)),
+        // scalac skips stray `;` (breeze's `package breeze.plot;;;`), so a
+        // top-level separator may be a run of literal semicolons.
+        optional(
+          trailingSep1(
+            seq(choice(";", $._automatic_semicolon), repeat(";")),
+            $._top_level_definition,
+          ),
+        ),
       ),
 
     _top_level_definition: $ => choice($._definition, statementExpression($)),
@@ -2179,7 +2187,7 @@ module.exports = grammar({
                   // (-1) readings, which keep their upstream trees where both
                   // can apply; this only wins where the tail cannot parse as
                   // a type (`=> new …`, `=> { … }` as expression bodies).
-                  prec.right(prec.dynamic(-5, seq(optional("implicit"), operandName($), ":", $._type))),
+                  prec.right(prec.dynamic(-5, seq(optional("implicit"), choice(operandName($), $.wildcard), ":", $._type))),
                 ),
               ),
               anyArrow(),
@@ -2248,7 +2256,7 @@ module.exports = grammar({
             field(
               "parameters",
               prec.right(
-                seq(optional("implicit"), operandName($), ":", $._type),
+                seq(optional("implicit"), choice(operandName($), $.wildcard), ":", $._type),
               ),
             ),
             anyArrow(),
@@ -2834,6 +2842,13 @@ module.exports = grammar({
               "]",
             ),
             $.identifier,
+            // `'op` reads an operator name (Scala 2 symbol literal `'*`,
+            // scalding's `x == '*)`); the choice sits with the identifier
+            // branch for the same reason.
+            $.operator_identifier,
+            // `'val` — a keyword can still name a Scala 2 symbol literal
+            // (scalding's `'row, 'col, 'val` column literals).
+            alias("val", $.identifier),
             $.null_literal,
             $.boolean_literal,
           ),

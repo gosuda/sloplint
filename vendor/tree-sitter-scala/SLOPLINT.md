@@ -21,7 +21,7 @@
   the published `node-types.json` lists the hidden supertypes `_definition` and `_pattern`,
   and the 0.27.1 output expands them to concrete kinds in child-type lists. The visible node
   kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` is unchanged.
-- Test: `tree-sitter test` in this directory: 315/315 (305 upstream + 10 sloplint cases).
+- Test: `tree-sitter test` in this directory: 318/318 (305 upstream + 13 sloplint cases).
 
 ## Changes to grammar.js
 
@@ -41,14 +41,19 @@
    non-star opchar (`/[${OP_NSS}]${OP_RUN}` in the mul class, `/[${OP_NSS}]${OP_RUN_SLASH}`
    in `OP_ID_UNION`). `//` and `/*` stays excluded — a `/` followed by another `/` or `*`
    still opens a comment. `x/y` and `/x/` with a letter `x` are unchanged.
-5. SC-TYPEDLAMBDA: `lambda_expression` admits an unparenthesized typed parameter
+5. SC-WILDLAMBDA / SC-SYMNAME / SC-SEMI: `_: T =>` admits `wildcard` beside
+   `operandName` in both typed-lambda parameter slots (`{ _: Any => () }`,
+   algebird's `prepareMonoid`); `quote_expression` names an operator (`'*)`,
+   scalding) or the keyword `val` (`'row, 'col, 'val` column literals); and a
+   top-level separator may be a run of literal `;` (`package breeze.plot;;;`).
+6. SC-TYPEDLAMBDA: `lambda_expression` admits an unparenthesized typed parameter
    `a: T => body` in expression position (scalding's `case c => a: Array[Long] => new W(a)`).
    It is kept at dynamic -5, below colon-argument (0) and the ascription arrow tail (-1),
    so both keep their upstream trees wherever they can apply; the lambda only wins when
    the `=>` tail cannot parse as a type (`=> new …`, and expression bodies in general
    that are not valid function-type tails). `_braced_typed_lambda` is raised to dynamic 2
    so the braced form keeps winning inside `{ … }`.
-6. The conflict `[$.repeat_pattern, $._simple_expression]` is removed (generator reported it
+7. The conflict `[$.repeat_pattern, $._simple_expression]` is removed (generator reported it
    unnecessary). The conflict `[$.block, $.capture_set]` is moved, with identical content.
 
 ## Fixed shapes (scalac 3.10.0 `-Ystop-after:parser` accepts each)
@@ -118,6 +123,9 @@ published crate for the proof, then restored):
 | typed_term_parameter_polymorphic_function_still_parses | PASS | PASS |
 | slash_tail_operator_names_parse (SC-OPSLASH) | FAIL | PASS |
 | unparenthesized_typed_lambda_parses (SC-TYPEDLAMBDA) | FAIL | PASS |
+| wildcard_typed_lambda_parses (SC-WILDLAMBDA) | FAIL | PASS |
+| keyword_and_operator_symbol_literals_parse (SC-SYMNAME) | FAIL | PASS |
+| stray_semicolons_after_package_parse (SC-SEMI) | FAIL | PASS |
 
 The four FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
-panics. The vendored run is 12/12.
+panics. The vendored run is 15/15.

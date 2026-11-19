@@ -108,3 +108,96 @@ object W {
             (case_clause
               pattern: (identifier)
               body: (identifier))))))))
+
+================================================================================
+Stray semicolons after a package clause (sloplint SC-SEMI)
+================================================================================
+
+package breeze.plot;;;
+
+trait X
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (package_clause
+    name: (package_identifier
+      (identifier)
+      (identifier)))
+  (trait_definition
+    name: (identifier)))
+
+================================================================================
+Wildcard typed lambda in braces (sloplint SC-WILDLAMBDA)
+================================================================================
+
+object O {
+  val f = prepareMonoid { _: Any => () }.andThenPresent(x => y)
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    name: (identifier)
+    body: (template_body
+      (val_definition
+        pattern: (identifier)
+        value: (call_expression
+          function: (field_expression
+            value: (call_expression
+              function: (identifier)
+              arguments: (block
+                (lambda_expression
+                  parameters: (wildcard)
+                  parameters: (type_identifier)
+                  (unit))))
+            field: (identifier))
+          arguments: (arguments
+            (lambda_expression
+              parameters: (identifier)
+              (identifier))))))))
+
+================================================================================
+Operator and keyword symbol literals (sloplint SC-SYMNAME)
+================================================================================
+
+object M {
+  implicit def symbolToFields(x: Symbol) = if (x == '*) x else x
+  val m = new Matrix('row, 'col, 'val, p)
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    name: (identifier)
+    body: (template_body
+      (function_definition
+        (modifiers)
+        name: (identifier)
+        parameters: (parameters
+          (parameter
+            name: (identifier)
+            type: (type_identifier)))
+        body: (if_expression
+          condition: (parenthesized_expression
+            (infix_expression
+              left: (identifier)
+              operator: (operator_identifier)
+              right: (quote_expression
+                (operator_identifier))))
+          consequence: (identifier)
+          alternative: (identifier)))
+      (val_definition
+        pattern: (identifier)
+        value: (instance_expression
+          (type_identifier)
+          arguments: (arguments
+            (quote_expression
+              (identifier))
+            (quote_expression
+              (identifier))
+            (quote_expression
+              (identifier))
+            (identifier)))))))
