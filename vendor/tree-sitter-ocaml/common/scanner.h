@@ -597,12 +597,12 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
       if (lexer->lookahead == '|') {
         delim[dn] = '\0';
         advance(lexer);
-        // Bound the skip at the line end: a cppo tail is line-scoped, so
-        // an unclosed or mistaken opener must not swallow the file.
+        // Raw strings may span newlines (and `\`-escaped line
+        // continuations); only EOF without a closer ends the skip —
+        // anything else would split a legitimate multiline raw string.
         bool closed = false;
         for (;;) {
           if (lexer->lookahead == '\0' && eof(lexer)) break;
-          if (lexer->lookahead == '\n') break;
           if (lexer->lookahead == '|') {
             advance(lexer);
             size_t k = 0;
@@ -636,7 +636,40 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
       }
       continue;
     }
-    if (c == '(') depth++;
+    if (c == '(') {
+      advance(lexer);
+      if (lexer->lookahead == '*') {
+        // `(*` starts a nested comment — its text (including `{x1|`-like
+        // fragments) is not code, so raw-string openers inside comments
+        // can never fire.
+        advance(lexer);
+        int comment_depth = 1;
+        while (comment_depth > 0) {
+          if (lexer->lookahead == '\0' && eof(lexer)) break;
+          if (lexer->lookahead == '(') {
+            advance(lexer);
+            if (lexer->lookahead == '*') {
+              advance(lexer);
+              comment_depth++;
+            }
+            continue;
+          }
+          if (lexer->lookahead == '*') {
+            advance(lexer);
+            if (lexer->lookahead == ')') {
+              advance(lexer);
+              comment_depth--;
+            }
+            continue;
+          }
+          advance(lexer);
+        }
+        continue;
+      }
+      depth++;
+      if (n + 1 < sizeof(buf)) buf[n++] = '(';
+      continue;
+    }
     if (c == ')') {
       if (depth == 0) break;
       depth--;

@@ -364,11 +364,11 @@ fn multiline_string_in_cppo_tail_stays_one_directive() {
 }
 
 #[test]
-fn unclosed_raw_string_opener_in_cppo_tail_stays_line_scoped() {
+fn unclosed_raw_string_opener_in_cppo_comment_stays_hidden() {
     // `{x1|` inside a cppo comment looks like a quoted-string opener
-    // (digits are legal inside a delimiter). An unterminated opener
-    // must not swallow the following declarations: a cppo tail is
-    // line-scoped, so the skip stops at the newline.
+    // (digits are legal inside a delimiter). Comment text is not code:
+    // the tail scan skips `(* ... *)`, so the opener can never fire and
+    // the following declarations stay visible.
     let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
     let mut parser = tree_sitter::Parser::new();
     parser
@@ -408,6 +408,29 @@ fn cppo_directives_parse_in_interface_grammar() {
         assert!(
             !tree.root_node().has_error() && !sexp.contains("MISSING"),
             "interface must parse clean, sexp: {sexp}"
+        );
+    }
+}
+
+#[test]
+fn multiline_raw_string_in_cppo_tail_keeps_arm_arrow() {
+    // A raw string inside a tail may span physical lines (and escaped
+    // continuations) — the skip must reach `|}`/`|tag}` so a `->` after
+    // the closer still reads as the arm's arrow.
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    for source in [
+        "let f = function\n  | `A -> 1\n  | #error when s = {|a\nb|} -> e\n  | `C -> 3\n",
+        "let f = function\n  | `A -> 1\n#define M {|a \\\nb|}\n  | `C -> 3\n",
+    ] {
+        let tree = parser.parse(source, None).expect("parser returns a tree");
+        let sexp = tree.root_node().to_sexp();
+        assert!(
+            !tree.root_node().has_error() && !sexp.contains("MISSING"),
+            "must parse clean, sexp: {sexp}"
         );
     }
 }
