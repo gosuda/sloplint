@@ -127,6 +127,31 @@ fn quotations_in_all_positions_parse() {
     assert_interface_clean("val f : <:ctyp< int >>\nval g : int\n");
 }
 
+// --- quotation in a let binding pattern (review-driven) ------------------------
+
+#[test]
+fn quotation_binding_pattern_parses() {
+    run_clean("let <:patt< `A >> = f 1\n");
+}
+
+// --- colon and dotted tag forms (camlp5 location/module tags) ------------------
+
+#[test]
+fn colon_and_dotted_tags_parse() {
+    run_clean(concat!(
+        "let w = <:expr:< 1 >>\n",
+        "let q = <:m.n< body >>\n",
+        "let v = `1 + 1`\n",
+    ));
+}
+
+// --- raw-identifier variant tags must not be swallowed -------------------------
+
+#[test]
+fn raw_ident_tags_stay_tags() {
+    run_clean("let (`\\#let \\#rec) = x\n");
+}
+
 // --- Controls: still invalid ---------------------------------------------------
 
 #[test]

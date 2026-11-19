@@ -1888,6 +1888,8 @@ export default grammar({
       $.package_pattern,
       $.any_pattern,
       $._extension,
+      $.quotation,
+      $.term_quotation,
     ),
 
     _effect_binding_pattern: $ => choice(
@@ -2638,7 +2640,7 @@ export default grammar({
     // deliberately not a quotation opener: `<<` is a legal custom infix
     // operator in real OCaml (e.g. bap defines `( << )`).
     quotation: $ => seq(
-      /<:[a-zA-Z_]+</,
+      /<:[a-zA-Z_][a-zA-Z_0-9.:]*</,
       repeat(choice(
         $._quotation_content,
         $.quotation,
@@ -2658,7 +2660,7 @@ export default grammar({
     // covered (camlp5 preprocessing is a documented ceiling).
     term_quotation: $ => token(seq(
       '`',
-      /[^`A-Za-z0-9_']/,
+      /[^`\p{L}_'\\]/,
       /[^`]*/,
       '`',
     )),

@@ -9226,6 +9226,14 @@
         {
           "type": "SYMBOL",
           "name": "_extension"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "quotation"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "term_quotation"
         }
       ]
     },
@@ -13512,7 +13520,7 @@
       "members": [
         {
           "type": "PATTERN",
-          "value": "<:[a-zA-Z_]+<"
+          "value": "<:[a-zA-Z_][a-zA-Z_0-9.:]*<"
         },
         {
           "type": "REPEAT",
@@ -13564,7 +13572,7 @@
           },
           {
             "type": "PATTERN",
-            "value": "[^`A-Za-z0-9_']"
+            "value": "[^`\\p{L}_'\\\\]"
           },
           {
             "type": "PATTERN",

@@ -159,3 +159,30 @@ let v = `Ident name
         (tag)
         (value_path
           (value_name))))))
+
+================================================================================
+quotation in binding pattern and colon/dotted tag forms
+================================================================================
+
+let <:patt< `A >> = f 1
+let w = <:expr:< 1 >>
+let q = <:m.n< body >>
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (value_definition
+    (let_binding
+      (quotation)
+      (application_expression
+        (value_path
+          (value_name))
+        (number))))
+  (value_definition
+    (let_binding
+      (value_name)
+      (quotation)))
+  (value_definition
+    (let_binding
+      (value_name)
+      (quotation))))

@@ -876,6 +876,10 @@
         "named": true
       },
       {
+        "type": "quotation",
+        "named": true
+      },
+      {
         "type": "quoted_extension",
         "named": true
       },
@@ -885,6 +889,10 @@
       },
       {
         "type": "tag",
+        "named": true
+      },
+      {
+        "type": "term_quotation",
         "named": true
       },
       {
