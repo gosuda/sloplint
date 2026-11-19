@@ -5601,8 +5601,21 @@
           "type": "CHOICE",
           "members": [
             {
-              "type": "SYMBOL",
-              "name": "_receiver_type"
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_receiver_type"
+                },
+                {
+                  "type": "PREC_DYNAMIC",
+                  "value": 2,
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "parenthesized_expression"
+                  }
+                }
+              ]
             },
             {
               "type": "BLANK"
@@ -6403,7 +6416,7 @@
     },
     "_reserved_identifier": {
       "type": "PREC_DYNAMIC",
-      "value": 1,
+      "value": 0,
       "content": {
         "type": "ALIAS",
         "content": {
@@ -6629,10 +6642,6 @@
       "_reserved_identifier"
     ],
     [
-      "_receiver_type",
-      "_reserved_identifier"
-    ],
-    [
       "platform_modifier",
       "_reserved_identifier"
     ],
@@ -6662,6 +6671,10 @@
     ],
     [
       "_receiver_type"
+    ],
+    [
+      "callable_reference",
+      "primary_expression"
     ],
     [
       "context_parameters",

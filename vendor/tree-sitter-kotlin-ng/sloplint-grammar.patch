@@ -1,8 +1,6 @@
-diff --git a/grammar.js b/grammar.js
-index 0e0078a..b810e7f 100644
---- a/grammar.js
-+++ b/grammar.js
-@@ -50,9 +50,12 @@ module.exports = grammar({
+--- /tmp/upstream-kt-src/grammar.js	2026-11-19 22:13:55.831239550 +0000
++++ vendor/tree-sitter-kotlin-ng/grammar.js	2026-11-19 22:56:46.448774330 +0000
+@@ -50,9 +50,12 @@
  
      [$.function_value_parameters, $.function_type_parameters],
      [$.parenthesized_type, $.function_type_parameters],
@@ -15,17 +13,18 @@ index 0e0078a..b810e7f 100644
      [$.platform_modifier, $._reserved_identifier],
      [$.property_modifier, $._reserved_identifier],
  
-@@ -63,6 +66,9 @@ module.exports = grammar({
+@@ -63,6 +66,10 @@
      [$.non_nullable_type],
      [$.function_type],
      [$._receiver_type],
++    [$.callable_reference, $.primary_expression],
 +    [$.context_parameters, $._reserved_identifier],
 +    [$.modifiers, $.type_modifiers],
 +    [$.secondary_constructor, $._reserved_identifier],
    ],
  
    extras: $ => [
-@@ -155,6 +161,7 @@ module.exports = grammar({
+@@ -155,6 +162,7 @@
      ),
  
      class_declaration: $ => prec.right(seq(
@@ -33,7 +32,7 @@ index 0e0078a..b810e7f 100644
        optional($.modifiers),
        choice('class', seq(optional('fun'), 'interface')),
        field('name', $.identifier),
-@@ -174,6 +181,7 @@ module.exports = grammar({
+@@ -174,6 +182,7 @@
      )),
  
      property_declaration: $ => prec.right(seq(
@@ -41,7 +40,7 @@ index 0e0078a..b810e7f 100644
        optional($.modifiers),
        choice('val', 'var'),
        optional($.type_parameters),
-@@ -186,11 +194,21 @@ module.exports = grammar({
+@@ -186,11 +195,21 @@
        )),
        optional(';'),
        optional(choice(
@@ -63,7 +62,7 @@ index 0e0078a..b810e7f 100644
      type_alias: $ => prec.right(seq(
        optional($.modifiers),
        'typealias',
-@@ -265,6 +283,7 @@ module.exports = grammar({
+@@ -265,6 +284,7 @@
      constructor_invocation: $ => seq($.type, $.value_arguments),
  
      function_declaration: $ => prec.right(1, seq(
@@ -71,7 +70,7 @@ index 0e0078a..b810e7f 100644
        optional($.modifiers),
        'fun',
        optional($.type_parameters),
-@@ -322,6 +341,14 @@ module.exports = grammar({
+@@ -322,6 +342,14 @@
        $.primary_expression,
      ),
  
@@ -86,7 +85,7 @@ index 0e0078a..b810e7f 100644
      getter: $ => prec.right(seq(
        optional($.modifiers),
        'get',
-@@ -415,7 +442,7 @@ module.exports = grammar({
+@@ -415,7 +443,7 @@
  
      enum_entry: $ => seq(
        optional($.modifiers),
@@ -95,7 +94,7 @@ index 0e0078a..b810e7f 100644
        optional($.value_arguments),
        optional($.class_body),
      ),
-@@ -427,7 +454,7 @@ module.exports = grammar({
+@@ -427,7 +455,7 @@
      ),
  
      value_argument: $ => seq(
@@ -104,7 +103,7 @@ index 0e0078a..b810e7f 100644
        optional('*'),
        $.expression,
      ),
-@@ -593,6 +620,7 @@ module.exports = grammar({
+@@ -593,6 +621,7 @@
  
      function_type: $ => seq(
        optional($.type_modifiers),
@@ -112,7 +111,7 @@ index 0e0078a..b810e7f 100644
        optional(seq($._receiver_type, '.')),
        $.function_type_parameters,
        '->',
-@@ -605,7 +633,8 @@ module.exports = grammar({
+@@ -605,7 +634,8 @@
        ')',
      ),
  
@@ -122,7 +121,7 @@ index 0e0078a..b810e7f 100644
  
      assignment: $ => seq(
        field('left', $.expression),
-@@ -752,6 +781,7 @@ module.exports = grammar({
+@@ -752,6 +782,7 @@
      ),
  
      lambda_literal: $ => seq(
@@ -130,7 +129,7 @@ index 0e0078a..b810e7f 100644
        '{',
        optional(seq(optional($.lambda_parameters), '->')),
        optionalSep1($.statement, $._semi),
-@@ -825,7 +855,9 @@ module.exports = grammar({
+@@ -825,7 +856,9 @@
  
      parenthesized_expression: $ => seq('(', $.expression, ')'),
  
@@ -141,7 +140,7 @@ index 0e0078a..b810e7f 100644
  
      when_expression: $ => seq(
        'when',
-@@ -853,6 +885,11 @@ module.exports = grammar({
+@@ -853,6 +886,11 @@
            commaSep1(field('condition', $._when_condition)),
            optional(','),
          ),
@@ -153,7 +152,21 @@ index 0e0078a..b810e7f 100644
          'else',
        ),
        '->',
-@@ -929,7 +966,7 @@ module.exports = grammar({
+@@ -922,14 +960,20 @@
+     ),
+ 
+     callable_reference: $ => seq(
+-      optional($._receiver_type),
++      optional(choice(
++        $._receiver_type,
++        // `(v)::class` on a value receiver: the parenthesized-expression
++        // reading wins over `parenthesized_type`, which only stays for real
++        // type shapes like `(Pair<A, B>)::class` that can't be expressions.
++        prec.dynamic(2, $.parenthesized_expression),
++      )),
+       '::',
+       choice($.identifier, 'class'),
+     ),
  
      navigation_expression: $ => prec(PREC.CALL, seq(
        $.expression,
@@ -162,7 +175,7 @@ index 0e0078a..b810e7f 100644
        $.identifier,
      )),
  
-@@ -940,6 +977,7 @@ module.exports = grammar({
+@@ -940,6 +984,7 @@
      ),
  
      string_literal: $ => seq(
@@ -170,7 +183,7 @@ index 0e0078a..b810e7f 100644
        '"',
        repeat(choice(
          alias(choice(
-@@ -956,14 +994,17 @@ module.exports = grammar({
+@@ -956,14 +1001,17 @@
      ),
  
      multiline_string_literal: $ => seq(
@@ -189,7 +202,16 @@ index 0e0078a..b810e7f 100644
      interpolation: $ => choice(
        seq('$', $._identifier),
        seq('${', $.expression, '}'),
-@@ -1059,6 +1100,9 @@ module.exports = grammar({
+@@ -1045,7 +1093,7 @@
+       /`[^\r\n`]+`/,
+     )),
+ 
+-    _reserved_identifier: $ => prec.dynamic(1, alias(
++    _reserved_identifier: $ => prec.dynamic(0, alias(
+       choice(
+         'actual',
+         'annotation',
+@@ -1059,6 +1107,9 @@
          'set',
          'operator',
          'value',
@@ -199,198 +221,3 @@ index 0e0078a..b810e7f 100644
        ),
        $.identifier,
      )),
-diff --git a/src/scanner.c b/src/scanner.c
-index 8f9d287..5d26fc6 100644
---- a/src/scanner.c
-+++ b/src/scanner.c
-@@ -61,6 +61,58 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
-     return false;
- }
- 
-+static bool get_call_follows(TSLexer *lexer) {
-+    if (lexer->lookahead != '(') {
-+        return false;
-+    }
-+    skip(lexer);
-+    while (iswspace(lexer->lookahead)) {
-+        skip(lexer);
-+    }
-+    return lexer->lookahead != ')';
-+}
-+
-+// Skips whitespace and comments. Returns whether at least one comment was
-+// skipped, so callers can tell comment-crossed tokens from adjacent ones.
-+static bool skip_ws_comments(TSLexer *lexer) {
-+    bool comment = false;
-+    for (;;) {
-+        while (iswspace(lexer->lookahead)) {
-+            skip(lexer);
-+        }
-+        if (lexer->lookahead != '/') {
-+            return comment;
-+        }
-+        skip(lexer);
-+        if (lexer->lookahead == '/') {
-+            while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
-+                skip(lexer);
-+            }
-+            comment = true;
-+            continue;
-+        }
-+        if (lexer->lookahead != '*') {
-+            return comment;
-+        }
-+        comment = true;
-+        // Consume the `*` of `/*` before nesting so `/*/x*/` cannot close early.
-+        skip(lexer);
-+        // Block comments may nest in Kotlin.
-+        unsigned depth = 1;
-+        while (depth > 0 && !lexer->eof(lexer)) {
-+            wchar_t c = lexer->lookahead;
-+            skip(lexer);
-+            if (c == '/' && lexer->lookahead == '*') {
-+                depth++;
-+                skip(lexer);
-+            } else if (c == '*' && lexer->lookahead == '/') {
-+                depth--;
-+                skip(lexer);
-+            }
-+        }
-+    }
-+}
-+
- void *tree_sitter_kotlin_external_scanner_create() { return NULL; }
- 
- void tree_sitter_kotlin_external_scanner_destroy(void *payload) {}
-@@ -166,6 +218,8 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
-                     return false;
-                 case 'i':
-                     return scan_word(lexer, "import");
-+                case '}':
-+                    return valid_symbols[CLASS_MEMBER_SEMI] && !valid_symbols[SEMI];
-                 case ';':
-                     advance(lexer);
-                     lexer->mark_end(lexer);
-@@ -178,9 +232,11 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
-         char scanned_word[16] = {0};
-     _switch:
-         switch (lexer->lookahead) {
-+            case ':':
-+                advance(lexer);
-+                return lexer->lookahead == ':';
-             case ',':
-             case '.':
--            case ':':
-             case '*':
-             case '%':
-             case '>':
-@@ -224,6 +280,12 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
-                     goto q_dot_from_semi;
-                 }
-                 return true;
-+            // `class C\n(params)` — a `(` continuing a declaration head must
-+            // not take a semicolon. In expression position `x\n(y)` stays two
-+            // statements; nullable-chain (`?.`) and `!is` continuations mark
-+            // that state, so the semi is kept wherever either is valid.
-+            case '(':
-+                return valid_symbols[Q_DOT] || valid_symbols[NOT_IS];
-             case 'e':
-             case 'i':
-             case 'g':
-@@ -238,23 +300,30 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
-             case 'c':
-             case 'b':
-             case 'w':
-+                bool crossed_comment = false;
-                 while (scan_words(lexer,
-                                   (const char[16][16]){"public", "private", "protected", "internal", "abstract",
-                                                        "final", "open", "override", "lateinit", "vararg", "noinline",
-                                                        "crossinline", "external", "suspend", "inline"},
-                                   scanned_word, NULL)) {
-                     memset(scanned_word, 0, MAX_WORD_SIZE);
--                    while (iswspace(lexer->lookahead)) {
--                        skip(lexer);
--                    }
-+                    crossed_comment |= skip_ws_comments(lexer);
-                 }
- 
-                 uint8_t index = -1;
-                 bool res = scan_words(
-                     lexer,
--                    (const char[16][16]){"else", "in", "instanceof", "get", "set", "constructor", "by", "as", "where"},
-+                    (const char[16][16]){"else", "in", "instanceof", "get", "set", "constructor", "by", "as",
-+                                        "where", "field"},
-                     scanned_word, &index);
- 
-+                // A continuation keyword (else/in/instanceof/by/as/where) after a comment crossed in the
-+                // modifier loop means the preceding word was an identifier, not a member modifier, so
-+                // this line is a new statement rather than a continuation of the previous expression.
-+                if (crossed_comment && (index <= 2 || (index >= 6 && index <= 8))) {
-+                    return true;
-+                }
-+
-                 // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
-                 // we found a variable named constructor whose field is being accessed
-                 if (index == 5) {
-@@ -279,18 +348,22 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
-                     }
-                 }
-                 // If `get` was found and the keyword is not valid, return a semi since it's being used as an identifier
--                else if (index == 3 && (!valid_symbols[GET] || lexer->lookahead == '[')) {
-+                else if (index == 3 && (!valid_symbols[GET] || lexer->lookahead == '[' || get_call_follows(lexer))) {
-                     return true;
-                 }
-                 // If `set` was found and the keyword is not valid, return a semi since it's being used as an identifier
-                 else if (index == 4 && (!valid_symbols[SET] || lexer->lookahead == '[' || lexer->lookahead == '(' ||
-                                         lexer->lookahead == '.')) {
-                     if (lexer->lookahead == '(' && valid_symbols[SET]) {
--                        // skip until the closing parenthesis
--                        while (lexer->lookahead != ')' && !lexer->eof(lexer)) {
-+                        unsigned depth = 0;
-+                        do {
-+                            if (lexer->lookahead == '(') {
-+                                depth++;
-+                            } else if (lexer->lookahead == ')') {
-+                                depth--;
-+                            }
-                             skip(lexer);
--                        }
--                        skip(lexer);
-+                        } while (depth > 0 && !lexer->eof(lexer));
- 
-                         while (iswspace(lexer->lookahead)) {
-                             if (lexer->lookahead == '\n') {
-@@ -307,6 +380,33 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
-                 else if (index == 1 && valid_symbols[IN]) {
-                     return true;
-                 }
-+                // If `field` was found at class member position and a `:` or `=`
-+                // follows (comments permitted between), this is a Kotlin 2.x explicit
-+                // backing field continuing the property declaration — no semi.
-+                else if (index == 9) {
-+                    // A `field: T = expr` tail can only be a Kotlin 2.x explicit
-+                    // backing field — a `field:` statement is never valid — so the
-+                    // semi is suppressed wherever a statement separator is allowed.
-+                    // A `field = expr` tail is ambiguous with a plain assignment to
-+                    // an identifier named `field`, so it suppresses only at class
-+                    // member position, where a bare identifier cannot start a member.
-+                    if (!valid_symbols[SEMI] && !valid_symbols[CLASS_MEMBER_SEMI]) {
-+                        return true;
-+                    }
-+                    skip_ws_comments(lexer);
-+                    if (lexer->lookahead == ':') {
-+                        skip(lexer);
-+                        return lexer->lookahead == ':';
-+                    }
-+                    if (lexer->lookahead == '=') {
-+                        if (!valid_symbols[CLASS_MEMBER_SEMI]) {
-+                            return true;
-+                        }
-+                        skip(lexer);
-+                        return lexer->lookahead == '=';
-+                    }
-+                    return true;
-+                }
-                 return !res;
-             case ';':
-                 advance(lexer);

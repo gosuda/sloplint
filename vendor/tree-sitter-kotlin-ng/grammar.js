@@ -66,6 +66,7 @@ module.exports = grammar({
     [$.non_nullable_type],
     [$.function_type],
     [$._receiver_type],
+    [$.callable_reference, $.primary_expression],
     [$.context_parameters, $._reserved_identifier],
     [$.modifiers, $.type_modifiers],
     [$.secondary_constructor, $._reserved_identifier],
@@ -959,7 +960,13 @@ module.exports = grammar({
     ),
 
     callable_reference: $ => seq(
-      optional($._receiver_type),
+      optional(choice(
+        $._receiver_type,
+        // `(v)::class` on a value receiver: the parenthesized-expression
+        // reading wins over `parenthesized_type`, which only stays for real
+        // type shapes like `(Pair<A, B>)::class` that can't be expressions.
+        prec.dynamic(2, $.parenthesized_expression),
+      )),
       '::',
       choice($.identifier, 'class'),
     ),
@@ -1086,7 +1093,7 @@ module.exports = grammar({
       /`[^\r\n`]+`/,
     )),
 
-    _reserved_identifier: $ => prec.dynamic(1, alias(
+    _reserved_identifier: $ => prec.dynamic(0, alias(
       choice(
         'actual',
         'annotation',
