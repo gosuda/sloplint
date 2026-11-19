@@ -51,6 +51,7 @@ languages! {
     OcamlInterface => "ocaml", &[".mli"];
     Odin => "odin", &[".odin"];
     Starlark => "starlark", &[".bzl", ".star", ".BUILD", ".bazel"];
+    Lean => "lean", &[".lean"];
 }
 
 const HEADER_EXTENSION: &str = ".h";

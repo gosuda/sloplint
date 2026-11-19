@@ -15,6 +15,7 @@ pub(crate) mod go;
 pub(crate) mod java;
 pub(crate) mod javascript;
 pub(crate) mod kotlin;
+pub(crate) mod lean;
 pub(crate) mod logos;
 pub(crate) mod objc;
 pub(crate) mod ocaml;
@@ -117,6 +118,7 @@ fn grammar(lang: Lang) -> (tree_sitter::Language, Table, &'static dyn LangHooks)
             starlark::TABLE,
             &starlark::HOOKS,
         ),
+        Lang::Lean => (tree_sitter_lean::LANGUAGE.into(), lean::TABLE, &lean::HOOKS),
     }
 }
 

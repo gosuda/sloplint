@@ -78,6 +78,11 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
             blocks: &[(b"(*", b"*)")],
             code: &[],
         },
+        Lang::Lean => CommentSyntax {
+            lines: &[b"--"],
+            blocks: &[(b"/-", b"-/")],
+            code: &[],
+        },
     }
 }
 
