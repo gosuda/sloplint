@@ -1,5 +1,5 @@
 --- grammars/ocaml/grammar.js	2006-07-24 01:21:28.000000000 +0000
-+++ grammars/ocaml/grammar.js	2026-11-19 08:12:47.883907257 +0000
++++ grammars/ocaml/grammar.js	2026-11-19 08:21:24.338549026 +0000
 @@ -50,6 +50,15 @@
      [$._include_or_include_functor],
      [$._module_typed, $.functor_type],
@@ -245,7 +245,7 @@
  });
  
 --- common/scanner.h	2006-07-24 01:21:28.000000000 +0000
-+++ common/scanner.h	2026-11-19 08:14:31.383031838 +0000
++++ common/scanner.h	2026-11-19 08:25:33.753029601 +0000
 @@ -16,6 +16,9 @@
    LINE_NUMBER_DIRECTIVE,
    NULL_CHARACTER,
@@ -270,7 +270,7 @@
  static inline bool is_identchar(const int32_t c) {
    return is_identstart(c) || (c >= '0' && c <= '9') || c == '\'';
  }
-@@ -390,6 +400,354 @@
+@@ -390,6 +400,362 @@
    return false;
  }
  
@@ -520,6 +520,14 @@
 +        int comment_depth = 1;
 +        while (comment_depth > 0) {
 +          if (lexer->lookahead == '\0' && eof(lexer)) break;
++          // OCaml comment lexing tracks strings: `(* "(*" *)` is one
++          // comment (the `(*` inside the literal does not nest) and
++          // `(* "*)" *)` is too (the `*)` inside cannot close it).
++          if (lexer->lookahead == '"') {
++            advance(lexer);
++            scan_string(lexer);
++            continue;
++          }
 +          if (lexer->lookahead == '(') {
 +            advance(lexer);
 +            if (lexer->lookahead == '*') {
@@ -625,7 +633,7 @@
  static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
    int32_t last = 0;
  
-@@ -521,7 +879,9 @@
+@@ -521,7 +887,9 @@
      return true;
    }
  
@@ -635,7 +643,7 @@
      skip(lexer);
    }
  
-@@ -533,39 +893,98 @@
+@@ -533,39 +901,98 @@
      return true;
    }
  

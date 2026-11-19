@@ -432,15 +432,66 @@ fn multiline_raw_string_in_cppo_tail_keeps_arm_arrow() {
     parser
         .set_language(&language)
         .expect("ocaml language loads");
-    for source in [
-        "let f = function\n  | `A -> 1\n  | #error when s = {|a\nb|} -> e\n  | `C -> 3\n",
-        "let f = function\n  | `A -> 1\n#define M {|a \\\nb|}\n  | `C -> 3\n",
+    for (source, match_cases, directives) in [
+        // The guarded `#error` arm survives as a match_case with a
+        // `when` guard — the multiline raw string can't eat its arrow.
+        (
+            "let f = function\n  | `A -> 1\n  | #error when s = {|a\nb|} -> e\n  | `C -> 3\n",
+            3,
+            0,
+        ),
+        // A `#define` with a multiline raw string stays a separate
+        // directive node between the two real arms.
+        (
+            "let f = function\n  | `A -> 1\n#define M {|a \\\nb|}\n  | `C -> 3\n",
+            2,
+            1,
+        ),
     ] {
         let tree = parser.parse(source, None).expect("parser returns a tree");
         let sexp = tree.root_node().to_sexp();
         assert!(
             !tree.root_node().has_error() && !sexp.contains("MISSING"),
             "must parse clean, sexp: {sexp}"
+        );
+        assert_eq!(
+            sexp.matches("match_case").count(),
+            match_cases,
+            "arm structure wrong, sexp: {sexp}"
+        );
+        assert_eq!(
+            sexp.matches("cppo_directive").count(),
+            directives,
+            "directive placement wrong, sexp: {sexp}"
+        );
+    }
+}
+
+#[test]
+fn quoted_comment_markers_in_cppo_tail_comment_stay_hidden() {
+    // OCaml comment lexing tracks strings: `(* "(*" *)` and `(* "*)" *)`
+    // are each one complete comment — marker text inside the literal can
+    // neither nest nor close early, so the arms after the directive must
+    // survive intact.
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    for source in [
+        "let f x =\n  match x with\n  | `A -> 1\n#if G (* \"(*\" *)\n  | `B -> 2\n#endif\n  | `C -> 3\n",
+        "let f x =\n  match x with\n  | `A -> 1\n#if G (* \")\" *)\n  | `B -> 2\n#endif\n  | `C -> 3\n",
+    ] {
+        let tree = parser.parse(source, None).expect("parser returns a tree");
+        let sexp = tree.root_node().to_sexp();
+        assert!(
+            !tree.root_node().has_error() && !sexp.contains("MISSING"),
+            "must parse clean, sexp: {sexp}"
+        );
+        assert_eq!(
+            sexp.matches("match_case").count(),
+            3,
+            "all three arms must survive, sexp: {sexp}"
         );
     }
 }

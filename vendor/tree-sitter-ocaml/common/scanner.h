@@ -646,6 +646,14 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
         int comment_depth = 1;
         while (comment_depth > 0) {
           if (lexer->lookahead == '\0' && eof(lexer)) break;
+          // OCaml comment lexing tracks strings: `(* "(*" *)` is one
+          // comment (the `(*` inside the literal does not nest) and
+          // `(* "*)" *)` is too (the `*)` inside cannot close it).
+          if (lexer->lookahead == '"') {
+            advance(lexer);
+            scan_string(lexer);
+            continue;
+          }
           if (lexer->lookahead == '(') {
             advance(lexer);
             if (lexer->lookahead == '*') {
