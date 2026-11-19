@@ -653,6 +653,14 @@ build-dependency. After every regen, refresh the packed copy:
 ```
 gzip -9 -c src/parser.c > src/parser.c.gz
 ```
+
+A `src/parser.c` left behind by an earlier `tree-sitter generate` run is
+gitignored, so pulling a regen does not remove it, and the build still
+compiles the leftover instead of the packed copy. The leftover keeps its
+old language version, so it reproduces the mismatch the regen fixed.
+After pulling a regen you did not run yourself, delete the leftover
+first with `rm -f src/parser.c`.
+
 - **`#` lines with no directive name** — inherited from the C base via
   `sloplint-c-base.patch`: `preproc_null` covers the null directive and the
   `# comment` banner idiom (heavy in boost `.hpp`/`.ipp` headers — the
