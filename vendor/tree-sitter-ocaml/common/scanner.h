@@ -429,27 +429,92 @@ static int scan_cppo_name(TSLexer *lexer) {
   return -1;
 }
 
-// Directive tail: consumes to end of line; `\<anything>` is a cppo
-// continuation/escape pair. Tracks whether a literal `->` occurs (a `-`
-// directly before `>`), which cppo directives never carry between match
-// arms. Returns false only on `->` when `no_arrow` is forced by the
-// caller for the whole line.
-static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow) {
+// Directive tail: consumes to end of line. `\<anything>` is a cppo
+// continuation/escape pair and `"..."` arguments are skipped so an
+// arrow inside a quoted argument (`#error "a -> b"`) does not read as
+// a match-arm arrow. `(`/`)` depth is tracked and a `)` that would
+// close an enclosing pair ends the token, so a directive claimed
+// inside parentheses (`o #define (fun y -> y))`) can never swallow
+// the caller's delimiters.
+//
+// `has_arrow` reports a literal `->` anywhere on the line (outside
+// strings). `arm_shape` reports whether the text before the first
+// `->` is empty or ` as <lowercase-ident>` — the shape of a
+// polymorphic-variant arm (`| `#name as v ->`), which is not a
+// directive even when the name collides with a cppo directive name
+// (`#stop`, `#warning`, `#defined`).
+static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
+                           bool *arm_shape) {
+  char buf[256];
+  size_t n = 0;
+  int depth = 0;
+  bool in_str = false;
+
+  *has_arrow = false;
+  *arm_shape = false;
   for (;;) {
     int32_t c = lexer->lookahead;
-    if (c == '\n' || (c == '\0' && eof(lexer))) return;
+    if (c == '\n' || (c == '\0' && eof(lexer))) break;
+    if (in_str) {
+      if (c == '\\') {
+        advance(lexer);
+        if (!eof(lexer)) advance(lexer);
+        continue;
+      }
+      if (c == '"') in_str = false;
+      advance(lexer);
+      continue;
+    }
+    if (c == '"') {
+      in_str = true;
+      advance(lexer);
+      continue;
+    }
     if (c == '\\') {
       advance(lexer);
       if (!eof(lexer)) advance(lexer);
       continue;
     }
-    if (c == '-') {
-      advance(lexer);
-      if (lexer->lookahead == '>') *has_arrow = true;
-      continue;
+    if (c == '(') depth++;
+    if (c == ')') {
+      if (depth == 0) break;
+      depth--;
     }
+    if (n + 1 < sizeof(buf)) buf[n++] = (char)c;
     advance(lexer);
+    if (c == '-' && lexer->lookahead == '>') *has_arrow = true;
   }
+
+  if (!*has_arrow) return;
+  buf[n] = '\0';
+  const char *arrow = strstr(buf, "->");
+  if (!arrow) return;  // arrow fell past the captured prefix
+  const char *p = buf;
+  const char *end = arrow;
+  while (p < end && (*p == ' ' || *p == '\t')) p++;
+  if (p == end) {
+    *arm_shape = true;  // `| `#name ->` — bare variant tag
+    return;
+  }
+  if (end - p < 4 || p[0] != 'a' || p[1] != 's' ||
+      (p[2] != ' ' && p[2] != '\t')) {
+    return;
+  }
+  p += 2;
+  while (p < end && (*p == ' ' || *p == '\t')) p++;
+  if (p >= end ||
+      !((*p >= 'a' && *p <= 'z') || *p == '_')) {
+    return;  // `as` binds a lowercase value name
+  }
+  p++;
+  while (p < end && (*p == '_' || *p == '\'' ||
+                     (*p >= 'a' && *p <= 'z') ||
+                     (*p >= 'A' && *p <= 'Z') ||
+                     (*p >= '0' && *p <= '9'))) {
+    p++;
+  }
+  while (p < end && (*p == ' ' || *p == '\t')) p++;
+  *arm_shape = p == end;
 }
 
 static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
@@ -655,25 +720,26 @@ static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
       return true;
     }
 
-    int cppo_name = -1;
     if ((valid_symbols[CPPO_DIRECTIVE] ||
          valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) &&
-        (cppo_name = scan_cppo_name(lexer)) >= 0) {
+        scan_cppo_name(lexer) >= 0) {
       bool has_arrow = false;
-      scan_cppo_tail(lexer, &has_arrow);
+      bool arm_shape = false;
+      scan_cppo_tail(lexer, &has_arrow, &arm_shape);
       if (!has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
         if (lexer->lookahead == '\n') advance(lexer);
         lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
         return true;
       }
-      // `| #error as e -> pp` is a polymorphic-variant arm, not a
-      // directive: only `#error`/`#warning` lines carrying `->` keep the
-      // arm read, because those are the cppo names real corpus code uses
-      // as variant tags. Any other arrow-bearing name at a match
-      // position (`#define F x -> y` between arms) is a directive line —
-      // emit the no-arrow token so the match stays open.
+      // `| `#name as v -> ...` is a polymorphic-variant arm, not a
+      // directive: when the tail before `->` is only ` as <ident>` or
+      // nothing, the line is an arm whichever name it uses (`#error`,
+      // `#warning`, `#stop`, ...). Any other arrow-bearing name at a
+      // match position (`#define g (fun x -> x)` between arms) is
+      // directive text — emit the no-arrow token so the match stays
+      // open.
       if (has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
-        if (cppo_name == 9 || cppo_name == 10) return false;
+        if (arm_shape) return false;
         if (lexer->lookahead == '\n') advance(lexer);
         lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
         return true;

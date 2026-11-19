@@ -422,12 +422,72 @@ fn double_hash_before_non_ascii_ident_is_operator() {
 // no-arrow token keeps the match open so the next `|` arm still parses.
 #[test]
 fn cppo_directive_with_arrow_between_arms_keeps_match_open() {
-    run_clean(concat!(
+    let source = concat!(
         "let f = function\n",
         "  | `A -> 1\n",
         "#define g (fun x -> x)\n",
         "  | `B -> 2\n",
         "let h = 3\n",
+    );
+    run_clean(source);
+    // The function must contain both match cases with the directive
+    // between them — error-free alone could hide a directive that ate
+    // the second arm.
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        sexp.contains("function_expression")
+            && sexp.matches("(match_case").count() == 2
+            && sexp.matches("(cppo_directive").count() == 1
+            && sexp.find("(match_case") < sexp.find("(cppo_directive")
+            && sexp.find("(cppo_directive") < sexp.rfind("(match_case"),
+        "directive must sit between the two match cases, sexp: {sexp}"
+    );
+}
+
+// `#name` lines whose tail before `->` is ` as <ident>` are
+// polymorphic-variant arms for EVERY cppo-colliding name — `#stop` is a
+// cppo name too, and `#defined` prefix-matches `define`.
+#[test]
+fn hash_other_names_variant_arms_stay_arms() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "  | #stop as x -> use x\n",
+        "  | #defined as d -> use d\n",
+        "let g = 2\n",
+    ));
+}
+
+// A `->` inside a quoted directive argument is not a match-arm arrow:
+// `#warning "a -> b"` between arms is a diagnostic directive, never a
+// method call on the previous arm's result.
+#[test]
+fn cppo_directive_quoted_arrow_between_arms_parses() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "#warning \"a -> b\"\n",
+        "  | `B -> 2\n",
+        "let g = 2\n",
+    ));
+}
+
+// A directive claimed inside parentheses ends before a `)` that closes
+// the enclosing pair, so `o #define (fun y -> y))` keeps its parens
+// balanced instead of letting the directive swallow them.
+#[test]
+fn hash_directive_inside_parens_keeps_close_paren() {
+    run_clean(concat!(
+        "let f x = match x with\n",
+        "  | A -> (o #define (fun y -> y))\n",
+        "  | B -> 1\n",
+        "let g = 2\n",
     ));
 }
 

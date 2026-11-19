@@ -2669,12 +2669,15 @@ export default grammar({
     // external tokens (common/scanner.h): they claim `#`/`##` at column 0
     // or right after skipped whitespace, so `| #ifdef FEATURE` inside a
     // match works while a `#`/`##` butted against a token (`o#error x`,
-    // `o##name`) stays a method call / hash operator. The no-arrow
-    // variant additionally refuses lines containing a literal `->`,
-    // keeping `| #error as e -> ...` polymorphic-variant arms free of
-    // the directive parse; when the match-position variant is expected
-    // alone, the refusal applies even where the structure-level variant
-    // is also valid.
+    // `o##name`) stays a method call / hash operator. A `->` inside a
+    // quoted argument does not count, and a `)` that would close an
+    // enclosing pair ends the token, so a directive inside parentheses
+    // (`o #define (fun y -> y))`) keeps the parens balanced. The
+    // no-arrow variant additionally refuses lines whose pre-`->` text is
+    // ` as <ident>` or empty — the shape of a `| `#name as v -> ...`
+    // polymorphic-variant arm — for every `#name`, while other
+    // arrow-bearing lines (`#define g (fun x -> x)` between arms) still
+    // claim as directive text.
     //
     // cppo directive names: define, include, if, ifdef, ifndef, elif,
     // else, endif, undef, error, warning, pragma, line, ext, endext,
