@@ -443,8 +443,8 @@ static int scan_cppo_name(TSLexer *lexer) {
 // polymorphic-variant arm (`| `#name as v ->`), which is not a
 // directive even when the name collides with a cppo directive name
 // (`#stop`, `#warning`, `#defined`).
-static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
-                           bool *arm_shape) {
+static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
+                           bool section_name) {
   char buf[256];
   size_t n = 0;
   size_t arrow_off = (size_t)-1;
@@ -459,19 +459,10 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
       // A `->` on a later line still separates a multi-line arm (`| #name
       // when g\n  -> e`): peek past the break for it. mark_end keeps
       // the token's extent at the newline; the look-ahead chars are
-      // re-lexed for the next token. The peek only runs when the tail
-      // already has arm shape (`when`/`as` prefix): a bare directive
-      // (`#endif`, `#else`, `#elif`) must never claim the enclosing
-      // arm's arrow.
-      size_t i = 0;
-      while (i < n && (buf[i] == ' ' || buf[i] == '\t')) i++;
-      bool arm_prefix =
-          (i + 5 <= n && buf[i] == 'w' && buf[i + 1] == 'h' &&
-           buf[i + 2] == 'e' && buf[i + 3] == 'n' &&
-           (buf[i + 4] == ' ' || buf[i + 4] == '\t')) ||
-          (i + 3 <= n && buf[i] == 'a' && buf[i + 1] == 's' &&
-           (buf[i + 2] == ' ' || buf[i + 2] == '\t'));
-      if (arm_prefix) {
+      // re-lexed for the next token. Conditional-section names
+      // (`#if`..`#endif`) are never arm patterns, so a bare `#endif`
+      // must not claim the enclosing arm's arrow.
+      if (!section_name) {
         lexer->mark_end(lexer);
         while (lexer->lookahead == '\n' || lexer->lookahead == ' ' ||
                lexer->lookahead == '\t' || lexer->lookahead == '\r') {
@@ -799,11 +790,16 @@ static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     }
 
     if ((valid_symbols[CPPO_DIRECTIVE] ||
-         valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) &&
-        scan_cppo_name(lexer) >= 0) {
+         valid_symbols[CPPO_DIRECTIVE_NO_ARROW])) {
+      int cppo_idx = scan_cppo_name(lexer);
+      if (cppo_idx < 0) return false;
+      // `if`/`ifdef`/`ifndef`/`elif`/`else`/`endif` are conditional-
+      // section names — never polymorphic-variant arm patterns, so
+      // their tails skip the next-line arrow peek.
+      bool section_name = cppo_idx >= 2 && cppo_idx <= 7;
       bool has_arrow = false;
       bool arm_shape = false;
-      scan_cppo_tail(lexer, &has_arrow, &arm_shape);
+      scan_cppo_tail(lexer, &has_arrow, &arm_shape, section_name);
       if (!has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
         if (lexer->lookahead == '\n') advance(lexer);
         lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;

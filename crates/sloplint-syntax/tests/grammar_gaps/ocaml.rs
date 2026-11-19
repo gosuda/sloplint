@@ -636,27 +636,51 @@ fn hash_error_variant_arm_still_stays_arm() {
 }
 
 // A bare section directive (`#endif`) inside a nested match must not
-// claim the enclosing arm's `->` on the next line: the peek past the
-// newline only applies to arm-shaped tails (`when`/`as` prefixes), so
-// the directive stays a directive and the outer arm keeps its arrow.
+// claim the enclosing arm's `->` on the next line: conditional-section
+// names skip the newline peek, so the directive stays a directive and
+// the outer arm keeps its arrow.
 #[test]
 fn bare_directive_before_enclosing_arrow_stays_directive() {
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    for name in ["#endif", "#else"] {
+        let source = format!(
+            concat!(
+                "let f = function\n",
+                "  | A when match y with\n",
+                "           | B -> true\n",
+                "           {}\n",
+                "      -> outer\n",
+                "  | C -> c\n",
+                "let g = 2\n",
+            ),
+            name
+        );
+        let tree = parser.parse(&source, None).expect("parser returns a tree");
+        let sexp = tree.root_node().to_sexp();
+        assert!(
+            !tree.root_node().has_error() && !sexp.contains("MISSING"),
+            "{name} before the enclosing arm's arrow must parse clean, sexp: {sexp}"
+        );
+        assert!(
+            sexp.contains("cppo_directive"),
+            "{name} must lex as a cppo directive, not a method call, sexp: {sexp}"
+        );
+    }
+}
+
+// The mirror case: `| #error\n -> e` is a bare variant arm — `#error`
+// is not a section name, so its next-line `->` still marks the arm.
+#[test]
+fn bare_variant_arm_with_nextline_arrow_stays_arm() {
     run_clean(concat!(
         "let f = function\n",
-        "  | A when match y with\n",
-        "           | B -> true\n",
-        "           #endif\n",
-        "      -> outer\n",
-        "  | C -> c\n",
-        "let g = 2\n",
-    ));
-    // `#else`/`#elif` variants of the same shape.
-    run_clean(concat!(
-        "let f = function\n",
-        "  | A when match y with\n",
-        "           | B -> true\n",
-        "           #else\n",
-        "      -> outer\n",
+        "  | `A -> 1\n",
+        "  | #error\n",
+        "    -> handle ()\n",
         "let g = 2\n",
     ));
 }
