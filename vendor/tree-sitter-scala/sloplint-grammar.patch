@@ -25,6 +25,24 @@
      // '{'  identifier  •  ':' starts the braced typed lambda, the block
      // lambda param, and a statement alike.
      [$._simple_expression, $._braced_typed_lambda],
+@@ -1526,7 +1524,7 @@
+         repeat($.annotation),
+         optional($.modifiers),
+         optional(choice("val", "var")),
+-        field("name", $._identifier),
++        field("name", choice($._identifier, alias(choice("using", "given"), $.identifier))),
+         optional(seq(":", field("type", $._param_type))),
+         optional(seq("=", field("default_value", $.expression))),
+       ),
+@@ -1545,7 +1543,7 @@
+           // A given conditional clause takes `tracked val`.
+           optional(trackedMod($)),
+           optional(choice("val", "var")),
+-          field("name", $._identifier),
++          field("name", choice($._identifier, alias(choice("using", "given"), $.identifier))),
+           ":",
+           field("type", $._param_type),
+           optional(seq("=", field("default_value", $.expression))),
 @@ -2019,7 +2017,10 @@
          PREC.infix,
          seq(
@@ -37,7 +55,7 @@
            field("right", $._definition_pattern),
          ),
        ),
-@@ -2283,19 +2284,37 @@
+@@ -2283,17 +2284,35 @@
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -63,7 +81,7 @@
 +            $._control_tail_gate,
 +            "then",
 +          ),
-+        ),
+         ),
 +        prec.dynamic(
 +          5,
 +          seq(
@@ -72,19 +90,17 @@
 +            $._control_tail_gate,
 +            "then",
 +          ),
-         ),
-       ),
- 
++        ),
++      ),
++
 +    split_call_condition: $ =>
 +      seq(
 +        field("function", $._indentable_expression),
 +        $._automatic_semicolon,
 +        field("arguments", $.arguments),
-+      ),
-+
+       ),
+ 
      /*
-      *   MatchClause       ::=  'match' <<< CaseClauses >>>
-      *
 @@ -2529,6 +2548,17 @@
              optional($._end_marker_kw_tail),
            ),
@@ -103,3 +119,47 @@
          prec(
            "new",
            seq("new", $.template_body, optional($._end_marker_kw_tail)),
+@@ -2726,10 +2756,30 @@
+     // binder is admitted in every argument list.
+     _argument_list: $ =>
+       seq(
+-        sep1(",", choice($.expression, $.vararg, $.capture_pattern)),
++        sep1(
++          ",",
++          choice(
++            $.expression,
++            $.vararg,
++            $.capture_pattern,
++            alias($.keyword_named_argument, $.assignment_expression),
++          ),
++        ),
+         optional(","),
+       ),
+ 
++    // A named argument whose name is a Scala 3 keyword still names the
++    // parameter in Scala 2 sources: `@JsonSerialize(using = classOf[X])`
++    // (jackson-module-scala's pervasive idiom) or `f(given = v)`. Restricted
++    // to argument lists: admitting the keyword where an expression statement
++    // can start would shadow the identifier read (`using()` is a call).
++    keyword_named_argument: $ =>
++      seq(
++        field("left", alias(choice("using", "given"), $.identifier)),
++        "=",
++        field("right", $.expression),
++      ),
++
+     vararg: $ =>
+       choice(
+         // Scala 3: `args*`. The star in front of a closing delimiter arrives
+@@ -2745,7 +2795,10 @@
+       ),
+ 
+     // ExprsInParens     ::=  ExprInParens {‘,’ ExprInParens}
+-    _exprs_in_parens: $ => trailingCommaSep1($.expression),
++    _exprs_in_parens: $ =>
++      trailingCommaSep1(
++        choice($.expression, alias($.keyword_named_argument, $.assignment_expression)),
++      ),
+ 
+     // The opening is a single two-character token so that a bare `$` used as
+     // an ordinary identifier (e.g. `$(selector)`) still lexes as an

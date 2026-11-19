@@ -1524,7 +1524,7 @@ module.exports = grammar({
         repeat($.annotation),
         optional($.modifiers),
         optional(choice("val", "var")),
-        field("name", $._identifier),
+        field("name", choice($._identifier, alias(choice("using", "given"), $.identifier))),
         optional(seq(":", field("type", $._param_type))),
         optional(seq("=", field("default_value", $.expression))),
       ),
@@ -1543,7 +1543,7 @@ module.exports = grammar({
           // A given conditional clause takes `tracked val`.
           optional(trackedMod($)),
           optional(choice("val", "var")),
-          field("name", $._identifier),
+          field("name", choice($._identifier, alias(choice("using", "given"), $.identifier))),
           ":",
           field("type", $._param_type),
           optional(seq("=", field("default_value", $.expression))),
@@ -2756,8 +2756,28 @@ module.exports = grammar({
     // binder is admitted in every argument list.
     _argument_list: $ =>
       seq(
-        sep1(",", choice($.expression, $.vararg, $.capture_pattern)),
+        sep1(
+          ",",
+          choice(
+            $.expression,
+            $.vararg,
+            $.capture_pattern,
+            alias($.keyword_named_argument, $.assignment_expression),
+          ),
+        ),
         optional(","),
+      ),
+
+    // A named argument whose name is a Scala 3 keyword still names the
+    // parameter in Scala 2 sources: `@JsonSerialize(using = classOf[X])`
+    // (jackson-module-scala's pervasive idiom) or `f(given = v)`. Restricted
+    // to argument lists: admitting the keyword where an expression statement
+    // can start would shadow the identifier read (`using()` is a call).
+    keyword_named_argument: $ =>
+      seq(
+        field("left", alias(choice("using", "given"), $.identifier)),
+        "=",
+        field("right", $.expression),
       ),
 
     vararg: $ =>
@@ -2775,7 +2795,10 @@ module.exports = grammar({
       ),
 
     // ExprsInParens     ::=  ExprInParens {‘,’ ExprInParens}
-    _exprs_in_parens: $ => trailingCommaSep1($.expression),
+    _exprs_in_parens: $ =>
+      trailingCommaSep1(
+        choice($.expression, alias($.keyword_named_argument, $.assignment_expression)),
+      ),
 
     // The opening is a single two-character token so that a bare `$` used as
     // an ordinary identifier (e.g. `$(selector)`) still lexes as an

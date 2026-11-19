@@ -203,3 +203,24 @@ fn star_repeat_and_vararg_still_parse() {
     let analysis = run_clean(source);
     assert_eq!(function_names(&analysis), ["f", "g"]);
 }
+
+#[test]
+fn keyword_named_arguments_and_parameter_names_parse() {
+    // jackson-module-scala's `@JsonDeserialize(using = classOf[...])` and
+    // filodb's `given: Int` parameter name — Scala 3 keywords used as Scala 2
+    // names.
+    let source = concat!(
+        "case class Foo(@JsonDeserialize(using = classOf[MyDeserializer]) myVal: BigDecimal)\n",
+        "case class WrongNumberArguments(given: Int, expected: Int)\n",
+        "object X {\n",
+        "  def f(using: Int, given: String) = 0\n",
+        "  val z = f(using = 3, given = \"x\")\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert!(
+        analysis.parse_error.is_none(),
+        "keyword named arguments and parameter names must parse: {:?}",
+        analysis.parse_error
+    );
+}

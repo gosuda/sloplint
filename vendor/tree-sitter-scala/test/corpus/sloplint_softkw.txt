@@ -1,0 +1,51 @@
+================================================================================
+SC-SOFTKW-ARG: `using` as a named-argument name (Scala 2 idiom)
+================================================================================
+
+// jackson-module-scala's pervasive `@JsonDeserialize(using = classOf[...])`.
+// `using` is a Scala 3 keyword but stays a parameter name in Scala 2 sources.
+case class Foo(@JsonDeserialize(using = classOf[MyDeserializer]) myVal: BigDecimal)
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (comment)
+  (comment)
+  (class_definition
+    name: (identifier)
+    class_parameters: (class_parameters
+      (class_parameter
+        (annotation
+          name: (type_identifier)
+          arguments: (arguments
+            (assignment_expression
+              left: (identifier)
+              right: (generic_function
+                function: (identifier)
+                type_arguments: (type_arguments
+                  (type_identifier))))))
+        name: (identifier)
+        type: (type_identifier)))))
+
+================================================================================
+SC-SOFTKW-PARAM: `given` as a parameter name (Scala 2 idiom)
+================================================================================
+
+// filodb's WrongNumberArguments names a parameter `given`.
+case class WrongNumberArguments(given: Int, expected: Int) extends InvalidFunctionSpec
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (comment)
+  (class_definition
+    name: (identifier)
+    class_parameters: (class_parameters
+      (class_parameter
+        name: (identifier)
+        type: (type_identifier))
+      (class_parameter
+        name: (identifier)
+        type: (type_identifier)))
+    extend: (extends_clause
+      type: (type_identifier))))

@@ -9,7 +9,8 @@
   `LICENSE`, `README.md`, `bindings/`, `queries/`, `tree-sitter.json`.
 - Copied from upstream: `test/corpus/*.txt` (10 files, 305 cases, all passing before and after).
 - Changed: `grammar.js` (see `sloplint-grammar.patch`), and `src/` regenerated.
-- Added: `test/corpus/sloplint_endnew.txt`, `sloplint_parenif.txt`, `sloplint_instar.txt`.
+- Added: `test/corpus/sloplint_endnew.txt`, `sloplint_parenif.txt`, `sloplint_instar.txt`,
+  `sloplint_softkw.txt`.
 
 ## Regeneration
 
@@ -20,7 +21,7 @@
   the published `node-types.json` lists the hidden supertypes `_definition` and `_pattern`,
   and the 0.27.1 output expands them to concrete kinds in child-type lists. The visible node
   kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` is unchanged.
-- Test: `tree-sitter test` in this directory: 313/313 (305 upstream + 8 sloplint cases).
+- Test: `tree-sitter test` in this directory: 315/315 (305 upstream + 10 sloplint cases).
 
 ## Changes to grammar.js
 
@@ -36,6 +37,13 @@
    `infix_type` already does. This makes `val P(a, b * c) = p` parse.
 4. The conflict `[$.repeat_pattern, $._simple_expression]` is removed (generator reported it
    unnecessary). The conflict `[$.block, $.capture_set]` is moved, with identical content.
+5. SC-SOFTKW: Scala 3 keywords keep their Scala 2 name readings where the corpus needs
+   them. `parameter`/`class_parameter` name slots accept `using`/`given` (filodb's
+   `WrongNumberArguments(given: Int, …)`); `_argument_list` and `_exprs_in_parens` accept
+   `using = v`/`given = v` as `keyword_named_argument`, aliased to `assignment_expression`
+   for node parity (`@JsonDeserialize(using = classOf[X])`, jackson-module-scala's
+   pervasive idiom). Scoped to argument lists only: at statement level the keyword must
+   not shadow the identifier read (`using()` is a call).
 
 ## Fixed shapes (scalac 3.10.0 `-Ystop-after:parser` accepts each)
 
@@ -44,6 +52,9 @@
 - SC-PARENIF: `if x.exists` / `(x => x == 10) then`. Real occurrence: `tests/pos/i12757.scala`.
 - SC-INSTAR: `case class *(...)` with `val P(a, b * c) = p`. Real occurrence:
   `tests/pos/t5702-pos-infix-star.scala`.
+- SC-SOFTKW: `@JsonDeserialize(using = classOf[MyDeserializer])` and `given: Int`.
+  Real occurrences: twitter/util `caseclasses.scala`, linkerd `H2Config.scala`,
+  feathr `FeatureDefinition.scala`, filodb `ComputedColumn.scala`.
 
 ## Still failing (residual)
 
@@ -102,6 +113,7 @@ published crate for the proof, then restored):
 | dangling_polymorphic_function_body_still_errors | PASS | PASS |
 | star_repeat_and_vararg_still_parse | PASS | PASS |
 | typed_term_parameter_polymorphic_function_still_parses | PASS | PASS |
+| keyword_named_arguments_and_parameter_names_parse (SC-SOFTKW) | FAIL | PASS |
 
-The four FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
-panics. The vendored run is 10/10.
+The five FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
+panics. The vendored run is 11/11.
