@@ -495,7 +495,9 @@ fn swapped_named_args_are_not_plain_identifiers() {
         .find(|c| c.callee == "Render")
         .expect("Render must be a call fact");
     assert!(
-        call.args.iter().all(|a| !matches!(a.shape, ArgShape::Ident(_))),
+        call.args
+            .iter()
+            .all(|a| !matches!(a.shape, ArgShape::Ident(_))),
         "named arguments bind by name, so no value may read as a forwarded identifier, got {:?}",
         call.args.iter().map(|a| &a.shape).collect::<Vec<_>>()
     );
@@ -589,5 +591,33 @@ fn interp_hole_with_comment_brace_stays_dynamic() {
     assert!(
         matches!(shape, Some(ArgShape::Str { longest_static }) if *longest_static < 8),
         "expression source after a comment brace must not read as fixed text, got {shape:?}"
+    );
+}
+
+#[test]
+fn paren_around_interp_prefix_keeps_concat() {
+    let analysis = run_clean(
+        "src/parenconcat.lgo",
+        "package p\n\nimport \"log\"\n\nfunc Greet(name string, suffix string) {\n\tlog.Print(($\"service started: {name}\") + suffix)\n\tlog.Print(($\"service started: {name}\" + suffix))\n}\n",
+    );
+    let shapes: Vec<&ArgShape> = analysis
+        .facts
+        .calls
+        .iter()
+        .filter(|c| c.callee == "log.Print")
+        .map(|c| {
+            c.args
+                .first()
+                .map(|a| &a.shape)
+                .expect("Print takes one arg")
+        })
+        .collect();
+    assert_eq!(
+        shapes,
+        vec![
+            &ArgShape::Concat { longest_static: 17 },
+            &ArgShape::Concat { longest_static: 17 },
+        ],
+        "a parenthesized interpolated prefix is still a concatenation, got {shapes:?}"
     );
 }

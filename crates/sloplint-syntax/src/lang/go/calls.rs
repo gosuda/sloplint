@@ -4,12 +4,15 @@ use sloplint_core::facts::{Arg, ArgShape, AssertShape, Assertion};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, Link, binary_concat, child_by_field, code_children, first_named_child, named_children,
-    narrow, pos_of, string_arg_shape, text,
+    Cx, Link, child_by_field, code_children, first_named_child, named_children, narrow, pos_of,
+    string_arg_shape, text,
 };
 const GO_CALLEE: u8 = 11;
 
 pub(crate) fn go_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
+    // Parentheses change grouping, not meaning: a parenthesized literal is
+    // still a literal and a parenthesized operand still concatenates.
+    let n = go_unparen(n);
     match n.kind() {
         "interpreted_string_literal" => {
             string_arg_shape(cx, n, &["interpreted_string_literal_content"])
@@ -24,21 +27,9 @@ pub(crate) fn go_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
                 longest_static: sloplint_core::text::longest_static_chunk_interp(inner),
             }
         }
-        _ if binary_concat(
-            cx,
-            n,
-            "+",
-            &[
-                "interpreted_string_literal",
-                "raw_string_literal",
-                "interp_string_literal",
-            ],
-        ) =>
-        {
-            ArgShape::Concat {
-                longest_static: go_concat_static(cx, n),
-            }
-        }
+        _ if go_is_concat(cx, n) => ArgShape::Concat {
+            longest_static: go_concat_static(cx, n),
+        },
         _ => ArgShape::Other,
     }
 }
@@ -49,11 +40,44 @@ fn interp_inner(raw: &str) -> &str {
         .unwrap_or(raw)
 }
 
+fn go_string_operand(kind: &str) -> bool {
+    matches!(
+        kind,
+        "interpreted_string_literal" | "raw_string_literal" | "interp_string_literal"
+    )
+}
+
+/// The `binary_concat` left-spine check with parentheses stripped at every
+/// step, so `("lit" + x)` and `"lit" + ("x")` read the same as `"lit" + x`.
+fn go_is_concat(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    let mut current = go_unparen(n);
+    loop {
+        let (Some(left), Some(op), Some(right)) =
+            (current.child(0), current.child(1), current.child(2))
+        else {
+            return false;
+        };
+        if current.child_count() != 3 || text(cx, op) != "+" {
+            return false;
+        }
+        let left = go_unparen(left);
+        let right = go_unparen(right);
+        if go_string_operand(left.kind()) || go_string_operand(right.kind()) {
+            return true;
+        }
+        if left.kind() != current.kind() {
+            return false;
+        }
+        current = left;
+    }
+}
+
 fn go_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
     let mut chunks = Vec::new();
     let mut interp_best = 0u32;
     let mut stack = vec![n];
     while let Some(m) = stack.pop() {
+        let m = go_unparen(m);
         if m.kind() == "binary_expression"
             && child_by_field(m, "operator").is_some_and(|o| text(cx, o) == "+")
         {
