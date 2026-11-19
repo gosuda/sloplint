@@ -11920,16 +11920,28 @@
           }
         },
         {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "SYMBOL",
-              "name": "attribute_specifier"
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
+          "type": "REPEAT",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "attribute_specifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "ms_call_modifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "macro_attribute"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "macro_qualifier"
+              }
+            ]
+          }
         },
         {
           "type": "STRING",
@@ -23571,6 +23583,32 @@
           "name": "struct_declaration"
         },
         {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "enum_specifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "union_specifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "struct_specifier"
+                }
+              ]
+            },
+            {
+              "type": "STRING",
+              "value": ";"
+            }
+          ]
+        },
+        {
           "type": "SYMBOL",
           "name": "preproc_ifdef"
         },
@@ -24445,6 +24483,19 @@
         {
           "type": "SYMBOL",
           "name": "identifier"
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "."
+            },
+            {
+              "type": "SYMBOL",
+              "name": "identifier"
+            }
+          ]
         },
         {
           "type": "SYMBOL",
@@ -27397,6 +27448,10 @@
     [
       "macro_qualifier",
       "keyword_declarator"
+    ],
+    [
+      "_declaration_modifiers",
+      "init_declarator"
     ],
     [
       "_declaration_specifiers",

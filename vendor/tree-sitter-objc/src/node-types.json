@@ -3783,11 +3783,23 @@
       }
     },
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": false,
       "types": [
         {
           "type": "attribute_specifier",
+          "named": true
+        },
+        {
+          "type": "macro_attribute",
+          "named": true
+        },
+        {
+          "type": "macro_qualifier",
+          "named": true
+        },
+        {
+          "type": "ms_call_modifier",
           "named": true
         }
       ]
@@ -3887,6 +3899,10 @@
       "required": true,
       "types": [
         {
+          "type": "enum_specifier",
+          "named": true
+        },
+        {
           "type": "preproc_if",
           "named": true
         },
@@ -3896,6 +3912,14 @@
         },
         {
           "type": "struct_declaration",
+          "named": true
+        },
+        {
+          "type": "struct_specifier",
+          "named": true
+        },
+        {
+          "type": "union_specifier",
           "named": true
         },
         {
