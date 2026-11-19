@@ -2726,12 +2726,37 @@
             "type": "CHOICE",
             "members": [
               {
-                "type": "SYMBOL",
-                "name": "_definition_pattern"
+                "type": "PREC_DYNAMIC",
+                "value": 1,
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "identifiers"
+                }
               },
               {
-                "type": "SYMBOL",
-                "name": "identifiers"
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "_definition_pattern"
+                  },
+                  {
+                    "type": "REPEAT",
+                    "content": {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "STRING",
+                          "value": ","
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "_definition_pattern"
+                        }
+                      ]
+                    }
+                  }
+                ]
               }
             ]
           }
@@ -2937,12 +2962,37 @@
             "type": "CHOICE",
             "members": [
               {
-                "type": "SYMBOL",
-                "name": "_definition_pattern"
+                "type": "PREC_DYNAMIC",
+                "value": 1,
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "identifiers"
+                }
               },
               {
-                "type": "SYMBOL",
-                "name": "identifiers"
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "_definition_pattern"
+                  },
+                  {
+                    "type": "REPEAT",
+                    "content": {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "STRING",
+                          "value": ","
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "_definition_pattern"
+                        }
+                      ]
+                    }
+                  }
+                ]
               }
             ]
           }
@@ -14362,6 +14412,19 @@
       "val_definition"
     ],
     [
+      "val_definition",
+      "val_declaration",
+      "identifiers"
+    ],
+    [
+      "val_definition",
+      "identifiers"
+    ],
+    [
+      "val_definition",
+      "val_declaration"
+    ],
+    [
       "_dot_match_expression"
     ],
     [
@@ -14430,10 +14493,6 @@
     ],
     [
       "_full_enum_def"
-    ],
-    [
-      "identifiers",
-      "val_declaration"
     ],
     [
       "class_parameters"

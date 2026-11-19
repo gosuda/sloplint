@@ -9,7 +9,8 @@
   `LICENSE`, `README.md`, `bindings/`, `queries/`, `tree-sitter.json`.
 - Copied from upstream: `test/corpus/*.txt` (10 files, 305 cases, all passing before and after).
 - Changed: `grammar.js` (see `sloplint-grammar.patch`), and `src/` regenerated.
-- Added: `test/corpus/sloplint_endnew.txt`, `sloplint_parenif.txt`, `sloplint_instar.txt`.
+- Added: `test/corpus/sloplint_endnew.txt`, `sloplint_parenif.txt`, `sloplint_instar.txt`,
+  `sloplint_multipat.txt`.
 
 ## Regeneration
 
@@ -20,7 +21,7 @@
   the published `node-types.json` lists the hidden supertypes `_definition` and `_pattern`,
   and the 0.27.1 output expands them to concrete kinds in child-type lists. The visible node
   kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` is unchanged.
-- Test: `tree-sitter test` in this directory: 313/313 (305 upstream + 8 sloplint cases).
+- Test: `tree-sitter test` in this directory: 316/316 (305 upstream + 11 sloplint cases).
 
 ## Changes to grammar.js
 
@@ -36,6 +37,13 @@
    `infix_type` already does. This makes `val P(a, b * c) = p` parse.
 4. The conflict `[$.repeat_pattern, $._simple_expression]` is removed (generator reported it
    unnecessary). The conflict `[$.block, $.capture_set]` is moved, with identical content.
+5. SC-MULTIPAT: `val_definition`/`var_definition` take a comma-separated `_definition_pattern`
+   list, so `val a2_1, List(a2_2) = …` (SLS PatDef ::= Pattern2 {',' Pattern2}) parses — a
+   real form in scalameta's Issue1872 fixture. The pure name list keeps its `identifiers`
+   node via `prec.dynamic(1)`. New conflicts: `[$.val_definition, $.val_declaration,
+   $.identifiers]`, `[$.val_definition, $.identifiers]`, `[$.val_definition,
+   $.val_declaration]`; the upstream tuple `[$.identifiers, $.val_declaration]` is removed
+   as subsumed.
 
 ## Fixed shapes (scalac 3.10.0 `-Ystop-after:parser` accepts each)
 
@@ -44,6 +52,8 @@
 - SC-PARENIF: `if x.exists` / `(x => x == 10) then`. Real occurrence: `tests/pos/i12757.scala`.
 - SC-INSTAR: `case class *(...)` with `val P(a, b * c) = p`. Real occurrence:
   `tests/pos/t5702-pos-infix-star.scala`.
+- SC-MULTIPAT: `val a2_1, List(a2_2) = List(1, 2)` and the `var` form. Real occurrence:
+  scalameta `semanticdb/integration/src/main/scala/example/Issue1872.scala`.
 
 ## Still failing (residual)
 
@@ -102,6 +112,7 @@ published crate for the proof, then restored):
 | dangling_polymorphic_function_body_still_errors | PASS | PASS |
 | star_repeat_and_vararg_still_parse | PASS | PASS |
 | typed_term_parameter_polymorphic_function_still_parses | PASS | PASS |
+| multi_pattern_val_and_var_definitions_parse (SC-MULTIPAT) | FAIL | PASS |
 
-The four FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
-panics. The vendored run is 10/10.
+The five FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
+panics. The vendored run is 11/11.

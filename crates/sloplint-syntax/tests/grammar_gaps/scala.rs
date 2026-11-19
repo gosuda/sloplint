@@ -203,3 +203,22 @@ fn star_repeat_and_vararg_still_parse() {
     let analysis = run_clean(source);
     assert_eq!(function_names(&analysis), ["f", "g"]);
 }
+
+#[test]
+fn multi_pattern_val_and_var_definitions_parse() {
+    // scalameta's Issue1872 semanticdb fixture binds a name and a pattern in a
+    // single definition: `val a2_1, List(a2_2) = …`.
+    let source = concat!(
+        "object Test {\n",
+        "  val a2_1, List(a2_2) = List(1, 2)\n",
+        "  var e, List(f) = List(1, 2)\n",
+        "  val a, b = (1, 2)\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert!(
+        analysis.parse_error.is_none(),
+        "multi-pattern val/var definitions must parse: {:?}",
+        analysis.parse_error
+    );
+}

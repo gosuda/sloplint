@@ -8,7 +8,19 @@
      [$.tuple_pattern, $._simple_expression],
      [$.tuple_pattern, $._simple_expression, $.binding],
      // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
-@@ -493,6 +492,7 @@
+@@ -480,6 +479,11 @@
+     // Same separator-or-marker fork as above.
+     [$.function_definition],
+     [$.val_definition],
++    // 'val' name ',' name • ':' — a multi-pattern `val a, List(b) =` now
++    // competes with the `val a, b : T` declaration read.
++    [$.val_definition, $.val_declaration, $.identifiers],
++    [$.val_definition, $.identifiers],
++    [$.val_definition, $.val_declaration],
+     [$._dot_match_expression],
+     [$.var_definition],
+     [$.package_clause],
+@@ -493,6 +497,7 @@
      // we treat `operator_identifier` as `simple_expression`
      [$._simple_expression, $.lambda_expression],
      [$._simple_expression, $._single_lambda_param],
@@ -16,7 +28,15 @@
      // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
      // identifier `export` beginning an expression statement. Each reading
      // dies on the next token ('.' vs a name), so forking settles it. The
-@@ -532,8 +532,6 @@
+@@ -511,7 +516,6 @@
+     // 'enum'  _class_constructor  '{'  'case'  operator_identifier  _full_enum_def_repeat1  •  _automatic_semicolon  …
+     [$._full_enum_def],
+     // _start_val  identifier  ','  identifier  •  ':'  …
+-    [$.identifiers, $.val_declaration],
+     // 'enum'  operator_identifier  _automatic_semicolon  '('  ')'  •  ':'  …
+     [$.class_parameters],
+     // 'for'  operator_identifier  ':'  _annotated_type  •  ':'  …
+@@ -532,8 +536,6 @@
      [$._constructor_annotation],
      [$._constructor_annotation_arguments, $.arguments],
      [$._constructor_annotation, $.applied_constructor_type],
@@ -25,7 +45,37 @@
      // '{'  identifier  •  ':' starts the braced typed lambda, the block
      // lambda param, and a statement alike.
      [$._simple_expression, $._braced_typed_lambda],
-@@ -2019,7 +2017,10 @@
+@@ -1132,7 +1134,13 @@
+     val_definition: $ =>
+       seq(
+         $._start_val,
+-        field("pattern", choice($._definition_pattern, $.identifiers)),
++        // PatDef admits a comma list of patterns, not only of names:
++        // `val a, List(b) = …` (scalameta's Issue1872 fixtures). The
++        // name-only list keeps its `identifiers` node where it applies.
++        field(
++          "pattern",
++          choice(prec.dynamic(1, $.identifiers), commaSep1($._definition_pattern)),
++        ),
+         optional(seq(":", field("type", $._type))),
+         "=",
+         field("value", $._indentable_expression),
+@@ -1160,7 +1168,13 @@
+     var_definition: $ =>
+       seq(
+         $._start_var,
+-        field("pattern", choice($._definition_pattern, $.identifiers)),
++        // PatDef admits a comma list of patterns, not only of names:
++        // `val a, List(b) = …` (scalameta's Issue1872 fixtures). The
++        // name-only list keeps its `identifiers` node where it applies.
++        field(
++          "pattern",
++          choice(prec.dynamic(1, $.identifiers), commaSep1($._definition_pattern)),
++        ),
+         optional(seq(":", field("type", $._type))),
+         "=",
+         field("value", $._indentable_expression),
+@@ -2019,7 +2033,10 @@
          PREC.infix,
          seq(
            field("left", $._definition_pattern),
@@ -37,7 +87,7 @@
            field("right", $._definition_pattern),
          ),
        ),
-@@ -2283,19 +2284,37 @@
+@@ -2283,17 +2300,35 @@
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -63,7 +113,7 @@
 +            $._control_tail_gate,
 +            "then",
 +          ),
-+        ),
+         ),
 +        prec.dynamic(
 +          5,
 +          seq(
@@ -72,20 +122,18 @@
 +            $._control_tail_gate,
 +            "then",
 +          ),
-         ),
-       ),
- 
++        ),
++      ),
++
 +    split_call_condition: $ =>
 +      seq(
 +        field("function", $._indentable_expression),
 +        $._automatic_semicolon,
 +        field("arguments", $.arguments),
-+      ),
-+
+       ),
+ 
      /*
-      *   MatchClause       ::=  'match' <<< CaseClauses >>>
-      *
-@@ -2529,6 +2548,17 @@
+@@ -2529,6 +2564,17 @@
              optional($._end_marker_kw_tail),
            ),
          ),

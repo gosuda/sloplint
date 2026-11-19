@@ -479,6 +479,11 @@ module.exports = grammar({
     // Same separator-or-marker fork as above.
     [$.function_definition],
     [$.val_definition],
+    // 'val' name ',' name • ':' — a multi-pattern `val a, List(b) =` now
+    // competes with the `val a, b : T` declaration read.
+    [$.val_definition, $.val_declaration, $.identifiers],
+    [$.val_definition, $.identifiers],
+    [$.val_definition, $.val_declaration],
     [$._dot_match_expression],
     [$.var_definition],
     [$.package_clause],
@@ -511,7 +516,6 @@ module.exports = grammar({
     // 'enum'  _class_constructor  '{'  'case'  operator_identifier  _full_enum_def_repeat1  •  _automatic_semicolon  …
     [$._full_enum_def],
     // _start_val  identifier  ','  identifier  •  ':'  …
-    [$.identifiers, $.val_declaration],
     // 'enum'  operator_identifier  _automatic_semicolon  '('  ')'  •  ':'  …
     [$.class_parameters],
     // 'for'  operator_identifier  ':'  _annotated_type  •  ':'  …
@@ -1130,7 +1134,13 @@ module.exports = grammar({
     val_definition: $ =>
       seq(
         $._start_val,
-        field("pattern", choice($._definition_pattern, $.identifiers)),
+        // PatDef admits a comma list of patterns, not only of names:
+        // `val a, List(b) = …` (scalameta's Issue1872 fixtures). The
+        // name-only list keeps its `identifiers` node where it applies.
+        field(
+          "pattern",
+          choice(prec.dynamic(1, $.identifiers), commaSep1($._definition_pattern)),
+        ),
         optional(seq(":", field("type", $._type))),
         "=",
         field("value", $._indentable_expression),
@@ -1158,7 +1168,13 @@ module.exports = grammar({
     var_definition: $ =>
       seq(
         $._start_var,
-        field("pattern", choice($._definition_pattern, $.identifiers)),
+        // PatDef admits a comma list of patterns, not only of names:
+        // `val a, List(b) = …` (scalameta's Issue1872 fixtures). The
+        // name-only list keeps its `identifiers` node where it applies.
+        field(
+          "pattern",
+          choice(prec.dynamic(1, $.identifiers), commaSep1($._definition_pattern)),
+        ),
         optional(seq(":", field("type", $._type))),
         "=",
         field("value", $._indentable_expression),
