@@ -1,0 +1,455 @@
+========================
+Integer value definition
+========================
+
+module Numbers {
+  val answer = 42
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))))
+
+========================================
+Value and operator definitions expose semantic fields
+========================================
+
+module DefinitionBodyField {
+  val answer = 42
+  def identity(x) = x
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (name_reference
+        name: (identifier)))))
+
+========================================
+Uppercase hexadecimal prefix is rejected
+========================================
+
+module UppercaseHex {
+  pure val value = 0XCAFE
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      (ERROR
+        (integer_literal))
+      value: (name_reference
+        name: (identifier)))))
+
+========================================
+Leading-zero decimal literal is rejected
+========================================
+
+module LeadingZero {
+  pure val value = 00
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (ERROR
+      (integer_literal))))
+
+========================================
+Zero-prefixed separator is rejected
+========================================
+
+module ZeroSeparator {
+  pure val value = 0_1
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      (ERROR
+        (integer_literal))
+      value: (name_reference
+        name: (identifier)))))
+
+========================================
+Qualified tuple patterns
+========================================
+
+module Patterns {
+  val (Scope::left, Scope::right) = (1, 2)
+  pure val unpack = ((Scope::left, Scope::right)) => Scope::left
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (tuple_pattern
+        element: (qualified_identifier
+          namespace: (identifier)
+          name: (identifier))
+        element: (qualified_identifier
+          namespace: (identifier)
+          name: (identifier)))
+      value: (tuple_literal
+        element: (integer_literal)
+        element: (integer_literal)))
+    (value_definition
+      name: (identifier)
+      value: (lambda_expression
+        parameter: (tuple_pattern
+          element: (qualified_identifier
+            namespace: (identifier)
+            name: (identifier))
+          element: (qualified_identifier
+            namespace: (identifier)
+            name: (identifier)))
+        body: (namespace_access_expression
+          namespace: (identifier)
+          member: (identifier))))))
+
+========================================
+Value destructuring patterns
+========================================
+
+module ValDestructuring {
+  pure val (first, _) = (1, 2)
+  pure val { left, right } = { left: 1, right: 2 }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (tuple_pattern
+        element: (identifier)
+        element: (hole))
+      value: (tuple_literal
+        element: (integer_literal)
+        element: (integer_literal)))
+    (value_definition
+      name: (record_pattern
+        field: (identifier)
+        field: (identifier))
+      value: (record_literal
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))))))
+
+========================================
+Hexadecimal integer literals
+========================================
+
+module Hexadecimal {
+  pure val lower = 0xabcdef
+  pure val mixed = 0xAbCdEf
+  pure val separated = 0xAB_CD_EF
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))))
+
+=========================
+Boolean value definitions
+=========================
+
+module Flags {
+  val isEnabled = true
+  val isDisabled = false
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (boolean_literal))
+    (value_definition
+      name: (identifier)
+      value: (boolean_literal))))
+
+=======================
+String value definition
+=======================
+
+module Messages {
+  val greeting = "hello"
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (string_literal))))
+
+========================================
+Backslashes in raw strings
+========================================
+
+module BackslashStrings {
+  pure val path = "a\\b"
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (string_literal))))
+
+========================================
+Multiline raw strings
+========================================
+
+module Strings {
+  pure val message = "first
+second"
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (string_literal))))
+
+=========================
+Value definition reference
+=========================
+
+module Example {
+  val answer = 42
+  val copy = answer
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (value_definition
+      name: (identifier)
+      value: (name_reference
+        name: (identifier)))))
+
+========================================
+Pure value definition
+========================================
+
+module Collections {
+  pure val ADDRESSES = Set("alice", "bob", "charlie")
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (string_literal)
+        argument: (string_literal)
+        argument: (string_literal)))))
+
+========================================
+Typed value definitions
+========================================
+
+module Values {
+  pure val Nodes: Set[int] = 1.to(10)
+  val Limit: int = 10
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      type: (set_type
+        element: (primitive_type))
+      value: (ufcs_call_expression
+        receiver: (integer_literal)
+        method: (identifier)
+        argument: (integer_literal)))
+    (value_definition
+      name: (identifier)
+      type: (primitive_type)
+      value: (integer_literal))))
+
+========================================
+Decimal literal with separators
+========================================
+
+module Numbers {
+  pure val million = 1_000_000
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))))
+
+========================================
+Value definitions allow empty parameter lists
+========================================
+
+module EmptyValueParameters {
+  pure val answer() = 42
+  val truth(): bool = true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (value_definition
+      name: (identifier)
+      type: (primitive_type)
+      value: (boolean_literal))))
+
+========================================
+Local value definitions allow empty parameter lists
+========================================
+
+module LocalEmptyValueParameters {
+  pure def identity(n: int): int = {
+    pure val x(): int = n
+    x
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            type: (primitive_type)
+            value: (name_reference
+              name: (identifier)))
+          body: (name_reference
+            name: (identifier)))))))
+
+========================================
+Annotated tuple destructuring is rejected
+:error
+========================================
+
+module BadTuple { val (a, b): (int, int) = (1, 2) }
+
+---
+
+(source_file)
+
+========================================
+Annotated record destructuring is rejected
+:error
+========================================
+
+module BadRecord { val {a, b}: {a: int, b: int} = {a: 1, b: 2} }
+
+---
+
+(source_file)
+
+========================================
+Annotated local tuple destructuring is rejected
+:error
+========================================
+
+module BadLocalTuple { pure def f() = { val (a, b): (int, int) = (1, 2); a } }
+
+---
+
+(source_file)
+
+========================================
+Annotated local record destructuring is rejected
+:error
+========================================
+
+module BadLocalRecord { pure def f() = { val {a, b}: {a: int, b: int} = {a: 1, b: 2}; a } }
+
+---
+
+(source_file)

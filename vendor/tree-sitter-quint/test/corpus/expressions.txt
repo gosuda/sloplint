@@ -1,0 +1,1184 @@
+===================
+Addition expression
+===================
+
+module Arithmetic {
+  val result = 1 + 2
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (integer_literal)
+        right: (integer_literal)))))
+
+========================================
+Multiplication has precedence over addition
+========================================
+
+module Arithmetic {
+  val result = 1 + 2 * 3
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (integer_literal)
+        right: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))))))
+
+==============================================
+Parentheses override multiplication precedence
+==============================================
+
+module Arithmetic {
+  val result = (1 + 2) * 3
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (parenthesized_expression
+          expression: (binary_expression
+            left: (integer_literal)
+            right: (integer_literal)))
+        right: (integer_literal)))))
+
+============================================
+Additive operators associate from the left
+============================================
+
+module Arithmetic {
+  val result = 10 - 3 + 1
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (integer_literal)))))
+
+===============================================
+Greater-than binds more loosely than multiplication
+===============================================
+
+module Comparisons {
+  val isLarge = 2 * 3 > 5
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (integer_literal)))))
+
+===================================================
+Less-than-or-equal binds more loosely than addition
+===================================================
+
+module Comparisons {
+  val isSmallEnough = 1 + 2 <= 3
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (integer_literal)))))
+
+==========================================
+Less-than binds more loosely than addition
+==========================================
+
+module Comparisons {
+  val isSmall = 1 + 2 < 4
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (integer_literal)))))
+
+==========================================
+Inequality binds more loosely than addition
+==========================================
+
+module Comparisons {
+  val isDifferent = 1 + 2 != 4
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (integer_literal)))))
+
+=================================================
+Unary negation binds tighter than multiplication
+=================================================
+
+module Arithmetic {
+  val result = -1 * 2
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (unary_expression
+          operand: (integer_literal))
+        right: (integer_literal)))))
+
+========================================
+Equality binds more loosely than addition
+========================================
+
+module Comparisons {
+  val isThree = 1 + 2 == 3
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (integer_literal)))))
+
+==================================================
+Multiplicative operators associate from the left
+==================================================
+
+module Arithmetic {
+  val result = 12 / 3 * 2
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (integer_literal)))))
+
+===========================================================
+Greater-than-or-equal binds more loosely than multiplication
+===========================================================
+
+module Comparisons {
+  val isLargeEnough = 2 * 3 >= 6
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (integer_literal)))))
+
+===============================================
+Conjunction binds more loosely than comparison
+===============================================
+
+module Logic {
+  val result = true and 1 < 2
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (boolean_literal)
+        right: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))))))
+
+============================================
+Disjunction binds more loosely than conjunction
+============================================
+
+module Logic {
+  val result = true or false and false
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (boolean_literal)
+        right: (binary_expression
+          left: (boolean_literal)
+          right: (boolean_literal))))))
+
+========================================
+Function calls bind tighter than conjunction
+========================================
+
+module Logic {
+  val result = not(false) and true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (call_expression
+          function: (name_reference
+            name: (identifier))
+          argument: (boolean_literal))
+        right: (boolean_literal)))))
+
+====================================================
+Modulo associates with multiplication from the left
+====================================================
+
+module Arithmetic {
+  val result = 10 % 3 * 2
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (integer_literal)))))
+
+=============================================
+Power binds more tightly than multiplication
+=============================================
+
+module Arithmetic {
+  val result = 2 ^ 3 * 4
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (integer_literal)))))
+
+====================================
+Power associates from the right
+====================================
+
+module Arithmetic {
+  val result = 2 ^ 3 ^ 4
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (integer_literal)
+        right: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))))))
+
+=============================================
+Equivalence binds more loosely than disjunction
+=============================================
+
+module Logic {
+  val result = true iff false or true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (boolean_literal)
+        right: (binary_expression
+          left: (boolean_literal)
+          right: (boolean_literal))))))
+
+=============================================
+Leads-to binds more loosely than equivalence
+=============================================
+
+module Logic {
+  val result = true leadsTo false iff true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (boolean_literal)
+        right: (binary_expression
+          left: (boolean_literal)
+          right: (boolean_literal))))))
+
+=============================================
+Implication binds more loosely than leads-to
+=============================================
+
+module Logic {
+  val result = true implies false leadsTo true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (boolean_literal)
+        right: (binary_expression
+          left: (boolean_literal)
+          right: (boolean_literal))))))
+
+======================
+Non-empty list literal
+======================
+
+module Collections {
+  val numbers = [1, 2, 3]
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (list_literal
+        element: (integer_literal)
+        element: (integer_literal)
+        element: (integer_literal)))))
+
+==================
+Empty list literal
+==================
+
+module Collections {
+  val empty = []
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (list_literal))))
+
+=================
+Two-element tuple
+=================
+
+module Collections {
+  val entry = ("alice", 42)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (tuple_literal
+        element: (string_literal)
+        element: (integer_literal)))))
+
+============
+Unit literal
+============
+
+module Collections {
+  val unit = ()
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (unit_literal))))
+
+========================
+Non-empty record literal
+========================
+
+module Collections {
+  val user = { name: "Alice", age: 42 }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (record_literal
+        (record_literal_field
+          name: (identifier)
+          value: (string_literal))
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))))))
+
+========================================
+Record extension
+========================================
+
+module Records {
+  pure val base = { a: 1 }
+  pure val extended = { b: 2, ...base }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (record_literal
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (record_literal
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))
+        (record_spread
+          value: (name_reference
+            name: (identifier)))))))
+
+===================
+Record field access
+===================
+
+module Collections {
+  val user = { name: "Alice", age: 42 }
+  val userName = user.name
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (record_literal
+        (record_literal_field
+          name: (identifier)
+          value: (string_literal))
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (field_access_expression
+        object: (name_reference
+          name: (identifier))
+        field: (identifier)))))
+
+=============
+List indexing
+=============
+
+module Collections {
+  val numbers = [10, 20, 30]
+  val first = numbers[0]
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (list_literal
+        element: (integer_literal)
+        element: (integer_literal)
+        element: (integer_literal)))
+    (value_definition
+      name: (identifier)
+      value: (index_expression
+        collection: (name_reference
+          name: (identifier))
+        index: (integer_literal)))))
+
+======================
+Conditional expression
+======================
+
+module Control {
+  val maximum = if (1 > 2) 1 else 2
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (if_expression
+        condition: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        consequence: (integer_literal)
+        alternative: (integer_literal)))))
+
+=======================
+Single-parameter lambda
+=======================
+
+module Functions {
+  val increment = x => x + 1
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (lambda_expression
+        parameter: (identifier)
+        body: (binary_expression
+          left: (name_reference
+            name: (identifier))
+          right: (integer_literal))))))
+
+========================================
+Qualified lambda parameter
+========================================
+
+module Lambdas {
+  pure val apply = (Scope::x) => Scope::x
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (lambda_expression
+        parameter: (qualified_identifier
+          namespace: (identifier)
+          name: (identifier))
+        body: (namespace_access_expression
+          namespace: (identifier)
+          member: (identifier))))))
+
+====================================
+Reserved operator calls
+====================================
+
+module OperatorCalls {
+  pure val direct = and(true, false)
+  pure val dotted = true.or(false)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (call_expression
+        function: (reserved_operator)
+        argument: (boolean_literal)
+        argument: (boolean_literal)))
+    (value_definition
+      name: (identifier)
+      value: (ufcs_call_expression
+        receiver: (boolean_literal)
+        method: (reserved_operator)
+        argument: (boolean_literal)))))
+
+====================================
+Trailing delimiters
+====================================
+
+module Source { const N: int }
+module TrailingDelimiters {
+  import Source(N = 1,).*
+  pure def add(x: int, y: int,): int = x + y
+  pure val list = [1, 2,]
+  pure val tuple = (1, 2,)
+  pure val result = add(1, 2,)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (primitive_type)))
+  (module_definition
+    name: (identifier)
+    (anonymous_instance_declaration
+      module: (identifier)
+      (instance_override
+        name: (identifier)
+        value: (integer_literal)))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (name_reference
+          name: (identifier))))
+    (value_definition
+      name: (identifier)
+      value: (list_literal
+        element: (integer_literal)
+        element: (integer_literal)))
+    (value_definition
+      name: (identifier)
+      value: (tuple_literal
+        element: (integer_literal)
+        element: (integer_literal)))
+    (value_definition
+      name: (identifier)
+      value: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (integer_literal)
+        argument: (integer_literal)))))
+
+====================================
+Record elements and trailing commas
+====================================
+
+module RecordElements {
+  type Pair = { left: int, right: int, }
+  pure val base = { left: 1, right: 2 }
+  pure val extended = { ...base, right: 3, }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (type_alias_declaration
+      name: (identifier)
+      value: (record_type
+        (record_type_field
+          name: (identifier)
+          type: (primitive_type))
+        (record_type_field
+          name: (identifier)
+          type: (primitive_type))))
+    (value_definition
+      name: (identifier)
+      value: (record_literal
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (record_literal
+        (record_spread
+          value: (name_reference
+            name: (identifier)))
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))))))
+
+========================================
+Pair expressions have low precedence
+========================================
+
+module Pairs {
+  pure val entry = 1 + 2 -> 3 * 4
+  pure val nested = 1 -> 2 -> 3
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (pair_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (pair_expression
+        left: (pair_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (integer_literal)))))
+
+========================================
+Tuple-unpacking lambda
+========================================
+
+module TupleLambda {
+  pure val pairs = [(1, 2)]
+  pure val sums = pairs.map(((x, y)) => x + y)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (list_literal
+        element: (tuple_literal
+          element: (integer_literal)
+          element: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (ufcs_call_expression
+        receiver: (name_reference
+          name: (identifier))
+        method: (identifier)
+        argument: (lambda_expression
+          parameter: (tuple_pattern
+            element: (identifier)
+            element: (identifier))
+          body: (binary_expression
+            left: (name_reference
+              name: (identifier))
+            right: (name_reference
+              name: (identifier))))))))
+
+========================================
+Chained method calls
+========================================
+
+module Ranges {
+  val selected = 1.to(100).oneOf()
+  val selectedField = { value: 1 }.value
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (ufcs_call_expression
+        receiver: (ufcs_call_expression
+          receiver: (integer_literal)
+          method: (identifier)
+          argument: (integer_literal))
+        method: (identifier)))
+    (value_definition
+      name: (identifier)
+      value: (field_access_expression
+        object: (record_literal
+          (record_literal_field
+            name: (identifier)
+            value: (integer_literal)))
+        field: (identifier)))))
+
+======================
+Multi-parameter lambda
+======================
+
+module Functions {
+  val add = (x, y) => x + y
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (lambda_expression
+        parameter: (identifier)
+        parameter: (identifier)
+        body: (binary_expression
+          left: (name_reference
+            name: (identifier))
+          right: (name_reference
+            name: (identifier)))))))
+
+====================================
+Parenthesized single-parameter lambda
+====================================
+
+module Functions {
+  val increment = (x) => x + 1
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (lambda_expression
+        parameter: (identifier)
+        body: (binary_expression
+          left: (name_reference
+            name: (identifier))
+          right: (integer_literal))))))
+
+========================================
+Empty lists and operator types allow a trailing comma
+========================================
+
+module CommaOnlyForms {
+  pure val empty: List[int] = [,]
+  const predicate: (,) => bool
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      type: (list_type
+        element: (primitive_type))
+      value: (list_literal))
+    (constant_declaration
+      name: (identifier)
+      type: (operator_type
+        result: (primitive_type)))))
+
+========================================
+Equality and ordering share left-associative precedence
+========================================
+
+module RelationPrecedence {
+  // Syntax regression: this mixed chain is intentionally rejected by typechecking.
+  pure val equalityThenOrdering = 1 == 2 < 3
+  pure val orderingThenEquality = 1 < 2 == true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (comment)
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (integer_literal)))
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (boolean_literal)))))
+
+========================================
+Nullary calls allow a comma without arguments
+========================================
+
+module CommaCalls {
+  pure def apply(f: () => int): int = f(,)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (operator_type
+          result: (primitive_type)))
+      return_type: (primitive_type)
+      body: (call_expression
+        function: (name_reference
+          name: (identifier))))))
+
+========================================
+Trailing commas in ufcs calls are rejected
+:error
+========================================
+
+module InvalidComma { pure val value = 1.to(2,) }
+
+---
+
+(source_file)
+
+========================================
+Trailing commas in reserved-ufcs calls are rejected
+:error
+========================================
+
+module InvalidComma { pure val value = true.and(false,) }
+
+---
+
+(source_file)
+
+========================================
+Pairs remain inside lambda conditional and local definition bodies
+========================================
+
+module PairBodies {
+  pure def mapped = x => x -> 1
+  pure val conditional = if (true) 1 -> 2 else 2 -> 3
+  pure val local = val x = 1 x -> 2
+  pure val terminated = val x = 1; x -> 2
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      body: (lambda_expression
+        parameter: (identifier)
+        body: (pair_expression
+          left: (name_reference
+            name: (identifier))
+          right: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (if_expression
+        condition: (boolean_literal)
+        consequence: (pair_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        alternative: (pair_expression
+          left: (integer_literal)
+          right: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (nested_definition_expression
+        definition: (value_definition
+          name: (identifier)
+          value: (integer_literal))
+        body: (pair_expression
+          left: (name_reference
+            name: (identifier))
+          right: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (nested_definition_expression
+        definition: (value_definition
+          name: (identifier)
+          value: (integer_literal))
+        body: (pair_expression
+          left: (name_reference
+            name: (identifier))
+          right: (integer_literal))))))
+
+========================================
+Assignments bind more tightly than Boolean and temporal connectives
+========================================
+
+module AssignmentPrecedence {
+  var x: int
+  temporal conjunction = x' = 1 and always(true)
+  temporal disjunction = x' = 1 or always(true)
+  temporal equivalence = x' = 1 iff always(true)
+  temporal implication = x' = 1 implies always(true)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (variable_declaration
+      name: (identifier)
+      type: (primitive_type))
+    (operator_definition
+      name: (identifier)
+      body: (binary_expression
+        left: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (integer_literal))
+        right: (call_expression
+          function: (name_reference
+            name: (identifier))
+          argument: (boolean_literal))))
+    (operator_definition
+      name: (identifier)
+      body: (binary_expression
+        left: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (integer_literal))
+        right: (call_expression
+          function: (name_reference
+            name: (identifier))
+          argument: (boolean_literal))))
+    (operator_definition
+      name: (identifier)
+      body: (binary_expression
+        left: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (integer_literal))
+        right: (call_expression
+          function: (name_reference
+            name: (identifier))
+          argument: (boolean_literal))))
+    (operator_definition
+      name: (identifier)
+      body: (binary_expression
+        left: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (integer_literal))
+        right: (call_expression
+          function: (name_reference
+            name: (identifier))
+          argument: (boolean_literal))))))

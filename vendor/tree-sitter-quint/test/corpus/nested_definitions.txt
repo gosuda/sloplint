@@ -1,0 +1,2175 @@
+========================================
+Nested value and operator definitions
+========================================
+
+module Nested {
+  def double(x) =
+    def plus(a, b) = a + b
+    plus(x, x)
+
+  def pow4(x) =
+    val x2 = x * x
+    x2 * x2
+
+  def triple(x) =
+    def add(n) = n + x; add(x, add(x, x))
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (nested_definition_expression
+        definition: (operator_definition
+          name: (identifier)
+          parameter: (parameter
+            name: (identifier))
+          parameter: (parameter
+            name: (identifier))
+          body: (binary_expression
+            left: (name_reference
+              name: (identifier))
+            right: (name_reference
+              name: (identifier))))
+        body: (call_expression
+          function: (name_reference
+            name: (identifier))
+          argument: (name_reference
+            name: (identifier))
+          argument: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (nested_definition_expression
+        definition: (value_definition
+          name: (identifier)
+          value: (binary_expression
+            left: (name_reference
+              name: (identifier))
+            right: (name_reference
+              name: (identifier))))
+        body: (binary_expression
+          left: (name_reference
+            name: (identifier))
+          right: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (nested_definition_expression
+        definition: (operator_definition
+          name: (identifier)
+          parameter: (parameter
+            name: (identifier))
+          body: (binary_expression
+            left: (name_reference
+              name: (identifier))
+            right: (name_reference
+              name: (identifier))))
+        body: (call_expression
+          function: (name_reference
+            name: (identifier))
+          argument: (name_reference
+            name: (identifier))
+          argument: (call_expression
+            function: (name_reference
+              name: (identifier))
+            argument: (name_reference
+              name: (identifier))
+            argument: (name_reference
+              name: (identifier))))))))
+
+========================================
+Nested temporal definitions
+========================================
+
+module NestedTemporal {
+  var x: int
+
+  temporal property =
+    temporal A = eventually(x > 3)
+    temporal B = always(eventually(x == 0))
+    A implies B
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (variable_declaration
+      name: (identifier)
+      type: (primitive_type))
+    (operator_definition
+      name: (identifier)
+      body: (nested_definition_expression
+        definition: (operator_definition
+          name: (identifier)
+          body: (call_expression
+            function: (name_reference
+              name: (identifier))
+            argument: (binary_expression
+              left: (name_reference
+                name: (identifier))
+              right: (integer_literal))))
+        body: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (call_expression
+              function: (name_reference
+                name: (identifier))
+              argument: (call_expression
+                function: (name_reference
+                  name: (identifier))
+                argument: (binary_expression
+                  left: (name_reference
+                    name: (identifier))
+                  right: (integer_literal)))))
+          body: (binary_expression
+            left: (name_reference
+              name: (identifier))
+            right: (name_reference
+              name: (identifier))))))))
+
+========================================
+Nested action and nondeterministic definitions
+========================================
+
+module NestedAction {
+  var n: int
+
+  action step =
+    nondet i = oneOf(0.to(10))
+    action update = n' = i
+    all {
+      i > n,
+      update,
+    }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (variable_declaration
+      name: (identifier)
+      type: (primitive_type))
+    (operator_definition
+      name: (identifier)
+      body: (nested_definition_expression
+        definition: (operator_definition
+          name: (identifier)
+          body: (call_expression
+            function: (name_reference
+              name: (identifier))
+            argument: (ufcs_call_expression
+              receiver: (integer_literal)
+              method: (identifier)
+              argument: (integer_literal))))
+        body: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (assignment_expression
+              target: (primed_identifier
+                name: (identifier))
+              value: (name_reference
+                name: (identifier))))
+          body: (all_expression
+            conjunct: (binary_expression
+              left: (name_reference
+                name: (identifier))
+              right: (name_reference
+                name: (identifier)))
+            conjunct: (name_reference
+              name: (identifier))))))))
+
+========================================
+Local binding followed by tuple result
+========================================
+
+module CallBoundary {
+  pure def step(len: int, flag: bool): (int, bool) = {
+    val newLen = len + if (flag) 1 else 0
+    (newLen, flag)
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (tuple_type
+        element: (primitive_type)
+        element: (primitive_type))
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (binary_expression
+              left: (name_reference
+                name: (identifier))
+              right: (if_expression
+                condition: (name_reference
+                  name: (identifier))
+                consequence: (integer_literal)
+                alternative: (integer_literal))))
+          body: (tuple_literal
+            element: (name_reference
+              name: (identifier))
+            element: (name_reference
+              name: (identifier))))))))
+
+========================================
+Local definition expression boundaries
+========================================
+
+module LetBoundary {
+  pure def conjunction(flag: bool): bool = {
+    val local = flag
+    and { local }
+  }
+
+  pure def negation(value: int): bool = {
+    val local = value
+    -local <= 0
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (name_reference
+              name: (identifier)))
+          body: (and_block_expression
+            conjunct: (name_reference
+              name: (identifier))))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (name_reference
+              name: (identifier)))
+          body: (binary_expression
+            left: (unary_expression
+              operand: (name_reference
+                name: (identifier)))
+            right: (integer_literal)))))))
+
+========================================
+Same-line local value definition
+========================================
+
+module SameLineLocalDefinition {
+  pure val result = (pure val x = 1 x + 1)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (parenthesized_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (integer_literal))
+          body: (binary_expression
+            left: (name_reference
+              name: (identifier))
+            right: (integer_literal)))))))
+
+========================================
+Local declaration-only operator header
+========================================
+
+module LocalHeaders {
+  pure val result = {
+    pure def declared(x: int): int
+    1
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            parameter: (annotated_parameter
+              name: (identifier)
+              type: (primitive_type))
+            return_type: (primitive_type))
+          body: (integer_literal))))))
+
+========================================
+Local declaration-only value headers
+========================================
+
+module LocalValueHeaders {
+  pure val stateful = {
+    val declared
+    1
+  }
+
+  pure val stateless = {
+    pure val declared
+    2
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier))
+          body: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier))
+          body: (integer_literal))))))
+
+========================================
+Local value initializers continue across newlines and comments
+========================================
+
+module MultilineContinuations {
+  pure def indexed(): int = {
+    val xs = List(1, 2)
+      [0]
+    xs
+  }
+  pure def commented(): List[int] = {
+    val xs = List(1, 2)
+      /* keep the chain together */
+      .append(3)
+    xs
+  }
+  pure def blankLines(): List[int] = {
+    val xs = List(1, 2)
+
+      .append(3)
+    xs
+  }
+  pure def arithmetic(): int = {
+    val n = 1
+      + 2
+    n
+  }
+  pure def subtraction(): int = {
+    val n = 3
+      - 1
+    n
+  }
+  pure def booleanContinuation(): bool = {
+    val flag = true
+      and false
+    flag
+  }
+  pure def listBody(): List[int] = {
+    val ignored = 1
+    [2, 3]
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (index_expression
+              collection: (call_expression
+                function: (name_reference
+                  name: (identifier))
+                argument: (integer_literal)
+                argument: (integer_literal))
+              index: (integer_literal)))
+          body: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      return_type: (list_type
+        element: (primitive_type))
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (ufcs_call_expression
+              receiver: (call_expression
+                function: (name_reference
+                  name: (identifier))
+                argument: (integer_literal)
+                argument: (integer_literal))
+              (comment)
+              (chain_break)
+              method: (identifier)
+              argument: (integer_literal)))
+          body: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      return_type: (list_type
+        element: (primitive_type))
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (ufcs_call_expression
+              receiver: (call_expression
+                function: (name_reference
+                  name: (identifier))
+                argument: (integer_literal)
+                argument: (integer_literal))
+              (chain_break)
+              method: (identifier)
+              argument: (integer_literal)))
+          body: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (binary_expression
+              left: (integer_literal)
+              right: (integer_literal)))
+          body: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (binary_expression
+              left: (integer_literal)
+              right: (integer_literal)))
+          body: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (binary_expression
+              left: (boolean_literal)
+              right: (boolean_literal)))
+          body: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      return_type: (list_type
+        element: (primitive_type))
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (integer_literal))
+          body: (list_literal
+            element: (integer_literal)
+            element: (integer_literal)))))))
+
+========================================
+Local initializers stay greedy while preserving a trailing body
+========================================
+
+module GreedyBoundaries {
+  type Pair = (int, int)
+  pure def tupleBody(pair: Pair): Pair = {
+    val (x, y) = pair
+    (x + 1, y + 1)
+  }
+  pure def nameBeforeTuple(pair: Pair): Pair = {
+    val value = pair
+    (value._1, value._2)
+  }
+  pure def unaryBody(a: int, b: int): bool = {
+    val delta = a - b
+    -a <= delta and delta <= b
+  }
+  pure def longestInitializer(a: int, b: int): int = {
+    val delta = a - b - a - b
+    -delta
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (type_alias_declaration
+      name: (identifier)
+      value: (tuple_type
+        element: (primitive_type)
+        element: (primitive_type)))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (named_type
+          name: (identifier)))
+      return_type: (named_type
+        name: (identifier))
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (tuple_pattern
+              element: (identifier)
+              element: (identifier))
+            value: (name_reference
+              name: (identifier)))
+          body: (tuple_literal
+            element: (binary_expression
+              left: (name_reference
+                name: (identifier))
+              right: (integer_literal))
+            element: (binary_expression
+              left: (name_reference
+                name: (identifier))
+              right: (integer_literal))))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (named_type
+          name: (identifier)))
+      return_type: (named_type
+        name: (identifier))
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (name_reference
+              name: (identifier)))
+          body: (tuple_literal
+            element: (field_access_expression
+              object: (name_reference
+                name: (identifier))
+              field: (identifier))
+            element: (field_access_expression
+              object: (name_reference
+                name: (identifier))
+              field: (identifier))))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (binary_expression
+              left: (name_reference
+                name: (identifier))
+              right: (name_reference
+                name: (identifier))))
+          body: (binary_expression
+            left: (binary_expression
+              left: (unary_expression
+                operand: (name_reference
+                  name: (identifier)))
+              right: (name_reference
+                name: (identifier)))
+            right: (binary_expression
+              left: (name_reference
+                name: (identifier))
+              right: (name_reference
+                name: (identifier)))))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (binary_expression
+              left: (binary_expression
+                left: (binary_expression
+                  left: (name_reference
+                    name: (identifier))
+                  right: (name_reference
+                    name: (identifier)))
+                right: (name_reference
+                  name: (identifier)))
+              right: (name_reference
+                name: (identifier))))
+          body: (unary_expression
+            operand: (name_reference
+              name: (identifier))))))))
+
+========================================
+Local operator bodies before tuple unary and list results
+========================================
+
+module LocalOperators {
+  pure def tupleBody(x: int): (int, int) = {
+    def f = x
+    (x, f)
+  }
+  pure def unaryBody(x: int): int = {
+    def f = x + 1
+    -f
+  }
+  pure def listBody(x: int): List[int] = {
+    pure def f(p: int): int = p + x
+    [f(1)]
+  }
+  pure def greedyBody(x: int): int = {
+    def f = x - x
+    -x
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (tuple_type
+        element: (primitive_type)
+        element: (primitive_type))
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (name_reference
+              name: (identifier)))
+          body: (tuple_literal
+            element: (name_reference
+              name: (identifier))
+            element: (name_reference
+              name: (identifier))))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (binary_expression
+              left: (name_reference
+                name: (identifier))
+              right: (integer_literal)))
+          body: (unary_expression
+            operand: (name_reference
+              name: (identifier))))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (list_type
+        element: (primitive_type))
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            parameter: (annotated_parameter
+              name: (identifier)
+              type: (primitive_type))
+            return_type: (primitive_type)
+            body: (binary_expression
+              left: (name_reference
+                name: (identifier))
+              right: (name_reference
+                name: (identifier))))
+          body: (list_literal
+            element: (call_expression
+              function: (name_reference
+                name: (identifier))
+              argument: (integer_literal))))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (binary_expression
+              left: (name_reference
+                name: (identifier))
+              right: (name_reference
+                name: (identifier))))
+          body: (unary_expression
+            operand: (name_reference
+              name: (identifier))))))))
+
+========================================
+Local initializers ending in conditional lambda and nested bodies
+========================================
+
+module PrefixBoundaries {
+  pure def conditionalTuple(x: int): (int, int) = {
+    val value = if (x > 0) x else -x
+    (value, x)
+  }
+  pure def lambdaList(x: int): List[int] = {
+    def f = y => y + x
+    [f(1)]
+  }
+  pure def nestedUnary(x: int): int = {
+    val value = val inner = x inner + 1
+    -value
+  }
+  pure def operatorConditional(x: int): (int, int) = {
+    def f = if (x > 0) x else -x
+    (f, x)
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (tuple_type
+        element: (primitive_type)
+        element: (primitive_type))
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (if_expression
+              condition: (binary_expression
+                left: (name_reference
+                  name: (identifier))
+                right: (integer_literal))
+              consequence: (name_reference
+                name: (identifier))
+              alternative: (unary_expression
+                operand: (name_reference
+                  name: (identifier)))))
+          body: (tuple_literal
+            element: (name_reference
+              name: (identifier))
+            element: (name_reference
+              name: (identifier))))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (list_type
+        element: (primitive_type))
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (lambda_expression
+              parameter: (identifier)
+              body: (binary_expression
+                left: (name_reference
+                  name: (identifier))
+                right: (name_reference
+                  name: (identifier)))))
+          body: (list_literal
+            element: (call_expression
+              function: (name_reference
+                name: (identifier))
+              argument: (integer_literal))))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (nested_definition_expression
+              definition: (value_definition
+                name: (identifier)
+                value: (name_reference
+                  name: (identifier)))
+              body: (binary_expression
+                left: (name_reference
+                  name: (identifier))
+                right: (integer_literal))))
+          body: (unary_expression
+            operand: (name_reference
+              name: (identifier))))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (tuple_type
+        element: (primitive_type)
+        element: (primitive_type))
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (if_expression
+              condition: (binary_expression
+                left: (name_reference
+                  name: (identifier))
+                right: (integer_literal))
+              consequence: (name_reference
+                name: (identifier))
+              alternative: (unary_expression
+                operand: (name_reference
+                  name: (identifier)))))
+          body: (tuple_literal
+            element: (name_reference
+              name: (identifier))
+            element: (name_reference
+              name: (identifier))))))))
+
+========================================
+Assignments nested in relations before conjunctions
+========================================
+
+module AssignmentClosure {
+  var x: int
+  temporal check = {
+    temporal condition = true == x' = 1 and x' = 2
+    (condition, true) == (true, true)
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (variable_declaration
+      name: (identifier)
+      type: (primitive_type))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (binary_expression
+              left: (binary_expression
+                left: (boolean_literal)
+                right: (assignment_expression
+                  target: (primed_identifier
+                    name: (identifier))
+                  value: (integer_literal)))
+              right: (assignment_expression
+                target: (primed_identifier
+                  name: (identifier))
+                value: (integer_literal))))
+          body: (binary_expression
+            left: (tuple_literal
+              element: (name_reference
+                name: (identifier))
+              element: (boolean_literal))
+            right: (tuple_literal
+              element: (boolean_literal)
+              element: (boolean_literal))))))))
+
+======================================
+Nested typed index initializer boundary
+======================================
+
+module NestedIndexBoundary {
+  pure val values = List(1)
+  pure def result = def first(): int = def second(): int = values[0]
+    -1;
+    0
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (integer_literal)))
+    (operator_definition
+      name: (identifier)
+      body: (nested_definition_expression
+        definition: (operator_definition
+          name: (identifier)
+          return_type: (primitive_type)
+          body: (nested_definition_expression
+            definition: (operator_definition
+              name: (identifier)
+              return_type: (primitive_type)
+              body: (index_expression
+                collection: (name_reference
+                  name: (identifier))
+                index: (integer_literal)))
+            body: (unary_expression
+              operand: (integer_literal))))
+        body: (integer_literal)))))
+
+====================================
+Nested UFCS initializer boundary
+====================================
+
+module NestedUfcsBoundary {
+  pure def keep(n: int): int = n
+  pure def result = val outer = val inner = 1.keep()
+    -1;
+    outer
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (name_reference
+        name: (identifier)))
+    (operator_definition
+      name: (identifier)
+      body: (nested_definition_expression
+        definition: (value_definition
+          name: (identifier)
+          value: (nested_definition_expression
+            definition: (value_definition
+              name: (identifier)
+              value: (ufcs_call_expression
+                receiver: (integer_literal)
+                method: (identifier)))
+            body: (unary_expression
+              operand: (integer_literal))))
+        body: (name_reference
+          name: (identifier))))))
+
+=======================================
+Nested subtraction initializer and unit body
+=======================================
+
+module NestedSubtractionBody {
+  pure val seed = 1
+  pure def result = val outer = val inner = seed
+    -seed
+    ()
+    outer
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      body: (nested_definition_expression
+        definition: (value_definition
+          name: (identifier)
+          value: (nested_definition_expression
+            definition: (value_definition
+              name: (identifier)
+              value: (binary_expression
+                left: (name_reference
+                  name: (identifier))
+                right: (name_reference
+                  name: (identifier))))
+            body: (unit_literal)))
+        body: (name_reference
+          name: (identifier))))))
+
+========================================
+Nested operator initializer before a unit body
+========================================
+
+module NestedOperatorUnit {
+  pure val seed = 1
+  pure val result = {a: seed, ...def outer(): () = val saved = def inner() = seed
+    seed
+    ();
+    {a: 2}}
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (value_definition
+      name: (identifier)
+      value: (record_literal
+        (record_literal_field
+          name: (identifier)
+          value: (name_reference
+            name: (identifier)))
+        (record_spread
+          value: (nested_definition_expression
+            definition: (operator_definition
+              name: (identifier)
+              return_type: (unit_type)
+              body: (nested_definition_expression
+                definition: (value_definition
+                  name: (identifier)
+                  value: (nested_definition_expression
+                    definition: (operator_definition
+                      name: (identifier)
+                      body: (name_reference
+                        name: (identifier)))
+                    body: (name_reference
+                      name: (identifier))))
+                body: (unit_literal)))
+            body: (record_literal
+              (record_literal_field
+                name: (identifier)
+                value: (integer_literal)))))))))
+
+======================================
+Bare local value header before a unit body
+======================================
+
+module BareValueHeader {
+  pure def result = {
+    def outer = val placeholder
+    ()
+    1
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (nested_definition_expression
+              definition: (value_definition
+                name: (identifier))
+              body: (unit_literal)))
+          body: (integer_literal))))))
+
+======================================
+Completed local operator before a list body
+======================================
+
+module IndexedLocalBody {
+  pure val seed = 1
+  pure def result = {
+    val saved = 1
+    -def later() = 1
+    seed[0]
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (binary_expression
+              left: (integer_literal)
+              right: (nested_definition_expression
+                definition: (operator_definition
+                  name: (identifier)
+                  body: (integer_literal))
+                body: (name_reference
+                  name: (identifier)))))
+          body: (list_literal
+            element: (integer_literal)))))))
+
+======================================
+Nested initializer before a parenthesized body
+======================================
+
+module NestedParenthesizedBody {
+  pure val seed = 1
+  pure def result = {
+    def outer = val saved = def inner() = seed
+    seed
+    (seed)
+    seed
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (nested_definition_expression
+              definition: (value_definition
+                name: (identifier)
+                value: (nested_definition_expression
+                  definition: (operator_definition
+                    name: (identifier)
+                    body: (name_reference
+                      name: (identifier)))
+                  body: (name_reference
+                    name: (identifier))))
+              body: (parenthesized_expression
+                expression: (name_reference
+                  name: (identifier)))))
+          body: (name_reference
+            name: (identifier)))))))
+
+======================================
+Destructured initializers before parenthesized bodies
+======================================
+
+module DestructuredBody {
+  pure val pairRecord = {left: 1, right: 2}
+  pure val pairTuple = (1, 2)
+  pure def recordResult = {
+    def outer = val {left, right} = def inner() = pairRecord
+    pairRecord
+    (left)
+    0
+  }
+  pure def tupleResult = {
+    def outer = val (left, right) = def inner() = pairTuple
+    pairTuple
+    (left)
+    0
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (record_literal
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (tuple_literal
+        element: (integer_literal)
+        element: (integer_literal)))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (nested_definition_expression
+              definition: (value_definition
+                name: (record_pattern
+                  field: (identifier)
+                  field: (identifier))
+                value: (nested_definition_expression
+                  definition: (operator_definition
+                    name: (identifier)
+                    body: (name_reference
+                      name: (identifier)))
+                  body: (name_reference
+                    name: (identifier))))
+              body: (parenthesized_expression
+                expression: (name_reference
+                  name: (identifier)))))
+          body: (integer_literal))))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (nested_definition_expression
+              definition: (value_definition
+                name: (tuple_pattern
+                  element: (identifier)
+                  element: (identifier))
+                value: (nested_definition_expression
+                  definition: (operator_definition
+                    name: (identifier)
+                    body: (name_reference
+                      name: (identifier)))
+                  body: (name_reference
+                    name: (identifier))))
+              body: (parenthesized_expression
+                expression: (name_reference
+                  name: (identifier)))))
+          body: (integer_literal))))))
+
+======================================
+Operator subtraction initializer before a unit body
+======================================
+
+module OperatorArithmeticBody {
+  pure val seed = 1
+  pure def result = def outer() = def inner() = seed
+    -seed
+    ()
+    0
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition name: (identifier) value: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      body: (nested_definition_expression
+        definition: (operator_definition
+          name: (identifier)
+          body: (nested_definition_expression
+            definition: (operator_definition
+              name: (identifier)
+              body: (binary_expression
+                left: (name_reference name: (identifier))
+                right: (name_reference name: (identifier))))
+            body: (unit_literal)))
+        body: (integer_literal)))))
+
+======================================
+Prefix calls retain a following list body
+======================================
+
+module PrefixCallListBody {
+  pure def makeValues(dummy: int): List[int] = List(dummy)
+  pure def keep(n: int): int = n
+  pure def normal = { def outer() = def inner() = if (true) List(1) else makeValues
+    (0)[0]
+    0
+  }
+  pure def method = { def outer() = def inner() = if (true) 1 else 1.keep
+    ()[0]
+    0
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (list_type
+        element: (primitive_type))
+      body: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (name_reference
+          name: (identifier))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (name_reference
+        name: (identifier)))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (nested_definition_expression
+              definition: (operator_definition
+                name: (identifier)
+                body: (if_expression
+                  condition: (boolean_literal)
+                  consequence: (call_expression
+                    function: (name_reference
+                      name: (identifier))
+                    argument: (integer_literal))
+                  alternative: (call_expression
+                    function: (name_reference
+                      name: (identifier))
+                    argument: (integer_literal))))
+              body: (list_literal
+                element: (integer_literal))))
+          body: (integer_literal))))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (nested_definition_expression
+              definition: (operator_definition
+                name: (identifier)
+                body: (if_expression
+                  condition: (boolean_literal)
+                  consequence: (integer_literal)
+                  alternative: (ufcs_call_expression
+                    receiver: (integer_literal)
+                    method: (identifier))))
+              body: (list_literal
+                element: (integer_literal))))
+          body: (integer_literal))))))
+
+======================================
+Complete local header keeps its empty parameters
+======================================
+
+module CompleteHeaderParameters {
+  pure val seed = 1
+  pure def operatorCase = {
+    def outer = def pendingHeader()
+    -seed
+    0
+  }
+  pure def valueCase = {
+    val saved = def pendingHeader()
+    -seed
+    saved
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (nested_definition_expression
+              definition: (operator_definition
+                name: (identifier))
+              body: (unary_expression
+                operand: (name_reference
+                  name: (identifier)))))
+          body: (integer_literal))))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (nested_definition_expression
+              definition: (operator_definition
+                name: (identifier))
+              body: (unary_expression
+                operand: (name_reference
+                  name: (identifier)))))
+          body: (name_reference
+            name: (identifier)))))))
+
+======================================
+Complete local headers retain their parameters
+======================================
+
+module ParameterizedHeaderBodies {
+  pure val seed = 1
+  pure def untyped = {
+    val saved = def pendingHeader(p)
+    -seed
+    saved
+  }
+  pure def multiple = {
+    val saved = def pendingHeader(p, q,)
+    -seed
+    saved
+  }
+  pure def annotated = {
+    val saved = def pendingHeader(p: int): bool
+    -seed
+    saved
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (nested_definition_expression
+              definition: (operator_definition
+                name: (identifier)
+                parameter: (parameter
+                  name: (identifier)))
+              body: (unary_expression
+                operand: (name_reference
+                  name: (identifier)))))
+          body: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (nested_definition_expression
+              definition: (operator_definition
+                name: (identifier)
+                parameter: (parameter
+                  name: (identifier))
+                parameter: (parameter
+                  name: (identifier)))
+              body: (unary_expression
+                operand: (name_reference
+                  name: (identifier)))))
+          body: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (nested_definition_expression
+              definition: (operator_definition
+                name: (identifier)
+                parameter: (annotated_parameter
+                  name: (identifier)
+                  type: (primitive_type))
+                return_type: (primitive_type))
+              body: (unary_expression
+                operand: (name_reference
+                  name: (identifier)))))
+          body: (name_reference
+            name: (identifier)))))))
+
+======================================
+Arithmetic initializers retain following list bodies
+======================================
+
+module ArithmeticListBody {
+  pure val seed = 1
+  pure def valueCase = {
+    val outer = val inner = seed
+    -seed[0]
+    0
+  }
+  pure def operatorCase = {
+    def outer() = def inner() = seed
+    -seed[0]
+    0
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (nested_definition_expression
+              definition: (value_definition
+                name: (identifier)
+                value: (binary_expression
+                  left: (name_reference
+                    name: (identifier))
+                  right: (name_reference
+                    name: (identifier))))
+              body: (list_literal
+                element: (integer_literal))))
+          body: (integer_literal))))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (nested_definition_expression
+              definition: (operator_definition
+                name: (identifier)
+                body: (binary_expression
+                  left: (name_reference
+                    name: (identifier))
+                  right: (name_reference
+                    name: (identifier))))
+              body: (list_literal
+                element: (integer_literal))))
+          body: (integer_literal))))))
+
+======================================
+Prefix initializers retain following delimited bodies
+======================================
+
+module PrefixDelimitedBodies {
+  pure val seed = 1
+  pure val recordValue = {number: 1}
+  pure def lambdaCase = {
+    def outer() = def inner() = p => seed - recordValue.number
+    (seed)
+    0
+  }
+  pure def conditionalCase = {
+    val outer = val inner = if (true) 0 else seed - recordValue.number
+    (seed)
+    0
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (value_definition
+      name: (identifier)
+      value: (record_literal
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (nested_definition_expression
+              definition: (operator_definition
+                name: (identifier)
+                body: (lambda_expression
+                  parameter: (identifier)
+                  body: (binary_expression
+                    left: (name_reference
+                      name: (identifier))
+                    right: (field_access_expression
+                      object: (name_reference
+                        name: (identifier))
+                      field: (identifier)))))
+              body: (parenthesized_expression
+                expression: (name_reference
+                  name: (identifier)))))
+          body: (integer_literal))))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (nested_definition_expression
+              definition: (value_definition
+                name: (identifier)
+                value: (if_expression
+                  condition: (boolean_literal)
+                  consequence: (integer_literal)
+                  alternative: (binary_expression
+                    left: (name_reference
+                      name: (identifier))
+                    right: (field_access_expression
+                      object: (name_reference
+                        name: (identifier))
+                      field: (identifier)))))
+              body: (parenthesized_expression
+                expression: (name_reference
+                  name: (identifier)))))
+          body: (integer_literal))))))
+
+======================================
+Unary initializers consume call arguments before local bodies
+======================================
+
+module UnaryCallBody {
+  pure val seed = 1
+  pure def number(n: int): int = n
+  pure def result = {
+    def outer = val saved = -number
+    (0)
+    seed -1
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition name: (identifier) value: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter name: (identifier) type: (primitive_type))
+      return_type: (primitive_type)
+      body: (name_reference name: (identifier)))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (nested_definition_expression
+              definition: (value_definition
+                name: (identifier)
+                value: (unary_expression
+                  operand: (call_expression
+                    function: (name_reference name: (identifier))
+                    argument: (integer_literal))))
+              body: (name_reference name: (identifier))))
+          body: (unary_expression operand: (integer_literal)))))))
+
+======================================
+Delimited local bodies keep postfix continuations
+======================================
+
+module PostfixDelimitedBody {
+  pure val seed = 1
+  pure val recordValue = {number: 1}
+  pure def result = {
+    def outer = val saved = seed
+    -seed
+    (recordValue).number -1
+  }
+}
+
+---
+
+(source_file
+ (module_definition name: (identifier)
+ (value_definition name: (identifier) value: (integer_literal))
+ (value_definition name: (identifier) value: (record_literal (record_literal_field name: (identifier) value: (integer_literal))))
+ (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression
+ definition: (operator_definition name: (identifier) body: (nested_definition_expression
+ definition: (value_definition name: (identifier) value: (binary_expression left: (name_reference name: (identifier)) right: (name_reference name: (identifier))))
+ body: (field_access_expression object: (parenthesized_expression expression: (name_reference name: (identifier))) field: (identifier))))
+ body: (unary_expression operand: (integer_literal)))))))
+
+======================================
+Subtraction retains nested implementations through Boolean continuations
+======================================
+
+module NestedBooleanSubtraction {
+  pure val seed = 1
+  pure def result = {
+    def outer = seed
+    -run later = seed
+    seed iff val saved = seed -seed
+    seed
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (binary_expression
+              left: (name_reference
+                name: (identifier))
+              right: (nested_definition_expression
+                definition: (operator_definition
+                  name: (identifier)
+                  body: (name_reference
+                    name: (identifier)))
+                body: (binary_expression
+                  left: (name_reference
+                    name: (identifier))
+                  right: (nested_definition_expression
+                    definition: (value_definition
+                      name: (identifier)
+                      value: (name_reference
+                        name: (identifier)))
+                    body: (unary_expression
+                      operand: (name_reference
+                        name: (identifier))))))))
+          body: (name_reference
+            name: (identifier)))))))
+
+======================================
+Delimited local bodies retain arithmetic continuations
+======================================
+
+module DelimitedArithmeticBody {
+  pure val seed = 1
+  def result = {
+    def outer = val saved = val choice = val initial = 1; 1
+    (2)
+    -seed[0]
+    1
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier)
+ (value_definition name: (identifier) value: (integer_literal))
+ (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression
+ definition: (operator_definition name: (identifier) body: (nested_definition_expression
+ definition: (value_definition name: (identifier) value: (nested_definition_expression
+ definition: (value_definition name: (identifier) value: (nested_definition_expression
+ definition: (value_definition name: (identifier) value: (integer_literal)) body: (integer_literal)))
+ body: (binary_expression left: (parenthesized_expression expression: (integer_literal)) right: (name_reference name: (identifier)))))
+ body: (list_literal element: (integer_literal))))
+ body: (integer_literal))))))
+
+======================================
+Prefix initializers consume indexing before later list bodies
+======================================
+
+module IndexedPrefixInitializer {
+  pure val values = List(1)
+  pure def conditional = {
+    val outer = val inner = if (true) 0 else values[0]
+    values[0]
+  }
+  pure def unary = {
+    def outer = def inner = -values[0]
+    values[0]
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier)
+(value_definition name: (identifier) value: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal)))
+(operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (value_definition name: (identifier) value: (if_expression condition: (boolean_literal) consequence: (integer_literal) alternative: (index_expression collection: (name_reference name: (identifier)) index: (integer_literal)))) body: (name_reference name: (identifier)))) body: (list_literal element: (integer_literal)))))
+(operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (operator_definition name: (identifier) body: (nested_definition_expression definition: (operator_definition name: (identifier) body: (unary_expression operand: (index_expression collection: (name_reference name: (identifier)) index: (integer_literal)))) body: (name_reference name: (identifier)))) body: (list_literal element: (integer_literal)))))))
+
+======================================
+Subtracted value headers leave unit bodies
+======================================
+
+module SubtractedValueHeader {
+  pure val seed = 1
+  def result = {
+    val saved = seed -val pending()
+    seed
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier)
+(value_definition name: (identifier) value: (integer_literal))
+(operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression
+ definition: (value_definition name: (identifier) value: (binary_expression left: (name_reference name: (identifier))
+ right: (nested_definition_expression definition: (value_definition name: (identifier)) body: (unit_literal))))
+ body: (name_reference name: (identifier)))))))
+
+======================================
+Postfix local bodies leave following call delimiters
+======================================
+
+module PostfixBodyEnd {
+  pure val seed = 1
+  pure val recordValue = {number: 1}
+  pure def result = {
+    def outer = val saved = seed -seed
+    (recordValue).number()
+  }
+}
+
+---
+
+(source_file
+ (module_definition name: (identifier)
+ (value_definition name: (identifier) value: (integer_literal))
+ (value_definition name: (identifier) value: (record_literal (record_literal_field name: (identifier) value: (integer_literal))))
+ (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression
+ definition: (operator_definition name: (identifier) body: (nested_definition_expression
+ definition: (value_definition name: (identifier) value: (binary_expression left: (name_reference name: (identifier)) right: (name_reference name: (identifier))))
+ body: (field_access_expression object: (parenthesized_expression expression: (name_reference name: (identifier))) field: (identifier))))
+ body: (unit_literal))))))
+
+======================================
+Compound arithmetic retains local value operands
+======================================
+
+module CompoundValueOperands {
+  pure val seed = 1
+  def implemented = {
+    val saved = seed -val pending = seed()
+    seed
+  }
+  def product = {
+    val saved = seed -seed * val pending();
+    seed
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier) (value_definition name: (identifier) value: (integer_literal)) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (binary_expression left: (name_reference name: (identifier)) right: (nested_definition_expression definition: (value_definition name: (identifier) value: (name_reference name: (identifier))) body: (unit_literal)))) body: (name_reference name: (identifier))))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (binary_expression left: (name_reference name: (identifier)) right: (binary_expression left: (name_reference name: (identifier)) right: (nested_definition_expression definition: (value_definition name: (identifier)) body: (unit_literal))))) body: (name_reference name: (identifier)))))))
+
+======================================
+Completed initializers retain nested and unary local bodies
+======================================
+
+module PrefixLocalBodies {
+  pure val seed = 1
+  pure val values = List(1)
+  pure def number(n: int): int = n
+  pure def nestedBody = {
+    val saved = def inner = -number
+    (0)
+    val last = values[0]
+    values
+  }
+  pure def unaryBody = {
+    val outer = val inner = if (true) false else false or true.and(true)
+    --seed;
+    (seed)
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier) (value_definition name: (identifier) value: (integer_literal)) (value_definition name: (identifier) value: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal))) (operator_definition name: (identifier) parameter: (annotated_parameter name: (identifier) type: (primitive_type)) return_type: (primitive_type) body: (name_reference name: (identifier))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (operator_definition name: (identifier) body: (unary_expression operand: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal)))) body: (nested_definition_expression definition: (value_definition name: (identifier) value: (name_reference name: (identifier))) body: (list_literal element: (integer_literal))))) body: (name_reference name: (identifier))))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (value_definition name: (identifier) value: (if_expression condition: (boolean_literal) consequence: (boolean_literal) alternative: (binary_expression left: (boolean_literal) right: (ufcs_call_expression receiver: (boolean_literal) method: (reserved_operator) argument: (boolean_literal))))) body: (unary_expression operand: (unary_expression operand: (name_reference name: (identifier)))))) body: (parenthesized_expression expression: (name_reference name: (identifier))))))))
+
+======================================
+Conditional initializers consume calls before later indexing
+======================================
+
+module ConditionalCallListBody {
+  pure val seed = 1
+  pure def number(n: int): int = n
+  pure def result = {
+    def outer = def inner = if (true) 0 else number
+    (0)[0]
+    -seed
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier) (value_definition name: (identifier) value: (integer_literal)) (operator_definition name: (identifier) parameter: (annotated_parameter name: (identifier) type: (primitive_type)) return_type: (primitive_type) body: (name_reference name: (identifier))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (operator_definition name: (identifier) body: (nested_definition_expression definition: (operator_definition name: (identifier) body: (if_expression condition: (boolean_literal) consequence: (integer_literal) alternative: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal)))) body: (list_literal element: (integer_literal)))) body: (unary_expression operand: (name_reference name: (identifier))))))))
+
+======================================
+Nested parameterized headers retain following list bodies
+======================================
+
+module NestedParameterizedHeader {
+  pure val seed = 1
+  pure def result = {
+    val saved = def first = def pending()[1]()
+    seed
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier) (value_definition name: (identifier) value: (integer_literal)) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (operator_definition name: (identifier) body: (nested_definition_expression definition: (operator_definition name: (identifier)) body: (list_literal element: (integer_literal)))) body: (unit_literal))) body: (name_reference name: (identifier)))))))
+
+======================================
+Assignment arithmetic retains local value operands
+======================================
+
+module AssignedLocalValueOperand {
+  var state: int
+  pure val seed = 1
+  def result = {
+    val saved = state' = seed -val pending = seed()
+    seed
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier) (variable_declaration name: (identifier) type: (primitive_type)) (value_definition name: (identifier) value: (integer_literal)) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (assignment_expression target: (primed_identifier name: (identifier)) value: (binary_expression left: (name_reference name: (identifier)) right: (nested_definition_expression definition: (value_definition name: (identifier) value: (name_reference name: (identifier))) body: (unit_literal))))) body: (name_reference name: (identifier)))))))
+
+======================================
+Prefix initializers finish compound right edges before local bodies
+======================================
+
+module CompoundPrefixEdge {
+  pure val seed = 1
+  pure val values = List(1)
+  pure def number(n: int): int = n
+  pure def lambdaCase = {
+    val saved = def inner = p => seed
+    -seed
+    seed()
+  }
+  pure def terminatedCall = {
+    val saved = def inner = -number
+    (0);
+    val last = values[0]
+    values
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier) (value_definition name: (identifier) value: (integer_literal)) (value_definition name: (identifier) value: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal))) (operator_definition name: (identifier) parameter: (annotated_parameter name: (identifier) type: (primitive_type)) return_type: (primitive_type) body: (name_reference name: (identifier))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (operator_definition name: (identifier) body: (lambda_expression parameter: (identifier) body: (binary_expression left: (name_reference name: (identifier)) right: (name_reference name: (identifier))))) body: (name_reference name: (identifier)))) body: (unit_literal)))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (operator_definition name: (identifier) body: (unary_expression operand: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal)))) body: (nested_definition_expression definition: (value_definition name: (identifier) value: (name_reference name: (identifier))) body: (list_literal element: (integer_literal))))) body: (name_reference name: (identifier)))))))
+
+======================================
+Completed operator initializers retain postfix and arithmetic continuations
+======================================
+
+module ContinuedOperatorInitializers {
+  pure val seed = 1
+  pure val values = List(1)
+  pure def source(n: int): List[int] = List(n)
+  pure def number(n: int): int = n
+  pure def indexed = {
+    val saved = def first = def second = source(0)[0];
+    seed()
+    seed
+  }
+  pure def nestedBody = {
+    val saved = def inner = source(0)[0];
+    val last = values[0]
+    values
+  }
+  pure def arithmetic = {
+    val saved = def inner = number(0)
+    -seed;
+    seed()
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier) (value_definition name: (identifier) value: (integer_literal)) (value_definition name: (identifier) value: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal))) (operator_definition name: (identifier) parameter: (annotated_parameter name: (identifier) type: (primitive_type)) return_type: (list_type element: (primitive_type)) body: (call_expression function: (name_reference name: (identifier)) argument: (name_reference name: (identifier)))) (operator_definition name: (identifier) parameter: (annotated_parameter name: (identifier) type: (primitive_type)) return_type: (primitive_type) body: (name_reference name: (identifier))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (operator_definition name: (identifier) body: (nested_definition_expression definition: (operator_definition name: (identifier) body: (index_expression collection: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal)) index: (integer_literal))) body: (name_reference name: (identifier)))) body: (unit_literal))) body: (name_reference name: (identifier))))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (operator_definition name: (identifier) body: (index_expression collection: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal)) index: (integer_literal))) body: (nested_definition_expression definition: (value_definition name: (identifier) value: (name_reference name: (identifier))) body: (list_literal element: (integer_literal))))) body: (name_reference name: (identifier))))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (operator_definition name: (identifier) body: (binary_expression left: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal)) right: (name_reference name: (identifier)))) body: (name_reference name: (identifier)))) body: (unit_literal))))))
+
+======================================
+Unary local bodies bind before arithmetic and relations
+======================================
+
+module UnaryLocalBodyPrecedence {
+  pure val seed = 1
+  pure def number(n: int): int = n
+  pure def division = {
+    def outer = val saved = number(0)
+    -seed / seed
+    seed
+  }
+  pure def relation = {
+    val outer = val inner = val pending
+    seed
+    -seed < seed
+    seed
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier) (value_definition name: (identifier) value: (integer_literal)) (operator_definition name: (identifier) parameter: (annotated_parameter name: (identifier) type: (primitive_type)) return_type: (primitive_type) body: (name_reference name: (identifier))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (operator_definition name: (identifier) body: (nested_definition_expression definition: (value_definition name: (identifier) value: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal))) body: (binary_expression left: (unary_expression operand: (name_reference name: (identifier))) right: (name_reference name: (identifier))))) body: (name_reference name: (identifier))))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (value_definition name: (identifier)) body: (name_reference name: (identifier)))) body: (binary_expression left: (unary_expression operand: (name_reference name: (identifier))) right: (name_reference name: (identifier))))) body: (name_reference name: (identifier)))))))
+
+======================================
+Local body operands preserve unary and postfix levels
+======================================
+
+module LocalBodyOperandLevels {
+  pure val seed = 1
+  pure val recordValue = {number: 1}
+  pure def division = {
+    def outer = val saved = 1 - seed
+    -seed / seed
+    seed
+  }
+  pure def fieldCase = {
+    val outer = def inner = val pending
+    seed
+    -recordValue.number()
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier) (value_definition name: (identifier) value: (integer_literal)) (value_definition name: (identifier) value: (record_literal (record_literal_field name: (identifier) value: (integer_literal)))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (operator_definition name: (identifier) body: (nested_definition_expression definition: (value_definition name: (identifier) value: (binary_expression left: (integer_literal) right: (name_reference name: (identifier)))) body: (binary_expression left: (unary_expression operand: (name_reference name: (identifier))) right: (name_reference name: (identifier))))) body: (name_reference name: (identifier))))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (operator_definition name: (identifier) body: (nested_definition_expression definition: (value_definition name: (identifier)) body: (name_reference name: (identifier)))) body: (unary_expression operand: (field_access_expression object: (name_reference name: (identifier)) field: (identifier))))) body: (unit_literal))))))
+
+======================================
+Power remains inside unary local bodies
+======================================
+
+module PowerLocalBody {
+  pure val seed = 1
+  pure def result = {
+    def outer = val saved = 1 - seed
+    -seed ^ 2
+    seed
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier) (value_definition name: (identifier) value: (integer_literal)) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (operator_definition name: (identifier) body: (nested_definition_expression definition: (value_definition name: (identifier) value: (binary_expression left: (integer_literal) right: (name_reference name: (identifier)))) body: (unary_expression operand: (binary_expression left: (name_reference name: (identifier)) right: (integer_literal))))) body: (name_reference name: (identifier)))))))
+
+======================================
+Header body indexing precedes later local calls
+======================================
+
+module HeaderBodyIndexContinuation {
+  pure val values = List(1)
+  pure val seed = 1
+  pure def result = {
+    val saved = def first = def second = val pending
+    values[0];
+    seed()
+    seed
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier) (value_definition name: (identifier) value: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal))) (value_definition name: (identifier) value: (integer_literal)) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (operator_definition name: (identifier) body: (nested_definition_expression definition: (operator_definition name: (identifier) body: (nested_definition_expression definition: (value_definition name: (identifier)) body: (index_expression collection: (name_reference name: (identifier)) index: (integer_literal)))) body: (name_reference name: (identifier)))) body: (unit_literal))) body: (name_reference name: (identifier)))))))
+
+======================================
+Earlier initializer calls precede later local arithmetic
+======================================
+
+module SuccessiveInitializerCalls {
+  pure val seed = 1
+  pure def number(n: int): int = n
+  pure def result = {
+    val saved = def first = number(0)
+    val middle = def second = seed
+    -seed;
+    seed()
+  }
+}
+
+---
+
+(source_file (module_definition name: (identifier) (value_definition name: (identifier) value: (integer_literal)) (operator_definition name: (identifier) parameter: (annotated_parameter name: (identifier) type: (primitive_type)) return_type: (primitive_type) body: (name_reference name: (identifier))) (operator_definition name: (identifier) body: (block_expression expression: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (operator_definition name: (identifier) body: (call_expression function: (name_reference name: (identifier)) argument: (integer_literal))) body: (nested_definition_expression definition: (value_definition name: (identifier) value: (nested_definition_expression definition: (operator_definition name: (identifier) body: (name_reference name: (identifier))) body: (unary_expression operand: (name_reference name: (identifier))))) body: (name_reference name: (identifier))))) body: (unit_literal))))))

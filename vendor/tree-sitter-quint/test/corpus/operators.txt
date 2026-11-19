@@ -1,0 +1,714 @@
+====================================
+Annotated pure operator definition
+====================================
+
+module Functions {
+  pure def increment(x: int): int = x + 1
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (integer_literal)))))
+
+========================================
+Declaration-only operator headers
+========================================
+
+module DeclarationHeaders {
+  pure val universe: Set[int]
+  pure def equal(left: t, right: t): bool
+  action step
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      type: (set_type
+        element: (primitive_type)))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (type_variable))
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (type_variable))
+      return_type: (primitive_type))
+    (operator_definition
+      name: (identifier))))
+
+========================================
+Parameterless annotated action definition
+========================================
+
+module Actions {
+  action isReady: bool = true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (boolean_literal))))
+
+========================================
+Qualified operator parameters
+========================================
+
+module Parameters {
+  pure def identity(Scope::x: int): int = Scope::x
+  pure def inferred(Scope::x) = Scope::x
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (qualified_identifier
+          namespace: (identifier)
+          name: (identifier))
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (namespace_access_expression
+        namespace: (identifier)
+        member: (identifier)))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (qualified_identifier
+          namespace: (identifier)
+          name: (identifier)))
+      body: (namespace_access_expression
+        namespace: (identifier)
+        member: (identifier)))))
+
+========================================
+Explicit empty operator parameter list
+========================================
+
+module EmptyOperatorParameters {
+  action tick(): bool = true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (boolean_literal))))
+
+========================================
+Empty parameter lists for every qualifier
+========================================
+
+module EmptyParameterLists {
+  pure def pureAnswer() = 42
+  def stateAnswer() = 42
+  nondet nondetAnswer() = 42
+  temporal temporalAnswer() = true
+  run runAnswer() = true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      body: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      body: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      body: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      body: (boolean_literal))
+    (operator_definition
+      name: (identifier)
+      body: (boolean_literal))))
+
+========================================
+Trailing commas in parameter lists
+========================================
+
+module TrailingParameterCommas {
+  def identity(x,) = x
+  action check(flag: bool,): bool = flag
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (name_reference
+        name: (identifier)))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (name_reference
+        name: (identifier)))))
+
+========================================
+Return types after inferred parameters
+========================================
+
+module UnannotatedReturnTypes {
+  pure def identity(x): int = x
+  action check(flag): bool = flag
+  nondet choose(): int = 1
+  temporal property(flag): bool = flag
+  run trace(): bool = true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      return_type: (primitive_type)
+      body: (name_reference
+        name: (identifier)))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      return_type: (primitive_type)
+      body: (name_reference
+        name: (identifier)))
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      return_type: (primitive_type)
+      body: (name_reference
+        name: (identifier)))
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (boolean_literal))))
+
+========================================
+Parameterized value definitions
+========================================
+
+module ParameterizedValues {
+  val identity(x) = x
+  pure val first(value: int): int = value
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (name_reference
+        name: (identifier)))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (name_reference
+        name: (identifier)))))
+
+========================================
+Stateful operator definition
+========================================
+
+module Timers {
+  var timer: int
+  def hasExpired(timestamp: int): bool = timer >= timestamp
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (variable_declaration
+      name: (identifier)
+      type: (primitive_type))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (name_reference
+          name: (identifier))))))
+
+========================================
+Inferred parameter with return annotation
+========================================
+
+module Flexible {
+  def inferred(x): int = x
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      return_type: (primitive_type)
+      body: (name_reference
+        name: (identifier)))))
+
+========================================
+Optional definition semicolons
+========================================
+
+module Terminators {
+  val answer = 42;
+  pure def identity(x: int): int = x;
+  action ready = true;
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (name_reference
+        name: (identifier)))
+    (operator_definition
+      name: (identifier)
+      body: (boolean_literal))))
+
+======================================
+Parameterless pure operator definition
+======================================
+
+module Functions {
+  pure def answer: int = 42
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (integer_literal))))
+
+======================================
+Type-inferred pure operator definition
+======================================
+
+module Functions {
+  pure def increment(x) = x + 1
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (integer_literal)))))
+
+==================================
+Annotated action definition
+==================================
+
+module Actions {
+  action isPositive(x: int): bool = x > 0
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (integer_literal)))))
+
+================================================
+Fully inferred parameterless operator definition
+================================================
+
+module Functions {
+  pure def answer = 42
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      body: (integer_literal))))
+
+========================================
+Parameterless inferred action definition
+========================================
+
+module Actions {
+  action isReady = true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      body: (boolean_literal))))
+
+========================================
+Parameterized inferred action definition
+========================================
+
+module Actions {
+  action isPositive(x) = x > 0
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (integer_literal)))))
+
+========================================
+Parameterless nondeterministic definition
+========================================
+
+module Choices {
+  nondet choose = true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      body: (boolean_literal))))
+
+========================================
+Parameterized nondeterministic definition
+========================================
+
+module Choices {
+  nondet choose(value) = value > 0
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (integer_literal)))))
+
+========================================
+Annotated nondeterministic definition
+========================================
+
+module Choices {
+  nondet choose(value: int): bool = value > 0
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (integer_literal)))))
+
+==================================================
+Parameterless annotated nondeterministic definition
+==================================================
+
+module Choices {
+  nondet choose: bool = true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (boolean_literal))))
+
+========================================
+Parameterless temporal definition
+========================================
+
+module Properties {
+  temporal staysReady = always(true)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      body: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (boolean_literal)))))
+
+========================================
+Parameterized temporal definition
+========================================
+
+module Properties {
+  temporal stays(value) = always(value)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (name_reference
+          name: (identifier))))))
+
+========================================
+Annotated temporal definition
+========================================
+
+module Properties {
+  temporal stays(value: bool): bool = always(value)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (name_reference
+          name: (identifier))))))
+
+========================================
+Parameterless annotated temporal definition
+========================================
+
+module Properties {
+  temporal staysReady: bool = always(true)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (boolean_literal)))))
+
+========================================
+Parameterless run definition
+========================================
+
+module Scenarios {
+  run example = true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      body: (boolean_literal))))
+
+========================================
+Parameterized run definition
+========================================
+
+module Scenarios {
+  run example(value) = value > 0
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (integer_literal)))))
+
+========================================
+Annotated run definition
+========================================
+
+module Scenarios {
+  run example(value: int): bool = value > 0
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (integer_literal)))))
+
+========================================
+Parameterless annotated run definition
+========================================
+
+module Scenarios {
+  run example: bool = true
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (boolean_literal))))
