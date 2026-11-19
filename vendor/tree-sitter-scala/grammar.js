@@ -458,6 +458,10 @@ module.exports = grammar({
     // 'extension' • '{' is either an extension definition with a braced body
     // or the soft identifier `extension` (a Scala 2 id) called with a block.
     [$.extension_definition, $._soft_identifier],
+    // 'enum' is a soft keyword too: an `enum`-definition and the identifier
+    // `enum` (Scala 2 code uses it as a parameter or named argument) diverge
+    // only after the token's continuation is known.
+    [$.enum_definition, $._soft_identifier],
     [$.binding, $._simple_expression],
     [$.binding, $._type_identifier],
     // A parenthesized type before `=>` can extend into a function type or stop
@@ -661,15 +665,18 @@ module.exports = grammar({
       ),
 
     enum_definition: $ =>
-      seq(
-        repeat($.annotation),
-        optional($.modifiers),
-        "enum",
-        $._class_constructor,
-        field("extend", optional($.extends_clause)),
-        field("derive", optional(choice($.derives_clause, $.uses_clause))),
-        field("body", $.enum_body),
-        optional($._end_marker_named_tail),
+      prec(
+        1,
+        seq(
+          repeat($.annotation),
+          optional($.modifiers),
+          "enum",
+          $._class_constructor,
+          field("extend", optional($.extends_clause)),
+          field("derive", optional(choice($.derives_clause, $.uses_clause))),
+          field("body", $.enum_body),
+          optional($._end_marker_named_tail),
+        ),
       ),
 
     _enum_block: $ =>
@@ -799,7 +806,7 @@ module.exports = grammar({
     // Scala 3 keywords that are valid identifiers in Scala 2 sources and thus
     // may appear as package names in import/export paths (e.g. `import io.circe.export.Exported`).
     _namespace_path_segment: $ =>
-      choice($._identifier, alias(choice("enum", "export"), $.identifier)),
+      choice($._identifier, alias("export", $.identifier)),
 
     namespace_wildcard: $ => prec.left(1, choice("*", "_", "given")),
 
@@ -2832,7 +2839,7 @@ module.exports = grammar({
     _super_identifier: $ => "super",
 
     // https://docs.scala-lang.org/scala3/reference/soft-modifier.html
-    _soft_identifier: $ => prec("soft_id", "extension"),
+    _soft_identifier: $ => prec("soft_id", choice("extension", "enum")),
 
     // alphaid          ::=  upper idrest
     //                       |  varid
