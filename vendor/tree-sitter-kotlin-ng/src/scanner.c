@@ -213,35 +213,61 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
         return;
     }
     if (accessor_index == 0 || accessor_index == 1) {
-        // `get`/`set` as plain identifiers: `get = 2` assigns, `get(x)` and
+        // `get`/`set` as plain identifiers: `get = 2` assigns (bare `get`
+        // is never an accessor — a getter needs `()`), `get(x)` and
         // `set(v)` call. A paren'ed accessor must be followed by a body
         // (`= expr`/`{...}`/`: type`) or it is a call, not an accessor.
-        while (iswspace(lexer->lookahead) && lexer->lookahead != '\n') {
-            skip(lexer);
-        }
+        skip_ws_comments(lexer);
         if (lexer->lookahead == '=') {
             return;
         }
         if (lexer->lookahead == '(') {
             skip(lexer);
-            while (iswspace(lexer->lookahead) && lexer->lookahead != '\n') {
-                skip(lexer);
-            }
+            skip_ws_comments(lexer);
             // A getter takes `()`; a setter takes `(<identifier> ...)` where
-            // modifiers may precede the parameter name.
+            // annotations (`@Anno v`) or a backtick-quoted name may precede
+            // or form the parameter name.
             if (accessor_index == 0) {
                 if (lexer->lookahead != ')') {
                     return;
                 }
-            } else if (!iswalpha(lexer->lookahead) && lexer->lookahead != '_') {
+            } else if (!iswalpha(lexer->lookahead) && lexer->lookahead != '_' &&
+                       lexer->lookahead != '@' && lexer->lookahead != '`') {
                 return;
             }
-            // `(` was already consumed; run until its `)` closes.
+            // `(` was already consumed; run until its `)` closes, ignoring
+            // strings, char literals, and comments inside the parens.
             unsigned depth = 1;
             do {
                 wchar_t ch = lexer->lookahead;
                 if (ch == '"' || ch == '\'') {
                     skip_string(lexer, ch);
+                    continue;
+                }
+                if (ch == '/') {
+                    skip(lexer);
+                    if (lexer->lookahead == '/') {
+                        while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
+                            skip(lexer);
+                        }
+                        continue;
+                    }
+                    if (lexer->lookahead == '*') {
+                        skip(lexer);
+                        unsigned comment_depth = 1;
+                        while (comment_depth > 0 && !lexer->eof(lexer)) {
+                            wchar_t c = lexer->lookahead;
+                            skip(lexer);
+                            if (c == '/' && lexer->lookahead == '*') {
+                                comment_depth++;
+                                skip(lexer);
+                            } else if (c == '*' && lexer->lookahead == '/') {
+                                comment_depth--;
+                                skip(lexer);
+                            }
+                        }
+                        continue;
+                    }
                     continue;
                 }
                 if (ch == '(') {
@@ -251,19 +277,17 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                 }
                 skip(lexer);
             } while (depth > 0 && !lexer->eof(lexer));
-            while (iswspace(lexer->lookahead) && lexer->lookahead != '\n') {
-                skip(lexer);
-            }
+            // The body may start on the next line: `get()\n= 2`.
+            skip_ws_comments(lexer);
             if (lexer->lookahead != '=' && lexer->lookahead != '{' && lexer->lookahead != ':') {
                 return;
             }
         }
     } else if (accessor_index == 2) {
-        // `field` binds a backing field only before `=` (or `: type =`); a
-        // call like `field(x)` or any other identifier use is a statement.
-        while (iswspace(lexer->lookahead) && lexer->lookahead != '\n') {
-            skip(lexer);
-        }
+        // `field` binds a backing field only before `=` (or `: type =`),
+        // possibly across comments and a line break; a call like `field(x)`
+        // or any other identifier use is a statement.
+        skip_ws_comments(lexer);
         if (lexer->lookahead != '=' && lexer->lookahead != ':') {
             return;
         }
