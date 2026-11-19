@@ -18,8 +18,9 @@ Date: 2026-11-18.
   Reproduce it with `diff -u --label=a/grammar.js --label=b/grammar.js`
   on the two files; apply it with `patch -p1` on the base file.
 
+## How src/ is generated
+
 - Tool: tree-sitter-cli 0.27.2.
-- Tool: tree-sitter-cli 0.27.1 (`/tmp/tscli/package/tree-sitter`).
 - Command, run in this directory: `tree-sitter generate`.
 - `src/scanner.c` is hand-written: an external scanner for `$"..."`
   interpolated strings whose interior may nest quotes and braces; it
