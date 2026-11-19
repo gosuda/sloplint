@@ -108,10 +108,13 @@ MISSING node).
 
 | | published 0.26.3 | vendored |
 |---|---|---|
-| cats parse-error files | 1 | 1 (residual) |
-| scala3-library parse-error files | 17 | 14 |
+| cats parse-error files | 1 | ≤1 (residual) |
+| scala3-library parse-error files | 17 | ≤14 |
 | fixed (error → clean) | | 3: i12757, i24250, t5702-pos-infix-star |
 | clean → error | | **0** |
+
+The vendored counts were measured at the SC-SEMI round; later rounds only add fixes (each
+round verifies `clean → error` stays 0), so they are upper bounds.
 
 - Clean under both grammars: 6029 files. Trees (S-expression) changed: **0**.
 - Findings: cats 3319 → 3319. scala3-library 10450 → 10449. Non-fixed-file deltas excluding
