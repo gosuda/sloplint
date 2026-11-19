@@ -200,13 +200,15 @@ fn braced_block_under_case_ends_with_its_block() {
     });
 }
 
-// `#ifdef`-guarded `MACRO() { int fd = 0; };` takes the loose member
-// read, which tags the block local as `field_declaration` — the
-// extractor must still bind it or its writes go unscoped.
+// `MACRO() { int fd = 0; };` inside a function body takes the
+// statement-scope member read, which nests the block local under
+// `field_declaration_list` — the extractor must still bind it or its
+// writes go unscoped. The `int bits : 3;` member makes the input
+// distinguishable: the base grammar can only read the block as a
+// nested function body, where a bitfield is not a statement.
 #[test]
 fn guarded_macro_braced_locals_bind() {
-    let source =
-        "#ifdef FLAG\nON_SCOPE_EXIT() {\n    int fd = 0;\n    fd = 1;\n    fd = 2;\n}\n#endif\n";
+    let source = "void g() {\n    ON_SCOPE_EXIT() {\n        int bits : 3;\n        int fd = 0;\n        fd = 1;\n        fd = 2;\n    };\n}\n";
     with_cpp_bindings(source, |found| {
         let fds = named_all(found, "fd");
         assert_eq!(fds.len(), 1, "the macro-braced local binds once: {found:?}");
@@ -216,7 +218,7 @@ fn guarded_macro_braced_locals_bind() {
                 fds[0].first_write_line,
                 fds[0].last_write_line
             ),
-            (2, 4, 5),
+            (2, 5, 6),
             "both writes land on the local: {found:?}"
         );
     });

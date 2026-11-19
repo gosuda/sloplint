@@ -171,3 +171,35 @@ fn ifdef_guarded_empty_paren_braced_macro() {
         "all three guarded macros must bind, sexp: {sexp}"
     );
 }
+
+// `WIDGET() { int bits : 3; };` inside a function body takes the
+// paren-required member read (`macro_braced_declaration`): the bitfield
+// is not a statement, so `macro_braced_statement` can't claim it and
+// the base grammar errors. Bare `NAME {` keeps the statement read —
+// the paren form never steals `ON_SCOPE_EXIT { cleanup(); };`.
+#[test]
+fn paren_braced_decl_at_statement_scope() {
+    let source = concat!(
+        "void f() {\n",
+        "  WIDGET() { int bits : 3; };\n",
+        "  ON_SCOPE_EXIT { cleanup(); };\n",
+        "}\n",
+    );
+    let language: tree_sitter::Language = tree_sitter_cpp::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).expect("cpp language loads");
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        !tree.root_node().has_error() && !sexp.contains("MISSING"),
+        "must parse clean, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("macro_braced_declaration") && sexp.contains("bitfield_clause"),
+        "paren form must read as member decl, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("macro_braced_statement"),
+        "bare NAME block must stay a statement macro, sexp: {sexp}"
+    );
+}

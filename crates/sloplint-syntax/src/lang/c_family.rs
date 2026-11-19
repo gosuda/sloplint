@@ -164,9 +164,19 @@ pub(crate) fn params<'s>(
 }
 
 pub(crate) fn init_value(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    cx.parent()
+    if let Some(value) = cx
+        .parent()
         .filter(|parent| parent.kind() == "init_declarator")
         .and_then(|parent| child_by_field(parent, "value"))
+    {
+        return value.id() == n.id();
+    }
+    // A braced-macro member read tags `int fd = f();` as a
+    // `field_declaration` whose initializer is `default_value` — the
+    // call still initializes a binding (likewise a real member default).
+    cx.parent()
+        .filter(|parent| parent.kind() == "field_declaration")
+        .and_then(|parent| child_by_field(parent, "default_value"))
         .is_some_and(|value| value.id() == n.id())
 }
 
