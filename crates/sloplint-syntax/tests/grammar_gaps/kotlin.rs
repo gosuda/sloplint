@@ -25,13 +25,17 @@ fn run(source: &str) -> Analysis<'_> {
     analyze(&mut Parsers::new(), &input, &NO_CUSTOM)
 }
 
-fn raw_has_error(source: &str) -> bool {
+fn raw_tree(source: &str) -> tree_sitter::Tree {
     let language: tree_sitter::Language = tree_sitter_kotlin_ng::LANGUAGE.into();
     let mut parser = tree_sitter::Parser::new();
     parser
         .set_language(&language)
         .expect("kotlin language loads");
-    let tree = parser.parse(source, None).expect("parser returns a tree");
+    parser.parse(source, None).expect("parser returns a tree")
+}
+
+fn raw_has_error(source: &str) -> bool {
+    let tree = raw_tree(source);
     let root = tree.root_node();
     root.has_error() || root.to_sexp().contains("MISSING")
 }
@@ -239,9 +243,23 @@ fn primary_constructor_parameters_on_the_next_line_parse() {
 #[test]
 fn annotated_open_class_stays_a_declaration() {
     run_clean("@Deprecated(\"old\") open class C {}\n");
+    let sexp = raw_tree("@Deprecated(\"old\") open class C {}\n")
+        .root_node()
+        .to_sexp();
+    assert!(
+        sexp.contains("(class_declaration"),
+        "annotated class must land in class_declaration, got:\n{sexp}"
+    );
 }
 
 #[test]
 fn value_receiver_class_literal_keeps_parenthesized_expression() {
     run_clean("fun f(v: Any) { (v)::class.java }\n");
+    let sexp = raw_tree("fun f(v: Any) { (v)::class.java }\n")
+        .root_node()
+        .to_sexp();
+    assert!(
+        sexp.contains("(callable_reference (parenthesized_expression"),
+        "the value receiver must stay a parenthesized_expression, got:\n{sexp}"
+    );
 }
