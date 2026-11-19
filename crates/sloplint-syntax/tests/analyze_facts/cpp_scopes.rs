@@ -199,3 +199,25 @@ fn braced_block_under_case_ends_with_its_block() {
         );
     });
 }
+
+// `#ifdef`-guarded `MACRO() { int fd = 0; };` takes the loose member
+// read, which tags the block local as `field_declaration` — the
+// extractor must still bind it or its writes go unscoped.
+#[test]
+fn guarded_macro_braced_locals_bind() {
+    let source =
+        "#ifdef FLAG\nON_SCOPE_EXIT() {\n    int fd = 0;\n    fd = 1;\n    fd = 2;\n}\n#endif\n";
+    with_cpp_bindings(source, |found| {
+        let fds = named_all(found, "fd");
+        assert_eq!(fds.len(), 1, "the macro-braced local binds once: {found:?}");
+        assert_eq!(
+            (
+                fds[0].write_lines,
+                fds[0].first_write_line,
+                fds[0].last_write_line
+            ),
+            (2, 4, 5),
+            "both writes land on the local: {found:?}"
+        );
+    });
+}

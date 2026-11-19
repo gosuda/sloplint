@@ -119,6 +119,7 @@ fn operator_comment_brackets_vs_division() {
         "    int operator /*c*/ [](int i) { return t[i]; }\n",
         "    int operator // line\n",
         "      [](int i) { return t[i]; }\n",
+        "    int operator /(int i) { return t[i]; }\n",
         "  };\n",
         "};\n",
     );

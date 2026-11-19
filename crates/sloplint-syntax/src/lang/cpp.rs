@@ -171,7 +171,18 @@ impl LangHooks for CppHooks {
         })
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() != "declaration" {
+        // A guarded `MACRO() { int fd = open(); };` parses on the loose
+        // member read, which tags block locals as `field_declaration`.
+        // Inside a macro-braced body they are locals, so bind them there
+        // — real struct fields keep a `struct_specifier` grandparent.
+        let decl_like = n.kind() == "declaration"
+            || (n.kind() == "field_declaration"
+                && n.parent().is_some_and(|p| {
+                    p.kind() == "field_declaration_list"
+                        && p.parent()
+                            .is_some_and(|g| g.kind() == "macro_braced_declaration")
+                }));
+        if !decl_like {
             return;
         }
         if word(
