@@ -1,0 +1,20 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -175,6 +175,8 @@
+     // * a source file containing multiple modules (ambiguously valid but used by the tools)
+     // * a TLA⁺ snippet without an encapsulating module
+     // * a PlusCal algorithm without an encapsulating module
++    // Can be one of three things, or empty: sloplint parses placeholder
++    // files with no content, and an empty alternative keeps them clean.
+     source_file: $ => choice(
+       seq(
+         optional(alias($.leading_extramodular_text, $.extramodular_text)),
+@@ -182,7 +184,7 @@
+       ),
+       seq(
+         optional($.extends),
+-        repeat1($._unit)
++        repeat($._unit)
+       ),
+       $.pcal_algorithm
+     ),
