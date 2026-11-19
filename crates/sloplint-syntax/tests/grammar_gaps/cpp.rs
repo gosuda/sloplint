@@ -432,7 +432,7 @@ fn gnu_asm_fused_clobber_strings_and_fields() {
     while let Some(n) = stack.pop() {
         for i in 0..n.child_count() {
             let c = n.child(i).unwrap();
-            if let Some(field) = n.field_name_for_child(i as u32) {
+            if let Some(field) = n.field_name_for_child(i) {
                 found_input |= field == "input_operands";
                 found_clobber |= field == "clobbers";
                 found_goto |= field == "goto_labels";
