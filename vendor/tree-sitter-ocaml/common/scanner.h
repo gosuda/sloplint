@@ -479,7 +479,16 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
           buf[j + 2] == 'e' && buf[j + 3] == 'n') {
         j += 4;
         while (j < n && (buf[j] == ' ' || buf[j] == '\t')) j++;
-        arm_prefix = j < n && buf[j] != '=';
+        if (j < n && (buf[j] == '"' || buf[j] == '\'')) {
+          // A lone literal guard is never valid OCaml — `#define
+          // when "text"` defines a macro named `when`. A literal
+          // plus anything more (`when "ok" = x`) can be a guard.
+          j++;
+          while (j < n && (buf[j] == ' ' || buf[j] == '\t')) j++;
+          arm_prefix = j < n;
+        } else {
+          arm_prefix = j < n && buf[j] != '=';
+        }
       } else if (j + 2 <= n && buf[j] == 'a' && buf[j + 1] == 's') {
         j += 2;
         while (j < n && (buf[j] == ' ' || buf[j] == '\t')) j++;
@@ -590,6 +599,17 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
       p[3] == 'n' && (p[4] == ' ' || p[4] == '\t')) {
     const char *q = p + 4;
     while (q < end && (*q == ' ' || *q == '\t')) q++;
+    if (q < end && (*q == '"' || *q == '\'')) {
+      // `when <literal>` alone is never a guard — a directive's
+      // argument list (`#define when "x"`); `when <literal> <more>`
+      // can be (`when "ok" = x`).
+      q++;
+      while (q < end && (*q == ' ' || *q == '\t')) q++;
+      if (q < end) {
+        *arm_shape = true;  // `| `#name when "s" = x ->` — guarded arm
+      }
+      return;
+    }
     // `#if when = x` is a cppo condition over a macro named `when`,
     // not a pattern guard — `when` needs a real guard expression.
     if (q < end && *q != '=') {

@@ -726,6 +726,41 @@ fn guarded_variant_arm_with_literal_guard_stays_arm() {
     ));
 }
 
+// `#define when "text"` defines a cppo macro named `when` — a lone
+// literal after `when`/`as` is a directive argument, not a guard.
+#[test]
+fn define_macro_named_when_stays_directive() {
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    for line in ["#define when \"text\"", "#define as 'c'"] {
+        let source = format!(
+            concat!(
+                "let f = function\n",
+                "  | A when match y with\n",
+                "           | B -> true\n",
+                "           {}\n",
+                "      -> outer\n",
+                "  | C -> c\n",
+                "let g = 2\n",
+            ),
+            line
+        );
+        let tree = parser.parse(&source, None).expect("parser returns a tree");
+        let sexp = tree.root_node().to_sexp();
+        assert!(
+            !tree.root_node().has_error() && !sexp.contains("MISSING"),
+            "{line} before the enclosing arrow must parse clean, sexp: {sexp}"
+        );
+        assert!(
+            sexp.contains("cppo_directive"),
+            "{line} must lex as a cppo directive, sexp: {sexp}"
+        );
+    }
+}
+
 // `#if when = 1` is a cppo condition over a macro named `when`, not a
 // pattern guard — it stays a directive before an enclosing arrow.
 #[test]

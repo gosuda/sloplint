@@ -239,7 +239,7 @@
  });
  
 --- common/scanner.h	2006-07-24 01:21:28.000000000 +0000
-+++ common/scanner.h	2026-11-19 07:30:27.091946764 +0000
++++ common/scanner.h	2026-11-19 07:35:59.329926565 +0000
 @@ -16,6 +16,9 @@
    LINE_NUMBER_DIRECTIVE,
    NULL_CHARACTER,
@@ -264,7 +264,7 @@
  static inline bool is_identchar(const int32_t c) {
    return is_identstart(c) || (c >= '0' && c <= '9') || c == '\'';
  }
-@@ -390,6 +400,232 @@
+@@ -390,6 +400,252 @@
    return false;
  }
  
@@ -347,7 +347,16 @@
 +          buf[j + 2] == 'e' && buf[j + 3] == 'n') {
 +        j += 4;
 +        while (j < n && (buf[j] == ' ' || buf[j] == '\t')) j++;
-+        arm_prefix = j < n && buf[j] != '=';
++        if (j < n && (buf[j] == '"' || buf[j] == '\'')) {
++          // A lone literal guard is never valid OCaml — `#define
++          // when "text"` defines a macro named `when`. A literal
++          // plus anything more (`when "ok" = x`) can be a guard.
++          j++;
++          while (j < n && (buf[j] == ' ' || buf[j] == '\t')) j++;
++          arm_prefix = j < n;
++        } else {
++          arm_prefix = j < n && buf[j] != '=';
++        }
 +      } else if (j + 2 <= n && buf[j] == 'a' && buf[j + 1] == 's') {
 +        j += 2;
 +        while (j < n && (buf[j] == ' ' || buf[j] == '\t')) j++;
@@ -458,6 +467,17 @@
 +      p[3] == 'n' && (p[4] == ' ' || p[4] == '\t')) {
 +    const char *q = p + 4;
 +    while (q < end && (*q == ' ' || *q == '\t')) q++;
++    if (q < end && (*q == '"' || *q == '\'')) {
++      // `when <literal>` alone is never a guard — a directive's
++      // argument list (`#define when "x"`); `when <literal> <more>`
++      // can be (`when "ok" = x`).
++      q++;
++      while (q < end && (*q == ' ' || *q == '\t')) q++;
++      if (q < end) {
++        *arm_shape = true;  // `| `#name when "s" = x ->` — guarded arm
++      }
++      return;
++    }
 +    // `#if when = x` is a cppo condition over a macro named `when`,
 +    // not a pattern guard — `when` needs a real guard expression.
 +    if (q < end && *q != '=') {
@@ -497,7 +517,7 @@
  static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
    int32_t last = 0;
  
-@@ -521,7 +757,9 @@
+@@ -521,7 +777,9 @@
      return true;
    }
  
@@ -507,7 +527,7 @@
      skip(lexer);
    }
  
-@@ -533,39 +771,100 @@
+@@ -533,39 +791,100 @@
      return true;
    }
  
