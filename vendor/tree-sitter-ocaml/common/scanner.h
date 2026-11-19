@@ -447,6 +447,7 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
                            bool *arm_shape) {
   char buf[256];
   size_t n = 0;
+  size_t arrow_off = (size_t)-1;
   int depth = 0;
   bool in_str = false;
 
@@ -471,10 +472,19 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
       continue;
     }
     if (c == '\'') {
-      // Possible char literal (`')'`, `'\n'`): its brackets must not
-      // count toward paren depth. If the `'…'` shape fails, the `'`
-      // was part of an identifier (`x'`) and only consumed chars are
-      // lost to the prefix buffer — arm-shape still holds.
+      // A `'` straight after an identifier char is a name apostrophe
+      // (`ADD'(x)`, `e'->`), not a char literal — keep it in the
+      // prefix and let the next chars be analyzed normally.
+      if (n > 0 && (buf[n - 1] == '_' || buf[n - 1] == '\'' ||
+                    (buf[n - 1] >= 'a' && buf[n - 1] <= 'z') ||
+                    (buf[n - 1] >= 'A' && buf[n - 1] <= 'Z') ||
+                    (buf[n - 1] >= '0' && buf[n - 1] <= '9'))) {
+        buf[n++] = '\'';
+        advance(lexer);
+        continue;
+      }
+      // Otherwise a possible char literal (`')'`, `'\n'`): its
+      // contents must not count toward paren depth or arrows.
       advance(lexer);
       if (lexer->lookahead == '\\') {
         advance(lexer);
@@ -502,15 +512,19 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
     }
     if (n + 1 < sizeof(buf)) buf[n++] = (char)c;
     advance(lexer);
-    if (c == '-' && lexer->lookahead == '>') *has_arrow = true;
+    // Only a `->` at depth 0 can separate an arm pattern from its
+    // body; arrows inside parens (`#define f (x -> y)`) can't.
+    if (c == '-' && lexer->lookahead == '>' && depth == 0 &&
+        arrow_off == (size_t)-1) {
+      arrow_off = n - 1;
+    }
   }
 
-  if (!*has_arrow) return;
+  if (arrow_off == (size_t)-1) return;
+  *has_arrow = true;
   buf[n] = '\0';
-  const char *arrow = strstr(buf, "->");
-  if (!arrow) return;  // arrow fell past the captured prefix
   const char *p = buf;
-  const char *end = arrow;
+  const char *end = buf + arrow_off;
   while (p < end && (*p == ' ' || *p == '\t')) p++;
   if (p == end) {
     *arm_shape = true;  // `| `#name ->` — bare variant tag

@@ -522,8 +522,7 @@ fn hash_directive_inside_parens_keeps_close_paren() {
     // directive token emitted at arm end stops at depth 0.
     let source2 = concat!(
         "let f x = (match x with\n",
-        "  | A -> o #define g (fun y -> y)\n",
-        "  | B -> 1)\n",
+        "  | A -> (o #define g (fun y -> y)) | B -> 1)\n",
         "let h = 2\n",
     );
     let tree2 = parser.parse(source2, None).expect("parser returns a tree");
@@ -552,6 +551,39 @@ fn hash_guarded_variant_arm_still_stays_arm() {
 #[test]
 fn cppo_directive_char_literal_paren_tail_parses() {
     run_clean(concat!("#define RPAREN ')'\n", "let x = 1\n"));
+}
+
+// A `'` after an identifier char is a name apostrophe, not a char
+// literal: `#define ADD'(x) x` keeps its parens, and `| #error as
+// e'->` keeps the `->` that ends the arm.
+#[test]
+fn cppo_directive_apostrophe_name_and_arm_parse() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "#define ADD'(x) x\n",
+        "  | `B -> ADD'(2)\n",
+        "let g = 3\n",
+    ));
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "  | #error as e'-> use e'\n",
+        "let g = 2\n",
+    ));
+}
+
+// Arrows inside parens don't separate an arm: `#define when (fun x
+// -> x)` between match arms is a directive, not a guarded arm.
+#[test]
+fn cppo_directive_paren_arrow_not_an_arm() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "#define when (fun x -> x)\n",
+        "  | `B -> 2\n",
+        "let g = 3\n",
+    ));
 }
 
 // `#error as e -> ...` after `|` is a polymorphic-variant arm, never a

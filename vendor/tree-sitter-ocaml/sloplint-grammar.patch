@@ -239,7 +239,7 @@
  });
  
 --- common/scanner.h	2006-07-24 01:21:28.000000000 +0000
-+++ common/scanner.h	2026-11-19 06:29:42.371989601 +0000
++++ common/scanner.h	2026-11-19 06:37:51.785121366 +0000
 @@ -16,6 +16,9 @@
    LINE_NUMBER_DIRECTIVE,
    NULL_CHARACTER,
@@ -264,7 +264,7 @@
  static inline bool is_identchar(const int32_t c) {
    return is_identstart(c) || (c >= '0' && c <= '9') || c == '\'';
  }
-@@ -390,6 +400,156 @@
+@@ -390,6 +400,170 @@
    return false;
  }
  
@@ -315,6 +315,7 @@
 +                           bool *arm_shape) {
 +  char buf[256];
 +  size_t n = 0;
++  size_t arrow_off = (size_t)-1;
 +  int depth = 0;
 +  bool in_str = false;
 +
@@ -339,10 +340,19 @@
 +      continue;
 +    }
 +    if (c == '\'') {
-+      // Possible char literal (`')'`, `'\n'`): its brackets must not
-+      // count toward paren depth. If the `'…'` shape fails, the `'`
-+      // was part of an identifier (`x'`) and only consumed chars are
-+      // lost to the prefix buffer — arm-shape still holds.
++      // A `'` straight after an identifier char is a name apostrophe
++      // (`ADD'(x)`, `e'->`), not a char literal — keep it in the
++      // prefix and let the next chars be analyzed normally.
++      if (n > 0 && (buf[n - 1] == '_' || buf[n - 1] == '\'' ||
++                    (buf[n - 1] >= 'a' && buf[n - 1] <= 'z') ||
++                    (buf[n - 1] >= 'A' && buf[n - 1] <= 'Z') ||
++                    (buf[n - 1] >= '0' && buf[n - 1] <= '9'))) {
++        buf[n++] = '\'';
++        advance(lexer);
++        continue;
++      }
++      // Otherwise a possible char literal (`')'`, `'\n'`): its
++      // contents must not count toward paren depth or arrows.
 +      advance(lexer);
 +      if (lexer->lookahead == '\\') {
 +        advance(lexer);
@@ -370,15 +380,19 @@
 +    }
 +    if (n + 1 < sizeof(buf)) buf[n++] = (char)c;
 +    advance(lexer);
-+    if (c == '-' && lexer->lookahead == '>') *has_arrow = true;
++    // Only a `->` at depth 0 can separate an arm pattern from its
++    // body; arrows inside parens (`#define f (x -> y)`) can't.
++    if (c == '-' && lexer->lookahead == '>' && depth == 0 &&
++        arrow_off == (size_t)-1) {
++      arrow_off = n - 1;
++    }
 +  }
 +
-+  if (!*has_arrow) return;
++  if (arrow_off == (size_t)-1) return;
++  *has_arrow = true;
 +  buf[n] = '\0';
-+  const char *arrow = strstr(buf, "->");
-+  if (!arrow) return;  // arrow fell past the captured prefix
 +  const char *p = buf;
-+  const char *end = arrow;
++  const char *end = buf + arrow_off;
 +  while (p < end && (*p == ' ' || *p == '\t')) p++;
 +  if (p == end) {
 +    *arm_shape = true;  // `| `#name ->` — bare variant tag
@@ -421,7 +435,7 @@
  static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
    int32_t last = 0;
  
-@@ -521,7 +681,9 @@
+@@ -521,7 +695,9 @@
      return true;
    }
  
@@ -431,7 +445,7 @@
      skip(lexer);
    }
  
-@@ -533,39 +695,95 @@
+@@ -533,39 +709,95 @@
      return true;
    }
  
