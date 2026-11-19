@@ -15,6 +15,9 @@ fun outer(): Int {
     val a12 = 12
     val a13 = 13
     val a14 = 14
+    // Deliberately parser-level Kotlin (anonymous functions cannot
+    // declare defaults): the `= DEF` bare identifier sibling is the only
+    // shape that exercises the delimiter gate in function_params.
     val g = fun(t: Long = DEF) { DEF = 9 }
     return a14 + a13
 }

@@ -15,6 +15,17 @@ fun g(): Int {
     val a12 = x + 12
     val a13 = x + 13
     val a14 = x + 14
+    // Deliberately parser-level Kotlin (params are `val` and cannot be
+    // reassigned): the write to the param name is the only way to
+    // exercise whether `fun(x)`'s bare parameter binds `x` at all.
     val f = fun(x) { x = 99 }
+    // Comment and annotation delimiters before the param name exercise
+    // the same binding path (`fun(/* c */ y)`, `fun(@Anno z)`).
+    var y = 0
+    y += 1
+    val g = fun(/* input */ y) { y = 99 }
+    var z = 0
+    z += 1
+    val h = fun(@Suppress("a") z) { z = 99 }
     return a14 + a13
 }

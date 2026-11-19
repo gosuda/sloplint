@@ -1,2 +1,2 @@
 # shadowed-lambda.kt: outer `total` is written once on line 3; the line-26 write targets the inner `run` block's own `total` under the forEach lambda parameter, so misattribution would span 23 and fire.
-# anon-param.kt: the `x` on line 18 binds the anonymous function's bare-name parameter, not the outer `var x` written on lines 2-3; if the param were dropped from function_params, misattribution would span 16 and fire.
+# anon-param.kt: `fun(x)`, `fun(/* c */ y)`, and `fun(@Anno z)` bare params each bind their name; if a param were dropped from function_params, its `x = 99`-style write would misattribute to the outer var and span past strict minor_at 15.
