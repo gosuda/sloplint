@@ -1,8 +1,7 @@
 diff --git a/grammar.js b/grammar.js
-index 9d530a1..348be10 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -7,10 +7,31 @@ const PREC = {
+@@ -7,10 +7,31 @@
    PARAM: 6,
  };
  
@@ -35,7 +34,7 @@ index 9d530a1..348be10 100644
  
    extras: ($) => [
      $.comment,
-@@ -21,15 +42,27 @@ export default grammar({
+@@ -21,15 +42,27 @@
    ],
  
    conflicts: ($) => [
@@ -64,7 +63,7 @@ index 9d530a1..348be10 100644
  
      // Comments
      comment: ($) =>
-@@ -48,22 +81,24 @@ export default grammar({
+@@ -48,22 +81,24 @@
      integer_literal: ($) =>
        choice($.decimal_integer_literal, $.hexadecimal_integer_literal),
  
@@ -94,7 +93,7 @@ index 9d530a1..348be10 100644
          ),
        ),
  
-@@ -73,18 +108,18 @@ export default grammar({
+@@ -73,18 +108,18 @@
          choice(
            seq(
              /[0-9]+\.[0-9]+/,
@@ -119,7 +118,7 @@ index 9d530a1..348be10 100644
            ),
          ),
        ),
-@@ -103,7 +138,10 @@ export default grammar({
+@@ -103,7 +138,10 @@
          /\"(\s*\#*)*/, // this is a trick to avoid tree-sitter allowing comment between tokens, as string should be tokenize but powershell allow subexpression inside it...
          repeat(
            choice(
@@ -131,7 +130,7 @@ index 9d530a1..348be10 100644
              $.variable,
              $.sub_expression,
              token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
-@@ -124,7 +162,11 @@ export default grammar({
+@@ -124,7 +162,11 @@
              token.immediate(/[^\$\r\n`]+/),
              $.variable,
              $.sub_expression,
@@ -144,7 +143,7 @@ index 9d530a1..348be10 100644
              token.immediate(/(\r?\n)+\"[^@]/),
              token.immediate('$'),
              token.immediate(/`.{1}|`\r?\n/),
-@@ -149,7 +191,10 @@ export default grammar({
+@@ -149,7 +191,10 @@
      simple_name: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
  
      // Type names
@@ -156,7 +155,7 @@ index 9d530a1..348be10 100644
  
      type_name: ($) =>
        choice($.type_identifier, seq($.type_name, '.', $.type_identifier)),
-@@ -225,6 +270,11 @@ export default grammar({
+@@ -225,6 +270,11 @@
          reservedWord('-ilike'),
          reservedWord('-ilt'),
          reservedWord('-imatch'),
@@ -168,7 +167,7 @@ index 9d530a1..348be10 100644
          reservedWord('-in'),
          reservedWord('-ine'),
          reservedWord('-inotcontains'),
-@@ -306,12 +356,57 @@ export default grammar({
+@@ -306,12 +356,79 @@
  
      // Commands
      generic_token: ($) =>
@@ -201,6 +200,28 @@ index 9d530a1..348be10 100644
 +              '(' + WORD_SQ + '|' + WORD_DQ + ')' +
 +              wordTail(/[^&\s()}|;,]/.source),
 +          ),
++          // sloplint: a variable head followed by `..` or by a `.` that
++          // does not open a member name is argument-mode text, as in
++          // `to $EndDate...` or `$v..$w`. `$v.foo` stays member access:
++          // neither alternative takes a single `.` before an identifier
++          // char.
++          new RegExp(
++            /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
++              '(' +
++                /\.{2,}[^&\s()}|;,"'`]*/.source + '|' +
++                /\.[^&\s()}|;,"'`a-zA-Z0-9_$][^&\s()}|;,"'`]*/.source +
++              ')',
++          ),
++          // sloplint: word that starts with a quoted segment and keeps
++          // going as one expandable argument word, as in "a"`n"b" or
++          // 'a'`n'b'. At least one continuation is required, so a bare
++          // "a" still lexes as expandable_string.
++          new RegExp(
++            '(' + WORD_SQ + '|' + WORD_DQ + ')' +
++              '(' +
++                /[^&\s()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC +
++              ')+',
++          ),
 +        ),
 +      ),
  
@@ -228,7 +249,7 @@ index 9d530a1..348be10 100644
  
      _verbatim_command_argument_chars: ($) =>
        repeat1(choice(/"[^"]*"/, /&[^&]*/, /[^\|\r\n]+/)),
-@@ -387,6 +482,13 @@ export default grammar({
+@@ -387,6 +504,13 @@
            $.inlinescript_statement,
            $.parallel_statement,
            $.sequence_statement,
@@ -242,7 +263,7 @@ index 9d530a1..348be10 100644
            seq($.pipeline, $._statement_terminator),
            $.empty_statement,
          ),
-@@ -460,16 +562,18 @@ export default grammar({
+@@ -460,16 +584,18 @@
  
      switch_clauses: ($) => repeat1($.switch_clause),
  
@@ -263,7 +284,7 @@ index 9d530a1..348be10 100644
  
      foreach_statement: ($) =>
        seq(
-@@ -552,8 +656,11 @@ export default grammar({
+@@ -552,8 +678,11 @@
          ')',
        ),
  
@@ -275,7 +296,7 @@ index 9d530a1..348be10 100644
          choice(
            reservedWord('function'),
            reservedWord('filter'),
-@@ -562,10 +669,19 @@ export default grammar({
+@@ -562,10 +691,19 @@
          $.function_name,
          optional($.function_parameter_declaration),
          '{',
@@ -296,7 +317,7 @@ index 9d530a1..348be10 100644
      function_name: ($) => $._command_token,
  
      function_parameter_declaration: ($) =>
-@@ -582,7 +698,9 @@ export default grammar({
+@@ -582,7 +720,9 @@
  
      label: ($) => token(seq(':', /[a-zA-Z_][a-zA-Z0-9_]*/)),
  
@@ -307,7 +328,7 @@ index 9d530a1..348be10 100644
  
      trap_statement: ($) =>
        seq(reservedWord('trap'), optional($.type_literal), $.statement_block),
-@@ -738,6 +856,18 @@ export default grammar({
+@@ -738,6 +878,18 @@
            new RegExp(caseInsensitive('for-')),
            new RegExp(caseInsensitive('while-')),
            new RegExp(caseInsensitive('parallel-')),
@@ -326,7 +347,7 @@ index 9d530a1..348be10 100644
          ),
          repeat(
            choice(
-@@ -750,7 +880,8 @@ export default grammar({
+@@ -750,7 +902,8 @@
          ),
        ),
  
@@ -336,7 +357,7 @@ index 9d530a1..348be10 100644
  
      // Use to parse command path
      path_command_name: ($) =>
-@@ -765,12 +896,23 @@ export default grammar({
+@@ -765,12 +918,23 @@
        prec.right(
          choice(
            $.command_parameter,
@@ -361,7 +382,7 @@ index 9d530a1..348be10 100644
      // Stop parsing is a token that end the parsing of command line
      stop_parsing: ($) => /--%[^\r\n]*/,
  
-@@ -785,12 +927,35 @@ export default grammar({
+@@ -785,12 +949,35 @@
          PREC.PARAM,
          choice(
            seq($.command_argument_sep, optional($.generic_token)),
@@ -398,7 +419,7 @@ index 9d530a1..348be10 100644
      verbatim_command_argument: ($) =>
        seq('--%', $._verbatim_command_argument_chars),
  
-@@ -802,8 +967,10 @@ export default grammar({
+@@ -802,8 +989,10 @@
          seq($.file_redirection_operator, $.redirected_file_name),
        ),
  
@@ -410,7 +431,7 @@ index 9d530a1..348be10 100644
  
      // Class
      class_attribute: ($) =>
-@@ -832,13 +999,26 @@ export default grammar({
+@@ -832,13 +1021,26 @@
          '(',
          optional($.class_method_parameter_list),
          ')',
@@ -437,7 +458,7 @@ index 9d530a1..348be10 100644
          token(reservedWord('class')),
          $.simple_name,
          optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
-@@ -859,6 +1039,7 @@ export default grammar({
+@@ -859,6 +1061,7 @@
      // Enums
      enum_statement: ($) =>
        seq(
@@ -445,7 +466,7 @@ index 9d530a1..348be10 100644
          token(reservedWord('enum')),
          $.simple_name,
          '{',
-@@ -870,7 +1051,20 @@ export default grammar({
+@@ -870,7 +1073,20 @@
        seq($.simple_name, optional(seq('=', $.integer_literal))),
  
      // Expressions
@@ -467,7 +488,7 @@ index 9d530a1..348be10 100644
  
      logical_expression: ($) =>
        prec.left(
-@@ -983,7 +1177,35 @@ export default grammar({
+@@ -983,7 +1199,35 @@
      pre_decrement_expression: ($) => seq('--', $.unary_expression),
  
      cast_expression: ($) =>
@@ -504,7 +525,7 @@ index 9d530a1..348be10 100644
  
      attributed_variable: ($) => seq($.type_literal, $.variable),
  
-@@ -1017,8 +1239,12 @@ export default grammar({
+@@ -1017,8 +1261,12 @@
      array_expression: ($) =>
        seq('@(', field('statements', optional($.statement_list)), ')'),
  
@@ -518,7 +539,7 @@ index 9d530a1..348be10 100644
  
      hash_literal_expression: ($) =>
        seq('@{', optional($.hash_literal_body), '}'),
-@@ -1076,11 +1302,17 @@ export default grammar({
+@@ -1076,11 +1324,17 @@
          $.invokation_foreach_expression,
        ),
  
@@ -538,7 +559,7 @@ index 9d530a1..348be10 100644
          $.script_block_expression,
        ),
  
-@@ -1120,10 +1352,13 @@ export default grammar({
+@@ -1120,10 +1374,13 @@
            $.comparison_argument_expression,
            seq(
              $.bitwise_argument_expression,
@@ -555,7 +576,7 @@ index 9d530a1..348be10 100644
              ),
              $.comparison_argument_expression,
            ),
-@@ -1188,32 +1423,49 @@ export default grammar({
+@@ -1188,32 +1445,49 @@
  
      type_literal: ($) => seq('[', $.type_spec, ']'),
  
@@ -619,7 +640,6 @@ index 9d530a1..348be10 100644
  
      attribute_name: ($) => $.type_spec,
 diff --git a/src/scanner.c b/src/scanner.c
-index 96e5db4..fbe2ca7 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
 @@ -5,7 +5,8 @@
@@ -632,7 +652,7 @@ index 96e5db4..fbe2ca7 100644
  };
  
  /* --- API --- */
-@@ -24,6 +25,25 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
+@@ -24,6 +25,25 @@
  
  static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
  
@@ -658,7 +678,7 @@ index 96e5db4..fbe2ca7 100644
  static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
  {
      if (valid_symbols[STATEMENT_TERMINATOR]) {
-@@ -31,13 +51,26 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
+@@ -31,13 +51,26 @@
          // This token has no characters -- everything is lookahead to determine its existence
          lexer->mark_end(lexer);
  
@@ -687,7 +707,7 @@ index 96e5db4..fbe2ca7 100644
              skip(lexer);
          }
      }
-@@ -47,9 +80,40 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
+@@ -47,9 +80,40 @@
  
  /* --- API Implementation --- */
  

@@ -384,6 +384,28 @@ export default grammar({
               '(' + WORD_SQ + '|' + WORD_DQ + ')' +
               wordTail(/[^&\s()}|;,]/.source),
           ),
+          // sloplint: a variable head followed by `..` or by a `.` that
+          // does not open a member name is argument-mode text, as in
+          // `to $EndDate...` or `$v..$w`. `$v.foo` stays member access:
+          // neither alternative takes a single `.` before an identifier
+          // char.
+          new RegExp(
+            /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
+              '(' +
+                /\.{2,}[^&\s()}|;,"'`]*/.source + '|' +
+                /\.[^&\s()}|;,"'`a-zA-Z0-9_$][^&\s()}|;,"'`]*/.source +
+              ')',
+          ),
+          // sloplint: word that starts with a quoted segment and keeps
+          // going as one expandable argument word, as in "a"`n"b" or
+          // 'a'`n'b'. At least one continuation is required, so a bare
+          // "a" still lexes as expandable_string.
+          new RegExp(
+            '(' + WORD_SQ + '|' + WORD_DQ + ')' +
+              '(' +
+                /[^&\s()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC +
+              ')+',
+          ),
         ),
       ),
 
