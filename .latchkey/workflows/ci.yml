@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+latchkey:
+  schema: 1
+
+env:
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+
+jobs:
+  lint:
+    runs-on: small
+    timeout-minutes: 15
+    steps:
+      - run: bash scripts/selftest-release-scripts.sh
+      - run: rustup set profile minimal && rustup toolchain install
+      - run: cargo fmt --all --check
+      - name: cargo deny
+        run: |
+          d=cargo-deny-0.20.2-x86_64-unknown-linux-musl
+          curl -fsSL --retry 3 -o /tmp/d.tgz https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/$d.tar.gz
+          echo "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f  /tmp/d.tgz" | sha256sum -c --strict
+          tar -xzf /tmp/d.tgz -C /tmp $d/cargo-deny
+          PATH=/tmp/$d:$PATH cargo deny check
+
+  test:
+    runs-on: medium
+    timeout-minutes: 60
+    env:
+      SLOPLINT_REQUIRE_FS_CAPS: "1"
+    steps:
+      - run: rustup set profile minimal && rustup toolchain install
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - run: cargo run --locked -q -p sloplint -- check crates --format agent --strictness standard --mode threshold --fail-on minor

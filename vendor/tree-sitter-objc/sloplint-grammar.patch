@@ -25,7 +25,7 @@
      [$.expression, $.generic_specifier],
      [$._declarator, $.type_specifier, $.generic_specifier],
      [$._declarator, $.type_specifier, $.sized_type_specifier],
-@@ -32,6 +46,125 @@
+@@ -32,6 +46,129 @@
      [$.extension_expression, $.range_expression],
      [$.abstract_array_declarator, $.array_type_specifier],
      [$._type_definition_type],
@@ -112,6 +112,10 @@
 +    // `+ NAME;` is a macro_qualifier ending the method modifiers vs a
 +    // one-segment keyword selector.
 +    [$.macro_qualifier, $.keyword_declarator],
++    // `TYPE name __unused = v;` — a macro_attribute after the declarator
++    // belongs to either init_declarator's own repeat or the trailing
++    // _declaration_modifiers repeat (both accept it until '=' resolves).
++    [$._declaration_modifiers, $.init_declarator],
 +    // `+ NAME <modifier> __extension__` in @implementation — the
 +    // pre-body declaration repeat vs the modifier repeat overlap.
 +    [$._declaration_specifiers, $.method_definition],
@@ -151,7 +155,7 @@
    ]),
  
    inline: ($, original) => original.concat([
-@@ -48,6 +181,26 @@
+@@ -48,6 +185,26 @@
    ]),
  
    rules: {
@@ -178,7 +182,7 @@
      _top_level_item: ($, original) => choice(
        original,
        $.class_declaration,
-@@ -57,8 +210,91 @@
+@@ -57,8 +214,91 @@
        $.protocol_forward_declaration,
        $.module_import,
        $.compatibility_alias_declaration,
@@ -270,7 +274,7 @@
      ),
  
      _block_item: ($, original) => choice(
-@@ -70,8 +306,46 @@
+@@ -70,8 +310,46 @@
        $.protocol_forward_declaration,
        $.module_import,
        $.compatibility_alias_declaration,
@@ -317,7 +321,7 @@
      ),
  
      function_definition: $ => seq(
-@@ -88,19 +362,52 @@
+@@ -88,19 +366,52 @@
          $.init_declarator,
          seq($.type_qualifier, $.identifier),
        )))),
@@ -380,7 +384,7 @@
      ),
  
      _type_definition_type: $ => seq(
-@@ -114,6 +421,15 @@
+@@ -114,6 +425,15 @@
      _type_definition_declarators: $ => seq(
        commaSep1(field('declarator', $._type_declarator)),
        optional($._declaration_modifiers),
@@ -396,7 +400,7 @@
      ),
  
      _declaration_modifiers: ($, original) => choice(
-@@ -142,6 +458,12 @@
+@@ -142,6 +462,12 @@
        $.throw_statement,
        $.synchronized_statement,
        $.ms_asm_block,
@@ -409,7 +413,7 @@
      ),
  
      attribute: $ => seq(
-@@ -357,13 +679,88 @@
+@@ -357,13 +683,88 @@
      ...preprocIf('_in_implementation_definition', $ => $.implementation_definition),
      ...preprocIf('_in_interface_declaration', $ => $.interface_declaration),
      ...preprocIf('_in_enumerator', $ => seq($.enumerator, ',')),
@@ -450,17 +454,17 @@
 +      preprocessor('define'),
 +      field('name', $._preproc_macro_name),
 +      field('value', optional($.preproc_arg)),
-       token.immediate(/\r?\n/),
-     ),
- 
++      token.immediate(/\r?\n/),
++    ),
++
 +    preproc_function_def: $ => seq(
 +      preprocessor('define'),
 +      field('name', $._preproc_macro_name),
 +      field('parameters', $.preproc_params),
 +      field('value', optional($.preproc_arg)),
-+      token.immediate(/\r?\n/),
-+    ),
-+
+       token.immediate(/\r?\n/),
+     ),
+ 
 +    // The generic `#ifdef` / `#elifdef` with the macro-name rule above, so
 +    // `#ifndef NS_ENUM` keeps parsing once `NS_ENUM` is a keyword.
 +    preproc_ifdef: $ => seq(
@@ -499,7 +503,7 @@
      preproc_linemarker: $ => seq(
        '#',
        $.number_literal,
-@@ -422,6 +819,7 @@
+@@ -422,6 +823,7 @@
            'NS_EXTENSION_UNAVAILABLE_IOS',
            'NS_CLASS_AVAILABLE_IOS',
            'NS_CLASS_DEPRECATED_IOS',
@@ -507,7 +511,7 @@
            '__OSX_AVAILABLE_STARTING',
          ),
          '(',
-@@ -481,6 +879,9 @@
+@@ -481,6 +883,9 @@
  
      enumerator: $ => seq(
        field('name', $.identifier),
@@ -517,7 +521,7 @@
        optional(seq('=', field('value', $.expression))),
      ),
  
-@@ -499,7 +900,10 @@
+@@ -499,7 +904,10 @@
      )),
  
      protocol_forward_declaration: $ => seq(
@@ -529,7 +533,7 @@
        '@protocol',
        commaSep1($.identifier),
        ';',
-@@ -523,7 +927,7 @@
+@@ -523,7 +931,7 @@
      ),
  
      _class_interface_header: $ => seq(
@@ -538,7 +542,7 @@
        '@interface',
        $.identifier,
        optional(';'),
-@@ -549,7 +953,7 @@
+@@ -549,7 +957,7 @@
      ),
  
      _class_implementation_header: $ => seq(
@@ -547,15 +551,19 @@
        '@implementation',
        $.identifier,
        optional(';'),
-@@ -590,7 +994,6 @@
+@@ -590,7 +998,10 @@
      instance_variable: $ => choice(
        $.visibility_specification,
        $.struct_declaration,
 -      $.atomic_declaration,
++      // sloplint: class-dump ivar blocks also carry anonymous enums and
++      // forward struct decls (`enum { kMax = 100, };`, `struct q_s;`)
++      // that have no declarator for struct_declaration to claim.
++      seq(choice($.enum_specifier, $.union_specifier, $.struct_specifier), ';'),
        $.preproc_ifdef,
        $.preproc_if,
      ),
-@@ -603,7 +1006,7 @@
+@@ -603,7 +1014,7 @@
      ),
  
      protocol_declaration: $ => seq(
@@ -564,7 +572,7 @@
        '@protocol',
        $.identifier,
        optional($.protocol_reference_list),
-@@ -625,10 +1028,16 @@
+@@ -625,10 +1036,16 @@
        $.function_definition,
        $.type_definition,
        alias($.preproc_if_in_interface_declaration, $.preproc_if),
@@ -582,7 +590,7 @@
        seq($.struct_specifier, ';'),
      ),
  
-@@ -646,12 +1055,16 @@
+@@ -646,12 +1063,16 @@
        $.preproc_function_def,
        $.macro_type_specifier,
        $.type_definition,
@@ -602,7 +610,7 @@
  
      property_implementation: $ => choice(
        seq(
-@@ -671,17 +1084,21 @@
+@@ -671,17 +1092,21 @@
            $.method_selector_no_list,
            optional(seq(
              $.method_parameter,
@@ -627,7 +635,17 @@
        optional(';'),
        $.compound_statement,
        optional(';'),
-@@ -718,7 +1135,7 @@
+@@ -700,6 +1125,9 @@
+ 
+     method_selector_no_list: $ => choice(
+       $.identifier,
++      // sloplint: class-dump headers declare clang's synthesized
++      // `.cxx_destruct` selector, which literally starts with a dot.
++      seq('.', $.identifier),
+       $.keyword_selector,
+       seq($.keyword_selector, ',', '...'),
+     ),
+@@ -718,7 +1146,7 @@
        '@property',
        optional($.property_attributes_declaration),
        optional(choice($.attribute_specifier, $.attribute_declaration)),
@@ -636,7 +654,7 @@
      )),
  
      property_attributes_declaration: $ => seq(
-@@ -743,9 +1160,11 @@
+@@ -743,9 +1171,11 @@
            optional($.method_parameter),
          ),
          $.method_parameter,
@@ -649,7 +667,7 @@
        repeat1(prec.right(';')),
      ),
  
-@@ -768,17 +1187,47 @@
+@@ -768,17 +1198,47 @@
      struct_declaration: $ => seq(
        repeat1($.specifier_qualifier),
        commaSep1($.struct_declarator),
@@ -705,7 +723,18 @@
      ),
  
      preproc_block: $ => prec.right(seq(
-@@ -1050,6 +1499,7 @@
+@@ -1001,7 +1461,9 @@
+ 
+     init_declarator: $ => seq(
+       field('declarator', $._declarator),
+-      optional($.attribute_specifier),
++      // sloplint: mirror the C base's post-declarator modifiers so
++      // `SEL selector __unused = ...` keeps parsing under ObjC.
++      repeat(choice($.attribute_specifier, $.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
+       '=',
+       field('value', choice($.initializer_list, $.expression)),
+     ),
+@@ -1050,6 +1512,7 @@
        $.preproc_def,
        $.preproc_function_def,
        $.preproc_call,
@@ -713,7 +742,7 @@
        alias($.preproc_if_in_field_declaration_list, $.preproc_if),
        alias($.preproc_ifdef_in_field_declaration_list, $.preproc_ifdef),
        $.atdef_field,
-@@ -1082,7 +1532,6 @@
+@@ -1082,7 +1545,6 @@
        const hexDigits = seq(repeat1(hex), repeat(seq(separator, repeat1(hex))));
        const decimalDigits = seq(repeat1(decimal), repeat(seq(separator, repeat1(decimal))));
        return token(seq(
@@ -721,7 +750,7 @@
          optional(choice('0x', '0b')),
          choice(
            seq(
-@@ -1197,7 +1646,7 @@
+@@ -1197,7 +1659,7 @@
  
      ['preproc_ifdef' + suffix]: $ => seq(
        choice(preprocessor('ifdef'), preprocessor('ifndef')),
@@ -730,7 +759,7 @@
        repeat(prec(2, content($))),
        field('alternative', optional(choice(elseBlock($), $.preproc_elifdef))),
        preprocessor('endif'),
-@@ -1218,7 +1667,7 @@
+@@ -1218,7 +1680,7 @@
  
      ['preproc_elifdef' + suffix]: $ => seq(
        choice(preprocessor('elifdef'), preprocessor('elifndef')),
