@@ -79,7 +79,7 @@ Every run analyzes the project root. With no `PATHS`, only findings under the cu
 
 `meta/parse-error` is Minor in every profile, so a default `major` gate does not fail on it. Set the rule to a higher rung or pass `--fail-on minor`. `meta/custom-cap` is Major in every profile: a capped query's results are partial, so a default `major` gate fails until the query is anchored; the cap uses the same eligibility as the rule's own findings, so turning a rule off or excluding the file silences its cap too. An empty `project.languages` list analyzes nothing.
 
-The full rule table, with per-profile levels, role shifts, and predicates, is under [Rule reference](#rule-reference) below; `sloplint rules` prints the same data for the active profile.
+The full rule table, with per-profile levels, role shifts, and predicates, is under [Rule reference](#rule-reference) below; `sloplint rules` prints the effective settings and short summaries for the active profile.
 
 ### Severity and confidence
 
