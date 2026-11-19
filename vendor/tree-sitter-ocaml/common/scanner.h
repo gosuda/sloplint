@@ -455,7 +455,22 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
   *arm_shape = false;
   for (;;) {
     int32_t c = lexer->lookahead;
-    if (c == '\n' || (c == '\0' && eof(lexer))) break;
+    if (c == '\n' || (c == '\0' && eof(lexer))) {
+      // A `->` on a later line still separates a multi-line arm (`| #name
+      // when g\n  -> e`): peek past the break for it. mark_end keeps
+      // the token's extent at the newline; the look-ahead chars are
+      // re-lexed for the next token.
+      lexer->mark_end(lexer);
+      while (lexer->lookahead == '\n' || lexer->lookahead == ' ' ||
+             lexer->lookahead == '\t' || lexer->lookahead == '\r') {
+        advance(lexer);
+      }
+      if (lexer->lookahead == '-') {
+        advance(lexer);
+        if (lexer->lookahead == '>') *has_arrow = true;
+      }
+      break;
+    }
     if (in_str) {
       if (c == '\\') {
         advance(lexer);
@@ -479,7 +494,7 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
                     (buf[n - 1] >= 'a' && buf[n - 1] <= 'z') ||
                     (buf[n - 1] >= 'A' && buf[n - 1] <= 'Z') ||
                     (buf[n - 1] >= '0' && buf[n - 1] <= '9'))) {
-        buf[n++] = '\'';
+        if (n + 1 < sizeof(buf)) buf[n++] = '\'';
         advance(lexer);
         continue;
       }
@@ -520,11 +535,14 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
     }
   }
 
-  if (arrow_off == (size_t)-1) return;
-  *has_arrow = true;
+  if (arrow_off != (size_t)-1) *has_arrow = true;
+  if (!*has_arrow) return;
   buf[n] = '\0';
   const char *p = buf;
-  const char *end = buf + arrow_off;
+  // With no depth-0 arrow on the line, the whole tail is the
+  // would-be arm's pattern/guard prefix — the `->` was only found
+  // by the next-line peek.
+  const char *end = arrow_off != (size_t)-1 ? buf + arrow_off : buf + n;
   while (p < end && (*p == ' ' || *p == '\t')) p++;
   if (p == end) {
     *arm_shape = true;  // `| `#name ->` — bare variant tag

@@ -518,18 +518,24 @@ fn hash_directive_inside_parens_keeps_close_paren() {
         sexp.contains("method_invocation"),
         "`o #define` inside parens must parse as a method call, sexp: {sexp}"
     );
-    // The match-position claim must not eat the enclosing `)`: a
-    // directive token emitted at arm end stops at depth 0.
+    // A real directive between arms inside parens must not eat the
+    // enclosing `)` on a later line.
     let source2 = concat!(
         "let f x = (match x with\n",
-        "  | A -> (o #define g (fun y -> y)) | B -> 1)\n",
+        "  | A -> 1\n",
+        "#define FOO x\n",
+        "  | B -> 2)\n",
         "let h = 2\n",
     );
     let tree2 = parser.parse(source2, None).expect("parser returns a tree");
     let sexp2 = tree2.root_node().to_sexp();
     assert!(
         !tree2.root_node().has_error() && !sexp2.contains("MISSING"),
-        "directive at arm end inside parens must not swallow `)`, sexp: {sexp2}"
+        "directive between arms inside parens must not swallow `)`, sexp: {sexp2}"
+    );
+    assert!(
+        sexp2.contains("cppo_directive"),
+        "the mid-match #define must lex as a directive, sexp: {sexp2}"
     );
 }
 
@@ -583,6 +589,19 @@ fn cppo_directive_paren_arrow_not_an_arm() {
         "#define when (fun x -> x)\n",
         "  | `B -> 2\n",
         "let g = 3\n",
+    ));
+}
+
+// A guarded `#name` arm whose `->` sits on the next line is still an
+// arm — the parenthesized lambda's arrow doesn't claim a directive.
+#[test]
+fn hash_multiline_guarded_variant_arm_stays_arm() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "  | #error when f (fun x -> x)\n",
+        "    -> handle ()\n",
+        "let g = 2\n",
     ));
 }
 
