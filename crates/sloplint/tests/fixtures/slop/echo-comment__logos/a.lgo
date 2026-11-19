@@ -1,0 +1,21 @@
+package probe
+
+// Process the order.
+func process_order(ctx int, id int, qty int) (int, error) {
+	total := 0
+	const for _, f := range comptime.Fields[order]() {
+		total += id + qty
+		_ = f
+	}
+	compute := func(x int) (int, error) { return x, nil }
+	v, err := compute(total)?
+	if err != nil {
+		return 0, err
+	}
+	go group (ctx) {
+		go {
+			v++
+		}
+	}
+	return v, nil
+}

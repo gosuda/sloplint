@@ -48,7 +48,7 @@ struct CatchAllMatch;
 
 impl FileRule for CatchAllMatch {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
-        if facts.lang == Lang::Go {
+        if matches!(facts.lang, Lang::Go | Lang::Logos) {
             return;
         }
         for arm in &facts.wildcard_arms {

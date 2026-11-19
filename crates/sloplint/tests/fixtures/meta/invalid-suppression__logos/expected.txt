@@ -1,0 +1,2 @@
+a.lgo:2 major meta/invalid-suppression
+a.lgo:4 major meta/invalid-suppression

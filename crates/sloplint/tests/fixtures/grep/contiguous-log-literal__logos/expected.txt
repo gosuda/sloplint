@@ -1,0 +1,2 @@
+# Positive: message-bearing log.Fatal with a non-literal message; strict rung major.
+a.lgo:4 info grep/contiguous-log-literal

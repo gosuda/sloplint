@@ -44,6 +44,7 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
         | Lang::Tsx
         | Lang::JavaScript
         | Lang::Go
+        | Lang::Logos
         | Lang::Java
         | Lang::Kotlin
         | Lang::CSharp

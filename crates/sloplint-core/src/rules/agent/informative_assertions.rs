@@ -75,7 +75,7 @@ fn needs_message(lang: Lang, shape: AssertShape, value_is_bool_literal: bool) ->
     match lang {
         Lang::Rust => shape == AssertShape::BareName || shape == AssertShape::TopEqNe,
         Lang::Python => shape == AssertShape::BareName,
-        Lang::Go => value_is_bool_literal,
+        Lang::Go | Lang::Logos => value_is_bool_literal,
         _ => shape != AssertShape::Other,
     }
 }

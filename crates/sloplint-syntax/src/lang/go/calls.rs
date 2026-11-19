@@ -18,6 +18,16 @@ pub(crate) fn go_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         "composite_literal" => go_collection_shape(n),
         "func_literal" => ArgShape::CodeBody,
         "identifier" => ArgShape::Ident(text(cx, n)),
+        "interp_string_literal" => {
+            let raw = text(cx, n);
+            let inner = raw
+                .strip_prefix("$\"")
+                .and_then(|s| s.strip_suffix('"'))
+                .unwrap_or(raw);
+            ArgShape::Str {
+                longest_static: sloplint_core::text::longest_static_chunk_interp(inner),
+            }
+        }
         _ if binary_concat(
             cx,
             n,
@@ -65,7 +75,7 @@ fn go_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
 fn go_has_func_literal(root: Node<'_>) -> bool {
     let mut stack = vec![root];
     while let Some(n) = stack.pop() {
-        if n.kind() == "func_literal" {
+        if n.kind() == "func_literal" || n.kind() == "lambda_expression" {
             return true;
         }
         let mut cursor = n.walk();
@@ -90,10 +100,16 @@ fn go_collection_shape<'s>(n: Node<'_>) -> ArgShape<'s> {
 }
 
 pub(crate) fn go_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
+    let value = match n.kind() {
+        "named_argument" => child_by_field(n, "value"),
+        "spread_element" => code_children(n).into_iter().next(),
+        _ => None,
+    }
+    .unwrap_or(n);
     Arg {
-        shape: go_shape(cx, n),
-        start_line: pos_of(n).line,
-        end_line: narrow(n.end_position().row) + 1,
+        shape: go_shape(cx, value),
+        start_line: pos_of(value).line,
+        end_line: narrow(value.end_position().row) + 1,
     }
 }
 
@@ -167,19 +183,21 @@ fn go_receiver_calls(operand: Option<Node<'_>>) -> bool {
     }
 }
 
-fn cx_grandparent<'t>(cx: &Cx<'t, '_>) -> Option<Node<'t>> {
-    cx.ancestors().nth(1)
-}
-
 fn go_init_host<'t>(cx: &Cx<'t, '_>, n: Node<'t>) -> Option<(Node<'t>, Node<'t>)> {
-    let parent = cx.parent()?;
+    let mut inner = n;
+    let mut parent = cx.parent()?;
+    while parent.kind() == "try_expression"
+        && child_by_field(parent, "operand").is_some_and(|o| o.id() == inner.id())
+    {
+        inner = parent;
+        parent = cx.parent_of(inner)?;
+    }
     if parent.kind() == "expression_list" && parent.named_child_count() == 1 {
-        Some((cx_grandparent(cx)?, parent))
+        Some((cx.parent_of(parent)?, parent))
     } else {
-        Some((parent, n))
+        Some((parent, inner))
     }
 }
-
 fn go_has_named(cx: &Cx<'_, '_>, host: Node<'_>) -> bool {
     if host.kind() == "short_var_declaration" {
         return child_by_field(host, "left").is_some_and(|left| {

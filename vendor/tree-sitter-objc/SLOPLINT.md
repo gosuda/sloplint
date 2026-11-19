@@ -39,21 +39,23 @@ headers (`NSObjCRuntime.h`, `NSAvailability.h`), not the preprocessor output.
 
 - Tool: tree-sitter-cli 0.27.1.
 - The `grammar.js` starts with `require('tree-sitter-c/grammar')`. For
-  regeneration it resolves to a clone of
-  https://github.com/tree-sitter/tree-sitter-c at tag v0.23.4 (commit
-  `3efee11f784605d44623d7dadd6cd12a0f73ea92`), the version pinned by the
-  upstream `package-lock.json` (`tree-sitter-c 0.23.4`). Place it at
-  `node_modules/tree-sitter-c` next to `grammar.js` (a symlink to a tag clone
-  works). No file from it is copied here. Remove `node_modules/` before
-  committing; it is not vendored.
-- Commands, run in this directory with that symlink in place:
-  `tree-sitter generate`, then `tree-sitter test`.
+  regeneration it MUST resolve to this repo's own `vendor/tree-sitter-c`
+  (e.g. `NODE_PATH=<repo>/vendor`): the grammar inherits and references
+  sloplint-only C rules such as `preproc_ifdef_in_statement`, so pointing
+  it at upstream tree-sitter-c (any tag) fails to load with
+  `Undefined symbol 'preproc_ifdef_in_statement'`. No file from it is
+  copied here. Do not leave a `node_modules/` dir behind.
+- Commands, run in this directory:
+  `NODE_PATH=<repo>/vendor tree-sitter generate`, then
+  `NODE_PATH=<repo>/vendor tree-sitter test`.
 - It rewrites `src/parser.c`, `src/grammar.json`, `src/node-types.json` and
   `src/tree_sitter/*.h`. There is no `src/scanner.c`.
 - Regenerating the unpatched grammar with 0.27.1 moves the parser from ABI 14
   to ABI 15 with no rule and no node-kind change (454 kinds before and after).
-- `test/corpus/sloplint_*.txt` holds 21 new guard cases (upstream corpus
-  format: 5 enum, 4 string-enum, 6 annotation, 5 preproc). They were produced
+- `test/corpus/sloplint_*.txt` holds 33 new guard cases (upstream corpus
+  format: 5 enum, 4 string-enum, 6 annotation, 5 preproc, 3 atomic
+  linkage, 1 signed-number call arg, 1 macro-argument enum, 4 member
+  macros, 1 signature preproc, 3 class-dump). They were produced
   by `tree-sitter test --update` and read by hand: none contains an ERROR or
   MISSING node, and the `enum_specifier` alias yields exactly one node per
   `NS_ENUM` typedef (an early revision aliased an inline `seq` and produced
@@ -184,6 +186,15 @@ MISSING scan); each is clean now.
 - `#if __has_warning("...")`, `#if __has_include(<...>)/("...")`
 - `#ifdef` around `@property` in `@interface` and around a method definition
   in `@implementation`
+- `- (void).cxx_destruct;` — clang's synthesized `.cxx_destruct` selector
+  in class-dumped headers; `method_selector_no_list` accepts a leading
+  `.` before the identifier
+- `enum { kMax = 100, };` and `struct _opaque_pthread_rwlock_t;` inside
+  `@interface` ivar braces — `instance_variable` gained a declarator-less
+  `enum_specifier`/`union_specifier`/`struct_specifier` + `;` arm
+- `SEL selector __unused = 0;` — `init_declarator` mirrors the C base's
+  post-declarator `macro_attribute`/`macro_qualifier`/`ms_call_modifier`
+  repeat (the ObjC override had dropped it)
 
 ## Sweep evidence (AFNetworking + SDWebImage, 343 `.h`/`.m` sources)
 
@@ -215,6 +226,17 @@ unchanged. Residual clusters are `SHADER_STRING(...)` raw-GLSL bodies
 splitting binary expressions (Masonry's `MASAttribute` bitmask chain): both
 need the real preprocessor and stay errors by design. Upstream corpus plus
 `sloplint_*.txt`: 103 of 103.
+
+## Sweep evidence (third corpus, 2026-11-19)
+
+Same recount, class-dump round (`method_selector_no_list` dot selector,
+declarator-less ivar declarations, post-declarator macro attributes):
+XVim 529 to 212 still-erroring files (317 went fully clean). GPUImage
+stays at 134 — all of it is `SHADER_STRING(...)` raw-GLSL argument
+bodies, the preprocessor ceiling already documented. Residual XVim
+errors are C++ template syntax inside ObjC headers
+(`struct vector<T*, allocator<...>> {}`), which a C-family grammar does
+not model. Upstream corpus plus `sloplint_*.txt`: 109 of 109.
 
 ## Still failing (honest residuals)
 

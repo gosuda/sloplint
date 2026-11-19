@@ -15,6 +15,7 @@ pub(crate) mod go;
 pub(crate) mod java;
 pub(crate) mod javascript;
 pub(crate) mod kotlin;
+pub(crate) mod logos;
 pub(crate) mod objc;
 pub(crate) mod ocaml;
 pub(crate) mod odin;
@@ -57,6 +58,11 @@ fn grammar(lang: Lang) -> (tree_sitter::Language, Table, &'static dyn LangHooks)
         ),
         Lang::Go => (tree_sitter_go::LANGUAGE.into(), go::TABLE, &go::HOOKS),
         Lang::Java => (tree_sitter_java::LANGUAGE.into(), java::TABLE, &java::HOOKS),
+        Lang::Logos => (
+            tree_sitter_logos::LANGUAGE.into(),
+            logos::TABLE,
+            &logos::HOOKS,
+        ),
         Lang::Kotlin => (
             tree_sitter_kotlin_ng::LANGUAGE.into(),
             kotlin::TABLE,

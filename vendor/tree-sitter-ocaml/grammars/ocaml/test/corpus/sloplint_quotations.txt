@@ -1,0 +1,188 @@
+================================================================================
+camlp5 tagged quotations <:tag< ... >>
+================================================================================
+
+let f x = <:expr< $x$ + 1 >>
+let g = <:patt< `A x >>
+let h = <:ctyp< int -> string >>
+let s = <:str_item< let x = 1 >>
+let m = <:module_expr< struct let a = 2 end >>
+let t = <:sig_item< val y : int >>
+let c = <:class_expr< object method m = 1 end >>
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (value_definition
+    (let_binding
+      (value_name)
+      (parameter
+        (value_pattern))
+      (quotation)))
+  (value_definition
+    (let_binding
+      (value_name)
+      (quotation)))
+  (value_definition
+    (let_binding
+      (value_name)
+      (quotation)))
+  (value_definition
+    (let_binding
+      (value_name)
+      (quotation)))
+  (value_definition
+    (let_binding
+      (value_name)
+      (quotation)))
+  (value_definition
+    (let_binding
+      (value_name)
+      (quotation)))
+  (value_definition
+    (let_binding
+      (value_name)
+      (quotation))))
+
+================================================================================
+nested quotations
+================================================================================
+
+let nested = <:expr< f <:expr< 1 >> x >>
+let deep = <:str_item< let q = <:ctyp< 'a >> >>
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (value_definition
+    (let_binding
+      (value_name)
+      (quotation
+        (quotation))))
+  (value_definition
+    (let_binding
+      (value_name)
+      (quotation
+        (quotation)))))
+
+================================================================================
+term quotation (backtick, non-identifier start)
+================================================================================
+
+let p = prove (`?n. n + 0 = n`, tac)
+let q = ` { x | P x } `
+let r = `(a, b)`
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (value_definition
+    (let_binding
+      (value_name)
+      (application_expression
+        (value_path
+          (value_name))
+        (parenthesized_expression
+          (tuple_expression
+            (term_quotation)
+            (value_path
+              (value_name)))))))
+  (value_definition
+    (let_binding
+      (value_name)
+      (term_quotation)))
+  (value_definition
+    (let_binding
+      (value_name)
+      (term_quotation))))
+
+================================================================================
+backtick polymorphic variants stay tags
+================================================================================
+
+let f = function `A -> 1 | `B -> 2 | `C _ -> 3
+let g x = match x with `Data payload -> payload | `Empty -> 0
+type t = [`A | `B of int | `c ]
+let v = `Ident name
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (value_definition
+    (let_binding
+      (value_name)
+      (function_expression
+        (match_case
+          (tag)
+          (number))
+        (match_case
+          (tag)
+          (number))
+        (match_case
+          (tag_pattern
+            (tag)
+            (any_pattern))
+          (number)))))
+  (value_definition
+    (let_binding
+      (value_name)
+      (parameter
+        (value_pattern))
+      (match_expression
+        (value_path
+          (value_name))
+        (match_case
+          (tag_pattern
+            (tag)
+            (value_pattern))
+          (value_path
+            (value_name)))
+        (match_case
+          (tag)
+          (number)))))
+  (type_definition
+    (type_binding
+      (type_constructor)
+      (polymorphic_variant_type
+        (tag_specification
+          (tag))
+        (tag_specification
+          (tag)
+          (type_constructor_path
+            (type_constructor)))
+        (tag_specification
+          (tag)))))
+  (value_definition
+    (let_binding
+      (value_name)
+      (application_expression
+        (tag)
+        (value_path
+          (value_name))))))
+
+================================================================================
+quotation in binding pattern and colon/dotted tag forms
+================================================================================
+
+let <:patt< `A >> = f 1
+let w = <:expr:< 1 >>
+let q = <:m.n< body >>
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (value_definition
+    (let_binding
+      (quotation)
+      (application_expression
+        (value_path
+          (value_name))
+        (number))))
+  (value_definition
+    (let_binding
+      (value_name)
+      (quotation)))
+  (value_definition
+    (let_binding
+      (value_name)
+      (quotation))))

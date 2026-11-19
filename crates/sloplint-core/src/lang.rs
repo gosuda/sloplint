@@ -31,6 +31,7 @@ languages! {
     JavaScript => "javascript", &[".js", ".jsx", ".mjs", ".cjs"];
     Python => "python", &[".py", ".pyi"];
     Go => "go", &[".go"];
+    Logos => "logos", &[".lgo"];
     Java => "java", &[".java"];
     Kotlin => "kotlin", &[".kt", ".kts"];
     CSharp => "csharp", &[".cs"];

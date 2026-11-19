@@ -28,8 +28,16 @@ mod javascript_typescript;
 mod javascript_typescript_type_syntax;
 #[path = "grammar_gaps/kotlin.rs"]
 mod kotlin;
+#[path = "grammar_gaps/logos.rs"]
+mod logos;
 #[path = "grammar_gaps/objc.rs"]
 mod objc;
+#[path = "grammar_gaps/ocaml.rs"]
+mod ocaml;
+#[path = "grammar_gaps/ocaml_arms.rs"]
+mod ocaml_arms;
+#[path = "grammar_gaps/ocaml_cppo.rs"]
+mod ocaml_cppo;
 #[path = "grammar_gaps/odin.rs"]
 mod odin;
 #[path = "grammar_gaps/php.rs"]

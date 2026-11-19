@@ -43,7 +43,7 @@ fn strip_csharp_test_dir(seg: &str) -> &str {
 fn keys_for(lang: Lang, dir: &str, stem: &str) -> Vec<String> {
     let mut segs = Vec::new();
     match lang {
-        Lang::Go => {
+        Lang::Go | Lang::Logos => {
             push_all(&mut segs, &dir_segments(dir));
             if dir.is_empty() {
                 push_segment(&mut segs, stem);

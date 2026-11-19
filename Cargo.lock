@@ -1030,6 +1030,7 @@ dependencies = [
  "tree-sitter-java",
  "tree-sitter-javascript",
  "tree-sitter-kotlin-ng",
+ "tree-sitter-logos",
  "tree-sitter-objc",
  "tree-sitter-ocaml",
  "tree-sitter-odin",
@@ -1302,6 +1303,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0af592be68c579aa78a16846bd19422978c3c52e438523d45ff5d1bff1f9d4a"
 
 [[package]]
+name = "tree-sitter-logos"
+version = "0.25.0"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "tree-sitter-objc"
 version = "3.0.2"
 dependencies = [
@@ -1312,8 +1321,6 @@ dependencies = [
 [[package]]
 name = "tree-sitter-ocaml"
 version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43adb10fcccbcbbce0f4adc9dab7cd55f0a5eafc2d71bd4c03fcc5d6767066e0"
 dependencies = [
  "cc",
  "tree-sitter-language",

@@ -10,10 +10,8 @@ use crate::hooks::{
 };
 
 pub(crate) fn go_is_test_file(path: &str) -> bool {
-    path.rsplit('/')
-        .next()
-        .unwrap_or(path)
-        .ends_with("_test.go")
+    let base = path.rsplit('/').next().unwrap_or(path);
+    base.ends_with("_test.go") || base.ends_with("_test.lgo")
 }
 
 pub(crate) fn go_visibility(name: &str) -> Visibility {
@@ -220,7 +218,7 @@ pub(crate) fn go_sole(body: Node<'_>) -> Option<usize> {
     go_single_call(*only)
 }
 
-fn go_is_deprecated(line: &str) -> bool {
+pub(crate) fn go_is_deprecated(line: &str) -> bool {
     let text = line.trim();
     let text = text.strip_prefix("//").unwrap_or(text);
     let text = text.strip_prefix("/*").unwrap_or(text);

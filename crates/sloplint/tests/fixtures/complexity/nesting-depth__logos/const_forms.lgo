@@ -1,0 +1,16 @@
+package probe
+
+func ConstIfDeep() int {
+	const if true {
+		if true {
+			if true {
+				if true {
+					if true {
+						return 1
+					}
+				}
+			}
+		}
+	}
+	return 0
+}
