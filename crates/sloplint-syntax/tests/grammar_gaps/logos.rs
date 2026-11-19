@@ -13,7 +13,7 @@
 
 use std::sync::LazyLock;
 
-use sloplint_core::facts::ArgShape;
+use sloplint_core::facts::{AmbientKind, ArgShape};
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
@@ -550,6 +550,74 @@ fn var_group_without_trailing_separator_parses() {
     run_clean(
         "src/varok.lgo",
         "var ( x int; y int )\nvar ( x int )\nvar (\n\tx int\n\ty int\n)\nvar ( x int; )\n",
+    );
+}
+
+#[test]
+fn var_group_with_newline_comment_separator_parses() {
+    // Go inserts a semicolon after a declaration when a block comment on the
+    // same line spans a newline, so the comment separates the declarations
+    // instead of producing a parse error.
+    let analysis = run_clean(
+        "src/varcommentsep.lgo",
+        "package p\n\nvar (\n\tfirst int /* note\n */ second int\n)\n",
+    );
+    let mut names: Vec<&str> = analysis
+        .facts
+        .ambient
+        .iter()
+        .filter(|a| a.kind == AmbientKind::GlobalMutable)
+        .map(|a| a.name)
+        .collect();
+    names.sort_unstable();
+    assert_eq!(
+        names,
+        vec!["first", "second"],
+        "both declarations around the comment must read as globals, got {names:?}"
+    );
+}
+
+#[test]
+fn single_line_block_comment_is_no_separator() {
+    // A block comment without a newline is whitespace: with no other
+    // separator the group must still fail, as the Go compiler rejects it.
+    let analysis = run(
+        "src/varcommentnosep.lgo",
+        "package p\n\nvar (\n\tfirst int /* note */ second int\n)\n",
+    );
+    assert!(
+        analysis.parse_error.is_some(),
+        "a single-line block comment must not separate declarations"
+    );
+}
+
+#[test]
+fn newline_comment_after_newline_stays_a_comment_node() {
+    // A comment after a real newline still lexes as a `comment` extra (the
+    // external scanner never skips a newline), so doc and suppression
+    // handling keeps seeing it.
+    let source = "package p\n\nvar (\n\tfirst int\n\t/* docs for second\n\t   more */\n\tsecond int\n)\n";
+    let tree = parse_raw(source);
+    assert!(
+        !tree.root_node().has_error(),
+        "the group with a leading comment must parse cleanly"
+    );
+    let mut seen = false;
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "comment"
+            && node
+                .utf8_text(source.as_bytes())
+                .is_ok_and(|text| text.contains("docs for second"))
+        {
+            seen = true;
+        }
+        let mut cursor = node.walk();
+        stack.extend(node.children(&mut cursor));
+    }
+    assert!(
+        seen,
+        "the comment after a newline must stay a comment node"
     );
 }
 

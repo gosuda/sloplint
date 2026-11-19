@@ -23,9 +23,10 @@ Date: 2026-11-18.
 - Tool: tree-sitter-cli 0.27.2.
 - Command, run in this directory: `tree-sitter generate`.
 - `src/scanner.c` is hand-written: an external scanner for `$"..."`
-  interpolated strings whose interior may nest quotes and braces; it
-  skips whitespace itself because tree-sitter does not re-invoke an
-  external scanner after internal extras.
+  interpolated strings whose interior may nest quotes and braces, and a
+  same-line block comment that spans a newline (the declaration
+  separator below). Both skip whitespace themselves because tree-sitter
+  does not re-invoke an external scanner after internal extras.
 - Regenerate after every `grammar.js` edit; `tree-sitter test` then must
   pass (`test/corpus/`).
 
@@ -81,9 +82,16 @@ Go rules that cannot apply to LoGOs, and why:
   LoGOs cases in `test/corpus/logos_forms.txt`).
 - LoGOs run corpus
   (`.../spira-toolchain-tip/test/logos/run/*.lgo`): 482 files, 482
-  parse with no ERROR or MISSING node.
 - `var_spec_list` requires a separator between declarations (the final
-   one stays optional), matching `import_spec_list`.
+   one stays optional), matching `import_spec_list`. A block comment on
+   the same line that spans a newline also separates: the external
+   scanner token `_newline_comment` stands in the shared `_terminator`
+   rule wherever a newline does, mirroring Go semicolon insertion
+   (verified against `gofmt -e` for `var`, `const`, `struct`, statement
+   and top-level positions). A single-line block comment never
+   separates, and a comment after a real newline still lexes as a
+   `comment` extra. Gap tests pin all three shapes in
+   `crates/sloplint-syntax/tests/grammar_gaps/logos.rs`.
 - spira (`git ls-files '*.lgo'`): 48 files, 48 parse clean; sloplint
   over them reports no `meta/parse-error`.
 
@@ -94,5 +102,9 @@ Go rules that cannot apply to LoGOs, and why:
 - The empty-body `switch x { }` tie prefers the statement form; a
   zero-arm switch expression in statement position is therefore parsed
   as `expression_switch_statement`.
+- A `sloplint-allow` directive inside a same-line separator comment is
+  consumed with the separator and not suppressed: keep directives on
+  their own line or in trailing single-line comments, where the comment
+  stays a `comment` extra.
 - `queries/highlights.scm` and `queries/tags.scm` are editor queries
   only; sloplint loads no vendored query files.
