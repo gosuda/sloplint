@@ -18,8 +18,7 @@ Date: 2026-11-18.
   Reproduce it with `diff -u --label=a/grammar.js --label=b/grammar.js`
   on the two files; apply it with `patch -p1` on the base file.
 
-## How src/ is generated
-
+- Tool: tree-sitter-cli 0.27.2.
 - Tool: tree-sitter-cli 0.27.1 (`/tmp/tscli/package/tree-sitter`).
 - Command, run in this directory: `tree-sitter generate`.
 - `src/scanner.c` is hand-written: an external scanner for `$"..."`
@@ -75,13 +74,15 @@ Go rules that cannot apply to LoGOs, and why:
 - Lambda bodies carry no `sole_call`, so a sole-call lambda is not a
   `slop/passthrough-wrapper` candidate today.
 
-## Corpora (tree-sitter-cli 0.27.1, this directory)
+## Corpora (tree-sitter-cli 0.27.2, this directory)
 
 - `test/corpus`: 94 cases, 94 pass (the 80 vendored Go cases plus 14
   LoGOs cases in `test/corpus/logos_forms.txt`).
 - LoGOs run corpus
   (`.../spira-toolchain-tip/test/logos/run/*.lgo`): 482 files, 482
   parse with no ERROR or MISSING node.
+- `var_spec_list` requires a separator between declarations (the final
+   one stays optional), matching `import_spec_list`.
 - spira (`git ls-files '*.lgo'`): 48 files, 48 parse clean; sloplint
   over them reports no `meta/parse-error`.
 

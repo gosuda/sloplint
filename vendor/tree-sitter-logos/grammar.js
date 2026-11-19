@@ -298,7 +298,11 @@ module.exports = grammar({
 
     var_spec_list: $ => seq(
       '(',
-      repeat(seq($.var_spec, optional(terminator))),
+      optional(seq(
+        $.var_spec,
+        repeat(seq(terminator, $.var_spec)),
+        optional(terminator),
+      )),
       ')',
     ),
 

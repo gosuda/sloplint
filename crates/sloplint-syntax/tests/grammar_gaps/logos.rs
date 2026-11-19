@@ -522,6 +522,27 @@ fn interp_prefix_in_concat_keeps_its_static_run() {
 }
 
 #[test]
+fn var_group_without_separator_is_a_parse_error() {
+    let analysis = run("src/varsep.lgo", "var ( x int y int )\n");
+    assert!(
+        first_problem(&parse_raw("var ( x int y int )\n")).is_some(),
+        "adjacent declarations without a separator must not parse cleanly"
+    );
+    assert!(
+        analysis.parse_error.is_some(),
+        "adjacent declarations without a separator must not parse cleanly"
+    );
+}
+
+#[test]
+fn var_group_without_trailing_separator_parses() {
+    run_clean(
+        "src/varok.lgo",
+        "var ( x int; y int )\nvar ( x int )\nvar (\n\tx int\n\ty int\n)\nvar ( x int; )\n",
+    );
+}
+
+#[test]
 fn deferred_lambda_through_parens_is_cleanup() {
     let analysis = run_clean(
         "src/deferredlambda.lgo",
