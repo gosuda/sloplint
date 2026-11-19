@@ -70,8 +70,13 @@
           "value": "\u0000"
         },
         {
-          "type": "SYMBOL",
-          "name": "_newline_comment"
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_newline_comment"
+          },
+          "named": true,
+          "value": "comment"
         }
       ]
     },

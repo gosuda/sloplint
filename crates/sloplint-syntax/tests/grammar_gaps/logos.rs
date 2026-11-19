@@ -575,6 +575,24 @@ fn var_group_with_newline_comment_separator_parses() {
         vec!["first", "second"],
         "both declarations around the comment must read as globals, got {names:?}"
     );
+    // The separator comment is aliased to `comment`, so doc and suppression
+    // handling keeps seeing it.
+    let source = "package p\n\nvar (\n\tfirst int /* note\n */ second int\n)\n";
+    let tree = parse_raw(source);
+    let mut seen = false;
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "comment"
+            && node
+                .utf8_text(source.as_bytes())
+                .is_ok_and(|text| text.contains("note"))
+        {
+            seen = true;
+        }
+        let mut cursor = node.walk();
+        stack.extend(node.children(&mut cursor));
+    }
+    assert!(seen, "the separator comment must stay a comment node");
 }
 
 #[test]
@@ -596,7 +614,8 @@ fn newline_comment_after_newline_stays_a_comment_node() {
     // A comment after a real newline still lexes as a `comment` extra (the
     // external scanner never skips a newline), so doc and suppression
     // handling keeps seeing it.
-    let source = "package p\n\nvar (\n\tfirst int\n\t/* docs for second\n\t   more */\n\tsecond int\n)\n";
+    let source =
+        "package p\n\nvar (\n\tfirst int\n\t/* docs for second\n\t   more */\n\tsecond int\n)\n";
     let tree = parse_raw(source);
     assert!(
         !tree.root_node().has_error(),
@@ -615,10 +634,7 @@ fn newline_comment_after_newline_stays_a_comment_node() {
         let mut cursor = node.walk();
         stack.extend(node.children(&mut cursor));
     }
-    assert!(
-        seen,
-        "the comment after a newline must stay a comment node"
-    );
+    assert!(seen, "the comment after a newline must stay a comment node");
 }
 
 #[test]

@@ -201,8 +201,10 @@ module.exports = grammar({
 
     // Statement and declaration separator: a newline, a semicolon, or a
     // same-line block comment that spans a newline (Go inserts a semicolon
-    // there). Single-line block comments never separate.
-    _terminator: $ => choice(newline, ';', '\0', $._newline_comment),
+    // there). Single-line block comments never separate. The separator
+    // comment is aliased to `comment` so it stays visible to doc and
+    // suppression handling like any other comment node.
+    _terminator: $ => choice(newline, ';', '\0', alias($._newline_comment, $.comment)),
 
     _top_level_declaration: $ => choice(
       $.package_clause,

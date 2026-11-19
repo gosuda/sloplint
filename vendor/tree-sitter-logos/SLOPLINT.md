@@ -85,12 +85,13 @@ Go rules that cannot apply to LoGOs, and why:
 - `var_spec_list` requires a separator between declarations (the final
    one stays optional), matching `import_spec_list`. A block comment on
    the same line that spans a newline also separates: the external
-   scanner token `_newline_comment` stands in the shared `_terminator`
-   rule wherever a newline does, mirroring Go semicolon insertion
+   scanner token stands in the shared `_terminator` rule wherever a
+   newline does, aliased to `comment` so the separator stays visible to
+   doc and suppression handling, mirroring Go semicolon insertion
    (verified against `gofmt -e` for `var`, `const`, `struct`, statement
    and top-level positions). A single-line block comment never
    separates, and a comment after a real newline still lexes as a
-   `comment` extra. Gap tests pin all three shapes in
+   `comment` extra. Gap tests pin all four shapes in
    `crates/sloplint-syntax/tests/grammar_gaps/logos.rs`.
 - spira (`git ls-files '*.lgo'`): 48 files, 48 parse clean; sloplint
   over them reports no `meta/parse-error`.
@@ -102,9 +103,5 @@ Go rules that cannot apply to LoGOs, and why:
 - The empty-body `switch x { }` tie prefers the statement form; a
   zero-arm switch expression in statement position is therefore parsed
   as `expression_switch_statement`.
-- A `sloplint-allow` directive inside a same-line separator comment is
-  consumed with the separator and not suppressed: keep directives on
-  their own line or in trailing single-line comments, where the comment
-  stays a `comment` extra.
 - `queries/highlights.scm` and `queries/tags.scm` are editor queries
   only; sloplint loads no vendored query files.

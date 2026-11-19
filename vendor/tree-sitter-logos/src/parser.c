@@ -396,7 +396,7 @@ static const char * const ts_symbol_names[] = {
   [sym_iota] = "iota",
   [sym_comment] = "comment",
   [sym_interp_string_literal] = "interp_string_literal",
-  [sym__newline_comment] = "_newline_comment",
+  [sym__newline_comment] = "comment",
   [sym_source_file] = "source_file",
   [sym__terminator] = "_terminator",
   [sym_package_clause] = "package_clause",
@@ -668,7 +668,7 @@ static const TSSymbol ts_symbol_map[] = {
   [sym_iota] = sym_iota,
   [sym_comment] = sym_comment,
   [sym_interp_string_literal] = sym_interp_string_literal,
-  [sym__newline_comment] = sym__newline_comment,
+  [sym__newline_comment] = sym_comment,
   [sym_source_file] = sym_source_file,
   [sym__terminator] = sym__terminator,
   [sym_package_clause] = sym_package_clause,
@@ -1256,7 +1256,7 @@ static const TSSymbolMetadata ts_symbol_metadata[] = {
     .named = true,
   },
   [sym__newline_comment] = {
-    .visible = false,
+    .visible = true,
     .named = true,
   },
   [sym_source_file] = {
