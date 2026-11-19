@@ -1,0 +1,16 @@
+package probe
+
+func format(s string) string {
+	return s
+}
+
+func render(s string) string {
+	return format(s)
+}
+
+func use() {
+	register(callback = render)
+}
+
+func register(callback func(string) string) {
+}

@@ -81,7 +81,9 @@ fn forward_index<'a>(facts: &'a FileFacts<'_>) -> ForwardIndex<'a> {
     let mut valued: HashSet<&str> = HashSet::new();
     for call in &facts.calls {
         for arg in &call.args {
-            if let ArgShape::Ident(name) = &arg.shape {
+            // A named identifier still references the name; only the
+            // positional check in forwards_every_param must ignore it.
+            if let ArgShape::Ident(name) | ArgShape::NamedIdent(name) = &arg.shape {
                 valued.insert(name);
             }
         }
@@ -208,6 +210,14 @@ mod tests {
     fn ident_arg(name: &str) -> Arg<'_> {
         Arg {
             shape: ArgShape::Ident(name),
+            start_line: 1,
+            end_line: 1,
+        }
+    }
+
+    fn named_ident_arg(name: &str) -> Arg<'_> {
+        Arg {
+            shape: ArgShape::NamedIdent(name),
             start_line: 1,
             end_line: 1,
         }
@@ -441,6 +451,22 @@ mod tests {
             vec![ident_arg("greet")],
         ));
         assert_eq!(flagged("fn greet() {}\n", functions, calls), 0);
+    }
+
+    #[test]
+    fn named_value_use_stays_silent() {
+        let (functions, mut calls) = forward_facts();
+        calls.push(call(
+            "register",
+            Some("register"),
+            true,
+            vec![named_ident_arg("greet")],
+        ));
+        assert_eq!(
+            flagged("fn greet() {}\n", functions, calls),
+            0,
+            "a wrapper passed as a named callback is still referenced"
+        );
     }
 
     #[test]

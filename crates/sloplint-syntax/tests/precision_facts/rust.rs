@@ -41,6 +41,7 @@ fn calls_of(source: &str) -> Vec<CallFacts> {
                         longest_static: *longest_static,
                     },
                     ArgShape::Ident(_) => ArgShape::Ident(""),
+                    ArgShape::NamedIdent(_) => ArgShape::NamedIdent(""),
                     ArgShape::Collection => ArgShape::Collection,
                     ArgShape::CodeBody => ArgShape::CodeBody,
                     ArgShape::Other => ArgShape::Other,

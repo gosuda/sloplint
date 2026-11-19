@@ -112,13 +112,14 @@ fn go_collection_shape<'s>(n: Node<'_>) -> ArgShape<'s> {
 
 pub(crate) fn go_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
     // A named argument binds by name, not by position, and the rule never
-    // resolves the callee's parameter names, so its value must not read as
-    // a forwarded identifier. Every other value shape stays measurable for
-    // the log and multiline rules.
+    // resolves the callee's parameter names, so a named identifier must not
+    // read as a positional forward. It still references the name, so it keeps
+    // a distinct shape the value-use index can see. Every other value shape
+    // stays measurable for the log and multiline rules.
     if n.kind() == "named_argument" {
         let value = child_by_field(n, "value").unwrap_or(n);
         let shape = match go_shape(cx, value) {
-            ArgShape::Ident(_) => ArgShape::Other,
+            ArgShape::Ident(name) => ArgShape::NamedIdent(name),
             shape => shape,
         };
         return Arg {

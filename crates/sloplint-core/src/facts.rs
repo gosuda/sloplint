@@ -160,9 +160,16 @@ pub struct Arg<'s> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgShape<'s> {
-    Str { longest_static: u32 },
-    Concat { longest_static: u32 },
+    Str {
+        longest_static: u32,
+    },
+    Concat {
+        longest_static: u32,
+    },
     Ident(&'s str),
+    /// An identifier passed as a named argument value. It still references
+    /// the name, but it binds by name rather than by position.
+    NamedIdent(&'s str),
     Collection,
     CodeBody,
     Other,

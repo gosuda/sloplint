@@ -495,8 +495,17 @@ fn swapped_named_args_are_not_plain_identifiers() {
         .find(|c| c.callee == "Render")
         .expect("Render must be a call fact");
     assert!(
-        call.args.iter().all(|a| a.shape == ArgShape::Other),
+        call.args.iter().all(|a| !matches!(a.shape, ArgShape::Ident(_))),
         "named arguments bind by name, so no value may read as a forwarded identifier, got {:?}",
+        call.args.iter().map(|a| &a.shape).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        call.args.iter().map(|a| &a.shape).collect::<Vec<_>>(),
+        vec![
+            &ArgShape::NamedIdent("left"),
+            &ArgShape::NamedIdent("right"),
+        ],
+        "a named identifier still references its name, got {:?}",
         call.args.iter().map(|a| &a.shape).collect::<Vec<_>>()
     );
 }
