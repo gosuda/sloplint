@@ -105,17 +105,7 @@
    ],
  
    reserved: {
-@@ -115,9 +185,7 @@
-   supertypes: $ => [
-     $._expression,
-     $._type,
--    $._simple_type,
-     $._statement,
--    $._simple_statement,
-   ],
- 
-   rules: {
-@@ -125,17 +193,25 @@
+@@ -125,17 +195,25 @@
        repeat(choice(
          // Unlike a Go compiler, we accept statements at top-level to enable
          // parsing of partial code snippets in documentation (see #63).
@@ -143,7 +133,7 @@
      ),
  
      package_clause: $ => seq(
-@@ -166,8 +242,8 @@
+@@ -166,8 +244,8 @@
        '(',
        optional(seq(
          $.import_spec,
@@ -154,7 +144,7 @@
        )),
        ')',
      ),
-@@ -178,6 +254,17 @@
+@@ -178,6 +256,17 @@
        $.var_declaration,
      ),
  
@@ -172,7 +162,7 @@
      const_declaration: $ => seq(
        'const',
        choice(
-@@ -185,7 +272,7 @@
+@@ -185,7 +274,7 @@
          seq(
            // The last spec may be followed directly by `)`: `const ( F = 1 )`.
            '(',
@@ -181,7 +171,7 @@
            ')',
          ),
        ),
-@@ -221,7 +308,11 @@
+@@ -221,7 +310,11 @@
  
      var_spec_list: $ => seq(
        '(',
@@ -194,7 +184,7 @@
        ')',
      ),
  
-@@ -290,7 +381,7 @@
+@@ -290,7 +383,7 @@
          $.type_alias,
          seq(
            '(',
@@ -203,7 +193,7 @@
            ')',
          ),
        ),
-@@ -311,8 +402,48 @@
+@@ -311,8 +404,48 @@
        $.parenthesized_type,
      ),
  
@@ -253,7 +243,7 @@
      _simple_type: $ => choice(
        prec.dynamic(-1, $._type_identifier),
        $.generic_type,
-@@ -326,6 +457,8 @@
+@@ -326,6 +459,8 @@
        $.channel_type,
        $.function_type,
        $.negated_type,
@@ -262,7 +252,7 @@
      ),
  
      generic_type: $ => prec.dynamic(1, seq(
-@@ -362,8 +495,14 @@
+@@ -362,8 +497,14 @@
        field('element', $._type),
      )),
  
@@ -277,7 +267,7 @@
        $.field_declaration_list,
      ),
  
-@@ -376,12 +515,11 @@
+@@ -376,12 +517,11 @@
        '{',
        optional(seq(
          $.field_declaration,
@@ -292,7 +282,7 @@
      field_declaration: $ => seq(
        choice(
          seq(
-@@ -397,6 +535,11 @@
+@@ -397,6 +537,11 @@
            )),
          ),
        ),
@@ -304,7 +294,7 @@
        field('tag', optional($._string_literal)),
      ),
  
-@@ -405,18 +548,21 @@
+@@ -405,18 +550,21 @@
        '{',
        optional(seq(
          $._interface_elem,
@@ -329,7 +319,7 @@
        field('name', $._field_identifier),
        field('parameters', $.parameter_list),
        field('result', optional(choice($.parameter_list, $._simple_type))),
-@@ -424,6 +570,13 @@
+@@ -424,6 +572,13 @@
  
      type_elem: $ => sep1($._type, '|'),
  
@@ -343,7 +333,7 @@
      map_type: $ => prec.right(seq(
        'map',
        '[',
-@@ -455,7 +608,7 @@
+@@ -455,7 +610,7 @@
      statement_list: $ => choice(
        seq(
          repeat1(choice(
@@ -352,7 +342,7 @@
            $.empty_statement,
          )),
          optional($._last_statement),
-@@ -478,7 +631,15 @@
+@@ -478,7 +633,15 @@
        $._simple_statement,
        $.return_statement,
        $.go_statement,
@@ -368,7 +358,7 @@
        $.if_statement,
        $.for_statement,
        $.expression_switch_statement,
-@@ -543,15 +704,17 @@
+@@ -543,15 +706,17 @@
        field('right', $.expression_list),
      ),
  
@@ -388,7 +378,7 @@
        ':',
        optional(alias($.empty_labeled_statement, $.labeled_statement)),
      ),
-@@ -561,18 +724,94 @@
+@@ -561,18 +726,94 @@
      // be parsed as a parent node that *contains* a `fallthrough` token.
      fallthrough_statement: _ => prec.left('fallthrough'),
  
@@ -487,7 +477,7 @@
      // The initializer may be empty: `if ; x {}`, `switch ; {}`.
      if_statement: $ => seq(
        'if',
-@@ -611,7 +850,10 @@
+@@ -611,7 +852,10 @@
        field('right', $._expression),
      ),
  
@@ -499,7 +489,7 @@
        'switch',
        optional(seq(
          field('initializer', optional($._simple_statement)),
-@@ -621,7 +863,7 @@
+@@ -621,7 +865,7 @@
        '{',
        repeat(choice($.expression_case, $.default_case)),
        '}',
@@ -508,7 +498,7 @@
  
      expression_case: $ => seq(
        'case',
-@@ -636,15 +878,15 @@
+@@ -636,15 +880,15 @@
        optional($.statement_list),
      ),
  
@@ -527,7 +517,7 @@
        optional(seq(
          field('initializer', optional($._simple_statement)),
          ';',
-@@ -655,7 +897,7 @@
+@@ -655,7 +899,7 @@
        '(',
        'type',
        ')',
@@ -536,7 +526,7 @@
  
      type_case: $ => seq(
        'case',
-@@ -681,17 +923,26 @@
+@@ -681,17 +925,26 @@
      _expression: $ => choice(
        $.unary_expression,
        $.binary_expression,
@@ -563,7 +553,7 @@
        $._string_literal,
        $.int_literal,
        $.float_literal,
-@@ -701,9 +952,134 @@
+@@ -701,9 +954,134 @@
        $.true,
        $.false,
        $.iota,
@@ -698,7 +688,7 @@
      parenthesized_expression: $ => seq(
        '(',
        $._expression,
-@@ -739,16 +1115,35 @@
+@@ -739,16 +1117,35 @@
        ')',
      ),
  
@@ -736,7 +726,7 @@
      selector_expression: $ => prec(PREC.primary, seq(
        field('operand', choice(
          $._expression,
-@@ -759,7 +1154,7 @@
+@@ -759,7 +1156,7 @@
          alias($._parenthesized_type_literal, $.parenthesized_type),
        )),
        '.',
@@ -745,7 +735,7 @@
      )),
  
      // Only types that cannot also be expressions, so `(*T).M` keeps parsing as
-@@ -833,6 +1228,7 @@
+@@ -833,6 +1230,7 @@
          $.array_type,
          $.implicit_length_array_type,
          $.struct_type,
@@ -753,7 +743,7 @@
          $._type_identifier,
          $.generic_type,
          $.qualified_type,
-@@ -849,7 +1245,6 @@
+@@ -849,7 +1247,6 @@
        '}',
      ),
  
@@ -761,7 +751,7 @@
  
      // In T{k: v}, the key k may be:
      // - any expression (when T is a map, slice or array),
-@@ -904,13 +1299,22 @@
+@@ -904,13 +1301,22 @@
  
      _type_identifier: $ => alias($.identifier, $.type_identifier),
      _field_identifier: $ => alias($.identifier, $.field_identifier),

@@ -226,17 +226,40 @@ static bool scan_newline_comment(TSLexer *lexer) {
     }
 }
 
+// True when the lookahead after whitespace is `/`, so a comment MAY start
+// here. Only whitespace is skipped to find out, which tree-sitter discards
+// when this scan returns false.
+static bool at_slash(TSLexer *lexer) {
+    for (;;) {
+        int32_t c = lexer->lookahead;
+        if (c != ' ' && c != '\t' && c != '\r' && c != '\v' && c != '\f') {
+            return c == '/';
+        }
+        lexer->advance(lexer, true);
+    }
+}
+
 bool tree_sitter_logos_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
     (void)payload;
 
-    if (valid_symbols[NEWLINE_COMMENT] && scan_newline_comment(lexer)) {
-        lexer->result_symbol = NEWLINE_COMMENT;
-        lexer->mark_end(lexer);
-        return true;
+    if (valid_symbols[NEWLINE_COMMENT]) {
+        if (at_slash(lexer)) {
+            if (scan_newline_comment(lexer)) {
+                lexer->result_symbol = NEWLINE_COMMENT;
+                lexer->mark_end(lexer);
+                return true;
+            }
+            // The comment scan consumed a `/` but found no newline-spanning
+            // block comment. Falling through would resume the
+            // interpolated-string scan mid-comment and swallow the comment
+            // text into the pending token, so fail and let tree-sitter reset
+            // the lexer: the internal lexer handles the comment as an extra
+            // and re-invokes this scanner at the right position for `$"`.
+            return false;
+        }
+        // No comment ahead; only whitespace was skipped, so falling through
+        // to the interpolated-string scan below is safe.
     }
-    // A failed comment scan restores the lexer position, so fall through
-    // to the interpolated-string scan: both tokens can be valid together
-    // (for example after `return`), and a non-comment must not hide `$"`.
     if (!valid_symbols[INTERP_STRING]) {
         return false;
     }

@@ -730,3 +730,68 @@ fn right_grouped_concat_keeps_concat() {
         "a right-grouped literal is still a concatenation, got {shapes:?}"
     );
 }
+
+#[test]
+fn removed_supertypes_stay_queryable() {
+    // Custom rules written against the previous grammar name the hidden
+    // statement and type categories directly; dropping them from
+    // `supertypes` makes every such rule fail compilation and stops the
+    // run before any file is checked.
+    let rules = CustomRules::compile(&[
+        query_rule("logos", "((_simple_statement) @match)"),
+        query_rule("logos", "((_simple_type) @match)"),
+    ])
+    .expect("supertype queries compile");
+    let _ = rules;
+}
+
+fn query_rule(language: &str, query: &str) -> sloplint_core::CustomRuleSpec {
+    sloplint_core::CustomRuleSpec {
+        id: format!("custom/{language}-probe"),
+        language: language.to_string(),
+        severity: sloplint_core::Severity::Minor,
+        confidence: sloplint_core::Confidence::Medium,
+        message: "hit".to_string(),
+        why: "probe".to_string(),
+        fix: "probe".to_string(),
+        query: query.to_string(),
+        include: Vec::new(),
+        exclude: Vec::new(),
+    }
+}
+
+#[test]
+fn comment_before_interp_string_stays_a_comment_node() {
+    // A single-line block comment between `return` and an interpolated
+    // string is not a separator, so it must survive as an ordinary comment
+    // node instead of being swallowed into the string token.
+    let source =
+        "package p\n\nfunc f(x string) string {\n\treturn /* why */ $\"value {x}\"\n}\n";
+    let tree = parse_raw(source);
+    assert!(
+        !tree.root_node().has_error(),
+        "the commented return must parse cleanly"
+    );
+    let mut seen_comment = false;
+    let mut seen_interp = false;
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "comment"
+            && node
+                .utf8_text(source.as_bytes())
+                .is_ok_and(|text| text.contains("why"))
+        {
+            seen_comment = true;
+        }
+        if node.kind() == "interp_string_literal" {
+            seen_interp = true;
+        }
+        let mut cursor = node.walk();
+        stack.extend(node.children(&mut cursor));
+    }
+    assert!(seen_interp, "the interpolated string must stay a string node");
+    assert!(
+        seen_comment,
+        "the comment before the interpolated string must stay a comment node"
+    );
+}
