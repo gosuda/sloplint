@@ -167,7 +167,7 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
         skip_ws_comments(lexer);
         if (lexer->lookahead == '@') {
             skip(lexer);
-            while (iswalpha(lexer->lookahead) || lexer->lookahead == '_' || lexer->lookahead == '.') {
+            while (iswalnum(lexer->lookahead) || lexer->lookahead == '_' || lexer->lookahead == '.') {
                 skip(lexer);
             }
             skip_ws_comments(lexer);
@@ -202,10 +202,73 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
     }
     // `scan_words` buffers a miss, so the word after the modifiers is already
     // in `accessor_word` for this final check.
-    if (scan_words(lexer, (const char[MAX_WORDS][MAX_WORD_SIZE]){"get", "set", "field"}, accessor_word,
-                   NULL)) {
-        lexer->result_symbol = ACCESSOR_SEMI;
+    uint8_t accessor_index = -1;
+    if (!scan_words(lexer, (const char[MAX_WORDS][MAX_WORD_SIZE]){"get", "set", "field"}, accessor_word,
+                    &accessor_index)) {
+        return;
     }
+    // `set_up()`/`get_x`/`field2` match a prefix of an accessor word; a real
+    // accessor is never followed by an identifier-continue character.
+    if (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
+        return;
+    }
+    if (accessor_index == 0 || accessor_index == 1) {
+        // `get`/`set` as plain identifiers: `get = 2` assigns, `get(x)` and
+        // `set(v)` call. A paren'ed accessor must be followed by a body
+        // (`= expr`/`{...}`/`: type`) or it is a call, not an accessor.
+        while (iswspace(lexer->lookahead) && lexer->lookahead != '\n') {
+            skip(lexer);
+        }
+        if (lexer->lookahead == '=') {
+            return;
+        }
+        if (lexer->lookahead == '(') {
+            skip(lexer);
+            while (iswspace(lexer->lookahead) && lexer->lookahead != '\n') {
+                skip(lexer);
+            }
+            // A getter takes `()`; a setter takes `(<identifier> ...)` where
+            // modifiers may precede the parameter name.
+            if (accessor_index == 0) {
+                if (lexer->lookahead != ')') {
+                    return;
+                }
+            } else if (!iswalpha(lexer->lookahead) && lexer->lookahead != '_') {
+                return;
+            }
+            // `(` was already consumed; run until its `)` closes.
+            unsigned depth = 1;
+            do {
+                wchar_t ch = lexer->lookahead;
+                if (ch == '"' || ch == '\'') {
+                    skip_string(lexer, ch);
+                    continue;
+                }
+                if (ch == '(') {
+                    depth++;
+                } else if (ch == ')') {
+                    depth--;
+                }
+                skip(lexer);
+            } while (depth > 0 && !lexer->eof(lexer));
+            while (iswspace(lexer->lookahead) && lexer->lookahead != '\n') {
+                skip(lexer);
+            }
+            if (lexer->lookahead != '=' && lexer->lookahead != '{' && lexer->lookahead != ':') {
+                return;
+            }
+        }
+    } else if (accessor_index == 2) {
+        // `field` binds a backing field only before `=` (or `: type =`); a
+        // call like `field(x)` or any other identifier use is a statement.
+        while (iswspace(lexer->lookahead) && lexer->lookahead != '\n') {
+            skip(lexer);
+        }
+        if (lexer->lookahead != '=' && lexer->lookahead != ':') {
+            return;
+        }
+    }
+    lexer->result_symbol = ACCESSOR_SEMI;
 }
 
 // Skips whitespace and comments. Returns whether at least one comment was
