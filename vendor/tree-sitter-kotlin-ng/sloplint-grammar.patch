@@ -304,20 +304,26 @@
              case '*':
              case '%':
              case '>':
-@@ -224,6 +280,12 @@
+@@ -224,6 +280,18 @@
                      goto q_dot_from_semi;
                  }
                  return true;
 +            // `class C\n(params)` — a `(` continuing a declaration head must
-+            // not take a semicolon. In expression position `x\n(y)` stays two
-+            // statements; nullable-chain (`?.`) and `!is` continuations mark
-+            // that state, so the semi is kept wherever either is valid.
++            // not take a semicolon. The CONSTRUCTOR keyword is valid exactly in
++            // that head position (`class C constructor(...)`); after a complete
++            // statement (`fun g() {}`, `do { } while (c)`, `val x: Int`) it is
++            // not, so the semi must be emitted or `(a as B).c()` merges into
++            // the previous construct. In expression position `x\n(y)` stays two
++            // statements; nullable-chain (`?.`) and `!is` continuations also
++            // mark an ended expression, so the semi is kept wherever either is
++            // valid.
 +            case '(':
-+                return valid_symbols[Q_DOT] || valid_symbols[NOT_IS];
++                return valid_symbols[Q_DOT] || valid_symbols[NOT_IS] ||
++                       !valid_symbols[CONSTRUCTOR];
              case 'e':
              case 'i':
              case 'g':
-@@ -238,23 +300,30 @@
+@@ -238,23 +306,30 @@
              case 'c':
              case 'b':
              case 'w':
@@ -352,7 +358,7 @@
                  // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
                  // we found a variable named constructor whose field is being accessed
                  if (index == 5) {
-@@ -279,18 +348,22 @@
+@@ -279,18 +354,22 @@
                      }
                  }
                  // If `get` was found and the keyword is not valid, return a semi since it's being used as an identifier
@@ -380,7 +386,7 @@
  
                          while (iswspace(lexer->lookahead)) {
                              if (lexer->lookahead == '\n') {
-@@ -307,6 +380,33 @@
+@@ -307,6 +386,33 @@
                  else if (index == 1 && valid_symbols[IN]) {
                      return true;
                  }

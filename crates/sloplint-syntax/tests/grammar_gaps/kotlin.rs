@@ -238,6 +238,25 @@ fn empty_array_literal_in_an_annotation_argument_parses() {
 #[test]
 fn primary_constructor_parameters_on_the_next_line_parse() {
     run_clean("internal class D\n/** doc */\n    (x: Int) {\n}\n");
+    let sexp = raw_tree("internal class D\n/** doc */\n    (x: Int) {\n}\n")
+        .root_node()
+        .to_sexp();
+    assert!(
+        sexp.contains("(primary_constructor"),
+        "the next-line parens must stay the primary_constructor, got:\n{sexp}"
+    );
+}
+
+#[test]
+fn parenthesized_line_after_a_statement_keeps_its_separator() {
+    for source in [
+        "fun f() {\n    fun g() {}\n    (a as B).c()\n}\n",
+        "fun f() {\n    do {\n        p()\n    } while (c)\n    (a as B).c()\n}\n",
+        "fun f() {\n    val x: Int\n    (a as B).c()\n}\n",
+        "fun f() {\n    class D {}\n    (a as B).c()\n}\n",
+    ] {
+        run_clean(source);
+    }
 }
 
 #[test]

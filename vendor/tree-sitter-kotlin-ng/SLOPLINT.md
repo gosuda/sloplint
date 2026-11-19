@@ -4,6 +4,8 @@ Status: PARTIAL. 16 of the 18 named Kotlin clusters are fixed for their repro sh
 
 Round 2 adds: K-SOFTID (`open`/`override` usable as identifiers), K-PARENANNO (annotation on a parenthesized function type), K-ARRLIT (empty `[]` in an annotation argument), K-NEWLINECTOR (a newline or doc comment between the class name and the primary-constructor parameter list, which resolves the KSPLITCTOR shape), and K-ARRLIT also resolves the KVARARGARR repro (`= []`). A fresh dogfood pass over 274 corpus files previously flagged with parse errors leaves 171 still erroring; the cleared 102 are concentrated in installerx-revived (Room `indices = []`, `@Composable` paren types), facebook-android-sdk, dbflow, and mlkit (doc comment before the constructor).
 
+Round 3 repairs a K-NEWLINECTOR regression: a `(`-led line after a *complete* statement (`fun g() {}`, `do { } while (c)`, `val x: Int`, `class D {}`) again takes its separator — the scanner now suppresses the semi only where the `constructor` keyword is valid (the declaration-head position) or where a nullable-chain/`!is` continuation is still open.
+
 ## Origin
 
 - Upstream: https://github.com/tree-sitter-grammars/tree-sitter-kotlin, tag v1.1.0, commit 77dd60ea0a9003ce062c9728a513ffe1aaff8c82.
