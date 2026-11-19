@@ -43,9 +43,11 @@
    `_definition_pattern` (a lone `val x * y = v` infix pattern still parses); each
    comma successor is a `_comma_definition_pattern`, the same alternatives minus
    `infix_pattern`, so `val a, b | c` and `val a, b :: c` error while the
-   parenthesized `(b | c)`/`(b :: c)` forms stay legal — stricter than scalac 2,
-   which admits `::` successors, and matching scalac 3.10's `patDefOrDcl`, which
-   admits only identifiers after the first comma. The pure name list keeps its
+   parenthesized `(b | c)`/`(b :: c)` forms stay legal. This deliberately lands
+   between the dialects: scalac 2's `PatDef ::= Pattern2 {',' Pattern2}` admits
+   full pattern successors including `::`, scalac 3.10's `patDefOrDcl` admits
+   only identifiers after the first comma, and we accept patterns minus
+   unparenthesized infix. The pure name list keeps its
    `identifiers` node via `prec.dynamic(1)`. New conflicts:
    `[val_declaration, identifiers, _comma_definition_pattern]`,
    `[val_declaration, _comma_definition_pattern]`,
@@ -59,8 +61,10 @@
 - SC-PARENIF: `if x.exists` / `(x => x == 10) then`. Real occurrence: `tests/pos/i12757.scala`.
 - SC-INSTAR: `case class *(...)` with `val P(a, b * c) = p`. Real occurrence:
   `tests/pos/t5702-pos-infix-star.scala`.
-- SC-MULTIPAT: `val a2_1, List(a2_2) = List(1, 2)` and the `var` form. Real occurrence:
-  scalameta `semanticdb/integration/src/main/scala/example/Issue1872.scala`.
+- SC-MULTIPAT: `val a2_1, List(a2_2) = List(1, 2)` and the `var` form — an
+  SLS-2 form (scalac 3.10's `patDefOrDcl` takes only identifiers after the
+  comma, so this is a 2.13-dialect shape the grammar deliberately admits).
+  Real occurrence: scalameta `semanticdb/integration/src/main/scala/example/Issue1872.scala`.
 
 ## Still failing (residual)
 
