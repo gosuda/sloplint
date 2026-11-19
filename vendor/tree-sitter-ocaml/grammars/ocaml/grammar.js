@@ -1687,18 +1687,18 @@ export default grammar({
     // camlp4_conditional.
     _match_cases: $ => prec.right(seq(
       optional(seq(
-        repeat($.cppo_directive),
+        repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
         optional('|'),
-        repeat($.cppo_directive),
+        repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
       )),
       $.match_case,
       repeat(seq(
-        repeat($.cppo_directive),
+        repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
         '|',
-        repeat($.cppo_directive),
+        repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
         $.match_case,
       )),
-      repeat($.cppo_directive),
+      repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
     )),
 
     match_case: $ => seq(
@@ -2673,6 +2673,23 @@ export default grammar({
       /(?:define|include|if|ifdef|ifndef|elif|else|endif|undef|error|warning|pragma|line|ext|endext|stop|localization)/,
       // `\<newline>` continues a cppo directive onto the next line.
       /(?:[^\n\\]|\\[\s\S])*/,
+    )),
+
+    // Match-case-position cppo directives. A match arm can also start
+    // with a polymorphic-variant type pattern (`| #error as e -> pp`,
+    // mirage-tcpip/ocaml-git/...), so the directive token must be
+    // all-or-nothing: it requires the rest of the line with no `->`
+    // in it. `| #error as e -> ...` then fails the whole token and the
+    // `#` + `error` tokens are free for the pattern parse. Real cppo
+    // directives do not carry `->` on their line; the accepted casualty
+    // is a `->`-bearing `#define` placed between match arms.
+    cppo_directive_no_arrow: $ => token(seq(
+      '#',
+      /(?:define|include|if|ifdef|ifndef|elif|else|endif|undef|error|warning|pragma|line|ext|endext|stop|localization)/,
+      // `-` is consumed only when not followed by `>`; a trailing `-`
+      // before the newline is allowed by the final `-?`.
+      /(?:[^\n\\-]|\\[\s\S]|-[^\n\\>-]|--)*-?/,
+      '\n',
     )),
 
     // camlp4 directives `#<If:TESTING>`, `#<Else>`, `#<End>`. `#<` can never

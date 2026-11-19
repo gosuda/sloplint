@@ -8202,8 +8202,13 @@
                   {
                     "type": "REPEAT",
                     "content": {
-                      "type": "SYMBOL",
-                      "name": "cppo_directive"
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "cppo_directive_no_arrow"
+                      },
+                      "named": true,
+                      "value": "cppo_directive"
                     }
                   },
                   {
@@ -8221,8 +8226,13 @@
                   {
                     "type": "REPEAT",
                     "content": {
-                      "type": "SYMBOL",
-                      "name": "cppo_directive"
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "cppo_directive_no_arrow"
+                      },
+                      "named": true,
+                      "value": "cppo_directive"
                     }
                   }
                 ]
@@ -8244,8 +8254,13 @@
                 {
                   "type": "REPEAT",
                   "content": {
-                    "type": "SYMBOL",
-                    "name": "cppo_directive"
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "cppo_directive_no_arrow"
+                    },
+                    "named": true,
+                    "value": "cppo_directive"
                   }
                 },
                 {
@@ -8255,8 +8270,13 @@
                 {
                   "type": "REPEAT",
                   "content": {
-                    "type": "SYMBOL",
-                    "name": "cppo_directive"
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "cppo_directive_no_arrow"
+                    },
+                    "named": true,
+                    "value": "cppo_directive"
                   }
                 },
                 {
@@ -8269,8 +8289,13 @@
           {
             "type": "REPEAT",
             "content": {
-              "type": "SYMBOL",
-              "name": "cppo_directive"
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "cppo_directive_no_arrow"
+              },
+              "named": true,
+              "value": "cppo_directive"
             }
           }
         ]
@@ -13612,6 +13637,30 @@
           {
             "type": "PATTERN",
             "value": "(?:[^\\n\\\\]|\\\\[\\s\\S])*"
+          }
+        ]
+      }
+    },
+    "cppo_directive_no_arrow": {
+      "type": "TOKEN",
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "#"
+          },
+          {
+            "type": "PATTERN",
+            "value": "(?:define|include|if|ifdef|ifndef|elif|else|endif|undef|error|warning|pragma|line|ext|endext|stop|localization)"
+          },
+          {
+            "type": "PATTERN",
+            "value": "(?:[^\\n\\\\-]|\\\\[\\s\\S]|-[^\\n\\\\>-]|--)*-?"
+          },
+          {
+            "type": "STRING",
+            "value": "\n"
           }
         ]
       }

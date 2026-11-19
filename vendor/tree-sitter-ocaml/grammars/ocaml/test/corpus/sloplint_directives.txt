@@ -229,3 +229,40 @@ let y = 2
     (let_binding
       (value_name)
       (number))))
+
+================================================================================
+polymorphic-variant pattern arm after a directive-looking keyword
+================================================================================
+
+let f = function
+  | `A -> 1
+  | #error as e -> pp_error ppf e
+let g = 2
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (value_definition
+    (let_binding
+      (value_name)
+      (function_expression
+        (match_case
+          (tag)
+          (number))
+        (match_case
+          (alias_pattern
+            (polymorphic_variant_pattern
+              (type_constructor_path
+                (type_constructor)))
+            (value_pattern))
+          (application_expression
+            (value_path
+              (value_name))
+            (value_path
+              (value_name))
+            (value_path
+              (value_name)))))))
+  (value_definition
+    (let_binding
+      (value_name)
+      (number))))

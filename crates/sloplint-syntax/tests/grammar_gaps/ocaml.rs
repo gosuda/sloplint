@@ -288,3 +288,13 @@ fn camlp4_nested_conditional_as_arm_parses() {
         "let y = 2\n",
     ));
 }
+
+#[test]
+fn error_keyword_polymorphic_variant_pattern_arm_parses() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "  | #error as e -> pp_error ppf e\n",
+        "let g = 2\n",
+    ));
+}
