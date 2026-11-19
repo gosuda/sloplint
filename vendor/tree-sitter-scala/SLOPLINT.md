@@ -41,11 +41,16 @@
    non-star opchar (`/[${OP_NSS}]${OP_RUN}` in the mul class, `/[${OP_NSS}]${OP_RUN_SLASH}`
    in `OP_ID_UNION`). `//` and `/*` stays excluded — a `/` followed by another `/` or `*`
    still opens a comment. `x/y` and `/x/` with a letter `x` are unchanged.
-5. SC-WILDLAMBDA / SC-SYMNAME / SC-SEMI: `_: T =>` admits `wildcard` beside
-   `operandName` in both typed-lambda parameter slots (`{ _: Any => () }`,
-   algebird's `prepareMonoid`); `quote_expression` names an operator (`'*)`,
-   scalding) or the keyword `val` (`'row, 'col, 'val` column literals); and a
-   top-level separator may be a run of literal `;` (`package breeze.plot;;;`).
+5. SC-WILDLAMBDA / SC-SEMI: `_: T =>` admits `wildcard` beside `operandName`
+   in the unparenthesized typed-lambda slot (`{ _: Any => () }`, algebird's
+   `prepareMonoid`); and a top-level separator may be a run of literal `;`
+   (`package breeze.plot;;;`). SC-SELFWILD (new): `wildcard` is dropped from
+   `_braced_typed_lambda`'s parameters and `self_type` is raised to dynamic 3,
+   so `new T { _: (A, B) => ... }` reads as a wildcard self-type instead of a
+   block-argument lambda or an error (a typed wildcard lambda is written
+   `(_ : T) => ...`). SC-LEADSEMI (new): a stray literal `;` run may also lead
+   the file (`;;;def x = 1`); it is literal-`;` only because a leading
+   `_automatic_semicolon` made the separator boundary ambiguous.
 6. SC-TYPEDLAMBDA: `lambda_expression` admits an unparenthesized typed parameter
    `a: T => body` in expression position (scalding's `case c => a: Array[Long] => new W(a)`).
    It is kept at dynamic -5, below colon-argument (0) and the ascription arrow tail (-1),
@@ -55,6 +60,13 @@
    so the braced form keeps winning inside `{ … }`.
 7. The conflict `[$.repeat_pattern, $._simple_expression]` is removed (generator reported it
    unnecessary). The conflict `[$.block, $.capture_set]` is moved, with identical content.
+8. SC-SYMNAME (revised): `quote_expression` names an operator (`'*)`, scalding) or
+   the keyword `val` (`'row, 'col, 'val` column literals). The operator name is now
+   a `token.immediate` regex (`(?:[noSlash(OP)]|/[OP_NSS])+|/`) at `PREC.macro`, so
+   `' +` is rejected (the `'` must be adjacent to the name), a `/` never opens a
+   comment, and the reserved spellings `'=`, `':`, `'<-`, `'->`, `'/` lex. A
+   trailing `'` cannot be swallowed: `'='` stays a character literal because its
+   three characters outmatch the two of `'=`.
 
 ## Fixed shapes (scalac 3.10.0 `-Ystop-after:parser` accepts each)
 
@@ -126,6 +138,10 @@ published crate for the proof, then restored):
 | wildcard_typed_lambda_parses (SC-WILDLAMBDA) | FAIL | PASS |
 | keyword_and_operator_symbol_literals_parse (SC-SYMNAME) | FAIL | PASS |
 | stray_semicolons_after_package_parse (SC-SEMI) | FAIL | PASS |
+| wildcard_self_type_in_new_template_parses (SC-SELFWILD) | FAIL | PASS |
+| spaced_quote_operator_still_errors | PASS | PASS |
+| reserved_operator_symbol_literals_parse (SC-SYMNAME) | FAIL | PASS |
+| leading_stray_semicolons_parse (SC-LEADSEMI) | FAIL | PASS |
 
-The four FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
-panics. The vendored run is 15/15.
+The FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
+panics. The vendored run is 19/19.

@@ -1,5 +1,5 @@
---- a/grammar.js
-+++ b/grammar.js
+--- /tmp/scala-ga/grammar.js	2026-11-19 14:51:42.212342742 +0000
++++ grammar.js	2026-11-19 22:40:28.560455512 +0000
 @@ -138,6 +138,10 @@
        opRegex(`[*%]${OP_RUN}${OP_TAIL_LEFT}`),
        opRegex(`/[${OP_NSS_END_LEFT}]`),
@@ -20,28 +20,19 @@
    ),
  );
  
-@@ -438,7 +442,6 @@
- 
-   conflicts: $ => [
-     [$._if_rest],
--    [$.repeat_pattern, $._simple_expression],
-     [$.tuple_pattern, $._simple_expression],
-     [$.tuple_pattern, $._simple_expression, $.binding],
-     // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
-@@ -493,6 +496,7 @@
-     // we treat `operator_identifier` as `simple_expression`
-     [$._simple_expression, $.lambda_expression],
-     [$._simple_expression, $._single_lambda_param],
-+    [$.block, $.capture_set],
-     // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
-     // identifier `export` beginning an expression statement. Each reading
-     // dies on the next token ('.' vs a name), so forking settles it. The
-@@ -532,20 +536,36 @@
-     [$._constructor_annotation],
-     [$._constructor_annotation_arguments, $.arguments],
+@@ -458,10 +462,6 @@
+     // 'extension' • '{' is either an extension definition with a braced body
+     // or the soft identifier `extension` (a Scala 2 id) called with a block.
+     [$.extension_definition, $._soft_identifier],
+-    // 'enum' is a soft keyword too: an `enum`-definition and the identifier
+-    // `enum` (Scala 2 code uses it as a parameter or named argument) diverge
+-    // only after the token's continuation is known.
+-    [$.enum_definition, $._soft_identifier],
+     [$.binding, $._simple_expression],
+     [$.binding, $._type_identifier],
+     // A parenthesized type before `=>` can extend into a function type or stop
+@@ -538,16 +538,34 @@
      [$._constructor_annotation, $.applied_constructor_type],
--    // type_parameters  '=>'  '{'  '}'  •  '['  …
--    [$.block, $.capture_set],
      // '{'  identifier  •  ':' starts the braced typed lambda, the block
      // lambda param, and a statement alike.
 -    [$._simple_expression, $._braced_typed_lambda],
@@ -80,7 +71,7 @@
      // _simple_expression  ':'  '('  name_and_type  ')'  •  '=>'
      // The parenthesized list is either the lambda parameters of a colon
      // argument or a named tuple type on the ascription reading. What follows
-@@ -555,9 +575,6 @@
+@@ -557,9 +575,6 @@
      [$._annotated_type, $.binding],
      // '['  identifier  ':'  '{'  identifier  •  ':'  — a braced context
      // bound reuses the self-type head shapes.
@@ -90,35 +81,86 @@
      // '['  identifier  ':'  '{'  '('  wildcard  •  ':'  …
      [$.binding, $._annotated_type, $._simple_expression],
      // '['  identifier  ':'  '{'  wildcard  •  '{'  …
-@@ -636,7 +653,14 @@
+@@ -638,7 +653,22 @@
      compilation_unit: $ =>
        seq(
          optional($._shebang),
 -        optional(trailingSep1($._semicolon, $._top_level_definition)),
 +        // scalac skips stray `;` (breeze's `package breeze.plot;;;`), so a
-+        // top-level separator may be a run of literal semicolons.
++        // top-level separator may be a run of literal semicolons — and a
++        // stray run may lead the file too (`;;;def x = 1`). The leading
++        // run is literal-`;` only: a stray `_automatic_semicolon` there
++        // makes the boundary with the item separators ambiguous.
 +        optional(
-+          trailingSep1(
-+            seq(choice(";", $._automatic_semicolon), repeat(";")),
-+            $._top_level_definition,
++          seq(
++            repeat(";"),
++            optional(
++              trailingSep1(
++                seq(choice(";", $._automatic_semicolon), repeat(";")),
++                $._top_level_definition,
++              ),
++            ),
 +          ),
 +        ),
        ),
  
      _top_level_definition: $ => choice($._definition, statementExpression($)),
-@@ -2019,7 +2043,10 @@
-         PREC.infix,
-         seq(
-           field("left", $._definition_pattern),
--          field("operator", wordOrOpName($)),
-+          field(
-+            "operator",
-+            choice(wordOrOpName($), alias($._asterisk, $.operator_identifier)),
-+          ),
-           field("right", $._definition_pattern),
-         ),
+@@ -665,18 +695,15 @@
        ),
-@@ -2151,10 +2178,17 @@
+ 
+     enum_definition: $ =>
+-      prec(
+-        1,
+-        seq(
+-          repeat($.annotation),
+-          optional($.modifiers),
+-          "enum",
+-          $._class_constructor,
+-          field("extend", optional($.extends_clause)),
+-          field("derive", optional(choice($.derives_clause, $.uses_clause))),
+-          field("body", $.enum_body),
+-          optional($._end_marker_named_tail),
+-        ),
++      seq(
++        repeat($.annotation),
++        optional($.modifiers),
++        "enum",
++        $._class_constructor,
++        field("extend", optional($.extends_clause)),
++        field("derive", optional(choice($.derives_clause, $.uses_clause))),
++        field("body", $.enum_body),
++        optional($._end_marker_named_tail),
+       ),
+ 
+     _enum_block: $ =>
+@@ -806,7 +833,7 @@
+     // Scala 3 keywords that are valid identifiers in Scala 2 sources and thus
+     // may appear as package names in import/export paths (e.g. `import io.circe.export.Exported`).
+     _namespace_path_segment: $ =>
+-      choice($._identifier, alias("export", $.identifier)),
++      choice($._identifier, alias(choice("enum", "export"), $.identifier)),
+ 
+     namespace_wildcard: $ => prec.left(1, choice("*", "_", "given")),
+ 
+@@ -1078,10 +1105,14 @@
+ 
+     // Dynamic precedences added here to win over $.call_expression
+     self_type: $ =>
+-      // 2 beats the block lambda reading of `{ this: I => ... }`, which
+-      // carries dynamic 1.
++      // 3 beats the block lambda reading of `{ this: I => ... }`
++      // (dynamic 1) and the `_braced_typed_lambda` reading of
++      // `new T { _: (A, B) => ... }` (dynamic 2), which otherwise turns
++      // the anonymous class into `new T { wildcard-lambda }` call args.
++      // The extra weight is free: self_type is reachable only inside a
++      // template body, never in expression position.
+       prec.dynamic(
+-        2,
++        3,
+         prec(
+           "self_type",
+           seq(
+@@ -2159,10 +2190,17 @@
                ),
                field(
                  "parameters",
@@ -140,7 +182,7 @@
                ),
                anyArrow(),
                $._indentable_expression,
-@@ -2215,14 +2249,14 @@
+@@ -2223,13 +2261,16 @@
      // the reading of `x: T` as a statement taking a colon argument.
      _braced_typed_lambda: $ =>
        prec.dynamic(
@@ -152,88 +194,41 @@
              field(
                "parameters",
                prec.right(
--                seq(optional("implicit"), operandName($), ":", $._type),
-+                seq(optional("implicit"), choice(operandName($), $.wildcard), ":", $._type),
++                // No `wildcard`: `{ _: T => ... }` reads as the template
++                // body's self-type (`new T { _: T => ... }`), and a typed
++                // wildcard lambda is normally written `(_ : T) => ...`.
+                 seq(optional("implicit"), operandName($), ":", $._type),
                ),
              ),
-             anyArrow(),
-@@ -2283,19 +2317,37 @@
-     _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
- 
-     _if_condition_then: $ =>
--      // A marker slot of a construct inside the condition may emit a
--      // semicolon before the `then`. The weight beats the paren form, so
--      // `if (a)` + newline + `then x` keeps `then` as the keyword.
--      prec.dynamic(
--        5,
--        seq(
--          $._indentable_expression,
--          optional($._automatic_semicolon),
--          $._control_tail_gate,
--          "then",
-+      choice(
-+        // A marker slot of a construct inside the condition may emit a
-+        // semicolon before the `then`. The weight beats the paren form, so
-+        // `if (a)` + newline + `then x` keeps `then` as the keyword.
-+        prec.dynamic(
-+          5,
-+          seq(
-+            $._indentable_expression,
-+            optional($._automatic_semicolon),
-+            $._control_tail_gate,
-+            "then",
-+          ),
-+        ),
-+        prec.dynamic(
-+          5,
-+          seq(
-+            $.split_call_condition,
-+            optional($._automatic_semicolon),
-+            $._control_tail_gate,
-+            "then",
-+          ),
-         ),
-       ),
- 
-+    split_call_condition: $ =>
-+      seq(
-+        field("function", $._indentable_expression),
-+        $._automatic_semicolon,
-+        field("arguments", $.arguments),
-+      ),
-+
-     /*
-      *   MatchClause       ::=  'match' <<< CaseClauses >>>
-      *
-@@ -2529,6 +2581,17 @@
-             optional($._end_marker_kw_tail),
-           ),
-         ),
-+        prec.dynamic(
-+          1,
-+          seq(
-+            "new",
-+            $._constructor_application,
-+            colonEol($),
-+            $._indent,
-+            prec.dynamic(2, alias($._end_marker_kw, $.end_marker)),
-+            choice($._outdent, $._comma_outdent),
-+          ),
-+        ),
-         prec(
-           "new",
-           seq("new", $.template_body, optional($._end_marker_kw_tail)),
-@@ -2779,6 +2842,13 @@
+@@ -2816,6 +2857,22 @@
                "]",
              ),
              $.identifier,
 +            // `'op` reads an operator name (Scala 2 symbol literal `'*`,
-+            // scalding's `x == '*)`); the choice sits with the identifier
-+            // branch for the same reason.
-+            $.operator_identifier,
++            // scalding's `x == '*)`). Immediate, so `' +` is not silently
++            // accepted, and its charset is the operator union without a
++            // `/` that would open a comment — so reserved spellings
++            // `'=`, `':`, `'<-`, `'->` lex too. A trailing `'` cannot be
++            // swallowed: `'='` stays a character literal because its
++            // three characters outmatch the two of `'=`.
++            alias(
++              token.immediate(
++                prec(PREC.macro, opRegex(`(?:[${noSlash(OP)}]|/[${OP_NSS}])+|/`)),
++              ),
++              $.operator_identifier,
++            ),
 +            // `'val` — a keyword can still name a Scala 2 symbol literal
 +            // (scalding's `'row, 'col, 'val` column literals).
 +            alias("val", $.identifier),
              $.null_literal,
              $.boolean_literal,
            ),
+@@ -2839,7 +2896,7 @@
+     _super_identifier: $ => "super",
+ 
+     // https://docs.scala-lang.org/scala3/reference/soft-modifier.html
+-    _soft_identifier: $ => prec("soft_id", choice("extension", "enum")),
++    _soft_identifier: $ => prec("soft_id", "extension"),
+ 
+     // alphaid          ::=  upper idrest
+     //                       |  varid

@@ -654,11 +654,19 @@ module.exports = grammar({
       seq(
         optional($._shebang),
         // scalac skips stray `;` (breeze's `package breeze.plot;;;`), so a
-        // top-level separator may be a run of literal semicolons.
+        // top-level separator may be a run of literal semicolons — and a
+        // stray run may lead the file too (`;;;def x = 1`). The leading
+        // run is literal-`;` only: a stray `_automatic_semicolon` there
+        // makes the boundary with the item separators ambiguous.
         optional(
-          trailingSep1(
-            seq(choice(";", $._automatic_semicolon), repeat(";")),
-            $._top_level_definition,
+          seq(
+            repeat(";"),
+            optional(
+              trailingSep1(
+                seq(choice(";", $._automatic_semicolon), repeat(";")),
+                $._top_level_definition,
+              ),
+            ),
           ),
         ),
       ),
@@ -1097,10 +1105,14 @@ module.exports = grammar({
 
     // Dynamic precedences added here to win over $.call_expression
     self_type: $ =>
-      // 2 beats the block lambda reading of `{ this: I => ... }`, which
-      // carries dynamic 1.
+      // 3 beats the block lambda reading of `{ this: I => ... }`
+      // (dynamic 1) and the `_braced_typed_lambda` reading of
+      // `new T { _: (A, B) => ... }` (dynamic 2), which otherwise turns
+      // the anonymous class into `new T { wildcard-lambda }` call args.
+      // The extra weight is free: self_type is reachable only inside a
+      // template body, never in expression position.
       prec.dynamic(
-        2,
+        3,
         prec(
           "self_type",
           seq(
@@ -2256,7 +2268,10 @@ module.exports = grammar({
             field(
               "parameters",
               prec.right(
-                seq(optional("implicit"), choice(operandName($), $.wildcard), ":", $._type),
+                // No `wildcard`: `{ _: T => ... }` reads as the template
+                // body's self-type (`new T { _: T => ... }`), and a typed
+                // wildcard lambda is normally written `(_ : T) => ...`.
+                seq(optional("implicit"), operandName($), ":", $._type),
               ),
             ),
             anyArrow(),
@@ -2843,9 +2858,18 @@ module.exports = grammar({
             ),
             $.identifier,
             // `'op` reads an operator name (Scala 2 symbol literal `'*`,
-            // scalding's `x == '*)`); the choice sits with the identifier
-            // branch for the same reason.
-            $.operator_identifier,
+            // scalding's `x == '*)`). Immediate, so `' +` is not silently
+            // accepted, and its charset is the operator union without a
+            // `/` that would open a comment — so reserved spellings
+            // `'=`, `':`, `'<-`, `'->` lex too. A trailing `'` cannot be
+            // swallowed: `'='` stays a character literal because its
+            // three characters outmatch the two of `'=`.
+            alias(
+              token.immediate(
+                prec(PREC.macro, opRegex(`(?:[${noSlash(OP)}]|/[${OP_NSS}])+|/`)),
+              ),
+              $.operator_identifier,
+            ),
             // `'val` — a keyword can still name a Scala 2 symbol literal
             // (scalding's `'row, 'col, 'val` column literals).
             alias("val", $.identifier),
