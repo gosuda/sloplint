@@ -224,7 +224,13 @@ fn enum_stays_a_soft_identifier() {
         "enum = 1\n",
         "val s = y --?\n",
         "enum Bar { case C }\n",
+        // `enum(2)` after a line-broken operator calls the function `enum`:
+        // an enum declaration always needs a name, so `(` stays an operand.
+        "def e(enum: Int) = enum\n",
+        "def enum(x: Int) = x\n",
+        "val c = (1 +\n",
+        "  enum(2))\n",
     );
     let analysis = run_clean(source);
-    assert_eq!(function_names(&analysis), ["f"]);
+    assert_eq!(function_names(&analysis), ["f", "e", "enum"]);
 }

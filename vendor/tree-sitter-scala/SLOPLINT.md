@@ -124,10 +124,11 @@ name or named argument. Upstream fails the same files — this is a genuine gap,
 not a regression. The scanner's postfix-operator heuristic also had `enum` in its
 `definition_words` list, so `val n = 1 +` + newline + `enum` was split. `enum`
 now stays out of that list except when a following token proves the definition
-reading — a name start (`enum Foo`), a parameter list (`enum E(x: Int)`), or `=`
-(`enum = 1`, a standalone assignment to a variable named `enum`) keep the
-statement-break hint; `)`, `,`, `.`, `:`, an operator or end-of-line make it the
-right operand, matching the existing treatment of `extension`. `/:/`-style operators (`def /:/`, `x /:/ y` — breeze) remain a
+reading — a name start (`enum Foo`) or `=` (`enum = 1`, a standalone assignment
+to a variable named `enum`) keep the statement-break hint; anything else makes
+it the right operand (`1 +\nenum`, `1 +\nenum(2)` — an enum declaration
+always names itself first, so `(` can only be a call of the identifier),
+matching the existing treatment of `extension`. `/:/`-style operators (`def /:/`, `x /:/ y` — breeze) remain a
 documented upstream-parity ceiling: an operator may not end in `/` per SLS 1.1,
 and the scanner's trailing-slash path only covers non-slash-initial operators.
 `<removed_id>` placeholders in the-algorithm are sanitized-out identifiers, not

@@ -1897,18 +1897,19 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // `enum` is both a soft identifier and a definition starter, so the
       // word alone cannot pick a side: `x --?` + `enum Foo {}` is a new
       // statement (postfix), while `1 +` + `enum` continues the expression.
-      // Peek at the token after `enum`: a name, `(`/`[`/`{` (enum parameter
-      // lists or a `enum Foo { ... }` body after a name read by the caller's
-      // grammar, which never reaches here) or `=` (`enum = 1`, a standalone
-      // assignment statement) means definition; `)`, `,`, `.`, `:`, an
-      // operator or end-of-line means the word is the right operand.
+      // Peek at the token after `enum`: an identifier start (`enum Foo`)
+      // is an enum definition, `=` is a standalone assignment to a variable
+      // named `enum` (`enum = 1`); every other token — `(enum(2)` calls
+      // the function `enum`, an enum declaration needs a name first), `)`,
+      // `,`, `.`, `:`, an operator or end-of-line — means the word is the
+      // right operand.
       if (len == 4 && strcmp(word, "enum") == 0) {
         while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
           advance(lexer);
         }
         int32_t c = lexer->lookahead;
         if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
-            c == '$' || c == '(' || c == '[' || c == '{' || c == '=') {
+            c == '$' || c == '=') {
           lexer->result_symbol = postfix_sym;
           return true;
         }

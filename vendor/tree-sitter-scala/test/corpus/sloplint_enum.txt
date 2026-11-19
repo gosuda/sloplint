@@ -14,6 +14,9 @@ val r = x --?
 enum = 1
 val s = y --?
 enum Bar { case C }
+def enum(x: Int) = x
+val c = (1 +
+  enum(2))
 
 --------------------------------------------------------------------------------
 
@@ -79,4 +82,21 @@ enum Bar { case C }
     body: (enum_body
       (enum_case_definitions
         (simple_enum_case
-          name: (identifier))))))
+          name: (identifier)))))
+  (function_definition
+    name: (identifier)
+    parameters: (parameters
+      (parameter
+        name: (identifier)
+        type: (type_identifier)))
+    body: (identifier))
+  (val_definition
+    pattern: (identifier)
+    value: (parenthesized_expression
+      (infix_expression
+        left: (integer_literal)
+        operator: (operator_identifier)
+        right: (call_expression
+          function: (identifier)
+          arguments: (arguments
+            (integer_literal)))))))
