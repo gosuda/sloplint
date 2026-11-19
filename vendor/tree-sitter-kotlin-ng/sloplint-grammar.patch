@@ -1,6 +1,14 @@
 --- /tmp/upstream-kt-src/grammar.js	2026-11-19 22:13:55.831239550 +0000
-+++ vendor/tree-sitter-kotlin-ng/grammar.js	2026-11-19 23:00:59.104208114 +0000
-@@ -48,11 +48,15 @@
++++ vendor/tree-sitter-kotlin-ng/grammar.js	2026-11-19 23:01:19.386842150 +0000
+@@ -24,6 +24,7 @@
+   conflicts: $ => [
+     [$.class_body, $.enum_class_body],
+ 
++
+     [$.binary_expression, $.call_expression],
+     [$.binary_expression, $.in_expression, $.call_expression],
+     [$.binary_expression, $.infix_expression, $.call_expression],
+@@ -48,11 +49,15 @@
      [$.variable_declaration, $.type_modifiers, $.annotated_expression],
      [$.variable_declaration],
  
@@ -17,7 +25,7 @@
      [$.platform_modifier, $._reserved_identifier],
      [$.property_modifier, $._reserved_identifier],
  
-@@ -63,6 +67,10 @@
+@@ -63,6 +68,10 @@
      [$.non_nullable_type],
      [$.function_type],
      [$._receiver_type],
@@ -28,7 +36,18 @@
    ],
  
    extras: $ => [
-@@ -155,6 +163,7 @@
+@@ -85,6 +94,10 @@
+     'set',
+     // used to check if we can parse a comment
+     '$',
++    // `;` emitted by the scanner only when an accessor (`get`/`set`/`field`)
++    // follows it, so `var x = 1; private set` keeps the accessor inside the
++    // property instead of consuming the `;` as a member separator.
++    $._accessor_semi,
+   ],
+ 
+   inline: $ => [
+@@ -155,6 +168,7 @@
      ),
  
      class_declaration: $ => prec.right(seq(
@@ -36,7 +55,7 @@
        optional($.modifiers),
        choice('class', seq(optional('fun'), 'interface')),
        field('name', $.identifier),
-@@ -174,6 +183,7 @@
+@@ -174,6 +188,7 @@
      )),
  
      property_declaration: $ => prec.right(seq(
@@ -44,18 +63,32 @@
        optional($.modifiers),
        choice('val', 'var'),
        optional($.type_parameters),
-@@ -186,11 +196,21 @@
+@@ -184,13 +199,32 @@
+         seq('=', $.expression),
+         $.property_delegate,
        )),
-       optional(';'),
+-      optional(';'),
        optional(choice(
-+        // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
-+        // where an accessor would sit (upstream v1.1.0 gap).
-+        $.backing_field,
-         seq($.getter, optional($.setter)),
-         seq($.setter, optional($.getter)),
+-        seq($.getter, optional($.setter)),
+-        seq($.setter, optional($.getter)),
++        // `;` between the initializer and the accessors lexes as the
++        // member/statement separator (`_class_member_semi` / `_semi`), never
++        // as a literal `;` — the scanner emits `_accessor_semi` instead when
++        // an accessor word follows it, so `var x = 1; private set` parses.
++        seq($._accessor_semi, $._property_tail),
++        $._property_tail,
++        ';',
        )),
      )),
  
++    _property_tail: $ => prec.right(choice(
++      // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
++      // where an accessor would sit (upstream v1.1.0 gap).
++      $.backing_field,
++      seq($.getter, optional($.setter)),
++      seq($.setter, optional($.getter)),
++    )),
++
 +    context_parameters: $ => seq(
 +      'context',
 +      '(',
@@ -66,7 +99,7 @@
      type_alias: $ => prec.right(seq(
        optional($.modifiers),
        'typealias',
-@@ -221,7 +241,7 @@
+@@ -221,7 +255,7 @@
  
      constructor_delegation_call: $ => seq(choice('this', 'super'), $.value_arguments),
  
@@ -75,7 +108,7 @@
  
      type_parameter: $ => seq(
        optional($.type_parameter_modifiers),
-@@ -265,6 +285,7 @@
+@@ -265,6 +299,7 @@
      constructor_invocation: $ => seq($.type, $.value_arguments),
  
      function_declaration: $ => prec.right(1, seq(
@@ -83,7 +116,7 @@
        optional($.modifiers),
        'fun',
        optional($.type_parameters),
-@@ -276,6 +297,16 @@
+@@ -276,6 +311,16 @@
        optional($.function_body),
      )),
  
@@ -100,7 +133,7 @@
      function_value_parameters: $ => seq(
        '(',
        optionalCommaSep1(seq(
-@@ -322,6 +353,14 @@
+@@ -322,6 +367,14 @@
        $.primary_expression,
      ),
  
@@ -115,7 +148,7 @@
      getter: $ => prec.right(seq(
        optional($.modifiers),
        'get',
-@@ -415,7 +454,7 @@
+@@ -415,7 +468,7 @@
  
      enum_entry: $ => seq(
        optional($.modifiers),
@@ -124,7 +157,7 @@
        optional($.value_arguments),
        optional($.class_body),
      ),
-@@ -427,7 +466,7 @@
+@@ -427,7 +480,7 @@
      ),
  
      value_argument: $ => seq(
@@ -133,7 +166,7 @@
        optional('*'),
        $.expression,
      ),
-@@ -584,7 +623,7 @@
+@@ -584,7 +637,7 @@
        ),
      ),
  
@@ -142,7 +175,7 @@
  
      type_projection: $ => choice(
        seq(repeat($.variance_modifier), $.type),
-@@ -593,6 +632,7 @@
+@@ -593,6 +646,7 @@
  
      function_type: $ => seq(
        optional($.type_modifiers),
@@ -150,7 +183,7 @@
        optional(seq($._receiver_type, '.')),
        $.function_type_parameters,
        '->',
-@@ -605,7 +645,8 @@
+@@ -605,7 +659,8 @@
        ')',
      ),
  
@@ -160,7 +193,7 @@
  
      assignment: $ => seq(
        field('left', $.expression),
-@@ -752,6 +793,7 @@
+@@ -752,6 +807,7 @@
      ),
  
      lambda_literal: $ => seq(
@@ -168,7 +201,7 @@
        '{',
        optional(seq(optional($.lambda_parameters), '->')),
        optionalSep1($.statement, $._semi),
-@@ -768,7 +810,7 @@
+@@ -768,7 +824,7 @@
      anonymous_function: $ => prec.right(seq(
        'fun',
        optional(seq($.type, '.')),
@@ -177,7 +210,7 @@
        optional(seq(':', $.type)),
        optional($.type_constraints),
        optional($.function_body),
-@@ -825,7 +867,9 @@
+@@ -825,7 +881,9 @@
  
      parenthesized_expression: $ => seq('(', $.expression, ')'),
  
@@ -188,7 +221,7 @@
  
      when_expression: $ => seq(
        'when',
-@@ -853,6 +897,11 @@
+@@ -853,6 +911,11 @@
            commaSep1(field('condition', $._when_condition)),
            optional(','),
          ),
@@ -200,7 +233,7 @@
          'else',
        ),
        '->',
-@@ -922,14 +971,20 @@
+@@ -922,14 +985,20 @@
      ),
  
      callable_reference: $ => seq(
@@ -223,7 +256,7 @@
        $.identifier,
      )),
  
-@@ -940,6 +995,7 @@
+@@ -940,6 +1009,7 @@
      ),
  
      string_literal: $ => seq(
@@ -231,7 +264,7 @@
        '"',
        repeat(choice(
          alias(choice(
-@@ -956,14 +1012,17 @@
+@@ -956,14 +1026,17 @@
      ),
  
      multiline_string_literal: $ => seq(
@@ -250,7 +283,7 @@
      interpolation: $ => choice(
        seq('$', $._identifier),
        seq('${', $.expression, '}'),
-@@ -1045,7 +1104,7 @@
+@@ -1045,7 +1118,7 @@
        /`[^\r\n`]+`/,
      )),
  
@@ -259,7 +292,7 @@
        choice(
          'actual',
          'annotation',
-@@ -1059,6 +1118,9 @@
+@@ -1059,6 +1132,9 @@
          'set',
          'operator',
          'value',

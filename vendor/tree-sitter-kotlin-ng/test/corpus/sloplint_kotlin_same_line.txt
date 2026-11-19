@@ -131,3 +131,65 @@ enum class E {
         (function_value_parameters)
         (user_type
           (identifier))))))
+
+================================================================================
+semicolon before an accessor inside a class body
+================================================================================
+
+class C {
+    var m = 1; private set
+    val f = 2
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)
+        (setter
+          (modifiers
+            (visibility_modifier))))
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)))))
+
+================================================================================
+semicolon before getter and top-level private setter
+================================================================================
+
+var top = 1; private set
+class C {
+    var m = 1; get() = 2
+    val f = 2
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal)
+    (setter
+      (modifiers
+        (visibility_modifier))))
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)
+        (getter
+          (function_body
+            (number_literal))))
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)))))

@@ -15,10 +15,13 @@ enum TokenType {
     GET,
     SET,
     DOLLAR,
+    ACCESSOR_SEMI,
 };
 
 #define MAX_WORD_SIZE 16
-#define MAX_WORDS 16
+// Word tables list every modifier keyword plus a margin — keep the bound
+// above the longest initializer or trailing words are silently dropped.
+#define MAX_WORDS 20
 
 static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
 
@@ -72,8 +75,48 @@ static bool get_call_follows(TSLexer *lexer) {
     return lexer->lookahead != ')';
 }
 
-// Skips whitespace and comments. Returns whether at least one comment was
-// skipped, so callers can tell comment-crossed tokens from adjacent ones.
+// Skips a Kotlin string or char literal whose opening quote `quote` is the
+// current lookahead. Handles `\` escapes (single-quoted forms) and
+// `"""..."""` raw strings. Callers use it while scanning expression lists so
+// parens inside literals are not mistaken for syntax.
+static void skip_string(TSLexer *lexer, wchar_t quote) {
+    skip(lexer);
+    bool raw = false;
+    if (quote == '"' && lexer->lookahead == '"') {
+        skip(lexer);
+        if (lexer->lookahead == '"') {
+            raw = true;
+            skip(lexer);
+        } else {
+            // `""` — an already-closed empty string.
+            return;
+        }
+    }
+    while (!lexer->eof(lexer)) {
+        wchar_t c = lexer->lookahead;
+        skip(lexer);
+        if (!raw && c == '\\') {
+            skip(lexer);
+            continue;
+        }
+        if (c != quote) {
+            continue;
+        }
+        if (!raw) {
+            return;
+        }
+        // A raw string ends on three consecutive quotes; the first was just
+        // consumed, so two more close it.
+        if (lexer->lookahead == '"') {
+            skip(lexer);
+            if (lexer->lookahead == '"') {
+                skip(lexer);
+                return;
+            }
+        }
+    }
+}
+
 static bool skip_ws_comments(TSLexer *lexer) {
     bool comment = false;
     for (;;) {
@@ -112,6 +155,61 @@ static bool skip_ws_comments(TSLexer *lexer) {
         }
     }
 }
+
+// Peek after a `;` (already consumed and mark_end'd) for an accessor word.
+// `var x = 1; private set` — a `;` before `get`/`set`/`field` (possibly
+// behind annotations and modifiers) belongs to the property tail, not the
+// member/statement separator. The peeked characters are not marked, so the
+// emitted token's extent stays at the `;`.
+static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
+    char accessor_word[16] = {0};
+    for (;;) {
+        skip_ws_comments(lexer);
+        if (lexer->lookahead == '@') {
+            skip(lexer);
+            while (iswalpha(lexer->lookahead) || lexer->lookahead == '_' || lexer->lookahead == '.') {
+                skip(lexer);
+            }
+            skip_ws_comments(lexer);
+            if (lexer->lookahead == '(') {
+                unsigned depth = 0;
+                do {
+                    wchar_t ch = lexer->lookahead;
+                    if (ch == '"' || ch == '\'') {
+                        skip_string(lexer, ch);
+                        continue;
+                    }
+                    if (ch == '(') {
+                        depth++;
+                    } else if (ch == ')') {
+                        depth--;
+                    }
+                    skip(lexer);
+                } while (depth > 0 && !lexer->eof(lexer));
+            }
+            continue;
+        }
+        if (scan_words(lexer,
+                       (const char[MAX_WORDS][MAX_WORD_SIZE]){"public", "private", "protected", "internal",
+                                           "abstract", "final", "open", "override", "lateinit", "vararg",
+                                           "noinline", "crossinline", "external", "suspend", "inline", "actual",
+                                           "expect"},
+                       accessor_word, NULL)) {
+            memset(accessor_word, 0, MAX_WORD_SIZE);
+            continue;
+        }
+        break;
+    }
+    // `scan_words` buffers a miss, so the word after the modifiers is already
+    // in `accessor_word` for this final check.
+    if (scan_words(lexer, (const char[MAX_WORDS][MAX_WORD_SIZE]){"get", "set", "field"}, accessor_word,
+                   NULL)) {
+        lexer->result_symbol = ACCESSOR_SEMI;
+    }
+}
+
+// Skips whitespace and comments. Returns whether at least one comment was
+// skipped, so callers can tell comment-crossed tokens from adjacent ones.
 
 void *tree_sitter_kotlin_external_scanner_create() { return NULL; }
 
@@ -171,6 +269,9 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
             if (lexer->lookahead == ';') {
                 advance(lexer);
                 lexer->mark_end(lexer);
+                if (valid_symbols[ACCESSOR_SEMI]) {
+                    accessor_after_semi(lexer, valid_symbols);
+                }
                 return true;
             }
 
@@ -219,7 +320,9 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 case 'i':
                     return scan_word(lexer, "import");
                 case '}':
-                    return valid_symbols[CLASS_MEMBER_SEMI] && !valid_symbols[SEMI];
+                    // `SEMI` can be valid at a member boundary now (the member
+                    // separator accepts it), so gate on the member symbol alone.
+                    return valid_symbols[CLASS_MEMBER_SEMI];
                 case ';':
                     advance(lexer);
                     lexer->mark_end(lexer);
@@ -301,27 +404,32 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
             case 'b':
             case 'w':
                 bool crossed_comment = false;
+                bool crossed_modifier = false;
                 while (scan_words(lexer,
-                                  (const char[16][16]){"public", "private", "protected", "internal", "abstract",
+                                  (const char[MAX_WORDS][MAX_WORD_SIZE]){"public", "private", "protected", "internal", "abstract",
                                                        "final", "open", "override", "lateinit", "vararg", "noinline",
                                                        "crossinline", "external", "suspend", "inline", "actual",
                                                        "expect"},
                                   scanned_word, NULL)) {
                     memset(scanned_word, 0, MAX_WORD_SIZE);
+                    crossed_modifier = true;
                     crossed_comment |= skip_ws_comments(lexer);
                 }
 
                 uint8_t index = -1;
                 bool res = scan_words(
                     lexer,
-                    (const char[16][16]){"else", "in", "instanceof", "get", "set", "constructor", "by", "as",
+                    (const char[MAX_WORDS][MAX_WORD_SIZE]){"else", "in", "instanceof", "get", "set", "constructor", "by", "as",
                                         "where", "field"},
                     scanned_word, &index);
 
                 // A continuation keyword (else/in/instanceof/by/as/where) after a comment crossed in the
                 // modifier loop means the preceding word was an identifier, not a member modifier, so
                 // this line is a new statement rather than a continuation of the previous expression.
-                if (crossed_comment && (index <= 2 || (index >= 6 && index <= 8))) {
+                // A consumed modifier word means the same: `actual as T` reads `actual`
+                // as an identifier (a modifier is never followed by a continuation
+                // keyword in a declaration head), so the statement separates.
+                if ((crossed_comment || crossed_modifier) && (index <= 2 || (index >= 6 && index <= 8))) {
                     return true;
                 }
 
@@ -423,15 +531,23 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                     // inner space), then the modifier words, then require
                     // the `constructor` keyword itself.
                     for (;;) {
-                        while (!iswspace(lexer->lookahead) && lexer->lookahead != '(') {
+                        while (!iswspace(lexer->lookahead) && lexer->lookahead != '(' &&
+                               !lexer->eof(lexer)) {
                             skip(lexer);
                         }
                         if (lexer->lookahead == '(') {
                             unsigned depth = 0;
                             do {
-                                if (lexer->lookahead == '(') {
+                                wchar_t ch = lexer->lookahead;
+                                if (ch == '"' || ch == '\'') {
+                                    // String/char literals inside the argument list
+                                    // must not feed the paren counter (`@Anno(")")`).
+                                    skip_string(lexer, ch);
+                                    continue;
+                                }
+                                if (ch == '(') {
                                     depth++;
-                                } else if (lexer->lookahead == ')') {
+                                } else if (ch == ')') {
                                     depth--;
                                 }
                                 skip(lexer);
@@ -443,7 +559,7 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                         }
                     }
                     while (scan_words(lexer,
-                                      (const char[16][16]){"public", "private", "protected", "internal",
+                                      (const char[MAX_WORDS][MAX_WORD_SIZE]){"public", "private", "protected", "internal",
                                                            "abstract", "final", "open", "override", "lateinit",
                                                            "vararg", "noinline", "crossinline", "external",
                                                            "suspend", "inline", "actual", "expect"},
@@ -456,7 +572,7 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                     // `scanned_word` here — match it through the same
                     // helper instead of re-reading the lexer.
                     if (scan_words(lexer,
-                                   (const char[16][16]){"constructor"},
+                                   (const char[MAX_WORDS][MAX_WORD_SIZE]){"constructor"},
                                    scanned_word, NULL)) {
                         return false;
                     }

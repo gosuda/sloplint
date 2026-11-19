@@ -104,8 +104,24 @@ pub(crate) fn function_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>
     };
     named_children(list)
         .into_iter()
-        .filter(|child| child.kind() == "parameter")
-        .filter_map(|parameter| build_param(cx, parameter))
+        .filter(|child| child.kind() == "parameter" || child.kind() == "identifier")
+        .filter_map(|parameter| {
+            if parameter.kind() == "parameter" {
+                return build_param(cx, parameter);
+            }
+            // Untyped anonymous-function params (`fun(x) = x`) emit a bare
+            // identifier; it still binds a name, so it must count as a param.
+            let default = default_value(parameter);
+            Some(Param {
+                name: text(cx, parameter),
+                ty: None,
+                primitive_kind: PrimitiveKind::Other,
+                has_default: default.is_some(),
+                bool_default: default.is_some_and(|d| matches!(text(cx, d), "true" | "false")),
+                keyword_only: false,
+                is_variadic: false,
+            })
+        })
         .collect()
 }
 

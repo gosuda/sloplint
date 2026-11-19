@@ -267,3 +267,21 @@ fn secondary_constructor_head_split_across_lines_parses() {
         "class C {\n    @Inject\n    internal constructor(a: A)\n    @Anno(name = \"x\")\n    actual constructor(b: B)\n}\n",
     );
 }
+
+#[test]
+fn semicolon_before_accessors_parses() {
+    run_clean(
+        "var top = 1; private set\n\
+         class C {\n\
+         \x20   var m = 1; private set\n\
+         \x20   var g = 0; get() = 2\n\
+         \x20   var s = 0; set(v) { field = v }\n\
+         \x20   val f = 2\n\
+         }\n",
+    );
+}
+
+#[test]
+fn plain_member_after_semicolon_accessor_parses() {
+    run_clean("class C {\n    var m = 1; private set\n    fun f() {}\n}\n");
+}

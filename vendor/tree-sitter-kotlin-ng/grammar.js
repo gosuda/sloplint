@@ -24,6 +24,7 @@ module.exports = grammar({
   conflicts: $ => [
     [$.class_body, $.enum_class_body],
 
+
     [$.binary_expression, $.call_expression],
     [$.binary_expression, $.in_expression, $.call_expression],
     [$.binary_expression, $.infix_expression, $.call_expression],
@@ -93,6 +94,10 @@ module.exports = grammar({
     'set',
     // used to check if we can parse a comment
     '$',
+    // `;` emitted by the scanner only when an accessor (`get`/`set`/`field`)
+    // follows it, so `var x = 1; private set` keeps the accessor inside the
+    // property instead of consuming the `;` as a member separator.
+    $._accessor_semi,
   ],
 
   inline: $ => [
@@ -194,14 +199,23 @@ module.exports = grammar({
         seq('=', $.expression),
         $.property_delegate,
       )),
-      optional(';'),
       optional(choice(
-        // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
-        // where an accessor would sit (upstream v1.1.0 gap).
-        $.backing_field,
-        seq($.getter, optional($.setter)),
-        seq($.setter, optional($.getter)),
+        // `;` between the initializer and the accessors lexes as the
+        // member/statement separator (`_class_member_semi` / `_semi`), never
+        // as a literal `;` — the scanner emits `_accessor_semi` instead when
+        // an accessor word follows it, so `var x = 1; private set` parses.
+        seq($._accessor_semi, $._property_tail),
+        $._property_tail,
+        ';',
       )),
+    )),
+
+    _property_tail: $ => prec.right(choice(
+      // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
+      // where an accessor would sit (upstream v1.1.0 gap).
+      $.backing_field,
+      seq($.getter, optional($.setter)),
+      seq($.setter, optional($.getter)),
     )),
 
     context_parameters: $ => seq(
