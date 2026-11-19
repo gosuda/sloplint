@@ -1,0 +1,107 @@
+--- a/grammars/ocaml/grammar.js
++++ b/grammars/ocaml/grammar.js
+@@ -50,6 +50,13 @@
+     [$._include_or_include_functor],
+     [$._module_typed, $.functor_type],
+     [$._type, $._argument_type],
++    [$._structure_item, $._simple_expression],
++    [$.let_binding],
++    [$.class_binding],
++    [$.application_expression],
++    [$._signature_item, $._type],
++    [$._class_expression, $.class_application],
++    [$.class_application],
+   ],
+ 
+   precedences: $ => [
+@@ -298,6 +305,8 @@
+       $.value_specification,
+       $.kind_definition,
+       $.include_module,
++      $.quotation,
++      $.term_quotation,
+     ),
+ 
+     value_definition: $ => seq(
+@@ -651,6 +660,8 @@
+       $.class_type_definition,
+       $.floating_attribute,
+       $._item_extension,
++      $.quotation,
++      $.term_quotation,
+     ),
+ 
+     value_specification: $ => seq(
+@@ -690,6 +701,8 @@
+       $.functor_type,
+       $.parenthesized_module_type,
+       $._extension,
++      $.quotation,
++      $.term_quotation,
+     ),
+ 
+     signature: $ => seq(
+@@ -1077,6 +1090,8 @@
+       alias($._labeled_tuple_type, $.tuple_type),
+       $.function_type,
+       $.aliased_type,
++      $.quotation,
++      $.term_quotation,
+     ),
+ 
+     function_type: $ => prec.dynamic(1, prec.right(seq(
+@@ -1281,6 +1296,8 @@
+       $.hole_expression,
+       $.ocamlyacc_value,
+       $._extension,
++      $.quotation,
++      $.term_quotation,
+     ),
+ 
+     _non_function_expression: $ => choice(
+@@ -1827,6 +1844,8 @@
+       $.package_pattern,
+       $.any_pattern,
+       $._extension,
++      $.quotation,
++      $.term_quotation,
+     ),
+ 
+     _effect_pattern: $ => choice(
+@@ -2613,6 +2632,36 @@
+     _tuple_label: $ => seq('~', $._label_name),
+     directive: $ => seq(/#/, choice($._lowercase_identifier, $._uppercase_identifier)),
+     tag: $ => seq(/`/, choice($._lowercase_identifier, $._uppercase_identifier)),
++
++    // camlp5-style quotations: <:tag<...>> and `...` term quotations.
++    // Opaque to the grammar; nested quotations are allowed. A bare `<<` is
++    // deliberately not a quotation opener: `<<` is a legal custom infix
++    // operator in real OCaml (e.g. bap defines `( << )`).
++    quotation: $ => seq(
++      /<:[a-zA-Z_]+</,
++      repeat(choice(
++        $._quotation_content,
++        $.quotation,
++      )),
++      '>>',
++    ),
++
++    _quotation_content: $ => choice(
++      /[^<>]+/,
++      '<',
++      '>',
++    ),
++
++    // Backtick quotations (e.g. HOL Light terms). The first character must
++    // not start an identifier: `foo can only be a polymorphic-variant tag in
++    // real OCaml, so quotes beginning with an identifier are deliberately not
++    // covered (camlp5 preprocessing is a documented ceiling).
++    term_quotation: $ => token(seq(
++      '`',
++      /[^`A-Za-z0-9_']/,
++      /[^`]*/,
++      '`',
++    )),
+     attribute_id: $ => sep1(/\./, choice(
+       reserved('attribute_id', $._lowercase_identifier),
+       $._uppercase_identifier,

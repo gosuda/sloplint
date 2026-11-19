@@ -30,6 +30,8 @@ mod javascript_typescript_type_syntax;
 mod kotlin;
 #[path = "grammar_gaps/objc.rs"]
 mod objc;
+#[path = "grammar_gaps/ocaml.rs"]
+mod ocaml;
 #[path = "grammar_gaps/odin.rs"]
 mod odin;
 #[path = "grammar_gaps/php.rs"]
