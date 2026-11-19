@@ -32,13 +32,13 @@ void f(void) {
         (parameter_declaration
           (primitive_type))))
     (compound_statement
-      (macro_braced_declaration
+      (macro_braced_statement
         (identifier)
-        (field_declaration_list
-          (declaration
-            (function_declarator
+        (compound_statement
+          (expression_statement
+            (call_expression
               (identifier)
-              (parameter_list)))))
+              (argument_list)))))
       (declaration
         (type_identifier)
         (init_declarator
@@ -130,24 +130,26 @@ void f(void) {
                 (call_expression
                   (identifier)
                   (argument_list)))))))
-      (macro_braced_declaration
+      (macro_braced_statement
         (identifier)
-        (field_declaration_list
-          (field_declaration
+        (compound_statement
+          (declaration
             (primitive_type)
-            (field_identifier)
-            (raw_string_literal
-              (raw_string_delimiter)
-              (raw_string_content)
-              (raw_string_delimiter)))
-          (field_declaration
+            (init_declarator
+              (identifier)
+              (raw_string_literal
+                (raw_string_delimiter)
+                (raw_string_content)
+                (raw_string_delimiter))))
+          (declaration
             (placeholder_type_specifier
               (auto))
-            (field_identifier)
-            (raw_string_literal
-              (raw_string_delimiter)
-              (raw_string_content)
-              (raw_string_delimiter)))))
+            (init_declarator
+              (identifier)
+              (raw_string_literal
+                (raw_string_delimiter)
+                (raw_string_content)
+                (raw_string_delimiter))))))
       (macro_braced_statement
         (identifier)
         (compound_statement
@@ -263,19 +265,20 @@ void f(void) {
                 (identifier)
                 (string_literal
                   (string_content)))))))
-      (macro_braced_declaration
+      (macro_braced_statement
         (identifier)
-        (field_declaration_list
-          (declaration
+        (compound_statement
+          (attributed_statement
             (attribute_declaration
               (attribute
                 (identifier)
                 (argument_list
                   (string_literal
                     (string_content)))))
-            (function_declarator
-              (identifier)
-              (parameter_list)))))
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list))))))
       (macro_braced_statement
         (identifier)
         (compound_statement
@@ -312,26 +315,22 @@ void f(void) {
     (macro_argument_list
       (identifier))
     (field_declaration_list
-      (declaration
-        (function_declarator
+      (expression_statement
+        (call_expression
           (identifier)
-          (parameter_list
-            (parameter_declaration
-              (type_identifier)))))))
+          (argument_list
+            (identifier))))))
   (struct_specifier
     (type_identifier)
     (field_declaration_list
-      (function_definition
-        (function_declarator
+      (macro_braced_declaration
+        (identifier)
+        (macro_argument_list
+          (primitive_type)
           (identifier)
-          (parameter_list
-            (parameter_declaration
-              (primitive_type)
-              (identifier))
-            (parameter_declaration
-              (primitive_type)
-              (identifier))))
-        (compound_statement
+          (primitive_type)
+          (identifier))
+        (field_declaration_list
           (declaration
             (primitive_type)
             (identifier))))))

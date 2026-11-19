@@ -299,6 +299,10 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
     // chars keep it; the clearing set drops it.
     bool maybe_lambda = false;
     int pdepth = 0;
+    // A `]` has already closed a bracket run: commas after it live in a
+    // lambda trailer (`-> std::pair<int,int>`), not an init list, so
+    // they must not clear maybe_lambda.
+    bool capture_done = false;
     // Inside a numeric literal: `'` is a digit separator (`1'000`,
     // `0xAB'CD`), not a character constant. Set on digits; kept across
     // ident runs that follow them (`xAB`, `e5`, `ul` tails).
@@ -396,6 +400,7 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
         }
         if (c == ']') {
             maybe_lambda = true;
+            capture_done = true;
             pdepth = 0;
             advance(lexer);
             after_number = false;
@@ -457,9 +462,10 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
             continue;
         }
         // Init-clause separators / operators clear the lambda flag only
-        // at paren depth 0 — inside `[&](int a, int b)` a `,` is part of
-        // the parameter list and the lambda is still live.
-        if (pdepth == 0 &&
+        // at paren depth 0 and before any `]` closed a capture — inside
+        // `[&](int a, int b)` a `,` is part of the parameter list, and
+        // in `-> std::pair<int,int>` it lives inside the return type.
+        if (pdepth == 0 && !capture_done &&
             (c == ',' || c == '=' || c == '?' || c == '|' || c == '^' ||
              c == '%' || c == '!' || c == '#')) {
             maybe_lambda = false;

@@ -478,7 +478,7 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 
 ## Size
 
-`src/parser.c`: 209,142,511 bytes (published: 17,299,078). States: 30612
+`src/parser.c`: 196,815,915 bytes (published: 17,299,078). States: 29514
 (published: 8637). Language version: 14 (published: 14). The literal
 enumeration of `macro_attribute` costs most of the size growth.
 
@@ -702,7 +702,13 @@ first with `rm -f src/parser.c`.
   `gnu_asm_goto_list` node exactly like the structured `:`-led branch
   (`asm goto("x" :::: lbl1, lbl2)`). Sections carry the upstream field
   names (`output_operands`, `input_operands`, `clobbers`,
-  `goto_labels`).
+  `goto_labels`). Clobber-item strings carry the upstream `register`
+  field name and materialize as `gnu_asm_clobber_list` /
+  `gnu_asm_input_operand_list` nodes — the same list types the
+  structured `:`-led branch emits — via explicit aliases on the hidden
+  item rules (hidden lists inline their children, so without the alias
+  each item's inner `operand`/`register` field would shadow the
+  section's own field).
   A bare identifier in a non-goto slot fails like GCC. `asm(s : :: : x)`
   still parses as classic sections — the fused arm needs a literal `::`
   token. Repro: atmosphere's
@@ -733,8 +739,11 @@ first with `rm -f src/parser.c`.
   lambda capture), `//`/`/* */` comments and balanced `(...)`/`[...]`
   runs, so `Widget{R"x(a "b" ; c)x"}`, `MACRO { x = 1'000; }`,
   `Widget{[&](int a, int b) mutable {init();}}` (a `,` inside lambda
-  parameters doesn't drop the lambda flag) and `Widget{[&]{init();}}`
-  all stay initializer lists, while
+  parameters doesn't drop the lambda flag), `Widget{[&]{init();}}` and
+  lambdas returning templates (`[&]() -> std::pair<int,int> {}` — once
+  a capture's `]` lands, a `capture_done` latch blocks the
+  `, = ? | ^ % ! #` clearing set so the return type's commas can't
+  clear the lambda flag) all stay initializer lists, while
   `ON_SCOPE_EXIT { if (ready) {} };` still opens a block on the
   keyword. The name position accepts `identifier` and C++'s
   `type_identifier` (all-caps macro names like `ON_SCOPE_EXIT` lex as
@@ -746,7 +755,16 @@ first with `rm -f src/parser.c`.
   `macro_braced_declaration` covers top-level and member bodies
   (`SCOPE_GUARD(lock) { ReleaseSpinLock(lock); };`, `struct S { M(a,b)
   { int member; }; };`), and `macro_braced_expression` covers
-  initializer position (`auto g = SCOPE_GUARD(x) { Unlock(); };`). The
-  name may carry a `macro_argument_list`; `R_TRY_CATCH(e) { work(); };`
-  keeps its plain function-definition read (upstream parity) while the
-  `;`-terminated forms claim the macro nodes.
+  initializer position (`auto g = SCOPE_GUARD(x) { Unlock(); };`).
+  Both bodies hold `repeat($._block_item)` — real statements and
+  declarations — so a guard body like `ReleaseSpinLock(lock);` parses
+  as a `call_expression` statement instead of a phantom member
+  `function_declarator` (it was `_field_declaration_list_item` before,
+  which forced every `f(x);` line into a declaration). The rule is
+  deliberately kept OUT of `_block_item`: inside a function body
+  `NAME(args) {` must stay a `function_definition` read (upstream
+  parity — `R_TRY_CATCH(e) { work(); };`), so it lives only in
+  `declaration_list` and member positions and carries `prec.dynamic(1)`
+  to win those positions over the struct/`function_definition` reads.
+  The name may carry a `macro_argument_list`; `;` after the closing
+  `}` is optional on the declaration form.
