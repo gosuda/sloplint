@@ -1,8 +1,12 @@
 --- /tmp/upstream-kt-src/grammar.js	2026-11-19 22:13:55.831239550 +0000
-+++ vendor/tree-sitter-kotlin-ng/grammar.js	2026-11-19 22:56:46.448774330 +0000
-@@ -50,9 +50,12 @@
++++ vendor/tree-sitter-kotlin-ng/grammar.js	2026-11-19 23:00:59.104208114 +0000
+@@ -48,11 +48,15 @@
+     [$.variable_declaration, $.type_modifiers, $.annotated_expression],
+     [$.variable_declaration],
  
-     [$.function_value_parameters, $.function_type_parameters],
+-    [$.function_value_parameters, $.function_type_parameters],
++    [$._untyped_function_value_parameters, $._simple_user_type],
++    [$._untyped_function_value_parameters, $.function_type_parameters],
      [$.parenthesized_type, $.function_type_parameters],
 +    [$.parenthesized_type],
      [$.multi_variable_declaration, $.function_type_parameters],
@@ -13,7 +17,7 @@
      [$.platform_modifier, $._reserved_identifier],
      [$.property_modifier, $._reserved_identifier],
  
-@@ -63,6 +66,10 @@
+@@ -63,6 +67,10 @@
      [$.non_nullable_type],
      [$.function_type],
      [$._receiver_type],
@@ -24,7 +28,7 @@
    ],
  
    extras: $ => [
-@@ -155,6 +162,7 @@
+@@ -155,6 +163,7 @@
      ),
  
      class_declaration: $ => prec.right(seq(
@@ -32,7 +36,7 @@
        optional($.modifiers),
        choice('class', seq(optional('fun'), 'interface')),
        field('name', $.identifier),
-@@ -174,6 +182,7 @@
+@@ -174,6 +183,7 @@
      )),
  
      property_declaration: $ => prec.right(seq(
@@ -40,7 +44,7 @@
        optional($.modifiers),
        choice('val', 'var'),
        optional($.type_parameters),
-@@ -186,11 +195,21 @@
+@@ -186,11 +196,21 @@
        )),
        optional(';'),
        optional(choice(
@@ -55,14 +59,23 @@
 +    context_parameters: $ => seq(
 +      'context',
 +      '(',
-+      commaSep1(choice($.parameter, $.type)),
++      commaSep1(choice($.parameter, $.type, seq('_', ':', $.type))),
 +      ')',
 +    ),
 +
      type_alias: $ => prec.right(seq(
        optional($.modifiers),
        'typealias',
-@@ -265,6 +284,7 @@
+@@ -221,7 +241,7 @@
+ 
+     constructor_delegation_call: $ => seq(choice('this', 'super'), $.value_arguments),
+ 
+-    type_parameters: $ => seq('<', commaSep1($.type_parameter), '>'),
++    type_parameters: $ => seq('<', commaSep1($.type_parameter), optional(','), '>'),
+ 
+     type_parameter: $ => seq(
+       optional($.type_parameter_modifiers),
+@@ -265,6 +285,7 @@
      constructor_invocation: $ => seq($.type, $.value_arguments),
  
      function_declaration: $ => prec.right(1, seq(
@@ -70,7 +83,24 @@
        optional($.modifiers),
        'fun',
        optional($.type_parameters),
-@@ -322,6 +342,14 @@
+@@ -276,6 +297,16 @@
+       optional($.function_body),
+     )),
+ 
++    _untyped_function_value_parameters: $ => seq(
++      '(',
++      optionalCommaSep1(seq(
++        optional($.parameter_modifiers),
++        choice($.parameter, $.identifier),
++        optional(seq('=', $.expression)),
++      )),
++      ')',
++    ),
++
+     function_value_parameters: $ => seq(
+       '(',
+       optionalCommaSep1(seq(
+@@ -322,6 +353,14 @@
        $.primary_expression,
      ),
  
@@ -85,7 +115,7 @@
      getter: $ => prec.right(seq(
        optional($.modifiers),
        'get',
-@@ -415,7 +443,7 @@
+@@ -415,7 +454,7 @@
  
      enum_entry: $ => seq(
        optional($.modifiers),
@@ -94,7 +124,7 @@
        optional($.value_arguments),
        optional($.class_body),
      ),
-@@ -427,7 +455,7 @@
+@@ -427,7 +466,7 @@
      ),
  
      value_argument: $ => seq(
@@ -103,7 +133,16 @@
        optional('*'),
        $.expression,
      ),
-@@ -593,6 +621,7 @@
+@@ -584,7 +623,7 @@
+       ),
+     ),
+ 
+-    type_arguments: $ => seq('<', commaSep1($.type_projection), '>'),
++    type_arguments: $ => seq('<', commaSep1($.type_projection), optional(','), '>'),
+ 
+     type_projection: $ => choice(
+       seq(repeat($.variance_modifier), $.type),
+@@ -593,6 +632,7 @@
  
      function_type: $ => seq(
        optional($.type_modifiers),
@@ -111,7 +150,7 @@
        optional(seq($._receiver_type, '.')),
        $.function_type_parameters,
        '->',
-@@ -605,7 +634,8 @@
+@@ -605,7 +645,8 @@
        ')',
      ),
  
@@ -121,7 +160,7 @@
  
      assignment: $ => seq(
        field('left', $.expression),
-@@ -752,6 +782,7 @@
+@@ -752,6 +793,7 @@
      ),
  
      lambda_literal: $ => seq(
@@ -129,7 +168,16 @@
        '{',
        optional(seq(optional($.lambda_parameters), '->')),
        optionalSep1($.statement, $._semi),
-@@ -825,7 +856,9 @@
+@@ -768,7 +810,7 @@
+     anonymous_function: $ => prec.right(seq(
+       'fun',
+       optional(seq($.type, '.')),
+-      $.function_value_parameters,
++      alias($._untyped_function_value_parameters, $.function_value_parameters),
+       optional(seq(':', $.type)),
+       optional($.type_constraints),
+       optional($.function_body),
+@@ -825,7 +867,9 @@
  
      parenthesized_expression: $ => seq('(', $.expression, ')'),
  
@@ -140,7 +188,7 @@
  
      when_expression: $ => seq(
        'when',
-@@ -853,6 +886,11 @@
+@@ -853,6 +897,11 @@
            commaSep1(field('condition', $._when_condition)),
            optional(','),
          ),
@@ -152,7 +200,7 @@
          'else',
        ),
        '->',
-@@ -922,14 +960,20 @@
+@@ -922,14 +971,20 @@
      ),
  
      callable_reference: $ => seq(
@@ -175,7 +223,7 @@
        $.identifier,
      )),
  
-@@ -940,6 +984,7 @@
+@@ -940,6 +995,7 @@
      ),
  
      string_literal: $ => seq(
@@ -183,7 +231,7 @@
        '"',
        repeat(choice(
          alias(choice(
-@@ -956,14 +1001,17 @@
+@@ -956,14 +1012,17 @@
      ),
  
      multiline_string_literal: $ => seq(
@@ -202,7 +250,7 @@
      interpolation: $ => choice(
        seq('$', $._identifier),
        seq('${', $.expression, '}'),
-@@ -1045,7 +1093,7 @@
+@@ -1045,7 +1104,7 @@
        /`[^\r\n`]+`/,
      )),
  
@@ -211,7 +259,7 @@
        choice(
          'actual',
          'annotation',
-@@ -1059,6 +1107,9 @@
+@@ -1059,6 +1118,9 @@
          'set',
          'operator',
          'value',

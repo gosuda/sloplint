@@ -631,3 +631,89 @@ val u = x
   (assignment
     (identifier)
     (identifier)))
+
+================================================================================
+trailing commas, unnamed context param, untyped anonymous params, split ctor heads
+================================================================================
+
+fun <T,> takesTrailing() {}
+val r = box<Int, String,>()
+context(_: CoroutineContext)
+fun withCtx() {}
+val inc = fun(m) = m
+class C {
+    @Inject
+    internal constructor(a: A)
+    @Anno(1)
+    actual constructor(b: B)
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (type_parameters
+      (type_parameter
+        (identifier)))
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (call_expression
+      (identifier)
+      (type_arguments
+        (type_projection
+          (user_type
+            (identifier)))
+        (type_projection
+          (user_type
+            (identifier))))
+      (value_arguments)))
+  (function_declaration
+    (context_parameters
+      (user_type
+        (identifier)))
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (anonymous_function
+      (function_value_parameters
+        (identifier))
+      (function_body
+        (identifier))))
+  (class_declaration
+    (identifier)
+    (class_body
+      (secondary_constructor
+        (modifiers
+          (annotation
+            (user_type
+              (identifier)))
+          (visibility_modifier))
+        (function_value_parameters
+          (parameter
+            (identifier)
+            (user_type
+              (identifier)))))
+      (secondary_constructor
+        (modifiers
+          (annotation
+            (constructor_invocation
+              (user_type
+                (identifier))
+              (value_arguments
+                (value_argument
+                  (number_literal)))))
+          (platform_modifier))
+        (function_value_parameters
+          (parameter
+            (identifier)
+            (user_type
+              (identifier))))))))

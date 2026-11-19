@@ -304,7 +304,8 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 while (scan_words(lexer,
                                   (const char[16][16]){"public", "private", "protected", "internal", "abstract",
                                                        "final", "open", "override", "lateinit", "vararg", "noinline",
-                                                       "crossinline", "external", "suspend", "inline"},
+                                                       "crossinline", "external", "suspend", "inline", "actual",
+                                                       "expect"},
                                   scanned_word, NULL)) {
                     memset(scanned_word, 0, MAX_WORD_SIZE);
                     crossed_comment |= skip_ws_comments(lexer);
@@ -414,20 +415,52 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 return true;
             case '@':
                 if (valid_symbols[CONSTRUCTOR]) {
-                    while (!iswspace(lexer->lookahead)) {
-                        skip(lexer);
-                    }
-                    while (iswspace(lexer->lookahead)) {
-                        skip(lexer);
-                    }
-                    char ctor[12] = "constructor";
-                    for (uint8_t i = 0; i < 11; i++) {
-                        if (lexer->lookahead != ctor[i]) {
-                            return true;
+                    // `@A(x) @B private actual constructor` — a secondary
+                    // constructor head may be split across lines with any
+                    // number of annotations and modifiers between them. Skip
+                    // each annotation (name plus a balanced-paren argument
+                    // list, so `@Anno(name = "x")` does not stop at the
+                    // inner space), then the modifier words, then require
+                    // the `constructor` keyword itself.
+                    for (;;) {
+                        while (!iswspace(lexer->lookahead) && lexer->lookahead != '(') {
+                            skip(lexer);
                         }
-                        skip(lexer);
+                        if (lexer->lookahead == '(') {
+                            unsigned depth = 0;
+                            do {
+                                if (lexer->lookahead == '(') {
+                                    depth++;
+                                } else if (lexer->lookahead == ')') {
+                                    depth--;
+                                }
+                                skip(lexer);
+                            } while (depth > 0 && !lexer->eof(lexer));
+                        }
+                        skip_ws_comments(lexer);
+                        if (lexer->lookahead != '@') {
+                            break;
+                        }
                     }
-                    return false;
+                    while (scan_words(lexer,
+                                      (const char[16][16]){"public", "private", "protected", "internal",
+                                                           "abstract", "final", "open", "override", "lateinit",
+                                                           "vararg", "noinline", "crossinline", "external",
+                                                           "suspend", "inline", "actual", "expect"},
+                                      scanned_word, NULL)) {
+                        memset(scanned_word, 0, MAX_WORD_SIZE);
+                        skip_ws_comments(lexer);
+                    }
+                    // `scan_words` buffers the word it scanned even on a
+                    // miss, so `constructor` may already sit in
+                    // `scanned_word` here — match it through the same
+                    // helper instead of re-reading the lexer.
+                    if (scan_words(lexer,
+                                   (const char[16][16]){"constructor"},
+                                   scanned_word, NULL)) {
+                        return false;
+                    }
+                    return true;
                 }
                 if (valid_symbols[GET] || valid_symbols[SET]) {
                     bool saw_paren = false;

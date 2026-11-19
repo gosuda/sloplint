@@ -48,7 +48,8 @@ module.exports = grammar({
     [$.variable_declaration, $.type_modifiers, $.annotated_expression],
     [$.variable_declaration],
 
-    [$.function_value_parameters, $.function_type_parameters],
+    [$._untyped_function_value_parameters, $._simple_user_type],
+    [$._untyped_function_value_parameters, $.function_type_parameters],
     [$.parenthesized_type, $.function_type_parameters],
     [$.parenthesized_type],
     [$.multi_variable_declaration, $.function_type_parameters],
@@ -206,7 +207,7 @@ module.exports = grammar({
     context_parameters: $ => seq(
       'context',
       '(',
-      commaSep1(choice($.parameter, $.type)),
+      commaSep1(choice($.parameter, $.type, seq('_', ':', $.type))),
       ')',
     ),
 
@@ -240,7 +241,7 @@ module.exports = grammar({
 
     constructor_delegation_call: $ => seq(choice('this', 'super'), $.value_arguments),
 
-    type_parameters: $ => seq('<', commaSep1($.type_parameter), '>'),
+    type_parameters: $ => seq('<', commaSep1($.type_parameter), optional(','), '>'),
 
     type_parameter: $ => seq(
       optional($.type_parameter_modifiers),
@@ -295,6 +296,16 @@ module.exports = grammar({
       optional($.type_constraints),
       optional($.function_body),
     )),
+
+    _untyped_function_value_parameters: $ => seq(
+      '(',
+      optionalCommaSep1(seq(
+        optional($.parameter_modifiers),
+        choice($.parameter, $.identifier),
+        optional(seq('=', $.expression)),
+      )),
+      ')',
+    ),
 
     function_value_parameters: $ => seq(
       '(',
@@ -612,7 +623,7 @@ module.exports = grammar({
       ),
     ),
 
-    type_arguments: $ => seq('<', commaSep1($.type_projection), '>'),
+    type_arguments: $ => seq('<', commaSep1($.type_projection), optional(','), '>'),
 
     type_projection: $ => choice(
       seq(repeat($.variance_modifier), $.type),
@@ -799,7 +810,7 @@ module.exports = grammar({
     anonymous_function: $ => prec.right(seq(
       'fun',
       optional(seq($.type, '.')),
-      $.function_value_parameters,
+      alias($._untyped_function_value_parameters, $.function_value_parameters),
       optional(seq(':', $.type)),
       optional($.type_constraints),
       optional($.function_body),

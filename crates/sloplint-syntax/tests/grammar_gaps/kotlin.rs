@@ -245,3 +245,25 @@ fn annotated_open_class_stays_a_declaration() {
 fn value_receiver_class_literal_keeps_parenthesized_expression() {
     run_clean("fun f(v: Any) { (v)::class.java }\n");
 }
+
+#[test]
+fn trailing_commas_in_type_lists_parse() {
+    run_clean("fun <T,> takesTrailing() {}\nval r = box<Int, String,>()\n");
+}
+
+#[test]
+fn unnamed_context_parameter_parses() {
+    run_clean("context(_: CoroutineContext)\nfun withCtx() {}\n");
+}
+
+#[test]
+fn untyped_anonymous_function_parameters_parse() {
+    run_clean("val inc = fun(m) = m\nval g = fun(x, y) { return x + y }\n");
+}
+
+#[test]
+fn secondary_constructor_head_split_across_lines_parses() {
+    run_clean(
+        "class C {\n    @Inject\n    internal constructor(a: A)\n    @Anno(name = \"x\")\n    actual constructor(b: B)\n}\n",
+    );
+}
