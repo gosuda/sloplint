@@ -826,3 +826,27 @@ fn quoted_directive_before_enclosing_arrow_stays_directive() {
         );
     }
 }
+
+#[test]
+fn multiline_string_in_cppo_tail_stays_one_directive() {
+    // A `->` at line-start inside an unterminated string literal is
+    // string content, not an arm separator. The directive token spans
+    // the string's newline and the next `|` still separates cases.
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    for source in [
+        "let f = function\n  | `A -> 1\n  | #error when \"line1\n -> line2\"\n  | `C -> 3\n",
+        "let f = function\n  | `A -> 1\n  | #error when \"a\nb\" = x -> 4\n  | `C -> 3\n",
+        "let f = function\n  | `A -> 1\n  | #endif\n  | `C -> 3\n",
+    ] {
+        let tree = parser.parse(source, None).expect("parser returns a tree");
+        let sexp = tree.root_node().to_sexp();
+        assert!(
+            !tree.root_node().has_error() && !sexp.contains("MISSING"),
+            "must parse clean, sexp: {sexp}"
+        );
+    }
+}

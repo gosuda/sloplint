@@ -1,5 +1,5 @@
 --- grammars/ocaml/grammar.js	2006-07-24 01:21:28.000000000 +0000
-+++ grammars/ocaml/grammar.js	2026-11-19 06:21:45.737626283 +0000
++++ grammars/ocaml/grammar.js	2026-11-19 07:46:01.286019036 +0000
 @@ -50,6 +50,15 @@
      [$._include_or_include_functor],
      [$._module_typed, $.functor_type],
@@ -86,7 +86,7 @@
      ),
  
      _inline_expression: $ => choice(
-@@ -1649,9 +1679,26 @@
+@@ -1649,9 +1679,32 @@
        $._match_cases,
      ),
  
@@ -105,17 +105,23 @@
 +        repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
 +      )),
 +      $.match_case,
-+      repeat(seq(
-+        repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
-+        '|',
-+        repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
-+        $.match_case,
++      repeat(choice(
++        seq(
++          repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
++          '|',
++          repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
++          $.match_case,
++        ),
++        // `| #endif`-style directive lines: the `|` folds into the
++        // directive, so the next `|` still separates the following
++        // case (`| `A -> 1 | #endif | `B -> 2`).
++        seq('|', repeat1(alias($.cppo_directive_no_arrow, $.cppo_directive))),
 +      )),
 +      repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
      )),
  
      match_case: $ => seq(
-@@ -1827,6 +1874,8 @@
+@@ -1827,6 +1880,8 @@
        $.package_pattern,
        $.any_pattern,
        $._extension,
@@ -124,7 +130,7 @@
      ),
  
      _effect_pattern: $ => choice(
-@@ -1869,6 +1918,8 @@
+@@ -1869,6 +1924,8 @@
        $.package_pattern,
        $.any_pattern,
        $._extension,
@@ -133,7 +139,7 @@
      ),
  
      _effect_binding_pattern: $ => choice(
-@@ -2612,7 +2663,94 @@
+@@ -2612,7 +2669,94 @@
      _label: $ => seq(choice('~', '?'), $._label_name),
      _tuple_label: $ => seq('~', $._label_name),
      directive: $ => seq(/#/, choice($._lowercase_identifier, $._uppercase_identifier)),
@@ -228,7 +234,7 @@
      attribute_id: $ => sep1(/\./, choice(
        reserved('attribute_id', $._lowercase_identifier),
        $._uppercase_identifier,
-@@ -2627,6 +2765,9 @@
+@@ -2627,6 +2771,9 @@
      $.line_number_directive,
      $._null,
      $._error_sentinel,
@@ -239,7 +245,7 @@
  });
  
 --- common/scanner.h	2006-07-24 01:21:28.000000000 +0000
-+++ common/scanner.h	2026-11-19 07:35:59.329926565 +0000
++++ common/scanner.h	2026-11-19 07:43:22.692892766 +0000
 @@ -16,6 +16,9 @@
    LINE_NUMBER_DIRECTIVE,
    NULL_CHARACTER,
@@ -264,7 +270,7 @@
  static inline bool is_identchar(const int32_t c) {
    return is_identstart(c) || (c >= '0' && c <= '9') || c == '\'';
  }
-@@ -390,6 +400,252 @@
+@@ -390,6 +400,257 @@
    return false;
  }
  
@@ -327,6 +333,21 @@
 +  *arm_shape = false;
 +  for (;;) {
 +    int32_t c = lexer->lookahead;
++    if (in_str) {
++      // Strings may span newlines — keep scanning so the tail ends at
++      // the first line break *after* the closing quote. A `->` inside
++      // the literal (`when "a\n -> b"`) is then read as content, not
++      // an arm separator.
++      if (c == '\0' && eof(lexer)) break;
++      if (c == '\\') {
++        advance(lexer);
++        if (!eof(lexer)) advance(lexer);
++        continue;
++      }
++      if (c == '"') in_str = false;
++      advance(lexer);
++      continue;
++    }
 +    if (c == '\n' || (c == '\0' && eof(lexer))) {
 +      // A `->` on a later line still separates a multi-line arm (`| #name
 +      // when g\n  -> e`): peek past the break for it. mark_end keeps
@@ -375,16 +396,6 @@
 +        }
 +      }
 +      break;
-+    }
-+    if (in_str) {
-+      if (c == '\\') {
-+        advance(lexer);
-+        if (!eof(lexer)) advance(lexer);
-+        continue;
-+      }
-+      if (c == '"') in_str = false;
-+      advance(lexer);
-+      continue;
 +    }
 +    if (c == '"') {
 +      in_str = true;
@@ -517,7 +528,7 @@
  static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
    int32_t last = 0;
  
-@@ -521,7 +777,9 @@
+@@ -521,7 +782,9 @@
      return true;
    }
  
@@ -527,7 +538,7 @@
      skip(lexer);
    }
  
-@@ -533,39 +791,100 @@
+@@ -533,39 +796,100 @@
      return true;
    }
  

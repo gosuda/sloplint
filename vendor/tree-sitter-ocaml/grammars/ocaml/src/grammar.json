@@ -8249,39 +8249,65 @@
           {
             "type": "REPEAT",
             "content": {
-              "type": "SEQ",
+              "type": "CHOICE",
               "members": [
                 {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "ALIAS",
-                    "content": {
-                      "type": "SYMBOL",
-                      "name": "cppo_directive_no_arrow"
+                  "type": "SEQ",
+                  "members": [
+                    {
+                      "type": "REPEAT",
+                      "content": {
+                        "type": "ALIAS",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "cppo_directive_no_arrow"
+                        },
+                        "named": true,
+                        "value": "cppo_directive"
+                      }
                     },
-                    "named": true,
-                    "value": "cppo_directive"
-                  }
-                },
-                {
-                  "type": "STRING",
-                  "value": "|"
-                },
-                {
-                  "type": "REPEAT",
-                  "content": {
-                    "type": "ALIAS",
-                    "content": {
-                      "type": "SYMBOL",
-                      "name": "cppo_directive_no_arrow"
+                    {
+                      "type": "STRING",
+                      "value": "|"
                     },
-                    "named": true,
-                    "value": "cppo_directive"
-                  }
+                    {
+                      "type": "REPEAT",
+                      "content": {
+                        "type": "ALIAS",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "cppo_directive_no_arrow"
+                        },
+                        "named": true,
+                        "value": "cppo_directive"
+                      }
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "match_case"
+                    }
+                  ]
                 },
                 {
-                  "type": "SYMBOL",
-                  "name": "match_case"
+                  "type": "SEQ",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": "|"
+                    },
+                    {
+                      "type": "REPEAT1",
+                      "content": {
+                        "type": "ALIAS",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "cppo_directive_no_arrow"
+                        },
+                        "named": true,
+                        "value": "cppo_directive"
+                      }
+                    }
+                  ]
                 }
               ]
             }

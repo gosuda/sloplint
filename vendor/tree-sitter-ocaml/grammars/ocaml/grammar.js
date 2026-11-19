@@ -1692,11 +1692,17 @@ export default grammar({
         repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
       )),
       $.match_case,
-      repeat(seq(
-        repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
-        '|',
-        repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
-        $.match_case,
+      repeat(choice(
+        seq(
+          repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
+          '|',
+          repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
+          $.match_case,
+        ),
+        // `| #endif`-style directive lines: the `|` folds into the
+        // directive, so the next `|` still separates the following
+        // case (`| `A -> 1 | #endif | `B -> 2`).
+        seq('|', repeat1(alias($.cppo_directive_no_arrow, $.cppo_directive))),
       )),
       repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
     )),

@@ -459,6 +459,21 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
   *arm_shape = false;
   for (;;) {
     int32_t c = lexer->lookahead;
+    if (in_str) {
+      // Strings may span newlines — keep scanning so the tail ends at
+      // the first line break *after* the closing quote. A `->` inside
+      // the literal (`when "a\n -> b"`) is then read as content, not
+      // an arm separator.
+      if (c == '\0' && eof(lexer)) break;
+      if (c == '\\') {
+        advance(lexer);
+        if (!eof(lexer)) advance(lexer);
+        continue;
+      }
+      if (c == '"') in_str = false;
+      advance(lexer);
+      continue;
+    }
     if (c == '\n' || (c == '\0' && eof(lexer))) {
       // A `->` on a later line still separates a multi-line arm (`| #name
       // when g\n  -> e`): peek past the break for it. mark_end keeps
@@ -507,16 +522,6 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
         }
       }
       break;
-    }
-    if (in_str) {
-      if (c == '\\') {
-        advance(lexer);
-        if (!eof(lexer)) advance(lexer);
-        continue;
-      }
-      if (c == '"') in_str = false;
-      advance(lexer);
-      continue;
     }
     if (c == '"') {
       in_str = true;
