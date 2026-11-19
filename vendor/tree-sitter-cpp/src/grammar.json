@@ -173,6 +173,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "macro_braced_declaration"
+        },
+        {
+          "type": "SYMBOL",
           "name": "guarded_function"
         },
         {
@@ -302,6 +306,10 @@
           },
           "named": true,
           "value": "declaration"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_braced_declaration"
         },
         {
           "type": "SYMBOL",
@@ -9195,6 +9203,10 @@
                 "name": "_block_item"
               },
               {
+                "type": "SYMBOL",
+                "name": "macro_braced_declaration"
+              },
+              {
                 "type": "ALIAS",
                 "content": {
                   "type": "PREC_DYNAMIC",
@@ -11712,6 +11724,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "macro_braced_declaration"
+        },
+        {
+          "type": "SYMBOL",
           "name": "alias_declaration"
         },
         {
@@ -13491,6 +13507,10 @@
         {
           "type": "SYMBOL",
           "name": "binary_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_braced_expression"
         }
       ]
     },
@@ -23432,8 +23452,13 @@
                     "type": "FIELD",
                     "name": "input_operands",
                     "content": {
-                      "type": "SYMBOL",
-                      "name": "_fused_asm_items"
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_fused_asm_items"
+                      },
+                      "named": true,
+                      "value": "gnu_asm_input_operand_list"
                     }
                   },
                   {
@@ -23461,8 +23486,13 @@
                                 "type": "FIELD",
                                 "name": "clobbers",
                                 "content": {
-                                  "type": "SYMBOL",
-                                  "name": "_fused_asm_items"
+                                  "type": "ALIAS",
+                                  "content": {
+                                    "type": "SYMBOL",
+                                    "name": "_fused_asm_items"
+                                  },
+                                  "named": true,
+                                  "value": "gnu_asm_clobber_list"
                                 }
                               },
                               {
@@ -23561,8 +23591,13 @@
                     "type": "FIELD",
                     "name": "clobbers",
                     "content": {
-                      "type": "SYMBOL",
-                      "name": "_fused_asm_items"
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_fused_asm_items"
+                      },
+                      "named": true,
+                      "value": "gnu_asm_clobber_list"
                     }
                   },
                   {
@@ -23756,6 +23791,10 @@
           {
             "type": "CHOICE",
             "members": [
+              {
+                "type": "SYMBOL",
+                "name": "identifier"
+              },
               {
                 "type": "SYMBOL",
                 "name": "string_literal"
@@ -25472,6 +25511,18 @@
             }
           },
           {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "macro_argument_list"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          },
+          {
             "type": "ALIAS",
             "content": {
               "type": "SYMBOL",
@@ -25495,6 +25546,122 @@
         ]
       }
     },
+    "macro_braced_declaration": {
+      "type": "PREC_RIGHT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "FIELD",
+            "name": "name",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_type_identifier"
+                  },
+                  "named": true,
+                  "value": "identifier"
+                }
+              ]
+            }
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "macro_argument_list"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_macro_braced_members"
+            },
+            "named": true,
+            "value": "field_declaration_list"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": ";"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "macro_braced_expression": {
+      "type": "PREC_RIGHT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "FIELD",
+            "name": "name",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_type_identifier"
+                  },
+                  "named": true,
+                  "value": "identifier"
+                }
+              ]
+            }
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "macro_argument_list"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_macro_braced_body"
+            },
+            "named": true,
+            "value": "compound_statement"
+          }
+        ]
+      }
+    },
     "_macro_braced_body": {
       "type": "SEQ",
       "members": [
@@ -25512,6 +25679,31 @@
           "content": {
             "type": "SYMBOL",
             "name": "_block_item"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "}"
+        }
+      ]
+    },
+    "_macro_braced_members": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_macro_braced_open"
+          },
+          "named": false,
+          "value": "{"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_field_declaration_list_item"
           }
         },
         {
@@ -29728,20 +29920,6 @@
       "preproc_else_in_guarded_class"
     ],
     [
-      "preproc_if",
-      "preproc_if_in_declaration_specifiers",
-      "preproc_if_in_initializer_list",
-      "preproc_if_in_guarded_signature",
-      "preproc_if_in_guarded_class"
-    ],
-    [
-      "preproc_ifdef",
-      "preproc_ifdef_in_declaration_specifiers",
-      "preproc_ifdef_in_initializer_list",
-      "preproc_ifdef_in_guarded_signature",
-      "preproc_ifdef_in_guarded_class"
-    ],
-    [
       "preproc_elif",
       "preproc_elif_in_declaration_specifiers",
       "preproc_elif_in_initializer_list",
@@ -29764,21 +29942,6 @@
       "preproc_ifdef",
       "preproc_ifdef_in_declaration_specifiers",
       "preproc_ifdef_in_initializer_list"
-    ],
-    [
-      "preproc_elif",
-      "preproc_elif_in_declaration_specifiers",
-      "preproc_elif_in_initializer_list"
-    ],
-    [
-      "preproc_elifdef",
-      "preproc_elifdef_in_declaration_specifiers",
-      "preproc_elifdef_in_initializer_list"
-    ],
-    [
-      "preproc_else",
-      "preproc_else_in_declaration_specifiers",
-      "preproc_else_in_initializer_list"
     ],
     [
       "preproc_ifdef_in_declaration_specifiers",
@@ -29807,24 +29970,12 @@
       "preproc_elif_in_guarded_class"
     ],
     [
-      "preproc_if_in_declaration_specifiers",
-      "_declaration_specifiers"
-    ],
-    [
       "preproc_if",
       "preproc_if_in_declaration_specifiers"
     ],
     [
       "preproc_ifdef",
       "preproc_ifdef_in_declaration_specifiers"
-    ],
-    [
-      "preproc_elif_in_declaration_specifiers",
-      "_declaration_specifiers"
-    ],
-    [
-      "preproc_elifdef_in_declaration_specifiers",
-      "_declaration_specifiers"
     ],
     [
       "preproc_elif",
@@ -29907,6 +30058,367 @@
     ],
     [
       "macro_braced_statement"
+    ],
+    [
+      "macro_braced_expression"
+    ],
+    [
+      "macro_braced_declaration"
+    ],
+    [
+      "macro_braced_statement",
+      "macro_braced_expression"
+    ],
+    [
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "_declarator",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "_declarator",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_stmt",
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_braced_statement",
+      "macro_braced_declaration",
+      "macro_braced_expression"
+    ],
+    [
+      "_macro_declaration_stmt",
+      "expression",
+      "macro_braced_statement",
+      "macro_braced_expression"
+    ],
+    [
+      "expression",
+      "concatenated_string",
+      "macro_braced_expression"
+    ],
+    [
+      "type_specifier",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top",
+      "_macro_declaration_stmt",
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_braced_statement",
+      "macro_braced_declaration",
+      "macro_braced_expression"
+    ],
+    [
+      "enumerator",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_stmt",
+      "type_specifier",
+      "expression",
+      "macro_braced_statement",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "type_specifier",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "macro_declaration",
+      "_macro_declaration_stmt",
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_type_specifier",
+      "macro_braced_statement",
+      "macro_braced_declaration",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_argument_list",
+      "expression"
+    ],
+    [
+      "macro_argument_list",
+      "expression",
+      "template_type",
+      "template_function"
+    ],
+    [
+      "macro_argument_list",
+      "_string"
+    ],
+    [
+      "macro_argument_list",
+      "_string",
+      "concatenated_string"
+    ],
+    [
+      "macro_argument_list",
+      "_class_name"
+    ],
+    [
+      "_block_item",
+      "declaration_list"
+    ],
+    [
+      "preproc_ifdef",
+      "preproc_ifdef_in_declaration_specifiers",
+      "preproc_ifdef_in_field_declaration_list",
+      "_linkage_guard",
+      "preproc_ifdef_in_guarded_signature"
+    ],
+    [
+      "_midl_attribute",
+      "structured_binding_declarator",
+      "_lambda_capture_identifier"
+    ],
+    [
+      "labeled_statement",
+      "macro_access_label"
+    ],
+    [
+      "macro_declaration",
+      "_macro_declaration_stmt"
+    ],
+    [
+      "macro_qualifier",
+      "macro_declaration",
+      "_macro_declaration_stmt"
+    ],
+    [
+      "_declarator",
+      "_field_declarator"
+    ],
+    [
+      "_init_declarator_preproc",
+      "_declarator",
+      "_field_declarator"
+    ],
+    [
+      "macro_argument_list",
+      "type_specifier",
+      "call_expression"
+    ],
+    [
+      "macro_argument_list",
+      "compound_literal_expression"
+    ],
+    [
+      "macro_argument_list",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "macro_argument_list",
+      "type_specifier",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_argument_list",
+      "concatenated_string"
+    ],
+    [
+      "_midl_attribute",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "preproc_if",
+      "preproc_if_in_declaration_specifiers",
+      "preproc_if_in_field_declaration_list",
+      "_linkage_guard",
+      "preproc_if_in_guarded_signature"
+    ],
+    [
+      "preproc_ifdef",
+      "preproc_ifdef_in_field_declaration_list"
+    ],
+    [
+      "preproc_ifdef",
+      "preproc_ifdef_in_declaration_specifiers",
+      "preproc_ifdef_in_field_declaration_list"
+    ],
+    [
+      "preproc_else",
+      "preproc_else_in_declaration_specifiers",
+      "preproc_else_in_field_declaration_list",
+      "preproc_else_in_guarded_signature",
+      "preproc_else_in_guarded_class"
+    ],
+    [
+      "macro_declaration",
+      "_macro_declaration_top"
+    ],
+    [
+      "macro_qualifier",
+      "macro_declaration",
+      "_macro_declaration_top"
+    ],
+    [
+      "macro_qualifier",
+      "macro_declaration",
+      "_macro_declaration_top",
+      "type_specifier"
+    ],
+    [
+      "macro_declaration",
+      "_macro_declaration_top",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "macro_qualifier",
+      "macro_declaration",
+      "_macro_declaration_top",
+      "_macro_declaration_stmt",
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_type_specifier",
+      "macro_braced_statement",
+      "macro_braced_declaration",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_declaration",
+      "_macro_declaration_top",
+      "type_specifier"
+    ],
+    [
+      "macro_declaration",
+      "_macro_declaration_top",
+      "_declarator",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "macro_qualifier",
+      "macro_declaration",
+      "_macro_declaration_top",
+      "_declarator",
+      "type_specifier"
+    ],
+    [
+      "_declarator",
+      "_field_declarator",
+      "_init_reference_declarator"
+    ],
+    [
+      "macro_qualifier",
+      "_declarator",
+      "_field_declarator",
+      "_init_pointer_declarator"
+    ],
+    [
+      "macro_qualifier",
+      "_declarator",
+      "_field_declarator"
+    ],
+    [
+      "preproc_if",
+      "preproc_if_in_field_declaration_list"
+    ],
+    [
+      "preproc_if",
+      "preproc_if_in_declaration_specifiers",
+      "preproc_if_in_field_declaration_list"
+    ],
+    [
+      "preproc_elifdef",
+      "preproc_elifdef_in_declaration_specifiers",
+      "preproc_elifdef_in_field_declaration_list",
+      "preproc_elifdef_in_guarded_signature",
+      "preproc_elifdef_in_guarded_class"
+    ],
+    [
+      "dangling_label",
+      "macro_access_label"
+    ],
+    [
+      "_field_declaration_list_item",
+      "expression_statement"
+    ],
+    [
+      "macro_declaration",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "macro_declaration",
+      "_declarator",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "_block_item",
+      "_field_declaration_list_item"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top",
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_braced_statement",
+      "macro_braced_declaration",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "macro_declaration",
+      "_declarator",
+      "type_specifier",
+      "macro_type_specifier",
+      "macro_braced_declaration"
+    ],
+    [
+      "labeled_statement",
+      "dangling_label",
+      "macro_access_label"
+    ],
+    [
+      "macro_declaration",
+      "_macro_declaration_top",
+      "_macro_declaration_stmt"
+    ],
+    [
+      "macro_qualifier",
+      "macro_declaration",
+      "_macro_declaration_top",
+      "_macro_declaration_stmt"
+    ],
+    [
+      "preproc_elif",
+      "preproc_elif_in_declaration_specifiers",
+      "preproc_elif_in_field_declaration_list",
+      "preproc_elif_in_guarded_signature",
+      "preproc_elif_in_guarded_class"
     ],
     [
       "_block_item",
@@ -30051,24 +30563,9 @@
       "preproc_ifdef_in_guarded_class"
     ],
     [
-      "preproc_else",
-      "preproc_else_in_guarded_signature",
-      "preproc_else_in_guarded_class"
-    ],
-    [
       "preproc_if",
       "preproc_if_in_guarded_signature",
       "preproc_if_in_guarded_class"
-    ],
-    [
-      "preproc_elifdef",
-      "preproc_elifdef_in_guarded_signature",
-      "preproc_elifdef_in_guarded_class"
-    ],
-    [
-      "preproc_elif",
-      "preproc_elif_in_guarded_signature",
-      "preproc_elif_in_guarded_class"
     ],
     [
       "preproc_ifdef",
@@ -30077,28 +30574,10 @@
       "preproc_ifdef_in_guarded_class"
     ],
     [
-      "preproc_else",
-      "preproc_else_in_initializer_list",
-      "preproc_else_in_guarded_signature",
-      "preproc_else_in_guarded_class"
-    ],
-    [
       "preproc_if",
       "preproc_if_in_initializer_list",
       "preproc_if_in_guarded_signature",
       "preproc_if_in_guarded_class"
-    ],
-    [
-      "preproc_elifdef",
-      "preproc_elifdef_in_initializer_list",
-      "preproc_elifdef_in_guarded_signature",
-      "preproc_elifdef_in_guarded_class"
-    ],
-    [
-      "preproc_elif",
-      "preproc_elif_in_initializer_list",
-      "preproc_elif_in_guarded_signature",
-      "preproc_elif_in_guarded_class"
     ],
     [
       "_template_argument",
@@ -30414,15 +30893,6 @@
       "field_expression"
     ],
     [
-      "gnu_asm_input_operand",
-      "_lambda_capture_identifier"
-    ],
-    [
-      "_string",
-      "gnu_asm_input_operand",
-      "concatenated_string"
-    ],
-    [
       "field_initializer_list"
     ],
     [
@@ -30546,13 +31016,6 @@
       "comma_expression"
     ],
     [
-      "macro_qualifier",
-      "_macro_declaration_top",
-      "_declarator",
-      "type_specifier",
-      "expression"
-    ],
-    [
       "_macro_declaration_top",
       "type_specifier",
       "expression"
@@ -30600,32 +31063,7 @@
     ],
     [
       "macro_qualifier",
-      "_macro_declaration_stmt",
-      "_declarator",
-      "type_specifier",
-      "expression"
-    ],
-    [
-      "_macro_declaration_stmt",
-      "expression"
-    ],
-    [
-      "macro_qualifier",
-      "_macro_declaration_top",
-      "_macro_declaration_stmt",
-      "_declarator",
-      "type_specifier",
-      "expression"
-    ],
-    [
-      "macro_qualifier",
       "_macro_declaration_stmt"
-    ],
-    [
-      "macro_qualifier",
-      "_macro_declaration_stmt",
-      "type_specifier",
-      "expression"
     ],
     [
       "_macro_declaration_top",
@@ -30656,13 +31094,6 @@
       "_midl_attribute",
       "expression",
       "structured_binding_declarator"
-    ],
-    [
-      "macro_qualifier",
-      "macro_declaration",
-      "_declarator",
-      "type_specifier",
-      "macro_type_specifier"
     ],
     [
       "macro_argument_list",
@@ -30742,16 +31173,6 @@
     [
       "macro_namespace",
       "_macro_declaration_literals"
-    ],
-    [
-      "preproc_ifdef",
-      "_linkage_guard",
-      "preproc_ifdef_in_guarded_signature"
-    ],
-    [
-      "preproc_if",
-      "_linkage_guard",
-      "preproc_if_in_guarded_signature"
     ],
     [
       "function_definition",

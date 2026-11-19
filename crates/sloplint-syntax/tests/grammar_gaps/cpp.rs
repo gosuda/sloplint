@@ -425,6 +425,7 @@ fn gnu_asm_fused_clobber_strings_and_fields() {
     );
     let root = tree.root_node();
     let mut found_input = false;
+    let mut found_clobber = false;
     let mut found_goto = false;
     // Field names live on the goto-list and the `::`-led section items.
     let mut stack = vec![root];
@@ -433,14 +434,15 @@ fn gnu_asm_fused_clobber_strings_and_fields() {
             let c = n.child(i).unwrap();
             if let Some(field) = n.field_name_for_child(i as u32) {
                 found_input |= field == "input_operands";
+                found_clobber |= field == "clobbers";
                 found_goto |= field == "goto_labels";
             }
             stack.push(c);
         }
     }
     assert!(
-        found_input && found_goto,
-        "fused sections must emit field names"
+        found_input && found_clobber && found_goto,
+        "fused sections must emit input_operands/clobbers/goto_labels fields"
     );
 }
 
@@ -473,7 +475,8 @@ fn macro_braced_statements_parse() {
         "void f(void) {\n  ON_SCOPE_EXIT { if (ready) {} };\n}\n",
         "void f(void) {\n  GUARD { return; };\n}\n",
         // `[[attribute]]` can't be a lambda capture; the block after it
-        // is real macro body.
+        // is real macro body (reads as macro_braced_declaration — the
+        // attributed member shape is the declaration one).
         "void f(void) {\n  MACRO { [[likely]] { f(); } }\n}\n",
         // `Rif` is an identifier, `R\"...\"`/`u8R\"...\"` are raw strings;
         // their `;`s are literal content.
@@ -491,8 +494,8 @@ fn macro_braced_statements_parse() {
             "must parse clean, sexp: {sexp}"
         );
         assert!(
-            sexp.contains("macro_braced_statement"),
-            "must claim macro_braced_statement, sexp: {sexp}"
+            sexp.contains("macro_braced"),
+            "must claim a macro_braced node, sexp: {sexp}"
         );
     }
 }

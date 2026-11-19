@@ -256,10 +256,13 @@ static bool is_block_keyword(const char *word, int len) {
     // functional cast), contextual identifiers (import/module/export/
     // concept/final/override) and primitive types (int, char, ...
     // `int(x)` casts).
+    // `namespace` is the one declaration keyword safe to include: it
+    // opens a semicolon-free body and can never start an expression.
     static const char *kw[] = {
         "if", "else", "do", "for", "while", "switch", "case", "default",
         "try", "catch", "return", "break", "continue", "goto",
         "co_return", "asm", "__asm__", "__asm", "static_assert",
+        "namespace",
     };
     for (size_t i = 0; i < sizeof(kw) / sizeof(kw[0]); i++) {
         if ((int)strlen(kw[i]) == len && memcmp(word, kw[i], len) == 0) return true;
@@ -296,7 +299,10 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
     // chars keep it; the clearing set drops it.
     bool maybe_lambda = false;
     int pdepth = 0;
-    int32_t prev = 0;
+    // Inside a numeric literal: `'` is a digit separator (`1'000`,
+    // `0xAB'CD`), not a character constant. Set on digits; kept across
+    // ident runs that follow them (`xAB`, `e5`, `ul` tails).
+    bool after_number = false;
     char word[64];
     size_t scanned = 0;
     for (;;) {
@@ -307,15 +313,14 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
         if (c == '"') {
             advance(lexer);
             skip_dq(lexer);
-            prev = '"';
+            after_number = false;
             continue;
         }
         if (c == '\'') {
             advance(lexer);
-            if (prev >= '0' && prev <= '9') {
-                // Digit separator (1'000): `'` inside a number, not a
-                // char literal — keep scanning the digits normally.
-                prev = '0';
+            if (after_number) {
+                // Digit separator (1'000, 0xAB'CD): `'` inside a
+                // number, not a char literal — keep scanning.
                 continue;
             }
             // Char literal: scan to the closing `'`. Multi-char
@@ -332,14 +337,15 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
                 advance(lexer);
                 if (x == '\'') break;
             }
-            prev = '\'';
+            after_number = false;
             continue;
         }
         if (c == '/') {
-            if (skip_comment(lexer)) { prev = '/'; continue; }
-            maybe_lambda = false;  // `/` division can't lead a lambda
-            advance(lexer);
-            prev = '/';
+            if (skip_comment(lexer)) { after_number = false; continue; }
+            // Division: skip_comment already consumed the `/`, so the
+            // next lookahead (`"x"` in `base/"x"`) stays live.
+            maybe_lambda = false;
+            after_number = false;
             continue;
         }
         if (c == '(') {
@@ -351,42 +357,48 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
             if (lexer->lookahead == '{') {
                 advance(lexer);
                 skip_paren_body(lexer);   // GNU ({ stmts }) — ignore contents
-                prev = ')';
+                after_number = false;
                 continue;
             }
             if (maybe_lambda) pdepth++;
-            prev = '(';
+            after_number = false;
             continue;
         }
         if (c == ')') {
             if (pdepth > 0) pdepth--;
             advance(lexer);
-            prev = ')';
+            after_number = false;
             continue;
         }
         if (c == '[') {
             advance(lexer);
             if (lexer->lookahead == '[') {
                 // `[[attribute]]`: balanced `]`s inside attributes do
-                // not end a lambda capture — skip the whole attribute.
+                // not end a lambda capture — skip the whole attribute,
+                // including quoted arguments (`[[x("a]]b")]]`).
                 advance(lexer);
                 int closes = 0;
                 while (!lexer->eof(lexer) && closes < 2) {
+                    if (lexer->lookahead == '"') {
+                        advance(lexer);
+                        skip_dq(lexer);
+                        continue;
+                    }
                     if (lexer->lookahead == ']') closes++;
                     else closes = 0;
                     advance(lexer);
                 }
-                prev = ']';
+                after_number = false;
                 continue;
             }
-            prev = '[';
+            after_number = false;
             continue;
         }
         if (c == ']') {
             maybe_lambda = true;
             pdepth = 0;
             advance(lexer);
-            prev = ']';
+            after_number = false;
             continue;
         }
         if (c == '{') {
@@ -394,13 +406,13 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
                 advance(lexer);
                 skip_brace_body(lexer);   // lambda body — ignore contents
                 maybe_lambda = false;
-                prev = '}';
+                after_number = false;
                 continue;
             }
             depth++;
             maybe_lambda = false;
             advance(lexer);
-            prev = '{';
+            after_number = false;
             continue;
         }
         if (c == '}') {
@@ -408,11 +420,12 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
             maybe_lambda = false;
             if (depth == 0) return false;
             advance(lexer);
-            prev = '}';
+            after_number = false;
             continue;
         }
         if (c == ';') return true;
         if (is_ident_start(c)) {
+            bool was_num = after_number;
             int len = 0;
             while (is_ident_char(lexer->lookahead) && len < 63) {
                 word[len++] = (char)lexer->lookahead;
@@ -420,7 +433,6 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
             }
             while (is_ident_char(lexer->lookahead)) advance(lexer);
             word[len] = '\0';
-            prev = len > 0 ? word[len - 1] : c;
             // Raw string opener: only the exact prefixes R / u8R / LR /
             // uR / UR directly followed by `"` start one — `Rif` or
             // `R + 1` keep scanning as an ordinary identifier.
@@ -432,13 +444,16 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
                   word[2] == 'R'))) {
                 advance(lexer);  // past `"`
                 skip_raw_string(lexer);
-                prev = '"';
+                after_number = false;
                 continue;
             }
             // Inside `[...]` a possible lambda is collecting its
             // qualifiers (mutable/constexpr/noexcept -> T) — those names
             // must not fire the statement-keyword check.
             if (!maybe_lambda && is_block_keyword(word, len)) return true;
+            // An ident right after digits is a numeric tail (`0xAB`,
+            // `1e5`, `42ul`) — the number continues.
+            after_number = was_num;
             continue;
         }
         // Init-clause separators / operators clear the lambda flag only
@@ -450,7 +465,7 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
             maybe_lambda = false;
         }
         advance(lexer);
-        prev = c;
+        after_number = (c >= '0' && c <= '9');
     }
 }
 

@@ -478,7 +478,7 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 
 ## Size
 
-`src/parser.c`: 193,654,316 bytes (published: 17,299,078). States: 29254
+`src/parser.c`: 209,142,511 bytes (published: 17,299,078). States: 30612
 (published: 8637). Language version: 14 (published: 14). The literal
 enumeration of `macro_attribute` costs most of the size growth.
 
@@ -715,12 +715,19 @@ first with `rm -f src/parser.c`.
   resolved by the `_macro_braced_open` external token in `src/scanner.c`:
   it claims `{` when a `;` occurs inside the brace region — braced
   initializer lists never contain `;` — or when the body starts with a
-  control-flow keyword (`if`, `for`, `return`, `asm`, ... — the list is
-  deliberately narrow so `T{sizeof(const int)}` can't trip it), so
+  control-flow keyword (`if`, `for`, `return`, `asm`, `namespace`, ...
+  — the list is deliberately narrow so `T{sizeof(const int)}` can't
+  trip it; `namespace` is the one declaration keyword allowed since it
+  opens a semicolon-free body and can't start an expression), so
   `Type{args}` can never open a macro block. While probing it skips
   `"..."` literals, char literals scanned to their closing quote
   (multi-char constants `'A;'`/`'}x'` are legal — a `'` after a digit
-  is the `1'000` separator instead), raw strings opened only by the
+  is the `1'000`/`0xAB'CD` separator instead — tracked via an
+  `after_number` flag set on digits and kept across ident tails like
+  `xAB`/`e5`/`ul`, so `u8'a'` still reads as a char literal), quoted
+  arguments inside `[[attribute]]` (a `]` inside `"..."` can't end the
+  attribute), `/` division (skip_comment consumes it, so the quote in
+  `base/"x"` still opens a string), raw strings opened only by the
   exact prefixes `R`/`u8R`/`LR`/`uR`/`UR` directly before `"` (`Rif`
   stays an identifier), `[[attribute]]` runs (their `]`s can't close a
   lambda capture), `//`/`/* */` comments and balanced `(...)`/`[...]`
@@ -733,3 +740,13 @@ first with `rm -f src/parser.c`.
   `type_identifier` (all-caps macro names like `ON_SCOPE_EXIT` lex as
   type tokens). Usable at top level and as an unbraced `if`/`for`
   consequence. `;` after the closing `}` is optional.
+
+- **`macro_braced_declaration` / `macro_braced_expression`** — the same
+  probe drives `NAME(args) { body }` block macros in more positions: a
+  `macro_braced_declaration` covers top-level and member bodies
+  (`SCOPE_GUARD(lock) { ReleaseSpinLock(lock); };`, `struct S { M(a,b)
+  { int member; }; };`), and `macro_braced_expression` covers
+  initializer position (`auto g = SCOPE_GUARD(x) { Unlock(); };`). The
+  name may carry a `macro_argument_list`; `R_TRY_CATCH(e) { work(); };`
+  keeps its plain function-definition read (upstream parity) while the
+  `;`-terminated forms claim the macro nodes.

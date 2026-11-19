@@ -61,7 +61,7 @@ module.exports = grammar(C, {
   ],
 
   conflicts: $ => [
-    // `#ifdef`-arm specifiers vs a bare `#ifdef` arm vs an `extern "C"`
+        // `#ifdef`-arm specifiers vs a bare `#ifdef` arm vs an `extern "C"`
     // guarded block — all can open after a macro/identifier prefix.
     [$.preproc_ifdef, $.preproc_ifdef_in_declaration_specifiers, $._linkage_guard, $.preproc_ifdef_in_guarded_signature],
     [$.preproc_if, $.preproc_if_in_declaration_specifiers, $._linkage_guard, $.preproc_if_in_guarded_signature],
@@ -78,27 +78,19 @@ module.exports = grammar(C, {
     [$.type_qualifier],
     [$.type_definition],
     [$.preproc_else, $.preproc_else_in_declaration_specifiers, $.preproc_else_in_initializer_list, $.preproc_else_in_guarded_signature, $.preproc_else_in_guarded_class],
-    [$.preproc_if, $.preproc_if_in_declaration_specifiers, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
-    [$.preproc_ifdef, $.preproc_ifdef_in_declaration_specifiers, $.preproc_ifdef_in_initializer_list, $.preproc_ifdef_in_guarded_signature, $.preproc_ifdef_in_guarded_class],
-    [$.preproc_elif, $.preproc_elif_in_declaration_specifiers, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
+            [$.preproc_elif, $.preproc_elif_in_declaration_specifiers, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
     [$.preproc_elifdef, $.preproc_elifdef_in_declaration_specifiers, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
     [$.preproc_if, $.preproc_if_in_declaration_specifiers, $.preproc_if_in_initializer_list],
     [$.preproc_ifdef, $.preproc_ifdef_in_declaration_specifiers, $.preproc_ifdef_in_initializer_list],
-    [$.preproc_elif, $.preproc_elif_in_declaration_specifiers, $.preproc_elif_in_initializer_list],
-    [$.preproc_elifdef, $.preproc_elifdef_in_declaration_specifiers, $.preproc_elifdef_in_initializer_list],
-    [$.preproc_else, $.preproc_else_in_declaration_specifiers, $.preproc_else_in_initializer_list],
-    [$.preproc_ifdef_in_declaration_specifiers, $.preproc_ifdef_in_field_declaration_list],
+            [$.preproc_ifdef_in_declaration_specifiers, $.preproc_ifdef_in_field_declaration_list],
     [$.preproc_if_in_declaration_specifiers, $.preproc_if_in_field_declaration_list],
     [$.preproc_else_in_declaration_specifiers, $.preproc_else_in_field_declaration_list],
     [$.preproc_elif_in_declaration_specifiers, $.preproc_elif_in_field_declaration_list],
     [$.preproc_elifdef_in_declaration_specifiers, $.preproc_elifdef_in_field_declaration_list],
     [$.preproc_elif, $.preproc_elif_in_declaration_specifiers, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
-    [$.preproc_if_in_declaration_specifiers, $._declaration_specifiers],
-    [$.preproc_if, $.preproc_if_in_declaration_specifiers],
+        [$.preproc_if, $.preproc_if_in_declaration_specifiers],
     [$.preproc_ifdef, $.preproc_ifdef_in_declaration_specifiers],
-    [$.preproc_elif_in_declaration_specifiers, $._declaration_specifiers],
-    [$.preproc_elifdef_in_declaration_specifiers, $._declaration_specifiers],
-    [$.preproc_elif, $.preproc_elif_in_declaration_specifiers],
+        [$.preproc_elif, $.preproc_elif_in_declaration_specifiers],
     [$.preproc_elifdef, $.preproc_elifdef_in_declaration_specifiers],
     [$.preproc_else, $.preproc_else_in_declaration_specifiers],
     [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.expression],
@@ -141,6 +133,91 @@ module.exports = grammar(C, {
     [$._declaration_modifiers, $.attributed_statement],
     [$._top_level_item, $._top_level_statement],
     [$.macro_braced_statement],
+    [$.macro_braced_expression],
+    [$.macro_braced_declaration],
+    [$.macro_braced_statement, $.macro_braced_expression],
+    [$.expression, $.macro_braced_expression],
+    // `NAME {` inside a class/namespace body: the member body can hold
+    // `;`-terminated items that also look like expression statements.
+    [$._declarator, $.expression, $.macro_braced_expression],
+    [$.macro_qualifier, $._declarator, $.expression, $.macro_braced_expression],
+    [$._declarator, $.type_specifier, $.expression, $.macro_braced_expression],
+    [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_declaration, $.macro_braced_expression],
+    [$._macro_declaration_stmt, $.expression, $.macro_braced_statement, $.macro_braced_expression],
+    [$.expression, $.concatenated_string, $.macro_braced_expression],
+    [$.type_specifier, $.expression, $.macro_braced_expression],
+    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_declaration, $.macro_braced_expression],
+    [$.enumerator, $.expression, $.macro_braced_expression],
+    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
+    [$.macro_qualifier, $.type_specifier, $.expression, $.macro_braced_expression],
+    [$.macro_qualifier, $.macro_declaration, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_type_specifier, $.macro_braced_statement, $.macro_braced_declaration, $.macro_braced_expression],
+                    [$.macro_argument_list, $.expression],
+    [$.macro_argument_list, $.expression, $.template_type, $.template_function],
+                    [$.macro_argument_list, $._string],
+    [$.macro_argument_list, $._string, $.concatenated_string],
+    [$.macro_argument_list, $._class_name],
+    [$._block_item, $.declaration_list],
+    [$.preproc_ifdef, $.preproc_ifdef_in_declaration_specifiers, $.preproc_ifdef_in_field_declaration_list, $._linkage_guard, $.preproc_ifdef_in_guarded_signature],
+    [$._midl_attribute, $.structured_binding_declarator, $._lambda_capture_identifier],
+    [$.labeled_statement, $.macro_access_label],
+    [$.macro_declaration, $._macro_declaration_stmt],
+    [$.macro_qualifier, $.macro_declaration, $._macro_declaration_stmt],
+    [$._declarator, $._field_declarator],
+    [$._init_declarator_preproc, $._declarator, $._field_declarator],
+    [$.macro_argument_list, $.type_specifier, $.call_expression],
+    [$.macro_argument_list, $.compound_literal_expression],
+    [$.macro_argument_list, $.type_specifier, $.expression],
+    [$.macro_argument_list, $.type_specifier, $.expression, $.macro_braced_expression],
+    [$.macro_argument_list, $.concatenated_string],
+    [$._midl_attribute, $.expression, $.macro_braced_expression],
+    [$.preproc_if, $.preproc_if_in_declaration_specifiers, $.preproc_if_in_field_declaration_list, $._linkage_guard, $.preproc_if_in_guarded_signature],
+    [$.preproc_ifdef, $.preproc_ifdef_in_field_declaration_list],
+    [$.preproc_ifdef, $.preproc_ifdef_in_declaration_specifiers, $.preproc_ifdef_in_field_declaration_list],
+    [$.preproc_else, $.preproc_else_in_declaration_specifiers, $.preproc_else_in_field_declaration_list, $.preproc_else_in_guarded_signature, $.preproc_else_in_guarded_class],
+    [$.macro_declaration, $._macro_declaration_top],
+    [$.macro_qualifier, $.macro_declaration, $._macro_declaration_top],
+    [$.macro_qualifier, $.macro_declaration, $._macro_declaration_top, $.type_specifier],
+    [$.macro_declaration, $._macro_declaration_top, $.type_specifier, $.expression],
+    [$.macro_qualifier, $.macro_declaration, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_type_specifier, $.macro_braced_statement, $.macro_braced_declaration, $.macro_braced_expression],
+    [$.macro_declaration, $._macro_declaration_top, $.type_specifier],
+    [$.macro_declaration, $._macro_declaration_top, $._declarator, $.type_specifier, $.expression],
+    [$.macro_qualifier, $.macro_declaration, $._macro_declaration_top, $._declarator, $.type_specifier],
+    [$._declarator, $._field_declarator, $._init_reference_declarator],
+    [$.macro_qualifier, $._declarator, $._field_declarator, $._init_pointer_declarator],
+    [$.macro_qualifier, $._declarator, $._field_declarator],
+    [$.preproc_if, $.preproc_if_in_field_declaration_list],
+    [$.preproc_if, $.preproc_if_in_declaration_specifiers, $.preproc_if_in_field_declaration_list],
+    [$.preproc_elifdef, $.preproc_elifdef_in_declaration_specifiers, $.preproc_elifdef_in_field_declaration_list, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
+    [$.dangling_label, $.macro_access_label],
+    [$._field_declaration_list_item, $.expression_statement],
+    [$.macro_declaration, $.type_specifier, $.expression],
+    [$.macro_declaration, $._declarator, $.type_specifier, $.expression],
+    [$._block_item, $._field_declaration_list_item],
+                    // `NAME(args)` forks: call/declarator/macro_declaration vs a
+    // `MACRO(args) { members };` braced declaration — decided only by
+    // whether `_macro_braced_open` lexes after the `)`.
+        [
+      $.macro_qualifier,
+      $._macro_declaration_top,
+      $._declarator,
+      $.type_specifier,
+      $.expression,
+      $.macro_braced_statement,
+      $.macro_braced_declaration,
+      $.macro_braced_expression,
+    ],
+        [
+      $.macro_qualifier,
+      $.macro_declaration,
+      $._declarator,
+      $.type_specifier,
+      $.macro_type_specifier,
+      $.macro_braced_declaration,
+    ],
+        [$.labeled_statement, $.dangling_label, $.macro_access_label],
+    [$.macro_declaration, $._macro_declaration_top, $._macro_declaration_stmt],
+    [$.macro_qualifier, $.macro_declaration, $._macro_declaration_top, $._macro_declaration_stmt],
+    [$.preproc_elif, $.preproc_elif_in_declaration_specifiers, $.preproc_elif_in_field_declaration_list, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
     [$._block_item, $.statement],
     [$.type_qualifier, $.extension_expression],
 
@@ -177,16 +254,10 @@ module.exports = grammar(C, {
     [$._class_name, $.expression],
     [$.macro_declaration, $._declarator],
     [$.preproc_ifdef, $.preproc_ifdef_in_guarded_signature, $.preproc_ifdef_in_guarded_class],
-    [$.preproc_else, $.preproc_else_in_guarded_signature, $.preproc_else_in_guarded_class],
-    [$.preproc_if, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
-    [$.preproc_elifdef, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
-    [$.preproc_elif, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
-    [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list, $.preproc_ifdef_in_guarded_signature, $.preproc_ifdef_in_guarded_class],
-    [$.preproc_else, $.preproc_else_in_initializer_list, $.preproc_else_in_guarded_signature, $.preproc_else_in_guarded_class],
-    [$.preproc_if, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
-    [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
-    [$.preproc_elif, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
-    [$._template_argument, $._template_relational_argument],
+        [$.preproc_if, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
+        [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list, $.preproc_ifdef_in_guarded_signature, $.preproc_ifdef_in_guarded_class],
+        [$.preproc_if, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
+            [$._template_argument, $._template_relational_argument],
     [$.expression, $._template_relational_operand],
     [$.expression, $.template_type, $.template_method, $.template_function, $._template_relational_operand],
     [$._string, $._template_relational_operand],
@@ -261,10 +332,6 @@ module.exports = grammar(C, {
     [$.expression, $.field_designator, $._class_name],
     [$.preproc_ifdef_in_initializer_list, $.field_expression],
     [$.preproc_else_in_initializer_list, $.field_expression],
-    // Fused asm middle sections: `"c" (` reads as an input operand or as
-    // a `_string`/`concatenated_string` continuation; the operand wins on
-    // `prec.dynamic(1)`, otherwise `_string` clobbers take it.
-    [$._string, $.gnu_asm_input_operand, $.concatenated_string],
     [$.field_initializer_list],
     [$.expression, $.concatenated_string, $.template_type, $.template_function],
     [$.preproc_ifdef, $.type_qualifier, $.extension_expression],
@@ -295,8 +362,7 @@ module.exports = grammar(C, {
     [$.preproc_ifdef_in_initializer_list, $.comma_expression],
     [$._block_item, $.preproc_else_in_initializer_list],
     [$.preproc_else_in_initializer_list, $.comma_expression],
-    [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier, $.expression],
-    [$._macro_declaration_top, $.type_specifier, $.expression],
+        [$._macro_declaration_top, $.type_specifier, $.expression],
     [$._macro_declaration_top, $._top_level_expression_statement],
     [$.macro_qualifier, $._macro_declaration_top],
     // `asm(s : :: : x)` — the second `:` could extend the classic
@@ -318,20 +384,15 @@ module.exports = grammar(C, {
     [$.sized_type_specifier, $._argument_list_type],
     [$._declaration_modifiers, $._argument_list_type],
     [$.type_specifier, $._argument_list_type],
-    [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression],
-    [$._macro_declaration_stmt, $.expression],
-    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression],
-    [$.macro_qualifier, $._macro_declaration_stmt],
-    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression],
-    [$._macro_declaration_top, $._macro_declaration_stmt],
+                [$.macro_qualifier, $._macro_declaration_stmt],
+        [$._macro_declaration_top, $._macro_declaration_stmt],
     [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt],
     [$._field_declaration_list_item, $.field_declaration],
     [$._midl_attribute, $.structured_binding_declarator],
     [$._midl_attribute, $._lambda_capture_identifier],
     [$._midl_attribute, $.expression],
     [$._midl_attribute, $.expression, $.structured_binding_declarator],
-    [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier, $.macro_type_specifier],
-    [$.macro_argument_list, $.type_qualifier],
+        [$.macro_argument_list, $.type_qualifier],
     [$.macro_argument_list, $.type_specifier],
     [$.call_expression, $._argument_list_type],
     [$._argument_list_type, $.compound_literal_expression],
@@ -348,9 +409,7 @@ module.exports = grammar(C, {
     [$._macro_declaration_top, $.expression, $._class_name],
     [$._macro_declaration_top, $.expression, $.concatenated_string],
     [$.macro_namespace, $._macro_declaration_literals],
-    [$.preproc_ifdef, $._linkage_guard, $.preproc_ifdef_in_guarded_signature],
-    [$.preproc_if, $._linkage_guard, $.preproc_if_in_guarded_signature],
-    [$.function_definition, $.declaration, $.init_declarator, $._guarded_signature],
+            [$.function_definition, $.declaration, $.init_declarator, $._guarded_signature],
     [$.attributed_declarator, $._guarded_signature],
     [$._macro_qualifier_bare, $.type_specifier],
     [$._macro_qualifier_bare, $.sized_type_specifier],
@@ -396,6 +455,7 @@ module.exports = grammar(C, {
       // `parenthesized_expression(args)` statement (MISSING `;`).
       alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
       $.macro_namespace,
+      $.macro_braced_declaration,
       $.guarded_function,
       $.guarded_class,
     ),
@@ -413,6 +473,7 @@ module.exports = grammar(C, {
       alias($.constructor_or_destructor_definition, $.function_definition),
       alias($.operator_cast_definition, $.function_definition),
       alias($.operator_cast_declaration, $.declaration),
+      $.macro_braced_declaration,
       $.guarded_function,
       $.guarded_class,
       // No `macro_declaration` fallback here: top-level preproc bodies
@@ -429,6 +490,7 @@ module.exports = grammar(C, {
       '{',
       repeat(choice(
         $._block_item,
+        $.macro_braced_declaration,
         alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
       )),
       '}',
@@ -919,6 +981,8 @@ module.exports = grammar(C, {
       // `protected:` (JSON_PRIVATE_UNLESS_TESTED, GST_PAD_STREAM_LOCK
       // style labels) look identical to a member access specifier.
       $.macro_access_label,
+      // `MACRO(args) { members };` inside a class body.
+      $.macro_braced_declaration,
       $.alias_declaration,
       $.using_declaration,
       $.type_definition,
@@ -1382,9 +1446,9 @@ module.exports = grammar(C, {
       // `::`-led (outputs empty): `x :: inputs`, `x :: inputs : clobbers`,
       // `x :: inputs : clobbers : goto`, `x ::: clobbers`,
       // `x :: clobbers :: goto` (`::::`).
-      seq('::', optional(field('input_operands', $._fused_asm_items)),
+      seq('::', optional(field('input_operands', alias($._fused_asm_items, $.gnu_asm_input_operand_list))),
         optional(choice(
-          seq(':', optional(field('clobbers', $._fused_asm_items)),
+          seq(':', optional(field('clobbers', alias($._fused_asm_items, $.gnu_asm_clobber_list))),
             optional(seq(
               ':',
               optional(field('goto_labels', $._gnu_asm_goto_items)),
@@ -1395,7 +1459,7 @@ module.exports = grammar(C, {
       seq(
         field('output_operands', $.gnu_asm_output_operand_list),
         '::',
-        optional(field('clobbers', $._fused_asm_items)),
+        optional(field('clobbers', alias($._fused_asm_items, $.gnu_asm_clobber_list))),
         optional(seq(':', optional(field('goto_labels', $._gnu_asm_goto_items)))),
       ),
       // `x : outputs : inputs :: goto` (clobbers empty).
@@ -1426,7 +1490,7 @@ module.exports = grammar(C, {
     ),
     _fused_asm_concat_string: $ => prec.right(seq(
       choice($.identifier, $.string_literal, $.raw_string_literal),
-      choice($.string_literal, $.raw_string_literal),
+      choice($.identifier, $.string_literal, $.raw_string_literal),
       repeat(choice($.identifier, $.string_literal, $.raw_string_literal)),
     )),
 
@@ -1838,16 +1902,43 @@ module.exports = grammar(C, {
     // non-empty.
     macro_braced_statement: $ => prec.right(seq(
       // Macro names are conventionally ALL_CAPS, which lex as
-      // `type_identifier` — both must open the block.
+      // `type_identifier` — both must open the block. `R_TRY_CATCH(e) {`
+      // shows the argument list is attested at statement level too.
       field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
+      optional($.macro_argument_list),
       alias($._macro_braced_body, $.compound_statement),
       optional(';'),
     )),
+
+    // Declaration-level braced macros (`MACRO(args) { members };`,
+    // mesosphere's accessor classes): the body is a class-member list.
+    macro_braced_declaration: $ => prec.right(seq(
+      field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
+      optional($.macro_argument_list),
+      alias($._macro_braced_members, $.field_declaration_list),
+      optional(';'),
+    )),
+
+    // `auto g = SCOPE_GUARD { stmts };` — the braced block sits in
+    // expression position. `_expression` lives in the C base, so it's
+    // overridden wholesale like `_top_level_item`.
+    macro_braced_expression: $ => prec.right(seq(
+      field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
+      optional($.macro_argument_list),
+      alias($._macro_braced_body, $.compound_statement),
+    )),
+
+    expression: ($, original) => choice(
+      ...original.members,
+      $.macro_braced_expression,
+    ),
 
     // The `{` is an external token that only lexes when the brace
     // region contains a `;` — braced temporaries (`Type{arg}`) never
     // do, so they always take the regular `{`.
     _macro_braced_body: $ => seq(alias($._macro_braced_open, '{'), repeat1($._block_item), '}'),
+
+    _macro_braced_members: $ => seq(alias($._macro_braced_open, '{'), repeat($._field_declaration_list_item), '}'),
 
     // Statements
 

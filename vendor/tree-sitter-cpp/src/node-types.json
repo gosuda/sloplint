@@ -244,6 +244,10 @@
         "named": true
       },
       {
+        "type": "macro_braced_expression",
+        "named": true
+      },
+      {
         "type": "new_expression",
         "named": true
       },
@@ -1880,6 +1884,10 @@
           "named": true
         },
         {
+          "type": "macro_braced_declaration",
+          "named": true
+        },
+        {
           "type": "namespace_alias_definition",
           "named": true
         },
@@ -2472,6 +2480,10 @@
         },
         {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_braced_declaration",
           "named": true
         },
         {
@@ -3077,6 +3089,10 @@
         },
         {
           "type": "macro_access_label",
+          "named": true
+        },
+        {
+          "type": "macro_braced_declaration",
           "named": true
         },
         {
@@ -3903,6 +3919,28 @@
     "type": "gnu_asm_clobber_list",
     "named": true,
     "fields": {
+      "operand": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "concatenated_string",
+            "named": true
+          },
+          {
+            "type": "gnu_asm_input_operand",
+            "named": true
+          },
+          {
+            "type": "raw_string_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          }
+        ]
+      },
       "register": {
         "multiple": true,
         "required": false,
@@ -3946,31 +3984,11 @@
         ]
       },
       "clobbers": {
-        "multiple": true,
+        "multiple": false,
         "required": false,
         "types": [
           {
-            "type": ",",
-            "named": false
-          },
-          {
-            "type": "concatenated_string",
-            "named": true
-          },
-          {
             "type": "gnu_asm_clobber_list",
-            "named": true
-          },
-          {
-            "type": "gnu_asm_input_operand",
-            "named": true
-          },
-          {
-            "type": "raw_string_literal",
-            "named": true
-          },
-          {
-            "type": "string_literal",
             "named": true
           }
         ]
@@ -3986,53 +4004,11 @@
         ]
       },
       "input_operands": {
-        "multiple": true,
+        "multiple": false,
         "required": false,
         "types": [
-          {
-            "type": ",",
-            "named": false
-          },
-          {
-            "type": "concatenated_string",
-            "named": true
-          },
-          {
-            "type": "gnu_asm_input_operand",
-            "named": true
-          },
           {
             "type": "gnu_asm_input_operand_list",
-            "named": true
-          },
-          {
-            "type": "raw_string_literal",
-            "named": true
-          },
-          {
-            "type": "string_literal",
-            "named": true
-          }
-        ]
-      },
-      "operand": {
-        "multiple": true,
-        "required": false,
-        "types": [
-          {
-            "type": "concatenated_string",
-            "named": true
-          },
-          {
-            "type": "gnu_asm_input_operand",
-            "named": true
-          },
-          {
-            "type": "raw_string_literal",
-            "named": true
-          },
-          {
-            "type": "string_literal",
             "named": true
           }
         ]
@@ -4120,7 +4096,19 @@
         "required": false,
         "types": [
           {
+            "type": "concatenated_string",
+            "named": true
+          },
+          {
             "type": "gnu_asm_input_operand",
+            "named": true
+          },
+          {
+            "type": "raw_string_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
             "named": true
           }
         ]
@@ -4399,6 +4387,10 @@
         },
         {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_braced_declaration",
           "named": true
         },
         {
@@ -4997,6 +4989,66 @@
     }
   },
   {
+    "type": "macro_braced_declaration",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "field_declaration_list",
+          "named": true
+        },
+        {
+          "type": "macro_argument_list",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "macro_braced_expression",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "compound_statement",
+          "named": true
+        },
+        {
+          "type": "macro_argument_list",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "macro_braced_statement",
     "named": true,
     "fields": {
@@ -5012,11 +5064,15 @@
       }
     },
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": true,
       "types": [
         {
           "type": "compound_statement",
+          "named": true
+        },
+        {
+          "type": "macro_argument_list",
           "named": true
         }
       ]
@@ -5135,6 +5191,10 @@
         },
         {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_braced_declaration",
           "named": true
         },
         {
@@ -6422,6 +6482,10 @@
           "named": true
         },
         {
+          "type": "macro_braced_declaration",
+          "named": true
+        },
+        {
           "type": "macro_qualifier",
           "named": true
         },
@@ -6698,6 +6762,10 @@
           "named": true
         },
         {
+          "type": "macro_braced_declaration",
+          "named": true
+        },
+        {
           "type": "macro_qualifier",
           "named": true
         },
@@ -6949,6 +7017,10 @@
         },
         {
           "type": "macro_access_label",
+          "named": true
+        },
+        {
+          "type": "macro_braced_declaration",
           "named": true
         },
         {
@@ -7265,6 +7337,10 @@
         },
         {
           "type": "macro_access_label",
+          "named": true
+        },
+        {
+          "type": "macro_braced_declaration",
           "named": true
         },
         {
@@ -7745,6 +7821,10 @@
         },
         {
           "type": "macro_access_label",
+          "named": true
+        },
+        {
+          "type": "macro_braced_declaration",
           "named": true
         },
         {
@@ -9488,6 +9568,10 @@
         },
         {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_braced_declaration",
           "named": true
         },
         {
