@@ -1,3 +1,5 @@
 # outer-from-closure.kt: binding line 2, writes lines 3 and 34 (span 31 >= strict major_at 30); the last write sits inside a forEach closure with no shadowing.
 src/outer-from-closure.kt:2 info complexity/mutable-span
 src/stretch.kt:2 info complexity/mutable-span
+# anon-default.kt: `= DEF` is a default value, not a parameter; `DEF = 9` on line 18 still writes the outer `var DEF` (lines 2-3), giving span 16 >= strict minor_at 15.
+src/anon-default.kt:2 info complexity/mutable-span
