@@ -572,6 +572,53 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
       if (!eof(lexer)) advance(lexer);
       continue;
     }
+    if (c == '{') {
+      // `{|...|}` / `{delim|...|delim}` raw strings: a `"` inside is
+      // literal content, not a string opener — without this an odd
+      // number of quotes in the raw text leaves the scanner inside a
+      // phantom string that swallows the rest of the line (or file).
+      char delim[32];
+      size_t dn = 0;
+      advance(lexer);
+      while (((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
+              (lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
+              lexer->lookahead == '_') &&
+             dn + 1 < sizeof(delim)) {
+        delim[dn++] = (char)lexer->lookahead;
+        advance(lexer);
+      }
+      if (lexer->lookahead == '|') {
+        delim[dn] = '\0';
+        advance(lexer);
+        for (;;) {
+          if (lexer->lookahead == '\0' && eof(lexer)) break;
+          if (lexer->lookahead == '|') {
+            advance(lexer);
+            size_t k = 0;
+            while (k < dn && lexer->lookahead == delim[k]) {
+              advance(lexer);
+              k++;
+            }
+            if (k == dn && lexer->lookahead == '}') {
+              advance(lexer);
+              break;
+            }
+            continue;
+          }
+          advance(lexer);
+        }
+        if (arrow_off == (size_t)-1) saw_literal = true;
+        if (n + 1 < sizeof(buf)) buf[n++] = '"';
+        continue;
+      }
+      // Not a raw string — keep the `{` and any consumed identifier
+      // text in the tail buffer.
+      if (n + 1 + dn < sizeof(buf)) {
+        buf[n++] = '{';
+        for (size_t k = 0; k < dn; k++) buf[n++] = delim[k];
+      }
+      continue;
+    }
     if (c == '(') depth++;
     if (c == ')') {
       if (depth == 0) break;
@@ -866,7 +913,6 @@ static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
       bool arm_shape = false;
       scan_cppo_tail(lexer, &has_arrow, &arm_shape, section_name);
       if (!has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
-        if (lexer->lookahead == '\n') advance(lexer);
         lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
         return true;
       }
@@ -879,7 +925,6 @@ static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
       // open.
       if (has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
         if (arm_shape) return false;
-        if (lexer->lookahead == '\n') advance(lexer);
         lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
         return true;
       }

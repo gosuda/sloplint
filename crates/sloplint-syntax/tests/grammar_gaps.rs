@@ -32,6 +32,10 @@ mod kotlin;
 mod objc;
 #[path = "grammar_gaps/ocaml.rs"]
 mod ocaml;
+#[path = "grammar_gaps/ocaml_arms.rs"]
+mod ocaml_arms;
+#[path = "grammar_gaps/ocaml_cppo.rs"]
+mod ocaml_cppo;
 #[path = "grammar_gaps/odin.rs"]
 mod odin;
 #[path = "grammar_gaps/php.rs"]
