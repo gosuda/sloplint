@@ -459,15 +459,28 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
       // A `->` on a later line still separates a multi-line arm (`| #name
       // when g\n  -> e`): peek past the break for it. mark_end keeps
       // the token's extent at the newline; the look-ahead chars are
-      // re-lexed for the next token.
-      lexer->mark_end(lexer);
-      while (lexer->lookahead == '\n' || lexer->lookahead == ' ' ||
-             lexer->lookahead == '\t' || lexer->lookahead == '\r') {
-        advance(lexer);
-      }
-      if (lexer->lookahead == '-') {
-        advance(lexer);
-        if (lexer->lookahead == '>') *has_arrow = true;
+      // re-lexed for the next token. The peek only runs when the tail
+      // already has arm shape (`when`/`as` prefix): a bare directive
+      // (`#endif`, `#else`, `#elif`) must never claim the enclosing
+      // arm's arrow.
+      size_t i = 0;
+      while (i < n && (buf[i] == ' ' || buf[i] == '\t')) i++;
+      bool arm_prefix =
+          (i + 5 <= n && buf[i] == 'w' && buf[i + 1] == 'h' &&
+           buf[i + 2] == 'e' && buf[i + 3] == 'n' &&
+           (buf[i + 4] == ' ' || buf[i + 4] == '\t')) ||
+          (i + 3 <= n && buf[i] == 'a' && buf[i + 1] == 's' &&
+           (buf[i + 2] == ' ' || buf[i + 2] == '\t'));
+      if (arm_prefix) {
+        lexer->mark_end(lexer);
+        while (lexer->lookahead == '\n' || lexer->lookahead == ' ' ||
+               lexer->lookahead == '\t' || lexer->lookahead == '\r') {
+          advance(lexer);
+        }
+        if (lexer->lookahead == '-') {
+          advance(lexer);
+          if (lexer->lookahead == '>') *has_arrow = true;
+        }
       }
       break;
     }

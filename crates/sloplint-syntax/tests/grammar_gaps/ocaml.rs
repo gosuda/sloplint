@@ -537,6 +537,24 @@ fn hash_directive_inside_parens_keeps_close_paren() {
         sexp2.contains("cppo_directive"),
         "the mid-match #define must lex as a directive, sexp: {sexp2}"
     );
+    // The directive must also stop at a `)` on the SAME line — the
+    // token ends at depth 0 before the closing paren.
+    let source3 = concat!(
+        "let f x = (match x with\n",
+        "  | A -> 1\n",
+        "#define FOO 1)\n",
+        "let h = 2\n",
+    );
+    let tree3 = parser.parse(source3, None).expect("parser returns a tree");
+    let sexp3 = tree3.root_node().to_sexp();
+    assert!(
+        !tree3.root_node().has_error() && !sexp3.contains("MISSING"),
+        "same-line `)` after a directive must close the parens, sexp: {sexp3}"
+    );
+    assert!(
+        sexp3.contains("cppo_directive"),
+        "the mid-match #define must lex as a directive, sexp: {sexp3}"
+    );
 }
 
 // `#name` arms with `when` guards are still arms — `| #error as e when
@@ -613,6 +631,32 @@ fn hash_error_variant_arm_still_stays_arm() {
         "let f = function\n",
         "  | `A -> 1\n",
         "  | #error as e -> pp_error e\n",
+        "let g = 2\n",
+    ));
+}
+
+// A bare section directive (`#endif`) inside a nested match must not
+// claim the enclosing arm's `->` on the next line: the peek past the
+// newline only applies to arm-shaped tails (`when`/`as` prefixes), so
+// the directive stays a directive and the outer arm keeps its arrow.
+#[test]
+fn bare_directive_before_enclosing_arrow_stays_directive() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | A when match y with\n",
+        "           | B -> true\n",
+        "           #endif\n",
+        "      -> outer\n",
+        "  | C -> c\n",
+        "let g = 2\n",
+    ));
+    // `#else`/`#elif` variants of the same shape.
+    run_clean(concat!(
+        "let f = function\n",
+        "  | A when match y with\n",
+        "           | B -> true\n",
+        "           #else\n",
+        "      -> outer\n",
         "let g = 2\n",
     ));
 }

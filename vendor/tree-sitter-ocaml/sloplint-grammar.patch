@@ -239,7 +239,7 @@
  });
  
 --- common/scanner.h	2006-07-24 01:21:28.000000000 +0000
-+++ common/scanner.h	2026-11-19 06:47:01.379162645 +0000
++++ common/scanner.h	2026-11-19 07:04:15.685420871 +0000
 @@ -16,6 +16,9 @@
    LINE_NUMBER_DIRECTIVE,
    NULL_CHARACTER,
@@ -264,7 +264,7 @@
  static inline bool is_identchar(const int32_t c) {
    return is_identstart(c) || (c >= '0' && c <= '9') || c == '\'';
  }
-@@ -390,6 +400,188 @@
+@@ -390,6 +400,201 @@
    return false;
  }
  
@@ -327,15 +327,28 @@
 +      // A `->` on a later line still separates a multi-line arm (`| #name
 +      // when g\n  -> e`): peek past the break for it. mark_end keeps
 +      // the token's extent at the newline; the look-ahead chars are
-+      // re-lexed for the next token.
-+      lexer->mark_end(lexer);
-+      while (lexer->lookahead == '\n' || lexer->lookahead == ' ' ||
-+             lexer->lookahead == '\t' || lexer->lookahead == '\r') {
-+        advance(lexer);
-+      }
-+      if (lexer->lookahead == '-') {
-+        advance(lexer);
-+        if (lexer->lookahead == '>') *has_arrow = true;
++      // re-lexed for the next token. The peek only runs when the tail
++      // already has arm shape (`when`/`as` prefix): a bare directive
++      // (`#endif`, `#else`, `#elif`) must never claim the enclosing
++      // arm's arrow.
++      size_t i = 0;
++      while (i < n && (buf[i] == ' ' || buf[i] == '\t')) i++;
++      bool arm_prefix =
++          (i + 5 <= n && buf[i] == 'w' && buf[i + 1] == 'h' &&
++           buf[i + 2] == 'e' && buf[i + 3] == 'n' &&
++           (buf[i + 4] == ' ' || buf[i + 4] == '\t')) ||
++          (i + 3 <= n && buf[i] == 'a' && buf[i + 1] == 's' &&
++           (buf[i + 2] == ' ' || buf[i + 2] == '\t'));
++      if (arm_prefix) {
++        lexer->mark_end(lexer);
++        while (lexer->lookahead == '\n' || lexer->lookahead == ' ' ||
++               lexer->lookahead == '\t' || lexer->lookahead == '\r') {
++          advance(lexer);
++        }
++        if (lexer->lookahead == '-') {
++          advance(lexer);
++          if (lexer->lookahead == '>') *has_arrow = true;
++        }
 +      }
 +      break;
 +    }
@@ -453,7 +466,7 @@
  static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
    int32_t last = 0;
  
-@@ -521,7 +713,9 @@
+@@ -521,7 +726,9 @@
      return true;
    }
  
@@ -463,7 +476,7 @@
      skip(lexer);
    }
  
-@@ -533,39 +727,95 @@
+@@ -533,39 +740,95 @@
      return true;
    }
  
