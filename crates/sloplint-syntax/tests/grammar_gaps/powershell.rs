@@ -414,6 +414,26 @@ fn a_variable_word_may_trail_non_member_dots() {
         Write-Host $v..$w\n\
         $y = $v.foo\n",
     );
+
+    // Same competition inside command arguments: a `.` followed by an
+    // identifier char must still open a member name, not a word.
+    let language: tree_sitter::Language = tree_sitter_powershell::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("powershell language loads");
+    let tree = parser
+        .parse("Write-Output $v.foo\n", None)
+        .expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        !tree.root_node().has_error() && sexp.contains("member_access"),
+        "argument $v.foo must stay member access, sexp: {sexp}"
+    );
+    assert!(
+        !sexp.contains("generic_token"),
+        "argument $v.foo must not flatten into a word, sexp: {sexp}"
+    );
 }
 
 #[test]
