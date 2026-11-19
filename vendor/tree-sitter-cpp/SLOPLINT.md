@@ -760,19 +760,24 @@ first with `rm -f src/parser.c`.
   declarations — so a guard body like `ReleaseSpinLock(lock);` parses
   as a `call_expression` statement instead of a phantom member
   `function_declarator` (it was `_field_declaration_list_item` before,
-  which forced every `f(x);` line into a declaration). The rule is
-  deliberately kept OUT of `_block_item`: inside a function body
-  `NAME(args) {` must stay a `function_definition` read (upstream
-  parity — `R_TRY_CATCH(e) { work(); };`), so it lives only in
-  `declaration_list` and member positions and carries `prec.dynamic(1)`
-  to win those positions over the struct/`function_definition` reads.
-  The name may carry a `macro_argument_list`; `;` after the closing
-  `}` is optional on the declaration form. File/namespace/statement
-  scope uses the `_macro_braced_declaration_loose` alias of the same
-  node — identical but with `optional($.macro_argument_list)`, so
-  `WIDGET() { ... };` with empty parens parses too; member position
-  keeps the strict variant (nonempty args only) because `S() { ... }`
-  inside a class is a constructor, not a macro. The scanner's
+  which forced every `f(x);` line into a declaration). The name may
+  carry a `macro_argument_list`; `;` after the closing `}` is optional
+  on the declaration form. The strict variant lives in
+  `declaration_list` and member positions and carries
+  `prec.dynamic(1)` to win those positions over the
+  struct/`function_definition` reads; member position keeps nonempty
+  args only because `S() { ... }` inside a class is a constructor,
+  not a macro. File/namespace scope uses the
+  `_macro_braced_declaration_loose` alias of the same node — identical
+  but with `optional($.macro_argument_list)`, so `WIDGET() { ... };`
+  with empty parens parses too. Statement scope uses a third sibling,
+  `_macro_braced_declaration_paren` — parens required (empty allowed)
+  via a mandatory `macro_argument_list` — added to
+  `_non_case_statement`, so `WIDGET() { int bits : 3; };` inside a
+  function body parses as a member-bodied decl while bare
+  `NAME { stmts }` stays on `macro_braced_statement`, which is the
+  only read that can hold `ON_SCOPE_EXIT { cleanup(); };` (its block
+  is statements, not members). The scanner's
   `prev_was_operator` flag (set on the `operator` keyword so a
   following `]` doesn't mark a lambda capture) is cleared at the top
   of the scan loop for every character except whitespace, `[`, and

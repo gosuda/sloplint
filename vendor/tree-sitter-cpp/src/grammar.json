@@ -12734,6 +12734,15 @@
         {
           "type": "SYMBOL",
           "name": "macro_braced_statement"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_macro_braced_declaration_paren"
+          },
+          "named": true,
+          "value": "macro_braced_declaration"
         }
       ]
     },
@@ -25771,6 +25780,66 @@
         }
       }
     },
+    "_macro_braced_declaration_paren": {
+      "type": "PREC_DYNAMIC",
+      "value": 1,
+      "content": {
+        "type": "PREC_RIGHT",
+        "value": 0,
+        "content": {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "name",
+              "content": {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "identifier"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_type_identifier"
+                    },
+                    "named": true,
+                    "value": "identifier"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "SYMBOL",
+              "name": "macro_argument_list"
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_macro_braced_members"
+              },
+              "named": true,
+              "value": "field_declaration_list"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": ";"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
     "_macro_argument_list_nonempty": {
       "type": "SEQ",
       "members": [
@@ -30532,18 +30601,20 @@
       "macro_braced_expression"
     ],
     [
+      "_macro_declaration_stmt",
+      "expression",
+      "macro_braced_statement",
+      "_macro_braced_declaration_paren",
+      "macro_braced_expression"
+    ],
+    [
       "macro_qualifier",
       "_macro_declaration_stmt",
       "_declarator",
       "type_specifier",
       "expression",
       "macro_braced_statement",
-      "macro_braced_expression"
-    ],
-    [
-      "_macro_declaration_stmt",
-      "expression",
-      "macro_braced_statement",
+      "_macro_braced_declaration_paren",
       "macro_braced_expression"
     ],
     [
@@ -30567,6 +30638,7 @@
       "type_specifier",
       "expression",
       "macro_braced_statement",
+      "_macro_braced_declaration_paren",
       "macro_braced_expression"
     ],
     [
@@ -31523,6 +31595,13 @@
       "_macro_braced_declaration_loose"
     ],
     [
+      "_macro_braced_declaration_paren"
+    ],
+    [
+      "_macro_braced_declaration_loose",
+      "_macro_braced_declaration_paren"
+    ],
+    [
       "macro_argument_list",
       "template_type"
     ],
@@ -31535,6 +31614,7 @@
       "expression",
       "macro_braced_statement",
       "_macro_braced_declaration_loose",
+      "_macro_braced_declaration_paren",
       "macro_braced_expression"
     ]
   ],
@@ -31591,5 +31671,6 @@
     "_field_declarator",
     "_type_declarator",
     "_abstract_declarator"
-  ]
+  ],
+  "reserved": {}
 }

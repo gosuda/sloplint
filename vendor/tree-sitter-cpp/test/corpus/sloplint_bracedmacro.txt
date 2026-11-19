@@ -568,3 +568,38 @@ WIDGET() { int bits: 3; };
           (field_identifier)
           (bitfield_clause
             (number_literal)))))))
+
+================================================================================
+paren braced decl macro inside a function body
+================================================================================
+
+void f() {
+  WIDGET() { int bits : 3; };
+  ON_SCOPE_EXIT { cleanup(); };
+}
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list))
+    (compound_statement
+      (macro_braced_declaration
+        (identifier)
+        (macro_argument_list)
+        (field_declaration_list
+          (field_declaration
+            (primitive_type)
+            (field_identifier)
+            (bitfield_clause
+              (number_literal)))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list))))))))
