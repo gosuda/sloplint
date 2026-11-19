@@ -21,7 +21,7 @@ sloplint works from syntax alone: tree-sitter parses each file and per-language 
 
 ## Quick start
 
-Requires the `sloplint` binary (see [Install](#install)). Then, in any directory:
+Requires the `sloplint` binary (see [Install](#install)). Then, in a new empty directory:
 
 ```console
 $ sloplint init
