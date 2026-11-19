@@ -580,18 +580,29 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
       char delim[32];
       size_t dn = 0;
       advance(lexer);
-      while (((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
-              (lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
-              lexer->lookahead == '_') &&
-             dn + 1 < sizeof(delim)) {
+      // The delimiter's first char must be a lowercase letter or '_'
+      // (digits come later, per OCaml's lowercase-identchar rule).
+      if ((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
+          lexer->lookahead == '_') {
         delim[dn++] = (char)lexer->lookahead;
         advance(lexer);
+        while (((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
+                (lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
+                lexer->lookahead == '_' || lexer->lookahead == '\'') &&
+               dn + 1 < sizeof(delim)) {
+          delim[dn++] = (char)lexer->lookahead;
+          advance(lexer);
+        }
       }
       if (lexer->lookahead == '|') {
         delim[dn] = '\0';
         advance(lexer);
+        // Bound the skip at the line end: a cppo tail is line-scoped, so
+        // an unclosed or mistaken opener must not swallow the file.
+        bool closed = false;
         for (;;) {
           if (lexer->lookahead == '\0' && eof(lexer)) break;
+          if (lexer->lookahead == '\n') break;
           if (lexer->lookahead == '|') {
             advance(lexer);
             size_t k = 0;
@@ -601,14 +612,20 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
             }
             if (k == dn && lexer->lookahead == '}') {
               advance(lexer);
+              closed = true;
               break;
             }
             continue;
           }
           advance(lexer);
         }
-        if (arrow_off == (size_t)-1) saw_literal = true;
-        if (n + 1 < sizeof(buf)) buf[n++] = '"';
+        if (closed) {
+          if (arrow_off == (size_t)-1) saw_literal = true;
+          if (n + 1 < sizeof(buf)) buf[n++] = '"';
+        } else if (n + 1 + dn < sizeof(buf)) {
+          buf[n++] = '{';
+          for (size_t k = 0; k < dn; k++) buf[n++] = delim[k];
+        }
         continue;
       }
       // Not a raw string — keep the `{` and any consumed identifier

@@ -1,5 +1,5 @@
 --- grammars/ocaml/grammar.js	2006-07-24 01:21:28.000000000 +0000
-+++ grammars/ocaml/grammar.js	2026-11-19 07:46:01.286019036 +0000
++++ grammars/ocaml/grammar.js	2026-11-19 08:05:51.579450752 +0000
 @@ -50,6 +50,15 @@
      [$._include_or_include_functor],
      [$._module_typed, $.functor_type],
@@ -245,7 +245,7 @@
  });
  
 --- common/scanner.h	2006-07-24 01:21:28.000000000 +0000
-+++ common/scanner.h	2026-11-19 07:56:56.739142134 +0000
++++ common/scanner.h	2026-11-19 08:07:23.959776808 +0000
 @@ -16,6 +16,9 @@
    LINE_NUMBER_DIRECTIVE,
    NULL_CHARACTER,
@@ -270,7 +270,7 @@
  static inline bool is_identchar(const int32_t c) {
    return is_identstart(c) || (c >= '0' && c <= '9') || c == '\'';
  }
-@@ -390,6 +400,304 @@
+@@ -390,6 +400,321 @@
    return false;
  }
  
@@ -454,18 +454,29 @@
 +      char delim[32];
 +      size_t dn = 0;
 +      advance(lexer);
-+      while (((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
-+              (lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
-+              lexer->lookahead == '_') &&
-+             dn + 1 < sizeof(delim)) {
++      // The delimiter's first char must be a lowercase letter or '_'
++      // (digits come later, per OCaml's lowercase-identchar rule).
++      if ((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
++          lexer->lookahead == '_') {
 +        delim[dn++] = (char)lexer->lookahead;
 +        advance(lexer);
++        while (((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
++                (lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
++                lexer->lookahead == '_' || lexer->lookahead == '\'') &&
++               dn + 1 < sizeof(delim)) {
++          delim[dn++] = (char)lexer->lookahead;
++          advance(lexer);
++        }
 +      }
 +      if (lexer->lookahead == '|') {
 +        delim[dn] = '\0';
 +        advance(lexer);
++        // Bound the skip at the line end: a cppo tail is line-scoped, so
++        // an unclosed or mistaken opener must not swallow the file.
++        bool closed = false;
 +        for (;;) {
 +          if (lexer->lookahead == '\0' && eof(lexer)) break;
++          if (lexer->lookahead == '\n') break;
 +          if (lexer->lookahead == '|') {
 +            advance(lexer);
 +            size_t k = 0;
@@ -475,14 +486,20 @@
 +            }
 +            if (k == dn && lexer->lookahead == '}') {
 +              advance(lexer);
++              closed = true;
 +              break;
 +            }
 +            continue;
 +          }
 +          advance(lexer);
 +        }
-+        if (arrow_off == (size_t)-1) saw_literal = true;
-+        if (n + 1 < sizeof(buf)) buf[n++] = '"';
++        if (closed) {
++          if (arrow_off == (size_t)-1) saw_literal = true;
++          if (n + 1 < sizeof(buf)) buf[n++] = '"';
++        } else if (n + 1 + dn < sizeof(buf)) {
++          buf[n++] = '{';
++          for (size_t k = 0; k < dn; k++) buf[n++] = delim[k];
++        }
 +        continue;
 +      }
 +      // Not a raw string — keep the `{` and any consumed identifier
@@ -575,7 +592,7 @@
  static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
    int32_t last = 0;
  
-@@ -521,7 +829,9 @@
+@@ -521,7 +846,9 @@
      return true;
    }
  
@@ -585,7 +602,7 @@
      skip(lexer);
    }
  
-@@ -533,39 +843,98 @@
+@@ -533,39 +860,98 @@
      return true;
    }
  

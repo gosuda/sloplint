@@ -362,3 +362,52 @@ fn multiline_string_in_cppo_tail_stays_one_directive() {
         );
     }
 }
+
+#[test]
+fn unclosed_raw_string_opener_in_cppo_tail_stays_line_scoped() {
+    // `{x1|` inside a cppo comment looks like a quoted-string opener
+    // (digits are legal inside a delimiter). An unterminated opener
+    // must not swallow the following declarations: a cppo tail is
+    // line-scoped, so the skip stops at the newline.
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    let source = "let f x =\n  match x with\n  | A -> 1\n#if FOO\n  (* note {x1| \
+                  has no closer *)\n  | B -> 2\n#endif\n  | C -> 3\nlet g = 4\nlet h = 5\n";
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        !tree.root_node().has_error() && !sexp.contains("MISSING"),
+        "must parse clean, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("let_binding") || sexp.contains("value_specification"),
+        "declarations after the directive must survive, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn cppo_directives_parse_in_interface_grammar() {
+    // grammars/interface is generated separately and imports the ocaml
+    // grammar — the cppo/`| directive` fold must hold for .mli too.
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML_INTERFACE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml interface language loads");
+    for source in [
+        "val f : int -> int\n#ifdef X\nval g : int\n#endif\nval h : int\n",
+        "module M : module type of struct\n  let f = function\n    | `A -> 1\n    \
+         | #error\n    | `C -> 3\nend\nval g : int\n",
+        "val f : int\n#define M 1\nval g : int\n",
+    ] {
+        let tree = parser.parse(source, None).expect("parser returns a tree");
+        let sexp = tree.root_node().to_sexp();
+        assert!(
+            !tree.root_node().has_error() && !sexp.contains("MISSING"),
+            "interface must parse clean, sexp: {sexp}"
+        );
+    }
+}
