@@ -9,7 +9,8 @@
   `LICENSE`, `README.md`, `bindings/`, `queries/`, `tree-sitter.json`.
 - Copied from upstream: `test/corpus/*.txt` (10 files, 305 cases, all passing before and after).
 - Changed: `grammar.js` (see `sloplint-grammar.patch`), and `src/` regenerated.
-- Added: `test/corpus/sloplint_endnew.txt`, `sloplint_parenif.txt`, `sloplint_instar.txt`.
+- Added: `test/corpus/sloplint_endnew.txt`, `sloplint_parenif.txt`,
+  `sloplint_instar.txt`, `sloplint_enum.txt`.
 
 ## Regeneration
 
@@ -19,10 +20,19 @@
   byte-for-byte. `grammar.json` is identical. `parser.c` and `node-types.json` differ:
   the published `node-types.json` lists the hidden supertypes `_definition` and `_pattern`,
   and the 0.27.1 output expands them to concrete kinds in child-type lists. The visible node
-  kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` is unchanged.
-- Test: `tree-sitter test` in this directory: 313/313 (305 upstream + 8 sloplint cases).
+  kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` carries one
+  sloplint edit (SC-SOFTENUM, below): `enum` removed from the postfix-operator heuristic's
+  `definition_words` list.
+- Test: `tree-sitter test` in this directory: 314/314 (305 upstream + 9 sloplint cases).
 
 ## Changes to grammar.js
+
+4. SC-SOFTENUM: `enum` joined the `_soft_identifier` set, so Scala 2 sources may
+   use it as a parameter name or named argument (`def f(enum: E)`, `Map(enum = 1)`)
+   while `enum Foo { ... }` still parses as `enum_definition`. A
+   `[enum_definition, _soft_identifier]` GLR conflict keeps both readings alive,
+   `enum_definition` gained `prec(1)`, and `enum` dropped out of
+   `_namespace_path_segment`'s explicit alias since `_identifier` now covers it.
 
 1. SC-ENDNEW: a new `instance_expression` alternative for `new T:` with an empty body
    closed by `end new`. Upstream's indented template needs a body statement, so the marker
@@ -105,3 +115,30 @@ published crate for the proof, then restored):
 
 The four FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
 panics. The vendored run is 10/10.
+
+### SC-SOFTENUM (later round)
+
+`enum` is a Scala 3 keyword but a legal Scala 2 identifier. Dogfooding the corpus
+(the-algorithm, phantom) showed ~50 files failing on `enum` used as a parameter
+name or named argument. Upstream fails the same files — this is a genuine gap,
+not a regression. The scanner's postfix-operator heuristic also had `enum` in its
+`definition_words` list, so `val n = 1 +` + newline + `enum` was split. `enum`
+now stays out of that list except when a following token proves the definition
+reading — a name start (`enum Foo`) or `=` (`enum = 1`, a standalone assignment
+to a variable named `enum`) keep the statement-break hint; anything else makes
+it the right operand (`1 +\nenum`, `1 +\nenum(2)` — an enum declaration
+always names itself first, so `(` can only be a call of the identifier),
+matching the existing treatment of `extension`. `/:/`-style operators (`def /:/`, `x /:/ y` — breeze) remain a
+documented upstream-parity ceiling: an operator may not end in `/` per SLS 1.1,
+and the scanner's trailing-slash path only covers non-slash-initial operators.
+`<removed_id>` placeholders in the-algorithm are sanitized-out identifiers, not
+valid Scala — corpus-content ceiling.
+
+Corpus delta (same files, same grammar build):
+
+| repo | files with parse errors before | after |
+|---|---|---|
+| the-algorithm | 42 | 14 (all `<removed_id>` placeholders) |
+| phantom | ~10 | 0 |
+| scalding | ~8 | 6 (multi-line curried signatures — residual cluster) |
+| breeze | ~12 | 4 (`/:/` ceiling + unexamined residuals) |
