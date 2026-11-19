@@ -2751,7 +2751,7 @@
                         },
                         {
                           "type": "SYMBOL",
-                          "name": "_definition_pattern"
+                          "name": "_comma_definition_pattern"
                         }
                       ]
                     }
@@ -2987,7 +2987,7 @@
                         },
                         {
                           "type": "SYMBOL",
-                          "name": "_definition_pattern"
+                          "name": "_comma_definition_pattern"
                         }
                       ]
                     }
@@ -6947,6 +6947,63 @@
         {
           "type": "SYMBOL",
           "name": "repeat_pattern"
+        }
+      ]
+    },
+    "_comma_definition_pattern": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_identifier"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "stable_identifier"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "interpolated_string_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "capture_pattern"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "tuple_pattern"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "named_tuple_pattern"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "case_class_pattern"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "given_pattern"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "quote_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "unit"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "wildcard"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "xml_pattern"
         }
       ]
     },
@@ -14315,6 +14372,19 @@
   ],
   "conflicts": [
     [
+      "val_declaration",
+      "identifiers",
+      "_comma_definition_pattern"
+    ],
+    [
+      "val_declaration",
+      "_comma_definition_pattern"
+    ],
+    [
+      "_comma_definition_pattern",
+      "identifiers"
+    ],
+    [
       "_if_rest"
     ],
     [
@@ -14410,19 +14480,6 @@
     ],
     [
       "val_definition"
-    ],
-    [
-      "val_definition",
-      "val_declaration",
-      "identifiers"
-    ],
-    [
-      "val_definition",
-      "identifiers"
-    ],
-    [
-      "val_definition",
-      "val_declaration"
     ],
     [
       "_dot_match_expression"

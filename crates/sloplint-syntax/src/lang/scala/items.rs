@@ -102,7 +102,14 @@ pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s st
     if n.kind() != "var_definition" && n.kind() != "val_definition" {
         return;
     }
-    if let Some(pat) = child_by_field(n, "pattern") {
+    // `var whole, Some(count) = …` repeats the `pattern` field, and the
+    // field iteration also yields the anonymous `,` separators — so walk
+    // every named field child instead of `child_by_field`'s first match.
+    let mut cursor = n.walk();
+    for pat in n
+        .children_by_field_name("pattern", &mut cursor)
+        .filter(|pat| pat.is_named())
+    {
         collect_idents(cx, pat, out);
     }
 }

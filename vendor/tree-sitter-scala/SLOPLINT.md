@@ -37,13 +37,20 @@
    `infix_type` already does. This makes `val P(a, b * c) = p` parse.
 4. The conflict `[$.repeat_pattern, $._simple_expression]` is removed (generator reported it
    unnecessary). The conflict `[$.block, $.capture_set]` is moved, with identical content.
-5. SC-MULTIPAT: `val_definition`/`var_definition` take a comma-separated `_definition_pattern`
+5. SC-MULTIPAT: `val_definition`/`var_definition` take a comma-separated pattern
    list, so `val a2_1, List(a2_2) = …` (SLS PatDef ::= Pattern2 {',' Pattern2}) parses — a
-   real form in scalameta's Issue1872 fixture. The pure name list keeps its `identifiers`
-   node via `prec.dynamic(1)`. New conflicts: `[$.val_definition, $.val_declaration,
-   $.identifiers]`, `[$.val_definition, $.identifiers]`, `[$.val_definition,
-   $.val_declaration]`; the upstream tuple `[$.identifiers, $.val_declaration]` is removed
-   as subsumed.
+   real form in scalameta's Issue1872 fixture. The first element keeps the full
+   `_definition_pattern` (a lone `val x * y = v` infix pattern still parses); each
+   comma successor is a `_comma_definition_pattern`, the same alternatives minus
+   `infix_pattern`, so `val a, b | c` and `val a, b :: c` error while the
+   parenthesized `(b | c)`/`(b :: c)` forms stay legal — stricter than scalac 2,
+   which admits `::` successors, and matching scalac 3.10's `patDefOrDcl`, which
+   admits only identifiers after the first comma. The pure name list keeps its
+   `identifiers` node via `prec.dynamic(1)`. New conflicts:
+   `[val_declaration, identifiers, _comma_definition_pattern]`,
+   `[val_declaration, _comma_definition_pattern]`,
+   `[_comma_definition_pattern, identifiers]`. Field iteration also yields the
+   anonymous `,` separators, so `decl_names` filters `is_named()`.
 
 ## Fixed shapes (scalac 3.10.0 `-Ystop-after:parser` accepts each)
 

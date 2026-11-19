@@ -437,6 +437,12 @@ module.exports = grammar({
   ],
 
   conflicts: $ => [
+    // `val export: T` (declaration) vs `val x, export: T`? After `val`, a
+    // leading comma-list element can be a plain name, which collides with
+    // the declaration's `name: type` head until `,` or `=` disambiguates.
+    [$.val_declaration, $.identifiers, $._comma_definition_pattern],
+    [$.val_declaration, $._comma_definition_pattern],
+    [$._comma_definition_pattern, $.identifiers],
     [$._if_rest],
     [$.tuple_pattern, $._simple_expression],
     [$.tuple_pattern, $._simple_expression, $.binding],
@@ -481,9 +487,6 @@ module.exports = grammar({
     [$.val_definition],
     // 'val' name ',' name • ':' — a multi-pattern `val a, List(b) =` now
     // competes with the `val a, b : T` declaration read.
-    [$.val_definition, $.val_declaration, $.identifiers],
-    [$.val_definition, $.identifiers],
-    [$.val_definition, $.val_declaration],
     [$._dot_match_expression],
     [$.var_definition],
     [$.package_clause],
@@ -1139,7 +1142,10 @@ module.exports = grammar({
         // name-only list keeps its `identifiers` node where it applies.
         field(
           "pattern",
-          choice(prec.dynamic(1, $.identifiers), commaSep1($._definition_pattern)),
+          choice(
+            prec.dynamic(1, $.identifiers),
+            seq($._definition_pattern, repeat(seq(",", $._comma_definition_pattern))),
+          ),
         ),
         optional(seq(":", field("type", $._type))),
         "=",
@@ -1173,7 +1179,10 @@ module.exports = grammar({
         // name-only list keeps its `identifiers` node where it applies.
         field(
           "pattern",
-          choice(prec.dynamic(1, $.identifiers), commaSep1($._definition_pattern)),
+          choice(
+            prec.dynamic(1, $.identifiers),
+            seq($._definition_pattern, repeat(seq(",", $._comma_definition_pattern))),
+          ),
         ),
         optional(seq(":", field("type", $._type))),
         "=",
@@ -1992,6 +2001,27 @@ module.exports = grammar({
     // SLS 4.1: the pattern of a val/var definition is a Pattern2, so no
     // top-level alternatives or ascription. `val a: A | B` then reads `|`
     // as a union type instead of an alternative pattern.
+    // PatDef comma-list elements reject an unparenthesized infix: scalac
+    // admits only identifiers after the first comma and reads `|` (and any
+    // other infix op) at Pattern level, which needs parens — `val a, b | c`
+    // and `val a, b :: c` are errors while `val a, (b | c)` parses.
+    _comma_definition_pattern: $ =>
+      choice(
+        $._identifier,
+        $.stable_identifier,
+        $.interpolated_string_expression,
+        $.capture_pattern,
+        $.tuple_pattern,
+        $.named_tuple_pattern,
+        $.case_class_pattern,
+        $.given_pattern,
+        $.quote_expression,
+        $.literal,
+        $.unit,
+        $.wildcard,
+        $.xml_pattern,
+      ),
+
     _definition_pattern: $ =>
       choice(
         $._identifier,
