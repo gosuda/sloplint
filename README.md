@@ -14,7 +14,7 @@ It is written for developers and for coding agents. The default `agent` output f
 
 - **24 languages**: Rust, TypeScript/TSX, JavaScript/JSX, Python, Go, LoGOs, Java, Kotlin, C#, C, C++, Objective-C, PHP, Ruby, Bash, PowerShell, Swift, R, Scala, Dart, Zig, OCaml, Odin, Starlark.
 - **27 builtin rules** in four families (`complexity/`, `grep/`, `slop/`, `agent/`), plus custom tree-sitter queries from `[[custom_rules]]` configuration.
-- **4 strictness profiles** (`minimal`, `basic`, `standard`, `strict`), each monotone in coverage and thresholds. Every rule was measured against real open-source code; a rule stays on at `standard` only when at least 80 percent of sampled findings were judged true (see [Precision](#precision)).
+ - **4 strictness profiles** (`minimal`, `basic`, `standard`, `strict`), each monotone in coverage and thresholds. Every rule was measured against real open-source code; a rule stays on at `standard` only when at least 80 percent of sampled findings were judged true after tightening (see [Precision](#precision)).
 - **Ratchet mode** freezes today's findings into a baseline, so only new debt fails the build.
 
 sloplint works from syntax alone: tree-sitter parses each file and per-language heuristics lower the tree into facts, so results are approximate by design. It is not a typechecker or a security analyzer, and it applies no patches itself; every finding carries a `fix:` line describing the change a human or agent should make. In C#, property accessors, operators, conversion operators, and destructors count as functions.
