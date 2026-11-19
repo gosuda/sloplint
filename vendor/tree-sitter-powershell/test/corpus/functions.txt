@@ -489,7 +489,6 @@ function 1+1{
             (script_parameter
               (variable))))))))
 
-
 ===
 Function name as keyword
 ===
