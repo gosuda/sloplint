@@ -277,3 +277,56 @@ fn stray_semicolons_after_package_parse() {
     let source = concat!("package breeze.plot;;;\n", "\n", "trait Dataset\n");
     run_clean(source);
 }
+
+#[test]
+fn wildcard_self_type_in_new_template_parses() {
+    // `new T { _: (A, B) => }` declares a wildcard self-type, not a lambda:
+    // the template body's self_type must win over the block-argument read.
+    let source = concat!(
+        "trait T\n",
+        "class K {\n",
+        "  val m = new T { _: (Any, Any) => }\n",
+        "  val n = new T { _: (Any, Any) => go() }\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert!(
+        analysis.facts.calls.iter().any(|c| c.callee == "go"),
+        "the self-type body keeps its statement calls: {:?}",
+        analysis.facts.calls
+    );
+}
+
+#[test]
+fn spaced_quote_operator_still_errors() {
+    // `' +` is not a symbol literal — the quote's operator name must be
+    // adjacent to the `'`.
+    let source = "object O {\n  val s = ' +\n}\n";
+    assert!(
+        run(source).parse_error.is_some(),
+        "a spaced quote operator must not parse as a symbol literal"
+    );
+}
+
+#[test]
+fn reserved_operator_symbol_literals_parse() {
+    // `'=`, `':`, `'<-`, `'->` name operators; `'='` stays a char literal.
+    let source = concat!(
+        "object O {\n",
+        "  val a = '=\n",
+        "  val b = ':\n",
+        "  val c = '<-\n",
+        "  val d = '->\n",
+        "  val e = '/\n",
+        "  val ch = '='\n",
+        "}\n",
+    );
+    run_clean(source);
+}
+
+#[test]
+fn leading_stray_semicolons_parse() {
+    // `;;;def x = 1` — scalac skips a stray `;` run at the top of a file too.
+    let source = concat!(";;;val h = 1\n", ";;;\n");
+    run_clean(source);
+}
