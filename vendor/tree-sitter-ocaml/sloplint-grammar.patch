@@ -1,0 +1,765 @@
+--- grammars/ocaml/grammar.js	2006-07-24 01:21:28.000000000 +0000
++++ grammars/ocaml/grammar.js	2026-11-19 08:21:24.338549026 +0000
+@@ -50,6 +50,15 @@
+     [$._include_or_include_functor],
+     [$._module_typed, $.functor_type],
+     [$._type, $._argument_type],
++    [$._structure_item, $._simple_expression],
++    [$.let_binding],
++    [$.class_binding],
++    [$.application_expression],
++    [$._signature_item, $._type],
++    [$._class_expression, $.class_application],
++    [$.class_application],
++    [$._camlp4_any_directive, $.camlp4_conditional],
++    [$._match_cases],
+   ],
+ 
+   precedences: $ => [
+@@ -298,6 +307,12 @@
+       $.value_specification,
+       $.kind_definition,
+       $.include_module,
++      $.quotation,
++      $.term_quotation,
++      $.cppo_directive,
++      $._camlp4_any_directive,
++      $.opa_directive,
++      $.opa_quotation,
+     ),
+ 
+     value_definition: $ => seq(
+@@ -332,6 +347,7 @@
+     _parameter: $ => choice(
+       $.parameter,
+       alias($._parenthesized_abstract_type, $.abstract_type),
++      $.opa_quotation,
+     ),
+ 
+     parameter: $ => choice(
+@@ -651,6 +667,12 @@
+       $.class_type_definition,
+       $.floating_attribute,
+       $._item_extension,
++      $.quotation,
++      $.term_quotation,
++      $.cppo_directive,
++      $._camlp4_any_directive,
++      $.opa_directive,
++      $.opa_quotation,
+     ),
+ 
+     value_specification: $ => seq(
+@@ -690,6 +712,8 @@
+       $.functor_type,
+       $.parenthesized_module_type,
+       $._extension,
++      $.quotation,
++      $.term_quotation,
+     ),
+ 
+     signature: $ => seq(
+@@ -1077,6 +1101,8 @@
+       alias($._labeled_tuple_type, $.tuple_type),
+       $.function_type,
+       $.aliased_type,
++      $.quotation,
++      $.term_quotation,
+     ),
+ 
+     function_type: $ => prec.dynamic(1, prec.right(seq(
+@@ -1281,6 +1307,9 @@
+       $.hole_expression,
+       $.ocamlyacc_value,
+       $._extension,
++      $.quotation,
++      $.term_quotation,
++      $.opa_quotation,
+     ),
+ 
+     _non_function_expression: $ => choice(
+@@ -1304,6 +1333,7 @@
+       $.borrow_expression,
+       $.local_expression,
+       $.exclave_expression,
++      $.camlp4_conditional,
+     ),
+ 
+     _inline_expression: $ => choice(
+@@ -1649,9 +1679,32 @@
+       $._match_cases,
+     ),
+ 
++    // cppo directives may appear anywhere between `|` markers:
++    // `function | A -> a #ifdef X | B -> b`. They are folded into the
++    // separators; a trailing directive after the last case falls back to
++    // structure/signature position. camlp4 `#<...>` markers are excluded:
++    // a `#<Else>` here would steal the arm separator of an enclosing
++    // camlp4_conditional.
+     _match_cases: $ => prec.right(seq(
+-      optional('|'),
+-      sep1('|', $.match_case),
++      optional(seq(
++        repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
++        optional('|'),
++        repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
++      )),
++      $.match_case,
++      repeat(choice(
++        seq(
++          repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
++          '|',
++          repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
++          $.match_case,
++        ),
++        // `| #endif`-style directive lines: the `|` folds into the
++        // directive, so the next `|` still separates the following
++        // case (`| `A -> 1 | #endif | `B -> 2`).
++        seq('|', repeat1(alias($.cppo_directive_no_arrow, $.cppo_directive))),
++      )),
++      repeat(alias($.cppo_directive_no_arrow, $.cppo_directive)),
+     )),
+ 
+     match_case: $ => seq(
+@@ -1827,6 +1880,8 @@
+       $.package_pattern,
+       $.any_pattern,
+       $._extension,
++      $.quotation,
++      $.term_quotation,
+     ),
+ 
+     _effect_pattern: $ => choice(
+@@ -1869,6 +1924,8 @@
+       $.package_pattern,
+       $.any_pattern,
+       $._extension,
++      $.quotation,
++      $.term_quotation,
+     ),
+ 
+     _effect_binding_pattern: $ => choice(
+@@ -2612,7 +2669,94 @@
+     _label: $ => seq(choice('~', '?'), $._label_name),
+     _tuple_label: $ => seq('~', $._label_name),
+     directive: $ => seq(/#/, choice($._lowercase_identifier, $._uppercase_identifier)),
++
++    // cppo-style preprocessor directives (`#define`, `#include`, `#if`, ...).
++    // `cppo_directive`, `cppo_directive_no_arrow` and `opa_directive` are
++    // external tokens (common/scanner.h): they claim `#`/`##` at column 0
++    // or right after skipped whitespace, so `| #ifdef FEATURE` inside a
++    // match works while a `#`/`##` butted against a token (`o#error x`,
++    // `o##name`) stays a method call / hash operator. A `->` inside a
++    // quoted argument does not count, and a `)` that would close an
++    // enclosing pair ends the token, so a directive inside parentheses
++    // (`o #define (fun y -> y))`) keeps the parens balanced. The
++    // no-arrow variant additionally refuses lines whose pre-`->` text is
++    // ` as <ident>` or empty — the shape of a `| `#name as v -> ...`
++    // polymorphic-variant arm — for every `#name`, while other
++    // arrow-bearing lines (`#define g (fun x -> x)` between arms) still
++    // claim as directive text.
++    //
++    // cppo directive names: define, include, if, ifdef, ifndef, elif,
++    // else, endif, undef, error, warning, pragma, line, ext, endext,
++    // stop, localization. `\<newline>` continues a directive onto the
++    // next line; the accepted casualty is a `->`-bearing `#define`
++    // placed between match arms.
++
++    // camlp4 directives `#<If:TESTING>`, `#<Else>`, `#<End>`. `#<` can never
++    // begin a method call, so these are also valid inside expressions.
++    camlp4_directive: $ => token(seq('#', /<[A-Za-z]+[^>\n]*>/)),
++
++    // `#<End>` gets its own token so a conditional unambiguously ends
++    // there; without it `#<End> let x = ...` could be read as a further
++    // `#<End>` arm holding a `let` expression (which then lacks `in`).
++    camlp4_end_directive: $ => token(prec(1, '#<End>')),
++
++    _camlp4_any_directive: $ => choice($.camlp4_directive, $.camlp4_end_directive),
++
++    // camlp4 conditional sections in expression position:
++    // `#<If:TESTING> expr #<Else> expr #<End>`. Each `#<...>` token is an
++    // opaque separator and each arm holds a (required) expression;
++    // `#<End>` closes the section. Requiring arm expressions keeps an
++    // `#<If>` arm whose body is itself a conditional unambiguous:
++    // `#<If:A> #<If:B> x #<End> #<Else> y #<End>`.
++    camlp4_conditional: $ => seq(
++      repeat1(seq(
++        $.camlp4_directive,
++        $._sequence_expression,
++      )),
++      $.camlp4_end_directive,
++    ),
++
++    // opa/qml preprocessor forms: `##name args` bypass directives and
++    // `#<< ... >>#` bypass quotations (opaque payloads, e.g. opalang).
++    // `##` must be followed by an identifier char so Js_of_ocaml-style
++    // `##.` / `##x.y` expressions can never lex as directives.
++    opa_quotation: $ => token(seq(
++      '#<<',
++      /(?:[^>]|>[^>]|>>[^#])*/,
++      '>>#',
++      optional(';'),
++    )),
+     tag: $ => seq(/`/, choice($._lowercase_identifier, $._uppercase_identifier)),
++
++    // camlp5-style quotations: <:tag<...>> and `...` term quotations.
++    // Opaque to the grammar; nested quotations are allowed. A bare `<<` is
++    // deliberately not a quotation opener: `<<` is a legal custom infix
++    // operator in real OCaml (e.g. bap defines `( << )`).
++    quotation: $ => seq(
++      /<:[a-zA-Z_][a-zA-Z_0-9.:]*</,
++      repeat(choice(
++        $._quotation_content,
++        $.quotation,
++      )),
++      '>>',
++    ),
++
++    _quotation_content: $ => choice(
++      /[^<>]+/,
++      '<',
++      '>',
++    ),
++
++    // Backtick quotations (e.g. HOL Light terms). The first character must
++    // not start an identifier: `foo can only be a polymorphic-variant tag in
++    // real OCaml, so quotes beginning with an identifier are deliberately not
++    // covered (camlp5 preprocessing is a documented ceiling).
++    term_quotation: $ => token(seq(
++      '`',
++      /[^`\p{L}_'\\]/,
++      /[^`]*/,
++      '`',
++    )),
+     attribute_id: $ => sep1(/\./, choice(
+       reserved('attribute_id', $._lowercase_identifier),
+       $._uppercase_identifier,
+@@ -2627,6 +2771,9 @@
+     $.line_number_directive,
+     $._null,
+     $._error_sentinel,
++    $.cppo_directive,
++    $.cppo_directive_no_arrow,
++    $.opa_directive,
+   ],
+ });
+ 
+--- common/scanner.h	2006-07-24 01:21:28.000000000 +0000
++++ common/scanner.h	2026-11-19 08:25:33.753029601 +0000
+@@ -16,6 +16,9 @@
+   LINE_NUMBER_DIRECTIVE,
+   NULL_CHARACTER,
+   ERROR_SENTINEL,
++  CPPO_DIRECTIVE,
++  CPPO_DIRECTIVE_NO_ARROW,
++  OPA_DIRECTIVE,
+ };
+ 
+ typedef struct {
+@@ -369,6 +372,13 @@
+   return is_lowercase_ext(c) || (c >= 'A' && c <= 'Z');
+ }
+ 
++// Opa `##name` directive names are plain ASCII identifiers; the wider
++// OCaml identstart would claim `x ##été` (the `##` hash operator plus an
++// accented operand) as a directive.
++static inline bool is_ascii_identstart(const int32_t c) {
++  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
++}
++
+ static inline bool is_identchar(const int32_t c) {
+   return is_identstart(c) || (c >= '0' && c <= '9') || c == '\'';
+ }
+@@ -390,6 +400,362 @@
+   return false;
+ }
+ 
++static const char *CPPO_NAMES[] = {
++    "define", "include",  "if",     "ifdef", "ifndef", "elif",
++    "else",   "endif",    "undef",  "error", "warning", "pragma",
++    "line",   "ext",      "endext", "stop",  "localization",
++};
++
++// Matches the cppo name regex prefix: the directive name only needs to be
++// a prefix of the `#`-word (`#ifdefx` still claims `if` + tail `defx`,
++// mirroring the regex alternation). Returns the CPPO_NAMES index, or -1.
++static int scan_cppo_name(TSLexer *lexer) {
++  char word[64];
++  size_t n = 0;
++
++  while (lexer->lookahead >= 'a' && lexer->lookahead <= 'z') {
++    if (n + 1 < sizeof(word)) word[n++] = (char)lexer->lookahead;
++    advance(lexer);
++  }
++  word[n] = '\0';
++
++  if (n == 0) return -1;
++
++  for (size_t i = 0; i < sizeof(CPPO_NAMES) / sizeof(CPPO_NAMES[0]); i++) {
++    if (strncmp(word, CPPO_NAMES[i], strlen(CPPO_NAMES[i])) == 0) {
++      return (int)i;
++    }
++  }
++  return -1;
++}
++
++// Directive tail: consumes to end of line. `\<anything>` is a cppo
++// continuation/escape pair and `"..."` arguments are skipped so an
++// arrow inside a quoted argument (`#error "a -> b"`) does not read as
++// a match-arm arrow. `(`/`)` depth is tracked and a `)` that would
++// close an enclosing pair ends the token, so a directive claimed
++// inside parentheses (`o #define (fun y -> y))`) can never swallow
++// the caller's delimiters.
++//
++// `has_arrow` reports a literal `->` anywhere on the line (outside
++// strings). `arm_shape` reports whether the text before the first
++// `->` is empty or ` as <lowercase-ident>` — the shape of a
++// polymorphic-variant arm (`| `#name as v ->`), which is not a
++// directive even when the name collides with a cppo directive name
++// (`#stop`, `#warning`, `#defined`).
++static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
++                           bool section_name) {
++  char buf[256];
++  size_t n = 0;
++  size_t arrow_off = (size_t)-1;
++  int depth = 0;
++  bool in_str = false;
++  // Whether the tail skipped a string or char literal: a tail that is
++  // only literals and whitespace (`#include "cases.inc"`) is a
++  // directive argument, never an arm prefix.
++  bool saw_literal = false;
++
++  *has_arrow = false;
++  *arm_shape = false;
++  for (;;) {
++    int32_t c = lexer->lookahead;
++    if (in_str) {
++      // Strings may span newlines — keep scanning so the tail ends at
++      // the first line break *after* the closing quote. A `->` inside
++      // the literal (`when "a\n -> b"`) is then read as content, not
++      // an arm separator.
++      if (c == '\0' && eof(lexer)) break;
++      if (c == '\\') {
++        advance(lexer);
++        if (!eof(lexer)) advance(lexer);
++        continue;
++      }
++      if (c == '"') in_str = false;
++      advance(lexer);
++      continue;
++    }
++    if (c == '\n' || (c == '\0' && eof(lexer))) {
++      // A `->` on a later line still separates a multi-line arm (`| #name
++      // when g\n  -> e`): peek past the break for it. mark_end keeps
++      // the token's extent at the newline; the look-ahead chars are
++      // re-lexed for the next token. The peek is skipped when the tail
++      // can't be an arm prefix: conditional-section names with a bare
++      // or literal-only tail (`#endif`, `#include "x"`) are directives,
++      // while `when`/`as` tails stay arm-shaped for every name —
++      // including section names used as variant tags (`| #ifdef as e`).
++      size_t i = 0;
++      while (i < n && (buf[i] == ' ' || buf[i] == '\t')) i++;
++      // `when` and `as` arm prefixes — but `when = x` / `as = x` are
++      // cppo conditions over a macro named `when`/`as`, not a guard
++      // or an alias.
++      bool arm_prefix = false;
++      size_t j = i;
++      if (j + 4 <= n && buf[j] == 'w' && buf[j + 1] == 'h' &&
++          buf[j + 2] == 'e' && buf[j + 3] == 'n') {
++        j += 4;
++        while (j < n && (buf[j] == ' ' || buf[j] == '\t')) j++;
++        if (j < n && (buf[j] == '"' || buf[j] == '\'')) {
++          // A lone literal guard is never valid OCaml — `#define
++          // when "text"` defines a macro named `when`. A literal
++          // plus anything more (`when "ok" = x`) can be a guard.
++          j++;
++          while (j < n && (buf[j] == ' ' || buf[j] == '\t')) j++;
++          arm_prefix = j < n;
++        } else {
++          arm_prefix = j < n && buf[j] != '=';
++        }
++      } else if (j + 2 <= n && buf[j] == 'a' && buf[j + 1] == 's') {
++        j += 2;
++        while (j < n && (buf[j] == ' ' || buf[j] == '\t')) j++;
++        arm_prefix = j < n && buf[j] != '=' &&
++                     ((buf[j] >= 'a' && buf[j] <= 'z') || buf[j] == '_');
++      }
++      if (arm_prefix || (!section_name && !saw_literal)) {
++        lexer->mark_end(lexer);
++        while (lexer->lookahead == '\n' || lexer->lookahead == ' ' ||
++               lexer->lookahead == '\t' || lexer->lookahead == '\r') {
++          advance(lexer);
++        }
++        if (lexer->lookahead == '-') {
++          advance(lexer);
++          if (lexer->lookahead == '>') *has_arrow = true;
++        }
++      }
++      break;
++    }
++    if (c == '"') {
++      in_str = true;
++      // Only literals in the arm prefix count — a string in the body
++      // (`| #error -> "boom"`) must not disqualify the arm. Keep a
++      // `"` placeholder in the buffer so `when "ok" = x` still reads
++      // as a guard, not a `when =` cppo condition.
++      if (arrow_off == (size_t)-1) saw_literal = true;
++      if (n + 1 < sizeof(buf)) buf[n++] = '"';
++      advance(lexer);
++      continue;
++    }
++    if (c == '\'') {
++      // A `'` straight after an identifier char is a name apostrophe
++      // (`ADD'(x)`, `e'->`), not a char literal — keep it in the
++      // prefix and let the next chars be analyzed normally.
++      if (n > 0 && (buf[n - 1] == '_' || buf[n - 1] == '\'' ||
++                    (buf[n - 1] >= 'a' && buf[n - 1] <= 'z') ||
++                    (buf[n - 1] >= 'A' && buf[n - 1] <= 'Z') ||
++                    (buf[n - 1] >= '0' && buf[n - 1] <= '9'))) {
++        if (n + 1 < sizeof(buf)) buf[n++] = '\'';
++        advance(lexer);
++        continue;
++      }
++      // Otherwise a possible char literal (`')'`, `'\n'`): its
++      // contents must not count toward paren depth or arrows. As
++      // above, only a literal in the prefix counts; keep a `'`
++      // placeholder in the buffer for the same reason.
++      if (arrow_off == (size_t)-1) saw_literal = true;
++      if (n + 1 < sizeof(buf)) buf[n++] = '\'';
++      advance(lexer);
++      if (lexer->lookahead == '\\') {
++        advance(lexer);
++        if (!eof(lexer)) advance(lexer);
++        if (lexer->lookahead == '\'') advance(lexer);
++        continue;
++      }
++      if (lexer->lookahead != '\'' && lexer->lookahead != '\n' &&
++          !eof(lexer)) {
++        advance(lexer);
++        if (lexer->lookahead == '\'') advance(lexer);
++        continue;
++      }
++      continue;
++    }
++    if (c == '\\') {
++      advance(lexer);
++      if (!eof(lexer)) advance(lexer);
++      continue;
++    }
++    if (c == '{') {
++      // `{|...|}` / `{delim|...|delim}` raw strings: a `"` inside is
++      // literal content, not a string opener — without this an odd
++      // number of quotes in the raw text leaves the scanner inside a
++      // phantom string that swallows the rest of the line (or file).
++      char delim[32];
++      size_t dn = 0;
++      advance(lexer);
++      // The delimiter's first char must be a lowercase letter or '_'
++      // (digits come later, per OCaml's lowercase-identchar rule).
++      if ((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
++          lexer->lookahead == '_') {
++        delim[dn++] = (char)lexer->lookahead;
++        advance(lexer);
++        while (((lexer->lookahead >= 'a' && lexer->lookahead <= 'z') ||
++                (lexer->lookahead >= '0' && lexer->lookahead <= '9') ||
++                lexer->lookahead == '_' || lexer->lookahead == '\'') &&
++               dn + 1 < sizeof(delim)) {
++          delim[dn++] = (char)lexer->lookahead;
++          advance(lexer);
++        }
++      }
++      if (lexer->lookahead == '|') {
++        delim[dn] = '\0';
++        advance(lexer);
++        // Raw strings may span newlines (and `\`-escaped line
++        // continuations); only EOF without a closer ends the skip —
++        // anything else would split a legitimate multiline raw string.
++        bool closed = false;
++        for (;;) {
++          if (lexer->lookahead == '\0' && eof(lexer)) break;
++          if (lexer->lookahead == '|') {
++            advance(lexer);
++            size_t k = 0;
++            while (k < dn && lexer->lookahead == delim[k]) {
++              advance(lexer);
++              k++;
++            }
++            if (k == dn && lexer->lookahead == '}') {
++              advance(lexer);
++              closed = true;
++              break;
++            }
++            continue;
++          }
++          advance(lexer);
++        }
++        if (closed) {
++          if (arrow_off == (size_t)-1) saw_literal = true;
++          if (n + 1 < sizeof(buf)) buf[n++] = '"';
++        } else if (n + 1 + dn < sizeof(buf)) {
++          buf[n++] = '{';
++          for (size_t k = 0; k < dn; k++) buf[n++] = delim[k];
++        }
++        continue;
++      }
++      // Not a raw string — keep the `{` and any consumed identifier
++      // text in the tail buffer.
++      if (n + 1 + dn < sizeof(buf)) {
++        buf[n++] = '{';
++        for (size_t k = 0; k < dn; k++) buf[n++] = delim[k];
++      }
++      continue;
++    }
++    if (c == '(') {
++      advance(lexer);
++      if (lexer->lookahead == '*') {
++        // `(*` starts a nested comment — its text (including `{x1|`-like
++        // fragments) is not code, so raw-string openers inside comments
++        // can never fire.
++        advance(lexer);
++        int comment_depth = 1;
++        while (comment_depth > 0) {
++          if (lexer->lookahead == '\0' && eof(lexer)) break;
++          // OCaml comment lexing tracks strings: `(* "(*" *)` is one
++          // comment (the `(*` inside the literal does not nest) and
++          // `(* "*)" *)` is too (the `*)` inside cannot close it).
++          if (lexer->lookahead == '"') {
++            advance(lexer);
++            scan_string(lexer);
++            continue;
++          }
++          if (lexer->lookahead == '(') {
++            advance(lexer);
++            if (lexer->lookahead == '*') {
++              advance(lexer);
++              comment_depth++;
++            }
++            continue;
++          }
++          if (lexer->lookahead == '*') {
++            advance(lexer);
++            if (lexer->lookahead == ')') {
++              advance(lexer);
++              comment_depth--;
++            }
++            continue;
++          }
++          advance(lexer);
++        }
++        continue;
++      }
++      depth++;
++      if (n + 1 < sizeof(buf)) buf[n++] = '(';
++      continue;
++    }
++    if (c == ')') {
++      if (depth == 0) break;
++      depth--;
++    }
++    if (n + 1 < sizeof(buf)) buf[n++] = (char)c;
++    advance(lexer);
++    // Only a `->` at depth 0 can separate an arm pattern from its
++    // body; arrows inside parens (`#define f (x -> y)`) can't.
++    if (c == '-' && lexer->lookahead == '>' && depth == 0 &&
++        arrow_off == (size_t)-1) {
++      arrow_off = n - 1;
++    }
++  }
++
++  if (arrow_off != (size_t)-1) *has_arrow = true;
++  if (!*has_arrow) return;
++  buf[n] = '\0';
++  const char *p = buf;
++  // With no depth-0 arrow on the line, the whole tail is the
++  // would-be arm's pattern/guard prefix — the `->` was only found
++  // by the next-line peek.
++  const char *end = arrow_off != (size_t)-1 ? buf + arrow_off : buf + n;
++  while (p < end && (*p == ' ' || *p == '\t')) p++;
++  if (p == end && !saw_literal) {
++    *arm_shape = true;  // `| `#name ->` — bare variant tag
++    return;
++  }
++  if (end - p >= 5 && p[0] == 'w' && p[1] == 'h' && p[2] == 'e' &&
++      p[3] == 'n' && (p[4] == ' ' || p[4] == '\t')) {
++    const char *q = p + 4;
++    while (q < end && (*q == ' ' || *q == '\t')) q++;
++    if (q < end && (*q == '"' || *q == '\'')) {
++      // `when <literal>` alone is never a guard — a directive's
++      // argument list (`#define when "x"`); `when <literal> <more>`
++      // can be (`when "ok" = x`).
++      q++;
++      while (q < end && (*q == ' ' || *q == '\t')) q++;
++      if (q < end) {
++        *arm_shape = true;  // `| `#name when "s" = x ->` — guarded arm
++      }
++      return;
++    }
++    // `#if when = x` is a cppo condition over a macro named `when`,
++    // not a pattern guard — `when` needs a real guard expression.
++    if (q < end && *q != '=') {
++      *arm_shape = true;  // `| `#name when g ->` — guarded arm
++    }
++    return;
++  }
++  if (end - p < 4 || p[0] != 'a' || p[1] != 's' ||
++      (p[2] != ' ' && p[2] != '\t')) {
++    return;
++  }
++  p += 2;
++  while (p < end && (*p == ' ' || *p == '\t')) p++;
++  if (p >= end ||
++      !((*p >= 'a' && *p <= 'z') || *p == '_')) {
++    return;  // `as` binds a lowercase value name
++  }
++  p++;
++  while (p < end && (*p == '_' || *p == '\'' ||
++                     (*p >= 'a' && *p <= 'z') ||
++                     (*p >= 'A' && *p <= 'Z') ||
++                     (*p >= '0' && *p <= '9'))) {
++    p++;
++  }
++  while (p < end && (*p == ' ' || *p == '\t')) p++;
++  if (p == end) {
++    *arm_shape = true;  // `| `#name as v ->` — aliased variant tag
++    return;
++  }
++  // `as v` may be followed by a `when` guard (`| `#n as v when g ->`).
++  if (end - p >= 4 && p[0] == 'w' && p[1] == 'h' && p[2] == 'e' &&
++      p[3] == 'n' && (p + 4 == end || p[4] == ' ' || p[4] == '\t')) {
++    *arm_shape = true;
++  }
++}
++
+ static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
+   int32_t last = 0;
+ 
+@@ -521,7 +887,9 @@
+     return true;
+   }
+ 
++  bool skipped_ws = false;
+   while (iswspace(lexer->lookahead)) {
++    skipped_ws = true;
+     skip(lexer);
+   }
+ 
+@@ -533,39 +901,98 @@
+     return true;
+   }
+ 
+-  if (!scanner->in_string && valid_symbols[LINE_NUMBER_DIRECTIVE] &&
+-      lexer->lookahead == '#' && lexer->get_column(lexer) == 0) {
+-    advance(lexer);
+-
+-    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
++  // Unified `#` dispatch: cppo/opa directives and the `# N "file"`
++  // line directive share one `#` consumption. A `#` reached only at a
++  // line start or after whitespace (`| #ifdef`, `  ##name`) can be a
++  // directive; a `#` butted against the previous token (`o#error x`,
++  // `o##name`) is a `#`/`##` method call or hash operator and never
++  // lexes as a directive.
++  if (!scanner->in_string && lexer->lookahead == '#' &&
++      (skipped_ws || lexer->get_column(lexer) == 0)) {
++    bool hash_col0 = lexer->get_column(lexer) == 0;
++    advance(lexer);
++
++    // Pick the candidate by the character right after `#` so a failed
++    // match never leaves the lexer mid-token for another branch:
++    //   `##name`  -> opa directive
++    //   `# N "f"` -> line marker (column 0 only)
++    //   `#name`   -> cppo directive
++    if (valid_symbols[OPA_DIRECTIVE] && lexer->lookahead == '#') {
+       advance(lexer);
++      if (!is_ascii_identstart(lexer->lookahead)) return false;
++      while (lexer->lookahead != '\n' && !eof(lexer)) advance(lexer);
++      lexer->result_symbol = OPA_DIRECTIVE;
++      return true;
+     }
+ 
+-    if (!iswdigit(lexer->lookahead)) return false;
+-    while (iswdigit(lexer->lookahead)) advance(lexer);
++    if (hash_col0 && valid_symbols[LINE_NUMBER_DIRECTIVE] &&
++        (iswdigit(lexer->lookahead) || lexer->lookahead == ' ' ||
++         lexer->lookahead == '\t')) {
++      while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
++        advance(lexer);
++      }
+ 
+-    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+-      advance(lexer);
+-    }
++      if (!iswdigit(lexer->lookahead)) return false;
++      while (iswdigit(lexer->lookahead)) advance(lexer);
+ 
+-    if (lexer->lookahead != '"') return false;
+-    advance(lexer);
++      while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
++        advance(lexer);
++      }
+ 
+-    while (lexer->lookahead != '\n' && lexer->lookahead != '\r' &&
+-           lexer->lookahead != '"' && !eof(lexer)) {
++      if (lexer->lookahead != '"') return false;
+       advance(lexer);
+-    }
+ 
+-    if (lexer->lookahead != '"') return false;
+-    advance(lexer);
++      while (lexer->lookahead != '\n' && lexer->lookahead != '\r' &&
++             lexer->lookahead != '"' && !eof(lexer)) {
++        advance(lexer);
++      }
+ 
+-    while (lexer->lookahead != '\n' && lexer->lookahead != '\r' &&
+-           !eof(lexer)) {
++      if (lexer->lookahead != '"') return false;
+       advance(lexer);
++
++      while (lexer->lookahead != '\n' && lexer->lookahead != '\r' &&
++             !eof(lexer)) {
++        advance(lexer);
++      }
++
++      lexer->result_symbol = LINE_NUMBER_DIRECTIVE;
++      return true;
+     }
+ 
+-    lexer->result_symbol = LINE_NUMBER_DIRECTIVE;
+-    return true;
++    if ((valid_symbols[CPPO_DIRECTIVE] ||
++         valid_symbols[CPPO_DIRECTIVE_NO_ARROW])) {
++      int cppo_idx = scan_cppo_name(lexer);
++      if (cppo_idx < 0) return false;
++      // `if`/`ifdef`/`ifndef`/`elif`/`else`/`endif` are conditional-
++      // section names — never polymorphic-variant arm patterns, so
++      // their tails skip the next-line arrow peek.
++      bool section_name = cppo_idx >= 2 && cppo_idx <= 7;
++      bool has_arrow = false;
++      bool arm_shape = false;
++      scan_cppo_tail(lexer, &has_arrow, &arm_shape, section_name);
++      if (!has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
++        lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
++        return true;
++      }
++      // `| `#name as v -> ...` is a polymorphic-variant arm, not a
++      // directive: when the tail before `->` is only ` as <ident>` or
++      // nothing, the line is an arm whichever name it uses (`#error`,
++      // `#warning`, `#stop`, ...). Any other arrow-bearing name at a
++      // match position (`#define g (fun x -> x)` between arms) is
++      // directive text — emit the no-arrow token so the match stays
++      // open.
++      if (has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
++        if (arm_shape) return false;
++        lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
++        return true;
++      }
++      if (valid_symbols[CPPO_DIRECTIVE]) {
++        lexer->result_symbol = CPPO_DIRECTIVE;
++        return true;
++      }
++      return false;
++    }
++    return false;
+   }
+ 
+   if (!scanner->in_string && valid_symbols[COMMENT] &&
