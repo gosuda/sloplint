@@ -13,6 +13,8 @@ mod funcs;
 mod imports;
 mod stmts;
 
+pub(crate) use funcs::{go_is_deprecated, go_is_test_file};
+
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_declaration", Role::Function),
     ("method_declaration", Role::Function),

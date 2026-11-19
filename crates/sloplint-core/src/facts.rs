@@ -379,7 +379,7 @@ fn import_targets(facts: &FileFacts<'_>) -> Vec<Box<str>> {
         if module.is_empty() {
             continue;
         }
-        if facts.lang == Lang::Go && is_single_segment(module) {
+        if matches!(facts.lang, Lang::Go | Lang::Logos) && is_single_segment(module) {
             continue;
         }
         targets.push(Box::<str>::from(module));
@@ -476,7 +476,7 @@ fn legacy_package_key(lang: Lang, path: &str) -> String {
             }
             String::new()
         }
-        Lang::Go => match path.rfind('/') {
+        Lang::Go | Lang::Logos => match path.rfind('/') {
             Some(i) => path[..i].to_string(),
             None => String::new(),
         },

@@ -1,0 +1,2 @@
+a.lgo:2 info complexity/nesting-depth
+const_forms.lgo:3 info complexity/nesting-depth
