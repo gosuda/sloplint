@@ -152,6 +152,18 @@ fn raw_ident_tags_stay_tags() {
     run_clean("let (`\\#let \\#rec) = x\n");
 }
 
+// Two raw variant arms give the lexer a real competing term_quotation span:
+// if `\# ever opened a quote, `\#one -> ... `\#two would collapse into one
+// quotation and the match arms would disappear.
+#[test]
+fn raw_ident_variant_arms_stay_tags() {
+    run_clean(concat!(
+        "let f v = match v with\n",
+        "  | `\\#one -> 1\n",
+        "  | `\\#two -> 2\n",
+    ));
+}
+
 // --- Controls: still invalid ---------------------------------------------------
 
 #[test]
