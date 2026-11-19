@@ -1,0 +1,72 @@
+========================================
+dot-prefixed selectors from class dumps
+========================================
+
+@interface B
+- (void).cxx_destruct;
+@end
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    (method_declaration
+      (method_type
+        (type_name
+          (primitive_type)))
+      (identifier))))
+
+========================================
+anonymous enum and forward struct in ivars
+========================================
+
+@interface C {
+    enum { kMax = 100, };
+    NSMutableArray* _j;
+    struct _opaque_pthread_rwlock_t;
+}
+@end
+---
+
+(translation_unit
+  (class_interface
+    (identifier)
+    (instance_variables
+      (instance_variable
+        (enum_specifier
+          body: (enumerator_list
+            (enumerator
+              name: (identifier)
+              value: (number_literal)))))
+      (instance_variable
+        (struct_declaration
+          (type_identifier)
+          (struct_declarator
+            (pointer_declarator
+              declarator: (identifier)))))
+      (instance_variable
+        (struct_specifier
+          name: (type_identifier))))))
+
+========================================
+macro attribute between declarator and =
+========================================
+
+void f(){
+    SEL selector __unused = 0;
+}
+---
+
+(translation_unit
+  (function_definition
+    type: (primitive_type)
+    declarator: (function_declarator
+      declarator: (identifier)
+      parameters: (parameter_list))
+    body: (compound_statement
+      (declaration
+        type: (typedefed_specifier)
+        declarator: (init_declarator
+          declarator: (identifier)
+          (macro_attribute)
+          value: (number_literal))))))

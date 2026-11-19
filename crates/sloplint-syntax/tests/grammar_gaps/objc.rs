@@ -491,3 +491,42 @@ fn macro_arg_block_literal_and_selector_parses() {
     ));
     assert_eq!(function_names(&analysis), ["f"]);
 }
+
+/// Class-dumped headers declare clang's synthesized `.cxx_destruct`
+/// selector — its name literally starts with a dot. xvim's XcodeClasses
+/// headers carry one per class.
+#[test]
+fn dot_prefixed_method_selector_parses() {
+    run_clean(concat!(
+        "@interface B\n",
+        "- (void).cxx_destruct;\n",
+        "+ (void)shared;\n",
+        "@end\n",
+    ));
+}
+
+/// Anonymous enums and forward struct declarations inside `@interface`
+/// ivar braces have no declarator for `struct_declaration` to claim.
+#[test]
+fn ivar_block_accepts_anonymous_enum_and_forward_struct() {
+    run_clean(concat!(
+        "@interface C {\n",
+        "    enum { kMax = 100, };\n",
+        "    NSMutableArray* _j;\n",
+        "    struct _opaque_pthread_rwlock_t;\n",
+        "}\n",
+        "@end\n",
+    ));
+}
+
+/// `SEL selector __unused = 0;` — a `macro_attribute` between the
+/// declarator and `=` rides init_declarator's modifier repeat, the same
+/// shape the C grammar accepts (xvim's Logger.m).
+#[test]
+fn init_declarator_with_trailing_macro_attribute_parses() {
+    run_clean(concat!(
+        "void f(){\n",
+        "  SEL selector __unused = 0;\n",
+        "}\n",
+    ));
+}
