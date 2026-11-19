@@ -683,4 +683,49 @@ fn bare_variant_arm_with_nextline_arrow_stays_arm() {
         "    -> handle ()\n",
         "let g = 2\n",
     ));
+    // `when`/`as` tails stay arm-shaped for EVERY name — a section name
+    // used as a variant tag (`| #ifdef as e`) is still an arm.
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "  | #ifdef as e\n",
+        "    -> use e\n",
+        "let g = 2\n",
+    ));
+}
+
+// A directive whose tail is only a quoted argument (`#include
+// "cases.inc"`, `#warning "a -> b"`) is never an arm — the skipped
+// string must not read as an empty arm prefix.
+#[test]
+fn quoted_directive_before_enclosing_arrow_stays_directive() {
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    for line in ["#include \"cases.inc\"", "#warning \"a -> b\""] {
+        let source = format!(
+            concat!(
+                "let f = function\n",
+                "  | A when match y with\n",
+                "           | B -> true\n",
+                "           {}\n",
+                "      -> outer\n",
+                "  | C -> c\n",
+                "let g = 2\n",
+            ),
+            line
+        );
+        let tree = parser.parse(&source, None).expect("parser returns a tree");
+        let sexp = tree.root_node().to_sexp();
+        assert!(
+            !tree.root_node().has_error() && !sexp.contains("MISSING"),
+            "{line} before the enclosing arrow must parse clean, sexp: {sexp}"
+        );
+        assert!(
+            sexp.contains("cppo_directive"),
+            "{line} must lex as a cppo directive, sexp: {sexp}"
+        );
+    }
 }

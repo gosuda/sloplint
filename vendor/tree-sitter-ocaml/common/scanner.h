@@ -450,6 +450,10 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
   size_t arrow_off = (size_t)-1;
   int depth = 0;
   bool in_str = false;
+  // Whether the tail skipped a string or char literal: a tail that is
+  // only literals and whitespace (`#include "cases.inc"`) is a
+  // directive argument, never an arm prefix.
+  bool saw_literal = false;
 
   *has_arrow = false;
   *arm_shape = false;
@@ -459,10 +463,20 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
       // A `->` on a later line still separates a multi-line arm (`| #name
       // when g\n  -> e`): peek past the break for it. mark_end keeps
       // the token's extent at the newline; the look-ahead chars are
-      // re-lexed for the next token. Conditional-section names
-      // (`#if`..`#endif`) are never arm patterns, so a bare `#endif`
-      // must not claim the enclosing arm's arrow.
-      if (!section_name) {
+      // re-lexed for the next token. The peek is skipped when the tail
+      // can't be an arm prefix: conditional-section names with a bare
+      // or literal-only tail (`#endif`, `#include "x"`) are directives,
+      // while `when`/`as` tails stay arm-shaped for every name —
+      // including section names used as variant tags (`| #ifdef as e`).
+      size_t i = 0;
+      while (i < n && (buf[i] == ' ' || buf[i] == '\t')) i++;
+      bool arm_prefix =
+          (i + 5 <= n && buf[i] == 'w' && buf[i + 1] == 'h' &&
+           buf[i + 2] == 'e' && buf[i + 3] == 'n' &&
+           (buf[i + 4] == ' ' || buf[i + 4] == '\t')) ||
+          (i + 3 <= n && buf[i] == 'a' && buf[i + 1] == 's' &&
+           (buf[i + 2] == ' ' || buf[i + 2] == '\t'));
+      if (arm_prefix || (!section_name && !saw_literal)) {
         lexer->mark_end(lexer);
         while (lexer->lookahead == '\n' || lexer->lookahead == ' ' ||
                lexer->lookahead == '\t' || lexer->lookahead == '\r') {
@@ -487,6 +501,7 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
     }
     if (c == '"') {
       in_str = true;
+      saw_literal = true;
       advance(lexer);
       continue;
     }
@@ -504,6 +519,7 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
       }
       // Otherwise a possible char literal (`')'`, `'\n'`): its
       // contents must not count toward paren depth or arrows.
+      saw_literal = true;
       advance(lexer);
       if (lexer->lookahead == '\\') {
         advance(lexer);
@@ -548,7 +564,7 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow, bool *arm_shape,
   // by the next-line peek.
   const char *end = arrow_off != (size_t)-1 ? buf + arrow_off : buf + n;
   while (p < end && (*p == ' ' || *p == '\t')) p++;
-  if (p == end) {
+  if (p == end && !saw_literal) {
     *arm_shape = true;  // `| `#name ->` — bare variant tag
     return;
   }
