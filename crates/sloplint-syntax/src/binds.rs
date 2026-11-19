@@ -102,7 +102,11 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     fn write_or_declare(&mut self, name: &'s str, pos: Pos, parent: usize) -> bool {
-        let binds_scoped = self.hooks.block_scoped_binds();
+        // `block_scoped_decls`, not `block_scoped_binds`: scope ids are
+        // meaningful whenever decls end with their block, even for languages
+        // (JS/TS `var`, C-family) whose writes bind function-wide. A new decl
+        // in a different scope must not reuse an existing binding.
+        let binds_scoped = self.hooks.block_scoped_decls();
         let existing = self
             .fn_stack
             .last()

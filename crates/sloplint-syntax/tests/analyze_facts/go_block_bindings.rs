@@ -52,12 +52,7 @@ fn logos_labeled_short_declaration_ends_with_the_block() {
         .iter()
         .filter(|b| b.name == "x")
         .collect();
-    assert_eq!(
-        found.len(),
-        1,
-        "one binding: {:?}",
-        analysis.facts.bindings
-    );
+    assert_eq!(found.len(), 1, "one binding: {:?}", analysis.facts.bindings);
     assert_eq!(
         found[0].end_line, 9,
         "scope ends at the block: {:?}",

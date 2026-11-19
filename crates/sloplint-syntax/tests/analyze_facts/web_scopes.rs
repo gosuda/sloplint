@@ -201,3 +201,25 @@ fn ts_outer_const_survives_a_closed_inner_let_scope() {
         );
     });
 }
+
+#[test]
+fn js_static_block_var_does_not_reuse_an_outer_const() {
+    let source = "function f() {\nconst x = 0;\nclass C {\nstatic {\nvar x = 1;\nx = 2;\nx = 3;\n}\n}\nx = 4;\n}\n";
+    with_js(source, |found| {
+        assert_eq!(
+            found.len(),
+            2,
+            "outer const plus static-block var: {found:?}"
+        );
+        let outer = named(found, "x");
+        let block = found
+            .iter()
+            .find(|binding| binding.pos.line == 5)
+            .unwrap_or_else(|| panic!("no var binding at line 5 in {found:?}"));
+        assert_eq!(
+            (outer.write_lines, block.write_lines),
+            (1, 2),
+            "writes split between the two variables: {found:?}"
+        );
+    });
+}
