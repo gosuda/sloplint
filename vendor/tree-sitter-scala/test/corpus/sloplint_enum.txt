@@ -1,0 +1,102 @@
+================================================================================
+`enum` as a parameter name, named argument, operand, var, and real enum keyword
+================================================================================
+
+def f(enum: Int): Int = enum
+trait T { def g(enum: E): Unit }
+enum Foo { case A, B }
+val m = Map(enum = 1)
+val n = 1 +
+  enum
+var enum = 0
+val r = x --?
+
+enum = 1
+val s = y --?
+enum Bar { case C }
+def enum(x: Int) = x
+val c = (1 +
+  enum(2))
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    name: (identifier)
+    parameters: (parameters
+      (parameter
+        name: (identifier)
+        type: (type_identifier)))
+    return_type: (type_identifier)
+    body: (identifier))
+  (trait_definition
+    name: (identifier)
+    body: (template_body
+      (function_declaration
+        name: (identifier)
+        parameters: (parameters
+          (parameter
+            name: (identifier)
+            type: (type_identifier)))
+        return_type: (type_identifier))))
+  (enum_definition
+    name: (identifier)
+    body: (enum_body
+      (enum_case_definitions
+        (simple_enum_case
+          name: (identifier))
+        (simple_enum_case
+          name: (identifier)))))
+  (val_definition
+    pattern: (identifier)
+    value: (call_expression
+      function: (identifier)
+      arguments: (arguments
+        (assignment_expression
+          left: (identifier)
+          right: (integer_literal)))))
+  (val_definition
+    pattern: (identifier)
+    value: (infix_expression
+      left: (integer_literal)
+      operator: (operator_identifier)
+      right: (identifier)))
+  (var_definition
+    pattern: (identifier)
+    value: (integer_literal))
+  (val_definition
+    pattern: (identifier)
+    value: (postfix_expression
+      (identifier)
+      (operator_identifier)))
+  (assignment_expression
+    left: (identifier)
+    right: (integer_literal))
+  (val_definition
+    pattern: (identifier)
+    value: (postfix_expression
+      (identifier)
+      (operator_identifier)))
+  (enum_definition
+    name: (identifier)
+    body: (enum_body
+      (enum_case_definitions
+        (simple_enum_case
+          name: (identifier)))))
+  (function_definition
+    name: (identifier)
+    parameters: (parameters
+      (parameter
+        name: (identifier)
+        type: (type_identifier)))
+    body: (identifier))
+  (val_definition
+    pattern: (identifier)
+    value: (parenthesized_expression
+      (infix_expression
+        left: (integer_literal)
+        operator: (operator_identifier)
+        right: (call_expression
+          function: (identifier)
+          arguments: (arguments
+            (integer_literal)))))))

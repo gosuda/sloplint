@@ -404,3 +404,43 @@ fn an_attribute_list_may_precede_a_function_statement() {
     run_clean("[Alias('x')] function f { }\n");
     run_clean("[OutputType([int])]\nfunction g { $true }\n");
 }
+
+#[test]
+fn a_variable_word_may_trail_non_member_dots() {
+    // Argument mode: `$EndDate...` and `$v..$w` are one expandable word;
+    // `$v.foo` stays member access (powershell-scripts report files).
+    run_clean(
+        "Write-Host `nRetrieving events from $StartDate to $EndDate...\n\
+        Write-Host $v..$w\n\
+        $y = $v.foo\n",
+    );
+
+    // Same competition inside command arguments: a `.` followed by an
+    // identifier char must still open a member name, not a word.
+    let language: tree_sitter::Language = tree_sitter_powershell::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("powershell language loads");
+    let tree = parser
+        .parse("Write-Output $v.foo\n", None)
+        .expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        !tree.root_node().has_error() && sexp.contains("member_access"),
+        "argument $v.foo must stay member access, sexp: {sexp}"
+    );
+    assert!(
+        !sexp.contains("generic_token"),
+        "argument $v.foo must not flatten into a word, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn an_argument_word_may_start_with_a_quoted_segment() {
+    // "a"`n"b" is one expandable argument word in command position.
+    run_clean(
+        "Write-Progress -Activity \"`n text $CurrentEnd..\"`n\" count: $ProcessedAuditCount\"\n",
+    );
+    run_clean("Write-Output \"a\"`n\"b\"\n");
+}
