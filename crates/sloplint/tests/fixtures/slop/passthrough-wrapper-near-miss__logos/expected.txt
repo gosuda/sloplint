@@ -1,3 +1,5 @@
 # Near-miss: TestMain in a test region never fires.
 # Near-miss: spreading a slice into a variadic callee is expansion, not forwarding.
 # Near-miss: swapped named arguments bind by name, not by position.
+# Swapping the named values still binds by name and must never read as a
+# deletable wrapper; the story stays here so no comment becomes fixture input.
