@@ -239,7 +239,7 @@
  });
  
 --- common/scanner.h	2006-07-24 01:21:28.000000000 +0000
-+++ common/scanner.h	2026-11-19 07:18:26.941995982 +0000
++++ common/scanner.h	2026-11-19 07:25:11.274669417 +0000
 @@ -16,6 +16,9 @@
    LINE_NUMBER_DIRECTIVE,
    NULL_CHARACTER,
@@ -264,7 +264,7 @@
  static inline bool is_identchar(const int32_t c) {
    return is_identstart(c) || (c >= '0' && c <= '9') || c == '\'';
  }
-@@ -390,6 +400,208 @@
+@@ -390,6 +400,227 @@
    return false;
  }
  
@@ -338,12 +338,22 @@
 +      // including section names used as variant tags (`| #ifdef as e`).
 +      size_t i = 0;
 +      while (i < n && (buf[i] == ' ' || buf[i] == '\t')) i++;
-+      bool arm_prefix =
-+          (i + 5 <= n && buf[i] == 'w' && buf[i + 1] == 'h' &&
-+           buf[i + 2] == 'e' && buf[i + 3] == 'n' &&
-+           (buf[i + 4] == ' ' || buf[i + 4] == '\t')) ||
-+          (i + 3 <= n && buf[i] == 'a' && buf[i + 1] == 's' &&
-+           (buf[i + 2] == ' ' || buf[i + 2] == '\t'));
++      // `when` and `as` arm prefixes — but `when = x` / `as = x` are
++      // cppo conditions over a macro named `when`/`as`, not a guard
++      // or an alias.
++      bool arm_prefix = false;
++      size_t j = i;
++      if (j + 4 <= n && buf[j] == 'w' && buf[j + 1] == 'h' &&
++          buf[j + 2] == 'e' && buf[j + 3] == 'n') {
++        j += 4;
++        while (j < n && (buf[j] == ' ' || buf[j] == '\t')) j++;
++        arm_prefix = j < n && buf[j] != '=';
++      } else if (j + 2 <= n && buf[j] == 'a' && buf[j + 1] == 's') {
++        j += 2;
++        while (j < n && (buf[j] == ' ' || buf[j] == '\t')) j++;
++        arm_prefix = j < n && buf[j] != '=' &&
++                     ((buf[j] >= 'a' && buf[j] <= 'z') || buf[j] == '_');
++      }
 +      if (arm_prefix || (!section_name && !saw_literal)) {
 +        lexer->mark_end(lexer);
 +        while (lexer->lookahead == '\n' || lexer->lookahead == ' ' ||
@@ -369,7 +379,9 @@
 +    }
 +    if (c == '"') {
 +      in_str = true;
-+      saw_literal = true;
++      // Only literals in the arm prefix count — a string in the body
++      // (`| #error -> "boom"`) must not disqualify the arm.
++      if (arrow_off == (size_t)-1) saw_literal = true;
 +      advance(lexer);
 +      continue;
 +    }
@@ -386,8 +398,9 @@
 +        continue;
 +      }
 +      // Otherwise a possible char literal (`')'`, `'\n'`): its
-+      // contents must not count toward paren depth or arrows.
-+      saw_literal = true;
++      // contents must not count toward paren depth or arrows. As
++      // above, only a literal in the prefix counts.
++      if (arrow_off == (size_t)-1) saw_literal = true;
 +      advance(lexer);
 +      if (lexer->lookahead == '\\') {
 +        advance(lexer);
@@ -438,7 +451,13 @@
 +  }
 +  if (end - p >= 5 && p[0] == 'w' && p[1] == 'h' && p[2] == 'e' &&
 +      p[3] == 'n' && (p[4] == ' ' || p[4] == '\t')) {
-+    *arm_shape = true;  // `| `#name when g ->` — guarded arm
++    const char *q = p + 4;
++    while (q < end && (*q == ' ' || *q == '\t')) q++;
++    // `#if when = x` is a cppo condition over a macro named `when`,
++    // not a pattern guard — `when` needs a real guard expression.
++    if (q < end && *q != '=') {
++      *arm_shape = true;  // `| `#name when g ->` — guarded arm
++    }
 +    return;
 +  }
 +  if (end - p < 4 || p[0] != 'a' || p[1] != 's' ||
@@ -473,7 +492,7 @@
  static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
    int32_t last = 0;
  
-@@ -521,7 +733,9 @@
+@@ -521,7 +752,9 @@
      return true;
    }
  
@@ -483,7 +502,7 @@
      skip(lexer);
    }
  
-@@ -533,39 +747,100 @@
+@@ -533,39 +766,100 @@
      return true;
    }
  

@@ -694,6 +694,48 @@ fn bare_variant_arm_with_nextline_arrow_stays_arm() {
     ));
 }
 
+// A literal in the arm BODY (`| #error -> "boom"`) must not count
+// toward the empty-prefix arm check — the arm stays an arm.
+#[test]
+fn variant_arm_with_literal_body_stays_arm() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "  | #error -> \"boom\"\n",
+        "let g = 2\n",
+    ));
+}
+
+// `#if when = 1` is a cppo condition over a macro named `when`, not a
+// pattern guard — it stays a directive before an enclosing arrow.
+#[test]
+fn cppo_condition_named_when_stays_directive() {
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    let source = concat!(
+        "let f = function\n",
+        "  | A when match y with\n",
+        "           | B -> true\n",
+        "           #if when = 1\n",
+        "      -> outer\n",
+        "  | C -> c\n",
+        "let g = 2\n",
+    );
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        !tree.root_node().has_error() && !sexp.contains("MISSING"),
+        "#if when = 1 must parse clean, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("cppo_directive"),
+        "#if when = 1 must lex as a cppo directive, sexp: {sexp}"
+    );
+}
+
 // A directive whose tail is only a quoted argument (`#include
 // "cases.inc"`, `#warning "a -> b"`) is never an arm — the skipped
 // string must not read as an empty arm prefix.
