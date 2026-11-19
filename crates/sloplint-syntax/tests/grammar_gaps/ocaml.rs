@@ -469,26 +469,89 @@ fn hash_other_names_variant_arms_stay_arms() {
 // method call on the previous arm's result.
 #[test]
 fn cppo_directive_quoted_arrow_between_arms_parses() {
-    run_clean(concat!(
+    let source = concat!(
         "let f = function\n",
         "  | `A -> 1\n",
         "#warning \"a -> b\"\n",
         "  | `B -> 2\n",
         "let g = 2\n",
-    ));
+    );
+    run_clean(source);
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        sexp.matches("(cppo_directive").count() == 1
+            && sexp.matches("(match_case").count() == 2
+            && sexp.find("(match_case") < sexp.find("(cppo_directive")
+            && sexp.find("(cppo_directive") < sexp.rfind("(match_case"),
+        "the warning must claim as a directive between the arms, sexp: {sexp}"
+    );
 }
 
-// A directive claimed inside parentheses ends before a `)` that closes
-// the enclosing pair, so `o #define (fun y -> y))` keeps its parens
-// balanced instead of letting the directive swallow them.
+// A directive claimed inside a parenthesized match ends before a `)`
+// that closes the enclosing pair, so `o #define (fun y -> y)` keeps
+// the parens balanced instead of letting the directive swallow them.
+// Inside the parens `#define` is a method call — the scanner only
+// claims where the match's trailing-directive slot applies.
 #[test]
 fn hash_directive_inside_parens_keeps_close_paren() {
-    run_clean(concat!(
+    let source = concat!(
         "let f x = match x with\n",
         "  | A -> (o #define (fun y -> y))\n",
         "  | B -> 1\n",
         "let g = 2\n",
+    );
+    run_clean(source);
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        sexp.contains("method_invocation"),
+        "`o #define` inside parens must parse as a method call, sexp: {sexp}"
+    );
+    // The match-position claim must not eat the enclosing `)`: a
+    // directive token emitted at arm end stops at depth 0.
+    let source2 = concat!(
+        "let f x = (match x with\n",
+        "  | A -> o #define g (fun y -> y)\n",
+        "  | B -> 1)\n",
+        "let h = 2\n",
+    );
+    let tree2 = parser.parse(source2, None).expect("parser returns a tree");
+    let sexp2 = tree2.root_node().to_sexp();
+    assert!(
+        !tree2.root_node().has_error() && !sexp2.contains("MISSING"),
+        "directive at arm end inside parens must not swallow `)`, sexp: {sexp2}"
+    );
+}
+
+// `#name` arms with `when` guards are still arms — `| #error as e when
+// ok e ->` must not be claimed as a cppo directive.
+#[test]
+fn hash_guarded_variant_arm_still_stays_arm() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "  | #error as e when ok e -> use e\n",
+        "  | #stop when ready -> done_\n",
+        "let g = 2\n",
     ));
+}
+
+// `'x'` char literals in a directive tail must not count toward paren
+// depth — `#define RPAREN ')'` is a whole-line directive.
+#[test]
+fn cppo_directive_char_literal_paren_tail_parses() {
+    run_clean(concat!("#define RPAREN ')'\n", "let x = 1\n"));
 }
 
 // `#error as e -> ...` after `|` is a polymorphic-variant arm, never a

@@ -470,6 +470,26 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
       advance(lexer);
       continue;
     }
+    if (c == '\'') {
+      // Possible char literal (`')'`, `'\n'`): its brackets must not
+      // count toward paren depth. If the `'…'` shape fails, the `'`
+      // was part of an identifier (`x'`) and only consumed chars are
+      // lost to the prefix buffer — arm-shape still holds.
+      advance(lexer);
+      if (lexer->lookahead == '\\') {
+        advance(lexer);
+        if (!eof(lexer)) advance(lexer);
+        if (lexer->lookahead == '\'') advance(lexer);
+        continue;
+      }
+      if (lexer->lookahead != '\'' && lexer->lookahead != '\n' &&
+          !eof(lexer)) {
+        advance(lexer);
+        if (lexer->lookahead == '\'') advance(lexer);
+        continue;
+      }
+      continue;
+    }
     if (c == '\\') {
       advance(lexer);
       if (!eof(lexer)) advance(lexer);
@@ -496,6 +516,11 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
     *arm_shape = true;  // `| `#name ->` — bare variant tag
     return;
   }
+  if (end - p >= 5 && p[0] == 'w' && p[1] == 'h' && p[2] == 'e' &&
+      p[3] == 'n' && (p[4] == ' ' || p[4] == '\t')) {
+    *arm_shape = true;  // `| `#name when g ->` — guarded arm
+    return;
+  }
   if (end - p < 4 || p[0] != 'a' || p[1] != 's' ||
       (p[2] != ' ' && p[2] != '\t')) {
     return;
@@ -514,7 +539,15 @@ static void scan_cppo_tail(TSLexer *lexer, bool *has_arrow,
     p++;
   }
   while (p < end && (*p == ' ' || *p == '\t')) p++;
-  *arm_shape = p == end;
+  if (p == end) {
+    *arm_shape = true;  // `| `#name as v ->` — aliased variant tag
+    return;
+  }
+  // `as v` may be followed by a `when` guard (`| `#n as v when g ->`).
+  if (end - p >= 4 && p[0] == 'w' && p[1] == 'h' && p[2] == 'e' &&
+      p[3] == 'n' && (p + 4 == end || p[4] == ' ' || p[4] == '\t')) {
+    *arm_shape = true;
+  }
 }
 
 static bool scan_comment(Scanner *scanner, TSLexer *lexer) {

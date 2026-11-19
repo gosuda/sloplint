@@ -239,7 +239,7 @@
  });
  
 --- common/scanner.h	2006-07-24 01:21:28.000000000 +0000
-+++ common/scanner.h	2026-11-19 06:21:30.031910872 +0000
++++ common/scanner.h	2026-11-19 06:29:42.371989601 +0000
 @@ -16,6 +16,9 @@
    LINE_NUMBER_DIRECTIVE,
    NULL_CHARACTER,
@@ -264,7 +264,7 @@
  static inline bool is_identchar(const int32_t c) {
    return is_identstart(c) || (c >= '0' && c <= '9') || c == '\'';
  }
-@@ -390,6 +400,123 @@
+@@ -390,6 +400,156 @@
    return false;
  }
  
@@ -338,6 +338,26 @@
 +      advance(lexer);
 +      continue;
 +    }
++    if (c == '\'') {
++      // Possible char literal (`')'`, `'\n'`): its brackets must not
++      // count toward paren depth. If the `'…'` shape fails, the `'`
++      // was part of an identifier (`x'`) and only consumed chars are
++      // lost to the prefix buffer — arm-shape still holds.
++      advance(lexer);
++      if (lexer->lookahead == '\\') {
++        advance(lexer);
++        if (!eof(lexer)) advance(lexer);
++        if (lexer->lookahead == '\'') advance(lexer);
++        continue;
++      }
++      if (lexer->lookahead != '\'' && lexer->lookahead != '\n' &&
++          !eof(lexer)) {
++        advance(lexer);
++        if (lexer->lookahead == '\'') advance(lexer);
++        continue;
++      }
++      continue;
++    }
 +    if (c == '\\') {
 +      advance(lexer);
 +      if (!eof(lexer)) advance(lexer);
@@ -364,6 +384,11 @@
 +    *arm_shape = true;  // `| `#name ->` — bare variant tag
 +    return;
 +  }
++  if (end - p >= 5 && p[0] == 'w' && p[1] == 'h' && p[2] == 'e' &&
++      p[3] == 'n' && (p[4] == ' ' || p[4] == '\t')) {
++    *arm_shape = true;  // `| `#name when g ->` — guarded arm
++    return;
++  }
 +  if (end - p < 4 || p[0] != 'a' || p[1] != 's' ||
 +      (p[2] != ' ' && p[2] != '\t')) {
 +    return;
@@ -382,13 +407,21 @@
 +    p++;
 +  }
 +  while (p < end && (*p == ' ' || *p == '\t')) p++;
-+  *arm_shape = p == end;
++  if (p == end) {
++    *arm_shape = true;  // `| `#name as v ->` — aliased variant tag
++    return;
++  }
++  // `as v` may be followed by a `when` guard (`| `#n as v when g ->`).
++  if (end - p >= 4 && p[0] == 'w' && p[1] == 'h' && p[2] == 'e' &&
++      p[3] == 'n' && (p + 4 == end || p[4] == ' ' || p[4] == '\t')) {
++    *arm_shape = true;
++  }
 +}
 +
  static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
    int32_t last = 0;
  
-@@ -521,7 +648,9 @@
+@@ -521,7 +681,9 @@
      return true;
    }
  
@@ -398,7 +431,7 @@
      skip(lexer);
    }
  
-@@ -533,39 +662,95 @@
+@@ -533,39 +695,95 @@
      return true;
    }
  
