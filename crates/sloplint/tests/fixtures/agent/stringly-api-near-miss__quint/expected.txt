@@ -1,0 +1,1 @@
+# No run of swappable same-type primitives stays silent.

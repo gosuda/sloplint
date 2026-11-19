@@ -1,0 +1,1 @@
+# A suppression that fires stays silent.

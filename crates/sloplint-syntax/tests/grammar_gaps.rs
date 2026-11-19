@@ -50,6 +50,8 @@ mod powershell;
 mod powershell_syntax;
 #[path = "grammar_gaps/python.rs"]
 mod python;
+#[path = "grammar_gaps/quint.rs"]
+mod quint;
 #[path = "grammar_gaps/ruby.rs"]
 mod ruby;
 #[path = "grammar_gaps/rust.rs"]

@@ -23,6 +23,7 @@ pub(crate) mod odin;
 pub(crate) mod php;
 pub(crate) mod powershell;
 pub(crate) mod python;
+pub(crate) mod quint;
 pub(crate) mod r;
 pub(crate) mod ruby;
 pub(crate) mod rust;
@@ -119,6 +120,11 @@ fn grammar(lang: Lang) -> (tree_sitter::Language, Table, &'static dyn LangHooks)
             &starlark::HOOKS,
         ),
         Lang::Lean => (tree_sitter_lean::LANGUAGE.into(), lean::TABLE, &lean::HOOKS),
+        Lang::Quint => (
+            tree_sitter_quint::LANGUAGE.into(),
+            quint::TABLE,
+            &quint::HOOKS,
+        ),
     }
 }
 

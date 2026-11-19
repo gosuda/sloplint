@@ -52,6 +52,7 @@ languages! {
     Odin => "odin", &[".odin"];
     Starlark => "starlark", &[".bzl", ".star", ".BUILD", ".bazel"];
     Lean => "lean", &[".lean"];
+    Quint => "quint", &[".qnt"];
 }
 
 const HEADER_EXTENSION: &str = ".h";

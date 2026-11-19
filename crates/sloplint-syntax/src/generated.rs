@@ -54,7 +54,8 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
         | Lang::Swift
         | Lang::Scala
         | Lang::Dart
-        | Lang::Odin => SLASH,
+        | Lang::Odin
+        | Lang::Quint => SLASH,
         Lang::Zig => CommentSyntax {
             blocks: &[],
             ..SLASH

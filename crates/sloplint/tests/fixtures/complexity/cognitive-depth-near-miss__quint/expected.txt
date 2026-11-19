@@ -1,0 +1,1 @@
+# Two sequential branches stay below the strict rung.
