@@ -1,0 +1,108 @@
+================================================================================
+cppo directives between structure items and match arms
+================================================================================
+
+#ifdef STRINGLIT
+let has_stringlit = true
+#endif
+let typeof js = match js with
+  | `Floatlit _ -> "floatlit"
+#ifdef STRINGLIT
+  | `Stringlit _ -> "stringlit"
+#endif
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (cppo_directive)
+  (value_definition
+    (let_binding
+      (value_name)
+      (boolean)))
+  (cppo_directive)
+  (value_definition
+    (let_binding
+      (value_name)
+      (parameter
+        (value_pattern))
+      (match_expression
+        (value_path
+          (value_name))
+        (match_case
+          (tag_pattern
+            (tag)
+            (any_pattern))
+          (string
+            (string_content)))
+        (cppo_directive)
+        (match_case
+          (tag_pattern
+            (tag)
+            (any_pattern))
+          (string
+            (string_content)))
+        (cppo_directive)))))
+
+================================================================================
+camlp4 conditional section as a let body
+================================================================================
+
+let to_string =
+  #<If:TESTING>
+    original_name
+  #<Else>
+    function
+    | FakeSource n -> n
+    | Source n -> n
+  #<End>
+let y = 2
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (value_definition
+    (let_binding
+      (value_name)
+      (camlp4_conditional
+        (camlp4_directive)
+        (value_path
+          (value_name))
+        (camlp4_directive)
+        (function_expression
+          (match_case
+            (constructor_pattern
+              (constructor_path
+                (constructor_name))
+              (value_pattern))
+            (value_path
+              (value_name)))
+          (match_case
+            (constructor_pattern
+              (constructor_path
+                (constructor_name))
+              (value_pattern))
+            (value_path
+              (value_name))))
+        (camlp4_end_directive))))
+  (value_definition
+    (let_binding
+      (value_name)
+      (number))))
+
+================================================================================
+opa bypass directive and quotation at structure level
+================================================================================
+
+##register myfunction : string -> string
+#<< type data = string >>#;
+let x = 1
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (opa_directive)
+  (opa_quotation)
+  (value_definition
+    (let_binding
+      (value_name)
+      (number))))

@@ -180,3 +180,61 @@ fn unclosed_term_quotation_still_errors() {
 fn unclosed_let_still_errors() {
     run_error("let f = function `A -> \n");
 }
+
+// --- cppo preprocessor directives ----------------------------------------------
+
+#[test]
+fn cppo_directives_in_structure_and_match_arms_parse() {
+    run_clean(concat!(
+        "#ifdef STRINGLIT\n",
+        "let has_stringlit = true\n",
+        "#endif\n",
+        "let typeof js = match js with\n",
+        "  | `Floatlit _ -> \"floatlit\"\n",
+        "#ifdef STRINGLIT\n",
+        "  | `Stringlit _ -> \"stringlit\"\n",
+        "#endif\n",
+        "let f x = x\n",
+    ));
+}
+
+// --- camlp4 conditional sections ------------------------------------------------
+
+#[test]
+fn camlp4_conditional_in_let_body_parses() {
+    run_clean(concat!(
+        "let to_string =\n",
+        "  #<If:TESTING>\n",
+        "    original_name\n",
+        "  #<Else>\n",
+        "    function\n",
+        "    | FakeSource n -> n\n",
+        "    | Source n -> n\n",
+        "  #<End>\n",
+        "let y = 2\n",
+    ));
+}
+
+// `#<If$minlevel 10>` — directive arguments without a colon.
+#[test]
+fn camlp4_bare_arg_directive_parses() {
+    run_clean(concat!(
+        "let _ =\n",
+        "  #<If$minlevel 10>\n",
+        "    Printf.printf \"add\\n\"\n",
+        "  #<End>\n",
+        "let r = 1\n",
+    ));
+}
+
+// --- opa/qml bypass forms --------------------------------------------------------
+
+#[test]
+fn opa_directive_and_quotation_parse() {
+    run_clean(concat!(
+        "##register myfunction : string -> string\n",
+        "let myfunction s = s\n",
+        "#<< type data = string >>#;\n",
+        "let x = 1\n",
+    ));
+}

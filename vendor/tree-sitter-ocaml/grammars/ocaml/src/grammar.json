@@ -341,6 +341,22 @@
         {
           "type": "SYMBOL",
           "name": "term_quotation"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "cppo_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_camlp4_any_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "opa_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "opa_quotation"
         }
       ]
     },
@@ -571,6 +587,10 @@
           },
           "named": true,
           "value": "abstract_type"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "opa_quotation"
         }
       ]
     },
@@ -2900,6 +2920,22 @@
         {
           "type": "SYMBOL",
           "name": "term_quotation"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "cppo_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_camlp4_any_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "opa_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "opa_quotation"
         }
       ]
     },
@@ -6296,6 +6332,10 @@
         {
           "type": "SYMBOL",
           "name": "term_quotation"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "opa_quotation"
         }
       ]
     },
@@ -6386,6 +6426,10 @@
         {
           "type": "SYMBOL",
           "name": "exclave_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "camlp4_conditional"
         }
       ]
     },
@@ -8153,8 +8197,53 @@
             "type": "CHOICE",
             "members": [
               {
-                "type": "STRING",
-                "value": "|"
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "REPEAT",
+                    "content": {
+                      "type": "CHOICE",
+                      "members": [
+                        {
+                          "type": "SYMBOL",
+                          "name": "cppo_directive"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "camlp4_directive"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "STRING",
+                        "value": "|"
+                      },
+                      {
+                        "type": "BLANK"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "REPEAT",
+                    "content": {
+                      "type": "CHOICE",
+                      "members": [
+                        {
+                          "type": "SYMBOL",
+                          "name": "cppo_directive"
+                        },
+                        {
+                          "type": "SYMBOL",
+                          "name": "camlp4_directive"
+                        }
+                      ]
+                    }
+                  }
+                ]
               },
               {
                 "type": "BLANK"
@@ -8162,29 +8251,56 @@
             ]
           },
           {
-            "type": "SEQ",
-            "members": [
-              {
-                "type": "SYMBOL",
-                "name": "match_case"
-              },
-              {
-                "type": "REPEAT",
-                "content": {
-                  "type": "SEQ",
-                  "members": [
-                    {
-                      "type": "STRING",
-                      "value": "|"
-                    },
-                    {
-                      "type": "SYMBOL",
-                      "name": "match_case"
-                    }
-                  ]
+            "type": "SYMBOL",
+            "name": "match_case"
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "cppo_directive"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "camlp4_directive"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "STRING",
+                  "value": "|"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "match_case"
                 }
-              }
-            ]
+              ]
+            }
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "cppo_directive"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "camlp4_directive"
+                }
+              ]
+            }
           }
         ]
       }
@@ -13509,6 +13625,151 @@
         }
       ]
     },
+    "cppo_directive": {
+      "type": "TOKEN",
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "#"
+          },
+          {
+            "type": "PATTERN",
+            "value": "(?:define|include|if|ifdef|ifndef|elif|else|endif|undef|error|warning|pragma|line|ext|endext|stop|localization)"
+          },
+          {
+            "type": "PATTERN",
+            "value": "[^\\n]*"
+          }
+        ]
+      }
+    },
+    "camlp4_directive": {
+      "type": "TOKEN",
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "#"
+          },
+          {
+            "type": "PATTERN",
+            "value": "<[A-Za-z]+[^>\\n]*>"
+          }
+        ]
+      }
+    },
+    "camlp4_end_directive": {
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": 1,
+        "content": {
+          "type": "STRING",
+          "value": "#<End>"
+        }
+      }
+    },
+    "_camlp4_any_directive": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "camlp4_directive"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "camlp4_end_directive"
+        }
+      ]
+    },
+    "camlp4_conditional": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "REPEAT1",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "camlp4_directive"
+              },
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "_sequence_expression"
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "SYMBOL",
+          "name": "camlp4_end_directive"
+        }
+      ]
+    },
+    "opa_directive": {
+      "type": "TOKEN",
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "#"
+          },
+          {
+            "type": "STRING",
+            "value": "#"
+          },
+          {
+            "type": "PATTERN",
+            "value": "[^\\n]*"
+          }
+        ]
+      }
+    },
+    "opa_quotation": {
+      "type": "TOKEN",
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "#<<"
+          },
+          {
+            "type": "PATTERN",
+            "value": "(?:[^>]|>[^>]|>>[^#])*"
+          },
+          {
+            "type": "STRING",
+            "value": ">>#"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": ";"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        ]
+      }
+    },
     "tag": {
       "type": "SEQ",
       "members": [
@@ -13710,6 +13971,13 @@
     ],
     [
       "class_application"
+    ],
+    [
+      "_camlp4_any_directive",
+      "camlp4_conditional"
+    ],
+    [
+      "_match_cases"
     ]
   ],
   "precedences": [

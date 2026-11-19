@@ -1,6 +1,6 @@
 --- a/grammars/ocaml/grammar.js
 +++ b/grammars/ocaml/grammar.js
-@@ -50,6 +50,13 @@
+@@ -50,6 +50,15 @@
      [$._include_or_include_functor],
      [$._module_typed, $.functor_type],
      [$._type, $._argument_type],
@@ -11,28 +11,46 @@
 +    [$._signature_item, $._type],
 +    [$._class_expression, $.class_application],
 +    [$.class_application],
++    [$._camlp4_any_directive, $.camlp4_conditional],
++    [$._match_cases],
    ],
  
    precedences: $ => [
-@@ -298,6 +305,8 @@
+@@ -298,6 +307,12 @@
        $.value_specification,
        $.kind_definition,
        $.include_module,
 +      $.quotation,
 +      $.term_quotation,
++      $.cppo_directive,
++      $._camlp4_any_directive,
++      $.opa_directive,
++      $.opa_quotation,
      ),
  
      value_definition: $ => seq(
-@@ -651,6 +660,8 @@
+@@ -332,6 +347,7 @@
+     _parameter: $ => choice(
+       $.parameter,
+       alias($._parenthesized_abstract_type, $.abstract_type),
++      $.opa_quotation,
+     ),
+ 
+     parameter: $ => choice(
+@@ -651,6 +667,12 @@
        $.class_type_definition,
        $.floating_attribute,
        $._item_extension,
 +      $.quotation,
 +      $.term_quotation,
++      $.cppo_directive,
++      $._camlp4_any_directive,
++      $.opa_directive,
++      $.opa_quotation,
      ),
  
      value_specification: $ => seq(
-@@ -690,6 +701,8 @@
+@@ -690,6 +712,8 @@
        $.functor_type,
        $.parenthesized_module_type,
        $._extension,
@@ -41,7 +59,7 @@
      ),
  
      signature: $ => seq(
-@@ -1077,6 +1090,8 @@
+@@ -1077,6 +1101,8 @@
        alias($._labeled_tuple_type, $.tuple_type),
        $.function_type,
        $.aliased_type,
@@ -50,16 +68,51 @@
      ),
  
      function_type: $ => prec.dynamic(1, prec.right(seq(
-@@ -1281,6 +1296,8 @@
+@@ -1281,6 +1307,9 @@
        $.hole_expression,
        $.ocamlyacc_value,
        $._extension,
 +      $.quotation,
 +      $.term_quotation,
++      $.opa_quotation,
      ),
  
      _non_function_expression: $ => choice(
-@@ -1827,6 +1844,8 @@
+@@ -1304,6 +1333,7 @@
+       $.borrow_expression,
+       $.local_expression,
+       $.exclave_expression,
++      $.camlp4_conditional,
+     ),
+ 
+     _inline_expression: $ => choice(
+@@ -1649,9 +1679,23 @@
+       $._match_cases,
+     ),
+ 
++    // cppo/camlp4 directives may appear anywhere between `|` markers:
++    // `function | A -> a #ifdef X | B -> b`. They are folded into the
++    // separators; a trailing directive after the last case falls back to
++    // structure/signature position.
+     _match_cases: $ => prec.right(seq(
+-      optional('|'),
+-      sep1('|', $.match_case),
++      optional(seq(
++        repeat(choice($.cppo_directive, $.camlp4_directive)),
++        optional('|'),
++        repeat(choice($.cppo_directive, $.camlp4_directive)),
++      )),
++      $.match_case,
++      repeat(seq(
++        repeat(choice($.cppo_directive, $.camlp4_directive)),
++        '|',
++        $.match_case,
++      )),
++      repeat(choice($.cppo_directive, $.camlp4_directive)),
+     )),
+ 
+     match_case: $ => seq(
+@@ -1827,6 +1871,8 @@
        $.package_pattern,
        $.any_pattern,
        $._extension,
@@ -68,7 +121,7 @@
      ),
  
      _effect_pattern: $ => choice(
-@@ -1869,6 +1888,8 @@
+@@ -1869,6 +1915,8 @@
        $.package_pattern,
        $.any_pattern,
        $._extension,
@@ -77,9 +130,54 @@
      ),
  
      _effect_binding_pattern: $ => choice(
-@@ -2613,6 +2634,36 @@
+@@ -2612,7 +2660,81 @@
+     _label: $ => seq(choice('~', '?'), $._label_name),
      _tuple_label: $ => seq('~', $._label_name),
      directive: $ => seq(/#/, choice($._lowercase_identifier, $._uppercase_identifier)),
++
++    // cppo-style preprocessor directives (`#define`, `#include`, `#if`, ...).
++    // The payload is preprocessor syntax, not OCaml, so it is consumed to
++    // end of line. Restricted to structure/signature positions so `#` keeps
++    // lexing as the method-call operator inside expressions (`obj #m`).
++    cppo_directive: $ => token(seq(
++      '#',
++      /(?:define|include|if|ifdef|ifndef|elif|else|endif|undef|error|warning|pragma|line|ext|endext|stop|localization)/,
++      /[^\n]*/,
++    )),
++
++    // camlp4 directives `#<If:TESTING>`, `#<Else>`, `#<End>`. `#<` can never
++    // begin a method call, so these are also valid inside expressions.
++    camlp4_directive: $ => token(seq('#', /<[A-Za-z]+[^>\n]*>/)),
++
++    // `#<End>` gets its own token so a conditional unambiguously ends
++    // there; without it `#<End> let x = ...` could be read as a further
++    // `#<End>` arm holding a `let` expression (which then lacks `in`).
++    camlp4_end_directive: $ => token(prec(1, '#<End>')),
++
++    _camlp4_any_directive: $ => choice($.camlp4_directive, $.camlp4_end_directive),
++
++    // camlp4 conditional sections in expression position:
++    // `#<If:TESTING> expr #<Else> expr #<End>`. Each `#<...>` token is an
++    // opaque separator and each arm is its own expression; `#<End>`
++    // closes the section.
++    camlp4_conditional: $ => seq(
++      repeat1(seq(
++        $.camlp4_directive,
++        optional($._sequence_expression),
++      )),
++      $.camlp4_end_directive,
++    ),
++
++    // opa/qml preprocessor forms: `##name args` bypass directives and
++    // `#<< ... >>#` bypass quotations (opaque payloads, e.g. opalang).
++    opa_directive: $ => token(seq('#', '#', /[^\n]*/)),
++
++    opa_quotation: $ => token(seq(
++      '#<<',
++      /(?:[^>]|>[^>]|>>[^#])*/,
++      '>>#',
++      optional(';'),
++    )),
      tag: $ => seq(/`/, choice($._lowercase_identifier, $._uppercase_identifier)),
 +
 +    // camlp5-style quotations: <:tag<...>> and `...` term quotations.

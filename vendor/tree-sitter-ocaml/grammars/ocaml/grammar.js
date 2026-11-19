@@ -57,6 +57,8 @@ export default grammar({
     [$._signature_item, $._type],
     [$._class_expression, $.class_application],
     [$.class_application],
+    [$._camlp4_any_directive, $.camlp4_conditional],
+    [$._match_cases],
   ],
 
   precedences: $ => [
@@ -307,6 +309,10 @@ export default grammar({
       $.include_module,
       $.quotation,
       $.term_quotation,
+      $.cppo_directive,
+      $._camlp4_any_directive,
+      $.opa_directive,
+      $.opa_quotation,
     ),
 
     value_definition: $ => seq(
@@ -341,6 +347,7 @@ export default grammar({
     _parameter: $ => choice(
       $.parameter,
       alias($._parenthesized_abstract_type, $.abstract_type),
+      $.opa_quotation,
     ),
 
     parameter: $ => choice(
@@ -662,6 +669,10 @@ export default grammar({
       $._item_extension,
       $.quotation,
       $.term_quotation,
+      $.cppo_directive,
+      $._camlp4_any_directive,
+      $.opa_directive,
+      $.opa_quotation,
     ),
 
     value_specification: $ => seq(
@@ -1298,6 +1309,7 @@ export default grammar({
       $._extension,
       $.quotation,
       $.term_quotation,
+      $.opa_quotation,
     ),
 
     _non_function_expression: $ => choice(
@@ -1321,6 +1333,7 @@ export default grammar({
       $.borrow_expression,
       $.local_expression,
       $.exclave_expression,
+      $.camlp4_conditional,
     ),
 
     _inline_expression: $ => choice(
@@ -1666,9 +1679,23 @@ export default grammar({
       $._match_cases,
     ),
 
+    // cppo/camlp4 directives may appear anywhere between `|` markers:
+    // `function | A -> a #ifdef X | B -> b`. They are folded into the
+    // separators; a trailing directive after the last case falls back to
+    // structure/signature position.
     _match_cases: $ => prec.right(seq(
-      optional('|'),
-      sep1('|', $.match_case),
+      optional(seq(
+        repeat(choice($.cppo_directive, $.camlp4_directive)),
+        optional('|'),
+        repeat(choice($.cppo_directive, $.camlp4_directive)),
+      )),
+      $.match_case,
+      repeat(seq(
+        repeat(choice($.cppo_directive, $.camlp4_directive)),
+        '|',
+        $.match_case,
+      )),
+      repeat(choice($.cppo_directive, $.camlp4_directive)),
     )),
 
     match_case: $ => seq(
@@ -2633,6 +2660,50 @@ export default grammar({
     _label: $ => seq(choice('~', '?'), $._label_name),
     _tuple_label: $ => seq('~', $._label_name),
     directive: $ => seq(/#/, choice($._lowercase_identifier, $._uppercase_identifier)),
+
+    // cppo-style preprocessor directives (`#define`, `#include`, `#if`, ...).
+    // The payload is preprocessor syntax, not OCaml, so it is consumed to
+    // end of line. Restricted to structure/signature positions so `#` keeps
+    // lexing as the method-call operator inside expressions (`obj #m`).
+    cppo_directive: $ => token(seq(
+      '#',
+      /(?:define|include|if|ifdef|ifndef|elif|else|endif|undef|error|warning|pragma|line|ext|endext|stop|localization)/,
+      /[^\n]*/,
+    )),
+
+    // camlp4 directives `#<If:TESTING>`, `#<Else>`, `#<End>`. `#<` can never
+    // begin a method call, so these are also valid inside expressions.
+    camlp4_directive: $ => token(seq('#', /<[A-Za-z]+[^>\n]*>/)),
+
+    // `#<End>` gets its own token so a conditional unambiguously ends
+    // there; without it `#<End> let x = ...` could be read as a further
+    // `#<End>` arm holding a `let` expression (which then lacks `in`).
+    camlp4_end_directive: $ => token(prec(1, '#<End>')),
+
+    _camlp4_any_directive: $ => choice($.camlp4_directive, $.camlp4_end_directive),
+
+    // camlp4 conditional sections in expression position:
+    // `#<If:TESTING> expr #<Else> expr #<End>`. Each `#<...>` token is an
+    // opaque separator and each arm is its own expression; `#<End>`
+    // closes the section.
+    camlp4_conditional: $ => seq(
+      repeat1(seq(
+        $.camlp4_directive,
+        optional($._sequence_expression),
+      )),
+      $.camlp4_end_directive,
+    ),
+
+    // opa/qml preprocessor forms: `##name args` bypass directives and
+    // `#<< ... >>#` bypass quotations (opaque payloads, e.g. opalang).
+    opa_directive: $ => token(seq('#', '#', /[^\n]*/)),
+
+    opa_quotation: $ => token(seq(
+      '#<<',
+      /(?:[^>]|>[^>]|>>[^#])*/,
+      '>>#',
+      optional(';'),
+    )),
     tag: $ => seq(/`/, choice($._lowercase_identifier, $._uppercase_identifier)),
 
     // camlp5-style quotations: <:tag<...>> and `...` term quotations.

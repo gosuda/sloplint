@@ -630,6 +630,10 @@
         "named": true
       },
       {
+        "type": "camlp4_conditional",
+        "named": true
+      },
+      {
         "type": "cons_expression",
         "named": true
       },
@@ -748,11 +752,23 @@
     "named": true,
     "subtypes": [
       {
+        "type": "camlp4_directive",
+        "named": true
+      },
+      {
+        "type": "camlp4_end_directive",
+        "named": true
+      },
+      {
         "type": "class_definition",
         "named": true
       },
       {
         "type": "class_type_definition",
+        "named": true
+      },
+      {
+        "type": "cppo_directive",
         "named": true
       },
       {
@@ -785,6 +801,14 @@
       },
       {
         "type": "module_type_definition",
+        "named": true
+      },
+      {
+        "type": "opa_directive",
+        "named": true
+      },
+      {
+        "type": "opa_quotation",
         "named": true
       },
       {
@@ -1046,6 +1070,10 @@
         "named": true
       },
       {
+        "type": "opa_quotation",
+        "named": true
+      },
+      {
         "type": "prefix_expression",
         "named": true
       },
@@ -1250,11 +1278,31 @@
         "named": true
       },
       {
+        "type": "camlp4_directive",
+        "named": true
+      },
+      {
+        "type": "camlp4_end_directive",
+        "named": true
+      },
+      {
+        "type": "cppo_directive",
+        "named": true
+      },
+      {
         "type": "include_module",
         "named": true
       },
       {
         "type": "kind_definition",
+        "named": true
+      },
+      {
+        "type": "opa_directive",
+        "named": true
+      },
+      {
+        "type": "opa_quotation",
         "named": true
       },
       {
@@ -1742,6 +1790,29 @@
     }
   },
   {
+    "type": "camlp4_conditional",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "_sequence_expression",
+          "named": true
+        },
+        {
+          "type": "camlp4_directive",
+          "named": true
+        },
+        {
+          "type": "camlp4_end_directive",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "character",
     "named": true,
     "fields": {},
@@ -1843,6 +1914,10 @@
           "named": true
         },
         {
+          "type": "opa_quotation",
+          "named": true
+        },
+        {
           "type": "parameter",
           "named": true
         },
@@ -1923,6 +1998,10 @@
       "types": [
         {
           "type": "abstract_type",
+          "named": true
+        },
+        {
+          "type": "opa_quotation",
           "named": true
         },
         {
@@ -3126,6 +3205,10 @@
           "named": true
         },
         {
+          "type": "opa_quotation",
+          "named": true
+        },
+        {
           "type": "parameter",
           "named": true
         }
@@ -3142,6 +3225,14 @@
       "types": [
         {
           "type": "attribute_id",
+          "named": true
+        },
+        {
+          "type": "camlp4_directive",
+          "named": true
+        },
+        {
+          "type": "cppo_directive",
           "named": true
         },
         {
@@ -4304,6 +4395,10 @@
           "named": true
         },
         {
+          "type": "opa_quotation",
+          "named": true
+        },
+        {
           "type": "parameter",
           "named": true
         },
@@ -4653,6 +4748,14 @@
           "named": true
         },
         {
+          "type": "camlp4_directive",
+          "named": true
+        },
+        {
+          "type": "cppo_directive",
+          "named": true
+        },
+        {
           "type": "match_case",
           "named": true
         },
@@ -4716,6 +4819,10 @@
         },
         {
           "type": "method_name",
+          "named": true
+        },
+        {
+          "type": "opa_quotation",
           "named": true
         },
         {
@@ -6373,6 +6480,14 @@
           "named": true
         },
         {
+          "type": "camlp4_directive",
+          "named": true
+        },
+        {
+          "type": "cppo_directive",
+          "named": true
+        },
+        {
           "type": "match_case",
           "named": true
         }
@@ -7213,6 +7328,14 @@
     "named": false
   },
   {
+    "type": "camlp4_directive",
+    "named": true
+  },
+  {
+    "type": "camlp4_end_directive",
+    "named": true
+  },
+  {
     "type": "class",
     "named": false
   },
@@ -7243,6 +7366,10 @@
   },
   {
     "type": "conversion_specification",
+    "named": true
+  },
+  {
+    "type": "cppo_directive",
     "named": true
   },
   {
@@ -7465,6 +7592,14 @@
   {
     "type": "of",
     "named": false
+  },
+  {
+    "type": "opa_directive",
+    "named": true
+  },
+  {
+    "type": "opa_quotation",
+    "named": true
   },
   {
     "type": "open",
