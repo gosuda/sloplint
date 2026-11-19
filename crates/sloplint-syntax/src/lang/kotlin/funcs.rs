@@ -113,7 +113,20 @@ pub(crate) fn function_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>
             // identifier; it still binds a name, so it must count as a param.
             // A default value (`t: Long = DEFAULT`) also lands as a bare
             // identifier sibling, so only `(`- or `,`-led identifiers count.
-            if !matches!(parameter.prev_sibling().map(|s| s.kind()), Some("(" | ",")) {
+            // Comments and parameter modifiers sit between the delimiter and
+            // the name (`fun(/* c */ x)`, `fun(@Anno y)`), so skip them too.
+            let mut delimiter = parameter.prev_sibling();
+            while let Some(node) = delimiter {
+                if matches!(
+                    node.kind(),
+                    "line_comment" | "block_comment" | "parameter_modifiers" | "annotation"
+                ) {
+                    delimiter = node.prev_sibling();
+                } else {
+                    break;
+                }
+            }
+            if !matches!(delimiter.map(|s| s.kind()), Some("(" | ",")) {
                 return None;
             }
             let default = default_value(parameter);
