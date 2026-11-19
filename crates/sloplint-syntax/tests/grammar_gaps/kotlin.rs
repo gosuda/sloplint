@@ -235,3 +235,13 @@ fn empty_array_literal_in_an_annotation_argument_parses() {
 fn primary_constructor_parameters_on_the_next_line_parse() {
     run_clean("internal class D\n/** doc */\n    (x: Int) {\n}\n");
 }
+
+#[test]
+fn annotated_open_class_stays_a_declaration() {
+    run_clean("@Deprecated(\"old\") open class C {}\n");
+}
+
+#[test]
+fn value_receiver_class_literal_keeps_parenthesized_expression() {
+    run_clean("fun f(v: Any) { (v)::class.java }\n");
+}
