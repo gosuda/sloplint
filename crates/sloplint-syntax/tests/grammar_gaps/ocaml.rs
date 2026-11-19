@@ -336,7 +336,7 @@ fn double_hash_method_call_stays_method_call() {
     let tree = parser
         .parse("let f = o##name\nlet g = 2\n", None)
         .expect("parser returns a tree");
-    assert_eq!(tree.root_node().has_error(), false);
+    assert!(!tree.root_node().has_error());
     let sexp = tree.root_node().to_sexp();
     assert!(
         !sexp.contains("opa_directive"),
@@ -389,7 +389,7 @@ fn hash_get_hash_value_is_chained_method_call() {
     let tree = parser
         .parse("let x = obj #get#value ()\nlet y = 2\n", None)
         .expect("parser returns a tree");
-    assert_eq!(tree.root_node().has_error(), false);
+    assert!(!tree.root_node().has_error());
     let sexp = tree.root_node().to_sexp();
     assert!(!sexp.contains("opa_directive"), "sexp: {}", sexp);
     assert!(
@@ -416,4 +416,29 @@ fn double_hash_before_non_ascii_ident_is_operator() {
         "`##\u{e9}t\u{e9}` must not parse as an opa directive, sexp: {}",
         accented.root_node().to_sexp()
     );
+}
+
+// A `#define` carrying `->` between match arms is directive text: the
+// no-arrow token keeps the match open so the next `|` arm still parses.
+#[test]
+fn cppo_directive_with_arrow_between_arms_keeps_match_open() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "#define g (fun x -> x)\n",
+        "  | `B -> 2\n",
+        "let h = 3\n",
+    ));
+}
+
+// `#error as e -> ...` after `|` is a polymorphic-variant arm, never a
+// directive — the arrow-bearing arm keeps its `->`.
+#[test]
+fn hash_error_variant_arm_still_stays_arm() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "  | #error as e -> pp_error e\n",
+        "let g = 2\n",
+    ));
 }

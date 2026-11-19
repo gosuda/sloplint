@@ -408,8 +408,8 @@ static const char *CPPO_NAMES[] = {
 
 // Matches the cppo name regex prefix: the directive name only needs to be
 // a prefix of the `#`-word (`#ifdefx` still claims `if` + tail `defx`,
-// mirroring the regex alternation).
-static bool scan_cppo_name(TSLexer *lexer) {
+// mirroring the regex alternation). Returns the CPPO_NAMES index, or -1.
+static int scan_cppo_name(TSLexer *lexer) {
   char word[64];
   size_t n = 0;
 
@@ -419,12 +419,14 @@ static bool scan_cppo_name(TSLexer *lexer) {
   }
   word[n] = '\0';
 
-  if (n == 0) return false;
+  if (n == 0) return -1;
 
   for (size_t i = 0; i < sizeof(CPPO_NAMES) / sizeof(CPPO_NAMES[0]); i++) {
-    if (strncmp(word, CPPO_NAMES[i], strlen(CPPO_NAMES[i])) == 0) return true;
+    if (strncmp(word, CPPO_NAMES[i], strlen(CPPO_NAMES[i])) == 0) {
+      return (int)i;
+    }
   }
-  return false;
+  return -1;
 }
 
 // Directive tail: consumes to end of line; `\<anything>` is a cppo
@@ -653,12 +655,25 @@ static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
       return true;
     }
 
+    int cppo_name = -1;
     if ((valid_symbols[CPPO_DIRECTIVE] ||
          valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) &&
-        scan_cppo_name(lexer)) {
+        (cppo_name = scan_cppo_name(lexer)) >= 0) {
       bool has_arrow = false;
       scan_cppo_tail(lexer, &has_arrow);
       if (!has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
+        if (lexer->lookahead == '\n') advance(lexer);
+        lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
+        return true;
+      }
+      // `| #error as e -> pp` is a polymorphic-variant arm, not a
+      // directive: only `#error`/`#warning` lines carrying `->` keep the
+      // arm read, because those are the cppo names real corpus code uses
+      // as variant tags. Any other arrow-bearing name at a match
+      // position (`#define F x -> y` between arms) is a directive line —
+      // emit the no-arrow token so the match stays open.
+      if (has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
+        if (cppo_name == 9 || cppo_name == 10) return false;
         if (lexer->lookahead == '\n') advance(lexer);
         lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
         return true;
@@ -667,9 +682,6 @@ static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
         lexer->result_symbol = CPPO_DIRECTIVE;
         return true;
       }
-      // A `->`-bearing line where only the match-position variant is
-      // expected is a polymorphic-variant arm, never a directive —
-      // refuse rather than letting it steal the `->`.
       return false;
     }
     return false;
