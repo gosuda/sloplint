@@ -32,24 +32,11 @@ jobs:
 
   test:
     runs-on: medium
-    timeout-minutes: 90
+    timeout-minutes: 60
     env:
       SLOPLINT_REQUIRE_FS_CAPS: "1"
     steps:
       - run: rustup set profile minimal && rustup toolchain install
-      - uses: latchkey/cache-restore@1.1.0
-        with:
-          key: cargo-dev
-          version: v1
-          hash-files: Cargo.lock rust-toolchain.toml
-      - run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
       - run: cargo run --locked -q -p sloplint -- check crates --format agent --strictness standard --mode threshold --fail-on minor
-      - if: always() && env.LATCHKEY_CI_REF == 'refs/heads/main'
-        uses: latchkey/cache-save@1.1.0
-        with:
-          key: cargo-dev
-          version: v1
-          hash-files: Cargo.lock rust-toolchain.toml
-          path: target
