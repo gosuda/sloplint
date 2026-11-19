@@ -7855,6 +7855,107 @@
                       {
                         "type": "SYMBOL",
                         "name": "_single_lambda_param"
+                      },
+                      {
+                        "type": "PREC_RIGHT",
+                        "value": 0,
+                        "content": {
+                          "type": "PREC_DYNAMIC",
+                          "value": -5,
+                          "content": {
+                            "type": "SEQ",
+                            "members": [
+                              {
+                                "type": "CHOICE",
+                                "members": [
+                                  {
+                                    "type": "STRING",
+                                    "value": "implicit"
+                                  },
+                                  {
+                                    "type": "BLANK"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "CHOICE",
+                                "members": [
+                                  {
+                                    "type": "CHOICE",
+                                    "members": [
+                                      {
+                                        "type": "ALIAS",
+                                        "content": {
+                                          "type": "SYMBOL",
+                                          "name": "_alpha_identifier"
+                                        },
+                                        "named": true,
+                                        "value": "identifier"
+                                      },
+                                      {
+                                        "type": "ALIAS",
+                                        "content": {
+                                          "type": "SYMBOL",
+                                          "name": "_backquoted_id"
+                                        },
+                                        "named": true,
+                                        "value": "identifier"
+                                      },
+                                      {
+                                        "type": "ALIAS",
+                                        "content": {
+                                          "type": "SYMBOL",
+                                          "name": "_soft_identifier"
+                                        },
+                                        "named": true,
+                                        "value": "identifier"
+                                      },
+                                      {
+                                        "type": "ALIAS",
+                                        "content": {
+                                          "type": "STRING",
+                                          "value": "this"
+                                        },
+                                        "named": true,
+                                        "value": "identifier"
+                                      },
+                                      {
+                                        "type": "ALIAS",
+                                        "content": {
+                                          "type": "STRING",
+                                          "value": "super"
+                                        },
+                                        "named": true,
+                                        "value": "identifier"
+                                      },
+                                      {
+                                        "type": "ALIAS",
+                                        "content": {
+                                          "type": "STRING",
+                                          "value": "export"
+                                        },
+                                        "named": true,
+                                        "value": "identifier"
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "SYMBOL",
+                                    "name": "operator_identifier"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "STRING",
+                                "value": ":"
+                              },
+                              {
+                                "type": "SYMBOL",
+                                "name": "_type"
+                              }
+                            ]
+                          }
+                        }
                       }
                     ]
                   }
@@ -8095,7 +8196,7 @@
     },
     "_braced_typed_lambda": {
       "type": "PREC_DYNAMIC",
-      "value": 1,
+      "value": 2,
       "content": {
         "type": "PREC_RIGHT",
         "value": "lambda",
@@ -12110,6 +12211,11 @@
             "type": "PATTERN",
             "value": "\\/[\\-!#%&+\\\\:<=>?@\\u005e\\u007c~\\p{Sm}\\p{So}](?:[\\-!#%&*+\\\\:<=>?@\\u005e\\u007c~\\p{Sm}\\p{So}]|\\/[\\-!#%&+\\\\:<=>?@\\u005e\\u007c~\\p{Sm}\\p{So}])*(?:[\\-!#%&*+\\\\<>?@\\u005e\\u007c~\\u00ac\\u00b1\\u00d7\\u00f7\\u03f6\\u0606-\\u0608\\u2044\\u2052\\u207a-\\u207c\\u208a-\\u208c\\u2118\\u2140-\\u2144\\u214b\\u2190-\\u2194\\u219a-\\u219b\\u21a0\\u21a3\\u21a6\\u21ae\\u21ce-\\u21cf\\u21d2\\u21d4\\u21f4-\\u22ff\\u2320-\\u2321\\u237c\\u239b-\\u23b3\\u23dc-\\u23e1\\u25b7\\u25c1\\u25f8-\\u25ff\\u266f\\u27c0-\\u27c4\\u27c7-\\u27e5\\u27f0-\\u27ff\\u2900-\\u2982\\u2999-\\u29d7\\u29dc-\\u29fb\\u29fe-\\u2aff\\u2b30-\\u2b44\\u2b47-\\u2b4c\\ufb29\\ufe62\\ufe64-\\ufe66\\uff0b\\uff1c-\\uff1e\\uff5c\\uff5e\\uffe2\\uffe9-\\uffec𐶎-𐶏𜻰𝛁𝛛𝛻𝜕𝜵𝝏𝝯𝞉𝞩𝟃𞻰-𞻱🣐-🣘\\p{So}]|\\/[\\-!#%&+\\\\<>?@\\u005e\\u007c~\\u00ac\\u00b1\\u00d7\\u00f7\\u03f6\\u0606-\\u0608\\u2044\\u2052\\u207a-\\u207c\\u208a-\\u208c\\u2118\\u2140-\\u2144\\u214b\\u2190-\\u2194\\u219a-\\u219b\\u21a0\\u21a3\\u21a6\\u21ae\\u21ce-\\u21cf\\u21d2\\u21d4\\u21f4-\\u22ff\\u2320-\\u2321\\u237c\\u239b-\\u23b3\\u23dc-\\u23e1\\u25b7\\u25c1\\u25f8-\\u25ff\\u266f\\u27c0-\\u27c4\\u27c7-\\u27e5\\u27f0-\\u27ff\\u2900-\\u2982\\u2999-\\u29d7\\u29dc-\\u29fb\\u29fe-\\u2aff\\u2b30-\\u2b44\\u2b47-\\u2b4c\\ufb29\\ufe62\\ufe64-\\ufe66\\uff0b\\uff1c-\\uff1e\\uff5c\\uff5e\\uffe2\\uffe9-\\uffec𐶎-𐶏𜻰𝛁𝛛𝛻𝜕𝜵𝝏𝝯𝞉𝞩𝟃𞻰-𞻱🣐-🣘\\p{So}])",
             "flags": "u"
+          },
+          {
+            "type": "PATTERN",
+            "value": "\\/[\\-!#%&+\\\\:<=>?@\\u005e\\u007c~\\p{Sm}\\p{So}](?:[\\-!#%&*+\\\\:<=>?@\\u005e\\u007c~\\p{Sm}\\p{So}]|\\/[\\-!#%&+\\\\:<=>?@\\u005e\\u007c~\\p{Sm}\\p{So}])*\\/",
+            "flags": "u"
           }
         ]
       }
@@ -12149,7 +12255,7 @@
           },
           {
             "type": "PATTERN",
-            "value": "\\/[\\-!#%&+\\\\:<=>?@\\u005e\\u007c~\\p{Sm}\\p{So}](?:[\\-!#%&*+\\\\:<=>?@\\u005e\\u007c~\\p{Sm}\\p{So}]|\\/[\\-!#%&+\\\\:<=>?@\\u005e\\u007c~\\p{Sm}\\p{So}])*",
+            "value": "\\/[\\-!#%&+\\\\:<=>?@\\u005e\\u007c~\\p{Sm}\\p{So}](?:[\\-!#%&*+\\\\:<=>?@\\u005e\\u007c~\\p{Sm}\\p{So}]|\\/[\\-!#%&+\\\\:<=>?@\\u005e\\u007c~\\p{Sm}\\p{So}])*\\/?",
             "flags": "u"
           }
         ]
@@ -14483,15 +14589,46 @@
     ],
     [
       "_simple_expression",
+      "_braced_typed_lambda",
+      "lambda_expression"
+    ],
+    [
+      "_simple_expression",
+      "lambda_expression",
+      "binding"
+    ],
+    [
+      "self_type",
+      "_simple_expression",
+      "lambda_expression"
+    ],
+    [
+      "_self_type_ascription",
+      "lambda_expression"
+    ],
+    [
+      "self_type",
+      "_type_identifier",
+      "_simple_expression",
+      "lambda_expression"
+    ],
+    [
+      "lambda_expression",
       "_braced_typed_lambda"
     ],
     [
       "self_type",
       "_simple_expression",
+      "lambda_expression",
       "_braced_typed_lambda"
     ],
     [
+      "_type_identifier",
+      "lambda_expression"
+    ],
+    [
       "_self_type_ascription",
+      "lambda_expression",
       "_braced_typed_lambda"
     ],
     [
@@ -14522,11 +14659,6 @@
     [
       "_annotated_type",
       "binding"
-    ],
-    [
-      "self_type",
-      "_type_identifier",
-      "_simple_expression"
     ],
     [
       "self_type",

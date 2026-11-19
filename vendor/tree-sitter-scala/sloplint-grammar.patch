@@ -1,6 +1,26 @@
 --- a/grammar.js
 +++ b/grammar.js
-@@ -438,7 +438,6 @@
+@@ -138,6 +138,10 @@
+       opRegex(`[*%]${OP_RUN}${OP_TAIL_LEFT}`),
+       opRegex(`/[${OP_NSS_END_LEFT}]`),
+       opRegex(`/[${OP_NSS}]${OP_RUN}${OP_TAIL_LEFT}`),
++      // `x/y` stays two tokens, but `/x/` is one operator: a `/` bound to a
++      // following opchar cannot open a comment, and scalac accepts `/:/`
++      // (breeze, twitter-algebird) as a left-associative mul-level name.
++      opRegex(`/[${OP_NSS}]${OP_RUN}/`),
+     ),
+   ),
+   mulRight: token(
+@@ -181,7 +185,7 @@
+   choice(
+     opRegex(`[${OP_SINGLE_UNICODE}\\-!#%&*+/\\\\<>?\\u005e\\u007c~]`),
+     opRegex(`[${noSlash(OP)}]${OP_STEP}+`),
+-    opRegex(`/[${OP_NSS}]${OP_RUN}`),
++    opRegex(`/[${OP_NSS}]${OP_RUN_SLASH}`),
+   ),
+ );
+ 
+@@ -438,7 +442,6 @@
  
    conflicts: $ => [
      [$._if_rest],
@@ -8,7 +28,7 @@
      [$.tuple_pattern, $._simple_expression],
      [$.tuple_pattern, $._simple_expression, $.binding],
      // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
-@@ -493,6 +492,7 @@
+@@ -493,6 +496,7 @@
      // we treat `operator_identifier` as `simple_expression`
      [$._simple_expression, $.lambda_expression],
      [$._simple_expression, $._single_lambda_param],
@@ -16,7 +36,7 @@
      // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
      // identifier `export` beginning an expression statement. Each reading
      // dies on the next token ('.' vs a name), so forking settles it. The
-@@ -532,8 +532,6 @@
+@@ -532,13 +536,26 @@
      [$._constructor_annotation],
      [$._constructor_annotation_arguments, $.arguments],
      [$._constructor_annotation, $.applied_constructor_type],
@@ -24,8 +44,39 @@
 -    [$.block, $.capture_set],
      // '{'  identifier  •  ':' starts the braced typed lambda, the block
      // lambda param, and a statement alike.
-     [$._simple_expression, $._braced_typed_lambda],
-@@ -2019,7 +2017,10 @@
+-    [$._simple_expression, $._braced_typed_lambda],
+-    [$.self_type, $._simple_expression, $._braced_typed_lambda],
+-    [$._self_type_ascription, $._braced_typed_lambda],
++    // `{ export: T => … }` — a soft keyword as a typed lambda parameter vs
++    // a statement taking a colon argument. The typed branches' dynamic
++    // precedence resolves it to the lambda.
++    [$._simple_expression, $._braced_typed_lambda, $.lambda_expression],
++    // `(export: T => …)` — parenthesized typed lambda parameter vs a
++    // `name: type` binding vs a colon argument on the identifier.
++    [$._simple_expression, $.lambda_expression, $.binding],
++    // `given { export: T => … }` — typed lambda parameter vs a self-type
++    // ascription (`{ self: T => }`).
++    [$.self_type, $._simple_expression, $.lambda_expression],
++    [$._self_type_ascription, $.lambda_expression],
++    // `ident :` inside type-parameter lists — same fork between the typed
++    // lambda parameter and a colon argument / self-type.
++    [$.self_type, $._type_identifier, $._simple_expression, $.lambda_expression],
++    [$.lambda_expression, $._braced_typed_lambda],
++    [$.self_type, $._simple_expression, $.lambda_expression, $._braced_typed_lambda],
++    [$._type_identifier, $.lambda_expression],
++    [$._self_type_ascription, $.lambda_expression, $._braced_typed_lambda],
+     [$.binding, $._simple_expression, $._type_identifier],
+     [$.class_parameter, $._type_identifier],
+     // '{'  _single_lambda_param  '=>'  expression  •  '}'  …
+@@ -555,7 +572,6 @@
+     [$._annotated_type, $.binding],
+     // '['  identifier  ':'  '{'  identifier  •  ':'  — a braced context
+     // bound reuses the self-type head shapes.
+-    [$.self_type, $._type_identifier, $._simple_expression],
+     // '['  identifier  ':'  '{'  wildcard  •  ':'  …
+     [$.self_type, $._annotated_type, $._simple_expression],
+     // '['  identifier  ':'  '{'  '('  wildcard  •  ':'  …
+@@ -2019,7 +2035,10 @@
          PREC.infix,
          seq(
            field("left", $._definition_pattern),
@@ -37,7 +88,38 @@
            field("right", $._definition_pattern),
          ),
        ),
-@@ -2283,19 +2284,37 @@
+@@ -2151,10 +2170,17 @@
+               ),
+               field(
+                 "parameters",
+-                // No unparenthesized typed parameter here. It is only legal
+-                // inside braces, and `OWrites: c => body` must stay a colon
+-                // argument.
+-                choice($.wildcard, $._single_lambda_param),
++                choice(
++                  $.wildcard,
++                  $._single_lambda_param,
++                  // `a: T => body` — a typed parameter is also legal outside
++                  // braces (scalding's `case c => a: Array[Long] => new W(a)`).
++                  // Kept below the colon-argument (0) and ascription-arrow
++                  // (-1) readings, which keep their upstream trees where both
++                  // can apply; this only wins where the tail cannot parse as
++                  // a type (`=> new …`, `=> { … }` as expression bodies).
++                  prec.right(prec.dynamic(-5, seq(optional("implicit"), operandName($), ":", $._type))),
++                ),
+               ),
+               anyArrow(),
+               $._indentable_expression,
+@@ -2215,7 +2241,7 @@
+     // the reading of `x: T` as a statement taking a colon argument.
+     _braced_typed_lambda: $ =>
+       prec.dynamic(
+-        1,
++        2,
+         prec.right(
+           "lambda",
+           seq(
+@@ -2283,19 +2309,37 @@
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -85,7 +167,7 @@
      /*
       *   MatchClause       ::=  'match' <<< CaseClauses >>>
       *
-@@ -2529,6 +2548,17 @@
+@@ -2529,6 +2573,17 @@
              optional($._end_marker_kw_tail),
            ),
          ),

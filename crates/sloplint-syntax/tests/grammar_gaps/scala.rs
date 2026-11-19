@@ -203,3 +203,40 @@ fn star_repeat_and_vararg_still_parse() {
     let analysis = run_clean(source);
     assert_eq!(function_names(&analysis), ["f", "g"]);
 }
+
+#[test]
+fn slash_tail_operator_names_parse() {
+    // breeze / twitter-algebird define mul-level operators that end in `/`
+    // after a slash-led head, e.g. `def /:/`. The external scanner never
+    // claims a `/`-led token, so the regex partition must accept it.
+    let source = concat!(
+        "trait Foldable[F[_]] {\n",
+        "  def /:/[B](b: B)(f: (B, B) => B): B\n",
+        "  def |/[B](b: B): B\n",
+        "  def +/[B](b: B): B\n",
+        "}\n",
+    );
+    // Operator names land as `operator_identifier` heads, not `identifier`
+    // function names; the contract is that the definitions parse cleanly.
+    run_clean(source);
+}
+
+#[test]
+fn unparenthesized_typed_lambda_parses() {
+    // scalding writes `case c => a: Array[Long] => new W(a)`: a typed
+    // parameter is a lambda in expression position, not an ascription —
+    // the `=> new` tail cannot parse as a type.
+    let source = concat!(
+        "class W[A](a: A)\n",
+        "object W {\n",
+        "  def m(xs: Any) = xs match {\n",
+        "    case c if classOf[Array[Long]].equals(c) =>\n",
+        "      a: Array[Long] => new W(a)\n",
+        "    case w => w\n",
+        "  }\n",
+        "  val f = (a: Long) => a\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["m"]);
+}

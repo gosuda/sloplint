@@ -1,0 +1,110 @@
+================================================================================
+Slash-tailed operator names (sloplint SC-OPSLASH)
+================================================================================
+
+trait Foldable[F[_]] {
+  def /:/[B](b: B)(f: (B, B) => B): B
+  def |/[B](b: B): B
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (trait_definition
+    name: (identifier)
+    type_parameters: (type_parameters
+      name: (identifier)
+      type_parameters: (type_parameters
+        name: (wildcard)))
+    body: (template_body
+      (function_declaration
+        name: (operator_identifier)
+        parameters: (type_parameters
+          name: (identifier))
+        parameters: (parameters
+          (parameter
+            name: (identifier)
+            type: (type_identifier)))
+        parameters: (parameters
+          (parameter
+            name: (identifier)
+            type: (function_type
+              parameter_types: (parameter_types
+                type: (type_identifier)
+                type: (type_identifier))
+              return_type: (type_identifier))))
+        return_type: (type_identifier))
+      (function_declaration
+        name: (operator_identifier)
+        parameters: (type_parameters
+          name: (identifier))
+        parameters: (parameters
+          (parameter
+            name: (identifier)
+            type: (type_identifier)))
+        return_type: (type_identifier)))))
+
+================================================================================
+Unparenthesized typed lambda in a case body (sloplint SC-TYPEDLAMBDA)
+================================================================================
+
+class W[A](a: A)
+object W {
+  def m(xs: Any) = xs match {
+    case c if classOf[Array[Long]].equals(c) =>
+      a: Array[Long] => new W(a)
+    case w => w
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_definition
+    name: (identifier)
+    type_parameters: (type_parameters
+      name: (identifier))
+    class_parameters: (class_parameters
+      (class_parameter
+        name: (identifier)
+        type: (type_identifier))))
+  (object_definition
+    name: (identifier)
+    body: (template_body
+      (function_definition
+        name: (identifier)
+        parameters: (parameters
+          (parameter
+            name: (identifier)
+            type: (type_identifier)))
+        body: (match_expression
+          value: (identifier)
+          body: (case_block
+            (case_clause
+              pattern: (identifier)
+              (guard
+                condition: (call_expression
+                  function: (field_expression
+                    value: (generic_function
+                      function: (identifier)
+                      type_arguments: (type_arguments
+                        (generic_type
+                          type: (type_identifier)
+                          type_arguments: (type_arguments
+                            (type_identifier)))))
+                    field: (identifier))
+                  arguments: (arguments
+                    (identifier))))
+              body: (lambda_expression
+                parameters: (identifier)
+                parameters: (generic_type
+                  type: (type_identifier)
+                  type_arguments: (type_arguments
+                    (type_identifier)))
+                (instance_expression
+                  (type_identifier)
+                  arguments: (arguments
+                    (identifier)))))
+            (case_clause
+              pattern: (identifier)
+              body: (identifier))))))))

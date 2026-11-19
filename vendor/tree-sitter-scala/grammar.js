@@ -138,6 +138,10 @@ const OP_TOKEN = {
       opRegex(`[*%]${OP_RUN}${OP_TAIL_LEFT}`),
       opRegex(`/[${OP_NSS_END_LEFT}]`),
       opRegex(`/[${OP_NSS}]${OP_RUN}${OP_TAIL_LEFT}`),
+      // `x/y` stays two tokens, but `/x/` is one operator: a `/` bound to a
+      // following opchar cannot open a comment, and scalac accepts `/:/`
+      // (breeze, twitter-algebird) as a left-associative mul-level name.
+      opRegex(`/[${OP_NSS}]${OP_RUN}/`),
     ),
   ),
   mulRight: token(
@@ -181,7 +185,7 @@ const OP_ID_UNION = token(
   choice(
     opRegex(`[${OP_SINGLE_UNICODE}\\-!#%&*+/\\\\<>?\\u005e\\u007c~]`),
     opRegex(`[${noSlash(OP)}]${OP_STEP}+`),
-    opRegex(`/[${OP_NSS}]${OP_RUN}`),
+    opRegex(`/[${OP_NSS}]${OP_RUN_SLASH}`),
   ),
 );
 
@@ -534,9 +538,24 @@ module.exports = grammar({
     [$._constructor_annotation, $.applied_constructor_type],
     // '{'  identifier  •  ':' starts the braced typed lambda, the block
     // lambda param, and a statement alike.
-    [$._simple_expression, $._braced_typed_lambda],
-    [$.self_type, $._simple_expression, $._braced_typed_lambda],
-    [$._self_type_ascription, $._braced_typed_lambda],
+    // `{ export: T => … }` — a soft keyword as a typed lambda parameter vs
+    // a statement taking a colon argument. The typed branches' dynamic
+    // precedence resolves it to the lambda.
+    [$._simple_expression, $._braced_typed_lambda, $.lambda_expression],
+    // `(export: T => …)` — parenthesized typed lambda parameter vs a
+    // `name: type` binding vs a colon argument on the identifier.
+    [$._simple_expression, $.lambda_expression, $.binding],
+    // `given { export: T => … }` — typed lambda parameter vs a self-type
+    // ascription (`{ self: T => }`).
+    [$.self_type, $._simple_expression, $.lambda_expression],
+    [$._self_type_ascription, $.lambda_expression],
+    // `ident :` inside type-parameter lists — same fork between the typed
+    // lambda parameter and a colon argument / self-type.
+    [$.self_type, $._type_identifier, $._simple_expression, $.lambda_expression],
+    [$.lambda_expression, $._braced_typed_lambda],
+    [$.self_type, $._simple_expression, $.lambda_expression, $._braced_typed_lambda],
+    [$._type_identifier, $.lambda_expression],
+    [$._self_type_ascription, $.lambda_expression, $._braced_typed_lambda],
     [$.binding, $._simple_expression, $._type_identifier],
     [$.class_parameter, $._type_identifier],
     // '{'  _single_lambda_param  '=>'  expression  •  '}'  …
@@ -553,7 +572,6 @@ module.exports = grammar({
     [$._annotated_type, $.binding],
     // '['  identifier  ':'  '{'  identifier  •  ':'  — a braced context
     // bound reuses the self-type head shapes.
-    [$.self_type, $._type_identifier, $._simple_expression],
     // '['  identifier  ':'  '{'  wildcard  •  ':'  …
     [$.self_type, $._annotated_type, $._simple_expression],
     // '['  identifier  ':'  '{'  '('  wildcard  •  ':'  …
@@ -2152,10 +2170,17 @@ module.exports = grammar({
               ),
               field(
                 "parameters",
-                // No unparenthesized typed parameter here. It is only legal
-                // inside braces, and `OWrites: c => body` must stay a colon
-                // argument.
-                choice($.wildcard, $._single_lambda_param),
+                choice(
+                  $.wildcard,
+                  $._single_lambda_param,
+                  // `a: T => body` — a typed parameter is also legal outside
+                  // braces (scalding's `case c => a: Array[Long] => new W(a)`).
+                  // Kept below the colon-argument (0) and ascription-arrow
+                  // (-1) readings, which keep their upstream trees where both
+                  // can apply; this only wins where the tail cannot parse as
+                  // a type (`=> new …`, `=> { … }` as expression bodies).
+                  prec.right(prec.dynamic(-5, seq(optional("implicit"), operandName($), ":", $._type))),
+                ),
               ),
               anyArrow(),
               $._indentable_expression,
@@ -2216,7 +2241,7 @@ module.exports = grammar({
     // the reading of `x: T` as a statement taking a colon argument.
     _braced_typed_lambda: $ =>
       prec.dynamic(
-        1,
+        2,
         prec.right(
           "lambda",
           seq(
