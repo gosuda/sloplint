@@ -129,6 +129,10 @@ module.exports = grammar(C, {
     // `+ NAME;` is a macro_qualifier ending the method modifiers vs a
     // one-segment keyword selector.
     [$.macro_qualifier, $.keyword_declarator],
+    // `TYPE name __unused = v;` — a macro_attribute after the declarator
+    // belongs to either init_declarator's own repeat or the trailing
+    // _declaration_modifiers repeat (both accept it until '=' resolves).
+    [$._declaration_modifiers, $.init_declarator],
     // `+ NAME <modifier> __extension__` in @implementation — the
     // pre-body declaration repeat vs the modifier repeat overlap.
     [$._declaration_specifiers, $.method_definition],
@@ -994,6 +998,10 @@ module.exports = grammar(C, {
     instance_variable: $ => choice(
       $.visibility_specification,
       $.struct_declaration,
+      // sloplint: class-dump ivar blocks also carry anonymous enums and
+      // forward struct decls (`enum { kMax = 100, };`, `struct q_s;`)
+      // that have no declarator for struct_declaration to claim.
+      seq(choice($.enum_specifier, $.union_specifier, $.struct_specifier), ';'),
       $.preproc_ifdef,
       $.preproc_if,
     ),
@@ -1117,6 +1125,9 @@ module.exports = grammar(C, {
 
     method_selector_no_list: $ => choice(
       $.identifier,
+      // sloplint: class-dump headers declare clang's synthesized
+      // `.cxx_destruct` selector, which literally starts with a dot.
+      seq('.', $.identifier),
       $.keyword_selector,
       seq($.keyword_selector, ',', '...'),
     ),
@@ -1450,7 +1461,9 @@ module.exports = grammar(C, {
 
     init_declarator: $ => seq(
       field('declarator', $._declarator),
-      optional($.attribute_specifier),
+      // sloplint: mirror the C base's post-declarator modifiers so
+      // `SEL selector __unused = ...` keeps parsing under ObjC.
+      repeat(choice($.attribute_specifier, $.ms_call_modifier, $.macro_attribute, $.macro_qualifier)),
       '=',
       field('value', choice($.initializer_list, $.expression)),
     ),
