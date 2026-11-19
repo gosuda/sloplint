@@ -1,4 +1,6 @@
 diff --git a/grammar.js b/grammar.js
+--- a/grammar.js
++++ b/grammar.js
 @@ -7,10 +7,31 @@
    PARAM: 6,
  };
@@ -638,6 +640,8 @@ diff --git a/grammar.js b/grammar.js
  
      attribute_name: ($) => $.type_spec,
 diff --git a/src/scanner.c b/src/scanner.c
+--- a/src/scanner.c
++++ b/src/scanner.c
 @@ -5,7 +5,8 @@
  #include <wctype.h>
  
