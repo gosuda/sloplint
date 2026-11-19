@@ -173,6 +173,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "macro_braced_declaration"
+        },
+        {
+          "type": "SYMBOL",
           "name": "guarded_function"
         },
         {
@@ -9195,6 +9199,10 @@
                 "name": "_block_item"
               },
               {
+                "type": "SYMBOL",
+                "name": "macro_braced_declaration"
+              },
+              {
                 "type": "ALIAS",
                 "content": {
                   "type": "PREC_DYNAMIC",
@@ -11712,6 +11720,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "macro_braced_declaration"
+        },
+        {
+          "type": "SYMBOL",
           "name": "alias_declaration"
         },
         {
@@ -12663,6 +12675,10 @@
         {
           "type": "SYMBOL",
           "name": "qt_foreach_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_braced_statement"
         }
       ]
     },
@@ -12754,6 +12770,10 @@
         {
           "type": "SYMBOL",
           "name": "throw_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_braced_statement"
         }
       ]
     },
@@ -13483,6 +13503,10 @@
         {
           "type": "SYMBOL",
           "name": "binary_expression"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_braced_expression"
         }
       ]
     },
@@ -17384,73 +17408,82 @@
             "type": "CHOICE",
             "members": [
               {
-                "type": "SEQ",
+                "type": "CHOICE",
                 "members": [
                   {
-                    "type": "FIELD",
-                    "name": "output_operands",
-                    "content": {
-                      "type": "SYMBOL",
-                      "name": "gnu_asm_output_operand_list"
-                    }
-                  },
-                  {
-                    "type": "CHOICE",
+                    "type": "SEQ",
                     "members": [
                       {
-                        "type": "SEQ",
+                        "type": "FIELD",
+                        "name": "output_operands",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "gnu_asm_output_operand_list"
+                        }
+                      },
+                      {
+                        "type": "CHOICE",
                         "members": [
                           {
-                            "type": "FIELD",
-                            "name": "input_operands",
-                            "content": {
-                              "type": "SYMBOL",
-                              "name": "gnu_asm_input_operand_list"
-                            }
-                          },
-                          {
-                            "type": "CHOICE",
+                            "type": "SEQ",
                             "members": [
                               {
-                                "type": "SEQ",
+                                "type": "FIELD",
+                                "name": "input_operands",
+                                "content": {
+                                  "type": "SYMBOL",
+                                  "name": "gnu_asm_input_operand_list"
+                                }
+                              },
+                              {
+                                "type": "CHOICE",
                                 "members": [
                                   {
-                                    "type": "FIELD",
-                                    "name": "clobbers",
-                                    "content": {
-                                      "type": "SYMBOL",
-                                      "name": "gnu_asm_clobber_list"
-                                    }
-                                  },
-                                  {
-                                    "type": "CHOICE",
+                                    "type": "SEQ",
                                     "members": [
                                       {
                                         "type": "FIELD",
-                                        "name": "goto_labels",
+                                        "name": "clobbers",
                                         "content": {
                                           "type": "SYMBOL",
-                                          "name": "gnu_asm_goto_list"
+                                          "name": "gnu_asm_clobber_list"
                                         }
                                       },
                                       {
-                                        "type": "BLANK"
+                                        "type": "CHOICE",
+                                        "members": [
+                                          {
+                                            "type": "FIELD",
+                                            "name": "goto_labels",
+                                            "content": {
+                                              "type": "SYMBOL",
+                                              "name": "gnu_asm_goto_list"
+                                            }
+                                          },
+                                          {
+                                            "type": "BLANK"
+                                          }
+                                        ]
                                       }
                                     ]
+                                  },
+                                  {
+                                    "type": "BLANK"
                                   }
                                 ]
-                              },
-                              {
-                                "type": "BLANK"
                               }
                             ]
+                          },
+                          {
+                            "type": "BLANK"
                           }
                         ]
-                      },
-                      {
-                        "type": "BLANK"
                       }
                     ]
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "_gnu_asm_fused_sections"
                   }
                 ]
               },
@@ -23395,6 +23428,477 @@
         ]
       }
     },
+    "_gnu_asm_fused_sections": {
+      "type": "PREC_DYNAMIC",
+      "value": -1,
+      "content": {
+        "type": "CHOICE",
+        "members": [
+          {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "STRING",
+                "value": "::"
+              },
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "FIELD",
+                    "name": "input_operands",
+                    "content": {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_fused_asm_items"
+                      },
+                      "named": true,
+                      "value": "gnu_asm_input_operand_list"
+                    }
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              },
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "STRING",
+                            "value": ":"
+                          },
+                          {
+                            "type": "CHOICE",
+                            "members": [
+                              {
+                                "type": "FIELD",
+                                "name": "clobbers",
+                                "content": {
+                                  "type": "ALIAS",
+                                  "content": {
+                                    "type": "SYMBOL",
+                                    "name": "_fused_asm_clobber_items"
+                                  },
+                                  "named": true,
+                                  "value": "gnu_asm_clobber_list"
+                                }
+                              },
+                              {
+                                "type": "BLANK"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "CHOICE",
+                            "members": [
+                              {
+                                "type": "SEQ",
+                                "members": [
+                                  {
+                                    "type": "STRING",
+                                    "value": ":"
+                                  },
+                                  {
+                                    "type": "CHOICE",
+                                    "members": [
+                                      {
+                                        "type": "FIELD",
+                                        "name": "goto_labels",
+                                        "content": {
+                                          "type": "SYMBOL",
+                                          "name": "_gnu_asm_goto_items"
+                                        }
+                                      },
+                                      {
+                                        "type": "BLANK"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "BLANK"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "SEQ",
+                        "members": [
+                          {
+                            "type": "STRING",
+                            "value": "::"
+                          },
+                          {
+                            "type": "CHOICE",
+                            "members": [
+                              {
+                                "type": "FIELD",
+                                "name": "goto_labels",
+                                "content": {
+                                  "type": "SYMBOL",
+                                  "name": "_gnu_asm_goto_items"
+                                }
+                              },
+                              {
+                                "type": "BLANK"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "FIELD",
+                "name": "output_operands",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "gnu_asm_output_operand_list"
+                }
+              },
+              {
+                "type": "STRING",
+                "value": "::"
+              },
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "FIELD",
+                    "name": "clobbers",
+                    "content": {
+                      "type": "ALIAS",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_fused_asm_clobber_items"
+                      },
+                      "named": true,
+                      "value": "gnu_asm_clobber_list"
+                    }
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              },
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SEQ",
+                    "members": [
+                      {
+                        "type": "STRING",
+                        "value": ":"
+                      },
+                      {
+                        "type": "CHOICE",
+                        "members": [
+                          {
+                            "type": "FIELD",
+                            "name": "goto_labels",
+                            "content": {
+                              "type": "SYMBOL",
+                              "name": "_gnu_asm_goto_items"
+                            }
+                          },
+                          {
+                            "type": "BLANK"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "FIELD",
+                "name": "output_operands",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "gnu_asm_output_operand_list"
+                }
+              },
+              {
+                "type": "FIELD",
+                "name": "input_operands",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "gnu_asm_input_operand_list"
+                }
+              },
+              {
+                "type": "STRING",
+                "value": "::"
+              },
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "FIELD",
+                    "name": "goto_labels",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_gnu_asm_goto_items"
+                    }
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "_fused_asm_items": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "operand",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "PREC_DYNAMIC",
+                "value": 1,
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "gnu_asm_input_operand"
+                }
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_fused_asm_string"
+              }
+            ]
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "STRING",
+                "value": ","
+              },
+              {
+                "type": "FIELD",
+                "name": "operand",
+                "content": {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "PREC_DYNAMIC",
+                      "value": 1,
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "gnu_asm_input_operand"
+                      }
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "_fused_asm_string"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "_fused_asm_clobber_items": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "register",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_fused_asm_string"
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "STRING",
+                "value": ","
+              },
+              {
+                "type": "FIELD",
+                "name": "register",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_fused_asm_string"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "_fused_asm_string": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "string_literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "raw_string_literal"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_fused_asm_concat_string"
+          },
+          "named": true,
+          "value": "concatenated_string"
+        }
+      ]
+    },
+    "_fused_asm_concat_string": {
+      "type": "PREC_RIGHT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "identifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "string_literal"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "raw_string_literal"
+              }
+            ]
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "identifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "string_literal"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "raw_string_literal"
+              }
+            ]
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "string_literal"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "raw_string_literal"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "_gnu_asm_goto_items": {
+      "type": "ALIAS",
+      "content": {
+        "type": "SYMBOL",
+        "name": "_gnu_asm_goto_list_body"
+      },
+      "named": true,
+      "value": "gnu_asm_goto_list"
+    },
+    "_gnu_asm_goto_list_body": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "label",
+          "content": {
+            "type": "SYMBOL",
+            "name": "identifier"
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "STRING",
+                "value": ","
+              },
+              {
+                "type": "FIELD",
+                "name": "label",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
     "reference_declarator": {
       "type": "PREC_DYNAMIC",
       "value": 1,
@@ -25004,6 +25508,525 @@
         {
           "type": "STRING",
           "value": ";"
+        }
+      ]
+    },
+    "macro_braced_statement": {
+      "type": "PREC_RIGHT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "FIELD",
+            "name": "name",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_type_identifier"
+                  },
+                  "named": true,
+                  "value": "identifier"
+                }
+              ]
+            }
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "macro_argument_list"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_macro_braced_body"
+            },
+            "named": true,
+            "value": "compound_statement"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": ";"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "macro_braced_declaration": {
+      "type": "PREC_DYNAMIC",
+      "value": 1,
+      "content": {
+        "type": "PREC_RIGHT",
+        "value": 0,
+        "content": {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "name",
+              "content": {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "identifier"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_type_identifier"
+                    },
+                    "named": true,
+                    "value": "identifier"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_argument_list_nonempty"
+                  },
+                  "named": true,
+                  "value": "macro_argument_list"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_macro_braced_members"
+              },
+              "named": true,
+              "value": "field_declaration_list"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": ";"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "_macro_argument_list_nonempty": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "REPEAT1",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "identifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "primitive_type"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "sized_type_specifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "template_type"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "qualified_identifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "number_literal"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "pointer_expression"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "unary_expression"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "sizeof_expression"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "string_literal"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "char_literal"
+              },
+              {
+                "type": "STRING",
+                "value": ","
+              },
+              {
+                "type": "STRING",
+                "value": "::"
+              },
+              {
+                "type": "STRING",
+                "value": "<"
+              },
+              {
+                "type": "STRING",
+                "value": ">"
+              },
+              {
+                "type": "STRING",
+                "value": "*"
+              },
+              {
+                "type": "STRING",
+                "value": "&"
+              },
+              {
+                "type": "STRING",
+                "value": "&&"
+              },
+              {
+                "type": "STRING",
+                "value": "|"
+              },
+              {
+                "type": "STRING",
+                "value": "="
+              },
+              {
+                "type": "STRING",
+                "value": "!"
+              },
+              {
+                "type": "STRING",
+                "value": "?"
+              },
+              {
+                "type": "STRING",
+                "value": ":"
+              },
+              {
+                "type": "STRING",
+                "value": "."
+              },
+              {
+                "type": "STRING",
+                "value": "->"
+              },
+              {
+                "type": "STRING",
+                "value": "~"
+              },
+              {
+                "type": "STRING",
+                "value": "+"
+              },
+              {
+                "type": "STRING",
+                "value": "-"
+              },
+              {
+                "type": "STRING",
+                "value": "/"
+              },
+              {
+                "type": "STRING",
+                "value": "%"
+              },
+              {
+                "type": "STRING",
+                "value": "=="
+              },
+              {
+                "type": "STRING",
+                "value": "!="
+              },
+              {
+                "type": "STRING",
+                "value": "<<"
+              },
+              {
+                "type": "STRING",
+                "value": ">>"
+              },
+              {
+                "type": "STRING",
+                "value": "<="
+              },
+              {
+                "type": "STRING",
+                "value": ">="
+              },
+              {
+                "type": "STRING",
+                "value": "||"
+              },
+              {
+                "type": "STRING",
+                "value": "^"
+              },
+              {
+                "type": "STRING",
+                "value": "<<="
+              },
+              {
+                "type": "STRING",
+                "value": ">>="
+              },
+              {
+                "type": "STRING",
+                "value": "->*"
+              },
+              {
+                "type": "STRING",
+                "value": ".*"
+              },
+              {
+                "type": "STRING",
+                "value": "["
+              },
+              {
+                "type": "STRING",
+                "value": "]"
+              },
+              {
+                "type": "STRING",
+                "value": "{"
+              },
+              {
+                "type": "STRING",
+                "value": "}"
+              },
+              {
+                "type": "STRING",
+                "value": "operator"
+              },
+              {
+                "type": "STRING",
+                "value": "const"
+              },
+              {
+                "type": "STRING",
+                "value": "noexcept"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "macro_argument_list"
+              }
+            ]
+          }
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "macro_braced_expression": {
+      "type": "PREC_RIGHT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "FIELD",
+            "name": "name",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_type_identifier"
+                  },
+                  "named": true,
+                  "value": "identifier"
+                }
+              ]
+            }
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "macro_argument_list"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_macro_braced_body"
+            },
+            "named": true,
+            "value": "compound_statement"
+          }
+        ]
+      }
+    },
+    "_macro_braced_body": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_macro_braced_open"
+          },
+          "named": false,
+          "value": "{"
+        },
+        {
+          "type": "REPEAT1",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_block_item"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "}"
+        }
+      ]
+    },
+    "_macro_braced_members": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_macro_braced_open"
+          },
+          "named": false,
+          "value": "{"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "_block_item"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "field_declaration"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "friend_declaration"
+              },
+              {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "access_specifier"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": ":"
+                  }
+                ]
+              },
+              {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "SYMBOL",
+                        "name": "access_specifier"
+                      },
+                      {
+                        "type": "BLANK"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "qt_section_label"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": ":"
+                  }
+                ]
+              },
+              {
+                "type": "SYMBOL",
+                "name": "macro_access_label"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "type_definition"
+              }
+            ]
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "}"
         }
       ]
     },
@@ -29215,20 +30238,6 @@
       "preproc_else_in_guarded_class"
     ],
     [
-      "preproc_if",
-      "preproc_if_in_declaration_specifiers",
-      "preproc_if_in_initializer_list",
-      "preproc_if_in_guarded_signature",
-      "preproc_if_in_guarded_class"
-    ],
-    [
-      "preproc_ifdef",
-      "preproc_ifdef_in_declaration_specifiers",
-      "preproc_ifdef_in_initializer_list",
-      "preproc_ifdef_in_guarded_signature",
-      "preproc_ifdef_in_guarded_class"
-    ],
-    [
       "preproc_elif",
       "preproc_elif_in_declaration_specifiers",
       "preproc_elif_in_initializer_list",
@@ -29251,21 +30260,6 @@
       "preproc_ifdef",
       "preproc_ifdef_in_declaration_specifiers",
       "preproc_ifdef_in_initializer_list"
-    ],
-    [
-      "preproc_elif",
-      "preproc_elif_in_declaration_specifiers",
-      "preproc_elif_in_initializer_list"
-    ],
-    [
-      "preproc_elifdef",
-      "preproc_elifdef_in_declaration_specifiers",
-      "preproc_elifdef_in_initializer_list"
-    ],
-    [
-      "preproc_else",
-      "preproc_else_in_declaration_specifiers",
-      "preproc_else_in_initializer_list"
     ],
     [
       "preproc_ifdef_in_declaration_specifiers",
@@ -29294,24 +30288,12 @@
       "preproc_elif_in_guarded_class"
     ],
     [
-      "preproc_if_in_declaration_specifiers",
-      "_declaration_specifiers"
-    ],
-    [
       "preproc_if",
       "preproc_if_in_declaration_specifiers"
     ],
     [
       "preproc_ifdef",
       "preproc_ifdef_in_declaration_specifiers"
-    ],
-    [
-      "preproc_elif_in_declaration_specifiers",
-      "_declaration_specifiers"
-    ],
-    [
-      "preproc_elifdef_in_declaration_specifiers",
-      "_declaration_specifiers"
     ],
     [
       "preproc_elif",
@@ -29391,6 +30373,236 @@
     [
       "_top_level_item",
       "_top_level_statement"
+    ],
+    [
+      "macro_braced_statement"
+    ],
+    [
+      "macro_braced_expression"
+    ],
+    [
+      "macro_braced_declaration"
+    ],
+    [
+      "macro_braced_statement",
+      "macro_braced_expression"
+    ],
+    [
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "_declarator",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "_declarator",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_stmt",
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_braced_statement",
+      "macro_braced_expression"
+    ],
+    [
+      "_macro_declaration_stmt",
+      "expression",
+      "macro_braced_statement",
+      "macro_braced_expression"
+    ],
+    [
+      "expression",
+      "concatenated_string",
+      "macro_braced_expression"
+    ],
+    [
+      "type_specifier",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top",
+      "_macro_declaration_stmt",
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_braced_statement",
+      "macro_braced_declaration",
+      "macro_braced_expression"
+    ],
+    [
+      "enumerator",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_stmt",
+      "type_specifier",
+      "expression",
+      "macro_braced_statement",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "type_specifier",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_argument_list",
+      "expression"
+    ],
+    [
+      "macro_argument_list",
+      "expression",
+      "template_type",
+      "template_function"
+    ],
+    [
+      "macro_argument_list",
+      "_string"
+    ],
+    [
+      "macro_argument_list",
+      "_string",
+      "concatenated_string"
+    ],
+    [
+      "macro_argument_list",
+      "_class_name"
+    ],
+    [
+      "macro_argument_list",
+      "type_specifier",
+      "call_expression"
+    ],
+    [
+      "macro_argument_list",
+      "compound_literal_expression"
+    ],
+    [
+      "macro_argument_list",
+      "type_specifier",
+      "expression"
+    ],
+    [
+      "macro_argument_list",
+      "type_specifier",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_argument_list",
+      "concatenated_string"
+    ],
+    [
+      "_midl_attribute",
+      "expression",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top",
+      "_macro_declaration_stmt",
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_braced_statement",
+      "macro_braced_expression"
+    ],
+    [
+      "_macro_braced_body",
+      "_macro_braced_members"
+    ],
+    [
+      "_block_item",
+      "_macro_braced_members"
+    ],
+    [
+      "macro_argument_list",
+      "sized_type_specifier",
+      "_macro_argument_list_nonempty"
+    ],
+    [
+      "macro_argument_list",
+      "template_type",
+      "_macro_argument_list_nonempty"
+    ],
+    [
+      "macro_qualifier",
+      "_declarator",
+      "_field_declarator"
+    ],
+    [
+      "macro_qualifier",
+      "_declarator",
+      "_field_declarator",
+      "_init_pointer_declarator"
+    ],
+    [
+      "_declarator",
+      "_field_declarator",
+      "_init_reference_declarator"
+    ],
+    [
+      "macro_argument_list",
+      "type_specifier",
+      "_macro_argument_list_nonempty"
+    ],
+    [
+      "macro_argument_list",
+      "_macro_argument_list_nonempty"
+    ],
+    [
+      "_init_declarator_preproc",
+      "_declarator",
+      "_field_declarator"
+    ],
+    [
+      "_declarator",
+      "_field_declarator"
+    ],
+    [
+      "labeled_statement",
+      "macro_access_label"
+    ],
+    [
+      "_midl_attribute",
+      "structured_binding_declarator",
+      "_lambda_capture_identifier"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top",
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_braced_statement",
+      "macro_braced_declaration",
+      "macro_braced_expression"
+    ],
+    [
+      "macro_qualifier",
+      "macro_declaration",
+      "_declarator",
+      "type_specifier",
+      "macro_type_specifier",
+      "macro_braced_declaration"
     ],
     [
       "_block_item",
@@ -29535,24 +30747,9 @@
       "preproc_ifdef_in_guarded_class"
     ],
     [
-      "preproc_else",
-      "preproc_else_in_guarded_signature",
-      "preproc_else_in_guarded_class"
-    ],
-    [
       "preproc_if",
       "preproc_if_in_guarded_signature",
       "preproc_if_in_guarded_class"
-    ],
-    [
-      "preproc_elifdef",
-      "preproc_elifdef_in_guarded_signature",
-      "preproc_elifdef_in_guarded_class"
-    ],
-    [
-      "preproc_elif",
-      "preproc_elif_in_guarded_signature",
-      "preproc_elif_in_guarded_class"
     ],
     [
       "preproc_ifdef",
@@ -29561,28 +30758,10 @@
       "preproc_ifdef_in_guarded_class"
     ],
     [
-      "preproc_else",
-      "preproc_else_in_initializer_list",
-      "preproc_else_in_guarded_signature",
-      "preproc_else_in_guarded_class"
-    ],
-    [
       "preproc_if",
       "preproc_if_in_initializer_list",
       "preproc_if_in_guarded_signature",
       "preproc_if_in_guarded_class"
-    ],
-    [
-      "preproc_elifdef",
-      "preproc_elifdef_in_initializer_list",
-      "preproc_elifdef_in_guarded_signature",
-      "preproc_elifdef_in_guarded_class"
-    ],
-    [
-      "preproc_elif",
-      "preproc_elif_in_initializer_list",
-      "preproc_elif_in_guarded_signature",
-      "preproc_elif_in_guarded_class"
     ],
     [
       "_template_argument",
@@ -30021,13 +31200,6 @@
       "comma_expression"
     ],
     [
-      "macro_qualifier",
-      "_macro_declaration_top",
-      "_declarator",
-      "type_specifier",
-      "expression"
-    ],
-    [
       "_macro_declaration_top",
       "type_specifier",
       "expression"
@@ -30045,10 +31217,6 @@
       "macro_declaration",
       "_declarator",
       "type_specifier"
-    ],
-    [
-      "macro_argument_list",
-      "template_type"
     ],
     [
       "macro_argument_list",
@@ -30075,32 +31243,7 @@
     ],
     [
       "macro_qualifier",
-      "_macro_declaration_stmt",
-      "_declarator",
-      "type_specifier",
-      "expression"
-    ],
-    [
-      "_macro_declaration_stmt",
-      "expression"
-    ],
-    [
-      "macro_qualifier",
-      "_macro_declaration_top",
-      "_macro_declaration_stmt",
-      "_declarator",
-      "type_specifier",
-      "expression"
-    ],
-    [
-      "macro_qualifier",
       "_macro_declaration_stmt"
-    ],
-    [
-      "macro_qualifier",
-      "_macro_declaration_stmt",
-      "type_specifier",
-      "expression"
     ],
     [
       "_macro_declaration_top",
@@ -30131,13 +31274,6 @@
       "_midl_attribute",
       "expression",
       "structured_binding_declarator"
-    ],
-    [
-      "macro_qualifier",
-      "macro_declaration",
-      "_declarator",
-      "type_specifier",
-      "macro_type_specifier"
     ],
     [
       "macro_argument_list",
@@ -30210,11 +31346,6 @@
       "_class_name"
     ],
     [
-      "macro_qualifier",
-      "_macro_declaration_top",
-      "expression"
-    ],
-    [
       "_macro_declaration_top",
       "expression",
       "concatenated_string"
@@ -30222,16 +31353,6 @@
     [
       "macro_namespace",
       "_macro_declaration_literals"
-    ],
-    [
-      "preproc_ifdef",
-      "_linkage_guard",
-      "preproc_ifdef_in_guarded_signature"
-    ],
-    [
-      "preproc_if",
-      "_linkage_guard",
-      "preproc_if_in_guarded_signature"
     ],
     [
       "function_definition",
@@ -30331,6 +31452,10 @@
     {
       "type": "SYMBOL",
       "name": "raw_string_content"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_macro_braced_open"
     }
   ],
   "inline": [

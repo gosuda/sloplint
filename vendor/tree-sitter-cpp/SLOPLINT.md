@@ -11,10 +11,11 @@ Date: 2026-10-20.
   `bindings/rust/`, `queries/` and `Cargo.toml` are the published files.
   `LICENSE` is the upstream MIT license (the published crate files carry it
   only through `Cargo.toml`). `grammar.js` is new: the published crate omits
-  it, so it is taken from the upstream tag. `src/scanner.c` is unchanged.
-- `sloplint-grammar.patch` is the diff of `grammar.js` against the upstream
-  tag. It applies with `git apply` in a clone of tag v0.23.4. There are no
-  scanner changes.
+  it, so it is taken from the upstream tag.
+- `sloplint-grammar.patch` is the diff of `grammar.js` and `src/scanner.c`
+  against the upstream tag. It applies with `git apply` in a clone of tag
+  v0.23.4. The scanner change adds the `_macro_braced_open` external token
+  (see `macro_braced_statement` below).
 
 ## Why
 
@@ -477,7 +478,7 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 
 ## Size
 
-`src/parser.c`: 192,883,783 bytes (published: 17,299,078). States: 29043
+`src/parser.c`: 203,934,955 bytes (published: 17,299,078). States: 30267
 (published: 8637). Language version: 14 (published: 14). The literal
 enumeration of `macro_attribute` costs most of the size growth.
 
@@ -686,3 +687,84 @@ first with `rm -f src/parser.c`.
   `sloplint-c-base.patch` copy carries it too for consistency. The
   `const sign = /[-\+]/` helper stays for the exponent tails. Signed
   operands parse through `unary_expression`.
+- **GNU extended asm with fused `::` sections** — `asm(code ::: "memory")`
+  fuses operand-section separators into `::`/`:::` tokens, which the base
+  grammar's `:`-led list rules can't match. `gnu_asm_expression` now also
+  accepts `_gnu_asm_fused_sections`, enumerated positionally over `:`/`::`
+  tokens (outputs : inputs : clobbers : goto labels — at most four colons,
+  so a fifth fails). Which section a fused list lands in depends on the
+  separators that FOLLOW it, so middle sections take an
+  operand|clobber-string union (string, raw `R"..."`, and concatenated
+  forms through a call-free concat variant — the full
+  `concatenated_string` admits `call_expression` members whose
+  `::name(...)` callee would collide with the `::` separator) while the
+  trailing goto slot is strict: bare identifiers only, emitted as a
+  `gnu_asm_goto_list` node exactly like the structured `:`-led branch
+  (`asm goto("x" :::: lbl1, lbl2)`). Sections carry the upstream field
+  names (`output_operands`, `input_operands`, `clobbers`,
+  `goto_labels`). Clobber-item strings carry the upstream `register`
+  field name and materialize as `gnu_asm_clobber_list` /
+  `gnu_asm_input_operand_list` nodes — the same list types the
+  structured `:`-led branch emits — via explicit aliases on the hidden
+  item rules (hidden lists inline their children, so without the alias
+  each item's inner `operand`/`register` field would shadow the
+  section's own field).
+  A bare identifier in a non-goto slot fails like GCC. `asm(s : :: : x)`
+  still parses as classic sections — the fused arm needs a literal `::`
+  token. Repro: atmosphere's
+  `kern_init_loader_board_default_setup.arch.arm64.cpp` and friends —
+  verified with `g++ -fsyntax-only`.
+- **`macro_braced_statement`** — `NAME { stmts };` statement-block macros
+  (`ON_SCOPE_EXIT { VerifyAndClearTpidrEl1(...); };` in atmosphere, Qt
+  `Q_FOREACH`-style bodies, `LOG { ... };`). The ambiguity against braced
+  temporaries (`OStream{&buf}`, `Foo{a,b}`, `erase_fixture{}.m()`) is
+  resolved by the `_macro_braced_open` external token in `src/scanner.c`:
+  it claims `{` when a `;` occurs inside the brace region — braced
+  initializer lists never contain `;` — or when the body starts with a
+  control-flow keyword (`if`, `for`, `return`, `asm`, `namespace`, ...
+  — the list is deliberately narrow so `T{sizeof(const int)}` can't
+  trip it; `namespace` is the one declaration keyword allowed since it
+  opens a semicolon-free body and can't start an expression), so
+  `Type{args}` can never open a macro block. While probing it skips
+  `"..."` literals, char literals scanned to their closing quote
+  (multi-char constants `'A;'`/`'}x'` are legal — a `'` after a digit
+  is the `1'000`/`0xAB'CD` separator instead — tracked via an
+  `after_number` flag set on digits and kept across ident tails like
+  `xAB`/`e5`/`ul`, so `u8'a'` still reads as a char literal), quoted
+  arguments inside `[[attribute]]` (a `]` inside `"..."` can't end the
+  attribute), `/` division (skip_comment consumes it, so the quote in
+  `base/"x"` still opens a string), raw strings opened only by the
+  exact prefixes `R`/`u8R`/`LR`/`uR`/`UR` directly before `"` (`Rif`
+  stays an identifier), `[[attribute]]` runs (their `]`s can't close a
+  lambda capture), `//`/`/* */` comments and balanced `(...)`/`[...]`
+  runs, so `Widget{R"x(a "b" ; c)x"}`, `MACRO { x = 1'000; }`,
+  `Widget{[&](int a, int b) mutable {init();}}` (a `,` inside lambda
+  parameters doesn't drop the lambda flag), `Widget{[&]{init();}}` and
+  lambdas returning templates (`[&]() -> std::pair<int,int> {}` — once
+  a capture's `]` lands, a `capture_done` latch blocks the
+  `, = ? | ^ % ! #` clearing set so the return type's commas can't
+  clear the lambda flag) all stay initializer lists, while
+  `ON_SCOPE_EXIT { if (ready) {} };` still opens a block on the
+  keyword. The name position accepts `identifier` and C++'s
+  `type_identifier` (all-caps macro names like `ON_SCOPE_EXIT` lex as
+  type tokens). Usable at top level and as an unbraced `if`/`for`
+  consequence. `;` after the closing `}` is optional.
+
+- **`macro_braced_declaration` / `macro_braced_expression`** — the same
+  probe drives `NAME(args) { body }` block macros in more positions: a
+  `macro_braced_declaration` covers top-level and member bodies
+  (`SCOPE_GUARD(lock) { ReleaseSpinLock(lock); };`, `struct S { M(a,b)
+  { int member; }; };`), and `macro_braced_expression` covers
+  initializer position (`auto g = SCOPE_GUARD(x) { Unlock(); };`).
+  Both bodies hold `repeat($._block_item)` — real statements and
+  declarations — so a guard body like `ReleaseSpinLock(lock);` parses
+  as a `call_expression` statement instead of a phantom member
+  `function_declarator` (it was `_field_declaration_list_item` before,
+  which forced every `f(x);` line into a declaration). The rule is
+  deliberately kept OUT of `_block_item`: inside a function body
+  `NAME(args) {` must stay a `function_definition` read (upstream
+  parity — `R_TRY_CATCH(e) { work(); };`), so it lives only in
+  `declaration_list` and member positions and carries `prec.dynamic(1)`
+  to win those positions over the struct/`function_definition` reads.
+  The name may carry a `macro_argument_list`; `;` after the closing
+  `}` is optional on the declaration form.

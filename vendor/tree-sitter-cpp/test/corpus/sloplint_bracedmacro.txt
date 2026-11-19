@@ -1,0 +1,370 @@
+========================================
+Statement-block macros and braced temporaries
+========================================
+
+void f(void) {
+  ON_SCOPE_EXIT { cleanup(); };
+  OStream s{&buf};
+  Foo x{a, b};
+  erase_fixture{}.run();
+  if (cond) ON_SCOPE_EXIT { g(); };
+  for (;;) LOG { flush(); };
+  MACRO { x = 1'000; };
+  ON_SCOPE_EXIT { if (ready) {} };
+  Widget w{[&]{init();}};
+  auto w2 = Widget{R"x(a "b" ; c)x"};
+  MACRO { [[likely]] { f(); } }
+  MACRO { int Rif = R"delim(a;b)delim"; auto s = u8R"xy(y;x)xy"; }
+  MACRO { int q = 'A;' + '}x' + 1'000; }
+  T t{sizeof(const int)};
+  Widget w3{[&](int a, int b) mutable {init();}};
+  Widget{[&]{init();}}.run();
+}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list)))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (pointer_expression
+              (identifier)))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (identifier)
+            (identifier))))
+      (expression_statement
+        (call_expression
+          (field_expression
+            (compound_literal_expression
+              (type_identifier)
+              (initializer_list))
+            (field_identifier))
+          (argument_list)))
+      (if_statement
+        (condition_clause
+          (identifier))
+        (macro_braced_statement
+          (identifier)
+          (compound_statement
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list))))))
+      (for_statement
+        (macro_braced_statement
+          (identifier)
+          (compound_statement
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list))))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (expression_statement
+            (assignment_expression
+              (identifier)
+              (number_literal)))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (if_statement
+            (condition_clause
+              (identifier))
+            (compound_statement))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (lambda_expression
+              (lambda_capture_specifier
+                (lambda_default_capture))
+              (compound_statement
+                (expression_statement
+                  (call_expression
+                    (identifier)
+                    (argument_list))))))))
+      (declaration
+        (placeholder_type_specifier
+          (auto))
+        (init_declarator
+          (identifier)
+          (compound_literal_expression
+            (type_identifier)
+            (initializer_list
+              (raw_string_literal
+                (raw_string_delimiter)
+                (raw_string_content)
+                (raw_string_delimiter))))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (attributed_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (compound_statement
+              (expression_statement
+                (call_expression
+                  (identifier)
+                  (argument_list)))))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (declaration
+            (primitive_type)
+            (init_declarator
+              (identifier)
+              (raw_string_literal
+                (raw_string_delimiter)
+                (raw_string_content)
+                (raw_string_delimiter))))
+          (declaration
+            (placeholder_type_specifier
+              (auto))
+            (init_declarator
+              (identifier)
+              (raw_string_literal
+                (raw_string_delimiter)
+                (raw_string_content)
+                (raw_string_delimiter))))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (declaration
+            (primitive_type)
+            (init_declarator
+              (identifier)
+              (binary_expression
+                (binary_expression
+                  (char_literal
+                    (character)
+                    (character))
+                  (char_literal
+                    (character)
+                    (character)))
+                (number_literal))))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (sizeof_expression
+              (type_descriptor
+                (type_qualifier)
+                (primitive_type))))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (lambda_expression
+              (lambda_capture_specifier
+                (lambda_default_capture))
+              (abstract_function_declarator
+                (parameter_list
+                  (parameter_declaration
+                    (primitive_type)
+                    (identifier))
+                  (parameter_declaration
+                    (primitive_type)
+                    (identifier)))
+                (type_qualifier))
+              (compound_statement
+                (expression_statement
+                  (call_expression
+                    (identifier)
+                    (argument_list))))))))
+      (expression_statement
+        (call_expression
+          (field_expression
+            (compound_literal_expression
+              (type_identifier)
+              (initializer_list
+                (lambda_expression
+                  (lambda_capture_specifier
+                    (lambda_default_capture))
+                  (compound_statement
+                    (expression_statement
+                      (call_expression
+                        (identifier)
+                        (argument_list)))))))
+            (field_identifier))
+          (argument_list))))))
+
+================================================================================
+Probe edge cases: hex separators, u8 chars, slash strings, attributes, namespace
+================================================================================
+
+void f(void) {
+  MACRO { int v = 0xAB'CD; };
+  MACRO { int b = u8'a'; };
+  MACRO { auto p = base/"relative"; };
+  MACRO { [[deprecated("a]]b")]] f(); };
+  MACRO { namespace ns { int x; } };
+}
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (declaration
+            (primitive_type)
+            (init_declarator
+              (identifier)
+              (number_literal)))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (declaration
+            (primitive_type)
+            (init_declarator
+              (identifier)
+              (char_literal
+                (character))))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (declaration
+            (placeholder_type_specifier
+              (auto))
+            (init_declarator
+              (identifier)
+              (binary_expression
+                (identifier)
+                (string_literal
+                  (string_content)))))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (attributed_statement
+            (attribute_declaration
+              (attribute
+                (identifier)
+                (argument_list
+                  (string_literal
+                    (string_content)))))
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list))))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (namespace_definition
+            (namespace_identifier)
+            (declaration_list
+              (declaration
+                (primitive_type)
+                (identifier)))))))))
+
+================================================================================
+Braced macros with arguments: declarations, expressions, member position
+================================================================================
+
+SCOPE_GUARD(g_ams_iram_page_spin_lock) {
+  ReleaseSpinLock(g_ams_iram_page_spin_lock);
+};
+
+struct S {
+  MACRO(int a, int b) {
+    int member;
+  };
+};
+
+void f(void) {
+  auto g = SCOPE_GUARD(x) { Unlock(); };
+  R_TRY_CATCH(e) { work(); };
+}
+---
+
+(translation_unit
+  (macro_braced_declaration
+    (identifier)
+    (macro_argument_list
+      (identifier))
+    (field_declaration_list
+      (expression_statement
+        (call_expression
+          (identifier)
+          (argument_list
+            (identifier))))))
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (macro_braced_declaration
+        (identifier)
+        (macro_argument_list
+          (primitive_type)
+          (identifier)
+          (primitive_type)
+          (identifier))
+        (field_declaration_list
+          (declaration
+            (primitive_type)
+            (identifier))))))
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (declaration
+        (placeholder_type_specifier
+          (auto))
+        (init_declarator
+          (identifier)
+          (macro_braced_expression
+            (identifier)
+            (macro_argument_list
+              (identifier))
+            (compound_statement
+              (expression_statement
+                (call_expression
+                  (identifier)
+                  (argument_list)))))))
+      (function_definition
+        (function_declarator
+          (identifier)
+          (parameter_list
+            (parameter_declaration
+              (type_identifier))))
+        (compound_statement
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list)))))
+      (expression_statement))))
