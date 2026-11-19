@@ -1,10 +1,16 @@
---- a/grammar.js
-+++ b/grammar.js
-@@ -58,6 +58,78 @@
+--- /tmp/cpp-upstream/grammar.js
++++ grammar.js
+@@ -55,9 +55,76 @@
+   externals: $ => [
+     $.raw_string_delimiter,
+     $.raw_string_content,
++    // A `{` that only lexes when a `;` appears inside the brace region,
++    // so `Type{arg}` braced temporaries can never open a macro block.
++    $._macro_braced_open,
    ],
  
    conflicts: $ => [
-+    // `#ifdef`-arm specifiers vs a bare `#ifdef` arm vs an `extern "C"`
++        // `#ifdef`-arm specifiers vs a bare `#ifdef` arm vs an `extern "C"`
 +    // guarded block — all can open after a macro/identifier prefix.
 +    [$.preproc_ifdef, $.preproc_ifdef_in_declaration_specifiers, $._linkage_guard, $.preproc_ifdef_in_guarded_signature],
 +    [$.preproc_if, $.preproc_if_in_declaration_specifiers, $._linkage_guard, $.preproc_if_in_guarded_signature],
@@ -21,27 +27,19 @@
 +    [$.type_qualifier],
 +    [$.type_definition],
 +    [$.preproc_else, $.preproc_else_in_declaration_specifiers, $.preproc_else_in_initializer_list, $.preproc_else_in_guarded_signature, $.preproc_else_in_guarded_class],
-+    [$.preproc_if, $.preproc_if_in_declaration_specifiers, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
-+    [$.preproc_ifdef, $.preproc_ifdef_in_declaration_specifiers, $.preproc_ifdef_in_initializer_list, $.preproc_ifdef_in_guarded_signature, $.preproc_ifdef_in_guarded_class],
-+    [$.preproc_elif, $.preproc_elif_in_declaration_specifiers, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
++            [$.preproc_elif, $.preproc_elif_in_declaration_specifiers, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
 +    [$.preproc_elifdef, $.preproc_elifdef_in_declaration_specifiers, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
 +    [$.preproc_if, $.preproc_if_in_declaration_specifiers, $.preproc_if_in_initializer_list],
 +    [$.preproc_ifdef, $.preproc_ifdef_in_declaration_specifiers, $.preproc_ifdef_in_initializer_list],
-+    [$.preproc_elif, $.preproc_elif_in_declaration_specifiers, $.preproc_elif_in_initializer_list],
-+    [$.preproc_elifdef, $.preproc_elifdef_in_declaration_specifiers, $.preproc_elifdef_in_initializer_list],
-+    [$.preproc_else, $.preproc_else_in_declaration_specifiers, $.preproc_else_in_initializer_list],
-+    [$.preproc_ifdef_in_declaration_specifiers, $.preproc_ifdef_in_field_declaration_list],
++            [$.preproc_ifdef_in_declaration_specifiers, $.preproc_ifdef_in_field_declaration_list],
 +    [$.preproc_if_in_declaration_specifiers, $.preproc_if_in_field_declaration_list],
 +    [$.preproc_else_in_declaration_specifiers, $.preproc_else_in_field_declaration_list],
 +    [$.preproc_elif_in_declaration_specifiers, $.preproc_elif_in_field_declaration_list],
 +    [$.preproc_elifdef_in_declaration_specifiers, $.preproc_elifdef_in_field_declaration_list],
 +    [$.preproc_elif, $.preproc_elif_in_declaration_specifiers, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
-+    [$.preproc_if_in_declaration_specifiers, $._declaration_specifiers],
-+    [$.preproc_if, $.preproc_if_in_declaration_specifiers],
++        [$.preproc_if, $.preproc_if_in_declaration_specifiers],
 +    [$.preproc_ifdef, $.preproc_ifdef_in_declaration_specifiers],
-+    [$.preproc_elif_in_declaration_specifiers, $._declaration_specifiers],
-+    [$.preproc_elifdef_in_declaration_specifiers, $._declaration_specifiers],
-+    [$.preproc_elif, $.preproc_elif_in_declaration_specifiers],
++        [$.preproc_elif, $.preproc_elif_in_declaration_specifiers],
 +    [$.preproc_elifdef, $.preproc_elifdef_in_declaration_specifiers],
 +    [$.preproc_else, $.preproc_else_in_declaration_specifiers],
 +    [$.preproc_else_in_enumerator_list, $.preproc_else_in_enumerator_list_no_comma, $.expression],
@@ -79,7 +77,80 @@
      // C
      [$.type_specifier, $._declarator],
      [$.type_specifier, $.expression],
-@@ -74,7 +146,6 @@
+@@ -65,16 +132,78 @@
+     [$.attributed_statement],
+     [$._declaration_modifiers, $.attributed_statement],
+     [$._top_level_item, $._top_level_statement],
++    [$.macro_braced_statement],
++    [$.macro_braced_expression],
++    [$.macro_braced_declaration],
++    [$.macro_braced_statement, $.macro_braced_expression],
++    [$.expression, $.macro_braced_expression],
++    // `NAME {` inside a class/namespace body: the member body can hold
++    // `;`-terminated items that also look like expression statements.
++    [$._declarator, $.expression, $.macro_braced_expression],
++    [$.macro_qualifier, $._declarator, $.expression, $.macro_braced_expression],
++    [$._declarator, $.type_specifier, $.expression, $.macro_braced_expression],
++    [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
++    [$._macro_declaration_stmt, $.expression, $.macro_braced_statement, $.macro_braced_expression],
++    [$.expression, $.concatenated_string, $.macro_braced_expression],
++    [$.type_specifier, $.expression, $.macro_braced_expression],
++    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_declaration, $.macro_braced_expression],
++    [$.enumerator, $.expression, $.macro_braced_expression],
++    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
++    [$.macro_qualifier, $.type_specifier, $.expression, $.macro_braced_expression],
++                    [$.macro_argument_list, $.expression],
++    [$.macro_argument_list, $.expression, $.template_type, $.template_function],
++                    [$.macro_argument_list, $._string],
++    [$.macro_argument_list, $._string, $.concatenated_string],
++    [$.macro_argument_list, $._class_name],
++    [$.macro_argument_list, $.type_specifier, $.call_expression],
++    [$.macro_argument_list, $.compound_literal_expression],
++    [$.macro_argument_list, $.type_specifier, $.expression],
++    [$.macro_argument_list, $.type_specifier, $.expression, $.macro_braced_expression],
++    [$.macro_argument_list, $.concatenated_string],
++    [$._midl_attribute, $.expression, $.macro_braced_expression],
++    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
++    [$._macro_braced_body, $._macro_braced_members],
++    [$._block_item, $._macro_braced_members],
++    [$.macro_argument_list, $.sized_type_specifier, $._macro_argument_list_nonempty],
++    [$.macro_argument_list, $.template_type, $._macro_argument_list_nonempty],
++    [$.macro_qualifier, $._declarator, $._field_declarator],
++    [$.macro_qualifier, $._declarator, $._field_declarator, $._init_pointer_declarator],
++    [$._declarator, $._field_declarator, $._init_reference_declarator],
++    [$.macro_argument_list, $.type_specifier, $._macro_argument_list_nonempty],
++    [$.macro_argument_list, $._macro_argument_list_nonempty],
++    [$._init_declarator_preproc, $._declarator, $._field_declarator],
++    [$._declarator, $._field_declarator],
++    [$.labeled_statement, $.macro_access_label],
++    [$._midl_attribute, $.structured_binding_declarator, $._lambda_capture_identifier],
++                    // `NAME(args)` forks: call/declarator/macro_declaration vs a
++    // `MACRO(args) { members };` braced declaration — decided only by
++    // whether `_macro_braced_open` lexes after the `)`.
++        [
++      $.macro_qualifier,
++      $._macro_declaration_top,
++      $._declarator,
++      $.type_specifier,
++      $.expression,
++      $.macro_braced_statement,
++      $.macro_braced_declaration,
++      $.macro_braced_expression,
++    ],
++        [
++      $.macro_qualifier,
++      $.macro_declaration,
++      $._declarator,
++      $.type_specifier,
++      $.macro_type_specifier,
++      $.macro_braced_declaration,
++    ],
+     [$._block_item, $.statement],
+     [$.type_qualifier, $.extension_expression],
+-
+     // C++
+     [$.template_function, $.template_type],
+     [$.template_function, $.template_type, $.expression],
      [$.template_function, $.template_type, $.qualified_identifier],
      [$.template_type, $.qualified_type_identifier],
      [$.qualified_type_identifier, $.qualified_identifier],
@@ -87,7 +158,7 @@
      [$.expression, $._declarator],
      [$.expression, $.structured_binding_declarator],
      [$.expression, $._declarator, $.type_specifier],
-@@ -85,6 +156,7 @@
+@@ -85,6 +214,7 @@
      [$.structured_binding_declarator, $._lambda_capture_identifier],
      [$.parameter_list, $.argument_list],
      [$.type_specifier, $.call_expression],
@@ -95,7 +166,7 @@
      [$._declaration_specifiers, $._constructor_specifiers],
      [$._binary_fold_operator, $._fold_operator],
      [$._function_declarator_seq],
-@@ -94,6 +166,187 @@
+@@ -94,6 +224,182 @@
      [$.init_statement, $._for_statement_body],
      [$.field_expression, $.template_method, $.template_type],
      [$.qualified_field_identifier, $.template_method, $.template_type],
@@ -106,16 +177,10 @@
 +    [$._class_name, $.expression],
 +    [$.macro_declaration, $._declarator],
 +    [$.preproc_ifdef, $.preproc_ifdef_in_guarded_signature, $.preproc_ifdef_in_guarded_class],
-+    [$.preproc_else, $.preproc_else_in_guarded_signature, $.preproc_else_in_guarded_class],
-+    [$.preproc_if, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
-+    [$.preproc_elifdef, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
-+    [$.preproc_elif, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
-+    [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list, $.preproc_ifdef_in_guarded_signature, $.preproc_ifdef_in_guarded_class],
-+    [$.preproc_else, $.preproc_else_in_initializer_list, $.preproc_else_in_guarded_signature, $.preproc_else_in_guarded_class],
-+    [$.preproc_if, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
-+    [$.preproc_elifdef, $.preproc_elifdef_in_initializer_list, $.preproc_elifdef_in_guarded_signature, $.preproc_elifdef_in_guarded_class],
-+    [$.preproc_elif, $.preproc_elif_in_initializer_list, $.preproc_elif_in_guarded_signature, $.preproc_elif_in_guarded_class],
-+    [$._template_argument, $._template_relational_argument],
++        [$.preproc_if, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
++        [$.preproc_ifdef, $.preproc_ifdef_in_initializer_list, $.preproc_ifdef_in_guarded_signature, $.preproc_ifdef_in_guarded_class],
++        [$.preproc_if, $.preproc_if_in_initializer_list, $.preproc_if_in_guarded_signature, $.preproc_if_in_guarded_class],
++            [$._template_argument, $._template_relational_argument],
 +    [$.expression, $._template_relational_operand],
 +    [$.expression, $.template_type, $.template_method, $.template_function, $._template_relational_operand],
 +    [$._string, $._template_relational_operand],
@@ -220,32 +285,36 @@
 +    [$.preproc_ifdef_in_initializer_list, $.comma_expression],
 +    [$._block_item, $.preproc_else_in_initializer_list],
 +    [$.preproc_else_in_initializer_list, $.comma_expression],
-+    [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier, $.expression],
-+    [$._macro_declaration_top, $.type_specifier, $.expression],
++        [$._macro_declaration_top, $.type_specifier, $.expression],
 +    [$._macro_declaration_top, $._top_level_expression_statement],
 +    [$.macro_qualifier, $._macro_declaration_top],
++    // `asm(s : :: : x)` — the second `:` could extend the classic
++    // operand lists or the fused `::` sections; fused wins only when a
++    // real `::` token follows (it is the dynamic(-1) fallback).
++    // `IDENT {` — braced statement macro vs class name / brace
++    // initializer; the dynamic(-1) macro read only survives when the
++    // braces hold statements.
++    // `:: "lit" (` — fused operand: string+constraint vs
++    // concatenated-string call operand.
++    // `::`-fused sections vs global-scope `::expr` inside operands.
++    // In fused `::` sections a `"lit"(expr)` operand can't statically
++    // tell input vs output — output wins deterministically.
 +    [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier],
-+    [$.macro_argument_list, $.template_type],
 +    [$.macro_argument_list, $.sized_type_specifier],
 +    [$.sized_type_specifier, $.expression],
 +    [$._argument_list_type],
 +    [$.sized_type_specifier, $._argument_list_type],
 +    [$._declaration_modifiers, $._argument_list_type],
 +    [$.type_specifier, $._argument_list_type],
-+    [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression],
-+    [$._macro_declaration_stmt, $.expression],
-+    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression],
-+    [$.macro_qualifier, $._macro_declaration_stmt],
-+    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression],
-+    [$._macro_declaration_top, $._macro_declaration_stmt],
++                [$.macro_qualifier, $._macro_declaration_stmt],
++        [$._macro_declaration_top, $._macro_declaration_stmt],
 +    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt],
 +    [$._field_declaration_list_item, $.field_declaration],
 +    [$._midl_attribute, $.structured_binding_declarator],
 +    [$._midl_attribute, $._lambda_capture_identifier],
 +    [$._midl_attribute, $.expression],
 +    [$._midl_attribute, $.expression, $.structured_binding_declarator],
-+    [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier, $.macro_type_specifier],
-+    [$.macro_argument_list, $.type_qualifier],
++        [$.macro_argument_list, $.type_qualifier],
 +    [$.macro_argument_list, $.type_specifier],
 +    [$.call_expression, $._argument_list_type],
 +    [$._argument_list_type, $.compound_literal_expression],
@@ -260,12 +329,9 @@
 +    [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier],
 +    [$.macro_qualifier, $._macro_declaration_top, $.type_specifier, $.expression],
 +    [$._macro_declaration_top, $.expression, $._class_name],
-+    [$.macro_qualifier, $._macro_declaration_top, $.expression],
 +    [$._macro_declaration_top, $.expression, $.concatenated_string],
 +    [$.macro_namespace, $._macro_declaration_literals],
-+    [$.preproc_ifdef, $._linkage_guard, $.preproc_ifdef_in_guarded_signature],
-+    [$.preproc_if, $._linkage_guard, $.preproc_if_in_guarded_signature],
-+    [$.function_definition, $.declaration, $.init_declarator, $._guarded_signature],
++            [$.function_definition, $.declaration, $.init_declarator, $._guarded_signature],
 +    [$.attributed_declarator, $._guarded_signature],
 +    [$._macro_qualifier_bare, $.type_specifier],
 +    [$._macro_qualifier_bare, $.sized_type_specifier],
@@ -283,7 +349,7 @@
    ],
  
    inline: ($, original) => original.concat([
-@@ -119,6 +372,14 @@
+@@ -119,6 +425,15 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -293,15 +359,21 @@
 +      // `parenthesized_expression(args)` statement (MISSING `;`).
 +      alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
 +      $.macro_namespace,
++      $.macro_braced_declaration,
 +      $.guarded_function,
 +      $.guarded_class,
      ),
  
      _block_item: ($, original) => choice(
-@@ -134,6 +395,25 @@
+@@ -134,6 +449,31 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
++      // No `macro_braced_declaration` here: inside a function body the
++      // statement-block read must win, and `NAME(args) {` falls back to
++      // `function_definition` either way (upstream parity) — as a
++      // member-list read it turned call bodies into phantom member
++      // declarations (`ON_SCOPE_EXIT { cleanup(); };` losing the call).
 +      $.guarded_function,
 +      $.guarded_class,
 +      // No `macro_declaration` fallback here: top-level preproc bodies
@@ -318,13 +390,14 @@
 +      '{',
 +      repeat(choice(
 +        $._block_item,
++        $.macro_braced_declaration,
 +        alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
 +      )),
 +      '}',
      ),
  
      // Types
-@@ -153,7 +433,9 @@
+@@ -153,7 +493,9 @@
      decltype: $ => seq(
        'decltype',
        '(',
@@ -335,7 +408,7 @@
        ')',
      ),
  
-@@ -168,14 +450,27 @@
+@@ -168,14 +510,27 @@
        $.dependent_type,
        $.placeholder_type_specifier,
        $.decltype,
@@ -365,7 +438,7 @@
        'mutable',
        'constinit',
        'consteval',
-@@ -193,6 +488,11 @@
+@@ -193,6 +548,11 @@
        $._class_declaration_item,
      ),
      _class_declaration_item: $ => prec.right(seq(
@@ -377,7 +450,7 @@
        choice(
          field('name', $._class_name),
          seq(
-@@ -226,26 +526,73 @@
+@@ -226,26 +586,73 @@
        alias($.qualified_type_identifier, $.qualified_identifier),
      )),
  
@@ -464,7 +537,7 @@
      ),
  
      virtual_specifier: _ => choice(
-@@ -284,14 +631,24 @@
+@@ -284,14 +691,24 @@
  
      enum_specifier: $ => prec.right(seq(
        'enum',
@@ -494,7 +567,7 @@
        ),
        optional($.attribute_specifier),
      )),
-@@ -339,9 +696,16 @@
+@@ -339,9 +756,16 @@
      ),
  
      template_instantiation: $ => seq(
@@ -513,7 +586,7 @@
        ';',
      ),
  
-@@ -387,26 +751,50 @@
+@@ -387,26 +811,50 @@
        ),
      ),
  
@@ -574,7 +647,7 @@
        field('declarator', choice(
          $.variadic_declarator,
          alias($.variadic_reference_declarator, $.reference_declarator),
-@@ -432,6 +820,23 @@
+@@ -432,6 +880,23 @@
            $.initializer_list,
          )),
        ),
@@ -598,7 +671,7 @@
      ),
  
      operator_cast: $ => prec.right(1, seq(
-@@ -444,9 +849,31 @@
+@@ -444,9 +909,31 @@
      //   A b {};
      compound_statement: (_, original) => prec(-1, original),
  
@@ -631,7 +704,7 @@
      ),
  
      field_initializer: $ => prec(1, seq(
-@@ -469,22 +896,43 @@
+@@ -469,22 +956,45 @@
        alias($.operator_cast_declaration, $.declaration),
        $.friend_declaration,
        seq($.access_specifier, ':'),
@@ -640,6 +713,8 @@
 +      // `protected:` (JSON_PRIVATE_UNLESS_TESTED, GST_PAD_STREAM_LOCK
 +      // style labels) look identical to a member access specifier.
 +      $.macro_access_label,
++      // `MACRO(args) { members };` inside a class body.
++      $.macro_braced_declaration,
        $.alias_declaration,
        $.using_declaration,
        $.type_definition,
@@ -682,7 +757,7 @@
        )),
        optional($.attribute_specifier),
        ';',
-@@ -493,6 +941,8 @@
+@@ -493,6 +1003,8 @@
      inline_method_definition: $ => seq(
        $._declaration_specifiers,
        field('declarator', $._field_declarator),
@@ -691,7 +766,7 @@
        choice(
          field('body', choice($.compound_statement, $.try_statement)),
          $.default_method_clause,
-@@ -512,6 +962,7 @@
+@@ -512,6 +1024,7 @@
          $.operator_cast,
          alias($.qualified_operator_cast_identifier, $.qualified_identifier),
        )),
@@ -699,7 +774,7 @@
        field('body', choice($.compound_statement, $.try_statement)),
      ),
  
-@@ -535,9 +986,11 @@
+@@ -535,9 +1048,11 @@
      constructor_or_destructor_definition: $ => seq(
        repeat($._constructor_specifiers),
        field('declarator', $.function_declarator),
@@ -711,7 +786,7 @@
            field('body', $.compound_statement),
          ),
          alias($.constructor_try_statement, $.try_statement),
-@@ -580,6 +1033,324 @@
+@@ -580,6 +1095,423 @@
        'protected',
      ),
  
@@ -1007,6 +1082,105 @@
 +      optional(';'),
 +    )),
 +
++    // GCC `asm(...)` with `::`-fused operand sections. In C++ `::` is
++    // the scope-resolution token, so `"" ::: "memory"` lexes `::` + `:`:
++    // the classic nested lists (which need a `:` per section) never see
++    // three colons and fail — `asm(code : out : in : clob)` with an
++    // empty section is the atmosphere/ACO idiom. The fused path keeps
++    // the real operand node kinds in generic sections: a `::` closes an
++    // empty section AND opens the next, so which list an operand
++    // belongs to is not statically recoverable. Only reachable when a
++    // `::` token is present, so the classic path stays unambiguous.
++    gnu_asm_expression: $ => prec(PREC.CALL, seq(
++      choice('asm', '__asm__', '__asm', '__ASM'),
++      repeat($.gnu_asm_qualifier),
++      '(',
++      field('assembly_code', $._string),
++      optional(choice(
++        seq(
++          field('output_operands', $.gnu_asm_output_operand_list),
++          optional(seq(
++            field('input_operands', $.gnu_asm_input_operand_list),
++            optional(seq(
++              field('clobbers', $.gnu_asm_clobber_list),
++              optional(field('goto_labels', $.gnu_asm_goto_list)),
++            )),
++          )),
++        ),
++        $._gnu_asm_fused_sections,
++      )),
++      ')',
++    )),
++
++    // Which section a fused list lands in depends on the separators
++    // that FOLLOW it, so middle sections take the operand|string union
++    // while the trailing goto slot is typed strictly (bare identifiers
++    // only, emitted as `gnu_asm_goto_list` like the structured branch).
++    // Separators are enumerated, so a fifth colon can't parse.
++    _gnu_asm_fused_sections: $ => prec.dynamic(-1, choice(
++      // `::`-led (outputs empty): `x :: inputs`, `x :: inputs : clobbers`,
++      // `x :: inputs : clobbers : goto`, `x ::: clobbers`,
++      // `x :: clobbers :: goto` (`::::`).
++      seq('::', optional(field('input_operands', alias($._fused_asm_items, $.gnu_asm_input_operand_list))),
++        optional(choice(
++          seq(':', optional(field('clobbers', alias($._fused_asm_clobber_items, $.gnu_asm_clobber_list))),
++            optional(seq(
++              ':',
++              optional(field('goto_labels', $._gnu_asm_goto_items)),
++            ))),
++          seq('::', optional(field('goto_labels', $._gnu_asm_goto_items))),
++        ))),
++      // `x : outputs :: clobbers [: goto]` (inputs empty).
++      seq(
++        field('output_operands', $.gnu_asm_output_operand_list),
++        '::',
++        optional(field('clobbers', alias($._fused_asm_clobber_items, $.gnu_asm_clobber_list))),
++        optional(seq(':', optional(field('goto_labels', $._gnu_asm_goto_items)))),
++      ),
++      // `x : outputs : inputs :: goto` (clobbers empty).
++      seq(
++        field('output_operands', $.gnu_asm_output_operand_list),
++        field('input_operands', $.gnu_asm_input_operand_list),
++        '::',
++        optional(field('goto_labels', $._gnu_asm_goto_items)),
++      ),
++    )),
++
++    // Middle-section items in fused sections: `"c"(expr)` operands or
++    // clobber strings — `gnu_asm_clobber_list` takes `_string`, but the
++    // full `concatenated_string` also allows `call_expression` members
++    // whose `::name(...)` callee would collide with the `::` section
++    // separator — so fused items take a concat variant with no call
++    // members. A bare identifier can't live here — only goto labels take
++    // those — so `asm("x" :: ident)` fails like GCC.
++    _fused_asm_items: $ => commaSep1(field('operand', choice(
++      prec.dynamic(1, $.gnu_asm_input_operand),
++      $._fused_asm_string,
++    ))),
++
++    // Clobbers emit `register:` fields like upstream
++    // `gnu_asm_clobber_list`, so queries find them in fused sections.
++    _fused_asm_clobber_items: $ => commaSep1(field('register', $._fused_asm_string)),
++
++    _fused_asm_string: $ => choice(
++      $.string_literal,
++      $.raw_string_literal,
++      alias($._fused_asm_concat_string, $.concatenated_string),
++    ),
++    _fused_asm_concat_string: $ => prec.right(seq(
++      choice($.identifier, $.string_literal, $.raw_string_literal),
++      choice($.identifier, $.string_literal, $.raw_string_literal),
++      repeat(choice($.identifier, $.string_literal, $.raw_string_literal)),
++    )),
++
++    // Goto labels in fused sections; aliased so emitted nodes keep the
++    // `gnu_asm_goto_list` name queries match.
++    _gnu_asm_goto_items: $ => alias(
++      $._gnu_asm_goto_list_body,
++      $.gnu_asm_goto_list,
++    ),
++    _gnu_asm_goto_list_body: $ => commaSep1(field('label', $.identifier)),
++
 +    macro_attribute: ($, original) => choice(
 +      original,
 +      // Qt declaration modifiers (moc-expanded): seen in class members and
@@ -1036,7 +1210,7 @@
      _declarator: ($, original) => choice(
        original,
        $.reference_declarator,
-@@ -600,6 +1371,11 @@
+@@ -600,6 +1532,11 @@
      _type_declarator: ($, original) => choice(
        original,
        alias($.reference_type_declarator, $.reference_declarator),
@@ -1048,7 +1222,7 @@
      ),
  
      _abstract_declarator: ($, original) => choice(
-@@ -607,6 +1383,34 @@
+@@ -607,6 +1544,34 @@
        $.abstract_reference_declarator,
      ),
  
@@ -1083,7 +1257,7 @@
      reference_declarator: $ => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._declarator))),
      reference_field_declarator: $ => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._field_declarator))),
      reference_type_declarator: $ => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._type_declarator))),
-@@ -646,8 +1450,15 @@
+@@ -646,8 +1611,15 @@
        ),
      )),
  
@@ -1100,7 +1274,7 @@
        $.requires_clause,
      )),
  
-@@ -656,6 +1467,14 @@
+@@ -656,6 +1628,14 @@
        $._function_declarator_seq,
      )),
  
@@ -1115,7 +1289,7 @@
      function_field_declarator: $ => prec.dynamic(1, seq(
        field('declarator', $._field_declarator),
        $._function_declarator_seq,
-@@ -703,16 +1522,123 @@
+@@ -703,16 +1683,123 @@
        field('arguments', $.template_argument_list),
      ),
  
@@ -1185,8 +1359,8 @@
 +      field('consequence', $.expression),
 +      ':',
 +      field('alternative', $.expression),
-     ),
- 
++    ),
++
 +    _template_relational_assignment: $ => prec.right(PREC.ASSIGNMENT, seq(
 +      field('left', $._template_relational_expression),
 +      field('operator', choice('=', '+=', '-=', '*=', '/=', '%=', '<<=', '>>=', '&=', '|=', '^=')),
@@ -1233,8 +1407,8 @@
 +      $.fold_expression,
 +      $.user_defined_literal,
 +      alias($._template_tight_binary, $.binary_expression),
-+    ),
-+
+     ),
+ 
 +    _template_tight_binary: $ => prec.left(PREC.SHIFT, seq(
 +      field('left', $.expression),
 +      field('operator', choice('*', '/', '%', '+', '-', '<<', '>>')),
@@ -1244,17 +1418,160 @@
      namespace_definition: $ => seq(
        optional('inline'),
        'namespace',
-@@ -807,6 +1733,9 @@
+@@ -789,6 +1876,133 @@
+       ';',
+     ),
+ 
++    // `NAME { stmts };` — statement macros whose expansion carries the
++    // braced block (`ON_SCOPE_EXIT { fs::CloseFile(f); };`,
++    // atmosphere/folly). Dynamic -1 keeps the fork below the
++    // braced-temporary read: `erase_fixture{}.m()`, `OStream{&buf} << x`
++    // and `alloc_checker{0}, f(x)` all stay compound literals because
++    // their braces hold no `;`-terminated block items, while real macro
++    // bodies (`{ f(); }`) can only parse here. The block must be
++    // non-empty.
++    macro_braced_statement: $ => prec.right(seq(
++      // Macro names are conventionally ALL_CAPS, which lex as
++      // `type_identifier` — both must open the block. `R_TRY_CATCH(e) {`
++      // shows the argument list is attested at statement level too.
++      field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
++      optional($.macro_argument_list),
++      alias($._macro_braced_body, $.compound_statement),
++      optional(';'),
++    )),
++
++    // Declaration-level braced macros (`MACRO(args) { members };`,
++    // mesosphere's accessor classes). The body allows statements as
++    // well as declarations — `SCOPE_GUARD(lock) { ReleaseSpinLock(x); };`
++    // keeps its call visible instead of reading as a phantom member.
++    macro_braced_declaration: $ => prec.dynamic(1, prec.right(seq(
++      field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
++      optional(alias($._macro_argument_list_nonempty, $.macro_argument_list)),
++      alias($._macro_braced_members, $.field_declaration_list),
++      optional(';'),
++    ))),
++
++    // The base `macro_argument_list` also matches `()` — with empty
++    // parens the braced read would steal `S() { this->x = 1; };`
++    // constructors, so the declaration form demands ≥1 argument.
++    _macro_argument_list_nonempty: $ => seq(
++      '(',
++      repeat1(choice(
++        $.identifier,
++        $.primitive_type,
++        $.sized_type_specifier,
++        $.template_type,
++        $.qualified_identifier,
++        $.number_literal,
++        $.pointer_expression,
++        $.unary_expression,
++        $.sizeof_expression,
++        $.string_literal,
++        $.char_literal,
++        ',',
++        '::',
++        '<',
++        '>',
++        '*',
++        '&',
++        '&&',
++        '|',
++        '=',
++        '!',
++        '?',
++        ':',
++        '.',
++        '->',
++        '~',
++        '+',
++        '-',
++        '/',
++        '%',
++        '==',
++        '!=',
++        '<<',
++        '>>',
++        '<=',
++        '>=',
++        '||',
++        '^',
++        '<<=',
++        '>>=',
++        '->*',
++        '.*',
++        '[',
++        ']',
++        '{',
++        '}',
++        'operator',
++        'const',
++        'noexcept',
++        $.macro_argument_list,
++      )),
++      ')',
++    ),
++
++    // `auto g = SCOPE_GUARD { stmts };` — the braced block sits in
++    // expression position. `_expression` lives in the C base, so it's
++    // overridden wholesale like `_top_level_item`.
++    macro_braced_expression: $ => prec.right(seq(
++      field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
++      optional($.macro_argument_list),
++      alias($._macro_braced_body, $.compound_statement),
++    )),
++
++    expression: ($, original) => choice(
++      ...original.members,
++      $.macro_braced_expression,
++    ),
++
++    // The `{` is an external token that only lexes when the brace
++    // region contains a `;` — braced temporaries (`Type{arg}`) never
++    // do, so they always take the regular `{`.
++    _macro_braced_body: $ => seq(alias($._macro_braced_open, '{'), repeat1($._block_item), '}'),
++
++    // Member-only forms that `_block_item` lacks: bit-fields
++    // (`int x : 3;`), `friend class T;`, `private:` access labels.
++    // `f(x);` still reads as a call — `field_declaration` requires a
++    // type specifier and `constructor_or_destructor_declaration`
++    // (which would phantom-read it) is deliberately not offered.
++    _macro_braced_members: $ => seq(
++      alias($._macro_braced_open, '{'),
++      repeat(choice(
++        $._block_item,
++        $.field_declaration,
++        $.friend_declaration,
++        seq($.access_specifier, ':'),
++        seq(optional($.access_specifier), $.qt_section_label, ':'),
++        $.macro_access_label,
++        $.type_definition,
++      )),
++      '}',
++    ),
++
+     // Statements
+ 
+     _top_level_statement: ($, original) => choice(
+@@ -798,6 +2012,7 @@
+       $.for_range_loop,
+       $.try_statement,
+       $.throw_statement,
++      $.macro_braced_statement,
+     ),
+ 
+     _non_case_statement: ($, original) => choice(
+@@ -807,6 +2022,10 @@
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
 +      $.emit_statement,
 +      $.qt_statement_macro,
 +      $.qt_foreach_statement,
++      $.macro_braced_statement,
      ),
  
      switch_statement: $ => seq(
-@@ -818,16 +1747,27 @@
+@@ -818,16 +2037,27 @@
      while_statement: $ => seq(
        'while',
        field('condition', $.condition_clause),
@@ -1284,7 +1601,7 @@
  
      // Using prec(1) instead of prec.dynamic(1) causes issues with the
      // range loop's declaration specifiers if `int` is passed in, it'll
-@@ -838,7 +1778,7 @@
+@@ -838,7 +2068,7 @@
        '(',
        $._for_range_loop_body,
        ')',
@@ -1293,7 +1610,7 @@
      ),
      _for_range_loop_body: $ => seq(
        field('initializer', optional($.init_statement)),
-@@ -968,10 +1908,257 @@
+@@ -968,10 +2198,257 @@
        ']',
      ),
  
@@ -1555,7 +1872,7 @@
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +2178,15 @@
+@@ -991,9 +2468,15 @@
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -1574,7 +1891,7 @@
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +2200,7 @@
+@@ -1007,7 +2490,7 @@
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -1583,7 +1900,7 @@
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +2208,7 @@
+@@ -1015,6 +2498,7 @@
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -1591,7 +1908,7 @@
        )),
      ),
  
-@@ -1215,13 +2409,66 @@
+@@ -1215,13 +2699,66 @@
              field('operator', operator),
              field('right', $.expression),
            ));
@@ -1660,7 +1977,7 @@
        ')',
      ),
  
-@@ -1230,7 +2477,7 @@
+@@ -1230,7 +2767,7 @@
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -1669,7 +1986,7 @@
          field('value', $.initializer_list),
        ),
      ),
-@@ -1244,6 +2491,7 @@
+@@ -1244,6 +2781,7 @@
          $._namespace_identifier,
          $.template_type,
          $.decltype,
@@ -1677,7 +1994,7 @@
          alias($.dependent_type_identifier, $.dependent_name),
        ))),
        '::',
-@@ -1256,6 +2504,7 @@
+@@ -1256,6 +2794,7 @@
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -1685,7 +2002,7 @@
        )),
      ),
  
-@@ -1296,10 +2545,20 @@
+@@ -1296,10 +2835,20 @@
        $.user_defined_literal,
      ),
  
@@ -1710,7 +2027,7 @@
      )),
  
      _assignment_expression_lhs: $ => seq(
-@@ -1342,11 +2601,47 @@
+@@ -1342,11 +2891,47 @@
  
      this: _ => 'this',
  
@@ -1763,7 +2080,7 @@
  
      number_literal: $ => {
        const sign = /[-\+]/;
-@@ -1366,8 +2661,10 @@
+@@ -1366,8 +2951,10 @@
        const intSuffix = /(ll|LL)[uU]?|[uU](ll|LL)?|[uU][lL]?|[uU][zZ]?|[lL][uU]?|[zZ][uU]?/;
        const floatSuffix = /([fF](16|32|64|128)?)|[lL]|(bf16|BF16)/;
  
@@ -1775,7 +2092,7 @@
          choice(
            seq(
              choice(
-@@ -1409,7 +2706,10 @@
+@@ -1409,7 +2996,10 @@
        $.literal_suffix,
      ),
  
@@ -1787,7 +2104,7 @@
    },
  });
  
-@@ -1434,3 +2734,69 @@
+@@ -1434,3 +3024,69 @@
  function commaSep1(rule) {
    return seq(rule, repeat(seq(',', rule)));
  }
@@ -1857,3 +2174,440 @@
 +    )),
 +  };
 +}
+--- /tmp/cpp-upstream/scanner.c
++++ src/scanner.c
+@@ -5,7 +5,10 @@
+ #include <string.h>
+ #include <wctype.h>
+ 
+-enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT };
++enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, MACRO_BRACED_OPEN };
++
++/// Bounds the look-ahead for the macro-brace probe.
++#define MACRO_BRACE_SCAN_LIMIT 65536
+ 
+ /// The spec limits delimiters to 16 chars
+ #define MAX_DELIMITER_LENGTH 16
+@@ -94,6 +97,396 @@
+     }
+ }
+ 
++static bool is_ident_start(int32_t c) {
++    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c > 127;
++}
++
++static bool is_ident_char(int32_t c) {
++    return is_ident_start(c) || (c >= '0' && c <= '9');
++}
++
++// Consume the rest of a "..." string (the opening quote is already
++// consumed). Stops after the closing quote or at EOF.
++static void skip_dq(TSLexer *lexer) {
++    while (!lexer->eof(lexer)) {
++        if (lexer->lookahead == '\\') {
++            advance(lexer);
++            if (!lexer->eof(lexer)) advance(lexer);
++            continue;
++        }
++        if (lexer->lookahead == '"') {
++            advance(lexer);
++            break;
++        }
++        advance(lexer);
++    }
++}
++
++// Consume a '...' char literal inside a region whose contents don't
++// matter (skipped lambda bodies, skipped statement expressions): the
++// opening quote is already consumed; consume the literal if it
++// completes, else just one more char (digit separator like 1'000).
++static void skip_sq(TSLexer *lexer) {
++    if (lexer->lookahead == '\\') {
++        advance(lexer);
++        if (!lexer->eof(lexer)) advance(lexer);
++    } else if (!lexer->eof(lexer)) {
++        advance(lexer);
++    }
++    if (lexer->lookahead == '\'') advance(lexer);
++}
++
++// Consume a raw string after `R"` (the R and the quote are already
++// consumed): delimiter up to `(`, then contents up to `)delim"`.
++// Malformed opens bail out having consumed only delimiter-legal chars
++// (no `;`, `{`, `}`), which is safe to resume scanning from.
++static void skip_raw_string(TSLexer *lexer) {
++    char delim[16];
++    int dlen = 0;
++    while (dlen < 16) {
++        int32_t d = lexer->lookahead;
++        if (d == '(') break;
++        if (d == ')' || d == '"' || d == ' ' || d == '\\' || d == '\t' ||
++            d == '\n' || d == '\r' || d == '\f' || d == '\v' ||
++            lexer->eof(lexer)) {
++            return;
++        }
++        delim[dlen++] = (char)d;
++        advance(lexer);
++    }
++    if (lexer->lookahead != '(') return;
++    advance(lexer);
++    while (!lexer->eof(lexer)) {
++        if (lexer->lookahead == ')') {
++            advance(lexer);
++            int i = 0;
++            while (i < dlen && lexer->lookahead == delim[i]) {
++                advance(lexer);
++                i++;
++            }
++            if (i == dlen && lexer->lookahead == '"') {
++                advance(lexer);
++                return;
++            }
++            continue;
++        }
++        advance(lexer);
++    }
++}
++
++// Skip // and /* */ comments; returns false when the `/` was division.
++static bool skip_comment(TSLexer *lexer) {
++    advance(lexer);
++    if (lexer->lookahead == '/') {
++        while (!lexer->eof(lexer) && lexer->lookahead != '\n') advance(lexer);
++        return true;
++    }
++    if (lexer->lookahead == '*') {
++        advance(lexer);
++        while (!lexer->eof(lexer)) {
++            if (lexer->lookahead == '*') {
++                advance(lexer);
++                if (lexer->lookahead == '/') {
++                    advance(lexer);
++                    break;
++                }
++                continue;
++            }
++            advance(lexer);
++        }
++        return true;
++    }
++    return false;
++}
++
++// Skip a `({ ... })` GNU statement expression: the `(` and `{` are
++// already consumed; runs to the paren matching the opener. Contents
++// (including interior `;`) are ignored — a statement expression is
++// legal inside an initializer, so its semicolons are no macro signal.
++static void skip_paren_body(TSLexer *lexer) {
++    int parens = 1;
++    while (!lexer->eof(lexer) && parens > 0) {
++        int32_t c = lexer->lookahead;
++        if (c == '"') { advance(lexer); skip_dq(lexer); continue; }
++        if (c == '\'') { advance(lexer); skip_sq(lexer); continue; }
++        if (c == 'R') {
++            advance(lexer);
++            if (lexer->lookahead == '"') { advance(lexer); skip_raw_string(lexer); }
++            continue;
++        }
++        if (c == '/') { if (skip_comment(lexer)) continue; continue; }
++        if (c == '(') parens++;
++        if (c == ')') parens--;
++        advance(lexer);
++    }
++}
++
++// Skip a `{ ... }` region whose contents must not be probed (a lambda
++// body inside a braced initializer): the `{` is already consumed.
++static void skip_brace_body(TSLexer *lexer) {
++    int depth = 1;
++    while (!lexer->eof(lexer) && depth > 0) {
++        int32_t c = lexer->lookahead;
++        if (c == '"') { advance(lexer); skip_dq(lexer); continue; }
++        if (c == '\'') { advance(lexer); skip_sq(lexer); continue; }
++        if (c == 'R') {
++            advance(lexer);
++            if (lexer->lookahead == '"') { advance(lexer); skip_raw_string(lexer); }
++            continue;
++        }
++        if (c == '/') { if (skip_comment(lexer)) continue; continue; }
++        if (c == '{') depth++;
++        if (c == '}') depth--;
++        advance(lexer);
++    }
++}
++
++static bool is_block_keyword(const char *word, int len) {
++    // Control-flow keywords that can open a semicolon-free statement
++    // body (`MACRO { if (c) f(); }`, `{ return; }`, ...) and can never
++    // begin an initializer-list element. Declaration/specifier words
++    // are excluded on purpose: `const`/`static`/`mutable`/... appear
++    // legitimately inside initializers (`T{sizeof(const int)}`,
++    // `T{std::move(static_)})`), and a decl-statement macro
++    // (`MACRO { int x = 0; }`) is already proven by the `;` probe.
++    // Also excluded: expression-valid keywords (new, delete, throw,
++    // noexcept, sizeof, decltype, requires, co_await, co_yield, this,
++    // *_cast, operator), elaborated-type-specifier leads
++    // (struct/class/union/enum/typename — `struct S(x)` is a legal
++    // functional cast), contextual identifiers (import/module/export/
++    // concept/final/override) and primitive types (int, char, ...
++    // `int(x)` casts).
++    // `namespace` is the one declaration keyword safe to include: it
++    // opens a semicolon-free body and can never start an expression.
++    static const char *kw[] = {
++        "if", "else", "do", "for", "while", "switch", "case", "default",
++        "try", "catch", "return", "break", "continue", "goto",
++        "co_return", "asm", "__asm__", "__asm", "static_assert",
++        "namespace",
++    };
++    for (size_t i = 0; i < sizeof(kw) / sizeof(kw[0]); i++) {
++        if ((int)strlen(kw[i]) == len && memcmp(word, kw[i], len) == 0) return true;
++    }
++    return false;
++}
++
++/// `{` that opens a macro block (`ON_SCOPE_EXIT { f(); };`,
++/// `R_TRY_CATCH(e) { try { ... } catch { ... } }`,
++/// `MACRO { if (ok) {} }`): it is a macro block when the region holds
++/// statement evidence — a `;` or a statement-only keyword — before the
++/// matching `}`. Braced initializer lists (`Type{arg}`) contain neither
++/// outside lambdas and `({ ... })` statement expressions, so they fall
++/// back to the regular `{` token.
++/// The token covers just the `{` itself; the look-ahead chars are
++/// re-lexed afterwards via mark_end.
++static bool scan_macro_braced_open(TSLexer *lexer) {
++    // External scans start at the raw position — skip whitespace up
++    // to the `{` itself (`NAME { ... }` has a space).
++    while (lexer->lookahead == ' ' || lexer->lookahead == '\t' ||
++           lexer->lookahead == '\n' || lexer->lookahead == '\r') {
++        lexer->advance(lexer, true);
++    }
++    if (lexer->lookahead != '{') {
++        return false;
++    }
++    advance(lexer);
++    lexer->mark_end(lexer);
++
++    int depth = 1;
++    // `[captures] (params) qualifiers { body }` inside a braced init is a
++    // lambda: its body's `;`/keywords are not macro evidence. A `]` sets
++    // maybe_lambda; `(`, `)`, qualifier idents and trailing-return-type
++    // chars keep it; the clearing set drops it.
++    bool maybe_lambda = false;
++    int pdepth = 0;
++    // A `]` has already closed a bracket run: commas after it live in a
++    // lambda trailer (`-> std::pair<int,int>`), not an init list, so
++    // they must not clear maybe_lambda.
++    bool capture_done = false;
++    // Inside a numeric literal: `'` is a digit separator (`1'000`,
++    // `0xAB'CD`), not a character constant. Set on digits; kept across
++    // ident runs that follow them (`xAB`, `e5`, `ul` tails).
++    bool after_number = false;
++    // `operator[]` is not a lambda capture — when the last identifier
++    // scanned was `operator`, a following `]` must not mark maybe_lambda
++    // or the operator's `{` body gets skipped as a lambda body and its
++    // `;` evidence is lost.
++    bool prev_was_operator = false;
++    char word[64];
++    size_t scanned = 0;
++    for (;;) {
++        if (lexer->eof(lexer) || scanned++ > MACRO_BRACE_SCAN_LIMIT) {
++            return false;
++        }
++        int32_t c = lexer->lookahead;
++        if (c == '"') {
++            advance(lexer);
++            skip_dq(lexer);
++            after_number = false;
++            continue;
++        }
++        if (c == '\'') {
++            advance(lexer);
++            if (after_number) {
++                // Digit separator (1'000, 0xAB'CD): `'` inside a
++                // number, not a char literal — keep scanning.
++                continue;
++            }
++            // Char literal: scan to the closing `'`. Multi-char
++            // constants ('A;', '}x') are legal C++, so any `;`/`{`/`}`
++            // seen before the closing quote is literal content.
++            while (!lexer->eof(lexer)) {
++                int32_t x = lexer->lookahead;
++                if (x == '\\') {
++                    advance(lexer);
++                    if (!lexer->eof(lexer)) advance(lexer);
++                    continue;
++                }
++                if (x == '\n' || x == '\r') break;  // unterminated
++                advance(lexer);
++                if (x == '\'') break;
++            }
++            after_number = false;
++            continue;
++        }
++        if (c == '/') {
++            if (skip_comment(lexer)) { after_number = false; continue; }
++            // Division: skip_comment already consumed the `/`, so the
++            // next lookahead (`"x"` in `base/"x"`) stays live.
++            maybe_lambda = false;
++            after_number = false;
++            continue;
++        }
++        if (c == '(') {
++            advance(lexer);
++            while (lexer->lookahead == ' ' || lexer->lookahead == '\t' ||
++                   lexer->lookahead == '\n' || lexer->lookahead == '\r') {
++                advance(lexer);
++            }
++            if (lexer->lookahead == '{') {
++                advance(lexer);
++                skip_paren_body(lexer);   // GNU ({ stmts }) — ignore contents
++                after_number = false;
++                continue;
++            }
++            if (maybe_lambda) pdepth++;
++            after_number = false;
++            continue;
++        }
++        if (c == ')') {
++            if (pdepth > 0) pdepth--;
++            advance(lexer);
++            after_number = false;
++            continue;
++        }
++        if (c == '[') {
++            advance(lexer);
++            if (lexer->lookahead == '[') {
++                // `[[attribute]]`: balanced `]`s inside attributes do
++                // not end a lambda capture — skip the whole attribute,
++                // including quoted arguments (`[[x("a]]b")]]`).
++                advance(lexer);
++                int closes = 0;
++                while (!lexer->eof(lexer) && closes < 2) {
++                    if (lexer->lookahead == '"') {
++                        advance(lexer);
++                        skip_dq(lexer);
++                        continue;
++                    }
++                    if (lexer->lookahead == ']') closes++;
++                    else closes = 0;
++                    advance(lexer);
++                }
++                after_number = false;
++                continue;
++            }
++            after_number = false;
++            continue;
++        }
++        if (c == ']') {
++            if (!prev_was_operator) {
++                maybe_lambda = true;
++                capture_done = true;
++                pdepth = 0;
++            }
++            prev_was_operator = false;
++            advance(lexer);
++            after_number = false;
++            continue;
++        }
++        if (c == '{') {
++            if (maybe_lambda && pdepth == 0) {
++                advance(lexer);
++                skip_brace_body(lexer);   // lambda body — ignore contents
++                maybe_lambda = false;
++                after_number = false;
++                continue;
++            }
++            depth++;
++            maybe_lambda = false;
++            advance(lexer);
++            after_number = false;
++            continue;
++        }
++        if (c == '}') {
++            depth--;
++            maybe_lambda = false;
++            if (depth == 0) return false;
++            advance(lexer);
++            after_number = false;
++            continue;
++        }
++        if (c == ';') return true;
++        if (is_ident_start(c)) {
++            bool was_num = after_number;
++            int len = 0;
++            while (is_ident_char(lexer->lookahead) && len < 63) {
++                word[len++] = (char)lexer->lookahead;
++                advance(lexer);
++            }
++            while (is_ident_char(lexer->lookahead)) advance(lexer);
++            word[len] = '\0';
++            // Raw string opener: only the exact prefixes R / u8R / LR /
++            // uR / UR directly followed by `"` start one — `Rif` or
++            // `R + 1` keep scanning as an ordinary identifier.
++            if (lexer->lookahead == '"' &&
++                ((len == 1 && word[0] == 'R') ||
++                 (len == 2 && (word[0] == 'L' || word[0] == 'u' ||
++                               word[0] == 'U') && word[1] == 'R') ||
++                 (len == 3 && word[0] == 'u' && word[1] == '8' &&
++                  word[2] == 'R'))) {
++                advance(lexer);  // past `"`
++                skip_raw_string(lexer);
++                after_number = false;
++                continue;
++            }
++            // Inside `[...]` a possible lambda is collecting its
++            // qualifiers (mutable/constexpr/noexcept -> T) — those names
++            // must not fire the statement-keyword check.
++            if (!maybe_lambda && is_block_keyword(word, len)) return true;
++            prev_was_operator = (len == 8 && memcmp(word, "operator", 8) == 0);
++            // An ident right after digits is a numeric tail (`0xAB`,
++            // `1e5`, `42ul`) — the number continues.
++            after_number = was_num;
++            continue;
++        }
++        // Init-clause separators / operators clear the lambda flag only
++        // at paren depth 0 and before any `]` closed a capture — inside
++        // `[&](int a, int b)` a `,` is part of the parameter list, and
++        // in `-> std::pair<int,int>` it lives inside the return type.
++        if (pdepth == 0 && !capture_done &&
++            (c == ',' || c == '=' || c == '?' || c == '|' || c == '^' ||
++             c == '%' || c == '!' || c == '#')) {
++            maybe_lambda = false;
++        }
++        if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
++            prev_was_operator = false;
++        }
++        advance(lexer);
++        after_number = (c >= '0' && c <= '9');
++    }
++}
++
+ void *tree_sitter_cpp_external_scanner_create() {
+     Scanner *scanner = (Scanner *)ts_calloc(1, sizeof(Scanner));
+     memset(scanner, 0, sizeof(Scanner));
+@@ -108,6 +501,11 @@
+         return false;
+     }
+ 
++    if (valid_symbols[MACRO_BRACED_OPEN]) {
++        lexer->result_symbol = MACRO_BRACED_OPEN;
++        return scan_macro_braced_open(lexer);
++    }
++
+     // No skipping leading whitespace: raw-string grammar is space-sensitive.
+     if (valid_symbols[RAW_STRING_DELIMITER]) {
+         lexer->result_symbol = RAW_STRING_DELIMITER;
+@@ -133,9 +531,11 @@
+ }
+ 
+ void tree_sitter_cpp_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
+-    assert(length % sizeof(wchar_t) == 0 && "Can't decode serialized delimiter!");
+-
+     Scanner *scanner = (Scanner *)payload;
++    if (length % sizeof(wchar_t) != 0 || length > sizeof(scanner->delimiter)) {
++        reset(scanner);
++        return;
++    }
+     scanner->delimiter_length = length / sizeof(wchar_t);
+     if (length > 0) {
+         memcpy(&scanner->delimiter[0], buffer, length);
