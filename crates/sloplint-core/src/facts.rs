@@ -179,6 +179,9 @@ pub enum ArgShape<'s> {
 pub struct MutBinding<'s> {
     pub name: &'s str,
     pub pos: Pos,
+    /// Line where the binding's scope closed; `u32::MAX` while the scope
+    /// is still open or when the language is not block-scoped.
+    pub end_line: u32,
     pub last_write_line: u32,
     pub first_write_line: u32,
     pub write_lines: u32,

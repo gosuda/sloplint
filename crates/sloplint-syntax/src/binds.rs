@@ -44,6 +44,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             self.facts.bindings.push(MutBinding {
                 name,
                 pos,
+                end_line: u32::MAX,
                 last_write_line: pos.line,
                 first_write_line: pos.line,
                 write_lines: 0,
@@ -133,6 +134,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
         self.facts.bindings.push(MutBinding {
             name,
             pos,
+            end_line: u32::MAX,
             last_write_line: pos.line,
             first_write_line: pos.line,
             write_lines: 0,
