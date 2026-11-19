@@ -1,5 +1,5 @@
 ================================================================================
-`enum` as a parameter name, named argument, and real enum keyword
+`enum` as a parameter name, named argument, operand, var, and real enum keyword
 ================================================================================
 
 def f(enum: Int): Int = enum
@@ -8,6 +8,12 @@ enum Foo { case A, B }
 val m = Map(enum = 1)
 val n = 1 +
   enum
+var enum = 0
+val r = x --?
+
+enum = 1
+val s = y --?
+enum Bar { case C }
 
 --------------------------------------------------------------------------------
 
@@ -51,4 +57,26 @@ val n = 1 +
     value: (infix_expression
       left: (integer_literal)
       operator: (operator_identifier)
-      right: (identifier))))
+      right: (identifier)))
+  (var_definition
+    pattern: (identifier)
+    value: (integer_literal))
+  (val_definition
+    pattern: (identifier)
+    value: (postfix_expression
+      (identifier)
+      (operator_identifier)))
+  (assignment_expression
+    left: (identifier)
+    right: (integer_literal))
+  (val_definition
+    pattern: (identifier)
+    value: (postfix_expression
+      (identifier)
+      (operator_identifier)))
+  (enum_definition
+    name: (identifier)
+    body: (enum_body
+      (enum_case_definitions
+        (simple_enum_case
+          name: (identifier))))))

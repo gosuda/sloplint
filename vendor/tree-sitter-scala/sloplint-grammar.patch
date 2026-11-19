@@ -163,21 +163,41 @@ index 6fcbe2c..ca3ad9e 100644
      // alphaid          ::=  upper idrest
      //                       |  varid
 diff --git a/src/scanner.c b/src/scanner.c
-index b4856af..15cc84b 100644
+index b4856af..ee14dc2 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -1876,10 +1876,11 @@ static bool scan_impl(void *payload, TSLexer *lexer,
-     // postfixOps).
-     if (lexer->lookahead >= 'a' && lexer->lookahead <= 'z') {
-       // Hard keywords that can only begin a definition. Soft modifiers
--      // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
--      // are ordinary identifiers, so such a line can be the right operand.
-+      // (`inline`, `open`, `opaque`, `transparent`, `infix`) and the soft
-+      // `enum` stay out: they are ordinary identifiers, so such a line can
-+      // be the right operand.
+@@ -1879,7 +1879,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+       // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
+       // are ordinary identifiers, so such a line can be the right operand.
        static const char *const definition_words[] = {
 -          "abstract", "class", "def",    "enum",      "export", "final",
 +          "abstract", "class", "def",    "export",    "final",
            "given",    "import", "implicit", "lazy",   "object", "override",
            "package",  "private", "protected", "sealed", "trait", "type",
            "val",      "var",
+@@ -1894,6 +1894,25 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+         lexer->result_symbol = postfix_sym;
+         return true;
+       }
++      // `enum` is both a soft identifier and a definition starter, so the
++      // word alone cannot pick a side: `x --?` + `enum Foo {}` is a new
++      // statement (postfix), while `1 +` + `enum` continues the expression.
++      // Peek at the token after `enum`: a name, `(`/`[`/`{` (enum parameter
++      // lists or a `enum Foo { ... }` body after a name read by the caller's
++      // grammar, which never reaches here) or `=` (`enum = 1`, a standalone
++      // assignment statement) means definition; `)`, `,`, `.`, `:`, an
++      // operator or end-of-line means the word is the right operand.
++      if (len == 4 && strcmp(word, "enum") == 0) {
++        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
++          advance(lexer);
++        }
++        int32_t c = lexer->lookahead;
++        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
++            c == '$' || c == '(' || c == '[' || c == '{' || c == '=') {
++          lexer->result_symbol = postfix_sym;
++          return true;
++        }
++      }
+     }
+     // Any other operand continues the expression, on this line or over the
+     // break; the internal per-class token carries the operator's precedence.

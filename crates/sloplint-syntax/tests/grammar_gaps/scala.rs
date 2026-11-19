@@ -216,6 +216,14 @@ fn enum_stays_a_soft_identifier() {
         // `enum` after a line-broken operator is the operand, not a definition.
         "val n = 1 +\n",
         "  enum\n",
+        // But `enum` still starts a definition or a standalone assignment
+        // after a postfix operator, even across a blank line.
+        "var enum = 0\n",
+        "val r = x --?\n",
+        "\n",
+        "enum = 1\n",
+        "val s = y --?\n",
+        "enum Bar { case C }\n",
     );
     let analysis = run_clean(source);
     assert_eq!(function_names(&analysis), ["f"]);
