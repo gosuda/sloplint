@@ -44,7 +44,7 @@ Exit code `0` means the gate passed: the run can still list below-`fail_on` find
 
 Install from source with the command below. There is no registry install: the `sloplint` name on crates.io is a reserved stub, and no release binaries or npm wrapper have been published.
 
-Prerequisites: Git, [rustup](https://rustup.rs/), and a C/C++ toolchain for the target platform (the tree-sitter parsers and scanners compile native sources). The checked-in `rust-toolchain.toml` pins Rust 1.99.1, which `cargo` selects automatically.
+Prerequisites: Git, [rustup](https://rustup.rs/), and a C/C++ toolchain for the target platform (the tree-sitter parsers and scanners compile native sources). The checked-in `rust-toolchain.toml` pins Rust 1.100.0, which `cargo` selects automatically.
 
 ```bash
 cargo install --git https://github.com/gosuda/sloplint --locked
