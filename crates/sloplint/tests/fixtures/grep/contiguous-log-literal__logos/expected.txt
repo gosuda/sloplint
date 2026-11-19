@@ -2,3 +2,5 @@
 a.lgo:4 info grep/contiguous-log-literal
 # Positive: comment brace inside the hole leaves no literal run, still dynamic.
 interp.lgo:4 info grep/contiguous-log-literal
+# Positive: short interpolated prefix stays dynamic even with a plain suffix.
+interp.lgo:7 info grep/contiguous-log-literal

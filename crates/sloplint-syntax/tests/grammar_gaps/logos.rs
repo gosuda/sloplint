@@ -483,6 +483,45 @@ fn spread_ident_arg_is_not_a_plain_identifier() {
 }
 
 #[test]
+fn swapped_named_args_are_not_plain_identifiers() {
+    let analysis = run_clean(
+        "src/swappednamed.lgo",
+        "package p\n\nfunc Render(left string, right string) string {\n\treturn left\n}\n\nfunc Swap(left string, right string) string {\n\treturn Render(right = left, left = right)\n}\n",
+    );
+    let call = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "Render")
+        .expect("Render must be a call fact");
+    assert!(
+        call.args.iter().all(|a| a.shape == ArgShape::Other),
+        "named arguments bind by name, so no value may read as a forwarded identifier, got {:?}",
+        call.args.iter().map(|a| &a.shape).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn interp_prefix_in_concat_keeps_its_static_run() {
+    let analysis = run_clean(
+        "src/interpconcat.lgo",
+        "package p\n\nimport \"log\"\n\nfunc Greet(name string, suffix string) {\n\tlog.Print($\"service started: {name}\" + suffix)\n}\n",
+    );
+    let call = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "log.Print")
+        .expect("Print must be a call fact");
+    assert_eq!(
+        call.args.first().map(|a| &a.shape),
+        Some(&ArgShape::Concat { longest_static: 17 }),
+        "\"service started: \" is 17 static chars, got {:?}",
+        call.args.first().map(|a| &a.shape)
+    );
+}
+
+#[test]
 fn deferred_lambda_through_parens_is_cleanup() {
     let analysis = run_clean(
         "src/deferredlambda.lgo",

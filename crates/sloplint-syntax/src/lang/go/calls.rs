@@ -19,11 +19,7 @@ pub(crate) fn go_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         "func_literal" => ArgShape::CodeBody,
         "identifier" => ArgShape::Ident(text(cx, n)),
         "interp_string_literal" => {
-            let raw = text(cx, n);
-            let inner = raw
-                .strip_prefix("$\"")
-                .and_then(|s| s.strip_suffix('"'))
-                .unwrap_or(raw);
+            let inner = interp_inner(text(cx, n));
             ArgShape::Str {
                 longest_static: sloplint_core::text::longest_static_chunk_interp(inner),
             }
@@ -32,7 +28,11 @@ pub(crate) fn go_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
             cx,
             n,
             "+",
-            &["interpreted_string_literal", "raw_string_literal"],
+            &[
+                "interpreted_string_literal",
+                "raw_string_literal",
+                "interp_string_literal",
+            ],
         ) =>
         {
             ArgShape::Concat {
@@ -43,8 +43,15 @@ pub(crate) fn go_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     }
 }
 
+fn interp_inner(raw: &str) -> &str {
+    raw.strip_prefix("$\"")
+        .and_then(|s| s.strip_suffix('"'))
+        .unwrap_or(raw)
+}
+
 fn go_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
     let mut chunks = Vec::new();
+    let mut interp_best = 0u32;
     let mut stack = vec![n];
     while let Some(m) = stack.pop() {
         if m.kind() == "binary_expression"
@@ -68,8 +75,12 @@ fn go_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
                 }
             }
         }
+        if m.kind() == "interp_string_literal" {
+            let run = sloplint_core::text::longest_static_chunk_interp(interp_inner(text(cx, m)));
+            interp_best = interp_best.max(run);
+        }
     }
-    sloplint_core::text::longest_static_chunk(&chunks)
+    sloplint_core::text::longest_static_chunk(&chunks).max(interp_best)
 }
 
 fn go_has_func_literal(root: Node<'_>) -> bool {
@@ -100,8 +111,23 @@ fn go_collection_shape<'s>(n: Node<'_>) -> ArgShape<'s> {
 }
 
 pub(crate) fn go_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
+    // A named argument binds by name, not by position, and the rule never
+    // resolves the callee's parameter names, so its value must not read as
+    // a forwarded identifier. Every other value shape stays measurable for
+    // the log and multiline rules.
+    if n.kind() == "named_argument" {
+        let value = child_by_field(n, "value").unwrap_or(n);
+        let shape = match go_shape(cx, value) {
+            ArgShape::Ident(_) => ArgShape::Other,
+            shape => shape,
+        };
+        return Arg {
+            shape,
+            start_line: pos_of(value).line,
+            end_line: narrow(value.end_position().row) + 1,
+        };
+    }
     let value = match n.kind() {
-        "named_argument" => child_by_field(n, "value"),
         "spread_element" => code_children(n)
             .into_iter()
             .next()
