@@ -13,6 +13,10 @@ Date: 2026-11-18.
 - Syntax authority: `/home/alpha/repos-devtool/LoGOs/.outline/worktree/spira-toolchain-tip/src/cmd/compile/internal/syntax/`
   (files with `logos` in the name and the hooks in `parser.go`), then
   `logos-doc/SPEC.md` in that tree.
+- `sloplint-grammar.patch` is the unified diff from the base above
+  (`vendor/tree-sitter-go/grammar.js`) to this directory's `grammar.js`.
+  Reproduce it with `diff -u --label=a/grammar.js --label=b/grammar.js`
+  on the two files; apply it with `patch -p1` on the base file.
 
 ## How src/ is generated
 
@@ -33,9 +37,10 @@ literals `(a, b)`; struct type assertions `type S struct : I`; struct
 field defaults (`Port int = 8080`); closed-union interface elements
 (`~int | ~string`), property elements (`Name string`) and `const`
 method/property elements; `const` view types (`const []int`); lambdas
-`x => e`, `() => e`, `(a, b) => e`, `x => { ... }`; switch expressions
-with `case v => e` arms (including `;`-separated arms and `nil` or
-receive bodies); named call arguments (`limit = 4`); `..expr` spread in
+`x => e`, `() => e`, `(a, b) => e`, `x => { ... }` lambdas; `switch`
+expressions with `case v => e` value arms, `case T => e` type arms under
+a type-switch guard `x.(type)`, `;`-separated arms, and `nil` or receive
+bodies; named call arguments (`limit = 4`); `..expr` spread in
 argument lists and composite literals; `errdefer`, `scope defer`,
 `yield`; `go group (ctx, limit = N) { go { ... } }` and bare `go { }`
 group children; `const if` / `const for` / `const switch`; `val.[f]`
@@ -72,7 +77,7 @@ Go rules that cannot apply to LoGOs, and why:
 
 ## Corpora (tree-sitter-cli 0.27.1, this directory)
 
-- `test/corpus`: 88 cases, 88 pass (the 80 vendored Go cases plus 8
+- `test/corpus`: 94 cases, 94 pass (the 80 vendored Go cases plus 14
   LoGOs cases in `test/corpus/logos_forms.txt`).
 - LoGOs run corpus
   (`.../spira-toolchain-tip/test/logos/run/*.lgo`): 482 files, 482

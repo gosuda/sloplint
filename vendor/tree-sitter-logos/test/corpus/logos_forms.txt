@@ -928,3 +928,244 @@ func tuples() {
           (expression_list
             (identifier)
             (identifier)))))))
+
+================================================================================
+LoGOs spread in call arguments
+================================================================================
+
+package p
+
+func sum(vals ...int) int {
+	return len(vals)
+}
+
+func call(args []int, rest []int) int {
+	n := sum(..args)
+	return sum(n, ..rest)
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (variadic_parameter_declaration
+        (identifier)
+        (type_identifier)))
+    (type_identifier)
+    (block
+      (statement_list
+        (return_statement
+          (expression_list
+            (call_expression
+              (identifier)
+              (argument_list
+                (identifier))))))))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter_declaration
+        (identifier)
+        (slice_type
+          (type_identifier)))
+      (parameter_declaration
+        (identifier)
+        (slice_type
+          (type_identifier))))
+    (type_identifier)
+    (block
+      (statement_list
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (call_expression
+              (identifier)
+              (argument_list
+                (spread_element
+                  (identifier))))))
+        (return_statement
+          (expression_list
+            (call_expression
+              (identifier)
+              (argument_list
+                (identifier)
+                (spread_element
+                  (identifier))))))))))
+
+================================================================================
+LoGOs switch expression with type arms
+================================================================================
+
+package p
+
+func classify(x any) int {
+	return switch x.(type) {
+	case []byte => 1
+	case string, []byte => 2
+	case string => 0
+	default => -1
+	}
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter_declaration
+        (identifier)
+        (type_identifier)))
+    (type_identifier)
+    (block
+      (statement_list
+        (return_statement
+          (expression_list
+            (switch_expression
+              (identifier)
+              (switch_type_arm
+                (slice_type
+                  (type_identifier))
+                (int_literal))
+              (switch_type_arm
+                (type_identifier)
+                (slice_type
+                  (type_identifier))
+                (int_literal))
+              (switch_type_arm
+                (type_identifier)
+                (int_literal))
+              (switch_default_arm
+                (unary_expression
+                  (int_literal))))))))))
+
+================================================================================
+LoGOs interpolation with comments
+================================================================================
+
+package p
+
+func message() string {
+	return $"value {1 /* { */ + 2}"
+}
+
+func other(x int) string {
+	return $"n = {x // trailing comment
+	}"
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    (identifier)
+    (parameter_list)
+    (type_identifier)
+    (block
+      (statement_list
+        (return_statement
+          (expression_list
+            (interp_string_literal))))))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter_declaration
+        (identifier)
+        (type_identifier)))
+    (type_identifier)
+    (block
+      (statement_list
+        (return_statement
+          (expression_list
+            (interp_string_literal)))))))
+
+================================================================================
+LoGOs nested interpolations
+================================================================================
+
+package p
+
+func nest(name string) string {
+	return $"o{"m" + $"i{name}"}"
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    (identifier)
+    (parameter_list
+      (parameter_declaration
+        (identifier)
+        (type_identifier)))
+    (type_identifier)
+    (block
+      (statement_list
+        (return_statement
+          (expression_list
+            (interp_string_literal)))))))
+
+================================================================================
+LoGOs tuple literal rejects empty elements
+================================================================================
+
+package p
+
+func f() {
+	t := (1,,)
+	_ = t
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    (identifier)
+    (parameter_list)
+    (block
+      (statement_list
+        (short_var_declaration
+          (expression_list
+            (identifier))
+          (expression_list
+            (tuple_literal
+              (int_literal)
+              (MISSING identifier))))
+        (assignment_statement
+          (expression_list
+            (identifier))
+          (expression_list
+            (identifier)))))))
+
+================================================================================
+LoGOs tuple type rejects empty elements
+================================================================================
+
+package p
+
+var t (int,,)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (var_declaration
+    (var_spec
+      (identifier)
+      (parenthesized_type
+        (tuple_type
+          (type_identifier)
+          (MISSING type_identifier))))))

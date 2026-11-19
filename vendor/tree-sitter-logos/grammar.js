@@ -402,7 +402,7 @@ module.exports = grammar({
     tuple_type: $ => seq(
       $._tuple_type_elem,
       ',',
-      commaSep($._tuple_type_elem),
+      commaSep1($._tuple_type_elem),
       optional(','),
     ),
 
@@ -991,7 +991,7 @@ module.exports = grammar({
       '(',
       $._expression,
       ',',
-      commaSep($._expression),
+      commaSep1($._expression),
       optional(','),
       ')',
     ),
@@ -1004,33 +1004,59 @@ module.exports = grammar({
       field('right', $._expression),
     )),
 
-    // `switch` as an expression with `=>` arms (SPEC T-104.6). The tag
-    // may be a plain expression or a type-switch guard `x.(type)`.
-    switch_expression: $ => seq(
-      'switch',
-      optional(seq(
-        field('initializer', optional($._simple_statement)),
-        ';',
-      )),
-      field('tag', optional(choice(
-        $._expression,
-        seq(
+    // `switch` as an expression with `=>` arms (SPEC T-104.6). Like the
+    // statement forms, the header chooses the arm flavor: a plain or
+    // absent tag takes value arms (`switch_arm`, as in
+    // `expression_case`), while a type-switch guard `x.(type)` takes
+    // type arms (`switch_type_arm`, as in `type_case`). The guard and a
+    // selector tag diverge on the token after `.`, so no conflict arises.
+    switch_expression: $ => choice(
+      seq(
+        'switch',
+        optional(seq(
+          field('initializer', optional($._simple_statement)),
+          ';',
+        )),
+        field('tag', optional($._expression)),
+        '{',
+        // Arms are separated by `;` (newlines are extras).
+        repeat(seq(choice($.switch_arm, $.switch_default_arm), optional(';'))),
+        '}',
+      ),
+      seq(
+        'switch',
+        optional(seq(
+          field('initializer', optional($._simple_statement)),
+          ';',
+        )),
+        field('tag', seq(
           $._expression,
           '.',
           '(',
           'type',
           ')',
-        ),
-      ))),
-      '{',
-      // Arms are separated by `;` (newlines are extras).
-      repeat(seq(choice($.switch_arm, $.switch_default_arm), optional(';'))),
-      '}',
+        )),
+        '{',
+        // Arms are separated by `;` (newlines are extras).
+        repeat(seq(choice($.switch_type_arm, $.switch_default_arm), optional(';'))),
+        '}',
+      ),
     ),
 
     switch_arm: $ => seq(
       'case',
       field('value', commaSep1($._expression)),
+      optional(','),
+      '=>',
+      field('body', $._expression),
+    ),
+
+    // Type-guarded `switch x.(type)` arms accept types such as `[]byte`,
+    // which have no value-expression spelling. Statement-form type cases
+    // are untouched.
+    switch_type_arm: $ => seq(
+      'case',
+      field('type', commaSep1($._type)),
       optional(','),
       '=>',
       field('body', $._expression),
@@ -1077,11 +1103,17 @@ module.exports = grammar({
       ')',
     ),
 
+    // `..expr` spread in argument lists mirrors composite literals:
+    // `f(..args)` and `f(a, ..rest)` are calls with spread arguments.
     argument_list: $ => seq(
       '(',
       optional(seq(
-        choice($._expression, $.variadic_argument, $.named_argument),
-        repeat(seq(',', choice($._expression, $.variadic_argument, $.named_argument))),
+        commaSep1(choice(
+          $._expression,
+          $.variadic_argument,
+          $.named_argument,
+          $.spread_element
+        )),
         optional(','),
       )),
       ')',

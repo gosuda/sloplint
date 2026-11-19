@@ -360,6 +360,10 @@
           "named": true
         },
         {
+          "type": "spread_element",
+          "named": true
+        },
+        {
           "type": "variadic_argument",
           "named": true
         }
@@ -2945,8 +2949,46 @@
         {
           "type": "switch_default_arm",
           "named": true
+        },
+        {
+          "type": "switch_type_arm",
+          "named": true
         }
       ]
+    }
+  },
+  {
+    "type": "switch_type_arm",
+    "named": true,
+    "fields": {
+      "body": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "_expression",
+            "named": true
+          }
+        ]
+      },
+      "type": {
+        "multiple": true,
+        "required": true,
+        "types": [
+          {
+            "type": ",",
+            "named": false
+          },
+          {
+            "type": "_simple_type",
+            "named": true
+          },
+          {
+            "type": "parenthesized_type",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {

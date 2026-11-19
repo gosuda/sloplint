@@ -248,10 +248,28 @@ fn go_in_deferred_closure(cx: &Cx<'_, '_>) -> bool {
     for ancestor in cx.ancestors() {
         match ancestor.kind() {
             "func_literal" => {
-                let call = cx.parent_of(ancestor);
-                let defer = call.and_then(|c| cx.parent_of(c));
-                return call.is_some_and(|c| c.kind() == "call_expression")
-                    && defer.is_some_and(|d| d.kind() == "defer_statement");
+                let Some(call) = cx.parent_of(ancestor) else {
+                    return false;
+                };
+                if call.kind() != "call_expression" {
+                    return false;
+                }
+                let defer = match cx.parent_of(call) {
+                    Some(next)
+                        if next.kind() == "try_expression"
+                            && child_by_field(next, "operand")
+                                .is_some_and(|o| o.id() == call.id()) =>
+                    {
+                        cx.parent_of(next)
+                    }
+                    next => next,
+                };
+                return defer.is_some_and(|d| {
+                    matches!(
+                        d.kind(),
+                        "defer_statement" | "scope_defer_statement" | "errdefer_statement"
+                    )
+                });
             }
             "function_declaration" | "method_declaration" => return false,
             _ => {}

@@ -14,7 +14,7 @@ use tree_sitter::Node;
 use super::go;
 use crate::hooks::{
     CallHead, Container, Cx, FunctionHead, LangHooks, ShadowKind, TypeHead, child_by_field,
-    named_children, pos_of, text,
+    named_children, pos_of, preceding_comments, text,
 };
 use crate::spec::Role;
 
@@ -51,13 +51,6 @@ pub(crate) struct LogosHooks;
 
 pub(crate) static HOOKS: LogosHooks = LogosHooks;
 
-fn is_test_file(path: &str) -> bool {
-    path.rsplit('/')
-        .next()
-        .unwrap_or(path)
-        .ends_with("_test.lgo")
-}
-
 fn lambda_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> FunctionHead<'s> {
     let body = child_by_field(n, "body");
     let mut params = Vec::new();
@@ -84,7 +77,7 @@ fn lambda_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> FunctionHead<'s> {
         visibility: Visibility::Private,
         signature_forced: false,
         entry_point: false,
-        in_test: is_test_file(cx.path),
+        in_test: go::go_is_test_file(cx.path),
         is_overload: false,
         is_deprecated: false,
         is_decorated: false,
@@ -106,7 +99,14 @@ impl LangHooks for LogosHooks {
     }
 
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
-        go::HOOKS.function(n, cx)
+        let mut head = go::HOOKS.function(n, cx)?;
+        if let Some(anchor) = cx.parent().filter(|p| p.kind() == "const_func_declaration") {
+            let (doc, doc_pos) = preceding_comments(cx, anchor, &["comment"], &[]);
+            head.is_deprecated = doc.iter().any(|line| go::go_is_deprecated(line));
+            head.doc = doc;
+            head.doc_pos = doc_pos;
+        }
+        Some(head)
     }
 
     fn closure_as_function<'s>(

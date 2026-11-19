@@ -15,6 +15,7 @@ const ALLOW_FILES: &[&str] = &[
     "**/build.rs",
     "**/bin/**",
     "**/main.go",
+    "**/main.lgo",
     "**/cmd/**",
     "**/__main__.py",
     "**/config.*",
@@ -527,5 +528,16 @@ mod tests {
             [(20, "mutable global `cache`".to_string())],
             "the test-region write must not block the library mutable global"
         );
+    }
+    #[test]
+    fn allow_files_covers_lgos_entry_points() {
+        let mut builder = GlobSetBuilder::new();
+        for pattern in ALLOW_FILES {
+            let glob = Glob::new(pattern).expect("allow_files pattern parses");
+            builder.add(glob);
+        }
+        let set = builder.build().expect("allow_files builds");
+        assert!(set.is_match("src/main.lgo"));
+        assert!(set.is_match("cmd/tool/main.lgo"));
     }
 }
