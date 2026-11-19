@@ -1,0 +1,5 @@
+package probe
+import "log"
+func Fail(n int) {
+	log.Fatal($"{n /* } explanation */}")
+}

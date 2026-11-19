@@ -102,7 +102,10 @@ fn go_collection_shape<'s>(n: Node<'_>) -> ArgShape<'s> {
 pub(crate) fn go_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
     let value = match n.kind() {
         "named_argument" => child_by_field(n, "value"),
-        "spread_element" => code_children(n).into_iter().next(),
+        "spread_element" => code_children(n)
+            .into_iter()
+            .next()
+            .filter(|operand| operand.kind() == "composite_literal"),
         _ => None,
     }
     .unwrap_or(n);

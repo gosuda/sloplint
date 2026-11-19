@@ -1,1 +1,2 @@
 # Near-miss: errors.New builds an error value, it never carries a log message.
+# Near-miss: interpolated message with a long static prefix reads as searchable.

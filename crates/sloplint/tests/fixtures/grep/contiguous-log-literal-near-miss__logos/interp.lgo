@@ -1,0 +1,5 @@
+package probe
+import "log"
+func Greet(name string) {
+	log.Fatal($"service started: {name}")
+}

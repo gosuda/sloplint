@@ -453,8 +453,54 @@ fn saved_lambda_inside_deferred_closure_is_not_cleanup() {
         "package p\n\nfunc save(f func()) {}\n\nfunc work() error {\n\treturn nil\n}\n\nfunc f() {\n\tscope defer func() {\n\t\tsave(() => {\n\t\t\tif err := work(); err != nil {\n\t\t\t}\n\t\t})\n\t}()\n}\n",
     );
     assert!(
+        !analysis.facts.handlers.is_empty(),
+        "the saved lambda must emit a handler fact"
+    );
+    assert!(
         !analysis.facts.handlers.iter().any(|h| h.in_cleanup),
         "a handler in a saved lambda must not inherit deferred cleanup"
+    );
+}
+
+#[test]
+fn spread_ident_arg_is_not_a_plain_identifier() {
+    let analysis = run_clean(
+        "src/spreadident.lgo",
+        "package p\n\nfunc sum(vals ...int) int {\n\treturn 0\n}\n\nfunc total(values []int) int {\n\treturn sum(..values)\n}\n",
+    );
+    let call = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "sum")
+        .expect("sum must be a call fact");
+    assert_eq!(
+        call.args.first().map(|a| &a.shape),
+        Some(&ArgShape::Other),
+        "a spread identifier expands elements instead of forwarding one value, got {:?}",
+        call.args.first().map(|a| &a.shape)
+    );
+}
+
+#[test]
+fn deferred_lambda_through_parens_is_cleanup() {
+    let analysis = run_clean(
+        "src/deferredlambda.lgo",
+        "package p\n\nfunc work() error {\n\treturn nil\n}\n\nfunc f() {\n\tscope defer (() => {\n\t\tif err := work(); err != nil {\n\t\t}\n\t})()\n}\n",
+    );
+    assert!(
+        !analysis.facts.handlers.is_empty(),
+        "the deferred lambda must emit a handler fact"
+    );
+    assert!(
+        analysis.facts.handlers.iter().all(|h| h.in_cleanup),
+        "a directly deferred lambda counts as cleanup, got {:?}",
+        analysis
+            .facts
+            .handlers
+            .iter()
+            .map(|h| h.in_cleanup)
+            .collect::<Vec<_>>()
     );
 }
 
