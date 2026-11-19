@@ -55,6 +55,7 @@ languages! {
     Quint => "quint", &[".qnt"];
     Tlaplus => "tlaplus", &[".tla"];
     Alloy => "alloy", &[".als"];
+    Dafny => "dafny", &[".dfy"];
 }
 
 const HEADER_EXTENSION: &str = ".h";

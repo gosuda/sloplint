@@ -55,7 +55,8 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
         | Lang::Scala
         | Lang::Dart
         | Lang::Odin
-        | Lang::Quint => SLASH,
+        | Lang::Quint
+        | Lang::Dafny => SLASH,
         Lang::Alloy => CommentSyntax {
             lines: &[b"//", b"--"],
             ..SLASH

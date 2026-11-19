@@ -17,6 +17,7 @@ tree-sitter-c = { workspace = true }
 tree-sitter-c-sharp = { workspace = true }
 tree-sitter-cpp = { workspace = true }
 tree-sitter-dart = { workspace = true }
+tree-sitter-dafny = { workspace = true }
 tree-sitter-go = { workspace = true }
 tree-sitter-logos = { workspace = true }
 tree-sitter-java = { workspace = true }
