@@ -129,7 +129,7 @@ fn shadowed(facts: &FileFacts<'_>, line: u32, name: &str) -> bool {
         binding.name == name
             && function.pos.line <= binding.pos.line
             && binding.pos.line <= line
-            && line <= binding.end_line
+            && line < binding.end_line
     })
 }
 
@@ -675,6 +675,68 @@ mod tests {
             out.len(),
             0,
             "a use past the local's scope end is a use of the wrapper: {out:?}"
+        );
+    }
+
+    #[test]
+    fn closed_scope_local_on_the_same_line_does_not_shadow() {
+        let mut render = fun("render", vec![param("s")], Some(0));
+        render.pos = Pos { line: 2, byte: 0 };
+        render.end_line = 4;
+        let mut show = fun("show", Vec::new(), None);
+        show.pos = Pos { line: 6, byte: 0 };
+        show.end_line = 11;
+        let format_call = Call {
+            pos: Pos { line: 3, byte: 0 },
+            callee: "format",
+            kind: CallKind::Plain,
+            callee_root: Some("format"),
+            is_simple_path: true,
+            initializes_binding: false,
+            args: vec![Arg {
+                shape: ArgShape::Ident("s"),
+                start_line: 3,
+                end_line: 3,
+            }],
+        };
+        // `{ const render = ...; } display(render)` on one line: the
+        // block-local `render` ends on line 9 and the arg sits on the
+        // same line after the closing brace, so it names the wrapper.
+        let display_call = Call {
+            pos: Pos { line: 9, byte: 0 },
+            callee: "display",
+            kind: CallKind::Plain,
+            callee_root: Some("display"),
+            is_simple_path: true,
+            initializes_binding: false,
+            args: vec![Arg {
+                shape: ArgShape::NamedIdent("render"),
+                start_line: 9,
+                end_line: 9,
+            }],
+        };
+        let strict = preset(Strictness::Strict);
+        let rule = build(strict.options, &Settings::default()).expect("strict preset builds");
+        let mut owned = facts(
+            "fn render() {}\n",
+            vec![render, show],
+            vec![format_call, display_call],
+        );
+        owned.bindings.push(crate::facts::MutBinding {
+            name: "render",
+            pos: Pos { line: 7, byte: 0 },
+            end_line: 9,
+            last_write_line: 7,
+            first_write_line: 7,
+            write_lines: 0,
+            loop_depth: 0,
+        });
+        let mut out = Vec::new();
+        rule.check(&owned, &mut out);
+        assert_eq!(
+            out.len(),
+            0,
+            "a use on the local's closing-brace line names the wrapper: {out:?}"
         );
     }
 
