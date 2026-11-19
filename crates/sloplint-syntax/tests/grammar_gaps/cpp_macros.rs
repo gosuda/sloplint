@@ -103,3 +103,70 @@ fn operator_brackets_vs_lambda_captures() {
         }
     }
 }
+
+// Comments are legal inside an operator name: `operator /*c*/ []` must
+// still suppress lambda marking on its `]` so the enclosing macro body
+// binds, while a division `/` after `operator` clears the flag.
+#[test]
+fn operator_comment_brackets_vs_division() {
+    let language: tree_sitter::Language = tree_sitter_cpp::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).expect("cpp language loads");
+
+    let source = concat!(
+        "struct S {\n",
+        "  MACRO(int t) {\n",
+        "    int operator /*c*/ [](int i) { return t[i]; }\n",
+        "    int operator // line\n",
+        "      [](int i) { return t[i]; }\n",
+        "  };\n",
+        "};\n",
+    );
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        !tree.root_node().has_error() && !sexp.contains("MISSING"),
+        "commented operator[] must parse clean, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("macro_braced_declaration"),
+        "must claim the macro, sexp: {sexp}"
+    );
+}
+
+// `#ifdef`-guarded `WIDGET() { member-only content };` binds the loose
+// braced decl at file, namespace, and statement scope — the inherited
+// un-suffixed preproc arms take `_block_item`, so the child grammar
+// re-declares them with the loose variant added.
+#[test]
+fn ifdef_guarded_empty_paren_braced_macro() {
+    let language: tree_sitter::Language = tree_sitter_cpp::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).expect("cpp language loads");
+
+    let source = concat!(
+        "#ifdef FLAG\n",
+        "WIDGET() { int bits: 3; };\n",
+        "#endif\n",
+        "namespace N {\n",
+        "#ifdef FLAG\n",
+        "WIDGET() { int bits: 3; };\n",
+        "#endif\n",
+        "}\n",
+        "void f() {\n",
+        "#ifdef FLAG\n",
+        "  WIDGET() { int bits: 3; };\n",
+        "#endif\n",
+        "}\n",
+    );
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        !tree.root_node().has_error() && !sexp.contains("MISSING"),
+        "guarded empty-paren macros must parse clean, sexp: {sexp}"
+    );
+    assert!(
+        sexp.matches("macro_braced_declaration").count() == 3,
+        "all three guarded macros must bind, sexp: {sexp}"
+    );
+}

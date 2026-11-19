@@ -478,7 +478,7 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 
 ## Size
 
-`src/parser.c`: 203,898,833 bytes (published: 17,299,078). States: 30259
+`src/parser.c`: 204,223,165 bytes (published: 17,299,078). States: 30277
 (published: 8637). Language version: 14 (published: 14). The literal
 enumeration of `macro_attribute` costs most of the size growth.
 
@@ -775,7 +775,16 @@ first with `rm -f src/parser.c`.
   inside a class is a constructor, not a macro. The scanner's
   `prev_was_operator` flag (set on the `operator` keyword so a
   following `]` doesn't mark a lambda capture) is cleared at the top
-  of the scan loop for every character except whitespace and `[` —
-  exactly the characters legal between `operator` and `]` — so
-  `factory.operator()([] { return 1; })` keeps its real lambda
-  capture instead of being swallowed into a macro read.
+  of the scan loop for every character except whitespace, `[`, and
+  `/` — `/` reaches its own branch, which keeps the flag only when it
+  opens a comment (comments are legal inside an operator name, so
+  `operator /*c*/ []` still binds). `factory.operator()([] { return 1; })`
+  keeps its real lambda capture instead of being swallowed into a
+  macro read.
+
+  The inherited un-suffixed `preproc_if`/`#ifdef` arms take
+  `_block_item`, which deliberately lacks the loose decl — the child
+  grammar re-declares those five rules with the same content plus the
+  loose alias, so a guarded `WIDGET() { int bits: 3; };` parses at
+  file, namespace, and statement scope. Member position stays strict
+  (a guarded `S() { ... }` in a class is still a constructor).

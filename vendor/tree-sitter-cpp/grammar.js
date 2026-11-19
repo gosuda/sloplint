@@ -160,7 +160,6 @@ module.exports = grammar(C, {
     [$.macro_argument_list, $.type_specifier, $.expression, $.macro_braced_expression],
     [$.macro_argument_list, $.concatenated_string],
     [$._midl_attribute, $.expression, $.macro_braced_expression],
-    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
     [$._macro_braced_body, $._macro_braced_members],
     [$._block_item, $._macro_braced_members],
     [$.macro_argument_list, $.sized_type_specifier, $._macro_argument_list_nonempty],
@@ -1218,6 +1217,21 @@ module.exports = grammar(C, {
     )),
 
     ...preprocIf('_in_guarded_class', $ => $._guarded_class_head),
+
+    // The inherited un-suffixed `#if`/`#ifdef` arms take `_block_item`,
+    // which deliberately lacks the loose braced decl — so a guarded
+    // `WIDGET() { int bits: 3; };` errored even at file scope. Adding
+    // it here (child rules shadow the parent's same-named rules) keeps
+    // unguarded statement bodies on `macro_braced_statement` while
+    // guarded positions gain the member-form read.
+    ...preprocIf('', $ => choice(
+      $._block_item,
+      alias($._macro_braced_declaration_loose, $.macro_braced_declaration),
+      alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
+      $.dangling_else,
+      $.dangling_label,
+      '__extension__',
+    )),
 
     _macro_declaration_literals: $ => choice(
       'Q_OBJECT',

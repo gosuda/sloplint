@@ -651,6 +651,15 @@
                 {
                   "type": "ALIAS",
                   "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_braced_declaration_loose"
+                  },
+                  "named": true,
+                  "value": "macro_braced_declaration"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
                     "type": "PREC_DYNAMIC",
                     "value": -2,
                     "content": {
@@ -770,6 +779,15 @@
                 {
                   "type": "ALIAS",
                   "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_braced_declaration_loose"
+                  },
+                  "named": true,
+                  "value": "macro_braced_declaration"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
                     "type": "PREC_DYNAMIC",
                     "value": -2,
                     "content": {
@@ -867,6 +885,15 @@
                 {
                   "type": "ALIAS",
                   "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_braced_declaration_loose"
+                  },
+                  "named": true,
+                  "value": "macro_braced_declaration"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
                     "type": "PREC_DYNAMIC",
                     "value": -2,
                     "content": {
@@ -934,6 +961,15 @@
                 {
                   "type": "SYMBOL",
                   "name": "_block_item"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_braced_declaration_loose"
+                  },
+                  "named": true,
+                  "value": "macro_braced_declaration"
                 },
                 {
                   "type": "ALIAS",
@@ -1044,6 +1080,15 @@
                 {
                   "type": "SYMBOL",
                   "name": "_block_item"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_braced_declaration_loose"
+                  },
+                  "named": true,
+                  "value": "macro_braced_declaration"
                 },
                 {
                   "type": "ALIAS",
@@ -30580,16 +30625,6 @@
     [
       "_midl_attribute",
       "expression",
-      "macro_braced_expression"
-    ],
-    [
-      "macro_qualifier",
-      "_macro_declaration_top",
-      "_macro_declaration_stmt",
-      "_declarator",
-      "type_specifier",
-      "expression",
-      "macro_braced_statement",
       "macro_braced_expression"
     ],
     [

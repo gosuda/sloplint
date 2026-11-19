@@ -507,3 +507,64 @@ void f(void) {
                   (compound_statement
                     (return_statement
                       (number_literal))))))))))))
+
+================================================================================
+braced macro: operator name carries a comment before []
+================================================================================
+
+struct S {
+  MACRO(int t) {
+    int operator /*c*/ [](int i) { return t[i]; }
+  };
+};
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (struct_specifier
+    (type_identifier)
+    (field_declaration_list
+      (macro_braced_declaration
+        (identifier)
+        (macro_argument_list
+          (primitive_type)
+          (identifier))
+        (field_declaration_list
+          (function_definition
+            (primitive_type)
+            (function_declarator
+              (operator_name
+                (comment))
+              (parameter_list
+                (parameter_declaration
+                  (primitive_type)
+                  (identifier))))
+            (compound_statement
+              (return_statement
+                (subscript_expression
+                  (identifier)
+                  (subscript_argument_list
+                    (identifier)))))))))))
+
+================================================================================
+braced macro: empty parens guarded by #ifdef
+================================================================================
+
+#ifdef FLAG
+WIDGET() { int bits: 3; };
+#endif
+
+--------------------------------------------------------------------------------
+
+(translation_unit
+  (preproc_ifdef
+    (identifier)
+    (macro_braced_declaration
+      (identifier)
+      (macro_argument_list)
+      (field_declaration_list
+        (field_declaration
+          (primitive_type)
+          (field_identifier)
+          (bitfield_clause
+            (number_literal)))))))
