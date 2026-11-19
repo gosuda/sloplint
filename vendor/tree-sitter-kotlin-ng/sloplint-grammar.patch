@@ -1,6 +1,21 @@
+diff --git a/grammar.js b/grammar.js
+index 0e0078a..b810e7f 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -63,6 +63,9 @@
+@@ -50,9 +50,12 @@ module.exports = grammar({
+ 
+     [$.function_value_parameters, $.function_type_parameters],
+     [$.parenthesized_type, $.function_type_parameters],
++    [$.parenthesized_type],
+     [$.multi_variable_declaration, $.function_type_parameters],
+ 
+     [$.class_modifier, $._reserved_identifier],
++    [$.inheritance_modifier, $._reserved_identifier],
++    [$.member_modifier, $._reserved_identifier],
+     [$.platform_modifier, $._reserved_identifier],
+     [$.property_modifier, $._reserved_identifier],
+ 
+@@ -63,6 +66,9 @@ module.exports = grammar({
      [$.non_nullable_type],
      [$.function_type],
      [$._receiver_type],
@@ -10,7 +25,7 @@
    ],
  
    extras: $ => [
-@@ -155,6 +158,7 @@
+@@ -155,6 +161,7 @@ module.exports = grammar({
      ),
  
      class_declaration: $ => prec.right(seq(
@@ -18,7 +33,7 @@
        optional($.modifiers),
        choice('class', seq(optional('fun'), 'interface')),
        field('name', $.identifier),
-@@ -174,6 +178,7 @@
+@@ -174,6 +181,7 @@ module.exports = grammar({
      )),
  
      property_declaration: $ => prec.right(seq(
@@ -26,7 +41,7 @@
        optional($.modifiers),
        choice('val', 'var'),
        optional($.type_parameters),
-@@ -186,11 +191,21 @@
+@@ -186,11 +194,21 @@ module.exports = grammar({
        )),
        optional(';'),
        optional(choice(
@@ -48,7 +63,7 @@
      type_alias: $ => prec.right(seq(
        optional($.modifiers),
        'typealias',
-@@ -265,6 +280,7 @@
+@@ -265,6 +283,7 @@ module.exports = grammar({
      constructor_invocation: $ => seq($.type, $.value_arguments),
  
      function_declaration: $ => prec.right(1, seq(
@@ -56,7 +71,7 @@
        optional($.modifiers),
        'fun',
        optional($.type_parameters),
-@@ -322,6 +338,14 @@
+@@ -322,6 +341,14 @@ module.exports = grammar({
        $.primary_expression,
      ),
  
@@ -71,7 +86,7 @@
      getter: $ => prec.right(seq(
        optional($.modifiers),
        'get',
-@@ -415,7 +439,7 @@
+@@ -415,7 +442,7 @@ module.exports = grammar({
  
      enum_entry: $ => seq(
        optional($.modifiers),
@@ -80,7 +95,7 @@
        optional($.value_arguments),
        optional($.class_body),
      ),
-@@ -427,7 +451,7 @@
+@@ -427,7 +454,7 @@ module.exports = grammar({
      ),
  
      value_argument: $ => seq(
@@ -89,7 +104,7 @@
        optional('*'),
        $.expression,
      ),
-@@ -593,6 +617,7 @@
+@@ -593,6 +620,7 @@ module.exports = grammar({
  
      function_type: $ => seq(
        optional($.type_modifiers),
@@ -97,7 +112,17 @@
        optional(seq($._receiver_type, '.')),
        $.function_type_parameters,
        '->',
-@@ -752,6 +777,7 @@
+@@ -605,7 +633,8 @@ module.exports = grammar({
+       ')',
+     ),
+ 
+-    parenthesized_type: $ => seq('(', $.type, ')'),
++    parenthesized_type: $ =>
++      prec.dynamic(1, seq(optional($.type_modifiers), '(', $.type, ')')),
+ 
+     assignment: $ => seq(
+       field('left', $.expression),
+@@ -752,6 +781,7 @@ module.exports = grammar({
      ),
  
      lambda_literal: $ => seq(
@@ -105,7 +130,18 @@
        '{',
        optional(seq(optional($.lambda_parameters), '->')),
        optionalSep1($.statement, $._semi),
-@@ -853,6 +879,11 @@
+@@ -825,7 +855,9 @@ module.exports = grammar({
+ 
+     parenthesized_expression: $ => seq('(', $.expression, ')'),
+ 
+-    collection_literal: $ => seq('[', commaSep1($.expression), optional(','), ']'),
++    // Annotation array values may be empty: `indices = []` (Room @Entity).
++    collection_literal: $ =>
++      seq('[', optional(seq(commaSep1($.expression), optional(','))), ']'),
+ 
+     when_expression: $ => seq(
+       'when',
+@@ -853,6 +885,11 @@ module.exports = grammar({
            commaSep1(field('condition', $._when_condition)),
            optional(','),
          ),
@@ -117,7 +153,7 @@
          'else',
        ),
        '->',
-@@ -929,7 +960,7 @@
+@@ -929,7 +966,7 @@ module.exports = grammar({
  
      navigation_expression: $ => prec(PREC.CALL, seq(
        $.expression,
@@ -126,7 +162,7 @@
        $.identifier,
      )),
  
-@@ -940,6 +971,7 @@
+@@ -940,6 +977,7 @@ module.exports = grammar({
      ),
  
      string_literal: $ => seq(
@@ -134,7 +170,7 @@
        '"',
        repeat(choice(
          alias(choice(
-@@ -956,14 +988,17 @@
+@@ -956,14 +994,17 @@ module.exports = grammar({
      ),
  
      multiline_string_literal: $ => seq(
@@ -153,17 +189,21 @@
      interpolation: $ => choice(
        seq('$', $._identifier),
        seq('${', $.expression, '}'),
-@@ -1059,6 +1094,7 @@
+@@ -1059,6 +1100,9 @@ module.exports = grammar({
          'set',
          'operator',
          'value',
 +        'context',
++        'open',
++        'override',
        ),
        $.identifier,
      )),
+diff --git a/src/scanner.c b/src/scanner.c
+index 8f9d287..5d26fc6 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -61,6 +61,58 @@
+@@ -61,6 +61,58 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
      return false;
  }
  
@@ -222,7 +262,7 @@
  void *tree_sitter_kotlin_external_scanner_create() { return NULL; }
  
  void tree_sitter_kotlin_external_scanner_destroy(void *payload) {}
-@@ -166,6 +218,8 @@
+@@ -166,6 +218,8 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      return false;
                  case 'i':
                      return scan_word(lexer, "import");
@@ -231,7 +271,7 @@
                  case ';':
                      advance(lexer);
                      lexer->mark_end(lexer);
-@@ -178,9 +232,11 @@
+@@ -178,9 +232,11 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
          char scanned_word[16] = {0};
      _switch:
          switch (lexer->lookahead) {
@@ -244,7 +284,20 @@
              case '*':
              case '%':
              case '>':
-@@ -238,23 +294,30 @@
+@@ -224,6 +280,12 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+                     goto q_dot_from_semi;
+                 }
+                 return true;
++            // `class C\n(params)` — a `(` continuing a declaration head must
++            // not take a semicolon. In expression position `x\n(y)` stays two
++            // statements; nullable-chain (`?.`) and `!is` continuations mark
++            // that state, so the semi is kept wherever either is valid.
++            case '(':
++                return valid_symbols[Q_DOT] || valid_symbols[NOT_IS];
+             case 'e':
+             case 'i':
+             case 'g':
+@@ -238,23 +300,30 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
              case 'c':
              case 'b':
              case 'w':
@@ -279,7 +332,7 @@
                  // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
                  // we found a variable named constructor whose field is being accessed
                  if (index == 5) {
-@@ -279,18 +342,22 @@
+@@ -279,18 +348,22 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      }
                  }
                  // If `get` was found and the keyword is not valid, return a semi since it's being used as an identifier
@@ -307,7 +360,7 @@
  
                          while (iswspace(lexer->lookahead)) {
                              if (lexer->lookahead == '\n') {
-@@ -307,6 +374,33 @@
+@@ -307,6 +380,33 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                  else if (index == 1 && valid_symbols[IN]) {
                      return true;
                  }

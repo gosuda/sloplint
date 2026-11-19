@@ -280,6 +280,12 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                     goto q_dot_from_semi;
                 }
                 return true;
+            // `class C\n(params)` — a `(` continuing a declaration head must
+            // not take a semicolon. In expression position `x\n(y)` stays two
+            // statements; nullable-chain (`?.`) and `!is` continuations mark
+            // that state, so the semi is kept wherever either is valid.
+            case '(':
+                return valid_symbols[Q_DOT] || valid_symbols[NOT_IS];
             case 'e':
             case 'i':
             case 'g':

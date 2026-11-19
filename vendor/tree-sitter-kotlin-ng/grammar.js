@@ -50,9 +50,12 @@ module.exports = grammar({
 
     [$.function_value_parameters, $.function_type_parameters],
     [$.parenthesized_type, $.function_type_parameters],
+    [$.parenthesized_type],
     [$.multi_variable_declaration, $.function_type_parameters],
 
     [$.class_modifier, $._reserved_identifier],
+    [$.inheritance_modifier, $._reserved_identifier],
+    [$.member_modifier, $._reserved_identifier],
     [$.platform_modifier, $._reserved_identifier],
     [$.property_modifier, $._reserved_identifier],
 
@@ -630,7 +633,8 @@ module.exports = grammar({
       ')',
     ),
 
-    parenthesized_type: $ => seq('(', $.type, ')'),
+    parenthesized_type: $ =>
+      prec.dynamic(1, seq(optional($.type_modifiers), '(', $.type, ')')),
 
     assignment: $ => seq(
       field('left', $.expression),
@@ -851,7 +855,9 @@ module.exports = grammar({
 
     parenthesized_expression: $ => seq('(', $.expression, ')'),
 
-    collection_literal: $ => seq('[', commaSep1($.expression), optional(','), ']'),
+    // Annotation array values may be empty: `indices = []` (Room @Entity).
+    collection_literal: $ =>
+      seq('[', optional(seq(commaSep1($.expression), optional(','))), ']'),
 
     when_expression: $ => seq(
       'when',
@@ -1095,6 +1101,8 @@ module.exports = grammar({
         'operator',
         'value',
         'context',
+        'open',
+        'override',
       ),
       $.identifier,
     )),

@@ -211,3 +211,27 @@ fn modified_and_comment_backing_fields_parse() {
 fn field_assignment_in_a_body_stays_a_statement() {
     run_clean("fun f(field: Boolean) {\n    val x = false\n    field = true\n}\n");
 }
+
+#[test]
+fn open_and_override_as_identifiers_parse() {
+    run_clean(
+        "fun a() { val open = 1; open(2) }\nclass A : SeekableByteChannel {\n    private var open = true\n    override fun close() { open = false }\n}\n",
+    );
+}
+
+#[test]
+fn annotation_on_a_parenthesized_function_type_parses() {
+    run_clean("fun f(content: @Composable (() -> Unit)) {}\n");
+}
+
+#[test]
+fn empty_array_literal_in_an_annotation_argument_parses() {
+    run_clean(
+        "@Entity(tableName = \"config\", indices = [])\ndata class ConfigEntity(val id: Int)\n",
+    );
+}
+
+#[test]
+fn primary_constructor_parameters_on_the_next_line_parse() {
+    run_clean("internal class D\n/** doc */\n    (x: Int) {\n}\n");
+}

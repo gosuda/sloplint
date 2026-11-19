@@ -1,6 +1,8 @@
 # tree-sitter-kotlin-ng, vendored for sloplint
 
-Status: PARTIAL. 12 of the 18 named Kotlin clusters are fixed for their repro shapes. 6 are open. The residual files below are listed by file, with their shape.
+Status: PARTIAL. 16 of the 18 named Kotlin clusters are fixed for their repro shapes. 4 are open. The residual files below are listed by file, with their shape.
+
+Round 2 adds: K-SOFTID (`open`/`override` usable as identifiers), K-PARENANNO (annotation on a parenthesized function type), K-ARRLIT (empty `[]` in an annotation argument), K-NEWLINECTOR (a newline or doc comment between the class name and the primary-constructor parameter list, which resolves the KSPLITCTOR shape), and K-ARRLIT also resolves the KVARARGARR repro (`= []`). A fresh dogfood pass over 274 corpus files previously flagged with parse errors leaves 171 still erroring; the cleared 102 are concentrated in installerx-revived (Room `indices = []`, `@Composable` paren types), facebook-android-sdk, dbflow, and mlkit (doc comment before the constructor).
 
 ## Origin
 
@@ -29,9 +31,9 @@ A class member followed by `}` on the same line. The scanner emitted `_class_mem
 
 This one change also fixes enum entries whose bodies close on the same line (K22b), one-line local classes (K08, K08b, K08c), and `class A { fun f(): Int = 1 }`.
 
-## Fixed (12 named clusters, for their repro shapes)
+## Fixed (16 named clusters, for their repro shapes)
 
-KCTX, KSUSP-L, KNULLREF, KDCOLON, KSTR5, KDOLLAR, KENUMENTRY, KGUARD (one condition before `if`), KGETVAL, KSETNEST, KENUMBODY, KBFIELD.
+KCTX, KSUSP-L, KNULLREF, KDCOLON, KSTR5, KDOLLAR, KENUMENTRY, KGUARD (one condition before `if`), KGETVAL, KSETNEST, KENUMBODY, KBFIELD, K-SOFTID, K-PARENANNO, K-ARRLIT, K-NEWLINECTOR.
 
 Per-cluster corpus attribution was not measured. The corpus differential is file-level, and a file's first error cannot be assigned to a cluster without a per-cluster triage that I did not complete. The fixed status is established by the repro shapes only.
 
@@ -43,14 +45,14 @@ Limits:
 
 The modifier word scan also skips comments so `private /* note */ field = v` still attaches, but a comment crossed there no longer lets a continuation keyword suppress the separator: `else`/`in`/`instanceof`/`by`/`as`/`where` after a comment-crossed modifier word emit the semi exactly as upstream does when a comment ends the word scan (`x\nfoo /* c */ as Int` splits instead of merging). The accessor keywords `get`/`set`/`constructor`/`field` keep their own checks after a comment, which is an improvement over upstream, where a comment between a modifier and `get`/`set` already broke the chain.
 
-## Open named clusters (6)
+## Open named clusters (4)
 
-1. KSUSP-N (K05): `suspend` as an expression identifier, `fun g(suspend: Int, x: Int): Int = suspend + x`. The named label `g(suspend = 1)` is accepted. Making `suspend` reserved caused grammar conflicts. kotlinc reports `suspend` used as a bare expression only as a type or invocation error, so the expression form is not a syntax control.
+1. KSUSP-N (K05): `suspend` as an expression identifier, `fun g(suspend: Int, x: Int): Int = suspend + x`. The named label `g(suspend = 1)` is accepted. Making `suspend` reserved caused grammar conflicts (`suspend '{'` collides with `lambda_literal`, `suspend '@'` with `function_modifier`/`type_modifiers`); it was dropped from `_reserved_identifier` in round 2 for that reason. kotlinc reports `suspend` used as a bare expression only as a type or invocation error, so the expression form is not a syntax control. `dynamic` was tried in `_reserved_identifier` too and reverted: it collides with the `dynamic` type literal at `'.'`/`'?'` follow positions.
 2. KACCSET (K13): annotated setter after an `=` getter. A scanner change that skipped the annotation was tried and reverted: it made `ChannelProducerConsumerBenchmark.kt` line 43 fail with `MISSING "get"`, a file the published grammar parses cleanly.
-3. KSPLITCTOR (K14): a constructor split from its class header by a newline or an annotation.
-4. KSUSPPAREN (K19): `suspend ((Int) -> String?)`. A modifier prefix on `parenthesized_type` is ambiguous with `function_type`.
-5. KPARENVAL (K20): `(fn)(call, it)` callee inside a lambda. Needs a declared conflict.
-6. KVARARGARR (K23): `vararg val f: G = []`. kotlinc 2.4.21 reports no syntax error on K23, so the input is valid. `[]` must be limited to annotation-class parameter defaults; a grammar rule cannot express that without a dedicated rule, and a broader rule would accept invalid code.
+3. KSUSPPAREN (K19): `suspend ((Int) -> String?)`. A modifier prefix on `parenthesized_type` is ambiguous with `function_type`.
+4. KPARENVAL (K20): `(fn)(call, it)` callee inside a lambda. Needs a declared conflict.
+
+KSPLITCTOR (K14) is fixed in round 2 by the scanner change below. KVARARGARR (K23) parses as of round 2 because `collection_literal` now permits zero elements; the acceptance is broader than kotlinc's annotation-only rule (see over-acceptance notes).
 
 ## Residual files: hidden MISSING, no ERROR (4)
 
@@ -66,7 +68,7 @@ Counts are by the first `ERROR` node only. The 26 files contain no same-line mem
 
 | Shape | Files | Files, first error |
 |---|---|---|
-| KSPLITCTOR (constructor split from header, or annotation before a constructor) | 10 | Channel.kt, EmbeddedServer.posix.kt, EmbeddedServerJvm.kt, EmbeddedServer.web.kt, EngineTestBaseNix.kt, EngineTestBase.web.kt, SessionsBuilder.kt, CharsetJVM.kt, and two DefaultPool.kt files (common and jvm) |
+| KSPLITCTOR (constructor split from header, or annotation before a constructor) | 10 | Channel.kt, EmbeddedServer.posix.kt, EmbeddedServerJvm.kt, EmbeddedServer.web.kt, EngineTestBaseNix.kt, EngineTestBase.web.kt, SessionsBuilder.kt, CharsetJVM.kt, and two DefaultPool.kt files (common and jvm). The newline-separated shape is fixed in round 2; the annotation-separated shape (`class C @Anno (x)`) remains open. |
 | KACCSET (annotated setter) | 2 | ResponseType.kt, HttpRequest.kt |
 | KSUSP-N (`suspend` as a parameter name) | 1 | Semaphore.kt |
 | KPARENVAL | 1 | FormAuth.kt |
@@ -79,7 +81,7 @@ Counts are by the first `ERROR` node only. The 26 files contain no same-line mem
 - Over-acceptance of syntax-invalid input: `set(s, 1)` as an accessor on a property (`var s: String = "d"` then `set(s, 1)`). kotlinc 2.4.21 reports `syntax error: Expecting ')'` at 2:12 and `syntax error: Expecting function body` at 2:14. The raw tree is clean on both the vendored and the published grammar. Pre-existing, not fixed.
 - `::class` on its own line in a function body. kotlinc reports `class literals with empty left hand side are unsupported`. That is a semantic diagnostic, not a syntax error. The raw tree is clean on both grammars, so it is not counted as a syntax over-acceptance.
 - Over-rejection of valid syntax: `class C { fun f() = 1 fun g() = 2 }`. kotlinc accepts it (exit 0, no diagnostics). Both grammars report an error. Not in any named cluster; not fixed.
-- Over-rejection of a feature-gated construct: `val x = []` outside annotations. Without a flag kotlinc reports `array literals outside of annotations are unsupported`. With `-Xcollection-literals` the only remaining error is `cannot infer type for type parameter 'T'`, so the syntax is valid. Both grammars report an error. Not a named cluster; not fixed; not a control.
+- Over-rejection of a feature-gated construct: `val x = []` outside annotations. Without a flag kotlinc reports `array literals outside of annotations are unsupported`. With `-Xcollection-literals` the only remaining error is `cannot infer type for type parameter 'T'`, so the syntax is valid. Round 2 accepts `[]` in every position (the `collection_literal` grammar cannot scope empties to annotation arguments), so the vendored grammar now over-accepts the unflagged form — the same lint-tooling tradeoff as the pre-existing `set(s, 1)` note above.
 
 ## Invalid controls (kotlinc syntax error; raw error on the vendored grammar)
 
@@ -100,15 +102,16 @@ Transitions, published to vendored, over the 3688 corpus files: clean to clean 3
 
 Repros: all 27 are raw errors on the published grammar. On the vendored grammar, 19 are clean (K01, K02, K03, K04, K06, K07, K08, K08b, K08c, K09, K10, K11, K12, K15, K16, K17, K18, K22, K22b), 5 are ERROR (K05, K13, K14, K19, K20), and 3 are MISSING only (K21b, K21c, K23). The 8 open repros are 6 named clusters plus the KFILEANN pair.
 
-Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (28 tests, each clean check asserting the raw tree and each invalid control asserting the raw tree has an error):
-- Vendored path dependency: 28 pass.
-- Published `tree-sitter-kotlin-ng` 1.1.0: 23 fail and 5 pass. The 5 that pass are the invalid controls and the `field` plain-identifier controls, which the published grammar also splits correctly.
+Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (32 tests, each clean check asserting the raw tree and each invalid control asserting the raw tree has an error):
+- Vendored path dependency: 32 pass.
+- Published `tree-sitter-kotlin-ng` 1.1.0: 23 fail and 9 pass. The 5 pre-round-2 passes are the invalid controls and the `field` plain-identifier controls; round 2's four new tests fail on the published grammar.
 
 Corpus cases (`tree-sitter test`, fresh `HOME`):
-- Vendored: 43 of 43. These are the 22 upstream cases, the 17 `sloplint_kotlin.txt` cases, and the 4 `sloplint_kotlin_same_line.txt` cases. The expected trees have no `ERROR` or `MISSING`.
+- Vendored: 47 of 47. These are the 22 upstream cases, the 17 `sloplint_kotlin.txt` cases, the 4 `sloplint_kotlin_same_line.txt` cases, and the 4 `sloplint_softids.txt` cases. The expected trees have no `ERROR` or `MISSING`.
 - Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 21 pass (the 17 sloplint cases and the 4 same-line cases). The 22 upstream cases passed on the published grammar before any change.
 
 ## Code notes
 
 - `get_call_follows` advances the lexer before it returns false. Tree-sitter rewinds on a false return, so behavior is correct, but the helper should restore the position explicitly.
 - `context` was added to `_reserved_identifier`. Identifiers named `context` are lexed as a keyword in some states. No test covers this.
+- Round 2: `open` and `override` joined `_reserved_identifier` (conflicts added against `inheritance_modifier` and `member_modifier`). `parenthesized_type` gained `optional($.type_modifiers)` with `prec.dynamic(1)` so `@Composable (() -> Unit)` binds the annotation inside the paren rather than guessing `nullable_type` (a `[$.parenthesized_type]` self-conflict covers the receiver ambiguity). `collection_literal` permits zero elements. The scanner suppresses `_semi` before `(` only when neither `_q_dot` nor `_not_is` is valid — after a class/object name `x\n(y)` keeps parsing as a primary constructor, while in expression position `x\n(y)` still splits into two statements.
