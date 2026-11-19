@@ -20,7 +20,9 @@
   byte-for-byte. `grammar.json` is identical. `parser.c` and `node-types.json` differ:
   the published `node-types.json` lists the hidden supertypes `_definition` and `_pattern`,
   and the 0.27.1 output expands them to concrete kinds in child-type lists. The visible node
-  kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` is unchanged.
+  kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` carries one
+  sloplint edit (SC-SOFTENUM, below): `enum` removed from the postfix-operator heuristic's
+  `definition_words` list.
 - Test: `tree-sitter test` in this directory: 314/314 (305 upstream + 9 sloplint cases).
 
 ## Changes to grammar.js
@@ -119,7 +121,12 @@ panics. The vendored run is 10/10.
 `enum` is a Scala 3 keyword but a legal Scala 2 identifier. Dogfooding the corpus
 (the-algorithm, phantom) showed ~50 files failing on `enum` used as a parameter
 name or named argument. Upstream fails the same files — this is a genuine gap,
-not a regression. `/:/`-style operators (`def /:/`, `x /:/ y` — breeze) remain a
+not a regression. The scanner's postfix-operator heuristic also had `enum` in its
+`definition_words` list, so `val n = 1 +` + newline + `enum` was split; `enum`
+now stays out of that list, matching the existing treatment of `extension` and
+other soft modifiers. The tradeoff: `x +` + newline + `enum Foo { ... }` (an enum
+definition right after a line-broken operator) no longer gets the statement-break
+hint — the same acceptance tradeoff upstream already makes for `extension`. `/:/`-style operators (`def /:/`, `x /:/ y` — breeze) remain a
 documented upstream-parity ceiling: an operator may not end in `/` per SLS 1.1,
 and the scanner's trailing-slash path only covers non-slash-initial operators.
 `<removed_id>` placeholders in the-algorithm are sanitized-out identifiers, not

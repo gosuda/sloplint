@@ -6,6 +6,8 @@ def f(enum: Int): Int = enum
 trait T { def g(enum: E): Unit }
 enum Foo { case A, B }
 val m = Map(enum = 1)
+val n = 1 +
+  enum
 
 --------------------------------------------------------------------------------
 
@@ -43,4 +45,10 @@ val m = Map(enum = 1)
       arguments: (arguments
         (assignment_expression
           left: (identifier)
-          right: (integer_literal))))))
+          right: (integer_literal)))))
+  (val_definition
+    pattern: (identifier)
+    value: (infix_expression
+      left: (integer_literal)
+      operator: (operator_identifier)
+      right: (identifier))))

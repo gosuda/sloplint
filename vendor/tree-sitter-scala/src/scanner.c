@@ -1876,10 +1876,11 @@ static bool scan_impl(void *payload, TSLexer *lexer,
     // postfixOps).
     if (lexer->lookahead >= 'a' && lexer->lookahead <= 'z') {
       // Hard keywords that can only begin a definition. Soft modifiers
-      // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
-      // are ordinary identifiers, so such a line can be the right operand.
+      // (`inline`, `open`, `opaque`, `transparent`, `infix`) and the soft
+      // `enum` stay out: they are ordinary identifiers, so such a line can
+      // be the right operand.
       static const char *const definition_words[] = {
-          "abstract", "class", "def",    "enum",      "export", "final",
+          "abstract", "class", "def",    "export",    "final",
           "given",    "import", "implicit", "lazy",   "object", "override",
           "package",  "private", "protected", "sealed", "trait", "type",
           "val",      "var",

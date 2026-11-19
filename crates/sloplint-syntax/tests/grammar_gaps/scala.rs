@@ -213,6 +213,9 @@ fn enum_stays_a_soft_identifier() {
         "trait T { def g(enum: E): Unit }\n",
         "enum Foo { case A, B }\n",
         "val m = Map(enum = 1)\n",
+        // `enum` after a line-broken operator is the operand, not a definition.
+        "val n = 1 +\n",
+        "  enum\n",
     );
     let analysis = run_clean(source);
     assert_eq!(function_names(&analysis), ["f"]);

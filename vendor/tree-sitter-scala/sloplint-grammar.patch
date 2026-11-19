@@ -1,7 +1,8 @@
 diff --git a/grammar.js b/grammar.js
+index 6fcbe2c..ca3ad9e 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -438,7 +438,6 @@
+@@ -438,7 +438,6 @@ module.exports = grammar({
  
    conflicts: $ => [
      [$._if_rest],
@@ -9,7 +10,7 @@ diff --git a/grammar.js b/grammar.js
      [$.tuple_pattern, $._simple_expression],
      [$.tuple_pattern, $._simple_expression, $.binding],
      // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
-@@ -459,6 +458,10 @@
+@@ -459,6 +458,10 @@ module.exports = grammar({
      // 'extension' • '{' is either an extension definition with a braced body
      // or the soft identifier `extension` (a Scala 2 id) called with a block.
      [$.extension_definition, $._soft_identifier],
@@ -20,7 +21,7 @@ diff --git a/grammar.js b/grammar.js
      [$.binding, $._simple_expression],
      [$.binding, $._type_identifier],
      // A parenthesized type before `=>` can extend into a function type or stop
-@@ -493,6 +496,7 @@
+@@ -493,6 +496,7 @@ module.exports = grammar({
      // we treat `operator_identifier` as `simple_expression`
      [$._simple_expression, $.lambda_expression],
      [$._simple_expression, $._single_lambda_param],
@@ -28,7 +29,7 @@ diff --git a/grammar.js b/grammar.js
      // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
      // identifier `export` beginning an expression statement. Each reading
      // dies on the next token ('.' vs a name), so forking settles it. The
-@@ -532,8 +536,6 @@
+@@ -532,8 +536,6 @@ module.exports = grammar({
      [$._constructor_annotation],
      [$._constructor_annotation_arguments, $.arguments],
      [$._constructor_annotation, $.applied_constructor_type],
@@ -37,7 +38,7 @@ diff --git a/grammar.js b/grammar.js
      // '{'  identifier  •  ':' starts the braced typed lambda, the block
      // lambda param, and a statement alike.
      [$._simple_expression, $._braced_typed_lambda],
-@@ -663,15 +665,18 @@
+@@ -663,15 +665,18 @@ module.exports = grammar({
        ),
  
      enum_definition: $ =>
@@ -65,7 +66,7 @@ diff --git a/grammar.js b/grammar.js
        ),
  
      _enum_block: $ =>
-@@ -801,7 +806,7 @@
+@@ -801,7 +806,7 @@ module.exports = grammar({
      // Scala 3 keywords that are valid identifiers in Scala 2 sources and thus
      // may appear as package names in import/export paths (e.g. `import io.circe.export.Exported`).
      _namespace_path_segment: $ =>
@@ -74,7 +75,7 @@ diff --git a/grammar.js b/grammar.js
  
      namespace_wildcard: $ => prec.left(1, choice("*", "_", "given")),
  
-@@ -2019,7 +2024,10 @@
+@@ -2019,7 +2024,10 @@ module.exports = grammar({
          PREC.infix,
          seq(
            field("left", $._definition_pattern),
@@ -86,7 +87,7 @@ diff --git a/grammar.js b/grammar.js
            field("right", $._definition_pattern),
          ),
        ),
-@@ -2283,19 +2291,37 @@
+@@ -2283,19 +2291,37 @@ module.exports = grammar({
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -134,7 +135,7 @@ diff --git a/grammar.js b/grammar.js
      /*
       *   MatchClause       ::=  'match' <<< CaseClauses >>>
       *
-@@ -2529,6 +2555,17 @@
+@@ -2529,6 +2555,17 @@ module.exports = grammar({
              optional($._end_marker_kw_tail),
            ),
          ),
@@ -152,7 +153,7 @@ diff --git a/grammar.js b/grammar.js
          prec(
            "new",
            seq("new", $.template_body, optional($._end_marker_kw_tail)),
-@@ -2802,7 +2839,7 @@
+@@ -2802,7 +2839,7 @@ module.exports = grammar({
      _super_identifier: $ => "super",
  
      // https://docs.scala-lang.org/scala3/reference/soft-modifier.html
@@ -161,3 +162,22 @@ diff --git a/grammar.js b/grammar.js
  
      // alphaid          ::=  upper idrest
      //                       |  varid
+diff --git a/src/scanner.c b/src/scanner.c
+index b4856af..15cc84b 100644
+--- a/src/scanner.c
++++ b/src/scanner.c
+@@ -1876,10 +1876,11 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+     // postfixOps).
+     if (lexer->lookahead >= 'a' && lexer->lookahead <= 'z') {
+       // Hard keywords that can only begin a definition. Soft modifiers
+-      // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
+-      // are ordinary identifiers, so such a line can be the right operand.
++      // (`inline`, `open`, `opaque`, `transparent`, `infix`) and the soft
++      // `enum` stay out: they are ordinary identifiers, so such a line can
++      // be the right operand.
+       static const char *const definition_words[] = {
+-          "abstract", "class", "def",    "enum",      "export", "final",
++          "abstract", "class", "def",    "export",    "final",
+           "given",    "import", "implicit", "lazy",   "object", "override",
+           "package",  "private", "protected", "sealed", "trait", "type",
+           "val",      "var",
