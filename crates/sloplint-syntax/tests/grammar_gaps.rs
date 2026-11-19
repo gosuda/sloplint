@@ -8,6 +8,8 @@
 //! integration-test executable. Each module names the published-grammar
 //! version it fails against, so a re-vendor that drops a patch shows up here.
 
+#[path = "grammar_gaps/alloy.rs"]
+mod alloy;
 #[path = "grammar_gaps/bash.rs"]
 mod bash;
 #[path = "grammar_gaps/c.rs"]
