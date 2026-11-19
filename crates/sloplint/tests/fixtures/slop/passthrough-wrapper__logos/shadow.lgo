@@ -1,0 +1,18 @@
+package probe
+
+func format(s string) string {
+	return s
+}
+
+func render(s string) string {
+	return format(s)
+}
+
+func show(render string) string {
+	display(value = render)
+	return render
+}
+
+func display(value string) string {
+	return value
+}
