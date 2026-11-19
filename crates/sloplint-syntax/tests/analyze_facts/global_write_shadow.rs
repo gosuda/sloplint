@@ -455,3 +455,25 @@ fn go_write_after_the_loop_reaches_the_global() {
         "after_loop.go: a write after the loop reaches the file-scope variable"
     );
 }
+
+#[test]
+fn scala_named_arguments_are_not_global_writes() {
+    assert_eq!(
+        in_function_writes(
+            Lang::Scala,
+            "named.scala",
+            "var counter = 0\n\ndef calls() = g(counter = 4)\n",
+        ),
+        0,
+        "a `name = value` argument is not an assignment to the file-scope mutable"
+    );
+    assert_eq!(
+        in_function_writes(
+            Lang::Scala,
+            "named.scala",
+            "var counter = 0\n\ndef calls() = {\ncounter = 4\n}\n",
+        ),
+        1,
+        "a statement assignment to the file-scope mutable stays a GlobalWrite"
+    );
+}

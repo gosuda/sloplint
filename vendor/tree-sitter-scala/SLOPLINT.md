@@ -45,6 +45,25 @@
    pervasive idiom). Scoped to argument lists only: at statement level the keyword must
    not shadow the identifier read (`using()` is a call).
 
+
+   Round 2 (review-driven):
+   - `nameChoice` also admits `using`/`given` as plain identifiers, so `f(1, using())`,
+     `using.Context` qualified types, and expression-position `using`/`given` parse.
+     `given_definition` in `_definition` carries `prec.dynamic(10)` so the definition
+     read still wins the statement-head fork (a bare `given T is U:` with an indented
+     body otherwise loses to a call/infix-expression read when a statement follows).
+   - `parameter_types` gains a `("(" "using" [erased] FunArgTypes ")")` arm for
+     context function types `(using T) => R`, with new conflict pairs
+     `[parameter_types, _type_identifier]` / `[_single_lambda_param]` /
+     `[_simple_expression]` and `[class_parameter]`.
+   - `class_parameter` splits its name slot: `paramName` (nameChoice minus
+     `using`/`given`) needs no type, while a `using`/`given`-named parameter must be
+     typed — `(using = 1)` after an annotation is therefore the annotation's argument
+     list, never an untyped parameter.
+   - items.rs `ambient_head`: an `assignment_expression` nested under `arguments`
+     is a named argument, not a write — `g(using = 4)` no longer reports GlobalWrite
+     on a file-scope `using` (mirrors `write_roots`' existing guard).
+
 ## Fixed shapes (scalac 3.10.0 `-Ystop-after:parser` accepts each)
 
 - SC-ENDNEW: `trait Foo` / `val foo =` / `  new Foo:` / `  end new` (empty body).
@@ -54,7 +73,10 @@
   `tests/pos/t5702-pos-infix-star.scala`.
 - SC-SOFTKW: `@JsonDeserialize(using = classOf[MyDeserializer])` and `given: Int`.
   Real occurrences: twitter/util `caseclasses.scala`, linkerd `H2Config.scala`,
-  feathr `FeatureDefinition.scala`, filodb `ComputedColumn.scala`.
+  feathr `FeatureDefinition.scala`, filodb `ComputedColumn.scala`. Round 2 adds
+  `f(1, using())`, `(using using.Context)`, `(using T) => R` context function types,
+  `class E @deprecated(using = 1)(x: Int)`, and `given T is U:` before a following
+  top-level statement.
 
 ## Still failing (residual)
 
@@ -114,6 +136,9 @@ published crate for the proof, then restored):
 | star_repeat_and_vararg_still_parse | PASS | PASS |
 | typed_term_parameter_polymorphic_function_still_parses | PASS | PASS |
 | keyword_named_arguments_and_parameter_names_parse (SC-SOFTKW) | FAIL | PASS |
+| context_function_parameter_types_parse | FAIL | PASS |
+| annotation_arguments_named_using_stay_annotation_arguments | FAIL | PASS |
+| given_is_definition_before_a_following_statement | FAIL | PASS |
 
 The five FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
 panics. The vendored run is 11/11.

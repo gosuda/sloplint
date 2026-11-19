@@ -1,40 +1,148 @@
---- a/grammar.js
-+++ b/grammar.js
-@@ -438,7 +438,6 @@
+--- /tmp/scala-ga/grammar.js	2026-11-19 14:51:42.212342742 +0000
++++ grammar.js	2026-11-19 23:14:13.296878325 +0000
+@@ -245,6 +245,11 @@
+     alias($._alpha_identifier, $.identifier),
+     alias($._backquoted_id, $.identifier),
+     alias($._soft_identifier, $.identifier),
++    // `using`/`given` stay soft in every name position, including argument
++    // expressions (`f(using())`), qualified types (`using.Context`), and
++    // statement heads — the `using`/`given` clause reads keep winning where
++    // their keyword is valid because the alias carries no lexical precedence.
++    alias(choice("using", "given"), $.identifier),
+     alias("this", $.identifier),
+     alias("super", $.identifier),
+     // `export` is a hard keyword in Scala 3 but an ordinary identifier in
+@@ -278,6 +283,21 @@
+ // (lambda parameters, bindings, self types). These must share the identifier
+ // rule's per-class tokens: one lexer state cannot hold both flavors of the
+ // same string, so swapping a site to $._identifier changes lexing there.
++
++// A parameter name: nameChoice minus `using`/`given`. At a clause head the
++// keyword token is the clause marker, and mid-list a `using`/`given`-named
++// parameter must carry its type (see class_parameter's second alternative).
++const paramName = $ =>
++  choice(
++    alias($._alpha_identifier, $.identifier),
++    alias($._backquoted_id, $.identifier),
++    alias($._soft_identifier, $.identifier),
++    alias("this", $.identifier),
++    alias("super", $.identifier),
++    alias("export", $.identifier),
++    opName($),
++  );
++
+ const operandName = $ => choice(nameChoice($), $.operator_identifier);
  
-   conflicts: $ => [
-     [$._if_rest],
--    [$.repeat_pattern, $._simple_expression],
-     [$.tuple_pattern, $._simple_expression],
-     [$.tuple_pattern, $._simple_expression, $.binding],
-     // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
-@@ -493,6 +492,7 @@
-     // we treat `operator_identifier` as `simple_expression`
-     [$._simple_expression, $.lambda_expression],
-     [$._simple_expression, $._single_lambda_param],
-+    [$.block, $.capture_set],
-     // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
-     // identifier `export` beginning an expression statement. Each reading
-     // dies on the next token ('.' vs a name), so forking settles it. The
-@@ -532,8 +532,6 @@
-     [$._constructor_annotation],
-     [$._constructor_annotation_arguments, $.arguments],
-     [$._constructor_annotation, $.applied_constructor_type],
--    // type_parameters  '=>'  '{'  '}'  •  '['  …
--    [$.block, $.capture_set],
-     // '{'  identifier  •  ':' starts the braced typed lambda, the block
-     // lambda param, and a statement alike.
-     [$._simple_expression, $._braced_typed_lambda],
-@@ -1526,7 +1524,7 @@
-         repeat($.annotation),
-         optional($.modifiers),
-         optional(choice("val", "var")),
--        field("name", $._identifier),
-+        field("name", choice($._identifier, alias(choice("using", "given"), $.identifier))),
-         optional(seq(":", field("type", $._param_type))),
-         optional(seq("=", field("default_value", $.expression))),
+ // A Scala 3 end marker as the last child of the construct it closes. The
+@@ -458,10 +478,23 @@
+     // 'extension' • '{' is either an extension definition with a braced body
+     // or the soft identifier `extension` (a Scala 2 id) called with a block.
+     [$.extension_definition, $._soft_identifier],
+-    // 'enum' is a soft keyword too: an `enum`-definition and the identifier
+-    // `enum` (Scala 2 code uses it as a parameter or named argument) diverge
+-    // only after the token's continuation is known.
+-    [$.enum_definition, $._soft_identifier],
++    [$.given_definition, $._simple_expression, $._braced_typed_lambda],
++    [$.given_definition, $._simple_expression],
++    [$._type_identifier, $.given_pattern],
++    [$.self_type, $.given_definition, $._simple_expression],
++    [$._using_parameters_clause, $._type_identifier],
++    [$.parameter_types, $._type_identifier],
++    [$.parameter_types, $._type_identifier, $._simple_expression],
++    [$.parameter_types, $._type_identifier, $._single_lambda_param],
++    [$.parameter_types, $._simple_expression],
++    [$._simple_expression, $.keyword_named_argument],
++    [$._simple_expression, $.arguments],
++    [$.self_type, $.given_definition, $._type_identifier, $._simple_expression],
++    [$.given_definition, $._type_identifier, $._simple_expression],
++    [$.given_definition, $._type_identifier],
++    [$.given_pattern, $._simple_expression],
++    [$._type_identifier, $.given_pattern, $._simple_expression],
++    [$.self_type, $.given_definition, $._simple_expression, $._braced_typed_lambda],
+     [$.binding, $._simple_expression],
+     [$.binding, $._type_identifier],
+     // A parenthesized type before `=>` can extend into a function type or stop
+@@ -645,7 +678,7 @@
+ 
+     _definition: $ =>
+       choice(
+-        $.given_definition,
++        prec.dynamic(10, $.given_definition),
+         $.extension_definition,
+         $.class_definition,
+         $.import_declaration,
+@@ -665,18 +698,15 @@
        ),
-@@ -1545,7 +1543,7 @@
+ 
+     enum_definition: $ =>
+-      prec(
+-        1,
+-        seq(
+-          repeat($.annotation),
+-          optional($.modifiers),
+-          "enum",
+-          $._class_constructor,
+-          field("extend", optional($.extends_clause)),
+-          field("derive", optional(choice($.derives_clause, $.uses_clause))),
+-          field("body", $.enum_body),
+-          optional($._end_marker_named_tail),
+-        ),
++      seq(
++        repeat($.annotation),
++        optional($.modifiers),
++        "enum",
++        $._class_constructor,
++        field("extend", optional($.extends_clause)),
++        field("derive", optional(choice($.derives_clause, $.uses_clause))),
++        field("body", $.enum_body),
++        optional($._end_marker_named_tail),
+       ),
+ 
+     _enum_block: $ =>
+@@ -806,7 +836,7 @@
+     // Scala 3 keywords that are valid identifiers in Scala 2 sources and thus
+     // may appear as package names in import/export paths (e.g. `import io.circe.export.Exported`).
+     _namespace_path_segment: $ =>
+-      choice($._identifier, alias("export", $.identifier)),
++      choice($._identifier, alias(choice("enum", "export"), $.identifier)),
+ 
+     namespace_wildcard: $ => prec.left(1, choice("*", "_", "given")),
+ 
+@@ -1527,13 +1557,26 @@
+       ),
+ 
+     class_parameter: $ =>
+-      seq(
+-        repeat($.annotation),
+-        optional($.modifiers),
+-        optional(choice("val", "var")),
+-        field("name", $._identifier),
+-        optional(seq(":", field("type", $._param_type))),
+-        optional(seq("=", field("default_value", $.expression))),
++      choice(
++        seq(
++          repeat($.annotation),
++          optional($.modifiers),
++          optional(choice("val", "var")),
++          field("name", paramName($)),
++          optional(seq(":", field("type", $._param_type))),
++          optional(seq("=", field("default_value", $.expression))),
++        ),
++        // A `using`/`given`-named parameter must be typed: `(using = 1)`
++        // after an annotation is that annotation's argument list instead.
++        seq(
++          repeat($.annotation),
++          optional($.modifiers),
++          optional(choice("val", "var")),
++          field("name", alias(choice("using", "given"), $.identifier)),
++          ":",
++          field("type", $._param_type),
++          optional(seq("=", field("default_value", $.expression))),
++        ),
+       ),
+ 
+     /*
+@@ -1550,7 +1593,7 @@
            // A given conditional clause takes `tracked val`.
            optional(trackedMod($)),
            optional(choice("val", "var")),
@@ -43,83 +151,23 @@
            ":",
            field("type", $._param_type),
            optional(seq("=", field("default_value", $.expression))),
-@@ -2019,7 +2017,10 @@
-         PREC.infix,
-         seq(
-           field("left", $._definition_pattern),
--          field("operator", wordOrOpName($)),
-+          field(
-+            "operator",
-+            choice(wordOrOpName($), alias($._asterisk, $.operator_identifier)),
-+          ),
-           field("right", $._definition_pattern),
-         ),
-       ),
-@@ -2283,17 +2284,35 @@
-     _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
- 
-     _if_condition_then: $ =>
--      // A marker slot of a construct inside the condition may emit a
--      // semicolon before the `then`. The weight beats the paren form, so
--      // `if (a)` + newline + `then x` keeps `then` as the keyword.
--      prec.dynamic(
--        5,
--        seq(
--          $._indentable_expression,
--          optional($._automatic_semicolon),
--          $._control_tail_gate,
--          "then",
-+      choice(
-+        // A marker slot of a construct inside the condition may emit a
-+        // semicolon before the `then`. The weight beats the paren form, so
-+        // `if (a)` + newline + `then x` keeps `then` as the keyword.
-+        prec.dynamic(
-+          5,
-+          seq(
-+            $._indentable_expression,
-+            optional($._automatic_semicolon),
-+            $._control_tail_gate,
-+            "then",
-+          ),
-         ),
-+        prec.dynamic(
-+          5,
-+          seq(
-+            $.split_call_condition,
-+            optional($._automatic_semicolon),
-+            $._control_tail_gate,
-+            "then",
-+          ),
-+        ),
-+      ),
-+
-+    split_call_condition: $ =>
-+      seq(
-+        field("function", $._indentable_expression),
-+        $._automatic_semicolon,
-+        field("arguments", $.arguments),
-       ),
- 
-     /*
-@@ -2529,6 +2548,17 @@
-             optional($._end_marker_kw_tail),
+@@ -1931,6 +1974,15 @@
+             ")",
            ),
          ),
-+        prec.dynamic(
-+          1,
-+          seq(
-+            "new",
-+            $._constructor_application,
-+            colonEol($),
-+            $._indent,
-+            prec.dynamic(2, alias($._end_marker_kw, $.end_marker)),
-+            choice($._outdent, $._comma_outdent),
-+          ),
++        // Context function type `(using T, U) => R`: `erased` sits once
++        // after `using`, like in _using_parameters_clause.
++        seq(
++          "(",
++          "using",
++          optional(erasedMod($)),
++          trailingCommaSep1($._param_type),
++          ")",
 +        ),
-         prec(
-           "new",
-           seq("new", $.template_body, optional($._end_marker_kw_tail)),
-@@ -2726,10 +2756,30 @@
+         $.compound_type,
+         $.infix_type,
+       ),
+@@ -2763,10 +2815,30 @@
      // binder is admitted in every argument list.
      _argument_list: $ =>
        seq(
@@ -151,7 +199,7 @@
      vararg: $ =>
        choice(
          // Scala 3: `args*`. The star in front of a closing delimiter arrives
-@@ -2745,7 +2795,10 @@
+@@ -2782,7 +2854,10 @@
        ),
  
      // ExprsInParens     ::=  ExprInParens {‘,’ ExprInParens}
@@ -163,3 +211,12 @@
  
      // The opening is a single two-character token so that a bare `$` used as
      // an ordinary identifier (e.g. `$(selector)`) still lexes as an
+@@ -2839,7 +2914,7 @@
+     _super_identifier: $ => "super",
+ 
+     // https://docs.scala-lang.org/scala3/reference/soft-modifier.html
+-    _soft_identifier: $ => prec("soft_id", choice("extension", "enum")),
++    _soft_identifier: $ => prec("soft_id", "extension"),
+ 
+     // alphaid          ::=  upper idrest
+     //                       |  varid

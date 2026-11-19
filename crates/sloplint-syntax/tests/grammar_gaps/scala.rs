@@ -224,3 +224,38 @@ fn keyword_named_arguments_and_parameter_names_parse() {
         analysis.parse_error
     );
 }
+
+#[test]
+fn context_function_parameter_types_parse() {
+    // Scala 3 context function types `(using T) => R`, including a
+    // `using`-rooted stable type (`using.Context`).
+    let source = concat!(
+        "def f(x: (using Context) => Int, y: (using using.Context) => Int) = x\n",
+        "def g(f: (using Int, String) => Boolean) = f\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["f", "g"]);
+}
+
+#[test]
+fn annotation_arguments_named_using_stay_annotation_arguments() {
+    // `@Mark(using = 1)` is the annotation's argument list; the class's own
+    // parameters start at the next list. An untyped `using`/`given` name can
+    // never be a parameter (Scala requires a type there).
+    let source = "class E @deprecated(using = 1)(x: Int)\n";
+    let analysis = run_clean(source);
+    assert!(
+        analysis.parse_error.is_none(),
+        "annotation named arguments must parse: {:?}",
+        analysis.parse_error
+    );
+}
+
+#[test]
+fn given_is_definition_before_a_following_statement() {
+    // `given T is U:` with an indented body must keep the given-definition
+    // reading when another top-level statement follows.
+    let source = concat!("given ListSet is Set:\n", "  def f = 1\n", "x = 1\n",);
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["f"]);
+}

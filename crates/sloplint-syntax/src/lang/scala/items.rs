@@ -504,6 +504,10 @@ fn report_assign_write<'s>(
     n: Node<'_>,
     out: &mut Vec<(AmbientKind, &'s str, Pos)>,
 ) {
+    if n.kind() == "assignment_expression" && n.parent().is_some_and(|p| p.kind() == "arguments") {
+        // `f(name = v)` is a named argument, not a write.
+        return;
+    }
     let Some(left) = child_by_field(n, "left") else {
         return;
     };
