@@ -76,7 +76,10 @@
   feathr `FeatureDefinition.scala`, filodb `ComputedColumn.scala`. Round 2 adds
   `f(1, using())`, `(using using.Context)`, `(using T) => R` context function types,
   `class E @deprecated(using = 1)(x: Int)`, and `given T is U:` before a following
-  top-level statement.
+  top-level statement. The `@deprecated(using = 1)` shape is an SLS-2 form
+  (jackson-module-scala compiles under Scala 2.13; scalac 3's `parArgumentExprs`
+  treats a leading `using` in parens as a context marker, so this bullet is a
+  2.13-dialect shape the grammar deliberately admits).
 
 ## Still failing (residual)
 

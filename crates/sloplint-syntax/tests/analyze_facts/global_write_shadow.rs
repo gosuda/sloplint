@@ -477,3 +477,16 @@ fn scala_named_arguments_are_not_global_writes() {
         "a statement assignment to the file-scope mutable stays a GlobalWrite"
     );
 }
+
+#[test]
+fn scala_using_named_argument_is_not_a_global_write() {
+    assert_eq!(
+        in_function_writes(
+            Lang::Scala,
+            "named.scala",
+            "var using = 0\n\ndef calls() = g(using = 4)\n",
+        ),
+        0,
+        "a `using = value` argument is not an assignment to the file-scope mutable"
+    );
+}
