@@ -42,6 +42,7 @@ tree-sitter-lean = { path = "vendor/tree-sitter-lean" }
 tree-sitter-quint = { path = "vendor/tree-sitter-quint" }
 tree-sitter-tlaplus = { path = "vendor/tree-sitter-tlaplus" }
 tree-sitter-dafny = { path = "vendor/tree-sitter-dafny" }
+tree-sitter-racket = { path = "vendor/tree-sitter-racket" }
 rayon = "1.12.0"
 ignore = "0.4.34"
 globset = "0.4.21"

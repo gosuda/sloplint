@@ -94,6 +94,11 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
             blocks: &[(b"(*", b"*)")],
             code: &[],
         },
+        Lang::Racket => CommentSyntax {
+            lines: &[b";"],
+            blocks: &[(b"#|", b"|#")],
+            code: &[],
+        },
     }
 }
 
