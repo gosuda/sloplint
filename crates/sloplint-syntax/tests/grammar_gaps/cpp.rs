@@ -386,6 +386,62 @@ fn gnu_asm_fused_goto_labels_parse() {
         bad_tree.root_node().has_error(),
         "five-section asm must error"
     );
+    // Same bound fused: `::` + `:` + `::` is five separators.
+    let bad_fused = "void f(void) {\n  __asm__ goto(\"x\" :: \"i\"(a) : \"m\" :: done);\n}\n";
+    let bad_fused_tree = parser
+        .parse(bad_fused, None)
+        .expect("parser returns a tree");
+    assert!(
+        bad_fused_tree.root_node().has_error(),
+        "fused five-separator asm must error"
+    );
+}
+
+// Fused middle sections take the operand|clobber-string union: raw
+// `R"..."` and concatenated `R"a" "b"` clobbers parse, and sections carry
+// the upstream field names (`input_operands`, `clobbers`, `goto_labels`).
+#[test]
+fn gnu_asm_fused_clobber_strings_and_fields() {
+    let language: tree_sitter::Language = tree_sitter_cpp::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).expect("cpp language loads");
+    let source = concat!(
+        "void f(void) {\n",
+        "  __asm__ goto(\"\" : : \"r\"(*x) :: done);\n",
+        "  __asm__ goto(\"x\" :: \"i\"(a) : \"memory\" : done);\n",
+        "  __asm__(\"x\" ::: R\"(memory)\" \"sync\");\n",
+        "done:\n  return;\n",
+        "}\n",
+    );
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        !tree.root_node().has_error() && !sexp.contains("MISSING"),
+        "must parse clean, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("raw_string_literal") && sexp.contains("concatenated_string"),
+        "raw + concatenated clobbers must parse, sexp: {sexp}"
+    );
+    let root = tree.root_node();
+    let mut found_input = false;
+    let mut found_goto = false;
+    // Field names live on the goto-list and the `::`-led section items.
+    let mut stack = vec![root];
+    while let Some(n) = stack.pop() {
+        for i in 0..n.child_count() {
+            let c = n.child(i).unwrap();
+            if let Some(field) = n.field_name_for_child(i as u32) {
+                found_input |= field == "input_operands";
+                found_goto |= field == "goto_labels";
+            }
+            stack.push(c);
+        }
+    }
+    assert!(
+        found_input && found_goto,
+        "fused sections must emit field names"
+    );
 }
 
 // `IDENT {` opens a braced temporary (`T{}.m()`, `T{arg} << x`), never a
@@ -416,6 +472,14 @@ fn macro_braced_statements_parse() {
         // Keyword-led bodies open a block even without a `;` inside.
         "void f(void) {\n  ON_SCOPE_EXIT { if (ready) {} };\n}\n",
         "void f(void) {\n  GUARD { return; };\n}\n",
+        // `[[attribute]]` can't be a lambda capture; the block after it
+        // is real macro body.
+        "void f(void) {\n  MACRO { [[likely]] { f(); } }\n}\n",
+        // `Rif` is an identifier, `R\"...\"`/`u8R\"...\"` are raw strings;
+        // their `;`s are literal content.
+        "void f(void) {\n  MACRO { int Rif = R\"delim(a;b)delim\"; auto s = u8R\"xy(y;x)xy\"; }\n}\n",
+        // Multi-char character constants hide nothing from the probe.
+        "void f(void) {\n  MACRO { int q = 'A;' + '}x' + 1'000; }\n}\n",
     ] {
         let language: tree_sitter::Language = tree_sitter_cpp::LANGUAGE.into();
         let mut parser = tree_sitter::Parser::new();
@@ -441,6 +505,13 @@ fn braced_temporary_with_lambda_or_raw_string_stays_init() {
     for source in [
         "void f(void) {\n  Widget w{[&]{init();}};\n}\n",
         "void f(void) {\n  auto w = Widget{R\"x(a \"b\" ; c)x\"};\n}\n",
+        // `const` inside `sizeof` is not statement evidence.
+        "void f(void) {\n  T t{sizeof(const int)};\n}\n",
+        // A `,` inside lambda parameters doesn't drop the lambda flag,
+        // so `mutable`'s own keyword check can't fire.
+        "void f(void) {\n  Widget w{[&](int a, int b) mutable {init();}};\n}\n",
+        // Statement-start braced temporary with a member call.
+        "void f(void) {\n  Widget{[&]{init();}}.run();\n}\n",
     ] {
         let language: tree_sitter::Language = tree_sitter_cpp::LANGUAGE.into();
         let mut parser = tree_sitter::Parser::new();

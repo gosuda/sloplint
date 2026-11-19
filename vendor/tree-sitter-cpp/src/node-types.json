@@ -3946,11 +3946,31 @@
         ]
       },
       "clobbers": {
-        "multiple": false,
+        "multiple": true,
         "required": false,
         "types": [
           {
+            "type": ",",
+            "named": false
+          },
+          {
+            "type": "concatenated_string",
+            "named": true
+          },
+          {
             "type": "gnu_asm_clobber_list",
+            "named": true
+          },
+          {
+            "type": "gnu_asm_input_operand",
+            "named": true
+          },
+          {
+            "type": "raw_string_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
             "named": true
           }
         ]
@@ -3966,11 +3986,31 @@
         ]
       },
       "input_operands": {
-        "multiple": false,
+        "multiple": true,
         "required": false,
         "types": [
           {
+            "type": ",",
+            "named": false
+          },
+          {
+            "type": "concatenated_string",
+            "named": true
+          },
+          {
+            "type": "gnu_asm_input_operand",
+            "named": true
+          },
+          {
             "type": "gnu_asm_input_operand_list",
+            "named": true
+          },
+          {
+            "type": "raw_string_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
             "named": true
           }
         ]
@@ -3980,7 +4020,15 @@
         "required": false,
         "types": [
           {
+            "type": "concatenated_string",
+            "named": true
+          },
+          {
             "type": "gnu_asm_input_operand",
+            "named": true
+          },
+          {
+            "type": "raw_string_literal",
             "named": true
           },
           {
@@ -4004,14 +4052,6 @@
       "multiple": true,
       "required": false,
       "types": [
-        {
-          "type": "gnu_asm_input_operand_list",
-          "named": true
-        },
-        {
-          "type": "gnu_asm_output_operand_list",
-          "named": true
-        },
         {
           "type": "gnu_asm_qualifier",
           "named": true

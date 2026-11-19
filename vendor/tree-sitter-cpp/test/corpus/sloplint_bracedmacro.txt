@@ -13,6 +13,12 @@ void f(void) {
   ON_SCOPE_EXIT { if (ready) {} };
   Widget w{[&]{init();}};
   auto w2 = Widget{R"x(a "b" ; c)x"};
+  MACRO { [[likely]] { f(); } }
+  MACRO { int Rif = R"delim(a;b)delim"; auto s = u8R"xy(y;x)xy"; }
+  MACRO { int q = 'A;' + '}x' + 1'000; }
+  T t{sizeof(const int)};
+  Widget w3{[&](int a, int b) mutable {init();}};
+  Widget{[&]{init();}}.run();
 }
 
 ---
@@ -111,4 +117,99 @@ void f(void) {
               (raw_string_literal
                 (raw_string_delimiter)
                 (raw_string_content)
-                (raw_string_delimiter)))))))))
+                (raw_string_delimiter))))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (attributed_statement
+            (attribute_declaration
+              (attribute
+                (identifier)))
+            (compound_statement
+              (expression_statement
+                (call_expression
+                  (identifier)
+                  (argument_list)))))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (declaration
+            (primitive_type)
+            (init_declarator
+              (identifier)
+              (raw_string_literal
+                (raw_string_delimiter)
+                (raw_string_content)
+                (raw_string_delimiter))))
+          (declaration
+            (placeholder_type_specifier
+              (auto))
+            (init_declarator
+              (identifier)
+              (raw_string_literal
+                (raw_string_delimiter)
+                (raw_string_content)
+                (raw_string_delimiter))))))
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (declaration
+            (primitive_type)
+            (init_declarator
+              (identifier)
+              (binary_expression
+                (binary_expression
+                  (char_literal
+                    (character)
+                    (character))
+                  (char_literal
+                    (character)
+                    (character)))
+                (number_literal))))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (sizeof_expression
+              (type_descriptor
+                (type_qualifier)
+                (primitive_type))))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (lambda_expression
+              (lambda_capture_specifier
+                (lambda_default_capture))
+              (abstract_function_declarator
+                (parameter_list
+                  (parameter_declaration
+                    (primitive_type)
+                    (identifier))
+                  (parameter_declaration
+                    (primitive_type)
+                    (identifier)))
+                (type_qualifier))
+              (compound_statement
+                (expression_statement
+                  (call_expression
+                    (identifier)
+                    (argument_list))))))))
+      (expression_statement
+        (call_expression
+          (field_expression
+            (compound_literal_expression
+              (type_identifier)
+              (initializer_list
+                (lambda_expression
+                  (lambda_capture_specifier
+                    (lambda_default_capture))
+                  (compound_statement
+                    (expression_statement
+                      (call_expression
+                        (identifier)
+                        (argument_list)))))))
+            (field_identifier))
+          (argument_list))))))

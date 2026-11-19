@@ -23429,8 +23429,12 @@
                 "type": "CHOICE",
                 "members": [
                   {
-                    "type": "SYMBOL",
-                    "name": "_fused_asm_items"
+                    "type": "FIELD",
+                    "name": "input_operands",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_fused_asm_items"
+                    }
                   },
                   {
                     "type": "BLANK"
@@ -23454,8 +23458,12 @@
                             "type": "CHOICE",
                             "members": [
                               {
-                                "type": "SYMBOL",
-                                "name": "_fused_asm_items"
+                                "type": "FIELD",
+                                "name": "clobbers",
+                                "content": {
+                                  "type": "SYMBOL",
+                                  "name": "_fused_asm_items"
+                                }
                               },
                               {
                                 "type": "BLANK"
@@ -23535,8 +23543,12 @@
             "type": "SEQ",
             "members": [
               {
-                "type": "SYMBOL",
-                "name": "gnu_asm_output_operand_list"
+                "type": "FIELD",
+                "name": "output_operands",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "gnu_asm_output_operand_list"
+                }
               },
               {
                 "type": "STRING",
@@ -23546,8 +23558,12 @@
                 "type": "CHOICE",
                 "members": [
                   {
-                    "type": "SYMBOL",
-                    "name": "_fused_asm_items"
+                    "type": "FIELD",
+                    "name": "clobbers",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_fused_asm_items"
+                    }
                   },
                   {
                     "type": "BLANK"
@@ -23593,12 +23609,20 @@
             "type": "SEQ",
             "members": [
               {
-                "type": "SYMBOL",
-                "name": "gnu_asm_output_operand_list"
+                "type": "FIELD",
+                "name": "output_operands",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "gnu_asm_output_operand_list"
+                }
               },
               {
-                "type": "SYMBOL",
-                "name": "gnu_asm_input_operand_list"
+                "type": "FIELD",
+                "name": "input_operands",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "gnu_asm_input_operand_list"
+                }
               },
               {
                 "type": "STRING",
@@ -23644,7 +23668,7 @@
               },
               {
                 "type": "SYMBOL",
-                "name": "string_literal"
+                "name": "_fused_asm_string"
               }
             ]
           }
@@ -23674,7 +23698,7 @@
                     },
                     {
                       "type": "SYMBOL",
-                      "name": "string_literal"
+                      "name": "_fused_asm_string"
                     }
                   ]
                 }
@@ -23683,6 +23707,87 @@
           }
         }
       ]
+    },
+    "_fused_asm_string": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "string_literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "raw_string_literal"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_fused_asm_concat_string"
+          },
+          "named": true,
+          "value": "concatenated_string"
+        }
+      ]
+    },
+    "_fused_asm_concat_string": {
+      "type": "PREC_RIGHT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "identifier"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "string_literal"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "raw_string_literal"
+              }
+            ]
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "string_literal"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "raw_string_literal"
+              }
+            ]
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "string_literal"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "raw_string_literal"
+                }
+              ]
+            }
+          }
+        ]
+      }
     },
     "_gnu_asm_goto_items": {
       "type": "ALIAS",
@@ -30307,6 +30412,15 @@
     [
       "preproc_else_in_initializer_list",
       "field_expression"
+    ],
+    [
+      "gnu_asm_input_operand",
+      "_lambda_capture_identifier"
+    ],
+    [
+      "_string",
+      "gnu_asm_input_operand",
+      "concatenated_string"
     ],
     [
       "field_initializer_list"

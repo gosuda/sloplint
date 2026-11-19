@@ -261,6 +261,10 @@ module.exports = grammar(C, {
     [$.expression, $.field_designator, $._class_name],
     [$.preproc_ifdef_in_initializer_list, $.field_expression],
     [$.preproc_else_in_initializer_list, $.field_expression],
+    // Fused asm middle sections: `"c" (` reads as an input operand or as
+    // a `_string`/`concatenated_string` continuation; the operand wins on
+    // `prec.dynamic(1)`, otherwise `_string` clobbers take it.
+    [$._string, $.gnu_asm_input_operand, $.concatenated_string],
     [$.field_initializer_list],
     [$.expression, $.concatenated_string, $.template_type, $.template_function],
     [$.preproc_ifdef, $.type_qualifier, $.extension_expression],
@@ -1375,38 +1379,56 @@ module.exports = grammar(C, {
     // only, emitted as `gnu_asm_goto_list` like the structured branch).
     // Separators are enumerated, so a fifth colon can't parse.
     _gnu_asm_fused_sections: $ => prec.dynamic(-1, choice(
-      // `::`-led: `x :: i`, `x :: i : c`, `x :: i : c : g`,
-      // `x ::: clobbers`, `x :: c :: goto` (`::::`).
-      seq('::', optional($._fused_asm_items), optional(choice(
-        seq(':', optional($._fused_asm_items), optional(seq(
-          ':',
-          optional(field('goto_labels', $._gnu_asm_goto_items)),
+      // `::`-led (outputs empty): `x :: inputs`, `x :: inputs : clobbers`,
+      // `x :: inputs : clobbers : goto`, `x ::: clobbers`,
+      // `x :: clobbers :: goto` (`::::`).
+      seq('::', optional(field('input_operands', $._fused_asm_items)),
+        optional(choice(
+          seq(':', optional(field('clobbers', $._fused_asm_items)),
+            optional(seq(
+              ':',
+              optional(field('goto_labels', $._gnu_asm_goto_items)),
+            ))),
+          seq('::', optional(field('goto_labels', $._gnu_asm_goto_items))),
         ))),
-        seq('::', optional(field('goto_labels', $._gnu_asm_goto_items))),
-      ))),
-      // `x : outputs :: clobbers [: goto]`.
+      // `x : outputs :: clobbers [: goto]` (inputs empty).
       seq(
-        $.gnu_asm_output_operand_list,
+        field('output_operands', $.gnu_asm_output_operand_list),
         '::',
-        optional($._fused_asm_items),
+        optional(field('clobbers', $._fused_asm_items)),
         optional(seq(':', optional(field('goto_labels', $._gnu_asm_goto_items)))),
       ),
       // `x : outputs : inputs :: goto` (clobbers empty).
       seq(
-        $.gnu_asm_output_operand_list,
-        $.gnu_asm_input_operand_list,
+        field('output_operands', $.gnu_asm_output_operand_list),
+        field('input_operands', $.gnu_asm_input_operand_list),
         '::',
         optional(field('goto_labels', $._gnu_asm_goto_items)),
       ),
     )),
 
     // Middle-section items in fused sections: `"c"(expr)` operands or
-    // clobber string literals. A bare identifier can't live here — only goto
-    // labels take those — so `asm("x" :: ident)` fails like GCC.
+    // clobber strings — `gnu_asm_clobber_list` takes `_string`, but the
+    // full `concatenated_string` also allows `call_expression` members
+    // whose `::name(...)` callee would collide with the `::` section
+    // separator — so fused items take a concat variant with no call
+    // members. A bare identifier can't live here — only goto labels take
+    // those — so `asm("x" :: ident)` fails like GCC.
     _fused_asm_items: $ => commaSep1(field('operand', choice(
       prec.dynamic(1, $.gnu_asm_input_operand),
-      $.string_literal,
+      $._fused_asm_string,
     ))),
+
+    _fused_asm_string: $ => choice(
+      $.string_literal,
+      $.raw_string_literal,
+      alias($._fused_asm_concat_string, $.concatenated_string),
+    ),
+    _fused_asm_concat_string: $ => prec.right(seq(
+      choice($.identifier, $.string_literal, $.raw_string_literal),
+      choice($.string_literal, $.raw_string_literal),
+      repeat(choice($.identifier, $.string_literal, $.raw_string_literal)),
+    )),
 
     // Goto labels in fused sections; aliased so emitted nodes keep the
     // `gnu_asm_goto_list` name queries match.

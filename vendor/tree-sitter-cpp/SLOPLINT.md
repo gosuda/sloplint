@@ -478,7 +478,7 @@ those 5 files gain the now-visible calls and bindings and lose nothing.
 
 ## Size
 
-`src/parser.c`: 193,621,140 bytes (published: 17,299,078). States: 29208
+`src/parser.c`: 193,654,316 bytes (published: 17,299,078). States: 29254
 (published: 8637). Language version: 14 (published: 14). The literal
 enumeration of `macro_attribute` costs most of the size growth.
 
@@ -693,10 +693,16 @@ first with `rm -f src/parser.c`.
   accepts `_gnu_asm_fused_sections`, enumerated positionally over `:`/`::`
   tokens (outputs : inputs : clobbers : goto labels — at most four colons,
   so a fifth fails). Which section a fused list lands in depends on the
-  separators that FOLLOW it, so middle sections take the
-  operand|`string_literal` union while the trailing goto slot is strict:
-  bare identifiers only, emitted as a `gnu_asm_goto_list` node exactly
-  like the structured `:`-led branch (`asm goto("x" :::: lbl1, lbl2)`).
+  separators that FOLLOW it, so middle sections take an
+  operand|clobber-string union (string, raw `R"..."`, and concatenated
+  forms through a call-free concat variant — the full
+  `concatenated_string` admits `call_expression` members whose
+  `::name(...)` callee would collide with the `::` separator) while the
+  trailing goto slot is strict: bare identifiers only, emitted as a
+  `gnu_asm_goto_list` node exactly like the structured `:`-led branch
+  (`asm goto("x" :::: lbl1, lbl2)`). Sections carry the upstream field
+  names (`output_operands`, `input_operands`, `clobbers`,
+  `goto_labels`).
   A bare identifier in a non-goto slot fails like GCC. `asm(s : :: : x)`
   still parses as classic sections — the fused arm needs a literal `::`
   token. Repro: atmosphere's
@@ -709,14 +715,19 @@ first with `rm -f src/parser.c`.
   resolved by the `_macro_braced_open` external token in `src/scanner.c`:
   it claims `{` when a `;` occurs inside the brace region — braced
   initializer lists never contain `;` — or when the body starts with a
-  statement keyword (`if`, `for`, `return`, ...), so `Type{args}` can
-  never open a macro block. While probing it skips `"..."`/`'...'`/raw
-  `R"delim(...)delim"` literals (digit separators like `1'000` are
-  handled speculatively: a `'x` that can't complete as a character
-  literal doesn't hide a `;`), `//`/`/* */` comments and balanced
-  `(...)`/`[...]` runs, so `Widget{R"x(a "b" ; c)x"}`, `MACRO { x =
-  1'000; }` and `Widget{[&]{init();}}` (a lambda — the `;` lives inside
-  `[&]{...}`) all stay initializer lists, while
+  control-flow keyword (`if`, `for`, `return`, `asm`, ... — the list is
+  deliberately narrow so `T{sizeof(const int)}` can't trip it), so
+  `Type{args}` can never open a macro block. While probing it skips
+  `"..."` literals, char literals scanned to their closing quote
+  (multi-char constants `'A;'`/`'}x'` are legal — a `'` after a digit
+  is the `1'000` separator instead), raw strings opened only by the
+  exact prefixes `R`/`u8R`/`LR`/`uR`/`UR` directly before `"` (`Rif`
+  stays an identifier), `[[attribute]]` runs (their `]`s can't close a
+  lambda capture), `//`/`/* */` comments and balanced `(...)`/`[...]`
+  runs, so `Widget{R"x(a "b" ; c)x"}`, `MACRO { x = 1'000; }`,
+  `Widget{[&](int a, int b) mutable {init();}}` (a `,` inside lambda
+  parameters doesn't drop the lambda flag) and `Widget{[&]{init();}}`
+  all stay initializer lists, while
   `ON_SCOPE_EXIT { if (ready) {} };` still opens a block on the
   keyword. The name position accepts `identifier` and C++'s
   `type_identifier` (all-caps macro names like `ON_SCOPE_EXIT` lex as
