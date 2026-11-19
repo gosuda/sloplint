@@ -8202,17 +8202,8 @@
                   {
                     "type": "REPEAT",
                     "content": {
-                      "type": "CHOICE",
-                      "members": [
-                        {
-                          "type": "SYMBOL",
-                          "name": "cppo_directive"
-                        },
-                        {
-                          "type": "SYMBOL",
-                          "name": "camlp4_directive"
-                        }
-                      ]
+                      "type": "SYMBOL",
+                      "name": "cppo_directive"
                     }
                   },
                   {
@@ -8230,17 +8221,8 @@
                   {
                     "type": "REPEAT",
                     "content": {
-                      "type": "CHOICE",
-                      "members": [
-                        {
-                          "type": "SYMBOL",
-                          "name": "cppo_directive"
-                        },
-                        {
-                          "type": "SYMBOL",
-                          "name": "camlp4_directive"
-                        }
-                      ]
+                      "type": "SYMBOL",
+                      "name": "cppo_directive"
                     }
                   }
                 ]
@@ -8262,22 +8244,20 @@
                 {
                   "type": "REPEAT",
                   "content": {
-                    "type": "CHOICE",
-                    "members": [
-                      {
-                        "type": "SYMBOL",
-                        "name": "cppo_directive"
-                      },
-                      {
-                        "type": "SYMBOL",
-                        "name": "camlp4_directive"
-                      }
-                    ]
+                    "type": "SYMBOL",
+                    "name": "cppo_directive"
                   }
                 },
                 {
                   "type": "STRING",
                   "value": "|"
+                },
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "cppo_directive"
+                  }
                 },
                 {
                   "type": "SYMBOL",
@@ -8289,17 +8269,8 @@
           {
             "type": "REPEAT",
             "content": {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "SYMBOL",
-                  "name": "cppo_directive"
-                },
-                {
-                  "type": "SYMBOL",
-                  "name": "camlp4_directive"
-                }
-              ]
+              "type": "SYMBOL",
+              "name": "cppo_directive"
             }
           }
         ]
@@ -13640,7 +13611,7 @@
           },
           {
             "type": "PATTERN",
-            "value": "[^\\n]*"
+            "value": "(?:[^\\n\\\\]|\\\\[\\s\\S])*"
           }
         ]
       }
@@ -13698,16 +13669,8 @@
                 "name": "camlp4_directive"
               },
               {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "SYMBOL",
-                    "name": "_sequence_expression"
-                  },
-                  {
-                    "type": "BLANK"
-                  }
-                ]
+                "type": "SYMBOL",
+                "name": "_sequence_expression"
               }
             ]
           }
@@ -13733,7 +13696,7 @@
           },
           {
             "type": "PATTERN",
-            "value": "[^\\n]*"
+            "value": "[a-zA-Z_][^\\n]*"
           }
         ]
       }

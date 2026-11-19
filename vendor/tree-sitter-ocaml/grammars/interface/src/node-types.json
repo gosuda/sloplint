@@ -3227,10 +3227,6 @@
           "named": true
         },
         {
-          "type": "camlp4_directive",
-          "named": true
-        },
-        {
           "type": "cppo_directive",
           "named": true
         },
@@ -4744,10 +4740,6 @@
       "types": [
         {
           "type": "attribute_id",
-          "named": true
-        },
-        {
-          "type": "camlp4_directive",
           "named": true
         },
         {
@@ -6476,10 +6468,6 @@
       "types": [
         {
           "type": "attribute_id",
-          "named": true
-        },
-        {
-          "type": "camlp4_directive",
           "named": true
         },
         {

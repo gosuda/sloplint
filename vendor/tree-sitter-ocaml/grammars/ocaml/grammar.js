@@ -1679,23 +1679,26 @@ export default grammar({
       $._match_cases,
     ),
 
-    // cppo/camlp4 directives may appear anywhere between `|` markers:
+    // cppo directives may appear anywhere between `|` markers:
     // `function | A -> a #ifdef X | B -> b`. They are folded into the
     // separators; a trailing directive after the last case falls back to
-    // structure/signature position.
+    // structure/signature position. camlp4 `#<...>` markers are excluded:
+    // a `#<Else>` here would steal the arm separator of an enclosing
+    // camlp4_conditional.
     _match_cases: $ => prec.right(seq(
       optional(seq(
-        repeat(choice($.cppo_directive, $.camlp4_directive)),
+        repeat($.cppo_directive),
         optional('|'),
-        repeat(choice($.cppo_directive, $.camlp4_directive)),
+        repeat($.cppo_directive),
       )),
       $.match_case,
       repeat(seq(
-        repeat(choice($.cppo_directive, $.camlp4_directive)),
+        repeat($.cppo_directive),
         '|',
+        repeat($.cppo_directive),
         $.match_case,
       )),
-      repeat(choice($.cppo_directive, $.camlp4_directive)),
+      repeat($.cppo_directive),
     )),
 
     match_case: $ => seq(
@@ -2668,7 +2671,8 @@ export default grammar({
     cppo_directive: $ => token(seq(
       '#',
       /(?:define|include|if|ifdef|ifndef|elif|else|endif|undef|error|warning|pragma|line|ext|endext|stop|localization)/,
-      /[^\n]*/,
+      // `\<newline>` continues a cppo directive onto the next line.
+      /(?:[^\n\\]|\\[\s\S])*/,
     )),
 
     // camlp4 directives `#<If:TESTING>`, `#<Else>`, `#<End>`. `#<` can never
@@ -2684,19 +2688,23 @@ export default grammar({
 
     // camlp4 conditional sections in expression position:
     // `#<If:TESTING> expr #<Else> expr #<End>`. Each `#<...>` token is an
-    // opaque separator and each arm is its own expression; `#<End>`
-    // closes the section.
+    // opaque separator and each arm holds a (required) expression;
+    // `#<End>` closes the section. Requiring arm expressions keeps an
+    // `#<If>` arm whose body is itself a conditional unambiguous:
+    // `#<If:A> #<If:B> x #<End> #<Else> y #<End>`.
     camlp4_conditional: $ => seq(
       repeat1(seq(
         $.camlp4_directive,
-        optional($._sequence_expression),
+        $._sequence_expression,
       )),
       $.camlp4_end_directive,
     ),
 
     // opa/qml preprocessor forms: `##name args` bypass directives and
     // `#<< ... >>#` bypass quotations (opaque payloads, e.g. opalang).
-    opa_directive: $ => token(seq('#', '#', /[^\n]*/)),
+    // `##` must be followed by an identifier char so Js_of_ocaml-style
+    // `##.` / `##x.y` expressions can never lex as directives.
+    opa_directive: $ => token(seq('#', '#', /[a-zA-Z_][^\n]*/)),
 
     opa_quotation: $ => token(seq(
       '#<<',

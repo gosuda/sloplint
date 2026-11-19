@@ -238,3 +238,53 @@ fn opa_directive_and_quotation_parse() {
         "let x = 1\n",
     ));
 }
+
+#[test]
+fn cppo_directive_line_continuation_parses() {
+    run_clean(concat!(
+        "#define FOO a \\\n",
+        "  b c\n",
+        "let x = 1\n",
+    ));
+}
+
+#[test]
+fn cppo_directive_between_bar_and_match_arm_parses() {
+    run_clean(concat!(
+        "let f v = match v with\n",
+        "  | A -> 1\n",
+        "  | #ifdef Y\n",
+        "    C -> 3\n",
+        "#endif\n",
+        "let g = 1\n",
+    ));
+}
+
+#[test]
+fn camlp4_else_after_function_arm_parses() {
+    run_clean(concat!(
+        "let f =\n",
+        "  #<If:A>\n",
+        "    function\n",
+        "    | X -> 1\n",
+        "  #<Else>\n",
+        "    g\n",
+        "  #<End>\n",
+        "let y = 2\n",
+    ));
+}
+
+#[test]
+fn camlp4_nested_conditional_as_arm_parses() {
+    run_clean(concat!(
+        "let x =\n",
+        "  #<If:A>\n",
+        "    #<If:B>\n",
+        "      1\n",
+        "    #<End>\n",
+        "  #<Else>\n",
+        "    2\n",
+        "  #<End>\n",
+        "let y = 2\n",
+    ));
+}

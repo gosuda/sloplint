@@ -106,3 +106,126 @@ let x = 1
     (let_binding
       (value_name)
       (number))))
+
+================================================================================
+cppo directive with a backslash line continuation
+================================================================================
+
+#define FOO a \
+  b c
+let x = 1
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (cppo_directive)
+  (value_definition
+    (let_binding
+      (value_name)
+      (number))))
+
+================================================================================
+cppo directive between a `|` marker and its match arm
+================================================================================
+
+let f v = match v with
+  | A -> 1
+  | #ifdef Y
+    C -> 3
+#endif
+let g = 1
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (value_definition
+    (let_binding
+      (value_name)
+      (parameter
+        (value_pattern))
+      (match_expression
+        (value_path
+          (value_name))
+        (match_case
+          (constructor_path
+            (constructor_name))
+          (number))
+        (cppo_directive)
+        (match_case
+          (constructor_path
+            (constructor_name))
+          (number))
+        (cppo_directive))))
+  (value_definition
+    (let_binding
+      (value_name)
+      (number))))
+
+================================================================================
+camlp4 `#<Else>` arm separator after a function branch
+================================================================================
+
+let f =
+  #<If:A>
+    function
+    | X -> 1
+  #<Else>
+    g
+  #<End>
+let y = 2
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (value_definition
+    (let_binding
+      (value_name)
+      (camlp4_conditional
+        (camlp4_directive)
+        (function_expression
+          (match_case
+            (constructor_path
+              (constructor_name))
+            (number)))
+        (camlp4_directive)
+        (value_path
+          (value_name))
+        (camlp4_end_directive))))
+  (value_definition
+    (let_binding
+      (value_name)
+      (number))))
+
+================================================================================
+nested camlp4 conditional as a conditional arm
+================================================================================
+
+let x =
+  #<If:A>
+    #<If:B>
+      1
+    #<End>
+  #<Else>
+    2
+  #<End>
+let y = 2
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (value_definition
+    (let_binding
+      (value_name)
+      (camlp4_conditional
+        (camlp4_directive)
+        (camlp4_conditional
+          (camlp4_directive)
+          (number)
+          (camlp4_end_directive))
+        (camlp4_directive)
+        (number)
+        (camlp4_end_directive))))
+  (value_definition
+    (let_binding
+      (value_name)
+      (number))))
