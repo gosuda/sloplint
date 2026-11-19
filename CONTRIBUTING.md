@@ -4,7 +4,7 @@ This guide covers building, testing, and extending `sloplint`.
 
 ## Prerequisites
 
-Install `rustup`. The workspace pins Rust `1.99.1` with `clippy` and `rustfmt` in `rust-toolchain.toml`, which `cargo` selects automatically.
+Install `rustup`. The workspace pins Rust `1.100.0` with `clippy` and `rustfmt` in `rust-toolchain.toml`, which `cargo` selects automatically; `rust-version = "1.99.1"` in `Cargo.toml` is the minimum supported version, not the selected toolchain.
 
 ## Workspace layout
 
