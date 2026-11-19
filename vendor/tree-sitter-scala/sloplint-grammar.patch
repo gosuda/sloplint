@@ -1,3 +1,4 @@
+diff --git a/grammar.js b/grammar.js
 --- a/grammar.js
 +++ b/grammar.js
 @@ -438,7 +438,6 @@
@@ -8,7 +9,18 @@
      [$.tuple_pattern, $._simple_expression],
      [$.tuple_pattern, $._simple_expression, $.binding],
      // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
-@@ -493,6 +492,7 @@
+@@ -459,6 +458,10 @@
+     // 'extension' • '{' is either an extension definition with a braced body
+     // or the soft identifier `extension` (a Scala 2 id) called with a block.
+     [$.extension_definition, $._soft_identifier],
++    // 'enum' is a soft keyword too: an `enum`-definition and the identifier
++    // `enum` (Scala 2 code uses it as a parameter or named argument) diverge
++    // only after the token's continuation is known.
++    [$.enum_definition, $._soft_identifier],
+     [$.binding, $._simple_expression],
+     [$.binding, $._type_identifier],
+     // A parenthesized type before `=>` can extend into a function type or stop
+@@ -493,6 +496,7 @@
      // we treat `operator_identifier` as `simple_expression`
      [$._simple_expression, $.lambda_expression],
      [$._simple_expression, $._single_lambda_param],
@@ -16,7 +28,7 @@
      // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
      // identifier `export` beginning an expression statement. Each reading
      // dies on the next token ('.' vs a name), so forking settles it. The
-@@ -532,8 +532,6 @@
+@@ -532,8 +536,6 @@
      [$._constructor_annotation],
      [$._constructor_annotation_arguments, $.arguments],
      [$._constructor_annotation, $.applied_constructor_type],
@@ -25,7 +37,44 @@
      // '{'  identifier  •  ':' starts the braced typed lambda, the block
      // lambda param, and a statement alike.
      [$._simple_expression, $._braced_typed_lambda],
-@@ -2019,7 +2017,10 @@
+@@ -663,15 +665,18 @@
+       ),
+ 
+     enum_definition: $ =>
+-      seq(
+-        repeat($.annotation),
+-        optional($.modifiers),
+-        "enum",
+-        $._class_constructor,
+-        field("extend", optional($.extends_clause)),
+-        field("derive", optional(choice($.derives_clause, $.uses_clause))),
+-        field("body", $.enum_body),
+-        optional($._end_marker_named_tail),
++      prec(
++        1,
++        seq(
++          repeat($.annotation),
++          optional($.modifiers),
++          "enum",
++          $._class_constructor,
++          field("extend", optional($.extends_clause)),
++          field("derive", optional(choice($.derives_clause, $.uses_clause))),
++          field("body", $.enum_body),
++          optional($._end_marker_named_tail),
++        ),
+       ),
+ 
+     _enum_block: $ =>
+@@ -801,7 +806,7 @@
+     // Scala 3 keywords that are valid identifiers in Scala 2 sources and thus
+     // may appear as package names in import/export paths (e.g. `import io.circe.export.Exported`).
+     _namespace_path_segment: $ =>
+-      choice($._identifier, alias(choice("enum", "export"), $.identifier)),
++      choice($._identifier, alias("export", $.identifier)),
+ 
+     namespace_wildcard: $ => prec.left(1, choice("*", "_", "given")),
+ 
+@@ -2019,7 +2024,10 @@
          PREC.infix,
          seq(
            field("left", $._definition_pattern),
@@ -37,7 +86,7 @@
            field("right", $._definition_pattern),
          ),
        ),
-@@ -2283,19 +2284,37 @@
+@@ -2283,19 +2291,37 @@
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -85,7 +134,7 @@
      /*
       *   MatchClause       ::=  'match' <<< CaseClauses >>>
       *
-@@ -2529,6 +2548,17 @@
+@@ -2529,6 +2555,17 @@
              optional($._end_marker_kw_tail),
            ),
          ),
@@ -103,3 +152,12 @@
          prec(
            "new",
            seq("new", $.template_body, optional($._end_marker_kw_tail)),
+@@ -2802,7 +2839,7 @@
+     _super_identifier: $ => "super",
+ 
+     // https://docs.scala-lang.org/scala3/reference/soft-modifier.html
+-    _soft_identifier: $ => prec("soft_id", "extension"),
++    _soft_identifier: $ => prec("soft_id", choice("extension", "enum")),
+ 
+     // alphaid          ::=  upper idrest
+     //                       |  varid
