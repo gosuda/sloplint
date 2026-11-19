@@ -2666,14 +2666,15 @@ export default grammar({
 
     // cppo-style preprocessor directives (`#define`, `#include`, `#if`, ...).
     // `cppo_directive`, `cppo_directive_no_arrow` and `opa_directive` are
-    // external tokens (common/scanner.h): they only claim `#`/`##` when it
-    // is the first non-whitespace character of a line, so `#`-method calls
-    // (`o#error x`) and `##` hash-operator reads (`o##name`) can never be
-    // stolen mid-line. The no-arrow variant additionally refuses lines
-    // containing a literal `->`, keeping `| #error as e -> ...`
-    // polymorphic-variant arms free of the directive parse; when the
-    // match-position variant is expected, the refusal applies even where
-    // the structure-level variant is also valid.
+    // external tokens (common/scanner.h): they claim `#`/`##` at column 0
+    // or right after skipped whitespace, so `| #ifdef FEATURE` inside a
+    // match works while a `#`/`##` butted against a token (`o#error x`,
+    // `o##name`) stays a method call / hash operator. The no-arrow
+    // variant additionally refuses lines containing a literal `->`,
+    // keeping `| #error as e -> ...` polymorphic-variant arms free of
+    // the directive parse; when the match-position variant is expected
+    // alone, the refusal applies even where the structure-level variant
+    // is also valid.
     //
     // cppo directive names: define, include, if, ifdef, ifndef, elif,
     // else, endif, undef, error, warning, pragma, line, ext, endext,

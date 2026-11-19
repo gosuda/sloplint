@@ -372,6 +372,13 @@ static inline bool is_identstart(const int32_t c) {
   return is_lowercase_ext(c) || (c >= 'A' && c <= 'Z');
 }
 
+// Opa `##name` directive names are plain ASCII identifiers; the wider
+// OCaml identstart would claim `x ##été` (the `##` hash operator plus an
+// accented operand) as a directive.
+static inline bool is_ascii_identstart(const int32_t c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+}
+
 static inline bool is_identchar(const int32_t c) {
   return is_identstart(c) || (c >= '0' && c <= '9') || c == '\'';
 }
@@ -599,39 +606,22 @@ static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
     bool hash_col0 = lexer->get_column(lexer) == 0;
     advance(lexer);
 
-    if ((valid_symbols[CPPO_DIRECTIVE] ||
-         valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) &&
-        scan_cppo_name(lexer)) {
-      bool has_arrow = false;
-      scan_cppo_tail(lexer, &has_arrow);
-      if (!has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
-        if (lexer->lookahead == '\n') advance(lexer);
-        lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
-        return true;
-      }
-      // A `->`-bearing directive line where the match-position variant
-      // is expected is a polymorphic-variant arm, never a directive —
-      // refuse rather than letting the structure-level variant steal
-      // it mid-item.
-      if (has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
-        return false;
-      }
-      if (valid_symbols[CPPO_DIRECTIVE]) {
-        lexer->result_symbol = CPPO_DIRECTIVE;
-        return true;
-      }
-      return false;
-    }
-
+    // Pick the candidate by the character right after `#` so a failed
+    // match never leaves the lexer mid-token for another branch:
+    //   `##name`  -> opa directive
+    //   `# N "f"` -> line marker (column 0 only)
+    //   `#name`   -> cppo directive
     if (valid_symbols[OPA_DIRECTIVE] && lexer->lookahead == '#') {
       advance(lexer);
-      if (!is_identstart(lexer->lookahead)) return false;
+      if (!is_ascii_identstart(lexer->lookahead)) return false;
       while (lexer->lookahead != '\n' && !eof(lexer)) advance(lexer);
       lexer->result_symbol = OPA_DIRECTIVE;
       return true;
     }
 
-    if (hash_col0 && valid_symbols[LINE_NUMBER_DIRECTIVE]) {
+    if (hash_col0 && valid_symbols[LINE_NUMBER_DIRECTIVE] &&
+        (iswdigit(lexer->lookahead) || lexer->lookahead == ' ' ||
+         lexer->lookahead == '\t')) {
       while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
         advance(lexer);
       }
@@ -661,6 +651,26 @@ static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
 
       lexer->result_symbol = LINE_NUMBER_DIRECTIVE;
       return true;
+    }
+
+    if ((valid_symbols[CPPO_DIRECTIVE] ||
+         valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) &&
+        scan_cppo_name(lexer)) {
+      bool has_arrow = false;
+      scan_cppo_tail(lexer, &has_arrow);
+      if (!has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
+        if (lexer->lookahead == '\n') advance(lexer);
+        lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
+        return true;
+      }
+      if (valid_symbols[CPPO_DIRECTIVE]) {
+        lexer->result_symbol = CPPO_DIRECTIVE;
+        return true;
+      }
+      // A `->`-bearing line where only the match-position variant is
+      // expected is a polymorphic-variant arm, never a directive —
+      // refuse rather than letting it steal the `->`.
+      return false;
     }
     return false;
   }

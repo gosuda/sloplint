@@ -1,5 +1,5 @@
---- /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-ocaml-0.26.0/grammars/ocaml/grammar.js	2006-07-24 01:21:28.000000000 +0000
-+++ grammars/ocaml/grammar.js	2026-11-19 05:41:31.501330434 +0000
+--- grammars/ocaml/grammar.js	2006-07-24 01:21:28.000000000 +0000
++++ grammars/ocaml/grammar.js	2026-11-19 05:58:17.103150937 +0000
 @@ -50,6 +50,15 @@
      [$._include_or_include_functor],
      [$._module_typed, $.functor_type],
@@ -133,21 +133,22 @@
      ),
  
      _effect_binding_pattern: $ => choice(
-@@ -2612,7 +2663,90 @@
+@@ -2612,7 +2663,91 @@
      _label: $ => seq(choice('~', '?'), $._label_name),
      _tuple_label: $ => seq('~', $._label_name),
      directive: $ => seq(/#/, choice($._lowercase_identifier, $._uppercase_identifier)),
 +
 +    // cppo-style preprocessor directives (`#define`, `#include`, `#if`, ...).
 +    // `cppo_directive`, `cppo_directive_no_arrow` and `opa_directive` are
-+    // external tokens (common/scanner.h): they only claim `#`/`##` when it
-+    // is the first non-whitespace character of a line, so `#`-method calls
-+    // (`o#error x`) and `##` hash-operator reads (`o##name`) can never be
-+    // stolen mid-line. The no-arrow variant additionally refuses lines
-+    // containing a literal `->`, keeping `| #error as e -> ...`
-+    // polymorphic-variant arms free of the directive parse; when the
-+    // match-position variant is expected, the refusal applies even where
-+    // the structure-level variant is also valid.
++    // external tokens (common/scanner.h): they claim `#`/`##` at column 0
++    // or right after skipped whitespace, so `| #ifdef FEATURE` inside a
++    // match works while a `#`/`##` butted against a token (`o#error x`,
++    // `o##name`) stays a method call / hash operator. The no-arrow
++    // variant additionally refuses lines containing a literal `->`,
++    // keeping `| #error as e -> ...` polymorphic-variant arms free of
++    // the directive parse; when the match-position variant is expected
++    // alone, the refusal applies even where the structure-level variant
++    // is also valid.
 +    //
 +    // cppo directive names: define, include, if, ifdef, ifndef, elif,
 +    // else, endif, undef, error, warning, pragma, line, ext, endext,
@@ -224,7 +225,7 @@
      attribute_id: $ => sep1(/\./, choice(
        reserved('attribute_id', $._lowercase_identifier),
        $._uppercase_identifier,
-@@ -2627,6 +2761,9 @@
+@@ -2627,6 +2762,9 @@
      $.line_number_directive,
      $._null,
      $._error_sentinel,
@@ -234,8 +235,8 @@
    ],
  });
  
---- /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tree-sitter-ocaml-0.26.0/common/scanner.h	2006-07-24 01:21:28.000000000 +0000
-+++ common/scanner.h	2026-11-19 05:48:36.531670974 +0000
+--- common/scanner.h	2006-07-24 01:21:28.000000000 +0000
++++ common/scanner.h	2026-11-19 05:58:03.787392220 +0000
 @@ -16,6 +16,9 @@
    LINE_NUMBER_DIRECTIVE,
    NULL_CHARACTER,
@@ -246,7 +247,21 @@
  };
  
  typedef struct {
-@@ -390,6 +393,56 @@
+@@ -369,6 +372,13 @@
+   return is_lowercase_ext(c) || (c >= 'A' && c <= 'Z');
+ }
+ 
++// Opa `##name` directive names are plain ASCII identifiers; the wider
++// OCaml identstart would claim `x ##été` (the `##` hash operator plus an
++// accented operand) as a directive.
++static inline bool is_ascii_identstart(const int32_t c) {
++  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
++}
++
+ static inline bool is_identchar(const int32_t c) {
+   return is_identstart(c) || (c >= '0' && c <= '9') || c == '\'';
+ }
+@@ -390,6 +400,56 @@
    return false;
  }
  
@@ -303,7 +318,7 @@
  static bool scan_comment(Scanner *scanner, TSLexer *lexer) {
    int32_t last = 0;
  
-@@ -521,7 +574,9 @@
+@@ -521,7 +581,9 @@
      return true;
    }
  
@@ -313,13 +328,15 @@
      skip(lexer);
    }
  
-@@ -533,39 +588,81 @@
+@@ -533,39 +595,84 @@
      return true;
    }
  
 -  if (!scanner->in_string && valid_symbols[LINE_NUMBER_DIRECTIVE] &&
 -      lexer->lookahead == '#' && lexer->get_column(lexer) == 0) {
 -    advance(lexer);
+-
+-    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
 +  // Unified `#` dispatch: cppo/opa directives and the `# N "file"`
 +  // line directive share one `#` consumption. A `#` reached only at a
 +  // line start or after whitespace (`| #ifdef`, `  ##name`) can be a
@@ -331,34 +348,14 @@
 +    bool hash_col0 = lexer->get_column(lexer) == 0;
 +    advance(lexer);
 +
-+    if ((valid_symbols[CPPO_DIRECTIVE] ||
-+         valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) &&
-+        scan_cppo_name(lexer)) {
-+      bool has_arrow = false;
-+      scan_cppo_tail(lexer, &has_arrow);
-+      if (!has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
-+        if (lexer->lookahead == '\n') advance(lexer);
-+        lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
-+        return true;
-+      }
-+      // A `->`-bearing directive line where the match-position variant
-+      // is expected is a polymorphic-variant arm, never a directive —
-+      // refuse rather than letting the structure-level variant steal
-+      // it mid-item.
-+      if (has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
-+        return false;
-+      }
-+      if (valid_symbols[CPPO_DIRECTIVE]) {
-+        lexer->result_symbol = CPPO_DIRECTIVE;
-+        return true;
-+      }
-+      return false;
-+    }
- 
--    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
++    // Pick the candidate by the character right after `#` so a failed
++    // match never leaves the lexer mid-token for another branch:
++    //   `##name`  -> opa directive
++    //   `# N "f"` -> line marker (column 0 only)
++    //   `#name`   -> cppo directive
 +    if (valid_symbols[OPA_DIRECTIVE] && lexer->lookahead == '#') {
        advance(lexer);
-+      if (!is_identstart(lexer->lookahead)) return false;
++      if (!is_ascii_identstart(lexer->lookahead)) return false;
 +      while (lexer->lookahead != '\n' && !eof(lexer)) advance(lexer);
 +      lexer->result_symbol = OPA_DIRECTIVE;
 +      return true;
@@ -366,7 +363,9 @@
  
 -    if (!iswdigit(lexer->lookahead)) return false;
 -    while (iswdigit(lexer->lookahead)) advance(lexer);
-+    if (hash_col0 && valid_symbols[LINE_NUMBER_DIRECTIVE]) {
++    if (hash_col0 && valid_symbols[LINE_NUMBER_DIRECTIVE] &&
++        (iswdigit(lexer->lookahead) || lexer->lookahead == ' ' ||
++         lexer->lookahead == '\t')) {
 +      while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
 +        advance(lexer);
 +      }
@@ -400,10 +399,7 @@
 -           !eof(lexer)) {
 +      if (lexer->lookahead != '"') return false;
        advance(lexer);
--    }
- 
--    lexer->result_symbol = LINE_NUMBER_DIRECTIVE;
--    return true;
++
 +      while (lexer->lookahead != '\n' && lexer->lookahead != '\r' &&
 +             !eof(lexer)) {
 +        advance(lexer);
@@ -411,6 +407,28 @@
 +
 +      lexer->result_symbol = LINE_NUMBER_DIRECTIVE;
 +      return true;
+     }
+ 
+-    lexer->result_symbol = LINE_NUMBER_DIRECTIVE;
+-    return true;
++    if ((valid_symbols[CPPO_DIRECTIVE] ||
++         valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) &&
++        scan_cppo_name(lexer)) {
++      bool has_arrow = false;
++      scan_cppo_tail(lexer, &has_arrow);
++      if (!has_arrow && valid_symbols[CPPO_DIRECTIVE_NO_ARROW]) {
++        if (lexer->lookahead == '\n') advance(lexer);
++        lexer->result_symbol = CPPO_DIRECTIVE_NO_ARROW;
++        return true;
++      }
++      if (valid_symbols[CPPO_DIRECTIVE]) {
++        lexer->result_symbol = CPPO_DIRECTIVE;
++        return true;
++      }
++      // A `->`-bearing line where only the match-position variant is
++      // expected is a polymorphic-variant arm, never a directive —
++      // refuse rather than letting it steal the `->`.
++      return false;
 +    }
 +    return false;
    }

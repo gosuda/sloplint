@@ -326,7 +326,28 @@ fn hash_method_call_inside_match_arm_stays_method_call() {
 // `o##name` is the `##` hash operator, not an opa bypass directive.
 #[test]
 fn double_hash_method_call_stays_method_call() {
-    run_clean(concat!("let f = o##name\n", "let g = 2\n",));
+    // A wrong-but-error-free tree (`##name` swallowed as an opa
+    // directive) contains no method_invocation, so assert the shape.
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    let tree = parser
+        .parse("let f = o##name\nlet g = 2\n", None)
+        .expect("parser returns a tree");
+    assert_eq!(tree.root_node().has_error(), false);
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        !sexp.contains("opa_directive"),
+        "`o##name` must not lex as an opa directive, sexp: {}",
+        sexp
+    );
+    assert!(
+        sexp.contains("hash_expression"),
+        "`o##name` must parse as a `##` hash expression, sexp: {}",
+        sexp
+    );
 }
 
 // A `-\`-newline continuation inside a `#define` between match arms is
@@ -341,4 +362,58 @@ fn cppo_directive_minus_backslash_continuation_between_arms_parses() {
         "  | `B -> 2\n",
         "let g = 1\n",
     ));
+}
+
+// A structure-level cppo directive containing `->` after a match must
+// lex as `cppo_directive`, not die on the no-arrow arm guard.
+#[test]
+fn cppo_directive_with_arrow_after_match_parses() {
+    run_clean(concat!(
+        "let f = function\n",
+        "  | `A -> 1\n",
+        "  | `B -> 2\n",
+        "#define g (fun x -> x)\n",
+        "let h = 3\n",
+    ));
+}
+
+// `obj #get#value` chains two method calls — the `#` after a failed
+// cppo name match must not fall through to the `##name` branch.
+#[test]
+fn hash_get_hash_value_is_chained_method_call() {
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    let tree = parser
+        .parse("let x = obj #get#value ()\nlet y = 2\n", None)
+        .expect("parser returns a tree");
+    assert_eq!(tree.root_node().has_error(), false);
+    let sexp = tree.root_node().to_sexp();
+    assert!(!sexp.contains("opa_directive"), "sexp: {}", sexp);
+    assert!(
+        sexp.contains("method_invocation"),
+        "`obj #get#value` must keep its method calls, sexp: {}",
+        sexp
+    );
+}
+
+// `##` before a non-ASCII identifier is the hash operator, not an opa
+// directive — opa bypass names are plain ASCII.
+#[test]
+fn double_hash_before_non_ascii_ident_is_operator() {
+    let language: tree_sitter::Language = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("ocaml language loads");
+    let accented = parser
+        .parse("let x = succ ##\u{e9}t\u{e9}\nlet y = 2\n", None)
+        .expect("parser returns a tree");
+    assert!(
+        !accented.root_node().to_sexp().contains("opa_directive"),
+        "`##\u{e9}t\u{e9}` must not parse as an opa directive, sexp: {}",
+        accented.root_node().to_sexp()
+    );
 }
