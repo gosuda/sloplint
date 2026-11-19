@@ -47,29 +47,33 @@ fn go_string_operand(kind: &str) -> bool {
     )
 }
 
-/// The `binary_concat` left-spine check with parentheses stripped at every
-/// step, so `("lit" + x)` and `"lit" + ("x")` read the same as `"lit" + x`.
+/// The `binary_concat` check with parentheses stripped at every step, so
+/// `("lit" + x)`, `"lit" + ("x")` and `prefix + ("lit" + suffix)` all read
+/// the same as `"lit" + x`. Only `+` nodes are entered; a nested `+` under
+/// any other operator still reads as its own subtree.
 fn go_is_concat(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    let mut current = go_unparen(n);
-    loop {
+    let mut stack = vec![go_unparen(n)];
+    while let Some(current) = stack.pop() {
+        if current.kind() != "binary_expression" || current.child_count() != 3 {
+            continue;
+        }
         let (Some(left), Some(op), Some(right)) =
             (current.child(0), current.child(1), current.child(2))
         else {
-            return false;
+            continue;
         };
-        if current.child_count() != 3 || text(cx, op) != "+" {
-            return false;
+        if text(cx, op) != "+" {
+            continue;
         }
         let left = go_unparen(left);
         let right = go_unparen(right);
         if go_string_operand(left.kind()) || go_string_operand(right.kind()) {
             return true;
         }
-        if left.kind() != current.kind() {
-            return false;
-        }
-        current = left;
+        stack.push(left);
+        stack.push(right);
     }
+    false
 }
 
 fn go_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {

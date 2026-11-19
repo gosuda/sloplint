@@ -705,3 +705,28 @@ fn paren_around_interp_prefix_keeps_concat() {
         "a parenthesized interpolated prefix is still a concatenation, got {shapes:?}"
     );
 }
+
+#[test]
+fn right_grouped_concat_keeps_concat() {
+    let analysis = run_clean(
+        "src/rightgroup.lgo",
+        "package p\n\nimport \"log\"\n\nfunc Greet(prefix string, suffix string) {\n\tlog.Print(prefix + (\"service started: \" + suffix))\n}\n",
+    );
+    let shapes: Vec<&ArgShape> = analysis
+        .facts
+        .calls
+        .iter()
+        .filter(|c| c.callee == "log.Print")
+        .map(|c| {
+            c.args
+                .first()
+                .map(|a| &a.shape)
+                .expect("Print takes one arg")
+        })
+        .collect();
+    assert_eq!(
+        shapes,
+        vec![&ArgShape::Concat { longest_static: 17 }],
+        "a right-grouped literal is still a concatenation, got {shapes:?}"
+    );
+}
