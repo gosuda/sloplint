@@ -68,6 +68,29 @@ export default grammar({
     [$.type, $._pointer_base_type],
 
     [$.qualified_name, $.member_access_expression],
+    [$.enum_declaration, $._declaration_list_body],
+    // `#if`-split heads share one preproc arm across the type kinds —
+    // GLR must keep all declaration reads alive until the keyword.
+    [$.class_declaration, $.struct_declaration, $.interface_declaration, $.record_declaration],
+    [$.enum_member_declaration_list, $.declaration_list],
+    [$.preproc_if_in_top_level, $.preproc_if_in_class_head],
+    [$.preproc_elif, $.preproc_elif_in_attribute_list, $.preproc_elif_in_class_head, $.preproc_elif_in_method_head],
+    [$.record_base, $.type],
+    [$.primary_constructor_base_type, $.type],
+    [$.preproc_if_in_top_level, $.preproc_if_in_expression, $.preproc_if_in_class_head],
+    [$.preproc_else_in_top_level, $.preproc_else_in_expression, $.preproc_else_in_attribute_list, $.preproc_else_in_class_head],
+    [$.preproc_elif_in_top_level, $.preproc_elif_in_expression, $.preproc_elif_in_attribute_list, $.preproc_elif_in_class_head],
+    [$.preproc_else, $.preproc_else_in_enum_member_declaration, $.preproc_else_in_attribute_list, $.preproc_else_in_class_head, $.preproc_else_in_method_head],
+    [$.preproc_elif, $.preproc_elif_in_enum_member_declaration, $.preproc_elif_in_attribute_list, $.preproc_elif_in_class_head, $.preproc_elif_in_method_head],
+    [$.preproc_if_in_class_head, $.preproc_if_in_method_head],
+    [$.preproc_if, $.preproc_if_in_attribute_list, $.preproc_if_in_method_head],
+    [$.preproc_else, $.preproc_else_in_attribute_list, $.preproc_else_in_class_head, $.preproc_else_in_method_head],
+    [$.preproc_elif, $.preproc_elif_in_attribute_list, $.preproc_elif_in_class_head, $.preproc_elif_in_method_head],
+    [$.preproc_if, $.preproc_if_in_enum_member_declaration],
+    [$._method_declaration_initializer, $.preproc_if_in_method_head],
+    [$._method_declaration_initializer, $.preproc_else_in_method_head],
+    [$._interface_declaration_initializer],
+    [$._record_declaration_initializer],
     [$.qualified_name, $.explicit_interface_specifier],
 
     [$._array_base_type, $.stackalloc_expression],
@@ -109,6 +132,8 @@ export default grammar({
     [$.preproc_if_in_top_level, $.preproc_if_in_expression, $.preproc_if_in_attribute_list, $.preproc_if_in_initializer_expression],
     [$._simple_name, $.parameter],
     [$.tuple_element, $.parameter, $.declaration_expression],
+    // `(out float x) => ...` — `out float x` reads as an argument
+    // (`out` + declaration_expression) until `=>` disambiguates.
     [$.parameter, $.tuple_element],
 
     [$.event_declaration, $.variable_declarator],
@@ -286,7 +311,10 @@ export default grammar({
     ),
 
     class_declaration: $ => seq(
-      $._class_declaration_initializer,
+      choice(
+        $._class_declaration_initializer,
+        alias($.preproc_if_in_class_head, $.preproc_if),
+      ),
       $._declaration_list_body,
     ),
 
@@ -300,7 +328,10 @@ export default grammar({
     ),
 
     struct_declaration: $ => seq(
-      $._struct_declaration_initializer,
+      choice(
+        $._struct_declaration_initializer,
+        alias($.preproc_if_in_class_head, $.preproc_if),
+      ),
       $._declaration_list_body,
     ),
 
@@ -315,7 +346,10 @@ export default grammar({
     ),
 
     enum_declaration: $ => seq(
-      $._enum_declaration_initializer,
+      choice(
+        $._enum_declaration_initializer,
+        alias($.preproc_if_in_class_head, $.preproc_if),
+      ),
       choice(
         seq(field('body', $.enum_member_declaration_list), $._optional_semi),
         ';',
@@ -347,7 +381,10 @@ export default grammar({
     ),
 
     interface_declaration: $ => seq(
-      $._interface_declaration_initializer,
+      choice(
+        $._interface_declaration_initializer,
+        alias($.preproc_if_in_class_head, $.preproc_if),
+      ),
       $._declaration_list_body,
     ),
 
@@ -378,7 +415,10 @@ export default grammar({
     ),
 
     record_declaration: $ => seq(
-      $._record_declaration_initializer,
+      choice(
+        $._record_declaration_initializer,
+        alias($.preproc_if_in_class_head, $.preproc_if),
+      ),
       $._declaration_list_body,
     ),
 
@@ -442,7 +482,22 @@ export default grammar({
       field('name', $.identifier),
     ),
 
-    base_list: $ => seq(':', commaSep1(seq($.type, optional($.argument_list)))),
+    // `#if` arms carry whole `, Type` fragments — the separator lives
+    // inside the guard, so the list can't stay a plain commaSep1.
+    base_list: $ => seq(
+      ':',
+      choice(
+        seq($.type, optional($.argument_list)),
+        alias($.preproc_if_in_base_list, $.preproc_if),
+      ),
+      repeat(choice(
+        seq(',', choice(
+          seq($.type, optional($.argument_list)),
+          alias($.preproc_if_in_base_list, $.preproc_if),
+        )),
+        alias($.preproc_if_in_base_list, $.preproc_if),
+      )),
+    ),
 
     type_parameter_constraints_clause: $ => seq(
       'where',
@@ -591,6 +646,14 @@ export default grammar({
     ),
 
     method_declaration: $ => seq(
+      choice(
+        $._method_declaration_initializer,
+        alias($.preproc_if_in_method_head, $.preproc_if),
+      ),
+      $._function_body,
+    ),
+
+    _method_declaration_initializer: $ => seq(
       repeat($._attribute_list),
       repeat($.modifier),
       field('returns', $.type),
@@ -599,7 +662,6 @@ export default grammar({
       field('type_parameters', optional($.type_parameter_list)),
       field('parameters', $.parameter_list),
       repeat($.type_parameter_constraints_clause),
-      $._function_body,
     ),
 
     event_declaration: $ => seq(
@@ -716,7 +778,24 @@ export default grammar({
       $.argument_list,
     ),
 
-    argument_list: $ => seq('(', commaSep($.argument), ')'),
+    argument_list: $ => seq(
+      '(',
+      optional(seq(
+        choice(
+          $.argument,
+          alias($.preproc_if_in_argument_list, $.preproc_if),
+        ),
+        repeat(choice(
+          seq(',', choice(
+            $.argument,
+            alias($.preproc_if_in_argument_list, $.preproc_if),
+          )),
+          alias($.preproc_if_in_argument_list, $.preproc_if),
+        )),
+        optional(','),
+      )),
+      ')',
+    ),
 
     tuple_pattern: $ => seq(
       '(',
@@ -1152,13 +1231,15 @@ export default grammar({
       field('condition', $.expression),
       ')',
       field('consequence', $.statement),
-      repeat(choice(
-        seq(
-          'else',
-          field('alternative', $.statement),
-        ),
-        alias($.preproc_if_in_else_clause, $.preproc_if),
+      optional(seq(
+        'else',
+        field('alternative', $.statement),
       )),
+    )),
+
+    dangling_else: $ => prec.right(seq(
+      'else',
+      field('alternative', $.statement),
     )),
 
     while_statement: $ => seq(
@@ -2085,7 +2166,7 @@ export default grammar({
     // Preprocessor
 
     ...preprocIf('', $ => $.declaration),
-    ...preprocIf('_in_top_level', $ => choice($._top_level_item_no_statement, $.statement)),
+    ...preprocIf('_in_top_level', $ => choice($._top_level_item_no_statement, $.statement, $.dangling_else)),
     ...preprocIf('_in_expression', $ => $.expression, -2, false),
     ...preprocIf('_in_enum_member_declaration', $ => $.enum_member_declaration, 0, false),
     ...preprocIf('_in_attribute_list', $ => $.attribute_list, -1, false),
@@ -2099,12 +2180,53 @@ export default grammar({
     ...preprocIf('_in_constructor_initializer', $ => $.constructor_initializer, 0, false),
     ...preprocIf('_in_initializer_expression', $ => seq($.expression, optional(','))),
     ...preprocIf('_in_collection_element', $ => seq($.collection_element, optional(','))),
-    ...preprocIf('_in_else_clause', $ => seq('else', $.statement)),
+    // else-clause position: only binds when an arm actually carries an
+    // `else stmt` — `repeat1`, not `repeat`, so a bare `#if X C(); #endif`
+    // after `if(){..}else{..}` falls back to a plain statement-level
+    // preproc_if instead of matching empty and orphaning `#endif`.
     ...preprocIf('_in_accessor', $ => seq(
       repeat($.modifier),
       field('name', choice('get', 'set', 'add', 'remove', 'init', $.identifier)),
       $._function_body,
     )),
+    ...preprocIf('_in_base_list', $ => seq(optional(','), $.type, optional($.argument_list))),
+    ...preprocIf('_in_argument_list', $ => seq(optional(','), $.argument)),
+    // One variant serves every type head sharing the `name` + type
+    // params + base list shape (class/struct/interface/record/enum) —
+    // `#if`-split heads like `#if A public class X #else public class Y
+    // #endif { ... }` keep the shared body as one declaration.
+    ...preprocIf('_in_class_head', $ => seq(
+      repeat($._attribute_list),
+      repeat($.modifier),
+      choice(
+        'class',
+        'interface',
+        'struct',
+        seq('record', optional(choice('class', 'struct'))),
+        'enum',
+      ),
+      field('name', $.identifier),
+      repeat(choice($.type_parameter_list, $.parameter_list, $.base_list)),
+      repeat($.type_parameter_constraints_clause),
+    )),
+
+    // Same split at method-signature position:
+    // `#if A public int F() #else public string F() #endif { ... }`.
+    ...preprocIf('_in_method_head', $ => seq(
+      repeat($._attribute_list),
+      repeat($.modifier),
+      $.type,
+      optional($.explicit_interface_specifier),
+      field('name', $.identifier),
+      optional($.type_parameter_list),
+      $.parameter_list,
+      prec.left(repeat($.type_parameter_constraints_clause)),
+    )),
+
+    // `#line` filenames are arbitrary path strings — Razor `.cshtml.cs`
+    // files carry Windows paths like "..\..\Pages\X.cshtml" whose `\.`
+    // is not a valid escape_sequence, so string_literal can't serve.
+    _preproc_line_path: $ => token(seq('"', repeat(choice(/[^"\\\n]/, /\\./)), '"')),
 
     preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
     preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,
@@ -2165,13 +2287,13 @@ export default grammar({
       choice(
         'default',
         'hidden',
-        seq($.integer_literal, optional($.string_literal)),
+        seq($.integer_literal, optional($._preproc_line_path)),
         seq(
           '(', $.integer_literal, ',', $.integer_literal, ')',
           '-',
           '(', $.integer_literal, ',', $.integer_literal, ')',
           optional($.integer_literal),
-          $.string_literal,
+          $._preproc_line_path,
         ),
       ),
       /\n/,
@@ -2260,6 +2382,10 @@ function preprocessor(command) {
  * @returns {RuleBuilders<string, string>}
  */
 function preprocIf(suffix, content, precedence = 0, rep = true) {
+  return preprocIfImpl(suffix, content, precedence, rep ? 'repeat' : 'optional');
+}
+
+function preprocIfImpl(suffix, content, precedence, mode) {
   /**
    *
    * @param {GrammarSymbols<string>} $
@@ -2273,26 +2399,30 @@ function preprocIf(suffix, content, precedence = 0, rep = true) {
     );
   }
 
+  const items = $ => mode === 'repeat1' ? repeat1(content($))
+    : mode === 'repeat' ? repeat(content($))
+    : optional(content($));
+
   return {
     ['preproc_if' + suffix]: $ => prec(precedence, seq(
       preprocessor('if'),
       field('condition', $._preproc_expression),
       /\n/,
-      rep ? repeat(content($)) : optional(content($)),
+      items($),
       field('alternative', optional(alternativeBlock($))),
       preprocessor('endif'),
     )),
 
     ['preproc_else' + suffix]: $ => prec(precedence, seq(
       preprocessor('else'),
-      rep ? repeat(content($)) : optional(content($)),
+      items($),
     )),
 
     ['preproc_elif' + suffix]: $ => prec(precedence, seq(
       preprocessor('elif'),
       field('condition', $._preproc_expression),
       /\n/,
-      rep ? repeat(content($)) : optional(content($)),
+      items($),
       field('alternative', optional(alternativeBlock($))),
     )),
   };
