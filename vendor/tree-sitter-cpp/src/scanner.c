@@ -5,7 +5,10 @@
 #include <string.h>
 #include <wctype.h>
 
-enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT };
+enum TokenType { RAW_STRING_DELIMITER, RAW_STRING_CONTENT, MACRO_BRACED_OPEN };
+
+/// Bounds the look-ahead for the macro-brace probe.
+#define MACRO_BRACE_SCAN_LIMIT 65536
 
 /// The spec limits delimiters to 16 chars
 #define MAX_DELIMITER_LENGTH 16
@@ -94,6 +97,86 @@ static bool scan_raw_string_content(Scanner *scanner, TSLexer *lexer) {
     }
 }
 
+/// `{` that opens a macro block (`ON_SCOPE_EXIT { f(); };`): it is
+/// only a macro block when a `;` appears before the matching `}`.
+/// Braced initializer lists (`Type{arg}`, `Type{arg}.m()`) never
+/// contain `;`, so they always fall back to the regular `{` token.
+/// The token covers just the `{` itself; the look-ahead chars are
+/// re-lexed afterwards via mark_end.
+static bool scan_macro_braced_open(TSLexer *lexer) {
+    // External scans start at the raw position — skip whitespace up
+    // to the `{` itself (`NAME { ... }` has a space).
+    while (lexer->lookahead == ' ' || lexer->lookahead == '\t' ||
+           lexer->lookahead == '\n' || lexer->lookahead == '\r') {
+        lexer->advance(lexer, true);
+    }
+    if (lexer->lookahead != '{') {
+        return false;
+    }
+    advance(lexer);
+    lexer->mark_end(lexer);
+
+    int depth = 1;
+    size_t scanned = 0;
+    for (;;) {
+        if (lexer->eof(lexer) || scanned++ > MACRO_BRACE_SCAN_LIMIT) {
+            return false;
+        }
+        int32_t c = lexer->lookahead;
+        if (c == '"' || c == '\'') {
+            // Skip string/char literals so their contents can't count
+            // toward the `;` or `}` search.
+            int32_t quote = c;
+            advance(lexer);
+            while (!lexer->eof(lexer)) {
+                if (lexer->lookahead == '\\') {
+                    advance(lexer);
+                    if (!lexer->eof(lexer)) advance(lexer);
+                    continue;
+                }
+                if (lexer->lookahead == quote) {
+                    advance(lexer);
+                    break;
+                }
+                if (lexer->lookahead == '\n' && quote == '\'') break;
+                advance(lexer);
+            }
+            continue;
+        }
+        if (c == '/') {
+            // Skip // and /* */ comments.
+            advance(lexer);
+            if (lexer->lookahead == '/') {
+                while (!lexer->eof(lexer) && lexer->lookahead != '\n') advance(lexer);
+                continue;
+            }
+            if (lexer->lookahead == '*') {
+                advance(lexer);
+                while (!lexer->eof(lexer)) {
+                    if (lexer->lookahead == '*') {
+                        advance(lexer);
+                        if (lexer->lookahead == '/') {
+                            advance(lexer);
+                            break;
+                        }
+                        continue;
+                    }
+                    advance(lexer);
+                }
+                continue;
+            }
+            continue;
+        }
+        if (c == '{') depth++;
+        if (c == '}') {
+            depth--;
+            if (depth == 0) return false;
+        }
+        if (c == ';') return true;
+        advance(lexer);
+    }
+}
+
 void *tree_sitter_cpp_external_scanner_create() {
     Scanner *scanner = (Scanner *)ts_calloc(1, sizeof(Scanner));
     memset(scanner, 0, sizeof(Scanner));
@@ -106,6 +189,11 @@ bool tree_sitter_cpp_external_scanner_scan(void *payload, TSLexer *lexer, const 
     if (valid_symbols[RAW_STRING_DELIMITER] && valid_symbols[RAW_STRING_CONTENT]) {
         // we're in error recovery
         return false;
+    }
+
+    if (valid_symbols[MACRO_BRACED_OPEN]) {
+        lexer->result_symbol = MACRO_BRACED_OPEN;
+        return scan_macro_braced_open(lexer);
     }
 
     // No skipping leading whitespace: raw-string grammar is space-sensitive.

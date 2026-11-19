@@ -1,0 +1,51 @@
+========================================
+GNU extended asm with fused :: sections
+========================================
+
+void f(void) {
+  __asm__ volatile("b code" ::: "memory");
+  int out, in = 1;
+  __asm__("mov %0, %1" : "=r"(out) : "r"(in) : "r0");
+}
+
+---
+
+(translation_unit
+    (function_definition
+        (primitive_type)
+        (function_declarator
+            (identifier)
+            (parameter_list
+                (parameter_declaration
+                    (primitive_type))))
+        (compound_statement
+            (expression_statement
+                (gnu_asm_expression
+                    (gnu_asm_qualifier)
+                    (string_literal
+                        (string_content))
+                    (string_literal
+                        (string_content))))
+            (declaration
+                (primitive_type)
+                (identifier)
+                (init_declarator
+                    (identifier)
+                    (number_literal)))
+            (expression_statement
+                (gnu_asm_expression
+                    (string_literal
+                        (string_content))
+                    (gnu_asm_output_operand_list
+                        (gnu_asm_output_operand
+                            (string_literal
+                                (string_content))
+                            (identifier)))
+                    (gnu_asm_input_operand_list
+                        (gnu_asm_input_operand
+                            (string_literal
+                                (string_content))
+                            (identifier)))
+                    (gnu_asm_clobber_list
+                        (string_literal
+                            (string_content))))))))

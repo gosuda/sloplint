@@ -1,0 +1,71 @@
+========================================
+Statement-block macros and braced temporaries
+========================================
+
+void f(void) {
+  ON_SCOPE_EXIT { cleanup(); };
+  OStream s{&buf};
+  Foo x{a, b};
+  erase_fixture{}.run();
+  if (cond) ON_SCOPE_EXIT { g(); };
+  for (;;) LOG { flush(); };
+}
+
+---
+
+(translation_unit
+  (function_definition
+    (primitive_type)
+    (function_declarator
+      (identifier)
+      (parameter_list
+        (parameter_declaration
+          (primitive_type))))
+    (compound_statement
+      (macro_braced_statement
+        (identifier)
+        (compound_statement
+          (expression_statement
+            (call_expression
+              (identifier)
+              (argument_list)))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (pointer_expression
+              (identifier)))))
+      (declaration
+        (type_identifier)
+        (init_declarator
+          (identifier)
+          (initializer_list
+            (identifier)
+            (identifier))))
+      (expression_statement
+        (call_expression
+          (field_expression
+            (compound_literal_expression
+              (type_identifier)
+              (initializer_list))
+            (field_identifier))
+          (argument_list)))
+      (if_statement
+        (condition_clause
+          (identifier))
+        (macro_braced_statement
+          (identifier)
+          (compound_statement
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list))))))
+      (for_statement
+        (macro_braced_statement
+          (identifier)
+          (compound_statement
+            (expression_statement
+              (call_expression
+                (identifier)
+                (argument_list)))))))))

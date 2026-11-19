@@ -340,3 +340,55 @@ fn call_operand_beside_signed_number_parses() {
     ));
     assert!(analysis.parse_error.is_none());
 }
+
+// GNU extended asm with fused `::` sections (`::: "memory"`).
+#[test]
+fn gnu_asm_fused_sections_parse() {
+    run_clean(concat!(
+        "void f(void) {\n",
+        "  __asm__ volatile(\"b code\" ::: \"memory\");\n",
+        "  int out, in = 1;\n",
+        "  __asm__(\"mov %0, %1\" : \"=r\"(out) : \"r\"(in) : \"r0\");\n",
+        "}\n",
+    ));
+}
+
+// `IDENT {` opens a braced temporary (`T{}.m()`, `T{arg} << x`), never a
+// macro — the braced-init read must win at statement start.
+#[test]
+fn braced_temporary_statements_parse() {
+    run_clean(concat!(
+        "int main() {\n",
+        "  erase_fixture{}.test_case_erase_one();\n",
+        "  OStream{&buf} << \"text\";\n",
+        "  alloc_checker{0}, call_fn(0);\n",
+        "}\n",
+    ));
+}
+
+// `NAME { stmts };` is a statement-block macro (`ON_SCOPE_EXIT { f(); };`),
+// not a braced temporary — the `_macro_braced_open` external token claims
+// `{` only when the region contains a `;`.
+#[test]
+fn macro_braced_statements_parse() {
+    for source in [
+        "void f(void) {\n  ON_SCOPE_EXIT { cleanup(); };\n}\n",
+        "void f(void) {\n  if (cond) ON_SCOPE_EXIT { g(); };\n}\n",
+        "ON_SCOPE_EXIT{g();};\n",
+        "void f(void) {\n  lower_name { g(); };\n}\n",
+    ] {
+        let language: tree_sitter::Language = tree_sitter_cpp::LANGUAGE.into();
+        let mut parser = tree_sitter::Parser::new();
+        parser.set_language(&language).expect("cpp language loads");
+        let tree = parser.parse(source, None).expect("parser returns a tree");
+        let sexp = tree.root_node().to_sexp();
+        assert!(
+            !tree.root_node().has_error() && !sexp.contains("MISSING"),
+            "must parse clean, sexp: {sexp}"
+        );
+        assert!(
+            sexp.contains("macro_braced_statement"),
+            "must claim macro_braced_statement, sexp: {sexp}"
+        );
+    }
+}

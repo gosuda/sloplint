@@ -12663,6 +12663,10 @@
         {
           "type": "SYMBOL",
           "name": "qt_foreach_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_braced_statement"
         }
       ]
     },
@@ -12754,6 +12758,10 @@
         {
           "type": "SYMBOL",
           "name": "throw_statement"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "macro_braced_statement"
         }
       ]
     },
@@ -17384,73 +17392,82 @@
             "type": "CHOICE",
             "members": [
               {
-                "type": "SEQ",
+                "type": "CHOICE",
                 "members": [
                   {
-                    "type": "FIELD",
-                    "name": "output_operands",
-                    "content": {
-                      "type": "SYMBOL",
-                      "name": "gnu_asm_output_operand_list"
-                    }
-                  },
-                  {
-                    "type": "CHOICE",
+                    "type": "SEQ",
                     "members": [
                       {
-                        "type": "SEQ",
+                        "type": "FIELD",
+                        "name": "output_operands",
+                        "content": {
+                          "type": "SYMBOL",
+                          "name": "gnu_asm_output_operand_list"
+                        }
+                      },
+                      {
+                        "type": "CHOICE",
                         "members": [
                           {
-                            "type": "FIELD",
-                            "name": "input_operands",
-                            "content": {
-                              "type": "SYMBOL",
-                              "name": "gnu_asm_input_operand_list"
-                            }
-                          },
-                          {
-                            "type": "CHOICE",
+                            "type": "SEQ",
                             "members": [
                               {
-                                "type": "SEQ",
+                                "type": "FIELD",
+                                "name": "input_operands",
+                                "content": {
+                                  "type": "SYMBOL",
+                                  "name": "gnu_asm_input_operand_list"
+                                }
+                              },
+                              {
+                                "type": "CHOICE",
                                 "members": [
                                   {
-                                    "type": "FIELD",
-                                    "name": "clobbers",
-                                    "content": {
-                                      "type": "SYMBOL",
-                                      "name": "gnu_asm_clobber_list"
-                                    }
-                                  },
-                                  {
-                                    "type": "CHOICE",
+                                    "type": "SEQ",
                                     "members": [
                                       {
                                         "type": "FIELD",
-                                        "name": "goto_labels",
+                                        "name": "clobbers",
                                         "content": {
                                           "type": "SYMBOL",
-                                          "name": "gnu_asm_goto_list"
+                                          "name": "gnu_asm_clobber_list"
                                         }
                                       },
                                       {
-                                        "type": "BLANK"
+                                        "type": "CHOICE",
+                                        "members": [
+                                          {
+                                            "type": "FIELD",
+                                            "name": "goto_labels",
+                                            "content": {
+                                              "type": "SYMBOL",
+                                              "name": "gnu_asm_goto_list"
+                                            }
+                                          },
+                                          {
+                                            "type": "BLANK"
+                                          }
+                                        ]
                                       }
                                     ]
+                                  },
+                                  {
+                                    "type": "BLANK"
                                   }
                                 ]
-                              },
-                              {
-                                "type": "BLANK"
                               }
                             ]
+                          },
+                          {
+                            "type": "BLANK"
                           }
                         ]
-                      },
-                      {
-                        "type": "BLANK"
                       }
                     ]
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "_gnu_asm_fused_sections"
                   }
                 ]
               },
@@ -23395,6 +23412,200 @@
         ]
       }
     },
+    "_gnu_asm_fused_sections": {
+      "type": "PREC_DYNAMIC",
+      "value": -1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": ":"
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "FIELD",
+                          "name": "operand",
+                          "content": {
+                            "type": "SYMBOL",
+                            "name": "_gnu_asm_operand"
+                          }
+                        },
+                        {
+                          "type": "REPEAT",
+                          "content": {
+                            "type": "SEQ",
+                            "members": [
+                              {
+                                "type": "STRING",
+                                "value": ","
+                              },
+                              {
+                                "type": "FIELD",
+                                "name": "operand",
+                                "content": {
+                                  "type": "SYMBOL",
+                                  "name": "_gnu_asm_operand"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "type": "STRING",
+            "value": "::"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "FIELD",
+                    "name": "operand",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_gnu_asm_operand"
+                    }
+                  },
+                  {
+                    "type": "REPEAT",
+                    "content": {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "STRING",
+                          "value": ","
+                        },
+                        {
+                          "type": "FIELD",
+                          "name": "operand",
+                          "content": {
+                            "type": "SYMBOL",
+                            "name": "_gnu_asm_operand"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": ":"
+                    },
+                    {
+                      "type": "STRING",
+                      "value": "::"
+                    }
+                  ]
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "FIELD",
+                          "name": "operand",
+                          "content": {
+                            "type": "SYMBOL",
+                            "name": "_gnu_asm_operand"
+                          }
+                        },
+                        {
+                          "type": "REPEAT",
+                          "content": {
+                            "type": "SEQ",
+                            "members": [
+                              {
+                                "type": "STRING",
+                                "value": ","
+                              },
+                              {
+                                "type": "FIELD",
+                                "name": "operand",
+                                "content": {
+                                  "type": "SYMBOL",
+                                  "name": "_gnu_asm_operand"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "_gnu_asm_operand": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "PREC_DYNAMIC",
+          "value": 1,
+          "content": {
+            "type": "SYMBOL",
+            "name": "gnu_asm_output_operand"
+          }
+        },
+        {
+          "type": "SYMBOL",
+          "name": "gnu_asm_input_operand"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_string"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
+        }
+      ]
+    },
     "reference_declarator": {
       "type": "PREC_DYNAMIC",
       "value": 1,
@@ -25004,6 +25215,83 @@
         {
           "type": "STRING",
           "value": ";"
+        }
+      ]
+    },
+    "macro_braced_statement": {
+      "type": "PREC_RIGHT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "FIELD",
+            "name": "name",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_type_identifier"
+                  },
+                  "named": true,
+                  "value": "identifier"
+                }
+              ]
+            }
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_macro_braced_body"
+            },
+            "named": true,
+            "value": "compound_statement"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "STRING",
+                "value": ";"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "_macro_braced_body": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_macro_braced_open"
+          },
+          "named": false,
+          "value": "{"
+        },
+        {
+          "type": "REPEAT1",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_block_item"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": "}"
         }
       ]
     },
@@ -29393,6 +29681,20 @@
       "_top_level_statement"
     ],
     [
+      "expression",
+      "_class_name",
+      "macro_braced_statement"
+    ],
+    [
+      "macro_braced_statement"
+    ],
+    [
+      "_macro_declaration_top",
+      "expression",
+      "_class_name",
+      "macro_braced_statement"
+    ],
+    [
       "_block_item",
       "statement"
     ],
@@ -30041,6 +30343,35 @@
       "_macro_declaration_top"
     ],
     [
+      "gnu_asm_output_operand_list",
+      "_gnu_asm_fused_sections"
+    ],
+    [
+      "_string",
+      "gnu_asm_output_operand",
+      "gnu_asm_input_operand",
+      "concatenated_string"
+    ],
+    [
+      "gnu_asm_output_operand_list",
+      "_gnu_asm_operand"
+    ],
+    [
+      "gnu_asm_output_operand",
+      "gnu_asm_input_operand",
+      "_lambda_capture_identifier"
+    ],
+    [
+      "delete_expression"
+    ],
+    [
+      "new_expression"
+    ],
+    [
+      "gnu_asm_output_operand",
+      "gnu_asm_input_operand"
+    ],
+    [
       "macro_qualifier",
       "macro_declaration",
       "_declarator",
@@ -30331,6 +30662,10 @@
     {
       "type": "SYMBOL",
       "name": "raw_string_content"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_macro_braced_open"
     }
   ],
   "inline": [

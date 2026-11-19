@@ -390,6 +390,10 @@
         "named": true
       },
       {
+        "type": "macro_braced_statement",
+        "named": true
+      },
+      {
         "type": "macro_declaration",
         "named": true
       },
@@ -1480,6 +1484,10 @@
         },
         {
           "type": "labeled_statement",
+          "named": true
+        },
+        {
+          "type": "macro_braced_statement",
           "named": true
         },
         {
@@ -3967,6 +3975,36 @@
           }
         ]
       },
+      "operand": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "concatenated_string",
+            "named": true
+          },
+          {
+            "type": "gnu_asm_input_operand",
+            "named": true
+          },
+          {
+            "type": "gnu_asm_output_operand",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "raw_string_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          }
+        ]
+      },
       "output_operands": {
         "multiple": false,
         "required": false,
@@ -4329,6 +4367,10 @@
         },
         {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_braced_statement",
           "named": true
         },
         {
@@ -4923,6 +4965,32 @@
     }
   },
   {
+    "type": "macro_braced_statement",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "compound_statement",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "macro_declaration",
     "named": true,
     "fields": {},
@@ -5035,6 +5103,10 @@
         },
         {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_braced_statement",
           "named": true
         },
         {
@@ -9384,6 +9456,10 @@
         },
         {
           "type": "linkage_specification",
+          "named": true
+        },
+        {
+          "type": "macro_braced_statement",
           "named": true
         },
         {

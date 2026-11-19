@@ -55,6 +55,9 @@ module.exports = grammar(C, {
   externals: $ => [
     $.raw_string_delimiter,
     $.raw_string_content,
+    // A `{` that only lexes when a `;` appears inside the brace region,
+    // so `Type{arg}` braced temporaries can never open a macro block.
+    $._macro_braced_open,
   ],
 
   conflicts: $ => [
@@ -137,6 +140,9 @@ module.exports = grammar(C, {
     [$.attributed_statement],
     [$._declaration_modifiers, $.attributed_statement],
     [$._top_level_item, $._top_level_statement],
+    [$.expression, $._class_name, $.macro_braced_statement],
+    [$.macro_braced_statement],
+    [$._macro_declaration_top, $.expression, $._class_name, $.macro_braced_statement],
     [$._block_item, $.statement],
     [$.type_qualifier, $.extension_expression],
 
@@ -291,6 +297,24 @@ module.exports = grammar(C, {
     [$._macro_declaration_top, $.type_specifier, $.expression],
     [$._macro_declaration_top, $._top_level_expression_statement],
     [$.macro_qualifier, $._macro_declaration_top],
+    // `asm(s : :: : x)` — the second `:` could extend the classic
+    // operand lists or the fused `::` sections; fused wins only when a
+    // real `::` token follows (it is the dynamic(-1) fallback).
+    [$.gnu_asm_output_operand_list, $._gnu_asm_fused_sections],
+    // `IDENT {` — braced statement macro vs class name / brace
+    // initializer; the dynamic(-1) macro read only survives when the
+    // braces hold statements.
+    // `:: "lit" (` — fused operand: string+constraint vs
+    // concatenated-string call operand.
+    [$._string, $.gnu_asm_output_operand, $.gnu_asm_input_operand, $.concatenated_string],
+    [$.gnu_asm_output_operand_list, $._gnu_asm_operand],
+    [$.gnu_asm_output_operand, $.gnu_asm_input_operand, $._lambda_capture_identifier],
+    // `::`-fused sections vs global-scope `::expr` inside operands.
+    [$.delete_expression],
+    [$.new_expression],
+    // In fused `::` sections a `"lit"(expr)` operand can't statically
+    // tell input vs output — output wins deterministically.
+    [$.gnu_asm_output_operand, $.gnu_asm_input_operand],
     [$.macro_qualifier, $.macro_declaration, $._declarator, $.type_specifier],
     [$.macro_argument_list, $.template_type],
     [$.macro_argument_list, $.sized_type_specifier],
@@ -1325,6 +1349,53 @@ module.exports = grammar(C, {
       optional(';'),
     )),
 
+    // GCC `asm(...)` with `::`-fused operand sections. In C++ `::` is
+    // the scope-resolution token, so `"" ::: "memory"` lexes `::` + `:`:
+    // the classic nested lists (which need a `:` per section) never see
+    // three colons and fail — `asm(code : out : in : clob)` with an
+    // empty section is the atmosphere/ACO idiom. The fused path keeps
+    // the real operand node kinds in generic sections: a `::` closes an
+    // empty section AND opens the next, so which list an operand
+    // belongs to is not statically recoverable. Only reachable when a
+    // `::` token is present, so the classic path stays unambiguous.
+    gnu_asm_expression: $ => prec(PREC.CALL, seq(
+      choice('asm', '__asm__', '__asm', '__ASM'),
+      repeat($.gnu_asm_qualifier),
+      '(',
+      field('assembly_code', $._string),
+      optional(choice(
+        seq(
+          field('output_operands', $.gnu_asm_output_operand_list),
+          optional(seq(
+            field('input_operands', $.gnu_asm_input_operand_list),
+            optional(seq(
+              field('clobbers', $.gnu_asm_clobber_list),
+              optional(field('goto_labels', $.gnu_asm_goto_list)),
+            )),
+          )),
+        ),
+        $._gnu_asm_fused_sections,
+      )),
+      ')',
+    )),
+
+    _gnu_asm_fused_sections: $ => prec.dynamic(-1, seq(
+      repeat(seq(':', commaSep(field('operand', $._gnu_asm_operand)))),
+      '::',
+      commaSep(field('operand', $._gnu_asm_operand)),
+      repeat(seq(
+        choice(':', '::'),
+        commaSep(field('operand', $._gnu_asm_operand)),
+      )),
+    )),
+
+    _gnu_asm_operand: $ => choice(
+      prec.dynamic(1, $.gnu_asm_output_operand),
+      $.gnu_asm_input_operand,
+      $._string,
+      $.identifier,
+    ),
+
     macro_attribute: ($, original) => choice(
       original,
       // Qt declaration modifiers (moc-expanded): seen in class members and
@@ -1715,6 +1786,27 @@ module.exports = grammar(C, {
       ';',
     ),
 
+    // `NAME { stmts };` — statement macros whose expansion carries the
+    // braced block (`ON_SCOPE_EXIT { fs::CloseFile(f); };`,
+    // atmosphere/folly). Dynamic -1 keeps the fork below the
+    // braced-temporary read: `erase_fixture{}.m()`, `OStream{&buf} << x`
+    // and `alloc_checker{0}, f(x)` all stay compound literals because
+    // their braces hold no `;`-terminated block items, while real macro
+    // bodies (`{ f(); }`) can only parse here. The block must be
+    // non-empty.
+    macro_braced_statement: $ => prec.right(seq(
+      // Macro names are conventionally ALL_CAPS, which lex as
+      // `type_identifier` — both must open the block.
+      field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
+      alias($._macro_braced_body, $.compound_statement),
+      optional(';'),
+    )),
+
+    // The `{` is an external token that only lexes when the brace
+    // region contains a `;` — braced temporaries (`Type{arg}`) never
+    // do, so they always take the regular `{`.
+    _macro_braced_body: $ => seq(alias($._macro_braced_open, '{'), repeat1($._block_item), '}'),
+
     // Statements
 
     _top_level_statement: ($, original) => choice(
@@ -1724,6 +1816,7 @@ module.exports = grammar(C, {
       $.for_range_loop,
       $.try_statement,
       $.throw_statement,
+      $.macro_braced_statement,
     ),
 
     _non_case_statement: ($, original) => choice(
@@ -1736,6 +1829,7 @@ module.exports = grammar(C, {
       $.emit_statement,
       $.qt_statement_macro,
       $.qt_foreach_statement,
+      $.macro_braced_statement,
     ),
 
     switch_statement: $ => seq(

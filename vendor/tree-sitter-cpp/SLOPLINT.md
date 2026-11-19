@@ -11,10 +11,11 @@ Date: 2026-10-20.
   `bindings/rust/`, `queries/` and `Cargo.toml` are the published files.
   `LICENSE` is the upstream MIT license (the published crate files carry it
   only through `Cargo.toml`). `grammar.js` is new: the published crate omits
-  it, so it is taken from the upstream tag. `src/scanner.c` is unchanged.
-- `sloplint-grammar.patch` is the diff of `grammar.js` against the upstream
-  tag. It applies with `git apply` in a clone of tag v0.23.4. There are no
-  scanner changes.
+  it, so it is taken from the upstream tag.
+- `sloplint-grammar.patch` is the diff of `grammar.js` and `src/scanner.c`
+  against the upstream tag. It applies with `git apply` in a clone of tag
+  v0.23.4. The scanner change adds the `_macro_braced_open` external token
+  (see `macro_braced_statement` below).
 
 ## Why
 
@@ -678,3 +679,22 @@ gzip -9 -c src/parser.c > src/parser.c.gz
   `sloplint-c-base.patch` copy carries it too for consistency. The
   `const sign = /[-\+]/` helper stays for the exponent tails. Signed
   operands parse through `unary_expression`.
+- **GNU extended asm with fused `::` sections** — `asm(code ::: "memory")`
+  fuses the operand-section separators into one `::` token, which the base
+  grammar reads as three colons and fails on. `gnu_asm_expression` now also
+  accepts `_gnu_asm_fused_sections`: `::` plus the four-section operand
+  lists. `asm(s : :: : x)` still parses as classic sections (the fused arm
+  requires `::` immediately, so the second `:` can't reach it). Repro:
+  atmosphere's `kern_init_loader_board_default_setup.arch.arm64.cpp` and
+  friends — verified with `g++ -fsyntax-only`.
+- **`macro_braced_statement`** — `NAME { stmts };` statement-block macros
+  (`ON_SCOPE_EXIT { VerifyAndClearTpidrEl1(...); };` in atmosphere, Qt
+  `Q_FOREACH`-style bodies, `LOG { ... };`). The ambiguity against braced
+  temporaries (`OStream{&buf}`, `Foo{a,b}`, `erase_fixture{}.m()`) is
+  resolved by the `_macro_braced_open` external token in `src/scanner.c`:
+  it claims `{` only when a `;` occurs inside the brace region — braced
+  initializer lists never contain `;` — so `Type{args}` can never open a
+  macro block. The name position accepts `identifier` and C++'s
+  `type_identifier` (all-caps macro names like `ON_SCOPE_EXIT` lex as
+  type tokens). Usable at top level and as an unbraced `if`/`for`
+  consequence. `;` after the closing `}` is optional.
