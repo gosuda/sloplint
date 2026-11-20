@@ -157,7 +157,6 @@ Invoke-Expression ([System.Text.Encoding]::Unicode.GetString(([convert]::FromBas
                                                                                                                 (string_literal
                                                                                                                   (verbatim_string_characters))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
-
 ===
 Obfuscated command
 ===

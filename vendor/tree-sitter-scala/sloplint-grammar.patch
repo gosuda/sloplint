@@ -1,6 +1,6 @@
---- /tmp/scala-ga/grammar.js	2026-11-19 14:51:42.212342742 +0000
-+++ grammar.js	2026-11-19 22:49:18.945865741 +0000
-@@ -437,6 +437,12 @@
+--- a/grammar.js
++++ b/grammar.js
+@@ -437,8 +437,13 @@
    ],
  
    conflicts: $ => [
@@ -11,20 +11,22 @@
 +    [$.val_declaration, $._comma_definition_pattern],
 +    [$._comma_definition_pattern, $.identifiers],
      [$._if_rest],
+-    [$.repeat_pattern, $._simple_expression],
      [$.tuple_pattern, $._simple_expression],
      [$.tuple_pattern, $._simple_expression, $.binding],
-@@ -458,10 +464,6 @@
+     // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
+@@ -459,6 +464,10 @@
      // 'extension' • '{' is either an extension definition with a braced body
      // or the soft identifier `extension` (a Scala 2 id) called with a block.
      [$.extension_definition, $._soft_identifier],
--    // 'enum' is a soft keyword too: an `enum`-definition and the identifier
--    // `enum` (Scala 2 code uses it as a parameter or named argument) diverge
--    // only after the token's continuation is known.
--    [$.enum_definition, $._soft_identifier],
++    // 'enum' is a soft keyword too: an `enum`-definition and the identifier
++    // `enum` (Scala 2 code uses it as a parameter or named argument) diverge
++    // only after the token's continuation is known.
++    [$.enum_definition, $._soft_identifier],
      [$.binding, $._simple_expression],
      [$.binding, $._type_identifier],
      // A parenthesized type before `=>` can extend into a function type or stop
-@@ -483,6 +485,8 @@
+@@ -480,6 +489,8 @@
      // Same separator-or-marker fork as above.
      [$.function_definition],
      [$.val_definition],
@@ -33,52 +35,61 @@
      [$._dot_match_expression],
      [$.var_definition],
      [$.package_clause],
-@@ -515,7 +519,6 @@
-     // 'enum'  _class_constructor  '{'  'case'  operator_identifier  _full_enum_def_repeat1  •  _automatic_semicolon  …
-     [$._full_enum_def],
-     // _start_val  identifier  ','  identifier  •  ':'  …
--    [$.identifiers, $.val_declaration],
-     // 'enum'  operator_identifier  _automatic_semicolon  '('  ')'  •  ':'  …
-     [$.class_parameters],
-     // 'for'  operator_identifier  ':'  _annotated_type  •  ':'  …
-@@ -665,18 +668,15 @@
+@@ -493,6 +504,7 @@
+     // we treat `operator_identifier` as `simple_expression`
+     [$._simple_expression, $.lambda_expression],
+     [$._simple_expression, $._single_lambda_param],
++    [$.block, $.capture_set],
+     // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
+     // identifier `export` beginning an expression statement. Each reading
+     // dies on the next token ('.' vs a name), so forking settles it. The
+@@ -532,8 +544,6 @@
+     [$._constructor_annotation],
+     [$._constructor_annotation_arguments, $.arguments],
+     [$._constructor_annotation, $.applied_constructor_type],
+-    // type_parameters  '=>'  '{'  '}'  •  '['  …
+-    [$.block, $.capture_set],
+     // '{'  identifier  •  ':' starts the braced typed lambda, the block
+     // lambda param, and a statement alike.
+     [$._simple_expression, $._braced_typed_lambda],
+@@ -663,15 +673,18 @@
        ),
  
      enum_definition: $ =>
--      prec(
--        1,
--        seq(
--          repeat($.annotation),
--          optional($.modifiers),
--          "enum",
--          $._class_constructor,
--          field("extend", optional($.extends_clause)),
--          field("derive", optional(choice($.derives_clause, $.uses_clause))),
--          field("body", $.enum_body),
--          optional($._end_marker_named_tail),
--        ),
-+      seq(
-+        repeat($.annotation),
-+        optional($.modifiers),
-+        "enum",
-+        $._class_constructor,
-+        field("extend", optional($.extends_clause)),
-+        field("derive", optional(choice($.derives_clause, $.uses_clause))),
-+        field("body", $.enum_body),
-+        optional($._end_marker_named_tail),
+-      seq(
+-        repeat($.annotation),
+-        optional($.modifiers),
+-        "enum",
+-        $._class_constructor,
+-        field("extend", optional($.extends_clause)),
+-        field("derive", optional(choice($.derives_clause, $.uses_clause))),
+-        field("body", $.enum_body),
+-        optional($._end_marker_named_tail),
++      prec(
++        1,
++        seq(
++          repeat($.annotation),
++          optional($.modifiers),
++          "enum",
++          $._class_constructor,
++          field("extend", optional($.extends_clause)),
++          field("derive", optional(choice($.derives_clause, $.uses_clause))),
++          field("body", $.enum_body),
++          optional($._end_marker_named_tail),
++        ),
        ),
  
      _enum_block: $ =>
-@@ -806,7 +806,7 @@
+@@ -801,7 +814,7 @@
      // Scala 3 keywords that are valid identifiers in Scala 2 sources and thus
      // may appear as package names in import/export paths (e.g. `import io.circe.export.Exported`).
      _namespace_path_segment: $ =>
--      choice($._identifier, alias("export", $.identifier)),
-+      choice($._identifier, alias(choice("enum", "export"), $.identifier)),
+-      choice($._identifier, alias(choice("enum", "export"), $.identifier)),
++      choice($._identifier, alias("export", $.identifier)),
  
      namespace_wildcard: $ => prec.left(1, choice("*", "_", "given")),
  
-@@ -1137,7 +1137,16 @@
+@@ -1132,7 +1145,16 @@
      val_definition: $ =>
        seq(
          $._start_val,
@@ -96,7 +107,7 @@
          optional(seq(":", field("type", $._type))),
          "=",
          field("value", $._indentable_expression),
-@@ -1165,7 +1174,16 @@
+@@ -1160,7 +1182,16 @@
      var_definition: $ =>
        seq(
          $._start_var,
@@ -114,7 +125,7 @@
          optional(seq(":", field("type", $._type))),
          "=",
          field("value", $._indentable_expression),
-@@ -1983,6 +2001,27 @@
+@@ -1978,6 +2009,27 @@
      // SLS 4.1: the pattern of a val/var definition is a Pattern2, so no
      // top-level alternatives or ascription. `val a: A | B` then reads `|`
      // as a union type instead of an alternative pattern.
@@ -142,12 +153,128 @@
      _definition_pattern: $ =>
        choice(
          $._identifier,
-@@ -2839,7 +2878,7 @@
+@@ -2019,7 +2071,10 @@
+         PREC.infix,
+         seq(
+           field("left", $._definition_pattern),
+-          field("operator", wordOrOpName($)),
++          field(
++            "operator",
++            choice(wordOrOpName($), alias($._asterisk, $.operator_identifier)),
++          ),
+           field("right", $._definition_pattern),
+         ),
+       ),
+@@ -2283,19 +2338,37 @@
+     _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
+ 
+     _if_condition_then: $ =>
+-      // A marker slot of a construct inside the condition may emit a
+-      // semicolon before the `then`. The weight beats the paren form, so
+-      // `if (a)` + newline + `then x` keeps `then` as the keyword.
+-      prec.dynamic(
+-        5,
+-        seq(
+-          $._indentable_expression,
+-          optional($._automatic_semicolon),
+-          $._control_tail_gate,
+-          "then",
++      choice(
++        // A marker slot of a construct inside the condition may emit a
++        // semicolon before the `then`. The weight beats the paren form, so
++        // `if (a)` + newline + `then x` keeps `then` as the keyword.
++        prec.dynamic(
++          5,
++          seq(
++            $._indentable_expression,
++            optional($._automatic_semicolon),
++            $._control_tail_gate,
++            "then",
++          ),
++        ),
++        prec.dynamic(
++          5,
++          seq(
++            $.split_call_condition,
++            optional($._automatic_semicolon),
++            $._control_tail_gate,
++            "then",
++          ),
+         ),
+       ),
+ 
++    split_call_condition: $ =>
++      seq(
++        field("function", $._indentable_expression),
++        $._automatic_semicolon,
++        field("arguments", $.arguments),
++      ),
++
+     /*
+      *   MatchClause       ::=  'match' <<< CaseClauses >>>
+      *
+@@ -2529,6 +2602,17 @@
+             optional($._end_marker_kw_tail),
+           ),
+         ),
++        prec.dynamic(
++          1,
++          seq(
++            "new",
++            $._constructor_application,
++            colonEol($),
++            $._indent,
++            prec.dynamic(2, alias($._end_marker_kw, $.end_marker)),
++            choice($._outdent, $._comma_outdent),
++          ),
++        ),
+         prec(
+           "new",
+           seq("new", $.template_body, optional($._end_marker_kw_tail)),
+@@ -2802,7 +2886,7 @@
      _super_identifier: $ => "super",
  
      // https://docs.scala-lang.org/scala3/reference/soft-modifier.html
--    _soft_identifier: $ => prec("soft_id", choice("extension", "enum")),
-+    _soft_identifier: $ => prec("soft_id", "extension"),
+-    _soft_identifier: $ => prec("soft_id", "extension"),
++    _soft_identifier: $ => prec("soft_id", choice("extension", "enum")),
  
      // alphaid          ::=  upper idrest
      //                       |  varid
+--- a/src/scanner.c
++++ b/src/scanner.c
+@@ -1879,7 +1879,7 @@
+       // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
+       // are ordinary identifiers, so such a line can be the right operand.
+       static const char *const definition_words[] = {
+-          "abstract", "class", "def",    "enum",      "export", "final",
++          "abstract", "class", "def",    "export",    "final",
+           "given",    "import", "implicit", "lazy",   "object", "override",
+           "package",  "private", "protected", "sealed", "trait", "type",
+           "val",      "var",
+@@ -1894,6 +1894,26 @@
+         lexer->result_symbol = postfix_sym;
+         return true;
+       }
++      // `enum` is both a soft identifier and a definition starter, so the
++      // word alone cannot pick a side: `x --?` + `enum Foo {}` is a new
++      // statement (postfix), while `1 +` + `enum` continues the expression.
++      // Peek at the token after `enum`: an identifier start (`enum Foo`)
++      // is an enum definition, `=` is a standalone assignment to a variable
++      // named `enum` (`enum = 1`); every other token — `(enum(2)` calls
++      // the function `enum`, an enum declaration needs a name first), `)`,
++      // `,`, `.`, `:`, an operator or end-of-line — means the word is the
++      // right operand.
++      if (len == 4 && strcmp(word, "enum") == 0) {
++        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
++          advance(lexer);
++        }
++        int32_t c = lexer->lookahead;
++        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
++            c == '$' || c == '=') {
++          lexer->result_symbol = postfix_sym;
++          return true;
++        }
++      }
+     }
+     // Any other operand continues the expression, on this line or over the
+     // break; the internal per-class token carries the operator's precedence.
