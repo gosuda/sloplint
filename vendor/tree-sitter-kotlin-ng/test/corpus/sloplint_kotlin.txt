@@ -1035,15 +1035,18 @@ context(String) fun g() {}
 ================================================================================
 K-BAREACCESSOR: bare get/set pairs before }, generic extension val, paren receiver fun
 ================================================================================
-
 class C {
     var x = 1; get
-    set
+    set;
     var y = 2; get
     val <T> List<T>.head: T get() = this[0]
     var z = 3; set
     fun (String).ext() = length
-}
+    var w = 4; get
+    set }
+var d = 5; get
+get
+println(d)
 
 --------------------------------------------------------------------------------
 
@@ -1093,4 +1096,21 @@ class C {
         name: (identifier)
         (function_value_parameters)
         (function_body
-          (identifier))))))
+          (identifier)))
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)
+        (getter)
+        (setter))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (identifier)
+  (identifier)
+  (call_expression
+    (identifier)
+    (value_arguments
+      (value_argument
+        (identifier)))))

@@ -169,3 +169,10 @@ extension property (`val <T> List<T>.head`), and `(` after `fun` opens a
 parenthesized extension receiver (`fun (String).ext()`). Only the
 accessor words themselves may close at `}`/`;` — `get data }` still
 fails inside `data`.
+
+## Round 10
+
+The member-word follower check rejects a repeat of the same accessor
+word — `var x = 1; get\nget` (or `set\nset`) can never be a second
+accessor of the same kind, so the second word now reads as a script
+statement instead of a duplicate getter the parser would reject.

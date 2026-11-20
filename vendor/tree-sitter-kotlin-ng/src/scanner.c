@@ -351,6 +351,14 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                 if (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
                     return;
                 }
+                // The same accessor word cannot start a second accessor of
+                // the same kind — `var x = 1; get\nget` leaves the property
+                // with two getters and the parser rejects it. Read the
+                // second word as a statement instead.
+                if ((accessor_index == 0 && strcmp(member_word, "get") == 0) ||
+                    (accessor_index == 1 && strcmp(member_word, "set") == 0)) {
+                    return;
+                }
                 skip_ws_comments(lexer);
                 // A member keyword is followed by another keyword or a name
                 // (`get data class`, `get private set`); a literal or
