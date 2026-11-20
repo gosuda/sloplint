@@ -247,3 +247,41 @@ fn invalid_tlaplus_still_reports_a_parse_error() {
         "a truncated operator body must not parse cleanly"
     );
 }
+
+#[test]
+fn pluscal_macro_body_stays_inside_the_function_scope() {
+    let source = "---- MODULE Pm ----\n(*\n--algorithm A\nvariables x = 1;\nmacro m(a) begin\n  x := a;\nend macro;\nbegin\n  m(2);\nend algorithm;\n*)\n====\n";
+    let analysis = run_clean("src/pm.tla", source);
+    let names: Vec<&str> = analysis.facts.functions.iter().map(|f| f.name).collect();
+    assert!(names.contains(&"m"), "macro head must surface: {names:?}");
+}
+
+#[test]
+fn pluscal_call_args_and_parallel_assign_writes() {
+    let source = "---- MODULE Pw ----\n(*\n--algorithm A\nprocedure P(a) variables v = 0, w = 0;\nbegin\n  v := a || w := a;\n  PrintT(\"lit\");\n  return;\nend procedure;\nbegin\n  call P(1);\nend algorithm;\n*)\n====\n";
+    let analysis = run_clean("src/pw.tla", source);
+    let bound: Vec<&str> = analysis.facts.bindings.iter().map(|b| b.name).collect();
+    for want in ["v", "w"] {
+        assert!(
+            bound.contains(&want),
+            "procedure variable {want} declared: {bound:?}"
+        );
+    }
+    for want in ["v", "w"] {
+        assert!(
+            analysis
+                .facts
+                .bindings
+                .iter()
+                .any(|b| b.name == want && b.last_write_line != u32::MAX),
+            "parallel assign writes {want}"
+        );
+    }
+    let print = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "PrintT")
+        .expect("PrintT call recorded");
+    assert_eq!(print.args.len(), 1, "PrintT arg must be kept");
+}
