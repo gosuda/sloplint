@@ -418,7 +418,7 @@ fn loop_index_binds_to_the_loop_scope() {
         "  i := 1;\n",
         "  for i := 0 to 10\n",
         "  {\n",
-        "    i := i + 1;\n",
+        "    var k := i + 1;\n",
         "  }\n",
         "  i := 5;\n",
         "}\n",
@@ -431,7 +431,9 @@ fn loop_index_binds_to_the_loop_scope() {
         .collect();
     assert_eq!(bindings.len(), 2, "expected outer and loop `i` bindings");
     assert_eq!(bindings[0].last_write_line, 9);
-    assert_eq!(bindings[1].last_write_line, 7);
+    // The loop index is read-only in Dafny — its only write is the `for`
+    // initializer itself.
+    assert_eq!(bindings[1].last_write_line, 5);
 }
 
 #[test]

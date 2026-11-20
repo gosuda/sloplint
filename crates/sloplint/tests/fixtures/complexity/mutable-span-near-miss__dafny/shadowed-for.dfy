@@ -33,7 +33,7 @@ method Tally()
   var v29 := 29;
   for i := 0 to 10
   {
-    i := i + 1;
-    i := i + 2;
+    var k1 := i + 1;
+    var k2 := i + 2;
   }
 }
