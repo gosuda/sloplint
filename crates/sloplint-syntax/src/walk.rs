@@ -173,12 +173,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             descending = false;
         }
         if self.collect_facts {
-            let hooks = self.hooks;
-            let barrel = {
-                let cx = self.make_cx();
-                hooks.barrel(root, &cx)
-            };
-            self.facts.barrel = barrel;
+            self.facts.barrel = self.hooks.barrel(root, &self.make_cx());
         }
     }
 
@@ -203,14 +198,8 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             && self.hooks.shadow_decl_kind(node.kind())
         {
             let mut names = Vec::new();
-            {
-                let cx = self.make_cx();
-                self.hooks.shadow_names(node, &cx, &mut names);
-            }
-            let parent = {
-                let cx = self.make_cx();
-                self.hooks.decl_scope_parent(self.depth, node, &cx)
-            };
+            self.hooks.shadow_names(node, &self.make_cx(), &mut names);
+            let parent = self.hooks.decl_scope_parent(self.depth, node, &self.make_cx());
             if let Some(frame) = self.fn_stack.last_mut() {
                 for name in names {
                     frame.shadow.register(name, parent);
