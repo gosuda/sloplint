@@ -4,6 +4,8 @@
 
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=flat" alt="License"></a>
   <a href="https://github.com/gosuda/sloplint/actions/workflows/ci.yml"><img src="https://github.com/gosuda/sloplint/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  
+[![Built with Depot](https://depot.dev/badges/built-with-depot.svg)](https://depot.dev?utm_source=gosuda)
 </div>
 
 ## What is this?
