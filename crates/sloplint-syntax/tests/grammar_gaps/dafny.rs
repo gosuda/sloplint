@@ -587,3 +587,23 @@ fn negated_scrutinee_is_not_a_field() {
         ScrutineeKind::Other
     );
 }
+
+#[test]
+fn negated_base_suffix_is_not_a_field() {
+    // `-p.x` parses as `(-p).x`: a member of the negated value, not a
+    // field of a named scrutinee — catch-all-match must stay silent.
+    use sloplint_core::facts::ScrutineeKind;
+    let analysis = run_clean(concat!(
+        "datatype P = P(x: int)\n",
+        "method M(p: P)\n",
+        "{\n",
+        "  match -p.x\n",
+        "  case _ => print 1;\n",
+        "}\n",
+    ));
+    assert_eq!(analysis.facts.wildcard_arms.len(), 1);
+    assert_eq!(
+        analysis.facts.wildcard_arms[0].scrutinee,
+        ScrutineeKind::Other
+    );
+}
