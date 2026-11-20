@@ -177,3 +177,76 @@ internal class D
           (user_type
             (identifier)))))
     (class_body)))
+
+================================================================================
+K-SUPERNL: superclass call arguments on the next line
+================================================================================
+
+// `class D : Base\n() {}` — the scanner cannot suppress the semi before a
+// delegation's `(` (its valid-symbol mask matches a `(` after a complete
+// statement), so the constructor invocation tolerates the separator.
+
+class D : Base
+() {
+}
+
+class E : Iface1, Base
+(arg) {
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (line_comment)
+  (line_comment)
+  (line_comment)
+  (class_declaration
+    name: (identifier)
+    (delegation_specifiers
+      (delegation_specifier
+        (constructor_invocation
+          (user_type
+            (identifier))
+          (value_arguments))))
+    (class_body))
+  (class_declaration
+    name: (identifier)
+    (delegation_specifiers
+      (delegation_specifier
+        (user_type
+          (identifier)))
+      (delegation_specifier
+        (constructor_invocation
+          (user_type
+            (identifier))
+          (value_arguments
+            (value_argument
+              (identifier))))))
+    (class_body)))
+
+================================================================================
+K-SUSPENDWRAP: suspend on a fully wrapped function type
+================================================================================
+
+// `suspend ((A) -> B)` — ktor's JWT verifier returns this shape. `suspend`
+// joins the paren-type modifiers; `suspend (Int).() -> Unit` still binds it
+// to the enclosing function type.
+
+val v: suspend ((A) -> B)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (line_comment)
+  (line_comment)
+  (line_comment)
+  (property_declaration
+    (variable_declaration
+      (identifier)
+      (parenthesized_type
+        (function_type
+          (function_type_parameters
+            (user_type
+              (identifier)))
+          (user_type
+            (identifier)))))))

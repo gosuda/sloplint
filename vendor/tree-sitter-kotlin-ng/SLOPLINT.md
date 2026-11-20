@@ -6,6 +6,8 @@ Round 2 adds: K-SOFTID (`open`/`override` usable as identifiers), K-PARENANNO (a
 
 Round 3 repairs a K-NEWLINECTOR regression: a `(`-led line after a *complete* statement (`fun g() {}`, `do { } while (c)`, `val x: Int`, `class D {}`) again takes its separator — the scanner now suppresses the semi only where the `constructor` keyword is valid (the declaration-head position) or where a nullable-chain/`!is` continuation is still open. The same round binds `suspend` in `suspend (Int).() -> Unit` to the function type rather than the parenthesized receiver: parenthesized types now take annotations only, via `paren_type_modifiers`.
 
+Round 4 covers two continuations the scanner cannot disambiguate. `class D : Base\n() {}` fails because the `(` after `Base` carries the same valid-symbol mask as a `(` after a complete statement, so the semi cannot be suppressed; instead the delegation's constructor invocation absorbs an optional `_semi` (`_delegation_constructor_invocation`, aliased to `constructor_invocation` so the node shape is unchanged). `suspend ((A) -> B)` — ktor's JWT verifier returns this shape — fails because no rule admits a type modifier before a parenthesized type; a second `parenthesized_type` arm at dynamic precedence −1 accepts `suspend` there, while `suspend (Int).() -> Unit` keeps binding `suspend` to the enclosing function type.
+
 ## Origin
 
 - Upstream: https://github.com/tree-sitter-grammars/tree-sitter-kotlin, tag v1.1.0, commit 77dd60ea0a9003ce062c9728a513ffe1aaff8c82.
@@ -109,7 +111,7 @@ Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (32 tests,
 - Published `tree-sitter-kotlin-ng` 1.1.0: 23 fail and 9 pass.
 
 Corpus cases (`tree-sitter test`, fresh `HOME`):
-- Vendored: 47 of 47. These are the 22 upstream cases, the 17 `sloplint_kotlin.txt` cases, the 4 `sloplint_kotlin_same_line.txt` cases, and the 4 `sloplint_softids.txt` cases. The expected trees have no `ERROR` or `MISSING`.
+- Vendored: 49 of 49. These are the 22 upstream cases, the 17 `sloplint_kotlin.txt` cases, the 4 `sloplint_kotlin_same_line.txt` cases, and the 6 `sloplint_softids.txt` cases. The expected trees have no `ERROR` or `MISSING`.
 - Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 21 pass (the 17 sloplint cases and the 4 same-line cases). The 22 upstream cases passed on the published grammar before any change.
 
 ## Code notes

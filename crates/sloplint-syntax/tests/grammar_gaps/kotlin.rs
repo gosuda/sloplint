@@ -293,3 +293,33 @@ fn value_receiver_class_literal_keeps_parenthesized_expression() {
         "the value receiver must stay a parenthesized_expression, got:\n{sexp}"
     );
 }
+
+#[test]
+fn superclass_call_arguments_survive_a_newline() {
+    // `class D : Base\n() {}` — the scanner cannot suppress the semi before
+    // a delegation's `(`, so the constructor invocation absorbs it.
+    for source in [
+        "class D : Base\n() {}\n",
+        "class E : Iface1, Base\n(arg) {}\n",
+        "class F : Base\n(x = 1) {}\n",
+    ] {
+        run_clean(source);
+    }
+    let sexp = raw_tree("class D : Base\n(x) {}\n").root_node().to_sexp();
+    assert!(
+        sexp.contains("(constructor_invocation"),
+        "split superclass call must stay a constructor_invocation, got:\n{sexp}"
+    );
+}
+
+#[test]
+fn wrapped_suspend_function_type_parses() {
+    // `suspend ((A) -> B)` — ktor's JWT verifier returns this shape.
+    for source in [
+        "val v: suspend ((A) -> B)\n",
+        "typealias T = suspend ((A) -> B)\n",
+        "fun f(): suspend ((A) -> B) = TODO()\n",
+    ] {
+        run_clean(source);
+    }
+}

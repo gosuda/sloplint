@@ -1581,8 +1581,13 @@
             "type": "CHOICE",
             "members": [
               {
-                "type": "SYMBOL",
-                "name": "constructor_invocation"
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_delegation_constructor_invocation"
+                },
+                "named": true,
+                "value": "constructor_invocation"
               },
               {
                 "type": "SYMBOL",
@@ -1596,6 +1601,31 @@
           }
         ]
       }
+    },
+    "_delegation_constructor_invocation": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "type"
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_semi"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "SYMBOL",
+          "name": "value_arguments"
+        }
+      ]
     },
     "variable_declaration": {
       "type": "PREC",
@@ -3373,37 +3403,91 @@
       ]
     },
     "parenthesized_type": {
-      "type": "PREC_DYNAMIC",
-      "value": 1,
-      "content": {
-        "type": "SEQ",
-        "members": [
-          {
-            "type": "CHOICE",
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "PREC_DYNAMIC",
+          "value": 1,
+          "content": {
+            "type": "SEQ",
             "members": [
               {
-                "type": "SYMBOL",
-                "name": "paren_type_modifiers"
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "paren_type_modifiers"
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
               },
               {
-                "type": "BLANK"
+                "type": "STRING",
+                "value": "("
+              },
+              {
+                "type": "SYMBOL",
+                "name": "type"
+              },
+              {
+                "type": "STRING",
+                "value": ")"
               }
             ]
-          },
-          {
-            "type": "STRING",
-            "value": "("
-          },
-          {
-            "type": "SYMBOL",
-            "name": "type"
-          },
-          {
-            "type": "STRING",
-            "value": ")"
           }
-        ]
-      }
+        },
+        {
+          "type": "PREC_DYNAMIC",
+          "value": -1,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "paren_type_modifiers"
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              },
+              {
+                "type": "STRING",
+                "value": "suspend"
+              },
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "paren_type_modifiers"
+                  },
+                  {
+                    "type": "BLANK"
+                  }
+                ]
+              },
+              {
+                "type": "STRING",
+                "value": "("
+              },
+              {
+                "type": "SYMBOL",
+                "name": "type"
+              },
+              {
+                "type": "STRING",
+                "value": ")"
+              }
+            ]
+          }
+        }
+      ]
     },
     "paren_type_modifiers": {
       "type": "REPEAT1",
@@ -6589,12 +6673,12 @@
     [
       "annotated_expression",
       "type_modifiers",
-      "paren_type_modifiers"
+      "modifiers"
     ],
     [
       "annotated_expression",
       "type_modifiers",
-      "modifiers"
+      "paren_type_modifiers"
     ],
     [
       "annotated_expression",
@@ -6614,6 +6698,15 @@
     [
       "function_modifier",
       "type_modifiers"
+    ],
+    [
+      "function_modifier",
+      "type_modifiers",
+      "parenthesized_type"
+    ],
+    [
+      "type_modifiers",
+      "parenthesized_type"
     ],
     [
       "function_modifier",

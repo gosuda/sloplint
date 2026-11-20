@@ -39,12 +39,19 @@ module.exports = grammar({
     [$.delegation_specifier, $.type_modifiers, $.paren_type_modifiers],
     [$.delegation_specifier, $.paren_type_modifiers],
     [$.annotated_expression, $.type_modifiers],
-    [$.annotated_expression, $.type_modifiers, $.paren_type_modifiers],
     [$.annotated_expression, $.type_modifiers, $.modifiers],
+    [$.annotated_expression, $.type_modifiers, $.paren_type_modifiers],
     [$.annotated_expression, $.type_modifiers, $.modifiers, $.paren_type_modifiers],
     [$.parameter_modifiers, $.type_modifiers],
     [$.parameter_modifiers, $.type_modifiers, $.paren_type_modifiers],
+    // `suspend @Anno` — suspend is a function modifier, a type modifier,
+    // and (as of the wrapped-suspend fix) a paren-type modifier / a
+    // suspend-prefixed parenthesized type.
     [$.function_modifier, $.type_modifiers],
+    [$.function_modifier, $.type_modifiers, $.parenthesized_type],
+    // `suspend (` — suspend inside type_modifiers (suspend function type /
+    // suspend receiver) vs suspend heading a wrapped parenthesized type.
+    [$.type_modifiers, $.parenthesized_type],
     [$.function_modifier, $._reserved_identifier],
     [$.variable_declaration, $.type_modifiers, $.paren_type_modifiers],
     [$.variable_declaration],
@@ -318,11 +325,17 @@ module.exports = grammar({
     delegation_specifier: $ => prec.right(seq(
       repeat($.annotation),
       choice(
-        $.constructor_invocation,
+        alias($._delegation_constructor_invocation, $.constructor_invocation),
         $.explicit_delegation,
         $.type,
       ),
     )),
+
+    // `class D : Base\n() {}` — the scanner cannot suppress the semi before a
+    // superclass call's arguments (its valid-symbol mask is identical to a `(`
+    // after a complete statement), so the delegation's constructor invocation
+    // tolerates the separator instead.
+    _delegation_constructor_invocation: $ => seq($.type, optional($._semi), $.value_arguments),
 
     variable_declaration: $ => prec(1, seq(
       repeat($.annotation),
@@ -639,11 +652,20 @@ module.exports = grammar({
       ')',
     ),
 
-    parenthesized_type: $ =>
+    parenthesized_type: $ => choice(
       prec.dynamic(1, seq(optional($.paren_type_modifiers), '(', $.type, ')')),
+      // `suspend ((Header) -> Verifier?)` (ktor's JWT verifier) — the whole
+      // paren wraps a complete type, so `suspend` modifies it here. Dynamic
+      // -1 loses the tie to the function-type reading, so
+      // `suspend (Int).() -> Unit` still binds `suspend` to that type.
+      prec.dynamic(
+        -1,
+        seq(optional($.paren_type_modifiers), 'suspend', optional($.paren_type_modifiers), '(', $.type, ')'),
+      ),
+    ),
 
     // Annotations only: `suspend` binds the enclosing function type
-    // (`suspend (Int).() -> Unit`), never a parenthesized one.
+    // (`suspend (Int).() -> Unit`), never an unwrapped parenthesized one.
     paren_type_modifiers: $ => repeat1($.annotation),
 
     assignment: $ => seq(
