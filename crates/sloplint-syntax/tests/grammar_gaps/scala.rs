@@ -330,3 +330,34 @@ fn leading_stray_semicolons_parse() {
     let source = concat!(";;;val h = 1\n", ";;;\n");
     run_clean(source);
 }
+
+#[test]
+fn enum_stays_a_soft_identifier() {
+    // Scala 2 code uses `enum` as a parameter or named argument; only a real
+    // `enum` definition should claim the keyword reading.
+    let source = concat!(
+        "def f(enum: Int): Int = enum\n",
+        "trait T { def g(enum: E): Unit }\n",
+        "enum Foo { case A, B }\n",
+        "val m = Map(enum = 1)\n",
+        // `enum` after a line-broken operator is the operand, not a definition.
+        "val n = 1 +\n",
+        "  enum\n",
+        // But `enum` still starts a definition or a standalone assignment
+        // after a postfix operator, even across a blank line.
+        "var enum = 0\n",
+        "val r = x --?\n",
+        "\n",
+        "enum = 1\n",
+        "val s = y --?\n",
+        "enum Bar { case C }\n",
+        // `enum(2)` after a line-broken operator calls the function `enum`:
+        // an enum declaration always needs a name, so `(` stays an operand.
+        "def e(enum: Int) = enum\n",
+        "def enum(x: Int) = x\n",
+        "val c = (1 +\n",
+        "  enum(2))\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["f", "e", "enum"]);
+}

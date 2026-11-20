@@ -228,97 +228,101 @@
       ]
     },
     "enum_definition": {
-      "type": "SEQ",
-      "members": [
-        {
-          "type": "REPEAT",
-          "content": {
-            "type": "SYMBOL",
-            "name": "annotation"
-          }
-        },
-        {
-          "type": "CHOICE",
-          "members": [
-            {
+      "type": "PREC",
+      "value": 1,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "REPEAT",
+            "content": {
               "type": "SYMBOL",
-              "name": "modifiers"
-            },
-            {
-              "type": "BLANK"
+              "name": "annotation"
             }
-          ]
-        },
-        {
-          "type": "STRING",
-          "value": "enum"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "_class_constructor"
-        },
-        {
-          "type": "FIELD",
-          "name": "extend",
-          "content": {
+          },
+          {
             "type": "CHOICE",
             "members": [
               {
                 "type": "SYMBOL",
-                "name": "extends_clause"
+                "name": "modifiers"
               },
               {
                 "type": "BLANK"
               }
             ]
-          }
-        },
-        {
-          "type": "FIELD",
-          "name": "derive",
-          "content": {
+          },
+          {
+            "type": "STRING",
+            "value": "enum"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "_class_constructor"
+          },
+          {
+            "type": "FIELD",
+            "name": "extend",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "extends_clause"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "derive",
+            "content": {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SYMBOL",
+                      "name": "derives_clause"
+                    },
+                    {
+                      "type": "SYMBOL",
+                      "name": "uses_clause"
+                    }
+                  ]
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          },
+          {
+            "type": "FIELD",
+            "name": "body",
+            "content": {
+              "type": "SYMBOL",
+              "name": "enum_body"
+            }
+          },
+          {
             "type": "CHOICE",
             "members": [
               {
-                "type": "CHOICE",
-                "members": [
-                  {
-                    "type": "SYMBOL",
-                    "name": "derives_clause"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "uses_clause"
-                  }
-                ]
+                "type": "SYMBOL",
+                "name": "_end_marker_named_tail"
               },
               {
                 "type": "BLANK"
               }
             ]
           }
-        },
-        {
-          "type": "FIELD",
-          "name": "body",
-          "content": {
-            "type": "SYMBOL",
-            "name": "enum_body"
-          }
-        },
-        {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "SYMBOL",
-              "name": "_end_marker_named_tail"
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
-        }
-      ]
+        ]
+      }
     },
     "_enum_block": {
       "type": "PREC_LEFT",
@@ -928,17 +932,8 @@
         {
           "type": "ALIAS",
           "content": {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "STRING",
-                "value": "enum"
-              },
-              {
-                "type": "STRING",
-                "value": "export"
-              }
-            ]
+            "type": "STRING",
+            "value": "export"
           },
           "named": true,
           "value": "identifier"
@@ -11649,8 +11644,17 @@
       "type": "PREC",
       "value": "soft_id",
       "content": {
-        "type": "STRING",
-        "value": "extension"
+        "type": "CHOICE",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "extension"
+          },
+          {
+            "type": "STRING",
+            "value": "enum"
+          }
+        ]
       }
     },
     "_alpha_identifier": {
@@ -14509,6 +14513,10 @@
     ],
     [
       "extension_definition",
+      "_soft_identifier"
+    ],
+    [
+      "enum_definition",
       "_soft_identifier"
     ],
     [
