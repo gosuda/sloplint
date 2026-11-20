@@ -158,6 +158,51 @@ static bool skip_ws_comments(TSLexer *lexer) {
     }
 }
 
+// As skip_ws_comments, but also reports through `newline` whether any
+// newline was crossed — including inside skipped comments.
+static bool skip_ws_comments_nl(TSLexer *lexer, bool *newline) {
+    bool comment = false;
+    for (;;) {
+        while (iswspace(lexer->lookahead)) {
+            if (lexer->lookahead == '\n') {
+                *newline = true;
+            }
+            skip(lexer);
+        }
+        if (lexer->lookahead != '/') {
+            return comment;
+        }
+        skip(lexer);
+        if (lexer->lookahead == '/') {
+            while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
+                skip(lexer);
+            }
+            comment = true;
+            continue;
+        }
+        if (lexer->lookahead != '*') {
+            return comment;
+        }
+        comment = true;
+        skip(lexer);
+        unsigned depth = 1;
+        while (depth > 0 && !lexer->eof(lexer)) {
+            wchar_t c = lexer->lookahead;
+            skip(lexer);
+            if (c == '\n') {
+                *newline = true;
+            }
+            if (c == '/' && lexer->lookahead == '*') {
+                depth++;
+                skip(lexer);
+            } else if (c == '*' && lexer->lookahead == '/') {
+                depth--;
+                skip(lexer);
+            }
+        }
+    }
+}
+
 // Peek after a `;` (already consumed and mark_end'd) for an accessor word.
 // `var x = 1; private set` — a `;` before `get`/`set`/`field` (possibly
 // behind annotations and modifiers) belongs to the property tail, not the
@@ -228,7 +273,8 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
         // accessor, so the `;` must stay a statement separator. A paren'ed
         // accessor must be followed by a body (`= expr`/`{...}`/`: type`)
         // or it is a call, not an accessor.
-        skip_ws_comments(lexer);
+        bool member_newline = false;
+        skip_ws_comments_nl(lexer, &member_newline);
         if (lexer->lookahead == '(') {
             skip(lexer);
             skip_ws_comments(lexer);
@@ -296,7 +342,7 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
             // already accepts. Only expression continuations — `get = 2`,
             // `get.run()`, `set[i] = 1`, `get { }`, `set + 1`, `foo(get)`,
             // `get as T` — keep the `;` as a statement separator.
-            skip_ws_comments(lexer);
+            skip_ws_comments_nl(lexer, &member_newline);
             switch (lexer->lookahead) {
             case '=':
             case '.':
@@ -351,14 +397,6 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                 if (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
                     return;
                 }
-                // The same accessor word cannot start a second accessor of
-                // the same kind — `var x = 1; get\nget` leaves the property
-                // with two getters and the parser rejects it. Read the
-                // second word as a statement instead.
-                if ((accessor_index == 0 && strcmp(member_word, "get") == 0) ||
-                    (accessor_index == 1 && strcmp(member_word, "set") == 0)) {
-                    return;
-                }
                 skip_ws_comments(lexer);
                 // A member keyword is followed by another keyword or a name
                 // (`get data class`, `get private set`); a literal or
@@ -395,6 +433,19 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                 }
                 if (!member_next) {
                     return;
+                }
+                // The same accessor word cannot start a second accessor of
+                // the same kind — `var x = 1; get\nget` or `get\nget() = 2`
+                // leaves the property with two getters. A `get`/`set` call
+                // on the next line is a statement instead: `var x = 1;
+                // get\nget(1)` keeps the getter and the `get(1)` call. On
+                // the same line `get get(1)` is one infix expression, so
+                // the `;` stays a separator either way.
+                if ((accessor_index == 0 && strcmp(member_word, "get") == 0) ||
+                    (accessor_index == 1 && strcmp(member_word, "set") == 0)) {
+                    if (!(member_newline && next == '(' && get_call_follows(lexer))) {
+                        return;
+                    }
                 }
             } else if (member_word[0]) {
                 skip_ws_comments(lexer);
