@@ -21,6 +21,8 @@ Round 9 fixes statement-position properties picking up accessor tails. Kotlin gi
 
 Round 10 reparents the split so `statement` stays queryable: the local-position rule is now `statement` itself (blocks, branches, lambda bodies and `when` arms use it), whose `local_property_declaration` members keep the `property_declaration` node kind via the alias, so `(statement) @match` and `(block (statement) ...)` custom-rule queries compile and match local statements again — before this round they were inlined members of the hidden `_local_statement`, which made the block-scoped pattern an impossible pattern at query-compile time. File level uses `_file_statement` (`declaration` plus the statement rest), keeping full accessor tails and the annotated-declaration resolution at top level. The round also accepts `;` around accessors inside the tail (`field = 1; get() = field`, `get(); set()`) and drops the now-unreachable `modifiers`/`annotated_lambda` conflict. Three corpus cases pin the shapes (58 of 58 pass).
 
+Round 11 fixes two scanner edges: newlines inside a `/* */` comment no longer detach an accessor after `;` (Kotlin does not insert a semi inside a block comment — `var x = 1; /* a\nb */ get() = x` keeps its getter; `//` comments still end the property since their terminating newline is a real break), and `scan_words` now treats `_`/digits as identifier continuations so `constructor_legacy()`/`constructor2` after a bodyless class are calls, not constructors. The vendoring patch is resynced to cover the `fun(open)` parameter and accessor fixes. (64 of 64 corpus cases pass.)
+
 ## Origin
 
 - Upstream: https://github.com/tree-sitter-grammars/tree-sitter-kotlin, tag v1.1.0, commit 77dd60ea0a9003ce062c9728a513ffe1aaff8c82.

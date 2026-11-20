@@ -43,7 +43,7 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
                        uint8_t *index) {
     if (!scanned_word[0]) {
         for (uint8_t i = 0; i < MAX_WORD_SIZE - 1; i++) {
-            if (!iswalpha(lexer->lookahead)) {
+            if (!iswalnum(lexer->lookahead) && lexer->lookahead != '_') {
                 if (i == 0) {
                     return false;
                 }
@@ -162,8 +162,11 @@ static bool skip_ws_comments(TSLexer *lexer) {
     }
 }
 
-// As skip_ws_comments, but also reports through `newline` whether any
-// newline was crossed — including inside skipped comments.
+// As skip_ws_comments, but also reports through `newline` whether a real
+// line break was crossed: bare whitespace newlines and the newline that
+// ends a `//` comment count, but newlines inside a `/* */` block comment
+// do not (Kotlin does not insert a semi inside a block comment, so
+// `var x = 1; /* a\nb */ get() = x` still attaches the getter).
 static bool skip_ws_comments_nl(TSLexer *lexer, bool *newline) {
     bool comment = false;
     for (;;) {
@@ -193,9 +196,6 @@ static bool skip_ws_comments_nl(TSLexer *lexer, bool *newline) {
         while (depth > 0 && !lexer->eof(lexer)) {
             wchar_t c = lexer->lookahead;
             skip(lexer);
-            if (c == '\n') {
-                *newline = true;
-            }
             if (c == '/' && lexer->lookahead == '*') {
                 depth++;
                 skip(lexer);

@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 0e0078a..7154c42 100644
+index 0e0078a..3881531 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -23,6 +23,15 @@ module.exports = grammar({
@@ -210,7 +210,7 @@ index 0e0078a..7154c42 100644
        optional($.modifiers),
        'fun',
        optional($.type_parameters),
-@@ -276,6 +372,16 @@ module.exports = grammar({
+@@ -276,6 +372,19 @@ module.exports = grammar({
        optional($.function_body),
      )),
  
@@ -218,7 +218,10 @@ index 0e0078a..7154c42 100644
 +      '(',
 +      optionalCommaSep1(seq(
 +        optional($.parameter_modifiers),
-+        choice($.parameter, $.identifier),
++        // `$._identifier`, not `$.identifier`: soft keywords (`open`,
++        // `override`, `get`, ...) are legal inferred parameter names,
++        // matching the typed `parameter` alternative.
++        choice($.parameter, $._identifier),
 +        optional(seq('=', $.expression)),
 +      )),
 +      ')',
@@ -227,7 +230,7 @@ index 0e0078a..7154c42 100644
      function_value_parameters: $ => seq(
        '(',
        optionalCommaSep1(seq(
-@@ -293,12 +399,18 @@ module.exports = grammar({
+@@ -293,12 +402,18 @@ module.exports = grammar({
      delegation_specifier: $ => prec.right(seq(
        repeat($.annotation),
        choice(
@@ -247,7 +250,7 @@ index 0e0078a..7154c42 100644
      variable_declaration: $ => prec(1, seq(
        repeat($.annotation),
        $._identifier,
-@@ -322,6 +434,14 @@ module.exports = grammar({
+@@ -322,6 +437,14 @@ module.exports = grammar({
        $.primary_expression,
      ),
  
@@ -262,7 +265,7 @@ index 0e0078a..7154c42 100644
      getter: $ => prec.right(seq(
        optional($.modifiers),
        'get',
-@@ -415,7 +535,7 @@ module.exports = grammar({
+@@ -415,7 +538,7 @@ module.exports = grammar({
  
      enum_entry: $ => seq(
        optional($.modifiers),
@@ -271,7 +274,7 @@ index 0e0078a..7154c42 100644
        optional($.value_arguments),
        optional($.class_body),
      ),
-@@ -427,7 +547,7 @@ module.exports = grammar({
+@@ -427,7 +550,7 @@ module.exports = grammar({
      ),
  
      value_argument: $ => seq(
@@ -280,7 +283,7 @@ index 0e0078a..7154c42 100644
        optional('*'),
        $.expression,
      ),
-@@ -438,8 +558,19 @@ module.exports = grammar({
+@@ -438,8 +561,19 @@ module.exports = grammar({
        optional($._semi),
      ),
  
@@ -301,7 +304,7 @@ index 0e0078a..7154c42 100644
        $.assignment,
        $.for_statement,
        $.while_statement,
-@@ -447,6 +578,15 @@ module.exports = grammar({
+@@ -447,6 +581,15 @@ module.exports = grammar({
        $.expression,
      ),
  
@@ -317,7 +320,7 @@ index 0e0078a..7154c42 100644
      modifiers: $ => prec.right(repeat1(choice(
        $.annotation,
        $.class_modifier,
-@@ -584,7 +724,7 @@ module.exports = grammar({
+@@ -584,7 +727,7 @@ module.exports = grammar({
        ),
      ),
  
@@ -326,7 +329,7 @@ index 0e0078a..7154c42 100644
  
      type_projection: $ => choice(
        seq(repeat($.variance_modifier), $.type),
-@@ -593,6 +733,7 @@ module.exports = grammar({
+@@ -593,6 +736,7 @@ module.exports = grammar({
  
      function_type: $ => seq(
        optional($.type_modifiers),
@@ -334,7 +337,7 @@ index 0e0078a..7154c42 100644
        optional(seq($._receiver_type, '.')),
        $.function_type_parameters,
        '->',
-@@ -605,7 +746,21 @@ module.exports = grammar({
+@@ -605,7 +749,21 @@ module.exports = grammar({
        ')',
      ),
  
@@ -357,7 +360,7 @@ index 0e0078a..7154c42 100644
  
      assignment: $ => seq(
        field('left', $.expression),
-@@ -752,6 +907,7 @@ module.exports = grammar({
+@@ -752,6 +910,7 @@ module.exports = grammar({
      ),
  
      lambda_literal: $ => seq(
@@ -365,7 +368,7 @@ index 0e0078a..7154c42 100644
        '{',
        optional(seq(optional($.lambda_parameters), '->')),
        optionalSep1($.statement, $._semi),
-@@ -768,7 +924,7 @@ module.exports = grammar({
+@@ -768,7 +927,7 @@ module.exports = grammar({
      anonymous_function: $ => prec.right(seq(
        'fun',
        optional(seq($.type, '.')),
@@ -374,7 +377,7 @@ index 0e0078a..7154c42 100644
        optional(seq(':', $.type)),
        optional($.type_constraints),
        optional($.function_body),
-@@ -825,7 +981,9 @@ module.exports = grammar({
+@@ -825,7 +984,9 @@ module.exports = grammar({
  
      parenthesized_expression: $ => seq('(', $.expression, ')'),
  
@@ -385,7 +388,7 @@ index 0e0078a..7154c42 100644
  
      when_expression: $ => seq(
        'when',
-@@ -853,6 +1011,11 @@ module.exports = grammar({
+@@ -853,6 +1014,11 @@ module.exports = grammar({
            commaSep1(field('condition', $._when_condition)),
            optional(','),
          ),
@@ -397,7 +400,7 @@ index 0e0078a..7154c42 100644
          'else',
        ),
        '->',
-@@ -922,14 +1085,20 @@ module.exports = grammar({
+@@ -922,14 +1088,20 @@ module.exports = grammar({
      ),
  
      callable_reference: $ => seq(
@@ -420,7 +423,7 @@ index 0e0078a..7154c42 100644
        $.identifier,
      )),
  
-@@ -940,6 +1109,7 @@ module.exports = grammar({
+@@ -940,6 +1112,7 @@ module.exports = grammar({
      ),
  
      string_literal: $ => seq(
@@ -428,7 +431,7 @@ index 0e0078a..7154c42 100644
        '"',
        repeat(choice(
          alias(choice(
-@@ -956,14 +1126,17 @@ module.exports = grammar({
+@@ -956,14 +1129,17 @@ module.exports = grammar({
      ),
  
      multiline_string_literal: $ => seq(
@@ -447,7 +450,7 @@ index 0e0078a..7154c42 100644
      interpolation: $ => choice(
        seq('$', $._identifier),
        seq('${', $.expression, '}'),
-@@ -1045,7 +1218,7 @@ module.exports = grammar({
+@@ -1045,7 +1221,7 @@ module.exports = grammar({
        /`[^\r\n`]+`/,
      )),
  
@@ -456,7 +459,7 @@ index 0e0078a..7154c42 100644
        choice(
          'actual',
          'annotation',
-@@ -1059,6 +1232,9 @@ module.exports = grammar({
+@@ -1059,6 +1235,9 @@ module.exports = grammar({
          'set',
          'operator',
          'value',
@@ -467,7 +470,7 @@ index 0e0078a..7154c42 100644
        $.identifier,
      )),
 diff --git a/src/scanner.c b/src/scanner.c
-index 8f9d287..1dc46c3 100644
+index 8f9d287..93a4d97 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
 @@ -15,10 +15,15 @@ enum TokenType {
@@ -487,7 +490,16 @@ index 8f9d287..1dc46c3 100644
  
  static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
  
-@@ -61,6 +66,426 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
+@@ -38,7 +43,7 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
+                        uint8_t *index) {
+     if (!scanned_word[0]) {
+         for (uint8_t i = 0; i < MAX_WORD_SIZE - 1; i++) {
+-            if (!iswalpha(lexer->lookahead)) {
++            if (!iswalnum(lexer->lookahead) && lexer->lookahead != '_') {
+                 if (i == 0) {
+                     return false;
+                 }
+@@ -61,6 +66,438 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
      return false;
  }
  
@@ -533,11 +545,15 @@ index 8f9d287..1dc46c3 100644
 +            return;
 +        }
 +        // A raw string ends on three consecutive quotes; the first was just
-+        // consumed, so two more close it.
++        // consumed. Consume the whole closing quote run so a literal ending
++        // in extra quotes (`@A("""x"""")`) leaves none for the caller to
++        // re-read as a new string opener.
 +        if (lexer->lookahead == '"') {
 +            skip(lexer);
 +            if (lexer->lookahead == '"') {
-+                skip(lexer);
++                while (lexer->lookahead == '"') {
++                    skip(lexer);
++                }
 +                return;
 +            }
 +        }
@@ -583,8 +599,11 @@ index 8f9d287..1dc46c3 100644
 +    }
 +}
 +
-+// As skip_ws_comments, but also reports through `newline` whether any
-+// newline was crossed — including inside skipped comments.
++// As skip_ws_comments, but also reports through `newline` whether a real
++// line break was crossed: bare whitespace newlines and the newline that
++// ends a `//` comment count, but newlines inside a `/* */` block comment
++// do not (Kotlin does not insert a semi inside a block comment, so
++// `var x = 1; /* a\nb */ get() = x` still attaches the getter).
 +static bool skip_ws_comments_nl(TSLexer *lexer, bool *newline) {
 +    bool comment = false;
 +    for (;;) {
@@ -614,9 +633,6 @@ index 8f9d287..1dc46c3 100644
 +        while (depth > 0 && !lexer->eof(lexer)) {
 +            wchar_t c = lexer->lookahead;
 +            skip(lexer);
-+            if (c == '\n') {
-+                *newline = true;
-+            }
 +            if (c == '/' && lexer->lookahead == '*') {
 +                depth++;
 +                skip(lexer);
@@ -639,6 +655,14 @@ index 8f9d287..1dc46c3 100644
 +    // `private set` is a bare accessor, while `get.run()` / `set + 1` are
 +    // statements using `get`/`set` as plain identifiers.
 +    bool had_prefix = false;
++    // An accessor must start on the same line as the `;` — a newline
++    // (including one inside a comment) ends the property, so
++    // `val x = 1;\nfield = 5` is a new statement, not a backing field.
++    bool crossed_newline = false;
++    skip_ws_comments_nl(lexer, &crossed_newline);
++    if (crossed_newline) {
++        return;
++    }
 +    for (;;) {
 +        skip_ws_comments(lexer);
 +        if (lexer->lookahead == '@') {
@@ -914,7 +938,7 @@ index 8f9d287..1dc46c3 100644
  void *tree_sitter_kotlin_external_scanner_create() { return NULL; }
  
  void tree_sitter_kotlin_external_scanner_destroy(void *payload) {}
-@@ -119,6 +544,9 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -119,6 +556,9 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
              if (lexer->lookahead == ';') {
                  advance(lexer);
                  lexer->mark_end(lexer);
@@ -924,7 +948,7 @@ index 8f9d287..1dc46c3 100644
                  return true;
              }
  
-@@ -166,6 +594,10 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -166,6 +606,10 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      return false;
                  case 'i':
                      return scan_word(lexer, "import");
@@ -935,7 +959,7 @@ index 8f9d287..1dc46c3 100644
                  case ';':
                      advance(lexer);
                      lexer->mark_end(lexer);
-@@ -178,9 +610,11 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -178,9 +622,11 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
          char scanned_word[16] = {0};
      _switch:
          switch (lexer->lookahead) {
@@ -948,7 +972,7 @@ index 8f9d287..1dc46c3 100644
              case '*':
              case '%':
              case '>':
-@@ -224,6 +658,26 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -224,6 +670,26 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      goto q_dot_from_semi;
                  }
                  return true;
@@ -975,7 +999,7 @@ index 8f9d287..1dc46c3 100644
              case 'e':
              case 'i':
              case 'g':
-@@ -238,23 +692,36 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -238,23 +704,36 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
              case 'c':
              case 'b':
              case 'w':
@@ -1018,7 +1042,7 @@ index 8f9d287..1dc46c3 100644
                  // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
                  // we found a variable named constructor whose field is being accessed
                  if (index == 5) {
-@@ -279,18 +746,22 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -279,18 +758,22 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      }
                  }
                  // If `get` was found and the keyword is not valid, return a semi since it's being used as an identifier
@@ -1046,7 +1070,7 @@ index 8f9d287..1dc46c3 100644
  
                          while (iswspace(lexer->lookahead)) {
                              if (lexer->lookahead == '\n') {
-@@ -307,6 +778,33 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -307,6 +790,33 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                  else if (index == 1 && valid_symbols[IN]) {
                      return true;
                  }
@@ -1080,7 +1104,7 @@ index 8f9d287..1dc46c3 100644
                  return !res;
              case ';':
                  advance(lexer);
-@@ -314,20 +812,60 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -314,20 +824,88 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                  return true;
              case '@':
                  if (valid_symbols[CONSTRUCTOR]) {
@@ -1106,6 +1130,34 @@ index 8f9d287..1dc46c3 100644
 +                                    // String/char literals inside the argument list
 +                                    // must not feed the paren counter (`@Anno(")")`).
 +                                    skip_string(lexer, ch);
++                                    continue;
++                                }
++                                if (ch == '/') {
++                                    // `//` and `/*` comments can carry
++                                    // unbalanced parens (`@A(1 /*)*/ 2)`).
++                                    skip(lexer);
++                                    if (lexer->lookahead == '/') {
++                                        while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
++                                            skip(lexer);
++                                        }
++                                        continue;
++                                    }
++                                    if (lexer->lookahead == '*') {
++                                        skip(lexer);
++                                        unsigned comment_depth = 1;
++                                        while (comment_depth > 0 && !lexer->eof(lexer)) {
++                                            wchar_t c = lexer->lookahead;
++                                            skip(lexer);
++                                            if (c == '/' && lexer->lookahead == '*') {
++                                                comment_depth++;
++                                                skip(lexer);
++                                            } else if (c == '*' && lexer->lookahead == '/') {
++                                                comment_depth--;
++                                                skip(lexer);
++                                            }
++                                        }
++                                        continue;
++                                    }
 +                                    continue;
 +                                }
 +                                if (ch == '(') {
