@@ -2861,7 +2861,11 @@ module.exports = grammar({
       seq(
         field("left", alias(choice("using", "given"), $.identifier)),
         "=",
-        field("right", $.expression),
+        // Same value space as `assignment_expression`: statement-only
+        // expressions like `do … while` and indented blocks are valid
+        // named-argument values too (`f(x = do {} while (c))`,
+        // `f(x =\n  indented`).
+        field("right", choice(statementExpression($), $.indented_block)),
       ),
 
     vararg: $ =>

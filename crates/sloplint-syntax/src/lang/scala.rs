@@ -11,6 +11,7 @@ mod calls;
 mod funcs;
 mod imports;
 mod items;
+mod writes;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
@@ -74,7 +75,7 @@ impl LangHooks for ScalaHooks {
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        items::write_roots(cx, n, out);
+        writes::write_roots(cx, n, out);
     }
 
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {

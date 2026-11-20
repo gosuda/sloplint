@@ -88,6 +88,33 @@
      on `obj` — a field path can't name a parameter — while `sink(name = v)`
      stays a named argument.
 
+   Round 4 (review-driven):
+   - `keyword_named_argument`'s right side is now
+     `choice(statementExpression($), $.indented_block)`, the same set
+     `assignment_expression` accepts, so `f(using = do {} while (x))` and
+     multiline block values parse instead of erroring.
+   - scanner.c `given` peek: after the postfix-operator decision point a `[`
+     skips the balanced bracket group and classifies on the follower —
+     `=>`, `:`, an identifier start, `_` or a backtick stays a definition,
+     anything else (including `(`) is a postfix operand. `given[Int](1)`
+     after a line-ending operator now parses as a generic call operand.
+   - scanner.c `given` peek: `given(` is a postfix operand unless the `(` is
+     directly followed by `using` that is not followed by `=`, so
+     `given(using x)`/`given(using = v)`-style operand calls join the infix
+     while `given (using T)` definitions keep their read.
+   - items.rs `named_arg_verdict` walks the scope chain innermost-first and
+     the first scope declaring `def fname` decides, so a member method
+     shadows a same-named file-scope signature; def names, parameter names
+     and argument labels all pass through `unquote` so a backquoted
+     parameter matches its plain argument label.
+   - items.rs `push_pattern_names`: `given` extractor patterns only skip the
+     binding when more than one `pattern` field is present, so
+     `case given(status)` binds `status` while the tuple-type reading
+     `case given (status, String)` still binds nothing.
+   - items.rs write machinery moved to `scala/writes.rs` (`write_roots`,
+     `is_compound_write`, `report_assign_write`, `named_arg_verdict`) to
+     keep the adapter under the 600-line self-lint budget.
+
 ## Fixed shapes (scalac 3.10.0 `-Ystop-after:parser` accepts each)
 
 - SC-ENDNEW: `trait Foo` / `val foo =` / `  new Foo:` / `  end new` (empty body).

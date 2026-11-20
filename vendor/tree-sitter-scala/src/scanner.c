@@ -1952,10 +1952,50 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       if (len == 5 && strcmp(word, "given") == 0) {
         int32_t c = peek_past_blanks_comments(lexer);
         if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
-            c == '$' || c == '=' || c == '[' || c == '`') {
+            c == '$' || c == '=' || c == '`') {
           lexer->result_symbol = postfix_sym;
           return true;
         }
+        // `[` is ambiguous: `given [T] => …` is a definition's type
+        // parameter list, but `given[Int](1)` calls a function `given`
+        // with explicit type arguments. Skip the balanced brackets and
+        // look at what follows: `=>`/`:`/`extends`/`with` or a name is a
+        // definition, call parens and operand punctuation mean the
+        // expression read.
+        if (c == '[') {
+          int depth = 0;
+          advance(lexer);
+          while (!lexer->eof(lexer)) {
+            if (lexer->lookahead == '[') {
+              depth++;
+            } else if (lexer->lookahead == ']') {
+              depth--;
+              if (depth == 0) {
+                advance(lexer);
+                break;
+              }
+            }
+            advance(lexer);
+          }
+          if (depth == 0) {
+            c = peek_past_blanks_comments(lexer);
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                c == '_' || c == ':' || c == '`') {
+              lexer->result_symbol = postfix_sym;
+              return true;
+            }
+            if (c == '=') {
+              advance(lexer);
+              if (lexer->lookahead == '>') {
+                lexer->result_symbol = postfix_sym;
+                return true;
+              }
+            }
+          }
+        }
+        // `(using …)` opens a using clause — after `given` directly or
+        // after its type parameter list — but `given(using = 2)` calls
+        // `given` with the named argument `using`.
         if (c == '(') {
           advance(lexer);
           c = peek_past_blanks_comments(lexer);
@@ -1963,7 +2003,8 @@ static bool scan_impl(void *payload, TSLexer *lexer,
             char inner[sizeof "using"];
             int inner_len =
                 read_word(lexer, inner, (int)sizeof inner, NULL);
-            if (inner_len == 5 && strcmp(inner, "using") == 0) {
+            if (inner_len == 5 && strcmp(inner, "using") == 0 &&
+                peek_past_blanks_comments(lexer) != '=') {
               lexer->result_symbol = postfix_sym;
               return true;
             }

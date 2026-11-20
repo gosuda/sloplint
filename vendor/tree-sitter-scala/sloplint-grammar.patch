@@ -1,6 +1,8 @@
+diff --git a/grammar.js b/grammar.js
+index 6fcbe2c..688a804 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -245,6 +245,11 @@
+@@ -245,6 +245,11 @@ const nameChoice = $ =>
      alias($._alpha_identifier, $.identifier),
      alias($._backquoted_id, $.identifier),
      alias($._soft_identifier, $.identifier),
@@ -12,7 +14,7 @@
      alias("this", $.identifier),
      alias("super", $.identifier),
      // `export` is a hard keyword in Scala 3 but an ordinary identifier in
-@@ -278,6 +283,21 @@
+@@ -278,6 +283,21 @@ const wordOrOpName = $ => choice(wordName($), opName($));
  // (lambda parameters, bindings, self types). These must share the identifier
  // rule's per-class tokens: one lexer state cannot hold both flavors of the
  // same string, so swapping a site to $._identifier changes lexing there.
@@ -34,7 +36,7 @@
  const operandName = $ => choice(nameChoice($), $.operator_identifier);
  
  // A Scala 3 end marker as the last child of the construct it closes. The
-@@ -438,7 +458,6 @@
+@@ -438,7 +458,6 @@ module.exports = grammar({
  
    conflicts: $ => [
      [$._if_rest],
@@ -42,7 +44,7 @@
      [$.tuple_pattern, $._simple_expression],
      [$.tuple_pattern, $._simple_expression, $.binding],
      // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
-@@ -459,12 +478,33 @@
+@@ -459,12 +478,35 @@ module.exports = grammar({
      // 'extension' • '{' is either an extension definition with a braced body
      // or the soft identifier `extension` (a Scala 2 id) called with a block.
      [$.extension_definition, $._soft_identifier],
@@ -50,9 +52,11 @@
 +    // `enum` (Scala 2 code uses it as a parameter or named argument) diverge
 +    // only after the token's continuation is known.
 +    [$.enum_definition, $._soft_identifier],
-+    [$.given_definition, $._simple_expression, $._braced_typed_lambda],
-+    [$.given_definition, $._simple_expression],
 +    [$._type_identifier, $.given_pattern],
++    [$.given_definition, $._simple_expression, $._braced_typed_lambda],
++    [$.given_pattern, $._simple_expression],
++    [$._type_identifier, $.given_pattern, $._simple_expression],
++    [$.given_definition, $._simple_expression],
 +    [$.self_type, $.given_definition, $._simple_expression],
 +    [$._using_parameters_clause, $._type_identifier],
 +    [$._simple_expression, $.keyword_named_argument],
@@ -60,8 +64,6 @@
 +    [$.self_type, $.given_definition, $._type_identifier, $._simple_expression],
 +    [$.given_definition, $._type_identifier, $._simple_expression],
 +    [$.given_definition, $._type_identifier],
-+    [$.given_pattern, $._simple_expression],
-+    [$._type_identifier, $.given_pattern, $._simple_expression],
 +    [$.self_type, $.given_definition, $._simple_expression, $._braced_typed_lambda],
      [$.binding, $._simple_expression],
      [$.binding, $._type_identifier],
@@ -70,13 +72,15 @@
      // The conflicts keep both readings alive so precedence picks per context.
      [$._type, $.parameter_types],
 +    [$._context_parameter_types, $._type_identifier],
++    [$.tuple_type, $.parameter_types, $._context_parameter_types],
++    [$.parameter_types, $._context_parameter_types],
 +    [$._context_parameter_types, $._type_identifier, $._simple_expression],
 +    [$._context_parameter_types, $._simple_expression],
 +    [$._context_parameter_types, $._type_identifier, $._single_lambda_param],
      [$.parameter_types, $._colon_bindings],
      [$.parameter_types, $.bindings],
      [$.while_expression, $._simple_expression],
-@@ -493,6 +533,7 @@
+@@ -493,6 +535,7 @@ module.exports = grammar({
      // we treat `operator_identifier` as `simple_expression`
      [$._simple_expression, $.lambda_expression],
      [$._simple_expression, $._single_lambda_param],
@@ -84,7 +88,7 @@
      // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
      // identifier `export` beginning an expression statement. Each reading
      // dies on the next token ('.' vs a name), so forking settles it. The
-@@ -532,8 +573,6 @@
+@@ -532,8 +575,6 @@ module.exports = grammar({
      [$._constructor_annotation],
      [$._constructor_annotation_arguments, $.arguments],
      [$._constructor_annotation, $.applied_constructor_type],
@@ -93,7 +97,7 @@
      // '{'  identifier  •  ':' starts the braced typed lambda, the block
      // lambda param, and a statement alike.
      [$._simple_expression, $._braced_typed_lambda],
-@@ -643,7 +682,7 @@
+@@ -643,7 +684,7 @@ module.exports = grammar({
  
      _definition: $ =>
        choice(
@@ -102,7 +106,7 @@
          $.extension_definition,
          $.class_definition,
          $.import_declaration,
-@@ -663,15 +702,18 @@
+@@ -663,15 +704,18 @@ module.exports = grammar({
        ),
  
      enum_definition: $ =>
@@ -130,7 +134,7 @@
        ),
  
      _enum_block: $ =>
-@@ -801,7 +843,7 @@
+@@ -801,7 +845,7 @@ module.exports = grammar({
      // Scala 3 keywords that are valid identifiers in Scala 2 sources and thus
      // may appear as package names in import/export paths (e.g. `import io.circe.export.Exported`).
      _namespace_path_segment: $ =>
@@ -139,7 +143,7 @@
  
      namespace_wildcard: $ => prec.left(1, choice("*", "_", "given")),
  
-@@ -1522,13 +1564,26 @@
+@@ -1522,13 +1566,26 @@ module.exports = grammar({
        ),
  
      class_parameter: $ =>
@@ -173,7 +177,7 @@
        ),
  
      /*
-@@ -1545,7 +1600,7 @@
+@@ -1545,7 +1602,7 @@ module.exports = grammar({
            // A given conditional clause takes `tracked val`.
            optional(trackedMod($)),
            optional(choice("val", "var")),
@@ -182,7 +186,7 @@
            ":",
            field("type", $._param_type),
            optional(seq("=", field("default_value", $.expression))),
-@@ -1896,6 +1951,17 @@
+@@ -1896,6 +1953,17 @@ module.exports = grammar({
                field("parameter_types", $.parameter_types),
                $._arrow_then_type,
              ),
@@ -200,18 +204,19 @@
            ),
          ),
        ),
-@@ -1930,6 +1996,19 @@
+@@ -1930,6 +1998,20 @@ module.exports = grammar({
          $.infix_type,
        ),
  
-+    // The `using`-led parameter list of a context function type `(using T, U)
-+    // ?=> R`: `erased` sits once after `using`, like in
-+    // _using_parameters_clause. Kept out of parameter_types so the plain
-+    // `=>` arrow cannot follow it.
++    // The parameter list of a context function type `(T, U) ?=> R`; the
++    // `using` marker is optional because Scala 3.4+ also spells it
++    // `(using T, U) ?=> R` when context parameters carry modifiers.
++    // `erased` sits once after `using`, like in _using_parameters_clause.
++    // Kept out of parameter_types so the plain `=>` arrow cannot follow it.
 +    _context_parameter_types: $ =>
 +      seq(
 +        "(",
-+        "using",
++        optional("using"),
 +        optional(erasedMod($)),
 +        trailingCommaSep1($._param_type),
 +        ")",
@@ -220,7 +225,7 @@
      _param_type: $ => choice($.lazy_parameter_type, $._param_value_type),
  
      _param_value_type: $ =>
-@@ -2019,7 +2098,10 @@
+@@ -2019,7 +2101,10 @@ module.exports = grammar({
          PREC.infix,
          seq(
            field("left", $._definition_pattern),
@@ -232,7 +237,7 @@
            field("right", $._definition_pattern),
          ),
        ),
-@@ -2283,17 +2365,35 @@
+@@ -2283,17 +2368,35 @@ module.exports = grammar({
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -278,7 +283,7 @@
        ),
  
      /*
-@@ -2529,6 +2629,17 @@
+@@ -2529,6 +2632,17 @@ module.exports = grammar({
              optional($._end_marker_kw_tail),
            ),
          ),
@@ -296,7 +301,7 @@
          prec(
            "new",
            seq("new", $.template_body, optional($._end_marker_kw_tail)),
-@@ -2726,10 +2837,30 @@
+@@ -2726,10 +2840,34 @@ module.exports = grammar({
      // binder is admitted in every argument list.
      _argument_list: $ =>
        seq(
@@ -322,13 +327,17 @@
 +      seq(
 +        field("left", alias(choice("using", "given"), $.identifier)),
 +        "=",
-+        field("right", $.expression),
++        // Same value space as `assignment_expression`: statement-only
++        // expressions like `do … while` and indented blocks are valid
++        // named-argument values too (`f(x = do {} while (c))`,
++        // `f(x =\n  indented`).
++        field("right", choice(statementExpression($), $.indented_block)),
 +      ),
 +
      vararg: $ =>
        choice(
          // Scala 3: `args*`. The star in front of a closing delimiter arrives
-@@ -2745,7 +2876,10 @@
+@@ -2745,7 +2883,10 @@ module.exports = grammar({
        ),
  
      // ExprsInParens     ::=  ExprInParens {‘,’ ExprInParens}
@@ -340,7 +349,7 @@
  
      // The opening is a single two-character token so that a bare `$` used as
      // an ordinary identifier (e.g. `$(selector)`) still lexes as an
-@@ -2802,7 +2936,7 @@
+@@ -2802,7 +2943,7 @@ module.exports = grammar({
      _super_identifier: $ => "super",
  
      // https://docs.scala-lang.org/scala3/reference/soft-modifier.html
@@ -349,9 +358,59 @@
  
      // alphaid          ::=  upper idrest
      //                       |  varid
+diff --git a/src/scanner.c b/src/scanner.c
+index b4856af..73ca41e 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -1879,8 +1879,8 @@
+@@ -299,7 +299,7 @@ static enum TokenType op_left_class(int32_t first) {
+     case '<': case '>': return OP_LEFT_REL;
+     case ':': return OP_LEFT_COLON;
+     case '+': case '-': return OP_LEFT_ADD;
+-    case '*': case '%': return OP_LEFT_MUL;
++    case '*': case '%': case '/': return OP_LEFT_MUL;
+     default: return OP_LEFT_OTHER;
+   }
+ }
+@@ -760,6 +760,38 @@ static bool has_operand(TSLexer *lexer) {
+   }
+ }
+ 
++// Skips blanks and comments for the `enum`/`given` definition peeks. Returns
++// the character the peek should inspect — the real lookahead, or '/' when a
++// lone slash (an operator, not a comment) was consumed. The caller may only
++// return a verdict after this: the position is already past what was read,
++// which is fine because `return false` rewinds and `return true` extends the
++// token only up to the last mark_end.
++static int32_t peek_past_blanks_comments(TSLexer *lexer) {
++  for (;;) {
++    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
++      advance(lexer);
++    }
++    if (lexer->lookahead != '/') {
++      return lexer->lookahead;
++    }
++    advance(lexer);
++    if (lexer->lookahead == '/') {
++      // A line comment runs to the newline; the declaration prefix never
++      // crosses it, so the peek stops there too.
++      while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
++        advance(lexer);
++      }
++      return lexer->lookahead;
++    }
++    if (lexer->lookahead == '*') {
++      advance(lexer);
++      consume_block_comment_body(lexer);
++      continue;
++    }
++    return '/';
++  }
++}
++
+ // Reads the run of opchars at the lookahead into `op`. Only the first 3 are
+ // kept, since a longer run is never a symbolic keyword. Returns the full
+ // length and advances the lexer past the run.
+@@ -1879,8 +1911,8 @@ static bool scan_impl(void *payload, TSLexer *lexer,
        // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
        // are ordinary identifiers, so such a line can be the right operand.
        static const char *const definition_words[] = {
@@ -362,7 +421,7 @@
            "package",  "private", "protected", "sealed", "trait", "type",
            "val",      "var",
        };
-@@ -1894,6 +1894,41 @@
+@@ -1894,6 +1926,91 @@ static bool scan_impl(void *payload, TSLexer *lexer,
          lexer->result_symbol = postfix_sym;
          return true;
        }
@@ -376,10 +435,7 @@
 +      // `,`, `.`, `:`, an operator or end-of-line — means the word is the
 +      // right operand.
 +      if (len == 4 && strcmp(word, "enum") == 0) {
-+        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-+          advance(lexer);
-+        }
-+        int32_t c = lexer->lookahead;
++        int32_t c = peek_past_blanks_comments(lexer);
 +        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
 +            c == '$' || c == '=') {
 +          lexer->result_symbol = postfix_sym;
@@ -387,18 +443,71 @@
 +        }
 +      }
 +      // `given` gets the same split as `enum`: a definition follows a type or
-+      // parameter name (`given Foo`), while `given(`, `given.`, `given:` and
-+      // the like are an expression operand (`x +` + `given(1)` calls the
-+      // function `given`). `=` names a variable being assigned.
++      // parameter name (`given Foo`), a type-parameter list (`given [T] =>`),
++      // or a using clause (`given (using Ord[T]) =>`), while `given(`,
++      // `given.`, `given:` and the like are an expression operand (`x +` +
++      // `given(1)` calls the function `given`). `=` names a variable being
++      // assigned.
 +      if (len == 5 && strcmp(word, "given") == 0) {
-+        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-+          advance(lexer);
-+        }
-+        int32_t c = lexer->lookahead;
++        int32_t c = peek_past_blanks_comments(lexer);
 +        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
-+            c == '$' || c == '=') {
++            c == '$' || c == '=' || c == '`') {
 +          lexer->result_symbol = postfix_sym;
 +          return true;
++        }
++        // `[` is ambiguous: `given [T] => …` is a definition's type
++        // parameter list, but `given[Int](1)` calls a function `given`
++        // with explicit type arguments. Skip the balanced brackets and
++        // look at what follows: `=>`/`:`/`extends`/`with` or a name is a
++        // definition, call parens and operand punctuation mean the
++        // expression read.
++        if (c == '[') {
++          int depth = 0;
++          advance(lexer);
++          while (!lexer->eof(lexer)) {
++            if (lexer->lookahead == '[') {
++              depth++;
++            } else if (lexer->lookahead == ']') {
++              depth--;
++              if (depth == 0) {
++                advance(lexer);
++                break;
++              }
++            }
++            advance(lexer);
++          }
++          if (depth == 0) {
++            c = peek_past_blanks_comments(lexer);
++            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
++                c == '_' || c == ':' || c == '`') {
++              lexer->result_symbol = postfix_sym;
++              return true;
++            }
++            if (c == '=') {
++              advance(lexer);
++              if (lexer->lookahead == '>') {
++                lexer->result_symbol = postfix_sym;
++                return true;
++              }
++            }
++          }
++        }
++        // `(using …)` opens a using clause — after `given` directly or
++        // after its type parameter list — but `given(using = 2)` calls
++        // `given` with the named argument `using`.
++        if (c == '(') {
++          advance(lexer);
++          c = peek_past_blanks_comments(lexer);
++          if (c >= 'a' && c <= 'z') {
++            char inner[sizeof "using"];
++            int inner_len =
++                read_word(lexer, inner, (int)sizeof inner, NULL);
++            if (inner_len == 5 && strcmp(inner, "using") == 0 &&
++                peek_past_blanks_comments(lexer) != '=') {
++              lexer->result_symbol = postfix_sym;
++              return true;
++            }
++          }
 +        }
 +      }
      }

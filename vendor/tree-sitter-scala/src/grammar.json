@@ -11640,8 +11640,26 @@
           "type": "FIELD",
           "name": "right",
           "content": {
-            "type": "SYMBOL",
-            "name": "expression"
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "expression"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "do_while_expression"
+                  }
+                ]
+              },
+              {
+                "type": "SYMBOL",
+                "name": "indented_block"
+              }
+            ]
           }
         }
       ]
