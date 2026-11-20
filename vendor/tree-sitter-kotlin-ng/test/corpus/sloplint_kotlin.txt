@@ -843,3 +843,30 @@ class C {
             (navigation_expression
               (identifier)
               (identifier))))))))
+
+================================================================================
+semicolon between backing field and accessor
+================================================================================
+
+class A {
+    val x: Int
+        field = 1; get() = field
+}
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier)
+          (user_type
+            (identifier)))
+        (backing_field
+          (number_literal))
+        (getter
+          (function_body
+            (identifier)))))))
+

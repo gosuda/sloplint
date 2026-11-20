@@ -247,12 +247,20 @@ module.exports = grammar({
       seq(
         $.backing_field,
         optional(choice(
-          seq($.getter, optional($.setter)),
-          seq($.setter, optional($.getter)),
+          seq(
+            optional($._accessor_semi),
+            $.getter,
+            optional(seq(optional($._accessor_semi), $.setter)),
+          ),
+          seq(
+            optional($._accessor_semi),
+            $.setter,
+            optional(seq(optional($._accessor_semi), $.getter)),
+          ),
         )),
       ),
-      seq($.getter, optional($.setter)),
-      seq($.setter, optional($.getter)),
+      seq($.getter, optional(seq(optional($._accessor_semi), $.setter))),
+      seq($.setter, optional(seq(optional($._accessor_semi), $.getter))),
     )),
 
     context_parameters: $ => seq(
