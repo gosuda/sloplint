@@ -490,3 +490,25 @@ fn scala_using_named_argument_is_not_a_global_write() {
         "a `using = value` argument is not an assignment to the file-scope mutable"
     );
 }
+
+#[test]
+fn scala_field_write_argument_is_a_global_write() {
+    assert_eq!(
+        in_function_writes(
+            Lang::Scala,
+            "store.scala",
+            "class Box { var value: Int = 0 }\nvar box: Box = new Box\n\ndef sink(x: Int): Unit = {}\n\ndef store() = {\nsink(box.value = 4)\n}\n",
+        ),
+        1,
+        "a `obj.field = value` argument writes the file-scope mutable, it is not a named argument"
+    );
+    assert_eq!(
+        in_function_writes(
+            Lang::Scala,
+            "named.scala",
+            "var counter = 0\n\ndef calls() = {\ng(counter = 4)\n}\n",
+        ),
+        0,
+        "a bare `name = value` argument still does not write the file-scope mutable"
+    );
+}
