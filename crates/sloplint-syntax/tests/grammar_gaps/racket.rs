@@ -164,3 +164,60 @@ fn unterminated_forms_still_report_a_parse_error() {
         "an unterminated define must still be a parse error"
     );
 }
+
+#[test]
+fn define_contract_lambda_initializer_reports_params() {
+    let analysis = run_clean(
+        "#lang racket\n(define/contract checked (->* (number?) number?) (lambda (x) (* x 2)))\n",
+    );
+    let names = function_names(&analysis);
+    assert_eq!(names[0], "checked");
+    assert_eq!(analysis.facts.functions[0].params[0].name, "x");
+}
+
+#[test]
+fn curried_defines_report_the_innermost_name_and_params() {
+    let analysis = run_clean("#lang racket\n(define ((adder a) b) (+ a b))\n");
+    let names = function_names(&analysis);
+    assert_eq!(names, ["adder"]);
+    let params = &analysis.facts.functions[0].params;
+    assert_eq!(params[0].name, "a");
+}
+
+#[test]
+fn long_form_quote_stays_datum() {
+    let analysis = run_clean(
+        "#lang racket\n(define (real x) x)\n(quote (define (hidden x) x))\n(quasiquote (define (also-hidden x) x))\n",
+    );
+    assert_eq!(function_names(&analysis), ["real"]);
+}
+
+#[test]
+fn nested_defines_are_local_bindings() {
+    let analysis = run_clean(
+        "#lang racket\n(provide outer)\n(define (outer x) (define (helper y) y) (helper x))\n",
+    );
+    let vis: Vec<(&str, bool)> = analysis
+        .facts
+        .functions
+        .iter()
+        .map(|function| {
+            (
+                function.name,
+                function.visibility == sloplint_core::facts::Visibility::Exported,
+            )
+        })
+        .collect();
+    assert_eq!(vis, [("outer", true), ("helper", false)]);
+}
+
+#[test]
+fn rename_out_exports_the_local_name() {
+    let analysis = run_clean(
+        "#lang racket\n(provide (rename-out [local exported-alias]))\n(define (local) 1)\n",
+    );
+    assert_eq!(
+        analysis.facts.functions[0].visibility,
+        sloplint_core::facts::Visibility::Exported
+    );
+}

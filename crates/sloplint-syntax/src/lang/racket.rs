@@ -123,6 +123,22 @@ const NON_CODE_KINDS: &[&str] = &[
     "graph",
 ];
 
+/// Long-form datum heads: `(quote ...)`, `(syntax ...)` and friends
+/// emit an ordinary `list`, so the head symbol — not the node kind —
+/// marks their children as datum.
+const DATUM_HEADS: &[&str] = &[
+    "quote",
+    "quasiquote",
+    "syntax",
+    "quasisyntax",
+    "unquote",
+    "unquote-splicing",
+    "unsyntax",
+    "unsyntax-splicing",
+    "box",
+    "graph",
+];
+
 const COMMENT_KINDS: &[&str] = &["comment", "block_comment", "sexp_comment"];
 
 fn is_comment(kind: &str) -> bool {
@@ -151,36 +167,81 @@ fn first_symbol<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
 }
 
 fn in_non_code(cx: &Cx<'_, '_>) -> bool {
+    cx.ancestors().any(|ancestor| {
+        NON_CODE_KINDS.contains(&ancestor.kind())
+            || (ancestor.kind() == "list"
+                && head_child(ancestor).is_some_and(|head| {
+                    head.kind() == "symbol" && DATUM_HEADS.contains(&text(cx, head))
+                }))
+    })
+}
+
+/// A `list` whose head is `module`/`module+`/`module*`/`begin`: the only
+/// lists a definition may nest under while still being module-level
+/// (and therefore providable).
+fn module_level_list(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    n.kind() == "list"
+        && head_child(n).is_some_and(|head| {
+            head.kind() == "symbol"
+                && matches!(text(cx, head), "module" | "module+" | "module*" | "begin")
+        })
+}
+
+/// Whether this `define` sits at module level: every ancestor below the
+/// program is a module-headed list. A define inside any other form is a
+/// local binding and cannot be provided, so it is never Exported.
+fn is_module_level(cx: &Cx<'_, '_>) -> bool {
     cx.ancestors()
-        .any(|ancestor| NON_CODE_KINDS.contains(&ancestor.kind()))
+        .take_while(|ancestor| ancestor.kind() != "program")
+        .all(|ancestor| module_level_list(cx, ancestor))
+}
+
+/// The signature of a `define`'s second child: `(name args ...)` for a
+/// plain signature, `(name args ...)` nested deeper for each curried
+/// layer of `(define ((f x) y) ...)`. Returns the innermost list, whose
+/// head is the bound name and whose tail is `f`'s parameter list.
+fn signature_list(n: Node<'_>) -> Option<Node<'_>> {
+    let mut cur = n;
+    loop {
+        let inner = code_children(cur);
+        match inner.first() {
+            Some(first) if first.kind() == "symbol" => return Some(cur),
+            Some(first) if first.kind() == "list" => cur = *first,
+            _ => return None,
+        }
+    }
+}
+
+/// The lambda form a `define`/`define/contract` initializes to, if any:
+/// the last code child that is a list headed by `lambda`/`λ`.
+fn lambda_init<'a>(cx: &Cx<'_, '_>, kids: &'a [Node<'a>]) -> Option<Node<'a>> {
+    kids.iter()
+        .rev()
+        .find(|kid| {
+            kid.kind() == "list"
+                && head_child(**kid).is_some_and(|head| {
+                    head.kind() == "symbol"
+                        && matches!(lookup_head(text(cx, head)), Some(Head::Lambda))
+                })
+        })
+        .copied()
 }
 
 /// The defined name of a top-level `define` list, if it binds one
 /// function: `(define (name args ...) ...)` or
 /// `(define name (lambda ...))`.
 fn define_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
-    let mut kids = code_children(n).into_iter();
-    let second = kids.nth(1)?;
+    let kids = code_children(n);
+    let second = *kids.get(1)?;
     if second.kind() == "list" {
-        let mut inner = code_children(second).into_iter();
-        let name = inner.next()?;
-        if name.kind() == "symbol" {
-            return Some(text(cx, name));
-        }
-        return None;
+        let sig = signature_list(second)?;
+        let name = code_children(sig).into_iter().next()?;
+        return (name.kind() == "symbol").then(|| text(cx, name));
     }
     if second.kind() != "symbol" {
         return None;
     }
-    let third = kids.next()?;
-    if third.kind() == "list"
-        && head_child(third).is_some_and(|head| {
-            head.kind() == "symbol" && matches!(lookup_head(text(cx, head)), Some(Head::Lambda))
-        })
-    {
-        return Some(text(cx, second));
-    }
-    None
+    lambda_init(cx, &kids).map(|_| text(cx, second))
 }
 
 fn is_bool_default(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
@@ -284,21 +345,20 @@ fn define_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>, name: &'s str) -> FunctionHead<
     head.name = name;
     head.name_pos = pos_of(n);
     head.visibility = visibility_of(cx, name);
-    let mut kids = code_children(n).into_iter();
-    let second = kids.nth(1);
-    match second.map(|node| node.kind()) {
-        // `(define (name args ...) ...)`: parameters follow the name.
+    let kids = code_children(n);
+    match kids.get(1).map(|node| node.kind()) {
+        // `(define (name args ...) ...)`: parameters follow the name in
+        // the innermost signature list (curried defines nest deeper).
         Some("list") => {
-            let second = second.expect("kind was just matched");
-            let inner = code_children(second);
-            head.params = params_of_nodes(cx, inner.get(1..).unwrap_or(&[]));
+            if let Some(sig) = signature_list(kids[1]) {
+                let inner = code_children(sig);
+                head.params = params_of_nodes(cx, inner.get(1..).unwrap_or(&[]));
+            }
         }
         // `(define name (lambda (args ...) ...))`: parameters live in
         // the lambda form, which carries no name of its own.
         Some("symbol") => {
-            if let Some(third) = kids.next()
-                && third.kind() == "list"
-                && let Some(lambda) = head_child(third)
+            if let Some(lambda) = lambda_init(cx, &kids)
                 && let Some(params_node) = code_children(lambda).into_iter().nth(1)
             {
                 head.params = params_of(cx, params_node);
@@ -336,7 +396,11 @@ impl LangHooks for RacketHooks {
         match lookup_head(text(cx, head)) {
             Some(Head::Define) => {
                 let name = define_name(cx, n)?;
-                Some(define_head(cx, n, name))
+                let mut head = define_head(cx, n, name);
+                if !is_module_level(cx) {
+                    head.visibility = Visibility::Private;
+                }
+                Some(head)
             }
             Some(Head::Lambda) => {
                 let mut kids = code_children(n).into_iter();
@@ -447,16 +511,18 @@ fn provide_list_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, spec: Node<'_>, out: 
             }
         }
         "rename-out" => {
+            // Visibility is resolved against the internal binding, so
+            // record the local name — `(rename-out [local alias])`
+            // makes `local` an exported function.
             for pair in kids {
                 if pair.kind() != "list" {
                     continue;
                 }
                 let mut inner = code_children(pair).into_iter();
-                inner.next();
-                if let Some(external) = inner.next()
-                    && external.kind() == "symbol"
+                if let Some(local) = inner.next()
+                    && local.kind() == "symbol"
                 {
-                    out.push(text(cx, external));
+                    out.push(text(cx, local));
                 }
             }
         }

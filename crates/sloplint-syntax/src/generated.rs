@@ -17,7 +17,10 @@ const MARKERS: [&[u8]; 7] = [
 
 const BOM: &[u8] = b"\xEF\xBB\xBF";
 
-type Block = (&'static [u8], &'static [u8]);
+/// A block comment: (opener, closer, nests).
+/// Nested pairs — `#| |#`, `(* *)` for OCaml, `/- -/` for Lean —
+/// must find the closer at depth zero, not the first occurrence.
+type Block = (&'static [u8], &'static [u8], bool);
 
 struct CommentSyntax {
     lines: &'static [&'static [u8]],
@@ -27,7 +30,7 @@ struct CommentSyntax {
 
 const SLASH: CommentSyntax = CommentSyntax {
     lines: &[b"//"],
-    blocks: &[(b"/*", b"*/")],
+    blocks: &[(b"/*", b"*/", false)],
     code: &[],
 };
 
@@ -72,31 +75,32 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
         },
         Lang::Ruby | Lang::Bash | Lang::R => HASH,
         Lang::Python | Lang::Starlark => CommentSyntax {
-            blocks: &[(b"\"\"\"", b"\"\"\""), (b"'''", b"'''")],
+            blocks: &[(b"\"\"\"", b"\"\"\"", false), (b"'''", b"'''", false)],
             ..HASH
         },
         Lang::PowerShell => CommentSyntax {
-            blocks: &[(b"<#", b"#>")],
+            blocks: &[(b"<#", b"#>", false)],
             ..HASH
         },
         Lang::Ocaml | Lang::OcamlInterface => CommentSyntax {
             lines: &[],
-            blocks: &[(b"(*", b"*)")],
+            blocks: &[(b"(*", b"*)", true)],
             code: &[],
         },
         Lang::Lean => CommentSyntax {
             lines: &[b"--"],
-            blocks: &[(b"/-", b"-/")],
+            blocks: &[(b"/-", b"-/", true)],
             code: &[],
         },
         Lang::Tlaplus => CommentSyntax {
             lines: &[b"\\*"],
-            blocks: &[(b"(*", b"*)")],
+            blocks: &[(b"(*", b"*)", false)],
             code: &[],
         },
         Lang::Racket => CommentSyntax {
-            lines: &[b";"],
-            blocks: &[(b"#|", b"|#")],
+            // `#lang` opens the header like `#!` does elsewhere.
+            lines: &[b";", b"#lang"],
+            blocks: &[(b"#|", b"|#", true)],
             code: &[],
         },
     }
@@ -105,7 +109,8 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
 enum Header {
     Marked,
     Ended,
-    Continues(Option<&'static [u8]>),
+    /// An open block comment: its (opener, closer) pair.
+    Continues(Option<Block>),
 }
 
 /// True when a header comment in the first 2048 bytes carries a generated-file marker, in any letter case.
@@ -138,38 +143,35 @@ pub fn is_generated(bytes: &[u8], lang: Lang) -> bool {
     false
 }
 
-fn scan_line(line: &[u8], mut closer: Option<&'static [u8]>, syntax: &CommentSyntax) -> Header {
+fn scan_line(line: &[u8], mut closer: Option<Block>, syntax: &CommentSyntax) -> Header {
     let mut rest = line.trim_ascii_start();
     loop {
         let entered = closer.map_or_else(
             || enter_comment(rest, syntax),
-            |end| Some((rest, Some(end))),
+            |block| Some((rest, Some(block))),
         );
-        let Some((body, end)) = entered else {
+        let Some((body, block)) = entered else {
             return Header::Ended;
         };
-        let (comment, after) = end
-            .and_then(|end| split_at(body, end))
+        let (comment, after) = block
+            .and_then(|block| split_block(body, block))
             .map_or((body, None), |(comment, after)| (comment, Some(after)));
         if carries_marker(comment) {
             return Header::Marked;
         }
         let Some(after) = after else {
-            return Header::Continues(end);
+            return Header::Continues(block);
         };
         closer = None;
         rest = after.trim_ascii_start();
     }
 }
 
-fn enter_comment<'a>(
-    line: &'a [u8],
-    syntax: &CommentSyntax,
-) -> Option<(&'a [u8], Option<&'static [u8]>)> {
+fn enter_comment<'a>(line: &'a [u8], syntax: &CommentSyntax) -> Option<(&'a [u8], Option<Block>)> {
     let block = syntax
         .blocks
         .iter()
-        .find_map(|(open, close)| Some((line.strip_prefix(*open)?, Some(*close))));
+        .find_map(|block| Some((line.strip_prefix(block.0)?, Some(*block))));
     block.or_else(|| is_line_comment(line, syntax).then_some((line, None)))
 }
 
@@ -202,11 +204,34 @@ fn carries_marker(line: &[u8]) -> bool {
     })
 }
 
-fn split_at<'a>(haystack: &'a [u8], needle: &[u8]) -> Option<(&'a [u8], &'a [u8])> {
-    let at = haystack
-        .windows(needle.len())
-        .position(|window| window == needle)?;
-    Some((&haystack[..at], &haystack[at + needle.len()..]))
+/// Split `body` at the close of `block`: the first `close` for a flat
+/// block, or the `close` that returns nesting to depth zero when the
+/// pair nests (re-entered `open`s inside the body deepen it).
+fn split_block<'a>(body: &'a [u8], block: Block) -> Option<(&'a [u8], &'a [u8])> {
+    let (open, close, nests) = block;
+    if !nests {
+        let at = body
+            .windows(close.len())
+            .position(|window| window == close)?;
+        return Some((&body[..at], &body[at + close.len()..]));
+    }
+    let mut depth = 1usize;
+    let mut at = 0;
+    while at < body.len() {
+        if body[at..].starts_with(open) {
+            depth += 1;
+            at += open.len();
+        } else if body[at..].starts_with(close) {
+            depth -= 1;
+            if depth == 0 {
+                return Some((&body[..at], &body[at + close.len()..]));
+            }
+            at += close.len();
+        } else {
+            at += 1;
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -453,6 +478,39 @@ mod tests {
                 String::from_utf8_lossy(head)
             );
         }
+    }
+
+    #[test]
+    fn lang_lines_open_the_header_in_racket() {
+        assert_generated(&[
+            (
+                Lang::Racket,
+                b"#lang racket\n;; auto-generated\n(define x 1)\n",
+            ),
+            (Lang::Racket, b"#langracket\n; @generated\n(define x 1)\n"),
+        ]);
+    }
+
+    #[test]
+    fn nested_block_comments_scan_to_the_matching_closer() {
+        assert_generated(&[
+            (
+                Lang::Racket,
+                b"#| outer #| inner |# do not edit |#\n(define x 1)\n",
+            ),
+            (
+                Lang::Ocaml,
+                b"(* outer (* inner *) do not edit *)\nlet x = 1\n",
+            ),
+            (
+                Lang::Lean,
+                b"/- outer /- inner -/ auto-generated -/\ndef x := 1\n",
+            ),
+        ]);
+        assert_not_generated(&[
+            (Lang::Racket, b"#| comment |# (define s \"do not edit\")\n"),
+            (Lang::Tlaplus, b"(* comment *) x == \"do not edit\"\n"),
+        ]);
     }
 
     #[test]

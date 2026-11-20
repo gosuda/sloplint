@@ -114,7 +114,8 @@ static bool scan(TSLexer *lexer, const bool *valid_symbols) {
     String current_line = string_new();
     while (true) {
         read_line(&current_line, lexer);
-        if (strcmp(terminator.data, current_line.data) == 0) {
+        if (terminator.len == current_line.len &&
+            memcmp(terminator.data, current_line.data, terminator.len) == 0) {
             lexer->result_symbol = HERE_STRING_BODY;
             string_free(&terminator);
             string_free(&current_line);
