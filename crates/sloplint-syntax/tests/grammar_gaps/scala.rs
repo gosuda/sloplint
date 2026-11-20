@@ -439,11 +439,7 @@ fn comment_stopped_operator_keeps_its_class() {
 fn quote_symbol_ending_in_slash() {
     // `'op` may end in `/` when the slash does not open a comment; `'+/*c*/`
     // is the `'+'` quote followed by a block comment.
-    let source = concat!(
-        "val a = '+/\n",
-        "val b = '/:/\n",
-        "val c = '+/*c*/\n",
-    );
+    let source = concat!("val a = '+/\n", "val b = '/:/\n", "val c = '+/*c*/\n",);
     run_clean(source);
 }
 
@@ -454,7 +450,9 @@ fn braced_lambda_wildcard_and_eol_colon_call() {
     // indents below; `{ _: Int => go() }` reads `_` ascribed to `Int => go()`.
     let language: tree_sitter::Language = tree_sitter_scala::LANGUAGE.into();
     let mut parser = tree_sitter::Parser::new();
-    parser.set_language(&language).expect("scala language loads");
+    parser
+        .set_language(&language)
+        .expect("scala language loads");
     let source = concat!(
         "val e = { (_: Int) => go() }\n",
         "val f = accept { f:\n  cb => y }\n",
@@ -479,7 +477,9 @@ fn char_literal_and_comment_colon_and_unicode_symbol() {
     // lambda colon, and `'op` quote names accept Unicode operator chars.
     let language: tree_sitter::Language = tree_sitter_scala::LANGUAGE.into();
     let mut parser = tree_sitter::Parser::new();
-    parser.set_language(&language).expect("scala language loads");
+    parser
+        .set_language(&language)
+        .expect("scala language loads");
     let source = concat!(
         "val a = path.split('/')\n",
         "val b = { x:/*note*/ Int => produce() }\n",
@@ -511,7 +511,9 @@ fn operator_names_keep_their_precedence_classes() {
     // operator chars scalac accepts.
     let language: tree_sitter::Language = tree_sitter_scala::LANGUAGE.into();
     let mut parser = tree_sitter::Parser::new();
-    parser.set_language(&language).expect("scala language loads");
+    parser
+        .set_language(&language)
+        .expect("scala language loads");
     let source = concat!(
         "val l = a / b / c\n",
         "val m = a + b / c\n",
@@ -519,6 +521,12 @@ fn operator_names_keep_their_precedence_classes() {
         "val s = a ★ b ☃ c\n",
         "val t = f(1, 2) : // trailing note\n  y => g(y)\n",
         "val u = '×/☃\n",
+        // Comment touching the colon, closing on its own line.
+        "val v = f(1, 2) :/*c*/ Int => b\n",
+        // Multi-line comment after the colon: the `*/` line carries code.
+        "val w = (x: /* two\n lines */ Int => x)\n",
+        // A lone `/` after the comment is code, not swallowed whitespace.
+        "val z = Map[String, /*c*/ / => Int]()\n",
     );
     let tree = parser.parse(source, None).expect("parser returns a tree");
     let sexp = tree.root_node().to_sexp();
@@ -538,6 +546,15 @@ fn operator_names_keep_their_precedence_classes() {
     assert!(
         sexp.contains("colon_argument"),
         "the comment after an EOL colon keeps the indented argument, sexp: {sexp}"
+    );
+    assert_eq!(
+        sexp.matches("(ascription_expression").count(),
+        2,
+        "the adjacent and multi-line comments keep their type ascriptions, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("function_type"),
+        "the lone `/` after a comment still ascripts to an operator type, sexp: {sexp}"
     );
     assert!(
         sexp.contains("quote_expression"),

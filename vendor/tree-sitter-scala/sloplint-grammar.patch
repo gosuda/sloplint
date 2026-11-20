@@ -436,7 +436,7 @@ index 6fcbe2c..3bf0d6a 100644
      // XML literals (SLS §10). The external token $._xml_tag_start decides
      // where markup starts. Comment, CDATA and processing instruction
 diff --git a/src/scanner.c b/src/scanner.c
-index b4856af..ccad73b 100644
+index b4856af..cf32df0 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
 @@ -69,10 +69,32 @@ enum TokenType {
@@ -497,7 +497,7 @@ index b4856af..ccad73b 100644
  };
  
  typedef struct {
-@@ -285,6 +319,43 @@ static bool is_op_char(int32_t c) {
+@@ -285,6 +319,45 @@ static bool is_op_char(int32_t c) {
    }
  }
  
@@ -532,8 +532,10 @@ index b4856af..ccad73b 100644
 +         (c >= 0xff1c && c <= 0xff1e) || (c >= 0xffe9 && c <= 0xffec) ||
 +         // scalac also accepts Unicode category So (OTHER_SYMBOL) chars in
 +         // operator names — the Miscellaneous Symbols and Dingbats blocks
-+         // hold the ones real code uses (`'×/☃`, `a ★ b`).
-+         (c >= 0x2600 && c <= 0x27bf) ||
++         // hold the ones real code uses (`'×/☃`, `a ★ b`). The range skips
++         // 0x2768-0x2793, which are punctuation (Ps/Pe ornate parens) and
++         // numbers (No dingbat digits), not So.
++         (c >= 0x2600 && c <= 0x2767) || (c >= 0x2794 && c <= 0x27bf) ||
 +         (c >= 0x10d8e && c <= 0x10d8f) || (c >= 0x1f8d0 && c <= 0x1f8d8) ||
 +         (c >= 0x1eef0 && c <= 0x1eef1);
 +}
@@ -541,7 +543,7 @@ index b4856af..ccad73b 100644
  // SLS 6.12.3 gives an operator its precedence by its first character. An
  // operator ending in `/` is never right-associative and never an assignment,
  // so the left-associative class is the whole answer. The partition matches
-@@ -299,11 +370,59 @@ static enum TokenType op_left_class(int32_t first) {
+@@ -299,11 +372,59 @@ static enum TokenType op_left_class(int32_t first) {
      case '<': case '>': return OP_LEFT_REL;
      case ':': return OP_LEFT_COLON;
      case '+': case '-': return OP_LEFT_ADD;
@@ -602,7 +604,20 @@ index b4856af..ccad73b 100644
  // Mirrors the start class of XML_NAME in grammar.js. Every non-ASCII
  // character is accepted, since the letter test is ASCII-only and the internal
  // lexer rejects the name if it is not a letter after all.
-@@ -1736,39 +1855,121 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -724,9 +845,9 @@ static bool rest_of_line_is_blank_or_comments(TSLexer *lexer) {
+       return false;  // a lone '/' is code
+     }
+     advance(lexer);
+-    if (!consume_block_comment_body_on_line(lexer)) {
+-      return true;  // the comment runs past the line end
+-    }
++    // Consume the whole comment: the line where `*/` lands is the one
++    // whose remainder decides, not the line the comment opened on.
++    consume_block_comment_body_ex(lexer, false);
+   }
+ }
+ 
+@@ -1736,39 +1857,126 @@ static bool scan_impl(void *payload, TSLexer *lexer,
      return scan_float_with_separator(lexer);
    }
  
@@ -696,6 +711,9 @@ index b4856af..ccad73b 100644
 +    bool colon_slash = false;
 +    bool lone_colon = op_len == 1 && op[0] == ':';
 +    bool line_blank = false;
++    // Whether line_blank already holds the rest-of-line verdict — the
++    // check consumes input, so it must never run twice.
++    bool rest_checked = false;
 +    if (lone_colon && lexer->lookahead == '/') {
 +      advance(lexer);
 +      if (lexer->lookahead == '/' || lexer->lookahead == '*') {
@@ -711,8 +729,9 @@ index b4856af..ccad73b 100644
 +          line_blank = true;
 +        } else {
 +          advance(lexer);
-+          line_blank = !consume_block_comment_body_on_line(lexer) ||
-+                       rest_of_line_is_blank_or_comments(lexer);
++          consume_block_comment_body_ex(lexer, false);
++          line_blank = rest_of_line_is_blank_or_comments(lexer);
++          rest_checked = true;
 +        }
 +      } else {
 +        lexer->mark_end(lexer);
@@ -724,18 +743,20 @@ index b4856af..ccad73b 100644
        // A lone `:` ending its line is the fewer-braces colon (scalac's
        // COLONeol). Deciding it at the token level kills the cross-newline
        // ascription fork that GLR would otherwise keep alive across the region.
-+      if (valid_symbols[COLON_MID] &&
-+          !(line_blank || rest_of_line_is_blank_or_comments(lexer))) {
+-      if (valid_symbols[COLON_EOL] &&
+-          rest_of_line_is_blank_or_comments(lexer)) {
++      bool blank =
++          line_blank ||
++          (!rest_checked && rest_of_line_is_blank_or_comments(lexer));
++      if (valid_symbols[COLON_MID] && !blank) {
 +        lexer->result_symbol = COLON_MID;
 +        return true;
 +      }
-       if (valid_symbols[COLON_EOL] &&
--          rest_of_line_is_blank_or_comments(lexer)) {
-+          (line_blank || rest_of_line_is_blank_or_comments(lexer))) {
++      if (valid_symbols[COLON_EOL] && blank) {
          lexer->result_symbol = COLON_EOL;
          return true;
        }
-@@ -1779,14 +1980,29 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -1779,14 +1987,29 @@ static bool scan_impl(void *payload, TSLexer *lexer,
      // and the first character alone fixes the SLS 6.12.3 precedence class.
      // `#!` opens a script header, whose path is not part of an operator.
      bool shebang = op_len >= 2 && op[0] == '#' && op[1] == '!';
@@ -770,7 +791,7 @@ index b4856af..ccad73b 100644
        while (!at_comment) {
          int32_t c = lexer->lookahead;
          if (c == '/') {
-@@ -1797,22 +2013,108 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -1797,22 +2020,108 @@ static bool scan_impl(void *payload, TSLexer *lexer,
          } else {
            break;
          }
@@ -886,7 +907,7 @@ index b4856af..ccad73b 100644
        return false;
      }
      // These sequences are not infix operators, so the line does not
-@@ -1851,6 +2153,20 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -1851,6 +2160,20 @@ static bool scan_impl(void *payload, TSLexer *lexer,
            return true;
          }
        }
@@ -907,7 +928,7 @@ index b4856af..ccad73b 100644
        return false;
      }
      // The right operand must be able to start an expression. Comments and line
-@@ -1879,7 +2195,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -1879,7 +2202,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
        // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
        // are ordinary identifiers, so such a line can be the right operand.
        static const char *const definition_words[] = {
@@ -916,7 +937,7 @@ index b4856af..ccad73b 100644
            "given",    "import", "implicit", "lazy",   "object", "override",
            "package",  "private", "protected", "sealed", "trait", "type",
            "val",      "var",
-@@ -1894,9 +2210,41 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -1894,9 +2217,41 @@ static bool scan_impl(void *payload, TSLexer *lexer,
          lexer->result_symbol = postfix_sym;
          return true;
        }

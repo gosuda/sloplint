@@ -350,8 +350,10 @@ static bool is_unicode_op_char(int32_t c) {
          (c >= 0xff1c && c <= 0xff1e) || (c >= 0xffe9 && c <= 0xffec) ||
          // scalac also accepts Unicode category So (OTHER_SYMBOL) chars in
          // operator names — the Miscellaneous Symbols and Dingbats blocks
-         // hold the ones real code uses (`'×/☃`, `a ★ b`).
-         (c >= 0x2600 && c <= 0x27bf) ||
+         // hold the ones real code uses (`'×/☃`, `a ★ b`). The range skips
+         // 0x2768-0x2793, which are punctuation (Ps/Pe ornate parens) and
+         // numbers (No dingbat digits), not So.
+         (c >= 0x2600 && c <= 0x2767) || (c >= 0x2794 && c <= 0x27bf) ||
          (c >= 0x10d8e && c <= 0x10d8f) || (c >= 0x1f8d0 && c <= 0x1f8d8) ||
          (c >= 0x1eef0 && c <= 0x1eef1);
 }
@@ -843,9 +845,9 @@ static bool rest_of_line_is_blank_or_comments(TSLexer *lexer) {
       return false;  // a lone '/' is code
     }
     advance(lexer);
-    if (!consume_block_comment_body_on_line(lexer)) {
-      return true;  // the comment runs past the line end
-    }
+    // Consume the whole comment: the line where `*/` lands is the one
+    // whose remainder decides, not the line the comment opened on.
+    consume_block_comment_body_ex(lexer, false);
   }
 }
 
@@ -1935,6 +1937,9 @@ static bool scan_impl(void *payload, TSLexer *lexer,
     bool colon_slash = false;
     bool lone_colon = op_len == 1 && op[0] == ':';
     bool line_blank = false;
+    // Whether line_blank already holds the rest-of-line verdict — the
+    // check consumes input, so it must never run twice.
+    bool rest_checked = false;
     if (lone_colon && lexer->lookahead == '/') {
       advance(lexer);
       if (lexer->lookahead == '/' || lexer->lookahead == '*') {
@@ -1950,8 +1955,9 @@ static bool scan_impl(void *payload, TSLexer *lexer,
           line_blank = true;
         } else {
           advance(lexer);
-          line_blank = !consume_block_comment_body_on_line(lexer) ||
-                       rest_of_line_is_blank_or_comments(lexer);
+          consume_block_comment_body_ex(lexer, false);
+          line_blank = rest_of_line_is_blank_or_comments(lexer);
+          rest_checked = true;
         }
       } else {
         lexer->mark_end(lexer);
@@ -1963,13 +1969,14 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // A lone `:` ending its line is the fewer-braces colon (scalac's
       // COLONeol). Deciding it at the token level kills the cross-newline
       // ascription fork that GLR would otherwise keep alive across the region.
-      if (valid_symbols[COLON_MID] &&
-          !(line_blank || rest_of_line_is_blank_or_comments(lexer))) {
+      bool blank =
+          line_blank ||
+          (!rest_checked && rest_of_line_is_blank_or_comments(lexer));
+      if (valid_symbols[COLON_MID] && !blank) {
         lexer->result_symbol = COLON_MID;
         return true;
       }
-      if (valid_symbols[COLON_EOL] &&
-          (line_blank || rest_of_line_is_blank_or_comments(lexer))) {
+      if (valid_symbols[COLON_EOL] && blank) {
         lexer->result_symbol = COLON_EOL;
         return true;
       }
