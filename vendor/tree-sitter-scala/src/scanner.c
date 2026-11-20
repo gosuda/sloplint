@@ -514,12 +514,19 @@ static bool scan_string_content(TSLexer *lexer, bool is_multiline, StringMode st
 
 // Consumes a block comment body, nesting per SLS 1.4. The caller has consumed
 // the leading "/*". With stop_at_newline it stops at the first newline.
-// Returns whether the comment closed on the line it started on.
-static bool consume_block_comment_body_ex(TSLexer *lexer, bool stop_at_newline) {
+// Returns whether the comment closed on the line it started on. When
+// saw_newline is given it reports whether the body crossed a line end —
+// comments are transparent to scalac, so an embedded newline still ends the
+// line the comment opened on.
+static bool consume_block_comment_body_ex(TSLexer *lexer, bool stop_at_newline,
+                                          bool *saw_newline) {
   unsigned depth = 1;
   while (depth > 0) {
     if (lexer->eof(lexer) || (stop_at_newline && lexer->lookahead == '\n')) {
       return false;
+    }
+    if (saw_newline && lexer->lookahead == '\n') {
+      *saw_newline = true;
     }
     if (lexer->lookahead == '/') {
       advance(lexer);
@@ -542,13 +549,13 @@ static bool consume_block_comment_body_ex(TSLexer *lexer, bool stop_at_newline) 
 
 // Stops just past the matching "*/" (or at EOF).
 static void consume_block_comment_body(TSLexer *lexer) {
-  consume_block_comment_body_ex(lexer, false);
+  consume_block_comment_body_ex(lexer, false, NULL);
 }
 
 // Stops at a newline. Returns whether the comment ended on the line it
 // started on. A comment crossing the line end means the line ends there.
 static bool consume_block_comment_body_on_line(TSLexer *lexer) {
-  return consume_block_comment_body_ex(lexer, true);
+  return consume_block_comment_body_ex(lexer, true, NULL);
 }
 
 static bool finish_block_comment(TSLexer *lexer) {
@@ -845,9 +852,7 @@ static bool rest_of_line_is_blank_or_comments(TSLexer *lexer) {
       return false;  // a lone '/' is code
     }
     advance(lexer);
-    // Consume the whole comment: the line where `*/` lands is the one
-    // whose remainder decides, not the line the comment opened on.
-    consume_block_comment_body_ex(lexer, false);
+    consume_block_comment_body_ex(lexer, false, NULL);
   }
 }
 
@@ -1234,6 +1239,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
     }
     skip(lexer);
   }
+
 
   // COMMA_OUTDENT is a distinct token so tree-sitter only makes it valid
   // where comma termination is expected (colon_argument,
@@ -1955,8 +1961,15 @@ static bool scan_impl(void *payload, TSLexer *lexer,
           line_blank = true;
         } else {
           advance(lexer);
-          consume_block_comment_body_ex(lexer, false);
-          line_blank = rest_of_line_is_blank_or_comments(lexer);
+          bool comment_newline = false;
+          consume_block_comment_body_ex(lexer, false, &comment_newline);
+          /* A newline inside the comment ends the colon's line — but only
+             where the fewer-braces colon is on the table. Inside braces
+             there is no indentation syntax, so the comment stays
+             transparent and a braced typed lambda still reads its param. */
+          line_blank =
+              (valid_symbols[COLON_EOL] && comment_newline) ||
+              rest_of_line_is_blank_or_comments(lexer);
           rest_checked = true;
         }
       } else {

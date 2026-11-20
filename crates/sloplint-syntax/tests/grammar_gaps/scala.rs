@@ -527,6 +527,10 @@ fn operator_names_keep_their_precedence_classes() {
         "val w = (x: /* two\n lines */ Int => x)\n",
         // A lone `/` after the comment is code, not swallowed whitespace.
         "val z = Map[String, /*c*/ / => Int]()\n",
+        // A newline inside the colon's comment ends the colon's line:
+        // `y => g(y)` is the fewer-braces body, not a lambda argument
+        // that would swallow the `f(1, 2)` call.
+        "def cb() = { f(1, 2) : /* two\nlines */ y => g(y) }\n",
     );
     let tree = parser.parse(source, None).expect("parser returns a tree");
     let sexp = tree.root_node().to_sexp();
@@ -549,8 +553,8 @@ fn operator_names_keep_their_precedence_classes() {
     );
     assert_eq!(
         sexp.matches("(ascription_expression").count(),
-        2,
-        "the adjacent and multi-line comments keep their type ascriptions, sexp: {sexp}"
+        3,
+        "the adjacent, multi-line and in-brace comments keep their type ascriptions, sexp: {sexp}"
     );
     assert!(
         sexp.contains("function_type"),
@@ -559,5 +563,15 @@ fn operator_names_keep_their_precedence_classes() {
     assert!(
         sexp.contains("quote_expression"),
         "`'×/☃` stays one symbol name, sexp: {sexp}"
+    );
+    // `{ f(1,2) : /* a\nb */ y => g(y) }` — inside braces there is no
+    // indentation syntax, so the colon stays a plain ascription (same read
+    // upstream gives); what matters is the `f` call surviving instead of
+    // being swallowed as a lambda parameter.
+    let cb_idx = sexp.find("(function_definition").unwrap_or(sexp.len());
+    let cb = &sexp[cb_idx..];
+    assert!(
+        cb.matches("(call_expression").count() >= 1,
+        "the newline inside the colon's comment must not merge the call into a lambda, sexp: {sexp}"
     );
 }

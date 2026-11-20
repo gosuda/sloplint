@@ -239,3 +239,13 @@ probe judges the line `*/` lands on — `f(1,2) : // note\n y=>g(y)` keeps
 its `colon_argument` reading, `x :/*note*/ Int => b` keeps `_colon_mid`,
 `(x: /*two\nlines*/ Int => x)` parses, and a lone `/` after a comment is
 still code (`Map[String, /*c*/ / => Int]`).
+
+Round: a newline *inside* the colon's trailing block comment ends the colon's
+line (scalac's COLONeol is comment-transparent). The colon probe now watches
+the comment body for a newline and — only when the fewer-braces colon is in
+valid_symbols — calls the line blank, so `{ f(1,2) : /* a\nb */ y => g(y) }`
+keeps `f` as a call instead of the `=>` tail swallowing it into a lambda
+parameter. Inside braces COLON_EOL is never on the table, so the braced
+ascription / typed-lambda reads are unchanged. Residual: content that sits
+on the comment's own `*/`-close line still goes through the ascription fork
+when no real newline follows — same as upstream.
