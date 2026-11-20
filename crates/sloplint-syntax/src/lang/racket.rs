@@ -106,23 +106,6 @@ fn lookup_head(name: &str) -> Option<Head> {
         .map(|(_, concept)| *concept)
 }
 
-/// Node kinds that wrap datum instead of code: quoted forms,
-/// commented-out datum, and reader-level datum wrappers. A
-/// definition-shaped list under any of these is data, not code.
-const NON_CODE_KINDS: &[&str] = &[
-    "quote",
-    "quasiquote",
-    "syntax",
-    "quasisyntax",
-    "unquote",
-    "unquote_splicing",
-    "unsyntax",
-    "unsyntax_splicing",
-    "sexp_comment",
-    "box",
-    "graph",
-];
-
 const COMMENT_KINDS: &[&str] = &["comment", "block_comment", "sexp_comment"];
 
 fn is_comment(kind: &str) -> bool {
@@ -138,9 +121,12 @@ fn code_children(n: Node<'_>) -> Vec<Node<'_>> {
         .collect()
 }
 
-/// First code child: the head position of a `list`.
+/// First code child: the head position of a `list`. Iterates without
+/// collecting so ancestor scans stay linear in each list's head.
 fn head_child(n: Node<'_>) -> Option<Node<'_>> {
-    code_children(n).into_iter().next()
+    let mut cursor = n.walk();
+    n.named_children(&mut cursor)
+        .find(|child| !is_comment(child.kind()))
 }
 
 fn first_symbol<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
@@ -150,37 +136,195 @@ fn first_symbol<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
         .map(|symbol| text(cx, symbol))
 }
 
+/// Which family a pending escape belongs to: `unquote` escapes only
+/// `quasiquote`; `unsyntax` escapes only `quasisyntax`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Escape {
+    Quote,
+    Syntax,
+}
+
+/// Whether this node sits inside datum, walking innermost to outermost.
+///
+/// A quasi form scans its whole template for escapes of its own family —
+/// literal forms of the other family and `quote`/`syntax`/`box`/`graph`
+/// wrappers are transparent to that scan — so a `quasiquote` consumes
+/// the nearest enclosing `unquote` even through an `unsyntax` list or a
+/// `quote`. The node's innermost escape decides its fate: when that
+/// escape pairs with a quasi the node's fate becomes the quasi's own
+/// context; when an outer escape pairs first the innermost one is trapped
+/// inside the escape's body and can never pair, so literals enclosing it
+/// decide. A `hash` literal never evaluates its contents, whatever
+/// encloses it.
 fn in_non_code(cx: &Cx<'_, '_>) -> bool {
+    // Pending escapes, innermost at index 0. A quasi form pairs with the
+    // topmost pending escape of its own family; a literal form is
+    // transparent while it sits inside a pending escape's body — a quasi
+    // still scans through it — and only decides datum at the end of the
+    // walk or when the pending escapes become unpairable.
+    let mut escapes: Vec<Escape> = Vec::new();
+    // Smallest escape-count seen at a literal ancestor. A literal makes the
+    // innermost escape datum only when it sits inside the pairing escape's
+    // body — i.e. when it enclosed at most `pos` escapes where `pos` is the
+    // pairing escape's index. A literal that also wraps the pairing escape
+    // lives in the quasi's template and cannot hide the escape's body.
+    let mut literal_min_enclosed = usize::MAX;
+    for ancestor in cx.ancestors() {
+        let head = match ancestor.kind() {
+            "sexp_comment" | "hash" => return true,
+            "quote" | "syntax" | "box" | "graph" => {
+                if escapes.is_empty() {
+                    return true;
+                }
+                literal_min_enclosed = literal_min_enclosed.min(escapes.len());
+                continue;
+            }
+            "quasiquote" => match escapes.iter().rposition(|e| *e == Escape::Quote) {
+                Some(0) => {
+                    escapes.clear();
+                    literal_min_enclosed = usize::MAX;
+                    continue;
+                }
+                Some(pos) => return literal_min_enclosed <= pos,
+                None => return true,
+            },
+            "quasisyntax" => match escapes.iter().rposition(|e| *e == Escape::Syntax) {
+                Some(0) => {
+                    escapes.clear();
+                    literal_min_enclosed = usize::MAX;
+                    continue;
+                }
+                Some(pos) => return literal_min_enclosed <= pos,
+                None => return true,
+            },
+            "unquote" | "unquote_splicing" => {
+                escapes.push(Escape::Quote);
+                continue;
+            }
+            "unsyntax" | "unsyntax_splicing" => {
+                escapes.push(Escape::Syntax);
+                continue;
+            }
+            "list" => match head_child(ancestor) {
+                Some(head) if head.kind() == "symbol" => text(cx, head),
+                _ => continue,
+            },
+            _ => continue,
+        };
+        match head {
+            "quote" | "syntax" => {
+                if escapes.is_empty() {
+                    return true;
+                }
+                literal_min_enclosed = literal_min_enclosed.min(escapes.len());
+            }
+            "quasiquote" => match escapes.iter().rposition(|e| *e == Escape::Quote) {
+                Some(0) => {
+                    escapes.clear();
+                    literal_min_enclosed = usize::MAX;
+                }
+                Some(pos) => return literal_min_enclosed <= pos,
+                None => return true,
+            },
+            "quasisyntax" => match escapes.iter().rposition(|e| *e == Escape::Syntax) {
+                Some(0) => {
+                    escapes.clear();
+                    literal_min_enclosed = usize::MAX;
+                }
+                Some(pos) => return literal_min_enclosed <= pos,
+                None => return true,
+            },
+            "unquote" | "unquote-splicing" => escapes.push(Escape::Quote),
+            "unsyntax" | "unsyntax-splicing" => escapes.push(Escape::Syntax),
+            _ => {}
+        }
+    }
+    // The innermost escape decides the node's fate. If it never paired,
+    // the node is datum only when a literal wraps the escape — otherwise
+    // `unquote`/`unsyntax` are ordinary callees whose argument is code.
+    !escapes.is_empty() && literal_min_enclosed != usize::MAX
+}
+
+/// A `list` whose head splices its body definitions into the
+/// enclosing scope: `begin` and the `splicing-*` family. `module`
+/// forms are deliberately absent — a submodule's definitions are
+/// not in the file's provide scope, and only program-level
+/// `(provide ...)` forms are collected.
+fn module_level_list(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    n.kind() == "list"
+        && head_child(n).is_some_and(|head| {
+            head.kind() == "symbol"
+                && matches!(
+                    text(cx, head),
+                    "begin"
+                        | "splicing-let"
+                        | "splicing-let*"
+                        | "splicing-letrec"
+                        | "splicing-let-values"
+                        | "splicing-let*-values"
+                        | "splicing-letrec-values"
+                        | "splicing-local"
+                        | "splicing-parameterize"
+                        | "splicing-syntax-parameterize"
+                )
+        })
+}
+
+/// Whether this `define` sits at file level: every ancestor below the
+/// program splices its definitions into the enclosing scope. A define
+/// inside any other form — including a submodule — is a local binding
+/// and cannot be provided at file level, so it is never Exported.
+fn is_module_level(cx: &Cx<'_, '_>) -> bool {
     cx.ancestors()
-        .any(|ancestor| NON_CODE_KINDS.contains(&ancestor.kind()))
+        .take_while(|ancestor| ancestor.kind() != "program")
+        .all(|ancestor| module_level_list(cx, ancestor))
+}
+
+/// The signature of a `define`'s second child: `(name args ...)` for a
+/// plain signature, `(name args ...)` nested deeper for each curried
+/// layer of `(define ((f x) y) ...)`. Returns the innermost list, whose
+/// head is the bound name and whose tail is `f`'s parameter list.
+fn signature_list(n: Node<'_>) -> Option<Node<'_>> {
+    let mut cur = n;
+    loop {
+        let inner = code_children(cur);
+        match inner.first() {
+            Some(first) if first.kind() == "symbol" => return Some(cur),
+            Some(first) if first.kind() == "list" => cur = *first,
+            _ => return None,
+        }
+    }
+}
+
+/// The lambda form a `define`/`define/contract` initializes to, if
+/// any: only the last code child counts. In `define/contract` the
+/// contract sits before the init and may itself carry lambdas
+/// (`#:freevar` predicates), so scanning every list child would bind
+/// a contract lambda as the value.
+fn lambda_init<'a>(cx: &Cx<'_, '_>, kids: &'a [Node<'a>]) -> Option<Node<'a>> {
+    let last = kids.last()?;
+    (last.kind() == "list"
+        && head_child(*last).is_some_and(|head| {
+            head.kind() == "symbol" && matches!(lookup_head(text(cx, head)), Some(Head::Lambda))
+        }))
+    .then_some(*last)
 }
 
 /// The defined name of a top-level `define` list, if it binds one
 /// function: `(define (name args ...) ...)` or
 /// `(define name (lambda ...))`.
 fn define_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
-    let mut kids = code_children(n).into_iter();
-    let second = kids.nth(1)?;
+    let kids = code_children(n);
+    let second = *kids.get(1)?;
     if second.kind() == "list" {
-        let mut inner = code_children(second).into_iter();
-        let name = inner.next()?;
-        if name.kind() == "symbol" {
-            return Some(text(cx, name));
-        }
-        return None;
+        let sig = signature_list(second)?;
+        let name = code_children(sig).into_iter().next()?;
+        return (name.kind() == "symbol").then(|| text(cx, name));
     }
     if second.kind() != "symbol" {
         return None;
     }
-    let third = kids.next()?;
-    if third.kind() == "list"
-        && head_child(third).is_some_and(|head| {
-            head.kind() == "symbol" && matches!(lookup_head(text(cx, head)), Some(Head::Lambda))
-        })
-    {
-        return Some(text(cx, second));
-    }
-    None
+    lambda_init(cx, &kids).map(|_| text(cx, second))
 }
 
 fn is_bool_default(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
@@ -284,21 +428,20 @@ fn define_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>, name: &'s str) -> FunctionHead<
     head.name = name;
     head.name_pos = pos_of(n);
     head.visibility = visibility_of(cx, name);
-    let mut kids = code_children(n).into_iter();
-    let second = kids.nth(1);
-    match second.map(|node| node.kind()) {
-        // `(define (name args ...) ...)`: parameters follow the name.
+    let kids = code_children(n);
+    match kids.get(1).map(|node| node.kind()) {
+        // `(define (name args ...) ...)`: parameters follow the name in
+        // the innermost signature list (curried defines nest deeper).
         Some("list") => {
-            let second = second.expect("kind was just matched");
-            let inner = code_children(second);
-            head.params = params_of_nodes(cx, inner.get(1..).unwrap_or(&[]));
+            if let Some(sig) = signature_list(kids[1]) {
+                let inner = code_children(sig);
+                head.params = params_of_nodes(cx, inner.get(1..).unwrap_or(&[]));
+            }
         }
         // `(define name (lambda (args ...) ...))`: parameters live in
         // the lambda form, which carries no name of its own.
         Some("symbol") => {
-            if let Some(third) = kids.next()
-                && third.kind() == "list"
-                && let Some(lambda) = head_child(third)
+            if let Some(lambda) = lambda_init(cx, &kids)
                 && let Some(params_node) = code_children(lambda).into_iter().nth(1)
             {
                 head.params = params_of(cx, params_node);
@@ -336,7 +479,11 @@ impl LangHooks for RacketHooks {
         match lookup_head(text(cx, head)) {
             Some(Head::Define) => {
                 let name = define_name(cx, n)?;
-                Some(define_head(cx, n, name))
+                let mut head = define_head(cx, n, name);
+                if !is_module_level(cx) {
+                    head.visibility = Visibility::Private;
+                }
+                Some(head)
             }
             Some(Head::Lambda) => {
                 let mut kids = code_children(n).into_iter();
@@ -447,16 +594,18 @@ fn provide_list_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, spec: Node<'_>, out: 
             }
         }
         "rename-out" => {
+            // Visibility is resolved against the internal binding, so
+            // record the local name — `(rename-out [local alias])`
+            // makes `local` an exported function.
             for pair in kids {
                 if pair.kind() != "list" {
                     continue;
                 }
                 let mut inner = code_children(pair).into_iter();
-                inner.next();
-                if let Some(external) = inner.next()
-                    && external.kind() == "symbol"
+                if let Some(local) = inner.next()
+                    && local.kind() == "symbol"
                 {
-                    out.push(text(cx, external));
+                    out.push(text(cx, local));
                 }
             }
         }

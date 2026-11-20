@@ -1,0 +1,11 @@
+#lang racket
+(define v0 0)
+(define v1 1)
+(define v2 2)
+(define v3 3)
+(define v4 4)
+(define v5 5)
+(define v6 6)
+(define v7 7)
+(define v8 8)
+(define v9 9)
