@@ -5,16 +5,19 @@ use sloplint_core::lang::Lang;
 use crate::hooks::LangHooks;
 use crate::spec::{LangSpec, Role, spec};
 
+pub(crate) mod alloy;
 pub(crate) mod bash;
 pub(crate) mod c;
 pub(crate) mod c_family;
 pub(crate) mod cpp;
 pub(crate) mod csharp;
+pub(crate) mod dafny;
 pub(crate) mod dart;
 pub(crate) mod go;
 pub(crate) mod java;
 pub(crate) mod javascript;
 pub(crate) mod kotlin;
+pub(crate) mod lean;
 pub(crate) mod logos;
 pub(crate) mod objc;
 pub(crate) mod ocaml;
@@ -22,12 +25,15 @@ pub(crate) mod odin;
 pub(crate) mod php;
 pub(crate) mod powershell;
 pub(crate) mod python;
+pub(crate) mod quint;
 pub(crate) mod r;
+pub(crate) mod racket;
 pub(crate) mod ruby;
 pub(crate) mod rust;
 pub(crate) mod scala;
 pub(crate) mod starlark;
 pub(crate) mod swift;
+pub(crate) mod tlaplus;
 pub(crate) mod typescript;
 pub(crate) mod zig;
 
@@ -116,6 +122,32 @@ fn grammar(lang: Lang) -> (tree_sitter::Language, Table, &'static dyn LangHooks)
             tree_sitter_starlark::LANGUAGE.into(),
             starlark::TABLE,
             &starlark::HOOKS,
+        ),
+        Lang::Lean => (tree_sitter_lean::LANGUAGE.into(), lean::TABLE, &lean::HOOKS),
+        Lang::Quint => (
+            tree_sitter_quint::LANGUAGE.into(),
+            quint::TABLE,
+            &quint::HOOKS,
+        ),
+        Lang::Tlaplus => (
+            tree_sitter_tlaplus::LANGUAGE.into(),
+            tlaplus::TABLE,
+            &tlaplus::HOOKS,
+        ),
+        Lang::Alloy => (
+            tree_sitter_alloy::LANGUAGE.into(),
+            alloy::TABLE,
+            &alloy::HOOKS,
+        ),
+        Lang::Dafny => (
+            tree_sitter_dafny::LANGUAGE.into(),
+            dafny::TABLE,
+            &dafny::HOOKS,
+        ),
+        Lang::Racket => (
+            tree_sitter_racket::LANGUAGE.into(),
+            racket::TABLE,
+            &racket::HOOKS,
         ),
     }
 }

@@ -1,0 +1,181 @@
+========================================
+Contextual keywords allowed as identifiers
+========================================
+
+module KeywordExceptions {
+  pure val from = 1
+  pure val as = 2
+  pure val recordValue = { from: 1, as: 2, Set: 3, List: 4 }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (value_definition
+      name: (identifier)
+      value: (record_literal
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))
+        (record_literal_field
+          name: (identifier)
+          value: (integer_literal))))))
+
+========================================
+Reserved operator keyword rejected as identifier
+========================================
+
+module InvalidReservedKeyword {
+  pure val match = 1
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (ERROR
+      (integer_literal))))
+
+========================================
+Structural keyword rejected as identifier
+========================================
+
+module InvalidStructuralKeyword {
+  pure val module = 1
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      (ERROR
+        (identifier))
+      value: (integer_literal))))
+
+========================================
+Underscore is tokenized as a hole
+========================================
+
+module HoleContexts {
+  assume _ = true
+  pure def ignore(_: int): int = 0
+  pure val tupleLambda = ((_, right)) => right
+  type Option = Some(int)
+  pure val matched = match Some(1) { Some(_) => 0 }
+  pure val (_, second) = (1, 2)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (assumption_declaration
+      name: (hole)
+      condition: (boolean_literal))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (hole)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (integer_literal))
+    (value_definition
+      name: (identifier)
+      value: (lambda_expression
+        parameter: (tuple_pattern
+          element: (hole)
+          element: (identifier))
+        body: (name_reference
+          name: (identifier))))
+    (type_alias_declaration
+      name: (identifier)
+      value: (sum_type
+        (sum_type_variant
+          name: (identifier)
+          payload: (primitive_type))))
+    (value_definition
+      name: (identifier)
+      value: (match_expression
+        value: (call_expression
+          function: (name_reference
+            name: (identifier))
+          argument: (integer_literal))
+        arm: (match_arm
+          variant: (identifier)
+          parameter: (hole)
+          body: (integer_literal))))
+    (value_definition
+      name: (tuple_pattern
+        element: (hole)
+        element: (identifier))
+      value: (tuple_literal
+        element: (integer_literal)
+        element: (integer_literal)))))
+
+========================================
+Hole is rejected as a definition name
+========================================
+
+module LoneHoleName {
+  pure val _ = 1
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (ERROR
+      (hole)
+      (integer_literal))))
+
+========================================
+Boolean keyword rejected as identifier
+========================================
+
+module InvalidBooleanKeyword {
+  pure val true = 1
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (ERROR
+      (integer_literal))))
+
+========================================
+Primitive type keyword rejected as identifier
+========================================
+
+module InvalidTypeKeyword {
+  pure val int = 1
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (ERROR
+      (integer_literal))))

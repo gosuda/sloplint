@@ -1,0 +1,429 @@
+========================
+module declaration: plain
+========================
+
+module mymod
+
+---
+
+(source_file
+  (module_decl
+    name: (qual_name (name))))
+
+========================
+module declaration: with parameters
+========================
+
+module mymod [A, B]
+
+---
+
+(source_file
+  (module_decl
+    name: (qual_name (name))
+    (name_list_exact (name) (name))))
+
+========================
+module declaration: with exactly
+========================
+
+module mymod [exactly A, B]
+
+---
+
+(source_file
+  (module_decl
+    name: (qual_name (name))
+    (name_list_exact (name) (name))))
+
+========================
+open declaration: plain
+========================
+
+open util/ordering
+
+---
+
+(source_file
+  (open_decl
+    name: (qual_name (name) (name))))
+
+========================
+open declaration: with ref list
+========================
+
+open util/ordering [State]
+
+---
+
+(source_file
+  (open_decl
+    name: (qual_name (name) (name))
+    (sig_ref_list
+      (sig_ref (qual_name (name))))))
+
+========================
+open declaration: with ref list and alias
+========================
+
+open util/ordering [State] as ord
+
+---
+
+(source_file
+  (open_decl
+    name: (qual_name (name) (name))
+    (sig_ref_list
+      (sig_ref (qual_name (name))))
+    alias: (name)))
+
+========================
+sig declaration: simple empty
+========================
+
+sig A {}
+
+---
+
+(source_file
+  (sig_decl
+    names: (name_list (name))))
+
+========================
+sig declaration: abstract extends
+========================
+
+abstract sig Node extends Base {}
+
+---
+
+(source_file
+  (sig_decl
+    (sig_qualifier)
+    names: (name_list (name))
+    (sig_extension
+      (sig_ref (qual_name (name))))))
+
+========================
+sig declaration: one qualifier
+========================
+
+one sig Config {}
+
+---
+
+(source_file
+  (sig_decl
+    (sig_qualifier)
+    names: (name_list (name))))
+
+========================
+sig declaration: in union
+========================
+
+sig A in B + C {}
+
+---
+
+(source_file
+  (sig_decl
+    names: (name_list (name))
+    (sig_extension
+      (sig_ref_union
+        (sig_ref (qual_name (name)))
+        (sig_ref (qual_name (name)))))))
+
+========================
+sig declaration: with fields
+========================
+
+sig Book {
+  addr: Name -> lone Addr
+}
+
+---
+
+(source_file
+  (sig_decl
+    names: (name_list (name))
+    (sig_body
+      (field_decl
+        (name_list (name))
+        (arrow_expression
+          (qual_name (name))
+          (qual_name (name)))))))
+
+========================
+sig declaration: var disj fields
+========================
+
+sig S {
+  var disj x, y: A
+}
+
+---
+
+(source_file
+  (sig_decl
+    names: (name_list (name))
+    (sig_body
+      (field_decl
+        (name_list (name) (name))
+        (qual_name (name))))))
+
+========================
+sig declaration: multiple fields
+========================
+
+sig Book {
+  addr: Name -> Addr,
+  name: Name
+}
+
+---
+
+(source_file
+  (sig_decl
+    names: (name_list (name))
+    (sig_body
+      (field_decl
+        (name_list (name))
+        (arrow_expression
+          (qual_name (name))
+          (qual_name (name))))
+      (field_decl
+        (name_list (name))
+        (qual_name (name))))))
+
+========================
+sig declaration: with appended fact
+========================
+
+sig A {} {
+  all x: this | some x
+}
+
+---
+
+(source_file
+  (sig_decl
+    names: (name_list (name))
+    (block_expression
+      (quantified_expression
+        (decl_list
+          (decl
+            (name_list (name))
+            (this_expr)))
+        (multiplicity_expression
+          (qual_name (name)))))))
+
+========================
+fact declaration: named
+========================
+
+fact myFact { some x }
+
+---
+
+(source_file
+  (fact_decl
+    name: (name)
+    (block_expression
+      (multiplicity_expression
+        (qual_name (name))))))
+
+========================
+pred declaration: no params
+========================
+
+pred isValid { some x }
+
+---
+
+(source_file
+  (pred_decl
+    name: (name)
+    (block_expression
+      (multiplicity_expression
+        (qual_name (name))))))
+
+========================
+pred declaration: with params in parens
+========================
+
+pred p (x: A, y: B) { x = y }
+
+---
+
+(source_file
+  (pred_decl
+    name: (name)
+    (decl_list
+      (decl (name_list (name)) (qual_name (name)))
+      (decl (name_list (name)) (qual_name (name))))
+    (block_expression
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+pred declaration: with params in brackets
+========================
+
+pred p [x: A] { some x }
+
+---
+
+(source_file
+  (pred_decl
+    name: (name)
+    (decl_list
+      (decl (name_list (name)) (qual_name (name))))
+    (block_expression
+      (multiplicity_expression
+        (qual_name (name))))))
+
+========================
+pred declaration: qualified with sig
+========================
+
+pred Node.isRoot { no parent }
+
+---
+
+(source_file
+  (pred_decl
+    (sig_ref (qual_name (name)))
+    name: (name)
+    (block_expression
+      (multiplicity_expression
+        (qual_name (name))))))
+
+========================
+fun declaration: with return type
+========================
+
+fun f [x: A]: B { x }
+
+---
+
+(source_file
+  (fun_decl
+    name: (name)
+    (decl_list
+      (decl (name_list (name)) (qual_name (name))))
+    return_type: (qual_name (name))
+    (block_expression
+      (qual_name (name)))))
+
+========================
+assert declaration
+========================
+
+assert noOrphans {
+  all n: Node | some n.parent
+}
+
+---
+
+(source_file
+  (assert_decl
+    name: (name)
+    (block_expression
+      (quantified_expression
+        (decl_list
+          (decl (name_list (name)) (qual_name (name))))
+        (multiplicity_expression
+          (dot_expression
+            (qual_name (name))
+            (qual_name (name))))))))
+
+========================
+enum declaration
+========================
+
+enum Color { Red, Green, Blue }
+
+---
+
+(source_file
+  (enum_decl
+    name: (name)
+    (name_list (name) (name) (name))))
+
+========================
+let declaration: block form
+========================
+
+let x { some y }
+
+---
+
+(source_file
+  (let_decl
+    name: (name)
+    (block_expression
+      (multiplicity_expression
+        (qual_name (name))))))
+
+========================
+let declaration: equals form
+========================
+
+let x = A + B
+
+---
+
+(source_file
+  (let_decl
+    name: (name)
+    (plus_minus_expression
+      (qual_name (name))
+      (qual_name (name)))))
+
+========================
+command: run with body
+========================
+
+run { some x }
+
+---
+
+(source_file
+  (command
+    body: (block_expression
+      (multiplicity_expression
+        (qual_name (name))))))
+
+========================
+command: check with scope
+========================
+
+check myAssert for 5 but 3 Int
+
+---
+
+(source_file
+  (command
+    name: (qual_name (name))
+    (scope
+      (number)
+      (typescope_list
+        (typescope
+          (type_scope_number (number))
+          (scope_sig_ref))))))
+
+========================
+command: with label and expect
+========================
+
+myTest: run myPred for 3 expect 1
+
+---
+
+(source_file
+  (command
+    label: (name)
+    name: (qual_name (name))
+    (scope (number))
+    (expect_clause (number))))

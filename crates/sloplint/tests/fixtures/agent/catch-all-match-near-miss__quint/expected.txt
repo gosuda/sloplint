@@ -1,0 +1,1 @@
+# An exhaustive match without a wildcard stays silent.

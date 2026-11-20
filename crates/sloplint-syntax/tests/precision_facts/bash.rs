@@ -98,7 +98,9 @@ fn shapes_of(source: &str) -> Vec<Vec<Shape>> {
                 .map(|a| match &a.shape {
                     ArgShape::Str { .. } => Shape::Str,
                     ArgShape::Concat { longest_static } => Shape::Concat(*longest_static),
-                    ArgShape::Ident(name) => Shape::Ident(name.to_string()),
+                    ArgShape::Ident(name) | ArgShape::NamedIdent(name) => {
+                        Shape::Ident(name.to_string())
+                    }
                     ArgShape::Collection => Shape::Collection,
                     ArgShape::CodeBody => Shape::CodeBody,
                     ArgShape::Other => Shape::Other,

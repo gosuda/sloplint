@@ -1,0 +1,28 @@
+================================================================================
+comment before an interpolated string is not swallowed
+================================================================================
+
+package p
+
+func f(x string) string {
+	return /* why */ $"value {x}"
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (package_clause
+    (package_identifier))
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list
+      (parameter_declaration
+        name: (identifier)
+        type: (type_identifier)))
+    result: (type_identifier)
+    body: (block
+      (statement_list
+        (return_statement
+          (comment)
+          (expression_list
+            (interp_string_literal)))))))

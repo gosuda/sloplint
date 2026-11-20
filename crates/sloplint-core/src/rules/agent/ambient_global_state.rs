@@ -350,6 +350,7 @@ mod tests {
         checked.bindings.push(crate::facts::MutBinding {
             name: "counter",
             pos: Pos { line: 5, byte: 0 },
+            end_line: u32::MAX,
             last_write_line: 5,
             first_write_line: 5,
             write_lines: 0,

@@ -1,1 +1,2 @@
 # Plain return err propagates without logging: no finding for Go.
+# Near-miss: handler in a directly deferred lambda runs at cleanup.

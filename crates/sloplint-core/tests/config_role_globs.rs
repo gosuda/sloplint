@@ -12,6 +12,12 @@ const EXPECTED: &[&str] = &[
     "**/testing/**",
     "**/tests/common/**",
     "**/tests/support/**",
+    "**/tests/shared/**",
+    "**/tests/helpers/**",
+    "**/test/common/**",
+    "**/test/support/**",
+    "**/test/shared/**",
+    "**/test/helpers/**",
     "**/spec/support/**",
     "**/__mocks__/**",
 ];

@@ -18,7 +18,6 @@ Attribute targets
       name: (identifier)
       (attribute_argument_list))))
 
-
 ================================================================================
 Attributes
 ================================================================================
@@ -354,7 +353,6 @@ class A<[typevar: B] TC>
           (identifier)
           (variable_declarator
             (identifier)))))))
-
 
 ================================================================================
 Attribute quirks

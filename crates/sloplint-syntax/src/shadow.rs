@@ -77,24 +77,34 @@ pub(crate) struct FnFrame<'s> {
     pub block_scoped: bool,
 }
 impl<'s> FnFrame<'s> {
-    pub(crate) fn release(&mut self, depth: usize) {
+    /// Closes the scope ending at `depth` and returns the fact indexes of
+    /// bindings whose declarations it held, so callers can stamp their
+    /// `end_line`. Non-block-scoped languages keep their decls and return
+    /// an empty list, leaving those bindings open-ended.
+    pub(crate) fn release(&mut self, depth: usize) -> Vec<usize> {
         let freed = self.shadow.release(depth);
         self.only.release(depth);
         if self.block_scoped {
-            self.pop_decl_scopes(depth, &freed);
+            self.pop_decl_scopes(depth, &freed)
+        } else {
+            Vec::new()
         }
     }
-    pub(crate) fn pop_decl_scopes(&mut self, depth: usize, freed: &[&'s str]) {
+    pub(crate) fn pop_decl_scopes(&mut self, depth: usize, freed: &[&'s str]) -> Vec<usize> {
+        let mut closed = Vec::new();
         for name in freed {
             if let Some(stack) = self.decls.get_mut(name) {
                 while stack.last().is_some_and(|top| top.scope == depth) {
-                    stack.pop();
+                    if let Some(decl) = stack.pop() {
+                        closed.push(decl.binding);
+                    }
                 }
                 if stack.is_empty() {
                     self.decls.remove(name);
                 }
             }
         }
+        closed
     }
 }
 #[derive(Clone, Copy)]

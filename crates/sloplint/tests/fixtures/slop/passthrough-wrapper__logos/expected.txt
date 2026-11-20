@@ -1,1 +1,2 @@
 a.lgo:2 info slop/passthrough-wrapper
+shadow.lgo:7 info slop/passthrough-wrapper

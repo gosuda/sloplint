@@ -142,13 +142,12 @@ module.exports = grammar(C, {
     [$._declarator, $.expression, $.macro_braced_expression],
     [$.macro_qualifier, $._declarator, $.expression, $.macro_braced_expression],
     [$._declarator, $.type_specifier, $.expression, $.macro_braced_expression],
-    [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
-    [$._macro_declaration_stmt, $.expression, $.macro_braced_statement, $.macro_braced_expression],
+    [$._macro_declaration_stmt, $.expression, $.macro_braced_statement, $._macro_braced_declaration_paren, $.macro_braced_expression],
+    [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $._macro_braced_declaration_paren, $.macro_braced_expression],
     [$.expression, $.concatenated_string, $.macro_braced_expression],
     [$.type_specifier, $.expression, $.macro_braced_expression],
-    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_declaration, $.macro_braced_expression],
     [$.enumerator, $.expression, $.macro_braced_expression],
-    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
+    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_braced_statement, $._macro_braced_declaration_paren, $.macro_braced_expression],
     [$.macro_qualifier, $.type_specifier, $.expression, $.macro_braced_expression],
                     [$.macro_argument_list, $.expression],
     [$.macro_argument_list, $.expression, $.template_type, $.template_function],
@@ -161,7 +160,6 @@ module.exports = grammar(C, {
     [$.macro_argument_list, $.type_specifier, $.expression, $.macro_braced_expression],
     [$.macro_argument_list, $.concatenated_string],
     [$._midl_attribute, $.expression, $.macro_braced_expression],
-    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
     [$._macro_braced_body, $._macro_braced_members],
     [$._block_item, $._macro_braced_members],
     [$.macro_argument_list, $.sized_type_specifier, $._macro_argument_list_nonempty],
@@ -170,24 +168,10 @@ module.exports = grammar(C, {
     [$.macro_qualifier, $._declarator, $._field_declarator, $._init_pointer_declarator],
     [$._declarator, $._field_declarator, $._init_reference_declarator],
     [$.macro_argument_list, $.type_specifier, $._macro_argument_list_nonempty],
-    [$.macro_argument_list, $._macro_argument_list_nonempty],
     [$._init_declarator_preproc, $._declarator, $._field_declarator],
     [$._declarator, $._field_declarator],
     [$.labeled_statement, $.macro_access_label],
     [$._midl_attribute, $.structured_binding_declarator, $._lambda_capture_identifier],
-                    // `NAME(args)` forks: call/declarator/macro_declaration vs a
-    // `MACRO(args) { members };` braced declaration — decided only by
-    // whether `_macro_braced_open` lexes after the `)`.
-        [
-      $.macro_qualifier,
-      $._macro_declaration_top,
-      $._declarator,
-      $.type_specifier,
-      $.expression,
-      $.macro_braced_statement,
-      $.macro_braced_declaration,
-      $.macro_braced_expression,
-    ],
         [
       $.macro_qualifier,
       $.macro_declaration,
@@ -400,6 +384,17 @@ module.exports = grammar(C, {
     [$.abstract_parenthesized_declarator, $.qualified_identifier, $.qualified_type_identifier],
     [$._type_declarator, $.template_type],
     [$.expression],
+    // `NAME(args)` forks: call/declarator/macro_declaration vs a
+    // `MACRO(args) { members };` braced declaration — decided only by
+    // whether `_macro_braced_open` lexes after the `)`. The loose
+    // `_macro_braced_declaration_loose` variant (empty `()` allowed)
+    // takes the file/namespace/statement positions.
+    [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $._macro_braced_declaration_loose, $.macro_braced_expression],
+    [$._macro_braced_declaration_loose],
+    [$._macro_braced_declaration_paren],
+    [$._macro_braced_declaration_loose, $._macro_braced_declaration_paren],
+    [$.macro_argument_list, $.template_type],
+    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $._macro_braced_declaration_loose, $._macro_braced_declaration_paren, $.macro_braced_expression],
   ],
 
   inline: ($, original) => original.concat([
@@ -431,7 +426,7 @@ module.exports = grammar(C, {
       // `parenthesized_expression(args)` statement (MISSING `;`).
       alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
       $.macro_namespace,
-      $.macro_braced_declaration,
+      alias($._macro_braced_declaration_loose, $.macro_braced_declaration),
       $.guarded_function,
       $.guarded_class,
     ),
@@ -470,7 +465,7 @@ module.exports = grammar(C, {
       '{',
       repeat(choice(
         $._block_item,
-        $.macro_braced_declaration,
+        alias($._macro_braced_declaration_loose, $.macro_braced_declaration),
         alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
       )),
       '}',
@@ -1225,6 +1220,21 @@ module.exports = grammar(C, {
 
     ...preprocIf('_in_guarded_class', $ => $._guarded_class_head),
 
+    // The inherited un-suffixed `#if`/`#ifdef` arms take `_block_item`,
+    // which deliberately lacks the loose braced decl — so a guarded
+    // `WIDGET() { int bits: 3; };` errored even at file scope. Adding
+    // it here (child rules shadow the parent's same-named rules) keeps
+    // unguarded statement bodies on `macro_braced_statement` while
+    // guarded positions gain the member-form read.
+    ...preprocIf('', $ => choice(
+      $._block_item,
+      alias($._macro_braced_declaration_loose, $.macro_braced_declaration),
+      alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
+      $.dangling_else,
+      $.dangling_label,
+      '__extension__',
+    )),
+
     _macro_declaration_literals: $ => choice(
       'Q_OBJECT',
       'Q_GADGET',
@@ -1905,6 +1915,27 @@ module.exports = grammar(C, {
       optional(';'),
     ))),
 
+    // Same shape with the base (empty-matching) `macro_argument_list` —
+    // used at file/namespace/statement scope, where `NAME() {}` can
+    // never be a constructor, so empty `()` is unambiguously a macro.
+    _macro_braced_declaration_loose: $ => prec.dynamic(1, prec.right(seq(
+      field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
+      optional($.macro_argument_list),
+      alias($._macro_braced_members, $.field_declaration_list),
+      optional(';'),
+    ))),
+
+    // Statement-scope braced decl macros (`WIDGET() { int bits : 3; };`
+    // inside a function body). Parens are required — bare `NAME {` stays
+    // with `macro_braced_statement`, which is the only read that can
+    // hold `ON_SCOPE_EXIT { cleanup(); };` (its block is statements).
+    _macro_braced_declaration_paren: $ => prec.dynamic(1, prec.right(seq(
+      field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
+      $.macro_argument_list,
+      alias($._macro_braced_members, $.field_declaration_list),
+      optional(';'),
+    ))),
+
     // The base `macro_argument_list` also matches `()` — with empty
     // parens the braced read would steal `S() { this->x = 1; };`
     // constructors, so the declaration form demands ≥1 argument.
@@ -2026,6 +2057,7 @@ module.exports = grammar(C, {
       $.qt_statement_macro,
       $.qt_foreach_statement,
       $.macro_braced_statement,
+      alias($._macro_braced_declaration_paren, $.macro_braced_declaration),
     ),
 
     switch_statement: $ => seq(

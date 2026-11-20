@@ -13,7 +13,7 @@
 
 use std::sync::LazyLock;
 
-use sloplint_core::facts::ArgShape;
+use sloplint_core::facts::{AmbientKind, ArgShape};
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
@@ -453,8 +453,209 @@ fn saved_lambda_inside_deferred_closure_is_not_cleanup() {
         "package p\n\nfunc save(f func()) {}\n\nfunc work() error {\n\treturn nil\n}\n\nfunc f() {\n\tscope defer func() {\n\t\tsave(() => {\n\t\t\tif err := work(); err != nil {\n\t\t\t}\n\t\t})\n\t}()\n}\n",
     );
     assert!(
+        !analysis.facts.handlers.is_empty(),
+        "the saved lambda must emit a handler fact"
+    );
+    assert!(
         !analysis.facts.handlers.iter().any(|h| h.in_cleanup),
         "a handler in a saved lambda must not inherit deferred cleanup"
+    );
+}
+
+#[test]
+fn spread_ident_arg_is_not_a_plain_identifier() {
+    let analysis = run_clean(
+        "src/spreadident.lgo",
+        "package p\n\nfunc sum(vals ...int) int {\n\treturn 0\n}\n\nfunc total(values []int) int {\n\treturn sum(..values)\n}\n",
+    );
+    let call = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "sum")
+        .expect("sum must be a call fact");
+    assert_eq!(
+        call.args.first().map(|a| &a.shape),
+        Some(&ArgShape::Other),
+        "a spread identifier expands elements instead of forwarding one value, got {:?}",
+        call.args.first().map(|a| &a.shape)
+    );
+}
+
+#[test]
+fn swapped_named_args_are_not_plain_identifiers() {
+    let analysis = run_clean(
+        "src/swappednamed.lgo",
+        "package p\n\nfunc Render(left string, right string) string {\n\treturn left\n}\n\nfunc Swap(left string, right string) string {\n\treturn Render(right = left, left = right)\n}\n",
+    );
+    let call = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "Render")
+        .expect("Render must be a call fact");
+    assert!(
+        call.args
+            .iter()
+            .all(|a| !matches!(a.shape, ArgShape::Ident(_))),
+        "named arguments bind by name, so no value may read as a forwarded identifier, got {:?}",
+        call.args.iter().map(|a| &a.shape).collect::<Vec<_>>()
+    );
+    assert_eq!(
+        call.args.iter().map(|a| &a.shape).collect::<Vec<_>>(),
+        vec![
+            &ArgShape::NamedIdent("left"),
+            &ArgShape::NamedIdent("right"),
+        ],
+        "a named identifier still references its name, got {:?}",
+        call.args.iter().map(|a| &a.shape).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn interp_prefix_in_concat_keeps_its_static_run() {
+    let analysis = run_clean(
+        "src/interpconcat.lgo",
+        "package p\n\nimport \"log\"\n\nfunc Greet(name string, suffix string) {\n\tlog.Print($\"service started: {name}\" + suffix)\n}\n",
+    );
+    let call = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "log.Print")
+        .expect("Print must be a call fact");
+    assert_eq!(
+        call.args.first().map(|a| &a.shape),
+        Some(&ArgShape::Concat { longest_static: 17 }),
+        "\"service started: \" is 17 static chars, got {:?}",
+        call.args.first().map(|a| &a.shape)
+    );
+}
+
+#[test]
+fn var_group_without_separator_is_a_parse_error() {
+    let analysis = run("src/varsep.lgo", "var ( x int y int )\n");
+    assert!(
+        first_problem(&parse_raw("var ( x int y int )\n")).is_some(),
+        "adjacent declarations without a separator must not parse cleanly"
+    );
+    assert!(
+        analysis.parse_error.is_some(),
+        "adjacent declarations without a separator must not parse cleanly"
+    );
+}
+
+#[test]
+fn var_group_without_trailing_separator_parses() {
+    run_clean(
+        "src/varok.lgo",
+        "var ( x int; y int )\nvar ( x int )\nvar (\n\tx int\n\ty int\n)\nvar ( x int; )\n",
+    );
+}
+
+#[test]
+fn var_group_with_newline_comment_separator_parses() {
+    // Go inserts a semicolon after a declaration when a block comment on the
+    // same line spans a newline, so the comment separates the declarations
+    // instead of producing a parse error.
+    let analysis = run_clean(
+        "src/varcommentsep.lgo",
+        "package p\n\nvar (\n\tfirst int /* note\n */ second int\n)\n",
+    );
+    let mut names: Vec<&str> = analysis
+        .facts
+        .ambient
+        .iter()
+        .filter(|a| a.kind == AmbientKind::GlobalMutable)
+        .map(|a| a.name)
+        .collect();
+    names.sort_unstable();
+    assert_eq!(
+        names,
+        vec!["first", "second"],
+        "both declarations around the comment must read as globals, got {names:?}"
+    );
+    // The separator comment is aliased to `comment`, so doc and suppression
+    // handling keeps seeing it.
+    let source = "package p\n\nvar (\n\tfirst int /* note\n */ second int\n)\n";
+    let tree = parse_raw(source);
+    let mut seen = false;
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "comment"
+            && node
+                .utf8_text(source.as_bytes())
+                .is_ok_and(|text| text.contains("note"))
+        {
+            seen = true;
+        }
+        let mut cursor = node.walk();
+        stack.extend(node.children(&mut cursor));
+    }
+    assert!(seen, "the separator comment must stay a comment node");
+}
+
+#[test]
+fn single_line_block_comment_is_no_separator() {
+    // A block comment without a newline is whitespace: with no other
+    // separator the group must still fail, as the Go compiler rejects it.
+    let analysis = run(
+        "src/varcommentnosep.lgo",
+        "package p\n\nvar (\n\tfirst int /* note */ second int\n)\n",
+    );
+    assert!(
+        analysis.parse_error.is_some(),
+        "a single-line block comment must not separate declarations"
+    );
+}
+
+#[test]
+fn newline_comment_after_newline_stays_a_comment_node() {
+    // A comment after a real newline still lexes as a `comment` extra (the
+    // external scanner never skips a newline), so doc and suppression
+    // handling keeps seeing it.
+    let source =
+        "package p\n\nvar (\n\tfirst int\n\t/* docs for second\n\t   more */\n\tsecond int\n)\n";
+    let tree = parse_raw(source);
+    assert!(
+        !tree.root_node().has_error(),
+        "the group with a leading comment must parse cleanly"
+    );
+    let mut seen = false;
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "comment"
+            && node
+                .utf8_text(source.as_bytes())
+                .is_ok_and(|text| text.contains("docs for second"))
+        {
+            seen = true;
+        }
+        let mut cursor = node.walk();
+        stack.extend(node.children(&mut cursor));
+    }
+    assert!(seen, "the comment after a newline must stay a comment node");
+}
+
+#[test]
+fn deferred_lambda_through_parens_is_cleanup() {
+    let analysis = run_clean(
+        "src/deferredlambda.lgo",
+        "package p\n\nfunc work() error {\n\treturn nil\n}\n\nfunc f() {\n\tscope defer (() => {\n\t\tif err := work(); err != nil {\n\t\t}\n\t})()\n}\n",
+    );
+    assert!(
+        !analysis.facts.handlers.is_empty(),
+        "the deferred lambda must emit a handler fact"
+    );
+    assert!(
+        analysis.facts.handlers.iter().all(|h| h.in_cleanup),
+        "a directly deferred lambda counts as cleanup, got {:?}",
+        analysis
+            .facts
+            .handlers
+            .iter()
+            .map(|h| h.in_cleanup)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -474,5 +675,125 @@ fn interp_hole_with_comment_brace_stays_dynamic() {
     assert!(
         matches!(shape, Some(ArgShape::Str { longest_static }) if *longest_static < 8),
         "expression source after a comment brace must not read as fixed text, got {shape:?}"
+    );
+}
+
+#[test]
+fn paren_around_interp_prefix_keeps_concat() {
+    let analysis = run_clean(
+        "src/parenconcat.lgo",
+        "package p\n\nimport \"log\"\n\nfunc Greet(name string, suffix string) {\n\tlog.Print(($\"service started: {name}\") + suffix)\n\tlog.Print(($\"service started: {name}\" + suffix))\n}\n",
+    );
+    let shapes: Vec<&ArgShape> = analysis
+        .facts
+        .calls
+        .iter()
+        .filter(|c| c.callee == "log.Print")
+        .map(|c| {
+            c.args
+                .first()
+                .map(|a| &a.shape)
+                .expect("Print takes one arg")
+        })
+        .collect();
+    assert_eq!(
+        shapes,
+        vec![
+            &ArgShape::Concat { longest_static: 17 },
+            &ArgShape::Concat { longest_static: 17 },
+        ],
+        "a parenthesized interpolated prefix is still a concatenation, got {shapes:?}"
+    );
+}
+
+#[test]
+fn right_grouped_concat_keeps_concat() {
+    let analysis = run_clean(
+        "src/rightgroup.lgo",
+        "package p\n\nimport \"log\"\n\nfunc Greet(prefix string, suffix string) {\n\tlog.Print(prefix + (\"service started: \" + suffix))\n}\n",
+    );
+    let shapes: Vec<&ArgShape> = analysis
+        .facts
+        .calls
+        .iter()
+        .filter(|c| c.callee == "log.Print")
+        .map(|c| {
+            c.args
+                .first()
+                .map(|a| &a.shape)
+                .expect("Print takes one arg")
+        })
+        .collect();
+    assert_eq!(
+        shapes,
+        vec![&ArgShape::Concat { longest_static: 17 }],
+        "a right-grouped literal is still a concatenation, got {shapes:?}"
+    );
+}
+
+#[test]
+fn removed_supertypes_stay_queryable() {
+    // Custom rules written against the previous grammar name the hidden
+    // statement and type categories directly; dropping them from
+    // `supertypes` makes every such rule fail compilation and stops the
+    // run before any file is checked.
+    let rules = CustomRules::compile(&[
+        query_rule("logos", "((_simple_statement) @match)"),
+        query_rule("logos", "((_simple_type) @match)"),
+    ])
+    .expect("supertype queries compile");
+    let _ = rules;
+}
+
+fn query_rule(language: &str, query: &str) -> sloplint_core::CustomRuleSpec {
+    sloplint_core::CustomRuleSpec {
+        id: format!("custom/{language}-probe"),
+        language: language.to_string(),
+        severity: sloplint_core::Severity::Minor,
+        confidence: sloplint_core::Confidence::Medium,
+        message: "hit".to_string(),
+        why: "probe".to_string(),
+        fix: "probe".to_string(),
+        query: query.to_string(),
+        include: Vec::new(),
+        exclude: Vec::new(),
+    }
+}
+
+#[test]
+fn comment_before_interp_string_stays_a_comment_node() {
+    // A single-line block comment between `return` and an interpolated
+    // string is not a separator, so it must survive as an ordinary comment
+    // node instead of being swallowed into the string token.
+    let source = "package p\n\nfunc f(x string) string {\n\treturn /* why */ $\"value {x}\"\n}\n";
+    let tree = parse_raw(source);
+    assert!(
+        !tree.root_node().has_error(),
+        "the commented return must parse cleanly"
+    );
+    let mut seen_comment = false;
+    let mut seen_interp = false;
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "comment"
+            && node
+                .utf8_text(source.as_bytes())
+                .is_ok_and(|text| text.contains("why"))
+        {
+            seen_comment = true;
+        }
+        if node.kind() == "interp_string_literal" {
+            seen_interp = true;
+        }
+        let mut cursor = node.walk();
+        stack.extend(node.children(&mut cursor));
+    }
+    assert!(
+        seen_interp,
+        "the interpolated string must stay a string node"
+    );
+    assert!(
+        seen_comment,
+        "the comment before the interpolated string must stay a comment node"
     );
 }

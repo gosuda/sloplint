@@ -814,7 +814,175 @@ class C {
                     (integer_literal))))))
           (if_statement
             condition: (identifier)
-            consequence: (block)
-            (preproc_if
-              condition: (identifier)
-              (block))))))))
+            consequence: (block))
+          (preproc_if
+            condition: (identifier)
+            (dangling_else
+              alternative: (block))))))))
+
+================================================================================
+preproc after else-less if and else arm inside preproc_if
+================================================================================
+
+class C {
+  void M(bool q) {
+    if (q) { A(); }
+#if !NET20
+    C();
+#endif
+    if (q) {}
+#if X
+    else { D(); }
+#endif
+  }
+}
+
+---
+
+(compilation_unit
+  (class_declaration
+    (identifier)
+    (declaration_list
+      (method_declaration
+        (predefined_type)
+        (identifier)
+        (parameter_list
+          (parameter
+            (predefined_type)
+            (identifier)))
+        (block
+          (if_statement
+            (identifier)
+            (block
+              (expression_statement
+                (invocation_expression
+                  (identifier)
+                  (argument_list)))))
+          (preproc_if
+            (unary_expression
+              (identifier))
+            (expression_statement
+              (invocation_expression
+                (identifier)
+                (argument_list))))
+          (if_statement
+            (identifier)
+            (block))
+          (preproc_if
+            (identifier)
+            (dangling_else
+              (block
+                (expression_statement
+                  (invocation_expression
+                    (identifier)
+                    (argument_list)))))))))))
+
+================================================================================
+preproc splitting base list and argument list
+================================================================================
+
+class X : B
+#if X
+    , I
+#endif
+{
+  void M() {
+    F(x
+#if Y
+        , y
+#endif
+    );
+  }
+}
+
+---
+
+(compilation_unit
+  (class_declaration
+    (identifier)
+    (base_list
+      (identifier)
+      (preproc_if
+        (identifier)
+        (identifier)))
+    (declaration_list
+      (method_declaration
+        (predefined_type)
+        (identifier)
+        (parameter_list)
+        (block
+          (expression_statement
+            (invocation_expression
+              (identifier)
+              (argument_list
+                (argument
+                  (identifier))
+                (preproc_if
+                  (identifier)
+                  (argument
+                    (identifier)))))))))))
+
+================================================================================
+preproc splitting class and method heads
+================================================================================
+
+#if X
+public class Head1
+#else
+internal class Head1
+#endif
+{
+#if Y
+  private int M1() { return 0; }
+#else
+  public void M1() { }
+#endif
+}
+
+---
+
+(compilation_unit
+  (class_declaration
+    (preproc_if
+      (identifier)
+      (modifier)
+      (identifier)
+      (preproc_else
+        (modifier)
+        (identifier)))
+    (declaration_list
+      (preproc_if
+        (identifier)
+        (method_declaration
+          (modifier)
+          (predefined_type)
+          (identifier)
+          (parameter_list)
+          (block
+            (return_statement
+              (integer_literal))))
+        (preproc_else
+          (method_declaration
+            (modifier)
+            (predefined_type)
+            (identifier)
+            (parameter_list)
+            (block)))))))
+
+================================================================================
+line directive with backslash path
+================================================================================
+
+#line 2 "..\..\Views\Shared.cshtml"
+class C { }
+#line default
+
+---
+
+(compilation_unit
+  (preproc_line
+    (integer_literal))
+  (class_declaration
+    (identifier)
+    (declaration_list))
+  (preproc_line))

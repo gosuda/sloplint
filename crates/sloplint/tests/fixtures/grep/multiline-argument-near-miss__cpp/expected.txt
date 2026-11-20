@@ -1,2 +1,4 @@
 # near-miss: arg spans 5 lines < strict Minor(15).
 # Retired positive (retired_add.cpp): binary-operator arg is not a Collection, so it stays silent.
+# Guarded macro member init (macro_braced.cpp): the call initializes
+# field_declaration default_value — initializes_binding keeps it silent.

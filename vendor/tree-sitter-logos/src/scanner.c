@@ -8,6 +8,7 @@
 
 enum TokenType {
     INTERP_STRING,
+    NEWLINE_COMMENT,
 };
 
 // LoGOs interpolated string literal: `$"..."`.
@@ -182,9 +183,83 @@ static const char *scan_interp_body(TSLexer *lexer, int depth) {
     }
 }
 
+// A block comment that starts on the current line (only spaces, tabs and
+// other non-newline whitespace since the last token) and contains a newline.
+// Go inserts a semicolon after the preceding token in that case, so the
+// comment separates grouped declarations where a single-line block comment
+// does not. Newlines are never skipped here: after a real newline the
+// internal `newline` terminal wins and the comment lexes as an ordinary
+// `comment` extra, so leading and trailing comments stay visible in the
+// tree. Unterminated input is not a comment; fail and let the internal
+// lexer report it.
+static bool scan_newline_comment(TSLexer *lexer) {
+    for (;;) {
+        int32_t c = lexer->lookahead;
+        if (c != ' ' && c != '\t' && c != '\r' && c != '\v' && c != '\f') {
+            break;
+        }
+        lexer->advance(lexer, true);
+    }
+    if (lexer->lookahead != '/') {
+        return false;
+    }
+    advance(lexer);
+    if (lexer->lookahead != '*') {
+        return false;
+    }
+    advance(lexer);
+    bool saw_newline = false;
+    int32_t prev = 0;
+    for (;;) {
+        int32_t c = lexer->lookahead;
+        if (c == 0) {
+            return false;
+        }
+        advance(lexer);
+        if (c == '\n') {
+            saw_newline = true;
+        }
+        if (prev == '*' && c == '/') {
+            return saw_newline;
+        }
+        prev = c;
+    }
+}
+
+// True when the lookahead after whitespace is `/`, so a comment MAY start
+// here. Only whitespace is skipped to find out, which tree-sitter discards
+// when this scan returns false.
+static bool at_slash(TSLexer *lexer) {
+    for (;;) {
+        int32_t c = lexer->lookahead;
+        if (c != ' ' && c != '\t' && c != '\r' && c != '\v' && c != '\f') {
+            return c == '/';
+        }
+        lexer->advance(lexer, true);
+    }
+}
+
 bool tree_sitter_logos_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
     (void)payload;
 
+    if (valid_symbols[NEWLINE_COMMENT]) {
+        if (at_slash(lexer)) {
+            if (scan_newline_comment(lexer)) {
+                lexer->result_symbol = NEWLINE_COMMENT;
+                lexer->mark_end(lexer);
+                return true;
+            }
+            // The comment scan consumed a `/` but found no newline-spanning
+            // block comment. Falling through would resume the
+            // interpolated-string scan mid-comment and swallow the comment
+            // text into the pending token, so fail and let tree-sitter reset
+            // the lexer: the internal lexer handles the comment as an extra
+            // and re-invokes this scanner at the right position for `$"`.
+            return false;
+        }
+        // No comment ahead; only whitespace was skipped, so falling through
+        // to the interpolated-string scan below is safe.
+    }
     if (!valid_symbols[INTERP_STRING]) {
         return false;
     }
