@@ -343,9 +343,17 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                 }
                 skip(lexer);
             } while (depth > 0 && !lexer->eof(lexer));
-            // The body may start on the next line: `get()\n= 2`.
+            // The body may start on the next line: `get()\n= 2`. A `=` or
+            // `:` that is really an operator (`get() == x`, `get()::class`)
+            // keeps the `;` a statement separator.
             skip_ws_comments(lexer);
-            if (lexer->lookahead != '=' && lexer->lookahead != '{' && lexer->lookahead != ':') {
+            if (lexer->lookahead == '=' || lexer->lookahead == ':') {
+                wchar_t op = lexer->lookahead;
+                skip(lexer);
+                if (lexer->lookahead == op) {
+                    return;
+                }
+            } else if (lexer->lookahead != '{') {
                 return;
             }
         } else if (!had_prefix) {
@@ -459,7 +467,12 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                         return;
                     }
                 }
-            } else if (member_word[0]) {
+            } else if (member_word[0] && !member_newline) {
+                // Only on the accessor's own line can a non-keyword word be
+                // an infix callee (`get until 2`); across a newline the
+                // complete bare accessor ends the property and the word —
+                // even a literal like `42` — starts the next member or
+                // statement (`set\n42.toString()`).
                 skip_ws_comments(lexer);
                 if (iswalnum(lexer->lookahead) || lexer->lookahead == '_' ||
                     lexer->lookahead == '(' || lexer->lookahead == '[' ||
@@ -475,10 +488,17 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
         }
     } else if (accessor_index == 2) {
         // `field` binds a backing field only before `=` (or `: type =`),
-        // possibly across comments and a line break; a call like `field(x)`
-        // or any other identifier use is a statement.
+        // possibly across comments and a line break; a call like `field(x)`,
+        // a comparison (`field == x`), or a callable reference
+        // (`field::class`) is a statement.
         skip_ws_comments(lexer);
-        if (lexer->lookahead != '=' && lexer->lookahead != ':') {
+        if (lexer->lookahead == '=' || lexer->lookahead == ':') {
+            wchar_t op = lexer->lookahead;
+            skip(lexer);
+            if (lexer->lookahead == op) {
+                return;
+            }
+        } else {
             return;
         }
         // A backing field can only open the property tail, so it gets a
