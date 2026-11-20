@@ -56,6 +56,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
                     frames_at_decl: at_frames,
                     scope: parent,
                 });
+                *frame.decl_scope_count.entry(parent).or_insert(0) += 1;
                 frame.shadow.register(name, parent);
             }
         }
@@ -151,6 +152,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             frames_at_decl: at_frames,
             scope: parent,
         });
+        *frame.decl_scope_count.entry(parent).or_insert(0) += 1;
         if scoped {
             frame.shadow.register(name, parent);
         }

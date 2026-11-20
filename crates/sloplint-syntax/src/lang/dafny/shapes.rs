@@ -164,8 +164,13 @@ pub(crate) fn callee_parts<'s>(
 
 pub(crate) fn has_actual_binding(node: Node<'_>) -> bool {
     let mut cursor = node.walk();
-    node.children(&mut cursor)
-        .any(|child| child.is_named() && child.kind() == "actual_binding")
+    node.children(&mut cursor).any(|child| {
+        // `f()` carries no `actual_binding` node — its parens are anonymous
+        // children — but an application is still a call. A `(` right after
+        // `.` is a datatype update `p.(x := 1)`, not a call.
+        (child.is_named() && child.kind() == "actual_binding")
+            || (child.kind() == "(" && child.prev_sibling().is_none_or(|prev| prev.kind() != "."))
+    })
 }
 
 pub(crate) fn pattern_names<'s>(cx: &Cx<'_, 's>, pattern: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
@@ -173,6 +178,15 @@ pub(crate) fn pattern_names<'s>(cx: &Cx<'_, 's>, pattern: Node<'_>, out: &mut Ve
         "id_pattern" => {
             if let Some(id) = first_named_child_matching(pattern, &["identifier"]) {
                 out.push((text(cx, id), pos_of(id)));
+            }
+        }
+        "case_pattern" if pattern.named_child_count() == 1 => {
+            // `var (a, b)` wraps each element in a `case_pattern`; a lone
+            // identifier inside is a bound name, not a constructor.
+            if let Some(id) = first_named_child_matching(pattern, &["identifier"]) {
+                out.push((text(cx, id), pos_of(id)));
+            } else if let Some(inner) = pattern.named_child(0) {
+                pattern_names(cx, inner, out);
             }
         }
         "constructor_pattern" | "tuple_pattern" | "disjunctive_pattern" | "case_pattern" => {
@@ -203,6 +217,29 @@ pub(crate) fn wildcard_pattern(cx: &Cx<'_, '_>, pattern: Node<'_>) -> bool {
     first_named_child_matching(pattern, &["identifier"]).is_some_and(|id| text(cx, id) == "_")
 }
 
+/// A wrapper that passes its operand through unchanged: a precedence
+/// chain node carrying exactly one non-comment named child whose first
+/// child is that operand, or parentheses. `-(x)` leads with the `-`
+/// operator — the value is computed, so the wrapper is not transparent.
+fn transparent_wrap(node: Node<'_>) -> bool {
+    node.kind() == "parenthesized_expression"
+        || (first_operand(node).is_some()
+            && node
+                .named_children(&mut node.walk())
+                .filter(|c| !COMMENT_KINDS.contains(&c.kind()))
+                .count()
+                == 1
+            && node.child(0).is_some_and(|c| c.is_named()))
+}
+
+/// The first named child that is not a comment — `(/* note */ x)` still
+/// yields `x`.
+fn first_operand(node: Node<'_>) -> Option<Node<'_>> {
+    let mut cursor = node.walk();
+    node.named_children(&mut cursor)
+        .find(|c| !COMMENT_KINDS.contains(&c.kind()))
+}
+
 pub(crate) fn scrutinee_kind(cx: &Cx<'_, '_>, scrutinee: Node<'_>) -> ScrutineeKind {
     let mut current = scrutinee;
     loop {
@@ -213,11 +250,56 @@ pub(crate) fn scrutinee_kind(cx: &Cx<'_, '_>, scrutinee: Node<'_>) -> ScrutineeK
                 if has_actual_binding(current) {
                     return ScrutineeKind::Other;
                 }
+                // The member read must hang off a bare name or `this`:
+                // `-p.x` parses as `(-p).x` — a field of a computed base,
+                // not a field of the scrutinee value.
+                let mut base = first_operand(current);
+                loop {
+                    let Some(node) = base else {
+                        return ScrutineeKind::Other;
+                    };
+                    match node.kind() {
+                        "identifier" | "name_segment" | "qualified_name" | "this_expression" => {
+                            break
+                        }
+                        "suffix_expression" => {
+                            // A call (`p.Get()`) or index (`p.arr[0]`)
+                            // mid-receiver makes the whole scrutinee a
+                            // computed read.
+                            if has_actual_binding(node)
+                                || node
+                                    .children(&mut node.walk())
+                                    .any(|c| c.kind() == "[")
+                            {
+                                return ScrutineeKind::Other;
+                            }
+                            base = first_operand(node);
+                        }
+                        _ if CHAIN_KINDS.contains(&node.kind()) && transparent_wrap(node) => {
+                            base = first_operand(node);
+                        }
+                        _ => return ScrutineeKind::Other,
+                    }
+                }
                 let mut cursor = current.walk();
                 let mut trailing_ident = false;
                 for child in current.children(&mut cursor) {
+                    // A field name follows `.`; the update target in
+                    // `p.(x := 1)` follows `(` and is not a field access.
+                    // `obj./* note */state` parks a comment between the
+                    // dot and the name — step back over comments.
                     if child.is_named() && child.kind() == "identifier" {
-                        trailing_ident = true;
+                        let mut prev = child.prev_sibling();
+                        while let Some(node) = prev {
+                            if COMMENT_KINDS.contains(&node.kind()) {
+                                prev = node.prev_sibling();
+                            } else {
+                                break;
+                            }
+                        }
+                        if prev.is_some_and(|node| node.kind() == ".") {
+                            trailing_ident = true;
+                        }
                     }
                 }
                 return if trailing_ident {
@@ -227,7 +309,10 @@ pub(crate) fn scrutinee_kind(cx: &Cx<'_, '_>, scrutinee: Node<'_>) -> ScrutineeK
                 };
             }
             _ if CHAIN_KINDS.contains(&current.kind()) => {
-                let Some(first) = current.named_child(0) else {
+                if !transparent_wrap(current) {
+                    return ScrutineeKind::Other;
+                }
+                let Some(first) = first_operand(current) else {
                     return ScrutineeKind::Other;
                 };
                 current = first;

@@ -22,6 +22,8 @@ mod cpp_macros;
 mod csharp;
 #[path = "grammar_gaps/dafny.rs"]
 mod dafny;
+#[path = "grammar_gaps/dafny_match.rs"]
+mod dafny_match;
 #[path = "grammar_gaps/dart.rs"]
 mod dart;
 #[path = "grammar_gaps/go.rs"]

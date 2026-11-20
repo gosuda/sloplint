@@ -1,0 +1,2 @@
+# near-miss: else-if chains stay flat — counting each alternative as a level
+# would put the six-way Pick at depth 6 and fire.
