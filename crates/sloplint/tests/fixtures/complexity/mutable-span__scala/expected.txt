@@ -2,3 +2,9 @@
 src/outer-from-closure.scala:3 info complexity/mutable-span
 # Positive: var declared line 3, last write line 36, span 33 >= strict major_at 30.
 src/spread.scala:3 info complexity/mutable-span
+# pattern-vars.scala: `var whole, Some(count)` binds both names (writes to
+# `count` track onto the pattern binding, span 30); `counters` inside
+# `Some(counters.Zero)` stays a stable reference, so its own var keeps
+# its writes (span 31). `whole` only writes twice within 1 line — silent.
+src/pattern-vars.scala:3 info complexity/mutable-span
+src/pattern-vars.scala:4 info complexity/mutable-span

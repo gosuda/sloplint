@@ -226,13 +226,29 @@ fn multi_pattern_val_and_var_definitions_parse() {
 #[test]
 fn multi_pattern_var_registers_each_binding() {
     // `var whole, Some(count) = …` repeats the `pattern` field; both names
-    // must bind or later writes to `count` go untracked.
-    let source = "object O {\n  def f() = {\n    var whole, Some(count) = Some(0)\n    count += 1\n    count\n  }\n}\n";
+    // must bind or later writes to `count` go untracked. `counters` in
+    // `Some(counters.Zero)` is a stable reference, not a new local — a
+    // phantom binding would split write tracking for a real `counters`.
+    let source = "object O {\n  def f() = {\n    var whole, Some(count) = Some(0)\n    val pick, Some(counters.Zero) = (1, Some(0))\n    count += 1\n    count\n  }\n}\n";
     let analysis = run_clean(source);
     let names: Vec<_> = analysis.facts.bindings.iter().map(|b| b.name).collect();
     assert!(
         names.contains(&"whole") && names.contains(&"count"),
         "every pattern field binds its names: {names:?}"
+    );
+    assert!(
+        !names.contains(&"counters"),
+        "stable references in patterns are not locals: {names:?}"
+    );
+    let count = analysis
+        .facts
+        .bindings
+        .iter()
+        .find(|b| b.name == "count")
+        .expect("count binds");
+    assert!(
+        count.write_lines >= 1 && count.last_write_line == 5,
+        "the += write tracks onto the pattern binding: {count:?}"
     );
 }
 
