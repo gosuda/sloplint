@@ -1952,7 +1952,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       if (len == 5 && strcmp(word, "given") == 0) {
         int32_t c = peek_past_blanks_comments(lexer);
         if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
-            c == '$' || c == '=' || c == '`') {
+            c == '$' || c == '=' || c == '`' || c >= 0x80) {
           lexer->result_symbol = postfix_sym;
           return true;
         }
@@ -1963,7 +1963,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
         // definition, call parens and operand punctuation mean the
         // expression read.
         if (c == '[') {
-          int depth = 0;
+          int depth = 1;
           advance(lexer);
           while (!lexer->eof(lexer)) {
             if (lexer->lookahead == '[') {
@@ -1980,7 +1980,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
           if (depth == 0) {
             c = peek_past_blanks_comments(lexer);
             if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                c == '_' || c == ':' || c == '`') {
+                c == '_' || c == ':' || c == '`' || c >= 0x80) {
               lexer->result_symbol = postfix_sym;
               return true;
             }
@@ -1995,7 +1995,10 @@ static bool scan_impl(void *payload, TSLexer *lexer,
         }
         // `(using …)` opens a using clause — after `given` directly or
         // after its type parameter list — but `given(using = 2)` calls
-        // `given` with the named argument `using`.
+        // `given` with the named argument `using`. A balanced parenthesized
+        // group followed by `=`/`with`/`extends` is an anonymous given of
+        // tuple or function type (`given (Int, Int) = …`); anything else is
+        // a call's argument list.
         if (c == '(') {
           advance(lexer);
           c = peek_past_blanks_comments(lexer);
@@ -2007,6 +2010,36 @@ static bool scan_impl(void *payload, TSLexer *lexer,
                 peek_past_blanks_comments(lexer) != '=') {
               lexer->result_symbol = postfix_sym;
               return true;
+            }
+          }
+          int pdepth = 1;
+          while (!lexer->eof(lexer)) {
+            if (lexer->lookahead == '(') {
+              pdepth++;
+            } else if (lexer->lookahead == ')') {
+              pdepth--;
+              if (pdepth == 0) {
+                advance(lexer);
+                break;
+              }
+            }
+            advance(lexer);
+          }
+          if (pdepth == 0) {
+            int32_t f = peek_past_blanks_comments(lexer);
+            if (f == '=' || f == ':' || f == 'w' || f == 'e') {
+              if (f == '=' || f == ':') {
+                lexer->result_symbol = postfix_sym;
+                return true;
+              }
+              char tail[sizeof "extends"];
+              int tail_len =
+                  read_word(lexer, tail, (int)sizeof tail, NULL);
+              if ((tail_len == 4 && strcmp(tail, "with") == 0) ||
+                  (tail_len == 7 && strcmp(tail, "extends") == 0)) {
+                lexer->result_symbol = postfix_sym;
+                return true;
+              }
             }
           }
         }

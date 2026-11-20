@@ -284,6 +284,27 @@ fn given_is_definition_before_a_following_statement() {
 }
 
 #[test]
+fn given_after_postfix_covers_types_and_unicode_names() {
+    // After a line-broken operator each `given` shape is a new declaration:
+    // `[A] =>` type params, `(Int, Int)` tuple/function type, and a
+    // non-ASCII name; `given(using = 2)` stays a call's named argument.
+    let source = concat!(
+        "val r = x +\n",
+        "  given [A] => a\n",
+        "val s = y +\n",
+        "  given (Int, Int) = (1, 2)\n",
+        "val t = z +\n",
+        "  given É = e\n",
+        "val u = w +\n",
+        "  given(using = 2)\n",
+        "val v = q +\n",
+        "  given (Int, Int) with { def f = 1 }\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["f"]);
+}
+
+#[test]
 fn enum_stays_a_soft_identifier() {
     // Scala 2 code uses `enum` as a parameter or named argument; only a real
     // `enum` definition should claim the keyword reading.

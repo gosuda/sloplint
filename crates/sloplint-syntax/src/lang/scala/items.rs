@@ -115,6 +115,11 @@ fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str
             // given(status)` binds `status`.
             continue;
         }
+        // `case given T` is a given-pattern matching an implicit instance —
+        // nothing inside the type binds a local.
+        if node.kind() == "given_pattern" {
+            continue;
+        }
         if node.kind() == "identifier" {
             if is_pattern_binder(cx, node) {
                 out.push(text(cx, node));

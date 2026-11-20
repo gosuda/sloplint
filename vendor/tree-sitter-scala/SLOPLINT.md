@@ -223,3 +223,5 @@ Corpus delta (same files, same grammar build):
 | phantom | ~10 | 0 |
 | scalding | ~8 | 6 (multi-line curried signatures — residual cluster) |
 | breeze | ~12 | 4 (`/:/` ceiling + unexamined residuals) |
+
+Round: `given` continuation peeks now cover `given [A] =>`, `given (T, U) = …`/`with`/`extends`, and non-ASCII given names after a line-broken operator; `given(using = 2)` keeps the call read. `nameChoice` (the soft-keyword identifier set this PR routes through) feeds parameter and argument names AND general expression positions, bindings, and qualified types — keyword-as-identifier support is deliberately broader than named arguments alone.

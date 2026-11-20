@@ -1,6 +1,7 @@
 use sloplint_core::facts::{AmbientKind, Pos};
 use tree_sitter::Node;
 
+use super::calls::func_node;
 use super::items::first_ident;
 use crate::hooks::{
     Cx, FileSetKind, child_by_field, first_named_child, named_children, pos_of, text,
@@ -92,7 +93,7 @@ fn unquote(name: &str) -> &str {
 fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option<bool> {
     let args = n.parent().filter(|p| p.kind() == "arguments")?;
     let call = args.parent().filter(|p| p.kind() == "call_expression")?;
-    let func = child_by_field(call, "function")?;
+    let func = func_node(call)?;
     if func.kind() != "identifier" {
         return None;
     }
@@ -103,7 +104,8 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
         scope = s.parent();
         let mut saw_def = false;
         for def in named_children(s) {
-            if def.kind() != "function_definition" {
+            if def.kind() != "function_definition" && def.kind() != "function_declaration"
+            {
                 continue;
             }
             let Some(name_node) = child_by_field(def, "name") else {
