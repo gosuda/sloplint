@@ -353,6 +353,7 @@ static bool is_unicode_op_char(int32_t c) {
          // hold the ones real code uses (`'×/☃`, `a ★ b`). The range skips
          // 0x2768-0x2793, which are punctuation (Ps/Pe ornate parens) and
          // numbers (No dingbat digits), not So.
+         (c >= 0x25a0 && c <= 0x25f7) ||
          (c >= 0x2600 && c <= 0x2767) || (c >= 0x2794 && c <= 0x27bf) ||
          (c >= 0x10d8e && c <= 0x10d8f) || (c >= 0x1f8d0 && c <= 0x1f8d8) ||
          (c >= 0x1eef0 && c <= 0x1eef1);
@@ -399,12 +400,17 @@ static enum TokenType op_right_class(int32_t first) {
 // spellings on the left side). `first`/`last`/`second` are the operator's
 // first, last and second-to-last accepted characters.
 static enum TokenType op_stopped_class(int32_t first, int32_t last,
-                                       int32_t second) {
+                                       int32_t second, int32_t op_len) {
   if (last == ':') {
     return op_right_class(first);
   }
-  if (last == '=' && second != '<' && second != '>' && second != '!' &&
-      first != '=') {
+  // The `<=`/`>=`/`!=` carve-out is for the two-character spellings only:
+  // `x /+!= y + z` assigns `y + z` to `x` (the run is longer than `!=`),
+  // while `x != y` stays a comparison.
+  bool comparison =
+      (op_len == 2 && (second == '<' || second == '>' || second == '!')) ||
+      first == '=';
+  if (last == '=' && !comparison) {
     return OP_ASSIGN;
   }
   return op_left_class(first);
@@ -1873,16 +1879,31 @@ static bool scan_impl(void *payload, TSLexer *lexer,
     advance(lexer);
     int32_t c = lexer->lookahead;
     bool tail_slash = false;
+    bool accepted = false;
     while (is_op_char(c) || c == '/' || is_unicode_op_char(c)) {
       if (c == '/') {
         advance(lexer);
         if (lexer->lookahead == '/' || lexer->lookahead == '*' ||
             lexer->lookahead == '\'') {
-          break;  // comment opener or a char literal: the `/` is not taken
+          // A comment opener ends the quote: `'x//c` is `'x` plus a line
+          // comment, while a bare `'//` is the `//` symbol itself so that
+          // trailing text errors the way scalac reads it.
+          if (accepted) {
+            lexer->result_symbol = OP_SYMBOL;
+            return true;  // the mark ends the quote before the `/`
+          }
+          if (lexer->lookahead != '\'') {
+            advance(lexer);
+            lexer->mark_end(lexer);
+            lexer->result_symbol = OP_SYMBOL;
+            return true;
+          }
+          break;  // a char literal: the `/` is not taken
         }
         tail_slash = true;
       } else {
         tail_slash = false;
+        accepted = true;
         advance(lexer);
       }
       lexer->mark_end(lexer);
@@ -2048,13 +2069,26 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // the line end follows — the postfix checks below decide that case
       // (`(x /:/)`). An operand on the same line keeps the class token, the
       // only spelling an operator ending in `/` has.
+      // A non-ASCII char is either an opchar carrying the operator past
+      // what this reads or a letter operand (`10/π`) — the internal
+      // lexer's real char classes decide which.
+      if (ends_in_slash && lexer->lookahead >= 0x80) {
+        return false;
+      }
       if (ends_in_slash && lexer->lookahead < 0x80) {
         bool operand_follows = false;
         for (;;) {
           advance_past_blanks(lexer);
           int32_t c = lexer->lookahead;
-          if (lexer->eof(lexer) || c == '\n' || c == '\r' ||
-              is_close_or_separator(c)) {
+          // A line ending in an operator continues on the next line (SLS
+          // 1.2): `x /\n y` is still the `/` infix, so the operand probe
+          // skips line ends rather than breaking.
+          while (c == '\n' || c == '\r') {
+            advance(lexer);
+            advance_past_blanks(lexer);
+            c = lexer->lookahead;
+          }
+          if (lexer->eof(lexer) || is_close_or_separator(c)) {
             break;
           }
           if (c != '/') {
@@ -2130,7 +2164,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
             ends_in_slash
                 ? op_class
                 : op_stopped_class(op_len ? op[0] : '/', last_op_char,
-                                   second_op_char);
+                                   second_op_char, op_len);
         if (emit_op_class(lexer, valid_symbols, cls)) {
           return true;
         }
@@ -2182,7 +2216,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
             ends_in_slash
                 ? op_class
                 : op_stopped_class(op_len ? op[0] : '/', last_op_char,
-                                   second_op_char);
+                                   second_op_char, op_len);
         if (emit_op_class(lexer, valid_symbols, cls)) {
           return true;
         }
@@ -2260,7 +2294,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
           ends_in_slash
               ? op_class
               : op_stopped_class(op_len ? op[0] : '/', last_op_char,
-                                 second_op_char);
+                                 second_op_char, op_len);
       if (emit_op_class(lexer, valid_symbols, cls)) {
         return true;
       }

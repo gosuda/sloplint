@@ -249,3 +249,23 @@ parameter. Inside braces COLON_EOL is never on the table, so the braced
 ascription / typed-lambda reads are unchanged. Residual: content that sits
 on the comment's own `*/`-close line still goes through the ascription fork
 when no real newline follows — same as upstream.
+
+Round: scanner-only fixes for slash runs, quotes, and unicode operands.
+A `/`-tailed run that meets a non-ASCII char hands the token to the
+internal lexer (`10/π` reads `10 / π`, `a /★ b` stays one op) — the
+internal char classes know whether the char is an opchar or a letter.
+The operand probe also skips bare line ends, so `x /\n y` stays an infix
+(SLS 1.2: a line ending in an operator continues). `op_stopped_class`
+takes the run length: the `<=`/`>=`/`!=` carve-out applies only to the
+two-character spellings, so a comment-stopped `+!=` still classifies as
+an assignment. And `'op` quotes ending at a comment opener emit the
+quote before the `/` (`'x//c` = `'x` + comment) while a bare `'//`/`'/*`
+is emitted whole so trailing text errors like scalac.
+Residuals, kept deliberately: `/X/`-with-comment shapes (`x /:/*c*/ y`,
+`x /+!=/*n*/ y`) ride the internal `mulLeft` regex — removing that arm
+corrupts the `:`-external state machine enough to break
+`new T { _: (A, B) => }` wildcard self-types (the `(A, B)` tuple forks
+against `_colon_bindings`, a context question regexes cannot answer).
+`{ _: T => body }` wildcard-typed lambdas keep the ascription read for
+the same reason: a `$.wildcard` parameter collides with self_type and
+colon arguments inside `new T {` templates.
