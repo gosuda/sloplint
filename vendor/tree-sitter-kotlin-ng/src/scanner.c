@@ -372,11 +372,18 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                 } else if (next == '(') {
                     member_next = strcmp(member_word, "constructor") == 0 ||
                                   strcmp(member_word, "val") == 0 || strcmp(member_word, "var") == 0 ||
-                                  strcmp(member_word, "get") == 0 || strcmp(member_word, "set") == 0;
+                                  strcmp(member_word, "get") == 0 || strcmp(member_word, "set") == 0 ||
+                                  strcmp(member_word, "fun") == 0;
                 } else if (next == ':') {
                     member_next = strcmp(member_word, "object") == 0;
                 } else if (next == '<') {
-                    member_next = strcmp(member_word, "fun") == 0;
+                    member_next = strcmp(member_word, "fun") == 0 ||
+                                  strcmp(member_word, "val") == 0 || strcmp(member_word, "var") == 0;
+                } else if (next == '}' || next == ';') {
+                    // A bare accessor ends its own member (`var x = 1; get }`,
+                    // `get; set`); only the accessor words themselves close a
+                    // member here — `get data }` still fails inside `data`.
+                    member_next = strcmp(member_word, "get") == 0 || strcmp(member_word, "set") == 0;
                 }
                 if (!member_next) {
                     return;

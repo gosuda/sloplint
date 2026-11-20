@@ -159,3 +159,13 @@ as an infix callee (`get context 2`, `get data(2)`, `get open -1`,
 (`context(`, `init {`, `companion object`), and `(`/`:`/`<` are member
 syntax only for `constructor`/`val`/`var`/`get`/`set`, `object`, and `fun`
 respectively.
+
+## Round 9
+
+The `;`-accessor probe's member-word follower check closed three more
+shapes: a bare `get`/`set` before `}` or `;` ends its own member
+(`var x = 1; get\nset }`), `<` after `val`/`var` opens a generic
+extension property (`val <T> List<T>.head`), and `(` after `fun` opens a
+parenthesized extension receiver (`fun (String).ext()`). Only the
+accessor words themselves may close at `}`/`;` — `get data }` still
+fails inside `data`.
