@@ -129,12 +129,13 @@ fn commented_paren_scrutinee_still_reads_as_a_field() {
 
 #[test]
 fn called_receiver_is_a_computed_scrutinee() {
-    // `match this.Get().state` — the receiver threads a call, so the
-    // scrutinee is computed even though it ends in `.state`.
+    // `match this.Get().state` — a function call is an expression, so the
+    // receiver threads a call and the scrutinee is computed even though it
+    // ends in `.state`.
     let analysis = run_clean(concat!(
         "class C {\n",
         "  var state: int\n",
-        "  method Get() returns (x: C) { return this; }\n",
+        "  function Get(): C { this }\n",
         "  method M()\n",
         "  {\n",
         "    match this.Get().state\n",
