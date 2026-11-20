@@ -68,6 +68,8 @@ mod ruby;
 mod rust;
 #[path = "grammar_gaps/scala.rs"]
 mod scala;
+#[path = "grammar_gaps/scala_ops.rs"]
+mod scala_ops;
 #[path = "grammar_gaps/starlark.rs"]
 mod starlark;
 #[path = "grammar_gaps/swift.rs"]
