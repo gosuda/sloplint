@@ -408,3 +408,53 @@ fn enum_stays_a_soft_identifier() {
     let analysis = run_clean(source);
     assert_eq!(function_names(&analysis), ["f", "e", "enum"]);
 }
+
+#[test]
+fn comment_stopped_operator_keeps_its_class() {
+    // A `/*` after an operator's `/`-run cuts the token there, so the
+    // internal run cannot spell it: `x /+/* note */ y` is `x /+ y`, and a
+    // `:`- or `=`-tailed spelling keeps its precedence class out of the
+    // external tokens.
+    let source = concat!(
+        "val a = x /+/*note*/ y\n",
+        "val b = x */+:/*note*/ y\n",
+        "val c = x */+=/*note*/ y\n",
+        // Right-associative `:`-tail: the second `/+:` binds `y /+: z`.
+        "val d = x /+:/*note*/ y /+: z\n",
+    );
+    run_clean(source);
+    // `*/+:` chains right: `x /+: (y /+: z)`, not `(x /+: y) /+: z`.
+    let language: tree_sitter::Language = tree_sitter_scala::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).unwrap();
+    let tree = parser.parse("val d = x /+: y /+: z", None).unwrap();
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        sexp.contains("right: (infix_expression"),
+        "a `:`-tail operator must associate right, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn quote_symbol_ending_in_slash() {
+    // `'op` may end in `/` when the slash does not open a comment; `'+/*c*/`
+    // is the `'+'` quote followed by a block comment.
+    let source = concat!(
+        "val a = '+/\n",
+        "val b = '/:/\n",
+        "val c = '+/*c*/\n",
+    );
+    run_clean(source);
+}
+
+#[test]
+fn braced_lambda_wildcard_and_eol_colon_call() {
+    // `{ _: T => body }` is the typed wildcard lambda, while `{ f:` at end of
+    // line is the fewer-braces colon call whose callback indents below.
+    let source = concat!(
+        "val e = { _: Int => go() }\n",
+        "val f = accept { f:\n  cb => y }\n",
+        "val g = forAll { int: Int => int.asJson }\n",
+    );
+    run_clean(source);
+}
