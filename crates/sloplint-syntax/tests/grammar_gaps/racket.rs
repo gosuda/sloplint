@@ -352,7 +352,7 @@ fn a_literal_wrapping_the_pairing_escape_stays_code() {
     // its body `(c ,L)` is code — the quote wraps the escape form, not
     // the escape's body — so the inner unquote's argument is linted.
     let analysis = run_clean(
-        "#lang racket\n(quasiquote (a (quote (b (unquote (c (unquote (lambda (x) x))))))))\n",
+        "#lang racket\n(define (c q) q)\n(quasiquote (a (quote (b (unquote (c (unquote (lambda (x) x))))))))\n",
     );
     assert!(
         analysis
@@ -375,7 +375,7 @@ fn a_syntax_literal_wrapping_the_pairing_unsyntax_stays_code() {
     // The syntax-family mirror: `#`(... 'syntax ... #,(c #,L))` — the
     // outer unsyntax pairs through `syntax`, so L is code.
     let analysis = run_clean(
-        "#lang racket\n(quasisyntax (a (syntax (b (unsyntax (c (unsyntax (lambda (x) x))))))))\n",
+        "#lang racket\n(define (c q) q)\n(quasisyntax (a (syntax (b (unsyntax (c (unsyntax (lambda (x) x))))))))\n",
     );
     assert!(
         analysis
