@@ -46,7 +46,7 @@ vendored `node_modules` are needed.
 
 The committed `src/parser.c`, `src/grammar.json` and `src/node-types.json`
 are regenerated from the patched `grammar.js` below: ABI 15
-(`#define LANGUAGE_VERSION 15`), `STATE_COUNT 1336`, no external scanner
+(`#define LANGUAGE_VERSION 15`), `STATE_COUNT 1422`, no external scanner
 (`src/` holds no `scanner.c`). Regenerating the *pinned* grammar.js with
 0.27.1 reproduces the pre-patch parser byte-identically (STATE_COUNT 624),
 which is what `sloplint-grammar.patch` diffs against.
@@ -74,7 +74,7 @@ validated against 331 real-world `.als` files at a 100% parse rate.
 
 ## Corpora (tree-sitter-cli 0.27.1, this directory)
 
-- `test/corpus`: 83 cases, 83 pass.
+- `test/corpus`: 88 cases, 88 pass (83 upstream + 5 sloplint round-2).
 
 ## Divergences from the pin (sloplint-grammar.patch)
 
@@ -107,3 +107,23 @@ Electrum/Alloy-6 code in the dogfood corpus), each hit repeatedly:
   models carry it.
 - `_semicolon_decoration`: runs of 2+ `;` at paragraph level (`;;;;;;`
   separators in textbook models).
+
+Round 2 (2026-11-20 dogfood corpus):
+
+- `_decl_name` (primed declarator names) is used for pred/fun/assert
+  declaration names too: `assert add_1`, `pred step'`, `fun lookup'`.
+- Declaration names may be sig-scoped (`optional(sig_ref (`.` | `::`))`
+  prefix on pred/fun decls), e.g. `pred MySig.helper`.
+- `assert` may carry a string name (`assert "every book has an address"`).
+- Qualified-path segments may be declaration keywords (`_qname_seg`):
+  `pred/totalOrder`, `fun/add`, `module/x` — real util-module file names.
+  Only keywords that are not standalone expressions are admitted, so
+  `univ`/`none`/`Int` stay expression-only.
+- `qual_path` (at least one `/`) is the operator of
+  `infix_qual_call_expression` (`n1 fun/add n2`) and a `box_join`
+  callee (`pred/totalOrder[]`).
+- `scope_expression`: `Sig::member` in expression position
+  (`GrandParent::parents`), binding like the dot join.
+- Infix calls admit only keyword-led operators (`a fun/add b`); a
+  name-led path (`x a/b y`) is ambiguous with adjacent block
+  expressions and stays a known gap.

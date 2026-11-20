@@ -47,15 +47,11 @@ module.exports = grammar({
     [$.command],
     // scope: "for 5 State" is typescope, not "for 5" + new paragraph
     [$.scope, $.type_scope_number],
-    // name can reduce to name_list or qual_name depending on context
-    [$.name_list, $.qual_name],
-    // `lone x, y` inside `[...]` can be a decl list or an expr list
-    [$.qual_name, $._decl_name],
-    // `no trashed'` is multiplicity(no, prime(t)) while `no t': T` is a
-    // decl — `'` inside _decl_name and prime_expression is the same token,
-    // so the shared GLR lex disambiguates on what follows (: | ,)
-    [$.name_list, $.prime_expression],
-    [$.qual_name, $.prime_expression],
+    // `a/b` alone is a qual_name; followed by an expression it is the
+    // operator of an infix_qual_call (`x a/b y`).
+    [$.qual_name, $.qual_path],
+    // `x'` — a primed decl name or a path segment followed by a prime.
+    [$._qname_seg, $._decl_name],
   ],
 
   rules: {
@@ -166,8 +162,8 @@ module.exports = grammar({
     pred_decl: $ => seq(
       optional($.visibility),
       'pred',
-      optional(seq($.sig_ref, '.')),
-      field('name', $.name),
+      optional(seq($.sig_ref, choice('.', '::'))),
+      field('name', $._decl_name),
       optional(choice(
         seq('(', optional($.decl_list), ')'),
         seq('[', optional($.decl_list), ']'),
@@ -179,8 +175,8 @@ module.exports = grammar({
     fun_decl: $ => seq(
       optional($.visibility),
       'fun',
-      optional(seq($.sig_ref, '.')),
-      field('name', $.name),
+      optional(seq($.sig_ref, choice('.', '::'))),
+      field('name', $._decl_name),
       optional(choice(
         seq('(', optional($.decl_list), ')'),
         seq('[', optional($.decl_list), ']'),
@@ -193,7 +189,7 @@ module.exports = grammar({
     // ---- Assert ----
     assert_decl: $ => seq(
       'assert',
-      optional(field('name', choice($.name, $.string))),
+      optional(field('name', choice($._decl_name, $.string))),
       $.block_expression,
     ),
 
@@ -339,7 +335,29 @@ module.exports = grammar({
       $.prime_expression,
       $.quantified_expression,
       $.let_expression,
+      $.infix_qual_call_expression,
+      $.scope_expression,
       $._primary_expression,
+    ),
+
+    // Infix function application with a `/`-qualified callee:
+    // `n1 fun/add n2` — the same call `fun/add[n1, n2]` writes in the
+    // util modules. The operator's FIRST segment must be a declaration
+    // keyword (`fun/`, `pred/`...): a name-led path is ambiguous with
+    // adjacent expressions (`a = b c < d` in a block), so `x a/b y`
+    // stays a known gap.
+    infix_qual_call_expression: $ => prec.left(PREC.DOT, seq(
+      field('left', $._expression),
+      field('operator', $.infix_operator),
+      field('right', $._expression),
+    )),
+
+    infix_operator: $ => seq(
+      alias(choice(
+        'pred', 'fun', 'assert', 'fact', 'sig', 'enum', 'module',
+        'open', 'check', 'run',
+      ), $.name),
+      repeat1(seq('/', $._qname_seg)),
     ),
 
     // ; (trace sequence) - lowest precedence, right-assoc
@@ -495,7 +513,7 @@ module.exports = grammar({
     // Box join: expr[exprs] — the callee can be a field named like an
     // operator word (`sum[i + j]` calls a `sum` relation).
     box_join_expression: $ => prec.left(PREC.BRACKET, seq(
-      choice($._expression, $.member_keyword),
+      choice($._expression, $.member_keyword, $.qual_path),
       '[',
       optional($.expr_list),
       ']',
@@ -506,6 +524,14 @@ module.exports = grammar({
     dot_expression: $ => prec.left(PREC.DOT, seq(
       $._expression,
       '.',
+      choice($._expression, $.member_keyword),
+    )),
+
+    // Scope resolution: `Sig::field` — the `::` between a signature
+    // and one of its members, same binding as the dot join.
+    scope_expression: $ => prec.left(PREC.DOT, seq(
+      $._expression,
+      '::',
       choice($._expression, $.member_keyword),
     )),
 
@@ -616,8 +642,30 @@ module.exports = grammar({
         seq('this', '/'),
         seq('seq', '/'),
       )),
+      $._qname_seg,
+      repeat(seq('/', $._qname_seg)),
+    ),
+
+    // A qualified-path segment: plain names plus the declaration
+    // keywords that double as util-module file names (`pred/totalOrder`,
+    // `fun/add`, `module/x` — the `/` disambiguates the keyword read).
+    _qname_seg: $ => choice(
       $.name,
-      repeat(seq('/', $.name)),
+      alias(choice(
+        'pred', 'fun', 'assert', 'fact', 'sig', 'enum', 'module',
+        'open', 'check', 'run',
+      ), $.name),
+    ),
+
+    // A path with at least one `/` — the infix-operator shape
+    // `x fun/add y` and the call head `pred/totalOrder[...]`.
+    qual_path: $ => seq(
+      optional(choice(
+        seq('this', '/'),
+        seq('seq', '/'),
+      )),
+      $._qname_seg,
+      repeat1(seq('/', $._qname_seg)),
     ),
 
     // ---- Terminals ----

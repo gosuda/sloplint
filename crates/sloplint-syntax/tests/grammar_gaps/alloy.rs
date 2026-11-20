@@ -196,6 +196,56 @@ fn types_record_first_name_and_abstract() {
     assert_eq!(hidden.visibility, Visibility::Private);
 }
 
+// Round 2: real-model shapes the vendored grammar rejected — primed
+// declaration names, `Sig::name` scoping, keyword-led qualified paths used
+// as call heads and infix operators, and string-named asserts.
+
+#[test]
+fn primed_decl_names_parse_clean() {
+    run_clean(
+        "assert add_1 { all x: Int | some x }\n\
+         pred step'[s: State] { some s }\n\
+         fun lookup'[b: Book]: set Addr { b.addr }\n",
+    );
+}
+
+#[test]
+fn sig_scoped_names_parse_clean() {
+    let analysis = run_clean(
+        "sig GrandParent {}\n\
+         pred root { no GrandParent::parents }\n\
+         fun kidsOf[]: set GrandParent::children { GrandParent::children }\n",
+    );
+    let names: Vec<_> = analysis.facts.functions.iter().map(|f| f.name).collect();
+    assert!(names.contains(&"root"), "pred name kept, got {names:?}");
+}
+
+#[test]
+fn qualified_paths_as_calls_and_infix_parse_clean() {
+    let analysis = run_clean(
+        "open util/ordering[State]\n\
+         pred ordered { first[] = pred/totalOrder[] or this/first = this/last }\n\
+         fun total[a, b: Int]: Int { a fun/add b }\n",
+    );
+    let total = analysis
+        .facts
+        .functions
+        .iter()
+        .find(|f| f.name == "total")
+        .expect("fun total");
+    assert_eq!(
+        total.return_type,
+        Some("Int"),
+        "got {:?}",
+        total.return_type
+    );
+}
+
+#[test]
+fn string_named_assert_parses() {
+    run_clean("assert \"every book has an address\" { all b: Book | some b.addr }\n");
+}
+
 #[test]
 fn private_and_anonymous_paragraphs_are_not_exported() {
     let analysis =
