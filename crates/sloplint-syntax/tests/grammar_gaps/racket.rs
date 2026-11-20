@@ -305,13 +305,44 @@ fn escapes_inside_a_quoted_quasiquote_stay_datum() {
 fn unquote_and_unsyntax_without_a_quasi_are_calls() {
     // Outside a template, `unquote`/`unsyntax` are ordinary callee names
     // — their argument expressions are code.
+    let analysis = run_clean("#lang racket\n(define (unquote f) f)\n(unquote (lambda (x) x))\n");
+    assert!(
+        analysis
+            .facts
+            .functions
+            .iter()
+            .any(|f| f.params.iter().any(|p| p.name == "x")),
+        "the lambda passed to `unquote` is code: {:?}",
+        analysis
+            .facts
+            .functions
+            .iter()
+            .map(|f| f.name)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn an_escape_inside_an_escaped_nested_quasi_is_code() {
+    // `(a '(b ,(f `(c ,(lambda (x) x)))))`: the outer unquote escapes
+    // back to code, where the inner quasiquote evaluates its own
+    // unquote — the lambda is linted.
     let analysis = run_clean(
-        "#lang racket\n(define (unquote f) f)\n(unquote (lambda (x) x))\n(define/contract u (lambda (y) y) any/c)\n",
+        "#lang racket\n(quasiquote (a (quote (b (unquote (f (quasiquote (c (unquote (lambda (x) x))))))))))\n",
     );
     assert!(
-        analysis.facts.functions.len() >= 2,
-        "arguments to escape-named calls are code: {:?}",
-        analysis.facts.functions.iter().map(|f| f.name).collect::<Vec<_>>()
+        analysis
+            .facts
+            .functions
+            .iter()
+            .any(|f| f.params.iter().any(|p| p.name == "x")),
+        "escapes re-enter code through nested quasis: {:?}",
+        analysis
+            .facts
+            .functions
+            .iter()
+            .map(|f| f.name)
+            .collect::<Vec<_>>()
     );
 }
 

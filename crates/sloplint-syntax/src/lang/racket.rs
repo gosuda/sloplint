@@ -149,67 +149,54 @@ enum Escape {
 /// A quasi form scans its whole template for escapes of its own family —
 /// literal forms of the other family and `quote`/`syntax`/`box`/`graph`
 /// wrappers are transparent to that scan — so a `quasiquote` consumes
-/// the nearest pending `unquote` even through an `unsyntax` list. With
-/// no pending escape of the matching family, the quasi form is datum.
-/// The node's innermost escape decides its fate: one that never pairs
-/// leaves the node as literal datum.
+/// the nearest enclosing `unquote` even through an `unsyntax` list or a
+/// `quote`. The node's innermost escape decides its fate: when that
+/// escape pairs with a quasi the node's fate becomes the quasi's own
+/// context; when an outer escape pairs first the innermost one is trapped
+/// inside the escape's body and can never pair, so literals enclosing it
+/// decide. A `hash` literal never evaluates its contents, whatever
+/// encloses it.
 fn in_non_code(cx: &Cx<'_, '_>) -> bool {
     // Pending escapes, innermost at index 0. A quasi form pairs with the
     // topmost pending escape of its own family; a literal form is
-    // transparent while it sits inside a pending escape's body, and a
-    // literal above a quasi decides everything inside as datum. A `hash`
-    // literal never evaluates its contents, whatever encloses it.
+    // transparent while it sits inside a pending escape's body — a quasi
+    // still scans through it — and only decides datum at the end of the
+    // walk or when the pending escapes become unpairable.
     let mut escapes: Vec<Escape> = Vec::new();
-    let mut innermost_alive = false;
-    let mut crossed_quasi = false;
     let mut literal_with_pending = false;
     for ancestor in cx.ancestors() {
         let head = match ancestor.kind() {
             "sexp_comment" | "hash" => return true,
             "quote" | "syntax" | "box" | "graph" => {
-                if escapes.is_empty() || crossed_quasi {
+                if escapes.is_empty() {
                     return true;
                 }
                 literal_with_pending = true;
                 continue;
             }
-            "quasiquote" => {
-                crossed_quasi = true;
-                match escapes.iter().rposition(|e| *e == Escape::Quote) {
-                    Some(pos) => {
-                        if pos == 0 {
-                            innermost_alive = false;
-                        }
-                        escapes.remove(pos);
-                        continue;
-                    }
-                    None => return true,
+            "quasiquote" => match escapes.iter().rposition(|e| *e == Escape::Quote) {
+                Some(0) => {
+                    escapes.clear();
+                    literal_with_pending = false;
+                    continue;
                 }
-            }
-            "quasisyntax" => {
-                crossed_quasi = true;
-                match escapes.iter().rposition(|e| *e == Escape::Syntax) {
-                    Some(pos) => {
-                        if pos == 0 {
-                            innermost_alive = false;
-                        }
-                        escapes.remove(pos);
-                        continue;
-                    }
-                    None => return true,
+                Some(_) => return literal_with_pending,
+                None => return true,
+            },
+            "quasisyntax" => match escapes.iter().rposition(|e| *e == Escape::Syntax) {
+                Some(0) => {
+                    escapes.clear();
+                    literal_with_pending = false;
+                    continue;
                 }
-            }
+                Some(_) => return literal_with_pending,
+                None => return true,
+            },
             "unquote" | "unquote_splicing" => {
-                if escapes.is_empty() && !crossed_quasi {
-                    innermost_alive = true;
-                }
                 escapes.push(Escape::Quote);
                 continue;
             }
             "unsyntax" | "unsyntax_splicing" => {
-                if escapes.is_empty() && !crossed_quasi {
-                    innermost_alive = true;
-                }
                 escapes.push(Escape::Syntax);
                 continue;
             }
@@ -221,56 +208,36 @@ fn in_non_code(cx: &Cx<'_, '_>) -> bool {
         };
         match head {
             "quote" | "syntax" => {
-                if escapes.is_empty() || crossed_quasi {
+                if escapes.is_empty() {
                     return true;
                 }
                 literal_with_pending = true;
             }
-            "quasiquote" => {
-                crossed_quasi = true;
-                match escapes.iter().rposition(|e| *e == Escape::Quote) {
-                    Some(pos) => {
-                        if pos == 0 {
-                            innermost_alive = false;
-                        }
-                        escapes.remove(pos);
-                    }
-                    None => return true,
+            "quasiquote" => match escapes.iter().rposition(|e| *e == Escape::Quote) {
+                Some(0) => {
+                    escapes.clear();
+                    literal_with_pending = false;
                 }
-            }
-            "quasisyntax" => {
-                crossed_quasi = true;
-                match escapes.iter().rposition(|e| *e == Escape::Syntax) {
-                    Some(pos) => {
-                        if pos == 0 {
-                            innermost_alive = false;
-                        }
-                        escapes.remove(pos);
-                    }
-                    None => return true,
+                Some(_) => return literal_with_pending,
+                None => return true,
+            },
+            "quasisyntax" => match escapes.iter().rposition(|e| *e == Escape::Syntax) {
+                Some(0) => {
+                    escapes.clear();
+                    literal_with_pending = false;
                 }
-            }
-            "unquote" | "unquote-splicing" => {
-                if escapes.is_empty() && !crossed_quasi {
-                    innermost_alive = true;
-                }
-                escapes.push(Escape::Quote);
-            }
-            "unsyntax" | "unsyntax-splicing" => {
-                if escapes.is_empty() && !crossed_quasi {
-                    innermost_alive = true;
-                }
-                escapes.push(Escape::Syntax);
-            }
+                Some(_) => return literal_with_pending,
+                None => return true,
+            },
+            "unquote" | "unquote-splicing" => escapes.push(Escape::Quote),
+            "unsyntax" | "unsyntax-splicing" => escapes.push(Escape::Syntax),
             _ => {}
         }
     }
-    // The innermost escape decides the node's fate. If it paired with a
-    // quasi, the node escaped into code. If it never paired, the node is
-    // datum inside a literal escape form only when a literal wraps it —
-    // otherwise `unquote`/`unsyntax` are ordinary callees whose argument
-    // is code.
-    innermost_alive && literal_with_pending
+    // The innermost escape decides the node's fate. If it never paired,
+    // the node is datum only when a literal wraps the escape — otherwise
+    // `unquote`/`unsyntax` are ordinary callees whose argument is code.
+    !escapes.is_empty() && literal_with_pending
 }
 
 /// A `list` whose head splices its body definitions into the
