@@ -1,1 +1,3 @@
 a.lgo:8 info slop/zombie-catch
+# Positive: handler in a saved lambda is not deferred cleanup, still fires.
+saved.lgo:9 info slop/zombie-catch

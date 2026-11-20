@@ -1,0 +1,1 @@
+# Longest same-kind run is two: below the three-param threshold.

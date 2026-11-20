@@ -43,6 +43,37 @@ fn sibling_short_declaration_does_not_extend_the_outer_span() {
 }
 
 #[test]
+fn logos_labeled_short_declaration_ends_with_the_block() {
+    let source = "package p\n\nfunc f() {\nloop:\nx := 1\n_ = x\nx = 2\n_ = x\n}\n";
+    let analysis = run_clean(Lang::Logos, "case.lgo", source);
+    let found: Vec<_> = analysis
+        .facts
+        .bindings
+        .iter()
+        .filter(|b| b.name == "x")
+        .collect();
+    assert_eq!(found.len(), 1, "one binding: {:?}", analysis.facts.bindings);
+    assert_eq!(
+        found[0].end_line, 9,
+        "scope ends at the block: {:?}",
+        analysis.facts.bindings
+    );
+}
+
+#[test]
+fn labeled_short_declaration_ends_with_the_block() {
+    let source = "package p\n\nfunc f() {\nloop:\nx := 1\n_ = x\nx = 2\n_ = x\n}\n";
+    with_go_bindings(source, |found| {
+        let all = named_all(found, "x");
+        assert_eq!(all.len(), 1, "one binding: {found:?}");
+        assert_eq!(
+            all[0].end_line, 9,
+            "scope ends at the block, not the label: {found:?}"
+        );
+    });
+}
+
+#[test]
 fn if_init_short_declaration_shadows_the_outer_name() {
     let source = "package p\n\nfunc f() bool {\nok := false\n_ = ok\nif x, ok := 1, true; ok {\n_ = x\nreturn ok\n}\nreturn ok\n}\n";
     with_go_bindings(source, |found| {

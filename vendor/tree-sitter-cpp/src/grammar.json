@@ -172,8 +172,13 @@
           "name": "macro_namespace"
         },
         {
-          "type": "SYMBOL",
-          "name": "macro_braced_declaration"
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_macro_braced_declaration_loose"
+          },
+          "named": true,
+          "value": "macro_braced_declaration"
         },
         {
           "type": "SYMBOL",
@@ -646,6 +651,15 @@
                 {
                   "type": "ALIAS",
                   "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_braced_declaration_loose"
+                  },
+                  "named": true,
+                  "value": "macro_braced_declaration"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
                     "type": "PREC_DYNAMIC",
                     "value": -2,
                     "content": {
@@ -765,6 +779,15 @@
                 {
                   "type": "ALIAS",
                   "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_braced_declaration_loose"
+                  },
+                  "named": true,
+                  "value": "macro_braced_declaration"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
                     "type": "PREC_DYNAMIC",
                     "value": -2,
                     "content": {
@@ -862,6 +885,15 @@
                 {
                   "type": "ALIAS",
                   "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_braced_declaration_loose"
+                  },
+                  "named": true,
+                  "value": "macro_braced_declaration"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
                     "type": "PREC_DYNAMIC",
                     "value": -2,
                     "content": {
@@ -929,6 +961,15 @@
                 {
                   "type": "SYMBOL",
                   "name": "_block_item"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_braced_declaration_loose"
+                  },
+                  "named": true,
+                  "value": "macro_braced_declaration"
                 },
                 {
                   "type": "ALIAS",
@@ -1039,6 +1080,15 @@
                 {
                   "type": "SYMBOL",
                   "name": "_block_item"
+                },
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_macro_braced_declaration_loose"
+                  },
+                  "named": true,
+                  "value": "macro_braced_declaration"
                 },
                 {
                   "type": "ALIAS",
@@ -9199,8 +9249,13 @@
                 "name": "_block_item"
               },
               {
-                "type": "SYMBOL",
-                "name": "macro_braced_declaration"
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_macro_braced_declaration_loose"
+                },
+                "named": true,
+                "value": "macro_braced_declaration"
               },
               {
                 "type": "ALIAS",
@@ -12679,6 +12734,15 @@
         {
           "type": "SYMBOL",
           "name": "macro_braced_statement"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_macro_braced_declaration_paren"
+          },
+          "named": true,
+          "value": "macro_braced_declaration"
         }
       ]
     },
@@ -25648,6 +25712,134 @@
         }
       }
     },
+    "_macro_braced_declaration_loose": {
+      "type": "PREC_DYNAMIC",
+      "value": 1,
+      "content": {
+        "type": "PREC_RIGHT",
+        "value": 0,
+        "content": {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "name",
+              "content": {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "identifier"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_type_identifier"
+                    },
+                    "named": true,
+                    "value": "identifier"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "macro_argument_list"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_macro_braced_members"
+              },
+              "named": true,
+              "value": "field_declaration_list"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": ";"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "_macro_braced_declaration_paren": {
+      "type": "PREC_DYNAMIC",
+      "value": 1,
+      "content": {
+        "type": "PREC_RIGHT",
+        "value": 0,
+        "content": {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "name",
+              "content": {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "identifier"
+                  },
+                  {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_type_identifier"
+                    },
+                    "named": true,
+                    "value": "identifier"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "SYMBOL",
+              "name": "macro_argument_list"
+            },
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_macro_braced_members"
+              },
+              "named": true,
+              "value": "field_declaration_list"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": ";"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
     "_macro_argument_list_nonempty": {
       "type": "SEQ",
       "members": [
@@ -30409,18 +30601,20 @@
       "macro_braced_expression"
     ],
     [
+      "_macro_declaration_stmt",
+      "expression",
+      "macro_braced_statement",
+      "_macro_braced_declaration_paren",
+      "macro_braced_expression"
+    ],
+    [
       "macro_qualifier",
       "_macro_declaration_stmt",
       "_declarator",
       "type_specifier",
       "expression",
       "macro_braced_statement",
-      "macro_braced_expression"
-    ],
-    [
-      "_macro_declaration_stmt",
-      "expression",
-      "macro_braced_statement",
+      "_macro_braced_declaration_paren",
       "macro_braced_expression"
     ],
     [
@@ -30434,17 +30628,6 @@
       "macro_braced_expression"
     ],
     [
-      "macro_qualifier",
-      "_macro_declaration_top",
-      "_macro_declaration_stmt",
-      "_declarator",
-      "type_specifier",
-      "expression",
-      "macro_braced_statement",
-      "macro_braced_declaration",
-      "macro_braced_expression"
-    ],
-    [
       "enumerator",
       "expression",
       "macro_braced_expression"
@@ -30455,6 +30638,7 @@
       "type_specifier",
       "expression",
       "macro_braced_statement",
+      "_macro_braced_declaration_paren",
       "macro_braced_expression"
     ],
     [
@@ -30516,16 +30700,6 @@
       "macro_braced_expression"
     ],
     [
-      "macro_qualifier",
-      "_macro_declaration_top",
-      "_macro_declaration_stmt",
-      "_declarator",
-      "type_specifier",
-      "expression",
-      "macro_braced_statement",
-      "macro_braced_expression"
-    ],
-    [
       "_macro_braced_body",
       "_macro_braced_members"
     ],
@@ -30565,10 +30739,6 @@
       "_macro_argument_list_nonempty"
     ],
     [
-      "macro_argument_list",
-      "_macro_argument_list_nonempty"
-    ],
-    [
       "_init_declarator_preproc",
       "_declarator",
       "_field_declarator"
@@ -30585,16 +30755,6 @@
       "_midl_attribute",
       "structured_binding_declarator",
       "_lambda_capture_identifier"
-    ],
-    [
-      "macro_qualifier",
-      "_macro_declaration_top",
-      "_declarator",
-      "type_specifier",
-      "expression",
-      "macro_braced_statement",
-      "macro_braced_declaration",
-      "macro_braced_expression"
     ],
     [
       "macro_qualifier",
@@ -31420,6 +31580,42 @@
     ],
     [
       "expression"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top",
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_braced_statement",
+      "_macro_braced_declaration_loose",
+      "macro_braced_expression"
+    ],
+    [
+      "_macro_braced_declaration_loose"
+    ],
+    [
+      "_macro_braced_declaration_paren"
+    ],
+    [
+      "_macro_braced_declaration_loose",
+      "_macro_braced_declaration_paren"
+    ],
+    [
+      "macro_argument_list",
+      "template_type"
+    ],
+    [
+      "macro_qualifier",
+      "_macro_declaration_top",
+      "_macro_declaration_stmt",
+      "_declarator",
+      "type_specifier",
+      "expression",
+      "macro_braced_statement",
+      "_macro_braced_declaration_loose",
+      "_macro_braced_declaration_paren",
+      "macro_braced_expression"
     ]
   ],
   "precedences": [
@@ -31475,5 +31671,6 @@
     "_field_declarator",
     "_type_declarator",
     "_abstract_declarator"
-  ]
+  ],
+  "reserved": {}
 }

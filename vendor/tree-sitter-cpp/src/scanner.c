@@ -319,6 +319,16 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
             return false;
         }
         int32_t c = lexer->lookahead;
+        // `prev_was_operator` survives whitespace, `[`, and `/` —
+        // `/` reaches its branch below, which keeps the flag only
+        // when it turns out to open a comment (comments are legal
+        // between `operator` and `[]`). Anything else (`(`, `'`,
+        // ident chars) means the upcoming `]` belongs to a real
+        // lambda capture.
+        if (c != '[' && c != ']' && c != '/' && c != ' ' && c != '\t' &&
+            c != '\n' && c != '\r') {
+            prev_was_operator = false;
+        }
         if (c == '"') {
             advance(lexer);
             skip_dq(lexer);
@@ -351,8 +361,10 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
         }
         if (c == '/') {
             if (skip_comment(lexer)) { after_number = false; continue; }
-            // Division: skip_comment already consumed the `/`, so the
-            // next lookahead (`"x"` in `base/"x"`) stays live.
+            // Division or the `/` of an `operator/` name: skip_comment
+            // already consumed the `/`, so the next lookahead
+            // (`"x"` in `base/"x"`) stays live.
+            prev_was_operator = false;
             maybe_lambda = false;
             after_number = false;
             continue;
@@ -478,9 +490,6 @@ static bool scan_macro_braced_open(TSLexer *lexer) {
             (c == ',' || c == '=' || c == '?' || c == '|' || c == '^' ||
              c == '%' || c == '!' || c == '#')) {
             maybe_lambda = false;
-        }
-        if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
-            prev_was_operator = false;
         }
         advance(lexer);
         after_number = (c >= '0' && c <= '9');

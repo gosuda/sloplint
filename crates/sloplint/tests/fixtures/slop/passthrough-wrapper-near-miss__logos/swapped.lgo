@@ -1,0 +1,9 @@
+package probe
+
+func RenderPair(left string, right string) string {
+	return left + right
+}
+
+func SwapPair(left string, right string) string {
+	return RenderPair(right = left, left = right)
+}

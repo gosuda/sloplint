@@ -1,0 +1,5 @@
+def classify (n : Nat) : String :=
+  match n with
+  | 0 => "zero"
+  | 1 => "one"
+  | _ => "other"

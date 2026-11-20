@@ -172,7 +172,11 @@ fn bash_ident_name(text: &str) -> &str {
 fn concat_operand_len<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> u32 {
     match bash_arg_shape(cx, n) {
         ArgShape::Str { longest_static } | ArgShape::Concat { longest_static } => longest_static,
-        ArgShape::Ident(_) | ArgShape::Collection | ArgShape::CodeBody | ArgShape::Other => 0,
+        ArgShape::Ident(_)
+        | ArgShape::NamedIdent(_)
+        | ArgShape::Collection
+        | ArgShape::CodeBody
+        | ArgShape::Other => 0,
     }
 }
 

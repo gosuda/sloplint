@@ -1,0 +1,10 @@
+package probe
+func work() error {
+	return nil
+}
+func F() {
+	scope defer (() => {
+		if err := work(); err != nil {
+		}
+	})()
+}

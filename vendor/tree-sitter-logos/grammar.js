@@ -26,7 +26,6 @@ const assignmentOperators = multiplicativeOperators.concat(additiveOperators).ma
 
 
 const newline = /\n/;
-const terminator = choice(newline, ';', '\0');
 
 const hexDigit = /[0-9a-fA-F]/;
 const octalDigit = /[0-7]/;
@@ -76,6 +75,12 @@ module.exports = grammar({
     // `$"..."` interpolated string literal; the interior may nest strings
     // and braces, so an external scanner finds the closing quote.
     $.interp_string_literal,
+    // A block comment that starts on the current line and spans a newline.
+    // Go inserts a semicolon there, so it separates grouped declarations
+    // where a single-line block comment does not. The scanner never skips
+    // a newline itself, so after a real newline the plain `comment` extra
+    // still wins and the comment stays visible in the tree.
+    $._newline_comment,
   ],
 
   inline: $ => [
@@ -190,11 +195,18 @@ module.exports = grammar({
       repeat(choice(
         // Unlike a Go compiler, we accept statements at top-level to enable
         // parsing of partial code snippets in documentation (see #63).
-        seq($._statement, terminator),
-        seq($._top_level_declaration, terminator),
+        seq($._statement, $._terminator),
+        seq($._top_level_declaration, $._terminator),
       )),
       optional($._top_level_declaration),
     ),
+
+    // Statement and declaration separator: a newline, a semicolon, or a
+    // same-line block comment that spans a newline (Go inserts a semicolon
+    // there). Single-line block comments never separate. The separator
+    // comment is aliased to `comment` so it stays visible to doc and
+    // suppression handling like any other comment node.
+    _terminator: $ => choice(newline, ';', '\0', alias($._newline_comment, $.comment)),
 
     _top_level_declaration: $ => choice(
       $.package_clause,
@@ -232,8 +244,8 @@ module.exports = grammar({
       '(',
       optional(seq(
         $.import_spec,
-        repeat(seq(terminator, $.import_spec)),
-        optional(terminator),
+        repeat(seq($._terminator, $.import_spec)),
+        optional($._terminator),
       )),
       ')',
     ),
@@ -262,7 +274,7 @@ module.exports = grammar({
         seq(
           // The last spec may be followed directly by `)`: `const ( F = 1 )`.
           '(',
-          optionalTrailingSep($.const_spec, terminator),
+          optionalTrailingSep($.const_spec, $._terminator),
           ')',
         ),
       ),
@@ -298,7 +310,11 @@ module.exports = grammar({
 
     var_spec_list: $ => seq(
       '(',
-      repeat(seq($.var_spec, optional(terminator))),
+      optional(seq(
+        $.var_spec,
+        repeat(seq($._terminator, $.var_spec)),
+        optional($._terminator),
+      )),
       ')',
     ),
 
@@ -367,7 +383,7 @@ module.exports = grammar({
         $.type_alias,
         seq(
           '(',
-          optionalTrailingSep(choice($.type_spec, $.type_alias), terminator),
+          optionalTrailingSep(choice($.type_spec, $.type_alias), $._terminator),
           ')',
         ),
       ),
@@ -501,12 +517,11 @@ module.exports = grammar({
       '{',
       optional(seq(
         $.field_declaration,
-        repeat(seq(terminator, $.field_declaration)),
-        optional(terminator),
+        repeat(seq($._terminator, $.field_declaration)),
+        optional($._terminator),
       )),
       '}',
     ),
-
     field_declaration: $ => seq(
       choice(
         seq(
@@ -535,12 +550,11 @@ module.exports = grammar({
       '{',
       optional(seq(
         $._interface_elem,
-        repeat(seq(terminator, $._interface_elem)),
-        optional(terminator),
+        repeat(seq($._terminator, $._interface_elem)),
+        optional($._terminator),
       )),
       '}',
     ),
-
     _interface_elem: $ => choice(
       $.method_elem,
       $.type_elem,
@@ -596,7 +610,7 @@ module.exports = grammar({
     statement_list: $ => choice(
       seq(
         repeat1(choice(
-          seq($._non_empty_statement, terminator),
+          seq($._non_empty_statement, $._terminator),
           $.empty_statement,
         )),
         optional($._last_statement),

@@ -1,0 +1,1 @@
+# Quint has no assert construct, so assertion checks stay silent.
