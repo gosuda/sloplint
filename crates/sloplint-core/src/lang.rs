@@ -53,6 +53,8 @@ languages! {
     Starlark => "starlark", &[".bzl", ".star", ".BUILD", ".bazel"];
     Lean => "lean", &[".lean"];
     Quint => "quint", &[".qnt"];
+    Tlaplus => "tlaplus", &[".tla"];
+    Alloy => "alloy", &[".als"];
 }
 
 const HEADER_EXTENSION: &str = ".h";

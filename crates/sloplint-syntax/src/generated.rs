@@ -56,6 +56,10 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
         | Lang::Dart
         | Lang::Odin
         | Lang::Quint => SLASH,
+        Lang::Alloy => CommentSyntax {
+            lines: &[b"//", b"--"],
+            ..SLASH
+        },
         Lang::Zig => CommentSyntax {
             blocks: &[],
             ..SLASH
@@ -82,6 +86,11 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
         Lang::Lean => CommentSyntax {
             lines: &[b"--"],
             blocks: &[(b"/-", b"-/")],
+            code: &[],
+        },
+        Lang::Tlaplus => CommentSyntax {
+            lines: &[b"\\*"],
+            blocks: &[(b"(*", b"*)")],
             code: &[],
         },
     }
