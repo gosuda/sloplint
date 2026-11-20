@@ -1,5 +1,5 @@
---- /tmp/cpp-upstream/grammar.js
-+++ grammar.js
+--- /tmp/cpp-upstream/grammar.js	2026-11-19 10:17:26.100675059 +0000
++++ grammar.js	2026-11-19 19:16:46.931870232 +0000
 @@ -55,9 +55,76 @@
    externals: $ => [
      $.raw_string_delimiter,
@@ -77,7 +77,7 @@
      // C
      [$.type_specifier, $._declarator],
      [$.type_specifier, $.expression],
-@@ -65,16 +132,78 @@
+@@ -65,16 +132,62 @@
      [$.attributed_statement],
      [$._declaration_modifiers, $.attributed_statement],
      [$._top_level_item, $._top_level_statement],
@@ -91,13 +91,12 @@
 +    [$._declarator, $.expression, $.macro_braced_expression],
 +    [$.macro_qualifier, $._declarator, $.expression, $.macro_braced_expression],
 +    [$._declarator, $.type_specifier, $.expression, $.macro_braced_expression],
-+    [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
-+    [$._macro_declaration_stmt, $.expression, $.macro_braced_statement, $.macro_braced_expression],
++    [$._macro_declaration_stmt, $.expression, $.macro_braced_statement, $._macro_braced_declaration_paren, $.macro_braced_expression],
++    [$.macro_qualifier, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $._macro_braced_declaration_paren, $.macro_braced_expression],
 +    [$.expression, $.concatenated_string, $.macro_braced_expression],
 +    [$.type_specifier, $.expression, $.macro_braced_expression],
-+    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_declaration, $.macro_braced_expression],
 +    [$.enumerator, $.expression, $.macro_braced_expression],
-+    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
++    [$.macro_qualifier, $._macro_declaration_stmt, $.type_specifier, $.expression, $.macro_braced_statement, $._macro_braced_declaration_paren, $.macro_braced_expression],
 +    [$.macro_qualifier, $.type_specifier, $.expression, $.macro_braced_expression],
 +                    [$.macro_argument_list, $.expression],
 +    [$.macro_argument_list, $.expression, $.template_type, $.template_function],
@@ -110,7 +109,6 @@
 +    [$.macro_argument_list, $.type_specifier, $.expression, $.macro_braced_expression],
 +    [$.macro_argument_list, $.concatenated_string],
 +    [$._midl_attribute, $.expression, $.macro_braced_expression],
-+    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $.macro_braced_expression],
 +    [$._macro_braced_body, $._macro_braced_members],
 +    [$._block_item, $._macro_braced_members],
 +    [$.macro_argument_list, $.sized_type_specifier, $._macro_argument_list_nonempty],
@@ -119,24 +117,10 @@
 +    [$.macro_qualifier, $._declarator, $._field_declarator, $._init_pointer_declarator],
 +    [$._declarator, $._field_declarator, $._init_reference_declarator],
 +    [$.macro_argument_list, $.type_specifier, $._macro_argument_list_nonempty],
-+    [$.macro_argument_list, $._macro_argument_list_nonempty],
 +    [$._init_declarator_preproc, $._declarator, $._field_declarator],
 +    [$._declarator, $._field_declarator],
 +    [$.labeled_statement, $.macro_access_label],
 +    [$._midl_attribute, $.structured_binding_declarator, $._lambda_capture_identifier],
-+                    // `NAME(args)` forks: call/declarator/macro_declaration vs a
-+    // `MACRO(args) { members };` braced declaration — decided only by
-+    // whether `_macro_braced_open` lexes after the `)`.
-+        [
-+      $.macro_qualifier,
-+      $._macro_declaration_top,
-+      $._declarator,
-+      $.type_specifier,
-+      $.expression,
-+      $.macro_braced_statement,
-+      $.macro_braced_declaration,
-+      $.macro_braced_expression,
-+    ],
 +        [
 +      $.macro_qualifier,
 +      $.macro_declaration,
@@ -158,7 +142,7 @@
      [$.expression, $._declarator],
      [$.expression, $.structured_binding_declarator],
      [$.expression, $._declarator, $.type_specifier],
-@@ -85,6 +214,7 @@
+@@ -85,6 +198,7 @@
      [$.structured_binding_declarator, $._lambda_capture_identifier],
      [$.parameter_list, $.argument_list],
      [$.type_specifier, $.call_expression],
@@ -166,7 +150,7 @@
      [$._declaration_specifiers, $._constructor_specifiers],
      [$._binary_fold_operator, $._fold_operator],
      [$._function_declarator_seq],
-@@ -94,6 +224,182 @@
+@@ -94,6 +208,193 @@
      [$.init_statement, $._for_statement_body],
      [$.field_expression, $.template_method, $.template_type],
      [$.qualified_field_identifier, $.template_method, $.template_type],
@@ -346,10 +330,21 @@
 +    [$.abstract_parenthesized_declarator, $.qualified_identifier, $.qualified_type_identifier],
 +    [$._type_declarator, $.template_type],
 +    [$.expression],
++    // `NAME(args)` forks: call/declarator/macro_declaration vs a
++    // `MACRO(args) { members };` braced declaration — decided only by
++    // whether `_macro_braced_open` lexes after the `)`. The loose
++    // `_macro_braced_declaration_loose` variant (empty `()` allowed)
++    // takes the file/namespace/statement positions.
++    [$.macro_qualifier, $._macro_declaration_top, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $._macro_braced_declaration_loose, $.macro_braced_expression],
++    [$._macro_braced_declaration_loose],
++    [$._macro_braced_declaration_paren],
++    [$._macro_braced_declaration_loose, $._macro_braced_declaration_paren],
++    [$.macro_argument_list, $.template_type],
++    [$.macro_qualifier, $._macro_declaration_top, $._macro_declaration_stmt, $._declarator, $.type_specifier, $.expression, $.macro_braced_statement, $._macro_braced_declaration_loose, $._macro_braced_declaration_paren, $.macro_braced_expression],
    ],
  
    inline: ($, original) => original.concat([
-@@ -119,6 +425,15 @@
+@@ -119,6 +420,15 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -359,13 +354,13 @@
 +      // `parenthesized_expression(args)` statement (MISSING `;`).
 +      alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
 +      $.macro_namespace,
-+      $.macro_braced_declaration,
++      alias($._macro_braced_declaration_loose, $.macro_braced_declaration),
 +      $.guarded_function,
 +      $.guarded_class,
      ),
  
      _block_item: ($, original) => choice(
-@@ -134,6 +449,31 @@
+@@ -134,6 +444,31 @@
        alias($.constructor_or_destructor_definition, $.function_definition),
        alias($.operator_cast_definition, $.function_definition),
        alias($.operator_cast_declaration, $.declaration),
@@ -390,14 +385,14 @@
 +      '{',
 +      repeat(choice(
 +        $._block_item,
-+        $.macro_braced_declaration,
++        alias($._macro_braced_declaration_loose, $.macro_braced_declaration),
 +        alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
 +      )),
 +      '}',
      ),
  
      // Types
-@@ -153,7 +493,9 @@
+@@ -153,7 +488,9 @@
      decltype: $ => seq(
        'decltype',
        '(',
@@ -408,7 +403,7 @@
        ')',
      ),
  
-@@ -168,14 +510,27 @@
+@@ -168,14 +505,27 @@
        $.dependent_type,
        $.placeholder_type_specifier,
        $.decltype,
@@ -438,7 +433,7 @@
        'mutable',
        'constinit',
        'consteval',
-@@ -193,6 +548,11 @@
+@@ -193,6 +543,11 @@
        $._class_declaration_item,
      ),
      _class_declaration_item: $ => prec.right(seq(
@@ -450,7 +445,7 @@
        choice(
          field('name', $._class_name),
          seq(
-@@ -226,26 +586,73 @@
+@@ -226,26 +581,73 @@
        alias($.qualified_type_identifier, $.qualified_identifier),
      )),
  
@@ -537,7 +532,7 @@
      ),
  
      virtual_specifier: _ => choice(
-@@ -284,14 +691,24 @@
+@@ -284,14 +686,24 @@
  
      enum_specifier: $ => prec.right(seq(
        'enum',
@@ -567,7 +562,7 @@
        ),
        optional($.attribute_specifier),
      )),
-@@ -339,9 +756,16 @@
+@@ -339,9 +751,16 @@
      ),
  
      template_instantiation: $ => seq(
@@ -586,7 +581,7 @@
        ';',
      ),
  
-@@ -387,26 +811,50 @@
+@@ -387,26 +806,50 @@
        ),
      ),
  
@@ -647,7 +642,7 @@
        field('declarator', choice(
          $.variadic_declarator,
          alias($.variadic_reference_declarator, $.reference_declarator),
-@@ -432,6 +880,23 @@
+@@ -432,6 +875,23 @@
            $.initializer_list,
          )),
        ),
@@ -671,7 +666,7 @@
      ),
  
      operator_cast: $ => prec.right(1, seq(
-@@ -444,9 +909,31 @@
+@@ -444,9 +904,31 @@
      //   A b {};
      compound_statement: (_, original) => prec(-1, original),
  
@@ -704,7 +699,7 @@
      ),
  
      field_initializer: $ => prec(1, seq(
-@@ -469,22 +956,45 @@
+@@ -469,22 +951,45 @@
        alias($.operator_cast_declaration, $.declaration),
        $.friend_declaration,
        seq($.access_specifier, ':'),
@@ -757,7 +752,7 @@
        )),
        optional($.attribute_specifier),
        ';',
-@@ -493,6 +1003,8 @@
+@@ -493,6 +998,8 @@
      inline_method_definition: $ => seq(
        $._declaration_specifiers,
        field('declarator', $._field_declarator),
@@ -766,7 +761,7 @@
        choice(
          field('body', choice($.compound_statement, $.try_statement)),
          $.default_method_clause,
-@@ -512,6 +1024,7 @@
+@@ -512,6 +1019,7 @@
          $.operator_cast,
          alias($.qualified_operator_cast_identifier, $.qualified_identifier),
        )),
@@ -774,7 +769,7 @@
        field('body', choice($.compound_statement, $.try_statement)),
      ),
  
-@@ -535,9 +1048,11 @@
+@@ -535,9 +1043,11 @@
      constructor_or_destructor_definition: $ => seq(
        repeat($._constructor_specifiers),
        field('declarator', $.function_declarator),
@@ -786,7 +781,7 @@
            field('body', $.compound_statement),
          ),
          alias($.constructor_try_statement, $.try_statement),
-@@ -580,6 +1095,423 @@
+@@ -580,6 +1090,438 @@
        'protected',
      ),
  
@@ -919,6 +914,21 @@
 +    )),
 +
 +    ...preprocIf('_in_guarded_class', $ => $._guarded_class_head),
++
++    // The inherited un-suffixed `#if`/`#ifdef` arms take `_block_item`,
++    // which deliberately lacks the loose braced decl — so a guarded
++    // `WIDGET() { int bits: 3; };` errored even at file scope. Adding
++    // it here (child rules shadow the parent's same-named rules) keeps
++    // unguarded statement bodies on `macro_braced_statement` while
++    // guarded positions gain the member-form read.
++    ...preprocIf('', $ => choice(
++      $._block_item,
++      alias($._macro_braced_declaration_loose, $.macro_braced_declaration),
++      alias(prec.dynamic(-2, prec.right($._macro_declaration_top)), $.macro_declaration),
++      $.dangling_else,
++      $.dangling_label,
++      '__extension__',
++    )),
 +
 +    _macro_declaration_literals: $ => choice(
 +      'Q_OBJECT',
@@ -1210,7 +1220,7 @@
      _declarator: ($, original) => choice(
        original,
        $.reference_declarator,
-@@ -600,6 +1532,11 @@
+@@ -600,6 +1542,11 @@
      _type_declarator: ($, original) => choice(
        original,
        alias($.reference_type_declarator, $.reference_declarator),
@@ -1222,7 +1232,7 @@
      ),
  
      _abstract_declarator: ($, original) => choice(
-@@ -607,6 +1544,34 @@
+@@ -607,6 +1554,34 @@
        $.abstract_reference_declarator,
      ),
  
@@ -1257,7 +1267,7 @@
      reference_declarator: $ => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._declarator))),
      reference_field_declarator: $ => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._field_declarator))),
      reference_type_declarator: $ => prec.dynamic(1, prec.right(seq(choice('&', '&&'), $._type_declarator))),
-@@ -646,8 +1611,15 @@
+@@ -646,8 +1621,15 @@
        ),
      )),
  
@@ -1274,7 +1284,7 @@
        $.requires_clause,
      )),
  
-@@ -656,6 +1628,14 @@
+@@ -656,6 +1638,14 @@
        $._function_declarator_seq,
      )),
  
@@ -1289,7 +1299,7 @@
      function_field_declarator: $ => prec.dynamic(1, seq(
        field('declarator', $._field_declarator),
        $._function_declarator_seq,
-@@ -703,16 +1683,123 @@
+@@ -703,16 +1693,123 @@
        field('arguments', $.template_argument_list),
      ),
  
@@ -1372,8 +1382,8 @@
 +      alias($._template_relational_binary, $.binary_expression),
 +      alias($._template_relational_conditional, $.conditional_expression),
 +      alias($._template_relational_assignment, $.assignment_expression),
-+    ),
-+
+     ),
+ 
 +    // Operand of a re-joined `>=`: unary-or-tighter expressions and binary
 +    // chains whose operators all outrank relational (`* / % + - << >>`).
 +    // Looser ops (`&&`, `==`, `?:`, ...) continue through
@@ -1407,8 +1417,8 @@
 +      $.fold_expression,
 +      $.user_defined_literal,
 +      alias($._template_tight_binary, $.binary_expression),
-     ),
- 
++    ),
++
 +    _template_tight_binary: $ => prec.left(PREC.SHIFT, seq(
 +      field('left', $.expression),
 +      field('operator', choice('*', '/', '%', '+', '-', '<<', '>>')),
@@ -1418,7 +1428,7 @@
      namespace_definition: $ => seq(
        optional('inline'),
        'namespace',
-@@ -789,6 +1876,133 @@
+@@ -789,6 +1886,154 @@
        ';',
      ),
  
@@ -1447,6 +1457,27 @@
 +    macro_braced_declaration: $ => prec.dynamic(1, prec.right(seq(
 +      field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
 +      optional(alias($._macro_argument_list_nonempty, $.macro_argument_list)),
++      alias($._macro_braced_members, $.field_declaration_list),
++      optional(';'),
++    ))),
++
++    // Same shape with the base (empty-matching) `macro_argument_list` —
++    // used at file/namespace/statement scope, where `NAME() {}` can
++    // never be a constructor, so empty `()` is unambiguously a macro.
++    _macro_braced_declaration_loose: $ => prec.dynamic(1, prec.right(seq(
++      field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
++      optional($.macro_argument_list),
++      alias($._macro_braced_members, $.field_declaration_list),
++      optional(';'),
++    ))),
++
++    // Statement-scope braced decl macros (`WIDGET() { int bits : 3; };`
++    // inside a function body). Parens are required — bare `NAME {` stays
++    // with `macro_braced_statement`, which is the only read that can
++    // hold `ON_SCOPE_EXIT { cleanup(); };` (its block is statements).
++    _macro_braced_declaration_paren: $ => prec.dynamic(1, prec.right(seq(
++      field('name', choice($.identifier, alias($._type_identifier, $.identifier))),
++      $.macro_argument_list,
 +      alias($._macro_braced_members, $.field_declaration_list),
 +      optional(';'),
 +    ))),
@@ -1552,7 +1583,7 @@
      // Statements
  
      _top_level_statement: ($, original) => choice(
-@@ -798,6 +2012,7 @@
+@@ -798,6 +2043,7 @@
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
@@ -1560,7 +1591,7 @@
      ),
  
      _non_case_statement: ($, original) => choice(
-@@ -807,6 +2022,10 @@
+@@ -807,6 +2053,11 @@
        $.for_range_loop,
        $.try_statement,
        $.throw_statement,
@@ -1568,10 +1599,11 @@
 +      $.qt_statement_macro,
 +      $.qt_foreach_statement,
 +      $.macro_braced_statement,
++      alias($._macro_braced_declaration_paren, $.macro_braced_declaration),
      ),
  
      switch_statement: $ => seq(
-@@ -818,16 +2037,27 @@
+@@ -818,16 +2069,27 @@
      while_statement: $ => seq(
        'while',
        field('condition', $.condition_clause),
@@ -1601,7 +1633,7 @@
  
      // Using prec(1) instead of prec.dynamic(1) causes issues with the
      // range loop's declaration specifiers if `int` is passed in, it'll
-@@ -838,7 +2068,7 @@
+@@ -838,7 +2100,7 @@
        '(',
        $._for_range_loop_body,
        ')',
@@ -1610,7 +1642,7 @@
      ),
      _for_range_loop_body: $ => seq(
        field('initializer', optional($.init_statement)),
-@@ -968,10 +2198,257 @@
+@@ -968,10 +2230,257 @@
        ']',
      ),
  
@@ -1872,7 +1904,7 @@
  
      co_await_expression: $ => prec.left(PREC.UNARY, seq(
        field('operator', 'co_await'),
-@@ -991,9 +2468,15 @@
+@@ -991,9 +2500,15 @@
      )),
  
      new_declarator: $ => prec.right(seq(
@@ -1891,7 +1923,7 @@
        optional($.new_declarator),
      )),
  
-@@ -1007,7 +2490,7 @@
+@@ -1007,7 +2522,7 @@
      field_expression: $ => seq(
        prec(PREC.FIELD, seq(
          field('argument', $.expression),
@@ -1900,7 +1932,7 @@
        )),
        field('field', choice(
          prec.dynamic(1, $._field_identifier),
-@@ -1015,6 +2498,7 @@
+@@ -1015,6 +2530,7 @@
          $.destructor_name,
          $.template_method,
          alias($.dependent_field_identifier, $.dependent_name),
@@ -1908,7 +1940,7 @@
        )),
      ),
  
-@@ -1215,13 +2699,66 @@
+@@ -1215,13 +2731,66 @@
              field('operator', operator),
              field('right', $.expression),
            ));
@@ -1977,7 +2009,7 @@
        ')',
      ),
  
-@@ -1230,7 +2767,7 @@
+@@ -1230,7 +2799,7 @@
      compound_literal_expression: ($, original) => choice(
        original,
        seq(
@@ -1986,7 +2018,7 @@
          field('value', $.initializer_list),
        ),
      ),
-@@ -1244,6 +2781,7 @@
+@@ -1244,6 +2813,7 @@
          $._namespace_identifier,
          $.template_type,
          $.decltype,
@@ -1994,7 +2026,7 @@
          alias($.dependent_type_identifier, $.dependent_name),
        ))),
        '::',
-@@ -1256,6 +2794,7 @@
+@@ -1256,6 +2826,7 @@
          alias($.qualified_field_identifier, $.qualified_identifier),
          $.template_method,
          prec.dynamic(1, $._field_identifier),
@@ -2002,7 +2034,7 @@
        )),
      ),
  
-@@ -1296,10 +2835,20 @@
+@@ -1296,10 +2867,20 @@
        $.user_defined_literal,
      ),
  
@@ -2027,7 +2059,7 @@
      )),
  
      _assignment_expression_lhs: $ => seq(
-@@ -1342,11 +2891,47 @@
+@@ -1342,11 +2923,47 @@
  
      this: _ => 'this',
  
@@ -2080,7 +2112,7 @@
  
      number_literal: $ => {
        const sign = /[-\+]/;
-@@ -1366,8 +2951,10 @@
+@@ -1366,8 +2983,10 @@
        const intSuffix = /(ll|LL)[uU]?|[uU](ll|LL)?|[uU][lL]?|[uU][zZ]?|[lL][uU]?|[zZ][uU]?/;
        const floatSuffix = /([fF](16|32|64|128)?)|[lL]|(bf16|BF16)/;
  
@@ -2092,7 +2124,7 @@
          choice(
            seq(
              choice(
-@@ -1409,7 +2996,10 @@
+@@ -1409,7 +3028,10 @@
        $.literal_suffix,
      ),
  
@@ -2104,7 +2136,7 @@
    },
  });
  
-@@ -1434,3 +3024,69 @@
+@@ -1434,3 +3056,69 @@
  function commaSep1(rule) {
    return seq(rule, repeat(seq(',', rule)));
  }
@@ -2174,8 +2206,8 @@
 +    )),
 +  };
 +}
---- /tmp/cpp-upstream/scanner.c
-+++ src/scanner.c
+--- /tmp/cpp-upstream/scanner.c	2026-11-19 09:26:33.810820008 +0000
++++ src/scanner.c	2026-11-19 18:59:31.644481311 +0000
 @@ -5,7 +5,10 @@
  #include <string.h>
  #include <wctype.h>
@@ -2188,7 +2220,7 @@
  
  /// The spec limits delimiters to 16 chars
  #define MAX_DELIMITER_LENGTH 16
-@@ -94,6 +97,396 @@
+@@ -94,6 +97,405 @@
      }
  }
  
@@ -2414,6 +2446,16 @@
 +            return false;
 +        }
 +        int32_t c = lexer->lookahead;
++        // `prev_was_operator` survives whitespace, `[`, and `/` —
++        // `/` reaches its branch below, which keeps the flag only
++        // when it turns out to open a comment (comments are legal
++        // between `operator` and `[]`). Anything else (`(`, `'`,
++        // ident chars) means the upcoming `]` belongs to a real
++        // lambda capture.
++        if (c != '[' && c != ']' && c != '/' && c != ' ' && c != '\t' &&
++            c != '\n' && c != '\r') {
++            prev_was_operator = false;
++        }
 +        if (c == '"') {
 +            advance(lexer);
 +            skip_dq(lexer);
@@ -2446,8 +2488,10 @@
 +        }
 +        if (c == '/') {
 +            if (skip_comment(lexer)) { after_number = false; continue; }
-+            // Division: skip_comment already consumed the `/`, so the
-+            // next lookahead (`"x"` in `base/"x"`) stays live.
++            // Division or the `/` of an `operator/` name: skip_comment
++            // already consumed the `/`, so the next lookahead
++            // (`"x"` in `base/"x"`) stays live.
++            prev_was_operator = false;
 +            maybe_lambda = false;
 +            after_number = false;
 +            continue;
@@ -2574,9 +2618,6 @@
 +             c == '%' || c == '!' || c == '#')) {
 +            maybe_lambda = false;
 +        }
-+        if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
-+            prev_was_operator = false;
-+        }
 +        advance(lexer);
 +        after_number = (c >= '0' && c <= '9');
 +    }
@@ -2585,7 +2626,7 @@
  void *tree_sitter_cpp_external_scanner_create() {
      Scanner *scanner = (Scanner *)ts_calloc(1, sizeof(Scanner));
      memset(scanner, 0, sizeof(Scanner));
-@@ -108,6 +501,11 @@
+@@ -108,6 +510,11 @@
          return false;
      }
  
@@ -2597,7 +2638,7 @@
      // No skipping leading whitespace: raw-string grammar is space-sensitive.
      if (valid_symbols[RAW_STRING_DELIMITER]) {
          lexer->result_symbol = RAW_STRING_DELIMITER;
-@@ -133,9 +531,11 @@
+@@ -133,9 +540,11 @@
  }
  
  void tree_sitter_cpp_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
