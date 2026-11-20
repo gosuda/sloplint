@@ -1955,6 +1955,10 @@ static bool scan_impl(void *payload, TSLexer *lexer,
     // comment-stopped operator is read from them (`:` right, `=` assign).
     int32_t last_op_char = 0;
     int32_t second_op_char = 0;
+    // Total operator length: op_len only counts the run before the first
+    // `/` (slashes go through the runner), so `+?/!=` would look like a
+    // two-character `!=` comparison to op_stopped_class without this.
+    int total_op_len = op_len;
     // Whether the operator's last accepted character is a `/`.
     bool ends_in_slash = false;
     // A `/` next carries the operator on, so the colon is not a lone one —
@@ -2061,6 +2065,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
           slash_run = true;
           second_op_char = last_op_char;
           last_op_char = c;
+          total_op_len++;
         }
       }
       // A Unicode opchar would carry the operator past what this reads, so
@@ -2089,6 +2094,28 @@ static bool scan_impl(void *payload, TSLexer *lexer,
             c = lexer->lookahead;
           }
           if (lexer->eof(lexer) || is_close_or_separator(c)) {
+            break;
+          }
+          if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+            char kw[sizeof "protected"];
+            int kw_len = read_word(lexer, kw, (int)sizeof kw, NULL);
+            // A definition keyword cannot be the operand: `x /\nval v` is
+            // a postfix `/` before `val`, not `x / val`. This mirrors the
+            // definition_words check on the postfix path; `enum` stays out
+            // for the same reason (it can be the operand identifier), and
+            // `case` is added since a `case` clause is never an operand.
+            static const char *const decls[] = {
+                "abstract", "case",      "class",   "def",   "export",
+                "final",    "given",     "import",  "implicit", "lazy",
+                "object",   "override",  "package", "private",
+                "protected", "sealed",   "trait",   "type",  "val",
+                "var",
+            };
+            if (kw_len > 0 && word_in(kw, decls,
+                                      sizeof(decls) / sizeof(decls[0]))) {
+              break;
+            }
+            operand_follows = true;
             break;
           }
           if (c != '/') {
@@ -2164,7 +2191,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
             ends_in_slash
                 ? op_class
                 : op_stopped_class(op_len ? op[0] : '/', last_op_char,
-                                   second_op_char, op_len);
+                                   second_op_char, total_op_len);
         if (emit_op_class(lexer, valid_symbols, cls)) {
           return true;
         }
@@ -2216,7 +2243,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
             ends_in_slash
                 ? op_class
                 : op_stopped_class(op_len ? op[0] : '/', last_op_char,
-                                   second_op_char, op_len);
+                                   second_op_char, total_op_len);
         if (emit_op_class(lexer, valid_symbols, cls)) {
           return true;
         }
@@ -2294,7 +2321,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
           ends_in_slash
               ? op_class
               : op_stopped_class(op_len ? op[0] : '/', last_op_char,
-                                 second_op_char, op_len);
+                                 second_op_char, total_op_len);
       if (emit_op_class(lexer, valid_symbols, cls)) {
         return true;
       }

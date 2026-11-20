@@ -575,3 +575,32 @@ fn operator_names_keep_their_precedence_classes() {
         "the newline inside the colon's comment must not merge the call into a lambda, sexp: {sexp}"
     );
 }
+
+#[test]
+fn slash_tail_operator_before_definition_is_postfix() {
+    // `x /` followed by a definition keyword is the postfix operator, not an
+    // infix waiting for `val` as its right operand.
+    let source = concat!(
+        "object T {\n",
+        "  val a = x /\n",
+        "  val v = 1\n",
+        "  val b = y /\n",
+        "  private val p = 2\n",
+        "}\n",
+    );
+    run_clean(source);
+}
+
+#[test]
+fn multi_slash_operator_keeps_assign_class() {
+    // `+?/!=`: the slash-run continues the operator past the first `/`, so
+    // the length passed to the assign check must count the whole run — the
+    // two-character `!=` comparison carve-out must not fire.
+    let source = concat!(
+        "object T {\n",
+        "  val a = x +?/!=/* note */ y + z\n",
+        "  val b = x +?/!= y\n",
+        "}\n",
+    );
+    run_clean(source);
+}

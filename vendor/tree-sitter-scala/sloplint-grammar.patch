@@ -436,7 +436,7 @@ index 6fcbe2c..3bf0d6a 100644
      // XML literals (SLS §10). The external token $._xml_tag_start decides
      // where markup starts. Comment, CDATA and processing instruction
 diff --git a/src/scanner.c b/src/scanner.c
-index b4856af..3b34777 100644
+index b4856af..1c7d491 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
 @@ -69,10 +69,32 @@ enum TokenType {
@@ -668,7 +668,7 @@ index b4856af..3b34777 100644
    // COMMA_OUTDENT is a distinct token so tree-sitter only makes it valid
    // where comma termination is expected (colon_argument,
    // _indentable_expression).
-@@ -1736,39 +1869,148 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -1736,39 +1869,152 @@ static bool scan_impl(void *payload, TSLexer *lexer,
      return scan_float_with_separator(lexer);
    }
  
@@ -768,6 +768,10 @@ index b4856af..3b34777 100644
 +    // comment-stopped operator is read from them (`:` right, `=` assign).
 +    int32_t last_op_char = 0;
 +    int32_t second_op_char = 0;
++    // Total operator length: op_len only counts the run before the first
++    // `/` (slashes go through the runner), so `+?/!=` would look like a
++    // two-character `!=` comparison to op_stopped_class without this.
++    int total_op_len = op_len;
 +    // Whether the operator's last accepted character is a `/`.
 +    bool ends_in_slash = false;
 +    // A `/` next carries the operator on, so the colon is not a lone one —
@@ -829,7 +833,7 @@ index b4856af..3b34777 100644
          lexer->result_symbol = COLON_EOL;
          return true;
        }
-@@ -1779,14 +2021,29 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -1779,14 +2025,29 @@ static bool scan_impl(void *payload, TSLexer *lexer,
      // and the first character alone fixes the SLS 6.12.3 precedence class.
      // `#!` opens a script header, whose path is not part of an operator.
      bool shebang = op_len >= 2 && op[0] == '#' && op[1] == '!';
@@ -864,7 +868,7 @@ index b4856af..3b34777 100644
        while (!at_comment) {
          int32_t c = lexer->lookahead;
          if (c == '/') {
-@@ -1797,22 +2054,121 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -1797,22 +2058,144 @@ static bool scan_impl(void *payload, TSLexer *lexer,
          } else {
            break;
          }
@@ -876,6 +880,7 @@ index b4856af..3b34777 100644
 +          slash_run = true;
 +          second_op_char = last_op_char;
 +          last_op_char = c;
++          total_op_len++;
 +        }
        }
        // A Unicode opchar would carry the operator past what this reads, so
@@ -908,6 +913,28 @@ index b4856af..3b34777 100644
 +            c = lexer->lookahead;
 +          }
 +          if (lexer->eof(lexer) || is_close_or_separator(c)) {
++            break;
++          }
++          if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
++            char kw[sizeof "protected"];
++            int kw_len = read_word(lexer, kw, (int)sizeof kw, NULL);
++            // A definition keyword cannot be the operand: `x /\nval v` is
++            // a postfix `/` before `val`, not `x / val`. This mirrors the
++            // definition_words check on the postfix path; `enum` stays out
++            // for the same reason (it can be the operand identifier), and
++            // `case` is added since a `case` clause is never an operand.
++            static const char *const decls[] = {
++                "abstract", "case",      "class",   "def",   "export",
++                "final",    "given",     "import",  "implicit", "lazy",
++                "object",   "override",  "package", "private",
++                "protected", "sealed",   "trait",   "type",  "val",
++                "var",
++            };
++            if (kw_len > 0 && word_in(kw, decls,
++                                      sizeof(decls) / sizeof(decls[0]))) {
++              break;
++            }
++            operand_follows = true;
 +            break;
 +          }
 +          if (c != '/') {
@@ -985,7 +1012,7 @@ index b4856af..3b34777 100644
 +            ends_in_slash
 +                ? op_class
 +                : op_stopped_class(op_len ? op[0] : '/', last_op_char,
-+                                   second_op_char, op_len);
++                                   second_op_char, total_op_len);
 +        if (emit_op_class(lexer, valid_symbols, cls)) {
 +          return true;
 +        }
@@ -993,7 +1020,7 @@ index b4856af..3b34777 100644
        return false;
      }
      // These sequences are not infix operators, so the line does not
-@@ -1851,6 +2207,20 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -1851,6 +2234,20 @@ static bool scan_impl(void *payload, TSLexer *lexer,
            return true;
          }
        }
@@ -1006,7 +1033,7 @@ index b4856af..3b34777 100644
 +            ends_in_slash
 +                ? op_class
 +                : op_stopped_class(op_len ? op[0] : '/', last_op_char,
-+                                   second_op_char, op_len);
++                                   second_op_char, total_op_len);
 +        if (emit_op_class(lexer, valid_symbols, cls)) {
 +          return true;
 +        }
@@ -1014,7 +1041,7 @@ index b4856af..3b34777 100644
        return false;
      }
      // The right operand must be able to start an expression. Comments and line
-@@ -1879,7 +2249,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -1879,7 +2276,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
        // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
        // are ordinary identifiers, so such a line can be the right operand.
        static const char *const definition_words[] = {
@@ -1023,7 +1050,7 @@ index b4856af..3b34777 100644
            "given",    "import", "implicit", "lazy",   "object", "override",
            "package",  "private", "protected", "sealed", "trait", "type",
            "val",      "var",
-@@ -1894,9 +2264,41 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -1894,9 +2291,41 @@ static bool scan_impl(void *payload, TSLexer *lexer,
          lexer->result_symbol = postfix_sym;
          return true;
        }
@@ -1057,7 +1084,7 @@ index b4856af..3b34777 100644
 +          ends_in_slash
 +              ? op_class
 +              : op_stopped_class(op_len ? op[0] : '/', last_op_char,
-+                                 second_op_char, op_len);
++                                 second_op_char, total_op_len);
 +      if (emit_op_class(lexer, valid_symbols, cls)) {
 +        return true;
 +      }

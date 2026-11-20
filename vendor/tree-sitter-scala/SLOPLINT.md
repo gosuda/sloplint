@@ -269,3 +269,16 @@ against `_colon_bindings`, a context question regexes cannot answer).
 `{ _: T => body }` wildcard-typed lambdas keep the ascription read for
 the same reason: a `$.wildcard` parameter collides with self_type and
 colon arguments inside `new T {` templates.
+
+Round: multi-slash op classes and definitions after a postfix `/`.
+`op_stopped_class` now takes the total operator length (`total_op_len`),
+counting every character the `/`-runner accepted, not just the run before
+the first `/`: `x +?/!=/* note */ y` is a four-character `=`-tailed
+operator, so the two-character `<=`/`>=`/`!=` comparison carve-out no
+longer fires mid-op. The operand probe that follows a `/`-tail also
+recognises a definition keyword (`val`, `def`, `class`, `case`, …) as
+"no operand": `x /\n  val v = 1` is a postfix `/` before a new
+definition, not `x / val`. The list mirrors the `definition_words`
+check on the postfix path (`enum` stays out — it can be the operand
+identifier — and `case` joins it since a `case` clause is never an
+operand).
