@@ -500,3 +500,47 @@ fn char_literal_and_comment_colon_and_unicode_symbol() {
         "the comment-cut colon must keep the typed lambda, sexp: {sexp}"
     );
 }
+
+#[test]
+fn operator_names_keep_their_precedence_classes() {
+    // SLS 6.12.3: the first character fixes the precedence class and the
+    // ending `:` picks right-associativity, so a wrong class changes the
+    // nesting even though every line still parses. `/` binds in the
+    // `*`/`%` class and left-associates; `:/` (starts `:`, ends `/`) sits
+    // below `*` but still left-associates; `★`/`☃` are So-category
+    // operator chars scalac accepts.
+    let language: tree_sitter::Language = tree_sitter_scala::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).expect("scala language loads");
+    let source = concat!(
+        "val l = a / b / c\n",
+        "val m = a + b / c\n",
+        "val r = x :/ y :/ z\n",
+        "val s = a ★ b ☃ c\n",
+        "val t = f(1, 2) : // trailing note\n  y => g(y)\n",
+        "val u = '×/☃\n",
+    );
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(!tree.root_node().has_error(), "sexp: {sexp}");
+    // `a / b / c`, `x :/ y :/ z` and `a ★ b ☃ c` nest on the left — none
+    // of the three ends in `:`, so all left-associate.
+    assert!(
+        sexp.matches("left: (infix_expression").count() == 3,
+        "the repeated operators must nest on the left, sexp: {sexp}"
+    );
+    // `a + b / c` keeps `/` tighter than `+`: the nested infix sits on
+    // the right of the `+`.
+    assert!(
+        sexp.matches("right: (infix_expression").count() == 1,
+        "`a + b / c` must bind `/` tighter than `+`, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("colon_argument"),
+        "the comment after an EOL colon keeps the indented argument, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("quote_expression"),
+        "`'×/☃` stays one symbol name, sexp: {sexp}"
+    );
+}

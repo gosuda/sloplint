@@ -348,6 +348,10 @@ static bool is_unicode_op_char(int32_t c) {
          (c >= 0x29fe && c <= 0x2aff) || (c >= 0x2b30 && c <= 0x2b44) ||
          (c >= 0x2b47 && c <= 0x2b4c) || (c >= 0xfe64 && c <= 0xfe66) ||
          (c >= 0xff1c && c <= 0xff1e) || (c >= 0xffe9 && c <= 0xffec) ||
+         // scalac also accepts Unicode category So (OTHER_SYMBOL) chars in
+         // operator names — the Miscellaneous Symbols and Dingbats blocks
+         // hold the ones real code uses (`'×/☃`, `a ★ b`).
+         (c >= 0x2600 && c <= 0x27bf) ||
          (c >= 0x10d8e && c <= 0x10d8f) || (c >= 0x1f8d0 && c <= 0x1f8d8) ||
          (c >= 0x1eef0 && c <= 0x1eef1);
 }
@@ -1930,11 +1934,25 @@ static bool scan_impl(void *payload, TSLexer *lexer,
     // the runner below keeps it in the token.
     bool colon_slash = false;
     bool lone_colon = op_len == 1 && op[0] == ':';
+    bool line_blank = false;
     if (lone_colon && lexer->lookahead == '/') {
       advance(lexer);
       if (lexer->lookahead == '/' || lexer->lookahead == '*') {
-        // `:` + comment: still a lone colon; the `/` stays unmarked so it
-        // is lexed again as the comment opener.
+        // `:` + comment: still a lone colon, and the first `/` is already
+        // consumed — the line-end check must start inside the comment
+        // (the consumed characters are re-lexed as the comment opener, so
+        // reading ahead here costs nothing). A line comment means blank;
+        // a block comment decides by where it ends and what follows.
+        if (lexer->lookahead == '/') {
+          while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
+            advance(lexer);
+          }
+          line_blank = true;
+        } else {
+          advance(lexer);
+          line_blank = !consume_block_comment_body_on_line(lexer) ||
+                       rest_of_line_is_blank_or_comments(lexer);
+        }
       } else {
         lexer->mark_end(lexer);
         colon_slash = true;
@@ -1946,12 +1964,12 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // COLONeol). Deciding it at the token level kills the cross-newline
       // ascription fork that GLR would otherwise keep alive across the region.
       if (valid_symbols[COLON_MID] &&
-          !rest_of_line_is_blank_or_comments(lexer)) {
+          !(line_blank || rest_of_line_is_blank_or_comments(lexer))) {
         lexer->result_symbol = COLON_MID;
         return true;
       }
       if (valid_symbols[COLON_EOL] &&
-          rest_of_line_is_blank_or_comments(lexer)) {
+          (line_blank || rest_of_line_is_blank_or_comments(lexer))) {
         lexer->result_symbol = COLON_EOL;
         return true;
       }

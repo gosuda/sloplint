@@ -225,3 +225,12 @@ non-comment `/` is marked into the token so `:/=` still reads as one operator.
 The `'op` run accepts the non-ASCII \p{Sm} set (`is_unicode_op_char`, mirroring
 grammar.js's SM_NONASCII), so `'+/×` is handed back whole to the internal regex
 and `'×/` emits as one operator symbol.
+
+Round: `is_unicode_op_char` now also accepts the \p{So} block 0x2600–0x27bf
+(Miscellaneous Symbols + Dingbats), matching the grammar.js `OP` regex which
+already includes `\p{So}` — `'☃`/`'★` symbols and `a ★ b ☃ c` operator names
+scan whole instead of splitting. And a lone `:` followed by a comment opener
+decides blankness itself: a `//` run makes the rest of the line blank, while
+`/*` asks `consume_block_comment_body_on_line` and then the trailing-content
+probe — `f(1,2) : // note\n y=>g(y)` keeps its `colon_argument` reading and
+`x :/*note*/ Int => b` keeps `_colon_mid`.
