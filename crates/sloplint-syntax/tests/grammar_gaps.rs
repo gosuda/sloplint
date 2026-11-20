@@ -8,6 +8,8 @@
 //! integration-test executable. Each module names the published-grammar
 //! version it fails against, so a re-vendor that drops a patch shows up here.
 
+#[path = "grammar_gaps/alloy.rs"]
+mod alloy;
 #[path = "grammar_gaps/bash.rs"]
 mod bash;
 #[path = "grammar_gaps/c.rs"]
@@ -50,6 +52,8 @@ mod powershell;
 mod powershell_syntax;
 #[path = "grammar_gaps/python.rs"]
 mod python;
+#[path = "grammar_gaps/quint.rs"]
+mod quint;
 #[path = "grammar_gaps/ruby.rs"]
 mod ruby;
 #[path = "grammar_gaps/rust.rs"]
@@ -60,5 +64,7 @@ mod scala;
 mod starlark;
 #[path = "grammar_gaps/swift.rs"]
 mod swift;
+#[path = "grammar_gaps/tlaplus.rs"]
+mod tlaplus;
 #[path = "grammar_gaps/zig.rs"]
 mod zig;

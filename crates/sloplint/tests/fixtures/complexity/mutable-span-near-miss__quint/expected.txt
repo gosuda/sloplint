@@ -1,0 +1,1 @@
+# Module state written on adjacent lines never forms a function-scoped mutable span.

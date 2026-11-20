@@ -1,0 +1,1214 @@
+========================================
+Complete bank module
+========================================
+
+module bank {
+  /// A state variable to store the balance of each account
+  var balances: str -> int
+
+  pure val ADDRESSES = Set("alice", "bob", "charlie")
+
+  action deposit(account, amount) = {
+    // Increment balance of account by amount
+    balances' = balances.setBy(account, curr => curr + amount)
+  }
+
+  action withdraw(account, amount) = {
+    // Decrement balance of account by amount
+    balances' = balances.setBy(account, curr => curr - amount)
+  }
+
+  action init = {
+    // At the initial state, all balances are zero
+    balances' = ADDRESSES.mapBy(_ => 0)
+  }
+
+  action step = {
+    // Non-deterministically pick an address and an amount
+    nondet account = ADDRESSES.oneOf()
+    nondet amount = 1.to(100).oneOf()
+    // Non-deterministically choose to either deposit or withdraw
+    any {
+      deposit(account, amount),
+      withdraw(account, amount),
+    }
+  }
+
+  /// An invariant stating that all accounts should have a non-negative balance
+  val no_negatives = ADDRESSES.forall(addr => balances.get(addr) >= 0)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (documentation_comment)
+    (variable_declaration
+      name: (identifier)
+      type: (function_type
+        parameter: (primitive_type)
+        result: (primitive_type)))
+    (value_definition
+      name: (identifier)
+      value: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (string_literal)
+        argument: (string_literal)
+        argument: (string_literal)))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      parameter: (parameter
+        name: (identifier))
+      body: (block_expression
+        (comment)
+        expression: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (ufcs_call_expression
+            receiver: (name_reference
+              name: (identifier))
+            method: (identifier)
+            argument: (name_reference
+              name: (identifier))
+            argument: (lambda_expression
+              parameter: (identifier)
+              body: (binary_expression
+                left: (name_reference
+                  name: (identifier))
+                right: (name_reference
+                  name: (identifier))))))))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      parameter: (parameter
+        name: (identifier))
+      body: (block_expression
+        (comment)
+        expression: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (ufcs_call_expression
+            receiver: (name_reference
+              name: (identifier))
+            method: (identifier)
+            argument: (name_reference
+              name: (identifier))
+            argument: (lambda_expression
+              parameter: (identifier)
+              body: (binary_expression
+                left: (name_reference
+                  name: (identifier))
+                right: (name_reference
+                  name: (identifier))))))))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        (comment)
+        expression: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (ufcs_call_expression
+            receiver: (name_reference
+              name: (identifier))
+            method: (identifier)
+            argument: (lambda_expression
+              parameter: (hole)
+              body: (integer_literal))))))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        (comment)
+        binding: (nondet_binding
+          name: (identifier)
+          value: (ufcs_call_expression
+            receiver: (name_reference
+              name: (identifier))
+            method: (identifier)))
+        binding: (nondet_binding
+          name: (identifier)
+          value: (ufcs_call_expression
+            receiver: (ufcs_call_expression
+              receiver: (integer_literal)
+              method: (identifier)
+              argument: (integer_literal))
+            method: (identifier)))
+        (comment)
+        expression: (any_expression
+          choice: (call_expression
+            function: (name_reference
+              name: (identifier))
+            argument: (name_reference
+              name: (identifier))
+            argument: (name_reference
+              name: (identifier)))
+          choice: (call_expression
+            function: (name_reference
+              name: (identifier))
+            argument: (name_reference
+              name: (identifier))
+            argument: (name_reference
+              name: (identifier))))))
+    (documentation_comment)
+    (value_definition
+      name: (identifier)
+      value: (ufcs_call_expression
+        receiver: (name_reference
+          name: (identifier))
+        method: (identifier)
+        argument: (lambda_expression
+          parameter: (identifier)
+          body: (binary_expression
+            left: (ufcs_call_expression
+              receiver: (name_reference
+                name: (identifier))
+              method: (identifier)
+              argument: (name_reference
+                name: (identifier)))
+            right: (integer_literal)))))))
+
+========================================
+Complete counters module
+========================================
+
+module counters {
+  var n: int
+
+  action Init = {
+    n' = 1
+  }
+
+  action Even = all {
+    n % 2 == 0,
+    n' = n / 2,
+  }
+
+  action ByThree = all {
+    n % 3 == 0,
+    n' = 2 * n
+  }
+
+  action Positive = all {
+    n > 0,
+    n' = n + 1,
+  }
+
+  action Next = any {
+    Even, ByThree, Positive
+  }
+
+  run run1 = (n' = 1).then(n' = 2).then(n' = 3).then(n' = 6).then(n' = 3)
+
+  run run2 = (Init).then(Positive).then(Positive).then(ByThree).then(Even)
+
+  run run3 = (Init).then(Next).then(Next).then(Next).then(Next)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (variable_declaration
+      name: (identifier)
+      type: (primitive_type))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (integer_literal))))
+    (operator_definition
+      name: (identifier)
+      body: (all_expression
+        conjunct: (binary_expression
+          left: (binary_expression
+            left: (name_reference
+              name: (identifier))
+            right: (integer_literal))
+          right: (integer_literal))
+        conjunct: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (binary_expression
+            left: (name_reference
+              name: (identifier))
+            right: (integer_literal)))))
+    (operator_definition
+      name: (identifier)
+      body: (all_expression
+        conjunct: (binary_expression
+          left: (binary_expression
+            left: (name_reference
+              name: (identifier))
+            right: (integer_literal))
+          right: (integer_literal))
+        conjunct: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (binary_expression
+            left: (integer_literal)
+            right: (name_reference
+              name: (identifier))))))
+    (operator_definition
+      name: (identifier)
+      body: (all_expression
+        conjunct: (binary_expression
+          left: (name_reference
+            name: (identifier))
+          right: (integer_literal))
+        conjunct: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (binary_expression
+            left: (name_reference
+              name: (identifier))
+            right: (integer_literal)))))
+    (operator_definition
+      name: (identifier)
+      body: (any_expression
+        choice: (name_reference
+          name: (identifier))
+        choice: (name_reference
+          name: (identifier))
+        choice: (name_reference
+          name: (identifier))))
+    (operator_definition
+      name: (identifier)
+      body: (ufcs_call_expression
+        receiver: (ufcs_call_expression
+          receiver: (ufcs_call_expression
+            receiver: (ufcs_call_expression
+              receiver: (parenthesized_expression
+                expression: (assignment_expression
+                  target: (primed_identifier
+                    name: (identifier))
+                  value: (integer_literal)))
+              method: (identifier)
+              argument: (assignment_expression
+                target: (primed_identifier
+                  name: (identifier))
+                value: (integer_literal)))
+            method: (identifier)
+            argument: (assignment_expression
+              target: (primed_identifier
+                name: (identifier))
+              value: (integer_literal)))
+          method: (identifier)
+          argument: (assignment_expression
+            target: (primed_identifier
+              name: (identifier))
+            value: (integer_literal)))
+        method: (identifier)
+        argument: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (integer_literal))))
+    (operator_definition
+      name: (identifier)
+      body: (ufcs_call_expression
+        receiver: (ufcs_call_expression
+          receiver: (ufcs_call_expression
+            receiver: (ufcs_call_expression
+              receiver: (parenthesized_expression
+                expression: (name_reference
+                  name: (identifier)))
+              method: (identifier)
+              argument: (name_reference
+                name: (identifier)))
+            method: (identifier)
+            argument: (name_reference
+              name: (identifier)))
+          method: (identifier)
+          argument: (name_reference
+            name: (identifier)))
+        method: (identifier)
+        argument: (name_reference
+          name: (identifier))))
+    (operator_definition
+      name: (identifier)
+      body: (ufcs_call_expression
+        receiver: (ufcs_call_expression
+          receiver: (ufcs_call_expression
+            receiver: (ufcs_call_expression
+              receiver: (parenthesized_expression
+                expression: (name_reference
+                  name: (identifier)))
+              method: (identifier)
+              argument: (name_reference
+                name: (identifier)))
+            method: (identifier)
+            argument: (name_reference
+              name: (identifier)))
+          method: (identifier)
+          argument: (name_reference
+            name: (identifier)))
+        method: (identifier)
+        argument: (name_reference
+          name: (identifier))))))
+
+========================================
+Complete polymorphic option types
+========================================
+
+module Options {
+  type Option[a] =
+    | Some(a)
+    | None
+
+  const maybeInt: Option[int]
+  const maybeList: Option[List[int]]
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (type_alias_declaration
+      name: (identifier)
+      parameter: (type_parameter
+        name: (type_variable))
+      value: (sum_type
+        (sum_type_variant
+          name: (identifier)
+          payload: (type_variable))
+        (sum_type_variant
+          name: (identifier))))
+    (constant_declaration
+      name: (identifier)
+      type: (type_application
+        constructor: (identifier)
+        argument: (primitive_type)))
+    (constant_declaration
+      name: (identifier)
+      type: (type_application
+        constructor: (identifier)
+        argument: (list_type
+          element: (primitive_type))))))
+
+========================================
+Complete module instance
+========================================
+
+module Voting {
+  const Value: Set[int]
+}
+
+module Consumer {
+  import Voting(Value = Set(0, 1)) as V
+  val MyValues = V::Value
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (set_type
+        element: (primitive_type))))
+  (module_definition
+    name: (identifier)
+    (instance_declaration
+      module: (identifier)
+      (instance_override
+        name: (identifier)
+        value: (call_expression
+          function: (name_reference
+            name: (identifier))
+          argument: (integer_literal)
+          argument: (integer_literal)))
+      alias: (identifier))
+    (value_definition
+      name: (identifier)
+      value: (namespace_access_expression
+        namespace: (identifier)
+        member: (identifier)))))
+
+========================================
+Complete namespaces and imports
+========================================
+
+module A::Impl {
+  pure val secretNum = 0xAB_CD
+}
+
+module A {
+  import A::Impl.*
+  pure val publicNum = secretNum + 1_000
+  val Inner::million = 1_000_000
+}
+
+module B {
+  import A.*
+  export A.*
+}
+
+module NamedConsumer {
+  import A.publicNum
+  pure val doubled = publicNum * 2
+}
+
+module Consumer {
+  import B.*
+  pure val pairs = [(1, 2)]
+  pure val sums = pairs.map(((x, y)) => x + y)
+  pure val result = publicNum + 0x10
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (qualified_identifier
+      namespace: (identifier)
+      name: (identifier))
+    (value_definition
+      name: (identifier)
+      value: (integer_literal)))
+  (module_definition
+    name: (identifier)
+    (wildcard_import_declaration
+      module: (qualified_identifier
+        namespace: (identifier)
+        name: (identifier)))
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (integer_literal)))
+    (value_definition
+      name: (qualified_identifier
+        namespace: (identifier)
+        name: (identifier))
+      value: (integer_literal)))
+  (module_definition
+    name: (identifier)
+    (wildcard_import_declaration
+      module: (identifier))
+    (wildcard_export_declaration
+      module: (identifier)))
+  (module_definition
+    name: (identifier)
+    (named_import_declaration
+      module: (identifier)
+      name: (identifier))
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (integer_literal))))
+  (module_definition
+    name: (identifier)
+    (wildcard_import_declaration
+      module: (identifier))
+    (value_definition
+      name: (identifier)
+      value: (list_literal
+        element: (tuple_literal
+          element: (integer_literal)
+          element: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (ufcs_call_expression
+        receiver: (name_reference
+          name: (identifier))
+        method: (identifier)
+        argument: (lambda_expression
+          parameter: (tuple_pattern
+            element: (identifier)
+            element: (identifier))
+          body: (binary_expression
+            left: (name_reference
+              name: (identifier))
+            right: (name_reference
+              name: (identifier))))))
+    (value_definition
+      name: (identifier)
+      value: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (integer_literal)))))
+
+========================================
+Complete operator forms
+========================================
+
+module OperatorForms {
+  pure val conjunction = and {
+    1 < 2,
+    2 < 3,
+  }
+
+  pure val disjunction = or {
+    false,
+    conjunction,
+  }
+
+  pure val entry = 1 + 2 -> 3 * 4
+  pure val result = conjunction -> disjunction
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (and_block_expression
+        conjunct: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        conjunct: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (or_block_expression
+        disjunct: (boolean_literal)
+        disjunct: (name_reference
+          name: (identifier))))
+    (value_definition
+      name: (identifier)
+      value: (pair_expression
+        left: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        right: (binary_expression
+          left: (integer_literal)
+          right: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (pair_expression
+        left: (name_reference
+          name: (identifier))
+        right: (name_reference
+          name: (identifier))))))
+
+========================================
+Complete data features
+========================================
+
+module DataFeatures {
+  type Elem = S(str) | I(int)
+
+  pure def render(value: Elem): str =
+    pure val base = { kind: "base" }
+    pure val extended = { label: "value", ...base }
+    match value { S(s) => s | I(_) => extended.label }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (type_alias_declaration
+      name: (identifier)
+      value: (sum_type
+        (sum_type_variant
+          name: (identifier)
+          payload: (primitive_type))
+        (sum_type_variant
+          name: (identifier)
+          payload: (primitive_type))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (named_type
+          name: (identifier)))
+      return_type: (primitive_type)
+      body: (nested_definition_expression
+        definition: (value_definition
+          name: (identifier)
+          value: (record_literal
+            (record_literal_field
+              name: (identifier)
+              value: (string_literal))))
+        body: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (record_literal
+              (record_literal_field
+                name: (identifier)
+                value: (string_literal))
+              (record_spread
+                value: (name_reference
+                  name: (identifier)))))
+          body: (match_expression
+            value: (name_reference
+              name: (identifier))
+            arm: (match_arm
+              variant: (identifier)
+              parameter: (identifier)
+              body: (name_reference
+                name: (identifier)))
+            arm: (match_arm
+              variant: (identifier)
+              parameter: (hole)
+              body: (field_access_expression
+                object: (name_reference
+                  name: (identifier))
+                field: (identifier)))))))))
+
+========================================
+Quint 0.33 grammar compatibility integration
+========================================
+
+module Grammar033Integration {
+  type Predicate = int -> int => bool
+  const predicate: Predicate
+  const nullary: (,) => bool
+  var x: int
+
+  pure val empty(): List[int] = [,]
+  pure def sumPair(n: int): int = {
+    pure val pair() = (n, n + 1)
+    val (a, b) = pair
+    a + b
+  }
+
+  action init = x' = 0
+  action step = x' = x + 1
+  temporal increasing = always((next(x) > x).orKeep(x))
+  temporal conditional = always((if (x < 3) next(x) == x + 1 else next(x) == 0).orKeep(x))
+  temporal negated = always(not(step).orKeep(x))
+  temporal changed = always((next(x) > x).mustChange(x))
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (type_alias_declaration
+      name: (identifier)
+      value: (operator_type
+        parameter: (function_type
+          parameter: (primitive_type)
+          result: (primitive_type))
+        result: (primitive_type)))
+    (constant_declaration
+      name: (identifier)
+      type: (named_type
+        name: (identifier)))
+    (constant_declaration
+      name: (identifier)
+      type: (operator_type
+        result: (primitive_type)))
+    (variable_declaration
+      name: (identifier)
+      type: (primitive_type))
+    (value_definition
+      name: (identifier)
+      type: (list_type
+        element: (primitive_type))
+      value: (list_literal))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (tuple_literal
+              element: (name_reference
+                name: (identifier))
+              element: (binary_expression
+                left: (name_reference
+                  name: (identifier))
+                right: (integer_literal))))
+          body: (nested_definition_expression
+            definition: (value_definition
+              name: (tuple_pattern
+                element: (identifier)
+                element: (identifier))
+              value: (name_reference
+                name: (identifier)))
+            body: (binary_expression
+              left: (name_reference
+                name: (identifier))
+              right: (name_reference
+                name: (identifier)))))))
+    (operator_definition
+      name: (identifier)
+      body: (assignment_expression
+        target: (primed_identifier
+          name: (identifier))
+        value: (integer_literal)))
+    (operator_definition
+      name: (identifier)
+      body: (assignment_expression
+        target: (primed_identifier
+          name: (identifier))
+        value: (binary_expression
+          left: (name_reference
+            name: (identifier))
+          right: (integer_literal))))
+    (operator_definition
+      name: (identifier)
+      body: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (ufcs_call_expression
+          receiver: (parenthesized_expression
+            expression: (binary_expression
+              left: (call_expression
+                function: (name_reference
+                  name: (identifier))
+                argument: (name_reference
+                  name: (identifier)))
+              right: (name_reference
+                name: (identifier))))
+          method: (identifier)
+          argument: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      body: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (ufcs_call_expression
+          receiver: (parenthesized_expression
+            expression: (if_expression
+              condition: (binary_expression
+                left: (name_reference
+                  name: (identifier))
+                right: (integer_literal))
+              consequence: (binary_expression
+                left: (call_expression
+                  function: (name_reference
+                    name: (identifier))
+                  argument: (name_reference
+                    name: (identifier)))
+                right: (binary_expression
+                  left: (name_reference
+                    name: (identifier))
+                  right: (integer_literal)))
+              alternative: (binary_expression
+                left: (call_expression
+                  function: (name_reference
+                    name: (identifier))
+                  argument: (name_reference
+                    name: (identifier)))
+                right: (integer_literal))))
+          method: (identifier)
+          argument: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      body: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (ufcs_call_expression
+          receiver: (call_expression
+            function: (name_reference
+              name: (identifier))
+            argument: (name_reference
+              name: (identifier)))
+          method: (identifier)
+          argument: (name_reference
+            name: (identifier)))))
+    (operator_definition
+      name: (identifier)
+      body: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (ufcs_call_expression
+          receiver: (parenthesized_expression
+            expression: (binary_expression
+              left: (call_expression
+                function: (name_reference
+                  name: (identifier))
+                argument: (name_reference
+                  name: (identifier)))
+              right: (name_reference
+                name: (identifier))))
+          method: (identifier)
+          argument: (name_reference
+            name: (identifier)))))))
+
+========================================
+ANTLR second pass integration
+========================================
+
+module SecondPassSource {
+  const N: int
+  pure val count = N
+}
+
+module SecondPassIntegration {
+  import SecondPassSource(N = 1,) as Configured
+  import SecondPassSource(N = 2,).*
+
+  type Maybe = Some(int) | None
+  const mapper: int -> (int, bool) => str
+  pure def apply(f: () => int): int = f(,)
+  pure def mapped = x => x -> Configured::count
+  pure val conditional = if (true) 1 -> 2 else 3 -> 4
+  pure val local = val x = Configured::count x -> 2
+  pure def unpack(value: Maybe): int = match value {
+    | Some(x) => x
+    | _ => 0
+  }
+  var state: int
+  temporal constrained = state' = 1 and always(true)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (primitive_type))
+    (value_definition
+      name: (identifier)
+      value: (name_reference
+        name: (identifier))))
+  (module_definition
+    name: (identifier)
+    (instance_declaration
+      module: (identifier)
+      (instance_override
+        name: (identifier)
+        value: (integer_literal))
+      alias: (identifier))
+    (anonymous_instance_declaration
+      module: (identifier)
+      (instance_override
+        name: (identifier)
+        value: (integer_literal)))
+    (type_alias_declaration
+      name: (identifier)
+      value: (sum_type
+        (sum_type_variant
+          name: (identifier)
+          payload: (primitive_type))
+        (sum_type_variant
+          name: (identifier))))
+    (constant_declaration
+      name: (identifier)
+      type: (function_type
+        parameter: (primitive_type)
+        result: (operator_type
+          parameter: (primitive_type)
+          parameter: (primitive_type)
+          result: (primitive_type))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (operator_type
+          result: (primitive_type)))
+      return_type: (primitive_type)
+      body: (call_expression
+        function: (name_reference
+          name: (identifier))))
+    (operator_definition
+      name: (identifier)
+      body: (lambda_expression
+        parameter: (identifier)
+        body: (pair_expression
+          left: (name_reference
+            name: (identifier))
+          right: (namespace_access_expression
+            namespace: (identifier)
+            member: (identifier)))))
+    (value_definition
+      name: (identifier)
+      value: (if_expression
+        condition: (boolean_literal)
+        consequence: (pair_expression
+          left: (integer_literal)
+          right: (integer_literal))
+        alternative: (pair_expression
+          left: (integer_literal)
+          right: (integer_literal))))
+    (value_definition
+      name: (identifier)
+      value: (nested_definition_expression
+        definition: (value_definition
+          name: (identifier)
+          value: (namespace_access_expression
+            namespace: (identifier)
+            member: (identifier)))
+        body: (pair_expression
+          left: (name_reference
+            name: (identifier))
+          right: (integer_literal))))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (named_type
+          name: (identifier)))
+      return_type: (primitive_type)
+      body: (match_expression
+        value: (name_reference
+          name: (identifier))
+        arm: (match_arm
+          variant: (identifier)
+          parameter: (identifier)
+          body: (name_reference
+            name: (identifier)))
+        arm: (match_arm
+          variant: (hole)
+          body: (integer_literal))))
+    (variable_declaration
+      name: (identifier)
+      type: (primitive_type))
+    (operator_definition
+      name: (identifier)
+      body: (binary_expression
+        left: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (integer_literal))
+        right: (call_expression
+          function: (name_reference
+            name: (identifier))
+          argument: (boolean_literal))))))
+
+========================================
+ANTLR third pass multiline and comment integration
+========================================
+
+#!/usr/bin/env quint typecheck
+/// Integration of comment tokens and multiline local bindings.
+module ThirdPassIntegration {
+  var x: int
+
+  /// A continued initializer followed by a separate body.
+  pure def computed(): int = {
+    val values = List(1, 2)
+      /* the chain continues across this comment */
+      .append(3)
+      [0]
+    val half = values
+      / 1
+    half
+  }
+
+  /// A semicolon ends the nondeterministic binding.
+  action step = {
+    nondet n = Set(1, 2).oneOf();
+    x' = n + computed
+  }
+}
+
+---
+
+(source_file
+  (hashbang)
+  (documentation_comment)
+  (module_definition
+    name: (identifier)
+    (variable_declaration
+      name: (identifier)
+      type: (primitive_type))
+    (documentation_comment)
+    (operator_definition
+      name: (identifier)
+      return_type: (primitive_type)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (value_definition
+            name: (identifier)
+            value: (index_expression
+              collection: (ufcs_call_expression
+                receiver: (call_expression
+                  function: (name_reference
+                    name: (identifier))
+                  argument: (integer_literal)
+                  argument: (integer_literal))
+                (comment)
+                (chain_break)
+                method: (identifier)
+                argument: (integer_literal))
+              index: (integer_literal)))
+          body: (nested_definition_expression
+            definition: (value_definition
+              name: (identifier)
+              value: (binary_expression
+                left: (name_reference
+                  name: (identifier))
+                right: (integer_literal)))
+            body: (name_reference
+              name: (identifier))))))
+    (documentation_comment)
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        binding: (nondet_binding
+          name: (identifier)
+          value: (ufcs_call_expression
+            receiver: (call_expression
+              function: (name_reference
+                name: (identifier))
+              argument: (integer_literal)
+              argument: (integer_literal))
+            method: (identifier)))
+        expression: (assignment_expression
+          target: (primed_identifier
+            name: (identifier))
+          value: (binary_expression
+            left: (name_reference
+              name: (identifier))
+            right: (name_reference
+              name: (identifier))))))))
+
+========================================
+ANTLR fourth pass local initializer integration
+========================================
+
+module FourthAudit {
+  var state: int
+  pure def values(n: int): List[int] = {
+    def absolute = if (n > 0) n else -n
+    val count = List(n).length()
+    def add = value => value + absolute
+    val value = val one = count one + 1
+    [add(value), -count]
+  }
+  def sample = {
+    nondet selected = Set(1, 2).oneOf()
+    (selected, selected) == (1, 1)
+  }
+  temporal step = {
+    temporal condition = true == state' = 1 and state' = 2
+    (condition, true) == (true, true)
+  }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (variable_declaration
+      name: (identifier)
+      type: (primitive_type))
+    (operator_definition
+      name: (identifier)
+      parameter: (annotated_parameter
+        name: (identifier)
+        type: (primitive_type))
+      return_type: (list_type
+        element: (primitive_type))
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (if_expression
+              condition: (binary_expression
+                left: (name_reference
+                  name: (identifier))
+                right: (integer_literal))
+              consequence: (name_reference
+                name: (identifier))
+              alternative: (unary_expression
+                operand: (name_reference
+                  name: (identifier)))))
+          body: (nested_definition_expression
+            definition: (value_definition
+              name: (identifier)
+              value: (ufcs_call_expression
+                receiver: (call_expression
+                  function: (name_reference
+                    name: (identifier))
+                  argument: (name_reference
+                    name: (identifier)))
+                method: (identifier)))
+            body: (nested_definition_expression
+              definition: (operator_definition
+                name: (identifier)
+                body: (lambda_expression
+                  parameter: (identifier)
+                  body: (binary_expression
+                    left: (name_reference
+                      name: (identifier))
+                    right: (name_reference
+                      name: (identifier)))))
+              body: (nested_definition_expression
+                definition: (value_definition
+                  name: (identifier)
+                  value: (nested_definition_expression
+                    definition: (value_definition
+                      name: (identifier)
+                      value: (name_reference
+                        name: (identifier)))
+                    body: (binary_expression
+                      left: (name_reference
+                        name: (identifier))
+                      right: (integer_literal))))
+                body: (list_literal
+                  element: (call_expression
+                    function: (name_reference
+                      name: (identifier))
+                    argument: (name_reference
+                      name: (identifier)))
+                  element: (unary_expression
+                    operand: (name_reference
+                      name: (identifier))))))))))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        binding: (nondet_binding
+          name: (identifier)
+          value: (ufcs_call_expression
+            receiver: (call_expression
+              function: (name_reference
+                name: (identifier))
+              argument: (integer_literal)
+              argument: (integer_literal))
+            method: (identifier)))
+        expression: (binary_expression
+          left: (tuple_literal
+            element: (name_reference
+              name: (identifier))
+            element: (name_reference
+              name: (identifier)))
+          right: (tuple_literal
+            element: (integer_literal)
+            element: (integer_literal)))))
+    (operator_definition
+      name: (identifier)
+      body: (block_expression
+        expression: (nested_definition_expression
+          definition: (operator_definition
+            name: (identifier)
+            body: (binary_expression
+              left: (binary_expression
+                left: (boolean_literal)
+                right: (assignment_expression
+                  target: (primed_identifier
+                    name: (identifier))
+                  value: (integer_literal)))
+              right: (assignment_expression
+                target: (primed_identifier
+                  name: (identifier))
+                value: (integer_literal))))
+          body: (binary_expression
+            left: (tuple_literal
+              element: (name_reference
+                name: (identifier))
+              element: (boolean_literal))
+            right: (tuple_literal
+              element: (boolean_literal)
+              element: (boolean_literal))))))))

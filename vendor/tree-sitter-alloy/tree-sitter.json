@@ -1,0 +1,15 @@
+{
+  "grammars": [
+    {
+      "name": "alloy",
+      "camelcase": "Alloy",
+      "scope": "source.alloy",
+      "path": ".",
+      "file-types": ["als"]
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT"
+  }
+}

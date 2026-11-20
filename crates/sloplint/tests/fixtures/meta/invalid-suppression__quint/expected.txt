@@ -1,0 +1,2 @@
+a.qnt:2 major meta/invalid-suppression
+a.qnt:4 major meta/invalid-suppression

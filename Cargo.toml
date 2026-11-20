@@ -37,7 +37,10 @@ tree-sitter-zig = { path = "vendor/tree-sitter-zig" }
 tree-sitter-ocaml = { path = "vendor/tree-sitter-ocaml" }
 tree-sitter-odin = { path = "vendor/tree-sitter-odin" }
 tree-sitter-starlark = { path = "vendor/tree-sitter-starlark" }
+tree-sitter-alloy = { path = "vendor/tree-sitter-alloy" }
 tree-sitter-lean = { path = "vendor/tree-sitter-lean" }
+tree-sitter-quint = { path = "vendor/tree-sitter-quint" }
+tree-sitter-tlaplus = { path = "vendor/tree-sitter-tlaplus" }
 rayon = "1.12.0"
 ignore = "0.4.34"
 globset = "0.4.21"

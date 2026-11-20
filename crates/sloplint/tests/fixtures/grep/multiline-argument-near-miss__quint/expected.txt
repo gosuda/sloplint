@@ -1,0 +1,1 @@
+# A twelve-line collection argument stays below the strict span rung.

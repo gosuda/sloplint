@@ -1,0 +1,221 @@
+==================
+Empty module
+==================
+
+module Foo {}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)))
+
+=============================
+Integer constant declaration
+=============================
+
+module Foo {
+  const N: int
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (primitive_type))))
+
+============================
+String constant declaration
+============================
+
+module Foo {
+  const NAME: str
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (primitive_type))))
+
+=============================
+Boolean constant declaration
+=============================
+
+module Foo {
+  const ENABLED: bool
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (primitive_type))))
+
+========================
+Set constant declaration
+========================
+
+module Foo {
+  const VALUES: Set[int]
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (set_type
+        element: (primitive_type)))))
+
+=========================
+List constant declaration
+=========================
+
+module Foo {
+  const VALUES: List[int]
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (list_type
+        element: (primitive_type)))))
+
+==================================
+Function type constant declaration
+==================================
+
+module Foo {
+  const BALANCES: str -> int
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (function_type
+        parameter: (primitive_type)
+        result: (primitive_type)))))
+
+==========================
+Tuple constant declaration
+==========================
+
+module Foo {
+  const ENTRY: (str, int)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (tuple_type
+        element: (primitive_type)
+        element: (primitive_type)))))
+
+===========================
+Record constant declaration
+===========================
+
+module Foo {
+  const USER: { name: str, age: int }
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (record_type
+        (record_type_field
+          name: (identifier)
+          type: (primitive_type))
+        (record_type_field
+          name: (identifier)
+          type: (primitive_type))))))
+
+==================================
+Parenthesized constant declaration
+==================================
+
+module Foo {
+  const VALUE: (int)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (parenthesized_type
+        type: (primitive_type)))))
+
+========================================
+Operator type constants
+========================================
+
+module Operators {
+  const predicate: (int, bool) => str
+  const generator: () => bool
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (operator_type
+        parameter: (primitive_type)
+        parameter: (primitive_type)
+        result: (primitive_type)))
+    (constant_declaration
+      name: (identifier)
+      type: (operator_type
+        result: (primitive_type)))))
+
+========================================
+Unary operator type
+========================================
+
+module Operators {
+  const predicate: int => bool
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (operator_type
+        parameter: (primitive_type)
+        result: (primitive_type)))))

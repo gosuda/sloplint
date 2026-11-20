@@ -1,0 +1,1 @@
+# Two repeated pairs never reach the strict repeat rung.
