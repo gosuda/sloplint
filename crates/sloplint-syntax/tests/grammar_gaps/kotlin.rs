@@ -217,6 +217,55 @@ fn field_assignment_in_a_body_stays_a_statement() {
 }
 
 #[test]
+fn semicolon_then_field_assignment_stays_a_local_statement() {
+    // Local variables cannot carry a backing field (Kotlin gives those to
+    // member and top-level properties only), so `var x = 1; field = 5` in a
+    // body is an initializer then an assignment, never `backing_field`.
+    let sexp = raw_tree("fun f() {\n    var x = 1; field = 5\n}\n")
+        .root_node()
+        .to_sexp();
+    assert!(
+        sexp.contains("(assignment"),
+        "field = 5 must be an assignment, got:\n{sexp}"
+    );
+    assert!(
+        !sexp.contains("(backing_field"),
+        "locals cannot have a backing field, got:\n{sexp}"
+    );
+}
+
+#[test]
+fn semicolon_then_getter_call_stays_a_local_statement() {
+    let sexp = raw_tree("fun f() {\n    var x = 1; get() {}\n}\n")
+        .root_node()
+        .to_sexp();
+    assert!(
+        sexp.contains("(call_expression"),
+        "get() {{}} must be a call with a trailing lambda, got:\n{sexp}"
+    );
+    assert!(
+        !sexp.contains("(getter"),
+        "locals cannot have accessors, got:\n{sexp}"
+    );
+}
+
+#[test]
+fn explicit_backing_field_then_accessors_parse() {
+    run_clean(
+        "class C {\n    val y = MutableStateFlow(0)\n        field = it\n        get() = field.value\n}\n",
+    );
+    let sexp = raw_tree(
+        "class C {\n    val y = MutableStateFlow(0)\n        field = it\n        get() = field.value\n}\n",
+    )
+    .root_node()
+    .to_sexp();
+    assert!(
+        sexp.contains("(backing_field") && sexp.contains("(getter"),
+        "accessors must be allowed after a backing field, got:\n{sexp}"
+    );
+}
+
+#[test]
 fn open_and_override_as_identifiers_parse() {
     run_clean(
         "fun a() { val open = 1; open(2) }\nclass A : SeekableByteChannel {\n    private var open = true\n    override fun close() { open = false }\n}\n",
@@ -283,6 +332,37 @@ fn annotated_open_class_stays_a_declaration() {
 }
 
 #[test]
+fn annotated_local_class_stays_a_declaration() {
+    run_clean("fun f() { @Deprecated(\"old\") open class C {} }\n");
+    let sexp = raw_tree("fun f() { @Deprecated(\"old\") open class C {} }\n")
+        .root_node()
+        .to_sexp();
+    assert!(
+        sexp.contains("(block (class_declaration"),
+        "annotated local class must land in class_declaration, got:\n{sexp}"
+    );
+}
+
+#[test]
+fn top_level_statement_query_matches_statements() {
+    // `(source_file (statement))` must compile — sloplint rules query the
+    // `statement` supertype at file level and a compile failure aborts the
+    // whole lint.
+    let language: tree_sitter::Language = tree_sitter_kotlin_ng::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).unwrap();
+    let source = "var x = 1\ny = 2\n";
+    let tree = parser.parse(source, None).unwrap();
+    let query = tree_sitter::Query::new(&language, "(source_file (statement) @s)")
+        .expect("source_file must expose the statement supertype");
+    let mut cursor = tree_sitter::QueryCursor::new();
+    let mut matched = 0;
+    let mut matches = cursor.matches(&query, tree.root_node(), source.as_bytes());
+    tree_sitter::StreamingIterator::for_each(&mut matches, |_| matched += 1);
+    assert_eq!(matched, 1, "the top-level assignment must match (statement)");
+}
+
+#[test]
 fn value_receiver_class_literal_keeps_parenthesized_expression() {
     run_clean("fun f(v: Any) { (v)::class.java }\n");
     let sexp = raw_tree("fun f(v: Any) { (v)::class.java }\n")
@@ -296,8 +376,9 @@ fn value_receiver_class_literal_keeps_parenthesized_expression() {
 
 #[test]
 fn superclass_call_arguments_survive_a_newline() {
-    // `class D : Base\n() {}` — the scanner cannot suppress the semi before
-    // a delegation's `(`, so the constructor invocation absorbs it.
+    // `class D : Base\n() {}` — when a declaration separator is followed
+    // by `(`, the scanner emits `_delegation_semi` instead of `_semi`,
+    // which only the delegation's constructor invocation accepts.
     for source in [
         "class D : Base\n() {}\n",
         "class E : Iface1, Base\n(arg) {}\n",
@@ -313,6 +394,24 @@ fn superclass_call_arguments_survive_a_newline() {
 }
 
 #[test]
+fn bodyless_class_with_generic_delegation_parses() {
+    // `class T : M<Int>` — the separator after the delegation type must end
+    // the declaration, not shift into the constructor invocation's tolerated
+    // separator (which then demands `(`). `_delegation_semi` is emitted only
+    // when `(` follows, so an EOF- or statement-followed `_semi` reduces the
+    // specifier instead.
+    for source in [
+        "class T : M<Int>\n",
+        "class Tagged : Marker<Int,>\n",
+        "class T : M<Int>\nval y = 1\n",
+        "class T private constructor() : Base\n(1) {}\n",
+        "class T : A, B\n(1) {}\n",
+    ] {
+        run_clean(source);
+    }
+}
+
+#[test]
 fn wrapped_suspend_function_type_parses() {
     // `suspend ((A) -> B)` — ktor's JWT verifier returns this shape.
     for source in [
@@ -322,4 +421,58 @@ fn wrapped_suspend_function_type_parses() {
     ] {
         run_clean(source);
     }
+}
+
+#[test]
+fn trailing_commas_in_type_lists_parse() {
+    run_clean("fun <T,> takesTrailing() {}\nval r = box<Int, String,>()\n");
+}
+
+#[test]
+fn unnamed_context_parameter_parses() {
+    run_clean("context(_: CoroutineContext)\nfun withCtx() {}\n");
+}
+
+#[test]
+fn untyped_anonymous_function_parameters_parse() {
+    run_clean("val inc = fun(m) = m\nval g = fun(x, y) { return x + y }\n");
+}
+
+#[test]
+fn secondary_constructor_head_split_across_lines_parses() {
+    run_clean(
+        "class C {\n    @Inject\n    internal constructor(a: A)\n    @Anno(name = \"x\")\n    actual constructor(b: B)\n}\n",
+    );
+}
+
+#[test]
+fn semicolon_before_accessors_parses() {
+    run_clean(
+        "var top = 1; private set\n\
+         class C {\n\
+         \x20   var m = 1; private set\n\
+         \x20   var g = 0; get() = 2\n\
+         \x20   var s = 0; set(v) { field = v }\n\
+         \x20   val f = 2\n\
+         }\n",
+    );
+}
+
+#[test]
+fn plain_member_after_semicolon_accessor_parses() {
+    run_clean("class C {\n    var m = 1; private set\n    fun f() {}\n}\n");
+}
+
+#[test]
+fn bare_default_accessors_after_a_semicolon_parse() {
+    run_clean("class C {\n    var x = 1; set\n    var y = 2; get; private set\n}\n");
+}
+#[test]
+fn infix_word_calls_after_a_semicolon_stay_statements() {
+    run_clean(
+        "val get = 1\nval x = 1; get until 2\nval y = 2; get as? Int\n\
+         val z = 3; get foo ::bar\nval w = 4; get context 2\nval v = 5; get context2 3\n",
+    );
+    // A `context(...)` member declaration may follow a bare accessor.
+    run_clean("var f = 6\n    get\ncontext(String) fun g() {}\n");
 }

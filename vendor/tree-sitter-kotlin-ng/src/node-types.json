@@ -200,7 +200,7 @@
         "named": true
       },
       {
-        "type": "declaration",
+        "type": "class_declaration",
         "named": true
       },
       {
@@ -213,6 +213,22 @@
       },
       {
         "type": "for_statement",
+        "named": true
+      },
+      {
+        "type": "function_declaration",
+        "named": true
+      },
+      {
+        "type": "object_declaration",
+        "named": true
+      },
+      {
+        "type": "property_declaration",
+        "named": true
+      },
+      {
+        "type": "type_alias",
         "named": true
       },
       {
@@ -1243,6 +1259,10 @@
           "named": true
         },
         {
+          "type": "identifier",
+          "named": true
+        },
+        {
           "type": "parameter",
           "named": true
         },
@@ -2057,6 +2077,10 @@
       "required": false,
       "types": [
         {
+          "type": "declaration",
+          "named": true
+        },
+        {
           "type": "file_annotation",
           "named": true
         },
@@ -2841,6 +2865,10 @@
   },
   {
     "type": "]",
+    "named": false
+  },
+  {
+    "type": "_",
     "named": false
   },
   {

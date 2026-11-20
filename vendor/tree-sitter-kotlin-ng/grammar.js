@@ -23,6 +23,15 @@ module.exports = grammar({
 
   conflicts: $ => [
     [$.class_body, $.enum_class_body],
+    // `_file_statement` offers both `declaration` and `statement`, so a
+    // top-level `class C {}` reduces under either supertype — the trees
+    // are identical.
+    [$.declaration, $.statement],
+    // Top-level `var x = 1` is reachable as both the full property (with
+    // accessor tail) and the local variant; the local rule's negative
+    // dynamic precedence makes the full property win.
+    [$.property_declaration, $.local_property_declaration],
+
 
     [$.binary_expression, $.call_expression],
     [$.binary_expression, $.in_expression, $.call_expression],
@@ -33,7 +42,6 @@ module.exports = grammar({
     [$._simple_user_type, $.primary_expression],
     [$.type, $._receiver_type],
 
-    [$.modifiers, $.annotated_lambda],
     [$.modifiers, $.annotated_expression],
 
     [$.delegation_specifier, $.type_modifiers, $.paren_type_modifiers],
@@ -56,7 +64,8 @@ module.exports = grammar({
     [$.variable_declaration, $.type_modifiers, $.paren_type_modifiers],
     [$.variable_declaration],
 
-    [$.function_value_parameters, $.function_type_parameters],
+    [$._untyped_function_value_parameters, $._simple_user_type],
+    [$._untyped_function_value_parameters, $.function_type_parameters],
     [$.parenthesized_type, $.function_type_parameters],
     [$.paren_type_modifiers],
     [$.multi_variable_declaration, $.function_type_parameters],
@@ -104,6 +113,20 @@ module.exports = grammar({
     'set',
     // used to check if we can parse a comment
     '$',
+    // `;` emitted by the scanner only when an accessor (`get`/`set`/`field`)
+    // follows it, so `var x = 1; private set` keeps the accessor inside the
+    // property instead of consuming the `;` as a member separator.
+    $._accessor_semi,
+    // Emitted instead of `_accessor_semi` when the word after `;` is
+    // `field`: a backing field can only open a property tail, never follow
+    // an accessor, so `val x = 1; get() = 1; field = 2` parses the last
+    // clause as a separate statement rather than a dead accessor slot.
+    $._field_semi,
+    // Emitted instead of `_semi` when a declaration separator is followed
+    // by `(`, so a delegation's constructor invocation can span the line
+    // break (`class D : Base\n() {}`) without the plain `_semi` competing
+    // with the declaration-ending read (`class T : M<Int>` at EOF).
+    $._delegation_semi,
   ],
 
   inline: $ => [
@@ -134,7 +157,7 @@ module.exports = grammar({
       repeat($.file_annotation),
       optional($.package_header),
       repeat($.import),
-      repeat(seq($.statement, $._semi)),
+      repeat(seq($._file_statement, $._semi)),
     ),
 
     file_annotation: $ => seq(
@@ -194,6 +217,19 @@ module.exports = grammar({
     )),
 
     property_declaration: $ => prec.right(seq(
+      $._property_declaration_head,
+      optional(choice(
+        // `;` between the initializer and the accessors lexes as the
+        // member/statement separator (`_class_member_semi` / `_semi`), never
+        // as a literal `;` — the scanner emits `_accessor_semi` instead when
+        // an accessor word follows it, so `var x = 1; private set` parses.
+        seq(choice($._accessor_semi, $._field_semi), $._property_tail),
+        $._property_tail,
+        ';',
+      )),
+    )),
+
+    _property_declaration_head: $ => seq(
       optional($.context_parameters),
       optional($.modifiers),
       choice('val', 'var'),
@@ -205,20 +241,48 @@ module.exports = grammar({
         seq('=', $.expression),
         $.property_delegate,
       )),
+    ),
+
+    // A local variable cannot carry accessors or a backing field (Kotlin
+    // gives them to member and top-level properties only), so the
+    // statement-position variant ends at the initializer — `var x = 1;
+    // field = 5` in a body is an initializer then an assignment to a local
+    // `field`, never a backing field.
+    // Lower dynamic precedence than `property_declaration` so that at
+    // top level — where both variants are reachable through
+    // `_file_statement` — the full accessor/backing-field tail wins.
+    local_property_declaration: $ => prec.dynamic(-1, prec.right(seq(
+      $._property_declaration_head,
       optional(';'),
-      optional(choice(
-        // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
-        // where an accessor would sit (upstream v1.1.0 gap).
+    ))),
+
+    _property_tail: $ => prec.right(choice(
+      // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
+      // where an accessor would sit (upstream v1.1.0 gap). Accessors can
+      // still follow: `field = MutableStateFlow(0)` then `get() = field`.
+      seq(
         $.backing_field,
-        seq($.getter, optional($.setter)),
-        seq($.setter, optional($.getter)),
-      )),
+        optional(choice(
+          seq(
+            optional($._accessor_semi),
+            $.getter,
+            optional(seq(optional($._accessor_semi), $.setter)),
+          ),
+          seq(
+            optional($._accessor_semi),
+            $.setter,
+            optional(seq(optional($._accessor_semi), $.getter)),
+          ),
+        )),
+      ),
+      seq($.getter, optional(seq(optional($._accessor_semi), $.setter))),
+      seq($.setter, optional(seq(optional($._accessor_semi), $.getter))),
     )),
 
     context_parameters: $ => seq(
       'context',
       '(',
-      commaSep1(choice($.parameter, $.type)),
+      commaSep1(choice($.parameter, $.type, seq('_', ':', $.type))),
       ')',
     ),
 
@@ -252,7 +316,7 @@ module.exports = grammar({
 
     constructor_delegation_call: $ => seq(choice('this', 'super'), $.value_arguments),
 
-    type_parameters: $ => seq('<', commaSep1($.type_parameter), '>'),
+    type_parameters: $ => seq('<', commaSep1($.type_parameter), optional(','), '>'),
 
     type_parameter: $ => seq(
       optional($.type_parameter_modifiers),
@@ -308,6 +372,16 @@ module.exports = grammar({
       optional($.function_body),
     )),
 
+    _untyped_function_value_parameters: $ => seq(
+      '(',
+      optionalCommaSep1(seq(
+        optional($.parameter_modifiers),
+        choice($.parameter, $.identifier),
+        optional(seq('=', $.expression)),
+      )),
+      ')',
+    ),
+
     function_value_parameters: $ => seq(
       '(',
       optionalCommaSep1(seq(
@@ -335,7 +409,7 @@ module.exports = grammar({
     // superclass call's arguments (its valid-symbol mask is identical to a `(`
     // after a complete statement), so the delegation's constructor invocation
     // tolerates the separator instead.
-    _delegation_constructor_invocation: $ => seq($.type, optional($._semi), $.value_arguments),
+    _delegation_constructor_invocation: $ => seq($.type, optional($._delegation_semi), $.value_arguments),
 
     variable_declaration: $ => prec(1, seq(
       repeat($.annotation),
@@ -484,13 +558,33 @@ module.exports = grammar({
       optional($._semi),
     ),
 
+    // Statements inside blocks/branches/lambdas. Properties here are
+    // local: Kotlin gives accessors and backing fields to member and
+    // top-level properties only, so `var x = 1; field = 5` in a body is
+    // an initializer then an assignment to a local `field`, never a
+    // backing field. The alias keeps the `property_declaration` node
+    // kind in the tree. Declarations are spelled out (rather than
+    // `$.declaration`) so the local property variant substitutes in.
     statement: $ => choice(
-      $.declaration,
+      $.class_declaration,
+      $.object_declaration,
+      $.function_declaration,
+      alias($.local_property_declaration, $.property_declaration),
+      $.type_alias,
       $.assignment,
       $.for_statement,
       $.while_statement,
       $.do_while_statement,
       $.expression,
+    ),
+
+    // Top-level statements, where full `property_declaration` (accessors,
+    // backing fields) applies. `block` children list the `statement`
+    // supertype, so `(block (statement) ...)` custom-rule queries keep
+    // compiling while local positions keep the no-accessor variant.
+    _file_statement: $ => choice(
+      $.declaration,
+      $.statement,
     ),
 
     modifiers: $ => prec.right(repeat1(choice(
@@ -630,7 +724,7 @@ module.exports = grammar({
       ),
     ),
 
-    type_arguments: $ => seq('<', commaSep1($.type_projection), '>'),
+    type_arguments: $ => seq('<', commaSep1($.type_projection), optional(','), '>'),
 
     type_projection: $ => choice(
       seq(repeat($.variance_modifier), $.type),
@@ -830,7 +924,7 @@ module.exports = grammar({
     anonymous_function: $ => prec.right(seq(
       'fun',
       optional(seq($.type, '.')),
-      $.function_value_parameters,
+      alias($._untyped_function_value_parameters, $.function_value_parameters),
       optional(seq(':', $.type)),
       optional($.type_constraints),
       optional($.function_body),
