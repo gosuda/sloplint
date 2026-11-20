@@ -2873,7 +2873,10 @@ module.exports = grammar({
             // three characters outmatch the two of `'=`.
             alias(
               token.immediate(
-                prec(PREC.macro, opRegex(`(?:[${noSlash(OP)}]|/[${OP_NSS}])+|/`)),
+                prec(
+                  PREC.macro,
+                  opRegex(`(?:[${noSlash(OP)}]|/[${OP_NSS}])+/?|/`),
+                ),
               ),
               $.operator_identifier,
             ),

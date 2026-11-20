@@ -366,6 +366,19 @@ fn comment_openers_are_not_operators() {
 }
 
 #[test]
+fn slash_symbol_literals_parse() {
+    // `'/:/`, `'+/`, `'/` name slash-class operators as symbol literals.
+    let source = concat!(
+        "object O {\n",
+        "  val a = '/:/\n",
+        "  val b = '+/\n",
+        "  val c = '/\n",
+        "}\n",
+    );
+    run_clean(source);
+}
+
+#[test]
 fn enum_stays_a_soft_identifier() {
     // Scala 2 code uses `enum` as a parameter or named argument; only a real
     // `enum` definition should claim the keyword reading.

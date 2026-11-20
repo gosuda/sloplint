@@ -183,5 +183,4 @@ Corpus delta (same files, same grammar build):
 | the-algorithm | 42 | 14 (all `<removed_id>` placeholders) |
 | phantom | ~10 | 0 |
 | scalding | ~8 | 6 (multi-line curried signatures — residual cluster) |
-| breeze | ~12 | 4 (`/:/` ceiling + unexamined residuals) |
->>>>>>> origin/main
+| breeze | ~12 | 4 (unexamined residuals; the `/:/` ceiling is handled by SC-OPSLASH) |
