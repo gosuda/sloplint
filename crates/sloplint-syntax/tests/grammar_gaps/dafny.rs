@@ -505,7 +505,6 @@ fn datatype_updates_are_not_calls() {
     );
 }
 
-
 #[test]
 fn if_inside_an_else_operand_still_counts_as_nesting() {
     // `else 1 + if b then 2 else 3`: the inner if is an operand of the else
