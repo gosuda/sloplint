@@ -54,6 +54,7 @@ languages! {
     Lean => "lean", &[".lean"];
     Quint => "quint", &[".qnt"];
     Tlaplus => "tlaplus", &[".tla"];
+    Alloy => "alloy", &[".als"];
 }
 
 const HEADER_EXTENSION: &str = ".h";

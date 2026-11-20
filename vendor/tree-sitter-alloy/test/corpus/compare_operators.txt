@@ -1,0 +1,149 @@
+========================
+not-equal operator
+========================
+
+fact { x != y }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+not-in operator (bang form)
+========================
+
+fact { x !in y }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+not-in operator (word form)
+========================
+
+fact { x not in y }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+bang-less-than operator
+========================
+
+fact { x !< y }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+bang-greater-than operator
+========================
+
+fact { x !> y }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+bang-less-equal operator
+========================
+
+fact { x !<= y }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+bang-greater-equal operator
+========================
+
+fact { x !>= y }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+in operator
+========================
+
+fact { x in y }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+standard compare operators
+========================
+
+fact { a = b  c < d  e > f  g <= h  i >= j  k =< l }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name)))
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name)))
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name)))
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name)))
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name)))
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name))))))

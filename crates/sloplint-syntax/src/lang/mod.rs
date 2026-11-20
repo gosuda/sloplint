@@ -5,6 +5,7 @@ use sloplint_core::lang::Lang;
 use crate::hooks::LangHooks;
 use crate::spec::{LangSpec, Role, spec};
 
+pub(crate) mod alloy;
 pub(crate) mod bash;
 pub(crate) mod c;
 pub(crate) mod c_family;
@@ -130,6 +131,11 @@ fn grammar(lang: Lang) -> (tree_sitter::Language, Table, &'static dyn LangHooks)
             tree_sitter_tlaplus::LANGUAGE.into(),
             tlaplus::TABLE,
             &tlaplus::HOOKS,
+        ),
+        Lang::Alloy => (
+            tree_sitter_alloy::LANGUAGE.into(),
+            alloy::TABLE,
+            &alloy::HOOKS,
         ),
     }
 }
