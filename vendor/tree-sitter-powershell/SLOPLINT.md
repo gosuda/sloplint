@@ -164,6 +164,23 @@ More valid code that the same sweep files turned up, fixed because it blocked fi
   `[_cast_operand, invokation_foreach_expression]`) cover the member-access
   ambiguity the shadow rule introduces.
 
+## Round 4 grammar changes
+
+- `generic_token` has two more forms.
+  - A variable head followed by `..` or by a `.` that does not open a member
+    name is one argument-mode word: `to $EndDate...`, `$v..$w`. `$v.foo`
+    still parses as member access — neither alternative accepts a single `.`
+    before an identifier char, and the post-dot char is limited to the word
+    tail set, so `$v.` at end of line still lexes as upstream did (it errors;
+    argument-mode `.` at EOL is a PS edge the token language cannot express
+    without lookahead).
+  - A word that starts with a quoted segment and keeps going: `"a"`n"b"`,
+    `'a'`n'b'`. At least one continuation is required, so a bare `"a"` still
+    lexes as `expandable_string`/`string_literal`.
+- Round-4 residuals observed and rejected as broken-PS parity with upstream:
+  backtick followed by trailing spaces before EOL (no line continuation in
+  pwsh either) and Unicode-dash operator typos (`–replace` with U+2013).
+
 ## node-types.json changes
 
 No kind or field was renamed or removed. Every change loosens a constraint or adds a child.
@@ -278,7 +295,7 @@ Round 1 and round 2 together. Each is valid PowerShell unless noted.
 ## Upstream corpus (`tree-sitter test`)
 
 - Stock grammar.js regenerated with 0.27.1: 139 of 139 pass.
-- Patched: 139 of 139 upstream cases pass, plus 52 `sloplint:` cases. 191 of 191.
+- Patched: 139 of 139 upstream cases pass, plus 54 `sloplint:` cases. 193 of 193.
 - The new cases are in `test/corpus/sloplint_*.txt`. Each one is named `sloplint: ...`.
 - Round 2 trees were produced with `tree-sitter test -u -i sloplint` and then read: no
   `ERROR` or `MISSING` node in any file, and the `sloplint_*` snapshots of round 1 did

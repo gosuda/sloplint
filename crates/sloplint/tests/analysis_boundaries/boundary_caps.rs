@@ -87,8 +87,11 @@ fn boundary_non_utf8_filename_is_skipped() {
     put(&root, "src/a.rs", "pub fn handle() {}\n");
     let raw = std::ffi::OsStr::from_bytes(b"src/bad\xff.rs");
     if let Err(e) = std::fs::write(root.join(raw), b"pub fn handle() {}\n") {
-        const EILSEQ: i32 = 92;
-        assert_eq!(e.raw_os_error(), Some(EILSEQ), "write non-UTF-8 name: {e}");
+        assert_eq!(
+            e.raw_os_error(),
+            Some(libc::EILSEQ),
+            "write non-UTF-8 name: {e}"
+        );
         skip_unless_fs_caps_required(
             "boundary_non_utf8_filename_is_skipped: filesystem cannot represent the 0xFF name",
             &e,
