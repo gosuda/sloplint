@@ -289,6 +289,46 @@ fn escapes_scan_through_cross_family_literals() {
 }
 
 #[test]
+fn escapes_inside_a_quoted_quasiquote_stay_datum() {
+    // The outer `quote` makes the whole `quasiquote` literal — escapes
+    // it would pair with are never evaluated.
+    let analysis = run_clean(
+        "#lang racket\n(quote (quasiquote (a (unsyntax (unquote (begin (define (q x) x) q))))))\n",
+    );
+    assert!(
+        !function_names(&analysis).contains(&"q"),
+        "a quasiquote inside a plain quote is all datum"
+    );
+}
+
+#[test]
+fn unquote_and_unsyntax_without_a_quasi_are_calls() {
+    // Outside a template, `unquote`/`unsyntax` are ordinary callee names
+    // — their argument expressions are code.
+    let analysis = run_clean(
+        "#lang racket\n(define (unquote f) f)\n(unquote (lambda (x) x))\n(define/contract u (lambda (y) y) any/c)\n",
+    );
+    assert!(
+        analysis.facts.functions.len() >= 2,
+        "arguments to escape-named calls are code: {:?}",
+        analysis.facts.functions.iter().map(|f| f.name).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn hash_literal_contents_stay_datum() {
+    // Racket never evaluates escapes inside `#hash` literals — a key
+    // that reads like `unquote` is just data.
+    let analysis = run_clean(
+        "#lang racket\n(quasiquote (list #hash((unquote (begin (define (h x) x) h)) . 1)))\n",
+    );
+    assert!(
+        !function_names(&analysis).contains(&"h"),
+        "escapes inside hash literals are datum"
+    );
+}
+
+#[test]
 fn unsyntax_escapes_a_quasisyntax_back_to_code() {
     let analysis = run_clean(
         "#lang racket\n(quasisyntax (a (unsyntax (begin (define (inside x) x) inside))))\n",

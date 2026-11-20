@@ -154,41 +154,61 @@ enum Escape {
 /// The node's innermost escape decides its fate: one that never pairs
 /// leaves the node as literal datum.
 fn in_non_code(cx: &Cx<'_, '_>) -> bool {
+    // Pending escapes, innermost at index 0. A quasi form pairs with the
+    // topmost pending escape of its own family; a literal form is
+    // transparent while it sits inside a pending escape's body, and a
+    // literal above a quasi decides everything inside as datum. A `hash`
+    // literal never evaluates its contents, whatever encloses it.
     let mut escapes: Vec<Escape> = Vec::new();
-    let mut innermost: Option<Escape> = None;
+    let mut innermost_alive = false;
+    let mut crossed_quasi = false;
+    let mut literal_with_pending = false;
     for ancestor in cx.ancestors() {
         let head = match ancestor.kind() {
-            "sexp_comment" => return true,
+            "sexp_comment" | "hash" => return true,
             "quote" | "syntax" | "box" | "graph" => {
-                if escapes.is_empty() {
+                if escapes.is_empty() || crossed_quasi {
                     return true;
                 }
+                literal_with_pending = true;
                 continue;
             }
-            "quasiquote" => match escapes.iter().rposition(|e| *e == Escape::Quote) {
-                Some(pos) => {
-                    escapes.remove(pos);
-                    continue;
+            "quasiquote" => {
+                crossed_quasi = true;
+                match escapes.iter().rposition(|e| *e == Escape::Quote) {
+                    Some(pos) => {
+                        if pos == 0 {
+                            innermost_alive = false;
+                        }
+                        escapes.remove(pos);
+                        continue;
+                    }
+                    None => return true,
                 }
-                None => return true,
-            },
-            "quasisyntax" => match escapes.iter().rposition(|e| *e == Escape::Syntax) {
-                Some(pos) => {
-                    escapes.remove(pos);
-                    continue;
+            }
+            "quasisyntax" => {
+                crossed_quasi = true;
+                match escapes.iter().rposition(|e| *e == Escape::Syntax) {
+                    Some(pos) => {
+                        if pos == 0 {
+                            innermost_alive = false;
+                        }
+                        escapes.remove(pos);
+                        continue;
+                    }
+                    None => return true,
                 }
-                None => return true,
-            },
+            }
             "unquote" | "unquote_splicing" => {
-                if innermost.is_none() {
-                    innermost = Some(Escape::Quote);
+                if escapes.is_empty() && !crossed_quasi {
+                    innermost_alive = true;
                 }
                 escapes.push(Escape::Quote);
                 continue;
             }
             "unsyntax" | "unsyntax_splicing" => {
-                if innermost.is_none() {
-                    innermost = Some(Escape::Syntax);
+                if escapes.is_empty() && !crossed_quasi {
+                    innermost_alive = true;
                 }
                 escapes.push(Escape::Syntax);
                 continue;
@@ -201,43 +221,56 @@ fn in_non_code(cx: &Cx<'_, '_>) -> bool {
         };
         match head {
             "quote" | "syntax" => {
-                if escapes.is_empty() {
+                if escapes.is_empty() || crossed_quasi {
                     return true;
                 }
+                literal_with_pending = true;
             }
-            "quasiquote" => match escapes.iter().rposition(|e| *e == Escape::Quote) {
-                Some(pos) => {
-                    escapes.remove(pos);
+            "quasiquote" => {
+                crossed_quasi = true;
+                match escapes.iter().rposition(|e| *e == Escape::Quote) {
+                    Some(pos) => {
+                        if pos == 0 {
+                            innermost_alive = false;
+                        }
+                        escapes.remove(pos);
+                    }
+                    None => return true,
                 }
-                None => return true,
-            },
-            "quasisyntax" => match escapes.iter().rposition(|e| *e == Escape::Syntax) {
-                Some(pos) => {
-                    escapes.remove(pos);
+            }
+            "quasisyntax" => {
+                crossed_quasi = true;
+                match escapes.iter().rposition(|e| *e == Escape::Syntax) {
+                    Some(pos) => {
+                        if pos == 0 {
+                            innermost_alive = false;
+                        }
+                        escapes.remove(pos);
+                    }
+                    None => return true,
                 }
-                None => return true,
-            },
+            }
             "unquote" | "unquote-splicing" => {
-                if innermost.is_none() {
-                    innermost = Some(Escape::Quote);
+                if escapes.is_empty() && !crossed_quasi {
+                    innermost_alive = true;
                 }
                 escapes.push(Escape::Quote);
             }
             "unsyntax" | "unsyntax-splicing" => {
-                if innermost.is_none() {
-                    innermost = Some(Escape::Syntax);
+                if escapes.is_empty() && !crossed_quasi {
+                    innermost_alive = true;
                 }
                 escapes.push(Escape::Syntax);
             }
             _ => {}
         }
     }
-    match innermost {
-        // The innermost escape never paired with a quasi of its family,
-        // so this node sits inside a literal escape form.
-        Some(first) => escapes.first().copied() == Some(first),
-        None => false,
-    }
+    // The innermost escape decides the node's fate. If it paired with a
+    // quasi, the node escaped into code. If it never paired, the node is
+    // datum inside a literal escape form only when a literal wraps it —
+    // otherwise `unquote`/`unsyntax` are ordinary callees whose argument
+    // is code.
+    innermost_alive && literal_with_pending
 }
 
 /// A `list` whose head splices its body definitions into the
