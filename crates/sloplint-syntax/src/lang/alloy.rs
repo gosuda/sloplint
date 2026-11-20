@@ -245,6 +245,7 @@ fn make_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
         }
         "name" | "qual_name" => ArgShape::Ident(trimmed(cx, n)),
         "this_expr" => ArgShape::Ident("this"),
+        "prime_expression" => ArgShape::Ident(trimmed(cx, n)),
         "set_comprehension" => ArgShape::Collection,
         _ => ArgShape::Other,
     };
