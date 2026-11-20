@@ -1,0 +1,147 @@
+========================
+decimal number
+========================
+
+fact { 42 }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression (number))))
+
+========================
+hex number
+========================
+
+fact { 0xFF }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression (number))))
+
+========================
+binary number
+========================
+
+fact { 0b1010 }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression (number))))
+
+========================
+string literal as fact name
+========================
+
+fact "myFact" { some x }
+
+---
+
+(source_file
+  (fact_decl
+    name: (string)
+    (block_expression
+      (multiplicity_expression
+        (qual_name (name))))))
+
+========================
+qualified name with slash
+========================
+
+fact { a/b/c in X }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (qual_name (name) (name) (name))
+        (qual_name (name))))))
+
+========================
+this-qualified name
+========================
+
+fact { this/A in B }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (qual_name (name))
+        (qual_name (name))))))
+
+========================
+at-name reference
+========================
+
+fact { @x in A }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (compare_expression
+        (at_name (name))
+        (qual_name (name))))))
+
+========================
+keyword atoms
+========================
+
+fact { this  iden  none  univ  Int }
+
+---
+
+(source_file
+  (fact_decl
+    (block_expression
+      (this_expr)
+      (iden_expr)
+      (none_expr)
+      (univ_expr)
+      (int_expr))))
+
+========================
+line comments
+========================
+
+// this is a comment
+-- this is also a comment
+fact { some x }
+
+---
+
+(source_file
+  (line_comment)
+  (line_comment)
+  (fact_decl
+    (block_expression
+      (multiplicity_expression
+        (qual_name (name))))))
+
+========================
+block comment
+========================
+
+/* multi-line
+   comment */
+fact { some x }
+
+---
+
+(source_file
+  (block_comment)
+  (fact_decl
+    (block_expression
+      (multiplicity_expression
+        (qual_name (name))))))

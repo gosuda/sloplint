@@ -110,6 +110,7 @@ impl ContiguousLogLiteral {
                     return None;
                 }
                 ArgShape::Ident(_)
+                | ArgShape::NamedIdent(_)
                 | ArgShape::Other
                 | ArgShape::Collection
                 | ArgShape::CodeBody => {}

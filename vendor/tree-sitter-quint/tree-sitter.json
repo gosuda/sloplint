@@ -1,0 +1,50 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "quint",
+      "camelcase": "Quint",
+      "title": "Quint",
+      "scope": "source.quint",
+      "file-types": [
+        "qnt",
+        "quint"
+      ],
+      "injection-regex": "^quint$",
+      "highlights": "queries/highlights.scm",
+      "locals": "queries/locals.scm",
+      "class-name": "TreeSitterQuint",
+      "external-files": [
+        "src/quint_033_atn.h",
+        "src/quint_boundaries.h",
+        "src/quint_scanner_boundary_state.h"
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "0.33.0",
+    "license": "Apache-2.0",
+    "description": "Tree-sitter grammar for Quint",
+    "authors": [
+      {
+        "name": "Ragunath Jawahar",
+        "email": "ragunath@legacycode.com",
+        "url": ""
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/LegacyCodeHQ/tree-sitter-quint",
+      "funding": ""
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "java": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true,
+    "zig": true
+  }
+}

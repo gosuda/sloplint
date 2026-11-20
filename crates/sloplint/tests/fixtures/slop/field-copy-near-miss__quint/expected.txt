@@ -1,0 +1,1 @@
+# A record mixed from two sources is a conversion, not a copy.

@@ -23,7 +23,7 @@ fn describe(shape: &ArgShape<'_>) -> String {
     match shape {
         ArgShape::Str { longest_static } => format!("str:{longest_static}"),
         ArgShape::Concat { longest_static } => format!("concat:{longest_static}"),
-        ArgShape::Ident(name) => format!("ident:{name}"),
+        ArgShape::Ident(name) | ArgShape::NamedIdent(name) => format!("ident:{name}"),
         ArgShape::Collection => "collection".to_string(),
         ArgShape::CodeBody => "code".to_string(),
         ArgShape::Other => "other".to_string(),

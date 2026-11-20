@@ -1,0 +1,1 @@
+# Scoped opens and explicit opens are not wildcards.

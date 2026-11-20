@@ -1,0 +1,1 @@
+# Quint has no logging primitives, so calls never match a log callee.

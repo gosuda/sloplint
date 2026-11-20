@@ -22,5 +22,5 @@ enum NoBody;
       (enum_member_declaration
         name: (identifier)
         value: (integer_literal))))
-(enum_declaration
-  name: (identifier)))
+  (enum_declaration
+    name: (identifier)))

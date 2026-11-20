@@ -36,6 +36,13 @@ Keep `sloplint-grammar.patch` in sync: it must hold exactly the difference from
 the published crate, and `SLOPLINT.md` must describe the change and the
 regeneration provenance.
 
+### Baseline exception: tree-sitter-logos
+
+`tree-sitter-logos` has no published crate, so its patch baseline is the
+patched in-repo `tree-sitter-go` grammar instead. `vendor/tree-sitter-logos/SLOPLINT.md`
+records that base and the reproduce command; its `sloplint-grammar.patch` must
+hold exactly the difference from that base.
+
 ## Regression tests
 
 `crates/sloplint-syntax/tests/grammar_gaps/<language>.rs` pins every fixed

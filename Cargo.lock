@@ -1021,15 +1021,18 @@ version = "0.1.0"
 dependencies = [
  "sloplint-core",
  "tree-sitter",
+ "tree-sitter-alloy",
  "tree-sitter-bash",
  "tree-sitter-c",
  "tree-sitter-c-sharp",
  "tree-sitter-cpp",
+ "tree-sitter-dafny",
  "tree-sitter-dart",
  "tree-sitter-go",
  "tree-sitter-java",
  "tree-sitter-javascript",
  "tree-sitter-kotlin-ng",
+ "tree-sitter-lean",
  "tree-sitter-logos",
  "tree-sitter-objc",
  "tree-sitter-ocaml",
@@ -1037,12 +1040,15 @@ dependencies = [
  "tree-sitter-php",
  "tree-sitter-powershell",
  "tree-sitter-python",
+ "tree-sitter-quint",
  "tree-sitter-r",
+ "tree-sitter-racket",
  "tree-sitter-ruby",
  "tree-sitter-rust",
  "tree-sitter-scala",
  "tree-sitter-starlark",
  "tree-sitter-swift",
+ "tree-sitter-tlaplus",
  "tree-sitter-typescript",
  "tree-sitter-zig",
 ]
@@ -1224,6 +1230,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-alloy"
+version = "0.0.1"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "tree-sitter-bash"
 version = "0.25.1"
 dependencies = [
@@ -1253,6 +1267,14 @@ version = "0.23.4"
 dependencies = [
  "cc",
  "flate2",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "tree-sitter-dafny"
+version = "0.1.0"
+dependencies = [
+ "cc",
  "tree-sitter-language",
 ]
 
@@ -1301,6 +1323,14 @@ name = "tree-sitter-language"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0af592be68c579aa78a16846bd19422978c3c52e438523d45ff5d1bff1f9d4a"
+
+[[package]]
+name = "tree-sitter-lean"
+version = "0.2.0"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
 
 [[package]]
 name = "tree-sitter-logos"
@@ -1359,10 +1389,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-quint"
+version = "0.33.0"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "tree-sitter-r"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffc9954ec870dcad6cffdd302b405306c68cf031ed79a78cd9746f6740d9fe20"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "tree-sitter-racket"
+version = "0.25.0"
 dependencies = [
  "cc",
  "tree-sitter-language",
@@ -1403,6 +1449,14 @@ dependencies = [
 [[package]]
 name = "tree-sitter-swift"
 version = "0.7.4"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "tree-sitter-tlaplus"
+version = "0.0.0"
 dependencies = [
  "cc",
  "tree-sitter-language",
