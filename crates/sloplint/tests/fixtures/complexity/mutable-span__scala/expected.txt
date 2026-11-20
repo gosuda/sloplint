@@ -6,5 +6,9 @@ src/outer-from-closure.scala:3 info complexity/mutable-span
 # writes twice within a few lines — silent.
 src/pattern-vars.scala:3 info complexity/mutable-span
 src/pattern-vars.scala:4 info complexity/mutable-span
+# `shadowed`: writes to backquoted vars resolve to their bindings (`count`
+# writes at 46/79, `Count` and `Other` at 47/80 and 48/81 — all span >30).
+src/pattern-vars.scala:44 info complexity/mutable-span
+src/pattern-vars.scala:45 info complexity/mutable-span
 # Positive: var declared line 3, last write line 36, span 33 >= strict major_at 30.
 src/spread.scala:3 info complexity/mutable-span

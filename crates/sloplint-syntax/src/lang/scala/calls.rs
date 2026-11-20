@@ -3,6 +3,7 @@ use sloplint_core::text::longest_static_chunk;
 use tree_sitter::Node;
 
 use super::funcs::{cut_at, seg_last};
+use super::items::unquote;
 use crate::hooks::{
     CallHead, Cx, child_by_field, first_named_child, first_named_child_matching, named_children,
     narrow, pos_of, text,
@@ -159,7 +160,7 @@ fn arg_shape<'s>(cx: &Cx<'_, 's>, a: Node<'_>) -> ArgShape<'s> {
         };
     }
     if a.kind() == "identifier" {
-        return ArgShape::Ident(text(cx, a));
+        return ArgShape::Ident(unquote(text(cx, a)));
     }
     if a.kind() == "lambda_expression" || a.kind() == "block" || a.kind() == "case_block" {
         return ArgShape::CodeBody;

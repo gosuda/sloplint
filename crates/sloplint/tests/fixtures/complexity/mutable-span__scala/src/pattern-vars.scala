@@ -45,6 +45,40 @@ object PatternVars {
     var `Count`, `Other` = 0
     count = count + 1
     Count = Count + Other
-    count + Count
+    Other = Other + 1
+    val b01 = 1
+    val b02 = 2
+    val b03 = 3
+    val b04 = 4
+    val b05 = 5
+    val b06 = 6
+    val b07 = 7
+    val b08 = 8
+    val b09 = 9
+    val b10 = 10
+    val b11 = 11
+    val b12 = 12
+    val b13 = 13
+    val b14 = 14
+    val b15 = 15
+    val b16 = 16
+    val b17 = 17
+    val b18 = 18
+    val b19 = 19
+    val b20 = 20
+    val b21 = 21
+    val b22 = 22
+    val b23 = 23
+    val b24 = 24
+    val b25 = 25
+    val b26 = 26
+    val b27 = 27
+    val b28 = 28
+    val b29 = 29
+    val b30 = 30
+    count = count + b30
+    Count = Count + b29
+    Other = Other + b28
+    count + Count + Other
   }
 }

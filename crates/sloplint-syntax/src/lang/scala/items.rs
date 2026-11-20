@@ -15,7 +15,7 @@ pub(crate) fn first_ident<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, 
     let mut stack = vec![n];
     while let Some(cur) = stack.pop() {
         if cur.kind() == "identifier" {
-            return Some((text(cx, cur), pos_of(cur)));
+            return Some((unquote(text(cx, cur)), pos_of(cur)));
         }
         if cur.kind() != "wildcard" {
             stack.extend(named_children(cur).into_iter().rev());
@@ -26,7 +26,7 @@ pub(crate) fn first_ident<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, 
 
 /// `` `name` `` binds the same variable as `name`: strip the backquotes so a
 /// backquoted binder and an unquoted spelling resolve alike.
-fn unquote(name: &str) -> &str {
+pub(crate) fn unquote(name: &str) -> &str {
     name.strip_prefix('`')
         .and_then(|rest| rest.strip_suffix('`'))
         .unwrap_or(name)
@@ -43,15 +43,16 @@ pub(crate) fn collect_idents<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'
             // direct children of the `identifiers` pattern are all top-level
             // binders too. Only binder positions count: `counters` in
             // `Some(counters.Zero)` is a stable reference, not a new local.
-            "identifier"
-                if node.id() == n.id()
-                    || (n.kind() == "identifiers"
-                        && node.parent().is_some_and(|p| p.id() == n.id()))
-                    || is_pattern_binder(cx, node) =>
+            "identifier" | "operator_identifier"
+                if !is_value_name(node)
+                    && (node.id() == n.id()
+                        || (n.kind() == "identifiers"
+                            && node.parent().is_some_and(|p| p.id() == n.id()))
+                        || is_pattern_binder(cx, node)) =>
             {
                 out.push((unquote(text(cx, node)), pos_of(node)))
             }
-            "identifier" => {}
+            "identifier" | "operator_identifier" => {}
             _ => pending.extend(named_children(node).into_iter().rev()),
         }
     }
@@ -80,7 +81,7 @@ fn binding_of<'s>(cx: &Cx<'_, 's>, pat: Option<Node<'_>>) -> Option<&'s str> {
 fn stmt_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: Option<&'s str>) -> Stmt<'s> {
     if s.kind() == "throw_expression" {
         let hit = any_named_child(s, |c| {
-            c.kind() == "identifier" && Some(text(cx, c)) == binding
+            c.kind() == "identifier" && Some(unquote(text(cx, c))) == binding
         });
         return if hit { Stmt::Rethrow } else { Stmt::Other };
     }
@@ -112,7 +113,9 @@ fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     let mut current = n;
     loop {
         current = match current.kind() {
-            "identifier" => return Some((unquote(text(cx, current)), pos_of(current))),
+            "identifier" | "operator_identifier" => {
+                return Some((unquote(text(cx, current)), pos_of(current)));
+            }
             "field_expression" => child_by_field(current, "value")?,
             "parenthesized_expression" => first_named_child(current)?,
             _ => return None,
@@ -167,12 +170,20 @@ fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str
 }
 
 fn is_pattern_binder(cx: &Cx<'_, '_>, node: Node<'_>) -> bool {
+    // A name before `@` (`x @ Some(y)`, `` `x` @ ``, `X @ ``) is always a
+    // binder — the capture's name is never a stable reference.
+    if node.parent().is_some_and(|p| {
+        p.kind() == "capture_pattern"
+            && child_by_field(p, "name").is_some_and(|m| m.id() == node.id())
+    }) {
+        return true;
+    }
     let name = text(cx, node);
     if name.starts_with('`')
         || !name
             .chars()
             .next()
-            .is_some_and(|first| first.is_lowercase())
+            .is_some_and(|first| first.is_lowercase() || first == '_')
     {
         return false;
     }
@@ -185,6 +196,23 @@ fn is_pattern_binder(cx: &Cx<'_, '_>, node: Node<'_>) -> bool {
         parent.kind(),
         "type_identifier" | "stable_identifier" | "stable_type_identifier"
     )
+}
+
+// An identifier that names a value slot but binds nothing: the interpolator
+// head of `s"..."` and a word-form infix operator (`a foo b`). Neither is a
+// local, and registering them steals writes from real variables.
+fn is_value_name(node: Node<'_>) -> bool {
+    let Some(parent) = node.parent() else {
+        return false;
+    };
+    if matches!(
+        parent.kind(),
+        "interpolated_string" | "interpolated_string_expression"
+    ) {
+        return true;
+    }
+    parent.kind() == "infix_expression"
+        && child_by_field(parent, "operator").is_some_and(|o| o.id() == node.id())
 }
 
 fn push_generator_pattern<'s>(cx: &Cx<'_, 's>, enumerator: Node<'_>, out: &mut Vec<&'s str>) {

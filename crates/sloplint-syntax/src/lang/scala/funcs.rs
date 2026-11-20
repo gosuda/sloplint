@@ -2,6 +2,7 @@ use sloplint_core::facts::{Param, PrimitiveKind, Visibility};
 use sloplint_core::role::CodeRole;
 use tree_sitter::Node;
 
+use super::items::unquote;
 use crate::hooks::{
     Container, Cx, FunctionHead, child_by_field, first_named_child, first_named_child_matching,
     has_child_kind, named_children, pos_of, preceding_comments, text, trimmed,
@@ -136,7 +137,7 @@ pub(crate) fn params_from<'s>(cx: &Cx<'_, 's>, c: Node<'_>, out: &mut Vec<Param<
             d.kind() == "boolean_literal" && (trimmed(cx, d) == "true" || trimmed(cx, d) == "false")
         });
         out.push(Param {
-            name: text(cx, nm),
+            name: unquote(text(cx, nm)),
             ty,
             primitive_kind: primitive_of(ty),
             has_default,
