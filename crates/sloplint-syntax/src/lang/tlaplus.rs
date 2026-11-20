@@ -64,7 +64,11 @@ pub(crate) struct TlaplusHooks;
 
 const COMMENT_KINDS: &[&str] = &["comment", "block_comment"];
 
-fn call_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
+fn call_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Arg<'s>> {
+    // Inline comments are named children of calls but not arguments.
+    if matches!(n.kind(), "comment" | "block_comment") {
+        return None;
+    }
     let shape = match n.kind() {
         "string" => {
             let raw = trimmed(cx, n);
@@ -73,17 +77,18 @@ fn call_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
                 .and_then(|s| s.strip_suffix('"'))
                 .unwrap_or(raw);
             ArgShape::Str {
-                longest_static: narrow(inner.len()),
+                // The log-literal rule compares against a character count.
+                longest_static: narrow(inner.chars().count()),
             }
         }
         "identifier" | "identifier_ref" => ArgShape::Ident(trimmed(cx, n)),
         _ => ArgShape::Other,
     };
-    Arg {
+    Some(Arg {
         shape,
         start_line: narrow(n.start_position().row) + 1,
         end_line: narrow(n.end_position().row) + 1,
-    }
+    })
 }
 
 fn is_test_path(path: &str) -> bool {
@@ -258,13 +263,20 @@ impl LangHooks for TlaplusHooks {
                 let name = child_by_field(n, "name").or_else(|| child_by_field(n, "op"))?;
                 let leaf = first_named_child_matching(name, &["identifier_ref", "identifier"])
                     .unwrap_or(name);
+                // `PrintT("x", 1)` parses as bound_op(name, parameter...):
+                // every named child other than the head is an argument.
+                let args = named_children(n)
+                    .into_iter()
+                    .filter(|child| child.id() != name.id())
+                    .filter_map(|child| call_arg(cx, child))
+                    .collect();
                 Some(CallHead {
                     callee: trimmed(cx, leaf),
                     kind: CallKind::Plain,
                     callee_root: None,
                     is_simple_path: false,
                     initializes_binding: false,
-                    args: Vec::new(),
+                    args,
                 })
             }
             "function_evaluation" => {
@@ -272,7 +284,7 @@ impl LangHooks for TlaplusHooks {
                 let args = named_children(n)
                     .into_iter()
                     .skip(1)
-                    .map(|child| call_arg(cx, child))
+                    .filter_map(|child| call_arg(cx, child))
                     .collect();
                 Some(CallHead {
                     callee: trimmed(cx, head),
@@ -288,7 +300,7 @@ impl LangHooks for TlaplusHooks {
                 let args = named_children(n)
                     .into_iter()
                     .filter(|child| child.id() != name.id())
-                    .map(|child| call_arg(cx, child))
+                    .filter_map(|child| call_arg(cx, child))
                     .collect();
                 Some(CallHead {
                     callee: trimmed(cx, name),
