@@ -44,19 +44,21 @@ runtime: node v26.13.1. Command, run in this directory:
 self-contained (`grammar.js` has no `require` of another grammar), so no
 vendored `node_modules` are needed.
 
-Regenerating the pinned `grammar.js` with 0.27.1 is byte-identical to the
-committed `src/parser.c`, `src/grammar.json` and `src/node-types.json`,
-so the committed parser is the faithful 0.27.1 output: ABI 15
-(`#define LANGUAGE_VERSION 15`), `STATE_COUNT 624`. No external scanner
-(`src/` holds no `scanner.c`).
+The committed `src/parser.c`, `src/grammar.json` and `src/node-types.json`
+are regenerated from the patched `grammar.js` below: ABI 15
+(`#define LANGUAGE_VERSION 15`), `STATE_COUNT 1336`, no external scanner
+(`src/` holds no `scanner.c`). Regenerating the *pinned* grammar.js with
+0.27.1 reproduces the pre-patch parser byte-identically (STATE_COUNT 624),
+which is what `sloplint-grammar.patch` diffs against.
 
-## Why this grammar needs no patch
+## Upstream corpus status
 
-The upstream corpus passes unmodified: `tree-sitter test` reports 83
-parses, 83 successful, 0 failed. The grammar README states coverage of
-the full Alloy 6 syntax (temporal operators, `var` fields, trace-style
-`run` commands) validated against 331 real-world `.als` files at a 100%
-parse rate.
+The upstream corpus passes under the patched grammar: `tree-sitter test`
+reports 83 parses, 83 successful, 0 failed — including the
+"primed identifier with dot" case that fails against the untouched pin
+(82/83 upstream). The grammar README states coverage of the full Alloy 6
+syntax (temporal operators, `var` fields, trace-style `run` commands)
+validated against 331 real-world `.als` files at a 100% parse rate.
 
 ## Known remaining gaps
 
@@ -80,15 +82,19 @@ All of these come from real corpora (the Practical Alloy book models and
 Electrum/Alloy-6 code in the dogfood corpus), each hit repeatedly:
 
 - `sig_decl`: allow `sig A = B + C` subset declarations with no brace body.
-- `field_decl`/`decl`: accept `disjoint` as a synonym of `disj`.
+- `field_decl`/`decl`: accept `disjoint` as a synonym of `disj`, and
+  both `disj`/`disjoint` remain usable as declared names
+  (`sig S { disjoint: S }`).
 - `compare_expression`: word-prefixed comparisons — `x not = y`, `x ! in e`,
   `x not < y`.
-- `cardinality_expression`: `-` alongside `#`/`int`/`sum` so negative
-  literals (`Node0->-8`, `>= -1`) parse.
+- Negative literals parse via `neg_expression`, bound above `->` so
+  `-1 -> x` is `(-1) -> x` rather than `-(1 -> x)` (`Node0->-8`,
+  `>= -1`).
 - Arrow operators (`some`/`one`/`lone`/`set` `->`) may omit the space
   before `->`; `set->`/`one->` are common in the wild.
 - `dot_expression` member position accepts operator/keyword words
-  (`e.before`, `x.after`) via `member_keyword`.
+  (`e.before`, `x.after`) via `member_keyword`; `let` is left out so an
+  `e.let x = a | b` member expression keeps parsing.
 - `box_join_expression` callee accepts `member_keyword` (`sum[i + j]` calls
   a field named `sum`).
 - `set_comprehension` without a `|` bar: `{x: A, y: B}`.

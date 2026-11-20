@@ -530,7 +530,7 @@ const DEFAULT_BENCH_GLOBS: &str = "**/benches/**,**/bench/**,**/benchmarks/**,**
 
 const DEFAULT_EXAMPLE_GLOBS: &str = "**/examples/**,**/example/**,**/_examples/**";
 
-const DEFAULT_SUPPORT_GLOBS: &str = "**/conftest.py,**/testutil/**,**/testutils/**,**/test_util/**,**/test_utils/**,**/test_helpers/**,**/test_support/**,**/testing/**,**/tests/common/**,**/tests/support/**,**/spec/support/**,**/__mocks__/**";
+const DEFAULT_SUPPORT_GLOBS: &str = "**/conftest.py,**/testutil/**,**/testutils/**,**/test_util/**,**/test_utils/**,**/test_helpers/**,**/test_support/**,**/testing/**,**/tests/common/**,**/tests/support/**,**/tests/shared/**,**/tests/helpers/**,**/test/common/**,**/test/support/**,**/test/shared/**,**/test/helpers/**,**/spec/support/**,**/__mocks__/**";
 
 const DEFAULT_ENTRY_GLOBS: &str = "**/src/main.rs,**/src/bin/**,**/build.rs,**/main.go,**/main.lgo,**/cmd/**,**/__main__.py,**/manage.py,**/scripts/**";
 

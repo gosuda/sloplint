@@ -22,12 +22,13 @@ const PREC = {
   OVERRIDE: 12,
   INTERSECT: 13,
   ARROW: 14,
-  DOMAIN: 15,
-  RANGE: 16,
-  BRACKET: 17,
-  DOT: 18,
-  UNOP: 19,
-  PRIME: 20,
+  NEG: 15,
+  DOMAIN: 16,
+  RANGE: 17,
+  BRACKET: 18,
+  DOT: 19,
+  UNOP: 20,
+  PRIME: 21,
 };
 
 module.exports = grammar({
@@ -329,6 +330,7 @@ module.exports = grammar({
       $.override_expression,
       $.intersect_expression,
       $.arrow_expression,
+      $.neg_expression,
       $.domain_expression,
       $.range_expression,
       $.dot_expression,
@@ -429,7 +431,14 @@ module.exports = grammar({
     // Cardinality/cast: # expr, int expr, sum expr (unary prefix)
     // CUP grammar: NumUnopExpr level, between MulExpr and OverrideExpr
     cardinality_expression: $ => prec(PREC.CARDINALITY, seq(
-      field('operator', choice('#', 'int', 'sum', '-')),
+      field('operator', choice('#', 'int', 'sum')),
+      $._expression,
+    )),
+
+    // Unary minus binds above `->` so `-1 -> x` is `(-1) -> x`, not
+    // `-(1 -> x)` — minus only makes sense on the number operand.
+    neg_expression: $ => prec(PREC.NEG, seq(
+      field('operator', '-'),
       $._expression,
     )),
 
@@ -506,7 +515,7 @@ module.exports = grammar({
     member_keyword: $ => alias(prec(20, choice(
       'before', 'after', 'always', 'eventually', 'historically', 'once',
       'until', 'since', 'releases', 'triggered', 'not', 'and', 'or',
-      'implies', 'iff', 'else', 'let', 'all', 'no', 'some', 'lone', 'one',
+      'implies', 'iff', 'else', 'all', 'no', 'some', 'lone', 'one',
       'sum', 'disj', 'disjoint', 'in', 'set', 'seq', 'int', 'steps',
       'but', 'expect', 'exactly', 'var', 'private', 'extends', 'module',
       'open', 'abstract', 'sig', 'pred', 'fun', 'fact', 'assert', 'run',
@@ -624,7 +633,13 @@ module.exports = grammar({
     // `no trashed'` (multiplicity + prime) lex identically and GLR
     // picks the surviving branch. A `name` node precedes the primes so
     // adapters keep reading the base spelling.
-    _decl_name: $ => seq($.name, repeat("'")),
+    _decl_name: $ => seq(
+      choice(
+        $.name,
+        alias(choice('disj', 'disjoint'), $.name),
+      ),
+      repeat("'"),
+    ),
 
     number: $ => choice(
       /[0-9][0-9_]*/,             // decimal (with optional underscores)

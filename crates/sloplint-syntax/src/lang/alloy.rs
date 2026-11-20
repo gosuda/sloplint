@@ -69,6 +69,27 @@ fn alloy_primitive(ty: Option<&str>) -> PrimitiveKind {
     }
 }
 
+/// A declarator spelling including trailing primes: `_decl_name` emits a
+/// `name` node followed by anonymous `'` tokens, so extend the slice over
+/// `'` runs (and whitespace between them) — `item'` must read `item'` for
+/// passthrough and arity checks to match calls.
+fn decl_name_text<'s>(cx: &Cx<'_, 's>, name: Node<'_>) -> &'s str {
+    let bytes = cx.src.as_bytes();
+    let mut end = name.end_byte();
+    loop {
+        let mut probe = end;
+        while probe < bytes.len() && bytes[probe].is_ascii_whitespace() {
+            probe += 1;
+        }
+        if probe < bytes.len() && bytes[probe] == b'\'' {
+            end = probe + 1;
+        } else {
+            break;
+        }
+    }
+    &cx.src[name.start_byte()..end]
+}
+
 fn decl_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
     let mut params = Vec::new();
     let Some(list) = first_named_child_matching(n, &["decl_list"]) else {
@@ -86,7 +107,7 @@ fn decl_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
                     named_children(child)
                         .into_iter()
                         .filter(|name| name.kind() == "name")
-                        .map(|name| text(cx, name)),
+                        .map(|name| decl_name_text(cx, name)),
                 );
             } else {
                 ty = Some(trimmed(cx, child));
@@ -204,7 +225,7 @@ fn sole_box_join<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<usize> {
             root.children(&mut cursor).any(|c| {
                 c.kind() == "command"
                     && child_by_field(c, "name")
-                        .is_some_and(|target| trimmed(cx, target) == decl_name)
+                        .is_some_and(|target| last_segment(trimmed(cx, target)) == decl_name)
             })
         });
         if run_targeted {
@@ -223,6 +244,7 @@ fn make_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
             }
         }
         "name" | "qual_name" => ArgShape::Ident(trimmed(cx, n)),
+        "this_expr" => ArgShape::Ident("this"),
         "set_comprehension" => ArgShape::Collection,
         _ => ArgShape::Other,
     };
@@ -245,26 +267,21 @@ fn box_join_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
 }
 
 fn is_alloy_test_path(path: &str) -> bool {
-    let mut segments = path.split('/').peekable();
     let mut in_test_tree = false;
     let mut in_support_tree = false;
-    while let Some(segment) = segments.next() {
+    for segment in path.split('/') {
         if segment == "test" || segment == "tests" {
             in_test_tree = true;
-            if matches!(
-                segments.clone().next(),
-                Some("support" | "common" | "shared" | "helpers")
-            ) {
-                in_support_tree = true;
-            }
+        } else if in_test_tree && matches!(segment, "support" | "common" | "shared" | "helpers") {
+            in_support_tree = true;
         }
     }
-    (in_test_tree && !in_support_tree)
-        || path
-            .rsplit('/')
-            .next()
-            .unwrap_or(path)
-            .ends_with("_test.als")
+    let test_suffix = path
+        .rsplit('/')
+        .next()
+        .unwrap_or(path)
+        .ends_with("_test.als");
+    !in_support_tree && (in_test_tree || test_suffix)
 }
 
 fn last_segment(path: &str) -> &str {

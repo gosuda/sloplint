@@ -1,8 +1,28 @@
 diff --git a/grammar.js b/grammar.js
-index 51282fa..399558d 100644
+index 51282fa..c657893 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -48,10 +48,22 @@ module.exports = grammar({
+@@ -22,12 +22,13 @@ const PREC = {
+   OVERRIDE: 12,
+   INTERSECT: 13,
+   ARROW: 14,
+-  DOMAIN: 15,
+-  RANGE: 16,
+-  BRACKET: 17,
+-  DOT: 18,
+-  UNOP: 19,
+-  PRIME: 20,
++  NEG: 15,
++  DOMAIN: 16,
++  RANGE: 17,
++  BRACKET: 18,
++  DOT: 19,
++  UNOP: 20,
++  PRIME: 21,
+ };
+ 
+ module.exports = grammar({
+@@ -48,10 +49,22 @@ module.exports = grammar({
      [$.scope, $.type_scope_number],
      // name can reduce to name_list or qual_name depending on context
      [$.name_list, $.qual_name],
@@ -26,7 +46,7 @@ index 51282fa..399558d 100644
  
      _paragraph: $ => choice(
        $.module_decl,
-@@ -98,10 +110,18 @@ module.exports = grammar({
+@@ -98,10 +111,18 @@ module.exports = grammar({
        'sig',
        field('names', $.name_list),
        optional($.sig_extension),
@@ -49,7 +69,7 @@ index 51282fa..399558d 100644
      ),
  
      sig_qualifier: $ => choice(
-@@ -127,10 +147,10 @@ module.exports = grammar({
+@@ -127,10 +148,10 @@ module.exports = grammar({
      field_decl: $ => seq(
        optional('var'),
        optional('private'),
@@ -62,7 +82,7 @@ index 51282fa..399558d 100644
        $._expression,
      ),
  
-@@ -245,19 +265,20 @@ module.exports = grammar({
+@@ -245,19 +266,20 @@ module.exports = grammar({
      decl_list: $ => seq(
        $.decl,
        repeat(seq(',', $.decl)),
@@ -87,7 +107,7 @@ index 51282fa..399558d 100644
      ),
  
      name_list_exact: $ => seq(
-@@ -266,8 +287,8 @@ module.exports = grammar({
+@@ -266,8 +288,8 @@ module.exports = grammar({
      ),
  
      _name_or_exactly: $ => choice(
@@ -98,7 +118,15 @@ index 51282fa..399558d 100644
      ),
  
      sig_ref: $ => choice(
-@@ -376,7 +397,9 @@ module.exports = grammar({
+@@ -308,6 +330,7 @@ module.exports = grammar({
+       $.override_expression,
+       $.intersect_expression,
+       $.arrow_expression,
++      $.neg_expression,
+       $.domain_expression,
+       $.range_expression,
+       $.dot_expression,
+@@ -376,7 +399,9 @@ module.exports = grammar({
        $._expression,
        field('operator', choice(
          '=', '!=', 'in', '!in',
@@ -109,16 +137,21 @@ index 51282fa..399558d 100644
          '<', '>', '<=', '>=', '=<',
          '!<', '!>', '!<=', '!>=',
        )),
-@@ -406,7 +429,7 @@ module.exports = grammar({
-     // Cardinality/cast: # expr, int expr, sum expr (unary prefix)
-     // CUP grammar: NumUnopExpr level, between MulExpr and OverrideExpr
-     cardinality_expression: $ => prec(PREC.CARDINALITY, seq(
--      field('operator', choice('#', 'int', 'sum')),
-+      field('operator', choice('#', 'int', 'sum', '-')),
+@@ -410,6 +435,13 @@ module.exports = grammar({
        $._expression,
      )),
  
-@@ -435,14 +458,16 @@ module.exports = grammar({
++    // Unary minus binds above `->` so `-1 -> x` is `(-1) -> x`, not
++    // `-(1 -> x)` — minus only makes sense on the number operand.
++    neg_expression: $ => prec(PREC.NEG, seq(
++      field('operator', '-'),
++      $._expression,
++    )),
++
+     // Override: ++
+     override_expression: $ => prec.left(PREC.OVERRIDE, seq(
+       $._expression,
+@@ -435,14 +467,16 @@ module.exports = grammar({
          $.some_arrow_op,
          $.one_arrow_op,
          $.lone_arrow_op,
@@ -138,7 +171,7 @@ index 51282fa..399558d 100644
  
      // Domain restriction: <:
      domain_expression: $ => prec.left(PREC.DOMAIN, seq(
-@@ -458,21 +483,36 @@ module.exports = grammar({
+@@ -458,21 +492,36 @@ module.exports = grammar({
        $._expression,
      )),
  
@@ -169,7 +202,7 @@ index 51282fa..399558d 100644
 +    member_keyword: $ => alias(prec(20, choice(
 +      'before', 'after', 'always', 'eventually', 'historically', 'once',
 +      'until', 'since', 'releases', 'triggered', 'not', 'and', 'or',
-+      'implies', 'iff', 'else', 'let', 'all', 'no', 'some', 'lone', 'one',
++      'implies', 'iff', 'else', 'all', 'no', 'some', 'lone', 'one',
 +      'sum', 'disj', 'disjoint', 'in', 'set', 'seq', 'int', 'steps',
 +      'but', 'expect', 'exactly', 'var', 'private', 'extends', 'module',
 +      'open', 'abstract', 'sig', 'pred', 'fun', 'fact', 'assert', 'run',
@@ -179,7 +212,7 @@ index 51282fa..399558d 100644
      // Closure/transpose: ~ ^ *
      closure_expression: $ => prec(PREC.UNOP, seq(
        field('operator', choice('~', '^', '*')),
-@@ -506,10 +546,10 @@ module.exports = grammar({
+@@ -506,10 +555,10 @@ module.exports = grammar({
      )),
  
      let_binding: $ => seq(
@@ -192,7 +225,7 @@ index 51282fa..399558d 100644
      ),
  
      // ---- Primary expressions ----
-@@ -544,11 +584,15 @@ module.exports = grammar({
+@@ -544,11 +593,15 @@ module.exports = grammar({
        '}',
      ),
  
@@ -210,7 +243,7 @@ index 51282fa..399558d 100644
        '}',
      ),
  
-@@ -568,7 +612,19 @@ module.exports = grammar({
+@@ -568,7 +621,25 @@ module.exports = grammar({
      ),
  
      // ---- Terminals ----
@@ -227,7 +260,13 @@ index 51282fa..399558d 100644
 +    // `no trashed'` (multiplicity + prime) lex identically and GLR
 +    // picks the surviving branch. A `name` node precedes the primes so
 +    // adapters keep reading the base spelling.
-+    _decl_name: $ => seq($.name, repeat("'")),
++    _decl_name: $ => seq(
++      choice(
++        $.name,
++        alias(choice('disj', 'disjoint'), $.name),
++      ),
++      repeat("'"),
++    ),
  
      number: $ => choice(
        /[0-9][0-9_]*/,             // decimal (with optional underscores)
