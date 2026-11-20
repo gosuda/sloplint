@@ -511,9 +511,10 @@ const DEFAULT_LOG_CALLEES: [(&str, &str); 30] = [
     ),
     ("quint", "print"),
     ("tlaplus", "Print,PrintT"),
-    // Alloy has no logging or output facility; the dotted name can never
-    // match an Alloy callee, so the log-literal rules stay silent.
-    ("alloy", "alloy.__no_log_callee__"),
+    // Alloy has no logging or output facility. The sentinel ends in `!`,
+    // which the Alloy `name` regex cannot produce, so no callee can ever
+    // match it and the log-literal rules stay silent.
+    ("alloy", "alloy.__no_log_callee__!"),
     ("dafny", "print"),
     (
         "racket",
