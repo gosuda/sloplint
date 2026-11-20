@@ -112,6 +112,16 @@ proofs bodies.
 - The corpus `nonstandard/` cases pin comment-embedded and fragment shapes;
   three corpus cases stay `:skip`ped upstream.
 
+S3, PlusCal declarations (2026-11-20 dogfood corpus):
+
+- `pcal_p_definitions` / `pcal_c_definitions` are `repeat1(choice(
+  definition, recursive_declaration))`: `RECURSIVE Op(...)` is legal in
+  a `define` block (jb567-style specs) and previously errored at `RECURSIVE`.
+- New `pcal_fifo_decls`: `fifos`/`fifo`/`channels`/`channel` declarations
+  alongside `variables` in P- and C-syntax algorithms
+  (`fifos q1, q2;`), which the base grammar never admitted; fugue-style
+  specs carry them.
+
 ## Changes to src/scanner.c
 
 S2, bounded `nested_scanner_serialize`: the serializer used to write the

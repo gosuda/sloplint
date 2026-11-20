@@ -2814,6 +2814,10 @@
           "named": true
         },
         {
+          "type": "pcal_fifo_decls",
+          "named": true
+        },
+        {
           "type": "pcal_macro",
           "named": true
         },
@@ -3009,6 +3013,10 @@
         {
           "type": "operator_definition",
           "named": true
+        },
+        {
+          "type": "recursive_declaration",
+          "named": true
         }
       ]
     }
@@ -3094,6 +3102,21 @@
         },
         {
           "type": "pcal_with",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "pcal_fifo_decls",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
           "named": true
         }
       ]
@@ -5532,6 +5555,14 @@
     "named": false
   },
   {
+    "type": "channel",
+    "named": false
+  },
+  {
+    "type": "channels",
+    "named": false
+  },
+  {
     "type": "comment",
     "named": true
   },
@@ -5589,6 +5620,14 @@
   },
   {
     "type": "fair",
+    "named": false
+  },
+  {
+    "type": "fifo",
+    "named": false
+  },
+  {
+    "type": "fifos",
     "named": false
   },
   {

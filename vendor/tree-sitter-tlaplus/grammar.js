@@ -1235,7 +1235,7 @@ module.exports = grammar({
     _pcal_p_algorithm: $ => seq(
       $.pcal_algorithm_start,
       field('name', $.identifier),
-      optional($.pcal_var_decls),
+      repeat(choice($.pcal_var_decls, $.pcal_fifo_decls)),
       optional(alias($.pcal_p_definitions, $.pcal_definitions)),
       repeat(alias($.pcal_p_macro, $.pcal_macro)),
       repeat(alias($.pcal_p_procedure, $.pcal_procedure)),
@@ -1251,7 +1251,7 @@ module.exports = grammar({
       $.pcal_algorithm_start,
       field('name', $.identifier),
       '{',
-      optional($.pcal_var_decls),
+      repeat(choice($.pcal_var_decls, $.pcal_fifo_decls)),
       optional(alias($.pcal_c_definitions, $.pcal_definitions)),
       repeat(alias($.pcal_c_macro, $.pcal_macro)),
       repeat(alias($.pcal_c_procedure, $.pcal_procedure)),
@@ -1279,13 +1279,13 @@ module.exports = grammar({
     // end define ;
     pcal_p_definitions: $ => seq(
       'define',
-      repeat1($._definition),
+      repeat1(choice($._definition, $.recursive_declaration)),
       'end', 'define', optional(';')
     ),
 
     pcal_c_definitions: $ => seq(
       'define', '{',
-      repeat1($._definition),
+      repeat1(choice($._definition, $.recursive_declaration)),
       '}', optional(';')
     ),
 
@@ -1374,6 +1374,14 @@ module.exports = grammar({
         choice(';', ','),
         $.pcal_var_decl
       )),
+      optional(';')
+    ),
+
+    // fifos ch1, ch2;   (PlusCal2 FIFO channel declarations)
+    // channels ch;      (multicast channel declarations)
+    pcal_fifo_decls: $ => seq(
+      choice('fifos', 'fifo', 'channels', 'channel'),
+      commaList1($.identifier),
       optional(';')
     ),
 

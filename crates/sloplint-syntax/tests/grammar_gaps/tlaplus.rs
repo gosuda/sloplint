@@ -403,3 +403,30 @@ fn deep_nesting_survives_serialize_capacity() {
         .expect("procedure P parsed");
     assert!(m.end_line > 0);
 }
+
+#[test]
+fn pcal_fifo_and_channel_declarations_parse_clean() {
+    // PlusCal2 channel declarations sit beside `variables` at algorithm head:
+    // `fifos a, b;`, `fifo q;`, `channels c;` (fugue Reject*/Accept* specs).
+    run_clean(
+        "src/fifo.tla",
+        "---- MODULE F ----\n(*\n--algorithm A\nfifos ch1, ch2;\nbegin\n  skip\nend algorithm;\n*)\n====\n",
+    );
+    run_clean(
+        "src/chan.tla",
+        "---- MODULE C ----\n(*\n--algorithm A {\n  channels ch;\n  { skip }\n} *)\n====\n",
+    );
+}
+
+#[test]
+fn pcal_recursive_declaration_in_define_parses_clean() {
+    // jb567-style: `RECURSIVE Op(_)` inside a PlusCal define block.
+    run_clean(
+        "src/rec.tla",
+        "---- MODULE R ----\n(*\n--algorithm A\nvariables x = 0\ndefine\n  RECURSIVE Sum(_)\n  Sum(n) == IF n = 0 THEN 0 ELSE n + Sum(n-1)\nend define;\nbegin\n  x := Sum(3)\nend algorithm;\n*)\n====\n",
+    );
+    run_clean(
+        "src/rec_c.tla",
+        "---- MODULE RC ----\n(*\n--algorithm A {\n  define {\n    RECURSIVE Fact(_)\n    Fact(n) == IF n = 0 THEN 1 ELSE n * Fact(n-1)\n  }\n  { skip }\n} *)\n====\n",
+    );
+}
