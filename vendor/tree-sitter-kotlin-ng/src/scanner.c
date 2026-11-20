@@ -171,7 +171,7 @@ static bool skip_ws_comments_nl(TSLexer *lexer, bool *newline) {
     bool comment = false;
     for (;;) {
         while (iswspace(lexer->lookahead)) {
-            if (lexer->lookahead == '\n') {
+            if (lexer->lookahead == '\n' || lexer->lookahead == '\r') {
                 *newline = true;
             }
             skip(lexer);
@@ -275,6 +275,14 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
     // `set_up()`/`get_x`/`field2` match a prefix of an accessor word; a real
     // accessor is never followed by an identifier-continue character.
     if (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
+        return;
+    }
+    // The accessor slot already used closes the property to a second one:
+    // after `var x get() = 1` only `set` remains a valid accessor keyword,
+    // so `; get` there is a plain identifier statement (`get\nfoo()` is a
+    // call), not a duplicate getter the property grammar would reject.
+    if ((accessor_index == 0 && !valid_symbols[GET]) ||
+        (accessor_index == 1 && !valid_symbols[SET])) {
         return;
     }
     if (accessor_index == 0 || accessor_index == 1) {
@@ -467,6 +475,13 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                         return;
                     }
                 }
+            } else if (member_word[0] && member_newline &&
+                       (strcmp(member_word, "as") == 0 || strcmp(member_word, "is") == 0 ||
+                        strcmp(member_word, "in") == 0)) {
+                // `as`/`is`/`in` cannot start a statement — Kotlin ignores
+                // the newline before them, so `get\nas Int` is the infix
+                // cast `get as Int` and `get` is an identifier.
+                return;
             } else if (member_word[0] && !member_newline) {
                 // Only on the accessor's own line can a non-keyword word be
                 // an infix callee (`get until 2`); across a newline the

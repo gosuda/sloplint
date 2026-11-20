@@ -470,7 +470,7 @@ index 0e0078a..3881531 100644
        $.identifier,
      )),
 diff --git a/src/scanner.c b/src/scanner.c
-index 8f9d287..7d0576b 100644
+index 8f9d287..771d1d3 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
 @@ -15,10 +15,15 @@ enum TokenType {
@@ -499,7 +499,7 @@ index 8f9d287..7d0576b 100644
                  if (i == 0) {
                      return false;
                  }
-@@ -61,6 +66,458 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
+@@ -61,6 +66,473 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
      return false;
  }
  
@@ -608,7 +608,7 @@ index 8f9d287..7d0576b 100644
 +    bool comment = false;
 +    for (;;) {
 +        while (iswspace(lexer->lookahead)) {
-+            if (lexer->lookahead == '\n') {
++            if (lexer->lookahead == '\n' || lexer->lookahead == '\r') {
 +                *newline = true;
 +            }
 +            skip(lexer);
@@ -712,6 +712,14 @@ index 8f9d287..7d0576b 100644
 +    // `set_up()`/`get_x`/`field2` match a prefix of an accessor word; a real
 +    // accessor is never followed by an identifier-continue character.
 +    if (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
++        return;
++    }
++    // The accessor slot already used closes the property to a second one:
++    // after `var x get() = 1` only `set` remains a valid accessor keyword,
++    // so `; get` there is a plain identifier statement (`get\nfoo()` is a
++    // call), not a duplicate getter the property grammar would reject.
++    if ((accessor_index == 0 && !valid_symbols[GET]) ||
++        (accessor_index == 1 && !valid_symbols[SET])) {
 +        return;
 +    }
 +    if (accessor_index == 0 || accessor_index == 1) {
@@ -904,6 +912,13 @@ index 8f9d287..7d0576b 100644
 +                        return;
 +                    }
 +                }
++            } else if (member_word[0] && member_newline &&
++                       (strcmp(member_word, "as") == 0 || strcmp(member_word, "is") == 0 ||
++                        strcmp(member_word, "in") == 0)) {
++                // `as`/`is`/`in` cannot start a statement — Kotlin ignores
++                // the newline before them, so `get\nas Int` is the infix
++                // cast `get as Int` and `get` is an identifier.
++                return;
 +            } else if (member_word[0] && !member_newline) {
 +                // Only on the accessor's own line can a non-keyword word be
 +                // an infix callee (`get until 2`); across a newline the
@@ -958,7 +973,7 @@ index 8f9d287..7d0576b 100644
  void *tree_sitter_kotlin_external_scanner_create() { return NULL; }
  
  void tree_sitter_kotlin_external_scanner_destroy(void *payload) {}
-@@ -119,6 +576,9 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -119,6 +591,9 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
              if (lexer->lookahead == ';') {
                  advance(lexer);
                  lexer->mark_end(lexer);
@@ -968,7 +983,7 @@ index 8f9d287..7d0576b 100644
                  return true;
              }
  
-@@ -166,6 +626,10 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -166,6 +641,10 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      return false;
                  case 'i':
                      return scan_word(lexer, "import");
@@ -979,7 +994,7 @@ index 8f9d287..7d0576b 100644
                  case ';':
                      advance(lexer);
                      lexer->mark_end(lexer);
-@@ -178,9 +642,11 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -178,9 +657,11 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
          char scanned_word[16] = {0};
      _switch:
          switch (lexer->lookahead) {
@@ -992,7 +1007,7 @@ index 8f9d287..7d0576b 100644
              case '*':
              case '%':
              case '>':
-@@ -224,6 +690,26 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -224,6 +705,26 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      goto q_dot_from_semi;
                  }
                  return true;
@@ -1019,7 +1034,7 @@ index 8f9d287..7d0576b 100644
              case 'e':
              case 'i':
              case 'g':
-@@ -238,23 +724,36 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -238,23 +739,36 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
              case 'c':
              case 'b':
              case 'w':
@@ -1062,7 +1077,7 @@ index 8f9d287..7d0576b 100644
                  // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
                  // we found a variable named constructor whose field is being accessed
                  if (index == 5) {
-@@ -279,18 +778,22 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -279,18 +793,22 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      }
                  }
                  // If `get` was found and the keyword is not valid, return a semi since it's being used as an identifier
@@ -1090,7 +1105,7 @@ index 8f9d287..7d0576b 100644
  
                          while (iswspace(lexer->lookahead)) {
                              if (lexer->lookahead == '\n') {
-@@ -307,6 +810,33 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -307,6 +825,33 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                  else if (index == 1 && valid_symbols[IN]) {
                      return true;
                  }
@@ -1124,7 +1139,7 @@ index 8f9d287..7d0576b 100644
                  return !res;
              case ';':
                  advance(lexer);
-@@ -314,20 +844,88 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -314,20 +859,88 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                  return true;
              case '@':
                  if (valid_symbols[CONSTRUCTOR]) {
