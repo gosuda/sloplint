@@ -217,6 +217,55 @@ fn field_assignment_in_a_body_stays_a_statement() {
 }
 
 #[test]
+fn semicolon_then_field_assignment_stays_a_local_statement() {
+    // Local variables cannot carry a backing field (Kotlin gives those to
+    // member and top-level properties only), so `var x = 1; field = 5` in a
+    // body is an initializer then an assignment, never `backing_field`.
+    let sexp = raw_tree("fun f() {\n    var x = 1; field = 5\n}\n")
+        .root_node()
+        .to_sexp();
+    assert!(
+        sexp.contains("(assignment"),
+        "field = 5 must be an assignment, got:\n{sexp}"
+    );
+    assert!(
+        !sexp.contains("(backing_field"),
+        "locals cannot have a backing field, got:\n{sexp}"
+    );
+}
+
+#[test]
+fn semicolon_then_getter_call_stays_a_local_statement() {
+    let sexp = raw_tree("fun f() {\n    var x = 1; get() {}\n}\n")
+        .root_node()
+        .to_sexp();
+    assert!(
+        sexp.contains("(call_expression"),
+        "get() {{}} must be a call with a trailing lambda, got:\n{sexp}"
+    );
+    assert!(
+        !sexp.contains("(getter"),
+        "locals cannot have accessors, got:\n{sexp}"
+    );
+}
+
+#[test]
+fn explicit_backing_field_then_accessors_parse() {
+    run_clean(
+        "class C {\n    val y = MutableStateFlow(0)\n        field = it\n        get() = field.value\n}\n",
+    );
+    let sexp = raw_tree(
+        "class C {\n    val y = MutableStateFlow(0)\n        field = it\n        get() = field.value\n}\n",
+    )
+    .root_node()
+    .to_sexp();
+    assert!(
+        sexp.contains("(backing_field") && sexp.contains("(getter"),
+        "accessors must be allowed after a backing field, got:\n{sexp}"
+    );
+}
+
+#[test]
 fn open_and_override_as_identifiers_parse() {
     run_clean(
         "fun a() { val open = 1; open(2) }\nclass A : SeekableByteChannel {\n    private var open = true\n    override fun close() { open = false }\n}\n",

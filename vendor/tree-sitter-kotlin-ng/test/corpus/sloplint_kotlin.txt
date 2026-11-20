@@ -763,3 +763,83 @@ class T private constructor() : Base
             (value_argument
               (number_literal))))))
     (class_body)))
+
+================================================================================
+local variables do not take accessors or backing fields
+================================================================================
+
+fun f() {
+    var x = 1; field = 5
+    var y = 2; get() {}
+    var z = 3; set(v) {}
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (number_literal))
+        (assignment
+          (identifier)
+          (number_literal))
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (number_literal))
+        (call_expression
+          (call_expression
+            (identifier)
+            (value_arguments))
+          (annotated_lambda
+            (lambda_literal)))
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (number_literal))
+        (call_expression
+          (call_expression
+            (identifier)
+            (value_arguments
+              (value_argument
+                (identifier))))
+          (annotated_lambda
+            (lambda_literal)))))))
+
+================================================================================
+explicit backing field followed by accessors
+================================================================================
+
+class C {
+    val y = MutableStateFlow(0)
+        field = it
+        get() = field.value
+}
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (number_literal))))
+        (backing_field
+          (identifier))
+        (getter
+          (function_body
+            (navigation_expression
+              (identifier)
+              (identifier))))))))

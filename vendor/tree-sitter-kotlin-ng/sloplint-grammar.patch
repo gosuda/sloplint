@@ -89,22 +89,12 @@
        optional($.modifiers),
        choice('class', seq(optional('fun'), 'interface')),
        field('name', $.identifier),
-@@ -174,6 +205,7 @@
+@@ -174,6 +205,20 @@
      )),
  
      property_declaration: $ => prec.right(seq(
-+      optional($.context_parameters),
-       optional($.modifiers),
-       choice('val', 'var'),
-       optional($.type_parameters),
-@@ -184,13 +216,32 @@
-         seq('=', $.expression),
-         $.property_delegate,
-       )),
--      optional(';'),
-       optional(choice(
--        seq($.getter, optional($.setter)),
--        seq($.setter, optional($.getter)),
++      $._property_declaration_head,
++      optional(choice(
 +        // `;` between the initializer and the accessors lexes as the
 +        // member/statement separator (`_class_member_semi` / `_semi`), never
 +        // as a literal `;` — the scanner emits `_accessor_semi` instead when
@@ -112,13 +102,45 @@
 +        seq($._accessor_semi, $._property_tail),
 +        $._property_tail,
 +        ';',
++      )),
++    )),
++
++    _property_declaration_head: $ => seq(
++      optional($.context_parameters),
+       optional($.modifiers),
+       choice('val', 'var'),
+       optional($.type_parameters),
+@@ -184,13 +229,40 @@
+         seq('=', $.expression),
+         $.property_delegate,
        )),
++    ),
++
++    // A local variable cannot carry accessors or a backing field (Kotlin
++    // gives them to member and top-level properties only), so the
++    // statement-position variant ends at the initializer — `var x = 1;
++    // field = 5` in a body is an initializer then an assignment to a local
++    // `field`, never a backing field.
++    local_property_declaration: $ => prec.right(seq(
++      $._property_declaration_head,
+       optional(';'),
+-      optional(choice(
+-        seq($.getter, optional($.setter)),
+-        seq($.setter, optional($.getter)),
+-      )),
      )),
  
 +    _property_tail: $ => prec.right(choice(
 +      // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
-+      // where an accessor would sit (upstream v1.1.0 gap).
-+      $.backing_field,
++      // where an accessor would sit (upstream v1.1.0 gap). Accessors can
++      // still follow: `field = MutableStateFlow(0)` then `get() = field`.
++      seq(
++        $.backing_field,
++        optional(choice(
++          seq($.getter, optional($.setter)),
++          seq($.setter, optional($.getter)),
++        )),
++      ),
 +      seq($.getter, optional($.setter)),
 +      seq($.setter, optional($.getter)),
 +    )),
@@ -133,7 +155,7 @@
      type_alias: $ => prec.right(seq(
        optional($.modifiers),
        'typealias',
-@@ -221,7 +272,7 @@
+@@ -221,7 +293,7 @@
  
      constructor_delegation_call: $ => seq(choice('this', 'super'), $.value_arguments),
  
@@ -142,7 +164,7 @@
  
      type_parameter: $ => seq(
        optional($.type_parameter_modifiers),
-@@ -265,6 +316,7 @@
+@@ -265,6 +337,7 @@
      constructor_invocation: $ => seq($.type, $.value_arguments),
  
      function_declaration: $ => prec.right(1, seq(
@@ -150,7 +172,7 @@
        optional($.modifiers),
        'fun',
        optional($.type_parameters),
-@@ -276,6 +328,16 @@
+@@ -276,6 +349,16 @@
        optional($.function_body),
      )),
  
@@ -167,7 +189,7 @@
      function_value_parameters: $ => seq(
        '(',
        optionalCommaSep1(seq(
-@@ -293,12 +355,18 @@
+@@ -293,12 +376,18 @@
      delegation_specifier: $ => prec.right(seq(
        repeat($.annotation),
        choice(
@@ -187,7 +209,7 @@
      variable_declaration: $ => prec(1, seq(
        repeat($.annotation),
        $._identifier,
-@@ -322,6 +390,14 @@
+@@ -322,6 +411,14 @@
        $.primary_expression,
      ),
  
@@ -202,7 +224,32 @@
      getter: $ => prec.right(seq(
        optional($.modifiers),
        'get',
-@@ -415,7 +491,7 @@
+@@ -368,7 +465,7 @@
+       'in',
+       $.expression,
+       ')',
+-      optional(choice($.block, $.statement)),
++      optional(choice($.block, $._local_statement)),
+     )),
+ 
+     while_statement: $ => prec.right(seq(
+@@ -377,13 +474,13 @@
+       '(',
+       field('condition', $.expression),
+       ')',
+-      optional(choice($.block, $.statement, ';')),
++      optional(choice($.block, $._local_statement, ';')),
+     )),
+ 
+     do_while_statement: $ => prec.right(seq(
+       optional($.label),
+       'do',
+-      optional(choice($.block, $.statement, ';')),
++      optional(choice($.block, $._local_statement, ';')),
+       'while',
+       '(',
+       field('condition', $.expression),
+@@ -415,7 +512,7 @@
  
      enum_entry: $ => seq(
        optional($.modifiers),
@@ -211,7 +258,7 @@
        optional($.value_arguments),
        optional($.class_body),
      ),
-@@ -427,7 +503,7 @@
+@@ -427,14 +524,14 @@
      ),
  
      value_argument: $ => seq(
@@ -220,7 +267,42 @@
        optional('*'),
        $.expression,
      ),
-@@ -584,7 +660,7 @@
+ 
+     _statements: $ => seq(
+-      $.statement,
+-      repeat(seq($._semi, $.statement)),
++      $._local_statement,
++      repeat(seq($._semi, $._local_statement)),
+       optional($._semi),
+     ),
+ 
+@@ -447,6 +544,25 @@
+       $.expression,
+     ),
+ 
++    // Statement positions inside blocks/branches/lambdas. Identical to
++    // `statement` except properties are local: Kotlin gives accessors and
++    // backing fields to member and top-level properties only, so
++    // `var x = 1; field = 5` in a body is an initializer then an
++    // assignment to a local `field`, never a backing field. The alias
++    // keeps the `property_declaration` node kind in the tree.
++    _local_statement: $ => choice(
++      $.class_declaration,
++      $.object_declaration,
++      $.function_declaration,
++      alias($.local_property_declaration, $.property_declaration),
++      $.type_alias,
++      $.assignment,
++      $.for_statement,
++      $.while_statement,
++      $.do_while_statement,
++      $.expression,
++    ),
++
+     modifiers: $ => prec.right(repeat1(choice(
+       $.annotation,
+       $.class_modifier,
+@@ -584,7 +700,7 @@
        ),
      ),
  
@@ -229,7 +311,7 @@
  
      type_projection: $ => choice(
        seq(repeat($.variance_modifier), $.type),
-@@ -593,6 +669,7 @@
+@@ -593,6 +709,7 @@
  
      function_type: $ => seq(
        optional($.type_modifiers),
@@ -237,7 +319,7 @@
        optional(seq($._receiver_type, '.')),
        $.function_type_parameters,
        '->',
-@@ -605,7 +682,21 @@
+@@ -605,7 +722,21 @@
        ')',
      ),
  
@@ -260,15 +342,19 @@
  
      assignment: $ => seq(
        field('left', $.expression),
-@@ -752,6 +843,7 @@
+@@ -752,9 +883,10 @@
      ),
  
      lambda_literal: $ => seq(
 +      optional('suspend'),
        '{',
        optional(seq(optional($.lambda_parameters), '->')),
-       optionalSep1($.statement, $._semi),
-@@ -768,7 +860,7 @@
+-      optionalSep1($.statement, $._semi),
++      optionalSep1($._local_statement, $._semi),
+       '}',
+     ),
+ 
+@@ -768,7 +900,7 @@
      anonymous_function: $ => prec.right(seq(
        'fun',
        optional(seq($.type, '.')),
@@ -277,7 +363,7 @@
        optional(seq(':', $.type)),
        optional($.type_constraints),
        optional($.function_body),
-@@ -825,7 +917,9 @@
+@@ -825,7 +957,9 @@
  
      parenthesized_expression: $ => seq('(', $.expression, ')'),
  
@@ -288,7 +374,7 @@
  
      when_expression: $ => seq(
        'when',
-@@ -853,6 +947,11 @@
+@@ -853,10 +987,15 @@
            commaSep1(field('condition', $._when_condition)),
            optional(','),
          ),
@@ -300,7 +386,12 @@
          'else',
        ),
        '->',
-@@ -922,14 +1021,20 @@
+-      choice($.block, $.statement),
++      choice($.block, $._local_statement),
+       optional($._semi),
+     ),
+ 
+@@ -922,14 +1061,20 @@
      ),
  
      callable_reference: $ => seq(
@@ -323,7 +414,7 @@
        $.identifier,
      )),
  
-@@ -940,6 +1045,7 @@
+@@ -940,6 +1085,7 @@
      ),
  
      string_literal: $ => seq(
@@ -331,7 +422,7 @@
        '"',
        repeat(choice(
          alias(choice(
-@@ -956,14 +1062,17 @@
+@@ -956,14 +1102,17 @@
      ),
  
      multiline_string_literal: $ => seq(
@@ -350,7 +441,7 @@
      interpolation: $ => choice(
        seq('$', $._identifier),
        seq('${', $.expression, '}'),
-@@ -1045,7 +1154,7 @@
+@@ -1045,7 +1194,7 @@
        /`[^\r\n`]+`/,
      )),
  
@@ -359,7 +450,7 @@
        choice(
          'actual',
          'annotation',
-@@ -1059,6 +1168,9 @@
+@@ -1059,6 +1208,9 @@
          'set',
          'operator',
          'value',

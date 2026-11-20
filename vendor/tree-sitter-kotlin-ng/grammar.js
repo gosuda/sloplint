@@ -205,17 +205,7 @@ module.exports = grammar({
     )),
 
     property_declaration: $ => prec.right(seq(
-      optional($.context_parameters),
-      optional($.modifiers),
-      choice('val', 'var'),
-      optional($.type_parameters),
-      optional(seq($._receiver_type, optional('.'))),
-      choice($.variable_declaration, $.multi_variable_declaration),
-      optional($.type_constraints),
-      optional(choice(
-        seq('=', $.expression),
-        $.property_delegate,
-      )),
+      $._property_declaration_head,
       optional(choice(
         // `;` between the initializer and the accessors lexes as the
         // member/statement separator (`_class_member_semi` / `_semi`), never
@@ -227,10 +217,41 @@ module.exports = grammar({
       )),
     )),
 
+    _property_declaration_head: $ => seq(
+      optional($.context_parameters),
+      optional($.modifiers),
+      choice('val', 'var'),
+      optional($.type_parameters),
+      optional(seq($._receiver_type, optional('.'))),
+      choice($.variable_declaration, $.multi_variable_declaration),
+      optional($.type_constraints),
+      optional(choice(
+        seq('=', $.expression),
+        $.property_delegate,
+      )),
+    ),
+
+    // A local variable cannot carry accessors or a backing field (Kotlin
+    // gives them to member and top-level properties only), so the
+    // statement-position variant ends at the initializer — `var x = 1;
+    // field = 5` in a body is an initializer then an assignment to a local
+    // `field`, never a backing field.
+    local_property_declaration: $ => prec.right(seq(
+      $._property_declaration_head,
+      optional(';'),
+    )),
+
     _property_tail: $ => prec.right(choice(
       // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
-      // where an accessor would sit (upstream v1.1.0 gap).
-      $.backing_field,
+      // where an accessor would sit (upstream v1.1.0 gap). Accessors can
+      // still follow: `field = MutableStateFlow(0)` then `get() = field`.
+      seq(
+        $.backing_field,
+        optional(choice(
+          seq($.getter, optional($.setter)),
+          seq($.setter, optional($.getter)),
+        )),
+      ),
       seq($.getter, optional($.setter)),
       seq($.setter, optional($.getter)),
     )),
@@ -444,7 +465,7 @@ module.exports = grammar({
       'in',
       $.expression,
       ')',
-      optional(choice($.block, $.statement)),
+      optional(choice($.block, $._local_statement)),
     )),
 
     while_statement: $ => prec.right(seq(
@@ -453,13 +474,13 @@ module.exports = grammar({
       '(',
       field('condition', $.expression),
       ')',
-      optional(choice($.block, $.statement, ';')),
+      optional(choice($.block, $._local_statement, ';')),
     )),
 
     do_while_statement: $ => prec.right(seq(
       optional($.label),
       'do',
-      optional(choice($.block, $.statement, ';')),
+      optional(choice($.block, $._local_statement, ';')),
       'while',
       '(',
       field('condition', $.expression),
@@ -509,13 +530,32 @@ module.exports = grammar({
     ),
 
     _statements: $ => seq(
-      $.statement,
-      repeat(seq($._semi, $.statement)),
+      $._local_statement,
+      repeat(seq($._semi, $._local_statement)),
       optional($._semi),
     ),
 
     statement: $ => choice(
       $.declaration,
+      $.assignment,
+      $.for_statement,
+      $.while_statement,
+      $.do_while_statement,
+      $.expression,
+    ),
+
+    // Statement positions inside blocks/branches/lambdas. Identical to
+    // `statement` except properties are local: Kotlin gives accessors and
+    // backing fields to member and top-level properties only, so
+    // `var x = 1; field = 5` in a body is an initializer then an
+    // assignment to a local `field`, never a backing field. The alias
+    // keeps the `property_declaration` node kind in the tree.
+    _local_statement: $ => choice(
+      $.class_declaration,
+      $.object_declaration,
+      $.function_declaration,
+      alias($.local_property_declaration, $.property_declaration),
+      $.type_alias,
       $.assignment,
       $.for_statement,
       $.while_statement,
@@ -846,7 +886,7 @@ module.exports = grammar({
       optional('suspend'),
       '{',
       optional(seq(optional($.lambda_parameters), '->')),
-      optionalSep1($.statement, $._semi),
+      optionalSep1($._local_statement, $._semi),
       '}',
     ),
 
@@ -955,7 +995,7 @@ module.exports = grammar({
         'else',
       ),
       '->',
-      choice($.block, $.statement),
+      choice($.block, $._local_statement),
       optional($._semi),
     ),
 

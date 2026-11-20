@@ -17,6 +17,8 @@ Round 7 hardens the `;`-accessor probe for real-corpus shapes: every whitespace 
 
 Round 8 fixes bodyless delegations: `class T : M<Int>` (and `Marker<Int,>`) at a line end died because the declaration-terminating `_semi` shifted into `_delegation_constructor_invocation`'s tolerated separator, which then demanded `(`. The tolerated separator is now a dedicated external `_delegation_semi`, emitted instead of `_semi` only when the separator is followed by `(`; a `_semi` after a delegation type now always ends the declaration. The `x\n(y)` expression split is unchanged (two statements). Two corpus cases pin the shapes (55 of 55 pass).
 
+Round 9 fixes statement-position properties picking up accessor tails. Kotlin gives accessors and explicit backing fields to member and top-level properties only, but `statement` routed through the same `declaration` — so `var x = 1; field = 5` in a function body bound `field = 5` as a backing field, and `; get() {}` became a getter instead of a call with a trailing lambda. `property_declaration` is now split into a shared `_property_declaration_head` plus the tail; statement positions (blocks, `if`/`while`/`do`/`for`/`when` branches, lambda bodies) use `_local_statement`, whose `local_property_declaration` ends at the initializer and is aliased to `property_declaration` so the node kind is unchanged. File-level and member-level properties keep the full tail. The tail also accepts accessors after a backing field (`field = it` then `get() = field.value`), which was unreachable before. Two corpus cases pin the shapes (57 of 57 pass).
+
 ## Origin
 
 - Upstream: https://github.com/tree-sitter-grammars/tree-sitter-kotlin, tag v1.1.0, commit 77dd60ea0a9003ce062c9728a513ffe1aaff8c82.
@@ -115,13 +117,12 @@ Transitions, published to vendored, over the 3688 corpus files: clean to clean 3
 
 Repros: all 27 are raw errors on the published grammar. On the vendored grammar, 19 are clean (K01, K02, K03, K04, K06, K07, K08, K08b, K08c, K09, K10, K11, K12, K15, K16, K17, K18, K22, K22b), 5 are ERROR (K05, K13, K14, K19, K20), and 3 are MISSING only (K21b, K21c, K23). The 8 open repros are 6 named clusters plus the KFILEANN pair.
 
-Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (32 tests, each clean check asserting the raw tree and each invalid control asserting the raw tree has an error):
-- Vendored path dependency: 32 pass.
-- Published `tree-sitter-kotlin-ng` 1.1.0: 23 fail and 9 pass.
+Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (48 tests, each clean check asserting the raw tree and each invalid control asserting the raw tree has an error):
+- Vendored path dependency: 48 pass.
 
 Corpus cases (`tree-sitter test`, fresh `HOME`):
-- Vendored: 53 of 53. These are the 22 upstream cases, the 18 `sloplint_kotlin.txt` cases, the 7 `sloplint_kotlin_same_line.txt` cases, and the 6 `sloplint_softids.txt` cases. The expected trees have no `ERROR` or `MISSING`.
-- Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 25 pass (the 18 sloplint cases and the 7 same-line cases). The 22 upstream cases passed on the published grammar before any change.
+- Vendored: 57 of 57. These are the 22 upstream cases, the 22 `sloplint_kotlin.txt` cases, the 7 `sloplint_kotlin_same_line.txt` cases, and the 6 `sloplint_softids.txt` cases. The expected trees have no `ERROR` or `MISSING`.
+- Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 29 pass (the 22 sloplint cases and the 7 same-line cases). The 22 upstream cases passed on the published grammar before any change.
 
 ## Code notes
 
