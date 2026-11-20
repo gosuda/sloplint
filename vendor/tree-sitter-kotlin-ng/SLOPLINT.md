@@ -22,7 +22,7 @@ Round 7 hardens the `;`-accessor probe for real-corpus shapes: every whitespace 
 - Copied unchanged from the published crate: `Cargo.toml`, `Cargo.toml.orig`, `Cargo.lock`, `README.md`, `bindings/rust/`, `tree-sitter.json`.
 - Copied from the upstream tag, because the published crate does not ship it: `LICENSE` (MIT).
 - Copied from the upstream tag: `test/corpus/declarations.txt`, `expressions.txt`, `semi.txt`.
-- Added: `test/corpus/sloplint_kotlin.txt` (15 cases, one per fixed repro) and `test/corpus/sloplint_kotlin_same_line.txt` (4 cases for same-line bodies).
+- Added: `test/corpus/sloplint_kotlin.txt` (18 cases, one per fixed repro) and `test/corpus/sloplint_kotlin_same_line.txt` (7 cases for same-line bodies).
 - Changed by hand: `grammar.js`, `src/scanner.c`.
 - Regenerated: `src/parser.c`, `src/grammar.json`, `src/node-types.json`, `src/tree_sitter/*`.
 - `sloplint-grammar.patch` is the diff of `grammar.js` and `src/scanner.c` against the upstream tag. It applies with `git apply --check` in a checkout of that tag.
@@ -118,8 +118,8 @@ Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (32 tests,
 - Published `tree-sitter-kotlin-ng` 1.1.0: 23 fail and 9 pass.
 
 Corpus cases (`tree-sitter test`, fresh `HOME`):
-- Vendored: 49 of 49. These are the 22 upstream cases, the 17 `sloplint_kotlin.txt` cases, the 4 `sloplint_kotlin_same_line.txt` cases, and the 6 `sloplint_softids.txt` cases. The expected trees have no `ERROR` or `MISSING`.
-- Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 21 pass (the 17 sloplint cases and the 4 same-line cases). The 22 upstream cases passed on the published grammar before any change.
+- Vendored: 55 of 55. These are the 22 upstream cases, the 20 `sloplint_kotlin.txt` cases, the 7 `sloplint_kotlin_same_line.txt` cases, and the 6 `sloplint_softids.txt` cases. The expected trees have no `ERROR` or `MISSING`.
+- Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 27 pass (the 20 sloplint cases and the 7 same-line cases). The 22 upstream cases passed on the published grammar before any change.
 
 ## Code notes
 
