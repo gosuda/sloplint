@@ -218,12 +218,26 @@ pub(crate) fn wildcard_pattern(cx: &Cx<'_, '_>, pattern: Node<'_>) -> bool {
 }
 
 /// A wrapper that passes its operand through unchanged: a precedence
-/// chain node carrying exactly one named child whose first child is that
-/// operand, or parentheses. `-(x)` leads with the `-` operator — the
-/// value is computed, so the wrapper is not transparent.
+/// chain node carrying exactly one non-comment named child whose first
+/// child is that operand, or parentheses. `-(x)` leads with the `-`
+/// operator — the value is computed, so the wrapper is not transparent.
 fn transparent_wrap(node: Node<'_>) -> bool {
     node.kind() == "parenthesized_expression"
-        || (node.named_child_count() == 1 && node.child(0).is_some_and(|c| c.is_named()))
+        || (first_operand(node).is_some()
+            && node
+                .named_children(&mut node.walk())
+                .filter(|c| !COMMENT_KINDS.contains(&c.kind()))
+                .count()
+                == 1
+            && node.child(0).is_some_and(|c| c.is_named()))
+}
+
+/// The first named child that is not a comment — `(/* note */ x)` still
+/// yields `x`.
+fn first_operand(node: Node<'_>) -> Option<Node<'_>> {
+    let mut cursor = node.walk();
+    node.named_children(&mut cursor)
+        .find(|c| !COMMENT_KINDS.contains(&c.kind()))
 }
 
 pub(crate) fn scrutinee_kind(cx: &Cx<'_, '_>, scrutinee: Node<'_>) -> ScrutineeKind {
@@ -236,19 +250,21 @@ pub(crate) fn scrutinee_kind(cx: &Cx<'_, '_>, scrutinee: Node<'_>) -> ScrutineeK
                 if has_actual_binding(current) {
                     return ScrutineeKind::Other;
                 }
-                // The member read must hang off a bare name: `-p.x` parses
-                // as `(-p).x` — a field of a computed base, not a field of
-                // the scrutinee value.
-                let mut base = current.named_child(0);
+                // The member read must hang off a bare name or `this`:
+                // `-p.x` parses as `(-p).x` — a field of a computed base,
+                // not a field of the scrutinee value.
+                let mut base = first_operand(current);
                 loop {
                     let Some(node) = base else {
                         return ScrutineeKind::Other;
                     };
                     match node.kind() {
-                        "identifier" | "name_segment" | "qualified_name" => break,
-                        "suffix_expression" => base = node.named_child(0),
+                        "identifier" | "name_segment" | "qualified_name" | "this_expression" => {
+                            break
+                        }
+                        "suffix_expression" => base = first_operand(node),
                         _ if CHAIN_KINDS.contains(&node.kind()) && transparent_wrap(node) => {
-                            base = node.named_child(0);
+                            base = first_operand(node);
                         }
                         _ => return ScrutineeKind::Other,
                     }
@@ -284,7 +300,7 @@ pub(crate) fn scrutinee_kind(cx: &Cx<'_, '_>, scrutinee: Node<'_>) -> ScrutineeK
                 if !transparent_wrap(current) {
                     return ScrutineeKind::Other;
                 }
-                let Some(first) = current.named_child(0) else {
+                let Some(first) = first_operand(current) else {
                     return ScrutineeKind::Other;
                 };
                 current = first;
