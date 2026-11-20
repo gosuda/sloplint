@@ -16,6 +16,7 @@ enum TokenType {
     SET,
     DOLLAR,
     ACCESSOR_SEMI,
+    FIELD_SEMI,
     DELEGATION_SEMI,
 };
 
@@ -164,6 +165,10 @@ static bool skip_ws_comments(TSLexer *lexer) {
 // emitted token's extent stays at the `;`.
 static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
     char accessor_word[16] = {0};
+    // Whether an annotation or modifier word preceded the accessor word:
+    // `private set` is a bare accessor, while `get.run()` / `set + 1` are
+    // statements using `get`/`set` as plain identifiers.
+    bool had_prefix = false;
     for (;;) {
         skip_ws_comments(lexer);
         if (lexer->lookahead == '@') {
@@ -188,6 +193,7 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                     skip(lexer);
                 } while (depth > 0 && !lexer->eof(lexer));
             }
+            had_prefix = true;
             continue;
         }
         if (scan_words(lexer,
@@ -197,6 +203,7 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                                            "expect"},
                        accessor_word, NULL)) {
             memset(accessor_word, 0, MAX_WORD_SIZE);
+            had_prefix = true;
             continue;
         }
         break;
@@ -214,14 +221,14 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
         return;
     }
     if (accessor_index == 0 || accessor_index == 1) {
-        // `get`/`set` as plain identifiers: `get = 2` assigns (bare `get`
-        // is never an accessor — a getter needs `()`), `get(x)` and
-        // `set(v)` call. A paren'ed accessor must be followed by a body
-        // (`= expr`/`{...}`/`: type`) or it is a call, not an accessor.
+        // A `get`/`set` accessor is either paren'ed (`get() = ...`,
+        // `set(v) { }`) or a bare visibility-only accessor behind a
+        // modifier (`private set`). Any other unmodified use — `get = 2`,
+        // `get.run()`, `set + 1` — is a plain identifier statement, not an
+        // accessor, so the `;` must stay a statement separator. A paren'ed
+        // accessor must be followed by a body (`= expr`/`{...}`/`: type`)
+        // or it is a call, not an accessor.
         skip_ws_comments(lexer);
-        if (lexer->lookahead == '=') {
-            return;
-        }
         if (lexer->lookahead == '(') {
             skip(lexer);
             skip_ws_comments(lexer);
@@ -283,6 +290,11 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
             if (lexer->lookahead != '=' && lexer->lookahead != '{' && lexer->lookahead != ':') {
                 return;
             }
+        } else if (!had_prefix) {
+            // Unmodified bare `get`/`set` is never an accessor (a getter
+            // needs `()`, a bare setter exists only behind a visibility
+            // modifier), so `get.run()`-style statements stay statements.
+            return;
         }
     } else if (accessor_index == 2) {
         // `field` binds a backing field only before `=` (or `: type =`),
@@ -292,6 +304,16 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
         if (lexer->lookahead != '=' && lexer->lookahead != ':') {
             return;
         }
+        // A backing field can only open the property tail, so it gets a
+        // distinct token: `_field_semi` is only valid at the tail start.
+        // After a completed accessor `; field = n` is a new statement, so
+        // leave the already-marked `_semi` in place when the token is not
+        // valid here.
+        if (!valid_symbols[FIELD_SEMI]) {
+            return;
+        }
+        lexer->result_symbol = FIELD_SEMI;
+        return;
     }
     lexer->result_symbol = ACCESSOR_SEMI;
 }
@@ -357,7 +379,7 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
             if (lexer->lookahead == ';') {
                 advance(lexer);
                 lexer->mark_end(lexer);
-                if (valid_symbols[ACCESSOR_SEMI]) {
+                if (valid_symbols[ACCESSOR_SEMI] || valid_symbols[FIELD_SEMI]) {
                     accessor_after_semi(lexer, valid_symbols);
                 }
                 return true;

@@ -870,3 +870,30 @@ class A {
           (function_body
             (identifier)))))))
 
+
+================================================================================
+statements after a completed accessor
+================================================================================
+
+val t = 1; get() = 1
+field = 2
+get.run()
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal)
+    (getter
+      (function_body
+        (number_literal))))
+  (assignment
+    (identifier)
+    (number_literal))
+  (call_expression
+    (navigation_expression
+      (identifier)
+      (identifier))
+    (value_arguments)))
