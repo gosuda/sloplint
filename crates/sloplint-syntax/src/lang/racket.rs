@@ -106,38 +106,12 @@ fn lookup_head(name: &str) -> Option<Head> {
         .map(|(_, concept)| *concept)
 }
 
-/// Node kinds that wrap datum instead of code: quoted forms,
-/// commented-out datum, and reader-level datum wrappers. A
-/// definition-shaped list under any of these is data, not code.
-const NON_CODE_KINDS: &[&str] = &[
-    "quote",
-    "quasiquote",
-    "syntax",
-    "quasisyntax",
-    "unquote",
-    "unquote_splicing",
-    "unsyntax",
-    "unsyntax_splicing",
-    "sexp_comment",
-    "box",
-    "graph",
-];
-
-/// Long-form datum heads: `(quote ...)`, `(syntax ...)` and friends
-/// emit an ordinary `list`, so the head symbol — not the node kind —
-/// marks their children as datum.
-const DATUM_HEADS: &[&str] = &[
-    "quote",
-    "quasiquote",
-    "syntax",
-    "quasisyntax",
-    "unquote",
-    "unquote-splicing",
-    "unsyntax",
-    "unsyntax-splicing",
-    "box",
-    "graph",
-];
+/// Node kinds that are always datum, whatever encloses them: a
+/// commented-out datum and the `#&`/`#n=` reader wrappers. Quoted
+/// forms are matched below instead — `unquote`-family escapes can
+/// switch a quasiquote's children back to code, so quoting is
+/// accounted level by level rather than unconditionally.
+const NON_CODE_KINDS: &[&str] = &["sexp_comment", "box", "graph"];
 
 const COMMENT_KINDS: &[&str] = &["comment", "block_comment", "sexp_comment"];
 
@@ -154,9 +128,12 @@ fn code_children(n: Node<'_>) -> Vec<Node<'_>> {
         .collect()
 }
 
-/// First code child: the head position of a `list`.
+/// First code child: the head position of a `list`. Iterates without
+/// collecting so ancestor scans stay linear in each list's head.
 fn head_child(n: Node<'_>) -> Option<Node<'_>> {
-    code_children(n).into_iter().next()
+    let mut cursor = n.walk();
+    n.named_children(&mut cursor)
+        .find(|child| !is_comment(child.kind()))
 }
 
 fn first_symbol<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
@@ -166,30 +143,80 @@ fn first_symbol<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
         .map(|symbol| text(cx, symbol))
 }
 
+/// Whether this node sits inside datum. `quote`/`syntax` (node kind
+/// or list head) is datum unconditionally; `quasiquote`/`quasisyntax`
+/// too, but each `unquote`-family form between this node and the
+/// quasiquote escapes one level back to code — walking innermost to
+/// outermost, a pending escape consumes the next quasiquote.
 fn in_non_code(cx: &Cx<'_, '_>) -> bool {
-    cx.ancestors().any(|ancestor| {
-        NON_CODE_KINDS.contains(&ancestor.kind())
-            || (ancestor.kind() == "list"
-                && head_child(ancestor).is_some_and(|head| {
-                    head.kind() == "symbol" && DATUM_HEADS.contains(&text(cx, head))
-                }))
-    })
+    let mut escapes = 0usize;
+    for ancestor in cx.ancestors() {
+        let head = match ancestor.kind() {
+            kind if NON_CODE_KINDS.contains(&kind) => return true,
+            "quote" | "syntax" => return true,
+            "quasiquote" | "quasisyntax" => {
+                if escapes == 0 {
+                    return true;
+                }
+                escapes -= 1;
+                continue;
+            }
+            "unquote" | "unquote_splicing" | "unsyntax" | "unsyntax_splicing" => {
+                escapes += 1;
+                continue;
+            }
+            "list" => match head_child(ancestor) {
+                Some(head) if head.kind() == "symbol" => text(cx, head),
+                _ => continue,
+            },
+            _ => continue,
+        };
+        match head {
+            "quote" | "syntax" => return true,
+            "quasiquote" | "quasisyntax" => {
+                if escapes == 0 {
+                    return true;
+                }
+                escapes -= 1;
+            }
+            "unquote" | "unquote-splicing" | "unsyntax" | "unsyntax-splicing" => {
+                escapes += 1;
+            }
+            _ => {}
+        }
+    }
+    false
 }
 
-/// A `list` whose head is `module`/`module+`/`module*`/`begin`: the only
-/// lists a definition may nest under while still being module-level
-/// (and therefore providable).
+/// A `list` whose head splices its body definitions into the
+/// enclosing scope: `begin` and the `splicing-*` family. `module`
+/// forms are deliberately absent — a submodule's definitions are
+/// not in the file's provide scope, and only program-level
+/// `(provide ...)` forms are collected.
 fn module_level_list(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     n.kind() == "list"
         && head_child(n).is_some_and(|head| {
             head.kind() == "symbol"
-                && matches!(text(cx, head), "module" | "module+" | "module*" | "begin")
+                && matches!(
+                    text(cx, head),
+                    "begin"
+                        | "splicing-let"
+                        | "splicing-let*"
+                        | "splicing-letrec"
+                        | "splicing-let-values"
+                        | "splicing-let*-values"
+                        | "splicing-letrec-values"
+                        | "splicing-local"
+                        | "splicing-parameterize"
+                        | "splicing-syntax-parameterize"
+                )
         })
 }
 
-/// Whether this `define` sits at module level: every ancestor below the
-/// program is a module-headed list. A define inside any other form is a
-/// local binding and cannot be provided, so it is never Exported.
+/// Whether this `define` sits at file level: every ancestor below the
+/// program splices its definitions into the enclosing scope. A define
+/// inside any other form — including a submodule — is a local binding
+/// and cannot be provided at file level, so it is never Exported.
 fn is_module_level(cx: &Cx<'_, '_>) -> bool {
     cx.ancestors()
         .take_while(|ancestor| ancestor.kind() != "program")
@@ -212,19 +239,18 @@ fn signature_list(n: Node<'_>) -> Option<Node<'_>> {
     }
 }
 
-/// The lambda form a `define`/`define/contract` initializes to, if any:
-/// the last code child that is a list headed by `lambda`/`λ`.
+/// The lambda form a `define`/`define/contract` initializes to, if
+/// any: only the last code child counts. In `define/contract` the
+/// contract sits before the init and may itself carry lambdas
+/// (`#:freevar` predicates), so scanning every list child would bind
+/// a contract lambda as the value.
 fn lambda_init<'a>(cx: &Cx<'_, '_>, kids: &'a [Node<'a>]) -> Option<Node<'a>> {
-    kids.iter()
-        .rev()
-        .find(|kid| {
-            kid.kind() == "list"
-                && head_child(**kid).is_some_and(|head| {
-                    head.kind() == "symbol"
-                        && matches!(lookup_head(text(cx, head)), Some(Head::Lambda))
-                })
-        })
-        .copied()
+    let last = kids.last()?;
+    (last.kind() == "list"
+        && head_child(*last).is_some_and(|head| {
+            head.kind() == "symbol" && matches!(lookup_head(text(cx, head)), Some(Head::Lambda))
+        }))
+    .then_some(*last)
 }
 
 /// The defined name of a top-level `define` list, if it binds one

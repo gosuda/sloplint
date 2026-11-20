@@ -17,10 +17,21 @@ const MARKERS: [&[u8]; 7] = [
 
 const BOM: &[u8] = b"\xEF\xBB\xBF";
 
-/// A block comment: (opener, closer, nests).
+/// A block comment: (opener, closer, nests, quote).
 /// Nested pairs — `#| |#`, `(* *)` for OCaml, `/- -/` for Lean —
 /// must find the closer at depth zero, not the first occurrence.
-type Block = (&'static [u8], &'static [u8], bool);
+/// `quote` marks a language that lexes string literals inside block
+/// comments (OCaml does, so `"(*"` does not deepen the nesting).
+type Block = (&'static [u8], &'static [u8], bool, Option<u8>);
+
+/// A block comment still open at a line's end: its pair, the nesting
+/// depth still unclosed (nested closers only step it down), and
+/// whether a comment string is open.
+struct Open {
+    block: Block,
+    depth: usize,
+    in_string: bool,
+}
 
 struct CommentSyntax {
     lines: &'static [&'static [u8]],
@@ -30,7 +41,7 @@ struct CommentSyntax {
 
 const SLASH: CommentSyntax = CommentSyntax {
     lines: &[b"//"],
-    blocks: &[(b"/*", b"*/", false)],
+    blocks: &[(b"/*", b"*/", false, None)],
     code: &[],
 };
 
@@ -75,32 +86,35 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
         },
         Lang::Ruby | Lang::Bash | Lang::R => HASH,
         Lang::Python | Lang::Starlark => CommentSyntax {
-            blocks: &[(b"\"\"\"", b"\"\"\"", false), (b"'''", b"'''", false)],
+            blocks: &[
+                (b"\"\"\"", b"\"\"\"", false, None),
+                (b"'''", b"'''", false, None),
+            ],
             ..HASH
         },
         Lang::PowerShell => CommentSyntax {
-            blocks: &[(b"<#", b"#>", false)],
+            blocks: &[(b"<#", b"#>", false, None)],
             ..HASH
         },
         Lang::Ocaml | Lang::OcamlInterface => CommentSyntax {
             lines: &[],
-            blocks: &[(b"(*", b"*)", true)],
+            blocks: &[(b"(*", b"*)", true, Some(b'"'))],
             code: &[],
         },
         Lang::Lean => CommentSyntax {
             lines: &[b"--"],
-            blocks: &[(b"/-", b"-/", true)],
+            blocks: &[(b"/-", b"-/", true, None)],
             code: &[],
         },
         Lang::Tlaplus => CommentSyntax {
             lines: &[b"\\*"],
-            blocks: &[(b"(*", b"*)", false)],
+            blocks: &[(b"(*", b"*)", false, None)],
             code: &[],
         },
         Lang::Racket => CommentSyntax {
             // `#lang` opens the header like `#!` does elsewhere.
             lines: &[b";", b"#lang"],
-            blocks: &[(b"#|", b"|#", true)],
+            blocks: &[(b"#|", b"|#", true, None)],
             code: &[],
         },
     }
@@ -109,8 +123,8 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
 enum Header {
     Marked,
     Ended,
-    /// An open block comment: its (opener, closer) pair.
-    Continues(Option<Block>),
+    /// An open block comment: its pair and carried scan state.
+    Continues(Option<Open>),
 }
 
 /// True when a header comment in the first 2048 bytes carries a generated-file marker, in any letter case.
@@ -143,26 +157,46 @@ pub fn is_generated(bytes: &[u8], lang: Lang) -> bool {
     false
 }
 
-fn scan_line(line: &[u8], mut closer: Option<Block>, syntax: &CommentSyntax) -> Header {
+fn scan_line(line: &[u8], mut open: Option<Open>, syntax: &CommentSyntax) -> Header {
     let mut rest = line.trim_ascii_start();
     loop {
-        let entered = closer.map_or_else(
-            || enter_comment(rest, syntax),
-            |block| Some((rest, Some(block))),
-        );
-        let Some((body, block)) = entered else {
-            return Header::Ended;
+        let (body, block) = match open.take() {
+            Some(open) => (rest, Some(open)),
+            None => match enter_comment(rest, syntax) {
+                Some((body, Some(block))) => (
+                    body,
+                    Some(Open {
+                        block,
+                        depth: 1,
+                        in_string: false,
+                    }),
+                ),
+                Some((body, None)) => (body, None),
+                None => return Header::Ended,
+            },
         };
-        let (comment, after) = block
-            .and_then(|block| split_block(body, block))
-            .map_or((body, None), |(comment, after)| (comment, Some(after)));
+        let (comment, after) = match block {
+            None => (body, None),
+            Some(open) => match split_block(body, &open) {
+                Split::Closed(comment, after) => (comment, Some(after)),
+                Split::StillOpen(depth, in_string) => {
+                    if carries_marker(body) {
+                        return Header::Marked;
+                    }
+                    return Header::Continues(Some(Open {
+                        block: open.block,
+                        depth,
+                        in_string,
+                    }));
+                }
+            },
+        };
         if carries_marker(comment) {
             return Header::Marked;
         }
         let Some(after) = after else {
-            return Header::Continues(block);
+            return Header::Continues(None);
         };
-        closer = None;
         rest = after.trim_ascii_start();
     }
 }
@@ -172,7 +206,25 @@ fn enter_comment<'a>(line: &'a [u8], syntax: &CommentSyntax) -> Option<(&'a [u8]
         .blocks
         .iter()
         .find_map(|block| Some((line.strip_prefix(block.0)?, Some(*block))));
-    block.or_else(|| is_line_comment(line, syntax).then_some((line, None)))
+    block.or_else(|| {
+        is_line_comment(line, syntax).then(|| {
+            // A `#lang` directive consumes its own line; only a `;`
+            // comment in it is comment text — trailing tokens are the
+            // directive's, not a comment that could hold a marker.
+            // Only a language that lists `#lang` as a leader (Racket)
+            // gets this; a `# language:` comment elsewhere is a comment.
+            let body = if line.starts_with(b"#lang")
+                && syntax.lines.iter().any(|leader| *leader == b"#lang")
+            {
+                line.iter()
+                    .position(|byte| *byte == b';')
+                    .map_or(&line[..0], |at| &line[at..])
+            } else {
+                line
+            };
+            (body, None)
+        })
+    })
 }
 
 fn split_opener(head: &[u8]) -> (&[u8], &[u8]) {
@@ -204,34 +256,60 @@ fn carries_marker(line: &[u8]) -> bool {
     })
 }
 
-/// Split `body` at the close of `block`: the first `close` for a flat
+/// What a scan of one comment-body line finds: either the block's
+/// close splits the line into comment and rest, or the comment stays
+/// open — carrying its nesting depth and string state to the next line.
+enum Split<'a> {
+    Closed(&'a [u8], &'a [u8]),
+    StillOpen(usize, bool),
+}
+
+/// Split `body` at the close of `open`: the first `close` for a flat
 /// block, or the `close` that returns nesting to depth zero when the
-/// pair nests (re-entered `open`s inside the body deepen it).
-fn split_block<'a>(body: &'a [u8], block: Block) -> Option<(&'a [u8], &'a [u8])> {
-    let (open, close, nests) = block;
-    if !nests {
-        let at = body
-            .windows(close.len())
-            .position(|window| window == close)?;
-        return Some((&body[..at], &body[at + close.len()..]));
-    }
-    let mut depth = 1usize;
+/// pair nests. `open.depth` is the depth carried from earlier lines
+/// (1 when the block just opened); openers inside the body deepen it,
+/// so an inner closer only steps it down instead of ending the block.
+/// Languages whose comments lex string literals (OCaml) skip openers
+/// and closers inside a comment string; the string state carries
+/// across lines since strings span newlines.
+fn split_block<'a>(body: &'a [u8], open: &Open) -> Split<'a> {
+    let (opener, close, nests, quote) = open.block;
+    let mut depth = open.depth;
+    let mut in_string = open.in_string;
     let mut at = 0;
     while at < body.len() {
-        if body[at..].starts_with(open) {
+        if in_string {
+            if body[at] == quote.unwrap_or(0) {
+                // A backslash escapes the quote char, so a `"` ending
+                // an odd-length run of escapes does not close.
+                let mut backslashes = 0usize;
+                while at > backslashes && body[at - 1 - backslashes] == b'\\' {
+                    backslashes += 1;
+                }
+                if backslashes % 2 == 0 {
+                    in_string = false;
+                }
+            }
+            at += 1;
+            continue;
+        }
+        if quote == Some(body[at]) {
+            in_string = true;
+            at += 1;
+        } else if nests && body[at..].starts_with(opener) {
             depth += 1;
-            at += open.len();
+            at += opener.len();
         } else if body[at..].starts_with(close) {
             depth -= 1;
             if depth == 0 {
-                return Some((&body[..at], &body[at + close.len()..]));
+                return Split::Closed(&body[..at], &body[at + close.len()..]);
             }
             at += close.len();
         } else {
             at += 1;
         }
     }
-    None
+    Split::StillOpen(depth.max(1), in_string)
 }
 
 #[cfg(test)]
@@ -511,6 +589,60 @@ mod tests {
             (Lang::Racket, b"#| comment |# (define s \"do not edit\")\n"),
             (Lang::Tlaplus, b"(* comment *) x == \"do not edit\"\n"),
         ]);
+    }
+
+    #[test]
+    fn nested_comments_keep_depth_across_lines() {
+        assert_generated(&[
+            (
+                Lang::Racket,
+                b"#| outer #| inner\n|# autogenerated\n|#\n(define x 1)\n",
+            ),
+            (
+                Lang::Ocaml,
+                b"(* outer (* inner\n*) do not edit\n*)\nlet x = 1\n",
+            ),
+            // After only the inner comment closes, following lines are
+            // still inside the outer comment, so the marker counts.
+            (
+                Lang::Racket,
+                b"#| outer #| inner\n|#\n(define s \"@generated\")\n",
+            ),
+        ]);
+        assert_not_generated(&[
+            // Both closers on the continuation line end the comment;
+            // a marker in the code after it does not count.
+            (
+                Lang::Racket,
+                b"#| outer #| inner\n|# |#\n(define s \"@generated\")\n",
+            ),
+        ]);
+    }
+
+    #[test]
+    fn ocaml_comment_strings_do_not_open_nesting() {
+        assert_generated(&[(
+            Lang::Ocaml,
+            b"(* prose \"(*\" autogenerated *)\nlet x = 1\n",
+        )]);
+        assert_not_generated(&[
+            // `"(*"` inside a comment is a string, not an opener, so
+            // `*)` still closes the comment and the marker in the
+            // following code does not count.
+            (
+                Lang::Ocaml,
+                b"(* prose \"(*\" *)\nlet s = \"autogenerated\"\n",
+            ),
+        ]);
+    }
+
+    #[test]
+    fn lang_line_tail_is_not_comment_text() {
+        assert_not_generated(&[(Lang::Racket, b"#lang racket (define s \"autogenerated\")\n")]);
+        assert_generated(&[(
+            Lang::Racket,
+            b"#lang racket ; autogenerated\n(define x 1)\n",
+        )]);
     }
 
     #[test]

@@ -178,15 +178,24 @@ fn is_ident_byte(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
 }
 
+/// The (opener, closer) pair matching `head`, preferring the longest
+/// opener: `#|` beats `#`, so a `#| comment |#` reads `|#` as its
+/// closer instead of being mistaken for a `#` line comment.
+fn reason_pair(head: &str) -> Option<(&'static str, &'static str)> {
+    REASON_CLOSERS
+        .iter()
+        .filter(|(opener, _)| head.starts_with(*opener))
+        .max_by_key(|(opener, _)| opener.len())
+        .copied()
+}
+
 fn payload_base(text: &str) -> usize {
     let trimmed = text.trim_start();
     let leading = text.len() - trimmed.len();
-    for (opener, _) in REASON_CLOSERS {
-        if trimmed.starts_with(opener) {
-            return leading + opener.len();
-        }
+    match reason_pair(trimmed) {
+        Some((opener, _)) => leading + opener.len(),
+        None => leading,
     }
-    leading
 }
 
 fn scan_comment(
@@ -277,10 +286,7 @@ fn directive(
 
 fn reason_closer(text: &str) -> &'static str {
     let head = text.trim_start();
-    REASON_CLOSERS
-        .iter()
-        .find(|(opener, _)| head.starts_with(*opener))
-        .map_or("\n", |&(_, closer)| closer)
+    reason_pair(head).map_or("\n", |(_, closer)| closer)
 }
 
 fn reason_until_terminator<'t>(text: &'t str, closer: &str) -> &'t str {
@@ -305,6 +311,7 @@ mod tests {
         ("(*", " *)"),
         ("<#", " #>"),
         ("<!--", " -->"),
+        ("#|", " |#"),
     ];
 
     /// Runs the parser over one comment and returns `(suppressions, findings)` counts.

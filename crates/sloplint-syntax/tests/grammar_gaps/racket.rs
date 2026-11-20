@@ -104,7 +104,7 @@ fn comments_and_quoted_datum_parse_without_functions() {
 #[test]
 fn here_strings_and_reader_forms_parse() {
     run_clean(
-        "#lang racket\n(define banner #<<END\nhello\nEND\n)\n#s(point 1 2)\n#(1 2 3)\n#hash((a . 1))\n",
+        "#lang racket\n(define banner #<<END\nhello\nENDING\nEND\n)\n#s(point 1 2)\n#(1 2 3)\n#hash((a . 1))\n",
     );
 }
 
@@ -220,4 +220,75 @@ fn rename_out_exports_the_local_name() {
         analysis.facts.functions[0].visibility,
         sloplint_core::facts::Visibility::Exported
     );
+}
+
+#[test]
+fn unquote_escapes_a_quasiquote_back_to_code() {
+    let analysis = run_clean(
+        "#lang racket\n(quasiquote (a (unquote (define (inside x) x)) (b (unquote (lambda (y) y)))))\n",
+    );
+    let names = function_names(&analysis);
+    assert!(
+        names.contains(&"inside"),
+        "an unquoted define inside a quasiquote is code: {names:?}"
+    );
+}
+
+#[test]
+fn box_and_calls_keep_code_arguments() {
+    // `(box ...)` is an ordinary call, not datum — only `#&` boxes are.
+    let analysis =
+        run_clean("#lang racket\n(box (lambda (x) x))\n(define f (box (lambda (x) x)))\n");
+    let names = function_names(&analysis);
+    assert_eq!(
+        names.iter().filter(|n| n.is_empty()).count(),
+        2,
+        "lambdas passed to calls still produce facts: {names:?}"
+    );
+}
+
+#[test]
+fn define_contract_freevar_lambda_is_not_the_initializer() {
+    // The contract's `#:freevar` lambda sits before the init value; the
+    // binding is a constant, not a function.
+    let analysis = run_clean(
+        "#lang racket\n(define/contract checked (->i () #:freevar v (lambda (x) x)) 5)\n",
+    );
+    assert!(
+        !function_names(&analysis).contains(&"checked"),
+        "a constant with a contract lambda must not read as a function"
+    );
+}
+
+#[test]
+fn splicing_let_definitions_are_provided() {
+    let analysis =
+        run_clean("#lang racket\n(provide checked)\n(splicing-let () (define (checked) 1))\n");
+    let checked = analysis
+        .facts
+        .functions
+        .iter()
+        .find(|function| function.name == "checked")
+        .expect("spliced define is a function");
+    assert_eq!(
+        checked.visibility,
+        sloplint_core::facts::Visibility::Exported
+    );
+}
+
+#[test]
+fn submodule_define_does_not_inherit_the_parent_export() {
+    // `local` is provided at file level; the same name inside a
+    // submodule is a different binding and stays private.
+    let analysis = run_clean(
+        "#lang racket\n(provide (rename-out [local alias]))\n(define (local) 1)\n(module sub racket\n  (define (local) 2))\n",
+    );
+    let vis: Vec<bool> = analysis
+        .facts
+        .functions
+        .iter()
+        .filter(|function| function.name == "local")
+        .map(|function| function.visibility == sloplint_core::facts::Visibility::Exported)
+        .collect();
+    assert_eq!(vis, [true, false]);
 }
