@@ -90,19 +90,7 @@ jobs:
         with:
           persist-credentials: false
       - run: rustup target add ${{ matrix.target }}
-      - name: Cache Rust and native dependencies
-        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          # Retain vendor dependencies; prune only the first-party crates.
-          workspaces: crates -> ../target
-          # The vendor hash must be in the restore prefix, not only its suffix.
-          shared-key: native-v1-${{ matrix.os }}-${{ matrix.target }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/config.toml', 'vendor/**') }}
-          env-vars: MACOSX_DEPLOYMENT_TARGET ImageOS ImageVersion
-          cache-bin: false
-          save-if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
       - name: Preserve vendor dependency fingerprints
-        # A fresh checkout otherwise rebuilds every generated parser. Content
-        # changes cannot restore the old cache because the key hashes vendor/.
         run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
       - run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
       - run: cargo test --workspace --locked --target ${{ matrix.target }}
