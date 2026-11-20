@@ -111,3 +111,19 @@ proofs bodies.
   `pcal_algorithm`); line-comment PlusCal is comment text.
 - The corpus `nonstandard/` cases pin comment-embedded and fragment shapes;
   three corpus cases stay `:skip`ped upstream.
+
+## Changes to src/scanner.c
+
+S2, bounded `nested_scanner_serialize`: the serializer used to write the
+full context stack unconditionally, overflowing
+`TREE_SITTER_SERIALIZATION_BUFFER_SIZE` (1024, `src/tree_sitter/parser.h`)
+when a deeply nested proof/PlusCal state ran up the serialized size, and
+`nested_scanner_deserialize` then read stale bytes as the context count.
+Now the serializer computes `scanner_serialized_size(&this->current_context)`
+once (the existing dry-run), counts how many enclosing contexts fit under
+the buffer cap (each costs a 4-byte size slot plus its contents), writes
+`context_depth = contexts + 1`, one `unsigned` size slot per context, a
+zero slot for the current context when it had to be dropped, and the
+contents. The wire format is unchanged, so `nested_scanner_deserialize`
+(depth, N sizes, N-1 contents, current context) stays consistent —
+dropped contexts deserialize as empty instead of corrupting the stack.
