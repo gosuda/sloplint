@@ -175,6 +175,15 @@ pub(crate) fn pattern_names<'s>(cx: &Cx<'_, 's>, pattern: Node<'_>, out: &mut Ve
                 out.push((text(cx, id), pos_of(id)));
             }
         }
+        "case_pattern" if pattern.named_child_count() == 1 => {
+            // `var (a, b)` wraps each element in a `case_pattern`; a lone
+            // identifier inside is a bound name, not a constructor.
+            if let Some(id) = first_named_child_matching(pattern, &["identifier"]) {
+                out.push((text(cx, id), pos_of(id)));
+            } else if let Some(inner) = pattern.named_child(0) {
+                pattern_names(cx, inner, out);
+            }
+        }
         "constructor_pattern" | "tuple_pattern" | "disjunctive_pattern" | "case_pattern" => {
             for child in named_children(pattern) {
                 if child.kind() == "identifier" || child.kind() == "integer_literal" {
