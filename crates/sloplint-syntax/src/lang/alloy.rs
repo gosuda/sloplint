@@ -69,6 +69,27 @@ fn alloy_primitive(ty: Option<&str>) -> PrimitiveKind {
     }
 }
 
+/// A declarator spelling including trailing primes: `_decl_name` emits a
+/// `name` node followed by anonymous `'` tokens, so extend the slice over
+/// `'` runs (and whitespace between them) — `item'` must read `item'` for
+/// passthrough and arity checks to match calls.
+fn decl_name_text<'s>(cx: &Cx<'_, 's>, name: Node<'_>) -> &'s str {
+    let bytes = cx.src.as_bytes();
+    let mut end = name.end_byte();
+    loop {
+        let mut probe = end;
+        while probe < bytes.len() && bytes[probe].is_ascii_whitespace() {
+            probe += 1;
+        }
+        if probe < bytes.len() && bytes[probe] == b'\'' {
+            end = probe + 1;
+        } else {
+            break;
+        }
+    }
+    &cx.src[name.start_byte()..end]
+}
+
 fn decl_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
     let mut params = Vec::new();
     let Some(list) = first_named_child_matching(n, &["decl_list"]) else {
@@ -86,7 +107,7 @@ fn decl_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
                     named_children(child)
                         .into_iter()
                         .filter(|name| name.kind() == "name")
-                        .map(|name| text(cx, name)),
+                        .map(|name| decl_name_text(cx, name)),
                 );
             } else {
                 ty = Some(trimmed(cx, child));
@@ -146,6 +167,21 @@ fn alloy_function<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> 
         .flatten()
         .map(|ty| trimmed(cx, ty));
     let (doc, doc_pos) = preceding_comments(cx, n, COMMENT_KINDS, &[]);
+    // `S.foo[x]` reads `this` implicitly, so the receiver counts as the
+    // first parameter for arity checks (passthrough, boolean-param rules).
+    let mut params = Vec::new();
+    if let Some(recv) = receiver {
+        params.push(Param {
+            name: "this",
+            ty: Some(recv),
+            primitive_kind: alloy_primitive(Some(recv)),
+            has_default: false,
+            bool_default: false,
+            keyword_only: false,
+            is_variadic: false,
+        });
+    }
+    params.extend(decl_params(cx, n));
     Some(FunctionHead {
         shadow_params: Vec::new(),
         name,
@@ -159,18 +195,21 @@ fn alloy_function<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> 
         is_decorated: false,
         is_trait_item: false,
         region: None,
-        params: decl_params(cx, n),
+        params,
         receiver,
         return_type,
         missing_annotations: Vec::new(),
         doc,
         doc_pos,
-        sole_call: sole_box_join(n),
+        sole_call: sole_box_join(cx, n),
     })
 }
 
 /// A paragraph body holding exactly one call, for the passthrough rule.
-fn sole_box_join(n: Node<'_>) -> Option<usize> {
+/// Suppressed when a `run`/`check` command targets the paragraph's own
+/// name — `run Foo` is how Alloy invokes the entry point, and flagging
+/// `pred Foo { sole[call] }` as a passthrough would flag every runner.
+fn sole_box_join<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<usize> {
     let body = first_named_child_matching(n, &["block_expression"])?;
     let mut inner = named_children(body)
         .into_iter()
@@ -178,6 +217,20 @@ fn sole_box_join(n: Node<'_>) -> Option<usize> {
     let only = inner.next()?;
     if inner.next().is_some() || only.kind() != "box_join_expression" {
         return None;
+    }
+    if let Some(name_node) = child_by_field(n, "name") {
+        let decl_name = trimmed(cx, name_node);
+        let run_targeted = cx.root().is_some_and(|root| {
+            let mut cursor = root.walk();
+            root.children(&mut cursor).any(|c| {
+                c.kind() == "command"
+                    && child_by_field(c, "name")
+                        .is_some_and(|target| last_segment(trimmed(cx, target)) == decl_name)
+            })
+        });
+        if run_targeted {
+            return None;
+        }
     }
     Some(only.id())
 }
@@ -191,6 +244,8 @@ fn make_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
             }
         }
         "name" | "qual_name" => ArgShape::Ident(trimmed(cx, n)),
+        "this_expr" => ArgShape::Ident("this"),
+        "prime_expression" => ArgShape::Ident(trimmed(cx, n)),
         "set_comprehension" => ArgShape::Collection,
         _ => ArgShape::Other,
     };
@@ -207,18 +262,27 @@ fn box_join_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
     };
     named_children(list)
         .into_iter()
+        .filter(|c| !COMMENT_KINDS.contains(&c.kind()))
         .map(|child| make_arg(cx, child))
         .collect()
 }
 
 fn is_alloy_test_path(path: &str) -> bool {
-    path.split('/')
-        .any(|segment| segment == "test" || segment == "tests")
-        || path
-            .rsplit('/')
-            .next()
-            .unwrap_or(path)
-            .ends_with("_test.als")
+    let mut in_test_tree = false;
+    let mut in_support_tree = false;
+    for segment in path.split('/') {
+        if segment == "test" || segment == "tests" {
+            in_test_tree = true;
+        } else if in_test_tree && matches!(segment, "support" | "common" | "shared" | "helpers") {
+            in_support_tree = true;
+        }
+    }
+    let test_suffix = path
+        .rsplit('/')
+        .next()
+        .unwrap_or(path)
+        .ends_with("_test.als");
+    !in_support_tree && (in_test_tree || test_suffix)
 }
 
 fn last_segment(path: &str) -> &str {

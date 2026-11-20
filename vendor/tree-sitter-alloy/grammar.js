@@ -22,12 +22,13 @@ const PREC = {
   OVERRIDE: 12,
   INTERSECT: 13,
   ARROW: 14,
-  DOMAIN: 15,
-  RANGE: 16,
-  BRACKET: 17,
-  DOT: 18,
-  UNOP: 19,
-  PRIME: 20,
+  NEG: 15,
+  DOMAIN: 16,
+  RANGE: 17,
+  BRACKET: 18,
+  DOT: 19,
+  UNOP: 20,
+  PRIME: 21,
 };
 
 module.exports = grammar({
@@ -48,10 +49,22 @@ module.exports = grammar({
     [$.scope, $.type_scope_number],
     // name can reduce to name_list or qual_name depending on context
     [$.name_list, $.qual_name],
+    // `lone x, y` inside `[...]` can be a decl list or an expr list
+    [$.qual_name, $._decl_name],
+    // `no trashed'` is multiplicity(no, prime(t)) while `no t': T` is a
+    // decl — `'` inside _decl_name and prime_expression is the same token,
+    // so the shared GLR lex disambiguates on what follows (: | ,)
+    [$.name_list, $.prime_expression],
+    [$.qual_name, $.prime_expression],
   ],
 
   rules: {
-    source_file: $ => repeat($._paragraph),
+    // Real models scatter `;;;;` separator decorations between
+    // paragraphs; a run of two or more `;` lexes as one decoration so
+    // it never collides with the `;` trace-sequence operator.
+    source_file: $ => repeat(choice($._paragraph, $._semicolon_decoration)),
+
+    _semicolon_decoration: $ => /;{2,}/,
 
     _paragraph: $ => choice(
       $.module_decl,
@@ -98,10 +111,18 @@ module.exports = grammar({
       'sig',
       field('names', $.name_list),
       optional($.sig_extension),
-      '{',
-      optional($.sig_body),
-      '}',
-      optional($.block_expression),
+      choice(
+        seq(
+          optional(seq('=', $._expression)),
+          '{',
+          optional($.sig_body),
+          '}',
+          optional($.block_expression),
+        ),
+        // `sig NonSymlink = Dir + File` — a cross-signature subset
+        // declaration may carry no brace body at all.
+        seq('=', $._expression),
+      ),
     ),
 
     sig_qualifier: $ => choice(
@@ -127,10 +148,10 @@ module.exports = grammar({
     field_decl: $ => seq(
       optional('var'),
       optional('private'),
-      optional('disj'),
+      optional(choice('disj', 'disjoint')),
       $.name_list,
       ':',
-      optional('disj'),
+      optional(choice('disj', 'disjoint')),
       $._expression,
     ),
 
@@ -245,19 +266,20 @@ module.exports = grammar({
     decl_list: $ => seq(
       $.decl,
       repeat(seq(',', $.decl)),
+      optional(','),
     ),
 
     decl: $ => seq(
-      optional('disj'),
+      optional(choice('disj', 'disjoint')),
       $.name_list,
       ':',
-      optional('disj'),
+      optional(choice('disj', 'disjoint')),
       $._expression,
     ),
 
     name_list: $ => seq(
-      $.name,
-      repeat(seq(',', $.name)),
+      $._decl_name,
+      repeat(seq(',', $._decl_name)),
     ),
 
     name_list_exact: $ => seq(
@@ -266,8 +288,8 @@ module.exports = grammar({
     ),
 
     _name_or_exactly: $ => choice(
-      $.name,
-      seq('exactly', $.name),
+      $._decl_name,
+      seq('exactly', $._decl_name),
     ),
 
     sig_ref: $ => choice(
@@ -308,6 +330,7 @@ module.exports = grammar({
       $.override_expression,
       $.intersect_expression,
       $.arrow_expression,
+      $.neg_expression,
       $.domain_expression,
       $.range_expression,
       $.dot_expression,
@@ -376,7 +399,9 @@ module.exports = grammar({
       $._expression,
       field('operator', choice(
         '=', '!=', 'in', '!in',
-        token(prec(1, seq('not', /\s+/, 'in'))),
+        // `x not = y` / `x ! in y` — Alloy accepts `not`/`!` before
+        // every comparator with whitespace between the words.
+        token(prec(1, seq(choice('not', '!'), /\s+/, choice('in', '=', '<', '>', '<=', '>=')))),
         '<', '>', '<=', '>=', '=<',
         '!<', '!>', '!<=', '!>=',
       )),
@@ -410,6 +435,13 @@ module.exports = grammar({
       $._expression,
     )),
 
+    // Unary minus binds above `->` so `-1 -> x` is `(-1) -> x`, not
+    // `-(1 -> x)` — minus only makes sense on the number operand.
+    neg_expression: $ => prec(PREC.NEG, seq(
+      field('operator', '-'),
+      $._expression,
+    )),
+
     // Override: ++
     override_expression: $ => prec.left(PREC.OVERRIDE, seq(
       $._expression,
@@ -435,14 +467,16 @@ module.exports = grammar({
         $.some_arrow_op,
         $.one_arrow_op,
         $.lone_arrow_op,
+        $.set_arrow_op,
       )),
       optional(field('right_mult', choice('some', 'one', 'lone'))),
       $._expression,
     )),
 
-    some_arrow_op: $ => token(prec(1, seq('some', /[\s]+/, '->'))),
-    one_arrow_op: $ => token(prec(1, seq('one', /[\s]+/, '->'))),
-    lone_arrow_op: $ => token(prec(1, seq('lone', /[\s]+/, '->'))),
+    some_arrow_op: $ => token(prec(1, seq('some', /[\s]*/, '->'))),
+    one_arrow_op: $ => token(prec(1, seq('one', /[\s]*/, '->'))),
+    lone_arrow_op: $ => token(prec(1, seq('lone', /[\s]*/, '->'))),
+    set_arrow_op: $ => token(prec(1, seq('set', /[\s]*/, '->'))),
 
     // Domain restriction: <:
     domain_expression: $ => prec.left(PREC.DOMAIN, seq(
@@ -458,20 +492,35 @@ module.exports = grammar({
       $._expression,
     )),
 
-    // Box join: expr[exprs]
+    // Box join: expr[exprs] — the callee can be a field named like an
+    // operator word (`sum[i + j]` calls a `sum` relation).
     box_join_expression: $ => prec.left(PREC.BRACKET, seq(
-      $._expression,
+      choice($._expression, $.member_keyword),
       '[',
       optional($.expr_list),
       ']',
     )),
 
-    // Dot join: .
+    // Dot join: . — the member can be a field whose name is an
+    // operator word: `e.before`, `x.after`, `y.set`.
     dot_expression: $ => prec.left(PREC.DOT, seq(
       $._expression,
       '.',
-      $._expression,
+      choice($._expression, $.member_keyword),
     )),
+
+    // Operator/keyword words allowed as member names after `.`. The
+    // bump prefers the member read: `x.lone y` is `(x.lone)` then `y`,
+    // never `x.(lone y)` — Alloy member names may reuse operator words.
+    member_keyword: $ => alias(prec(20, choice(
+      'before', 'after', 'always', 'eventually', 'historically', 'once',
+      'until', 'since', 'releases', 'triggered', 'not', 'and', 'or',
+      'implies', 'iff', 'else', 'all', 'no', 'some', 'lone', 'one',
+      'sum', 'disj', 'disjoint', 'in', 'set', 'seq', 'int', 'steps',
+      'but', 'expect', 'exactly', 'var', 'private', 'extends', 'module',
+      'open', 'abstract', 'sig', 'pred', 'fun', 'fact', 'assert', 'run',
+      'check', 'enum', 'for',
+    )), $.name),
 
     // Closure/transpose: ~ ^ *
     closure_expression: $ => prec(PREC.UNOP, seq(
@@ -506,10 +555,10 @@ module.exports = grammar({
     )),
 
     let_binding: $ => seq(
-      $.name,
+      $._decl_name,
       '=',
       $._expression,
-      repeat(seq(',', $.name, '=', $._expression)),
+      repeat(seq(',', $._decl_name, '=', $._expression)),
     ),
 
     // ---- Primary expressions ----
@@ -544,11 +593,15 @@ module.exports = grammar({
       '}',
     ),
 
+    // `{x: A | e}`, `{x: A { e }}`, `{x: A}` and `{x: A, y: B}` —
+    // the `|` predicate (or its `{ }` block spelling) is optional.
     set_comprehension: $ => seq(
       '{',
       $.decl_list,
-      '|',
-      $._expression,
+      optional(choice(
+        seq('|', $._expression),
+        $.block_expression,
+      )),
       '}',
     ),
 
@@ -568,7 +621,25 @@ module.exports = grammar({
     ),
 
     // ---- Terminals ----
-    name: $ => /[a-zA-Z_\$][a-zA-Z0-9_\$"]*/,
+    // `'` is deliberately not part of `name`: the postfix prime operator
+    // (`x'` next-state) must keep lexing. Primed declarator spellings
+    // (`t'`, `s'`) are covered by `_decl_name`, valid only where a
+    // declaration name is expected.
+    // The `"` tail matches upstream: `s"` is a primed identifier.
+    name: $ => /[\p{L}\p{Nl}_$][\p{L}\p{Nl}\p{Nd}\p{Pc}_$"]*/,
+
+    // A primed declarator name (`t'`, `s''`) — name + `'` literals, the
+    // same `'` token prime_expression uses, so `no t': T` (decl) and
+    // `no trashed'` (multiplicity + prime) lex identically and GLR
+    // picks the surviving branch. A `name` node precedes the primes so
+    // adapters keep reading the base spelling.
+    _decl_name: $ => seq(
+      choice(
+        $.name,
+        alias(choice('disj', 'disjoint'), $.name),
+      ),
+      repeat("'"),
+    ),
 
     number: $ => choice(
       /[0-9][0-9_]*/,             // decimal (with optional underscores)
