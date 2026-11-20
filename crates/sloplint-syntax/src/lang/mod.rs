@@ -27,6 +27,7 @@ pub(crate) mod powershell;
 pub(crate) mod python;
 pub(crate) mod quint;
 pub(crate) mod r;
+pub(crate) mod racket;
 pub(crate) mod ruby;
 pub(crate) mod rust;
 pub(crate) mod scala;
@@ -142,6 +143,11 @@ fn grammar(lang: Lang) -> (tree_sitter::Language, Table, &'static dyn LangHooks)
             tree_sitter_dafny::LANGUAGE.into(),
             dafny::TABLE,
             &dafny::HOOKS,
+        ),
+        Lang::Racket => (
+            tree_sitter_racket::LANGUAGE.into(),
+            racket::TABLE,
+            &racket::HOOKS,
         ),
     }
 }

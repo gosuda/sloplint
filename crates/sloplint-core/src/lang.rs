@@ -56,6 +56,7 @@ languages! {
     Tlaplus => "tlaplus", &[".tla"];
     Alloy => "alloy", &[".als"];
     Dafny => "dafny", &[".dfy"];
+    Racket => "racket", &[".rkt", ".rktd", ".rktl", ".scrbl"];
 }
 
 const HEADER_EXTENSION: &str = ".h";
