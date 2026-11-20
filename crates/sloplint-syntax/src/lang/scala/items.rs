@@ -29,7 +29,12 @@ pub(crate) fn collect_idents<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'
     while let Some(node) = pending.pop() {
         match node.kind() {
             "wildcard" => {}
-            "identifier" => out.push((text(cx, node), pos_of(node))),
+            // Only binder positions count: `counters` in
+            // `Some(counters.Zero)` is a stable reference, not a new local.
+            "identifier" if is_pattern_binder(cx, node) => {
+                out.push((text(cx, node), pos_of(node)))
+            }
+            "identifier" => {}
             _ => pending.extend(named_children(node).into_iter().rev()),
         }
     }
@@ -154,7 +159,9 @@ fn is_pattern_binder(cx: &Cx<'_, '_>, node: Node<'_>) -> bool {
     {
         return false;
     }
-    let Some(parent) = cx.parent_of(node) else {
+    // The raw tree parent: `stable_identifier` and friends are not tracked
+    // levels, so `cx.parent_of` would surface an ancestor instead.
+    let Some(parent) = node.parent() else {
         return true;
     };
     !matches!(
