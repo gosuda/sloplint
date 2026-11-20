@@ -9,6 +9,7 @@
 
 use std::sync::LazyLock;
 
+use sloplint_core::facts::ImportKind;
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
@@ -174,12 +175,12 @@ fn control_and_match_terms_keep_their_shapes() {
 
 #[test]
 fn modules_imports_and_comments_parse_clean() {
-    let source = "/-! module doc !-/\nimport Std.Data.HashMap\nopen Nat hiding Term in\nopen scoped BigOperators\n/- block -/\n-- line\n/-- doc -/\ndef s : String := \"hello\"\ndef t : String := s!\"value {1 + 2} end\"\n";
+    let source = "/-! module doc !-/\nimport Std.Data.HashMap\nopen Nat hiding Term in\nopen scoped BigOperators\nopen Nat renaming succ \u{2192} mySucc\nexport Nat (succ add)\nopen only Nat\n/- block -/\n-- line\n/-- doc -/\ndef s : String := \"hello\"\ndef t : String := s!\"value {1 + 2} end\"\n";
     let analysis = run_clean("src/module.lean", source);
     assert_eq!(
         analysis.facts.imports.len(),
-        4,
-        "one import plus three opens, got {:?}",
+        8,
+        "one import, four opens, two named re-exports, got {:?}",
         analysis
             .facts
             .imports
@@ -194,6 +195,57 @@ fn modules_imports_and_comments_parse_clean() {
             .iter()
             .any(|i| i.module == "Std.Data.HashMap"),
         "the dotted import path must stay whole"
+    );
+    assert!(
+        analysis
+            .facts
+            .imports
+            .iter()
+            .any(|i| i.module == "BigOperators"),
+        "an open-scoped namespace must record an import"
+    );
+    assert!(
+        analysis
+            .facts
+            .imports
+            .iter()
+            .any(|i| i.module == "BigOperators" && i.kind == ImportKind::SideEffect),
+        "an open-scoped namespace is a side-effect open, not a wildcard"
+    );
+    assert!(
+        !analysis
+            .facts
+            .imports
+            .iter()
+            .any(|i| i.module == "hiding" || i.module == "Term" || i.module == "renaming"),
+        "open modifiers and hidden names are not namespaces"
+    );
+    assert!(
+        analysis
+            .facts
+            .imports
+            .iter()
+            .any(|i| i.module == "only"),
+        "an open modifier word in first position is a real namespace"
+    );
+    assert!(
+        analysis
+            .facts
+            .imports
+            .iter()
+            .filter(|i| i.is_reexport)
+            .map(|i| i.name)
+            .collect::<Vec<_>>()
+            == ["succ", "add"],
+        "an export list names its re-exported symbols"
+    );
+    assert!(
+        analysis
+            .facts
+            .imports
+            .iter()
+            .all(|i| i.external_root.is_none()),
+        "open namespaces and stdlib imports carry no external root"
     );
     let tree = parse_raw(source);
     let sexp = tree.root_node().to_sexp();

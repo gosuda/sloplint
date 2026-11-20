@@ -511,9 +511,10 @@ const DEFAULT_LOG_CALLEES: [(&str, &str); 30] = [
     ),
     ("quint", "print"),
     ("tlaplus", "Print,PrintT"),
-    // Alloy has no logging or output facility; the dotted name can never
-    // match an Alloy callee, so the log-literal rules stay silent.
-    ("alloy", "alloy.__no_log_callee__"),
+    // Alloy has no logging or output facility. The sentinel ends in `!`,
+    // which the Alloy `name` regex cannot produce, so no callee can ever
+    // match it and the log-literal rules stay silent.
+    ("alloy", "alloy.__no_log_callee__!"),
     ("dafny", "print"),
     (
         "racket",
@@ -529,7 +530,7 @@ const DEFAULT_BENCH_GLOBS: &str = "**/benches/**,**/bench/**,**/benchmarks/**,**
 
 const DEFAULT_EXAMPLE_GLOBS: &str = "**/examples/**,**/example/**,**/_examples/**";
 
-const DEFAULT_SUPPORT_GLOBS: &str = "**/conftest.py,**/testutil/**,**/testutils/**,**/test_util/**,**/test_utils/**,**/test_helpers/**,**/test_support/**,**/testing/**,**/tests/common/**,**/tests/support/**,**/spec/support/**,**/__mocks__/**";
+const DEFAULT_SUPPORT_GLOBS: &str = "**/conftest.py,**/testutil/**,**/testutils/**,**/test_util/**,**/test_utils/**,**/test_helpers/**,**/test_support/**,**/testing/**,**/tests/common/**,**/tests/support/**,**/tests/shared/**,**/tests/helpers/**,**/test/common/**,**/test/support/**,**/test/shared/**,**/test/helpers/**,**/spec/support/**,**/__mocks__/**";
 
 const DEFAULT_ENTRY_GLOBS: &str = "**/src/main.rs,**/src/bin/**,**/build.rs,**/main.go,**/main.lgo,**/cmd/**,**/__main__.py,**/manage.py,**/scripts/**";
 

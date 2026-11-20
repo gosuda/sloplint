@@ -1838,44 +1838,54 @@
       const struct NestedScanner* const this,
       char* const buffer
     ) {
-      unsigned offset = 0;
-      unsigned copied = 0;
+      // The buffer is fixed at TREE_SITTER_SERIALIZATION_BUFFER_SIZE bytes;
+      // deep PlusCal nesting could overflow it. The wire layout is
+      // unchanged: the depth count, one size slot per context (0 when that
+      // context's contents do not fit), then the contents. Every context
+      // keeps its slot, so a dropped context still restores as an empty
+      // context at the right nesting depth, and the deserializer never
+      // reads past `length`. Only an absurdly deep context stack (more
+      // enclosing contexts than the size slots alone can hold) drops the
+      // outermost contexts outright.
+      const unsigned capacity = TREE_SITTER_SERIALIZATION_BUFFER_SIZE;
+      const unsigned enclosing = this->enclosing_contexts.size;
+      const unsigned max_depth =
+        (capacity - sizeof(nest_address)) / sizeof(unsigned);
+      const unsigned depth =
+        enclosing + 1 <= max_depth ? enclosing + 1 : max_depth;
+      const unsigned first = enclosing + 1 - depth;
 
-      // First write number of enclosing contexts (guaranteed to be >= 1)
-      nest_address const context_depth = this->enclosing_contexts.size + 1;
-      copied = sizeof(nest_address);
-      if (copied > 0) memcpy(&buffer[offset], &context_depth, copied);
-      offset += copied;
+      nest_address const context_depth = (nest_address)depth;
+      memcpy(&buffer[0], &context_depth, sizeof(nest_address));
 
-      // Then write size of N-1 enclosing contexts
-      for (int i = 0; i < context_depth - 1; i++) {
-        unsigned const context_size = array_get(&this->enclosing_contexts, i)->size;
-        copied = sizeof(unsigned);
-        if (copied > 0) memcpy(&buffer[offset], &context_size, copied);
-        offset += copied;
-      }
+      unsigned sizes_offset = sizeof(nest_address);
+      unsigned content_offset = sizes_offset + depth * sizeof(unsigned);
+      unsigned remaining = capacity - content_offset;
 
-      // Reserve space for current context size
-      unsigned const current_context_size_offset = offset;
-      copied = sizeof(unsigned);
-      offset += copied;
-
-      // Serialize N-1 enclosing contexts
-      for (unsigned i = 0; i < this->enclosing_contexts.size; i++) {
+      for (unsigned i = first; i < enclosing; i++) {
         CharArray* context = array_get(&this->enclosing_contexts, i);
-        copied = context->size;
-        if (copied > 0) memcpy(&buffer[offset], context->contents, copied);
-        offset += copied;
+        const unsigned written =
+          context->size <= remaining ? context->size : 0;
+        memcpy(&buffer[sizes_offset], &written, sizeof(unsigned));
+        sizes_offset += sizeof(unsigned);
+        if (written > 0) {
+          memcpy(&buffer[content_offset], context->contents, written);
+          content_offset += written;
+          remaining -= written;
+        }
       }
 
-      // Serialize current context
-      copied = scanner_serialize(&this->current_context, &buffer[offset]);
-      offset += copied;
+      const unsigned current_size =
+        scanner_serialized_size(&this->current_context);
+      const unsigned stored_current =
+        current_size <= remaining ? current_size : 0;
+      memcpy(&buffer[sizes_offset], &stored_current, sizeof(unsigned));
+      if (stored_current > 0) {
+        content_offset +=
+          scanner_serialize(&this->current_context, &buffer[content_offset]);
+      }
 
-      // Write current context size to reserved position
-      memcpy(&buffer[current_context_size_offset], &copied, sizeof(unsigned));
-
-      return offset;
+      return content_offset;
     }
 
     /**

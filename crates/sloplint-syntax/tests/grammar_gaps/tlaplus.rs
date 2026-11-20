@@ -247,3 +247,159 @@ fn invalid_tlaplus_still_reports_a_parse_error() {
         "a truncated operator body must not parse cleanly"
     );
 }
+
+#[test]
+fn pluscal_macro_body_stays_inside_the_function_scope() {
+    let source = "---- MODULE Pm ----\n(*\n--algorithm A\nvariables x = 1;\nmacro m(a) begin\n  x := a;\nend macro;\nbegin\n  m(2);\nend algorithm;\n*)\n====\n";
+    let analysis = run_clean("src/pm.tla", source);
+    let m = analysis
+        .facts
+        .functions
+        .iter()
+        .find(|f| f.name == "m")
+        .expect("macro head must surface");
+    // The macro (not just its signature) owns the body scope: its span
+    // covers `end macro;` at line 7, not just the header on line 5.
+    assert_eq!(m.end_line, 7, "macro function must own its body scope");
+}
+
+#[test]
+fn pluscal_call_args_and_parallel_assign_writes() {
+    let source = "---- MODULE Pw ----\n(*\n--algorithm A\nprocedure P(a) variables v = 0, w = 0;\nbegin\n  v := a || w := a;\n  PrintT(\"lit\");\n  return;\nend procedure;\nbegin\n  call P(1);\nend algorithm;\n*)\n====\n";
+    let analysis = run_clean("src/pw.tla", source);
+    let bound: Vec<&str> = analysis.facts.bindings.iter().map(|b| b.name).collect();
+    for want in ["v", "w"] {
+        assert!(
+            bound.contains(&want),
+            "procedure variable {want} declared: {bound:?}"
+        );
+    }
+    // Decl line is 4 (`variables v = 0, w = 0`); the parallel assignment
+    // `v := a || w := a` is line 6. insert_decls stamps last_write_line
+    // with the decl line, so a real write is proven by it moving to 6.
+    for want in ["v", "w"] {
+        assert!(
+            analysis
+                .facts
+                .bindings
+                .iter()
+                .any(|b| b.name == want && b.last_write_line == 6),
+            "parallel assign writes {want}"
+        );
+    }
+    let print = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "PrintT")
+        .expect("PrintT call recorded");
+    assert_eq!(print.args.len(), 1, "PrintT arg must be kept");
+}
+
+#[test]
+fn let_local_definitions_stay_private() {
+    let source = "---- MODULE L ----\nF == LET x == 1\n         y == 2\n     IN x + y\n====\n";
+    let analysis = run_clean("src/l.tla", source);
+    for want in ["x", "y"] {
+        let f = analysis
+            .facts
+            .functions
+            .iter()
+            .find(|f| f.name == want)
+            .unwrap_or_else(|| panic!("LET-local {want} is a function fact"));
+        assert_eq!(
+            f.visibility,
+            sloplint_core::facts::Visibility::Private,
+            "LET-local {want} must not be public"
+        );
+    }
+}
+
+#[test]
+fn bound_op_calls_keep_args_and_skip_comments() {
+    // PrintT("x", 1) parses as bound_op(name, parameter...), not
+    // function_evaluation; args must still reach the call facts, and an
+    // inline comment between them is not an argument.
+    let source = "---- MODULE B ----\nF == PrintT(\"x\" (* note *), 1)\n====\n";
+    let analysis = run_clean("src/b.tla", source);
+    let print = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "PrintT")
+        .expect("bound_op PrintT call recorded");
+    assert_eq!(print.args.len(), 2, "bound_op args, comment excluded");
+}
+
+#[test]
+fn prefixed_op_keeps_its_args_and_prefix_is_not_one() {
+    // `M!Op(x)` parses as prefixed_op(prefix: M!, op: bound_op(name,
+    // parameter: x)): the bound_op holds the real arguments.
+    let source = "---- MODULE Q ----\nG == M!Op(1)\n====\n";
+    let analysis = run_clean("src/q.tla", source);
+    let op = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "Op")
+        .expect("prefixed M!Op call recorded");
+    assert_eq!(op.args.len(), 1, "bound_op parameter, prefix excluded");
+
+    // `M!Spec` leaves a bare identifier_ref in the op field — the call is
+    // still recorded, with no arguments.
+    let source = "---- MODULE R ----\nH == M!Spec\n====\n";
+    let analysis = run_clean("src/r.tla", source);
+    let spec = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "Spec")
+        .expect("argument-less M!Spec call recorded");
+    assert!(spec.args.is_empty());
+
+    // `M!Nat` leaves a number-set leaf in the op field — same handling.
+    let source = "---- MODULE N ----\nH == M!Nat\n====\n";
+    let analysis = run_clean("src/n.tla", source);
+    assert!(
+        analysis.facts.calls.iter().any(|c| c.callee == "Nat"),
+        "M!Nat call recorded: {:?}",
+        analysis.facts.calls
+    );
+
+    // `M!+(a, b)` carries a bound_nonfix_op: the infix walk records `+`,
+    // and no call to the first operand `a` may appear.
+    let source = "---- MODULE S ----\nG == M!+(a, b)\n====\n";
+    let analysis = run_clean("src/s.tla", source);
+    assert!(
+        !analysis.facts.calls.iter().any(|c| c.callee == "a"),
+        "operand must not become a callee: {:?}",
+        analysis.facts.calls
+    );
+}
+
+#[test]
+fn deep_nesting_survives_serialize_capacity() {
+    // More nested PlusCal `with` blocks than the serialization buffer can
+    // carry: 251 size slots alone exceed the 1024-byte buffer, so the
+    // outermost contexts drop; they must restore as empty contexts at the
+    // right depth, not corrupt the parse.
+    let mut body = String::new();
+    for i in 0..250 {
+        body.push_str(&format!("    with v{i} = 0 do\n"));
+    }
+    body.push_str("    skip;\n");
+    for _ in 0..250 {
+        body.push_str("    end with;\n");
+    }
+    let source = format!(
+        "---- MODULE Deep ----\n(*\n--algorithm A\nprocedure P(a) variables x = 0;\nbegin\n{body}end procedure;\nbegin\n  call P(1);\nend algorithm;\n*)\n====\n"
+    );
+    let analysis = run_clean("src/deep.tla", &source);
+    let m = analysis
+        .facts
+        .functions
+        .iter()
+        .find(|f| f.name == "P")
+        .expect("procedure P parsed");
+    assert!(m.end_line > 0);
+}
