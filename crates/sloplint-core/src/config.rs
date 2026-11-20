@@ -426,7 +426,7 @@ fn default_languages() -> BTreeMap<String, LanguageConfig> {
         .collect()
 }
 
-const DEFAULT_LOG_CALLEES: [(&str, &str); 24] = [
+const DEFAULT_LOG_CALLEES: [(&str, &str); 25] = [
     ("rust", "trace!,debug!,info!,warn!,error!"),
     (
         "typescript",
@@ -505,6 +505,10 @@ const DEFAULT_LOG_CALLEES: [(&str, &str); 24] = [
         "log.debug,log.info,log.warn,log.error,log.fatal,log.panic,fmt.eprintln,fmt.eprintf",
     ),
     ("starlark", "print"),
+    (
+        "lean",
+        "dbg_trace,IO.println,IO.print,logInfo,logWarning,logError",
+    ),
 ];
 
 const DEFAULT_EXCLUDE: &str = "**/node_modules/**,**/target/**,**/vendor/**,**/dist/**,**/build/**,**/.venv/**,**/venv/**,**/__pycache__/**,**/*.d.ts,**/.git/**,**/.sloplint/**";
