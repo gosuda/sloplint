@@ -178,8 +178,8 @@ fn modules_imports_and_comments_parse_clean() {
     let analysis = run_clean("src/module.lean", source);
     assert_eq!(
         analysis.facts.imports.len(),
-        4,
-        "one import plus three opens, got {:?}",
+        3,
+        "one import, one open (hiding drops its tail), one scoped open, got {:?}",
         analysis
             .facts
             .imports
@@ -194,6 +194,30 @@ fn modules_imports_and_comments_parse_clean() {
             .iter()
             .any(|i| i.module == "Std.Data.HashMap"),
         "the dotted import path must stay whole"
+    );
+    assert!(
+        analysis
+            .facts
+            .imports
+            .iter()
+            .any(|i| i.module == "BigOperators"),
+        "an open-scoped namespace must record an import"
+    );
+    assert!(
+        !analysis
+            .facts
+            .imports
+            .iter()
+            .any(|i| i.module == "hiding" || i.module == "Term"),
+        "open modifiers and hidden names are not namespaces"
+    );
+    assert!(
+        analysis
+            .facts
+            .imports
+            .iter()
+            .all(|i| i.external_root.is_none() || i.module == "Std.Data.HashMap"),
+        "open namespaces load no package and carry no external root"
     );
     let tree = parse_raw(source);
     let sexp = tree.root_node().to_sexp();

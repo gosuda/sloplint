@@ -63,23 +63,45 @@ pub(crate) fn imports_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Impor
             });
         }
         "open" | "export" => {
+            // `open`/`export` bring names into scope without loading a
+            // package, so they carry no `external_root` (import fan-out is
+            // for `import` only). `open Nat (succ)` / `export Nat (succ)`
+            // name their selections via the `only` field — not wildcards.
             let mut cursor = n.walk();
-            for ns in n.children_by_field_name("namespace", &mut cursor) {
+            let explicit = n
+                .children_by_field_name("only", &mut cursor)
+                .next()
+                .is_some();
+            let kind = if explicit {
+                ImportKind::Named
+            } else {
+                ImportKind::Wildcard
+            };
+            let mut namespaces: Vec<Node> =
+                n.children_by_field_name("namespace", &mut cursor).collect();
+            namespaces.extend(n.children_by_field_name("scoped", &mut cursor));
+            let mut skip = false;
+            for ns in namespaces {
                 let raw = trimmed(cx, ns);
-                let external_root = lean_external_root(raw).map(|root| {
-                    let end = raw.find(root).unwrap_or(0) + root.len();
-                    &raw[..end]
-                });
+                // The grammar lexes `open A hiding B`-style open modifiers
+                // as identifiers; the keyword and what follows it are not
+                // namespaces.
+                if matches!(raw, "hiding" | "renaming" | "only" | "as") {
+                    skip = true;
+                }
+                if skip {
+                    continue;
+                }
                 out.push(Import {
                     pos: pos_of(ns),
                     module: Cow::Borrowed(raw),
                     name: "",
                     alias: None,
-                    kind: ImportKind::Wildcard,
+                    kind,
                     scope: ImportScope::Module,
                     in_test: false,
                     is_reexport: n.kind() == "export",
-                    external_root,
+                    external_root: None,
                 });
             }
         }

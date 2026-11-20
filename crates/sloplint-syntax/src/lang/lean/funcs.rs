@@ -242,7 +242,16 @@ pub(crate) fn closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionH
         return None;
     }
     let mut params = Vec::new();
-    for child in named_children(n) {
+    let mut cursor = n.walk();
+    for (i, child) in n.named_children(&mut cursor).enumerate() {
+        // The `body`/`type` fields are direct children too — an identifier
+        // there is the closure's body or annotation, not a parameter.
+        if matches!(
+            n.field_name_for_named_child(i as u32),
+            Some("body") | Some("type")
+        ) {
+            continue;
+        }
         if child.kind() == "binders" {
             params_from(cx, child, &mut params);
         } else if BINDER_KINDS.contains(&child.kind()) {
