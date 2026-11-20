@@ -232,11 +232,20 @@ pub(crate) fn scrutinee_kind(cx: &Cx<'_, '_>, scrutinee: Node<'_>) -> ScrutineeK
                 for child in current.children(&mut cursor) {
                     // A field name follows `.`; the update target in
                     // `p.(x := 1)` follows `(` and is not a field access.
-                    if child.is_named()
-                        && child.kind() == "identifier"
-                        && child.prev_sibling().is_some_and(|prev| prev.kind() == ".")
-                    {
-                        trailing_ident = true;
+                    // `obj./* note */state` parks a comment between the
+                    // dot and the name — step back over comments.
+                    if child.is_named() && child.kind() == "identifier" {
+                        let mut prev = child.prev_sibling();
+                        while let Some(node) = prev {
+                            if COMMENT_KINDS.contains(&node.kind()) {
+                                prev = node.prev_sibling();
+                            } else {
+                                break;
+                            }
+                        }
+                        if prev.is_some_and(|node| node.kind() == ".") {
+                            trailing_ident = true;
+                        }
                     }
                 }
                 return if trailing_ident {
