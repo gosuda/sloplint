@@ -479,6 +479,14 @@ fn split_infix_continuations_and_reused_accessor_words_parse() {
          var c = 1; get\nis\u{c9}()\n\
          var d = 1; set\nin list\n",
     );
+    // Clean is not enough for `isÉ()`: the detached-getter misread parses
+    // without errors too. The property must keep its `getter` and the
+    // next line must be a `call_expression`.
+    let sexp = raw_tree("var c = 1; get\nis\u{c9}()\n").root_node().to_sexp();
+    assert!(
+        sexp.contains("(getter") && sexp.contains("(call_expression"),
+        "the bare getter must stay on the property while `isÉ()` calls:\n{sexp}"
+    );
     // `x\nis Int` at file level still fails — a pre-existing upstream
     // newline-continuation gap (`is` also opens `when` entry conditions,
     // so the scanner cannot unconditionally continue on it). The `;`
