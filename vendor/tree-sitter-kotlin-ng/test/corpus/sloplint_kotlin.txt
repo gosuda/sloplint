@@ -717,3 +717,49 @@ class C {
             (identifier)
             (user_type
               (identifier))))))))
+
+================================================================================
+bodyless class with a generic delegation type
+================================================================================
+
+class Tagged : Marker<Int,>
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (delegation_specifiers
+      (delegation_specifier
+        (user_type
+          (identifier)
+          (type_arguments
+            (type_projection
+              (user_type
+                (identifier)))))))))
+
+================================================================================
+delegation call arguments after a declared primary constructor
+================================================================================
+
+class T private constructor() : Base
+(1) {}
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (primary_constructor
+      (modifiers
+        (visibility_modifier))
+      (class_parameters))
+    (delegation_specifiers
+      (delegation_specifier
+        (constructor_invocation
+          (user_type
+            (identifier))
+          (value_arguments
+            (value_argument
+              (number_literal))))))
+    (class_body)))

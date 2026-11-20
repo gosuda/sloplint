@@ -296,8 +296,9 @@ fn value_receiver_class_literal_keeps_parenthesized_expression() {
 
 #[test]
 fn superclass_call_arguments_survive_a_newline() {
-    // `class D : Base\n() {}` — the scanner cannot suppress the semi before
-    // a delegation's `(`, so the constructor invocation absorbs it.
+    // `class D : Base\n() {}` — when a declaration separator is followed
+    // by `(`, the scanner emits `_delegation_semi` instead of `_semi`,
+    // which only the delegation's constructor invocation accepts.
     for source in [
         "class D : Base\n() {}\n",
         "class E : Iface1, Base\n(arg) {}\n",
@@ -310,6 +311,24 @@ fn superclass_call_arguments_survive_a_newline() {
         sexp.contains("(constructor_invocation"),
         "split superclass call must stay a constructor_invocation, got:\n{sexp}"
     );
+}
+
+#[test]
+fn bodyless_class_with_generic_delegation_parses() {
+    // `class T : M<Int>` — the separator after the delegation type must end
+    // the declaration, not shift into the constructor invocation's tolerated
+    // separator (which then demands `(`). `_delegation_semi` is emitted only
+    // when `(` follows, so an EOF- or statement-followed `_semi` reduces the
+    // specifier instead.
+    for source in [
+        "class T : M<Int>\n",
+        "class Tagged : Marker<Int,>\n",
+        "class T : M<Int>\nval y = 1\n",
+        "class T private constructor() : Base\n(1) {}\n",
+        "class T : A, B\n(1) {}\n",
+    ] {
+        run_clean(source);
+    }
 }
 
 #[test]

@@ -1830,7 +1830,7 @@
           "members": [
             {
               "type": "SYMBOL",
-              "name": "_semi"
+              "name": "_delegation_semi"
             },
             {
               "type": "BLANK"
@@ -7132,6 +7132,10 @@
     {
       "type": "SYMBOL",
       "name": "_accessor_semi"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_delegation_semi"
     }
   ],
   "inline": [

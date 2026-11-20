@@ -15,6 +15,8 @@ Round 6 adds: `var x = 1; private set` — a `;` before an accessor (`get`/`set`
 
 Round 7 hardens the `;`-accessor probe for real-corpus shapes: every whitespace skip inside the probe now crosses `//` and nested `/* */` comments too (`var x = 1; get(/*note*/) = 2`), a getter/setter body may start on the line after the signature (`get()\n= 2`), the setter's parameter list may open with an annotation or a backtick-quoted name (``set(@Deprecated("x") `v`) {}``), and comments inside the parameter list no longer end the balanced-paren scan early. The lookalike rejects still apply: `get(2)`, `set(v)`, `set_up()`, `set2()`, and `get = 2` after `;` stay statements. On the sloplint side, `fun(/* c */ x)` and `fun(@Anno y)` bare params now bind their name — the delimiter check walks back past `line_comment`/`block_comment`/`parameter_modifiers`/`annotation` siblings instead of only accepting an immediate `(` or `,` sibling. A new same-line corpus case pins the comment/annotation/newline shapes (51 of 51 pass), and the `mutable-span` Kotlin near-miss fixture covers the commented and annotated binding paths end to end.
 
+Round 8 fixes bodyless delegations: `class T : M<Int>` (and `Marker<Int,>`) at a line end died because the declaration-terminating `_semi` shifted into `_delegation_constructor_invocation`'s tolerated separator, which then demanded `(`. The tolerated separator is now a dedicated external `_delegation_semi`, emitted instead of `_semi` only when the separator is followed by `(`; a `_semi` after a delegation type now always ends the declaration. The `x\n(y)` expression split is unchanged (two statements). Two corpus cases pin the shapes (55 of 55 pass).
+
 ## Origin
 
 - Upstream: https://github.com/tree-sitter-grammars/tree-sitter-kotlin, tag v1.1.0, commit 77dd60ea0a9003ce062c9728a513ffe1aaff8c82.
@@ -118,8 +120,8 @@ Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (32 tests,
 - Published `tree-sitter-kotlin-ng` 1.1.0: 23 fail and 9 pass.
 
 Corpus cases (`tree-sitter test`, fresh `HOME`):
-- Vendored: 55 of 55. These are the 22 upstream cases, the 20 `sloplint_kotlin.txt` cases, the 7 `sloplint_kotlin_same_line.txt` cases, and the 6 `sloplint_softids.txt` cases. The expected trees have no `ERROR` or `MISSING`.
-- Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 27 pass (the 20 sloplint cases and the 7 same-line cases). The 22 upstream cases passed on the published grammar before any change.
+- Vendored: 53 of 53. These are the 22 upstream cases, the 18 `sloplint_kotlin.txt` cases, the 7 `sloplint_kotlin_same_line.txt` cases, and the 6 `sloplint_softids.txt` cases. The expected trees have no `ERROR` or `MISSING`.
+- Published copy, verified to match the registry crate's `grammar.js`, `src/parser.c`, and `src/scanner.c`: 0 of 25 pass (the 18 sloplint cases and the 7 same-line cases). The 22 upstream cases passed on the published grammar before any change.
 
 ## Code notes
 

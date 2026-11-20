@@ -16,6 +16,7 @@ enum TokenType {
     SET,
     DOLLAR,
     ACCESSOR_SEMI,
+    DELEGATION_SEMI,
 };
 
 #define MAX_WORD_SIZE 16
@@ -480,6 +481,14 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
             // mark an ended expression, so the semi is kept wherever either is
             // valid.
             case '(':
+                // `Type\n(` mid-delegation: the separator is part of the
+                // constructor invocation, not the declaration end. Emitting
+                // the dedicated token keeps `_semi` free to terminate a
+                // bodyless declaration (`class T : M<Int>` at EOF).
+                if (valid_symbols[DELEGATION_SEMI]) {
+                    lexer->result_symbol = DELEGATION_SEMI;
+                    return true;
+                }
                 return valid_symbols[Q_DOT] || valid_symbols[NOT_IS] ||
                        !valid_symbols[CONSTRUCTOR];
             case 'e':

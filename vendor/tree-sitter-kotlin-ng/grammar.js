@@ -110,6 +110,11 @@ module.exports = grammar({
     // follows it, so `var x = 1; private set` keeps the accessor inside the
     // property instead of consuming the `;` as a member separator.
     $._accessor_semi,
+    // Emitted instead of `_semi` when a declaration separator is followed
+    // by `(`, so a delegation's constructor invocation can span the line
+    // break (`class D : Base\n() {}`) without the plain `_semi` competing
+    // with the declaration-ending read (`class T : M<Int>` at EOF).
+    $._delegation_semi,
   ],
 
   inline: $ => [
@@ -360,7 +365,7 @@ module.exports = grammar({
     // superclass call's arguments (its valid-symbol mask is identical to a `(`
     // after a complete statement), so the delegation's constructor invocation
     // tolerates the separator instead.
-    _delegation_constructor_invocation: $ => seq($.type, optional($._semi), $.value_arguments),
+    _delegation_constructor_invocation: $ => seq($.type, optional($._delegation_semi), $.value_arguments),
 
     variable_declaration: $ => prec(1, seq(
       repeat($.annotation),
