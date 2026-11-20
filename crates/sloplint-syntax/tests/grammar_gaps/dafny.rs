@@ -289,6 +289,91 @@ fn empty_match_parses_with_no_arms() {
     assert!(analysis.facts.wildcard_arms.is_empty());
 }
 
+#[test]
+fn var_decl_writes_are_tracked_on_the_binding() {
+    // `var x := 0` is the declaration; a later `x := ...` must record a
+    // write on the same binding — scoping `local_var_decl` to itself
+    // would miss it.
+    let analysis = run_clean(concat!(
+        "method M() {\n",
+        "  var x := 0;\n",
+        "  x := x + 1;\n",
+        "  x := x + 2;\n",
+        "}\n",
+    ));
+    let binding = analysis
+        .facts
+        .bindings
+        .iter()
+        .find(|b| b.name == "x")
+        .expect("x binding recorded");
+    assert_eq!(binding.write_lines, 2);
+    assert_eq!(binding.first_write_line, 3);
+    assert!(binding.last_write_line > binding.first_write_line);
+}
+
+#[test]
+fn chained_else_ifs_do_not_inflate_nesting() {
+    let nested = run_clean(concat!(
+        "method M(a: bool, b: bool) returns (r: int) {\n",
+        "  r := if a then if b then 1 else 2 else 3;\n",
+        "}\n",
+    ));
+    let m = &nested.facts.functions[0];
+    assert!(
+        m.max_depth >= 2,
+        "an if-expression in the then position nests: {}",
+        m.max_depth
+    );
+
+    let flat = run_clean(concat!(
+        "method M(c: bool) {\n",
+        "  if c {\n",
+        "  } else if c {\n",
+        "  }\n",
+        "}\n",
+    ));
+    let m = &flat.facts.functions[0];
+    assert_eq!(m.max_depth, 1, "an else-if chain counts once");
+}
+
+#[test]
+fn spec_clause_calls_are_not_linted() {
+    // Calls inside requires/ensures/invariant are proof constraints, not
+    // runtime calls — they must not appear as callees.
+    let analysis = run_clean(concat!(
+        "method Helper() returns (r: int) {\n",
+        "  r := 0;\n",
+        "}\n",
+        "method M() requires Helper() > 0 ensures Helper() > 0 {\n",
+        "  while true invariant Helper() > 0 {\n",
+        "    break;\n",
+        "  }\n",
+        "}\n",
+    ));
+    let callees: Vec<&str> = analysis.facts.calls.iter().map(|c| c.callee).collect();
+    assert!(
+        !callees.contains(&"Helper"),
+        "spec clauses are skipped: {callees:?}"
+    );
+}
+
+#[test]
+fn returns_clause_and_type_colon_report_output_types() {
+    let analysis = run_clean(concat!(
+        "method M(x: int) returns (r: int) {\n",
+        "  r := x;\n",
+        "}\n",
+        "function F(x: int): int {\n",
+        "  x\n",
+        "}\n",
+    ));
+    let m = &analysis.facts.functions[0];
+    assert_eq!(m.return_type, Some("(r: int)"));
+    let f = &analysis.facts.functions[1];
+    assert_eq!(f.return_type, Some("int"));
+}
+
 // --- Controls: still invalid ---------------------------------------------------
 
 #[test]

@@ -151,7 +151,11 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             if descending {
                 let node = cursor.node();
                 self.enter(node);
-                if cursor.goto_first_child() {
+                let skip = {
+                    let cx = self.make_cx();
+                    self.hooks.skip_subtree(node, &cx)
+                };
+                if !skip && cursor.goto_first_child() {
                     self.depth += 1;
                     continue;
                 }

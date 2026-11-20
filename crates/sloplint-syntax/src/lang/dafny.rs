@@ -3,9 +3,10 @@
 //! Function-like units are `method` (with `lemma`), `function` (with
 //! `predicate`), `constructor`, and `iterator` declarations. Specification
 //! clauses (`requires`, `ensures`, `invariant`, `decreases`, `modifies`,
-//! `reads`) are intentionally unmapped: they constrain proofs, they are not
-//! branches, loops, or calls, and counting them would punish verified code
-//! for being specified. `assert` statements map to the assert role with a
+//! `reads`, and the refinement/`witness` family) are unmapped and skipped:
+//! they constrain proofs, they are not branches, loops, or calls, and
+//! counting them would punish verified code for being specified.
+//! `assert` statements map to the assert role with a
 //! silent shape for the same reason; only `expect`, which takes an optional
 //! message, feeds the message rule.
 
@@ -85,10 +86,55 @@ impl LangHooks for DafnyHooks {
     }
 
     fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        // `if` has no field names here, so the else alternative is the
+        // parent's last named child — anything earlier (e.g. an
+        // if-expression in the condition) is not an else-if.
         matches!(
             n.kind(),
             "if_statement" | "if_expression" | "fn_if_expression"
-        ) && parent.is_some_and(|p| p.kind() == n.kind())
+        ) && parent.is_some_and(|p| {
+            p.kind() == n.kind()
+                && u32::try_from(p.named_child_count().saturating_sub(1))
+                    .ok()
+                    .and_then(|i| p.named_child(i))
+                    .is_some_and(|last| last.id() == n.id())
+        })
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        // `local_var_decl` is a child of `var_decl_statement`, so the
+        // declared name scopes to the block above the statement — the
+        // default depth-1 would scope `var x := 0` to itself and later
+        // `x := ...` writes would be missed.
+        if node.kind() == "local_var_decl"
+            && node
+                .parent()
+                .is_some_and(|p| p.kind() == "var_decl_statement")
+        {
+            return depth.saturating_sub(2);
+        }
+        let _ = cx;
+        depth.saturating_sub(1)
+    }
+
+    fn skip_subtree(&self, node: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+        // Specification clauses constrain proofs, not runtime behavior —
+        // their expressions are not lintable code.
+        let _ = cx;
+        matches!(
+            node.kind(),
+            "requires_clause"
+                | "yield_requires_clause"
+                | "ensures_clause"
+                | "yield_ensures_clause"
+                | "invariant_clause"
+                | "decreases_clause"
+                | "modifies_clause"
+                | "reads_clause"
+                | "refines_clause"
+                | "replaces_clause"
+                | "witness_clause"
+        )
     }
 
     fn binds_flow_targets(&self, kind: &str) -> bool {
