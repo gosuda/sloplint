@@ -115,16 +115,17 @@ fn return_type_of<'s>(
 ) -> Option<&'s str> {
     let mut seen_formals = 0;
     for child in named_children(node) {
-        if Some(child.id()) == formals.map(|form| form.id()) {
+        if child.kind() == "formals" {
             seen_formals += 1;
-            if seen_formals == 1 && node.kind() == "method_decl" {
+            if seen_formals == 1 && Some(child.id()) == formals.map(|form| form.id()) {
+                // The input parameter list — keep looking for the
+                // `returns`/`yields` output list or a `:` return type.
                 continue;
             }
-        }
-        if is_type_kind(child.kind()) {
+            // A second formals list is the `returns`/`yields` output.
             return Some(trimmed(cx, child));
         }
-        if child.kind() == "formals" && seen_formals >= 2 {
+        if is_type_kind(child.kind()) && seen_formals > 0 {
             return Some(trimmed(cx, child));
         }
     }

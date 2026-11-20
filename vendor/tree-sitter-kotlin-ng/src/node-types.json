@@ -200,7 +200,7 @@
         "named": true
       },
       {
-        "type": "declaration",
+        "type": "class_declaration",
         "named": true
       },
       {
@@ -213,6 +213,22 @@
       },
       {
         "type": "for_statement",
+        "named": true
+      },
+      {
+        "type": "function_declaration",
+        "named": true
+      },
+      {
+        "type": "object_declaration",
+        "named": true
+      },
+      {
+        "type": "property_declaration",
+        "named": true
+      },
+      {
+        "type": "type_alias",
         "named": true
       },
       {
@@ -618,6 +634,10 @@
           "named": true
         },
         {
+          "type": "parenthesized_expression",
+          "named": true
+        },
+        {
           "type": "parenthesized_type",
           "named": true
         },
@@ -796,7 +816,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "expression",
@@ -1236,6 +1256,10 @@
       "types": [
         {
           "type": "expression",
+          "named": true
+        },
+        {
+          "type": "identifier",
           "named": true
         },
         {
@@ -1747,6 +1771,21 @@
     }
   },
   {
+    "type": "paren_type_modifiers",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "annotation",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "parenthesized_expression",
     "named": true,
     "fields": {},
@@ -1766,9 +1805,13 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": false,
+      "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "paren_type_modifiers",
+          "named": true
+        },
         {
           "type": "type",
           "named": true
@@ -2033,6 +2076,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "declaration",
+          "named": true
+        },
         {
           "type": "file_annotation",
           "named": true
@@ -2818,6 +2865,10 @@
   },
   {
     "type": "]",
+    "named": false
+  },
+  {
+    "type": "_",
     "named": false
   },
   {
