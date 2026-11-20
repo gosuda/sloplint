@@ -357,6 +357,15 @@ fn prefixed_op_keeps_its_args_and_prefix_is_not_one() {
         .expect("argument-less M!Spec call recorded");
     assert!(spec.args.is_empty());
 
+    // `M!Nat` leaves a number-set leaf in the op field — same handling.
+    let source = "---- MODULE N ----\nH == M!Nat\n====\n";
+    let analysis = run_clean("src/n.tla", source);
+    assert!(
+        analysis.facts.calls.iter().any(|c| c.callee == "Nat"),
+        "M!Nat call recorded: {:?}",
+        analysis.facts.calls
+    );
+
     // `M!+(a, b)` carries a bound_nonfix_op: the infix walk records `+`,
     // and no call to the first operand `a` may appear.
     let source = "---- MODULE S ----\nG == M!+(a, b)\n====\n";
