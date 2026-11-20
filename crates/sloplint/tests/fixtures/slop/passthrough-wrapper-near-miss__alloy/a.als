@@ -25,7 +25,8 @@ pred inner_step[s: State] {
 run runner
 run this/runner
 
-// primed declarators forward as primed args, not as their base names
+// primed declarators forward as primed args, not as their base
+// names; the unforwarded `t` keeps this a near-miss
 pred step[s, s', t: State] {
   inner_pair[s, s']
 }
@@ -34,11 +35,9 @@ pred inner_pair[a, b: State] {
   some a + b
 }
 
-run step for 4
-
 // receiver calls forward `this` alongside non-param args
 pred S.forward[this, x: S] {
-  inner[this, S]
+  inner_pair[this, S]
 }
 
 // trailing commas in decl lists and a let-expression member
