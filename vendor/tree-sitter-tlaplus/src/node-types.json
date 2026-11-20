@@ -3116,6 +3116,10 @@
       "required": true,
       "types": [
         {
+          "type": "_expr",
+          "named": true
+        },
+        {
           "type": "identifier",
           "named": true
         }

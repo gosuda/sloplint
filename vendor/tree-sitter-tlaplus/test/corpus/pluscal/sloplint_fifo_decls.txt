@@ -147,3 +147,91 @@ end algorithm; *)
               (nat_number)))))
       (block_comment_text))
     (double_line)))
+
+==================|||
+fifo/channel keywords still name variables; indexed fifo domains
+==================|||
+
+---- MODULE M ----
+(*
+--algorithm A
+variables x = 0; channel = 1; fifo = 2;
+fifos ch[Agents], q1, q2;
+begin
+  x := ch
+end algorithm;
+*)
+====
+-------------|||
+
+(source_file
+  (module
+    (header_line)
+    (identifier)
+    (header_line)
+    (block_comment
+      (pcal_algorithm
+        (pcal_algorithm_start)
+        (identifier)
+        (pcal_var_decls
+          (pcal_var_decl
+            (identifier)
+            (nat_number))
+          (pcal_var_decl
+            (identifier)
+            (nat_number))
+          (pcal_var_decl
+            (identifier)
+            (nat_number)))
+        (pcal_fifo_decls
+          (identifier)
+          (identifier_ref)
+          (identifier)
+          (identifier))
+        (pcal_algorithm_body
+          (pcal_assign
+            (pcal_lhs
+              (identifier_ref))
+            (assign)
+            (identifier_ref))))
+      (block_comment_text))
+    (double_line)))
+
+
+==================|||
+C-syntax channel and indexed fifo declarations
+==================|||
+
+---- MODULE M ----
+(*
+--algorithm C {
+  variables x = 0;
+  channel ch;
+  fifo fq[Procs];
+  { skip }
+}*)
+====
+-------------|||
+
+(source_file
+  (module
+    (header_line)
+    (identifier)
+    (header_line)
+    (block_comment
+      (pcal_algorithm
+        (pcal_algorithm_start)
+        (identifier)
+        (pcal_var_decls
+          (pcal_var_decl
+            (identifier)
+            (nat_number)))
+        (pcal_fifo_decls
+          (identifier))
+        (pcal_fifo_decls
+          (identifier)
+          (identifier_ref))
+        (pcal_algorithm_body
+          (pcal_skip))))
+    (double_line)))
+

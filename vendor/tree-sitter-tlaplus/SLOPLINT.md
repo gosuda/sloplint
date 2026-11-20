@@ -37,7 +37,7 @@ Date: 2026-11-19.
   Command, run in this directory: `tree-sitter generate` (warning-free),
   then `tree-sitter test`. ABI stays 14, so the runtime keeps loading the
   parser as-is.
-- `src/parser.c` is 37028761 bytes (`STATE_COUNT 5552`). It stays committed
+- `src/parser.c` is ~37 MB (`STATE_COUNT 5579`). It stays committed
   plain: it is under GitHub's 100MB blob limit.
 - `src/scanner.c` is 76905 bytes and unchanged: the external scanner for
   nested proofs and conjunction/disjunction lists (README: "the latter
@@ -58,7 +58,7 @@ to `Blank file parses clean` with `(source_file)`.
 
 Run in this directory (`XDG_CACHE_HOME` pointed outside the checkout):
 
-- `tree-sitter test` with CLI 0.24.7: 371 cases, 371 pass, 0 fail
+- `tree-sitter test` with CLI 0.24.7: 376 cases, 376 pass, 0 fail
   (3 committed `:skip` markers in `jlist.txt`, `labels.txt`, `proofs.txt`,
   applied upstream; `:error` cases pass as expected failures).
 - `test/examples/Highlight.tla` parses with no `ERROR` or `MISSING` node
@@ -115,12 +115,18 @@ proofs bodies.
 S3, PlusCal declarations (2026-11-20 dogfood corpus):
 
 - `pcal_p_definitions` / `pcal_c_definitions` are `repeat1(choice(
-  definition, recursive_declaration))`: `RECURSIVE Op(...)` is legal in
-  a `define` block (jb567-style specs) and previously errored at `RECURSIVE`.
+  definition, recursive_declaration))`: `RECURSIVE Op(_)` (the placeholder-arity forward declaration)
+  is legal in a `define` block (jb567-style specs) and previously
+  errored at `RECURSIVE`.
 - New `pcal_fifo_decls`: `fifos`/`fifo`/`channels`/`channel` declarations
   alongside `variables` in P- and C-syntax algorithms
-  (`fifos q1, q2;`), which the base grammar never admitted; fugue-style
-  specs carry them.
+  (`fifos q1, q2;`, indexed `fifos ch[Agents]`), which the base grammar
+  never admitted; fugue-style specs carry them. The declaration keywords
+  remain usable as variable names (`variables channel = 1;`): keyword
+  literals shadow `word` identifiers wherever both are valid, so
+  `pcal_var_decl` aliases them back into `identifier` position and a
+  `[$.pcal_var_decls]` self-conflict lets lookahead split
+  `name =` (variable) from `name ident` (fifo/channel declaration).
 
 ## Changes to src/scanner.c
 

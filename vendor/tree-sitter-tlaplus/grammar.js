@@ -140,6 +140,9 @@ module.exports = grammar({
     // Lookahead to disambiguate identifier '(' identifier •  ',' …
     // Could be op(a, b) or could be lbl(a, b) ::
     [$._expr, $.label],
+    // Lookahead to disambiguate 'fifos'/'channel'  •  identifier/'=' …
+    // Could be a fifo/channel declaration or a variable named fifo/channel.
+    [$.pcal_var_decls],
     // Lookahead to disambiguate '['  identifier  •  '\in'  …
     // Matches both step_expr_or_stutter and function_literal
     [$._expr, $.quantifier_bound],
@@ -1377,18 +1380,29 @@ module.exports = grammar({
       optional(';')
     ),
 
-    // fifos ch1, ch2;   (PlusCal2 FIFO channel declarations)
-    // channels ch;      (multicast channel declarations)
+    // fifos ch1, ch2;       (PlusCal2 FIFO channel declarations)
+    // fifos ch[Agents];     (per-process indexed channel domains)
+    // channels ch;          (multicast channel declarations)
     pcal_fifo_decls: $ => seq(
       choice('fifos', 'fifo', 'channels', 'channel'),
-      commaList1($.identifier),
+      commaList1(seq(
+        $.identifier,
+        optional(seq('[', $._expr, ']'))
+      )),
       optional(';')
     ),
 
     // x \in 1..10
     // x = "x"
     pcal_var_decl: $ => seq(
-      $.identifier,
+      choice(
+        $.identifier,
+        // `variables channel = 1;` stays legal: the fifo/channel
+        // declaration keywords still name variables, so alias them
+        // back to `identifier` in this position — `=` after one can
+        // only be a var decl, an identifier can only be a fifo decl.
+        alias(choice('fifos', 'fifo', 'channels', 'channel'), $.identifier)
+      ),
       optional(seq(choice('=', $.set_in), $._expr)),
     ),
 
