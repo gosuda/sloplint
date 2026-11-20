@@ -224,8 +224,9 @@ fn rename_out_exports_the_local_name() {
 
 #[test]
 fn unquote_escapes_a_quasiquote_back_to_code() {
+    // `begin` gives the escape a valid expression-position body.
     let analysis = run_clean(
-        "#lang racket\n(quasiquote (a (unquote (define (inside x) x)) (b (unquote (lambda (y) y)))))\n",
+        "#lang racket\n(quasiquote (a (unquote (begin (define (inside x) x) inside)) (b (unquote (lambda (y) y)))))\n",
     );
     let names = function_names(&analysis);
     assert!(
@@ -273,8 +274,25 @@ fn cross_family_escapes_stay_datum() {
 }
 
 #[test]
+fn escapes_scan_through_cross_family_literals() {
+    // A quasi form scans its whole template: an `unquote` nested inside
+    // a literal `unsyntax` list still escapes the `quasiquote`, and an
+    // `unsyntax` inside `unquote` still escapes the `quasisyntax`.
+    let analysis = run_clean(
+        "#lang racket\n(quasiquote (a (unsyntax (unquote (begin (define (q x) x))))))\n(quasisyntax (b (unquote (unsyntax (begin (define (s x) x))))))\n",
+    );
+    let names = function_names(&analysis);
+    assert!(
+        names.contains(&"q") && names.contains(&"s"),
+        "same-family escapes nested in literal wrappers are code: {names:?}"
+    );
+}
+
+#[test]
 fn unsyntax_escapes_a_quasisyntax_back_to_code() {
-    let analysis = run_clean("#lang racket\n(quasisyntax (a (unsyntax (define (inside x) x))))\n");
+    let analysis = run_clean(
+        "#lang racket\n(quasisyntax (a (unsyntax (begin (define (inside x) x) inside))))\n",
+    );
     assert!(
         function_names(&analysis).contains(&"inside"),
         "an unsyntax define inside a quasisyntax is code"

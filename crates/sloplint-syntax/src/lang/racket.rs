@@ -106,13 +106,6 @@ fn lookup_head(name: &str) -> Option<Head> {
         .map(|(_, concept)| *concept)
 }
 
-/// Node kinds that are always datum, whatever encloses them: a
-/// commented-out datum and the `#&`/`#n=` reader wrappers. Quoted
-/// forms are matched below instead — `unquote`-family escapes can
-/// switch a quasiquote's children back to code, so quoting is
-/// accounted level by level rather than unconditionally.
-const NON_CODE_KINDS: &[&str] = &["sexp_comment", "box", "graph"];
-
 const COMMENT_KINDS: &[&str] = &["comment", "block_comment", "sexp_comment"];
 
 fn is_comment(kind: &str) -> bool {
@@ -144,44 +137,59 @@ fn first_symbol<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
 }
 
 /// Which family a pending escape belongs to: `unquote` escapes only
-/// `quasiquote`; `unsyntax` escapes only `quasisyntax`. A cross-family
-/// escape is literal datum — Racket never evaluates it.
+/// `quasiquote`; `unsyntax` escapes only `quasisyntax`.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Escape {
     Quote,
     Syntax,
 }
 
-impl Escape {
-    fn escapes(self, quasi_kind: &str) -> bool {
-        matches!(
-            (self, quasi_kind),
-            (Escape::Quote, "quasiquote") | (Escape::Syntax, "quasisyntax")
-        )
-    }
-}
-
-/// Whether this node sits inside datum. `quote`/`syntax` (node kind
-/// or list head) is datum unconditionally; `quasiquote`/`quasisyntax`
-/// too, but each same-family `unquote`/`unsyntax` form between this
-/// node and the quasi form escapes one level back to code — walking
-/// innermost to outermost, a pending escape consumes the matching
-/// quasi level only.
+/// Whether this node sits inside datum, walking innermost to outermost.
+///
+/// A quasi form scans its whole template for escapes of its own family —
+/// literal forms of the other family and `quote`/`syntax`/`box`/`graph`
+/// wrappers are transparent to that scan — so a `quasiquote` consumes
+/// the nearest pending `unquote` even through an `unsyntax` list. With
+/// no pending escape of the matching family, the quasi form is datum.
+/// The node's innermost escape decides its fate: one that never pairs
+/// leaves the node as literal datum.
 fn in_non_code(cx: &Cx<'_, '_>) -> bool {
     let mut escapes: Vec<Escape> = Vec::new();
+    let mut innermost: Option<Escape> = None;
     for ancestor in cx.ancestors() {
         let head = match ancestor.kind() {
-            kind if NON_CODE_KINDS.contains(&kind) => return true,
-            "quote" | "syntax" => return true,
-            kind @ ("quasiquote" | "quasisyntax") => match escapes.pop() {
-                Some(escape) if escape.escapes(kind) => continue,
-                _ => return true,
+            "sexp_comment" => return true,
+            "quote" | "syntax" | "box" | "graph" => {
+                if escapes.is_empty() {
+                    return true;
+                }
+                continue;
+            }
+            "quasiquote" => match escapes.iter().rposition(|e| *e == Escape::Quote) {
+                Some(pos) => {
+                    escapes.remove(pos);
+                    continue;
+                }
+                None => return true,
+            },
+            "quasisyntax" => match escapes.iter().rposition(|e| *e == Escape::Syntax) {
+                Some(pos) => {
+                    escapes.remove(pos);
+                    continue;
+                }
+                None => return true,
             },
             "unquote" | "unquote_splicing" => {
+                if innermost.is_none() {
+                    innermost = Some(Escape::Quote);
+                }
                 escapes.push(Escape::Quote);
                 continue;
             }
             "unsyntax" | "unsyntax_splicing" => {
+                if innermost.is_none() {
+                    innermost = Some(Escape::Syntax);
+                }
                 escapes.push(Escape::Syntax);
                 continue;
             }
@@ -192,17 +200,44 @@ fn in_non_code(cx: &Cx<'_, '_>) -> bool {
             _ => continue,
         };
         match head {
-            "quote" | "syntax" => return true,
-            kind @ ("quasiquote" | "quasisyntax") => match escapes.pop() {
-                Some(escape) if escape.escapes(kind) => {}
-                _ => return true,
+            "quote" | "syntax" => {
+                if escapes.is_empty() {
+                    return true;
+                }
+            }
+            "quasiquote" => match escapes.iter().rposition(|e| *e == Escape::Quote) {
+                Some(pos) => {
+                    escapes.remove(pos);
+                }
+                None => return true,
             },
-            "unquote" | "unquote-splicing" => escapes.push(Escape::Quote),
-            "unsyntax" | "unsyntax-splicing" => escapes.push(Escape::Syntax),
+            "quasisyntax" => match escapes.iter().rposition(|e| *e == Escape::Syntax) {
+                Some(pos) => {
+                    escapes.remove(pos);
+                }
+                None => return true,
+            },
+            "unquote" | "unquote-splicing" => {
+                if innermost.is_none() {
+                    innermost = Some(Escape::Quote);
+                }
+                escapes.push(Escape::Quote);
+            }
+            "unsyntax" | "unsyntax-splicing" => {
+                if innermost.is_none() {
+                    innermost = Some(Escape::Syntax);
+                }
+                escapes.push(Escape::Syntax);
+            }
             _ => {}
         }
     }
-    false
+    match innermost {
+        // The innermost escape never paired with a quasi of its family,
+        // so this node sits inside a literal escape form.
+        Some(first) => escapes.first().copied() == Some(first),
+        None => false,
+    }
 }
 
 /// A `list` whose head splices its body definitions into the

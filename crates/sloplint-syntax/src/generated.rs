@@ -159,10 +159,17 @@ pub fn is_generated(bytes: &[u8], lang: Lang) -> bool {
 
 fn scan_line(line: &[u8], mut open: Option<Open>, syntax: &CommentSyntax) -> Header {
     let mut rest = line.trim_ascii_start();
+    // A `#lang` directive consumes its own line: operands are not
+    // comments, but a `;` or `#|` anywhere in the line is — and the
+    // directive's operands never end the header run.
+    let lang_line =
+        syntax.lines.iter().any(|leader| *leader == b"#lang") && rest.starts_with(b"#lang");
     loop {
         let (body, block) = match open.take() {
             Some(open) => (rest, Some(open)),
-            None => match enter_comment(rest, syntax) {
+            None => match enter_comment(rest, syntax)
+                .or_else(|| lang_line.then(|| lang_comment(rest, syntax)).flatten())
+            {
                 Some((body, Some(block))) => (
                     body,
                     Some(Open {
@@ -172,7 +179,13 @@ fn scan_line(line: &[u8], mut open: Option<Open>, syntax: &CommentSyntax) -> Hea
                     }),
                 ),
                 Some((body, None)) => (body, None),
-                None => return Header::Ended,
+                None => {
+                    return if lang_line {
+                        Header::Continues(None)
+                    } else {
+                        Header::Ended
+                    };
+                }
             },
         };
         let (comment, after) = match block {
@@ -209,29 +222,43 @@ fn enter_comment<'a>(line: &'a [u8], syntax: &CommentSyntax) -> Option<(&'a [u8]
     block.or_else(|| {
         is_line_comment(line, syntax).then(|| {
             // A `#lang` directive consumes its own line; only a comment
-            // inside it — `;` or a `#|` block — is comment text, and a
-            // block may stay open into the following lines. Only a
+            // inside it — `;` or a `#|` block — is comment text. Only a
             // language that lists `#lang` as a leader (Racket) gets this;
             // a `# language:` comment elsewhere is a comment.
             if line.starts_with(b"#lang") && syntax.lines.iter().any(|leader| *leader == b"#lang") {
-                let semi = line.iter().position(|byte| *byte == b';');
-                let block = line.windows(2).position(|w| w == b"#|").and_then(|at| {
-                    syntax
-                        .blocks
-                        .iter()
-                        .find(|pair| pair.0 == b"#|")
-                        .map(|pair| (at, pair))
-                });
-                return match (semi, block) {
-                    (Some(s), Some((b, pair))) if b < s => (&line[b + 2..], Some(*pair)),
-                    (Some(s), _) => (&line[s..], None),
-                    (None, Some((b, pair))) => (&line[b + 2..], Some(*pair)),
-                    (None, None) => (&line[..0], None),
-                };
+                return lang_comment(line, syntax).unwrap_or((&line[..0], None));
             }
             (line, None)
         })
     })
+}
+
+/// The first `;` or `#|` on a `#lang` directive line outside a `"..."`
+/// string (a `#"`/`#rx"` literal's `"` still counts as a string start).
+/// Returns the comment body and, for `#|`, the block pair so an
+/// unterminated block carries its open state into the next lines.
+fn lang_comment<'a>(line: &'a [u8], syntax: &CommentSyntax) -> Option<(&'a [u8], Option<Block>)> {
+    let mut at = 0;
+    let mut in_string = false;
+    while at < line.len() {
+        let byte = line[at];
+        if in_string {
+            if byte == b'\\' {
+                at += 1;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+        } else if byte == b'"' {
+            in_string = true;
+        } else if byte == b';' {
+            return Some((&line[at..], None));
+        } else if byte == b'#' && line.get(at + 1) == Some(&b'|') {
+            let pair = syntax.blocks.iter().find(|pair| pair.0 == b"#|")?;
+            return Some((&line[at + 2..], Some(*pair)));
+        }
+        at += 1;
+    }
+    None
 }
 
 fn split_opener(head: &[u8]) -> (&[u8], &[u8]) {
