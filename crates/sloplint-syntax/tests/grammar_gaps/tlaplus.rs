@@ -344,6 +344,18 @@ fn prefixed_op_keeps_its_args_and_prefix_is_not_one() {
         .find(|c| c.callee == "Op")
         .expect("prefixed M!Op call recorded");
     assert_eq!(op.args.len(), 1, "bound_op parameter, prefix excluded");
+
+    // `M!Spec` leaves a bare identifier_ref in the op field — the call is
+    // still recorded, with no arguments.
+    let source = "---- MODULE R ----\nH == M!Spec\n====\n";
+    let analysis = run_clean("src/r.tla", source);
+    let spec = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "Spec")
+        .expect("argument-less M!Spec call recorded");
+    assert!(spec.args.is_empty());
 }
 
 #[test]
