@@ -166,8 +166,10 @@ pub(crate) fn has_actual_binding(node: Node<'_>) -> bool {
     let mut cursor = node.walk();
     node.children(&mut cursor).any(|child| {
         // `f()` carries no `actual_binding` node — its parens are anonymous
-        // children — but an application is still a call.
-        (child.is_named() && child.kind() == "actual_binding") || child.kind() == "("
+        // children — but an application is still a call. A `(` right after
+        // `.` is a datatype update `p.(x := 1)`, not a call.
+        (child.is_named() && child.kind() == "actual_binding")
+            || (child.kind() == "(" && child.prev_sibling().is_none_or(|prev| prev.kind() != "."))
     })
 }
 

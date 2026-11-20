@@ -478,3 +478,28 @@ fn plain_witness_expressions_are_lintable() {
         "only the compiled witness's call is a lint fact: {calls:?}"
     );
 }
+
+#[test]
+fn datatype_updates_are_not_calls() {
+    // `p.(x := 1)` is a datatype update — a `.` then `(` suffix — not a call.
+    let analysis = run_clean(concat!(
+        "datatype P = P(x: int)\n",
+        "method M()\n",
+        "{\n",
+        "  var p := P(0);\n",
+        "  p := p.(x := 1);\n",
+        "  Helper();\n",
+        "}\n",
+        "method Helper() {}\n",
+    ));
+    let callees: Vec<_> = analysis.facts.calls.iter().map(|c| c.callee).collect();
+    assert!(
+        callees.contains(&"Helper"),
+        "real calls still land: {callees:?}"
+    );
+    assert!(
+        !callees.contains(&"p"),
+        "datatype update is not a call: {callees:?}"
+    );
+}
+
