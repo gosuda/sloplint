@@ -262,7 +262,19 @@ pub(crate) fn scrutinee_kind(cx: &Cx<'_, '_>, scrutinee: Node<'_>) -> ScrutineeK
                         "identifier" | "name_segment" | "qualified_name" | "this_expression" => {
                             break
                         }
-                        "suffix_expression" => base = first_operand(node),
+                        "suffix_expression" => {
+                            // A call (`p.Get()`) or index (`p.arr[0]`)
+                            // mid-receiver makes the whole scrutinee a
+                            // computed read.
+                            if has_actual_binding(node)
+                                || node
+                                    .children(&mut node.walk())
+                                    .any(|c| c.kind() == "[")
+                            {
+                                return ScrutineeKind::Other;
+                            }
+                            base = first_operand(node);
+                        }
                         _ if CHAIN_KINDS.contains(&node.kind()) && transparent_wrap(node) => {
                             base = first_operand(node);
                         }
