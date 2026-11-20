@@ -339,6 +339,21 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             text,
         });
     }
+
+    /// Emits directive comments inside a skipped subtree: `skip_subtree`
+    /// keeps the cursor from descending, but suppression markers buried
+    /// there must still register.
+    pub(crate) fn emit_comments_in(&mut self, node: tree_sitter::Node<'_>) {
+        let mut stack = vec![node];
+        while let Some(n) = stack.pop() {
+            if self.spec.role_for(n.kind_id()) == Role::Comment {
+                self.on_comment(n);
+            }
+            let mut kids: Vec<_> = n.children(&mut n.walk()).collect();
+            kids.reverse();
+            stack.extend(kids);
+        }
+    }
 }
 
 impl<'s, 'a> WalkState<'s, 'a, '_> {
