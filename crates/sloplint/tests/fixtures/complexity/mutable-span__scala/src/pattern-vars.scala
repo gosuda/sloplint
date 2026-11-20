@@ -1,0 +1,85 @@
+object PatternVars {
+  def tally(limit: Int): Int = {
+    var whole, Some(count) = (0, Some(0))
+    var counters = 0
+    val pick, Some(PatternVars.counters) = (limit, Some(0))
+    counters = counters + 1
+    count = count + 1
+    whole = whole + pick
+    val a01 = 1
+    val a02 = 2
+    val a03 = 3
+    val a04 = 4
+    val a05 = 5
+    val a06 = 6
+    val a07 = 7
+    val a08 = 8
+    val a09 = 9
+    val a10 = 10
+    val a11 = 11
+    val a12 = 12
+    val a13 = 13
+    val a14 = 14
+    val a15 = 15
+    val a16 = 16
+    val a17 = 17
+    val a18 = 18
+    val a19 = 19
+    val a20 = 20
+    val a21 = 21
+    val a22 = 22
+    val a23 = 23
+    val a24 = 24
+    val a25 = 25
+    val a26 = 26
+    val a27 = 27
+    val tail = a27 + limit
+    count = count + tail
+    counters = counters + tail
+    whole + count + counters
+  }
+  val counters = 0
+
+  def shadowed: Int = {
+    var `count` = 0
+    var `Count` = 0
+    var `Other` = 0
+    count = count + 1
+    Count = Count + Other
+    Other = Other + 1
+    val b01 = 1
+    val b02 = 2
+    val b03 = 3
+    val b04 = 4
+    val b05 = 5
+    val b06 = 6
+    val b07 = 7
+    val b08 = 8
+    val b09 = 9
+    val b10 = 10
+    val b11 = 11
+    val b12 = 12
+    val b13 = 13
+    val b14 = 14
+    val b15 = 15
+    val b16 = 16
+    val b17 = 17
+    val b18 = 18
+    val b19 = 19
+    val b20 = 20
+    val b21 = 21
+    val b22 = 22
+    val b23 = 23
+    val b24 = 24
+    val b25 = 25
+    val b26 = 26
+    val b27 = 27
+    val b28 = 28
+    val b29 = 29
+    val b30 = 30
+    count = count + b30
+    Count = Count + b29
+    Other = Other + b28
+    count + Count + Other
+  }
+}
