@@ -146,6 +146,21 @@ fn alloy_function<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> 
         .flatten()
         .map(|ty| trimmed(cx, ty));
     let (doc, doc_pos) = preceding_comments(cx, n, COMMENT_KINDS, &[]);
+    // `S.foo[x]` reads `this` implicitly, so the receiver counts as the
+    // first parameter for arity checks (passthrough, boolean-param rules).
+    let mut params = Vec::new();
+    if let Some(recv) = receiver {
+        params.push(Param {
+            name: "this",
+            ty: Some(recv),
+            primitive_kind: alloy_primitive(Some(recv)),
+            has_default: false,
+            bool_default: false,
+            keyword_only: false,
+            is_variadic: false,
+        });
+    }
+    params.extend(decl_params(cx, n));
     Some(FunctionHead {
         shadow_params: Vec::new(),
         name,
@@ -159,7 +174,7 @@ fn alloy_function<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> 
         is_decorated: false,
         is_trait_item: false,
         region: None,
-        params: decl_params(cx, n),
+        params,
         receiver,
         return_type,
         missing_annotations: Vec::new(),
