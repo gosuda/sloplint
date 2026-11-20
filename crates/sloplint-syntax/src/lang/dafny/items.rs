@@ -31,15 +31,12 @@ pub(crate) fn decl_names_for<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'
             }
         }
         "var_decl_statement" => {
+            // `local_var_decl` children declare themselves — only
+            // `case_pattern` children (e.g. `var (a, b)`) need the
+            // statement's help, else their names would register twice.
             for child in named_children(n) {
-                match child.kind() {
-                    "local_var_decl" => {
-                        if let Some(name) = child_by_field(child, "name") {
-                            out.push((text(cx, name), pos_of(name)));
-                        }
-                    }
-                    "case_pattern" => pattern_names(cx, child, out),
-                    _ => {}
+                if child.kind() == "case_pattern" {
+                    pattern_names(cx, child, out);
                 }
             }
         }
