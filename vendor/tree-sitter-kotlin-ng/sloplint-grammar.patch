@@ -8,15 +8,40 @@
      [$.binary_expression, $.call_expression],
      [$.binary_expression, $.in_expression, $.call_expression],
      [$.binary_expression, $.infix_expression, $.call_expression],
-@@ -48,11 +49,15 @@
-     [$.variable_declaration, $.type_modifiers, $.annotated_expression],
+@@ -36,23 +37,35 @@
+     [$.modifiers, $.annotated_lambda],
+     [$.modifiers, $.annotated_expression],
+ 
+-    [$.delegation_specifier, $.type_modifiers],
++    [$.delegation_specifier, $.type_modifiers, $.paren_type_modifiers],
++    [$.delegation_specifier, $.paren_type_modifiers],
+     [$.annotated_expression, $.type_modifiers],
+-    [$.annotated_expression, $.type_modifiers, $.when_subject],
+     [$.annotated_expression, $.type_modifiers, $.modifiers],
++    [$.annotated_expression, $.type_modifiers, $.paren_type_modifiers],
++    [$.annotated_expression, $.type_modifiers, $.modifiers, $.paren_type_modifiers],
+     [$.parameter_modifiers, $.type_modifiers],
++    [$.parameter_modifiers, $.type_modifiers, $.paren_type_modifiers],
++    // `suspend @Anno` — suspend is a function modifier, a type modifier,
++    // and (as of the wrapped-suspend fix) a paren-type modifier / a
++    // suspend-prefixed parenthesized type.
+     [$.function_modifier, $.type_modifiers],
++    [$.function_modifier, $.type_modifiers, $.parenthesized_type],
++    // `suspend (` — suspend inside type_modifiers (suspend function type /
++    // suspend receiver) vs suspend heading a wrapped parenthesized type.
++    [$.type_modifiers, $.parenthesized_type],
+     [$.function_modifier, $._reserved_identifier],
+-    [$.variable_declaration, $.type_modifiers],
+-    [$.variable_declaration, $.type_modifiers, $.modifiers, $.annotated_expression],
+-    [$.variable_declaration, $.type_modifiers, $.annotated_expression],
++    [$.variable_declaration, $.type_modifiers, $.paren_type_modifiers],
      [$.variable_declaration],
  
 -    [$.function_value_parameters, $.function_type_parameters],
 +    [$._untyped_function_value_parameters, $._simple_user_type],
 +    [$._untyped_function_value_parameters, $.function_type_parameters],
      [$.parenthesized_type, $.function_type_parameters],
-+    [$.parenthesized_type],
++    [$.paren_type_modifiers],
      [$.multi_variable_declaration, $.function_type_parameters],
  
      [$.class_modifier, $._reserved_identifier],
@@ -25,18 +50,22 @@
      [$.platform_modifier, $._reserved_identifier],
      [$.property_modifier, $._reserved_identifier],
  
-@@ -63,6 +68,10 @@
+@@ -63,6 +76,14 @@
      [$.non_nullable_type],
      [$.function_type],
      [$._receiver_type],
 +    [$.callable_reference, $.primary_expression],
 +    [$.context_parameters, $._reserved_identifier],
 +    [$.modifiers, $.type_modifiers],
++    [$.modifiers, $.type_modifiers, $.paren_type_modifiers],
++    [$.modifiers, $.type_modifiers, $.paren_type_modifiers, $.annotated_expression],
++    [$.type_modifiers, $.paren_type_modifiers, $.annotated_expression],
++    [$.type_modifiers, $.paren_type_modifiers],
 +    [$.secondary_constructor, $._reserved_identifier],
    ],
  
    extras: $ => [
-@@ -85,6 +94,10 @@
+@@ -85,6 +106,10 @@
      'set',
      // used to check if we can parse a comment
      '$',
@@ -47,7 +76,7 @@
    ],
  
    inline: $ => [
-@@ -155,6 +168,7 @@
+@@ -155,6 +180,7 @@
      ),
  
      class_declaration: $ => prec.right(seq(
@@ -55,7 +84,7 @@
        optional($.modifiers),
        choice('class', seq(optional('fun'), 'interface')),
        field('name', $.identifier),
-@@ -174,6 +188,7 @@
+@@ -174,6 +200,7 @@
      )),
  
      property_declaration: $ => prec.right(seq(
@@ -63,7 +92,7 @@
        optional($.modifiers),
        choice('val', 'var'),
        optional($.type_parameters),
-@@ -184,13 +199,32 @@
+@@ -184,13 +211,32 @@
          seq('=', $.expression),
          $.property_delegate,
        )),
@@ -99,7 +128,7 @@
      type_alias: $ => prec.right(seq(
        optional($.modifiers),
        'typealias',
-@@ -221,7 +255,7 @@
+@@ -221,7 +267,7 @@
  
      constructor_delegation_call: $ => seq(choice('this', 'super'), $.value_arguments),
  
@@ -108,7 +137,7 @@
  
      type_parameter: $ => seq(
        optional($.type_parameter_modifiers),
-@@ -265,6 +299,7 @@
+@@ -265,6 +311,7 @@
      constructor_invocation: $ => seq($.type, $.value_arguments),
  
      function_declaration: $ => prec.right(1, seq(
@@ -116,7 +145,7 @@
        optional($.modifiers),
        'fun',
        optional($.type_parameters),
-@@ -276,6 +311,16 @@
+@@ -276,6 +323,16 @@
        optional($.function_body),
      )),
  
@@ -133,7 +162,27 @@
      function_value_parameters: $ => seq(
        '(',
        optionalCommaSep1(seq(
-@@ -322,6 +367,14 @@
+@@ -293,12 +350,18 @@
+     delegation_specifier: $ => prec.right(seq(
+       repeat($.annotation),
+       choice(
+-        $.constructor_invocation,
++        alias($._delegation_constructor_invocation, $.constructor_invocation),
+         $.explicit_delegation,
+         $.type,
+       ),
+     )),
+ 
++    // `class D : Base\n() {}` — the scanner cannot suppress the semi before a
++    // superclass call's arguments (its valid-symbol mask is identical to a `(`
++    // after a complete statement), so the delegation's constructor invocation
++    // tolerates the separator instead.
++    _delegation_constructor_invocation: $ => seq($.type, optional($._semi), $.value_arguments),
++
+     variable_declaration: $ => prec(1, seq(
+       repeat($.annotation),
+       $._identifier,
+@@ -322,6 +385,14 @@
        $.primary_expression,
      ),
  
@@ -148,7 +197,7 @@
      getter: $ => prec.right(seq(
        optional($.modifiers),
        'get',
-@@ -415,7 +468,7 @@
+@@ -415,7 +486,7 @@
  
      enum_entry: $ => seq(
        optional($.modifiers),
@@ -157,7 +206,7 @@
        optional($.value_arguments),
        optional($.class_body),
      ),
-@@ -427,7 +480,7 @@
+@@ -427,7 +498,7 @@
      ),
  
      value_argument: $ => seq(
@@ -166,7 +215,7 @@
        optional('*'),
        $.expression,
      ),
-@@ -584,7 +637,7 @@
+@@ -584,7 +655,7 @@
        ),
      ),
  
@@ -175,7 +224,7 @@
  
      type_projection: $ => choice(
        seq(repeat($.variance_modifier), $.type),
-@@ -593,6 +646,7 @@
+@@ -593,6 +664,7 @@
  
      function_type: $ => seq(
        optional($.type_modifiers),
@@ -183,17 +232,30 @@
        optional(seq($._receiver_type, '.')),
        $.function_type_parameters,
        '->',
-@@ -605,7 +659,8 @@
+@@ -605,7 +677,21 @@
        ')',
      ),
  
 -    parenthesized_type: $ => seq('(', $.type, ')'),
-+    parenthesized_type: $ =>
-+      prec.dynamic(1, seq(optional($.type_modifiers), '(', $.type, ')')),
++    parenthesized_type: $ => choice(
++      prec.dynamic(1, seq(optional($.paren_type_modifiers), '(', $.type, ')')),
++      // `suspend ((Header) -> Verifier?)` (ktor's JWT verifier) — the whole
++      // paren wraps a complete type, so `suspend` modifies it here. Dynamic
++      // -1 loses the tie to the function-type reading, so
++      // `suspend (Int).() -> Unit` still binds `suspend` to that type.
++      prec.dynamic(
++        -1,
++        seq(optional($.paren_type_modifiers), 'suspend', optional($.paren_type_modifiers), '(', $.type, ')'),
++      ),
++    ),
++
++    // Annotations only: `suspend` binds the enclosing function type
++    // (`suspend (Int).() -> Unit`), never an unwrapped parenthesized one.
++    paren_type_modifiers: $ => repeat1($.annotation),
  
      assignment: $ => seq(
        field('left', $.expression),
-@@ -752,6 +807,7 @@
+@@ -752,6 +838,7 @@
      ),
  
      lambda_literal: $ => seq(
@@ -201,7 +263,7 @@
        '{',
        optional(seq(optional($.lambda_parameters), '->')),
        optionalSep1($.statement, $._semi),
-@@ -768,7 +824,7 @@
+@@ -768,7 +855,7 @@
      anonymous_function: $ => prec.right(seq(
        'fun',
        optional(seq($.type, '.')),
@@ -210,7 +272,7 @@
        optional(seq(':', $.type)),
        optional($.type_constraints),
        optional($.function_body),
-@@ -825,7 +881,9 @@
+@@ -825,7 +912,9 @@
  
      parenthesized_expression: $ => seq('(', $.expression, ')'),
  
@@ -221,7 +283,7 @@
  
      when_expression: $ => seq(
        'when',
-@@ -853,6 +911,11 @@
+@@ -853,6 +942,11 @@
            commaSep1(field('condition', $._when_condition)),
            optional(','),
          ),
@@ -233,7 +295,7 @@
          'else',
        ),
        '->',
-@@ -922,14 +985,20 @@
+@@ -922,14 +1016,20 @@
      ),
  
      callable_reference: $ => seq(
@@ -256,7 +318,7 @@
        $.identifier,
      )),
  
-@@ -940,6 +1009,7 @@
+@@ -940,6 +1040,7 @@
      ),
  
      string_literal: $ => seq(
@@ -264,7 +326,7 @@
        '"',
        repeat(choice(
          alias(choice(
-@@ -956,14 +1026,17 @@
+@@ -956,14 +1057,17 @@
      ),
  
      multiline_string_literal: $ => seq(
@@ -283,7 +345,7 @@
      interpolation: $ => choice(
        seq('$', $._identifier),
        seq('${', $.expression, '}'),
-@@ -1045,7 +1118,7 @@
+@@ -1045,7 +1149,7 @@
        /`[^\r\n`]+`/,
      )),
  
@@ -292,7 +354,7 @@
        choice(
          'actual',
          'annotation',
-@@ -1059,6 +1132,9 @@
+@@ -1059,6 +1163,9 @@
          'set',
          'operator',
          'value',
@@ -594,20 +656,26 @@
              case '*':
              case '%':
              case '>':
-@@ -224,6 +470,12 @@
+@@ -224,6 +470,18 @@
                      goto q_dot_from_semi;
                  }
                  return true;
 +            // `class C\n(params)` — a `(` continuing a declaration head must
-+            // not take a semicolon. In expression position `x\n(y)` stays two
-+            // statements; nullable-chain (`?.`) and `!is` continuations mark
-+            // that state, so the semi is kept wherever either is valid.
++            // not take a semicolon. The CONSTRUCTOR keyword is valid exactly in
++            // that head position (`class C constructor(...)`); after a complete
++            // statement (`fun g() {}`, `do { } while (c)`, `val x: Int`) it is
++            // not, so the semi must be emitted or `(a as B).c()` merges into
++            // the previous construct. In expression position `x\n(y)` stays two
++            // statements; nullable-chain (`?.`) and `!is` continuations also
++            // mark an ended expression, so the semi is kept wherever either is
++            // valid.
 +            case '(':
-+                return valid_symbols[Q_DOT] || valid_symbols[NOT_IS];
++                return valid_symbols[Q_DOT] || valid_symbols[NOT_IS] ||
++                       !valid_symbols[CONSTRUCTOR];
              case 'e':
              case 'i':
              case 'g':
-@@ -238,23 +490,36 @@
+@@ -238,23 +496,36 @@
              case 'c':
              case 'b':
              case 'w':
@@ -650,7 +718,7 @@
                  // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
                  // we found a variable named constructor whose field is being accessed
                  if (index == 5) {
-@@ -279,18 +544,22 @@
+@@ -279,18 +550,22 @@
                      }
                  }
                  // If `get` was found and the keyword is not valid, return a semi since it's being used as an identifier
@@ -678,7 +746,7 @@
  
                          while (iswspace(lexer->lookahead)) {
                              if (lexer->lookahead == '\n') {
-@@ -307,6 +576,33 @@
+@@ -307,6 +582,33 @@
                  else if (index == 1 && valid_symbols[IN]) {
                      return true;
                  }
@@ -712,7 +780,7 @@
                  return !res;
              case ';':
                  advance(lexer);
-@@ -314,20 +610,60 @@
+@@ -314,20 +616,60 @@
                  return true;
              case '@':
                  if (valid_symbols[CONSTRUCTOR]) {

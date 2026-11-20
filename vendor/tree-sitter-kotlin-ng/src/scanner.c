@@ -471,11 +471,17 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                 }
                 return true;
             // `class C\n(params)` — a `(` continuing a declaration head must
-            // not take a semicolon. In expression position `x\n(y)` stays two
-            // statements; nullable-chain (`?.`) and `!is` continuations mark
-            // that state, so the semi is kept wherever either is valid.
+            // not take a semicolon. The CONSTRUCTOR keyword is valid exactly in
+            // that head position (`class C constructor(...)`); after a complete
+            // statement (`fun g() {}`, `do { } while (c)`, `val x: Int`) it is
+            // not, so the semi must be emitted or `(a as B).c()` merges into
+            // the previous construct. In expression position `x\n(y)` stays two
+            // statements; nullable-chain (`?.`) and `!is` continuations also
+            // mark an ended expression, so the semi is kept wherever either is
+            // valid.
             case '(':
-                return valid_symbols[Q_DOT] || valid_symbols[NOT_IS];
+                return valid_symbols[Q_DOT] || valid_symbols[NOT_IS] ||
+                       !valid_symbols[CONSTRUCTOR];
             case 'e':
             case 'i':
             case 'g':
