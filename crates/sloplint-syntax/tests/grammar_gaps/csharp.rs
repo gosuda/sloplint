@@ -434,3 +434,63 @@ fn preproc_ctor_init_initializer_collection_else() {
         }\n";
     run_clean("preproc_slots.cs", source);
 }
+
+#[test]
+fn preproc_after_elseless_if_and_base_arg_lists() {
+    // `#if` after an else-less `if` must not be claimed as an else-clause
+    // candidate (orphaned `#endif` bug); `dangling_else` binds `#if`-wrapped
+    // `else` arms to the preceding if as a sibling statement (reactive,
+    // hangfire). `#if` inside base lists and argument lists splits member
+    // slots (newtonsoft.json).
+    let source = "class X : B\n\
+        #if X\n\
+        \t, I\n\
+        #endif\n\
+        {\n\
+        \tvoid M(bool q) {\n\
+        \t\tif (q) { A(); }\n\
+        #if !NET20\n\
+        \t\tC();\n\
+        #endif\n\
+        \t\tif (q) { }\n\
+        #if Z\n\
+        \t\telse { D(); }\n\
+        #endif\n\
+        \t\tF(x\n\
+        #if Y\n\
+        \t\t\t, y\n\
+        #endif\n\
+        \t\t);\n\
+        \t}\n\
+        }\n";
+    run_clean("preproc_if_base_arg.cs", source);
+}
+
+#[test]
+fn preproc_class_and_method_heads() {
+    // `#if` branches carry complete alternate class/method heads; the body
+    // after `#endif` is shared (messagepack-csharp, unity-mcp).
+    let source = "#if X\n\
+        public class Head1\n\
+        #else\n\
+        internal class Head1\n\
+        #endif\n\
+        {\n\
+        #if Y\n\
+        \tprivate int M1() { return 0; }\n\
+        #else\n\
+        \tpublic void M1() { }\n\
+        #endif\n\
+        }\n";
+    run_clean("preproc_heads.cs", source);
+}
+
+#[test]
+fn preproc_line_backslash_path() {
+    // Razor codegen emits `#line 2 "..\\..\\File.cshtml"` — the raw
+    // backslash path is not a valid string literal.
+    let source = "#line 2 \"..\\..\\Views\\Shared.cshtml\"\n\
+        class C { }\n\
+        #line default\n";
+    run_clean("preproc_line_path.cs", source);
+}

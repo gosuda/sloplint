@@ -132,9 +132,38 @@ were left failing on purpose (see controls).
   last element lives inside a `#if` branch, both element lists now treat
   the `,` separator as optional (documented over-acceptance: `{1 2}` and
   `[1 2]` also parse; Roslyn still rejects them).
-- CS-SPLITPP, else clauses: `preproc_if_in_else_clause` (branches:
-  `'else' statement`) is accepted alongside `else` alternatives in
-  `if_statement`, so `if (q) {} #if X else {} #endif` parses.
+- CS-SPLITPP, else clauses + post-if blocks: `preproc_if_in_else_clause`
+  inside `if_statement`'s alternative repeat was REMOVED — it stole any
+  `#if` following an else-less `if` and then died on non-`else` branch
+  arms, leaving an orphaned `#endif` (`if(x){A();} #if !NET20 C();
+  #endif` failed). Replaced with a `dangling_else` rule
+  (`'else' statement`, `prec.right`) added as a `preproc_if_in_top_level`
+  branch, mirroring the tree-sitter-c convention: the `#if` stays a
+  sibling statement and `else` arms inside it bind semantically to the
+  preceding if. Both `if (q) {} #if X else {} #endif` and post-if `#if`
+  blocks now parse.
+- CS-SPLITPP, base lists: `base_list` restructured so each slot is
+  `type + optional(argument_list)` or `preproc_if_in_base_list`
+  (branches: `optional(',') type optional(argument_list)`), so
+  `class X : B #if , I #endif {}` parses.
+- CS-SPLITPP, argument lists: `argument_list` restructured the same way
+  with `preproc_if_in_argument_list` (branches: `optional(',') argument`)
+  plus a trailing `optional(',')`, so `F(x #if , y #endif)` parses.
+- CS-SPLITPP, declaration heads: the five type declarations and
+  `method_declaration` wrap their initializer as
+  `choice($._X_declaration_initializer, alias($.preproc_if_in_class_head /
+  _in_method_head, $.preproc_if))` — `#if` arms carry attrs+modifiers+
+  keyword+name+partial tail, so `#if`-split class/method heads parse.
+- CS-PREPLINE: `preproc_line` takes `_preproc_line_path`, a lax token
+  covering raw text to EOL, so Razor `#line 2 "..\.."` paths parse.
+- CS-LAMBDA `(out T x) => e`: unresolved upstream limitation — the
+  `(`-position merged LR state statically reduces `out float x` to
+  `argument` (`argument` is `prec(1)`, beats `parameter`) before `=>`
+  can disambiguate, and no GLR fork forms. `in`/`out`/`ref`/`scoped`/
+  `readonly` modifiers parse in every other position (method params,
+  call args, tuple elements, non-lambda lambdas); only lambda-position
+  `in`/`out` params fail. Verified identical failure on pristine
+  upstream v0.23.5 — ceiling, not a sloplint regression.
 
 ## Adapter stability
 
