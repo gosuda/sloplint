@@ -127,6 +127,13 @@ pub(crate) fn shadow_decl_kind(kind: &str) -> bool {
 fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str>) {
     let mut pending = vec![root];
     while let Some(node) = pending.pop() {
+        if node.kind() == "case_class_pattern"
+            && child_by_field(node, "type").is_some_and(|t| text(cx, t) == "given")
+        {
+            // `case given (status, String)` is a given of tuple type, not a
+            // `given(...)` extractor; its members bind no locals.
+            continue;
+        }
         if node.kind() == "identifier" {
             if is_pattern_binder(cx, node) {
                 out.push(text(cx, node));
@@ -193,16 +200,20 @@ pub(crate) fn shadow_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s s
 }
 
 pub(crate) fn write_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    if n.kind() == "assignment_expression"
-        && cx
-            .parent()
-            .is_some_and(|parent| parent.kind() == "arguments")
-    {
-        return;
-    }
     if (n.kind() == "assignment_expression" || is_compound_write(cx, n))
         && let Some(l) = child_by_field(n, "left")
     {
+        if n.kind() == "assignment_expression"
+            && l.kind() == "identifier"
+            && cx
+                .parent()
+                .is_some_and(|parent| parent.kind() == "arguments")
+            && named_arg_verdict(cx, n, text(cx, l)) != Some(false)
+        {
+            // `f(name = v)` is a named argument, not a write — same rule as
+            // report_assign_write. A field path stays a real write.
+            return;
+        }
         out.extend(write_root(cx, l));
     }
 }
@@ -499,6 +510,49 @@ fn top_level_var<'s>(cx: &Cx<'_, 's>, _n: Node<'_>, name: &str) -> bool {
         .contains(&name)
 }
 
+// Whether `name = v` inside `f(...)` names a parameter of a same-file
+// `def f`. None when the callee cannot be resolved (precision first — the
+// named-argument reading is the modern default); Some(true) when a same-file
+// def has that parameter; Some(false) when every same-file `def f` lacks it —
+// in Scala 2.12 scripts that shape is a `Unit`-valued assignment.
+fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option<bool> {
+    let args = n.parent().filter(|p| p.kind() == "arguments")?;
+    let call = args.parent().filter(|p| p.kind() == "call_expression")?;
+    let func = child_by_field(call, "function")?;
+    if func.kind() != "identifier" {
+        return None;
+    }
+    let fname = text(cx, func);
+    let root = cx.root()?;
+    let mut saw_def = false;
+    for def in named_children(root) {
+        if def.kind() != "function_definition" {
+            continue;
+        }
+        let Some(name_node) = child_by_field(def, "name") else {
+            continue;
+        };
+        if text(cx, name_node) != fname {
+            continue;
+        }
+        saw_def = true;
+        for c in named_children(def) {
+            if c.kind() != "parameters" {
+                continue;
+            }
+            for param in named_children(c) {
+                if param.kind() == "parameter"
+                    && child_by_field(param, "name")
+                        .is_some_and(|nm| text(cx, nm) == arg_name)
+                {
+                    return Some(true);
+                }
+            }
+        }
+    }
+    saw_def.then_some(false)
+}
+
 fn report_assign_write<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
@@ -510,9 +564,12 @@ fn report_assign_write<'s>(
     if n.kind() == "assignment_expression"
         && left.kind() == "identifier"
         && n.parent().is_some_and(|p| p.kind() == "arguments")
+        && named_arg_verdict(cx, n, text(cx, left)) != Some(false)
     {
-        // `f(name = v)` is a named argument, not a write. A field path
-        // (`f(obj.x = v)`) can't name a parameter, so it stays a real write.
+        // `f(name = v)` is a named argument, not a write — unless a same-file
+        // `def f` has no such parameter, which is a Scala 2.12 assignment.
+        // A field path (`f(obj.x = v)`) can't name a parameter, so it stays
+        // a real write.
         return;
     }
     let Some((name, pos)) = write_root(cx, left) else {

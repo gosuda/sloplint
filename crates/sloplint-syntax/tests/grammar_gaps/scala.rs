@@ -233,9 +233,11 @@ fn context_function_parameter_types_parse() {
     let source = concat!(
         "def f(x: (using Context) ?=> Int, y: (using using.Context) ?=> Int) = x\n",
         "def g(f: (using Int, String) ?=> Boolean) = f\n",
+        // The standard `FunArgTypes ?=> Type` form takes no `using` marker.
+        "def h(f: (Int, String) ?=> Boolean) = f\n",
     );
     let analysis = run_clean(source);
-    assert_eq!(function_names(&analysis), ["f", "g"]);
+    assert_eq!(function_names(&analysis), ["f", "g", "h"]);
 }
 
 #[test]

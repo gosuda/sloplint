@@ -56,6 +56,7 @@ SC-SOFTKW-CTXF: context function type requires `?=>` (sloplint)
 
 def f(x: (using Context) ?=> Int) = x
 def g(f: (using Int, String) ?=> Boolean) = f
+def h(f: (Int, String) ?=> Boolean) = f
 
 --------------------------------------------------------------------------------
 
@@ -67,6 +68,17 @@ def g(f: (using Int, String) ?=> Boolean) = f
         name: (identifier)
         type: (function_type
           parameter_types: (parameter_types
+            type: (type_identifier))
+          return_type: (type_identifier))))
+    body: (identifier))
+  (function_definition
+    name: (identifier)
+    parameters: (parameters
+      (parameter
+        name: (identifier)
+        type: (function_type
+          parameter_types: (parameter_types
+            type: (type_identifier)
             type: (type_identifier))
           return_type: (type_identifier))))
     body: (identifier))

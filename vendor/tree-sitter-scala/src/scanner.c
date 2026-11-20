@@ -299,7 +299,7 @@ static enum TokenType op_left_class(int32_t first) {
     case '<': case '>': return OP_LEFT_REL;
     case ':': return OP_LEFT_COLON;
     case '+': case '-': return OP_LEFT_ADD;
-    case '*': case '%': return OP_LEFT_MUL;
+    case '*': case '%': case '/': return OP_LEFT_MUL;
     default: return OP_LEFT_OTHER;
   }
 }
@@ -757,6 +757,38 @@ static bool has_operand(TSLexer *lexer) {
     }
     advance(lexer);
     consume_block_comment_body(lexer);
+  }
+}
+
+// Skips blanks and comments for the `enum`/`given` definition peeks. Returns
+// the character the peek should inspect — the real lookahead, or '/' when a
+// lone slash (an operator, not a comment) was consumed. The caller may only
+// return a verdict after this: the position is already past what was read,
+// which is fine because `return false` rewinds and `return true` extends the
+// token only up to the last mark_end.
+static int32_t peek_past_blanks_comments(TSLexer *lexer) {
+  for (;;) {
+    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+      advance(lexer);
+    }
+    if (lexer->lookahead != '/') {
+      return lexer->lookahead;
+    }
+    advance(lexer);
+    if (lexer->lookahead == '/') {
+      // A line comment runs to the newline; the declaration prefix never
+      // crosses it, so the peek stops there too.
+      while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
+        advance(lexer);
+      }
+      return lexer->lookahead;
+    }
+    if (lexer->lookahead == '*') {
+      advance(lexer);
+      consume_block_comment_body(lexer);
+      continue;
+    }
+    return '/';
   }
 }
 
@@ -1904,10 +1936,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // `,`, `.`, `:`, an operator or end-of-line — means the word is the
       // right operand.
       if (len == 4 && strcmp(word, "enum") == 0) {
-        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-          advance(lexer);
-        }
-        int32_t c = lexer->lookahead;
+        int32_t c = peek_past_blanks_comments(lexer);
         if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
             c == '$' || c == '=') {
           lexer->result_symbol = postfix_sym;
@@ -1915,18 +1944,30 @@ static bool scan_impl(void *payload, TSLexer *lexer,
         }
       }
       // `given` gets the same split as `enum`: a definition follows a type or
-      // parameter name (`given Foo`), while `given(`, `given.`, `given:` and
-      // the like are an expression operand (`x +` + `given(1)` calls the
-      // function `given`). `=` names a variable being assigned.
+      // parameter name (`given Foo`), a type-parameter list (`given [T] =>`),
+      // or a using clause (`given (using Ord[T]) =>`), while `given(`,
+      // `given.`, `given:` and the like are an expression operand (`x +` +
+      // `given(1)` calls the function `given`). `=` names a variable being
+      // assigned.
       if (len == 5 && strcmp(word, "given") == 0) {
-        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-          advance(lexer);
-        }
-        int32_t c = lexer->lookahead;
+        int32_t c = peek_past_blanks_comments(lexer);
         if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
-            c == '$' || c == '=') {
+            c == '$' || c == '=' || c == '[') {
           lexer->result_symbol = postfix_sym;
           return true;
+        }
+        if (c == '(') {
+          advance(lexer);
+          c = peek_past_blanks_comments(lexer);
+          if (c >= 'a' && c <= 'z') {
+            char inner[sizeof "using"];
+            int inner_len =
+                read_word(lexer, inner, (int)sizeof inner, NULL);
+            if (inner_len == 5 && strcmp(inner, "using") == 0) {
+              lexer->result_symbol = postfix_sym;
+              return true;
+            }
+          }
         }
       }
     }

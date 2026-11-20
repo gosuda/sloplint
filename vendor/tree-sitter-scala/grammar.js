@@ -482,9 +482,11 @@ module.exports = grammar({
     // `enum` (Scala 2 code uses it as a parameter or named argument) diverge
     // only after the token's continuation is known.
     [$.enum_definition, $._soft_identifier],
-    [$.given_definition, $._simple_expression, $._braced_typed_lambda],
-    [$.given_definition, $._simple_expression],
     [$._type_identifier, $.given_pattern],
+    [$.given_definition, $._simple_expression, $._braced_typed_lambda],
+    [$.given_pattern, $._simple_expression],
+    [$._type_identifier, $.given_pattern, $._simple_expression],
+    [$.given_definition, $._simple_expression],
     [$.self_type, $.given_definition, $._simple_expression],
     [$._using_parameters_clause, $._type_identifier],
     [$._simple_expression, $.keyword_named_argument],
@@ -492,8 +494,6 @@ module.exports = grammar({
     [$.self_type, $.given_definition, $._type_identifier, $._simple_expression],
     [$.given_definition, $._type_identifier, $._simple_expression],
     [$.given_definition, $._type_identifier],
-    [$.given_pattern, $._simple_expression],
-    [$._type_identifier, $.given_pattern, $._simple_expression],
     [$.self_type, $.given_definition, $._simple_expression, $._braced_typed_lambda],
     [$.binding, $._simple_expression],
     [$.binding, $._type_identifier],
@@ -502,6 +502,8 @@ module.exports = grammar({
     // The conflicts keep both readings alive so precedence picks per context.
     [$._type, $.parameter_types],
     [$._context_parameter_types, $._type_identifier],
+    [$.tuple_type, $.parameter_types, $._context_parameter_types],
+    [$.parameter_types, $._context_parameter_types],
     [$._context_parameter_types, $._type_identifier, $._simple_expression],
     [$._context_parameter_types, $._simple_expression],
     [$._context_parameter_types, $._type_identifier, $._single_lambda_param],
@@ -1996,14 +1998,15 @@ module.exports = grammar({
         $.infix_type,
       ),
 
-    // The `using`-led parameter list of a context function type `(using T, U)
-    // ?=> R`: `erased` sits once after `using`, like in
-    // _using_parameters_clause. Kept out of parameter_types so the plain
-    // `=>` arrow cannot follow it.
+    // The parameter list of a context function type `(T, U) ?=> R`; the
+    // `using` marker is optional because Scala 3.4+ also spells it
+    // `(using T, U) ?=> R` when context parameters carry modifiers.
+    // `erased` sits once after `using`, like in _using_parameters_clause.
+    // Kept out of parameter_types so the plain `=>` arrow cannot follow it.
     _context_parameter_types: $ =>
       seq(
         "(",
-        "using",
+        optional("using"),
         optional(erasedMod($)),
         trailingCommaSep1($._param_type),
         ")",

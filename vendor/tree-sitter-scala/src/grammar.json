@@ -6937,8 +6937,16 @@
           "value": "("
         },
         {
-          "type": "STRING",
-          "value": "using"
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "using"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
         },
         {
           "type": "CHOICE",
@@ -14904,17 +14912,26 @@
       "_soft_identifier"
     ],
     [
+      "_type_identifier",
+      "given_pattern"
+    ],
+    [
       "given_definition",
       "_simple_expression",
       "_braced_typed_lambda"
     ],
     [
-      "given_definition",
+      "given_pattern",
       "_simple_expression"
     ],
     [
       "_type_identifier",
-      "given_pattern"
+      "given_pattern",
+      "_simple_expression"
+    ],
+    [
+      "given_definition",
+      "_simple_expression"
     ],
     [
       "self_type",
@@ -14949,15 +14966,6 @@
       "_type_identifier"
     ],
     [
-      "given_pattern",
-      "_simple_expression"
-    ],
-    [
-      "_type_identifier",
-      "given_pattern",
-      "_simple_expression"
-    ],
-    [
       "self_type",
       "given_definition",
       "_simple_expression",
@@ -14978,6 +14986,15 @@
     [
       "_context_parameter_types",
       "_type_identifier"
+    ],
+    [
+      "tuple_type",
+      "parameter_types",
+      "_context_parameter_types"
+    ],
+    [
+      "parameter_types",
+      "_context_parameter_types"
     ],
     [
       "_context_parameter_types",

@@ -1,3 +1,4 @@
 src/store.scala:1 info agent/ambient-global-state
 src/store.scala:8 info agent/ambient-global-state
 src/store.scala:12 info agent/ambient-global-state
+src/store.scala:18 info agent/ambient-global-state
