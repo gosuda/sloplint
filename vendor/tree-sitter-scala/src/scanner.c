@@ -1880,7 +1880,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // are ordinary identifiers, so such a line can be the right operand.
       static const char *const definition_words[] = {
           "abstract", "class", "def",    "export",    "final",
-          "given",    "import", "implicit", "lazy",   "object", "override",
+          "import",   "implicit", "lazy",   "object", "override",
           "package",  "private", "protected", "sealed", "trait", "type",
           "val",      "var",
       };
@@ -1904,6 +1904,21 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // `,`, `.`, `:`, an operator or end-of-line — means the word is the
       // right operand.
       if (len == 4 && strcmp(word, "enum") == 0) {
+        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+          advance(lexer);
+        }
+        int32_t c = lexer->lookahead;
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
+            c == '$' || c == '=') {
+          lexer->result_symbol = postfix_sym;
+          return true;
+        }
+      }
+      // `given` gets the same split as `enum`: a definition follows a type or
+      // parameter name (`given Foo`), while `given(`, `given.`, `given:` and
+      // the like are an expression operand (`x +` + `given(1)` calls the
+      // function `given`). `=` names a variable being assigned.
+      if (len == 5 && strcmp(word, "given") == 0) {
         while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
           advance(lexer);
         }

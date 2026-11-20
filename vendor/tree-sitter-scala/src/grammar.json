@@ -6700,6 +6700,52 @@
                   "name": "_arrow_then_type"
                 }
               ]
+            },
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "FIELD",
+                  "name": "parameter_types",
+                  "content": {
+                    "type": "ALIAS",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "_context_parameter_types"
+                    },
+                    "named": true,
+                    "value": "parameter_types"
+                  }
+                },
+                {
+                  "type": "STRING",
+                  "value": "?=>"
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "FIELD",
+                      "name": "capture_set",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "capture_set"
+                      }
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
+                },
+                {
+                  "type": "FIELD",
+                  "name": "return_type",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "_type"
+                  }
+                }
+              ]
             }
           ]
         }
@@ -6874,88 +6920,88 @@
           }
         },
         {
-          "type": "SEQ",
-          "members": [
-            {
-              "type": "STRING",
-              "value": "("
-            },
-            {
-              "type": "STRING",
-              "value": "using"
-            },
-            {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "ALIAS",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "_erased_modifier"
-                  },
-                  "named": true,
-                  "value": "erased_modifier"
-                },
-                {
-                  "type": "BLANK"
-                }
-              ]
-            },
-            {
-              "type": "SEQ",
-              "members": [
-                {
-                  "type": "SEQ",
-                  "members": [
-                    {
-                      "type": "SYMBOL",
-                      "name": "_param_type"
-                    },
-                    {
-                      "type": "REPEAT",
-                      "content": {
-                        "type": "SEQ",
-                        "members": [
-                          {
-                            "type": "STRING",
-                            "value": ","
-                          },
-                          {
-                            "type": "SYMBOL",
-                            "name": "_param_type"
-                          }
-                        ]
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "CHOICE",
-                  "members": [
-                    {
-                      "type": "STRING",
-                      "value": ","
-                    },
-                    {
-                      "type": "BLANK"
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "STRING",
-              "value": ")"
-            }
-          ]
-        },
-        {
           "type": "SYMBOL",
           "name": "compound_type"
         },
         {
           "type": "SYMBOL",
           "name": "infix_type"
+        }
+      ]
+    },
+    "_context_parameter_types": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "STRING",
+          "value": "using"
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "ALIAS",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_erased_modifier"
+              },
+              "named": true,
+              "value": "erased_modifier"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_param_type"
+                },
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SEQ",
+                    "members": [
+                      {
+                        "type": "STRING",
+                        "value": ","
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "_param_type"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": ","
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": ")"
         }
       ]
     },
@@ -14880,24 +14926,6 @@
       "_type_identifier"
     ],
     [
-      "parameter_types",
-      "_type_identifier"
-    ],
-    [
-      "parameter_types",
-      "_type_identifier",
-      "_simple_expression"
-    ],
-    [
-      "parameter_types",
-      "_type_identifier",
-      "_single_lambda_param"
-    ],
-    [
-      "parameter_types",
-      "_simple_expression"
-    ],
-    [
       "_simple_expression",
       "keyword_named_argument"
     ],
@@ -14946,6 +14974,24 @@
     [
       "_type",
       "parameter_types"
+    ],
+    [
+      "_context_parameter_types",
+      "_type_identifier"
+    ],
+    [
+      "_context_parameter_types",
+      "_type_identifier",
+      "_simple_expression"
+    ],
+    [
+      "_context_parameter_types",
+      "_simple_expression"
+    ],
+    [
+      "_context_parameter_types",
+      "_type_identifier",
+      "_single_lambda_param"
     ],
     [
       "parameter_types",

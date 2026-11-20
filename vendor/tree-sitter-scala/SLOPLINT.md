@@ -23,7 +23,7 @@
   kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` carries one
   sloplint edit (SC-SOFTENUM, below): `enum` removed from the postfix-operator heuristic's
   `definition_words` list.
-- Test: `tree-sitter test` in this directory: 316/316 (305 upstream + 11 sloplint cases).
+- Test: `tree-sitter test` in this directory: 318/318 (305 upstream + 13 sloplint cases).
 
 ## Changes to grammar.js
 
@@ -61,10 +61,9 @@
      `given_definition` in `_definition` carries `prec.dynamic(10)` so the definition
      read still wins the statement-head fork (a bare `given T is U:` with an indented
      body otherwise loses to a call/infix-expression read when a statement follows).
-   - `parameter_types` gains a `("(" "using" [erased] FunArgTypes ")")` arm for
-     context function types `(using T) => R`, with new conflict pairs
-     `[parameter_types, _type_identifier]` / `[_single_lambda_param]` /
-     `[_simple_expression]` and `[class_parameter]`.
+   - `parameter_types` gained a `("(" "using" [erased] FunArgTypes ")")` arm for
+     context function types, superseded in round 3 (below) by
+     `_context_parameter_types`, which binds `?=>` only.
    - `class_parameter` splits its name slot: `paramName` (nameChoice minus
      `using`/`given`) needs no type, while a `using`/`given`-named parameter must be
      typed — `(using = 1)` after an annotation is therefore the annotation's argument
@@ -72,6 +71,22 @@
    - items.rs `ambient_head`: an `assignment_expression` nested under `arguments`
      is a named argument, not a write — `g(using = 4)` no longer reports GlobalWrite
      on a file-scope `using` (mirrors `write_roots`' existing guard).
+
+   Round 3 (review-driven):
+   - `function_type` splits context parameter types into
+     `_context_parameter_types` (aliased to `parameter_types`), bound to the
+     `?=>` arrow only: `(using T) => R` is now a parse error, matching the
+     Scala 3 rule that context function types require `?=>`. Conflict pairs
+     move from `parameter_types` to `_context_parameter_types` accordingly.
+   - scanner.c `definition_words` drops `given` and gives it the `enum` peek:
+     after a postfix-operator decision point, `given` + identifier-start/`=`
+     emits `postfix_sym` (new statement) and anything else keeps the infix
+     operand read, so `x +` newline `given(1)` parses as a call operand
+     instead of a `given_definition`.
+   - items.rs `report_assign_write`: only a bare `identifier` left side skips
+     the named-argument guard, so `sink(obj.x = v)` still reports a GlobalWrite
+     on `obj` — a field path can't name a parameter — while `sink(name = v)`
+     stays a named argument.
 
 ## Fixed shapes (scalac 3.10.0 `-Ystop-after:parser` accepts each)
 
@@ -83,7 +98,7 @@
 - SC-SOFTKW: `@JsonDeserialize(using = classOf[MyDeserializer])` and `given: Int`.
   Real occurrences: twitter/util `caseclasses.scala`, linkerd `H2Config.scala`,
   feathr `FeatureDefinition.scala`, filodb `ComputedColumn.scala`. Round 2 adds
-  `f(1, using())`, `(using using.Context)`, `(using T) => R` context function types,
+  `f(1, using())`, `(using using.Context)`, `(using T) ?=> R` context function types,
   `class E @deprecated(using = 1)(x: Int)`, and `given T is U:` before a following
   top-level statement. The `@deprecated(using = 1)` shape is an SLS-2 form
   (jackson-module-scala compiles under Scala 2.13; scalac 3's `parArgumentExprs`

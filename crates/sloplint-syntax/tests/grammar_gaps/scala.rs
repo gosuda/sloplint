@@ -227,14 +227,35 @@ fn keyword_named_arguments_and_parameter_names_parse() {
 
 #[test]
 fn context_function_parameter_types_parse() {
-    // Scala 3 context function types `(using T) => R`, including a
-    // `using`-rooted stable type (`using.Context`).
+    // Scala 3 context function types `(using T) ?=> R`, including a
+    // `using`-rooted stable type (`using.Context`). The `?=>` arrow is the
+    // only valid one: `(using T) => R` is not a function type.
     let source = concat!(
-        "def f(x: (using Context) => Int, y: (using using.Context) => Int) = x\n",
-        "def g(f: (using Int, String) => Boolean) = f\n",
+        "def f(x: (using Context) ?=> Int, y: (using using.Context) ?=> Int) = x\n",
+        "def g(f: (using Int, String) ?=> Boolean) = f\n",
     );
     let analysis = run_clean(source);
     assert_eq!(function_names(&analysis), ["f", "g"]);
+}
+
+#[test]
+fn context_function_parameter_types_with_plain_arrow_still_error() {
+    // `(using T) => R` is not a valid Scala 3 context function type.
+    let source = "def f(x: (using Context) => Int) = x\n";
+    let analysis = run(source);
+    assert!(
+        analysis.parse_error.is_some(),
+        "(using T) => R must stay a parse error"
+    );
+}
+
+#[test]
+fn given_call_after_line_broken_operator_is_an_operand() {
+    // `x +` then a newline then `given(1)`: the `given` is a call operand,
+    // not the start of a given definition — `(1)` cannot begin a definition.
+    let source = concat!("def given(x: Int) = x\n", "val c = 1 +\n", "  given(2)\n",);
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["given"]);
 }
 
 #[test]

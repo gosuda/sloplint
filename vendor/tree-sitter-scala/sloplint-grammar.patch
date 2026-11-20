@@ -42,7 +42,7 @@
      [$.tuple_pattern, $._simple_expression],
      [$.tuple_pattern, $._simple_expression, $.binding],
      // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
-@@ -459,6 +478,27 @@
+@@ -459,12 +478,33 @@
      // 'extension' • '{' is either an extension definition with a braced body
      // or the soft identifier `extension` (a Scala 2 id) called with a block.
      [$.extension_definition, $._soft_identifier],
@@ -55,10 +55,6 @@
 +    [$._type_identifier, $.given_pattern],
 +    [$.self_type, $.given_definition, $._simple_expression],
 +    [$._using_parameters_clause, $._type_identifier],
-+    [$.parameter_types, $._type_identifier],
-+    [$.parameter_types, $._type_identifier, $._simple_expression],
-+    [$.parameter_types, $._type_identifier, $._single_lambda_param],
-+    [$.parameter_types, $._simple_expression],
 +    [$._simple_expression, $.keyword_named_argument],
 +    [$._simple_expression, $.arguments],
 +    [$.self_type, $.given_definition, $._type_identifier, $._simple_expression],
@@ -70,6 +66,16 @@
      [$.binding, $._simple_expression],
      [$.binding, $._type_identifier],
      // A parenthesized type before `=>` can extend into a function type or stop
+     // so the arrow belongs to the enclosing lambda, pattern, or colon argument.
+     // The conflicts keep both readings alive so precedence picks per context.
+     [$._type, $.parameter_types],
++    [$._context_parameter_types, $._type_identifier],
++    [$._context_parameter_types, $._type_identifier, $._simple_expression],
++    [$._context_parameter_types, $._simple_expression],
++    [$._context_parameter_types, $._type_identifier, $._single_lambda_param],
+     [$.parameter_types, $._colon_bindings],
+     [$.parameter_types, $.bindings],
+     [$.while_expression, $._simple_expression],
 @@ -493,6 +533,7 @@
      // we treat `operator_identifier` as `simple_expression`
      [$._simple_expression, $.lambda_expression],
@@ -176,23 +182,45 @@
            ":",
            field("type", $._param_type),
            optional(seq("=", field("default_value", $.expression))),
-@@ -1926,6 +1981,15 @@
-             ")",
+@@ -1896,6 +1951,17 @@
+               field("parameter_types", $.parameter_types),
+               $._arrow_then_type,
+             ),
++            // Context function type: a `using`-led parameter list binds only
++            // the `?=>` arrow — `(using T) => R` is not a type in Scala 3.
++            seq(
++              field(
++                "parameter_types",
++                alias($._context_parameter_types, $.parameter_types),
++              ),
++              "?=>",
++              optional(field("capture_set", $.capture_set)),
++              field("return_type", $._type),
++            ),
            ),
          ),
-+        // Context function type `(using T, U) => R`: `erased` sits once
-+        // after `using`, like in _using_parameters_clause.
-+        seq(
-+          "(",
-+          "using",
-+          optional(erasedMod($)),
-+          trailingCommaSep1($._param_type),
-+          ")",
-+        ),
-         $.compound_type,
+       ),
+@@ -1930,6 +1996,19 @@
          $.infix_type,
        ),
-@@ -2019,7 +2083,10 @@
+ 
++    // The `using`-led parameter list of a context function type `(using T, U)
++    // ?=> R`: `erased` sits once after `using`, like in
++    // _using_parameters_clause. Kept out of parameter_types so the plain
++    // `=>` arrow cannot follow it.
++    _context_parameter_types: $ =>
++      seq(
++        "(",
++        "using",
++        optional(erasedMod($)),
++        trailingCommaSep1($._param_type),
++        ")",
++      ),
++
+     _param_type: $ => choice($.lazy_parameter_type, $._param_value_type),
+ 
+     _param_value_type: $ =>
+@@ -2019,7 +2098,10 @@
          PREC.infix,
          seq(
            field("left", $._definition_pattern),
@@ -204,7 +232,7 @@
            field("right", $._definition_pattern),
          ),
        ),
-@@ -2283,19 +2350,37 @@
+@@ -2283,17 +2365,35 @@
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -230,7 +258,7 @@
 +            $._control_tail_gate,
 +            "then",
 +          ),
-+        ),
+         ),
 +        prec.dynamic(
 +          5,
 +          seq(
@@ -239,20 +267,18 @@
 +            $._control_tail_gate,
 +            "then",
 +          ),
-         ),
-       ),
- 
++        ),
++      ),
++
 +    split_call_condition: $ =>
 +      seq(
 +        field("function", $._indentable_expression),
 +        $._automatic_semicolon,
 +        field("arguments", $.arguments),
-+      ),
-+
+       ),
+ 
      /*
-      *   MatchClause       ::=  'match' <<< CaseClauses >>>
-      *
-@@ -2529,6 +2614,17 @@
+@@ -2529,6 +2629,17 @@
              optional($._end_marker_kw_tail),
            ),
          ),
@@ -270,7 +296,7 @@
          prec(
            "new",
            seq("new", $.template_body, optional($._end_marker_kw_tail)),
-@@ -2726,10 +2822,30 @@
+@@ -2726,10 +2837,30 @@
      // binder is admitted in every argument list.
      _argument_list: $ =>
        seq(
@@ -302,7 +328,7 @@
      vararg: $ =>
        choice(
          // Scala 3: `args*`. The star in front of a closing delimiter arrives
-@@ -2745,7 +2861,10 @@
+@@ -2745,7 +2876,10 @@
        ),
  
      // ExprsInParens     ::=  ExprInParens {‘,’ ExprInParens}
@@ -314,7 +340,7 @@
  
      // The opening is a single two-character token so that a bare `$` used as
      // an ordinary identifier (e.g. `$(selector)`) still lexes as an
-@@ -2802,7 +2921,7 @@
+@@ -2802,7 +2936,7 @@
      _super_identifier: $ => "super",
  
      // https://docs.scala-lang.org/scala3/reference/soft-modifier.html
@@ -325,16 +351,18 @@
      //                       |  varid
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -1879,7 +1879,7 @@
+@@ -1879,8 +1879,8 @@
        // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
        // are ordinary identifiers, so such a line can be the right operand.
        static const char *const definition_words[] = {
 -          "abstract", "class", "def",    "enum",      "export", "final",
+-          "given",    "import", "implicit", "lazy",   "object", "override",
 +          "abstract", "class", "def",    "export",    "final",
-           "given",    "import", "implicit", "lazy",   "object", "override",
++          "import",   "implicit", "lazy",   "object", "override",
            "package",  "private", "protected", "sealed", "trait", "type",
            "val",      "var",
-@@ -1894,6 +1894,26 @@
+       };
+@@ -1894,6 +1894,41 @@
          lexer->result_symbol = postfix_sym;
          return true;
        }
@@ -348,6 +376,21 @@
 +      // `,`, `.`, `:`, an operator or end-of-line — means the word is the
 +      // right operand.
 +      if (len == 4 && strcmp(word, "enum") == 0) {
++        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
++          advance(lexer);
++        }
++        int32_t c = lexer->lookahead;
++        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
++            c == '$' || c == '=') {
++          lexer->result_symbol = postfix_sym;
++          return true;
++        }
++      }
++      // `given` gets the same split as `enum`: a definition follows a type or
++      // parameter name (`given Foo`), while `given(`, `given.`, `given:` and
++      // the like are an expression operand (`x +` + `given(1)` calls the
++      // function `given`). `=` names a variable being assigned.
++      if (len == 5 && strcmp(word, "given") == 0) {
 +        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
 +          advance(lexer);
 +        }

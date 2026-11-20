@@ -49,3 +49,55 @@ case class WrongNumberArguments(given: Int, expected: Int) extends InvalidFuncti
         type: (type_identifier)))
     extend: (extends_clause
       type: (type_identifier))))
+
+================================================================================
+SC-SOFTKW-CTXF: context function type requires `?=>` (sloplint)
+================================================================================
+
+def f(x: (using Context) ?=> Int) = x
+def g(f: (using Int, String) ?=> Boolean) = f
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    name: (identifier)
+    parameters: (parameters
+      (parameter
+        name: (identifier)
+        type: (function_type
+          parameter_types: (parameter_types
+            type: (type_identifier))
+          return_type: (type_identifier))))
+    body: (identifier))
+  (function_definition
+    name: (identifier)
+    parameters: (parameters
+      (parameter
+        name: (identifier)
+        type: (function_type
+          parameter_types: (parameter_types
+            type: (type_identifier)
+            type: (type_identifier))
+          return_type: (type_identifier))))
+    body: (identifier)))
+
+================================================================================
+SC-SOFTKW-GIVCALL: `given(1)` after a line-broken operator is a call (sloplint)
+================================================================================
+
+val x = 1 +
+  given(1)
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (val_definition
+    pattern: (identifier)
+    value: (infix_expression
+      left: (integer_literal)
+      operator: (operator_identifier)
+      right: (call_expression
+        function: (identifier)
+        arguments: (arguments
+          (integer_literal))))))

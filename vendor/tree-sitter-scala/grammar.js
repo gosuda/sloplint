@@ -487,10 +487,6 @@ module.exports = grammar({
     [$._type_identifier, $.given_pattern],
     [$.self_type, $.given_definition, $._simple_expression],
     [$._using_parameters_clause, $._type_identifier],
-    [$.parameter_types, $._type_identifier],
-    [$.parameter_types, $._type_identifier, $._simple_expression],
-    [$.parameter_types, $._type_identifier, $._single_lambda_param],
-    [$.parameter_types, $._simple_expression],
     [$._simple_expression, $.keyword_named_argument],
     [$._simple_expression, $.arguments],
     [$.self_type, $.given_definition, $._type_identifier, $._simple_expression],
@@ -505,6 +501,10 @@ module.exports = grammar({
     // so the arrow belongs to the enclosing lambda, pattern, or colon argument.
     // The conflicts keep both readings alive so precedence picks per context.
     [$._type, $.parameter_types],
+    [$._context_parameter_types, $._type_identifier],
+    [$._context_parameter_types, $._type_identifier, $._simple_expression],
+    [$._context_parameter_types, $._simple_expression],
+    [$._context_parameter_types, $._type_identifier, $._single_lambda_param],
     [$.parameter_types, $._colon_bindings],
     [$.parameter_types, $.bindings],
     [$.while_expression, $._simple_expression],
@@ -1951,6 +1951,17 @@ module.exports = grammar({
               field("parameter_types", $.parameter_types),
               $._arrow_then_type,
             ),
+            // Context function type: a `using`-led parameter list binds only
+            // the `?=>` arrow — `(using T) => R` is not a type in Scala 3.
+            seq(
+              field(
+                "parameter_types",
+                alias($._context_parameter_types, $.parameter_types),
+              ),
+              "?=>",
+              optional(field("capture_set", $.capture_set)),
+              field("return_type", $._type),
+            ),
           ),
         ),
       ),
@@ -1981,17 +1992,21 @@ module.exports = grammar({
             ")",
           ),
         ),
-        // Context function type `(using T, U) => R`: `erased` sits once
-        // after `using`, like in _using_parameters_clause.
-        seq(
-          "(",
-          "using",
-          optional(erasedMod($)),
-          trailingCommaSep1($._param_type),
-          ")",
-        ),
         $.compound_type,
         $.infix_type,
+      ),
+
+    // The `using`-led parameter list of a context function type `(using T, U)
+    // ?=> R`: `erased` sits once after `using`, like in
+    // _using_parameters_clause. Kept out of parameter_types so the plain
+    // `=>` arrow cannot follow it.
+    _context_parameter_types: $ =>
+      seq(
+        "(",
+        "using",
+        optional(erasedMod($)),
+        trailingCommaSep1($._param_type),
+        ")",
       ),
 
     _param_type: $ => choice($.lazy_parameter_type, $._param_value_type),
