@@ -225,3 +225,18 @@ Corpus delta (same files, same grammar build):
 | breeze | ~12 | 4 (`/:/` ceiling + unexamined residuals) |
 
 Round: `given` continuation peeks now cover `given [A] =>`, `given (T, U) = …`/`with`/`extends`, and non-ASCII given names after a line-broken operator; `given(using = 2)` keeps the call read. `nameChoice` (the soft-keyword identifier set this PR routes through) feeds parameter and argument names AND general expression positions, bindings, and qualified types — keyword-as-identifier support is deliberately broader than named arguments alone.
+
+Round: `given` operand lookaheads read complete tokens.
+- After `given` and after its `[T]` group, an expression-tail keyword
+  (`match`, `catch`, `finally`, `else`, `then`, `do`, `yield`, `while`,
+  `with`, `extends`) keeps the operand read, so `x +` + `given[Int] match
+  {…}` stays one initializer.
+- A lone `=` assigns the variable (`given = 1`); `=` continuing into an
+  operator is infix (`given == y`, `given(2) == 3`), and `:` after a
+  balanced group is the call's type ascription, not a declaration marker.
+- Non-ASCII lookahead now separates identifier starts from \p{Sm}
+  operators (`given ≤ 2` compares; `given É` still names a given), using
+  the same SM_NONASCII ranges as grammar.js.
+- The `[]`/`()` balancing loops skip strings (including `"""`), char and
+  symbol literals, backquoted identifiers, and comments, so `) =` inside
+  `given("x) = y")` no longer reads as declaration syntax.

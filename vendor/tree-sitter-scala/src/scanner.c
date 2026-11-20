@@ -240,6 +240,42 @@ static inline bool is_word_start(int32_t c) {
   return is_alpha(c) || c == '_' || c == '$';
 }
 
+// True for the non-ASCII math symbols (\p{Sm} minus ASCII) that the grammar
+// lexes as operators, mirrored from SM_NONASCII in grammar.js. Everything
+// else above ASCII stays a possible identifier start — \p{So} symbols are
+// left on the name side, an accepted approximation.
+static bool is_unicode_math_op(int32_t c) {
+  static const int32_t ranges[][2] = {
+      {0x00AC, 0x00AC}, {0x00B1, 0x00B1}, {0x00D7, 0x00D7}, {0x00F7, 0x00F7},
+      {0x03F6, 0x03F6}, {0x0606, 0x0608}, {0x2044, 0x2044}, {0x2052, 0x2052},
+      {0x207A, 0x207C}, {0x208A, 0x208C}, {0x2118, 0x2118}, {0x2140, 0x2144},
+      {0x214B, 0x214B}, {0x2190, 0x2194}, {0x219A, 0x219B}, {0x21A0, 0x21A0},
+      {0x21A3, 0x21A3}, {0x21A6, 0x21A6}, {0x21AE, 0x21AE}, {0x21CE, 0x21CF},
+      {0x21D2, 0x21D2}, {0x21D4, 0x21D4}, {0x21F4, 0x22FF}, {0x2320, 0x2321},
+      {0x237C, 0x237C}, {0x239B, 0x23B3}, {0x23DC, 0x23E1}, {0x25B7, 0x25B7},
+      {0x25C1, 0x25C1}, {0x25F8, 0x25FF}, {0x266F, 0x266F}, {0x27C0, 0x27C4},
+      {0x27C7, 0x27E5}, {0x27F0, 0x27FF}, {0x2900, 0x2982}, {0x2999, 0x29D7},
+      {0x29DC, 0x29FB}, {0x29FE, 0x2AFF}, {0x2B30, 0x2B44}, {0x2B47, 0x2B4C},
+      {0xFB29, 0xFB29}, {0xFE62, 0xFE62}, {0xFE64, 0xFE66}, {0xFF0B, 0xFF0B},
+      {0xFF1C, 0xFF1E}, {0xFF5C, 0xFF5C}, {0xFF5E, 0xFF5E}, {0xFFE2, 0xFFE2},
+      {0xFFE9, 0xFFEC}, {0x10D8E, 0x10D8F}, {0x1CEF0, 0x1CEF0},
+      {0x1D6C1, 0x1D6C1}, {0x1D6DB, 0x1D6DB}, {0x1D6FB, 0x1D6FB},
+      {0x1D715, 0x1D715}, {0x1D735, 0x1D735}, {0x1D74F, 0x1D74F},
+      {0x1D76F, 0x1D76F}, {0x1D789, 0x1D789}, {0x1D7A9, 0x1D7A9},
+      {0x1D7C3, 0x1D7C3}, {0x1EEF0, 0x1EEF1}, {0x1F8D0, 0x1F8D8},
+  };
+  for (size_t i = 0; i < sizeof(ranges) / sizeof(ranges[0]); i++) {
+    if (c >= ranges[i][0] && c <= ranges[i][1]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool nonascii_id_start(int32_t c) {
+  return c > 127 && !is_unicode_math_op(c);
+}
+
 static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
 
 static inline void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
@@ -698,6 +734,76 @@ static int32_t skip_char_or_quote_tail(TSLexer *lexer) {
     return 0;
   }
   return quoted;
+}
+
+// Skips a triple-quoted string's body after its opening `"""`, stopping
+// just past the closing `"""` or at EOF.
+static void skip_multiline_string_body(TSLexer *lexer) {
+  while (!lexer->eof(lexer)) {
+    if (lexer->lookahead == '"') {
+      advance(lexer);
+      if (lexer->lookahead == '"') {
+        advance(lexer);
+        if (lexer->lookahead == '"') {
+          advance(lexer);
+          return;
+        }
+      }
+    } else {
+      advance(lexer);
+    }
+  }
+}
+
+// Skips the non-delimiter character under the lookahead inside a balanced
+// group, honoring strings (including triple-quoted ones), character and
+// symbol literals, backquoted identifiers, and both comment forms, so a
+// `(`, `)`, `[` or `]` inside them never changes the depth. Other
+// characters are consumed by one.
+static void skip_group_char(TSLexer *lexer) {
+  int32_t c = lexer->lookahead;
+  if (c == '"') {
+    advance(lexer);
+    if (lexer->lookahead == '"') {
+      advance(lexer);
+      if (lexer->lookahead == '"') {
+        advance(lexer);
+        skip_multiline_string_body(lexer);
+      }
+      // `""` is the empty string; the second quote was the closer.
+      return;
+    }
+    skip_delimited(lexer, '"', true);
+    return;
+  }
+  if (c == '\'') {
+    advance(lexer);
+    // A character literal is consumed; a symbol literal's head is word
+    // characters only, so the caller's loop finishes it harmlessly.
+    skip_char_or_quote_tail(lexer);
+    return;
+  }
+  if (c == '`') {
+    advance(lexer);
+    skip_delimited(lexer, '`', false);
+    return;
+  }
+  if (c == '/') {
+    advance(lexer);
+    if (lexer->lookahead == '/') {
+      while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
+        advance(lexer);
+      }
+      return;
+    }
+    if (lexer->lookahead == '*') {
+      advance(lexer);
+      consume_block_comment_body(lexer);
+      return;
+    }
+    return;
+  }
+  advance(lexer);
 }
 
 // Whether the rest of the line holds only blanks and comments. A comment
@@ -1951,10 +2057,22 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // assigned.
       if (len == 5 && strcmp(word, "given") == 0) {
         int32_t c = peek_past_blanks_comments(lexer);
-        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
-            c == '$' || c == '=' || c == '`' || c >= 0x80) {
-          lexer->result_symbol = postfix_sym;
-          return true;
+        if (is_alpha(c) || c == '_' || c == '$' || c == '`' ||
+            nonascii_id_start(c)) {
+          // A keyword that continues the expression (`x +` + `given match
+          // {…}` matches on the call result) cannot also name the given.
+          if (!(is_alpha(c) && word_is_expression_tail(lexer))) {
+            lexer->result_symbol = postfix_sym;
+            return true;
+          }
+        } else if (c == '=') {
+          // A lone `=` assigns the variable (`given = 1`); `=` continuing
+          // into an operator is infix (`given == y` compares).
+          advance(lexer);
+          if (!is_op_char(lexer->lookahead)) {
+            lexer->result_symbol = postfix_sym;
+            return true;
+          }
         }
         // `[` is ambiguous: `given [T] => …` is a definition's type
         // parameter list, but `given[Int](1)` calls a function `given`
@@ -1965,26 +2083,31 @@ static bool scan_impl(void *payload, TSLexer *lexer,
         if (c == '[') {
           int depth = 1;
           advance(lexer);
-          while (!lexer->eof(lexer)) {
+          while (!lexer->eof(lexer) && depth > 0) {
             if (lexer->lookahead == '[') {
               depth++;
+              advance(lexer);
             } else if (lexer->lookahead == ']') {
               depth--;
-              if (depth == 0) {
-                advance(lexer);
-                break;
-              }
+              advance(lexer);
+            } else {
+              skip_group_char(lexer);
             }
-            advance(lexer);
           }
           if (depth == 0) {
             c = peek_past_blanks_comments(lexer);
-            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                c == '_' || c == ':' || c == '`' || c >= 0x80) {
+            if (is_alpha(c)) {
+              // `given[Int] match {…}` matches on the call result — a tail
+              // keyword never starts the given's name or result type.
+              if (!word_is_expression_tail(lexer)) {
+                lexer->result_symbol = postfix_sym;
+                return true;
+              }
+            } else if (c == '_' || c == ':' || c == '`' ||
+                       nonascii_id_start(c)) {
               lexer->result_symbol = postfix_sym;
               return true;
-            }
-            if (c == '=') {
+            } else if (c == '=') {
               advance(lexer);
               if (lexer->lookahead == '>') {
                 lexer->result_symbol = postfix_sym;
@@ -2013,25 +2136,32 @@ static bool scan_impl(void *payload, TSLexer *lexer,
             }
           }
           int pdepth = 1;
-          while (!lexer->eof(lexer)) {
+          while (!lexer->eof(lexer) && pdepth > 0) {
             if (lexer->lookahead == '(') {
               pdepth++;
+              advance(lexer);
             } else if (lexer->lookahead == ')') {
               pdepth--;
-              if (pdepth == 0) {
-                advance(lexer);
-                break;
-              }
+              advance(lexer);
+            } else {
+              skip_group_char(lexer);
             }
-            advance(lexer);
           }
           if (pdepth == 0) {
             int32_t f = peek_past_blanks_comments(lexer);
-            if (f == '=' || f == ':' || f == 'w' || f == 'e') {
-              if (f == '=' || f == ':') {
+            // A lone `=` opens an anonymous given of tuple or function
+            // type; `=` continuing into an operator stays infix
+            // (`given(2) == 3` compares). A `:` after the group is the
+            // call's type ascription (`given(x): T`), not a declaration
+            // marker, so it keeps the operand read.
+            if (f == '=') {
+              advance(lexer);
+              if (!is_op_char(lexer->lookahead)) {
                 lexer->result_symbol = postfix_sym;
                 return true;
               }
+            }
+            if (f == 'w' || f == 'e') {
               char tail[sizeof "extends"];
               int tail_len =
                   read_word(lexer, tail, (int)sizeof tail, NULL);

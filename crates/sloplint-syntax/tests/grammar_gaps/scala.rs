@@ -54,6 +54,19 @@ fn run_clean(source: &str) -> Analysis<'_> {
     analysis
 }
 
+fn sexp_of(source: &str) -> String {
+    let language: tree_sitter::Language = tree_sitter_scala::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("scala language loads");
+    parser
+        .parse(source, None)
+        .expect("parser returns a tree")
+        .root_node()
+        .to_sexp()
+}
+
 fn callees<'a>(analysis: &Analysis<'a>) -> Vec<&'a str> {
     analysis.facts.calls.iter().map(|c| c.callee).collect()
 }
@@ -258,6 +271,58 @@ fn given_call_after_line_broken_operator_is_an_operand() {
     let source = concat!("def given(x: Int) = x\n", "val c = 1 +\n", "  given(2)\n",);
     let analysis = run_clean(source);
     assert_eq!(function_names(&analysis), ["given"]);
+    // `function_names` cannot tell a call block from a given body — the
+    // `given(2)` call itself must be in the callee table.
+    assert_eq!(callees(&analysis), ["given"]);
+}
+
+#[test]
+fn given_call_result_keeps_infix_and_match_continuations() {
+    // On a continuation line, `given(2) == 3` compares the call result —
+    // `==` is not a declaration suffix — and `given[Int] match {…}` matches
+    // on it. Both must stay one initializer, so the `given` call survives.
+    let source = concat!(
+        "def given[T](x: T) = x\n",
+        "val ok = 1 +\n",
+        "  given(2) == 3\n",
+        "val result = 1 +\n",
+        "  given[Int] match { case _ => 0 }\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(callees(&analysis), ["given"]);
+    let sexp = sexp_of(source);
+    assert!(
+        sexp.contains("value: (match_expression"),
+        "the match must stay inside the initializer, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn given_operand_accepts_unicode_infix_operators() {
+    // `≤` is \p{Sm} — an operator, not an identifier start. The `given`
+    // operand must not swallow it as the given's name.
+    let source = concat!("def given(x: Int) = x\n", "val n = 1 +\n", "  given ≤ 2\n",);
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        sexp.contains("right: (infix_expression"),
+        "the `≤` comparison must stay the infix's right operand, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn given_call_group_ignores_delimiters_in_literals() {
+    // `) =` inside a string argument must not read as a declaration
+    // suffix; the group is balanced with literals and comments skipped.
+    let source = concat!(
+        "def given(x: String) = x\n",
+        "val n = 1 +\n",
+        "  given(\"x) = y\")\n",
+        "val m = 1 +\n",
+        "  given(\"\"\"a) = b\"\"\")\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(callees(&analysis), ["given", "given"]);
 }
 
 #[test]

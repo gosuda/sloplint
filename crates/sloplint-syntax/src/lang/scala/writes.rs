@@ -104,8 +104,7 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
         scope = s.parent();
         let mut saw_def = false;
         for def in named_children(s) {
-            if def.kind() != "function_definition" && def.kind() != "function_declaration"
-            {
+            if def.kind() != "function_definition" && def.kind() != "function_declaration" {
                 continue;
             }
             let Some(name_node) = child_by_field(def, "name") else {
