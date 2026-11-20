@@ -459,7 +459,19 @@ export default grammar({
         ')',
       ),
       seq('scoped', repeat1(field('scoped', $.identifier))),
-      repeat1(field('namespace', $.identifier)),
+      seq(
+        repeat1(field('namespace', $.identifier)),
+        optional(seq(
+          'renaming',
+          sep1(field('renaming', $.renaming_pair), ','),
+        )),
+      ),
+    ),
+
+    renaming_pair: $ => seq(
+      $.identifier,
+      choice('→', '->'),
+      $.identifier,
     ),
 
     export: $ => seq(

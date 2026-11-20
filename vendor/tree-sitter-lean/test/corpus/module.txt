@@ -109,3 +109,21 @@ public meta import all Foo
     (meta)
     (all)
     name: (identifier)))
+
+==============
+Open renaming
+==============
+
+open Nat renaming succ → mySucc, zero → z
+
+---
+
+(module
+  (open
+    namespace: (identifier)
+    renaming: (renaming_pair
+      (identifier)
+      (identifier))
+    renaming: (renaming_pair
+      (identifier)
+      (identifier))))
