@@ -319,6 +319,39 @@ static bool is_op_char(int32_t c) {
   }
 }
 
+// The non-ASCII \p{Sm} members — the same set grammar.js spells out as
+// SM_NONASCII, kept in sync with it. `\p{So}` beyond this is left to the
+// internal regex, which already reads `'op` quotes that do not end in `/`.
+static bool is_unicode_op_char(int32_t c) {
+  switch (c) {
+    case 0x00ac: case 0x00b1: case 0x00d7: case 0x00f7: case 0x03f6:
+    case 0x2044: case 0x2052: case 0x2118: case 0x214b: case 0x21a0:
+    case 0x21a3: case 0x21a6: case 0x21ae: case 0x21d2: case 0x21d4:
+    case 0x237c: case 0x25b7: case 0x25c1: case 0x266f: case 0xfb29:
+    case 0xfe62: case 0xff0b: case 0xff5c: case 0xff5e: case 0xffe2:
+    case 0x1cef0: case 0x1d6c1: case 0x1d6db: case 0x1d6fb: case 0x1d715:
+    case 0x1d735: case 0x1d74f: case 0x1d76f: case 0x1d789: case 0x1d7a9:
+    case 0x1d7c3:
+      return true;
+    default:
+      break;
+  }
+  return (c >= 0x0606 && c <= 0x0608) || (c >= 0x207a && c <= 0x207c) ||
+         (c >= 0x208a && c <= 0x208c) || (c >= 0x2140 && c <= 0x2144) ||
+         (c >= 0x2190 && c <= 0x2194) || (c >= 0x219a && c <= 0x219b) ||
+         (c >= 0x21ce && c <= 0x21cf) || (c >= 0x21f4 && c <= 0x22ff) ||
+         (c >= 0x2320 && c <= 0x2321) || (c >= 0x239b && c <= 0x23b3) ||
+         (c >= 0x23dc && c <= 0x23e1) || (c >= 0x25f8 && c <= 0x25ff) ||
+         (c >= 0x27c0 && c <= 0x27c4) || (c >= 0x27c7 && c <= 0x27e5) ||
+         (c >= 0x27f0 && c <= 0x27ff) || (c >= 0x2900 && c <= 0x2982) ||
+         (c >= 0x2999 && c <= 0x29d7) || (c >= 0x29dc && c <= 0x29fb) ||
+         (c >= 0x29fe && c <= 0x2aff) || (c >= 0x2b30 && c <= 0x2b44) ||
+         (c >= 0x2b47 && c <= 0x2b4c) || (c >= 0xfe64 && c <= 0xfe66) ||
+         (c >= 0xff1c && c <= 0xff1e) || (c >= 0xffe9 && c <= 0xffec) ||
+         (c >= 0x10d8e && c <= 0x10d8f) || (c >= 0x1f8d0 && c <= 0x1f8d8) ||
+         (c >= 0x1eef0 && c <= 0x1eef1);
+}
+
 // SLS 6.12.3 gives an operator its precedence by its first character. An
 // operator ending in `/` is never right-associative and never an assignment,
 // so the left-associative class is the whole answer. The partition matches
@@ -1828,11 +1861,12 @@ static bool scan_impl(void *payload, TSLexer *lexer,
     advance(lexer);
     int32_t c = lexer->lookahead;
     bool tail_slash = false;
-    while (is_op_char(c) || c == '/') {
+    while (is_op_char(c) || c == '/' || is_unicode_op_char(c)) {
       if (c == '/') {
         advance(lexer);
-        if (lexer->lookahead == '/' || lexer->lookahead == '*') {
-          break;  // comment opener: the `/` is not taken
+        if (lexer->lookahead == '/' || lexer->lookahead == '*' ||
+            lexer->lookahead == '\'') {
+          break;  // comment opener or a char literal: the `/` is not taken
         }
         tail_slash = true;
       } else {
@@ -1890,8 +1924,24 @@ static bool scan_impl(void *payload, TSLexer *lexer,
     int32_t second_op_char = 0;
     // Whether the operator's last accepted character is a `/`.
     bool ends_in_slash = false;
-    // A `/` next carries the operator on, so the colon is not a lone one.
-    if (op_len == 1 && op[0] == ':' && lexer->lookahead != '/') {
+    // A `/` next carries the operator on, so the colon is not a lone one —
+    // unless that `/` opens a comment (`x:/*note*/ Int => b`), which leaves
+    // the colon lone. A `/` that continues the operator is marked here so
+    // the runner below keeps it in the token.
+    bool colon_slash = false;
+    bool lone_colon = op_len == 1 && op[0] == ':';
+    if (lone_colon && lexer->lookahead == '/') {
+      advance(lexer);
+      if (lexer->lookahead == '/' || lexer->lookahead == '*') {
+        // `:` + comment: still a lone colon; the `/` stays unmarked so it
+        // is lexed again as the comment opener.
+      } else {
+        lexer->mark_end(lexer);
+        colon_slash = true;
+        lone_colon = false;
+      }
+    }
+    if (lone_colon) {
       // A lone `:` ending its line is the fewer-braces colon (scalac's
       // COLONeol). Deciding it at the token level kills the cross-newline
       // ascription fork that GLR would otherwise keep alive across the region.
@@ -1917,7 +1967,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
     // The runner also has to see a bare `//` or `/*` here even when no
     // operator-class token is valid: a `/` that opens a comment must stop
     // the scan before the postfix logic below can claim it as an operator.
-    if (lexer->lookahead == '/' && !shebang) {
+    if ((lexer->lookahead == '/' || colon_slash) && !shebang) {
       // One step per OP_STEP in grammar.js. A `/` is taken only when what
       // follows it cannot open a comment, so the token never needs to give
       // characters back. The end is marked per accepted character, so a
@@ -1927,6 +1977,14 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // A bare `//` or `/*` here is a comment opener, not an operator: the
       // first `/` belongs to the comment, so the internal tokens must win.
       bool run_marked = false;
+      if (colon_slash) {
+        // The lone-colon check already took a `/` that continues the
+        // operator (`:/=`); the run starts after it with the `/` counted.
+        run_marked = true;
+        slash_run = true;
+        ends_in_slash = true;
+        last_op_char = '/';
+      }
       while (!at_comment) {
         int32_t c = lexer->lookahead;
         if (c == '/') {

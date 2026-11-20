@@ -449,12 +449,54 @@ fn quote_symbol_ending_in_slash() {
 
 #[test]
 fn braced_lambda_wildcard_and_eol_colon_call() {
-    // `{ _: T => body }` is the typed wildcard lambda, while `{ f:` at end of
-    // line is the fewer-braces colon call whose callback indents below.
+    // `{ name: T => body }` and `{ (_: T) => body }` are typed lambdas, while
+    // `{ f:` at end of line is the fewer-braces colon call whose callback
+    // indents below; `{ _: Int => go() }` reads `_` ascribed to `Int => go()`.
+    let language: tree_sitter::Language = tree_sitter_scala::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).expect("scala language loads");
     let source = concat!(
-        "val e = { _: Int => go() }\n",
+        "val e = { (_: Int) => go() }\n",
         "val f = accept { f:\n  cb => y }\n",
         "val g = forAll { int: Int => int.asJson }\n",
     );
-    run_clean(source);
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(!tree.root_node().has_error(), "sexp: {sexp}");
+    assert!(
+        sexp.matches("lambda_expression").count() == 3,
+        "three lambdas expected, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("colon_argument") && sexp.contains("indented_block"),
+        "the EOL colon call must nest an indented block, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn char_literal_and_comment_colon_and_unicode_symbol() {
+    // `'/'` is a character literal, `x:/*note*/ T` still opens a typed
+    // lambda colon, and `'op` quote names accept Unicode operator chars.
+    let language: tree_sitter::Language = tree_sitter_scala::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).expect("scala language loads");
+    let source = concat!(
+        "val a = path.split('/')\n",
+        "val b = { x:/*note*/ Int => produce() }\n",
+        "val c = '+/\u{d7}\n",
+        "val d = '\u{d7}/\n",
+        "val e = x :/= y\n",
+        "val f = x :/ y\n",
+    );
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(!tree.root_node().has_error(), "sexp: {sexp}");
+    assert!(
+        sexp.contains("character_literal"),
+        "`'/'` must stay a character literal, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("lambda_expression"),
+        "the comment-cut colon must keep the typed lambda, sexp: {sexp}"
+    );
 }

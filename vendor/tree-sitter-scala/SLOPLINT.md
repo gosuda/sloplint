@@ -215,3 +215,13 @@ when the run's tail is `/`, and declines otherwise so `'+/*c*/` splits into the
 `_braced_typed_lambda` the parameter colon takes it, so `{ int: Int => b }`
 stays a typed lambda (the corpus pins that reading) while `{ f:` + an indented
 `cb => y` resolves to the fewer-braces colon call, matching scalac.
+
+
+Round: `'/` followed by `'` is a character literal (`path.split('/')`), not an
+operator symbol — the `/` check now also stops at `'`. The `:` + `/` ambiguity
+resolves the comment case first: `x:/*note*/ Int => b` keeps its `_colon_mid`
+because a `/` that opens `//` or `/*` does not continue the operator, while a
+non-comment `/` is marked into the token so `:/=` still reads as one operator.
+The `'op` run accepts the non-ASCII \p{Sm} set (`is_unicode_op_char`, mirroring
+grammar.js's SM_NONASCII), so `'+/×` is handed back whole to the internal regex
+and `'×/` emits as one operator symbol.
