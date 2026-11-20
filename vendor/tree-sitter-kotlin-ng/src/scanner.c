@@ -477,7 +477,9 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                 }
             } else if (member_word[0] && member_newline &&
                        (strcmp(member_word, "as") == 0 || strcmp(member_word, "is") == 0 ||
-                        strcmp(member_word, "in") == 0)) {
+                        strcmp(member_word, "in") == 0) &&
+                       !(iswalnum(lexer->lookahead) || lexer->lookahead == '_' ||
+                         lexer->lookahead > 127)) {
                 // `as`/`is`/`in` cannot start a statement — Kotlin ignores
                 // the newline before them, so `get\nas Int` is the infix
                 // cast `get as Int` and `get` is an identifier.

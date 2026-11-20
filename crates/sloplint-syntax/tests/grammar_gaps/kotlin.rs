@@ -467,6 +467,35 @@ fn plain_member_after_semicolon_accessor_parses() {
 fn bare_default_accessors_after_a_semicolon_parse() {
     run_clean("class C {\n    var x = 1; set\n    var y = 2; get; private set\n}\n");
 }
+
+#[test]
+fn split_infix_continuations_and_reused_accessor_words_parse() {
+    // `as`/`is`/`in` cannot start a statement, so `get\nas Int` is the
+    // infix cast `get as Int` — the `;` separates and `get` is an
+    // identifier. `isÉ` is a single identifier (unicode letters continue
+    // words), so `isÉ()` is a call, not an `is` continuation.
+    run_clean(
+        "var a = 1; get\nas Int\n\
+         var c = 1; get\nis\u{c9}()\n\
+         var d = 1; set\nin list\n",
+    );
+    // `x\nis Int` at file level still fails — a pre-existing upstream
+    // newline-continuation gap (`is` also opens `when` entry conditions,
+    // so the scanner cannot unconditionally continue on it). The `;`
+    // probe behaves the same: `get` reads as an identifier, matching
+    // what a plain `x` does there.
+    // A used accessor slot cannot be taken again: after `get() = 1` only
+    // `set` remains valid, so `; get` is a statement (`get\nfoo()` is a
+    // call), and `; get(2)`/`get = 2` stay statements regardless.
+    run_clean(
+        "var x: Int get() = 1; get\nfoo()\n\
+         var y = 2; get(2)\nvar z = 3; get = 2\n",
+    );
+    // A lone carriage return counts as a line break, matching LF:
+    // `set\r42.toString()` splits like `set\n42.toString()`, and
+    // `;\rget() = x` reads the same way as `;\nget() = x`.
+    run_clean("var e = 1; set\r42.toString()\nvar f = 1; get\rfoo()\n");
+}
 #[test]
 fn infix_word_calls_after_a_semicolon_stay_statements() {
     run_clean(
