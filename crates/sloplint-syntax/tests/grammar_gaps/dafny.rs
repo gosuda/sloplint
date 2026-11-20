@@ -503,3 +503,21 @@ fn datatype_updates_are_not_calls() {
     );
 }
 
+
+#[test]
+fn if_inside_an_else_operand_still_counts_as_nesting() {
+    // `else 1 + if b then 2 else 3`: the inner if is an operand of the else
+    // expression, not an else-if alternative — it must count as a level.
+    let analysis = run_clean(concat!(
+        "function Pick(x: int): int\n",
+        "{\n",
+        "  if x == 0 then 0 else 1 + if x == 1 then 2 else 3\n",
+        "}\n",
+    ));
+    let f = &analysis.facts.functions[0];
+    assert!(
+        f.max_depth >= 2,
+        "nested conditional inside the else operand must count: {}",
+        f.max_depth
+    );
+}

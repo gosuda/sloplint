@@ -114,10 +114,24 @@ impl LangHooks for DafnyHooks {
                                 .and_then(|i| p.named_child(i))
                                 .is_some_and(|last| last.id() == cur.id());
                         }
-                        "unary_expression" | "as_expression" | "bitvector_factor" | "factor"
-                        | "term" | "shift_term" | "relational_expression"
-                        | "logical_expression" | "implies_explies_expression"
-                        | "equiv_expression" => cur = p,
+                        // Each wrapper of an else-alternative carries exactly
+                        // one named child. `else 1 + if b then 2 else 3` keeps
+                        // the if under a binary `term` (two operands) — that
+                        // is a nested conditional, not an else-if.
+                        "unary_expression"
+                        | "as_expression"
+                        | "bitvector_factor"
+                        | "factor"
+                        | "term"
+                        | "shift_term"
+                        | "relational_expression"
+                        | "logical_expression"
+                        | "implies_explies_expression"
+                        | "equiv_expression"
+                            if p.named_child_count() == 1 =>
+                        {
+                            cur = p;
+                        }
                         _ => return false,
                     }
                 }
