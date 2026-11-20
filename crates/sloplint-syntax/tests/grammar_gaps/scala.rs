@@ -332,6 +332,40 @@ fn leading_stray_semicolons_parse() {
 }
 
 #[test]
+fn slash_run_stops_at_comment_before_operand() {
+    // `x /+/* c */ y` and `x /+ // c\n y`: a `/`-led operator stops where a
+    // comment opens — the internal run would swallow the comment's slashes.
+    // `x /+ // c\n val` is a postfix operator before a new definition.
+    let source = concat!(
+        "object T {\n",
+        "  val a = x /+/* note */ y\n",
+        "  val b = x /+// note\n",
+        "    y\n",
+        "  val c = x /+// note\n",
+        "  val d = y\n",
+        "}\n",
+    );
+    run_clean(source);
+}
+
+#[test]
+fn comment_openers_are_not_operators() {
+    // `//` and `/*` at statement position must not lex as phantom `/`-class
+    // operators; `x +/*c*/ y` keeps `+` internal with a comment node between
+    // operator and operand, and `???/*c*/()` still calls.
+    let source = concat!(
+        "// a line comment\n",
+        "/* a block comment */\n",
+        "object T {\n",
+        "  val a = x +/*note*/ y\n",
+        "  def m = ???/*c*/()\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["m"]);
+}
+
+#[test]
 fn enum_stays_a_soft_identifier() {
     // Scala 2 code uses `enum` as a parameter or named argument; only a real
     // `enum` definition should claim the keyword reading.
