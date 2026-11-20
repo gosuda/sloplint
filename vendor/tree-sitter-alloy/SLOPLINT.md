@@ -11,8 +11,10 @@ Date: 2026-11-19.
   (HEAD `main`, commit date 2026-03-14).
 - Licence: MIT (`LICENSE` is the upstream file, fetched verbatim).
 - This grammar is unpublished: no crates.io crate and no npm package exist
-  for it, so there is no published crate to diff against. `grammar.js` is
-  unmodified from the pinned revision and `sloplint-grammar.patch` is empty.
+  for it, so there is no published crate to diff against. `grammar.js` diverges from the pinned revision by
+  `sloplint-grammar.patch` (regenerated parser artifacts checked in
+  alongside it); the changes below are all corpus-driven, verified against
+  the upstream pin and the corpus tests.
 - Files kept from the revision: `grammar.js`, `src/` (`parser.c`,
   `grammar.json`, `node-types.json`, `tree_sitter/`), `queries/`,
   `test/corpus/`, `tree-sitter.json`, `LICENSE`, `README.md`,
@@ -71,3 +73,26 @@ parse rate.
 ## Corpora (tree-sitter-cli 0.27.1, this directory)
 
 - `test/corpus`: 83 cases, 83 pass.
+
+## Divergences from the pin (sloplint-grammar.patch)
+
+All of these come from real corpora (the Practical Alloy book models and
+Electrum/Alloy-6 code in the dogfood corpus), each hit repeatedly:
+
+- `sig_decl`: allow `sig A = B + C` subset declarations with no brace body.
+- `field_decl`/`decl`: accept `disjoint` as a synonym of `disj`.
+- `compare_expression`: word-prefixed comparisons — `x not = y`, `x ! in e`,
+  `x not < y`.
+- `cardinality_expression`: `-` alongside `#`/`int`/`sum` so negative
+  literals (`Node0->-8`, `>= -1`) parse.
+- Arrow operators (`some`/`one`/`lone`/`set` `->`) may omit the space
+  before `->`; `set->`/`one->` are common in the wild.
+- `dot_expression` member position accepts operator/keyword words
+  (`e.before`, `x.after`) via `member_keyword`.
+- `box_join_expression` callee accepts `member_keyword` (`sum[i + j]` calls
+  a field named `sum`).
+- `set_comprehension` without a `|` bar: `{x: A, y: B}`.
+- `name` accepts trailing primes (`s'`, `t'`) and non-ASCII letters
+  (`État`) — primed decl names are pervasive in Electrum models.
+- `_semicolon_decoration`: runs of 2+ `;` at paragraph level (`;;;;;;`
+  separators in textbook models).

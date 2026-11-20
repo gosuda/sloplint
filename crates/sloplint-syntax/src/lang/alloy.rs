@@ -165,12 +165,15 @@ fn alloy_function<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionHead<'s>> 
         missing_annotations: Vec::new(),
         doc,
         doc_pos,
-        sole_call: sole_box_join(n),
+        sole_call: sole_box_join(cx, n),
     })
 }
 
 /// A paragraph body holding exactly one call, for the passthrough rule.
-fn sole_box_join(n: Node<'_>) -> Option<usize> {
+/// Suppressed when a `run`/`check` command targets the paragraph's own
+/// name — `run Foo` is how Alloy invokes the entry point, and flagging
+/// `pred Foo { sole[call] }` as a passthrough would flag every runner.
+fn sole_box_join<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<usize> {
     let body = first_named_child_matching(n, &["block_expression"])?;
     let mut inner = named_children(body)
         .into_iter()
@@ -178,6 +181,20 @@ fn sole_box_join(n: Node<'_>) -> Option<usize> {
     let only = inner.next()?;
     if inner.next().is_some() || only.kind() != "box_join_expression" {
         return None;
+    }
+    if let Some(name_node) = child_by_field(n, "name") {
+        let decl_name = trimmed(cx, name_node);
+        let run_targeted = cx.root().is_some_and(|root| {
+            let mut cursor = root.walk();
+            root.children(&mut cursor).any(|c| {
+                c.kind() == "command"
+                    && child_by_field(c, "name")
+                        .is_some_and(|target| trimmed(cx, target) == decl_name)
+            })
+        });
+        if run_targeted {
+            return None;
+        }
     }
     Some(only.id())
 }
@@ -207,13 +224,27 @@ fn box_join_args<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Arg<'s>> {
     };
     named_children(list)
         .into_iter()
+        .filter(|c| !COMMENT_KINDS.contains(&c.kind()))
         .map(|child| make_arg(cx, child))
         .collect()
 }
 
 fn is_alloy_test_path(path: &str) -> bool {
-    path.split('/')
-        .any(|segment| segment == "test" || segment == "tests")
+    let mut segments = path.split('/').peekable();
+    let mut in_test_tree = false;
+    let mut in_support_tree = false;
+    while let Some(segment) = segments.next() {
+        if segment == "test" || segment == "tests" {
+            in_test_tree = true;
+            if matches!(
+                segments.clone().next(),
+                Some("support" | "common" | "shared" | "helpers")
+            ) {
+                in_support_tree = true;
+            }
+        }
+    }
+    (in_test_tree && !in_support_tree)
         || path
             .rsplit('/')
             .next()
