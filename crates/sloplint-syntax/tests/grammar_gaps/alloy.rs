@@ -269,3 +269,46 @@ fn private_and_anonymous_paragraphs_are_not_exported() {
         "an unnamed paragraph cannot be searched by name"
     );
 }
+
+#[test]
+fn primed_command_targets_parse_clean() {
+    run_clean("pred step' { 1 = 1 }\ncheck step'\nrun step'\n");
+}
+
+#[test]
+fn path_call_after_constraint_parses_clean() {
+    run_clean("sig A {}\nfact { a = a\npred/totalOrder[a] }\n");
+}
+
+#[test]
+fn primed_paragraph_name_keeps_primes() {
+    let analysis = run_clean("pred step' { 1 = 1 }\nassert A' { 1 = 1 }\n");
+    for want in ["step'", "A'"] {
+        assert!(
+            analysis.facts.functions.iter().any(|f| f.name == want),
+            "missing paragraph name {want}: {:?}",
+            analysis
+                .facts
+                .functions
+                .iter()
+                .map(|f| &f.name)
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+#[test]
+fn infix_qual_call_records_call_fact() {
+    let analysis =
+        run_clean("fun total[a, b: Int]: Int { a fun/add b }\nfun add[x, y: Int]: Int { x + y }\n");
+    assert!(
+        analysis.facts.calls.iter().any(|c| c.callee == "fun/add"),
+        "missing infix call fact: {:?}",
+        analysis
+            .facts
+            .calls
+            .iter()
+            .map(|c| &c.callee)
+            .collect::<Vec<_>>()
+    );
+}

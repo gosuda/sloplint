@@ -1040,8 +1040,17 @@
               "type": "FIELD",
               "name": "name",
               "content": {
-                "type": "SYMBOL",
-                "name": "qual_name"
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "qual_name"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "_decl_name"
+                  }
+                ]
               }
             },
             {
@@ -1656,7 +1665,7 @@
     },
     "infix_qual_call_expression": {
       "type": "PREC_LEFT",
-      "value": 19,
+      "value": 17,
       "content": {
         "type": "SEQ",
         "members": [
@@ -1693,55 +1702,31 @@
         {
           "type": "ALIAS",
           "content": {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "STRING",
-                "value": "pred"
-              },
-              {
-                "type": "STRING",
-                "value": "fun"
-              },
-              {
-                "type": "STRING",
-                "value": "assert"
-              },
-              {
-                "type": "STRING",
-                "value": "fact"
-              },
-              {
-                "type": "STRING",
-                "value": "sig"
-              },
-              {
-                "type": "STRING",
-                "value": "enum"
-              },
-              {
-                "type": "STRING",
-                "value": "module"
-              },
-              {
-                "type": "STRING",
-                "value": "open"
-              },
-              {
-                "type": "STRING",
-                "value": "check"
-              },
-              {
-                "type": "STRING",
-                "value": "run"
-              }
-            ]
+            "type": "STRING",
+            "value": "fun"
           },
           "named": true,
           "value": "name"
         },
         {
-          "type": "REPEAT1",
+          "type": "SYMBOL",
+          "name": "_infix_path_tail"
+        }
+      ]
+    },
+    "_infix_path_tail": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "/"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_qname_seg"
+        },
+        {
+          "type": "REPEAT",
           "content": {
             "type": "SEQ",
             "members": [
@@ -3321,24 +3306,105 @@
           ]
         },
         {
-          "type": "SYMBOL",
-          "name": "_qname_seg"
-        },
-        {
-          "type": "REPEAT",
-          "content": {
-            "type": "SEQ",
-            "members": [
-              {
-                "type": "STRING",
-                "value": "/"
-              },
-              {
-                "type": "SYMBOL",
-                "name": "_qname_seg"
-              }
-            ]
-          }
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "ALIAS",
+                  "content": {
+                    "type": "CHOICE",
+                    "members": [
+                      {
+                        "type": "STRING",
+                        "value": "pred"
+                      },
+                      {
+                        "type": "STRING",
+                        "value": "fun"
+                      },
+                      {
+                        "type": "STRING",
+                        "value": "assert"
+                      },
+                      {
+                        "type": "STRING",
+                        "value": "fact"
+                      },
+                      {
+                        "type": "STRING",
+                        "value": "sig"
+                      },
+                      {
+                        "type": "STRING",
+                        "value": "enum"
+                      },
+                      {
+                        "type": "STRING",
+                        "value": "module"
+                      },
+                      {
+                        "type": "STRING",
+                        "value": "open"
+                      },
+                      {
+                        "type": "STRING",
+                        "value": "check"
+                      },
+                      {
+                        "type": "STRING",
+                        "value": "run"
+                      }
+                    ]
+                  },
+                  "named": true,
+                  "value": "name"
+                },
+                {
+                  "type": "REPEAT1",
+                  "content": {
+                    "type": "SEQ",
+                    "members": [
+                      {
+                        "type": "STRING",
+                        "value": "/"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "_qname_seg"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "name"
+                },
+                {
+                  "type": "REPEAT",
+                  "content": {
+                    "type": "SEQ",
+                    "members": [
+                      {
+                        "type": "STRING",
+                        "value": "/"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "_qname_seg"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -3608,11 +3674,11 @@
     ],
     [
       "qual_name",
-      "qual_path"
+      "_decl_name"
     ],
     [
-      "_qname_seg",
-      "_decl_name"
+      "qual_name",
+      "_qname_seg"
     ]
   ],
   "precedences": [],

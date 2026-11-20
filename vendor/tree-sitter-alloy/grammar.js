@@ -47,11 +47,10 @@ module.exports = grammar({
     [$.command],
     // scope: "for 5 State" is typescope, not "for 5" + new paragraph
     [$.scope, $.type_scope_number],
-    // `a/b` alone is a qual_name; followed by an expression it is the
-    // operator of an infix_qual_call (`x a/b y`).
-    [$.qual_name, $.qual_path],
-    // `x'` — a primed decl name or a path segment followed by a prime.
-    [$._qname_seg, $._decl_name],
+    // `check A'` — a qualified path or a primed declaration name.
+    [$.qual_name, $._decl_name],
+    // `f { module/x` — path segment or keyword-led qualified name.
+    [$.qual_name, $._qname_seg],
   ],
 
   rules: {
@@ -212,7 +211,7 @@ module.exports = grammar({
     command: $ => seq(
       optional(seq(field('label', $.name), ':')),
       choice('run', 'check'),
-      optional(field('name', $.qual_name)),
+      optional(field('name', choice($.qual_name, $._decl_name))),
       optional(field('body', $.block_expression)),
       optional($.scope),
       optional($.expect_clause),
@@ -346,19 +345,21 @@ module.exports = grammar({
     // keyword (`fun/`, `pred/`...): a name-led path is ambiguous with
     // adjacent expressions (`a = b c < d` in a block), so `x a/b y`
     // stays a known gap.
-    infix_qual_call_expression: $ => prec.left(PREC.DOT, seq(
+    infix_qual_call_expression: $ => prec.left(PREC.BRACKET - 1, seq(
       field('left', $._expression),
       field('operator', $.infix_operator),
       field('right', $._expression),
     )),
 
+    // Identical token shape to qual_name's keyword-led arm — sharing the
+    // segment list keeps the two reads merged so the parser can still
+    // pick the box-join interpretation when `[` follows the path.
     infix_operator: $ => seq(
-      alias(choice(
-        'pred', 'fun', 'assert', 'fact', 'sig', 'enum', 'module',
-        'open', 'check', 'run',
-      ), $.name),
-      repeat1(seq('/', $._qname_seg)),
+      alias('fun', $.name),
+      $._infix_path_tail,
     ),
+
+    _infix_path_tail: $ => seq('/', $._qname_seg, repeat(seq('/', $._qname_seg))),
 
     // ; (trace sequence) - lowest precedence, right-assoc
     seq_expression: $ => prec.right(PREC.SEQ, seq(
@@ -642,8 +643,18 @@ module.exports = grammar({
         seq('this', '/'),
         seq('seq', '/'),
       )),
-      $._qname_seg,
-      repeat(seq('/', $._qname_seg)),
+      choice(
+        // A declaration keyword can open a name only when a '/' path
+        // follows (`pred/totalOrder`); alone it is a keyword, not a name.
+        seq(
+          alias(choice(
+            'pred', 'fun', 'assert', 'fact', 'sig', 'enum', 'module',
+            'open', 'check', 'run',
+          ), $.name),
+          repeat1(seq('/', $._qname_seg)),
+        ),
+        seq($.name, repeat(seq('/', $._qname_seg))),
+      ),
     ),
 
     // A qualified-path segment: plain names plus the declaration

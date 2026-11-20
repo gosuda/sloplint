@@ -1146,9 +1146,17 @@
         ]
       },
       "name": {
-        "multiple": false,
+        "multiple": true,
         "required": false,
         "types": [
+          {
+            "type": "'",
+            "named": false
+          },
+          {
+            "type": "name",
+            "named": true
+          },
           {
             "type": "qual_name",
             "named": true

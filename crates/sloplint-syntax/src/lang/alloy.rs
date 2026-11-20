@@ -34,6 +34,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("implies_expression", Role::If),
     ("quantified_expression", Role::Loop),
     ("box_join_expression", Role::Call),
+    ("infix_qual_call_expression", Role::Call),
     ("module_decl", Role::Module),
     ("open_decl", Role::Import),
     ("sig_decl", Role::TypeDef),
@@ -132,10 +133,12 @@ fn decl_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
 fn paragraph_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> (&'s str, Pos, bool) {
     match child_by_field(n, "name") {
         Some(name_node) => {
-            let name = if name_node.kind() == "string" {
-                strip_quotes(trimmed(cx, name_node))
-            } else {
-                trimmed(cx, name_node)
+            let name = match name_node.kind() {
+                "string" => strip_quotes(trimmed(cx, name_node)),
+                // `pred step'` — `_decl_name` is hidden, so the field lands on
+                // the inner `name`; extend over trailing primes like params do.
+                "name" => decl_name_text(cx, name_node),
+                _ => trimmed(cx, name_node),
             };
             (name, pos_of(name_node), true)
         }
@@ -295,6 +298,19 @@ impl LangHooks for AlloyHooks {
     }
 
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
+        if n.kind() == "infix_qual_call_expression" {
+            let op = child_by_field(n, "operator")?;
+            let left = child_by_field(n, "left")?;
+            let right = child_by_field(n, "right")?;
+            return Some(CallHead {
+                callee: trimmed(cx, op),
+                kind: sloplint_core::facts::CallKind::Plain,
+                callee_root: first_named_child_matching(op, &["name"]).map(|name| text(cx, name)),
+                is_simple_path: false,
+                initializes_binding: false,
+                args: vec![make_arg(cx, left), make_arg(cx, right)],
+            });
+        }
         if n.kind() != "box_join_expression" {
             return None;
         }

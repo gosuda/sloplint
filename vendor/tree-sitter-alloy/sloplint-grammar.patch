@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 51282fa..bace839 100644
+index 51282fa1..a72c030c 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -22,12 +22,13 @@ const PREC = {
@@ -22,17 +22,16 @@ index 51282fa..bace839 100644
  };
  
  module.exports = grammar({
-@@ -46,12 +47,20 @@ module.exports = grammar({
+@@ -46,12 +47,19 @@ module.exports = grammar({
      [$.command],
      // scope: "for 5 State" is typescope, not "for 5" + new paragraph
      [$.scope, $.type_scope_number],
 -    // name can reduce to name_list or qual_name depending on context
 -    [$.name_list, $.qual_name],
-+    // `a/b` alone is a qual_name; followed by an expression it is the
-+    // operator of an infix_qual_call (`x a/b y`).
-+    [$.qual_name, $.qual_path],
-+    // `x'` — a primed decl name or a path segment followed by a prime.
-+    [$._qname_seg, $._decl_name],
++    // `check A'` — a qualified path or a primed declaration name.
++    [$.qual_name, $._decl_name],
++    // `f { module/x` — path segment or keyword-led qualified name.
++    [$.qual_name, $._qname_seg],
    ],
  
    rules: {
@@ -46,7 +45,7 @@ index 51282fa..bace839 100644
  
      _paragraph: $ => choice(
        $.module_decl,
-@@ -98,10 +107,18 @@ module.exports = grammar({
+@@ -98,10 +106,18 @@ module.exports = grammar({
        'sig',
        field('names', $.name_list),
        optional($.sig_extension),
@@ -69,7 +68,7 @@ index 51282fa..bace839 100644
      ),
  
      sig_qualifier: $ => choice(
-@@ -127,10 +144,10 @@ module.exports = grammar({
+@@ -127,10 +143,10 @@ module.exports = grammar({
      field_decl: $ => seq(
        optional('var'),
        optional('private'),
@@ -82,7 +81,7 @@ index 51282fa..bace839 100644
        $._expression,
      ),
  
-@@ -145,8 +162,8 @@ module.exports = grammar({
+@@ -145,8 +161,8 @@ module.exports = grammar({
      pred_decl: $ => seq(
        optional($.visibility),
        'pred',
@@ -93,7 +92,7 @@ index 51282fa..bace839 100644
        optional(choice(
          seq('(', optional($.decl_list), ')'),
          seq('[', optional($.decl_list), ']'),
-@@ -158,8 +175,8 @@ module.exports = grammar({
+@@ -158,8 +174,8 @@ module.exports = grammar({
      fun_decl: $ => seq(
        optional($.visibility),
        'fun',
@@ -104,7 +103,7 @@ index 51282fa..bace839 100644
        optional(choice(
          seq('(', optional($.decl_list), ')'),
          seq('[', optional($.decl_list), ']'),
-@@ -172,7 +189,7 @@ module.exports = grammar({
+@@ -172,7 +188,7 @@ module.exports = grammar({
      // ---- Assert ----
      assert_decl: $ => seq(
        'assert',
@@ -113,7 +112,16 @@ index 51282fa..bace839 100644
        $.block_expression,
      ),
  
-@@ -245,19 +262,20 @@ module.exports = grammar({
+@@ -195,7 +211,7 @@ module.exports = grammar({
+     command: $ => seq(
+       optional(seq(field('label', $.name), ':')),
+       choice('run', 'check'),
+-      optional(field('name', $.qual_name)),
++      optional(field('name', choice($.qual_name, $._decl_name))),
+       optional(field('body', $.block_expression)),
+       optional($.scope),
+       optional($.expect_clause),
+@@ -245,19 +261,20 @@ module.exports = grammar({
      decl_list: $ => seq(
        $.decl,
        repeat(seq(',', $.decl)),
@@ -138,7 +146,7 @@ index 51282fa..bace839 100644
      ),
  
      name_list_exact: $ => seq(
-@@ -266,8 +284,8 @@ module.exports = grammar({
+@@ -266,8 +283,8 @@ module.exports = grammar({
      ),
  
      _name_or_exactly: $ => choice(
@@ -149,7 +157,7 @@ index 51282fa..bace839 100644
      ),
  
      sig_ref: $ => choice(
-@@ -308,6 +326,7 @@ module.exports = grammar({
+@@ -308,6 +325,7 @@ module.exports = grammar({
        $.override_expression,
        $.intersect_expression,
        $.arrow_expression,
@@ -157,7 +165,7 @@ index 51282fa..bace839 100644
        $.domain_expression,
        $.range_expression,
        $.dot_expression,
-@@ -316,9 +335,31 @@ module.exports = grammar({
+@@ -316,9 +334,33 @@ module.exports = grammar({
        $.prime_expression,
        $.quantified_expression,
        $.let_expression,
@@ -172,24 +180,26 @@ index 51282fa..bace839 100644
 +    // keyword (`fun/`, `pred/`...): a name-led path is ambiguous with
 +    // adjacent expressions (`a = b c < d` in a block), so `x a/b y`
 +    // stays a known gap.
-+    infix_qual_call_expression: $ => prec.left(PREC.DOT, seq(
++    infix_qual_call_expression: $ => prec.left(PREC.BRACKET - 1, seq(
 +      field('left', $._expression),
 +      field('operator', $.infix_operator),
 +      field('right', $._expression),
 +    )),
 +
++    // Identical token shape to qual_name's keyword-led arm — sharing the
++    // segment list keeps the two reads merged so the parser can still
++    // pick the box-join interpretation when `[` follows the path.
 +    infix_operator: $ => seq(
-+      alias(choice(
-+        'pred', 'fun', 'assert', 'fact', 'sig', 'enum', 'module',
-+        'open', 'check', 'run',
-+      ), $.name),
-+      repeat1(seq('/', $._qname_seg)),
++      alias('fun', $.name),
++      $._infix_path_tail,
 +    ),
++
++    _infix_path_tail: $ => seq('/', $._qname_seg, repeat(seq('/', $._qname_seg))),
 +
      // ; (trace sequence) - lowest precedence, right-assoc
      seq_expression: $ => prec.right(PREC.SEQ, seq(
        $._expression,
-@@ -376,7 +417,9 @@ module.exports = grammar({
+@@ -376,7 +418,9 @@ module.exports = grammar({
        $._expression,
        field('operator', choice(
          '=', '!=', 'in', '!in',
@@ -200,7 +210,7 @@ index 51282fa..bace839 100644
          '<', '>', '<=', '>=', '=<',
          '!<', '!>', '!<=', '!>=',
        )),
-@@ -410,6 +453,13 @@ module.exports = grammar({
+@@ -410,6 +454,13 @@ module.exports = grammar({
        $._expression,
      )),
  
@@ -214,7 +224,7 @@ index 51282fa..bace839 100644
      // Override: ++
      override_expression: $ => prec.left(PREC.OVERRIDE, seq(
        $._expression,
-@@ -435,14 +485,16 @@ module.exports = grammar({
+@@ -435,14 +486,16 @@ module.exports = grammar({
          $.some_arrow_op,
          $.one_arrow_op,
          $.lone_arrow_op,
@@ -234,7 +244,7 @@ index 51282fa..bace839 100644
  
      // Domain restriction: <:
      domain_expression: $ => prec.left(PREC.DOMAIN, seq(
-@@ -458,21 +510,44 @@ module.exports = grammar({
+@@ -458,21 +511,44 @@ module.exports = grammar({
        $._expression,
      )),
  
@@ -282,7 +292,7 @@ index 51282fa..bace839 100644
      // Closure/transpose: ~ ^ *
      closure_expression: $ => prec(PREC.UNOP, seq(
        field('operator', choice('~', '^', '*')),
-@@ -506,10 +581,10 @@ module.exports = grammar({
+@@ -506,10 +582,10 @@ module.exports = grammar({
      )),
  
      let_binding: $ => seq(
@@ -295,7 +305,7 @@ index 51282fa..bace839 100644
      ),
  
      // ---- Primary expressions ----
-@@ -544,11 +619,15 @@ module.exports = grammar({
+@@ -544,11 +620,15 @@ module.exports = grammar({
        '}',
      ),
  
@@ -313,12 +323,22 @@ index 51282fa..bace839 100644
        '}',
      ),
  
-@@ -563,12 +642,52 @@ module.exports = grammar({
+@@ -563,12 +643,62 @@ module.exports = grammar({
          seq('this', '/'),
          seq('seq', '/'),
        )),
-+      $._qname_seg,
-+      repeat(seq('/', $._qname_seg)),
++      choice(
++        // A declaration keyword can open a name only when a '/' path
++        // follows (`pred/totalOrder`); alone it is a keyword, not a name.
++        seq(
++          alias(choice(
++            'pred', 'fun', 'assert', 'fact', 'sig', 'enum', 'module',
++            'open', 'check', 'run',
++          ), $.name),
++          repeat1(seq('/', $._qname_seg)),
++        ),
++        seq($.name, repeat(seq('/', $._qname_seg))),
++      ),
 +    ),
 +
 +    // A qualified-path segment: plain names plus the declaration

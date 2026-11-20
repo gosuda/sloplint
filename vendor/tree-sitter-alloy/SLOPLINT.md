@@ -46,7 +46,7 @@ vendored `node_modules` are needed.
 
 The committed `src/parser.c`, `src/grammar.json` and `src/node-types.json`
 are regenerated from the patched `grammar.js` below: ABI 15
-(`#define LANGUAGE_VERSION 15`), `STATE_COUNT 1422`, no external scanner
+(`#define LANGUAGE_VERSION 15`), `STATE_COUNT 1439`, no external scanner
 (`src/` holds no `scanner.c`). Regenerating the *pinned* grammar.js with
 0.27.1 reproduces the pre-patch parser byte-identically (STATE_COUNT 624),
 which is what `sloplint-grammar.patch` diffs against.
@@ -114,16 +114,22 @@ Round 2 (2026-11-20 dogfood corpus):
   declaration names too: `assert add_1`, `pred step'`, `fun lookup'`.
 - Declaration names may be sig-scoped (`optional(sig_ref (`.` | `::`))`
   prefix on pred/fun decls), e.g. `pred MySig.helper`.
-- `assert` may carry a string name (`assert "every book has an address"`).
+- `assert` may carry a string name (`assert "every book has an address"`)
+  — base grammar accepted it; the corpus case guards the behavior.
 - Qualified-path segments may be declaration keywords (`_qname_seg`):
   `pred/totalOrder`, `fun/add`, `module/x` — real util-module file names.
   Only keywords that are not standalone expressions are admitted, so
-  `univ`/`none`/`Int` stay expression-only.
-- `qual_path` (at least one `/`) is the operator of
-  `infix_qual_call_expression` (`n1 fun/add n2`) and a `box_join`
-  callee (`pred/totalOrder[]`).
+  `univ`/`none`/`Int` stay expression-only. In `qual_name` a keyword-led
+  first segment requires a `/` tail, so a bare `some sig` still fails
+  (upstream parity).
+- `qual_path` (at least one `/`) is a `box_join` callee
+  (`pred/totalOrder[]`).
 - `scope_expression`: `Sig::member` in expression position
   (`GrandParent::parents`), binding like the dot join.
-- Infix calls admit only keyword-led operators (`a fun/add b`); a
-  name-led path (`x a/b y`) is ambiguous with adjacent block
-  expressions and stays a known gap.
+- `infix_qual_call_expression` (`a fun/add b`) admits only `fun/`-led
+  operators — `pred/`/`sig`/… cannot be infix-applied in Alloy, and
+  letting them lead the operator made `expr` + `pred/totalOrder[x]`
+  misread as an infix call. The operator binds below `box_join`, so
+  `a fun/add g[b]` groups as `a fun/add (g[b])`. A name-led path
+  (`x a/b y`) stays a known gap.
+- `command` names accept primed targets (`check A'`, `run step'`).
