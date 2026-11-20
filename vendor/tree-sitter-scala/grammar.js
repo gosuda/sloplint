@@ -177,6 +177,13 @@ const OP_LEFT = [
 ];
 const opLeft = ($, key) => $[`_op_left_${key}`];
 
+// The right-associative (`:`-tail) classes are external too, but only for
+// one spelling: an operator a comment cut short, which the internal run
+// cannot reproduce (`x */+:/*c*/` — the internal `/`-step would swallow the
+// comment's slash). `_op_assign` covers the `=`-tail the same way.
+const OP_RIGHT = OP_LEFT;
+const opRight = ($, key) => $[`_op_right_${key}`];
+
 // The pre-split operator identifier as one token, for pure name contexts
 // (definitions, imports, types, patterns). A state that also allows an infix
 // continuation needs the per-class tokens instead, because one lexer state
@@ -376,6 +383,11 @@ module.exports = grammar({
     // one so the lexer falls back to the grammar definition.
     ...OP_LEFT.map(key => opLeft($, key)),
     $._op_name,
+    // A `:`- or `=` -tailed operator a comment cut short has no internal
+    // spelling, so the right-associative classes and the assignment class
+    // go out through these tokens (see OP_RIGHT).
+    ...OP_RIGHT.map(key => opRight($, key)),
+    $._op_assign,
     // The `>` of `//>`. A regex would have to swallow the `using` after it to
     // see it, and highlighting needs that keyword as a token of its own, so
     // the scanner looks ahead instead and declines the `>` of a plain comment.
@@ -393,6 +405,13 @@ module.exports = grammar({
     // The `?` of a bounded wildcard. Only the bound tells it from the plain
     // one, and the parser cannot see that far.
     $._wildcard_bound_start,
+    // A symbolic quote literal `'op` ending in `/` — the internal regex
+    // cannot bound a trailing `/` against a following comment opener.
+    $._op_symbol,
+    // A `:` that does not end its line. In a braced typed lambda the colon
+    // at end of line belongs to the fewer-braces colon argument, so the
+    // parameter's colon takes this token instead.
+    $._colon_mid,
   ],
 
   inline: $ => [
@@ -2264,8 +2283,15 @@ module.exports = grammar({
         ),
       ),
 
-    // `{ x: T => body }` is legal only as a block result. The weight beats
-    // the reading of `x: T` as a statement taking a colon argument.
+    // `{ x: T => body }` is legal only as a block result. The weight sits
+    // below the colon-argument reading (0): when the `:` ends its line, `x:`
+    // is a fewer-braces call taking an indented callback, never a typed
+    // parameter (`{ f: ` + `cb => ... }` calls `f`, it does not bind it).
+    // A mid-line `:` has no colon-argument alternative, so the lambda
+    // reading still applies there. The `wildcard` parameter needs no
+    // self-type weight: `self_type` (dynamic 3) is only reachable inside a
+    // template body, while this rule lives in expression blocks, where
+    // `{ _: T => go() }` is the lambda scalac reads.
     _braced_typed_lambda: $ =>
       prec.dynamic(
         2,
@@ -2275,10 +2301,12 @@ module.exports = grammar({
             field(
               "parameters",
               prec.right(
-                // No `wildcard`: `{ _: T => ... }` reads as the template
-                // body's self-type (`new T { _: T => ... }`), and a typed
-                // wildcard lambda is normally written `(_ : T) => ...`.
-                seq(optional("implicit"), operandName($), ":", $._type),
+                seq(
+                  optional("implicit"),
+                  operandName($),
+                  $._colon_mid,
+                  $._type,
+                ),
               ),
             ),
             anyArrow(),
@@ -2850,11 +2878,17 @@ module.exports = grammar({
     quote_expression: $ =>
       prec.left(
         PREC.macro,
-        seq(
-          "'",
-          choice(
-            // `'{}` is a quoted empty block, common in macro code.
-            seq("{", optional($._block), "}"),
+        choice(
+          // `'op` ending in `/` (`'/:/`). The external scanner decides
+          // the slash bound, so a following `/*` or `//` always opens a
+          // comment and is never part of the name (`'+/*c*/` is `'+` +
+          // comment).
+          alias($._op_symbol, $.operator_identifier),
+          seq(
+            "'",
+            choice(
+              // `'{}` is a quoted empty block, common in macro code.
+              seq("{", optional($._block), "}"),
             // TypeBlock ::= {TypeBlockStat semi} Type. The bindings let a
             // quote name the type variables it matches on.
             seq(
@@ -2864,27 +2898,29 @@ module.exports = grammar({
               "]",
             ),
             $.identifier,
-            // `'op` reads an operator name (Scala 2 symbol literal `'*`,
-            // scalding's `x == '*)`). Immediate, so `' +` is not silently
-            // accepted, and its charset is the operator union without a
-            // `/` that would open a comment — so reserved spellings
-            // `'=`, `':`, `'<-`, `'->` lex too. A trailing `'` cannot be
-            // swallowed: `'='` stays a character literal because its
-            // three characters outmatch the two of `'=`.
-            alias(
-              token.immediate(
-                prec(
-                  PREC.macro,
-                  opRegex(`(?:[${noSlash(OP)}]|/[${OP_NSS}])+/?|/`),
+              // `'op` reads an operator name (Scala 2 symbol literal `'*`,
+              // scalding's `x == '*)`). Immediate, so `' +` is not silently
+              // accepted, and its charset is the operator union without a
+              // `/` that would open a comment — so reserved spellings
+              // `'=`, `':`, `'<-`, `'->` lex too. A trailing `'` cannot be
+              // swallowed: `'='` stays a character literal because its
+              // three characters outmatch the two of `'=`. Names ending in
+              // `/` are the external `_op_symbol`'s job (see above).
+              alias(
+                token.immediate(
+                  prec(
+                    PREC.macro,
+                    opRegex(`(?:[${noSlash(OP)}]|/[${OP_NSS}])+|/`),
+                  ),
                 ),
+                $.operator_identifier,
               ),
-              $.operator_identifier,
+              // `'val` — a keyword can still name a Scala 2 symbol literal
+              // (scalding's `'row, 'col, 'val` column literals).
+              alias("val", $.identifier),
+              $.null_literal,
+              $.boolean_literal,
             ),
-            // `'val` — a keyword can still name a Scala 2 symbol literal
-            // (scalding's `'row, 'col, 'val` column literals).
-            alias("val", $.identifier),
-            $.null_literal,
-            $.boolean_literal,
           ),
         ),
       ),
@@ -2988,6 +3024,13 @@ module.exports = grammar({
       OP_LEFT.map(key => [`_op_left_${key}`, () => OP_TOKEN[`${key}Left`]]),
     ),
     _op_name: $ => OP_ID_UNION,
+    ...Object.fromEntries(
+      OP_RIGHT.map(key => [
+        `_op_right_${key}`,
+        () => OP_TOKEN[`${key}Right`],
+      ]),
+    ),
+    _op_assign: $ => OP_TOKEN.assign,
 
     // XML literals (SLS §10). The external token $._xml_tag_start decides
     // where markup starts. Comment, CDATA and processing instruction

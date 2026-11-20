@@ -10,7 +10,7 @@
 - Copied from upstream: `test/corpus/*.txt` (10 files, 305 cases, all passing before and after).
 - Changed: `grammar.js` (see `sloplint-grammar.patch`), and `src/` regenerated.
 - Added: `test/corpus/sloplint_endnew.txt`, `sloplint_parenif.txt`, `sloplint_instar.txt`,
-  `sloplint_oplam.txt`, `sloplint_enum.txt`.
+  `sloplint_oplam.txt`, `sloplint_enum.txt`, `sloplint_opcmt.txt`.
 
 ## Regeneration
 
@@ -23,7 +23,7 @@
   kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` carries one
   sloplint edit (SC-SOFTENUM, below): `enum` removed from the postfix-operator heuristic's
   `definition_words` list.
-- Test: `tree-sitter test` in this directory: 319/319 (305 upstream + 14 sloplint cases).
+- Test: `tree-sitter test` in this directory: 324/324 (305 upstream + 19 sloplint cases).
 
 ## Changes to grammar.js
 
@@ -184,3 +184,34 @@ Corpus delta (same files, same grammar build):
 | phantom | ~10 | 0 |
 | scalding | ~8 | 6 (multi-line curried signatures — residual cluster) |
 | breeze | ~12 | 4 (unexamined residuals; the `/:/` ceiling is handled by SC-OPSLASH) |
+
+### SC-OPCMT / SC-OPRIGHT / SC-COLONMID (later round)
+
+A comment may cut an operator's `/`-run: `x /+/* note */ y` is the infix
+`x /+ y` with a `block_comment` between operator and right operand. The internal
+run cannot spell that token — its `/`-step would swallow the comment's opener —
+so the scanner emits the operator's class itself. The class is read from the
+last accepted character, not the first (`op_stopped_class`): a `:` tail is
+right-associative (`x */+:/*c*/ y`), an `=` tail is an assignment
+(`x */+=/*c*/ y`), everything else keeps the first-char left class. The
+right-associative and assign spellings only exist as new externals
+(`_op_right_*`, `_op_assign`) because the comment-stopped token is the one form
+the internal regex cannot reproduce; the productions take
+`choice($._op_right_X, OP_TOKEN.XRight)` so a re-lexable operator still goes
+out through the internal tokens.
+
+`ends_in_slash` decides between the postfix and operand readings: after a
+`/` the scanner reads past blanks and comments, and the token is a postfix
+operator when an operand follows (`x /:/`, `p /:/ q`'s first colon-op), or the
+start of a right operand when the line ends (`val l = x /` + newline). The
+`/`-run also makes a `*`-led operator ineligible for `POSTFIX_STAR`, so
+`f(x */+)` is a call to `f` with the postfix `*/+`, not a vararg splice.
+
+`'op` symbols may end in `/` too (`'+/`, `'/:/`): the scanner emits `_op_symbol`
+when the run's tail is `/`, and declines otherwise so `'+/*c*/` splits into the
+`'+'` quote and a `block_comment`.
+
+`_colon_mid` lexes a `:` only when same-line content follows. In
+`_braced_typed_lambda` the parameter colon takes it, so `{ int: Int => b }`
+stays a typed lambda (the corpus pins that reading) while `{ f:` + an indented
+`cb => y` resolves to the fewer-braces colon call, matching scalac.

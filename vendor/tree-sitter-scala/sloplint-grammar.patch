@@ -11,7 +11,21 @@
      ),
    ),
    mulRight: token(
-@@ -181,7 +185,7 @@
+@@ -173,6 +177,13 @@
+ ];
+ const opLeft = ($, key) => $[`_op_left_${key}`];
+ 
++// The right-associative (`:`-tail) classes are external too, but only for
++// one spelling: an operator a comment cut short, which the internal run
++// cannot reproduce (`x */+:/*c*/` — the internal `/`-step would swallow the
++// comment's slash). `_op_assign` covers the `=`-tail the same way.
++const OP_RIGHT = OP_LEFT;
++const opRight = ($, key) => $[`_op_right_${key}`];
++
+ // The pre-split operator identifier as one token, for pure name contexts
+ // (definitions, imports, types, patterns). A state that also allows an infix
+ // continuation needs the per-class tokens instead, because one lexer state
+@@ -181,7 +192,7 @@
    choice(
      opRegex(`[${OP_SINGLE_UNICODE}\\-!#%&*+/\\\\<>?\\u005e\\u007c~]`),
      opRegex(`[${noSlash(OP)}]${OP_STEP}+`),
@@ -20,7 +34,33 @@
    ),
  );
  
-@@ -438,7 +442,6 @@
+@@ -372,6 +383,11 @@
+     // one so the lexer falls back to the grammar definition.
+     ...OP_LEFT.map(key => opLeft($, key)),
+     $._op_name,
++    // A `:`- or `=` -tailed operator a comment cut short has no internal
++    // spelling, so the right-associative classes and the assignment class
++    // go out through these tokens (see OP_RIGHT).
++    ...OP_RIGHT.map(key => opRight($, key)),
++    $._op_assign,
+     // The `>` of `//>`. A regex would have to swallow the `using` after it to
+     // see it, and highlighting needs that keyword as a token of its own, so
+     // the scanner looks ahead instead and declines the `>` of a plain comment.
+@@ -389,6 +405,13 @@
+     // The `?` of a bounded wildcard. Only the bound tells it from the plain
+     // one, and the parser cannot see that far.
+     $._wildcard_bound_start,
++    // A symbolic quote literal `'op` ending in `/` — the internal regex
++    // cannot bound a trailing `/` against a following comment opener.
++    $._op_symbol,
++    // A `:` that does not end its line. In a braced typed lambda the colon
++    // at end of line belongs to the fewer-braces colon argument, so the
++    // parameter's colon takes this token instead.
++    $._colon_mid,
+   ],
+ 
+   inline: $ => [
+@@ -438,7 +461,6 @@
  
    conflicts: $ => [
      [$._if_rest],
@@ -28,7 +68,7 @@
      [$.tuple_pattern, $._simple_expression],
      [$.tuple_pattern, $._simple_expression, $.binding],
      // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
-@@ -459,6 +462,10 @@
+@@ -459,6 +481,10 @@
      // 'extension' • '{' is either an extension definition with a braced body
      // or the soft identifier `extension` (a Scala 2 id) called with a block.
      [$.extension_definition, $._soft_identifier],
@@ -39,7 +79,7 @@
      [$.binding, $._simple_expression],
      [$.binding, $._type_identifier],
      // A parenthesized type before `=>` can extend into a function type or stop
-@@ -493,6 +500,7 @@
+@@ -493,6 +519,7 @@
      // we treat `operator_identifier` as `simple_expression`
      [$._simple_expression, $.lambda_expression],
      [$._simple_expression, $._single_lambda_param],
@@ -47,7 +87,7 @@
      // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
      // identifier `export` beginning an expression statement. Each reading
      // dies on the next token ('.' vs a name), so forking settles it. The
-@@ -532,20 +540,36 @@
+@@ -532,20 +559,36 @@
      [$._constructor_annotation],
      [$._constructor_annotation_arguments, $.arguments],
      [$._constructor_annotation, $.applied_constructor_type],
@@ -91,7 +131,7 @@
      // _simple_expression  ':'  '('  name_and_type  ')'  •  '=>'
      // The parenthesized list is either the lambda parameters of a colon
      // argument or a named tuple type on the ascription reading. What follows
-@@ -555,9 +579,6 @@
+@@ -555,9 +598,6 @@
      [$._annotated_type, $.binding],
      // '['  identifier  ':'  '{'  identifier  •  ':'  — a braced context
      // bound reuses the self-type head shapes.
@@ -101,7 +141,7 @@
      // '['  identifier  ':'  '{'  '('  wildcard  •  ':'  …
      [$.binding, $._annotated_type, $._simple_expression],
      // '['  identifier  ':'  '{'  wildcard  •  '{'  …
-@@ -636,7 +657,22 @@
+@@ -636,7 +676,22 @@
      compilation_unit: $ =>
        seq(
          optional($._shebang),
@@ -125,7 +165,7 @@
        ),
  
      _top_level_definition: $ => choice($._definition, statementExpression($)),
-@@ -663,15 +699,18 @@
+@@ -663,15 +718,18 @@
        ),
  
      enum_definition: $ =>
@@ -153,7 +193,7 @@
        ),
  
      _enum_block: $ =>
-@@ -801,7 +840,7 @@
+@@ -801,7 +859,7 @@
      // Scala 3 keywords that are valid identifiers in Scala 2 sources and thus
      // may appear as package names in import/export paths (e.g. `import io.circe.export.Exported`).
      _namespace_path_segment: $ =>
@@ -162,7 +202,7 @@
  
      namespace_wildcard: $ => prec.left(1, choice("*", "_", "given")),
  
-@@ -1073,10 +1112,14 @@
+@@ -1073,10 +1131,14 @@
  
      // Dynamic precedences added here to win over $.call_expression
      self_type: $ =>
@@ -180,7 +220,7 @@
          prec(
            "self_type",
            seq(
-@@ -2019,7 +2062,10 @@
+@@ -2019,7 +2081,10 @@
          PREC.infix,
          seq(
            field("left", $._definition_pattern),
@@ -192,7 +232,7 @@
            field("right", $._definition_pattern),
          ),
        ),
-@@ -2151,10 +2197,17 @@
+@@ -2151,10 +2216,17 @@
                ),
                field(
                  "parameters",
@@ -214,8 +254,21 @@
                ),
                anyArrow(),
                $._indentable_expression,
-@@ -2215,13 +2268,16 @@
-     // the reading of `x: T` as a statement taking a colon argument.
+@@ -2211,18 +2283,30 @@
+         ),
+       ),
+ 
+-    // `{ x: T => body }` is legal only as a block result. The weight beats
+-    // the reading of `x: T` as a statement taking a colon argument.
++    // `{ x: T => body }` is legal only as a block result. The weight sits
++    // below the colon-argument reading (0): when the `:` ends its line, `x:`
++    // is a fewer-braces call taking an indented callback, never a typed
++    // parameter (`{ f: ` + `cb => ... }` calls `f`, it does not bind it).
++    // A mid-line `:` has no colon-argument alternative, so the lambda
++    // reading still applies there. The `wildcard` parameter needs no
++    // self-type weight: `self_type` (dynamic 3) is only reachable inside a
++    // template body, while this rule lives in expression blocks, where
++    // `{ _: T => go() }` is the lambda scalac reads.
      _braced_typed_lambda: $ =>
        prec.dynamic(
 -        1,
@@ -226,13 +279,17 @@
              field(
                "parameters",
                prec.right(
-+                // No `wildcard`: `{ _: T => ... }` reads as the template
-+                // body's self-type (`new T { _: T => ... }`), and a typed
-+                // wildcard lambda is normally written `(_ : T) => ...`.
-                 seq(optional("implicit"), operandName($), ":", $._type),
+-                seq(optional("implicit"), operandName($), ":", $._type),
++                seq(
++                  optional("implicit"),
++                  operandName($),
++                  $._colon_mid,
++                  $._type,
++                ),
                ),
              ),
-@@ -2283,17 +2339,35 @@
+             anyArrow(),
+@@ -2283,19 +2367,37 @@
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -258,7 +315,7 @@
 +            $._control_tail_gate,
 +            "then",
 +          ),
-         ),
++        ),
 +        prec.dynamic(
 +          5,
 +          seq(
@@ -267,18 +324,20 @@
 +            $._control_tail_gate,
 +            "then",
 +          ),
-+        ),
-+      ),
-+
+         ),
+       ),
+ 
 +    split_call_condition: $ =>
 +      seq(
 +        field("function", $._indentable_expression),
 +        $._automatic_semicolon,
 +        field("arguments", $.arguments),
-       ),
- 
++      ),
++
      /*
-@@ -2529,6 +2603,17 @@
+      *   MatchClause       ::=  'match' <<< CaseClauses >>>
+      *
+@@ -2529,6 +2631,17 @@
              optional($._end_marker_kw_tail),
            ),
          ),
@@ -296,30 +355,62 @@
          prec(
            "new",
            seq("new", $.template_body, optional($._end_marker_kw_tail)),
-@@ -2779,6 +2864,22 @@
+@@ -2765,11 +2878,17 @@
+     quote_expression: $ =>
+       prec.left(
+         PREC.macro,
+-        seq(
+-          "'",
+-          choice(
+-            // `'{}` is a quoted empty block, common in macro code.
+-            seq("{", optional($._block), "}"),
++        choice(
++          // `'op` ending in `/` (`'/:/`). The external scanner decides
++          // the slash bound, so a following `/*` or `//` always opens a
++          // comment and is never part of the name (`'+/*c*/` is `'+` +
++          // comment).
++          alias($._op_symbol, $.operator_identifier),
++          seq(
++            "'",
++            choice(
++              // `'{}` is a quoted empty block, common in macro code.
++              seq("{", optional($._block), "}"),
+             // TypeBlock ::= {TypeBlockStat semi} Type. The bindings let a
+             // quote name the type variables it matches on.
+             seq(
+@@ -2779,8 +2898,29 @@
                "]",
              ),
              $.identifier,
-+            // `'op` reads an operator name (Scala 2 symbol literal `'*`,
-+            // scalding's `x == '*)`). Immediate, so `' +` is not silently
-+            // accepted, and its charset is the operator union without a
-+            // `/` that would open a comment — so reserved spellings
-+            // `'=`, `':`, `'<-`, `'->` lex too. A trailing `'` cannot be
-+            // swallowed: `'='` stays a character literal because its
-+            // three characters outmatch the two of `'=`.
-+            alias(
-+              token.immediate(
-+                prec(PREC.macro, opRegex(`(?:[${noSlash(OP)}]|/[${OP_NSS}])+|/`)),
+-            $.null_literal,
+-            $.boolean_literal,
++              // `'op` reads an operator name (Scala 2 symbol literal `'*`,
++              // scalding's `x == '*)`). Immediate, so `' +` is not silently
++              // accepted, and its charset is the operator union without a
++              // `/` that would open a comment — so reserved spellings
++              // `'=`, `':`, `'<-`, `'->` lex too. A trailing `'` cannot be
++              // swallowed: `'='` stays a character literal because its
++              // three characters outmatch the two of `'=`. Names ending in
++              // `/` are the external `_op_symbol`'s job (see above).
++              alias(
++                token.immediate(
++                  prec(
++                    PREC.macro,
++                    opRegex(`(?:[${noSlash(OP)}]|/[${OP_NSS}])+|/`),
++                  ),
++                ),
++                $.operator_identifier,
 +              ),
-+              $.operator_identifier,
++              // `'val` — a keyword can still name a Scala 2 symbol literal
++              // (scalding's `'row, 'col, 'val` column literals).
++              alias("val", $.identifier),
++              $.null_literal,
++              $.boolean_literal,
 +            ),
-+            // `'val` — a keyword can still name a Scala 2 symbol literal
-+            // (scalding's `'row, 'col, 'val` column literals).
-+            alias("val", $.identifier),
-             $.null_literal,
-             $.boolean_literal,
            ),
-@@ -2802,7 +2903,7 @@
+         ),
+       ),
+@@ -2802,7 +2942,7 @@
      _super_identifier: $ => "super",
  
      // https://docs.scala-lang.org/scala3/reference/soft-modifier.html
@@ -328,9 +419,403 @@
  
      // alphaid          ::=  upper idrest
      //                       |  varid
+@@ -2884,6 +3024,13 @@
+       OP_LEFT.map(key => [`_op_left_${key}`, () => OP_TOKEN[`${key}Left`]]),
+     ),
+     _op_name: $ => OP_ID_UNION,
++    ...Object.fromEntries(
++      OP_RIGHT.map(key => [
++        `_op_right_${key}`,
++        () => OP_TOKEN[`${key}Right`],
++      ]),
++    ),
++    _op_assign: $ => OP_TOKEN.assign,
+ 
+     // XML literals (SLS §10). The external token $._xml_tag_start decides
+     // where markup starts. Comment, CDATA and processing instruction
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -1879,7 +1879,7 @@
+@@ -69,10 +69,32 @@
+   OP_LEFT_MUL,
+   OP_LEFT_OTHER,
+   OP_NAME,
++  // The right-associative (`:`-tail) and assignment (`=`-tail) operator
++  // classes, emitted only for a `/`-run a comment cut short: those spellings
++  // have no internal token because the internal run would absorb the
++  // comment's `/` into the operator.
++  OP_RIGHT_OR,
++  OP_RIGHT_XOR,
++  OP_RIGHT_AND,
++  OP_RIGHT_EQ,
++  OP_RIGHT_REL,
++  OP_RIGHT_COLON,
++  OP_RIGHT_ADD,
++  OP_RIGHT_MUL,
++  OP_RIGHT_OTHER,
++  OP_ASSIGN,
+   USING_DIRECTIVE_START,
+   CASE_DEFINITION_KEYWORD,
+   DEF_SEMICOLON,
+-  WILDCARD_BOUND_START
++  WILDCARD_BOUND_START,
++  // A symbolic quote literal `'op` that ends in `/`. The internal regex
++  // cannot bound a trailing `/` (no lookahead for a comment opener), so it
++  // goes out through this token.
++  OP_SYMBOL,
++  // A `:` with same-line content after it, as in the `x: T` of a braced
++  // typed lambda. The colon that ends its line belongs to the fewer-braces
++  // colon argument instead.
++  COLON_MID,
+ };
+ 
+ // Mirrors enum TokenType above.
+@@ -128,10 +150,22 @@
+   "OP_LEFT_MUL",
+   "OP_LEFT_OTHER",
+   "OP_NAME",
++  "OP_RIGHT_OR",
++  "OP_RIGHT_XOR",
++  "OP_RIGHT_AND",
++  "OP_RIGHT_EQ",
++  "OP_RIGHT_REL",
++  "OP_RIGHT_COLON",
++  "OP_RIGHT_ADD",
++  "OP_RIGHT_MUL",
++  "OP_RIGHT_OTHER",
++  "OP_ASSIGN",
+   "USING_DIRECTIVE_START",
+   "CASE_DEFINITION_KEYWORD",
+   "DEF_SEMICOLON",
+-  "WILDCARD_BOUND_START"
++  "WILDCARD_BOUND_START",
++  "OP_SYMBOL",
++  "COLON_MID",
+ };
+ 
+ typedef struct {
+@@ -299,11 +333,59 @@
+     case '<': case '>': return OP_LEFT_REL;
+     case ':': return OP_LEFT_COLON;
+     case '+': case '-': return OP_LEFT_ADD;
+-    case '*': case '%': return OP_LEFT_MUL;
++    case '*': case '/': case '%': return OP_LEFT_MUL;
+     default: return OP_LEFT_OTHER;
+   }
+ }
+ 
++// The right-associative twin of op_left_class: the precedence is still the
++// first character's (SLS 6.12.3), the `:` ending only picks the side.
++static enum TokenType op_right_class(int32_t first) {
++  switch (first) {
++    case '|': return OP_RIGHT_OR;
++    case '^': return OP_RIGHT_XOR;
++    case '&': return OP_RIGHT_AND;
++    case '=': case '!': return OP_RIGHT_EQ;
++    case '<': case '>': return OP_RIGHT_REL;
++    case ':': return OP_RIGHT_COLON;
++    case '+': case '-': return OP_RIGHT_ADD;
++    case '*': case '/': case '%': return OP_RIGHT_MUL;
++    default: return OP_RIGHT_OTHER;
++  }
++}
++
++// The class of an operator a comment cut short, read from its last accepted
++// character rather than its first: a `:` tail is right-associative, an `=`
++// tail is an assignment (SLS 6.12.3 keeps `<=`, `>=`, `!=` and `=`-led
++// spellings on the left side). `first`/`last`/`second` are the operator's
++// first, last and second-to-last accepted characters.
++static enum TokenType op_stopped_class(int32_t first, int32_t last,
++                                       int32_t second) {
++  if (last == ':') {
++    return op_right_class(first);
++  }
++  if (last == '=' && second != '<' && second != '>' && second != '!' &&
++      first != '=') {
++    return OP_ASSIGN;
++  }
++  return op_left_class(first);
++}
++
++// Emits the operator's class token, or the generic name token where the
++// class is not valid in this state.
++static bool emit_op_class(TSLexer *lexer, const bool *valid_symbols,
++                          enum TokenType cls) {
++  if (valid_symbols[cls]) {
++    lexer->result_symbol = cls;
++    return true;
++  }
++  if (valid_symbols[OP_NAME]) {
++    lexer->result_symbol = OP_NAME;
++    return true;
++  }
++  return false;
++}
++
+ // Mirrors the start class of XML_NAME in grammar.js. Every non-ASCII
+ // character is accepted, since the letter test is ASCII-only and the internal
+ // lexer rejects the name if it is not a letter after all.
+@@ -1736,37 +1818,88 @@
+     return scan_float_with_separator(lexer);
+   }
+ 
++  // `'op` — a symbolic quote literal whose operator ends in `/`. The
++  // internal regex cannot rule a comment opener out after the `/` (no
++  // lookahead), so only the trailing-slash spelling is emitted here; every
++  // shorter name stays with the internal regex, which also keeps `'=`,
++  // `'a'` and `'x` untouched.
++  if (valid_symbols[OP_SYMBOL] && !valid_symbols[ERROR_SENTINEL] &&
++      lexer->lookahead == '\'') {
++    advance(lexer);
++    int32_t c = lexer->lookahead;
++    bool tail_slash = false;
++    while (is_op_char(c) || c == '/') {
++      if (c == '/') {
++        advance(lexer);
++        if (lexer->lookahead == '/' || lexer->lookahead == '*') {
++          break;  // comment opener: the `/` is not taken
++        }
++        tail_slash = true;
++      } else {
++        tail_slash = false;
++        advance(lexer);
++      }
++      lexer->mark_end(lexer);
++      c = lexer->lookahead;
++    }
++    if (tail_slash) {
++      lexer->result_symbol = OP_SYMBOL;
++      return true;
++    }
++    return false;
++  }
++
+   // A symbolic operator in postfix position is lexed here, as is the
+   // fewer-braces colon. An operator that continues its expression, on the
+   // same line or over a line break, stays with the internal per-class
+   // tokens: since the postfix reading only exists through this branch, the
+   // internal tokens admit no statement split after `left op`.
+   // COLON_EOL only ever lexes a lone `:`, so that leg needs a colon first.
+-  // The branch also carries every operator ending in `/`, which the internal
+-  // tokens cannot express, so an operator class alone opens it too.
+-  if (!valid_symbols[ERROR_SENTINEL] && is_op_char(lexer->lookahead) &&
++  // The branch also carries every operator containing `/`, which the
++  // internal tokens cannot express, so an operator class or a `/` alone
++  // opens it too.
++  if (!valid_symbols[ERROR_SENTINEL] &&
++      (is_op_char(lexer->lookahead) || lexer->lookahead == '/') &&
+       ((valid_symbols[COLON_EOL] && lexer->lookahead == ':') ||
+        valid_symbols[POSTFIX_OP] || valid_symbols[POSTFIX_STAR] ||
+        valid_symbols[op_left_class(lexer->lookahead)] ||
+        valid_symbols[OP_NAME])) {
+-    // Collect the operator. Only the first 3 chars are kept, since anything
+-    // longer cannot be one of the reserved sequences checked below. The
+-    // entry condition already checked the first character.
++    // Collect the operator's non-slash characters. Only the first 3 chars
++    // are kept, since anything longer cannot be one of the reserved
++    // sequences checked below. A leading `/` is not collected: every slash
++    // goes through the runner below, which decides by the next character
++    // whether it opens a comment.
+     char op[4] = {0};
+     int op_len = 0;
+-    do {
++    while (is_op_char(lexer->lookahead)) {
+       if (op_len < 3) {
+         op[op_len] = (char)lexer->lookahead;
+       }
+       op_len++;
+       advance(lexer);
+-    } while (is_op_char(lexer->lookahead));
++    }
+     lexer->mark_end(lexer);
++    // Whether a comment cut the operator's `/`-run short.
++    bool stopped_at_comment = false;
++    // Whether the `/`-run consumed any characters: a `*`-led operator
++    // whose run took a `/` is not the lone `*` of a vararg splice.
++    bool slash_run = false;
++    // The last two characters the run accepted: the class of a
++    // comment-stopped operator is read from them (`:` right, `=` assign).
++    int32_t last_op_char = 0;
++    int32_t second_op_char = 0;
++    // Whether the operator's last accepted character is a `/`.
++    bool ends_in_slash = false;
+     // A `/` next carries the operator on, so the colon is not a lone one.
+     if (op_len == 1 && op[0] == ':' && lexer->lookahead != '/') {
+       // A lone `:` ending its line is the fewer-braces colon (scalac's
+       // COLONeol). Deciding it at the token level kills the cross-newline
+       // ascription fork that GLR would otherwise keep alive across the region.
++      if (valid_symbols[COLON_MID] &&
++          !rest_of_line_is_blank_or_comments(lexer)) {
++        lexer->result_symbol = COLON_MID;
++        return true;
++      }
+       if (valid_symbols[COLON_EOL] &&
+           rest_of_line_is_blank_or_comments(lexer)) {
+         lexer->result_symbol = COLON_EOL;
+@@ -1779,14 +1912,21 @@
+     // and the first character alone fixes the SLS 6.12.3 precedence class.
+     // `#!` opens a script header, whose path is not part of an operator.
+     bool shebang = op_len >= 2 && op[0] == '#' && op[1] == '!';
+-    enum TokenType op_class = op_left_class(op[0]);
+-    if (lexer->lookahead == '/' && !shebang &&
+-        (valid_symbols[op_class] || valid_symbols[OP_NAME])) {
++    enum TokenType op_class =
++        op_left_class(op_len ? op[0] : lexer->lookahead);
++    // The runner also has to see a bare `//` or `/*` here even when no
++    // operator-class token is valid: a `/` that opens a comment must stop
++    // the scan before the postfix logic below can claim it as an operator.
++    if (lexer->lookahead == '/' && !shebang) {
+       // One step per OP_STEP in grammar.js. A `/` is taken only when what
+       // follows it cannot open a comment, so the token never needs to give
+-      // characters back and the end is marked once, on the way out.
+-      bool ends_in_slash = false;
++      // characters back. The end is marked per accepted character, so a
++      // comment still bounds the token where it started.
+       bool at_comment = false;
++      // Whether the run consumed any operator character before a comment.
++      // A bare `//` or `/*` here is a comment opener, not an operator: the
++      // first `/` belongs to the comment, so the internal tokens must win.
++      bool run_marked = false;
+       while (!at_comment) {
+         int32_t c = lexer->lookahead;
+         if (c == '/') {
+@@ -1797,22 +1937,108 @@
+         } else {
+           break;
+         }
+-        ends_in_slash = !at_comment && c == '/';
++        if (!at_comment) {
++          ends_in_slash = c == '/';
++          lexer->mark_end(lexer);
++          run_marked = true;
++          slash_run = true;
++          second_op_char = last_op_char;
++          last_op_char = c;
++        }
+       }
+       // A Unicode opchar would carry the operator past what this reads, so
+-      // hand the whole token back to the internal lexer.
++      // hand the whole token back to the internal lexer. A `/`-tail ends the
++      // infix reading when nothing but a close, a separator, a comment or
++      // the line end follows — the postfix checks below decide that case
++      // (`(x /:/)`). An operand on the same line keeps the class token, the
++      // only spelling an operator ending in `/` has.
+       if (ends_in_slash && lexer->lookahead < 0x80) {
+-        lexer->mark_end(lexer);
+-        lexer->result_symbol = valid_symbols[op_class] ? op_class : OP_NAME;
+-        return true;
++        bool operand_follows = false;
++        for (;;) {
++          advance_past_blanks(lexer);
++          int32_t c = lexer->lookahead;
++          if (lexer->eof(lexer) || c == '\n' || c == '\r' ||
++              is_close_or_separator(c)) {
++            break;
++          }
++          if (c != '/') {
++            operand_follows = true;
++            break;
++          }
++          advance(lexer);
++          if (lexer->lookahead == '/') {
++            while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
++              advance(lexer);
++            }
++            break;  // a line comment ends the line
++          }
++          if (lexer->lookahead != '*') {
++            operand_follows = true;  // a lone '/' is operand text
++            break;
++          }
++          advance(lexer);
++          consume_block_comment_body(lexer);
++        }
++        if (operand_follows) {
++          lexer->result_symbol = valid_symbols[op_class] ? op_class : OP_NAME;
++          return true;
++        }
++        // The mark still ends the operator at its `/`; the reads above are
++        // re-lexed for the comment or close that follows.
+       }
+-      return false;
++      if (!at_comment && !ends_in_slash) {
++        return false;
++      }
++      // Nothing operator-like preceded the comment opener (`x +//c` or a
++      // bare `//`/`/*`): the internal lexer's operator run stops before the
++      // same `/` and its comment rules take over — nothing to emit here.
++      // The exception is a bare `/*` with no operator collected: `//` has an
++      // internal token, but BLOCK_COMMENT is external and the mid-line check
++      // below this branch is unreachable while the postfix path can claim
++      // the `/`, so emit it right here.
++      if (!run_marked) {
++        if (op_len == 0 && lexer->lookahead == '*' &&
++            valid_symbols[BLOCK_COMMENT]) {
++          advance(lexer);
++          return lex_block_comment(lexer);
++        }
++        return false;
++      }
++      // The lookahead sits on the comment's second character. Comments are
++      // transparent, so finish this one and let the checks below read what
++      // follows — an operand can still arrive on the next line
++      // (`x /+ // c\n  y`), while a comment-only tail is postfix.
++      if (lexer->lookahead == '/') {
++        while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
++          advance(lexer);
++        }
++      } else {
++        advance(lexer);
++        consume_block_comment_body(lexer);
++      }
++      stopped_at_comment = true;
+     }
+     // The branch is also entered for COLON_EOL-only states. Everything from
+     // here on emits a postfix token, so bail out early where none is valid.
++    // A comment-stopped operator's class is read from its last accepted
++    // character: the internal class tokens cannot spell it (the internal
++    // run would absorb the comment's `/`), so the right-associative
++    // `:`-tail and the `=` assignment go out through the OP_RIGHT_* and
++    // OP_ASSIGN externals.
+     enum TokenType postfix_sym =
+-        (op_len == 1 && op[0] == '*') ? POSTFIX_STAR : POSTFIX_OP;
++        (op_len == 1 && op[0] == '*' && !slash_run) ? POSTFIX_STAR
++                                                  : POSTFIX_OP;
+     if (!valid_symbols[postfix_sym]) {
++      if (stopped_at_comment || ends_in_slash) {
++        enum TokenType cls =
++            ends_in_slash
++                ? op_class
++                : op_stopped_class(op_len ? op[0] : '/', last_op_char,
++                                   second_op_char);
++        if (emit_op_class(lexer, valid_symbols, cls)) {
++          return true;
++        }
++      }
+       return false;
+     }
+     // These sequences are not infix operators, so the line does not
+@@ -1851,6 +2077,20 @@
+           return true;
+         }
+       }
++      // An operand follows on the same line (`x /+/*c*/ y`), so the run is
++      // infix. A comment-stopped or `/`-tailed operator has no internal
++      // spelling (the internal run would absorb the comment's `/`), so its
++      // class goes out here.
++      if (stopped_at_comment || ends_in_slash) {
++        enum TokenType cls =
++            ends_in_slash
++                ? op_class
++                : op_stopped_class(op_len ? op[0] : '/', last_op_char,
++                                   second_op_char);
++        if (emit_op_class(lexer, valid_symbols, cls)) {
++          return true;
++        }
++      }
+       return false;
+     }
+     // The right operand must be able to start an expression. Comments and line
+@@ -1879,7 +2119,7 @@
        // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
        // are ordinary identifiers, so such a line can be the right operand.
        static const char *const definition_words[] = {
@@ -339,7 +824,7 @@
            "given",    "import", "implicit", "lazy",   "object", "override",
            "package",  "private", "protected", "sealed", "trait", "type",
            "val",      "var",
-@@ -1894,6 +1894,26 @@
+@@ -1894,9 +2134,41 @@
          lexer->result_symbol = postfix_sym;
          return true;
        }
@@ -366,3 +851,18 @@
      }
      // Any other operand continues the expression, on this line or over the
      // break; the internal per-class token carries the operator's precedence.
++    // A comment-stopped or `/`-tailed run has no internal spelling, so the
++    // class or name token goes out here instead.
++    if (stopped_at_comment || ends_in_slash) {
++      enum TokenType cls =
++          ends_in_slash
++              ? op_class
++              : op_stopped_class(op_len ? op[0] : '/', last_op_char,
++                                 second_op_char);
++      if (emit_op_class(lexer, valid_symbols, cls)) {
++        return true;
++      }
++    }
+     return false;
+   }
+ 
