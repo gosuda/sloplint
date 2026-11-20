@@ -897,3 +897,32 @@ get.run()
       (identifier)
       (identifier))
     (value_arguments)))
+
+================================================================================
+K-BAREACCESSOR: bare default accessors after a semicolon
+================================================================================
+
+class C {
+    var x = 1; set
+    var y = 2; get; private set
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)
+        (setter))
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)
+        (getter)
+        (setter
+          (modifiers
+            (visibility_modifier)))))))

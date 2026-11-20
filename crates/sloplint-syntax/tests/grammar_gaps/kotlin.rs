@@ -462,3 +462,8 @@ fn semicolon_before_accessors_parses() {
 fn plain_member_after_semicolon_accessor_parses() {
     run_clean("class C {\n    var m = 1; private set\n    fun f() {}\n}\n");
 }
+
+#[test]
+fn bare_default_accessors_after_a_semicolon_parse() {
+    run_clean("class C {\n    var x = 1; set\n    var y = 2; get; private set\n}\n");
+}

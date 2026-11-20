@@ -291,10 +291,35 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                 return;
             }
         } else if (!had_prefix) {
-            // Unmodified bare `get`/`set` is never an accessor (a getter
-            // needs `()`, a bare setter exists only behind a visibility
-            // modifier), so `get.run()`-style statements stay statements.
-            return;
+            // Kotlin permits bare default accessors (`var x = 1; set`,
+            // `var x = 1; get`), the same shape the newline-separated form
+            // already accepts. Only expression continuations — `get = 2`,
+            // `get.run()`, `set + 1`, `foo(get)` — keep the `;` as a
+            // statement separator.
+            skip_ws_comments(lexer);
+            switch (lexer->lookahead) {
+            case '=':
+            case '.':
+            case '+':
+            case '-':
+            case '*':
+            case '/':
+            case '%':
+            case '<':
+            case '>':
+            case '&':
+            case '|':
+            case '^':
+            case '!':
+            case '?':
+            case ',':
+            case ')':
+            case ']':
+            case ':':
+                return;
+            default:
+                break;
+            }
         }
     } else if (accessor_index == 2) {
         // `field` binds a backing field only before `=` (or `: type =`),
