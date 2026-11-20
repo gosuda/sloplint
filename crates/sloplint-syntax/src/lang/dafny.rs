@@ -89,16 +89,40 @@ impl LangHooks for DafnyHooks {
         // `if` has no field names here, so the else alternative is the
         // parent's last named child — anything earlier (e.g. an
         // if-expression in the condition) is not an else-if.
-        matches!(
-            n.kind(),
-            "if_statement" | "if_expression" | "fn_if_expression"
-        ) && parent.is_some_and(|p| {
-            p.kind() == n.kind()
-                && u32::try_from(p.named_child_count().saturating_sub(1))
-                    .ok()
-                    .and_then(|i| p.named_child(i))
-                    .is_some_and(|last| last.id() == n.id())
-        })
+        let is_last = parent.is_some_and(|p| {
+            u32::try_from(p.named_child_count().saturating_sub(1))
+                .ok()
+                .and_then(|i| p.named_child(i))
+                .is_some_and(|last| last.id() == n.id())
+        });
+        match n.kind() {
+            "if_statement" => is_last && parent.is_some_and(|p| p.kind() == "if_statement"),
+            // `else if` expression chains wrap each alternative in the
+            // unary-expression chain (`equiv_expression` down to
+            // `unary_expression`), so the inner if's direct parent is never
+            // the outer if — climb the wrappers and check that the top of
+            // the chain is the outer if's else branch.
+            "if_expression" | "fn_if_expression" => {
+                let mut cur = n;
+                loop {
+                    let Some(p) = cur.parent() else { return false };
+                    match p.kind() {
+                        "if_expression" | "fn_if_expression" => {
+                            return u32::try_from(p.named_child_count().saturating_sub(1))
+                                .ok()
+                                .and_then(|i| p.named_child(i))
+                                .is_some_and(|last| last.id() == cur.id());
+                        }
+                        "unary_expression" | "as_expression" | "bitvector_factor" | "factor"
+                        | "term" | "shift_term" | "relational_expression"
+                        | "logical_expression" | "implies_explies_expression"
+                        | "equiv_expression" => cur = p,
+                        _ => return false,
+                    }
+                }
+            }
+            _ => false,
+        }
     }
 
     fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
