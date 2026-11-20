@@ -260,12 +260,15 @@ impl LangHooks for TlaplusHooks {
                 })
             }
             "bound_op" | "prefixed_op" => {
-                let name = child_by_field(n, "name").or_else(|| child_by_field(n, "op"))?;
+                // prefixed_op(prefix: M!, op: bound_op(name, parameter...))
+                // — the qualified call's arguments live inside the bound_op.
+                let op = child_by_field(n, "op").unwrap_or(n);
+                let name = child_by_field(op, "name").or_else(|| child_by_field(n, "name"))?;
                 let leaf = first_named_child_matching(name, &["identifier_ref", "identifier"])
                     .unwrap_or(name);
                 // `PrintT("x", 1)` parses as bound_op(name, parameter...):
                 // every named child other than the head is an argument.
-                let args = named_children(n)
+                let args = named_children(op)
                     .into_iter()
                     .filter(|child| child.id() != name.id())
                     .filter_map(|child| call_arg(cx, child))
