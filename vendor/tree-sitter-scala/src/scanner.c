@@ -1879,7 +1879,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
       // are ordinary identifiers, so such a line can be the right operand.
       static const char *const definition_words[] = {
-          "abstract", "class", "def",    "enum",      "export", "final",
+          "abstract", "class", "def",    "export",    "final",
           "given",    "import", "implicit", "lazy",   "object", "override",
           "package",  "private", "protected", "sealed", "trait", "type",
           "val",      "var",
@@ -1893,6 +1893,26 @@ static bool scan_impl(void *payload, TSLexer *lexer,
                   sizeof(definition_words) / sizeof(definition_words[0]))) {
         lexer->result_symbol = postfix_sym;
         return true;
+      }
+      // `enum` is both a soft identifier and a definition starter, so the
+      // word alone cannot pick a side: `x --?` + `enum Foo {}` is a new
+      // statement (postfix), while `1 +` + `enum` continues the expression.
+      // Peek at the token after `enum`: an identifier start (`enum Foo`)
+      // is an enum definition, `=` is a standalone assignment to a variable
+      // named `enum` (`enum = 1`); every other token — `(enum(2)` calls
+      // the function `enum`, an enum declaration needs a name first), `)`,
+      // `,`, `.`, `:`, an operator or end-of-line — means the word is the
+      // right operand.
+      if (len == 4 && strcmp(word, "enum") == 0) {
+        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+          advance(lexer);
+        }
+        int32_t c = lexer->lookahead;
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
+            c == '$' || c == '=') {
+          lexer->result_symbol = postfix_sym;
+          return true;
+        }
       }
     }
     // Any other operand continues the expression, on this line or over the
