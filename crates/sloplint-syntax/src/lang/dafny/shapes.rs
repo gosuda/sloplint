@@ -230,7 +230,12 @@ pub(crate) fn scrutinee_kind(cx: &Cx<'_, '_>, scrutinee: Node<'_>) -> ScrutineeK
                 let mut cursor = current.walk();
                 let mut trailing_ident = false;
                 for child in current.children(&mut cursor) {
-                    if child.is_named() && child.kind() == "identifier" {
+                    // A field name follows `.`; the update target in
+                    // `p.(x := 1)` follows `(` and is not a field access.
+                    if child.is_named()
+                        && child.kind() == "identifier"
+                        && child.prev_sibling().is_some_and(|prev| prev.kind() == ".")
+                    {
                         trailing_ident = true;
                     }
                 }
