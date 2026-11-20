@@ -11,6 +11,7 @@ pub(crate) mod c;
 pub(crate) mod c_family;
 pub(crate) mod cpp;
 pub(crate) mod csharp;
+pub(crate) mod dafny;
 pub(crate) mod dart;
 pub(crate) mod go;
 pub(crate) mod java;
@@ -26,6 +27,7 @@ pub(crate) mod powershell;
 pub(crate) mod python;
 pub(crate) mod quint;
 pub(crate) mod r;
+pub(crate) mod racket;
 pub(crate) mod ruby;
 pub(crate) mod rust;
 pub(crate) mod scala;
@@ -136,6 +138,16 @@ fn grammar(lang: Lang) -> (tree_sitter::Language, Table, &'static dyn LangHooks)
             tree_sitter_alloy::LANGUAGE.into(),
             alloy::TABLE,
             &alloy::HOOKS,
+        ),
+        Lang::Dafny => (
+            tree_sitter_dafny::LANGUAGE.into(),
+            dafny::TABLE,
+            &dafny::HOOKS,
+        ),
+        Lang::Racket => (
+            tree_sitter_racket::LANGUAGE.into(),
+            racket::TABLE,
+            &racket::HOOKS,
         ),
     }
 }

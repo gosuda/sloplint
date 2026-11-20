@@ -426,7 +426,7 @@ fn default_languages() -> BTreeMap<String, LanguageConfig> {
         .collect()
 }
 
-const DEFAULT_LOG_CALLEES: [(&str, &str); 28] = [
+const DEFAULT_LOG_CALLEES: [(&str, &str); 30] = [
     ("rust", "trace!,debug!,info!,warn!,error!"),
     (
         "typescript",
@@ -514,6 +514,11 @@ const DEFAULT_LOG_CALLEES: [(&str, &str); 28] = [
     // Alloy has no logging or output facility; the dotted name can never
     // match an Alloy callee, so the log-literal rules stay silent.
     ("alloy", "alloy.__no_log_callee__"),
+    ("dafny", "print"),
+    (
+        "racket",
+        "log-info,log-warning,log-error,log-debug,log-fatal,displayln,printf,eprintf",
+    ),
 ];
 
 const DEFAULT_EXCLUDE: &str = "**/node_modules/**,**/target/**,**/vendor/**,**/dist/**,**/build/**,**/.venv/**,**/venv/**,**/__pycache__/**,**/*.d.ts,**/.git/**,**/.sloplint/**";

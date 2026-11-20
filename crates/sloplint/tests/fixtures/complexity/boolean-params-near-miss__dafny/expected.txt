@@ -1,0 +1,1 @@
+# Single bool parameter: below the two-param threshold.

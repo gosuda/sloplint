@@ -18,6 +18,8 @@ mod c;
 mod cpp;
 #[path = "grammar_gaps/csharp.rs"]
 mod csharp;
+#[path = "grammar_gaps/dafny.rs"]
+mod dafny;
 #[path = "grammar_gaps/dart.rs"]
 mod dart;
 #[path = "grammar_gaps/go.rs"]
@@ -54,6 +56,8 @@ mod powershell_syntax;
 mod python;
 #[path = "grammar_gaps/quint.rs"]
 mod quint;
+#[path = "grammar_gaps/racket.rs"]
+mod racket;
 #[path = "grammar_gaps/ruby.rs"]
 mod ruby;
 #[path = "grammar_gaps/rust.rs"]
