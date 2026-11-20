@@ -29,5 +29,9 @@ fun g(): Int {
     // than the strict 15-line minor threshold.
     val g = fun(/* input */ y) { y = 99 }
     val h = fun(@Suppress("a") z) { z = 99 }
-    return a14 + a13
+    // Valid Kotlin: the bare parameter's type is inferred from the
+    // expected `(Int) -> Int`; this exercises the same binding path with
+    // a compiling program.
+    val typed: (Int) -> Int = fun(w) = w
+    return a14 + a13 + typed(x)
 }

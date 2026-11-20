@@ -119,8 +119,8 @@ Transitions, published to vendored, over the 3688 corpus files: clean to clean 3
 
 Repros: all 27 are raw errors on the published grammar. On the vendored grammar, 19 are clean (K01, K02, K03, K04, K06, K07, K08, K08b, K08c, K09, K10, K11, K12, K15, K16, K17, K18, K22, K22b), 5 are ERROR (K05, K13, K14, K19, K20), and 3 are MISSING only (K21b, K21c, K23). The 8 open repros are 6 named clusters plus the KFILEANN pair.
 
-Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (48 tests, each clean check asserting the raw tree and each invalid control asserting the raw tree has an error):
-- Vendored path dependency: 48 pass.
+Rust gap tests, `crates/sloplint-syntax/tests/grammar_gaps/kotlin.rs` (52 tests, each clean check asserting the raw tree and each invalid control asserting the raw tree has an error):
+- Vendored path dependency: 52 pass.
 
 Corpus cases (`tree-sitter test`, fresh `HOME`):
 - Vendored: 57 of 57. These are the 22 upstream cases, the 22 `sloplint_kotlin.txt` cases, the 7 `sloplint_kotlin_same_line.txt` cases, and the 6 `sloplint_softids.txt` cases. The expected trees have no `ERROR` or `MISSING`.

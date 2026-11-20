@@ -376,7 +376,10 @@ module.exports = grammar({
       '(',
       optionalCommaSep1(seq(
         optional($.parameter_modifiers),
-        choice($.parameter, $.identifier),
+        // `$._identifier`, not `$.identifier`: soft keywords (`open`,
+        // `override`, `get`, ...) are legal inferred parameter names,
+        // matching the typed `parameter` alternative.
+        choice($.parameter, $._identifier),
         optional(seq('=', $.expression)),
       )),
       ')',

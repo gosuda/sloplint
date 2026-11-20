@@ -108,11 +108,15 @@ static void skip_string(TSLexer *lexer, wchar_t quote) {
             return;
         }
         // A raw string ends on three consecutive quotes; the first was just
-        // consumed, so two more close it.
+        // consumed. Consume the whole closing quote run so a literal ending
+        // in extra quotes (`@A("""x"""")`) leaves none for the caller to
+        // re-read as a new string opener.
         if (lexer->lookahead == '"') {
             skip(lexer);
             if (lexer->lookahead == '"') {
-                skip(lexer);
+                while (lexer->lookahead == '"') {
+                    skip(lexer);
+                }
                 return;
             }
         }
@@ -214,6 +218,14 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
     // `private set` is a bare accessor, while `get.run()` / `set + 1` are
     // statements using `get`/`set` as plain identifiers.
     bool had_prefix = false;
+    // An accessor must start on the same line as the `;` — a newline
+    // (including one inside a comment) ends the property, so
+    // `val x = 1;\nfield = 5` is a new statement, not a backing field.
+    bool crossed_newline = false;
+    skip_ws_comments_nl(lexer, &crossed_newline);
+    if (crossed_newline) {
+        return;
+    }
     for (;;) {
         skip_ws_comments(lexer);
         if (lexer->lookahead == '@') {
@@ -832,6 +844,34 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                                     // String/char literals inside the argument list
                                     // must not feed the paren counter (`@Anno(")")`).
                                     skip_string(lexer, ch);
+                                    continue;
+                                }
+                                if (ch == '/') {
+                                    // `//` and `/*` comments can carry
+                                    // unbalanced parens (`@A(1 /*)*/ 2)`).
+                                    skip(lexer);
+                                    if (lexer->lookahead == '/') {
+                                        while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
+                                            skip(lexer);
+                                        }
+                                        continue;
+                                    }
+                                    if (lexer->lookahead == '*') {
+                                        skip(lexer);
+                                        unsigned comment_depth = 1;
+                                        while (comment_depth > 0 && !lexer->eof(lexer)) {
+                                            wchar_t c = lexer->lookahead;
+                                            skip(lexer);
+                                            if (c == '/' && lexer->lookahead == '*') {
+                                                comment_depth++;
+                                                skip(lexer);
+                                            } else if (c == '*' && lexer->lookahead == '/') {
+                                                comment_depth--;
+                                                skip(lexer);
+                                            }
+                                        }
+                                        continue;
+                                    }
                                     continue;
                                 }
                                 if (ch == '(') {
