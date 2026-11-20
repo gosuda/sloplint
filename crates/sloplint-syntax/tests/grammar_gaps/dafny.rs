@@ -385,3 +385,96 @@ fn unclosed_block_still_errors() {
 fn unterminated_paren_still_errors() {
     run_error("method M( {\n}\n");
 }
+
+#[test]
+fn directive_comments_inside_contracts_still_register() {
+    // `requires` subtrees are skipped for lint facts, but suppression
+    // markers buried in them must still reach the comment stream.
+    let analysis = run_clean(concat!(
+        "method Check(n: int)\n",
+        "  requires n > 0 // sloplint-allow-file: spec\n",
+        "{\n",
+        "  var x := 1;\n",
+        "}\n",
+    ));
+    assert!(
+        analysis
+            .comments
+            .iter()
+            .any(|c| c.text.contains("sloplint-allow-file")),
+        "directive comment inside a skipped clause must register: {:?}",
+        analysis.comments
+    );
+}
+
+#[test]
+fn loop_index_binds_to_the_loop_scope() {
+    // `for i := 0` shadows an outer `i`: its initialization and the body's
+    // writes belong to the loop's own binding, not the outer local.
+    let analysis = run_clean(concat!(
+        "method M()\n",
+        "{\n",
+        "  var i := 0;\n",
+        "  i := 1;\n",
+        "  for i := 0 to 10\n",
+        "  {\n",
+        "    i := i + 1;\n",
+        "  }\n",
+        "  i := 5;\n",
+        "}\n",
+    ));
+    let bindings: Vec<_> = analysis
+        .facts
+        .bindings
+        .iter()
+        .filter(|b| b.name == "i")
+        .collect();
+    assert_eq!(bindings.len(), 2, "expected outer and loop `i` bindings");
+    assert_eq!(bindings[0].last_write_line, 9);
+    assert_eq!(bindings[1].last_write_line, 7);
+}
+
+#[test]
+fn tuple_var_decls_bind_their_names() {
+    // `var (a2, b2) := pair` registers both names; a later write hits the
+    // destructured binding, not an outer local of the same name.
+    let analysis = run_clean(concat!(
+        "method M()\n",
+        "{\n",
+        "  var (a2, b2) := (1, 2);\n",
+        "  a2 := 5;\n",
+        "}\n",
+    ));
+    let names: Vec<_> = analysis.facts.bindings.iter().map(|b| b.name).collect();
+    assert!(
+        names.contains(&"a2") && names.contains(&"b2"),
+        "destructured names must bind: {names:?}"
+    );
+    let a2 = analysis
+        .facts
+        .bindings
+        .iter()
+        .find(|b| b.name == "a2")
+        .unwrap();
+    assert_eq!(a2.last_write_line, 4);
+}
+
+#[test]
+fn plain_witness_expressions_are_lintable() {
+    // `witness e` is compiled — its calls must reach lint facts; only
+    // `ghost witness e` is proof-only and skipped.
+    let analysis = run_clean(concat!(
+        "function ComputeDefault(): int\n",
+        "{\n",
+        "  1\n",
+        "}\n",
+        "type X = x: int | x > 0 witness ComputeDefault()\n",
+        "type G = y: int | y > 0 ghost witness ComputeDefault()\n",
+    ));
+    let calls: Vec<_> = analysis.facts.calls.iter().map(|c| c.callee).collect();
+    assert_eq!(
+        calls.iter().filter(|c| **c == "ComputeDefault").count(),
+        1,
+        "only the compiled witness's call is a lint fact: {calls:?}"
+    );
+}
