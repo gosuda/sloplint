@@ -1281,6 +1281,18 @@
               }
             ]
           }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": ","
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
         }
       ]
     },
@@ -3153,25 +3165,19 @@
       "type": "PATTERN",
       "value": "[\\p{L}\\p{Nl}_$][\\p{L}\\p{Nl}\\p{Nd}\\p{Pc}_$\"]*"
     },
-    "primed_name": {
-      "type": "ALIAS",
-      "content": {
-        "type": "PATTERN",
-        "value": "[\\p{L}\\p{Nl}_$][\\p{L}\\p{Nl}\\p{Nd}\\p{Pc}_$]*'+"
-      },
-      "named": true,
-      "value": "name"
-    },
     "_decl_name": {
-      "type": "CHOICE",
+      "type": "SEQ",
       "members": [
         {
           "type": "SYMBOL",
           "name": "name"
         },
         {
-          "type": "SYMBOL",
-          "name": "primed_name"
+          "type": "REPEAT",
+          "content": {
+            "type": "STRING",
+            "value": "'"
+          }
         }
       ]
     },
@@ -3280,6 +3286,14 @@
     [
       "qual_name",
       "_decl_name"
+    ],
+    [
+      "name_list",
+      "prime_expression"
+    ],
+    [
+      "qual_name",
+      "prime_expression"
     ]
   ],
   "precedences": [],

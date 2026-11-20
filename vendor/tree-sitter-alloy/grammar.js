@@ -50,6 +50,11 @@ module.exports = grammar({
     [$.name_list, $.qual_name],
     // `lone x, y` inside `[...]` can be a decl list or an expr list
     [$.qual_name, $._decl_name],
+    // `no trashed'` is multiplicity(no, prime(t)) while `no t': T` is a
+    // decl — `'` inside _decl_name and prime_expression is the same token,
+    // so the shared GLR lex disambiguates on what follows (: | ,)
+    [$.name_list, $.prime_expression],
+    [$.qual_name, $.prime_expression],
   ],
 
   rules: {
@@ -260,6 +265,7 @@ module.exports = grammar({
     decl_list: $ => seq(
       $.decl,
       repeat(seq(',', $.decl)),
+      optional(','),
     ),
 
     decl: $ => seq(
@@ -608,19 +614,17 @@ module.exports = grammar({
     // ---- Terminals ----
     // `'` is deliberately not part of `name`: the postfix prime operator
     // (`x'` next-state) must keep lexing. Primed declarator spellings
-    // (`t'`, `s'`) are covered by `primed_name`, valid only where a
+    // (`t'`, `s'`) are covered by `_decl_name`, valid only where a
     // declaration name is expected.
     // The `"` tail matches upstream: `s"` is a primed identifier.
     name: $ => /[\p{L}\p{Nl}_$][\p{L}\p{Nl}\p{Nd}\p{Pc}_$"]*/,
 
-    // A primed name in a declarator position (decl lists, let bindings):
-    // emits a `name` node spanning the primes so adapters read `t'`.
-    primed_name: $ => alias(
-      /[\p{L}\p{Nl}_$][\p{L}\p{Nl}\p{Nd}\p{Pc}_$]*'+/,
-      $.name,
-    ),
-
-    _decl_name: $ => choice($.name, $.primed_name),
+    // A primed declarator name (`t'`, `s''`) — name + `'` literals, the
+    // same `'` token prime_expression uses, so `no t': T` (decl) and
+    // `no trashed'` (multiplicity + prime) lex identically and GLR
+    // picks the surviving branch. A `name` node precedes the primes so
+    // adapters keep reading the base spelling.
+    _decl_name: $ => seq($.name, repeat("'")),
 
     number: $ => choice(
       /[0-9][0-9_]*/,             // decimal (with optional underscores)

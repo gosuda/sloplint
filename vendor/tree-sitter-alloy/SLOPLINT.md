@@ -92,7 +92,12 @@ Electrum/Alloy-6 code in the dogfood corpus), each hit repeatedly:
 - `box_join_expression` callee accepts `member_keyword` (`sum[i + j]` calls
   a field named `sum`).
 - `set_comprehension` without a `|` bar: `{x: A, y: B}`.
-- `name` accepts trailing primes (`s'`, `t'`) and non-ASCII letters
-  (`État`) — primed decl names are pervasive in Electrum models.
+- `name` accepts non-ASCII letters (`État`) and a `"` tail (upstream
+  parity); primed decl names (`t'`) parse via `_decl_name` = name +
+  `'` literals — the same token `prime_expression` uses, so
+  `no trashed'` (multiplicity + prime) and `no t': T` (decl)
+  disambiguate on what follows instead of failing lexically.
+- `decl_list` accepts a trailing comma (`pred p[t: Time, ]`) — real
+  models carry it.
 - `_semicolon_decoration`: runs of 2+ `;` at paragraph level (`;;;;;;`
   separators in textbook models).

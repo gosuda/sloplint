@@ -1,13 +1,18 @@
 diff --git a/grammar.js b/grammar.js
-index 51282fa..5de9413 100644
+index 51282fa..399558d 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -48,10 +48,17 @@ module.exports = grammar({
+@@ -48,10 +48,22 @@ module.exports = grammar({
      [$.scope, $.type_scope_number],
      // name can reduce to name_list or qual_name depending on context
      [$.name_list, $.qual_name],
 +    // `lone x, y` inside `[...]` can be a decl list or an expr list
 +    [$.qual_name, $._decl_name],
++    // `no trashed'` is multiplicity(no, prime(t)) while `no t': T` is a
++    // decl — `'` inside _decl_name and prime_expression is the same token,
++    // so the shared GLR lex disambiguates on what follows (: | ,)
++    [$.name_list, $.prime_expression],
++    [$.qual_name, $.prime_expression],
    ],
  
    rules: {
@@ -21,7 +26,7 @@ index 51282fa..5de9413 100644
  
      _paragraph: $ => choice(
        $.module_decl,
-@@ -98,10 +105,18 @@ module.exports = grammar({
+@@ -98,10 +110,18 @@ module.exports = grammar({
        'sig',
        field('names', $.name_list),
        optional($.sig_extension),
@@ -44,7 +49,7 @@ index 51282fa..5de9413 100644
      ),
  
      sig_qualifier: $ => choice(
-@@ -127,10 +142,10 @@ module.exports = grammar({
+@@ -127,10 +147,10 @@ module.exports = grammar({
      field_decl: $ => seq(
        optional('var'),
        optional('private'),
@@ -57,7 +62,11 @@ index 51282fa..5de9413 100644
        $._expression,
      ),
  
-@@ -248,16 +263,16 @@ module.exports = grammar({
+@@ -245,19 +265,20 @@ module.exports = grammar({
+     decl_list: $ => seq(
+       $.decl,
+       repeat(seq(',', $.decl)),
++      optional(','),
      ),
  
      decl: $ => seq(
@@ -78,7 +87,7 @@ index 51282fa..5de9413 100644
      ),
  
      name_list_exact: $ => seq(
-@@ -266,8 +281,8 @@ module.exports = grammar({
+@@ -266,8 +287,8 @@ module.exports = grammar({
      ),
  
      _name_or_exactly: $ => choice(
@@ -89,7 +98,7 @@ index 51282fa..5de9413 100644
      ),
  
      sig_ref: $ => choice(
-@@ -376,7 +391,9 @@ module.exports = grammar({
+@@ -376,7 +397,9 @@ module.exports = grammar({
        $._expression,
        field('operator', choice(
          '=', '!=', 'in', '!in',
@@ -100,7 +109,7 @@ index 51282fa..5de9413 100644
          '<', '>', '<=', '>=', '=<',
          '!<', '!>', '!<=', '!>=',
        )),
-@@ -406,7 +423,7 @@ module.exports = grammar({
+@@ -406,7 +429,7 @@ module.exports = grammar({
      // Cardinality/cast: # expr, int expr, sum expr (unary prefix)
      // CUP grammar: NumUnopExpr level, between MulExpr and OverrideExpr
      cardinality_expression: $ => prec(PREC.CARDINALITY, seq(
@@ -109,7 +118,7 @@ index 51282fa..5de9413 100644
        $._expression,
      )),
  
-@@ -435,14 +452,16 @@ module.exports = grammar({
+@@ -435,14 +458,16 @@ module.exports = grammar({
          $.some_arrow_op,
          $.one_arrow_op,
          $.lone_arrow_op,
@@ -129,7 +138,7 @@ index 51282fa..5de9413 100644
  
      // Domain restriction: <:
      domain_expression: $ => prec.left(PREC.DOMAIN, seq(
-@@ -458,21 +477,36 @@ module.exports = grammar({
+@@ -458,21 +483,36 @@ module.exports = grammar({
        $._expression,
      )),
  
@@ -170,7 +179,7 @@ index 51282fa..5de9413 100644
      // Closure/transpose: ~ ^ *
      closure_expression: $ => prec(PREC.UNOP, seq(
        field('operator', choice('~', '^', '*')),
-@@ -506,10 +540,10 @@ module.exports = grammar({
+@@ -506,10 +546,10 @@ module.exports = grammar({
      )),
  
      let_binding: $ => seq(
@@ -183,7 +192,7 @@ index 51282fa..5de9413 100644
      ),
  
      // ---- Primary expressions ----
-@@ -544,11 +578,15 @@ module.exports = grammar({
+@@ -544,11 +584,15 @@ module.exports = grammar({
        '}',
      ),
  
@@ -201,26 +210,24 @@ index 51282fa..5de9413 100644
        '}',
      ),
  
-@@ -568,7 +606,21 @@ module.exports = grammar({
+@@ -568,7 +612,19 @@ module.exports = grammar({
      ),
  
      // ---- Terminals ----
 -    name: $ => /[a-zA-Z_\$][a-zA-Z0-9_\$"]*/,
 +    // `'` is deliberately not part of `name`: the postfix prime operator
 +    // (`x'` next-state) must keep lexing. Primed declarator spellings
-+    // (`t'`, `s'`) are covered by `primed_name`, valid only where a
++    // (`t'`, `s'`) are covered by `_decl_name`, valid only where a
 +    // declaration name is expected.
 +    // The `"` tail matches upstream: `s"` is a primed identifier.
 +    name: $ => /[\p{L}\p{Nl}_$][\p{L}\p{Nl}\p{Nd}\p{Pc}_$"]*/,
 +
-+    // A primed name in a declarator position (decl lists, let bindings):
-+    // emits a `name` node spanning the primes so adapters read `t'`.
-+    primed_name: $ => alias(
-+      /[\p{L}\p{Nl}_$][\p{L}\p{Nl}\p{Nd}\p{Pc}_$]*'+/,
-+      $.name,
-+    ),
-+
-+    _decl_name: $ => choice($.name, $.primed_name),
++    // A primed declarator name (`t'`, `s''`) — name + `'` literals, the
++    // same `'` token prime_expression uses, so `no t': T` (decl) and
++    // `no trashed'` (multiplicity + prime) lex identically and GLR
++    // picks the surviving branch. A `name` node precedes the primes so
++    // adapters keep reading the base spelling.
++    _decl_name: $ => seq($.name, repeat("'")),
  
      number: $ => choice(
        /[0-9][0-9_]*/,             // decimal (with optional underscores)
