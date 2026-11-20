@@ -330,3 +330,45 @@ fn bound_op_calls_keep_args_and_skip_comments() {
         .expect("bound_op PrintT call recorded");
     assert_eq!(print.args.len(), 2, "bound_op args, comment excluded");
 }
+
+#[test]
+fn prefixed_op_keeps_its_args_and_prefix_is_not_one() {
+    // `M!Op(x)` parses as prefixed_op(prefix: M!, op: bound_op(name,
+    // parameter: x)): the bound_op holds the real arguments.
+    let source = "---- MODULE Q ----\nG == M!Op(1)\n====\n";
+    let analysis = run_clean("src/q.tla", source);
+    let op = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "Op")
+        .expect("prefixed M!Op call recorded");
+    assert_eq!(op.args.len(), 1, "bound_op parameter, prefix excluded");
+}
+
+#[test]
+fn deep_nesting_survives_serialize_capacity() {
+    // More nested PlusCal `with` blocks than the serialization buffer can
+    // carry: 251 size slots alone exceed the 1024-byte buffer, so the
+    // outermost contexts drop; they must restore as empty contexts at the
+    // right depth, not corrupt the parse.
+    let mut body = String::new();
+    for i in 0..250 {
+        body.push_str(&format!("    with v{i} = 0 do\n"));
+    }
+    body.push_str("    skip;\n");
+    for _ in 0..250 {
+        body.push_str("    end with;\n");
+    }
+    let source = format!(
+        "---- MODULE Deep ----\n(*\n--algorithm A\nprocedure P(a) variables x = 0;\nbegin\n{body}end procedure;\nbegin\n  call P(1);\nend algorithm;\n*)\n====\n"
+    );
+    let analysis = run_clean("src/deep.tla", &source);
+    let m = analysis
+        .facts
+        .functions
+        .iter()
+        .find(|f| f.name == "P")
+        .expect("procedure P parsed");
+    assert!(m.end_line > 0);
+}

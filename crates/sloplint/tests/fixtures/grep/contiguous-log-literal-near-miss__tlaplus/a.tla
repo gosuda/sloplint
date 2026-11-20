@@ -1,3 +1,3 @@
 ---- MODULE Fixture ----
-F == PrintT("searchable literal", 1)
+F == PrintT("searchable literal")
 ====

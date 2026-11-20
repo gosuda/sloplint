@@ -1,3 +1,3 @@
 ---- MODULE Fixture ----
-F == PrintT("x", 1)
+F == PrintT("x")
 ====
