@@ -256,13 +256,15 @@ fn multi_pattern_var_registers_each_binding() {
 fn var_binds_uppercase_and_backquoted_names() {
     // A val/var's top-level pattern identifier is always a binder, however
     // it is spelled — `var Count = 0` and ``var `a-b` = 0`` both introduce
-    // write-tracked locals. The lowercase/stable-reference rule only
-    // governs identifiers nested inside compound patterns.
+    // write-tracked locals, registered under the unquoted name so an
+    // unquoted write resolves to the backquoted binding. The
+    // lowercase/stable-reference rule only governs identifiers nested
+    // inside compound patterns.
     let source = "object O {\n  def f() = {\n    var Count = 0\n    var `a-b` = 0\n    Count = 1\n    `a-b` = 2\n    Count\n  }\n}\n";
     let analysis = run_clean(source);
     let names: Vec<_> = analysis.facts.bindings.iter().map(|b| b.name).collect();
     assert!(
-        names.contains(&"Count") && names.contains(&"`a-b`"),
+        names.contains(&"Count") && names.contains(&"a-b"),
         "uppercase and backquoted var names bind: {names:?}"
     );
     let count = analysis
