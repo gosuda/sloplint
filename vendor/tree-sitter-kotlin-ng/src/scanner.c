@@ -294,8 +294,8 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
             // Kotlin permits bare default accessors (`var x = 1; set`,
             // `var x = 1; get`), the same shape the newline-separated form
             // already accepts. Only expression continuations — `get = 2`,
-            // `get.run()`, `set + 1`, `foo(get)` — keep the `;` as a
-            // statement separator.
+            // `get.run()`, `set[i] = 1`, `get { }`, `set + 1`, `foo(get)`,
+            // `get as T` — keep the `;` as a statement separator.
             skip_ws_comments(lexer);
             switch (lexer->lookahead) {
             case '=':
@@ -316,9 +316,23 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
             case ')':
             case ']':
             case ':':
+            case '[':
+            case '{':
+            case '\'':
+            case '"':
+            case '`':
                 return;
             default:
                 break;
+            }
+            // Kotlin's word-form infix operators continue an expression:
+            // `get as T`, `x is C`, `get shl 1`, `a in b`, `x to y`.
+            char infix_word[16] = {0};
+            if (scan_words(lexer,
+                           (const char[MAX_WORDS][MAX_WORD_SIZE]){"as", "is", "in", "to", "by",
+                                               "and", "or", "xor", "shl", "shr", "ushr"},
+                           infix_word, NULL)) {
+                return;
             }
         }
     } else if (accessor_index == 2) {

@@ -141,3 +141,7 @@ Round 6 adds bare default accessors after a semicolon: `var x = 1; set` and
 `get`/`set` probe rejects only expression continuations (`=`, `.`, binary
 operators, `)`, `]`, `,`, `:`); `get = 4` at class level remains an error
 since a getter body still needs `get() = expr`.
+Round 7 keeps script statements out of the accessor probe: `set[i] = v`,
+`get { }`, `get as T`, and the other word-form infix operators (`is`, `in`,
+`to`, `by`, `and`, `or`, `xor`, `shl`, `shr`, `ushr`) reject the token, so
+indexed assignments and word-operator expressions after `;` stay statements.
