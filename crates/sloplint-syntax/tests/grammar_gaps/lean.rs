@@ -221,11 +221,7 @@ fn modules_imports_and_comments_parse_clean() {
         "open modifiers and hidden names are not namespaces"
     );
     assert!(
-        analysis
-            .facts
-            .imports
-            .iter()
-            .any(|i| i.module == "only"),
+        analysis.facts.imports.iter().any(|i| i.module == "only"),
         "an open modifier word in first position is a real namespace"
     );
     assert!(

@@ -127,15 +127,15 @@ fn commented_paren_scrutinee_still_reads_as_a_field() {
     );
 }
 
-
 #[test]
 fn called_receiver_is_a_computed_scrutinee() {
-    // `match this.Get().state` — the receiver threads a call, so the
-    // scrutinee is computed even though it ends in `.state`.
+    // `match this.Get().state` — a function call is an expression, so the
+    // receiver threads a call and the scrutinee is computed even though it
+    // ends in `.state`.
     let analysis = run_clean(concat!(
         "class C {\n",
         "  var state: int\n",
-        "  method Get() returns (x: int) { return 0; }\n",
+        "  function Get(): C { this }\n",
         "  method M()\n",
         "  {\n",
         "    match this.Get().state\n",
@@ -153,12 +153,14 @@ fn called_receiver_is_a_computed_scrutinee() {
 
 #[test]
 fn indexed_receiver_is_a_computed_scrutinee() {
-    // `match p.arr[0]` — an index read mid-receiver is not a field read.
+    // `match p.arr[0].x` — an index read mid-receiver is not a field read:
+    // the field `x` sits on an indexed receiver, so the scrutinee is computed.
     let analysis = run_clean(concat!(
-        "datatype P = P(arr: array<int>)\n",
+        "datatype Q = Q(x: int)\n",
+        "datatype P = P(arr: array<Q>)\n",
         "method M(p: P)\n",
         "{\n",
-        "  match p.arr[0]\n",
+        "  match p.arr[0].x\n",
         "  case 0 => print 0;\n",
         "  case _ => print 1;\n",
         "}\n",

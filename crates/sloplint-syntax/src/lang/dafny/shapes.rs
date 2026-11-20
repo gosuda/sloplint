@@ -260,16 +260,14 @@ pub(crate) fn scrutinee_kind(cx: &Cx<'_, '_>, scrutinee: Node<'_>) -> ScrutineeK
                     };
                     match node.kind() {
                         "identifier" | "name_segment" | "qualified_name" | "this_expression" => {
-                            break
+                            break;
                         }
                         "suffix_expression" => {
                             // A call (`p.Get()`) or index (`p.arr[0]`)
                             // mid-receiver makes the whole scrutinee a
                             // computed read.
                             if has_actual_binding(node)
-                                || node
-                                    .children(&mut node.walk())
-                                    .any(|c| c.kind() == "[")
+                                || node.children(&mut node.walk()).any(|c| c.kind() == "[")
                             {
                                 return ScrutineeKind::Other;
                             }

@@ -359,7 +359,10 @@ fn top_level_statement_query_matches_statements() {
     let mut matched = 0;
     let mut matches = cursor.matches(&query, tree.root_node(), source.as_bytes());
     tree_sitter::StreamingIterator::for_each(&mut matches, |_| matched += 1);
-    assert_eq!(matched, 1, "the top-level assignment must match (statement)");
+    assert_eq!(
+        matched, 1,
+        "the top-level assignment must match (statement)"
+    );
 }
 
 #[test]
@@ -482,7 +485,9 @@ fn split_infix_continuations_and_reused_accessor_words_parse() {
     // Clean is not enough for `isÉ()`: the detached-getter misread parses
     // without errors too. The property must keep its `getter` and the
     // next line must be a `call_expression`.
-    let sexp = raw_tree("var c = 1; get\nis\u{c9}()\n").root_node().to_sexp();
+    let sexp = raw_tree("var c = 1; get\nis\u{c9}()\n")
+        .root_node()
+        .to_sexp();
     assert!(
         sexp.contains("(getter") && sexp.contains("(call_expression"),
         "the bare getter must stay on the property while `isÉ()` calls:\n{sexp}"
