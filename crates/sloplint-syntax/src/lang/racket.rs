@@ -163,7 +163,12 @@ fn in_non_code(cx: &Cx<'_, '_>) -> bool {
     // still scans through it — and only decides datum at the end of the
     // walk or when the pending escapes become unpairable.
     let mut escapes: Vec<Escape> = Vec::new();
-    let mut literal_with_pending = false;
+    // Smallest escape-count seen at a literal ancestor. A literal makes the
+    // innermost escape datum only when it sits inside the pairing escape's
+    // body — i.e. when it enclosed at most `pos` escapes where `pos` is the
+    // pairing escape's index. A literal that also wraps the pairing escape
+    // lives in the quasi's template and cannot hide the escape's body.
+    let mut literal_min_enclosed = usize::MAX;
     for ancestor in cx.ancestors() {
         let head = match ancestor.kind() {
             "sexp_comment" | "hash" => return true,
@@ -171,25 +176,25 @@ fn in_non_code(cx: &Cx<'_, '_>) -> bool {
                 if escapes.is_empty() {
                     return true;
                 }
-                literal_with_pending = true;
+                literal_min_enclosed = literal_min_enclosed.min(escapes.len());
                 continue;
             }
             "quasiquote" => match escapes.iter().rposition(|e| *e == Escape::Quote) {
                 Some(0) => {
                     escapes.clear();
-                    literal_with_pending = false;
+                    literal_min_enclosed = usize::MAX;
                     continue;
                 }
-                Some(_) => return literal_with_pending,
+                Some(pos) => return literal_min_enclosed <= pos,
                 None => return true,
             },
             "quasisyntax" => match escapes.iter().rposition(|e| *e == Escape::Syntax) {
                 Some(0) => {
                     escapes.clear();
-                    literal_with_pending = false;
+                    literal_min_enclosed = usize::MAX;
                     continue;
                 }
-                Some(_) => return literal_with_pending,
+                Some(pos) => return literal_min_enclosed <= pos,
                 None => return true,
             },
             "unquote" | "unquote_splicing" => {
@@ -211,22 +216,22 @@ fn in_non_code(cx: &Cx<'_, '_>) -> bool {
                 if escapes.is_empty() {
                     return true;
                 }
-                literal_with_pending = true;
+                literal_min_enclosed = literal_min_enclosed.min(escapes.len());
             }
             "quasiquote" => match escapes.iter().rposition(|e| *e == Escape::Quote) {
                 Some(0) => {
                     escapes.clear();
-                    literal_with_pending = false;
+                    literal_min_enclosed = usize::MAX;
                 }
-                Some(_) => return literal_with_pending,
+                Some(pos) => return literal_min_enclosed <= pos,
                 None => return true,
             },
             "quasisyntax" => match escapes.iter().rposition(|e| *e == Escape::Syntax) {
                 Some(0) => {
                     escapes.clear();
-                    literal_with_pending = false;
+                    literal_min_enclosed = usize::MAX;
                 }
-                Some(_) => return literal_with_pending,
+                Some(pos) => return literal_min_enclosed <= pos,
                 None => return true,
             },
             "unquote" | "unquote-splicing" => escapes.push(Escape::Quote),
@@ -237,7 +242,7 @@ fn in_non_code(cx: &Cx<'_, '_>) -> bool {
     // The innermost escape decides the node's fate. If it never paired,
     // the node is datum only when a literal wraps the escape — otherwise
     // `unquote`/`unsyntax` are ordinary callees whose argument is code.
-    !escapes.is_empty() && literal_with_pending
+    !escapes.is_empty() && literal_min_enclosed != usize::MAX
 }
 
 /// A `list` whose head splices its body definitions into the

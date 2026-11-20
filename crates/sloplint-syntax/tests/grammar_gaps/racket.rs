@@ -347,6 +347,53 @@ fn an_escape_inside_an_escaped_nested_quasi_is_code() {
 }
 
 #[test]
+fn a_literal_wrapping_the_pairing_escape_stays_code() {
+    // `(a '(b ,(c ,L)))`: the outer unquote pairs through the quote,
+    // its body `(c ,L)` is code — the quote wraps the escape form, not
+    // the escape's body — so the inner unquote's argument is linted.
+    let analysis = run_clean(
+        "#lang racket\n(quasiquote (a (quote (b (unquote (c (unquote (lambda (x) x))))))))\n",
+    );
+    assert!(
+        analysis
+            .facts
+            .functions
+            .iter()
+            .any(|f| f.params.iter().any(|p| p.name == "x")),
+        "a literal above the paired escape cannot hide its body: {:?}",
+        analysis
+            .facts
+            .functions
+            .iter()
+            .map(|f| f.name)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn a_syntax_literal_wrapping_the_pairing_unsyntax_stays_code() {
+    // The syntax-family mirror: `#`(... 'syntax ... #,(c #,L))` — the
+    // outer unsyntax pairs through `syntax`, so L is code.
+    let analysis = run_clean(
+        "#lang racket\n(quasisyntax (a (syntax (b (unsyntax (c (unsyntax (lambda (x) x))))))))\n",
+    );
+    assert!(
+        analysis
+            .facts
+            .functions
+            .iter()
+            .any(|f| f.params.iter().any(|p| p.name == "x")),
+        "a literal above the paired escape cannot hide its body: {:?}",
+        analysis
+            .facts
+            .functions
+            .iter()
+            .map(|f| f.name)
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn hash_literal_contents_stay_datum() {
     // Racket never evaluates escapes inside `#hash` literals — a key
     // that reads like `unquote` is just data.
