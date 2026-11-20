@@ -1,10 +1,30 @@
 --- a/grammar.js
 +++ b/grammar.js
-@@ -50,9 +50,12 @@
+@@ -36,23 +36,27 @@
+     [$.modifiers, $.annotated_lambda],
+     [$.modifiers, $.annotated_expression],
+ 
+-    [$.delegation_specifier, $.type_modifiers],
++    [$.delegation_specifier, $.type_modifiers, $.paren_type_modifiers],
++    [$.delegation_specifier, $.paren_type_modifiers],
+     [$.annotated_expression, $.type_modifiers],
+-    [$.annotated_expression, $.type_modifiers, $.when_subject],
++    [$.annotated_expression, $.type_modifiers, $.paren_type_modifiers],
+     [$.annotated_expression, $.type_modifiers, $.modifiers],
++    [$.annotated_expression, $.type_modifiers, $.modifiers, $.paren_type_modifiers],
+     [$.parameter_modifiers, $.type_modifiers],
++    [$.parameter_modifiers, $.type_modifiers, $.paren_type_modifiers],
+     [$.function_modifier, $.type_modifiers],
+     [$.function_modifier, $._reserved_identifier],
+-    [$.variable_declaration, $.type_modifiers],
+-    [$.variable_declaration, $.type_modifiers, $.modifiers, $.annotated_expression],
+-    [$.variable_declaration, $.type_modifiers, $.annotated_expression],
++    [$.variable_declaration, $.type_modifiers, $.paren_type_modifiers],
+     [$.variable_declaration],
  
      [$.function_value_parameters, $.function_type_parameters],
      [$.parenthesized_type, $.function_type_parameters],
-+    [$.parenthesized_type],
++    [$.paren_type_modifiers],
      [$.multi_variable_declaration, $.function_type_parameters],
  
      [$.class_modifier, $._reserved_identifier],
@@ -13,18 +33,22 @@
      [$.platform_modifier, $._reserved_identifier],
      [$.property_modifier, $._reserved_identifier],
  
-@@ -63,6 +66,10 @@
+@@ -63,6 +67,14 @@
      [$.non_nullable_type],
      [$.function_type],
      [$._receiver_type],
 +    [$.callable_reference, $.primary_expression],
 +    [$.context_parameters, $._reserved_identifier],
 +    [$.modifiers, $.type_modifiers],
++    [$.modifiers, $.type_modifiers, $.paren_type_modifiers],
++    [$.modifiers, $.type_modifiers, $.paren_type_modifiers, $.annotated_expression],
++    [$.type_modifiers, $.paren_type_modifiers, $.annotated_expression],
++    [$.type_modifiers, $.paren_type_modifiers],
 +    [$.secondary_constructor, $._reserved_identifier],
    ],
  
    extras: $ => [
-@@ -155,6 +162,7 @@
+@@ -155,6 +167,7 @@
      ),
  
      class_declaration: $ => prec.right(seq(
@@ -32,7 +56,7 @@
        optional($.modifiers),
        choice('class', seq(optional('fun'), 'interface')),
        field('name', $.identifier),
-@@ -174,6 +182,7 @@
+@@ -174,6 +187,7 @@
      )),
  
      property_declaration: $ => prec.right(seq(
@@ -40,7 +64,7 @@
        optional($.modifiers),
        choice('val', 'var'),
        optional($.type_parameters),
-@@ -186,11 +195,21 @@
+@@ -186,11 +200,21 @@
        )),
        optional(';'),
        optional(choice(
@@ -62,7 +86,7 @@
      type_alias: $ => prec.right(seq(
        optional($.modifiers),
        'typealias',
-@@ -265,6 +284,7 @@
+@@ -265,6 +289,7 @@
      constructor_invocation: $ => seq($.type, $.value_arguments),
  
      function_declaration: $ => prec.right(1, seq(
@@ -70,7 +94,7 @@
        optional($.modifiers),
        'fun',
        optional($.type_parameters),
-@@ -322,6 +342,14 @@
+@@ -322,6 +347,14 @@
        $.primary_expression,
      ),
  
@@ -85,7 +109,7 @@
      getter: $ => prec.right(seq(
        optional($.modifiers),
        'get',
-@@ -415,7 +443,7 @@
+@@ -415,7 +448,7 @@
  
      enum_entry: $ => seq(
        optional($.modifiers),
@@ -94,7 +118,7 @@
        optional($.value_arguments),
        optional($.class_body),
      ),
-@@ -427,7 +455,7 @@
+@@ -427,7 +460,7 @@
      ),
  
      value_argument: $ => seq(
@@ -103,7 +127,7 @@
        optional('*'),
        $.expression,
      ),
-@@ -593,6 +621,7 @@
+@@ -593,6 +626,7 @@
  
      function_type: $ => seq(
        optional($.type_modifiers),
@@ -111,17 +135,21 @@
        optional(seq($._receiver_type, '.')),
        $.function_type_parameters,
        '->',
-@@ -605,7 +634,8 @@
+@@ -605,7 +639,12 @@
        ')',
      ),
  
 -    parenthesized_type: $ => seq('(', $.type, ')'),
 +    parenthesized_type: $ =>
-+      prec.dynamic(1, seq(optional($.type_modifiers), '(', $.type, ')')),
++      prec.dynamic(1, seq(optional($.paren_type_modifiers), '(', $.type, ')')),
++
++    // Annotations only: `suspend` binds the enclosing function type
++    // (`suspend (Int).() -> Unit`), never a parenthesized one.
++    paren_type_modifiers: $ => repeat1($.annotation),
  
      assignment: $ => seq(
        field('left', $.expression),
-@@ -752,6 +782,7 @@
+@@ -752,6 +791,7 @@
      ),
  
      lambda_literal: $ => seq(
@@ -129,7 +157,7 @@
        '{',
        optional(seq(optional($.lambda_parameters), '->')),
        optionalSep1($.statement, $._semi),
-@@ -825,7 +856,9 @@
+@@ -825,7 +865,9 @@
  
      parenthesized_expression: $ => seq('(', $.expression, ')'),
  
@@ -140,7 +168,7 @@
  
      when_expression: $ => seq(
        'when',
-@@ -853,6 +886,11 @@
+@@ -853,6 +895,11 @@
            commaSep1(field('condition', $._when_condition)),
            optional(','),
          ),
@@ -152,7 +180,7 @@
          'else',
        ),
        '->',
-@@ -922,14 +960,20 @@
+@@ -922,14 +969,20 @@
      ),
  
      callable_reference: $ => seq(
@@ -175,7 +203,7 @@
        $.identifier,
      )),
  
-@@ -940,6 +984,7 @@
+@@ -940,6 +993,7 @@
      ),
  
      string_literal: $ => seq(
@@ -183,7 +211,7 @@
        '"',
        repeat(choice(
          alias(choice(
-@@ -956,14 +1001,17 @@
+@@ -956,14 +1010,17 @@
      ),
  
      multiline_string_literal: $ => seq(
@@ -202,7 +230,7 @@
      interpolation: $ => choice(
        seq('$', $._identifier),
        seq('${', $.expression, '}'),
-@@ -1045,7 +1093,7 @@
+@@ -1045,7 +1102,7 @@
        /`[^\r\n`]+`/,
      )),
  
@@ -211,7 +239,7 @@
        choice(
          'actual',
          'annotation',
-@@ -1059,6 +1107,9 @@
+@@ -1059,6 +1116,9 @@
          'set',
          'operator',
          'value',

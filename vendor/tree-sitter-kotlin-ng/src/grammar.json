@@ -3383,7 +3383,7 @@
             "members": [
               {
                 "type": "SYMBOL",
-                "name": "type_modifiers"
+                "name": "paren_type_modifiers"
               },
               {
                 "type": "BLANK"
@@ -3403,6 +3403,13 @@
             "value": ")"
           }
         ]
+      }
+    },
+    "paren_type_modifiers": {
+      "type": "REPEAT1",
+      "content": {
+        "type": "SYMBOL",
+        "name": "annotation"
       }
     },
     "assignment": {
@@ -6568,7 +6575,12 @@
     ],
     [
       "delegation_specifier",
-      "type_modifiers"
+      "type_modifiers",
+      "paren_type_modifiers"
+    ],
+    [
+      "delegation_specifier",
+      "paren_type_modifiers"
     ],
     [
       "annotated_expression",
@@ -6577,7 +6589,7 @@
     [
       "annotated_expression",
       "type_modifiers",
-      "when_subject"
+      "paren_type_modifiers"
     ],
     [
       "annotated_expression",
@@ -6585,8 +6597,19 @@
       "modifiers"
     ],
     [
+      "annotated_expression",
+      "type_modifiers",
+      "modifiers",
+      "paren_type_modifiers"
+    ],
+    [
       "parameter_modifiers",
       "type_modifiers"
+    ],
+    [
+      "parameter_modifiers",
+      "type_modifiers",
+      "paren_type_modifiers"
     ],
     [
       "function_modifier",
@@ -6598,18 +6621,8 @@
     ],
     [
       "variable_declaration",
-      "type_modifiers"
-    ],
-    [
-      "variable_declaration",
       "type_modifiers",
-      "modifiers",
-      "annotated_expression"
-    ],
-    [
-      "variable_declaration",
-      "type_modifiers",
-      "annotated_expression"
+      "paren_type_modifiers"
     ],
     [
       "variable_declaration"
@@ -6623,7 +6636,7 @@
       "function_type_parameters"
     ],
     [
-      "parenthesized_type"
+      "paren_type_modifiers"
     ],
     [
       "multi_variable_declaration",
@@ -6683,6 +6696,26 @@
     [
       "modifiers",
       "type_modifiers"
+    ],
+    [
+      "modifiers",
+      "type_modifiers",
+      "paren_type_modifiers"
+    ],
+    [
+      "modifiers",
+      "type_modifiers",
+      "paren_type_modifiers",
+      "annotated_expression"
+    ],
+    [
+      "type_modifiers",
+      "paren_type_modifiers",
+      "annotated_expression"
+    ],
+    [
+      "type_modifiers",
+      "paren_type_modifiers"
     ],
     [
       "secondary_constructor",

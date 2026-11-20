@@ -260,6 +260,17 @@ fn parenthesized_line_after_a_statement_keeps_its_separator() {
 }
 
 #[test]
+fn suspend_receiver_function_type_binds_suspend_to_the_type() {
+    let sexp = raw_tree("val f: suspend (Int).() -> Unit = TODO()\n")
+        .root_node()
+        .to_sexp();
+    assert!(
+        sexp.contains("(function_type (type_modifiers"),
+        "suspend must modify the function_type, got:\n{sexp}"
+    );
+}
+
+#[test]
 fn annotated_open_class_stays_a_declaration() {
     run_clean("@Deprecated(\"old\") open class C {}\n");
     let sexp = raw_tree("@Deprecated(\"old\") open class C {}\n")

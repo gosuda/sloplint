@@ -36,21 +36,22 @@ module.exports = grammar({
     [$.modifiers, $.annotated_lambda],
     [$.modifiers, $.annotated_expression],
 
-    [$.delegation_specifier, $.type_modifiers],
+    [$.delegation_specifier, $.type_modifiers, $.paren_type_modifiers],
+    [$.delegation_specifier, $.paren_type_modifiers],
     [$.annotated_expression, $.type_modifiers],
-    [$.annotated_expression, $.type_modifiers, $.when_subject],
+    [$.annotated_expression, $.type_modifiers, $.paren_type_modifiers],
     [$.annotated_expression, $.type_modifiers, $.modifiers],
+    [$.annotated_expression, $.type_modifiers, $.modifiers, $.paren_type_modifiers],
     [$.parameter_modifiers, $.type_modifiers],
+    [$.parameter_modifiers, $.type_modifiers, $.paren_type_modifiers],
     [$.function_modifier, $.type_modifiers],
     [$.function_modifier, $._reserved_identifier],
-    [$.variable_declaration, $.type_modifiers],
-    [$.variable_declaration, $.type_modifiers, $.modifiers, $.annotated_expression],
-    [$.variable_declaration, $.type_modifiers, $.annotated_expression],
+    [$.variable_declaration, $.type_modifiers, $.paren_type_modifiers],
     [$.variable_declaration],
 
     [$.function_value_parameters, $.function_type_parameters],
     [$.parenthesized_type, $.function_type_parameters],
-    [$.parenthesized_type],
+    [$.paren_type_modifiers],
     [$.multi_variable_declaration, $.function_type_parameters],
 
     [$.class_modifier, $._reserved_identifier],
@@ -69,6 +70,10 @@ module.exports = grammar({
     [$.callable_reference, $.primary_expression],
     [$.context_parameters, $._reserved_identifier],
     [$.modifiers, $.type_modifiers],
+    [$.modifiers, $.type_modifiers, $.paren_type_modifiers],
+    [$.modifiers, $.type_modifiers, $.paren_type_modifiers, $.annotated_expression],
+    [$.type_modifiers, $.paren_type_modifiers, $.annotated_expression],
+    [$.type_modifiers, $.paren_type_modifiers],
     [$.secondary_constructor, $._reserved_identifier],
   ],
 
@@ -635,7 +640,11 @@ module.exports = grammar({
     ),
 
     parenthesized_type: $ =>
-      prec.dynamic(1, seq(optional($.type_modifiers), '(', $.type, ')')),
+      prec.dynamic(1, seq(optional($.paren_type_modifiers), '(', $.type, ')')),
+
+    // Annotations only: `suspend` binds the enclosing function type
+    // (`suspend (Int).() -> Unit`), never a parenthesized one.
+    paren_type_modifiers: $ => repeat1($.annotation),
 
     assignment: $ => seq(
       field('left', $.expression),

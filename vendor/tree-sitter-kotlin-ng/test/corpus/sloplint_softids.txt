@@ -62,13 +62,16 @@ K-PARENANNO: annotation on a parenthesized function type
 ================================================================================
 
 // `content: @Composable (() -> Unit)` — installerx/seal composable
-// slots. The paren type carries its own type_modifiers.
+// slots. The paren type carries its own annotations-only modifiers;
+// `suspend` always binds the enclosing function type instead.
 
 fun f(content: @Composable (() -> Unit)) {}
+fun g(f: suspend (Int).() -> Unit) {}
 
 --------------------------------------------------------------------------------
 
 (source_file
+  (line_comment)
   (line_comment)
   (line_comment)
   (function_declaration
@@ -77,7 +80,7 @@ fun f(content: @Composable (() -> Unit)) {}
       (parameter
         (identifier)
         (parenthesized_type
-          (type_modifiers
+          (paren_type_modifiers
             (annotation
               (user_type
                 (identifier))))
@@ -85,6 +88,21 @@ fun f(content: @Composable (() -> Unit)) {}
             (function_type_parameters)
             (user_type
               (identifier))))))
+    (function_body
+      (block)))
+  (function_declaration
+    name: (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (function_type
+          (type_modifiers)
+          (parenthesized_type
+            (user_type
+              (identifier)))
+          (function_type_parameters)
+          (user_type
+            (identifier)))))
     (function_body
       (block))))
 
