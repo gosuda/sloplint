@@ -29,9 +29,12 @@ pub(crate) fn collect_idents<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'
     while let Some(node) = pending.pop() {
         match node.kind() {
             "wildcard" => {}
-            // Only binder positions count: `counters` in
-            // `Some(counters.Zero)` is a stable reference, not a new local.
-            "identifier" if is_pattern_binder(cx, node) => {
+            // A val/var pattern's top-level identifier is always a binder,
+            // even spelled `Count` or `` `a-b` ``; the case/backquote rules
+            // only govern nested positions. Only binder positions count:
+            // `counters` in `Some(counters.Zero)` is a stable reference,
+            // not a new local.
+            "identifier" if node.id() == n.id() || is_pattern_binder(cx, node) => {
                 out.push((text(cx, node), pos_of(node)))
             }
             "identifier" => {}
