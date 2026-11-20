@@ -1,0 +1,252 @@
+================================================================================
+K-SOFTID: open/override used as identifiers
+================================================================================
+
+// `open` and `override` are modifier keywords but valid identifiers:
+// `private var open = true` (installerx), `open(filename)` (trime),
+// `forEach { override -> }` (zhihu-plus-plus).
+
+fun a() { val open = 1; open(2) }
+
+class A : SeekableByteChannel {
+    private var open = true
+    override fun close() { open = false }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (line_comment)
+  (line_comment)
+  (line_comment)
+  (function_declaration
+    name: (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (number_literal))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (number_literal)))))))
+  (class_declaration
+    name: (identifier)
+    (delegation_specifiers
+      (delegation_specifier
+        (user_type
+          (identifier))))
+    (class_body
+      (property_declaration
+        (modifiers
+          (visibility_modifier))
+        (variable_declaration
+          (identifier))
+        (identifier))
+      (function_declaration
+        (modifiers
+          (member_modifier))
+        name: (identifier)
+        (function_value_parameters)
+        (function_body
+          (block
+            (assignment
+              left: (identifier)
+              right: (identifier))))))))
+
+================================================================================
+K-PARENANNO: annotation on a parenthesized function type
+================================================================================
+
+// `content: @Composable (() -> Unit)` — installerx/seal composable
+// slots. The paren type carries its own annotations-only modifiers;
+// `suspend` always binds the enclosing function type instead.
+
+fun f(content: @Composable (() -> Unit)) {}
+fun g(f: suspend (Int).() -> Unit) {}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (line_comment)
+  (line_comment)
+  (line_comment)
+  (function_declaration
+    name: (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (parenthesized_type
+          (paren_type_modifiers
+            (annotation
+              (user_type
+                (identifier))))
+          (function_type
+            (function_type_parameters)
+            (user_type
+              (identifier))))))
+    (function_body
+      (block)))
+  (function_declaration
+    name: (identifier)
+    (function_value_parameters
+      (parameter
+        (identifier)
+        (function_type
+          (type_modifiers)
+          (parenthesized_type
+            (user_type
+              (identifier)))
+          (function_type_parameters)
+          (user_type
+            (identifier)))))
+    (function_body
+      (block))))
+
+================================================================================
+K-ARRLIT: empty array literal in an annotation argument
+================================================================================
+
+// `indices = []` — Room @Entity (installerx). `[]` is only legal in
+// annotation arguments but the grammar's collection_literal required
+// at least one element.
+
+@Entity(tableName = "config", indices = [])
+data class ConfigEntity(val id: Int)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (line_comment)
+  (line_comment)
+  (line_comment)
+  (class_declaration
+    (modifiers
+      (annotation
+        (constructor_invocation
+          (user_type
+            (identifier))
+          (value_arguments
+            (value_argument
+              (identifier)
+              (string_literal
+                (string_content)))
+            (value_argument
+              (identifier)
+              (collection_literal)))))
+      (class_modifier))
+    name: (identifier)
+    (primary_constructor
+      (class_parameters
+        (class_parameter
+          (identifier)
+          (user_type
+            (identifier)))))))
+
+================================================================================
+K-NEWLINECTOR: primary constructor parameter list on the next line
+================================================================================
+
+// `internal class C\n/** doc */\n    (x: Int)` — mlkit, dbflow,
+// facebook-android-sdk. The scanner used to emit _semi after the
+// class name, ending the declaration before `(`.
+
+internal class D
+/** doc */
+    (x: Int) {
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (line_comment)
+  (line_comment)
+  (line_comment)
+  (class_declaration
+    (modifiers
+      (visibility_modifier))
+    name: (identifier)
+    (block_comment)
+    (primary_constructor
+      (class_parameters
+        (class_parameter
+          (identifier)
+          (user_type
+            (identifier)))))
+    (class_body)))
+
+================================================================================
+K-SUPERNL: superclass call arguments on the next line
+================================================================================
+
+// `class D : Base\n() {}` — the scanner cannot suppress the semi before a
+// delegation's `(` (its valid-symbol mask matches a `(` after a complete
+// statement), so the constructor invocation tolerates the separator.
+
+class D : Base
+() {
+}
+
+class E : Iface1, Base
+(arg) {
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (line_comment)
+  (line_comment)
+  (line_comment)
+  (class_declaration
+    name: (identifier)
+    (delegation_specifiers
+      (delegation_specifier
+        (constructor_invocation
+          (user_type
+            (identifier))
+          (value_arguments))))
+    (class_body))
+  (class_declaration
+    name: (identifier)
+    (delegation_specifiers
+      (delegation_specifier
+        (user_type
+          (identifier)))
+      (delegation_specifier
+        (constructor_invocation
+          (user_type
+            (identifier))
+          (value_arguments
+            (value_argument
+              (identifier))))))
+    (class_body)))
+
+================================================================================
+K-SUSPENDWRAP: suspend on a fully wrapped function type
+================================================================================
+
+// `suspend ((A) -> B)` — ktor's JWT verifier returns this shape. `suspend`
+// joins the paren-type modifiers; `suspend (Int).() -> Unit` still binds it
+// to the enclosing function type.
+
+val v: suspend ((A) -> B)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (line_comment)
+  (line_comment)
+  (line_comment)
+  (property_declaration
+    (variable_declaration
+      (identifier)
+      (parenthesized_type
+        (function_type
+          (function_type_parameters
+            (user_type
+              (identifier)))
+          (user_type
+            (identifier)))))))

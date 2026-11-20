@@ -631,3 +631,516 @@ val u = x
   (assignment
     (identifier)
     (identifier)))
+
+================================================================================
+trailing commas, unnamed context param, untyped anonymous params, split ctor heads
+================================================================================
+
+fun <T,> takesTrailing() {}
+val r = box<Int, String,>()
+context(_: CoroutineContext)
+fun withCtx() {}
+val inc = fun(m) = m
+class C {
+    @Inject
+    internal constructor(a: A)
+    @Anno(1)
+    actual constructor(b: B)
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (function_declaration
+    (type_parameters
+      (type_parameter
+        (identifier)))
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (call_expression
+      (identifier)
+      (type_arguments
+        (type_projection
+          (user_type
+            (identifier)))
+        (type_projection
+          (user_type
+            (identifier))))
+      (value_arguments)))
+  (function_declaration
+    (context_parameters
+      (user_type
+        (identifier)))
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (anonymous_function
+      (function_value_parameters
+        (identifier))
+      (function_body
+        (identifier))))
+  (class_declaration
+    (identifier)
+    (class_body
+      (secondary_constructor
+        (modifiers
+          (annotation
+            (user_type
+              (identifier)))
+          (visibility_modifier))
+        (function_value_parameters
+          (parameter
+            (identifier)
+            (user_type
+              (identifier)))))
+      (secondary_constructor
+        (modifiers
+          (annotation
+            (constructor_invocation
+              (user_type
+                (identifier))
+              (value_arguments
+                (value_argument
+                  (number_literal)))))
+          (platform_modifier))
+        (function_value_parameters
+          (parameter
+            (identifier)
+            (user_type
+              (identifier))))))))
+
+================================================================================
+bodyless class with a generic delegation type
+================================================================================
+
+class Tagged : Marker<Int,>
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (delegation_specifiers
+      (delegation_specifier
+        (user_type
+          (identifier)
+          (type_arguments
+            (type_projection
+              (user_type
+                (identifier)))))))))
+
+================================================================================
+delegation call arguments after a declared primary constructor
+================================================================================
+
+class T private constructor() : Base
+(1) {}
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (primary_constructor
+      (modifiers
+        (visibility_modifier))
+      (class_parameters))
+    (delegation_specifiers
+      (delegation_specifier
+        (constructor_invocation
+          (user_type
+            (identifier))
+          (value_arguments
+            (value_argument
+              (number_literal))))))
+    (class_body)))
+
+================================================================================
+local variables do not take accessors or backing fields
+================================================================================
+
+fun f() {
+    var x = 1; field = 5
+    var y = 2; get() {}
+    var z = 3; set(v) {}
+}
+
+---
+
+(source_file
+  (function_declaration
+    (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (number_literal))
+        (assignment
+          (identifier)
+          (number_literal))
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (number_literal))
+        (call_expression
+          (call_expression
+            (identifier)
+            (value_arguments))
+          (annotated_lambda
+            (lambda_literal)))
+        (property_declaration
+          (variable_declaration
+            (identifier))
+          (number_literal))
+        (call_expression
+          (call_expression
+            (identifier)
+            (value_arguments
+              (value_argument
+                (identifier))))
+          (annotated_lambda
+            (lambda_literal)))))))
+
+================================================================================
+explicit backing field followed by accessors
+================================================================================
+
+class C {
+    val y = MutableStateFlow(0)
+        field = it
+        get() = field.value
+}
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (call_expression
+          (identifier)
+          (value_arguments
+            (value_argument
+              (number_literal))))
+        (backing_field
+          (identifier))
+        (getter
+          (function_body
+            (navigation_expression
+              (identifier)
+              (identifier))))))))
+
+================================================================================
+semicolon between backing field and accessor
+================================================================================
+
+class A {
+    val x: Int
+        field = 1; get() = field
+}
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier)
+          (user_type
+            (identifier)))
+        (backing_field
+          (number_literal))
+        (getter
+          (function_body
+            (identifier)))))))
+
+
+================================================================================
+statements after a completed accessor
+================================================================================
+
+val t = 1; get() = 1
+field = 2
+get.run()
+
+---
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal)
+    (getter
+      (function_body
+        (number_literal))))
+  (assignment
+    (identifier)
+    (number_literal))
+  (call_expression
+    (navigation_expression
+      (identifier)
+      (identifier))
+    (value_arguments)))
+
+================================================================================
+K-BAREACCESSOR: bare default accessors after a semicolon
+================================================================================
+
+class C {
+    var x = 1; set
+    var y = 2; get; private set
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)
+        (setter))
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)
+        (getter)
+        (setter
+          (modifiers
+            (visibility_modifier)))))))
+
+================================================================================
+K-INFIXWORD: infix word calls after a semicolon stay statements
+================================================================================
+
+val get = 1
+val x = 1; get until 2
+val y = 2; get as? Int
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
+    (identifier)
+    (identifier)
+    (number_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (as_expression
+    left: (identifier)
+    right: (user_type
+      (identifier))))
+
+================================================================================
+K-MEMBERINFIX: member keywords as infix callees after a semicolon
+================================================================================
+
+val a = 1; get context 2
+val b = 2; get context2 3
+val c = 3; get data 4
+val d = 4; get data(5)
+val e = 5; get open -1
+var f = 6
+    get
+context(String) fun g() {}
+
+---------------------------------------------------------------------------------
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
+    (identifier)
+    (identifier)
+    (number_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
+    (identifier)
+    (identifier)
+    (number_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
+    (identifier)
+    (identifier)
+    (number_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
+    (identifier)
+    (identifier)
+    (parenthesized_expression
+      (number_literal)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
+    (identifier)
+    (identifier)
+    (unary_expression
+      argument: (number_literal)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal)
+    (getter))
+  (function_declaration
+    (context_parameters
+      (user_type
+        (identifier)))
+    name: (identifier)
+    (function_value_parameters)
+    (function_body
+      (block))))
+
+
+================================================================================
+K-BAREACCESSOR: bare get/set pairs before }, generic extension val, paren receiver fun
+================================================================================
+class C {
+    var x = 1; get
+    set;
+    var y = 2; get
+    val <T> List<T>.head: T get() = this[0]
+    var z = 3; set
+    fun (String).ext() = length
+    var w = 4; get
+    set }
+var d = 5; get
+get
+println(d)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (class_declaration
+    name: (identifier)
+    (class_body
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)
+        (getter)
+        (setter))
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)
+        (getter))
+      (property_declaration
+        (type_parameters
+          (type_parameter
+            (identifier)))
+        (user_type
+          (identifier)
+          (type_arguments
+            (type_projection
+              (user_type
+                (identifier)))))
+        (variable_declaration
+          (identifier)
+          (user_type
+            (identifier)))
+        (getter
+          (function_body
+            (index_expression
+              (this_expression)
+              (number_literal)))))
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)
+        (setter))
+      (function_declaration
+        (parenthesized_type
+          (user_type
+            (identifier)))
+        name: (identifier)
+        (function_value_parameters)
+        (function_body
+          (identifier)))
+      (property_declaration
+        (variable_declaration
+          (identifier))
+        (number_literal)
+        (getter)
+        (setter))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (identifier)
+  (identifier)
+  (call_expression
+    (identifier)
+    (value_arguments
+      (value_argument
+        (identifier)))))
+
+================================================================================
+K-SAMEWORDCALL: same-word get/set calls — next-line accessor + call, same-line infix
+================================================================================
+var x = 1; get
+get(1)
+var y = 2; get get(2)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal)
+    (getter))
+  (call_expression
+    (identifier)
+    (value_arguments
+      (value_argument
+        (number_literal))))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
+    (identifier)
+    (identifier)
+    (parenthesized_expression
+      (number_literal))))
