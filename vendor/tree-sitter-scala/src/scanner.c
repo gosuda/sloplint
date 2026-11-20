@@ -1952,7 +1952,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       if (len == 5 && strcmp(word, "given") == 0) {
         int32_t c = peek_past_blanks_comments(lexer);
         if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
-            c == '$' || c == '=' || c == '[') {
+            c == '$' || c == '=' || c == '[' || c == '`') {
           lexer->result_symbol = postfix_sym;
           return true;
         }
