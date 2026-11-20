@@ -282,3 +282,12 @@ definition, not `x / val`. The list mirrors the `definition_words`
 check on the postfix path (`enum` stays out — it can be the operand
 identifier — and `case` joins it since a `case` clause is never an
 operand).
+
+Round: `export` is a soft identifier after a `/`-tail and postfix op.
+`export` was removed from both keyword lists (the operand probe's `decls`
+and the postfix path's `definition_words`) and given the same lookahead
+`enum` uses: a following identifier start, `=`, or `{` keeps the
+declaration read (`x /\nexport a.b`, `x --?\nexport = 1`), while any
+other continuation makes the word an operand (`10 / export`,
+`x /\nexport`, `export { … }` calls with a brace block). Before this,
+`val export = 2; 10 / export` reported a syntax error at `export`.

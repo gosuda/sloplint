@@ -2105,7 +2105,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
             // for the same reason (it can be the operand identifier), and
             // `case` is added since a `case` clause is never an operand.
             static const char *const decls[] = {
-                "abstract", "case",      "class",   "def",   "export",
+                "abstract", "case",      "class",   "def",
                 "final",    "given",     "import",  "implicit", "lazy",
                 "object",   "override",  "package", "private",
                 "protected", "sealed",   "trait",   "type",  "val",
@@ -2114,6 +2114,22 @@ static bool scan_impl(void *payload, TSLexer *lexer,
             if (kw_len > 0 && word_in(kw, decls,
                                       sizeof(decls) / sizeof(decls[0]))) {
               break;
+            }
+            // `export` is also a plain Scala 2 identifier (`10 / export`
+            // is division), so the word alone cannot decide: only a
+            // following member selector (`export a.b`) or an assignment
+            // (`export = 1`) makes it a declaration — the same lookahead
+            // `enum` uses on the postfix path. `export {…}` stays an
+            // operand (call with a brace block).
+            if (kw_len == 6 && memcmp(kw, "export", 6) == 0) {
+              while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+                advance(lexer);
+              }
+              int32_t n = lexer->lookahead;
+              if ((n >= 'a' && n <= 'z') || (n >= 'A' && n <= 'Z') ||
+                  n == '_' || n == '$' || n == '=') {
+                break;
+              }
             }
             operand_follows = true;
             break;
@@ -2276,7 +2292,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
       // are ordinary identifiers, so such a line can be the right operand.
       static const char *const definition_words[] = {
-          "abstract", "class", "def",    "export",    "final",
+          "abstract", "class", "def",    "final",
           "given",    "import", "implicit", "lazy",   "object", "override",
           "package",  "private", "protected", "sealed", "trait", "type",
           "val",      "var",
@@ -2301,6 +2317,22 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // `,`, `.`, `:`, an operator or end-of-line — means the word is the
       // right operand.
       if (len == 4 && strcmp(word, "enum") == 0) {
+        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+          advance(lexer);
+        }
+        int32_t c = lexer->lookahead;
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
+            c == '$' || c == '=') {
+          lexer->result_symbol = postfix_sym;
+          return true;
+        }
+      }
+      // `export` shares `enum`'s ambiguity: it is a hard keyword in Scala 3
+      // but a plain identifier in Scala 2, so `1 +` + `export` is division
+      // while `x --?` + `export a.b` / `export = 1` is a new statement.
+      // Same lookahead as `enum`; `export {…}` stays an operand (call with
+      // a brace block).
+      if (len == 6 && strcmp(word, "export") == 0) {
         while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
           advance(lexer);
         }
