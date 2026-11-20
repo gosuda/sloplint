@@ -3,16 +3,17 @@
 //! Function-like units are `method` (with `lemma`), `function` (with
 //! `predicate`), `constructor`, and `iterator` declarations. Specification
 //! clauses (`requires`, `ensures`, `invariant`, `decreases`, `modifies`,
-//! `reads`) are intentionally unmapped: they constrain proofs, they are not
-//! branches, loops, or calls, and counting them would punish verified code
-//! for being specified. `assert` statements map to the assert role with a
+//! `reads`, and the refinement/`witness` family) are unmapped and skipped:
+//! they constrain proofs, they are not branches, loops, or calls, and
+//! counting them would punish verified code for being specified.
+//! `assert` statements map to the assert role with a
 //! silent shape for the same reason; only `expect`, which takes an optional
 //! message, feeds the message rule.
 
 use sloplint_core::facts::{Import, Pos};
 use tree_sitter::Node;
 
-use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, TypeHead};
+use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, TypeHead, trimmed};
 use crate::spec::Role;
 mod calls;
 mod funcs;
@@ -38,6 +39,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("suffix_expression", Role::Call),
     ("print_statement", Role::Call),
     ("local_var_decl", Role::Decl),
+    ("var_decl_statement", Role::Decl),
     ("fn_let_expression", Role::Decl),
     ("let_expression", Role::Decl),
     ("let_or_fail_expression", Role::Decl),
@@ -85,10 +87,103 @@ impl LangHooks for DafnyHooks {
     }
 
     fn is_else_if(&self, n: Node<'_>, parent: Option<Node<'_>>) -> bool {
+        // `if` has no field names here, so the else alternative is the
+        // parent's last named child — anything earlier (e.g. an
+        // if-expression in the condition) is not an else-if.
+        let is_last = parent.is_some_and(|p| {
+            u32::try_from(p.named_child_count().saturating_sub(1))
+                .ok()
+                .and_then(|i| p.named_child(i))
+                .is_some_and(|last| last.id() == n.id())
+        });
+        match n.kind() {
+            "if_statement" => is_last && parent.is_some_and(|p| p.kind() == "if_statement"),
+            // `else if` expression chains wrap each alternative in the
+            // unary-expression chain (`equiv_expression` down to
+            // `unary_expression`), so the inner if's direct parent is never
+            // the outer if — climb the wrappers and check that the top of
+            // the chain is the outer if's else branch.
+            "if_expression" | "fn_if_expression" => {
+                let mut cur = n;
+                loop {
+                    let Some(p) = cur.parent() else { return false };
+                    match p.kind() {
+                        "if_expression" | "fn_if_expression" => {
+                            return u32::try_from(p.named_child_count().saturating_sub(1))
+                                .ok()
+                                .and_then(|i| p.named_child(i))
+                                .is_some_and(|last| last.id() == cur.id());
+                        }
+                        // Each wrapper of an else-alternative carries exactly
+                        // one named child. `else 1 + if b then 2 else 3` keeps
+                        // the if under a binary `term` (two operands) — that
+                        // is a nested conditional, not an else-if.
+                        "unary_expression"
+                        | "as_expression"
+                        | "bitvector_factor"
+                        | "factor"
+                        | "term"
+                        | "shift_term"
+                        | "relational_expression"
+                        | "logical_expression"
+                        | "implies_explies_expression"
+                        | "equiv_expression"
+                            if p.named_child_count() == 1 =>
+                        {
+                            cur = p;
+                        }
+                        _ => return false,
+                    }
+                }
+            }
+            _ => false,
+        }
+    }
+
+    fn decl_scope_parent(&self, depth: usize, node: Node<'_>, cx: &Cx<'_, '_>) -> usize {
+        // `local_var_decl` is a child of `var_decl_statement`, so the
+        // declared name scopes to the block above the statement — the
+        // default depth-1 would scope `var x := 0` to itself and later
+        // `x := ...` writes would be missed.
+        if node.kind() == "local_var_decl"
+            && node
+                .parent()
+                .is_some_and(|p| p.kind() == "var_decl_statement")
+        {
+            return depth.saturating_sub(2);
+        }
+        if node.kind() == "for_statement" {
+            // The loop variable scopes to the statement itself: it pops
+            // when the `for` exits. The body block's own depth cannot be
+            // used — the header's expressions sit at that depth too and
+            // their exits would free the binding before the body runs.
+            return depth;
+        }
+        let _ = cx;
+        depth.saturating_sub(1)
+    }
+
+    fn skip_subtree(&self, node: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+        // Specification clauses constrain proofs, not runtime behavior —
+        // their expressions are not lintable code.
+        if node.kind() == "witness_clause" {
+            // `witness e` supplies a compiled default; only
+            // `ghost witness e` is proof-only.
+            return trimmed(cx, node).starts_with("ghost");
+        }
         matches!(
-            n.kind(),
-            "if_statement" | "if_expression" | "fn_if_expression"
-        ) && parent.is_some_and(|p| p.kind() == n.kind())
+            node.kind(),
+            "requires_clause"
+                | "yield_requires_clause"
+                | "ensures_clause"
+                | "yield_ensures_clause"
+                | "invariant_clause"
+                | "decreases_clause"
+                | "modifies_clause"
+                | "reads_clause"
+                | "refines_clause"
+                | "replaces_clause"
+        )
     }
 
     fn binds_flow_targets(&self, kind: &str) -> bool {
@@ -168,6 +263,7 @@ mod tests {
                         ("suffix_expression", Role::Call),
                         ("print_statement", Role::Call),
                         ("local_var_decl", Role::Decl),
+                        ("var_decl_statement", Role::Decl),
                         ("fn_let_expression", Role::Decl),
                         ("assign_statement", Role::Write),
                         ("case_stmt_clause", Role::MatchArm),

@@ -213,6 +213,16 @@ pub(crate) trait LangHooks: Sync {
         false
     }
 
+    /// True when a node's subtree carries no lintable code and the
+    /// walker should not descend into it — e.g. specification clauses
+    /// whose expressions constrain proofs rather than runtime behavior.
+    /// The node itself is still entered and exited; only its children
+    /// are skipped.
+    fn skip_subtree(&self, node: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+        let _ = (node, cx);
+        false
+    }
+
     fn dynamic(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<&'static str> {
         let _ = (n, cx);
         None

@@ -104,8 +104,42 @@ pub(crate) fn function_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>
     };
     named_children(list)
         .into_iter()
-        .filter(|child| child.kind() == "parameter")
-        .filter_map(|parameter| build_param(cx, parameter))
+        .filter(|child| child.kind() == "parameter" || child.kind() == "identifier")
+        .filter_map(|parameter| {
+            if parameter.kind() == "parameter" {
+                return build_param(cx, parameter);
+            }
+            // Untyped anonymous-function params (`fun(x) = x`) emit a bare
+            // identifier; it still binds a name, so it must count as a param.
+            // A default value (`t: Long = DEFAULT`) also lands as a bare
+            // identifier sibling, so only `(`- or `,`-led identifiers count.
+            // Comments and parameter modifiers sit between the delimiter and
+            // the name (`fun(/* c */ x)`, `fun(@Anno y)`), so skip them too.
+            let mut delimiter = parameter.prev_sibling();
+            while let Some(node) = delimiter {
+                if matches!(
+                    node.kind(),
+                    "line_comment" | "block_comment" | "parameter_modifiers" | "annotation"
+                ) {
+                    delimiter = node.prev_sibling();
+                } else {
+                    break;
+                }
+            }
+            if !matches!(delimiter.map(|s| s.kind()), Some("(" | ",")) {
+                return None;
+            }
+            let default = default_value(parameter);
+            Some(Param {
+                name: text(cx, parameter),
+                ty: None,
+                primitive_kind: PrimitiveKind::Other,
+                has_default: default.is_some(),
+                bool_default: default.is_some_and(|d| matches!(text(cx, d), "true" | "false")),
+                keyword_only: false,
+                is_variadic: false,
+            })
+        })
         .collect()
 }
 
