@@ -143,26 +143,46 @@ fn first_symbol<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<&'s str> {
         .map(|symbol| text(cx, symbol))
 }
 
+/// Which family a pending escape belongs to: `unquote` escapes only
+/// `quasiquote`; `unsyntax` escapes only `quasisyntax`. A cross-family
+/// escape is literal datum — Racket never evaluates it.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Escape {
+    Quote,
+    Syntax,
+}
+
+impl Escape {
+    fn escapes(self, quasi_kind: &str) -> bool {
+        matches!(
+            (self, quasi_kind),
+            (Escape::Quote, "quasiquote") | (Escape::Syntax, "quasisyntax")
+        )
+    }
+}
+
 /// Whether this node sits inside datum. `quote`/`syntax` (node kind
 /// or list head) is datum unconditionally; `quasiquote`/`quasisyntax`
-/// too, but each `unquote`-family form between this node and the
-/// quasiquote escapes one level back to code — walking innermost to
-/// outermost, a pending escape consumes the next quasiquote.
+/// too, but each same-family `unquote`/`unsyntax` form between this
+/// node and the quasi form escapes one level back to code — walking
+/// innermost to outermost, a pending escape consumes the matching
+/// quasi level only.
 fn in_non_code(cx: &Cx<'_, '_>) -> bool {
-    let mut escapes = 0usize;
+    let mut escapes: Vec<Escape> = Vec::new();
     for ancestor in cx.ancestors() {
         let head = match ancestor.kind() {
             kind if NON_CODE_KINDS.contains(&kind) => return true,
             "quote" | "syntax" => return true,
-            "quasiquote" | "quasisyntax" => {
-                if escapes == 0 {
-                    return true;
-                }
-                escapes -= 1;
+            kind @ ("quasiquote" | "quasisyntax") => match escapes.pop() {
+                Some(escape) if escape.escapes(kind) => continue,
+                _ => return true,
+            },
+            "unquote" | "unquote_splicing" => {
+                escapes.push(Escape::Quote);
                 continue;
             }
-            "unquote" | "unquote_splicing" | "unsyntax" | "unsyntax_splicing" => {
-                escapes += 1;
+            "unsyntax" | "unsyntax_splicing" => {
+                escapes.push(Escape::Syntax);
                 continue;
             }
             "list" => match head_child(ancestor) {
@@ -173,15 +193,12 @@ fn in_non_code(cx: &Cx<'_, '_>) -> bool {
         };
         match head {
             "quote" | "syntax" => return true,
-            "quasiquote" | "quasisyntax" => {
-                if escapes == 0 {
-                    return true;
-                }
-                escapes -= 1;
-            }
-            "unquote" | "unquote-splicing" | "unsyntax" | "unsyntax-splicing" => {
-                escapes += 1;
-            }
+            kind @ ("quasiquote" | "quasisyntax") => match escapes.pop() {
+                Some(escape) if escape.escapes(kind) => {}
+                _ => return true,
+            },
+            "unquote" | "unquote-splicing" => escapes.push(Escape::Quote),
+            "unsyntax" | "unsyntax-splicing" => escapes.push(Escape::Syntax),
             _ => {}
         }
     }

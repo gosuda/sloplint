@@ -248,15 +248,36 @@ fn box_and_calls_keep_code_arguments() {
 }
 
 #[test]
-fn define_contract_freevar_lambda_is_not_the_initializer() {
-    // The contract's `#:freevar` lambda sits before the init value; the
-    // binding is a constant, not a function.
-    let analysis = run_clean(
-        "#lang racket\n(define/contract checked (->i () #:freevar v (lambda (x) x)) 5)\n",
-    );
+fn define_contract_middle_lambda_is_not_the_initializer() {
+    // A lambda-headed list in a non-final position (here the contract
+    // slot) is not the initializer — only the last code child counts.
+    let analysis = run_clean("#lang racket\n(define/contract checked (lambda (x) x) 5)\n");
     assert!(
         !function_names(&analysis).contains(&"checked"),
         "a constant with a contract lambda must not read as a function"
+    );
+}
+
+#[test]
+fn cross_family_escapes_stay_datum() {
+    // `unsyntax` does not escape `quasiquote`, and `unquote` does not
+    // escape `quasisyntax` — the escaped forms stay literal data.
+    let analysis = run_clean(
+        "#lang racket\n(quasiquote (a (unsyntax (define (q x) x))))\n(quasisyntax (b (unquote (define (s x) x))))\n",
+    );
+    let names = function_names(&analysis);
+    assert!(
+        !names.contains(&"q") && !names.contains(&"s"),
+        "cross-family escapes are datum, not code: {names:?}"
+    );
+}
+
+#[test]
+fn unsyntax_escapes_a_quasisyntax_back_to_code() {
+    let analysis = run_clean("#lang racket\n(quasisyntax (a (unsyntax (define (inside x) x))))\n");
+    assert!(
+        function_names(&analysis).contains(&"inside"),
+        "an unsyntax define inside a quasisyntax is code"
     );
 }
 
