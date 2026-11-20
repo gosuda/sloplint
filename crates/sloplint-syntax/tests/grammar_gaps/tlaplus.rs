@@ -252,8 +252,15 @@ fn invalid_tlaplus_still_reports_a_parse_error() {
 fn pluscal_macro_body_stays_inside_the_function_scope() {
     let source = "---- MODULE Pm ----\n(*\n--algorithm A\nvariables x = 1;\nmacro m(a) begin\n  x := a;\nend macro;\nbegin\n  m(2);\nend algorithm;\n*)\n====\n";
     let analysis = run_clean("src/pm.tla", source);
-    let names: Vec<&str> = analysis.facts.functions.iter().map(|f| f.name).collect();
-    assert!(names.contains(&"m"), "macro head must surface: {names:?}");
+    let m = analysis
+        .facts
+        .functions
+        .iter()
+        .find(|f| f.name == "m")
+        .expect("macro head must surface");
+    // The macro (not just its signature) owns the body scope: its span
+    // covers `end macro;` at line 7, not just the header on line 5.
+    assert_eq!(m.end_line, 7, "macro function must own its body scope");
 }
 
 #[test]
@@ -267,13 +274,16 @@ fn pluscal_call_args_and_parallel_assign_writes() {
             "procedure variable {want} declared: {bound:?}"
         );
     }
+    // Decl line is 4 (`variables v = 0, w = 0`); the parallel assignment
+    // `v := a || w := a` is line 6. insert_decls stamps last_write_line
+    // with the decl line, so a real write is proven by it moving to 6.
     for want in ["v", "w"] {
         assert!(
             analysis
                 .facts
                 .bindings
                 .iter()
-                .any(|b| b.name == want && b.last_write_line != u32::MAX),
+                .any(|b| b.name == want && b.last_write_line == 6),
             "parallel assign writes {want}"
         );
     }
@@ -303,4 +313,20 @@ fn let_local_definitions_stay_private() {
             "LET-local {want} must not be public"
         );
     }
+}
+
+#[test]
+fn bound_op_calls_keep_args_and_skip_comments() {
+    // PrintT("x", 1) parses as bound_op(name, parameter...), not
+    // function_evaluation; args must still reach the call facts, and an
+    // inline comment between them is not an argument.
+    let source = "---- MODULE B ----\nF == PrintT(\"x\" (* note *), 1)\n====\n";
+    let analysis = run_clean("src/b.tla", source);
+    let print = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|c| c.callee == "PrintT")
+        .expect("bound_op PrintT call recorded");
+    assert_eq!(print.args.len(), 2, "bound_op args, comment excluded");
 }
