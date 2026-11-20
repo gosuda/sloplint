@@ -333,19 +333,55 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
             // callees are arbitrary identifiers, so a fixed word list
             // cannot cover them.
             char member_word[16] = {0};
-            if (!scan_words(lexer,
-                            (const char[MAX_WORDS][MAX_WORD_SIZE]){"val", "var", "fun", "class",
-                                                "object", "interface", "enum", "annotation",
-                                                "typealias", "constructor", "init", "companion",
-                                                "public", "private", "protected", "internal",
-                                                "abstract", "final", "open", "override",
-                                                "lateinit", "const", "data", "sealed",
-                                                "inner", "value", "inline", "tailrec",
-                                                "operator", "infix", "external", "suspend",
-                                                "expect", "actual", "get", "set",
-                                                "context"},
-                            member_word, NULL) &&
-                member_word[0]) {
+            if (scan_words(lexer,
+                           (const char[MAX_WORDS][MAX_WORD_SIZE]){"val", "var", "fun", "class",
+                                               "object", "interface", "enum", "annotation",
+                                               "typealias", "constructor", "init", "companion",
+                                               "public", "private", "protected", "internal",
+                                               "abstract", "final", "open", "override",
+                                               "lateinit", "const", "data", "sealed",
+                                               "inner", "value", "inline", "tailrec",
+                                               "operator", "infix", "external", "suspend",
+                                               "expect", "actual", "get", "set",
+                                               "context"},
+                           member_word, NULL)) {
+                // `scan_words` reads letters only, so the match can be a
+                // prefix of a longer identifier (`context2`, `datax`); those
+                // are infix callees, not member keywords.
+                if (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
+                    return;
+                }
+                skip_ws_comments(lexer);
+                // A member keyword is followed by another keyword or a name
+                // (`get data class`, `get private set`); a literal or
+                // operator makes the word an infix callee instead
+                // (`get context 2`, `get data(2)`, `get open -1`,
+                // `get data < 2`). `context`/`init`/`companion` pin a narrow
+                // follower set, and `(`/`:`/`<` are member syntax for only a
+                // few words (`constructor(`, `val (a, b)`, `fun <T>`,
+                // `object : Base`) — for the rest they read as calls or
+                // operators (`get enum(2)`, `get data < 2`).
+                const wchar_t next = lexer->lookahead;
+                bool member_next = iswalpha(next) || next == '_' || next == '@' || next == '`';
+                if (strcmp(member_word, "context") == 0) {
+                    member_next = next == '(';
+                } else if (strcmp(member_word, "init") == 0) {
+                    member_next = next == '{';
+                } else if (strcmp(member_word, "companion") == 0) {
+                    member_next = iswalpha(next) || next == '_' || next == '@';
+                } else if (next == '(') {
+                    member_next = strcmp(member_word, "constructor") == 0 ||
+                                  strcmp(member_word, "val") == 0 || strcmp(member_word, "var") == 0 ||
+                                  strcmp(member_word, "get") == 0 || strcmp(member_word, "set") == 0;
+                } else if (next == ':') {
+                    member_next = strcmp(member_word, "object") == 0;
+                } else if (next == '<') {
+                    member_next = strcmp(member_word, "fun") == 0;
+                }
+                if (!member_next) {
+                    return;
+                }
+            } else if (member_word[0]) {
                 skip_ws_comments(lexer);
                 if (iswalnum(lexer->lookahead) || lexer->lookahead == '_' ||
                     lexer->lookahead == '(' || lexer->lookahead == '[' ||

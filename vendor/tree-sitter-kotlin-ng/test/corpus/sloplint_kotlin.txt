@@ -958,3 +958,75 @@ val y = 2; get as? Int
     left: (identifier)
     right: (user_type
       (identifier))))
+
+================================================================================
+K-MEMBERINFIX: member keywords as infix callees after a semicolon
+================================================================================
+
+val a = 1; get context 2
+val b = 2; get context2 3
+val c = 3; get data 4
+val d = 4; get data(5)
+val e = 5; get open -1
+var f = 6
+    get
+context(String) fun g() {}
+
+---------------------------------------------------------------------------------
+
+(source_file
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
+    (identifier)
+    (identifier)
+    (number_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
+    (identifier)
+    (identifier)
+    (number_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
+    (identifier)
+    (identifier)
+    (number_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
+    (identifier)
+    (identifier)
+    (parenthesized_expression
+      (number_literal)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
+    (identifier)
+    (identifier)
+    (unary_expression
+      argument: (number_literal)))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal)
+    (getter))
+  (function_declaration
+    (context_parameters
+      (user_type
+        (identifier)))
+    name: (identifier)
+    (function_value_parameters)
+    (function_body
+      (block))))

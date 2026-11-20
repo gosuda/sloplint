@@ -467,7 +467,7 @@ index 0e0078a..7154c42 100644
        $.identifier,
      )),
 diff --git a/src/scanner.c b/src/scanner.c
-index 8f9d287..4348b17 100644
+index 8f9d287..c4bf512 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
 @@ -15,10 +15,15 @@ enum TokenType {
@@ -487,7 +487,7 @@ index 8f9d287..4348b17 100644
  
  static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
  
-@@ -61,6 +66,324 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
+@@ -61,6 +66,360 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
      return false;
  }
  
@@ -758,19 +758,55 @@ index 8f9d287..4348b17 100644
 +            // callees are arbitrary identifiers, so a fixed word list
 +            // cannot cover them.
 +            char member_word[16] = {0};
-+            if (!scan_words(lexer,
-+                            (const char[MAX_WORDS][MAX_WORD_SIZE]){"val", "var", "fun", "class",
-+                                                "object", "interface", "enum", "annotation",
-+                                                "typealias", "constructor", "init", "companion",
-+                                                "public", "private", "protected", "internal",
-+                                                "abstract", "final", "open", "override",
-+                                                "lateinit", "const", "data", "sealed",
-+                                                "inner", "value", "inline", "tailrec",
-+                                                "operator", "infix", "external", "suspend",
-+                                                "expect", "actual", "get", "set",
-+                                                "context"},
-+                            member_word, NULL) &&
-+                member_word[0]) {
++            if (scan_words(lexer,
++                           (const char[MAX_WORDS][MAX_WORD_SIZE]){"val", "var", "fun", "class",
++                                               "object", "interface", "enum", "annotation",
++                                               "typealias", "constructor", "init", "companion",
++                                               "public", "private", "protected", "internal",
++                                               "abstract", "final", "open", "override",
++                                               "lateinit", "const", "data", "sealed",
++                                               "inner", "value", "inline", "tailrec",
++                                               "operator", "infix", "external", "suspend",
++                                               "expect", "actual", "get", "set",
++                                               "context"},
++                           member_word, NULL)) {
++                // `scan_words` reads letters only, so the match can be a
++                // prefix of a longer identifier (`context2`, `datax`); those
++                // are infix callees, not member keywords.
++                if (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
++                    return;
++                }
++                skip_ws_comments(lexer);
++                // A member keyword is followed by another keyword or a name
++                // (`get data class`, `get private set`); a literal or
++                // operator makes the word an infix callee instead
++                // (`get context 2`, `get data(2)`, `get open -1`,
++                // `get data < 2`). `context`/`init`/`companion` pin a narrow
++                // follower set, and `(`/`:`/`<` are member syntax for only a
++                // few words (`constructor(`, `val (a, b)`, `fun <T>`,
++                // `object : Base`) — for the rest they read as calls or
++                // operators (`get enum(2)`, `get data < 2`).
++                const wchar_t next = lexer->lookahead;
++                bool member_next = iswalpha(next) || next == '_' || next == '@' || next == '`';
++                if (strcmp(member_word, "context") == 0) {
++                    member_next = next == '(';
++                } else if (strcmp(member_word, "init") == 0) {
++                    member_next = next == '{';
++                } else if (strcmp(member_word, "companion") == 0) {
++                    member_next = iswalpha(next) || next == '_' || next == '@';
++                } else if (next == '(') {
++                    member_next = strcmp(member_word, "constructor") == 0 ||
++                                  strcmp(member_word, "val") == 0 || strcmp(member_word, "var") == 0 ||
++                                  strcmp(member_word, "get") == 0 || strcmp(member_word, "set") == 0;
++                } else if (next == ':') {
++                    member_next = strcmp(member_word, "object") == 0;
++                } else if (next == '<') {
++                    member_next = strcmp(member_word, "fun") == 0;
++                }
++                if (!member_next) {
++                    return;
++                }
++            } else if (member_word[0]) {
 +                skip_ws_comments(lexer);
 +                if (iswalnum(lexer->lookahead) || lexer->lookahead == '_' ||
 +                    lexer->lookahead == '(' || lexer->lookahead == '[' ||
@@ -812,7 +848,7 @@ index 8f9d287..4348b17 100644
  void *tree_sitter_kotlin_external_scanner_create() { return NULL; }
  
  void tree_sitter_kotlin_external_scanner_destroy(void *payload) {}
-@@ -119,6 +442,9 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -119,6 +478,9 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
              if (lexer->lookahead == ';') {
                  advance(lexer);
                  lexer->mark_end(lexer);
@@ -822,7 +858,7 @@ index 8f9d287..4348b17 100644
                  return true;
              }
  
-@@ -166,6 +492,10 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -166,6 +528,10 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      return false;
                  case 'i':
                      return scan_word(lexer, "import");
@@ -833,7 +869,7 @@ index 8f9d287..4348b17 100644
                  case ';':
                      advance(lexer);
                      lexer->mark_end(lexer);
-@@ -178,9 +508,11 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -178,9 +544,11 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
          char scanned_word[16] = {0};
      _switch:
          switch (lexer->lookahead) {
@@ -846,7 +882,7 @@ index 8f9d287..4348b17 100644
              case '*':
              case '%':
              case '>':
-@@ -224,6 +556,26 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -224,6 +592,26 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      goto q_dot_from_semi;
                  }
                  return true;
@@ -873,7 +909,7 @@ index 8f9d287..4348b17 100644
              case 'e':
              case 'i':
              case 'g':
-@@ -238,23 +590,36 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -238,23 +626,36 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
              case 'c':
              case 'b':
              case 'w':
@@ -916,7 +952,7 @@ index 8f9d287..4348b17 100644
                  // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
                  // we found a variable named constructor whose field is being accessed
                  if (index == 5) {
-@@ -279,18 +644,22 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -279,18 +680,22 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      }
                  }
                  // If `get` was found and the keyword is not valid, return a semi since it's being used as an identifier
@@ -944,7 +980,7 @@ index 8f9d287..4348b17 100644
  
                          while (iswspace(lexer->lookahead)) {
                              if (lexer->lookahead == '\n') {
-@@ -307,6 +676,33 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -307,6 +712,33 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                  else if (index == 1 && valid_symbols[IN]) {
                      return true;
                  }
@@ -978,7 +1014,7 @@ index 8f9d287..4348b17 100644
                  return !res;
              case ';':
                  advance(lexer);
-@@ -314,20 +710,60 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
+@@ -314,20 +746,60 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                  return true;
              case '@':
                  if (valid_symbols[CONSTRUCTOR]) {

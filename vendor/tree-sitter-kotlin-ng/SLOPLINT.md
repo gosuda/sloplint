@@ -150,3 +150,12 @@ are arbitrary identifiers, so instead of a fixed operator list the probe
 rejects any non-member word followed by an expression start (`get until 2`,
 `x foo y`, `get as Int`), while member keywords and modifiers (`val`,
 `private`, `set`, ...) still let the bare accessor through.
+Round 8 validates what follows a member word in the accessor probe: after a
+member-set match, an identifier-continue character (`context2`, `datax`)
+rejects, and the next token decides — member keywords take a keyword or a
+name (`get data class`), while a literal, operator or paren reads the word
+as an infix callee (`get context 2`, `get data(2)`, `get open -1`,
+`get data < 2`). `context`/`init`/`companion` pin narrow followers
+(`context(`, `init {`, `companion object`), and `(`/`:`/`<` are member
+syntax only for `constructor`/`val`/`var`/`get`/`set`, `object`, and `fun`
+respectively.

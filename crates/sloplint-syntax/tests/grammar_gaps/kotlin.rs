@@ -469,5 +469,10 @@ fn bare_default_accessors_after_a_semicolon_parse() {
 }
 #[test]
 fn infix_word_calls_after_a_semicolon_stay_statements() {
-    run_clean("val get = 1\nval x = 1; get until 2\nval y = 2; get as? Int\n");
+    run_clean(
+        "val get = 1\nval x = 1; get until 2\nval y = 2; get as? Int\n\
+         val z = 3; get foo ::bar\nval w = 4; get context 2\nval v = 5; get context2 3\n",
+    );
+    // A `context(...)` member declaration may follow a bare accessor.
+    run_clean("var f = 6\n    get\ncontext(String) fun g() {}\n");
 }
