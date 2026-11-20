@@ -332,6 +332,37 @@ fn annotated_open_class_stays_a_declaration() {
 }
 
 #[test]
+fn annotated_local_class_stays_a_declaration() {
+    run_clean("fun f() { @Deprecated(\"old\") open class C {} }\n");
+    let sexp = raw_tree("fun f() { @Deprecated(\"old\") open class C {} }\n")
+        .root_node()
+        .to_sexp();
+    assert!(
+        sexp.contains("(block (class_declaration"),
+        "annotated local class must land in class_declaration, got:\n{sexp}"
+    );
+}
+
+#[test]
+fn top_level_statement_query_matches_statements() {
+    // `(source_file (statement))` must compile — sloplint rules query the
+    // `statement` supertype at file level and a compile failure aborts the
+    // whole lint.
+    let language: tree_sitter::Language = tree_sitter_kotlin_ng::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).unwrap();
+    let source = "var x = 1\ny = 2\n";
+    let tree = parser.parse(source, None).unwrap();
+    let query = tree_sitter::Query::new(&language, "(source_file (statement) @s)")
+        .expect("source_file must expose the statement supertype");
+    let mut cursor = tree_sitter::QueryCursor::new();
+    let mut matched = 0;
+    let mut matches = cursor.matches(&query, tree.root_node(), source.as_bytes());
+    tree_sitter::StreamingIterator::for_each(&mut matches, |_| matched += 1);
+    assert_eq!(matched, 1, "the top-level assignment must match (statement)");
+}
+
+#[test]
 fn value_receiver_class_literal_keeps_parenthesized_expression() {
     run_clean("fun f(v: Any) { (v)::class.java }\n");
     let sexp = raw_tree("fun f(v: Any) { (v)::class.java }\n")

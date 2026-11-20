@@ -461,8 +461,17 @@
                     "type": "SEQ",
                     "members": [
                       {
-                        "type": "SYMBOL",
-                        "name": "_accessor_semi"
+                        "type": "CHOICE",
+                        "members": [
+                          {
+                            "type": "SYMBOL",
+                            "name": "_accessor_semi"
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "_field_semi"
+                          }
+                        ]
                       },
                       {
                         "type": "SYMBOL",
@@ -627,28 +636,32 @@
       ]
     },
     "local_property_declaration": {
-      "type": "PREC_RIGHT",
-      "value": 0,
+      "type": "PREC_DYNAMIC",
+      "value": -1,
       "content": {
-        "type": "SEQ",
-        "members": [
-          {
-            "type": "SYMBOL",
-            "name": "_property_declaration_head"
-          },
-          {
-            "type": "CHOICE",
-            "members": [
-              {
-                "type": "STRING",
-                "value": ";"
-              },
-              {
-                "type": "BLANK"
-              }
-            ]
-          }
-        ]
+        "type": "PREC_RIGHT",
+        "value": 0,
+        "content": {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_property_declaration_head"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "STRING",
+                  "value": ";"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            }
+          ]
+        }
       }
     },
     "_property_tail": {
@@ -3069,23 +3082,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "assignment"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "for_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "while_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "do_while_statement"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "expression"
+          "name": "statement"
         }
       ]
     },
@@ -7089,6 +7086,14 @@
       "enum_class_body"
     ],
     [
+      "declaration",
+      "statement"
+    ],
+    [
+      "property_declaration",
+      "local_property_declaration"
+    ],
+    [
       "binary_expression",
       "call_expression"
     ],
@@ -7364,6 +7369,10 @@
     {
       "type": "SYMBOL",
       "name": "_accessor_semi"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_field_semi"
     },
     {
       "type": "SYMBOL",

@@ -23,6 +23,14 @@ module.exports = grammar({
 
   conflicts: $ => [
     [$.class_body, $.enum_class_body],
+    // `_file_statement` offers both `declaration` and `statement`, so a
+    // top-level `class C {}` reduces under either supertype — the trees
+    // are identical.
+    [$.declaration, $.statement],
+    // Top-level `var x = 1` is reachable as both the full property (with
+    // accessor tail) and the local variant; the local rule's negative
+    // dynamic precedence makes the full property win.
+    [$.property_declaration, $.local_property_declaration],
 
 
     [$.binary_expression, $.call_expression],
@@ -109,6 +117,11 @@ module.exports = grammar({
     // follows it, so `var x = 1; private set` keeps the accessor inside the
     // property instead of consuming the `;` as a member separator.
     $._accessor_semi,
+    // Emitted instead of `_accessor_semi` when the word after `;` is
+    // `field`: a backing field can only open a property tail, never follow
+    // an accessor, so `val x = 1; get() = 1; field = 2` parses the last
+    // clause as a separate statement rather than a dead accessor slot.
+    $._field_semi,
     // Emitted instead of `_semi` when a declaration separator is followed
     // by `(`, so a delegation's constructor invocation can span the line
     // break (`class D : Base\n() {}`) without the plain `_semi` competing
@@ -210,7 +223,7 @@ module.exports = grammar({
         // member/statement separator (`_class_member_semi` / `_semi`), never
         // as a literal `;` — the scanner emits `_accessor_semi` instead when
         // an accessor word follows it, so `var x = 1; private set` parses.
-        seq($._accessor_semi, $._property_tail),
+        seq(choice($._accessor_semi, $._field_semi), $._property_tail),
         $._property_tail,
         ';',
       )),
@@ -235,10 +248,13 @@ module.exports = grammar({
     // statement-position variant ends at the initializer — `var x = 1;
     // field = 5` in a body is an initializer then an assignment to a local
     // `field`, never a backing field.
-    local_property_declaration: $ => prec.right(seq(
+    // Lower dynamic precedence than `property_declaration` so that at
+    // top level — where both variants are reachable through
+    // `_file_statement` — the full accessor/backing-field tail wins.
+    local_property_declaration: $ => prec.dynamic(-1, prec.right(seq(
       $._property_declaration_head,
       optional(';'),
-    )),
+    ))),
 
     _property_tail: $ => prec.right(choice(
       // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
@@ -568,11 +584,7 @@ module.exports = grammar({
     // compiling while local positions keep the no-accessor variant.
     _file_statement: $ => choice(
       $.declaration,
-      $.assignment,
-      $.for_statement,
-      $.while_statement,
-      $.do_while_statement,
-      $.expression,
+      $.statement,
     ),
 
     modifiers: $ => prec.right(repeat1(choice(
