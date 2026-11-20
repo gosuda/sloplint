@@ -321,6 +321,7 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
             case '\'':
             case '"':
             case '`':
+            case '$':
                 return;
             default:
                 break;
@@ -341,7 +342,8 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                                                 "lateinit", "const", "data", "sealed",
                                                 "inner", "value", "inline", "tailrec",
                                                 "operator", "infix", "external", "suspend",
-                                                "expect", "actual", "get", "set"},
+                                                "expect", "actual", "get", "set",
+                                                "context"},
                             member_word, NULL) &&
                 member_word[0]) {
                 skip_ws_comments(lexer);
@@ -350,7 +352,9 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
                     lexer->lookahead == '{' || lexer->lookahead == '"' ||
                     lexer->lookahead == '\'' || lexer->lookahead == '`' ||
                     lexer->lookahead == '!' || lexer->lookahead == '-' ||
-                    lexer->lookahead == '+' || lexer->lookahead == '.') {
+                    lexer->lookahead == '+' || lexer->lookahead == '.' ||
+                    lexer->lookahead == '?' || lexer->lookahead == ':' ||
+                    lexer->lookahead == '@' || lexer->lookahead == '$') {
                     return;
                 }
             }

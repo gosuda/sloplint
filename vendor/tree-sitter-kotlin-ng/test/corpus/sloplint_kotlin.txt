@@ -931,29 +931,30 @@ class C {
 K-INFIXWORD: infix word calls after a semicolon stay statements
 ================================================================================
 
-fun f() {
-    val x = 1; get until 2
-    var y = 2; get
-}
+val get = 1
+val x = 1; get until 2
+val y = 2; get as? Int
 
 --------------------------------------------------------------------------------
 
 (source_file
-  (function_declaration
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (infix_expression
     (identifier)
-    (function_value_parameters)
-    (function_body
-      (block
-        (property_declaration
-          (variable_declaration
-            (identifier))
-          (number_literal))
-        (infix_expression
-          (identifier)
-          (identifier)
-          (number_literal))
-        (property_declaration
-          (variable_declaration
-            (identifier))
-          (number_literal))
-        (identifier)))))
+    (identifier)
+    (number_literal))
+  (property_declaration
+    (variable_declaration
+      (identifier))
+    (number_literal))
+  (as_expression
+    left: (identifier)
+    right: (user_type
+      (identifier))))

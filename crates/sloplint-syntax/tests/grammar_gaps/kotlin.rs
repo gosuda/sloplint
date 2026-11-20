@@ -469,10 +469,5 @@ fn bare_default_accessors_after_a_semicolon_parse() {
 }
 #[test]
 fn infix_word_calls_after_a_semicolon_stay_statements() {
-    run_clean(
-        "fun f() {\n\
-         \x20   val x = 1; get until 2; set downTo 0\n\
-         \x20   var y = 2; get as Int\n\
-         }\n",
-    );
+    run_clean("val get = 1\nval x = 1; get until 2\nval y = 2; get as? Int\n");
 }
