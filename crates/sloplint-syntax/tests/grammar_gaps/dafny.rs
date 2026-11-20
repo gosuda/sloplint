@@ -565,3 +565,25 @@ fn commented_field_access_still_reads_as_a_field() {
         ScrutineeKind::Field
     );
 }
+
+#[test]
+fn negated_scrutinee_is_not_a_field() {
+    // `match -(p./* note */x)` wraps the field access in a computing
+    // operator: the scrutinee value is a negation, not the field, so a
+    // wildcard arm must stay silent under catch-all-match.
+    use sloplint_core::facts::ScrutineeKind;
+    let analysis = run_clean(concat!(
+        "datatype P = P(x: int)\n",
+        "method M(p: P)\n",
+        "{\n",
+        "  match -(p./* note */x)\n",
+        "  case 0 => print 0;\n",
+        "  case _ => print 1;\n",
+        "}\n",
+    ));
+    assert_eq!(analysis.facts.wildcard_arms.len(), 1);
+    assert_eq!(
+        analysis.facts.wildcard_arms[0].scrutinee,
+        ScrutineeKind::Other
+    );
+}

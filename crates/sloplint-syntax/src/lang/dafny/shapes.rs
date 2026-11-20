@@ -255,6 +255,16 @@ pub(crate) fn scrutinee_kind(cx: &Cx<'_, '_>, scrutinee: Node<'_>) -> ScrutineeK
                 };
             }
             _ if CHAIN_KINDS.contains(&current.kind()) => {
+                // Only transparent wrappers may be peeled: a precedence
+                // chain node carrying exactly one named child whose first
+                // child is that operand. `-(p.x)` leads with the `-`
+                // operator — the match value is computed, not a field.
+                let transparent = current.kind() == "parenthesized_expression"
+                    || (current.named_child_count() == 1
+                        && current.child(0).is_some_and(|c| c.is_named()));
+                if !transparent {
+                    return ScrutineeKind::Other;
+                }
                 let Some(first) = current.named_child(0) else {
                     return ScrutineeKind::Other;
                 };
