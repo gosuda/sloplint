@@ -46,6 +46,13 @@ pred misc[t: Time, ] {
   some s: S | s.let r = s | r = s
 }
 
+// equal-arity call that repeats the unprimed argument: `s'` is
+// not forwarded, so this is no passthrough — it only stays quiet
+// while primed declarators and primed args keep their primes
+pred rep[s, s': State] {
+  inner_pair[s, s]
+}
+
 // a comment between call arguments is not an argument
 fun argy[a, b: S]: S { a }
 fun use_argy[x: S]: S {
