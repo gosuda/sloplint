@@ -34,7 +34,6 @@ module.exports = grammar({
     [$._simple_user_type, $.primary_expression],
     [$.type, $._receiver_type],
 
-    [$.modifiers, $.annotated_lambda],
     [$.modifiers, $.annotated_expression],
 
     [$.delegation_specifier, $.type_modifiers, $.paren_type_modifiers],
@@ -145,7 +144,7 @@ module.exports = grammar({
       repeat($.file_annotation),
       optional($.package_header),
       repeat($.import),
-      repeat(seq($.statement, $._semi)),
+      repeat(seq($._file_statement, $._semi)),
     ),
 
     file_annotation: $ => seq(
@@ -465,7 +464,7 @@ module.exports = grammar({
       'in',
       $.expression,
       ')',
-      optional(choice($.block, $._local_statement)),
+      optional(choice($.block, $.statement)),
     )),
 
     while_statement: $ => prec.right(seq(
@@ -474,13 +473,13 @@ module.exports = grammar({
       '(',
       field('condition', $.expression),
       ')',
-      optional(choice($.block, $._local_statement, ';')),
+      optional(choice($.block, $.statement, ';')),
     )),
 
     do_while_statement: $ => prec.right(seq(
       optional($.label),
       'do',
-      optional(choice($.block, $._local_statement, ';')),
+      optional(choice($.block, $.statement, ';')),
       'while',
       '(',
       field('condition', $.expression),
@@ -530,13 +529,24 @@ module.exports = grammar({
     ),
 
     _statements: $ => seq(
-      $._local_statement,
-      repeat(seq($._semi, $._local_statement)),
+      $.statement,
+      repeat(seq($._semi, $.statement)),
       optional($._semi),
     ),
 
+    // Statements inside blocks/branches/lambdas. Properties here are
+    // local: Kotlin gives accessors and backing fields to member and
+    // top-level properties only, so `var x = 1; field = 5` in a body is
+    // an initializer then an assignment to a local `field`, never a
+    // backing field. The alias keeps the `property_declaration` node
+    // kind in the tree. Declarations are spelled out (rather than
+    // `$.declaration`) so the local property variant substitutes in.
     statement: $ => choice(
-      $.declaration,
+      $.class_declaration,
+      $.object_declaration,
+      $.function_declaration,
+      alias($.local_property_declaration, $.property_declaration),
+      $.type_alias,
       $.assignment,
       $.for_statement,
       $.while_statement,
@@ -544,18 +554,12 @@ module.exports = grammar({
       $.expression,
     ),
 
-    // Statement positions inside blocks/branches/lambdas. Identical to
-    // `statement` except properties are local: Kotlin gives accessors and
-    // backing fields to member and top-level properties only, so
-    // `var x = 1; field = 5` in a body is an initializer then an
-    // assignment to a local `field`, never a backing field. The alias
-    // keeps the `property_declaration` node kind in the tree.
-    _local_statement: $ => choice(
-      $.class_declaration,
-      $.object_declaration,
-      $.function_declaration,
-      alias($.local_property_declaration, $.property_declaration),
-      $.type_alias,
+    // Top-level statements, where full `property_declaration` (accessors,
+    // backing fields) applies. `block` children list the `statement`
+    // supertype, so `(block (statement) ...)` custom-rule queries keep
+    // compiling while local positions keep the no-accessor variant.
+    _file_statement: $ => choice(
+      $.declaration,
       $.assignment,
       $.for_statement,
       $.while_statement,
@@ -886,7 +890,7 @@ module.exports = grammar({
       optional('suspend'),
       '{',
       optional(seq(optional($.lambda_parameters), '->')),
-      optionalSep1($._local_statement, $._semi),
+      optionalSep1($.statement, $._semi),
       '}',
     ),
 
@@ -995,7 +999,7 @@ module.exports = grammar({
         'else',
       ),
       '->',
-      choice($.block, $._local_statement),
+      choice($.block, $.statement),
       optional($._semi),
     ),
 
