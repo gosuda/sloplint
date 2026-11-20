@@ -12,9 +12,10 @@ Date: 2026-11-19.
 - Rust crate name and version are unchanged: `tree-sitter-lean 0.2.0`
   (`Cargo.toml`). The crate is unpublished on crates.io and npm; the
   `Cargo.toml` `repository` already names the upstream repository.
-- `sloplint-grammar.patch` is empty: no local grammar edit. The vendored
-  tree is the pinned revision byte for byte except `Cargo.toml` (one
-  addition below).
+- `sloplint-grammar.patch` carries one grammar edit: `open <ns> renaming
+  a → b, c → d` (also `->`) parses as `renaming_pair` fields instead of
+  erroring on the arrow; `hiding`/`renaming`/`only`/`as` tails still lex as
+  identifier namespaces for the adapter to strip.
 - `Cargo.toml` has one addition: an empty `[workspace]` table after the
   `[dev-dependencies]` section. Without it `cargo fmt --all` reports the
   vendored package as belonging to the parent workspace and fails. No other

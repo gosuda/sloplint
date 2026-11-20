@@ -63,23 +63,70 @@ pub(crate) fn imports_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Impor
             });
         }
         "open" | "export" => {
+            // `open`/`export` bring names into scope without loading a
+            // package, so they carry no `external_root` (import fan-out is
+            // for `import` only).
             let mut cursor = n.walk();
-            for ns in n.children_by_field_name("namespace", &mut cursor) {
+            let onlies: Vec<Node> = n.children_by_field_name("only", &mut cursor).collect();
+            let namespaces: Vec<Node> =
+                n.children_by_field_name("namespace", &mut cursor).collect();
+            let scoped: Vec<Node> = n.children_by_field_name("scoped", &mut cursor).collect();
+            let is_reexport = n.kind() == "export";
+            if !onlies.is_empty() {
+                // `open Nat (succ)` / `export Nat (succ add)` name the
+                // symbols they open or re-export — one named import per
+                // listed name so reexport fact extraction sees them.
+                for ns in &namespaces {
+                    let module = trimmed(cx, *ns);
+                    for only in &onlies {
+                        out.push(Import {
+                            pos: pos_of(*only),
+                            module: Cow::Borrowed(module),
+                            name: trimmed(cx, *only),
+                            alias: None,
+                            kind: ImportKind::Named,
+                            scope: ImportScope::Module,
+                            in_test: false,
+                            is_reexport,
+                            external_root: None,
+                        });
+                    }
+                }
+                return;
+            }
+            // `open scoped X` activates scoped notation, instances, and
+            // attributes without bringing names into scope — a side
+            // effect, not a wildcard. Plain `open X` opens every name.
+            let (kind, entries): (ImportKind, Vec<Node>) = if !scoped.is_empty() {
+                (ImportKind::SideEffect, scoped)
+            } else {
+                (ImportKind::Wildcard, namespaces)
+            };
+            let mut pushed = false;
+            let mut skip = false;
+            for ns in entries {
                 let raw = trimmed(cx, ns);
-                let external_root = lean_external_root(raw).map(|root| {
-                    let end = raw.find(root).unwrap_or(0) + root.len();
-                    &raw[..end]
-                });
+                // The grammar lexes `open A hiding B`-style open modifiers
+                // as identifiers; the keyword and what follows it are not
+                // namespaces. A modifier word in first position is a real
+                // namespace (`open only Nat`).
+                if pushed && matches!(raw, "hiding" | "renaming" | "only" | "as") {
+                    skip = true;
+                }
+                if skip {
+                    continue;
+                }
+                pushed = true;
                 out.push(Import {
                     pos: pos_of(ns),
                     module: Cow::Borrowed(raw),
                     name: "",
                     alias: None,
-                    kind: ImportKind::Wildcard,
+                    kind,
                     scope: ImportScope::Module,
                     in_test: false,
-                    is_reexport: n.kind() == "export",
-                    external_root,
+                    is_reexport,
+                    external_root: None,
                 });
             }
         }

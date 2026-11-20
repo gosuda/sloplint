@@ -24321,6 +24321,16 @@
           }
         ]
       },
+      "renaming": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "renaming_pair",
+            "named": true
+          }
+        ]
+      },
       "scoped": {
         "multiple": true,
         "required": false,
@@ -28236,6 +28246,21 @@
       "types": [
         {
           "type": "struct_lit",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "renaming_pair",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
           "named": true
         }
       ]
@@ -38187,6 +38212,10 @@
   },
   {
     "type": "register_option",
+    "named": false
+  },
+  {
+    "type": "renaming",
     "named": false
   },
   {
