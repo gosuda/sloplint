@@ -15,7 +15,7 @@ use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 static NO_CUSTOM: LazyLock<CustomRules> =
     LazyLock::new(|| CustomRules::compile(&[]).expect("empty custom rules compile"));
 
-fn run(source: &str) -> Analysis<'_> {
+pub(crate) fn run(source: &str) -> Analysis<'_> {
     let input = FileInput {
         lang: Lang::Dafny,
         path: "gap.dfy",
@@ -27,7 +27,7 @@ fn run(source: &str) -> Analysis<'_> {
 
 /// first_error_pos cannot see hidden MISSING recovery nodes, so a clean
 /// `parse_error` alone could false-green; the raw tree must be healthy too.
-fn assert_raw_clean(source: &str) {
+pub(crate) fn assert_raw_clean(source: &str) {
     let language: tree_sitter::Language = tree_sitter_dafny::LANGUAGE.into();
     let mut parser = tree_sitter::Parser::new();
     parser
@@ -42,7 +42,7 @@ fn assert_raw_clean(source: &str) {
     );
 }
 
-fn run_clean(source: &str) -> Analysis<'_> {
+pub(crate) fn run_clean(source: &str) -> Analysis<'_> {
     assert_raw_clean(source);
     let analysis = run(source);
     assert!(
@@ -520,90 +520,5 @@ fn if_inside_an_else_operand_still_counts_as_nesting() {
         f.max_depth >= 2,
         "nested conditional inside the else operand must count: {}",
         f.max_depth
-    );
-}
-
-#[test]
-fn datatype_update_scrutinee_is_not_a_field() {
-    // `match p.(x := 1)` computes a new value — the update target `x`
-    // follows `(`, not `.`. Classifying it as a field access would let
-    // catch-all-match excuse a wildcard arm on a computed scrutinee.
-    use sloplint_core::facts::ScrutineeKind;
-    let analysis = run_clean(concat!(
-        "datatype P = P(x: int)\n",
-        "method M(p: P)\n",
-        "{\n",
-        "  match p.(x := 1)\n",
-        "  case P(0) => print 0;\n",
-        "  case _ => print 1;\n",
-        "}\n",
-    ));
-    assert_eq!(analysis.facts.wildcard_arms.len(), 1);
-    assert_eq!(
-        analysis.facts.wildcard_arms[0].scrutinee,
-        ScrutineeKind::Other
-    );
-}
-
-#[test]
-fn commented_field_access_still_reads_as_a_field() {
-    // `obj./* note */state` parks a comment between the dot and the field
-    // name; the scrutinee is still a field access.
-    use sloplint_core::facts::ScrutineeKind;
-    let analysis = run_clean(concat!(
-        "datatype P = P(x: int)\n",
-        "method M(p: P)\n",
-        "{\n",
-        "  match p./* note */x\n",
-        "  case 0 => print 0;\n",
-        "  case _ => print 1;\n",
-        "}\n",
-    ));
-    assert_eq!(analysis.facts.wildcard_arms.len(), 1);
-    assert_eq!(
-        analysis.facts.wildcard_arms[0].scrutinee,
-        ScrutineeKind::Field
-    );
-}
-
-#[test]
-fn negated_scrutinee_is_not_a_field() {
-    // `match -(p./* note */x)` wraps the field access in a computing
-    // operator: the scrutinee value is a negation, not the field, so a
-    // wildcard arm must stay silent under catch-all-match.
-    use sloplint_core::facts::ScrutineeKind;
-    let analysis = run_clean(concat!(
-        "datatype P = P(x: int)\n",
-        "method M(p: P)\n",
-        "{\n",
-        "  match -(p./* note */x)\n",
-        "  case 0 => print 0;\n",
-        "  case _ => print 1;\n",
-        "}\n",
-    ));
-    assert_eq!(analysis.facts.wildcard_arms.len(), 1);
-    assert_eq!(
-        analysis.facts.wildcard_arms[0].scrutinee,
-        ScrutineeKind::Other
-    );
-}
-
-#[test]
-fn negated_base_suffix_is_not_a_field() {
-    // `-p.x` parses as `(-p).x`: a member of the negated value, not a
-    // field of a named scrutinee — catch-all-match must stay silent.
-    use sloplint_core::facts::ScrutineeKind;
-    let analysis = run_clean(concat!(
-        "datatype P = P(x: int)\n",
-        "method M(p: P)\n",
-        "{\n",
-        "  match -p.x\n",
-        "  case _ => print 1;\n",
-        "}\n",
-    ));
-    assert_eq!(analysis.facts.wildcard_arms.len(), 1);
-    assert_eq!(
-        analysis.facts.wildcard_arms[0].scrutinee,
-        ScrutineeKind::Other
     );
 }
