@@ -265,9 +265,14 @@ impl LangHooks for TlaplusHooks {
                 let op = child_by_field(n, "op").unwrap_or(n);
                 // `M!Spec` (no arguments) leaves a bare identifier_ref in
                 // the op field with no name field — use it as the callee.
+                // Other name-less op children (`M!+(a, b)` carries a
+                // bound_nonfix_op) are handled by their own node arms, so
+                // no prefixed call is recorded here.
                 let name = child_by_field(op, "name")
                     .or_else(|| child_by_field(n, "name"))
-                    .unwrap_or(op);
+                    .or_else(|| {
+                        (matches!(op.kind(), "identifier_ref" | "identifier")).then_some(op)
+                    })?;
                 let leaf = first_named_child_matching(name, &["identifier_ref", "identifier"])
                     .unwrap_or(name);
                 // `PrintT("x", 1)` parses as bound_op(name, parameter...):

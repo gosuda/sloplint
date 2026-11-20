@@ -356,6 +356,16 @@ fn prefixed_op_keeps_its_args_and_prefix_is_not_one() {
         .find(|c| c.callee == "Spec")
         .expect("argument-less M!Spec call recorded");
     assert!(spec.args.is_empty());
+
+    // `M!+(a, b)` carries a bound_nonfix_op: the infix walk records `+`,
+    // and no call to the first operand `a` may appear.
+    let source = "---- MODULE S ----\nG == M!+(a, b)\n====\n";
+    let analysis = run_clean("src/s.tla", source);
+    assert!(
+        !analysis.facts.calls.iter().any(|c| c.callee == "a"),
+        "operand must not become a callee: {:?}",
+        analysis.facts.calls
+    );
 }
 
 #[test]
