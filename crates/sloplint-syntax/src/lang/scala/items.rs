@@ -163,6 +163,10 @@ fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str
             if is_pattern_binder(cx, node) {
                 out.push(text(cx, node));
             }
+        } else if node.kind() == "named_pattern" {
+            // `Doc(_id = id)`: the label selects a field — it is not a
+            // binder, so only the right-hand pattern is walked.
+            pending.extend(named_children(node).into_iter().skip(1).rev());
         } else if node.kind() != "wildcard" {
             pending.extend(named_children(node).into_iter().rev());
         }
@@ -589,6 +593,16 @@ pub(crate) fn ambient_head<'s>(
         return;
     }
     if in_function && (n.kind() == "assignment_expression" || is_compound_write(cx, n)) {
+        // Named call arguments (`f(`type` = v)`) are assignment_expressions in
+        // the grammar but never write the variable — same exclusion as
+        // write_roots.
+        if n.kind() == "assignment_expression"
+            && cx
+                .parent()
+                .is_some_and(|parent| parent.kind() == "arguments")
+        {
+            return;
+        }
         report_assign_write(cx, n, out);
         return;
     }

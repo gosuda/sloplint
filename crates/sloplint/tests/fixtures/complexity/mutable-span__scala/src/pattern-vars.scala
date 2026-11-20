@@ -42,7 +42,8 @@ object PatternVars {
 
   def shadowed: Int = {
     var `count` = 0
-    var `Count`, `Other` = 0
+    var `Count` = 0
+    var `Other` = 0
     count = count + 1
     Count = Count + Other
     Other = Other + 1
