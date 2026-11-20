@@ -1,3 +1,5 @@
 a.go:3 info complexity/mutable-span
+# labeled-short-decl.go: `retry:` labeled short decl binds in the function block; writes lines 5-38 (span 33 >= strict major_at 30).
+labeled-short-decl.go:4 info complexity/mutable-span
 # outer-from-closure.go: binding line 4, writes lines 5, 34 and 35 (span 30 >= strict major_at 30); the last writes sit inside a func literal with no shadowing.
 outer-from-closure.go:4 info complexity/mutable-span

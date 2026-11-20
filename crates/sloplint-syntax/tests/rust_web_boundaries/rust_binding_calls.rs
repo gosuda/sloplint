@@ -70,7 +70,7 @@ fn first_arg_tag(source: &str) -> (&'static str, u32, u32) {
     let tag = match &arg.shape {
         ArgShape::Str { .. } => "str",
         ArgShape::Concat { .. } => "concat",
-        ArgShape::Ident(_) => "ident",
+        ArgShape::Ident(_) | ArgShape::NamedIdent(_) => "ident",
         ArgShape::Collection => "collection",
         ArgShape::CodeBody => "code",
         ArgShape::Other => "other",

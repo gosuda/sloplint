@@ -237,6 +237,7 @@ mod tests {
         MutBinding {
             name,
             pos: Pos { line: 4, byte: 0 },
+            end_line: u32::MAX,
             last_write_line: 4,
             first_write_line: 4,
             write_lines: 0,

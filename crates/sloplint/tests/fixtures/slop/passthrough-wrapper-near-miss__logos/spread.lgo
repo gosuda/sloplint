@@ -1,0 +1,7 @@
+package probe
+func sum(vals ...int) int {
+	return len(vals)
+}
+func total(values []int) int {
+	return sum(..values)
+}

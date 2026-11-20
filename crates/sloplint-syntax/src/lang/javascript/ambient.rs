@@ -107,7 +107,9 @@ pub(crate) fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, P
 pub(crate) fn decl_names_for<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
     match n.kind() {
         "lexical_declaration" => {
-            if child_by_field(n, "kind").is_some_and(|kind| text(cx, kind) == "let") {
+            if child_by_field(n, "kind")
+                .is_some_and(|kind| matches!(text(cx, kind), "let" | "const"))
+            {
                 declared_names(cx, n, out);
             }
         }

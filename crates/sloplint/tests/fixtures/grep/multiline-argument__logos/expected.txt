@@ -1,2 +1,4 @@
 # Positive: Collection arg spans lines 11-27 (17 lines >= strict Minor(15)); finding at the call.
 a.lgo:10 info grep/multiline-argument
+# Positive: spread keeps the inline collection shape, same span through `..`.
+spread.lgo:10 info grep/multiline-argument

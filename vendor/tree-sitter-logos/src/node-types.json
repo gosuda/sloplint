@@ -827,6 +827,10 @@
       "required": false,
       "types": [
         {
+          "type": "comment",
+          "named": true
+        },
+        {
           "type": "const_spec",
           "named": true
         }
@@ -1277,6 +1281,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "comment",
+          "named": true
+        },
         {
           "type": "field_declaration",
           "named": true
@@ -1752,6 +1760,10 @@
       "required": false,
       "types": [
         {
+          "type": "comment",
+          "named": true
+        },
+        {
           "type": "import_spec",
           "named": true
         }
@@ -1807,6 +1819,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "comment",
+          "named": true
+        },
         {
           "type": "method_elem",
           "named": true
@@ -2672,6 +2688,10 @@
           "named": true
         },
         {
+          "type": "comment",
+          "named": true
+        },
+        {
           "type": "const_func_declaration",
           "named": true
         },
@@ -2727,6 +2747,10 @@
         },
         {
           "type": "break_statement",
+          "named": true
+        },
+        {
+          "type": "comment",
           "named": true
         },
         {
@@ -3243,6 +3267,10 @@
       "required": false,
       "types": [
         {
+          "type": "comment",
+          "named": true
+        },
+        {
           "type": "type_alias",
           "named": true
         },
@@ -3554,6 +3582,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "comment",
+          "named": true
+        },
         {
           "type": "var_spec",
           "named": true

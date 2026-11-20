@@ -81,12 +81,56 @@ fn forward_index<'a>(facts: &'a FileFacts<'_>) -> ForwardIndex<'a> {
     let mut valued: HashSet<&str> = HashSet::new();
     for call in &facts.calls {
         for arg in &call.args {
-            if let ArgShape::Ident(name) = &arg.shape {
-                valued.insert(name);
+            // A named identifier still references the name; only the
+            // positional check in forwards_every_param must ignore it.
+            let name = match &arg.shape {
+                ArgShape::Ident(name) | ArgShape::NamedIdent(name) => name,
+                _ => continue,
+            };
+            // A parameter or local that shadows the wrapper name is a
+            // different binding: passing it is no use of the wrapper.
+            if shadowed(facts, arg.start_line, name) {
+                continue;
             }
+            valued.insert(*name);
         }
     }
     ForwardIndex { twins, valued }
+}
+
+/// True when the identifier used at `line` resolves to a parameter or a
+/// local of the innermost enclosing function instead of to a file-scope
+/// function of the same name. Only the innermost range matters: a binding
+/// declared inside it before the use shadows the outer name, while a use
+/// outside every function, or in a function with no such parameter or
+/// local, still refers to the file-scope function.
+fn shadowed(facts: &FileFacts<'_>, line: u32, name: &str) -> bool {
+    let mut enclosing: Option<&Function<'_>> = None;
+    for function in &facts.functions {
+        if function.pos.line <= line && line <= function.end_line {
+            let inner = match enclosing {
+                None => true,
+                Some(best) => {
+                    function.pos.line >= best.pos.line && function.end_line <= best.end_line
+                }
+            };
+            if inner {
+                enclosing = Some(function);
+            }
+        }
+    }
+    let Some(function) = enclosing else {
+        return false;
+    };
+    if function.params.iter().any(|param| param.name == name) {
+        return true;
+    }
+    facts.bindings.iter().any(|binding| {
+        binding.name == name
+            && function.pos.line <= binding.pos.line
+            && binding.pos.line <= line
+            && line < binding.end_line
+    })
 }
 
 fn forwarded_callee<'s>(
@@ -208,6 +252,14 @@ mod tests {
     fn ident_arg(name: &str) -> Arg<'_> {
         Arg {
             shape: ArgShape::Ident(name),
+            start_line: 1,
+            end_line: 1,
+        }
+    }
+
+    fn named_ident_arg(name: &str) -> Arg<'_> {
+        Arg {
+            shape: ArgShape::NamedIdent(name),
             start_line: 1,
             end_line: 1,
         }
@@ -441,6 +493,251 @@ mod tests {
             vec![ident_arg("greet")],
         ));
         assert_eq!(flagged("fn greet() {}\n", functions, calls), 0);
+    }
+
+    #[test]
+    fn named_value_use_stays_silent() {
+        let (functions, mut calls) = forward_facts();
+        calls.push(call(
+            "register",
+            Some("register"),
+            true,
+            vec![named_ident_arg("greet")],
+        ));
+        assert_eq!(
+            flagged("fn greet() {}\n", functions, calls),
+            0,
+            "a wrapper passed as a named callback is still referenced"
+        );
+    }
+
+    #[test]
+    fn shadowed_param_named_value_still_flags() {
+        let mut render = fun("render", vec![param("s")], Some(0));
+        render.pos = Pos { line: 2, byte: 0 };
+        render.end_line = 4;
+        let mut show = fun("show", vec![param("render")], None);
+        show.pos = Pos { line: 6, byte: 0 };
+        show.end_line = 9;
+        let format_call = Call {
+            pos: Pos { line: 3, byte: 0 },
+            callee: "format",
+            kind: CallKind::Plain,
+            callee_root: Some("format"),
+            is_simple_path: true,
+            initializes_binding: false,
+            args: vec![Arg {
+                shape: ArgShape::Ident("s"),
+                start_line: 3,
+                end_line: 3,
+            }],
+        };
+        let display_call = Call {
+            pos: Pos { line: 7, byte: 0 },
+            callee: "display",
+            kind: CallKind::Plain,
+            callee_root: Some("display"),
+            is_simple_path: true,
+            initializes_binding: false,
+            args: vec![Arg {
+                shape: ArgShape::NamedIdent("render"),
+                start_line: 7,
+                end_line: 7,
+            }],
+        };
+        assert_eq!(
+            flagged(
+                "fn render() {}\n",
+                vec![render, show],
+                vec![format_call, display_call]
+            ),
+            1,
+            "a named value shadowed by a parameter is no use of the wrapper"
+        );
+    }
+
+    #[test]
+    fn shadowed_local_named_value_still_flags() {
+        let mut render = fun("render", vec![param("s")], Some(0));
+        render.pos = Pos { line: 2, byte: 0 };
+        render.end_line = 4;
+        let mut show = fun("show", Vec::new(), None);
+        show.pos = Pos { line: 6, byte: 0 };
+        show.end_line = 10;
+        let format_call = Call {
+            pos: Pos { line: 3, byte: 0 },
+            callee: "format",
+            kind: CallKind::Plain,
+            callee_root: Some("format"),
+            is_simple_path: true,
+            initializes_binding: false,
+            args: vec![Arg {
+                shape: ArgShape::Ident("s"),
+                start_line: 3,
+                end_line: 3,
+            }],
+        };
+        let display_call = Call {
+            pos: Pos { line: 8, byte: 0 },
+            callee: "display",
+            kind: CallKind::Plain,
+            callee_root: Some("display"),
+            is_simple_path: true,
+            initializes_binding: false,
+            args: vec![Arg {
+                shape: ArgShape::NamedIdent("render"),
+                start_line: 8,
+                end_line: 8,
+            }],
+        };
+        let strict = preset(Strictness::Strict);
+        let rule = build(strict.options, &Settings::default()).expect("strict preset builds");
+        let mut owned = facts(
+            "fn render() {}\n",
+            vec![render, show],
+            vec![format_call, display_call],
+        );
+        owned.bindings.push(crate::facts::MutBinding {
+            name: "render",
+            pos: Pos { line: 7, byte: 0 },
+            end_line: 9,
+            last_write_line: 7,
+            first_write_line: 7,
+            write_lines: 0,
+            loop_depth: 0,
+        });
+        let mut out = Vec::new();
+        rule.check(&owned, &mut out);
+        assert_eq!(
+            out.len(),
+            1,
+            "a named value shadowed by a local is no use of the wrapper"
+        );
+    }
+
+    #[test]
+    fn closed_scope_local_does_not_shadow_later_use() {
+        let mut render = fun("render", vec![param("s")], Some(0));
+        render.pos = Pos { line: 2, byte: 0 };
+        render.end_line = 4;
+        let mut show = fun("show", Vec::new(), None);
+        show.pos = Pos { line: 6, byte: 0 };
+        show.end_line = 11;
+        let format_call = Call {
+            pos: Pos { line: 3, byte: 0 },
+            callee: "format",
+            kind: CallKind::Plain,
+            callee_root: Some("format"),
+            is_simple_path: true,
+            initializes_binding: false,
+            args: vec![Arg {
+                shape: ArgShape::Ident("s"),
+                start_line: 3,
+                end_line: 3,
+            }],
+        };
+        // `render` here names the wrapper at line 10: the block-local
+        // `render` declared at line 7 already left scope at line 9, so
+        // it must not shadow the use — otherwise the wrapper looks
+        // unused and flags.
+        let display_call = Call {
+            pos: Pos { line: 10, byte: 0 },
+            callee: "display",
+            kind: CallKind::Plain,
+            callee_root: Some("display"),
+            is_simple_path: true,
+            initializes_binding: false,
+            args: vec![Arg {
+                shape: ArgShape::NamedIdent("render"),
+                start_line: 10,
+                end_line: 10,
+            }],
+        };
+        let strict = preset(Strictness::Strict);
+        let rule = build(strict.options, &Settings::default()).expect("strict preset builds");
+        let mut owned = facts(
+            "fn render() {}\n",
+            vec![render, show],
+            vec![format_call, display_call],
+        );
+        owned.bindings.push(crate::facts::MutBinding {
+            name: "render",
+            pos: Pos { line: 7, byte: 0 },
+            end_line: 9,
+            last_write_line: 7,
+            first_write_line: 7,
+            write_lines: 0,
+            loop_depth: 0,
+        });
+        let mut out = Vec::new();
+        rule.check(&owned, &mut out);
+        assert_eq!(
+            out.len(),
+            0,
+            "a use past the local's scope end is a use of the wrapper: {out:?}"
+        );
+    }
+
+    #[test]
+    fn closed_scope_local_on_the_same_line_does_not_shadow() {
+        let mut render = fun("render", vec![param("s")], Some(0));
+        render.pos = Pos { line: 2, byte: 0 };
+        render.end_line = 4;
+        let mut show = fun("show", Vec::new(), None);
+        show.pos = Pos { line: 6, byte: 0 };
+        show.end_line = 11;
+        let format_call = Call {
+            pos: Pos { line: 3, byte: 0 },
+            callee: "format",
+            kind: CallKind::Plain,
+            callee_root: Some("format"),
+            is_simple_path: true,
+            initializes_binding: false,
+            args: vec![Arg {
+                shape: ArgShape::Ident("s"),
+                start_line: 3,
+                end_line: 3,
+            }],
+        };
+        // `{ const render = ...; } display(render)` on one line: the
+        // block-local `render` ends on line 9 and the arg sits on the
+        // same line after the closing brace, so it names the wrapper.
+        let display_call = Call {
+            pos: Pos { line: 9, byte: 0 },
+            callee: "display",
+            kind: CallKind::Plain,
+            callee_root: Some("display"),
+            is_simple_path: true,
+            initializes_binding: false,
+            args: vec![Arg {
+                shape: ArgShape::NamedIdent("render"),
+                start_line: 9,
+                end_line: 9,
+            }],
+        };
+        let strict = preset(Strictness::Strict);
+        let rule = build(strict.options, &Settings::default()).expect("strict preset builds");
+        let mut owned = facts(
+            "fn render() {}\n",
+            vec![render, show],
+            vec![format_call, display_call],
+        );
+        owned.bindings.push(crate::facts::MutBinding {
+            name: "render",
+            pos: Pos { line: 7, byte: 0 },
+            end_line: 9,
+            last_write_line: 7,
+            first_write_line: 7,
+            write_lines: 0,
+            loop_depth: 0,
+        });
+        let mut out = Vec::new();
+        rule.check(&owned, &mut out);
+        assert_eq!(
+            out.len(),
+            0,
+            "a use on the local's closing-brace line names the wrapper: {out:?}"
+        );
     }
 
     #[test]
