@@ -133,3 +133,18 @@ Round 2 (2026-11-20 dogfood corpus):
   `a fun/add g[b]` groups as `a fun/add (g[b])`. A name-led path
   (`x a/b y`) stays a known gap.
 - `command` names accept primed targets (`check A'`, `run step'`).
+
+Round 4 (2026-11-20 review findings):
+
+- Adapter: `sole_box_join` compares primed declarator names via
+  `decl_name_text` on both sides — `run step'` suppresses `pred step'`
+  but leaves an unprimed `pred step` flagged. The sole-call check also
+  admits `infix_qual_call_expression`, so `fun w[a,b] { a fun/add b }`
+  is a passthrough wrapper.
+- Adapter: infix helper callees report `is_simple_path: true` — `fun/add`
+  is a qualified path like `fun/add[a, b]`.
+- `run this/step'` (trailing prime after a multi-segment qualified path)
+  is a verified upstream-parity gap: the pinned grammar rejects it
+  identically, so it is not accepted here either.
+- Doc: the `infix_qual_call_expression` comment now says only `fun/`
+  helpers are infix-applicable (the code already restricts to `fun`).

@@ -58,3 +58,17 @@ fun argy[a, b: S]: S { a }
 fun use_argy[x: S]: S {
   argy[x, /* pinned */ x]
 }
+
+// `run <primed>` suppresses only the primed target itself
+pred step'[s: State] {
+  inner_step[s]
+}
+
+run step'
+
+// an infix helper call is a sole call too: with more than one
+// statement the body is not a passthrough either way
+pred mixed[s: State] {
+  some s
+  s fun/add s
+}

@@ -342,9 +342,10 @@ module.exports = grammar({
     // Infix function application with a `/`-qualified callee:
     // `n1 fun/add n2` — the same call `fun/add[n1, n2]` writes in the
     // util modules. The operator's FIRST segment must be a declaration
-    // keyword (`fun/`, `pred/`...): a name-led path is ambiguous with
-    // adjacent expressions (`a = b c < d` in a block), so `x a/b y`
-    // stays a known gap.
+    // keyword — only `fun/` helpers are infix-applicable in Alloy,
+    // so restricting the operator to `fun` keeps a name-led path from
+    // being ambiguous with adjacent expressions (`a = b c < d` in a
+    // block). `x a/b y` stays a known gap.
     infix_qual_call_expression: $ => prec.left(PREC.BRACKET - 1, seq(
       field('left', $._expression),
       field('operator', $.infix_operator),

@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 51282fa1..a72c030c 100644
+index 51282fa1..0e34e493 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -22,12 +22,13 @@ const PREC = {
@@ -165,7 +165,7 @@ index 51282fa1..a72c030c 100644
        $.domain_expression,
        $.range_expression,
        $.dot_expression,
-@@ -316,9 +334,33 @@ module.exports = grammar({
+@@ -316,9 +334,34 @@ module.exports = grammar({
        $.prime_expression,
        $.quantified_expression,
        $.let_expression,
@@ -177,9 +177,10 @@ index 51282fa1..a72c030c 100644
 +    // Infix function application with a `/`-qualified callee:
 +    // `n1 fun/add n2` — the same call `fun/add[n1, n2]` writes in the
 +    // util modules. The operator's FIRST segment must be a declaration
-+    // keyword (`fun/`, `pred/`...): a name-led path is ambiguous with
-+    // adjacent expressions (`a = b c < d` in a block), so `x a/b y`
-+    // stays a known gap.
++    // keyword — only `fun/` helpers are infix-applicable in Alloy,
++    // so restricting the operator to `fun` keeps a name-led path from
++    // being ambiguous with adjacent expressions (`a = b c < d` in a
++    // block). `x a/b y` stays a known gap.
 +    infix_qual_call_expression: $ => prec.left(PREC.BRACKET - 1, seq(
 +      field('left', $._expression),
 +      field('operator', $.infix_operator),
@@ -199,7 +200,7 @@ index 51282fa1..a72c030c 100644
      // ; (trace sequence) - lowest precedence, right-assoc
      seq_expression: $ => prec.right(PREC.SEQ, seq(
        $._expression,
-@@ -376,7 +418,9 @@ module.exports = grammar({
+@@ -376,7 +419,9 @@ module.exports = grammar({
        $._expression,
        field('operator', choice(
          '=', '!=', 'in', '!in',
@@ -210,7 +211,7 @@ index 51282fa1..a72c030c 100644
          '<', '>', '<=', '>=', '=<',
          '!<', '!>', '!<=', '!>=',
        )),
-@@ -410,6 +454,13 @@ module.exports = grammar({
+@@ -410,6 +455,13 @@ module.exports = grammar({
        $._expression,
      )),
  
@@ -224,7 +225,7 @@ index 51282fa1..a72c030c 100644
      // Override: ++
      override_expression: $ => prec.left(PREC.OVERRIDE, seq(
        $._expression,
-@@ -435,14 +486,16 @@ module.exports = grammar({
+@@ -435,14 +487,16 @@ module.exports = grammar({
          $.some_arrow_op,
          $.one_arrow_op,
          $.lone_arrow_op,
@@ -244,7 +245,7 @@ index 51282fa1..a72c030c 100644
  
      // Domain restriction: <:
      domain_expression: $ => prec.left(PREC.DOMAIN, seq(
-@@ -458,21 +511,44 @@ module.exports = grammar({
+@@ -458,21 +512,44 @@ module.exports = grammar({
        $._expression,
      )),
  
@@ -292,7 +293,7 @@ index 51282fa1..a72c030c 100644
      // Closure/transpose: ~ ^ *
      closure_expression: $ => prec(PREC.UNOP, seq(
        field('operator', choice('~', '^', '*')),
-@@ -506,10 +582,10 @@ module.exports = grammar({
+@@ -506,10 +583,10 @@ module.exports = grammar({
      )),
  
      let_binding: $ => seq(
@@ -305,7 +306,7 @@ index 51282fa1..a72c030c 100644
      ),
  
      // ---- Primary expressions ----
-@@ -544,11 +620,15 @@ module.exports = grammar({
+@@ -544,11 +621,15 @@ module.exports = grammar({
        '}',
      ),
  
@@ -323,7 +324,7 @@ index 51282fa1..a72c030c 100644
        '}',
      ),
  
-@@ -563,12 +643,62 @@ module.exports = grammar({
+@@ -563,12 +644,62 @@ module.exports = grammar({
          seq('this', '/'),
          seq('seq', '/'),
        )),
