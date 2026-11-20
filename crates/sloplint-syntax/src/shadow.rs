@@ -65,6 +65,9 @@ pub(crate) struct FnFrame<'s> {
     pub depth: u32,
     pub frames: u32,
     pub decls: HashMap<&'s str, Vec<FrameDecl>>,
+    /// How many live decls sit at each scope, so `pop_decl_scopes` can
+    /// tell in O(1) that an exit closes nothing.
+    pub decl_scope_count: HashMap<usize, usize>,
     pub shadow: ScopedShadow<'s>,
     pub only: ScopedShadow<'s>,
     pub top: usize,
@@ -93,8 +96,14 @@ impl<'s> FnFrame<'s> {
     /// Pops every decl whose scope is `depth`, whatever registered it.
     /// Decls added by the bind path never enter `self.shadow` — languages
     /// without `DeclsAndBinds` filtering skip that registration — so freed
-    /// shadow names cannot drive the pop.
+    /// shadow names cannot drive the pop. `decl_scope_count` keeps the
+    /// exit path O(1) when no decl closes at this depth (the common case):
+    /// scanning `decls` on every node exit would be quadratic over a flat
+    /// block of locals.
     pub(crate) fn pop_decl_scopes(&mut self, depth: usize) -> Vec<usize> {
+        if !self.decl_scope_count.contains_key(&depth) {
+            return Vec::new();
+        }
         let mut closed = Vec::new();
         self.decls.retain(|_, stack| {
             while stack.last().is_some_and(|top| top.scope == depth) {
@@ -104,6 +113,7 @@ impl<'s> FnFrame<'s> {
             }
             !stack.is_empty()
         });
+        self.decl_scope_count.remove(&depth);
         closed
     }
 }

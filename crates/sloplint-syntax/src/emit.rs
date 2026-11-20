@@ -148,6 +148,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             depth: 0,
             frames: 0,
             decls: HashMap::new(),
+            decl_scope_count: HashMap::new(),
             shadow: ScopedShadow::new(),
             only: ScopedShadow::new(),
             top: self.depth.saturating_add(2),

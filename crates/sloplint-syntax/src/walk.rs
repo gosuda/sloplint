@@ -199,7 +199,9 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
         {
             let mut names = Vec::new();
             self.hooks.shadow_names(node, &self.make_cx(), &mut names);
-            let parent = self.hooks.decl_scope_parent(self.depth, node, &self.make_cx());
+            let parent = self
+                .hooks
+                .decl_scope_parent(self.depth, node, &self.make_cx());
             if let Some(frame) = self.fn_stack.last_mut() {
                 for name in names {
                     frame.shadow.register(name, parent);
