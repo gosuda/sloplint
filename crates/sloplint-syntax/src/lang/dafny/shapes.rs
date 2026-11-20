@@ -164,8 +164,11 @@ pub(crate) fn callee_parts<'s>(
 
 pub(crate) fn has_actual_binding(node: Node<'_>) -> bool {
     let mut cursor = node.walk();
-    node.children(&mut cursor)
-        .any(|child| child.is_named() && child.kind() == "actual_binding")
+    node.children(&mut cursor).any(|child| {
+        // `f()` carries no `actual_binding` node — its parens are anonymous
+        // children — but an application is still a call.
+        (child.is_named() && child.kind() == "actual_binding") || child.kind() == "("
+    })
 }
 
 pub(crate) fn pattern_names<'s>(cx: &Cx<'_, 's>, pattern: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {

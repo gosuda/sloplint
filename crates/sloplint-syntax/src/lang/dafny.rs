@@ -13,7 +13,7 @@
 use sloplint_core::facts::{Import, Pos};
 use tree_sitter::Node;
 
-use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, TypeHead};
+use crate::hooks::{CallHead, Cx, FunctionHead, LangHooks, TypeHead, trimmed};
 use crate::spec::Role;
 mod calls;
 mod funcs;
@@ -169,7 +169,6 @@ impl LangHooks for DafnyHooks {
                 | "reads_clause"
                 | "refines_clause"
                 | "replaces_clause"
-                | "witness_clause"
         )
     }
 
