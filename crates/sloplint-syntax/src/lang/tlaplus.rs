@@ -94,7 +94,7 @@ fn is_test_path(path: &str) -> bool {
 fn tlaplus_visibility(cx: &Cx<'_, '_>) -> Visibility {
     if cx
         .parent()
-        .is_some_and(|parent| parent.kind() == "local_definition")
+        .is_some_and(|parent| matches!(parent.kind(), "local_definition" | "let_in"))
     {
         Visibility::Private
     } else {

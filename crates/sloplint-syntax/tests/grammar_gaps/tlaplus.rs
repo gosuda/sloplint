@@ -285,3 +285,22 @@ fn pluscal_call_args_and_parallel_assign_writes() {
         .expect("PrintT call recorded");
     assert_eq!(print.args.len(), 1, "PrintT arg must be kept");
 }
+
+#[test]
+fn let_local_definitions_stay_private() {
+    let source = "---- MODULE L ----\nF == LET x == 1\n         y == 2\n     IN x + y\n====\n";
+    let analysis = run_clean("src/l.tla", source);
+    for want in ["x", "y"] {
+        let f = analysis
+            .facts
+            .functions
+            .iter()
+            .find(|f| f.name == want)
+            .unwrap_or_else(|| panic!("LET-local {want} is a function fact"));
+        assert_eq!(
+            f.visibility,
+            sloplint_core::facts::Visibility::Private,
+            "LET-local {want} must not be public"
+        );
+    }
+}
