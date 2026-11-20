@@ -137,6 +137,13 @@ impl LangHooks for DafnyHooks {
         {
             return depth.saturating_sub(2);
         }
+        if node.kind() == "for_statement" {
+            // The loop variable scopes to the statement itself: it pops
+            // when the `for` exits. The body block's own depth cannot be
+            // used — the header's expressions sit at that depth too and
+            // their exits would free the binding before the body runs.
+            return depth;
+        }
         let _ = cx;
         depth.saturating_sub(1)
     }
@@ -144,7 +151,11 @@ impl LangHooks for DafnyHooks {
     fn skip_subtree(&self, node: Node<'_>, cx: &Cx<'_, '_>) -> bool {
         // Specification clauses constrain proofs, not runtime behavior —
         // their expressions are not lintable code.
-        let _ = cx;
+        if node.kind() == "witness_clause" {
+            // `witness e` supplies a compiled default; only
+            // `ghost witness e` is proof-only.
+            return trimmed(cx, node).starts_with("ghost");
+        }
         matches!(
             node.kind(),
             "requires_clause"
