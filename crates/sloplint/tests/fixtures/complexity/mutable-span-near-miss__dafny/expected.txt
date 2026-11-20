@@ -1,0 +1,4 @@
+# near-miss: `for i` scopes to the loop body, so its writes do not extend the
+# outer `i` (declared line 3, written line 4); misattribution would span 31+
+# and fire. `var (a2, b2)` binds both names, so the line-36 write hits the
+# destructured binding, not the outer `a2`.

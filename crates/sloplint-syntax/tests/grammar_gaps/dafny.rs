@@ -15,7 +15,7 @@ use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 static NO_CUSTOM: LazyLock<CustomRules> =
     LazyLock::new(|| CustomRules::compile(&[]).expect("empty custom rules compile"));
 
-fn run(source: &str) -> Analysis<'_> {
+pub(crate) fn run(source: &str) -> Analysis<'_> {
     let input = FileInput {
         lang: Lang::Dafny,
         path: "gap.dfy",
@@ -27,7 +27,7 @@ fn run(source: &str) -> Analysis<'_> {
 
 /// first_error_pos cannot see hidden MISSING recovery nodes, so a clean
 /// `parse_error` alone could false-green; the raw tree must be healthy too.
-fn assert_raw_clean(source: &str) {
+pub(crate) fn assert_raw_clean(source: &str) {
     let language: tree_sitter::Language = tree_sitter_dafny::LANGUAGE.into();
     let mut parser = tree_sitter::Parser::new();
     parser
@@ -42,7 +42,7 @@ fn assert_raw_clean(source: &str) {
     );
 }
 
-fn run_clean(source: &str) -> Analysis<'_> {
+pub(crate) fn run_clean(source: &str) -> Analysis<'_> {
     assert_raw_clean(source);
     let analysis = run(source);
     assert!(
@@ -289,6 +289,91 @@ fn empty_match_parses_with_no_arms() {
     assert!(analysis.facts.wildcard_arms.is_empty());
 }
 
+#[test]
+fn var_decl_writes_are_tracked_on_the_binding() {
+    // `var x := 0` is the declaration; a later `x := ...` must record a
+    // write on the same binding — scoping `local_var_decl` to itself
+    // would miss it.
+    let analysis = run_clean(concat!(
+        "method M() {\n",
+        "  var x := 0;\n",
+        "  x := x + 1;\n",
+        "  x := x + 2;\n",
+        "}\n",
+    ));
+    let binding = analysis
+        .facts
+        .bindings
+        .iter()
+        .find(|b| b.name == "x")
+        .expect("x binding recorded");
+    assert_eq!(binding.write_lines, 2);
+    assert_eq!(binding.first_write_line, 3);
+    assert!(binding.last_write_line > binding.first_write_line);
+}
+
+#[test]
+fn chained_else_ifs_do_not_inflate_nesting() {
+    let nested = run_clean(concat!(
+        "method M(a: bool, b: bool) returns (r: int) {\n",
+        "  r := if a then if b then 1 else 2 else 3;\n",
+        "}\n",
+    ));
+    let m = &nested.facts.functions[0];
+    assert!(
+        m.max_depth >= 2,
+        "an if-expression in the then position nests: {}",
+        m.max_depth
+    );
+
+    let flat = run_clean(concat!(
+        "method M(c: bool) {\n",
+        "  if c {\n",
+        "  } else if c {\n",
+        "  }\n",
+        "}\n",
+    ));
+    let m = &flat.facts.functions[0];
+    assert_eq!(m.max_depth, 1, "an else-if chain counts once");
+}
+
+#[test]
+fn spec_clause_calls_are_not_linted() {
+    // Calls inside requires/ensures/invariant are proof constraints, not
+    // runtime calls — they must not appear as callees.
+    let analysis = run_clean(concat!(
+        "method Helper() returns (r: int) {\n",
+        "  r := 0;\n",
+        "}\n",
+        "method M() requires Helper() > 0 ensures Helper() > 0 {\n",
+        "  while true invariant Helper() > 0 {\n",
+        "    break;\n",
+        "  }\n",
+        "}\n",
+    ));
+    let callees: Vec<&str> = analysis.facts.calls.iter().map(|c| c.callee).collect();
+    assert!(
+        !callees.contains(&"Helper"),
+        "spec clauses are skipped: {callees:?}"
+    );
+}
+
+#[test]
+fn returns_clause_and_type_colon_report_output_types() {
+    let analysis = run_clean(concat!(
+        "method M(x: int) returns (r: int) {\n",
+        "  r := x;\n",
+        "}\n",
+        "function F(x: int): int {\n",
+        "  x\n",
+        "}\n",
+    ));
+    let m = &analysis.facts.functions[0];
+    assert_eq!(m.return_type, Some("(r: int)"));
+    let f = &analysis.facts.functions[1];
+    assert_eq!(f.return_type, Some("int"));
+}
+
 // --- Controls: still invalid ---------------------------------------------------
 
 #[test]
@@ -299,4 +384,141 @@ fn unclosed_block_still_errors() {
 #[test]
 fn unterminated_paren_still_errors() {
     run_error("method M( {\n}\n");
+}
+
+#[test]
+fn directive_comments_inside_contracts_still_register() {
+    // `requires` subtrees are skipped for lint facts, but suppression
+    // markers buried in them must still reach the comment stream.
+    let analysis = run_clean(concat!(
+        "method Check(n: int)\n",
+        "  requires n > 0 // sloplint-allow-file: spec\n",
+        "{\n",
+        "  var x := 1;\n",
+        "}\n",
+    ));
+    assert!(
+        analysis
+            .comments
+            .iter()
+            .any(|c| c.text.contains("sloplint-allow-file")),
+        "directive comment inside a skipped clause must register: {:?}",
+        analysis.comments
+    );
+}
+
+#[test]
+fn loop_index_binds_to_the_loop_scope() {
+    // `for i := 0` shadows an outer `i`: its initialization and the body's
+    // writes belong to the loop's own binding, not the outer local.
+    let analysis = run_clean(concat!(
+        "method M()\n",
+        "{\n",
+        "  var i := 0;\n",
+        "  i := 1;\n",
+        "  for i := 0 to 10\n",
+        "  {\n",
+        "    var k := i + 1;\n",
+        "  }\n",
+        "  i := 5;\n",
+        "}\n",
+    ));
+    let bindings: Vec<_> = analysis
+        .facts
+        .bindings
+        .iter()
+        .filter(|b| b.name == "i")
+        .collect();
+    assert_eq!(bindings.len(), 2, "expected outer and loop `i` bindings");
+    assert_eq!(bindings[0].last_write_line, 9);
+    // The loop index is read-only in Dafny — its only write is the `for`
+    // initializer itself.
+    assert_eq!(bindings[1].last_write_line, 5);
+}
+
+#[test]
+fn tuple_var_decls_bind_their_names() {
+    // `var (a2, b2) := pair` registers both names; a later write hits the
+    // destructured binding, not an outer local of the same name.
+    let analysis = run_clean(concat!(
+        "method M()\n",
+        "{\n",
+        "  var (a2, b2) := (1, 2);\n",
+        "  a2 := 5;\n",
+        "}\n",
+    ));
+    let names: Vec<_> = analysis.facts.bindings.iter().map(|b| b.name).collect();
+    assert!(
+        names.contains(&"a2") && names.contains(&"b2"),
+        "destructured names must bind: {names:?}"
+    );
+    let a2 = analysis
+        .facts
+        .bindings
+        .iter()
+        .find(|b| b.name == "a2")
+        .unwrap();
+    assert_eq!(a2.last_write_line, 4);
+}
+
+#[test]
+fn plain_witness_expressions_are_lintable() {
+    // `witness e` is compiled — its calls must reach lint facts; only
+    // `ghost witness e` is proof-only and skipped.
+    let analysis = run_clean(concat!(
+        "function ComputeDefault(): int\n",
+        "{\n",
+        "  1\n",
+        "}\n",
+        "type X = x: int | x > 0 witness ComputeDefault()\n",
+        "type G = y: int | y > 0 ghost witness ComputeDefault()\n",
+    ));
+    let calls: Vec<_> = analysis.facts.calls.iter().map(|c| c.callee).collect();
+    assert_eq!(
+        calls.iter().filter(|c| **c == "ComputeDefault").count(),
+        1,
+        "only the compiled witness's call is a lint fact: {calls:?}"
+    );
+}
+
+#[test]
+fn datatype_updates_are_not_calls() {
+    // `p.(x := 1)` is a datatype update — a `.` then `(` suffix — not a call.
+    let analysis = run_clean(concat!(
+        "datatype P = P(x: int)\n",
+        "method M()\n",
+        "{\n",
+        "  var p := P(0);\n",
+        "  p := p.(x := 1);\n",
+        "  Helper();\n",
+        "}\n",
+        "method Helper() {}\n",
+    ));
+    let callees: Vec<_> = analysis.facts.calls.iter().map(|c| c.callee).collect();
+    assert!(
+        callees.contains(&"Helper"),
+        "real calls still land: {callees:?}"
+    );
+    assert!(
+        !callees.contains(&"p"),
+        "datatype update is not a call: {callees:?}"
+    );
+}
+
+#[test]
+fn if_inside_an_else_operand_still_counts_as_nesting() {
+    // `else 1 + if b then 2 else 3`: the inner if is an operand of the else
+    // expression, not an else-if alternative — it must count as a level.
+    let analysis = run_clean(concat!(
+        "function Pick(x: int): int\n",
+        "{\n",
+        "  if x == 0 then 0 else 1 + if x == 1 then 2 else 3\n",
+        "}\n",
+    ));
+    let f = &analysis.facts.functions[0];
+    assert!(
+        f.max_depth >= 2,
+        "nested conditional inside the else operand must count: {}",
+        f.max_depth
+    );
 }
