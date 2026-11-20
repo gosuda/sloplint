@@ -1,14 +1,24 @@
+diff --git a/grammar.js b/grammar.js
+index 0e0078a..7154c42 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -24,6 +24,7 @@
+@@ -23,6 +23,15 @@ module.exports = grammar({
+ 
    conflicts: $ => [
      [$.class_body, $.enum_class_body],
- 
++    // `_file_statement` offers both `declaration` and `statement`, so a
++    // top-level `class C {}` reduces under either supertype — the trees
++    // are identical.
++    [$.declaration, $.statement],
++    // Top-level `var x = 1` is reachable as both the full property (with
++    // accessor tail) and the local variant; the local rule's negative
++    // dynamic precedence makes the full property win.
++    [$.property_declaration, $.local_property_declaration],
 +
+ 
      [$.binary_expression, $.call_expression],
      [$.binary_expression, $.in_expression, $.call_expression],
-     [$.binary_expression, $.infix_expression, $.call_expression],
-@@ -33,26 +34,37 @@
+@@ -33,26 +42,37 @@ module.exports = grammar({
      [$._simple_user_type, $.primary_expression],
      [$.type, $._receiver_type],
  
@@ -53,7 +63,7 @@
      [$.platform_modifier, $._reserved_identifier],
      [$.property_modifier, $._reserved_identifier],
  
-@@ -63,6 +75,14 @@
+@@ -63,6 +83,14 @@ module.exports = grammar({
      [$.non_nullable_type],
      [$.function_type],
      [$._receiver_type],
@@ -68,7 +78,7 @@
    ],
  
    extras: $ => [
-@@ -85,6 +105,15 @@
+@@ -85,6 +113,20 @@ module.exports = grammar({
      'set',
      // used to check if we can parse a comment
      '$',
@@ -76,6 +86,11 @@
 +    // follows it, so `var x = 1; private set` keeps the accessor inside the
 +    // property instead of consuming the `;` as a member separator.
 +    $._accessor_semi,
++    // Emitted instead of `_accessor_semi` when the word after `;` is
++    // `field`: a backing field can only open a property tail, never follow
++    // an accessor, so `val x = 1; get() = 1; field = 2` parses the last
++    // clause as a separate statement rather than a dead accessor slot.
++    $._field_semi,
 +    // Emitted instead of `_semi` when a declaration separator is followed
 +    // by `(`, so a delegation's constructor invocation can span the line
 +    // break (`class D : Base\n() {}`) without the plain `_semi` competing
@@ -84,7 +99,7 @@
    ],
  
    inline: $ => [
-@@ -115,7 +144,7 @@
+@@ -115,7 +157,7 @@ module.exports = grammar({
        repeat($.file_annotation),
        optional($.package_header),
        repeat($.import),
@@ -93,7 +108,7 @@
      ),
  
      file_annotation: $ => seq(
-@@ -155,6 +184,7 @@
+@@ -155,6 +197,7 @@ module.exports = grammar({
      ),
  
      class_declaration: $ => prec.right(seq(
@@ -101,7 +116,7 @@
        optional($.modifiers),
        choice('class', seq(optional('fun'), 'interface')),
        field('name', $.identifier),
-@@ -174,6 +204,20 @@
+@@ -174,6 +217,20 @@ module.exports = grammar({
      )),
  
      property_declaration: $ => prec.right(seq(
@@ -111,7 +126,7 @@
 +        // member/statement separator (`_class_member_semi` / `_semi`), never
 +        // as a literal `;` — the scanner emits `_accessor_semi` instead when
 +        // an accessor word follows it, so `var x = 1; private set` parses.
-+        seq($._accessor_semi, $._property_tail),
++        seq(choice($._accessor_semi, $._field_semi), $._property_tail),
 +        $._property_tail,
 +        ';',
 +      )),
@@ -122,7 +137,7 @@
        optional($.modifiers),
        choice('val', 'var'),
        optional($.type_parameters),
-@@ -184,13 +228,48 @@
+@@ -184,13 +241,51 @@ module.exports = grammar({
          seq('=', $.expression),
          $.property_delegate,
        )),
@@ -133,15 +148,18 @@
 +    // statement-position variant ends at the initializer — `var x = 1;
 +    // field = 5` in a body is an initializer then an assignment to a local
 +    // `field`, never a backing field.
-+    local_property_declaration: $ => prec.right(seq(
++    // Lower dynamic precedence than `property_declaration` so that at
++    // top level — where both variants are reachable through
++    // `_file_statement` — the full accessor/backing-field tail wins.
++    local_property_declaration: $ => prec.dynamic(-1, prec.right(seq(
 +      $._property_declaration_head,
        optional(';'),
 -      optional(choice(
 -        seq($.getter, optional($.setter)),
 -        seq($.setter, optional($.getter)),
 -      )),
-     )),
- 
++    ))),
++
 +    _property_tail: $ => prec.right(choice(
 +      // Kotlin 2.x explicit backing field: `val x: T` then `field = expr`
 +      // where an accessor would sit (upstream v1.1.0 gap). Accessors can
@@ -163,8 +181,8 @@
 +      ),
 +      seq($.getter, optional(seq(optional($._accessor_semi), $.setter))),
 +      seq($.setter, optional(seq(optional($._accessor_semi), $.getter))),
-+    )),
-+
+     )),
+ 
 +    context_parameters: $ => seq(
 +      'context',
 +      '(',
@@ -175,7 +193,7 @@
      type_alias: $ => prec.right(seq(
        optional($.modifiers),
        'typealias',
-@@ -221,7 +300,7 @@
+@@ -221,7 +316,7 @@ module.exports = grammar({
  
      constructor_delegation_call: $ => seq(choice('this', 'super'), $.value_arguments),
  
@@ -184,7 +202,7 @@
  
      type_parameter: $ => seq(
        optional($.type_parameter_modifiers),
-@@ -265,6 +344,7 @@
+@@ -265,6 +360,7 @@ module.exports = grammar({
      constructor_invocation: $ => seq($.type, $.value_arguments),
  
      function_declaration: $ => prec.right(1, seq(
@@ -192,7 +210,7 @@
        optional($.modifiers),
        'fun',
        optional($.type_parameters),
-@@ -276,6 +356,16 @@
+@@ -276,6 +372,16 @@ module.exports = grammar({
        optional($.function_body),
      )),
  
@@ -209,7 +227,7 @@
      function_value_parameters: $ => seq(
        '(',
        optionalCommaSep1(seq(
-@@ -293,12 +383,18 @@
+@@ -293,12 +399,18 @@ module.exports = grammar({
      delegation_specifier: $ => prec.right(seq(
        repeat($.annotation),
        choice(
@@ -229,7 +247,7 @@
      variable_declaration: $ => prec(1, seq(
        repeat($.annotation),
        $._identifier,
-@@ -322,6 +418,14 @@
+@@ -322,6 +434,14 @@ module.exports = grammar({
        $.primary_expression,
      ),
  
@@ -244,7 +262,7 @@
      getter: $ => prec.right(seq(
        optional($.modifiers),
        'get',
-@@ -415,7 +519,7 @@
+@@ -415,7 +535,7 @@ module.exports = grammar({
  
      enum_entry: $ => seq(
        optional($.modifiers),
@@ -253,7 +271,7 @@
        optional($.value_arguments),
        optional($.class_body),
      ),
-@@ -427,7 +531,7 @@
+@@ -427,7 +547,7 @@ module.exports = grammar({
      ),
  
      value_argument: $ => seq(
@@ -262,7 +280,7 @@
        optional('*'),
        $.expression,
      ),
-@@ -438,7 +542,31 @@
+@@ -438,8 +558,19 @@ module.exports = grammar({
        optional($._semi),
      ),
  
@@ -274,27 +292,32 @@
 +    // kind in the tree. Declarations are spelled out (rather than
 +    // `$.declaration`) so the local property variant substitutes in.
      statement: $ => choice(
+-      $.declaration,
 +      $.class_declaration,
 +      $.object_declaration,
 +      $.function_declaration,
 +      alias($.local_property_declaration, $.property_declaration),
 +      $.type_alias,
-+      $.assignment,
-+      $.for_statement,
-+      $.while_statement,
-+      $.do_while_statement,
-+      $.expression,
-+    ),
-+
+       $.assignment,
+       $.for_statement,
+       $.while_statement,
+@@ -447,6 +578,15 @@ module.exports = grammar({
+       $.expression,
+     ),
+ 
 +    // Top-level statements, where full `property_declaration` (accessors,
 +    // backing fields) applies. `block` children list the `statement`
 +    // supertype, so `(block (statement) ...)` custom-rule queries keep
 +    // compiling while local positions keep the no-accessor variant.
 +    _file_statement: $ => choice(
-       $.declaration,
-       $.assignment,
-       $.for_statement,
-@@ -584,7 +712,7 @@
++      $.declaration,
++      $.statement,
++    ),
++
+     modifiers: $ => prec.right(repeat1(choice(
+       $.annotation,
+       $.class_modifier,
+@@ -584,7 +724,7 @@ module.exports = grammar({
        ),
      ),
  
@@ -303,7 +326,7 @@
  
      type_projection: $ => choice(
        seq(repeat($.variance_modifier), $.type),
-@@ -593,6 +721,7 @@
+@@ -593,6 +733,7 @@ module.exports = grammar({
  
      function_type: $ => seq(
        optional($.type_modifiers),
@@ -311,7 +334,7 @@
        optional(seq($._receiver_type, '.')),
        $.function_type_parameters,
        '->',
-@@ -605,7 +734,21 @@
+@@ -605,7 +746,21 @@ module.exports = grammar({
        ')',
      ),
  
@@ -334,7 +357,7 @@
  
      assignment: $ => seq(
        field('left', $.expression),
-@@ -752,6 +895,7 @@
+@@ -752,6 +907,7 @@ module.exports = grammar({
      ),
  
      lambda_literal: $ => seq(
@@ -342,7 +365,7 @@
        '{',
        optional(seq(optional($.lambda_parameters), '->')),
        optionalSep1($.statement, $._semi),
-@@ -768,7 +912,7 @@
+@@ -768,7 +924,7 @@ module.exports = grammar({
      anonymous_function: $ => prec.right(seq(
        'fun',
        optional(seq($.type, '.')),
@@ -351,7 +374,7 @@
        optional(seq(':', $.type)),
        optional($.type_constraints),
        optional($.function_body),
-@@ -825,7 +969,9 @@
+@@ -825,7 +981,9 @@ module.exports = grammar({
  
      parenthesized_expression: $ => seq('(', $.expression, ')'),
  
@@ -362,7 +385,7 @@
  
      when_expression: $ => seq(
        'when',
-@@ -853,6 +999,11 @@
+@@ -853,6 +1011,11 @@ module.exports = grammar({
            commaSep1(field('condition', $._when_condition)),
            optional(','),
          ),
@@ -374,7 +397,7 @@
          'else',
        ),
        '->',
-@@ -922,14 +1073,20 @@
+@@ -922,14 +1085,20 @@ module.exports = grammar({
      ),
  
      callable_reference: $ => seq(
@@ -397,7 +420,7 @@
        $.identifier,
      )),
  
-@@ -940,6 +1097,7 @@
+@@ -940,6 +1109,7 @@ module.exports = grammar({
      ),
  
      string_literal: $ => seq(
@@ -405,7 +428,7 @@
        '"',
        repeat(choice(
          alias(choice(
-@@ -956,14 +1114,17 @@
+@@ -956,14 +1126,17 @@ module.exports = grammar({
      ),
  
      multiline_string_literal: $ => seq(
@@ -424,7 +447,7 @@
      interpolation: $ => choice(
        seq('$', $._identifier),
        seq('${', $.expression, '}'),
-@@ -1045,7 +1206,7 @@
+@@ -1045,7 +1218,7 @@ module.exports = grammar({
        /`[^\r\n`]+`/,
      )),
  
@@ -433,7 +456,7 @@
        choice(
          'actual',
          'annotation',
-@@ -1059,6 +1220,9 @@
+@@ -1059,6 +1232,9 @@ module.exports = grammar({
          'set',
          'operator',
          'value',
@@ -443,13 +466,16 @@
        ),
        $.identifier,
      )),
+diff --git a/src/scanner.c b/src/scanner.c
+index 8f9d287..eddf20a 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -15,10 +15,14 @@
+@@ -15,10 +15,15 @@ enum TokenType {
      GET,
      SET,
      DOLLAR,
 +    ACCESSOR_SEMI,
++    FIELD_SEMI,
 +    DELEGATION_SEMI,
  };
  
@@ -461,7 +487,7 @@
  
  static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
  
-@@ -61,6 +65,240 @@
+@@ -61,6 +66,261 @@ static bool scan_words(TSLexer *lexer, const char words[MAX_WORDS][MAX_WORD_SIZE
      return false;
  }
  
@@ -564,6 +590,10 @@
 +// emitted token's extent stays at the `;`.
 +static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
 +    char accessor_word[16] = {0};
++    // Whether an annotation or modifier word preceded the accessor word:
++    // `private set` is a bare accessor, while `get.run()` / `set + 1` are
++    // statements using `get`/`set` as plain identifiers.
++    bool had_prefix = false;
 +    for (;;) {
 +        skip_ws_comments(lexer);
 +        if (lexer->lookahead == '@') {
@@ -588,6 +618,7 @@
 +                    skip(lexer);
 +                } while (depth > 0 && !lexer->eof(lexer));
 +            }
++            had_prefix = true;
 +            continue;
 +        }
 +        if (scan_words(lexer,
@@ -597,6 +628,7 @@
 +                                           "expect"},
 +                       accessor_word, NULL)) {
 +            memset(accessor_word, 0, MAX_WORD_SIZE);
++            had_prefix = true;
 +            continue;
 +        }
 +        break;
@@ -614,14 +646,14 @@
 +        return;
 +    }
 +    if (accessor_index == 0 || accessor_index == 1) {
-+        // `get`/`set` as plain identifiers: `get = 2` assigns (bare `get`
-+        // is never an accessor — a getter needs `()`), `get(x)` and
-+        // `set(v)` call. A paren'ed accessor must be followed by a body
-+        // (`= expr`/`{...}`/`: type`) or it is a call, not an accessor.
++        // A `get`/`set` accessor is either paren'ed (`get() = ...`,
++        // `set(v) { }`) or a bare visibility-only accessor behind a
++        // modifier (`private set`). Any other unmodified use — `get = 2`,
++        // `get.run()`, `set + 1` — is a plain identifier statement, not an
++        // accessor, so the `;` must stay a statement separator. A paren'ed
++        // accessor must be followed by a body (`= expr`/`{...}`/`: type`)
++        // or it is a call, not an accessor.
 +        skip_ws_comments(lexer);
-+        if (lexer->lookahead == '=') {
-+            return;
-+        }
 +        if (lexer->lookahead == '(') {
 +            skip(lexer);
 +            skip_ws_comments(lexer);
@@ -683,6 +715,11 @@
 +            if (lexer->lookahead != '=' && lexer->lookahead != '{' && lexer->lookahead != ':') {
 +                return;
 +            }
++        } else if (!had_prefix) {
++            // Unmodified bare `get`/`set` is never an accessor (a getter
++            // needs `()`, a bare setter exists only behind a visibility
++            // modifier), so `get.run()`-style statements stay statements.
++            return;
 +        }
 +    } else if (accessor_index == 2) {
 +        // `field` binds a backing field only before `=` (or `: type =`),
@@ -692,6 +729,16 @@
 +        if (lexer->lookahead != '=' && lexer->lookahead != ':') {
 +            return;
 +        }
++        // A backing field can only open the property tail, so it gets a
++        // distinct token: `_field_semi` is only valid at the tail start.
++        // After a completed accessor `; field = n` is a new statement, so
++        // leave the already-marked `_semi` in place when the token is not
++        // valid here.
++        if (!valid_symbols[FIELD_SEMI]) {
++            return;
++        }
++        lexer->result_symbol = FIELD_SEMI;
++        return;
 +    }
 +    lexer->result_symbol = ACCESSOR_SEMI;
 +}
@@ -702,17 +749,17 @@
  void *tree_sitter_kotlin_external_scanner_create() { return NULL; }
  
  void tree_sitter_kotlin_external_scanner_destroy(void *payload) {}
-@@ -119,6 +357,9 @@
+@@ -119,6 +379,9 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
              if (lexer->lookahead == ';') {
                  advance(lexer);
                  lexer->mark_end(lexer);
-+                if (valid_symbols[ACCESSOR_SEMI]) {
++                if (valid_symbols[ACCESSOR_SEMI] || valid_symbols[FIELD_SEMI]) {
 +                    accessor_after_semi(lexer, valid_symbols);
 +                }
                  return true;
              }
  
-@@ -166,6 +407,10 @@
+@@ -166,6 +429,10 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      return false;
                  case 'i':
                      return scan_word(lexer, "import");
@@ -723,7 +770,7 @@
                  case ';':
                      advance(lexer);
                      lexer->mark_end(lexer);
-@@ -178,9 +423,11 @@
+@@ -178,9 +445,11 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
          char scanned_word[16] = {0};
      _switch:
          switch (lexer->lookahead) {
@@ -736,7 +783,7 @@
              case '*':
              case '%':
              case '>':
-@@ -224,6 +471,26 @@
+@@ -224,6 +493,26 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      goto q_dot_from_semi;
                  }
                  return true;
@@ -763,7 +810,7 @@
              case 'e':
              case 'i':
              case 'g':
-@@ -238,23 +505,36 @@
+@@ -238,23 +527,36 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
              case 'c':
              case 'b':
              case 'w':
@@ -806,7 +853,7 @@
                  // If `CLASS_MEMBER_SEMI` is valid, we found a secondary constructor and so we want to insert a semi, OR
                  // we found a variable named constructor whose field is being accessed
                  if (index == 5) {
-@@ -279,18 +559,22 @@
+@@ -279,18 +581,22 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                      }
                  }
                  // If `get` was found and the keyword is not valid, return a semi since it's being used as an identifier
@@ -834,7 +881,7 @@
  
                          while (iswspace(lexer->lookahead)) {
                              if (lexer->lookahead == '\n') {
-@@ -307,6 +591,33 @@
+@@ -307,6 +613,33 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                  else if (index == 1 && valid_symbols[IN]) {
                      return true;
                  }
@@ -868,20 +915,12 @@
                  return !res;
              case ';':
                  advance(lexer);
-@@ -314,20 +625,60 @@
+@@ -314,20 +647,60 @@ bool tree_sitter_kotlin_external_scanner_scan(void *payload, TSLexer *lexer, con
                  return true;
              case '@':
                  if (valid_symbols[CONSTRUCTOR]) {
 -                    while (!iswspace(lexer->lookahead)) {
 -                        skip(lexer);
--                    }
--                    while (iswspace(lexer->lookahead)) {
--                        skip(lexer);
--                    }
--                    char ctor[12] = "constructor";
--                    for (uint8_t i = 0; i < 11; i++) {
--                        if (lexer->lookahead != ctor[i]) {
--                            return true;
 +                    // `@A(x) @B private actual constructor` — a secondary
 +                    // constructor head may be split across lines with any
 +                    // number of annotations and modifiers between them. Skip
@@ -915,10 +954,10 @@
 +                        skip_ws_comments(lexer);
 +                        if (lexer->lookahead != '@') {
 +                            break;
-                         }
--                        skip(lexer);
++                        }
                      }
--                    return false;
+-                    while (iswspace(lexer->lookahead)) {
+-                        skip(lexer);
 +                    while (scan_words(lexer,
 +                                      (const char[MAX_WORDS][MAX_WORD_SIZE]){"public", "private", "protected", "internal",
 +                                                           "abstract", "final", "open", "override", "lateinit",
@@ -927,7 +966,13 @@
 +                                      scanned_word, NULL)) {
 +                        memset(scanned_word, 0, MAX_WORD_SIZE);
 +                        skip_ws_comments(lexer);
-+                    }
+                     }
+-                    char ctor[12] = "constructor";
+-                    for (uint8_t i = 0; i < 11; i++) {
+-                        if (lexer->lookahead != ctor[i]) {
+-                            return true;
+-                        }
+-                        skip(lexer);
 +                    // `scan_words` buffers the word it scanned even on a
 +                    // miss, so `constructor` may already sit in
 +                    // `scanned_word` here — match it through the same
@@ -936,7 +981,8 @@
 +                                   (const char[MAX_WORDS][MAX_WORD_SIZE]){"constructor"},
 +                                   scanned_word, NULL)) {
 +                        return false;
-+                    }
+                     }
+-                    return false;
 +                    return true;
                  }
                  if (valid_symbols[GET] || valid_symbols[SET]) {
