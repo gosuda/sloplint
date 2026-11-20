@@ -145,3 +145,8 @@ Round 7 keeps script statements out of the accessor probe: `set[i] = v`,
 `get { }`, `get as T`, and the other word-form infix operators (`is`, `in`,
 `to`, `by`, `and`, `or`, `xor`, `shl`, `shr`, `ushr`) reject the token, so
 indexed assignments and word-operator expressions after `;` stay statements.
+Round 7b generalizes the accessor-probe word check: Kotlin infix callees
+are arbitrary identifiers, so instead of a fixed operator list the probe
+rejects any non-member word followed by an expression start (`get until 2`,
+`x foo y`, `get as Int`), while member keywords and modifiers (`val`,
+`private`, `set`, ...) still let the bare accessor through.

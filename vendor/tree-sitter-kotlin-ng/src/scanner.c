@@ -23,7 +23,7 @@ enum TokenType {
 #define MAX_WORD_SIZE 16
 // Word tables list every modifier keyword plus a margin — keep the bound
 // above the longest initializer or trailing words are silently dropped.
-#define MAX_WORDS 20
+#define MAX_WORDS 40
 
 static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
 
@@ -325,14 +325,34 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
             default:
                 break;
             }
-            // Kotlin's word-form infix operators continue an expression:
-            // `get as T`, `x is C`, `get shl 1`, `a in b`, `x to y`.
-            char infix_word[16] = {0};
-            if (scan_words(lexer,
-                           (const char[MAX_WORDS][MAX_WORD_SIZE]){"as", "is", "in", "to", "by",
-                                               "and", "or", "xor", "shl", "shr", "ushr"},
-                           infix_word, NULL)) {
-                return;
+            // A member keyword or modifier after a bare accessor starts the
+            // next member (`get` + `private set`, `var y = 2`). Any other
+            // word followed by an expression start is an infix call
+            // (`get until 2`, `x foo y`, `get as Int`) — Kotlin infix
+            // callees are arbitrary identifiers, so a fixed word list
+            // cannot cover them.
+            char member_word[16] = {0};
+            if (!scan_words(lexer,
+                            (const char[MAX_WORDS][MAX_WORD_SIZE]){"val", "var", "fun", "class",
+                                                "object", "interface", "enum", "annotation",
+                                                "typealias", "constructor", "init", "companion",
+                                                "public", "private", "protected", "internal",
+                                                "abstract", "final", "open", "override",
+                                                "lateinit", "const", "data", "sealed",
+                                                "inner", "value", "inline", "tailrec",
+                                                "operator", "infix", "external", "suspend",
+                                                "expect", "actual", "get", "set"},
+                            member_word, NULL) &&
+                member_word[0]) {
+                skip_ws_comments(lexer);
+                if (iswalnum(lexer->lookahead) || lexer->lookahead == '_' ||
+                    lexer->lookahead == '(' || lexer->lookahead == '[' ||
+                    lexer->lookahead == '{' || lexer->lookahead == '"' ||
+                    lexer->lookahead == '\'' || lexer->lookahead == '`' ||
+                    lexer->lookahead == '!' || lexer->lookahead == '-' ||
+                    lexer->lookahead == '+' || lexer->lookahead == '.') {
+                    return;
+                }
             }
         }
     } else if (accessor_index == 2) {

@@ -467,3 +467,12 @@ fn plain_member_after_semicolon_accessor_parses() {
 fn bare_default_accessors_after_a_semicolon_parse() {
     run_clean("class C {\n    var x = 1; set\n    var y = 2; get; private set\n}\n");
 }
+#[test]
+fn infix_word_calls_after_a_semicolon_stay_statements() {
+    run_clean(
+        "fun f() {\n\
+         \x20   val x = 1; get until 2; set downTo 0\n\
+         \x20   var y = 2; get as Int\n\
+         }\n",
+    );
+}
