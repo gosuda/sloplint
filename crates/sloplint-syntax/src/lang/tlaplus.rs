@@ -12,11 +12,11 @@ use std::borrow::Cow;
 
 use crate::hooks::{
     CallHead, Cx, FunctionHead, LangHooks, child_by_field, first_named_child_matching,
-    named_children, pos_of, preceding_comments, trimmed,
+    named_children, narrow, pos_of, preceding_comments, trimmed,
 };
 use crate::spec::Role;
 use sloplint_core::facts::{
-    CallKind, Import, ImportKind, ImportScope, Param, Pos, PrimitiveKind, Visibility,
+    Arg, ArgShape, CallKind, Import, ImportKind, ImportScope, Param, Pos, PrimitiveKind, Visibility,
 };
 use tree_sitter::Node;
 
@@ -24,7 +24,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("operator_definition", Role::Function),
     ("function_definition", Role::Function),
     ("theorem", Role::Function),
-    ("pcal_macro_decl", Role::Function),
+    ("pcal_macro", Role::Function),
     ("pcal_procedure", Role::Function),
     ("pcal_process", Role::Function),
     ("if_then_else", Role::If),
@@ -52,6 +52,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("constant_declaration", Role::Decl),
     ("recursive_declaration", Role::Decl),
     ("pcal_var_decl", Role::Decl),
+    ("pcal_proc_var_decl", Role::Decl),
     ("pcal_assign", Role::Write),
     ("comment", Role::Comment),
     ("block_comment", Role::Comment),
@@ -63,6 +64,33 @@ pub(crate) struct TlaplusHooks;
 
 const COMMENT_KINDS: &[&str] = &["comment", "block_comment"];
 
+fn call_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Arg<'s>> {
+    // Inline comments are named children of calls but not arguments.
+    if matches!(n.kind(), "comment" | "block_comment") {
+        return None;
+    }
+    let shape = match n.kind() {
+        "string" => {
+            let raw = trimmed(cx, n);
+            let inner = raw
+                .strip_prefix('"')
+                .and_then(|s| s.strip_suffix('"'))
+                .unwrap_or(raw);
+            ArgShape::Str {
+                // The log-literal rule compares against a character count.
+                longest_static: narrow(inner.chars().count()),
+            }
+        }
+        "identifier" | "identifier_ref" => ArgShape::Ident(trimmed(cx, n)),
+        _ => ArgShape::Other,
+    };
+    Some(Arg {
+        shape,
+        start_line: narrow(n.start_position().row) + 1,
+        end_line: narrow(n.end_position().row) + 1,
+    })
+}
+
 fn is_test_path(path: &str) -> bool {
     path.split('/')
         .any(|segment| segment == "test" || segment == "tests")
@@ -71,7 +99,7 @@ fn is_test_path(path: &str) -> bool {
 fn tlaplus_visibility(cx: &Cx<'_, '_>) -> Visibility {
     if cx
         .parent()
-        .is_some_and(|parent| parent.kind() == "local_definition")
+        .is_some_and(|parent| matches!(parent.kind(), "local_definition" | "let_in"))
     {
         Visibility::Private
     } else {
@@ -189,11 +217,15 @@ impl LangHooks for TlaplusHooks {
                 let name = name_of(cx, n)?;
                 Some(function_head(cx, n, name, Vec::new()))
             }
-            "pcal_macro_decl" => {
-                let name = name_of(cx, n)?;
-                let name_id = child_by_field(n, "name").map(|named| named.id());
+            "pcal_macro" => {
+                // `pcal_macro` wraps the `pcal_macro_decl` head plus the
+                // macro body, so the Function role must sit on the wrapper
+                // for the body to land inside the function scope.
+                let decl = first_named_child_matching(n, &["pcal_macro_decl"])?;
+                let name = name_of(cx, decl)?;
+                let name_id = child_by_field(decl, "name").map(|named| named.id());
                 let mut params = Vec::new();
-                for child in named_children(n) {
+                for child in named_children(decl) {
                     if child.kind() == "identifier" && Some(child.id()) != name_id {
                         params.push(plain_param(cx, child));
                     }
@@ -228,38 +260,65 @@ impl LangHooks for TlaplusHooks {
                 })
             }
             "bound_op" | "prefixed_op" => {
-                let name = child_by_field(n, "name").or_else(|| child_by_field(n, "op"))?;
+                // prefixed_op(prefix: M!, op: bound_op(name, parameter...))
+                // — the qualified call's arguments live inside the bound_op.
+                let op = child_by_field(n, "op").unwrap_or(n);
+                // `M!Spec`/`M!Nat` (no arguments) leave a leaf op child —
+                // a bare identifier_ref or a number-set node — used as the
+                // callee. Op children with their own children
+                // (`M!+(a, b)` carries a bound_nonfix_op) are handled by
+                // their own node arms, so no prefixed call is recorded.
+                let name = child_by_field(op, "name")
+                    .or_else(|| child_by_field(n, "name"))
+                    .or_else(|| (op.named_child_count() == 0).then_some(op))?;
                 let leaf = first_named_child_matching(name, &["identifier_ref", "identifier"])
                     .unwrap_or(name);
+                // `PrintT("x", 1)` parses as bound_op(name, parameter...):
+                // every named child other than the head is an argument.
+                let args = named_children(op)
+                    .into_iter()
+                    .filter(|child| child.id() != name.id())
+                    .filter_map(|child| call_arg(cx, child))
+                    .collect();
                 Some(CallHead {
                     callee: trimmed(cx, leaf),
                     kind: CallKind::Plain,
                     callee_root: None,
                     is_simple_path: false,
                     initializes_binding: false,
-                    args: Vec::new(),
+                    args,
                 })
             }
             "function_evaluation" => {
                 let head = named_children(n).into_iter().next()?;
+                let args = named_children(n)
+                    .into_iter()
+                    .skip(1)
+                    .filter_map(|child| call_arg(cx, child))
+                    .collect();
                 Some(CallHead {
                     callee: trimmed(cx, head),
                     kind: CallKind::Plain,
                     callee_root: None,
                     is_simple_path: false,
                     initializes_binding: false,
-                    args: Vec::new(),
+                    args,
                 })
             }
             "pcal_macro_call" | "pcal_proc_call" => {
                 let name = child_by_field(n, "name")?;
+                let args = named_children(n)
+                    .into_iter()
+                    .filter(|child| child.id() != name.id())
+                    .filter_map(|child| call_arg(cx, child))
+                    .collect();
                 Some(CallHead {
                     callee: trimmed(cx, name),
                     kind: CallKind::Plain,
                     callee_root: None,
                     is_simple_path: true,
                     initializes_binding: false,
-                    args: Vec::new(),
+                    args,
                 })
             }
             _ => None,
@@ -288,7 +347,7 @@ impl LangHooks for TlaplusHooks {
                     }
                 }
             }
-            "pcal_var_decl" => {
+            "pcal_var_decl" | "pcal_proc_var_decl" => {
                 if let Some(name) = first_named_child_matching(n, &["identifier"]) {
                     out.push((trimmed(cx, name), pos_of(name)));
                 }
@@ -298,11 +357,19 @@ impl LangHooks for TlaplusHooks {
     }
 
     fn write_roots<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() == "pcal_assign"
-            && let Some(lhs) = first_named_child_matching(n, &["pcal_lhs"])
-            && let Some(target) = first_named_child_matching(lhs, &["identifier_ref", "identifier"])
-        {
-            out.push((trimmed(cx, target), pos_of(target)));
+        // `x := a || y := b` carries one `pcal_lhs` per `||` leg; every leg
+        // is a write target, not just the first.
+        if n.kind() == "pcal_assign" {
+            for lhs in named_children(n) {
+                if lhs.kind() != "pcal_lhs" {
+                    continue;
+                }
+                if let Some(target) =
+                    first_named_child_matching(lhs, &["identifier_ref", "identifier"])
+                {
+                    out.push((trimmed(cx, target), pos_of(target)));
+                }
+            }
         }
     }
 
