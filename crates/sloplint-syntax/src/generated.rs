@@ -54,7 +54,13 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
         | Lang::Swift
         | Lang::Scala
         | Lang::Dart
-        | Lang::Odin => SLASH,
+        | Lang::Odin
+        | Lang::Quint
+        | Lang::Dafny => SLASH,
+        Lang::Alloy => CommentSyntax {
+            lines: &[b"//", b"--"],
+            ..SLASH
+        },
         Lang::Zig => CommentSyntax {
             blocks: &[],
             ..SLASH
@@ -76,6 +82,21 @@ fn comment_syntax(lang: Lang) -> CommentSyntax {
         Lang::Ocaml | Lang::OcamlInterface => CommentSyntax {
             lines: &[],
             blocks: &[(b"(*", b"*)")],
+            code: &[],
+        },
+        Lang::Lean => CommentSyntax {
+            lines: &[b"--"],
+            blocks: &[(b"/-", b"-/")],
+            code: &[],
+        },
+        Lang::Tlaplus => CommentSyntax {
+            lines: &[b"\\*"],
+            blocks: &[(b"(*", b"*)")],
+            code: &[],
+        },
+        Lang::Racket => CommentSyntax {
+            lines: &[b";"],
+            blocks: &[(b"#|", b"|#")],
             code: &[],
         },
     }

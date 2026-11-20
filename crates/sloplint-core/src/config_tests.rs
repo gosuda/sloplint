@@ -100,6 +100,8 @@ fn default_log_callees_keep_message_bearers_only() {
     );
     assert_callees("odin", &["log.error", "fmt.eprintf"], &["panic"]);
     assert_callees("starlark", &["print"], &["fail"]);
+    assert_callees("tlaplus", &["Print", "PrintT"], &["printf"]);
+    assert_callees("racket", &["log-error", "displayln"], &["error"]);
 }
 
 #[test]

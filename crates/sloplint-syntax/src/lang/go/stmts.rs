@@ -250,9 +250,22 @@ fn go_in_deferred_closure(cx: &Cx<'_, '_>) -> bool {
             // A lambda is its own function boundary: a saved callback must not
             // inherit cleanup status from an enclosing deferred closure. Only a
             // lambda that is itself the deferred call counts as cleanup, by the
-            // same direct-invocation check as a function literal.
+            // same direct-invocation rule as a function literal.
             "func_literal" | "lambda_expression" => {
-                let Some(call) = cx.parent_of(ancestor) else {
+                let mut invoked = ancestor;
+                if ancestor.kind() == "lambda_expression" {
+                    while let Some(next) = cx.parent_of(invoked)
+                        && next.kind() == "parenthesized_expression"
+                    {
+                        invoked = next;
+                    }
+                    if child_by_field(cx.parent_of(invoked).unwrap_or(invoked), "function")
+                        .is_some_and(|f| f.id() != invoked.id())
+                    {
+                        return false;
+                    }
+                }
+                let Some(call) = cx.parent_of(invoked) else {
                     return false;
                 };
                 if call.kind() != "call_expression" {

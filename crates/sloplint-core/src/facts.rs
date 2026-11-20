@@ -160,9 +160,16 @@ pub struct Arg<'s> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgShape<'s> {
-    Str { longest_static: u32 },
-    Concat { longest_static: u32 },
+    Str {
+        longest_static: u32,
+    },
+    Concat {
+        longest_static: u32,
+    },
     Ident(&'s str),
+    /// An identifier passed as a named argument value. It still references
+    /// the name, but it binds by name rather than by position.
+    NamedIdent(&'s str),
     Collection,
     CodeBody,
     Other,
@@ -172,6 +179,9 @@ pub enum ArgShape<'s> {
 pub struct MutBinding<'s> {
     pub name: &'s str,
     pub pos: Pos,
+    /// Line where the binding's scope closed; `u32::MAX` while the scope
+    /// is still open or when the language is not block-scoped.
+    pub end_line: u32,
     pub last_write_line: u32,
     pub first_write_line: u32,
     pub write_lines: u32,
