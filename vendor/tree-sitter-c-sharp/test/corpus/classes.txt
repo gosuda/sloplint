@@ -406,8 +406,7 @@ public class NoBodyPrimaryWithBase(int x) : Base(x);
     body: (declaration_list))
   (class_declaration
     (modifier)
-    name: (identifier)
-  )
+    name: (identifier))
   (class_declaration
     (modifier)
     name: (identifier)
@@ -417,8 +416,7 @@ public class NoBodyPrimaryWithBase(int x) : Base(x);
         name: (identifier))
       (parameter
         type: (predefined_type)
-        name: (identifier)))
-  )
+        name: (identifier))))
   (class_declaration
     (modifier)
     name: (identifier)
@@ -431,4 +429,3 @@ public class NoBodyPrimaryWithBase(int x) : Base(x);
       (argument_list
         (argument
           (identifier))))))
-

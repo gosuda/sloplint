@@ -164,10 +164,29 @@ pub(crate) fn params<'s>(
 }
 
 pub(crate) fn init_value(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    cx.parent()
+    if let Some(value) = cx
+        .parent()
         .filter(|parent| parent.kind() == "init_declarator")
         .and_then(|parent| child_by_field(parent, "value"))
-        .is_some_and(|value| value.id() == n.id())
+    {
+        return value.id() == n.id();
+    }
+    // A braced-macro member read tags `int fd = f();` as a
+    // `field_declaration` whose initializer is `default_value` — the
+    // call still initializes a binding (likewise a real member
+    // default). One field declaration repeats `declarator` +
+    // `default_value` per variable (`int a = f(), b = g();`), so every
+    // `default_value` child counts, not just the first.
+    if let Some(parent) = cx
+        .parent()
+        .filter(|parent| parent.kind() == "field_declaration")
+    {
+        let mut cursor = parent.walk();
+        return parent
+            .children_by_field_name("default_value", &mut cursor)
+            .any(|value| value.id() == n.id());
+    }
+    false
 }
 
 pub(crate) fn primitive_kind_of(ty: Option<&str>) -> PrimitiveKind {

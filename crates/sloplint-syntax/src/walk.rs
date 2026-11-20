@@ -387,8 +387,11 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             self.publish_piece(node);
         }
         self.publish_deferred(node);
+        let end_line = node.end_position().row as u32 + 1;
         if let Some(frame) = self.fn_stack.last_mut() {
-            frame.release(self.depth);
+            for binding in frame.release(self.depth) {
+                self.facts.bindings[binding].end_line = end_line;
+            }
         }
         while let Some(&(mark_node, mark)) = self.marks.last() {
             if mark_node != id {

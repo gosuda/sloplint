@@ -1,0 +1,531 @@
+========================================
+Module import with substitution and alias
+========================================
+
+module Voting {
+  const Value: Set[int]
+  val Count = 1
+}
+
+module Imports {
+  import Voting(Value = Set(0, 1)) as V
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (set_type
+        element: (primitive_type)))
+    (value_definition
+      name: (identifier)
+      value: (integer_literal)))
+  (module_definition
+    name: (identifier)
+    (instance_declaration
+      module: (identifier)
+      (instance_override
+        name: (identifier)
+        value: (call_expression
+          function: (name_reference
+            name: (identifier))
+          argument: (integer_literal)
+          argument: (integer_literal)))
+      alias: (identifier))))
+
+========================================
+Module import from source
+========================================
+
+module Library {
+  const answer: int
+}
+
+module Consumer {
+  import Library(answer = 42) as L from "./quint-tree-sitter-library"
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (primitive_type)))
+  (module_definition
+    name: (identifier)
+    (instance_declaration
+      module: (identifier)
+      (instance_override
+        name: (identifier)
+        value: (integer_literal))
+      alias: (identifier)
+      source: (string_literal))))
+
+========================================
+Bare module imports and exports
+========================================
+
+module Math { val answer = 42 }
+module Reexport {
+  export Math
+  export Math as Arithmetic
+}
+module Use {
+  import Math
+  import Math as M
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal)))
+  (module_definition
+    name: (identifier)
+    (module_export_declaration
+      module: (identifier))
+    (module_export_declaration
+      module: (identifier)
+      alias: (identifier)))
+  (module_definition
+    name: (identifier)
+    (module_import_declaration
+      module: (identifier))
+    (module_import_declaration
+      module: (identifier)
+      alias: (identifier))))
+
+========================================
+Namespace access
+========================================
+
+module Voting {
+  const Value: Set[int]
+}
+
+module Consumer {
+  import Voting(Value = Set(0, 1)) as V
+  val MyValues = V::Value
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (set_type
+        element: (primitive_type))))
+  (module_definition
+    name: (identifier)
+    (instance_declaration
+      module: (identifier)
+      (instance_override
+        name: (identifier)
+        value: (call_expression
+          function: (name_reference
+            name: (identifier))
+          argument: (integer_literal)
+          argument: (integer_literal)))
+      alias: (identifier))
+    (value_definition
+      name: (identifier)
+      value: (namespace_access_expression
+        namespace: (identifier)
+        member: (identifier)))))
+
+========================================
+Named import
+========================================
+
+module Math {
+  def pow(x, y) = x^y
+}
+
+module Imports {
+  import Math.pow
+  def cube(x) = pow(x, 3)
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      parameter: (parameter
+        name: (identifier))
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (name_reference
+          name: (identifier)))))
+  (module_definition
+    name: (identifier)
+    (named_import_declaration
+      module: (identifier)
+      name: (identifier))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (call_expression
+        function: (name_reference
+          name: (identifier))
+        argument: (name_reference
+          name: (identifier))
+        argument: (integer_literal)))))
+
+========================================
+Qualified named import selector
+========================================
+
+module Lib {
+  pure val Member::value = 1
+}
+
+module Use {
+  import Lib.Member::value
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (qualified_identifier
+        namespace: (identifier)
+        name: (identifier))
+      value: (integer_literal)))
+  (module_definition
+    name: (identifier)
+    (named_import_declaration
+      module: (identifier)
+      name: (qualified_identifier
+        namespace: (identifier)
+        name: (identifier)))))
+
+========================================
+Named exports
+========================================
+
+module Lib {
+  pure val value = 1
+  pure val Member::value = 2
+}
+
+module Use {
+  export Lib.value
+  export Lib.Member::value
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (integer_literal))
+    (value_definition
+      name: (qualified_identifier
+        namespace: (identifier)
+        name: (identifier))
+      value: (integer_literal)))
+  (module_definition
+    name: (identifier)
+    (named_export_declaration
+      module: (identifier)
+      name: (identifier))
+    (named_export_declaration
+      module: (identifier)
+      name: (qualified_identifier
+        namespace: (identifier)
+        name: (identifier)))))
+
+========================================
+Wildcard import
+========================================
+
+module Math {
+  def sqr(x) = x * x
+  def pow(x, y) = x^y
+}
+
+module ImportAll {
+  import Math.*
+  def poly(x) = pow(x, 3) + sqr(x) + x
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (name_reference
+          name: (identifier))))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      parameter: (parameter
+        name: (identifier))
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (name_reference
+          name: (identifier)))))
+  (module_definition
+    name: (identifier)
+    (wildcard_import_declaration
+      module: (identifier))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (binary_expression
+        left: (binary_expression
+          left: (call_expression
+            function: (name_reference
+              name: (identifier))
+            argument: (name_reference
+              name: (identifier))
+            argument: (integer_literal))
+          right: (call_expression
+            function: (name_reference
+              name: (identifier))
+            argument: (name_reference
+              name: (identifier))))
+        right: (name_reference
+          name: (identifier))))))
+
+========================================
+Wildcard re-export
+========================================
+
+module A {
+  pure val greeting = "hello"
+}
+
+module B {
+  import A.*
+  export A.*
+}
+
+module C {
+  import B.*
+  def greet(name) = [greeting, name]
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (value_definition
+      name: (identifier)
+      value: (string_literal)))
+  (module_definition
+    name: (identifier)
+    (wildcard_import_declaration
+      module: (identifier))
+    (wildcard_export_declaration
+      module: (identifier)))
+  (module_definition
+    name: (identifier)
+    (wildcard_import_declaration
+      module: (identifier))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (list_literal
+        element: (name_reference
+          name: (identifier))
+        element: (name_reference
+          name: (identifier))))))
+
+========================================
+Anonymous module instance
+========================================
+
+module Bar {
+  const c: int
+  def A(y) = c + y
+}
+
+module Foo {
+  import Bar(c = 0).*
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (constant_declaration
+      name: (identifier)
+      type: (primitive_type))
+    (operator_definition
+      name: (identifier)
+      parameter: (parameter
+        name: (identifier))
+      body: (binary_expression
+        left: (name_reference
+          name: (identifier))
+        right: (name_reference
+          name: (identifier)))))
+  (module_definition
+    name: (identifier)
+    (anonymous_instance_declaration
+      module: (identifier)
+      (instance_override
+        name: (identifier)
+        value: (integer_literal)))))
+
+========================================
+Source-qualified imports
+========================================
+
+module ImportFrom {
+  import ImportSource.answer from "./quint-tree-sitter-import-source"
+  import ImportSource.* from "./quint-tree-sitter-import-source"
+  import ImportSource(N = 42).* from "./quint-tree-sitter-import-source"
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (identifier)
+    (named_import_declaration
+      module: (identifier)
+      name: (identifier)
+      source: (string_literal))
+    (wildcard_import_declaration
+      module: (identifier)
+      source: (string_literal))
+    (anonymous_instance_declaration
+      module: (identifier)
+      (instance_override
+        name: (identifier)
+        value: (integer_literal))
+      source: (string_literal))))
+
+========================================
+Qualified identifiers in module instances
+========================================
+
+module A::B {
+  const Config::n: int
+}
+
+module NamedInstance {
+  import A::B(Config::n = 1) as Scope::X
+}
+
+module AnonymousInstance {
+  import A::B(Config::n = 1).*
+}
+
+---
+
+(source_file
+  (module_definition
+    name: (qualified_identifier
+      namespace: (identifier)
+      name: (identifier))
+    (constant_declaration
+      name: (qualified_identifier
+        namespace: (identifier)
+        name: (identifier))
+      type: (primitive_type)))
+  (module_definition
+    name: (identifier)
+    (instance_declaration
+      module: (qualified_identifier
+        namespace: (identifier)
+        name: (identifier))
+      (instance_override
+        name: (qualified_identifier
+          namespace: (identifier)
+          name: (identifier))
+        value: (integer_literal))
+      alias: (qualified_identifier
+        namespace: (identifier)
+        name: (identifier))))
+  (module_definition
+    name: (identifier)
+    (anonymous_instance_declaration
+      module: (qualified_identifier
+        namespace: (identifier)
+        name: (identifier))
+      (instance_override
+        name: (qualified_identifier
+          namespace: (identifier)
+          name: (identifier))
+        value: (integer_literal)))))
+
+========================================
+Invalid empty-named module instance is rejected
+:error
+========================================
+
+module InvalidInstance { import A() as B }
+
+---
+
+(source_file)
+
+========================================
+Invalid empty-anonymous module instance is rejected
+:error
+========================================
+
+module InvalidInstance { import A().* }
+
+---
+
+(source_file)
+
+========================================
+Invalid empty-bare module instance is rejected
+:error
+========================================
+
+module InvalidInstance { import A() }
+
+---
+
+(source_file)
+
+========================================
+Invalid missing-selector module instance is rejected
+:error
+========================================
+
+module InvalidInstance { import A(x = 1) }
+
+---
+
+(source_file)

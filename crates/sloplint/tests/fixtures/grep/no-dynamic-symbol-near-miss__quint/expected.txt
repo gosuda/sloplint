@@ -1,0 +1,1 @@
+# Plain operator calls are statically named, so dynamic lookup never fires.

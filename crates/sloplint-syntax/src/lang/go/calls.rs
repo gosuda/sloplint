@@ -4,12 +4,15 @@ use sloplint_core::facts::{Arg, ArgShape, AssertShape, Assertion};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    Cx, Link, binary_concat, child_by_field, code_children, first_named_child, named_children,
-    narrow, pos_of, string_arg_shape, text,
+    Cx, Link, child_by_field, code_children, first_named_child, named_children, narrow, pos_of,
+    string_arg_shape, text,
 };
 const GO_CALLEE: u8 = 11;
 
 pub(crate) fn go_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
+    // Parentheses change grouping, not meaning: a parenthesized literal is
+    // still a literal and a parenthesized operand still concatenates.
+    let n = go_unparen(n);
     match n.kind() {
         "interpreted_string_literal" => {
             string_arg_shape(cx, n, &["interpreted_string_literal_content"])
@@ -19,34 +22,69 @@ pub(crate) fn go_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         "func_literal" => ArgShape::CodeBody,
         "identifier" => ArgShape::Ident(text(cx, n)),
         "interp_string_literal" => {
-            let raw = text(cx, n);
-            let inner = raw
-                .strip_prefix("$\"")
-                .and_then(|s| s.strip_suffix('"'))
-                .unwrap_or(raw);
+            let inner = interp_inner(text(cx, n));
             ArgShape::Str {
                 longest_static: sloplint_core::text::longest_static_chunk_interp(inner),
             }
         }
-        _ if binary_concat(
-            cx,
-            n,
-            "+",
-            &["interpreted_string_literal", "raw_string_literal"],
-        ) =>
-        {
-            ArgShape::Concat {
-                longest_static: go_concat_static(cx, n),
-            }
-        }
+        _ if go_is_concat(cx, n) => ArgShape::Concat {
+            longest_static: go_concat_static(cx, n),
+        },
         _ => ArgShape::Other,
     }
 }
 
+fn interp_inner(raw: &str) -> &str {
+    raw.strip_prefix("$\"")
+        .and_then(|s| s.strip_suffix('"'))
+        .unwrap_or(raw)
+}
+
+fn go_string_operand(kind: &str) -> bool {
+    matches!(
+        kind,
+        "interpreted_string_literal" | "raw_string_literal" | "interp_string_literal"
+    )
+}
+
+/// The `binary_concat` check with parentheses stripped at every step, so
+/// `("lit" + x)`, `"lit" + ("x")` and `prefix + ("lit" + suffix)` all read
+/// the same as `"lit" + x`. Only `+` nodes are entered; a nested `+` under
+/// any other operator still reads as its own subtree.
+fn go_is_concat(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    let mut stack = vec![go_unparen(n)];
+    while let Some(current) = stack.pop() {
+        if current.kind() != "binary_expression" {
+            continue;
+        }
+        // Comments are extra children, so positional reads shift: use
+        // the named fields, which skip them.
+        let (Some(left), Some(right)) = (
+            child_by_field(current, "left"),
+            child_by_field(current, "right"),
+        ) else {
+            continue;
+        };
+        if !child_by_field(current, "operator").is_some_and(|o| text(cx, o) == "+") {
+            continue;
+        }
+        let left = go_unparen(left);
+        let right = go_unparen(right);
+        if go_string_operand(left.kind()) || go_string_operand(right.kind()) {
+            return true;
+        }
+        stack.push(left);
+        stack.push(right);
+    }
+    false
+}
+
 fn go_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
     let mut chunks = Vec::new();
+    let mut interp_best = 0u32;
     let mut stack = vec![n];
     while let Some(m) = stack.pop() {
+        let m = go_unparen(m);
         if m.kind() == "binary_expression"
             && child_by_field(m, "operator").is_some_and(|o| text(cx, o) == "+")
         {
@@ -68,8 +106,12 @@ fn go_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
                 }
             }
         }
+        if m.kind() == "interp_string_literal" {
+            let run = sloplint_core::text::longest_static_chunk_interp(interp_inner(text(cx, m)));
+            interp_best = interp_best.max(run);
+        }
     }
-    sloplint_core::text::longest_static_chunk(&chunks)
+    sloplint_core::text::longest_static_chunk(&chunks).max(interp_best)
 }
 
 fn go_has_func_literal(root: Node<'_>) -> bool {
@@ -100,9 +142,28 @@ fn go_collection_shape<'s>(n: Node<'_>) -> ArgShape<'s> {
 }
 
 pub(crate) fn go_arg<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Arg<'s> {
+    // A named argument binds by name, not by position, and the rule never
+    // resolves the callee's parameter names, so a named identifier must not
+    // read as a positional forward. It still references the name, so it keeps
+    // a distinct shape the value-use index can see. Every other value shape
+    // stays measurable for the log and multiline rules.
+    if n.kind() == "named_argument" {
+        let value = child_by_field(n, "value").unwrap_or(n);
+        let shape = match go_shape(cx, value) {
+            ArgShape::Ident(name) => ArgShape::NamedIdent(name),
+            shape => shape,
+        };
+        return Arg {
+            shape,
+            start_line: pos_of(value).line,
+            end_line: narrow(value.end_position().row) + 1,
+        };
+    }
     let value = match n.kind() {
-        "named_argument" => child_by_field(n, "value"),
-        "spread_element" => code_children(n).into_iter().next(),
+        "spread_element" => code_children(n)
+            .into_iter()
+            .next()
+            .filter(|operand| operand.kind() == "composite_literal"),
         _ => None,
     }
     .unwrap_or(n);

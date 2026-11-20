@@ -1,0 +1,4 @@
+method Greet()
+{
+  print "hi";
+}

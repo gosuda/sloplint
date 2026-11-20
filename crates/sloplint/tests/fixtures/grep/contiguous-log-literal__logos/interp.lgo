@@ -1,0 +1,8 @@
+package probe
+import "log"
+func Fail(n int) {
+	log.Fatal($"{n /* } explanation */}")
+}
+func FailShort(name string, suffix string) {
+	log.Fatal($"hi {name}" + suffix)
+}

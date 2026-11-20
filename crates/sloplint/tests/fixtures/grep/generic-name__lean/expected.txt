@@ -1,0 +1,2 @@
+a.lean:1 minor grep/generic-name
+a.lean:4 minor grep/generic-name

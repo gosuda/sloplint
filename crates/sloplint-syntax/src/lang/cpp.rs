@@ -22,6 +22,10 @@ mod types;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("function_definition", Role::Function),
+    // `TEST(...)`/`TEST_F(...)` bodies parse as `macro_braced_declaration`;
+    // routing them here keeps the test-region hook alive (the hook returns
+    // None for non-test macro names, so other braced decls are unaffected).
+    ("macro_braced_declaration", Role::Function),
     ("lambda_expression", Role::Closure),
     ("if_statement", Role::If),
     ("else_clause", Role::ElseClause),
@@ -66,6 +70,38 @@ impl LangHooks for CppHooks {
     }
 
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
+        if n.kind() == "macro_braced_declaration" {
+            let name_node = child_by_field(n, "name")?;
+            let name = text(cx, name_node);
+            if !matches!(name, "TEST" | "TEST_F" | "TEST_P" | "TEST_CASE") {
+                return None;
+            }
+            let (doc, doc_pos) = preceding_comments(cx, n, &["comment"], &[]);
+            let body = named_children(n)
+                .into_iter()
+                .find(|child| child.kind() == "field_declaration_list");
+            return Some(FunctionHead {
+                shadow_params: Vec::new(),
+                name,
+                name_pos: pos_of(name_node),
+                visibility: Visibility::Private,
+                signature_forced: false,
+                entry_point: false,
+                in_test: true,
+                is_overload: false,
+                is_deprecated: false,
+                is_decorated: false,
+                is_trait_item: false,
+                region: Some(region_of(n, CodeRole::Test)),
+                receiver: None,
+                params: Vec::new(),
+                return_type: None,
+                missing_annotations: Vec::new(),
+                doc,
+                doc_pos,
+                sole_call: body.and_then(sole_call),
+            });
+        }
         let body = child_by_field(n, "body")?;
         let (fd, name_node) = c_family::func_parts(
             n,
@@ -171,7 +207,18 @@ impl LangHooks for CppHooks {
         })
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        if n.kind() != "declaration" {
+        // A guarded `MACRO() { int fd = open(); };` parses on the loose
+        // member read, which tags block locals as `field_declaration`.
+        // Inside a macro-braced body they are locals, so bind them there
+        // — real struct fields keep a `struct_specifier` grandparent.
+        let decl_like = n.kind() == "declaration"
+            || (n.kind() == "field_declaration"
+                && n.parent().is_some_and(|p| {
+                    p.kind() == "field_declaration_list"
+                        && p.parent()
+                            .is_some_and(|g| g.kind() == "macro_braced_declaration")
+                }));
+        if !decl_like {
             return;
         }
         if word(
