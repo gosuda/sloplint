@@ -416,6 +416,16 @@ fn pcal_fifo_and_channel_declarations_parse_clean() {
         "src/chan.tla",
         "---- MODULE C ----\n(*\n--algorithm A {\n  channels ch;\n  { skip }\n} *)\n====\n",
     );
+    // Indexed domains: `fifos ch[Agents]` (per-process mailboxes).
+    run_clean(
+        "src/fifo_idx.tla",
+        "---- MODULE I ----\n(*\n--algorithm A\nfifos ch[Agents], q1;\nbegin\n  skip\nend algorithm;\n*)\n====\n",
+    );
+    // The fifo/channel keywords still name variables: `variables channel = 1;`.
+    run_clean(
+        "src/kw_vars.tla",
+        "---- MODULE K ----\n(*\n--algorithm A\nvariables channel = 1; fifo = 2;\nbegin\n  skip\nend algorithm;\n*)\n====\n",
+    );
 }
 
 #[test]

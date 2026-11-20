@@ -1,6 +1,7 @@
-diff --git a/tmp/tlaplus-upstream/grammar.js b/grammar.js
+diff --git a/grammar.js b/grammar.js
 index 10a23730..d9906db7 100644
---- a/grammar.js b/grammar.js
+--- a/grammar.js
++++ b/grammar.js
 @@ -140,6 +140,9 @@ module.exports = grammar({
      // Lookahead to disambiguate identifier '(' identifier •  ',' …
      // Could be op(a, b) or could be lbl(a, b) ::
@@ -94,8 +95,10 @@ index 10a23730..d9906db7 100644
        optional(seq(choice('=', $.set_in), $._expr)),
      ),
  
---- a/src/grammar.json	2026-11-20 16:23:06.973158521 +0000
-+++ b/src/grammar.json	2026-11-20 16:55:37.684984296 +0000
+diff --git a/src/grammar.json b/src/grammar.json
+index 0349dca2..a0070701 100644
+--- a/src/grammar.json
++++ b/src/grammar.json
 @@ -77,7 +77,7 @@
                ]
              },
@@ -376,29 +379,31 @@ index 10a23730..d9906db7 100644
          },
          {
            "type": "CHOICE",
-@@ -9502,6 +9682,9 @@
+@@ -9501,6 +9681,9 @@
+       "_expr",
        "label"
      ],
-     [
++    [
 +      "pcal_var_decls"
 +    ],
-+    [
+     [
        "_expr",
        "quantifier_bound"
-     ],
---- a/src/node-types.json	2026-11-20 16:23:06.974158502 +0000
-+++ b/src/node-types.json	2026-11-20 16:56:44.777774636 +0000
-@@ -2814,6 +2814,10 @@
+diff --git a/src/node-types.json b/src/node-types.json
+index b1032deb..65c32911 100644
+--- a/src/node-types.json
++++ b/src/node-types.json
+@@ -2813,6 +2813,10 @@
+           "type": "pcal_definitions",
            "named": true
          },
-         {
++        {
 +          "type": "pcal_fifo_decls",
 +          "named": true
 +        },
-+        {
+         {
            "type": "pcal_macro",
            "named": true
-         },
 @@ -3009,6 +3013,10 @@
          {
            "type": "operator_definition",
@@ -410,10 +415,11 @@ index 10a23730..d9906db7 100644
          }
        ]
      }
-@@ -3100,6 +3108,25 @@
+@@ -3099,6 +3107,25 @@
+       ]
      }
    },
-   {
++  {
 +    "type": "pcal_fifo_decls",
 +    "named": true,
 +    "fields": {},
@@ -432,10 +438,9 @@ index 10a23730..d9906db7 100644
 +      ]
 +    }
 +  },
-+  {
+   {
      "type": "pcal_goto",
      "named": true,
-     "fields": {
 @@ -4212,7 +4239,7 @@
      "fields": {},
      "children": {
@@ -445,10 +450,11 @@ index 10a23730..d9906db7 100644
        "types": [
          {
            "type": "_unit",
-@@ -5532,6 +5559,14 @@
+@@ -5531,6 +5558,14 @@
+     "type": "call",
      "named": false
    },
-   {
++  {
 +    "type": "channel",
 +    "named": false
 +  },
@@ -456,14 +462,14 @@ index 10a23730..d9906db7 100644
 +    "type": "channels",
 +    "named": false
 +  },
-+  {
+   {
      "type": "comment",
      "named": true
-   },
-@@ -5592,6 +5627,14 @@
+@@ -5591,6 +5626,14 @@
+     "type": "fair",
      "named": false
    },
-   {
++  {
 +    "type": "fifo",
 +    "named": false
 +  },
@@ -471,18 +477,41 @@ index 10a23730..d9906db7 100644
 +    "type": "fifos",
 +    "named": false
 +  },
-+  {
+   {
      "type": "format",
      "named": true
-   },
---- a/src/scanner.c	2026-11-20 16:23:07.139155527 +0000
-+++ b/src/scanner.c	2026-11-20 14:58:44.408452014 +0000
+diff --git a/src/scanner.c b/src/scanner.c
+index 051cafe9..8ef4ca6b 100644
+--- a/src/scanner.c
++++ b/src/scanner.c
 @@ -1838,44 +1838,54 @@
        const struct NestedScanner* const this,
        char* const buffer
      ) {
 -      unsigned offset = 0;
 -      unsigned copied = 0;
+-
+-      // First write number of enclosing contexts (guaranteed to be >= 1)
+-      nest_address const context_depth = this->enclosing_contexts.size + 1;
+-      copied = sizeof(nest_address);
+-      if (copied > 0) memcpy(&buffer[offset], &context_depth, copied);
+-      offset += copied;
+-
+-      // Then write size of N-1 enclosing contexts
+-      for (int i = 0; i < context_depth - 1; i++) {
+-        unsigned const context_size = array_get(&this->enclosing_contexts, i)->size;
+-        copied = sizeof(unsigned);
+-        if (copied > 0) memcpy(&buffer[offset], &context_size, copied);
+-        offset += copied;
+-      }
+-
+-      // Reserve space for current context size
+-      unsigned const current_context_size_offset = offset;
+-      copied = sizeof(unsigned);
+-      offset += copied;
+-
+-      // Serialize N-1 enclosing contexts
+-      for (unsigned i = 0; i < this->enclosing_contexts.size; i++) {
 +      // The buffer is fixed at TREE_SITTER_SERIALIZATION_BUFFER_SIZE bytes;
 +      // deep PlusCal nesting could overflow it. The wire layout is
 +      // unchanged: the depth count, one size slot per context (0 when that
@@ -506,28 +535,7 @@ index 10a23730..d9906db7 100644
 +      unsigned sizes_offset = sizeof(nest_address);
 +      unsigned content_offset = sizes_offset + depth * sizeof(unsigned);
 +      unsigned remaining = capacity - content_offset;
- 
--      // First write number of enclosing contexts (guaranteed to be >= 1)
--      nest_address const context_depth = this->enclosing_contexts.size + 1;
--      copied = sizeof(nest_address);
--      if (copied > 0) memcpy(&buffer[offset], &context_depth, copied);
--      offset += copied;
--
--      // Then write size of N-1 enclosing contexts
--      for (int i = 0; i < context_depth - 1; i++) {
--        unsigned const context_size = array_get(&this->enclosing_contexts, i)->size;
--        copied = sizeof(unsigned);
--        if (copied > 0) memcpy(&buffer[offset], &context_size, copied);
--        offset += copied;
--      }
--
--      // Reserve space for current context size
--      unsigned const current_context_size_offset = offset;
--      copied = sizeof(unsigned);
--      offset += copied;
--
--      // Serialize N-1 enclosing contexts
--      for (unsigned i = 0; i < this->enclosing_contexts.size; i++) {
++
 +      for (unsigned i = first; i < enclosing; i++) {
          CharArray* context = array_get(&this->enclosing_contexts, i);
 -        copied = context->size;
