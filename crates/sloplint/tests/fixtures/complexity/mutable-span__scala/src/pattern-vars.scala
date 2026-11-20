@@ -2,7 +2,7 @@ object PatternVars {
   def tally(limit: Int): Int = {
     var whole, Some(count) = (0, Some(0))
     var counters = 0
-    val pick, Some(PatternVars.Zero) = (limit, Some(0))
+    val pick, Some(PatternVars.counters) = (limit, Some(0))
     counters = counters + 1
     count = count + 1
     whole = whole + pick
@@ -38,5 +38,13 @@ object PatternVars {
     counters = counters + tail
     whole + count + counters
   }
-  val Zero = 0
+  val counters = 0
+
+  def shadowed: Int = {
+    var `count` = 0
+    var `Count`, `Other` = 0
+    count = count + 1
+    Count = Count + Other
+    count + Count
+  }
 }

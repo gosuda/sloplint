@@ -24,6 +24,14 @@ pub(crate) fn first_ident<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, 
     None
 }
 
+/// `` `name` `` binds the same variable as `name`: strip the backquotes so a
+/// backquoted binder and an unquoted spelling resolve alike.
+fn unquote(name: &str) -> &str {
+    name.strip_prefix('`')
+        .and_then(|rest| rest.strip_suffix('`'))
+        .unwrap_or(name)
+}
+
 pub(crate) fn collect_idents<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     let mut pending = vec![n];
     while let Some(node) = pending.pop() {
@@ -31,11 +39,17 @@ pub(crate) fn collect_idents<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'
             "wildcard" => {}
             // A val/var pattern's top-level identifier is always a binder,
             // even spelled `Count` or `` `a-b` ``; the case/backquote rules
-            // only govern nested positions. Only binder positions count:
-            // `counters` in `Some(counters.Zero)` is a stable reference,
-            // not a new local.
-            "identifier" if node.id() == n.id() || is_pattern_binder(cx, node) => {
-                out.push((text(cx, node), pos_of(node)))
+            // only govern nested positions. In a comma-separated list the
+            // direct children of the `identifiers` pattern are all top-level
+            // binders too. Only binder positions count: `counters` in
+            // `Some(counters.Zero)` is a stable reference, not a new local.
+            "identifier"
+                if node.id() == n.id()
+                    || (n.kind() == "identifiers"
+                        && node.parent().is_some_and(|p| p.id() == n.id()))
+                    || is_pattern_binder(cx, node) =>
+            {
+                out.push((unquote(text(cx, node)), pos_of(node)))
             }
             "identifier" => {}
             _ => pending.extend(named_children(node).into_iter().rev()),
@@ -47,17 +61,17 @@ fn binding_of<'s>(cx: &Cx<'_, 's>, pat: Option<Node<'_>>) -> Option<&'s str> {
     let mut current = pat?;
     loop {
         if current.kind() == "identifier" {
-            return Some(text(cx, current));
+            return Some(unquote(text(cx, current)));
         }
         if current.kind() == "capture_pattern" {
-            return child_by_field(current, "name").map(|m| text(cx, m));
+            return child_by_field(current, "name").map(|m| unquote(text(cx, m)));
         }
         if current.kind() != "typed_pattern" {
             return None;
         }
         let inner = child_by_field(current, "pattern")?;
         if inner.kind() == "identifier" {
-            return Some(text(cx, inner));
+            return Some(unquote(text(cx, inner)));
         }
         current = inner;
     }
