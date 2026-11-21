@@ -54,6 +54,19 @@ fn run_clean(source: &str) -> Analysis<'_> {
     analysis
 }
 
+fn sexp_of(source: &str) -> String {
+    let language: tree_sitter::Language = tree_sitter_scala::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("scala language loads");
+    parser
+        .parse(source, None)
+        .expect("parser returns a tree")
+        .root_node()
+        .to_sexp()
+}
+
 fn callees<'a>(analysis: &Analysis<'a>) -> Vec<&'a str> {
     analysis.facts.calls.iter().map(|c| c.callee).collect()
 }
@@ -289,6 +302,158 @@ fn bare_infix_in_pattern_list_still_errors() {
         "an unparenthesized | must not parse in a comma pattern list"
     );
     run_clean("object O {\n  val a, (b | c) = (1, 2)\n}\n");
+}
+
+#[test]
+fn keyword_named_arguments_and_parameter_names_parse() {
+    // jackson-module-scala's `@JsonDeserialize(using = classOf[...])` and
+    // filodb's `given: Int` parameter name — Scala 3 keywords used as Scala 2
+    // names.
+    let source = concat!(
+        "case class Foo(@JsonDeserialize(using = classOf[MyDeserializer]) myVal: BigDecimal)\n",
+        "case class WrongNumberArguments(given: Int, expected: Int)\n",
+        "object X {\n",
+        "  def f(using: Int, given: String) = 0\n",
+        "  val z = f(using = 3, given = \"x\")\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert!(
+        analysis.parse_error.is_none(),
+        "keyword named arguments and parameter names must parse: {:?}",
+        analysis.parse_error
+    );
+}
+
+#[test]
+fn context_function_parameter_types_parse() {
+    // Scala 3 context function types `(using T) ?=> R`, including a
+    // `using`-rooted stable type (`using.Context`). The `?=>` arrow is the
+    // only valid one: `(using T) => R` is not a function type.
+    let source = concat!(
+        "def f(x: (using Context) ?=> Int, y: (using using.Context) ?=> Int) = x\n",
+        "def g(f: (using Int, String) ?=> Boolean) = f\n",
+        // The standard `FunArgTypes ?=> Type` form takes no `using` marker.
+        "def h(f: (Int, String) ?=> Boolean) = f\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["f", "g", "h"]);
+}
+
+#[test]
+fn context_function_parameter_types_with_plain_arrow_still_error() {
+    // `(using T) => R` is not a valid Scala 3 context function type.
+    let source = "def f(x: (using Context) => Int) = x\n";
+    let analysis = run(source);
+    assert!(
+        analysis.parse_error.is_some(),
+        "(using T) => R must stay a parse error"
+    );
+}
+
+#[test]
+fn given_call_after_line_broken_operator_is_an_operand() {
+    // `x +` then a newline then `given(1)`: the `given` is a call operand,
+    // not the start of a given definition — `(1)` cannot begin a definition.
+    let source = concat!("def given(x: Int) = x\n", "val c = 1 +\n", "  given(2)\n",);
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["given"]);
+    // `function_names` cannot tell a call block from a given body — the
+    // `given(2)` call itself must be in the callee table.
+    assert_eq!(callees(&analysis), ["given"]);
+}
+
+#[test]
+fn given_call_result_keeps_infix_and_match_continuations() {
+    // On a continuation line, `given(2) == 3` compares the call result —
+    // `==` is not a declaration suffix — and `given[Int] match {…}` matches
+    // on it. Both must stay one initializer, so the `given` call survives.
+    let source = concat!(
+        "def given[T](x: T) = x\n",
+        "val ok = 1 +\n",
+        "  given(2) == 3\n",
+        "val result = 1 +\n",
+        "  given[Int] match { case _ => 0 }\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(callees(&analysis), ["given"]);
+    let sexp = sexp_of(source);
+    assert!(
+        sexp.contains("value: (match_expression"),
+        "the match must stay inside the initializer, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn given_operand_accepts_unicode_infix_operators() {
+    // `≤` is \p{Sm} — an operator, not an identifier start. The `given`
+    // operand must not swallow it as the given's name.
+    let source = concat!("def given(x: Int) = x\n", "val n = 1 +\n", "  given ≤ 2\n",);
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        sexp.contains("right: (infix_expression"),
+        "the `≤` comparison must stay the infix's right operand, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn given_call_group_ignores_delimiters_in_literals() {
+    // `) =` inside a string argument must not read as a declaration
+    // suffix; the group is balanced with literals and comments skipped.
+    let source = concat!(
+        "def given(x: String) = x\n",
+        "val n = 1 +\n",
+        "  given(\"x) = y\")\n",
+        "val m = 1 +\n",
+        "  given(\"\"\"a) = b\"\"\")\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(callees(&analysis), ["given", "given"]);
+}
+
+#[test]
+fn annotation_arguments_named_using_stay_annotation_arguments() {
+    // `@Mark(using = 1)` is the annotation's argument list; the class's own
+    // parameters start at the next list. An untyped `using`/`given` name can
+    // never be a parameter (Scala requires a type there).
+    let source = "class E @deprecated(using = 1)(x: Int)\n";
+    let analysis = run_clean(source);
+    assert!(
+        analysis.parse_error.is_none(),
+        "annotation named arguments must parse: {:?}",
+        analysis.parse_error
+    );
+}
+
+#[test]
+fn given_is_definition_before_a_following_statement() {
+    // `given T is U:` with an indented body must keep the given-definition
+    // reading when another top-level statement follows.
+    let source = concat!("given ListSet is Set:\n", "  def f = 1\n", "x = 1\n",);
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["f"]);
+}
+
+#[test]
+fn given_after_postfix_covers_types_and_unicode_names() {
+    // After a line-broken operator each `given` shape is a new declaration:
+    // `[A] =>` type params, `(Int, Int)` tuple/function type, and a
+    // non-ASCII name; `given(using = 2)` stays a call's named argument.
+    let source = concat!(
+        "val r = x +\n",
+        "  given [A] => a\n",
+        "val s = y +\n",
+        "  given (Int, Int) = (1, 2)\n",
+        "val t = z +\n",
+        "  given É = e\n",
+        "val u = w +\n",
+        "  given(using = 2)\n",
+        "val v = q +\n",
+        "  given (Int, Int) with { def f = 1 }\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["f"]);
 }
 
 #[test]

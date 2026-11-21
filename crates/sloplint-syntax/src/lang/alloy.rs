@@ -34,6 +34,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("implies_expression", Role::If),
     ("quantified_expression", Role::Loop),
     ("box_join_expression", Role::Call),
+    ("infix_qual_call_expression", Role::Call),
     ("module_decl", Role::Module),
     ("open_decl", Role::Import),
     ("sig_decl", Role::TypeDef),
@@ -69,7 +70,15 @@ fn alloy_primitive(ty: Option<&str>) -> PrimitiveKind {
     }
 }
 
-/// A declarator spelling including trailing primes: `_decl_name` emits a
+/// Like `decl_name_text` but only extends `name`/`qual_name` nodes:
+/// other name-field kinds (e.g. `string`) keep their literal text.
+fn decl_text_for_compare<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> &'s str {
+    match n.kind() {
+        "name" | "qual_name" => decl_name_text(cx, n),
+        _ => trimmed(cx, n),
+    }
+}
+
 /// `name` node followed by anonymous `'` tokens, so extend the slice over
 /// `'` runs (and whitespace between them) — `item'` must read `item'` for
 /// passthrough and arity checks to match calls.
@@ -132,10 +141,12 @@ fn decl_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
 fn paragraph_name<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> (&'s str, Pos, bool) {
     match child_by_field(n, "name") {
         Some(name_node) => {
-            let name = if name_node.kind() == "string" {
-                strip_quotes(trimmed(cx, name_node))
-            } else {
-                trimmed(cx, name_node)
+            let name = match name_node.kind() {
+                "string" => strip_quotes(trimmed(cx, name_node)),
+                // `pred step'` — `_decl_name` is hidden, so the field lands on
+                // the inner `name`; extend over trailing primes like params do.
+                "name" => decl_name_text(cx, name_node),
+                _ => trimmed(cx, name_node),
             };
             (name, pos_of(name_node), true)
         }
@@ -215,17 +226,26 @@ fn sole_box_join<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<usize> {
         .into_iter()
         .filter(|c| !COMMENT_KINDS.contains(&c.kind()));
     let only = inner.next()?;
-    if inner.next().is_some() || only.kind() != "box_join_expression" {
+    if inner.next().is_some()
+        || !matches!(
+            only.kind(),
+            "box_join_expression" | "infix_qual_call_expression"
+        )
+    {
         return None;
     }
     if let Some(name_node) = child_by_field(n, "name") {
-        let decl_name = trimmed(cx, name_node);
+        // `_decl_name` is hidden, so the field lands on the inner `name`
+        // and `trimmed` drops trailing primes; `run step'` must match
+        // `pred step'` and NOT `pred step`.
+        let decl_name = decl_text_for_compare(cx, name_node);
         let run_targeted = cx.root().is_some_and(|root| {
             let mut cursor = root.walk();
             root.children(&mut cursor).any(|c| {
                 c.kind() == "command"
-                    && child_by_field(c, "name")
-                        .is_some_and(|target| last_segment(trimmed(cx, target)) == decl_name)
+                    && child_by_field(c, "name").is_some_and(|target| {
+                        last_segment(decl_text_for_compare(cx, target)) == decl_name
+                    })
             })
         });
         if run_targeted {
@@ -295,6 +315,20 @@ impl LangHooks for AlloyHooks {
     }
 
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
+        if n.kind() == "infix_qual_call_expression" {
+            let op = child_by_field(n, "operator")?;
+            let left = child_by_field(n, "left")?;
+            let right = child_by_field(n, "right")?;
+            return Some(CallHead {
+                callee: trimmed(cx, op),
+                kind: sloplint_core::facts::CallKind::Plain,
+                callee_root: first_named_child_matching(op, &["name"]).map(|name| text(cx, name)),
+                // `fun/add` is a qualified path like `fun/add[a, b]`.
+                is_simple_path: true,
+                initializes_binding: false,
+                args: vec![make_arg(cx, left), make_arg(cx, right)],
+            });
+        }
         if n.kind() != "box_join_expression" {
             return None;
         }

@@ -1,6 +1,42 @@
+diff --git a/grammar.js b/grammar.js
+index 6fcbe2c8..d983cccd 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -437,8 +437,13 @@
+@@ -245,6 +245,11 @@ const nameChoice = $ =>
+     alias($._alpha_identifier, $.identifier),
+     alias($._backquoted_id, $.identifier),
+     alias($._soft_identifier, $.identifier),
++    // `using`/`given` stay soft in every name position, including argument
++    // expressions (`f(using())`), qualified types (`using.Context`), and
++    // statement heads — the `using`/`given` clause reads keep winning where
++    // their keyword is valid because the alias carries no lexical precedence.
++    alias(choice("using", "given"), $.identifier),
+     alias("this", $.identifier),
+     alias("super", $.identifier),
+     // `export` is a hard keyword in Scala 3 but an ordinary identifier in
+@@ -278,6 +283,21 @@ const wordOrOpName = $ => choice(wordName($), opName($));
+ // (lambda parameters, bindings, self types). These must share the identifier
+ // rule's per-class tokens: one lexer state cannot hold both flavors of the
+ // same string, so swapping a site to $._identifier changes lexing there.
++
++// A parameter name: nameChoice minus `using`/`given`. At a clause head the
++// keyword token is the clause marker, and mid-list a `using`/`given`-named
++// parameter must carry its type (see class_parameter's second alternative).
++const paramName = $ =>
++  choice(
++    alias($._alpha_identifier, $.identifier),
++    alias($._backquoted_id, $.identifier),
++    alias($._soft_identifier, $.identifier),
++    alias("this", $.identifier),
++    alias("super", $.identifier),
++    alias("export", $.identifier),
++    opName($),
++  );
++
+ const operandName = $ => choice(nameChoice($), $.operator_identifier);
+ 
+ // A Scala 3 end marker as the last child of the construct it closes. The
+@@ -437,8 +457,13 @@ module.exports = grammar({
    ],
  
    conflicts: $ => [
@@ -15,7 +51,7 @@
      [$.tuple_pattern, $._simple_expression],
      [$.tuple_pattern, $._simple_expression, $.binding],
      // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
-@@ -459,6 +464,10 @@
+@@ -459,12 +484,35 @@ module.exports = grammar({
      // 'extension' • '{' is either an extension definition with a braced body
      // or the soft identifier `extension` (a Scala 2 id) called with a block.
      [$.extension_definition, $._soft_identifier],
@@ -23,10 +59,35 @@
 +    // `enum` (Scala 2 code uses it as a parameter or named argument) diverge
 +    // only after the token's continuation is known.
 +    [$.enum_definition, $._soft_identifier],
++    [$._type_identifier, $.given_pattern],
++    [$.given_definition, $._simple_expression, $._braced_typed_lambda],
++    [$.given_pattern, $._simple_expression],
++    [$._type_identifier, $.given_pattern, $._simple_expression],
++    [$.given_definition, $._simple_expression],
++    [$.self_type, $.given_definition, $._simple_expression],
++    [$._using_parameters_clause, $._type_identifier],
++    [$._simple_expression, $.keyword_named_argument],
++    [$._simple_expression, $.arguments],
++    [$.self_type, $.given_definition, $._type_identifier, $._simple_expression],
++    [$.given_definition, $._type_identifier, $._simple_expression],
++    [$.given_definition, $._type_identifier],
++    [$.self_type, $.given_definition, $._simple_expression, $._braced_typed_lambda],
      [$.binding, $._simple_expression],
      [$.binding, $._type_identifier],
      // A parenthesized type before `=>` can extend into a function type or stop
-@@ -480,6 +489,8 @@
+     // so the arrow belongs to the enclosing lambda, pattern, or colon argument.
+     // The conflicts keep both readings alive so precedence picks per context.
+     [$._type, $.parameter_types],
++    [$._context_parameter_types, $._type_identifier],
++    [$.tuple_type, $.parameter_types, $._context_parameter_types],
++    [$.parameter_types, $._context_parameter_types],
++    [$._context_parameter_types, $._type_identifier, $._simple_expression],
++    [$._context_parameter_types, $._simple_expression],
++    [$._context_parameter_types, $._type_identifier, $._single_lambda_param],
+     [$.parameter_types, $._colon_bindings],
+     [$.parameter_types, $.bindings],
+     [$.while_expression, $._simple_expression],
+@@ -480,6 +528,8 @@ module.exports = grammar({
      // Same separator-or-marker fork as above.
      [$.function_definition],
      [$.val_definition],
@@ -35,7 +96,7 @@
      [$._dot_match_expression],
      [$.var_definition],
      [$.package_clause],
-@@ -493,6 +504,7 @@
+@@ -493,6 +543,7 @@ module.exports = grammar({
      // we treat `operator_identifier` as `simple_expression`
      [$._simple_expression, $.lambda_expression],
      [$._simple_expression, $._single_lambda_param],
@@ -43,7 +104,16 @@
      // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
      // identifier `export` beginning an expression statement. Each reading
      // dies on the next token ('.' vs a name), so forking settles it. The
-@@ -532,8 +544,6 @@
+@@ -510,8 +561,6 @@ module.exports = grammar({
+     [$._class_constructor],
+     // 'enum'  _class_constructor  '{'  'case'  operator_identifier  _full_enum_def_repeat1  •  _automatic_semicolon  …
+     [$._full_enum_def],
+-    // _start_val  identifier  ','  identifier  •  ':'  …
+-    [$.identifiers, $.val_declaration],
+     // 'enum'  operator_identifier  _automatic_semicolon  '('  ')'  •  ':'  …
+     [$.class_parameters],
+     // 'for'  operator_identifier  ':'  _annotated_type  •  ':'  …
+@@ -532,8 +581,6 @@ module.exports = grammar({
      [$._constructor_annotation],
      [$._constructor_annotation_arguments, $.arguments],
      [$._constructor_annotation, $.applied_constructor_type],
@@ -52,7 +122,16 @@
      // '{'  identifier  •  ':' starts the braced typed lambda, the block
      // lambda param, and a statement alike.
      [$._simple_expression, $._braced_typed_lambda],
-@@ -663,15 +673,18 @@
+@@ -643,7 +690,7 @@ module.exports = grammar({
+ 
+     _definition: $ =>
+       choice(
+-        $.given_definition,
++        prec.dynamic(10, $.given_definition),
+         $.extension_definition,
+         $.class_definition,
+         $.import_declaration,
+@@ -663,15 +710,18 @@ module.exports = grammar({
        ),
  
      enum_definition: $ =>
@@ -80,7 +159,7 @@
        ),
  
      _enum_block: $ =>
-@@ -801,7 +814,7 @@
+@@ -801,7 +851,7 @@ module.exports = grammar({
      // Scala 3 keywords that are valid identifiers in Scala 2 sources and thus
      // may appear as package names in import/export paths (e.g. `import io.circe.export.Exported`).
      _namespace_path_segment: $ =>
@@ -89,7 +168,7 @@
  
      namespace_wildcard: $ => prec.left(1, choice("*", "_", "given")),
  
-@@ -1132,7 +1145,16 @@
+@@ -1132,7 +1182,16 @@ module.exports = grammar({
      val_definition: $ =>
        seq(
          $._start_val,
@@ -107,7 +186,7 @@
          optional(seq(":", field("type", $._type))),
          "=",
          field("value", $._indentable_expression),
-@@ -1160,7 +1182,16 @@
+@@ -1160,7 +1219,16 @@ module.exports = grammar({
      var_definition: $ =>
        seq(
          $._start_var,
@@ -125,7 +204,89 @@
          optional(seq(":", field("type", $._type))),
          "=",
          field("value", $._indentable_expression),
-@@ -1978,6 +2009,27 @@
+@@ -1522,13 +1590,26 @@ module.exports = grammar({
+       ),
+ 
+     class_parameter: $ =>
+-      seq(
+-        repeat($.annotation),
+-        optional($.modifiers),
+-        optional(choice("val", "var")),
+-        field("name", $._identifier),
+-        optional(seq(":", field("type", $._param_type))),
+-        optional(seq("=", field("default_value", $.expression))),
++      choice(
++        seq(
++          repeat($.annotation),
++          optional($.modifiers),
++          optional(choice("val", "var")),
++          field("name", paramName($)),
++          optional(seq(":", field("type", $._param_type))),
++          optional(seq("=", field("default_value", $.expression))),
++        ),
++        // A `using`/`given`-named parameter must be typed: `(using = 1)`
++        // after an annotation is that annotation's argument list instead.
++        seq(
++          repeat($.annotation),
++          optional($.modifiers),
++          optional(choice("val", "var")),
++          field("name", alias(choice("using", "given"), $.identifier)),
++          ":",
++          field("type", $._param_type),
++          optional(seq("=", field("default_value", $.expression))),
++        ),
+       ),
+ 
+     /*
+@@ -1545,7 +1626,7 @@ module.exports = grammar({
+           // A given conditional clause takes `tracked val`.
+           optional(trackedMod($)),
+           optional(choice("val", "var")),
+-          field("name", $._identifier),
++          field("name", choice($._identifier, alias(choice("using", "given"), $.identifier))),
+           ":",
+           field("type", $._param_type),
+           optional(seq("=", field("default_value", $.expression))),
+@@ -1896,6 +1977,17 @@ module.exports = grammar({
+               field("parameter_types", $.parameter_types),
+               $._arrow_then_type,
+             ),
++            // Context function type: a `using`-led parameter list binds only
++            // the `?=>` arrow — `(using T) => R` is not a type in Scala 3.
++            seq(
++              field(
++                "parameter_types",
++                alias($._context_parameter_types, $.parameter_types),
++              ),
++              "?=>",
++              optional(field("capture_set", $.capture_set)),
++              field("return_type", $._type),
++            ),
+           ),
+         ),
+       ),
+@@ -1930,6 +2022,20 @@ module.exports = grammar({
+         $.infix_type,
+       ),
+ 
++    // The parameter list of a context function type `(T, U) ?=> R`; the
++    // `using` marker is optional because Scala 3.4+ also spells it
++    // `(using T, U) ?=> R` when context parameters carry modifiers.
++    // `erased` sits once after `using`, like in _using_parameters_clause.
++    // Kept out of parameter_types so the plain `=>` arrow cannot follow it.
++    _context_parameter_types: $ =>
++      seq(
++        "(",
++        optional("using"),
++        optional(erasedMod($)),
++        trailingCommaSep1($._param_type),
++        ")",
++      ),
++
+     _param_type: $ => choice($.lazy_parameter_type, $._param_value_type),
+ 
+     _param_value_type: $ =>
+@@ -1978,6 +2084,27 @@ module.exports = grammar({
      // SLS 4.1: the pattern of a val/var definition is a Pattern2, so no
      // top-level alternatives or ascription. `val a: A | B` then reads `|`
      // as a union type instead of an alternative pattern.
@@ -153,7 +314,7 @@
      _definition_pattern: $ =>
        choice(
          $._identifier,
-@@ -2019,7 +2071,10 @@
+@@ -2019,7 +2146,10 @@ module.exports = grammar({
          PREC.infix,
          seq(
            field("left", $._definition_pattern),
@@ -165,7 +326,7 @@
            field("right", $._definition_pattern),
          ),
        ),
-@@ -2283,19 +2338,37 @@
+@@ -2283,17 +2413,35 @@ module.exports = grammar({
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -191,7 +352,7 @@
 +            $._control_tail_gate,
 +            "then",
 +          ),
-+        ),
+         ),
 +        prec.dynamic(
 +          5,
 +          seq(
@@ -200,20 +361,18 @@
 +            $._control_tail_gate,
 +            "then",
 +          ),
-         ),
-       ),
- 
++        ),
++      ),
++
 +    split_call_condition: $ =>
 +      seq(
 +        field("function", $._indentable_expression),
 +        $._automatic_semicolon,
 +        field("arguments", $.arguments),
-+      ),
-+
+       ),
+ 
      /*
-      *   MatchClause       ::=  'match' <<< CaseClauses >>>
-      *
-@@ -2529,6 +2602,17 @@
+@@ -2529,6 +2677,17 @@ module.exports = grammar({
              optional($._end_marker_kw_tail),
            ),
          ),
@@ -231,7 +390,55 @@
          prec(
            "new",
            seq("new", $.template_body, optional($._end_marker_kw_tail)),
-@@ -2802,7 +2886,7 @@
+@@ -2726,10 +2885,34 @@ module.exports = grammar({
+     // binder is admitted in every argument list.
+     _argument_list: $ =>
+       seq(
+-        sep1(",", choice($.expression, $.vararg, $.capture_pattern)),
++        sep1(
++          ",",
++          choice(
++            $.expression,
++            $.vararg,
++            $.capture_pattern,
++            alias($.keyword_named_argument, $.assignment_expression),
++          ),
++        ),
+         optional(","),
+       ),
+ 
++    // A named argument whose name is a Scala 3 keyword still names the
++    // parameter in Scala 2 sources: `@JsonSerialize(using = classOf[X])`
++    // (jackson-module-scala's pervasive idiom) or `f(given = v)`. Restricted
++    // to argument lists: admitting the keyword where an expression statement
++    // can start would shadow the identifier read (`using()` is a call).
++    keyword_named_argument: $ =>
++      seq(
++        field("left", alias(choice("using", "given"), $.identifier)),
++        "=",
++        // Same value space as `assignment_expression`: statement-only
++        // expressions like `do … while` and indented blocks are valid
++        // named-argument values too (`f(x = do {} while (c))`,
++        // `f(x =\n  indented`).
++        field("right", choice(statementExpression($), $.indented_block)),
++      ),
++
+     vararg: $ =>
+       choice(
+         // Scala 3: `args*`. The star in front of a closing delimiter arrives
+@@ -2745,7 +2928,10 @@ module.exports = grammar({
+       ),
+ 
+     // ExprsInParens     ::=  ExprInParens {‘,’ ExprInParens}
+-    _exprs_in_parens: $ => trailingCommaSep1($.expression),
++    _exprs_in_parens: $ =>
++      trailingCommaSep1(
++        choice($.expression, alias($.keyword_named_argument, $.assignment_expression)),
++      ),
+ 
+     // The opening is a single two-character token so that a bare `$` used as
+     // an ordinary identifier (e.g. `$(selector)`) still lexes as an
+@@ -2802,7 +2988,7 @@ module.exports = grammar({
      _super_identifier: $ => "super",
  
      // https://docs.scala-lang.org/scala3/reference/soft-modifier.html
@@ -240,41 +447,3 @@
  
      // alphaid          ::=  upper idrest
      //                       |  varid
---- a/src/scanner.c
-+++ b/src/scanner.c
-@@ -1879,7 +1879,7 @@
-       // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
-       // are ordinary identifiers, so such a line can be the right operand.
-       static const char *const definition_words[] = {
--          "abstract", "class", "def",    "enum",      "export", "final",
-+          "abstract", "class", "def",    "export",    "final",
-           "given",    "import", "implicit", "lazy",   "object", "override",
-           "package",  "private", "protected", "sealed", "trait", "type",
-           "val",      "var",
-@@ -1894,6 +1894,26 @@
-         lexer->result_symbol = postfix_sym;
-         return true;
-       }
-+      // `enum` is both a soft identifier and a definition starter, so the
-+      // word alone cannot pick a side: `x --?` + `enum Foo {}` is a new
-+      // statement (postfix), while `1 +` + `enum` continues the expression.
-+      // Peek at the token after `enum`: an identifier start (`enum Foo`)
-+      // is an enum definition, `=` is a standalone assignment to a variable
-+      // named `enum` (`enum = 1`); every other token — `(enum(2)` calls
-+      // the function `enum`, an enum declaration needs a name first), `)`,
-+      // `,`, `.`, `:`, an operator or end-of-line — means the word is the
-+      // right operand.
-+      if (len == 4 && strcmp(word, "enum") == 0) {
-+        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-+          advance(lexer);
-+        }
-+        int32_t c = lexer->lookahead;
-+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
-+            c == '$' || c == '=') {
-+          lexer->result_symbol = postfix_sym;
-+          return true;
-+        }
-+      }
-     }
-     // Any other operand continues the expression, on this line or over the
-     // break; the internal per-class token carries the operator's precedence.

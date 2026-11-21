@@ -7,8 +7,8 @@ use tree_sitter::Node;
 use super::calls::{call_identity, func_node};
 use super::funcs::{in_test_dir, seg_last};
 use crate::hooks::{
-    Container, Cx, FileSetKind, TypeHead, any_named_child, child_by_field, first_named_child,
-    has_child_kind, named_children, narrow, pos_of, text, trimmed,
+    Container, Cx, TypeHead, any_named_child, child_by_field, first_named_child, has_child_kind,
+    named_children, narrow, pos_of, text, trimmed,
 };
 
 pub(crate) fn first_ident<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
@@ -109,20 +109,6 @@ fn body_stmts<'s>(cx: &Cx<'_, 's>, body: Node<'_>, binding: Option<&'s str>) -> 
     }
 }
 
-fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
-    let mut current = n;
-    loop {
-        current = match current.kind() {
-            "identifier" | "operator_identifier" => {
-                return Some((unquote(text(cx, current)), pos_of(current)));
-            }
-            "field_expression" => child_by_field(current, "value")?,
-            "parenthesized_expression" => first_named_child(current)?,
-            _ => return None,
-        };
-    }
-}
-
 pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     if n.kind() != "var_definition" && n.kind() != "val_definition" {
         return;
@@ -139,19 +125,6 @@ pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s st
     }
 }
 
-fn is_compound_write_op(op: &str) -> bool {
-    op.ends_with('=')
-        && !matches!(
-            op,
-            "==" | "!=" | "<=" | ">=" | "=/=" | "=!=" | "===" | "!==" | "=:="
-        )
-}
-
-fn is_compound_write(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    n.kind() == "infix_expression"
-        && child_by_field(n, "operator").is_some_and(|o| is_compound_write_op(text(cx, o)))
-}
-
 pub(crate) fn shadow_decl_kind(kind: &str) -> bool {
     matches!(kind, "for_expression" | "case_clause")
 }
@@ -159,6 +132,24 @@ pub(crate) fn shadow_decl_kind(kind: &str) -> bool {
 fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str>) {
     let mut pending = vec![root];
     while let Some(node) = pending.pop() {
+        if node.kind() == "case_class_pattern"
+            && child_by_field(node, "type").is_some_and(|t| text(cx, t) == "given")
+            && node
+                .children_by_field_name("pattern", &mut node.walk())
+                .count()
+                > 1
+        {
+            // `case given (status, String)` is a given of tuple type, not a
+            // `given(...)` extractor; its members bind no locals. A single
+            // pattern argument is the extractor's binding — `case
+            // given(status)` binds `status`.
+            continue;
+        }
+        // `case given T` is a given-pattern matching an implicit instance —
+        // nothing inside the type binds a local.
+        if node.kind() == "given_pattern" {
+            continue;
+        }
         if node.kind() == "identifier" {
             if is_pattern_binder(cx, node) {
                 out.push(text(cx, node));
@@ -252,21 +243,6 @@ pub(crate) fn shadow_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s s
             }
         }
         _ => {}
-    }
-}
-
-pub(crate) fn write_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    if n.kind() == "assignment_expression"
-        && cx
-            .parent()
-            .is_some_and(|parent| parent.kind() == "arguments")
-    {
-        return;
-    }
-    if (n.kind() == "assignment_expression" || is_compound_write(cx, n))
-        && let Some(l) = child_by_field(n, "left")
-    {
-        out.extend(write_root(cx, l));
     }
 }
 
@@ -539,45 +515,6 @@ pub(crate) fn struct_lit<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FieldCopy<'
     })
 }
 
-fn var_pattern_name<'s>(cx: &Cx<'_, 's>, c: Node<'_>) -> Option<&'s str> {
-    if c.kind() != "var_definition" {
-        return None;
-    }
-    let pat = child_by_field(c, "pattern")?;
-    first_ident(cx, pat).map(|(name, _)| name)
-}
-
-fn top_level_names<'s>(cx: &Cx<'_, 's>) -> Vec<&'s str> {
-    let Some(root) = cx.root() else {
-        return Vec::new();
-    };
-    named_children(root)
-        .iter()
-        .filter_map(|c| var_pattern_name(cx, *c))
-        .collect()
-}
-
-fn top_level_var<'s>(cx: &Cx<'_, 's>, _n: Node<'_>, name: &str) -> bool {
-    cx.file_names(FileSetKind::Scope, || top_level_names(cx))
-        .contains(&name)
-}
-
-fn report_assign_write<'s>(
-    cx: &Cx<'_, 's>,
-    n: Node<'_>,
-    out: &mut Vec<(AmbientKind, &'s str, Pos)>,
-) {
-    let Some(left) = child_by_field(n, "left") else {
-        return;
-    };
-    let Some((name, pos)) = write_root(cx, left) else {
-        return;
-    };
-    if top_level_var(cx, n, name) {
-        out.push((AmbientKind::GlobalWrite, name, pos));
-    }
-}
-
 pub(crate) fn ambient_head<'s>(
     cx: &Cx<'_, 's>,
     n: Node<'_>,
@@ -592,18 +529,10 @@ pub(crate) fn ambient_head<'s>(
         }
         return;
     }
-    if in_function && (n.kind() == "assignment_expression" || is_compound_write(cx, n)) {
-        // Named call arguments (`f(`type` = v)`) are assignment_expressions in
-        // the grammar but never write the variable — same exclusion as
-        // write_roots.
-        if n.kind() == "assignment_expression"
-            && cx
-                .parent()
-                .is_some_and(|parent| parent.kind() == "arguments")
-        {
-            return;
-        }
-        report_assign_write(cx, n, out);
+    if in_function
+        && (n.kind() == "assignment_expression" || super::writes::is_compound_write(cx, n))
+    {
+        super::writes::report_assign_write(cx, n, out);
         return;
     }
     if n.kind() == "field_expression" {

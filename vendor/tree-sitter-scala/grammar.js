@@ -245,6 +245,11 @@ const nameChoice = $ =>
     alias($._alpha_identifier, $.identifier),
     alias($._backquoted_id, $.identifier),
     alias($._soft_identifier, $.identifier),
+    // `using`/`given` stay soft in every name position, including argument
+    // expressions (`f(using())`), qualified types (`using.Context`), and
+    // statement heads — the `using`/`given` clause reads keep winning where
+    // their keyword is valid because the alias carries no lexical precedence.
+    alias(choice("using", "given"), $.identifier),
     alias("this", $.identifier),
     alias("super", $.identifier),
     // `export` is a hard keyword in Scala 3 but an ordinary identifier in
@@ -278,6 +283,21 @@ const wordOrOpName = $ => choice(wordName($), opName($));
 // (lambda parameters, bindings, self types). These must share the identifier
 // rule's per-class tokens: one lexer state cannot hold both flavors of the
 // same string, so swapping a site to $._identifier changes lexing there.
+
+// A parameter name: nameChoice minus `using`/`given`. At a clause head the
+// keyword token is the clause marker, and mid-list a `using`/`given`-named
+// parameter must carry its type (see class_parameter's second alternative).
+const paramName = $ =>
+  choice(
+    alias($._alpha_identifier, $.identifier),
+    alias($._backquoted_id, $.identifier),
+    alias($._soft_identifier, $.identifier),
+    alias("this", $.identifier),
+    alias("super", $.identifier),
+    alias("export", $.identifier),
+    opName($),
+  );
+
 const operandName = $ => choice(nameChoice($), $.operator_identifier);
 
 // A Scala 3 end marker as the last child of the construct it closes. The
@@ -468,12 +488,31 @@ module.exports = grammar({
     // `enum` (Scala 2 code uses it as a parameter or named argument) diverge
     // only after the token's continuation is known.
     [$.enum_definition, $._soft_identifier],
+    [$._type_identifier, $.given_pattern],
+    [$.given_definition, $._simple_expression, $._braced_typed_lambda],
+    [$.given_pattern, $._simple_expression],
+    [$._type_identifier, $.given_pattern, $._simple_expression],
+    [$.given_definition, $._simple_expression],
+    [$.self_type, $.given_definition, $._simple_expression],
+    [$._using_parameters_clause, $._type_identifier],
+    [$._simple_expression, $.keyword_named_argument],
+    [$._simple_expression, $.arguments],
+    [$.self_type, $.given_definition, $._type_identifier, $._simple_expression],
+    [$.given_definition, $._type_identifier, $._simple_expression],
+    [$.given_definition, $._type_identifier],
+    [$.self_type, $.given_definition, $._simple_expression, $._braced_typed_lambda],
     [$.binding, $._simple_expression],
     [$.binding, $._type_identifier],
     // A parenthesized type before `=>` can extend into a function type or stop
     // so the arrow belongs to the enclosing lambda, pattern, or colon argument.
     // The conflicts keep both readings alive so precedence picks per context.
     [$._type, $.parameter_types],
+    [$._context_parameter_types, $._type_identifier],
+    [$.tuple_type, $.parameter_types, $._context_parameter_types],
+    [$.parameter_types, $._context_parameter_types],
+    [$._context_parameter_types, $._type_identifier, $._simple_expression],
+    [$._context_parameter_types, $._simple_expression],
+    [$._context_parameter_types, $._type_identifier, $._single_lambda_param],
     [$.parameter_types, $._colon_bindings],
     [$.parameter_types, $.bindings],
     [$.while_expression, $._simple_expression],
@@ -522,8 +561,6 @@ module.exports = grammar({
     [$._class_constructor],
     // 'enum'  _class_constructor  '{'  'case'  operator_identifier  _full_enum_def_repeat1  •  _automatic_semicolon  …
     [$._full_enum_def],
-    // _start_val  identifier  ','  identifier  •  ':'  …
-    [$.identifiers, $.val_declaration],
     // 'enum'  operator_identifier  _automatic_semicolon  '('  ')'  •  ':'  …
     [$.class_parameters],
     // 'for'  operator_identifier  ':'  _annotated_type  •  ':'  …
@@ -653,7 +690,7 @@ module.exports = grammar({
 
     _definition: $ =>
       choice(
-        $.given_definition,
+        prec.dynamic(10, $.given_definition),
         $.extension_definition,
         $.class_definition,
         $.import_declaration,
@@ -1553,13 +1590,26 @@ module.exports = grammar({
       ),
 
     class_parameter: $ =>
-      seq(
-        repeat($.annotation),
-        optional($.modifiers),
-        optional(choice("val", "var")),
-        field("name", $._identifier),
-        optional(seq(":", field("type", $._param_type))),
-        optional(seq("=", field("default_value", $.expression))),
+      choice(
+        seq(
+          repeat($.annotation),
+          optional($.modifiers),
+          optional(choice("val", "var")),
+          field("name", paramName($)),
+          optional(seq(":", field("type", $._param_type))),
+          optional(seq("=", field("default_value", $.expression))),
+        ),
+        // A `using`/`given`-named parameter must be typed: `(using = 1)`
+        // after an annotation is that annotation's argument list instead.
+        seq(
+          repeat($.annotation),
+          optional($.modifiers),
+          optional(choice("val", "var")),
+          field("name", alias(choice("using", "given"), $.identifier)),
+          ":",
+          field("type", $._param_type),
+          optional(seq("=", field("default_value", $.expression))),
+        ),
       ),
 
     /*
@@ -1576,7 +1626,7 @@ module.exports = grammar({
           // A given conditional clause takes `tracked val`.
           optional(trackedMod($)),
           optional(choice("val", "var")),
-          field("name", $._identifier),
+          field("name", choice($._identifier, alias(choice("using", "given"), $.identifier))),
           ":",
           field("type", $._param_type),
           optional(seq("=", field("default_value", $.expression))),
@@ -1927,6 +1977,17 @@ module.exports = grammar({
               field("parameter_types", $.parameter_types),
               $._arrow_then_type,
             ),
+            // Context function type: a `using`-led parameter list binds only
+            // the `?=>` arrow — `(using T) => R` is not a type in Scala 3.
+            seq(
+              field(
+                "parameter_types",
+                alias($._context_parameter_types, $.parameter_types),
+              ),
+              "?=>",
+              optional(field("capture_set", $.capture_set)),
+              field("return_type", $._type),
+            ),
           ),
         ),
       ),
@@ -1959,6 +2020,20 @@ module.exports = grammar({
         ),
         $.compound_type,
         $.infix_type,
+      ),
+
+    // The parameter list of a context function type `(T, U) ?=> R`; the
+    // `using` marker is optional because Scala 3.4+ also spells it
+    // `(using T, U) ?=> R` when context parameters carry modifiers.
+    // `erased` sits once after `using`, like in _using_parameters_clause.
+    // Kept out of parameter_types so the plain `=>` arrow cannot follow it.
+    _context_parameter_types: $ =>
+      seq(
+        "(",
+        optional("using"),
+        optional(erasedMod($)),
+        trailingCommaSep1($._param_type),
+        ")",
       ),
 
     _param_type: $ => choice($.lazy_parameter_type, $._param_value_type),
@@ -2810,8 +2885,32 @@ module.exports = grammar({
     // binder is admitted in every argument list.
     _argument_list: $ =>
       seq(
-        sep1(",", choice($.expression, $.vararg, $.capture_pattern)),
+        sep1(
+          ",",
+          choice(
+            $.expression,
+            $.vararg,
+            $.capture_pattern,
+            alias($.keyword_named_argument, $.assignment_expression),
+          ),
+        ),
         optional(","),
+      ),
+
+    // A named argument whose name is a Scala 3 keyword still names the
+    // parameter in Scala 2 sources: `@JsonSerialize(using = classOf[X])`
+    // (jackson-module-scala's pervasive idiom) or `f(given = v)`. Restricted
+    // to argument lists: admitting the keyword where an expression statement
+    // can start would shadow the identifier read (`using()` is a call).
+    keyword_named_argument: $ =>
+      seq(
+        field("left", alias(choice("using", "given"), $.identifier)),
+        "=",
+        // Same value space as `assignment_expression`: statement-only
+        // expressions like `do … while` and indented blocks are valid
+        // named-argument values too (`f(x = do {} while (c))`,
+        // `f(x =\n  indented`).
+        field("right", choice(statementExpression($), $.indented_block)),
       ),
 
     vararg: $ =>
@@ -2829,7 +2928,10 @@ module.exports = grammar({
       ),
 
     // ExprsInParens     ::=  ExprInParens {‘,’ ExprInParens}
-    _exprs_in_parens: $ => trailingCommaSep1($.expression),
+    _exprs_in_parens: $ =>
+      trailingCommaSep1(
+        choice($.expression, alias($.keyword_named_argument, $.assignment_expression)),
+      ),
 
     // The opening is a single two-character token so that a bare `$` used as
     // an ordinary identifier (e.g. `$(selector)`) still lexes as an
