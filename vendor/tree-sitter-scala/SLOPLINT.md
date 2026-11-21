@@ -10,7 +10,7 @@
 - Copied from upstream: `test/corpus/*.txt` (10 files, 305 cases, all passing before and after).
 - Changed: `grammar.js` (see `sloplint-grammar.patch`), and `src/` regenerated.
 - Added: `test/corpus/sloplint_endnew.txt`, `sloplint_parenif.txt`, `sloplint_instar.txt`,
-  `sloplint_oplam.txt`, `sloplint_enum.txt`, `sloplint_opcmt.txt`.
+  `sloplint_oplam.txt`, `sloplint_softkw.txt`, `sloplint_enum.txt`, `sloplint_opcmt.txt`.
 
 ## Regeneration
 
@@ -23,7 +23,7 @@
   kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` carries one
   sloplint edit (SC-SOFTENUM, below): `enum` removed from the postfix-operator heuristic's
   `definition_words` list.
-- Test: `tree-sitter test` in this directory: 324/324 (305 upstream + 19 sloplint cases).
+- Test: `tree-sitter test` in this directory: 328/328 (305 upstream + 23 sloplint cases).
 
 ## Changes to grammar.js
 
@@ -76,6 +76,82 @@
    comment, and the reserved spellings `'=`, `':`, `'<-`, `'->`, `'/` lex. A
    trailing `'` cannot be swallowed: `'='` stays a character literal because its
    three characters outmatch the two of `'=`.
+9. SC-SOFTKW: Scala 3 keywords keep their Scala 2 name readings where the corpus needs
+   them. `parameter`/`class_parameter` name slots accept `using`/`given` (filodb's
+   `WrongNumberArguments(given: Int, …)`); `_argument_list` and `_exprs_in_parens` accept
+   `using = v`/`given = v` as `keyword_named_argument`, aliased to `assignment_expression`
+   for node parity (`@JsonDeserialize(using = classOf[X])`, jackson-module-scala's
+   pervasive idiom). Scoped to argument lists only: at statement level the keyword must
+   not shadow the identifier read (`using()` is a call).
+
+
+   Round 2 (review-driven):
+   - `nameChoice` also admits `using`/`given` as plain identifiers, so `f(1, using())`,
+     `using.Context` qualified types, and expression-position `using`/`given` parse.
+     `given_definition` in `_definition` carries `prec.dynamic(10)` so the definition
+     read still wins the statement-head fork (a bare `given T is U:` with an indented
+     body otherwise loses to a call/infix-expression read when a statement follows).
+   - `parameter_types` gained a `("(" "using" [erased] FunArgTypes ")")` arm for
+     context function types, superseded in round 3 (below) by
+     `_context_parameter_types`, which binds `?=>` only.
+   - `class_parameter` splits its name slot: `paramName` (nameChoice minus
+     `using`/`given`) needs no type, while a `using`/`given`-named parameter must be
+     typed — `(using = 1)` after an annotation is therefore the annotation's argument
+     list, never an untyped parameter.
+   - items.rs `ambient_head`: an `assignment_expression` nested under `arguments`
+     is a named argument, not a write — `g(using = 4)` no longer reports GlobalWrite
+     on a file-scope `using` (mirrors `write_roots`' existing guard).
+
+   Round 3 (review-driven):
+   - `function_type` splits context parameter types into
+     `_context_parameter_types` (aliased to `parameter_types`), bound to the
+     `?=>` arrow only: `(using T) => R` is now a parse error, matching the
+     Scala 3 rule that context function types require `?=>`. Conflict pairs
+     move from `parameter_types` to `_context_parameter_types` accordingly.
+   - scanner.c `definition_words` drops `given` and gives it the `enum` peek:
+     after a postfix-operator decision point, `given` + identifier-start/`=`
+     emits `postfix_sym` (new statement) and anything else keeps the infix
+     operand read, so `x +` newline `given(1)` parses as a call operand
+     instead of a `given_definition`.
+   - items.rs `report_assign_write`: only a bare `identifier` left side skips
+     the named-argument guard, so `sink(obj.x = v)` still reports a GlobalWrite
+     on `obj` — a field path can't name a parameter — while `sink(name = v)`
+     stays a named argument.
+
+   Round 4 (review-driven):
+   - `keyword_named_argument`'s right side is now
+     `choice(statementExpression($), $.indented_block)`, the same set
+     `assignment_expression` accepts, so `f(using = do {} while (x))` and
+     multiline block values parse instead of erroring.
+   - scanner.c `given` peek: after the postfix-operator decision point a `[`
+     skips the balanced bracket group and classifies on the follower —
+     `=>`, `:`, an identifier start, `_` or a backtick stays a definition,
+     anything else (including `(`) is a postfix operand. `given[Int](1)`
+     after a line-ending operator now parses as a generic call operand.
+   - scanner.c `given` peek: `given(` is a postfix operand unless the `(` is
+     directly followed by `using` that is not followed by `=`, so
+     `given(using x)`/`given(using = v)`-style operand calls join the infix
+     while `given (using T)` definitions keep their read.
+   - items.rs `named_arg_verdict` walks the scope chain innermost-first and
+     the first scope declaring `def fname` decides, so a member method
+     shadows a same-named file-scope signature; def names, parameter names
+     and argument labels all pass through `unquote` so a backquoted
+     parameter matches its plain argument label.
+   - items.rs `push_pattern_names`: `given` extractor patterns only skip the
+     binding when more than one `pattern` field is present, so
+     `case given(status)` binds `status` while the tuple-type reading
+     `case given (status, String)` still binds nothing.
+   - items.rs write machinery moved to `scala/writes.rs` (`write_roots`,
+     `is_compound_write`, `report_assign_write`, `named_arg_verdict`) to
+     keep the adapter under the 600-line self-lint budget.
+
+   Merge round (with the operator/lambda work above): `given` joined `enum`
+   and `export` in leaving `definition_words` for a peek, so `given : T => b`
+   forks three ways — `_simple_expression`, `given_definition`, and the new
+   unparenthesized typed lambda — and `given { … }` adds `self_type` and
+   `_type_identifier` to the same fork. Three conflict tuples keep those
+   readings alive; the wider tuples subsumed the older
+   `_braced_typed_lambda` variants the generator now reports unnecessary.
 
 ## Fixed shapes (scalac 3.10.0 `-Ystop-after:parser` accepts each)
 
@@ -84,6 +160,15 @@
 - SC-PARENIF: `if x.exists` / `(x => x == 10) then`. Real occurrence: `tests/pos/i12757.scala`.
 - SC-INSTAR: `case class *(...)` with `val P(a, b * c) = p`. Real occurrence:
   `tests/pos/t5702-pos-infix-star.scala`.
+- SC-SOFTKW: `@JsonDeserialize(using = classOf[MyDeserializer])` and `given: Int`.
+  Real occurrences: twitter/util `caseclasses.scala`, linkerd `H2Config.scala`,
+  feathr `FeatureDefinition.scala`, filodb `ComputedColumn.scala`. Round 2 adds
+  `f(1, using())`, `(using using.Context)`, `(using T) ?=> R` context function types,
+  `class E @deprecated(using = 1)(x: Int)`, and `given T is U:` before a following
+  top-level statement. The `@deprecated(using = 1)` shape is an SLS-2 form
+  (jackson-module-scala compiles under Scala 2.13; scalac 3's `parArgumentExprs`
+  treats a leading `using` in parens as a context marker, so this bullet is a
+  2.13-dialect shape the grammar deliberately admits).
 
 ## Still failing (residual)
 
@@ -154,9 +239,13 @@ published crate for the proof, then restored):
 | spaced_quote_operator_still_errors | PASS | PASS |
 | reserved_operator_symbol_literals_parse (SC-SYMNAME) | FAIL | PASS |
 | leading_stray_semicolons_parse (SC-LEADSEMI) | FAIL | PASS |
+| keyword_named_arguments_and_parameter_names_parse (SC-SOFTKW) | FAIL | PASS |
+| context_function_parameter_types_parse | FAIL | PASS |
+| annotation_arguments_named_using_stay_annotation_arguments | FAIL | PASS |
+| given_is_definition_before_a_following_statement | FAIL | PASS |
 
 The FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
-panics. The vendored run is 19/19.
+panics. The vendored run is 41/41.
 
 ### SC-SOFTENUM (later round)
 
@@ -291,3 +380,20 @@ declaration read (`x /\nexport a.b`, `x --?\nexport = 1`), while any
 other continuation makes the word an operand (`10 / export`,
 `x /\nexport`, `export { … }` calls with a brace block). Before this,
 `val export = 2; 10 / export` reported a syntax error at `export`.
+
+Round: `given` continuation peeks now cover `given [A] =>`, `given (T, U) = …`/`with`/`extends`, and non-ASCII given names after a line-broken operator; `given(using = 2)` keeps the call read. `nameChoice` (the soft-keyword identifier set this PR routes through) feeds parameter and argument names AND general expression positions, bindings, and qualified types — keyword-as-identifier support is deliberately broader than named arguments alone.
+
+Round: `given` operand lookaheads read complete tokens.
+- After `given` and after its `[T]` group, an expression-tail keyword
+  (`match`, `catch`, `finally`, `else`, `then`, `do`, `yield`, `while`,
+  `with`, `extends`) keeps the operand read, so `x +` + `given[Int] match
+  {…}` stays one initializer.
+- A lone `=` assigns the variable (`given = 1`); `=` continuing into an
+  operator is infix (`given == y`, `given(2) == 3`), and `:` after a
+  balanced group is the call's type ascription, not a declaration marker.
+- Non-ASCII lookahead now separates identifier starts from \p{Sm}
+  operators (`given ≤ 2` compares; `given É` still names a given), using
+  the same SM_NONASCII ranges as grammar.js.
+- The `[]`/`()` balancing loops skip strings (including `"""`), char and
+  symbol literals, backquoted identifiers, and comments, so `) =` inside
+  `given("x) = y")` no longer reads as declaration syntax.
