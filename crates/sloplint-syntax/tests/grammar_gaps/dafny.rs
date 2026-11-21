@@ -1,10 +1,13 @@
 //! Dafny source exercising the shapes the sloplint adapter reads.
 //!
 //! The vendored grammar is the published tree-sitter-dafny 0.1.0 crate at
-//! `8085572` with no local patch, so every valid case below parses against
-//! the published grammar too. The tests pin the adapter-visible shapes (a
-//! grammar change that renames or restructures them shows up here) and the
-//! documented upstream gaps that must still error.
+//! `8085572` plus the `sloplint-grammar.patch` deviation: stray `;` after a
+//! top-level declaration parses (upstream errors on it — see
+//! `stray_semicolons_between_top_level_decls_parse`). The remaining valid
+//! cases parse against the published grammar too. The tests pin the
+//! adapter-visible shapes (a grammar change that renames or restructures
+//! them shows up here) and the documented upstream gaps that must still
+//! error.
 
 use std::sync::LazyLock;
 
