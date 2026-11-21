@@ -111,6 +111,13 @@ struct Scanner {
      statement can follow a nested block (`try`/`let x <- do`/...
      then another stmt at the outer indent). */
   bool pending_newline;
+  /* Column an in-flight multi-level dedent unwinds toward, or -1.
+     scan_layout consumes the newline while measuring the next line's
+     indent, so after emitting the first DEDENT there is no newline
+     left to trigger the remaining pops: this target replays DEDENTs
+     on subsequent scans until the stack unwinds to it (`for … do` /
+     `finally` bodies followed by a shallower declaration). */
+  int32_t dedent_target;
 };
 
 static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
@@ -403,6 +410,12 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
     scanner->pending_newline =
         scanner->indents.size > 0
         && *array_back(&scanner->indents) == indent;
+    /* The newline is consumed: if the stack is still deeper than this
+       line, record the target so scan() keeps emitting DEDENTs. */
+    scanner->dedent_target =
+        scanner->indents.size > 0
+        && *array_back(&scanner->indents) > indent
+        ? (int32_t)indent : -1;
     return true;
   }
   if (indent == top && valid_symbols[NEWLINE]) {
@@ -438,6 +451,31 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
 static bool scan(struct Scanner *scanner, TSLexer *lexer,
                  const bool *valid_symbols) {
   if (valid_symbols[ERROR_SENTINEL]) return false;
+
+  /* Multi-level dedent continuation: the triggering newline is already
+     consumed, so replay the remaining DEDENTs without re-measuring.
+     Serialized with the indents stack, a checkpoint replay sees a
+     consistent (target, stack) pair.  When the stack has unwound past
+     the target the flag is stale — clear it and scan normally. */
+  if (scanner->dedent_target >= 0 && valid_symbols[DEDENT]) {
+    uint16_t t = scanner->indents.size > 0
+      ? *array_back(&scanner->indents) : 0;
+    if (t > (uint16_t)scanner->dedent_target) {
+      uint16_t tgt = (uint16_t)scanner->dedent_target;
+      array_pop(&scanner->indents);
+      lexer->result_symbol = DEDENT;
+      uint16_t b = scanner->indents.size > 0
+        ? *array_back(&scanner->indents) : 0;
+      /* Landing exactly on an enclosing level: the consumed newline
+         is still that level's statement separator. */
+      scanner->pending_newline =
+          scanner->indents.size > 0 && b == tgt;
+      if (b <= tgt)
+        scanner->dedent_target = -1;
+      return true;
+    }
+    scanner->dedent_target = -1;
+  }
 
   /* The DEDENT that closed an inner block also consumed the newline
      that separates statements at the outer level — re-emit it here.
@@ -553,6 +591,7 @@ void *tree_sitter_lean_external_scanner_create(void) {
   struct Scanner *s = ts_calloc(1, sizeof(struct Scanner));
   array_init(&s->indents);
   array_push(&s->indents, 0);
+  s->dedent_target = -1;
   return s;
 }
 
@@ -570,7 +609,12 @@ unsigned tree_sitter_lean_external_scanner_serialize(void *payload, char *buffer
      checkpoint resurrect it at an unrelated position and fire a
      spurious NEWLINE (the do-block catch/finally regression). */
   buffer[0] = 0;
-  unsigned offset = 1;
+  /* dedent_target IS serialized: it is a real outstanding obligation
+     bound to the indents stack below, so a checkpoint must replay
+     both together.  0xFFFF = no pending dedent. */
+  uint16_t dt = s->dedent_target < 0 ? 0xFFFFu : (uint16_t)s->dedent_target;
+  memcpy(buffer + 1, &dt, sizeof dt);
+  unsigned offset = 3;
   for (uint32_t i = 0;
        i < s->indents.size && offset + sizeof(uint16_t) <= TREE_SITTER_SERIALIZATION_BUFFER_SIZE;
        i++) {
@@ -593,8 +637,17 @@ void tree_sitter_lean_external_scanner_deserialize(void *payload,
      restoring it here would resurrect it at every later position and
      fire a spurious NEWLINE wherever one happens to be valid.  A
      zero-length deserialize is a full reset, so it clears the flag. */
-  if (length == 0) s->pending_newline = false;
-  unsigned offset = 1;
+  if (length == 0) {
+    s->pending_newline = false;
+    s->dedent_target = -1;
+  }
+  s->dedent_target = -1;
+  if (length >= 3) {
+    uint16_t dt;
+    memcpy(&dt, buffer + 1, sizeof dt);
+    s->dedent_target = dt == 0xFFFFu ? -1 : (int32_t)dt;
+  }
+  unsigned offset = 3;
   while (offset + sizeof(uint16_t) <= length) {
     uint16_t v;
     memcpy(&v, buffer + offset, sizeof v);

@@ -288,3 +288,39 @@ example : True := by
             (ERROR)
             arg: (identifier))
           arg: (identifier))))))
+
+==============
+Sloplint: dedent past for and try blocks to next declaration
+==============
+
+def a : IO Unit := do
+  for x in xs do
+    y
+  try
+    x
+  finally
+    y
+def b : Nat := 0
+
+---
+
+(module
+  (declaration
+    (def
+      name: (identifier)
+      type: (app
+        fn: (identifier)
+        arg: (identifier))
+      body: (do_block
+        stmt: (for_loop
+          name: (identifier)
+          range: (identifier)
+          stmt: (identifier))
+        stmt: (do_try
+          stmt: (identifier)
+          stmt: (identifier)))))
+  (declaration
+    (def
+      name: (identifier)
+      type: (identifier)
+      body: (num_lit))))

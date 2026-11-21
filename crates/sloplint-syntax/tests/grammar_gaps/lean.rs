@@ -295,10 +295,10 @@ fn custom_command_heads_parse_clean() {
 
 #[test]
 fn do_try_catch_finally_parse_clean() {
-    // NOTE: a multiline `finally <block>` followed by another `def` is an
-    // upstream-parity gap (the pinned grammar eats the next `def`), so the
-    // block-finally def goes last and gets closed by EOF.
-    let source = "def t2 : IO Unit := do\n  try\n    risky\n  catch\n    | e1 => pure ()\n    | e2 => pure ()\ndef t3 : IO Unit := do\n  try risky catch e => fallback finally done\ndef t1 : IO Unit := do\n  try\n    risky\n  catch e =>\n    pure ()\n  finally\n    cleanup\n";
+    // `def t4` after a newline-indented `finally` body pins the
+    // multi-level-dedent scanner fix: the dedent must unwind both the
+    // finally block and the do-block so the next declaration parses.
+    let source = "def t2 : IO Unit := do\n  try\n    risky\n  catch\n    | e1 => pure ()\n    | e2 => pure ()\ndef t3 : IO Unit := do\n  try risky catch e => fallback finally done\ndef t1 : IO Unit := do\n  try\n    risky\n  catch e =>\n    pure ()\n  finally\n    cleanup\ndef t4 : Nat := 0\n";
     run_clean("src/dotry.lean", source);
     let sexp = parse_raw(source).root_node().to_sexp();
     for shape in ["(do_try ", "pattern:", "(do_block "] {

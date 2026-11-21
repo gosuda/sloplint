@@ -58,10 +58,16 @@ Date: 2026-11-21.
     alphanumeric chars join the token (`Aᵒᵖ`, `x⁻¹`, `a⁺` are now
     identifiers — postfix notation on those chars is fixture-drifted
     away, not error-freed).
+  - Multi-level dedents: when a newline lands several indent steps up
+    (a `for … do` or `finally` body followed by a column-0 `def`), the
+    scanner records a `dedent_target` column after the first `_dedent`
+    and keeps emitting `_dedent` — without consuming input — on the next
+    scans until the indent stack reaches it. Previously only one dedent
+    per newline could ever be produced, so the following declaration
+    parsed inside the still-open inner block and errored.
   - Known upstream-parity gaps (identical ERROR on the pinned upstream,
     unfixed by convention): `simpa using h`, `rcases h with ⟨…⟩`,
-    `first | …` alternation, `∀ᶠ`, a multiline `finally` block followed
-    by another `def`, a comma after a tactic in `by` blocks
+    `first | …` alternation, `∀ᶠ`, a comma after a tactic in `by` blocks
     (`by t, u` parses as `app(t, ERROR, u)` identically upstream), and
     `open … hiding`/`export` modifier words landing in
     `namespace`/`custom_command` nodes. (`open only Nat` now parses
@@ -95,8 +101,9 @@ Date: 2026-11-21.
   comments, raw string literals with matched `#` counts, and the
   layout-sensitive `_indent`, `_dedent`, `_newline` tokens that delimit
   tactic and do-block bodies — extended with `mark_end`-guarded word
-  peeks, a non-serialized `pending_newline`, and widened identifier
-  characters (see the grammar patch).
+  peeks, a non-serialized `pending_newline`, a `dedent_target` column
+  for multi-level dedents, and widened identifier characters (see the
+  grammar patch).
 - Verification: `tree-sitter test` in this directory, 313/313 corpus
   cases pass (see "Corpus results"). `tree-sitter test` builds the
   plain `src/parser.c`, so after a fresh clone first inflate the
