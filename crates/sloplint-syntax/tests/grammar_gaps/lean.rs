@@ -179,8 +179,8 @@ fn modules_imports_and_comments_parse_clean() {
     let analysis = run_clean("src/module.lean", source);
     assert_eq!(
         analysis.facts.imports.len(),
-        7,
-        "one import, four opens, two named re-exports (upstream parity: `hiding`/`Term` and `only`/`Nat` split into extra open/custom_command nodes, so the modifier shapes contribute seven entries), got {:?}",
+        8,
+        "one import, four opens, two named re-exports (upstream parity: `hiding`/`Term` splits into extra open nodes, and `open only Nat` parses `only` as a real first namespace plus `Nat`, so the modifier shapes contribute eight entries), got {:?}",
         analysis
             .facts
             .imports
@@ -382,12 +382,8 @@ fn tactic_vocabulary_keyword_tails_parse() {
 
 #[test]
 fn quantifier_comparison_binders_parse() {
-    for source in [
-        "theorem t : ∀ ε > 0, ∃ N > 0, N = N := by sorry\n",
-        // `∀ᶠ` is upstream-parity broken (identical ERROR on the pinned grammar).
-    ] {
-        run_clean("src/quant.lean", source);
-    }
+    // `∀ᶠ` is upstream-parity broken (identical ERROR on the pinned grammar).
+    run_clean("src/quant.lean", "theorem t : ∀ ε > 0, ∃ N > 0, N = N := by sorry\n");
 }
 
 #[test]
