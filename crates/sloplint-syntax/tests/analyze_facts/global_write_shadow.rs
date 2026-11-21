@@ -455,3 +455,90 @@ fn go_write_after_the_loop_reaches_the_global() {
         "after_loop.go: a write after the loop reaches the file-scope variable"
     );
 }
+
+#[test]
+fn scala_named_arguments_are_not_global_writes() {
+    assert_eq!(
+        in_function_writes(
+            Lang::Scala,
+            "named.scala",
+            "var counter = 0\n\ndef calls() = g(counter = 4)\n",
+        ),
+        0,
+        "a `name = value` argument is not an assignment to the file-scope mutable"
+    );
+    assert_eq!(
+        in_function_writes(
+            Lang::Scala,
+            "named.scala",
+            "var counter = 0\n\ndef calls() = {\ncounter = 4\n}\n",
+        ),
+        1,
+        "a statement assignment to the file-scope mutable stays a GlobalWrite"
+    );
+}
+
+#[test]
+fn scala_using_named_argument_is_not_a_global_write() {
+    assert_eq!(
+        in_function_writes(
+            Lang::Scala,
+            "named.scala",
+            "var using = 0\n\ndef calls() = g(using = 4)\n",
+        ),
+        0,
+        "a `using = value` argument is not an assignment to the file-scope mutable"
+    );
+}
+
+#[test]
+fn scala_field_write_argument_is_a_global_write() {
+    assert_eq!(
+        in_function_writes(
+            Lang::Scala,
+            "store.scala",
+            "class Box { var value: Int = 0 }\nvar box: Box = new Box\n\ndef sink(x: Int): Unit = {}\n\ndef store() = {\nsink(box.value = 4)\n}\n",
+        ),
+        1,
+        "a `obj.field = value` argument writes the file-scope mutable, it is not a named argument"
+    );
+    assert_eq!(
+        in_function_writes(
+            Lang::Scala,
+            "named.scala",
+            "var counter = 0\n\ndef calls() = {\ng(counter = 4)\n}\n",
+        ),
+        0,
+        "a bare `name = value` argument still does not write the file-scope mutable"
+    );
+}
+
+#[test]
+fn scala_member_def_shadows_file_signature_for_named_args() {
+    // A member `def f` shadows the file-scope `def f` when deciding whether
+    // `f(name = v)` is a named argument: the member has the parameter, so
+    // no write reaches the file-scope `var name`.
+    let source = "var name = 0\ndef f(other: Int) = other\nclass C {\n  def f(name: Int) = name\n  def g() = f(name = 1)\n}\n";
+    let count = run_clean(Lang::Scala, "shadow.scala", source)
+        .facts
+        .ambient
+        .iter()
+        .filter(|site| site.kind == AmbientKind::GlobalWrite)
+        .count();
+    assert_eq!(count, 0, "member def's `name` param makes it a named arg");
+}
+
+#[test]
+fn scala_backquoted_param_matches_named_arg() {
+    // `def f(`using`: Int)` and `f(using = 1)` name the same parameter —
+    // the assignment-shaped argument is not a write to file-scope `using`.
+    let source =
+        "var using = 0\ndef f(`using`: Int) = `using`\nclass C {\n  def g() = f(using = 1)\n}\n";
+    let count = run_clean(Lang::Scala, "quoted.scala", source)
+        .facts
+        .ambient
+        .iter()
+        .filter(|site| site.kind == AmbientKind::GlobalWrite)
+        .count();
+    assert_eq!(count, 0, "backquoted param still reads as a named arg");
+}

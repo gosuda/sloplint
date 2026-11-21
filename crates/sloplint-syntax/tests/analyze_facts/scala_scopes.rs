@@ -183,3 +183,28 @@ fn extractor_argument_still_shadows_outer_write() {
         );
     });
 }
+
+#[test]
+fn given_extractor_binds_its_argument() {
+    // `case given(status)` is a `given` extractor — `status` binds a local
+    // that shadows an outer name for writes inside the arm. The tuple-type
+    // reading `case given (status, String)` keeps binding nothing.
+    let source = "def f(v: Any): Int = {\n  var status = 0\n  v match {\n    case given(status) => status += 1\n    case given (status2, other) => status += 2\n  }\n  status += 10\n  status\n}\n";
+    with_scala_bindings(source, |found| {
+        let ss = named_all(found, "status");
+        assert_eq!(
+            ss.len(),
+            1,
+            "the extractor arg shadows the outer var, not a second binding: {found:?}"
+        );
+        assert_eq!(
+            (
+                ss[0].write_lines,
+                ss[0].first_write_line,
+                ss[0].last_write_line
+            ),
+            (2, 5, 7),
+            "the extractor arm's write is shadowed; only the tuple arm and post-match writes land: {found:?}"
+        );
+    });
+}
