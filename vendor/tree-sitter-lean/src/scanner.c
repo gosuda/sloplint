@@ -564,7 +564,12 @@ void tree_sitter_lean_external_scanner_destroy(void *payload) {
 
 unsigned tree_sitter_lean_external_scanner_serialize(void *payload, char *buffer) {
   struct Scanner *s = payload;
-  buffer[0] = s->pending_newline ? 1 : 0;
+  /* Always serialize pending_newline as 0: the flag is a one-shot
+     transient consumed by the next scan, and the runtime only
+     serializes after scan() returns true — persisting a 1 would let a
+     checkpoint resurrect it at an unrelated position and fire a
+     spurious NEWLINE (the do-block catch/finally regression). */
+  buffer[0] = 0;
   unsigned offset = 1;
   for (uint32_t i = 0;
        i < s->indents.size && offset + sizeof(uint16_t) <= TREE_SITTER_SERIALIZATION_BUFFER_SIZE;
