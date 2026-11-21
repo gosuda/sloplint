@@ -287,6 +287,11 @@ mod tests {
     }
 
     #[test]
+    fn scrbl_does_not_route_to_racket() {
+        assert_eq!(Lang::from_path("docs/guide.scrbl"), None);
+    }
+
+    #[test]
     fn shares_config_keys() {
         for key in ALL_CONFIG_KEYS {
             assert!(
