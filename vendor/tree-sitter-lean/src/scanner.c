@@ -68,6 +68,17 @@ static bool is_subscript_alnum(int32_t c) {
       || c == 0x2c7c;
 }
 
+/* Superscripts are not id-rest upstream, but they can't start a
+   notation/operator of their own — user notations like `ℝ³` or `xⁿ`
+   otherwise split at the superscript and break the whole command.
+   Identifying them keeps one name per atom; they are never
+   id-first, so `x ²` can't produce this path. */
+static bool is_superscript_alnum(int32_t c) {
+  return c == 0x00b2 || c == 0x00b3 || c == 0x00b9
+      || (0x2070 <= c && c <= 0x207f)
+      || (0x1d2c <= c && c <= 0x1d61);
+}
+
 static bool is_id_first(int32_t c) {
   return is_alpha_ascii(c) || c == '_' || is_letter_like(c);
 }
@@ -76,7 +87,14 @@ static bool is_id_rest(int32_t c) {
   return is_alpha_ascii(c)
       || is_digit_ascii(c)
       || c == '_' || c == '\'' || c == '!' || c == '?'
-      || is_letter_like(c) || is_subscript_alnum(c);
+      || is_letter_like(c) || is_subscript_alnum(c)
+      || is_superscript_alnum(c)
+      /* Mathlib postfix-numeral atoms (`ℝ≥0`, `ℝ≥0∞`, `ℕ∞`, `ℤ≥0`):
+         the postfix chars join the identifier instead of splitting
+         into a fresh operator token. Side effect: unspaced `x≥0`
+         scans as one identifier — linting only cares that it parses. */
+      || c == 0x2265 || c == 0x2264 || c == '>' || c == '<'
+      || c == 0x221e;
 }
 
 /*
@@ -86,6 +104,13 @@ static bool is_id_rest(int32_t c) {
  */
 struct Scanner {
   Array(uint16_t) indents;
+  /* Set when a DEDENT lands exactly on an enclosing block level: the
+     newline that terminated the inner block also separates statements
+     at the outer level, but the DEDENT consumed it.  The next scan
+     re-emits it as NEWLINE when the grammar wants one, so a sibling
+     statement can follow a nested block (`try`/`let x <- do`/...
+     then another stmt at the outer indent). */
+  bool pending_newline;
 };
 
 static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
@@ -375,9 +400,33 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
   if (indent < top && valid_symbols[DEDENT]) {
     array_pop(&scanner->indents);
     lexer->result_symbol = DEDENT;
+    scanner->pending_newline =
+        scanner->indents.size > 0
+        && *array_back(&scanner->indents) == indent;
     return true;
   }
   if (indent == top && valid_symbols[NEWLINE]) {
+    /* A `catch`/`finally` line closes out a do_try's inner block and
+       attaches via extras — emitting NEWLINE here would feed the
+       enclosing statement separator instead, orphaning the clause.
+       mark_end before the peek: the word's characters must stay
+       outside the NEWLINE token or any other `c`/`f`-led line
+       (`for`, `fun`, `cases`, `calc`, …) would lose its first word. */
+    if (lexer->lookahead == 'c' || lexer->lookahead == 'f') {
+      lexer->mark_end(lexer);
+      char word[8];
+      int n = 0;
+      while (n < 7 && is_alpha_ascii(lexer->lookahead)) {
+        word[n++] = (char)lexer->lookahead;
+        advance(lexer);
+      }
+      word[n] = 0;
+      if (((n == 5 && memcmp(word, "catch", 5) == 0)
+           || (n == 7 && memcmp(word, "finally", 7) == 0))
+          && !is_id_rest(lexer->lookahead)) {
+        return false;
+      }
+    }
     lexer->result_symbol = NEWLINE;
     return true;
   }
@@ -389,6 +438,41 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
 static bool scan(struct Scanner *scanner, TSLexer *lexer,
                  const bool *valid_symbols) {
   if (valid_symbols[ERROR_SENTINEL]) return false;
+
+  /* The DEDENT that closed an inner block also consumed the newline
+     that separates statements at the outer level — re-emit it here.
+     This is a one-shot flag: it must NOT be restored by deserialize
+     (the runtime only serializes after a scan that returns true, so
+     clearing it in a return-false call never persists — the stale
+     checkpoint would resurrect it at every later position).  A
+     `catch`/`finally` word peeks out of the emission: those clauses
+     attach to the enclosing rule via extras, so a NEWLINE would be
+     misread as a sibling-statement separator.
+     mark_end before the peek, same as in scan_layout: without it
+     the peeked word is swallowed into the NEWLINE token. */
+  if (scanner->pending_newline) {
+    if (lexer->lookahead == 'c' || lexer->lookahead == 'f') {
+      lexer->mark_end(lexer);
+      char word[8];
+      int n = 0;
+      while (n < 7 && is_alpha_ascii(lexer->lookahead)) {
+        word[n++] = (char)lexer->lookahead;
+        advance(lexer);
+      }
+      word[n] = 0;
+      if (((n == 5 && memcmp(word, "catch", 5) == 0)
+           || (n == 7 && memcmp(word, "finally", 7) == 0))
+          && !is_id_rest(lexer->lookahead)) {
+        scanner->pending_newline = false;
+        return false;
+      }
+    }
+    scanner->pending_newline = false;
+    if (valid_symbols[NEWLINE]) {
+      lexer->result_symbol = NEWLINE;
+      return true;
+    }
+  }
 
   /* Layout tokens have to be considered before the whitespace skip —
      they're triggered by newlines and leading-line indentation. */
@@ -480,7 +564,8 @@ void tree_sitter_lean_external_scanner_destroy(void *payload) {
 
 unsigned tree_sitter_lean_external_scanner_serialize(void *payload, char *buffer) {
   struct Scanner *s = payload;
-  unsigned offset = 0;
+  buffer[0] = s->pending_newline ? 1 : 0;
+  unsigned offset = 1;
   for (uint32_t i = 0;
        i < s->indents.size && offset + sizeof(uint16_t) <= TREE_SITTER_SERIALIZATION_BUFFER_SIZE;
        i++) {
@@ -496,7 +581,15 @@ void tree_sitter_lean_external_scanner_deserialize(void *payload,
                                                    unsigned length) {
   struct Scanner *s = payload;
   array_clear(&s->indents);
-  unsigned offset = 0;
+  /* pending_newline is deliberately NOT restored: it is a one-shot
+     flag consumed by the first scan after a dedent.  The runtime only
+     serializes scanner state after scan() returns true, so a flag
+     cleared inside a return-false call would never be persisted —
+     restoring it here would resurrect it at every later position and
+     fire a spurious NEWLINE wherever one happens to be valid.  A
+     zero-length deserialize is a full reset, so it clears the flag. */
+  if (length == 0) s->pending_newline = false;
+  unsigned offset = 1;
   while (offset + sizeof(uint16_t) <= length) {
     uint16_t v;
     memcpy(&v, buffer + offset, sizeof v);

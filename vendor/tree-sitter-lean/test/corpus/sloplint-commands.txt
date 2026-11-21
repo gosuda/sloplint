@@ -1,0 +1,288 @@
+==============
+Sloplint: hash command
+==============
+
+#lint
+#find _ + _ = _ + _
+#whnf Nat.add 1 2
+
+---
+
+(module
+  (hash_cmd
+    command: (hash_name))
+  (hash_cmd
+    command: (hash_name)
+    arg: (binary_op
+      lhs: (binary_op
+        lhs: (hole)
+        rhs: (hole))
+      rhs: (binary_op
+        lhs: (hole)
+        rhs: (hole))))
+  (hash_cmd
+    command: (hash_name)
+    arg: (app
+      fn: (app
+        fn: (identifier)
+        arg: (num_lit))
+      arg: (num_lit))))
+
+==============
+Sloplint: hash command with in-body
+==============
+
+#guard_msgs in
+#eval "hi"
+
+---
+
+(module
+  (hash_cmd
+    command: (hash_name)
+    body: (eval
+      term: (str_lit))))
+
+==============
+Sloplint: custom command heads
+==============
+
+World "Lecture10"
+et.semantics.termination "total"
+
+---
+
+(module
+  (custom_command
+    command: (custom_command_head)
+    (app
+      fn: (app
+        fn: (str_lit)
+        arg: (identifier))
+      arg: (str_lit))))
+
+==============
+Sloplint: try-catch-finally in do blocks
+==============
+
+def t1 : IO Unit := do
+  try
+    let x ← pure 1
+    IO.println x
+  catch e =>
+    IO.println e
+  finally
+    IO.println "done"
+
+def t2 : IO Unit := do
+  try
+    risky
+  catch
+    | e1 => pure ()
+    | e2 => pure ()
+
+---
+
+(module
+  (declaration
+    (def
+      name: (identifier)
+      type: (app
+        fn: (identifier)
+        arg: (identifier))
+      body: (do_block
+        stmt: (do_try
+          stmt: (let
+            name: (identifier)
+            value: (app
+              fn: (identifier)
+              arg: (num_lit)))
+          stmt: (app
+            fn: (identifier)
+            arg: (identifier))
+          name: (identifier)
+          body: (app
+            fn: (app
+              fn: (app
+                fn: (identifier)
+                arg: (identifier))
+              arg: (identifier))
+            arg: (str_lit))))))
+  (declaration
+    (def
+      name: (identifier)
+      type: (app
+        fn: (identifier)
+        arg: (identifier))
+      body: (do_block
+        stmt: (do_try
+          stmt: (identifier)
+          pattern: (identifier)
+          body: (app
+            fn: (identifier)
+            arg: (paren))
+          pattern: (identifier)
+          body: (app
+            fn: (identifier)
+            arg: (paren)))))))
+
+==============
+Sloplint: nested block then sibling statement
+==============
+
+def f : IO Unit := do
+  let x ← do
+    pure 1
+  IO.println x
+
+def g : IO Unit := do
+  try
+    risky
+  pure ()
+
+---
+
+(module
+  (declaration
+    (def
+      name: (identifier)
+      type: (app
+        fn: (identifier)
+        arg: (identifier))
+      body: (do_block
+        stmt: (let
+          name: (identifier)
+          value: (do_block
+            stmt: (app
+              fn: (identifier)
+              arg: (num_lit))))
+        stmt: (app
+          fn: (identifier)
+          arg: (identifier)))))
+  (declaration
+    (def
+      name: (identifier)
+      type: (app
+        fn: (identifier)
+        arg: (identifier))
+      body: (do_block
+        stmt: (do_try
+          stmt: (identifier))
+        stmt: (app
+          fn: (identifier)
+          arg: (paren))))))
+
+==============
+Sloplint: relative and dotted imports
+==============
+
+import .mm0
+import ..u_semiring
+import Prob20.Defs
+import tactic
+
+---
+
+(module
+  (import
+    name: (identifier))
+  (import
+    name: (identifier))
+  (import
+    name: (identifier))
+  (import
+    name: (identifier)))
+
+==============
+Sloplint: variables (plural)
+==============
+
+variables {C : Type u} [category.{v} C]
+
+---
+
+(module
+  (variable
+    (implicit_binder
+      name: (identifier)
+      type: (type_const
+        (identifier)))
+    (instance_binder
+      type: (app
+        fn: (universe_app
+          term: (identifier)
+          level: (identifier))
+        arg: (identifier)))))
+
+==============
+Sloplint: omit
+==============
+
+omit [NeZero p] in
+theorem t : True := trivial
+
+---
+
+(module
+  (omit
+    (instance_binder
+      type: (app
+        fn: (identifier)
+        arg: (identifier)))
+    body: (declaration
+      (theorem
+        name: (identifier)
+        type: (true_const)
+        body: (identifier)))))
+
+==============
+Sloplint: elab command
+==============
+
+elab "cases_and" : tactic => `(tactic| cases h)
+
+---
+
+(module
+  (elab_cmd
+    (str_lit)
+    category: (identifier)
+    body: (quotation
+      category: (identifier)
+      (induction
+        target: (identifier)))))
+
+==============
+Sloplint: open ... in at term level
+==============
+
+def x := open Foo in bar
+
+---
+
+(module
+  (declaration
+    (def
+      name: (identifier)
+      body: (open_term
+        namespace: (identifier)
+        body: (identifier)))))
+
+==============
+Sloplint: comma tactic separator
+==============
+
+example : True := by
+  trivial, exact True.intro
+
+---
+
+(module
+  (declaration
+    (example
+      type: (true_const)
+      body: (by
+        stmt: (identifier)
+        stmt: (app
+          fn: (identifier)
+          arg: (identifier))))))

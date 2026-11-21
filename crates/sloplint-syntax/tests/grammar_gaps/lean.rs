@@ -179,8 +179,8 @@ fn modules_imports_and_comments_parse_clean() {
     let analysis = run_clean("src/module.lean", source);
     assert_eq!(
         analysis.facts.imports.len(),
-        8,
-        "one import, four opens, two named re-exports, got {:?}",
+        7,
+        "one import, four opens, two named re-exports (upstream parity: `hiding`/`Term` and `only`/`Nat` split into extra open/custom_command nodes, so the modifier shapes contribute seven entries), got {:?}",
         analysis
             .facts
             .imports
@@ -264,6 +264,95 @@ fn modules_imports_and_comments_parse_clean() {
 }
 
 #[test]
+fn hash_commands_parse_clean() {
+    let source = "#lint\n#find _ + _ = _ + _\n#whnf Nat.add 1 2\n#guard_msgs in\n#eval \"hi\"\n#guard 1 + 1 = 2\n#print Nat\n#check fun x => x\n";
+    let analysis = run_clean("src/hashcmd.lean", source);
+    let tree = parse_raw(source);
+    let sexp = tree.root_node().to_sexp();
+    for shape in ["(hash_cmd ", "(hash_name)", "(eval ", "(app "] {
+        assert!(
+            sexp.contains(shape),
+            "tree must contain {shape}, got {sexp}"
+        );
+    }
+    assert!(
+        analysis.parse_error.is_none(),
+        "#-commands must not error, got {:?}",
+        analysis.parse_error
+    );
+}
+
+#[test]
+fn custom_command_heads_parse_clean() {
+    let source = "World \"Lecture10\"\net.semantics.termination \"total\"\n";
+    run_clean("src/customcmd.lean", source);
+    let sexp = parse_raw(source).root_node().to_sexp();
+    assert!(
+        sexp.contains("(custom_command "),
+        "custom command heads must parse, got {sexp}"
+    );
+}
+
+#[test]
+fn do_try_catch_finally_parse_clean() {
+    // NOTE: a multiline `finally <block>` followed by another `def` is an
+    // upstream-parity gap (the pinned grammar eats the next `def`), so the
+    // block-finally def goes last and gets closed by EOF.
+    let source = "def t2 : IO Unit := do\n  try\n    risky\n  catch\n    | e1 => pure ()\n    | e2 => pure ()\ndef t3 : IO Unit := do\n  try risky catch e => fallback finally done\ndef t1 : IO Unit := do\n  try\n    risky\n  catch e =>\n    pure ()\n  finally\n    cleanup\n";
+    run_clean("src/dotry.lean", source);
+    let sexp = parse_raw(source).root_node().to_sexp();
+    for shape in ["(do_try ", "pattern:", "(do_block "] {
+        assert!(
+            sexp.contains(shape),
+            "tree must contain {shape}, got {sexp}"
+        );
+    }
+}
+
+#[test]
+fn do_block_assign_and_tactic_apps_parse() {
+    // NOTE: `calc` chains and `first | …` alternation inside `by` blocks are
+    // upstream-parity gaps (identical or worse ERRORs on the pinned grammar),
+    // so they are omitted here.
+    let source = "def h : IO Unit := do\n  let mut n := 0\n  n := n + 1\n  IO.println n\nexample : 1 = 1 := by\n  intro h\n  apply f\n  rw [h]\n  simp [a, b]\n  repeat exact h\n";
+    run_clean("src/doblock.lean", source);
+    let sexp = parse_raw(source).root_node().to_sexp();
+    for shape in ["(block_assign ", "(app "] {
+        assert!(
+            sexp.contains(shape),
+            "tree must contain {shape}, got {sexp}"
+        );
+    }
+}
+
+#[test]
+fn variables_omit_elab_and_relative_imports_parse() {
+    let source = "import Std.Basic\nimport .mm0\nimport ..rel\nvariable (x : Nat)\nvariables {α : Type} [Inhabited α]\nomit [Sort] in\ndef f : Nat := 0\nelab \"foo\" x:term : term => x\n";
+    run_clean("src/misc.lean", source);
+    let sexp = parse_raw(source).root_node().to_sexp();
+    for shape in ["(import ", "(variable ", "(omit ", "(elab_cmd "] {
+        assert!(
+            sexp.contains(shape),
+            "tree must contain {shape}, got {sexp}"
+        );
+    }
+}
+
+#[test]
+fn nested_do_block_sibling_after_dedent() {
+    // A `let x ← do` block dedented back to the parent's statement indent:
+    // the newline that closed the inner block must still separate the outer
+    // statements (regression: the dedent consumed it upstream).
+    let source = "def h : IO Unit := do\n  let x ← do\n    pure 1\n  IO.println x\n";
+    run_clean("src/nested.lean", source);
+    let sexp = parse_raw(source).root_node().to_sexp();
+    assert!(
+        sexp.matches("stmt:").count() >= 2,
+        "the sibling after a dedented inner block must be a stmt, got {sexp}"
+    );
+}
+
+#[test]
 fn first_problem_agrees_with_has_error() {
     for source in ["def f (x : Nat) : Nat := x\n", "def broken (x : Nat) :=\n"] {
         let tree = parse_raw(source);
@@ -272,5 +361,55 @@ fn first_problem_agrees_with_has_error() {
             tree.root_node().has_error(),
             "first_problem must agree with has_error for {source:?}"
         );
+    }
+}
+
+#[test]
+fn tactic_vocabulary_keyword_tails_parse() {
+    // rw/simp/refine with keyword tails (`at`, `+flag`) parse as term
+    // applications — `at`/`only` are plain identifiers here and `+x` is a
+    // unary-op argument; no dedicated tactic rule needed.
+    for source in [
+        "theorem t : True := by\n  rw [foo] at h\n  exact h\n",
+        "theorem t : True := by\n  simp +arith [a] at h ⊢\n",
+        "theorem t : True := by\n  refine ⟨h, ?_⟩ <;> simp [a]\n",
+        "theorem t : True := by\n  intro s hs\n  constructor\n",
+        "theorem t : True := by\n  induction n with\n  | zero => rfl\n  | succ n ih => simp [ih]\n",
+    ] {
+        run_clean("src/tactic.lean", source);
+    }
+}
+
+#[test]
+fn quantifier_comparison_binders_parse() {
+    for source in [
+        "theorem t : ∀ ε > 0, ∃ N > 0, N = N := by sorry\n",
+        // `∀ᶠ` is upstream-parity broken (identical ERROR on the pinned grammar).
+    ] {
+        run_clean("src/quant.lean", source);
+    }
+}
+
+#[test]
+fn for_loop_and_have_forms_parse() {
+    for source in [
+        "def f : IO Unit := do\n  for x in xs do\n    IO.println x\n",
+        "def f : IO Unit := do\n  for h : x in xs do\n    pure h\n",
+        "def f : IO Unit := do\n  for x in xs, y in ys do\n    IO.println (x + y)\n",
+        "theorem t : True := by\n  have h : True\n  · exact True.intro\n",
+        "theorem t : True := by\n  have : True := True.intro\n  exact this\n",
+    ] {
+        run_clean("src/loops.lean", source);
+    }
+}
+
+#[test]
+fn attribute_erasure_and_option_dotnames_parse() {
+    for source in [
+        "attribute [-simp] Fintype.sum_sum_type\n",
+        "set_option linter.verso.manual.headerTags false in\ntheorem t : True := True.intro\n",
+        "open scoped Classical in\ndef f : Nat := 0\n",
+    ] {
+        run_clean("src/attrs.lean", source);
     }
 }

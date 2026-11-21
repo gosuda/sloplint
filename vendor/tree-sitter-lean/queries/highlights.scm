@@ -106,7 +106,6 @@
 (meta)      @keyword.import
 (all)       @keyword.import
 "import"    @keyword.import
-(public_section) @keyword.import
 
 [
   "namespace"
