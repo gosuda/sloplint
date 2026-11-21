@@ -34,7 +34,7 @@ Date: 2026-11-19.
   `long double`, `void *`, `void (*)(void)`) and `q_allocate` uses
   `sizeof(QAlign)` for the stride. MSVC's C mode has no `max_align_t` even
   under `/std:c11` (`error C2061`), which broke every Windows lane. The
-  union still covers the widest alignment the memo/frame/result payload
+  union still covers the widest alignment the memo/trace/result payload
   types need; on i386 it gives a weaker guarantee than `max_align_t`
   (no 16-byte SIMD alignment), which none of the current payload types
   require. A refresh from the pinned upstream revision must re-apply
