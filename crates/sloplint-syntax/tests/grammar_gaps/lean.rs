@@ -383,7 +383,10 @@ fn tactic_vocabulary_keyword_tails_parse() {
 #[test]
 fn quantifier_comparison_binders_parse() {
     // `∀ᶠ` is upstream-parity broken (identical ERROR on the pinned grammar).
-    run_clean("src/quant.lean", "theorem t : ∀ ε > 0, ∃ N > 0, N = N := by sorry\n");
+    run_clean(
+        "src/quant.lean",
+        "theorem t : ∀ ε > 0, ∃ N > 0, N = N := by sorry\n",
+    );
 }
 
 #[test]
