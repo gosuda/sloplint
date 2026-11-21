@@ -23,4 +23,5 @@ tree-sitter-language = "0.1"
 cc = "1.1.22"
 
 [dev-dependencies]
-tree-sitter = "0.24.7"
+# ABI 15 parser.c needs tree-sitter >= 0.25 for test_can_load_grammar.
+tree-sitter = "0.25"
