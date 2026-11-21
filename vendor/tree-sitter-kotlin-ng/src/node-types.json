@@ -1324,7 +1324,19 @@
           "named": true
         },
         {
+          "type": "do_while_statement",
+          "named": true
+        },
+        {
           "type": "expression",
+          "named": true
+        },
+        {
+          "type": "for_statement",
+          "named": true
+        },
+        {
+          "type": "while_statement",
           "named": true
         }
       ]

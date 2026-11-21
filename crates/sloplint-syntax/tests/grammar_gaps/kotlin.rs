@@ -518,3 +518,28 @@ fn infix_word_calls_after_a_semicolon_stay_statements() {
     // A `context(...)` member declaration may follow a bare accessor.
     run_clean("var f = 6\n    get\ncontext(String) fun g() {}\n");
 }
+
+/// Loop statements as `if`/`else` branch bodies: `if (m) for (c in ys) D()`
+/// used to lex `for` as an identifier call (no ERROR for the braced form,
+/// so "clean" was not proof). The tree must contain real `for_statement` /
+/// `while_statement` nodes, and a destructured `((p, q) in m)` header keeps
+/// working inside an unbraced branch.
+#[test]
+fn loops_as_if_branch_bodies_parse() {
+    for src in [
+        "fun f() {\n  if (m) for (c in ys) D()\n}\n",
+        "fun f() {\n  if (m) for (c in ys) D() else while (d) g()\n}\n",
+        "fun f() {\n  if (a) for ((p, q) in m) { g() } else { h() }\n}\n",
+        "fun f() {\n  if (m) while (d) g()\n}\n",
+        "fun f() {\n  if (m) do { g() } while (d)\n}\n",
+    ] {
+        run_clean(src);
+    }
+    let sexp = raw_tree("fun f() {\n  if (m) for (c in ys) D() else while (d) g()\n}\n")
+        .root_node()
+        .to_sexp();
+    assert!(
+        sexp.contains("(for_statement") && sexp.contains("(while_statement"),
+        "the if branch must be a real for-statement, not a `for` call:\n{sexp}"
+    );
+}

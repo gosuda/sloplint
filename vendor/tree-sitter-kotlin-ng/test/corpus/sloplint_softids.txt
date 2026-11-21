@@ -250,3 +250,80 @@ val v: suspend ((A) -> B)
               (identifier)))
           (user_type
             (identifier)))))))
+
+================================================================================
+K-IFLOOP: loop statements as if/else branch bodies
+================================================================================
+
+// `if (m) for (c in ys) D()` and `else while (d) x--` — branches take
+// control-structure bodies, not only expressions. Upstream v1.1.0 lexes
+// `for` as an identifier here and mis-shapes the call.
+
+fun f() {
+  if (m) for (c in ys) D() else while (d) g()
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (line_comment)
+  (line_comment)
+  (line_comment)
+  (function_declaration
+    name: (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (if_expression
+          condition: (identifier)
+          (for_statement
+            (variable_declaration
+              (identifier))
+            (identifier)
+            (call_expression
+              (identifier)
+              (value_arguments)))
+          (while_statement
+            condition: (identifier)
+            (call_expression
+              (identifier)
+              (value_arguments))))))))
+
+================================================================================
+K-IFLOOP2: destructured for variables inside an if branch
+================================================================================
+
+// `if (a) for ((p, q) in m) { g() } else h()` — a multi-variable for
+// header inside an unbraced if branch (TaskPage.kt / Session.kt shapes).
+
+fun f() {
+  if (a) for ((p, q) in m) { g() } else { h() }
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (line_comment)
+  (line_comment)
+  (function_declaration
+    name: (identifier)
+    (function_value_parameters)
+    (function_body
+      (block
+        (if_expression
+          condition: (identifier)
+          (for_statement
+            (multi_variable_declaration
+              (variable_declaration
+                (identifier))
+              (variable_declaration
+                (identifier)))
+            (identifier)
+            (block
+              (call_expression
+                (identifier)
+                (value_arguments))))
+          (block
+            (call_expression
+              (identifier)
+              (value_arguments))))))))
