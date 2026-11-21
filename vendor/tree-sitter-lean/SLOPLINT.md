@@ -40,10 +40,12 @@ Date: 2026-11-21.
     `lake_cmd` instead of erroring on `where`/brace fields — the top
     corpus-error family; `@[default_target]` attributes and `#[…]`
     array-literal values are accepted.
-  - `bindings/rust/build.rs` emits `cargo:rerun-if-changed=` for
-    `src/parser.c`, `src/parser.c.gz` and `grammar.js` (the resolved
-    `OUT_DIR` path it watched before changed every build, recompiling
-    the ~97 MB parser unconditionally).
+  - `bindings/rust/build.rs` emits `cargo:rerun-if-changed=` for `src/`,
+    `src/parser.c.gz` and `grammar.js`. It watches the `src/` directory
+    rather than `src/parser.c` itself: the file is absent in normal
+    checkouts, and a watched missing path reruns the build script on
+    every build — each rerun recompiled the ~97 MB parser. The directory
+    watch still notices a `tree-sitter generate` creating `parser.c`.
   - Known gap (no error, no facts): `custom_command_head` wins the
     lexical tie at TERM-TAIL positions (`#check 𝟙 X`, `def M :=
     StateT Nat IO`) and produces a harmless phantom `custom_command`
