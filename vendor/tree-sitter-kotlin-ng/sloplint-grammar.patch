@@ -1,8 +1,6 @@
-diff --git a/grammar.js b/grammar.js
-index 3881531..712c21a 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -31,6 +31,15 @@ module.exports = grammar({
+@@ -31,6 +31,15 @@
      // accessor tail) and the local variant; the local rule's negative
      // dynamic precedence makes the full property win.
      [$.property_declaration, $.local_property_declaration],
@@ -18,7 +16,23 @@ index 3881531..712c21a 100644
  
  
      [$.binary_expression, $.call_expression],
-@@ -963,12 +972,18 @@ module.exports = grammar({
+@@ -500,13 +509,13 @@
+       '(',
+       field('condition', $.expression),
+       ')',
+-      optional(choice($.block, $.statement, ';')),
++      optional(choice($.block, $.statement, prec(1, ';'))),
+     )),
+ 
+     do_while_statement: $ => prec.right(seq(
+       optional($.label),
+       'do',
+-      optional(choice($.block, $.statement, ';')),
++      optional(choice($.block, $.statement, prec(1, ';'))),
+       'while',
+       '(',
+       field('condition', $.expression),
+@@ -963,12 +972,18 @@
          $.block,
          $.expression,
          $.assignment,
@@ -37,7 +51,7 @@ index 3881531..712c21a 100644
            )),
            optional(';'),
            'else',
-@@ -976,6 +991,9 @@ module.exports = grammar({
+@@ -976,6 +991,9 @@
              $.block,
              $.expression,
              $.assignment,
@@ -47,11 +61,9 @@ index 3881531..712c21a 100644
              ';',
            ),
          ),
-diff --git a/src/scanner.c b/src/scanner.c
-index 7d0576b..cfe26c8 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -171,7 +171,7 @@ static bool skip_ws_comments_nl(TSLexer *lexer, bool *newline) {
+@@ -171,7 +171,7 @@
      bool comment = false;
      for (;;) {
          while (iswspace(lexer->lookahead)) {
@@ -60,7 +72,7 @@ index 7d0576b..cfe26c8 100644
                  *newline = true;
              }
              skip(lexer);
-@@ -277,6 +277,14 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
+@@ -277,6 +277,14 @@
      if (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
          return;
      }
@@ -75,7 +87,7 @@ index 7d0576b..cfe26c8 100644
      if (accessor_index == 0 || accessor_index == 1) {
          // A `get`/`set` accessor is either paren'ed (`get() = ...`,
          // `set(v) { }`) or a bare visibility-only accessor behind a
-@@ -467,6 +475,15 @@ static void accessor_after_semi(TSLexer *lexer, const bool *valid_symbols) {
+@@ -467,6 +475,15 @@
                          return;
                      }
                  }
