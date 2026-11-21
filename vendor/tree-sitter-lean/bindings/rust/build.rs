@@ -17,22 +17,25 @@ fn main() {
     let parser_path = if parser_path.exists() {
         parser_path
     } else {
-        let packed = std::fs::File::open(&parser_gz)
-            .expect("src/parser.c.gz missing: regenerate the vendored grammar");
-        let mut dec = flate2::read::GzDecoder::new(packed);
+        // Decompress once per OUT_DIR: a missing rerun-if-changed path is
+        // always stale to Cargo, so this script reruns whenever src/parser.c
+        // appears or disappears. Keeping the inflated copy stable means the
+        // rerun only recompiles when the inputs actually changed.
         let out = out_dir.join("parser.c");
-        let mut f = std::fs::File::create(&out).unwrap();
-        std::io::copy(&mut dec, &mut f).unwrap();
+        if !out.exists() {
+            let packed = std::fs::File::open(&parser_gz)
+                .expect("src/parser.c.gz missing: regenerate the vendored grammar");
+            let mut dec = flate2::read::GzDecoder::new(packed);
+            let mut f = std::fs::File::create(&out).unwrap();
+            std::io::copy(&mut dec, &mut f).unwrap();
+        }
         out
     };
     c_config.file(&parser_path);
-    // Watch src/parser.c only when a local regen produced it: a
-    // rerun-if-changed path that does not exist is always stale to Cargo,
-    // and in normal checkouts (where it is gitignored away) that would
-    // rerun this script — and the ~80MB compile — on every build.
-    if src_dir.join("parser.c").exists() {
-        println!("cargo:rerun-if-changed=src/parser.c");
-    }
+    // Watch src/parser.c unconditionally: a missing path reruns this script
+    // (cheap — the inflated copy above is kept), which is what lets a later
+    // `tree-sitter generate` actually take over the build.
+    println!("cargo:rerun-if-changed=src/parser.c");
     println!("cargo:rerun-if-changed={}", parser_gz.to_str().unwrap());
     println!("cargo:rerun-if-changed=grammar.js");
 
