@@ -17,25 +17,28 @@ fn main() {
     let parser_path = if parser_path.exists() {
         parser_path
     } else {
-        // Decompress once per OUT_DIR: a missing rerun-if-changed path is
-        // always stale to Cargo, so this script reruns whenever src/parser.c
-        // appears or disappears. Keeping the inflated copy stable means the
-        // rerun only recompiles when the inputs actually changed.
+        // Re-inflate on every run: parser.c.gz is a watched input, so
+        // reaching this branch means it changed (or the OUT_DIR copy is
+        // missing). Caching the inflated copy across a .gz change would
+        // keep compiling the old parser.
         let out = out_dir.join("parser.c");
-        if !out.exists() {
-            let packed = std::fs::File::open(&parser_gz)
-                .expect("src/parser.c.gz missing: regenerate the vendored grammar");
-            let mut dec = flate2::read::GzDecoder::new(packed);
-            let mut f = std::fs::File::create(&out).unwrap();
+        let packed = std::fs::File::open(&parser_gz)
+            .expect("src/parser.c.gz missing: regenerate the vendored grammar");
+        let mut dec = flate2::read::GzDecoder::new(packed);
+        let tmp = out_dir.join("parser.c.tmp");
+        {
+            let mut f = std::fs::File::create(&tmp).unwrap();
             std::io::copy(&mut dec, &mut f).unwrap();
         }
+        std::fs::rename(&tmp, &out).unwrap();
         out
     };
     c_config.file(&parser_path);
-    // Watch src/parser.c unconditionally: a missing path reruns this script
-    // (cheap — the inflated copy above is kept), which is what lets a later
-    // `tree-sitter generate` actually take over the build.
-    println!("cargo:rerun-if-changed=src/parser.c");
+    // Watch the src directory, not src/parser.c: the file is absent in
+    // normal checkouts, and a watched missing path reruns this script on
+    // every build — each rerun recompiles the ~80MB parser. The existing
+    // directory still notices a `tree-sitter generate` creating it.
+    println!("cargo:rerun-if-changed=src");
     println!("cargo:rerun-if-changed={}", parser_gz.to_str().unwrap());
     println!("cargo:rerun-if-changed=grammar.js");
 
