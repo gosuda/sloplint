@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 6fcbe2c..c11f327 100644
+index 6fcbe2c8..8e478b3d 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -138,6 +138,10 @@ const OP_TOKEN = {
@@ -96,15 +96,22 @@ index 6fcbe2c..c11f327 100644
    ],
  
    inline: $ => [
-@@ -438,7 +481,6 @@ module.exports = grammar({
+@@ -437,8 +480,13 @@ module.exports = grammar({
+   ],
  
    conflicts: $ => [
++    // `val export: T` (declaration) vs `val x, export: T`? After `val`, a
++    // leading comma-list element can be a plain name, which collides with
++    // the declaration's `name: type` head until `,` or `=` disambiguates.
++    [$.val_declaration, $.identifiers, $._comma_definition_pattern],
++    [$.val_declaration, $._comma_definition_pattern],
++    [$._comma_definition_pattern, $.identifiers],
      [$._if_rest],
 -    [$.repeat_pattern, $._simple_expression],
      [$.tuple_pattern, $._simple_expression],
      [$.tuple_pattern, $._simple_expression, $.binding],
      // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
-@@ -459,12 +501,37 @@ module.exports = grammar({
+@@ -459,12 +507,37 @@ module.exports = grammar({
      // 'extension' • '{' is either an extension definition with a braced body
      // or the soft identifier `extension` (a Scala 2 id) called with a block.
      [$.extension_definition, $._soft_identifier],
@@ -142,7 +149,16 @@ index 6fcbe2c..c11f327 100644
      [$.parameter_types, $._colon_bindings],
      [$.parameter_types, $.bindings],
      [$.while_expression, $._simple_expression],
-@@ -493,6 +560,7 @@ module.exports = grammar({
+@@ -480,6 +553,8 @@ module.exports = grammar({
+     // Same separator-or-marker fork as above.
+     [$.function_definition],
+     [$.val_definition],
++    // 'val' name ',' name • ':' — a multi-pattern `val a, List(b) =` now
++    // competes with the `val a, b : T` declaration read.
+     [$._dot_match_expression],
+     [$.var_definition],
+     [$.package_clause],
+@@ -493,6 +568,7 @@ module.exports = grammar({
      // we treat `operator_identifier` as `simple_expression`
      [$._simple_expression, $.lambda_expression],
      [$._simple_expression, $._single_lambda_param],
@@ -150,7 +166,16 @@ index 6fcbe2c..c11f327 100644
      // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
      // identifier `export` beginning an expression statement. Each reading
      // dies on the next token ('.' vs a name), so forking settles it. The
-@@ -532,20 +600,32 @@ module.exports = grammar({
+@@ -510,8 +586,6 @@ module.exports = grammar({
+     [$._class_constructor],
+     // 'enum'  _class_constructor  '{'  'case'  operator_identifier  _full_enum_def_repeat1  •  _automatic_semicolon  …
+     [$._full_enum_def],
+-    // _start_val  identifier  ','  identifier  •  ':'  …
+-    [$.identifiers, $.val_declaration],
+     // 'enum'  operator_identifier  _automatic_semicolon  '('  ')'  •  ':'  …
+     [$.class_parameters],
+     // 'for'  operator_identifier  ':'  _annotated_type  •  ':'  …
+@@ -532,20 +606,32 @@ module.exports = grammar({
      [$._constructor_annotation],
      [$._constructor_annotation_arguments, $.arguments],
      [$._constructor_annotation, $.applied_constructor_type],
@@ -190,7 +215,7 @@ index 6fcbe2c..c11f327 100644
      // _simple_expression  ':'  '('  name_and_type  ')'  •  '=>'
      // The parenthesized list is either the lambda parameters of a colon
      // argument or a named tuple type on the ascription reading. What follows
-@@ -555,9 +635,6 @@ module.exports = grammar({
+@@ -555,9 +641,6 @@ module.exports = grammar({
      [$._annotated_type, $.binding],
      // '['  identifier  ':'  '{'  identifier  •  ':'  — a braced context
      // bound reuses the self-type head shapes.
@@ -200,7 +225,7 @@ index 6fcbe2c..c11f327 100644
      // '['  identifier  ':'  '{'  '('  wildcard  •  ':'  …
      [$.binding, $._annotated_type, $._simple_expression],
      // '['  identifier  ':'  '{'  wildcard  •  '{'  …
-@@ -636,14 +713,29 @@ module.exports = grammar({
+@@ -636,14 +719,29 @@ module.exports = grammar({
      compilation_unit: $ =>
        seq(
          optional($._shebang),
@@ -232,7 +257,7 @@ index 6fcbe2c..c11f327 100644
          $.extension_definition,
          $.class_definition,
          $.import_declaration,
-@@ -663,15 +755,18 @@ module.exports = grammar({
+@@ -663,15 +761,18 @@ module.exports = grammar({
        ),
  
      enum_definition: $ =>
@@ -260,7 +285,7 @@ index 6fcbe2c..c11f327 100644
        ),
  
      _enum_block: $ =>
-@@ -801,7 +896,7 @@ module.exports = grammar({
+@@ -801,7 +902,7 @@ module.exports = grammar({
      // Scala 3 keywords that are valid identifiers in Scala 2 sources and thus
      // may appear as package names in import/export paths (e.g. `import io.circe.export.Exported`).
      _namespace_path_segment: $ =>
@@ -269,7 +294,7 @@ index 6fcbe2c..c11f327 100644
  
      namespace_wildcard: $ => prec.left(1, choice("*", "_", "given")),
  
-@@ -1073,10 +1168,14 @@ module.exports = grammar({
+@@ -1073,10 +1174,14 @@ module.exports = grammar({
  
      // Dynamic precedences added here to win over $.call_expression
      self_type: $ =>
@@ -287,7 +312,43 @@ index 6fcbe2c..c11f327 100644
          prec(
            "self_type",
            seq(
-@@ -1522,13 +1621,26 @@ module.exports = grammar({
+@@ -1132,7 +1237,16 @@ module.exports = grammar({
+     val_definition: $ =>
+       seq(
+         $._start_val,
+-        field("pattern", choice($._definition_pattern, $.identifiers)),
++        // PatDef admits a comma list of patterns, not only of names:
++        // `val a, List(b) = …` (scalameta's Issue1872 fixtures). The
++        // name-only list keeps its `identifiers` node where it applies.
++        field(
++          "pattern",
++          choice(
++            prec.dynamic(1, $.identifiers),
++            seq($._definition_pattern, repeat(seq(",", $._comma_definition_pattern))),
++          ),
++        ),
+         optional(seq(":", field("type", $._type))),
+         "=",
+         field("value", $._indentable_expression),
+@@ -1160,7 +1274,16 @@ module.exports = grammar({
+     var_definition: $ =>
+       seq(
+         $._start_var,
+-        field("pattern", choice($._definition_pattern, $.identifiers)),
++        // PatDef admits a comma list of patterns, not only of names:
++        // `val a, List(b) = …` (scalameta's Issue1872 fixtures). The
++        // name-only list keeps its `identifiers` node where it applies.
++        field(
++          "pattern",
++          choice(
++            prec.dynamic(1, $.identifiers),
++            seq($._definition_pattern, repeat(seq(",", $._comma_definition_pattern))),
++          ),
++        ),
+         optional(seq(":", field("type", $._type))),
+         "=",
+         field("value", $._indentable_expression),
+@@ -1522,13 +1645,26 @@ module.exports = grammar({
        ),
  
      class_parameter: $ =>
@@ -321,7 +382,7 @@ index 6fcbe2c..c11f327 100644
        ),
  
      /*
-@@ -1545,7 +1657,7 @@ module.exports = grammar({
+@@ -1545,7 +1681,7 @@ module.exports = grammar({
            // A given conditional clause takes `tracked val`.
            optional(trackedMod($)),
            optional(choice("val", "var")),
@@ -330,7 +391,7 @@ index 6fcbe2c..c11f327 100644
            ":",
            field("type", $._param_type),
            optional(seq("=", field("default_value", $.expression))),
-@@ -1896,6 +2008,17 @@ module.exports = grammar({
+@@ -1896,6 +2032,17 @@ module.exports = grammar({
                field("parameter_types", $.parameter_types),
                $._arrow_then_type,
              ),
@@ -348,7 +409,7 @@ index 6fcbe2c..c11f327 100644
            ),
          ),
        ),
-@@ -1930,6 +2053,20 @@ module.exports = grammar({
+@@ -1930,6 +2077,20 @@ module.exports = grammar({
          $.infix_type,
        ),
  
@@ -369,7 +430,35 @@ index 6fcbe2c..c11f327 100644
      _param_type: $ => choice($.lazy_parameter_type, $._param_value_type),
  
      _param_value_type: $ =>
-@@ -2019,7 +2156,10 @@ module.exports = grammar({
+@@ -1978,6 +2139,27 @@ module.exports = grammar({
+     // SLS 4.1: the pattern of a val/var definition is a Pattern2, so no
+     // top-level alternatives or ascription. `val a: A | B` then reads `|`
+     // as a union type instead of an alternative pattern.
++    // PatDef comma-list elements reject an unparenthesized infix: scalac
++    // admits only identifiers after the first comma and reads `|` (and any
++    // other infix op) at Pattern level, which needs parens — `val a, b | c`
++    // and `val a, b :: c` are errors while `val a, (b | c)` parses.
++    _comma_definition_pattern: $ =>
++      choice(
++        $._identifier,
++        $.stable_identifier,
++        $.interpolated_string_expression,
++        $.capture_pattern,
++        $.tuple_pattern,
++        $.named_tuple_pattern,
++        $.case_class_pattern,
++        $.given_pattern,
++        $.quote_expression,
++        $.literal,
++        $.unit,
++        $.wildcard,
++        $.xml_pattern,
++      ),
++
+     _definition_pattern: $ =>
+       choice(
+         $._identifier,
+@@ -2019,7 +2201,10 @@ module.exports = grammar({
          PREC.infix,
          seq(
            field("left", $._definition_pattern),
@@ -381,7 +470,7 @@ index 6fcbe2c..c11f327 100644
            field("right", $._definition_pattern),
          ),
        ),
-@@ -2151,10 +2291,17 @@ module.exports = grammar({
+@@ -2151,10 +2336,17 @@ module.exports = grammar({
                ),
                field(
                  "parameters",
@@ -403,7 +492,7 @@ index 6fcbe2c..c11f327 100644
                ),
                anyArrow(),
                $._indentable_expression,
-@@ -2211,18 +2358,30 @@ module.exports = grammar({
+@@ -2211,18 +2403,30 @@ module.exports = grammar({
          ),
        ),
  
@@ -438,7 +527,7 @@ index 6fcbe2c..c11f327 100644
                ),
              ),
              anyArrow(),
-@@ -2283,17 +2442,35 @@ module.exports = grammar({
+@@ -2283,19 +2487,37 @@ module.exports = grammar({
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -464,7 +553,7 @@ index 6fcbe2c..c11f327 100644
 +            $._control_tail_gate,
 +            "then",
 +          ),
-         ),
++        ),
 +        prec.dynamic(
 +          5,
 +          seq(
@@ -473,18 +562,20 @@ index 6fcbe2c..c11f327 100644
 +            $._control_tail_gate,
 +            "then",
 +          ),
-+        ),
-+      ),
-+
+         ),
+       ),
+ 
 +    split_call_condition: $ =>
 +      seq(
 +        field("function", $._indentable_expression),
 +        $._automatic_semicolon,
 +        field("arguments", $.arguments),
-       ),
- 
++      ),
++
      /*
-@@ -2529,6 +2706,17 @@ module.exports = grammar({
+      *   MatchClause       ::=  'match' <<< CaseClauses >>>
+      *
+@@ -2529,6 +2751,17 @@ module.exports = grammar({
              optional($._end_marker_kw_tail),
            ),
          ),
@@ -502,7 +593,7 @@ index 6fcbe2c..c11f327 100644
          prec(
            "new",
            seq("new", $.template_body, optional($._end_marker_kw_tail)),
-@@ -2726,10 +2914,34 @@ module.exports = grammar({
+@@ -2726,10 +2959,34 @@ module.exports = grammar({
      // binder is admitted in every argument list.
      _argument_list: $ =>
        seq(
@@ -538,7 +629,7 @@ index 6fcbe2c..c11f327 100644
      vararg: $ =>
        choice(
          // Scala 3: `args*`. The star in front of a closing delimiter arrives
-@@ -2745,7 +2957,10 @@ module.exports = grammar({
+@@ -2745,7 +3002,10 @@ module.exports = grammar({
        ),
  
      // ExprsInParens     ::=  ExprInParens {‘,’ ExprInParens}
@@ -550,7 +641,7 @@ index 6fcbe2c..c11f327 100644
  
      // The opening is a single two-character token so that a bare `$` used as
      // an ordinary identifier (e.g. `$(selector)`) still lexes as an
-@@ -2765,11 +2980,17 @@ module.exports = grammar({
+@@ -2765,11 +3025,17 @@ module.exports = grammar({
      quote_expression: $ =>
        prec.left(
          PREC.macro,
@@ -573,7 +664,7 @@ index 6fcbe2c..c11f327 100644
              // TypeBlock ::= {TypeBlockStat semi} Type. The bindings let a
              // quote name the type variables it matches on.
              seq(
-@@ -2779,8 +3000,29 @@ module.exports = grammar({
+@@ -2779,8 +3045,29 @@ module.exports = grammar({
                "]",
              ),
              $.identifier,
@@ -605,7 +696,7 @@ index 6fcbe2c..c11f327 100644
            ),
          ),
        ),
-@@ -2802,7 +3044,7 @@ module.exports = grammar({
+@@ -2802,7 +3089,7 @@ module.exports = grammar({
      _super_identifier: $ => "super",
  
      // https://docs.scala-lang.org/scala3/reference/soft-modifier.html
@@ -614,7 +705,7 @@ index 6fcbe2c..c11f327 100644
  
      // alphaid          ::=  upper idrest
      //                       |  varid
-@@ -2884,6 +3126,13 @@ module.exports = grammar({
+@@ -2884,6 +3171,13 @@ module.exports = grammar({
        OP_LEFT.map(key => [`_op_left_${key}`, () => OP_TOKEN[`${key}Left`]]),
      ),
      _op_name: $ => OP_ID_UNION,

@@ -15,7 +15,7 @@ pub(crate) fn first_ident<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, 
     let mut stack = vec![n];
     while let Some(cur) = stack.pop() {
         if cur.kind() == "identifier" {
-            return Some((text(cx, cur), pos_of(cur)));
+            return Some((unquote(text(cx, cur)), pos_of(cur)));
         }
         if cur.kind() != "wildcard" {
             stack.extend(named_children(cur).into_iter().rev());
@@ -24,12 +24,35 @@ pub(crate) fn first_ident<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, 
     None
 }
 
+/// `` `name` `` binds the same variable as `name`: strip the backquotes so a
+/// backquoted binder and an unquoted spelling resolve alike.
+pub(crate) fn unquote(name: &str) -> &str {
+    name.strip_prefix('`')
+        .and_then(|rest| rest.strip_suffix('`'))
+        .unwrap_or(name)
+}
+
 pub(crate) fn collect_idents<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
     let mut pending = vec![n];
     while let Some(node) = pending.pop() {
         match node.kind() {
             "wildcard" => {}
-            "identifier" => out.push((text(cx, node), pos_of(node))),
+            // A val/var pattern's top-level identifier is always a binder,
+            // even spelled `Count` or `` `a-b` ``; the case/backquote rules
+            // only govern nested positions. In a comma-separated list the
+            // direct children of the `identifiers` pattern are all top-level
+            // binders too. Only binder positions count: `counters` in
+            // `Some(counters.Zero)` is a stable reference, not a new local.
+            "identifier" | "operator_identifier"
+                if !is_value_name(node)
+                    && (node.id() == n.id()
+                        || (n.kind() == "identifiers"
+                            && node.parent().is_some_and(|p| p.id() == n.id()))
+                        || is_pattern_binder(cx, node)) =>
+            {
+                out.push((unquote(text(cx, node)), pos_of(node)))
+            }
+            "identifier" | "operator_identifier" => {}
             _ => pending.extend(named_children(node).into_iter().rev()),
         }
     }
@@ -39,17 +62,17 @@ fn binding_of<'s>(cx: &Cx<'_, 's>, pat: Option<Node<'_>>) -> Option<&'s str> {
     let mut current = pat?;
     loop {
         if current.kind() == "identifier" {
-            return Some(text(cx, current));
+            return Some(unquote(text(cx, current)));
         }
         if current.kind() == "capture_pattern" {
-            return child_by_field(current, "name").map(|m| text(cx, m));
+            return child_by_field(current, "name").map(|m| unquote(text(cx, m)));
         }
         if current.kind() != "typed_pattern" {
             return None;
         }
         let inner = child_by_field(current, "pattern")?;
         if inner.kind() == "identifier" {
-            return Some(text(cx, inner));
+            return Some(unquote(text(cx, inner)));
         }
         current = inner;
     }
@@ -58,7 +81,7 @@ fn binding_of<'s>(cx: &Cx<'_, 's>, pat: Option<Node<'_>>) -> Option<&'s str> {
 fn stmt_of<'s>(cx: &Cx<'_, 's>, s: Node<'_>, binding: Option<&'s str>) -> Stmt<'s> {
     if s.kind() == "throw_expression" {
         let hit = any_named_child(s, |c| {
-            c.kind() == "identifier" && Some(text(cx, c)) == binding
+            c.kind() == "identifier" && Some(unquote(text(cx, c))) == binding
         });
         return if hit { Stmt::Rethrow } else { Stmt::Other };
     }
@@ -90,7 +113,14 @@ pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s st
     if n.kind() != "var_definition" && n.kind() != "val_definition" {
         return;
     }
-    if let Some(pat) = child_by_field(n, "pattern") {
+    // `var whole, Some(count) = …` repeats the `pattern` field, and the
+    // field iteration also yields the anonymous `,` separators — so walk
+    // every named field child instead of `child_by_field`'s first match.
+    let mut cursor = n.walk();
+    for pat in n
+        .children_by_field_name("pattern", &mut cursor)
+        .filter(|pat| pat.is_named())
+    {
         collect_idents(cx, pat, out);
     }
 }
@@ -124,6 +154,10 @@ fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str
             if is_pattern_binder(cx, node) {
                 out.push(text(cx, node));
             }
+        } else if node.kind() == "named_pattern" {
+            // `Doc(_id = id)`: the label selects a field — it is not a
+            // binder, so only the right-hand pattern is walked.
+            pending.extend(named_children(node).into_iter().skip(1).rev());
         } else if node.kind() != "wildcard" {
             pending.extend(named_children(node).into_iter().rev());
         }
@@ -131,22 +165,49 @@ fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str
 }
 
 fn is_pattern_binder(cx: &Cx<'_, '_>, node: Node<'_>) -> bool {
+    // A name before `@` (`x @ Some(y)`, `` `x` @ ``, `X @ ``) is always a
+    // binder — the capture's name is never a stable reference.
+    if node.parent().is_some_and(|p| {
+        p.kind() == "capture_pattern"
+            && child_by_field(p, "name").is_some_and(|m| m.id() == node.id())
+    }) {
+        return true;
+    }
     let name = text(cx, node);
     if name.starts_with('`')
         || !name
             .chars()
             .next()
-            .is_some_and(|first| first.is_lowercase())
+            .is_some_and(|first| first.is_lowercase() || first == '_')
     {
         return false;
     }
-    let Some(parent) = cx.parent_of(node) else {
+    // The raw tree parent: `stable_identifier` and friends are not tracked
+    // levels, so `cx.parent_of` would surface an ancestor instead.
+    let Some(parent) = node.parent() else {
         return true;
     };
     !matches!(
         parent.kind(),
         "type_identifier" | "stable_identifier" | "stable_type_identifier"
     )
+}
+
+// An identifier that names a value slot but binds nothing: the interpolator
+// head of `s"..."` and a word-form infix operator (`a foo b`). Neither is a
+// local, and registering them steals writes from real variables.
+fn is_value_name(node: Node<'_>) -> bool {
+    let Some(parent) = node.parent() else {
+        return false;
+    };
+    if matches!(
+        parent.kind(),
+        "interpolated_string" | "interpolated_string_expression"
+    ) {
+        return true;
+    }
+    parent.kind() == "infix_expression"
+        && child_by_field(parent, "operator").is_some_and(|o| o.id() == node.id())
 }
 
 fn push_generator_pattern<'s>(cx: &Cx<'_, 's>, enumerator: Node<'_>, out: &mut Vec<&'s str>) {

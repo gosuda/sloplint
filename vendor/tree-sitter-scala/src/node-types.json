@@ -11045,9 +11045,13 @@
     "named": true,
     "fields": {
       "pattern": {
-        "multiple": false,
+        "multiple": true,
         "required": true,
         "types": [
+          {
+            "type": ",",
+            "named": false
+          },
           {
             "type": "boolean_literal",
             "named": true
@@ -11379,9 +11383,13 @@
     "named": true,
     "fields": {
       "pattern": {
-        "multiple": false,
+        "multiple": true,
         "required": true,
         "types": [
+          {
+            "type": ",",
+            "named": false
+          },
           {
             "type": "boolean_literal",
             "named": true
