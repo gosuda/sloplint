@@ -16,18 +16,21 @@
         {
           "type": "REPEAT",
           "content": {
-            "type": "CHOICE",
+            "type": "SEQ",
             "members": [
               {
                 "type": "SYMBOL",
                 "name": "_top_decl"
               },
               {
-                "type": "PREC",
-                "value": -1,
+                "type": "REPEAT",
                 "content": {
-                  "type": "STRING",
-                  "value": ";"
+                  "type": "PREC",
+                  "value": -1,
+                  "content": {
+                    "type": "STRING",
+                    "value": ";"
+                  }
                 }
               }
             ]
@@ -421,18 +424,21 @@
         {
           "type": "REPEAT",
           "content": {
-            "type": "CHOICE",
+            "type": "SEQ",
             "members": [
               {
                 "type": "SYMBOL",
                 "name": "_top_decl"
               },
               {
-                "type": "PREC",
-                "value": -1,
+                "type": "REPEAT",
                 "content": {
-                  "type": "STRING",
-                  "value": ";"
+                  "type": "PREC",
+                  "value": -1,
+                  "content": {
+                    "type": "STRING",
+                    "value": ";"
+                  }
                 }
               }
             ]

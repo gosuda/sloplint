@@ -20,7 +20,8 @@ Date: 2026-11-19.
   `.cargo_vcs_info.json`. `Cargo.toml` is the crate's original manifest.
 - `sloplint-grammar.patch` holds the local grammar diff versus the pinned
   upstream revision: stray `;` is tolerated after a top-level declaration
-  (`source_file` and `module_body` admit `prec(-1, ';')`), and decl/spec
+  (`source_file` and `module_body` repeat `seq($._top_decl, repeat(prec(-1, ';')))`,
+  so a leading `;` before any declaration still errors), and decl/spec
   rules ending in `optional(';')` are wrapped in `prec.right` so the `;`
   binds to the declaration rather than reading as a stray. Apply the patch
   to upstream `grammar.js` and regenerate to reproduce `src/`.

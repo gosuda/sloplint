@@ -180,9 +180,10 @@ module.exports = grammar({
   rules: {
     source_file: $ => seq(
       repeat($.include_directive),
-      // Dafny tolerates ';' after a top-level declaration. Lower
-      // precedence than a decl's own optional ';' (constant_field_decl).
-      repeat(choice($._top_decl, prec(-1, ';'))),
+      // Dafny tolerates ';' after a top-level declaration — but a leading
+      // ';' before any decl still errors. Lower precedence than a decl's
+      // own optional ';' (constant_field_decl).
+      repeat(seq($._top_decl, repeat(prec(-1, ';')))),
     ),
 
     // ========== Comments ==========
@@ -237,7 +238,7 @@ module.exports = grammar({
     refines_clause: $ => seq('refines', $.qualified_name),
     replaces_clause: $ => seq('replaces', $.qualified_name),
 
-    module_body: $ => seq('{', repeat(choice($._top_decl, prec(-1, ';'))), '}'),
+    module_body: $ => seq('{', repeat(seq($._top_decl, repeat(prec(-1, ';')))), '}'),
 
     module_import: $ => seq(
       'import', repeat($.attribute), optional('opened'),

@@ -1,28 +1,27 @@
-diff --git a/vendor/tree-sitter-dafny/grammar.js b/vendor/tree-sitter-dafny/grammar.js
-index 57f8884e..fcc25725 100644
 --- a/vendor/tree-sitter-dafny/grammar.js
 +++ b/vendor/tree-sitter-dafny/grammar.js
-@@ -180,7 +180,9 @@ module.exports = grammar({
+@@ -180,7 +180,10 @@
    rules: {
      source_file: $ => seq(
        repeat($.include_directive),
 -      repeat($._top_decl),
-+      // Dafny tolerates ';' after a top-level declaration. Lower
-+      // precedence than a decl's own optional ';' (constant_field_decl).
-+      repeat(choice($._top_decl, prec(-1, ';'))),
++      // Dafny tolerates ';' after a top-level declaration — but a leading
++      // ';' before any decl still errors. Lower precedence than a decl's
++      // own optional ';' (constant_field_decl).
++      repeat(seq($._top_decl, repeat(prec(-1, ';')))),
      ),
  
      // ========== Comments ==========
-@@ -235,7 +237,7 @@ module.exports = grammar({
+@@ -235,7 +238,7 @@
      refines_clause: $ => seq('refines', $.qualified_name),
      replaces_clause: $ => seq('replaces', $.qualified_name),
  
 -    module_body: $ => seq('{', repeat($._top_decl), '}'),
-+    module_body: $ => seq('{', repeat(choice($._top_decl, prec(-1, ';'))), '}'),
++    module_body: $ => seq('{', repeat(seq($._top_decl, repeat(prec(-1, ';')))), '}'),
  
      module_import: $ => seq(
        'import', repeat($.attribute), optional('opened'),
-@@ -362,8 +364,8 @@ module.exports = grammar({
+@@ -362,8 +365,8 @@
        optional($.block_statement),
      ),
  
@@ -33,7 +32,7 @@ index 57f8884e..fcc25725 100644
  
      // ========== Methods ==========
  
-@@ -466,29 +468,31 @@ module.exports = grammar({
+@@ -466,29 +469,31 @@
  
      // ========== Fields ==========
  
