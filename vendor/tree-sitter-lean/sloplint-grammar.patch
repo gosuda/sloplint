@@ -729,7 +729,7 @@ index 1eb7f4a..d19e0ad 100644
      uint16_t v;
      memcpy(&v, buffer + offset, sizeof v);
 diff --git a/bindings/rust/build.rs b/bindings/rust/build.rs
-index cbc9120..e8f0d85 100644
+index cbc9120..0e671e1 100644
 --- a/bindings/rust/build.rs
 +++ b/bindings/rust/build.rs
 @@ -1,5 +1,6 @@
@@ -739,7 +739,7 @@ index cbc9120..e8f0d85 100644
  
      let mut c_config = cc::Build::new();
      c_config.std("c11").include(src_dir);
-@@ -7,9 +8,31 @@ fn main() {
+@@ -7,9 +8,39 @@ fn main() {
      #[cfg(target_env = "msvc")]
      c_config.flag("-utf-8");
  
@@ -752,21 +752,29 @@ index cbc9120..e8f0d85 100644
 +    let parser_path = if parser_path.exists() {
 +        parser_path
 +    } else {
++        // Re-inflate on every run: parser.c.gz is a watched input, so
++        // reaching this branch means it changed (or the OUT_DIR copy is
++        // missing). Caching the inflated copy across a .gz change would
++        // keep compiling the old parser.
++        let out = out_dir.join("parser.c");
 +        let packed = std::fs::File::open(&parser_gz)
 +            .expect("src/parser.c.gz missing: regenerate the vendored grammar");
 +        let mut dec = flate2::read::GzDecoder::new(packed);
-+        let out = out_dir.join("parser.c");
-+        let mut f = std::fs::File::create(&out).unwrap();
-+        std::io::copy(&mut dec, &mut f).unwrap();
++        let tmp = out_dir.join("parser.c.tmp");
++        {
++            let mut f = std::fs::File::create(&tmp).unwrap();
++            std::io::copy(&mut dec, &mut f).unwrap();
++        }
++        std::fs::rename(&tmp, &out).unwrap();
 +        out
 +    };
      c_config.file(&parser_path);
 -    println!("cargo:rerun-if-changed={}", parser_path.to_str().unwrap());
-+    // Watch the sources, not the resolved path: when src/parser.c is
-+    // absent the resolved path lives in OUT_DIR (this script's own
-+    // output), which Cargo always reports as changed and would recompile
-+    // the ~80MB parser every build.
-+    println!("cargo:rerun-if-changed=src/parser.c");
++    // Watch the src directory, not src/parser.c: the file is absent in
++    // normal checkouts, and a watched missing path reruns this script on
++    // every build — each rerun recompiles the ~80MB parser. The existing
++    // directory still notices a `tree-sitter generate` creating it.
++    println!("cargo:rerun-if-changed=src");
 +    println!("cargo:rerun-if-changed={}", parser_gz.to_str().unwrap());
 +    println!("cargo:rerun-if-changed=grammar.js");
  
