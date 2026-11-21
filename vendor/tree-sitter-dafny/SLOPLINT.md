@@ -17,7 +17,10 @@ Date: 2026-11-19.
   (`parser.c`, `grammar.json`, `node-types.json`, `scanner.c`,
   `src/tree_sitter/`), `bindings/rust/`, `queries/`, `tree-sitter.json`,
   `README.md`. Dropped from the crate: `Cargo.toml.orig`, `Cargo.lock`,
-  `.cargo_vcs_info.json`. `Cargo.toml` is the crate's original manifest.
+  `.cargo_vcs_info.json`. `Cargo.toml` is the crate's manifest with one
+  change: the `tree-sitter` dev-dependency is bumped to `0.25` so the
+  standalone `test_can_load_grammar` can load the ABI-15 `parser.c` (the
+  workspace itself uses tree-sitter 0.27).
 - `sloplint-grammar.patch` holds the local grammar diff versus the pinned
   upstream revision: stray `;` is tolerated after a top-level declaration
   (`source_file` and `module_body` repeat `seq($._top_decl, repeat(prec(-1, ';')))`,
