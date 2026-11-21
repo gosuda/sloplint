@@ -344,7 +344,7 @@ fn split_block<'a>(body: &'a [u8], open: &Open) -> Split<'a> {
                 while at > backslashes && body[at - 1 - backslashes] == b'\\' {
                     backslashes += 1;
                 }
-                if backslashes % 2 == 0 {
+                if backslashes.is_multiple_of(2) {
                     in_string = false;
                 }
             }

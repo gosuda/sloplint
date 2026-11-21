@@ -1,0 +1,147 @@
+========================
+primed decl names
+========================
+
+assert add_1 { all x: Int | some x }
+pred step'[s: State] { some s }
+fun lookup'[b: Book]: set Addr { b.addr }
+
+---
+
+(source_file
+  (assert_decl
+    name: (name)
+    (block_expression
+      (quantified_expression
+        (decl_list
+          (decl
+            (name_list
+              (name))
+            (int_expr)))
+        (multiplicity_expression
+          (qual_name
+            (name))))))
+  (pred_decl
+    name: (name)
+    (decl_list
+      (decl
+        (name_list
+          (name))
+        (qual_name
+          (name))))
+    (block_expression
+      (multiplicity_expression
+        (qual_name
+          (name)))))
+  (fun_decl
+    name: (name)
+    (decl_list
+      (decl
+        (name_list
+          (name))
+        (qual_name
+          (name))))
+    return_type: (multiplicity_expression
+      (qual_name
+        (name)))
+    (block_expression
+      (dot_expression
+        (qual_name
+          (name))
+        (qual_name
+          (name))))))
+
+========================
+sig scope resolution
+========================
+
+sig GrandParent {}
+pred root { no GrandParent::parents }
+
+---
+
+(source_file
+  (sig_decl
+    names: (name_list
+      (name)))
+  (pred_decl
+    name: (name)
+    (block_expression
+      (multiplicity_expression
+        (scope_expression
+          (qual_name
+            (name))
+          (qual_name
+            (name)))))))
+
+========================
+qualified path call head
+========================
+
+pred ordered { first[] = pred/totalOrder[] }
+
+---
+
+(source_file
+  (pred_decl
+    name: (name)
+    (block_expression
+      (compare_expression
+        (box_join_expression
+          (qual_name
+            (name)))
+        (box_join_expression
+          (qual_name
+            (name)
+            (name)))))))
+
+========================
+keyword-led infix call
+========================
+
+fun total[a, b: Int]: Int { a fun/add b }
+
+---
+
+(source_file
+  (fun_decl
+    name: (name)
+    (decl_list
+      (decl
+        (name_list
+          (name)
+          (name))
+        (int_expr)))
+    return_type: (int_expr)
+    (block_expression
+      (infix_qual_call_expression
+        left: (qual_name
+          (name))
+        operator: (infix_operator
+          (name)
+          (name))
+        right: (qual_name
+          (name))))))
+
+========================
+string-named assert
+========================
+
+assert "every book has an address" { all b: Book | some b }
+
+---
+
+(source_file
+  (assert_decl
+    name: (string)
+    (block_expression
+      (quantified_expression
+        (decl_list
+          (decl
+            (name_list
+              (name))
+            (qual_name
+              (name))))
+        (multiplicity_expression
+          (qual_name
+            (name)))))))
