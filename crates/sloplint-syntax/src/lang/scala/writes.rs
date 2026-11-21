@@ -11,7 +11,9 @@ fn write_root<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
     let mut current = n;
     loop {
         current = match current.kind() {
-            "identifier" => return Some((text(cx, current), pos_of(current))),
+            "identifier" | "operator_identifier" => {
+                return Some((unquote(text(cx, current)), pos_of(current)));
+            }
             "field_expression" => child_by_field(current, "value")?,
             "parenthesized_expression" => first_named_child(current)?,
             _ => return None,

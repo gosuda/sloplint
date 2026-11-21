@@ -10,7 +10,7 @@
 - Copied from upstream: `test/corpus/*.txt` (10 files, 305 cases, all passing before and after).
 - Changed: `grammar.js` (see `sloplint-grammar.patch`), and `src/` regenerated.
 - Added: `test/corpus/sloplint_endnew.txt`, `sloplint_parenif.txt`, `sloplint_instar.txt`,
-  `sloplint_softkw.txt`, `sloplint_enum.txt`.
+  `sloplint_multipat.txt`, `sloplint_softkw.txt`, `sloplint_enum.txt`.
 
 ## Regeneration
 
@@ -23,7 +23,7 @@
   kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` carries one
   sloplint edit (SC-SOFTENUM, below): `enum` removed from the postfix-operator heuristic's
   `definition_words` list.
-- Test: `tree-sitter test` in this directory: 318/318 (305 upstream + 13 sloplint cases).
+- Test: `tree-sitter test` in this directory: 321/321 (305 upstream + 16 sloplint cases).
 
 ## Changes to grammar.js
 
@@ -46,7 +46,23 @@
    `infix_type` already does. This makes `val P(a, b * c) = p` parse.
 4. The conflict `[$.repeat_pattern, $._simple_expression]` is removed (generator reported it
    unnecessary). The conflict `[$.block, $.capture_set]` is moved, with identical content.
-5. SC-SOFTKW: Scala 3 keywords keep their Scala 2 name readings where the corpus needs
+5. SC-MULTIPAT: `val_definition`/`var_definition` take a comma-separated pattern
+   list, so `val a2_1, List(a2_2) = …` (SLS PatDef ::= Pattern2 {',' Pattern2}) parses — a
+   real form in scalameta's Issue1872 fixture. The first element keeps the full
+   `_definition_pattern` (a lone `val x * y = v` infix pattern still parses); each
+   comma successor is a `_comma_definition_pattern`, the same alternatives minus
+   `infix_pattern`, so `val a, b | c` and `val a, b :: c` error while the
+   parenthesized `(b | c)`/`(b :: c)` forms stay legal. This deliberately lands
+   between the dialects: scalac 2's `PatDef ::= Pattern2 {',' Pattern2}` admits
+   full pattern successors including `::`, scalac 3.10's `patDefOrDcl` admits
+   only identifiers after the first comma, and we accept patterns minus
+   unparenthesized infix. The pure name list keeps its
+   `identifiers` node via `prec.dynamic(1)`. New conflicts:
+   `[val_declaration, identifiers, _comma_definition_pattern]`,
+   `[val_declaration, _comma_definition_pattern]`,
+   `[_comma_definition_pattern, identifiers]`. Field iteration also yields the
+   anonymous `,` separators, so `decl_names` filters `is_named()`.
+6. SC-SOFTKW: Scala 3 keywords keep their Scala 2 name readings where the corpus needs
    them. `parameter`/`class_parameter` name slots accept `using`/`given` (filodb's
    `WrongNumberArguments(given: Int, …)`); `_argument_list` and `_exprs_in_parens` accept
    `using = v`/`given = v` as `keyword_named_argument`, aliased to `assignment_expression`
@@ -115,6 +131,13 @@
      `is_compound_write`, `report_assign_write`, `named_arg_verdict`) to
      keep the adapter under the 600-line self-lint budget.
 
+   Merge round (SC-MULTIPAT + SC-SOFTKW):
+   - `write_root` keeps the PR52 improvement in its new `writes.rs` home:
+     `operator_identifier` roots and `unquote`, so `var `a-b` = …` and
+     operator-named bindings resolve writes under the unquoted name.
+   - The `[identifiers, val_declaration]` conflict is dropped (generator
+     reported it unnecessary once SC-SOFTKW widened the name sets).
+
 ## Fixed shapes (scalac 3.10.0 `-Ystop-after:parser` accepts each)
 
 - SC-ENDNEW: `trait Foo` / `val foo =` / `  new Foo:` / `  end new` (empty body).
@@ -122,6 +145,10 @@
 - SC-PARENIF: `if x.exists` / `(x => x == 10) then`. Real occurrence: `tests/pos/i12757.scala`.
 - SC-INSTAR: `case class *(...)` with `val P(a, b * c) = p`. Real occurrence:
   `tests/pos/t5702-pos-infix-star.scala`.
+- SC-MULTIPAT: `val a2_1, List(a2_2) = List(1, 2)` and the `var` form — an
+  SLS-2 form (scalac 3.10's `patDefOrDcl` takes only identifiers after the
+  comma, so this is a 2.13-dialect shape the grammar deliberately admits).
+  Real occurrence: scalameta `semanticdb/integration/src/main/scala/example/Issue1872.scala`.
 - SC-SOFTKW: `@JsonDeserialize(using = classOf[MyDeserializer])` and `given: Int`.
   Real occurrences: twitter/util `caseclasses.scala`, linkerd `H2Config.scala`,
   feathr `FeatureDefinition.scala`, filodb `ComputedColumn.scala`. Round 2 adds
@@ -189,13 +216,14 @@ published crate for the proof, then restored):
 | dangling_polymorphic_function_body_still_errors | PASS | PASS |
 | star_repeat_and_vararg_still_parse | PASS | PASS |
 | typed_term_parameter_polymorphic_function_still_parses | PASS | PASS |
+| multi_pattern_val_and_var_definitions_parse (SC-MULTIPAT) | FAIL | PASS |
 | keyword_named_arguments_and_parameter_names_parse (SC-SOFTKW) | FAIL | PASS |
 | context_function_parameter_types_parse | FAIL | PASS |
 | annotation_arguments_named_using_stay_annotation_arguments | FAIL | PASS |
 | given_is_definition_before_a_following_statement | FAIL | PASS |
 
 The five FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
-panics. The vendored run is 11/11.
+panics. The vendored run is 25/25.
 
 ### SC-SOFTENUM (later round)
 

@@ -218,6 +218,93 @@ fn star_repeat_and_vararg_still_parse() {
 }
 
 #[test]
+fn multi_pattern_val_and_var_definitions_parse() {
+    // scalameta's Issue1872 semanticdb fixture binds a name and a pattern in a
+    // single definition: `val a2_1, List(a2_2) = …`.
+    let source = concat!(
+        "object Test {\n",
+        "  val a2_1, List(a2_2) = List(1, 2)\n",
+        "  var e, List(f) = List(1, 2)\n",
+        "  val a, b = (1, 2)\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert!(
+        analysis.parse_error.is_none(),
+        "multi-pattern val/var definitions must parse: {:?}",
+        analysis.parse_error
+    );
+}
+
+#[test]
+fn multi_pattern_var_registers_each_binding() {
+    // `var whole, Some(count) = …` repeats the `pattern` field; both names
+    // must bind or later writes to `count` go untracked. `counters` in
+    // `Some(counters.Zero)` is a stable reference, not a new local — a
+    // phantom binding would split write tracking for a real `counters`.
+    let source = "object O {\n  def f() = {\n    var whole, Some(count) = Some(0)\n    val pick, Some(counters.Zero) = (1, Some(0))\n    count += 1\n    count\n  }\n}\n";
+    let analysis = run_clean(source);
+    let names: Vec<_> = analysis.facts.bindings.iter().map(|b| b.name).collect();
+    assert!(
+        names.contains(&"whole") && names.contains(&"count"),
+        "every pattern field binds its names: {names:?}"
+    );
+    assert!(
+        !names.contains(&"counters"),
+        "stable references in patterns are not locals: {names:?}"
+    );
+    let count = analysis
+        .facts
+        .bindings
+        .iter()
+        .find(|b| b.name == "count")
+        .expect("count binds");
+    assert!(
+        count.write_lines >= 1 && count.last_write_line == 5,
+        "the += write tracks onto the pattern binding: {count:?}"
+    );
+}
+
+#[test]
+fn var_binds_uppercase_and_backquoted_names() {
+    // A val/var's top-level pattern identifier is always a binder, however
+    // it is spelled — `var Count = 0` and ``var `a-b` = 0`` both introduce
+    // write-tracked locals, registered under the unquoted name so an
+    // unquoted write resolves to the backquoted binding. The
+    // lowercase/stable-reference rule only governs identifiers nested
+    // inside compound patterns.
+    let source = "object O {\n  def f() = {\n    var Count = 0\n    var `a-b` = 0\n    Count = 1\n    `a-b` = 2\n    Count\n  }\n}\n";
+    let analysis = run_clean(source);
+    let names: Vec<_> = analysis.facts.bindings.iter().map(|b| b.name).collect();
+    assert!(
+        names.contains(&"Count") && names.contains(&"a-b"),
+        "uppercase and backquoted var names bind: {names:?}"
+    );
+    let count = analysis
+        .facts
+        .bindings
+        .iter()
+        .find(|b| b.name == "Count")
+        .expect("Count binds");
+    assert!(
+        count.last_write_line == 5,
+        "the plain write tracks onto the uppercase binding: {count:?}"
+    );
+}
+
+#[test]
+fn bare_infix_in_pattern_list_still_errors() {
+    // `val a, b | c = 1` — a `|` alternative needs parens in a PatDef
+    // comma list; `(b | c)` and `(b :: c)` stay legal.
+    let source = "object O {\n  val a, b | c = 1\n}\n";
+    assert!(
+        run(source).parse_error.is_some(),
+        "an unparenthesized | must not parse in a comma pattern list"
+    );
+    run_clean("object O {\n  val a, (b | c) = (1, 2)\n}\n");
+}
+
+#[test]
 fn keyword_named_arguments_and_parameter_names_parse() {
     // jackson-module-scala's `@JsonDeserialize(using = classOf[...])` and
     // filodb's `given: Int` parameter name — Scala 3 keywords used as Scala 2
