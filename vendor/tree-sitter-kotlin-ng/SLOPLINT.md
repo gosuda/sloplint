@@ -193,3 +193,25 @@ The member-word follower check rejects a repeat of the same accessor
 word — `var x = 1; get\nget` (or `set\nset`) can never be a second
 accessor of the same kind, so the second word now reads as a script
 statement instead of a duplicate getter the parser would reject.
+
+## Round 11 (loop statements as if/else branch bodies)
+
+Adds `for_statement`/`while_statement`/`do_while_statement` to the
+`if`/`else` branch choices (upstream only allowed block/expression/
+assignment), with conflict declarations covering the new merge points
+(`statement`/`assignment`, `_property_declaration_head`,
+`delegation_specifiers`).
+
+Known inherited limitations (verified byte-identical on the pinned
+upstream v1.1.0 parser, not introduced by this round):
+
+- An unbraced loop body on the next line (`for (i in xs)\n  g(i)`) ends
+  the loop after `)` and parses the body as a sibling statement — the
+  scanner's `_semi` wins over `optional(choice(block, statement))`. This
+  happens identically at statement level upstream; the same misparse is
+  now reachable inside `if`/`else` branches, where upstream produced an
+  equally wrong `call_expression(for, i in xs)` mis-shape instead.
+- `;` immediately before `else` (`if (c) x; else y`, any branch kind)
+  errors: a real `;` lexes as the external `_semi`, never as the literal
+  `';'` the `if_expression` rule lists, so the `optional(';')` path is
+  dead. Upstream errors identically on `if (x) f(); else g()`.
