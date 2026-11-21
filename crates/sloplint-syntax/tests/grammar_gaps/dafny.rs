@@ -506,6 +506,28 @@ fn datatype_updates_are_not_calls() {
 }
 
 #[test]
+fn stray_semicolons_between_top_level_decls_parse() {
+    // Dafny tolerates `;` after a top-level declaration — both glued to the
+    // decl and on its own line, inside and outside module bodies.
+    let analysis = run_clean(concat!(
+        "module M {\n",
+        "  method Foo() { }\n",
+        "  ;\n",
+        "  const x := 1;\n",
+        "}\n",
+        ";\n",
+        "method Top() { }\n",
+        ";\n",
+        "datatype Color = Red | Green;\n",
+        "function f(x: int): int ensures f(x) > 0; { x + 1 }\n",
+    ));
+    let names = function_names(&analysis);
+    assert!(names.contains(&"Foo"), "methods: {names:?}");
+    assert!(names.contains(&"Top"), "methods: {names:?}");
+    assert!(names.contains(&"f"), "methods: {names:?}");
+}
+
+#[test]
 fn if_inside_an_else_operand_still_counts_as_nesting() {
     // `else 1 + if b then 2 else 3`: the inner if is an operand of the else
     // expression, not an else-if alternative — it must count as a level.

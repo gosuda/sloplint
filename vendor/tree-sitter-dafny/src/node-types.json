@@ -7273,7 +7273,8 @@
   },
   {
     "type": "block_comment",
-    "named": true
+    "named": true,
+    "extra": true
   },
   {
     "type": "bool",
@@ -7473,7 +7474,8 @@
   },
   {
     "type": "line_comment",
-    "named": true
+    "named": true,
+    "extra": true
   },
   {
     "type": "map",

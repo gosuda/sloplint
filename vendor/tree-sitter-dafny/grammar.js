@@ -180,7 +180,9 @@ module.exports = grammar({
   rules: {
     source_file: $ => seq(
       repeat($.include_directive),
-      repeat($._top_decl),
+      // Dafny tolerates ';' after a top-level declaration. Lower
+      // precedence than a decl's own optional ';' (constant_field_decl).
+      repeat(choice($._top_decl, prec(-1, ';'))),
     ),
 
     // ========== Comments ==========
@@ -235,7 +237,7 @@ module.exports = grammar({
     refines_clause: $ => seq('refines', $.qualified_name),
     replaces_clause: $ => seq('replaces', $.qualified_name),
 
-    module_body: $ => seq('{', repeat($._top_decl), '}'),
+    module_body: $ => seq('{', repeat(choice($._top_decl, prec(-1, ';'))), '}'),
 
     module_import: $ => seq(
       'import', repeat($.attribute), optional('opened'),
@@ -362,8 +364,8 @@ module.exports = grammar({
       optional($.block_statement),
     ),
 
-    yield_requires_clause: $ => seq('yield', 'requires', $._expression, optional(';')),
-    yield_ensures_clause: $ => seq('yield', 'ensures', $._expression, optional(';')),
+    yield_requires_clause: $ => prec.right(seq('yield', 'requires', $._expression, optional(';'))),
+    yield_ensures_clause: $ => prec.right(seq('yield', 'ensures', $._expression, optional(';'))),
 
     // ========== Methods ==========
 
@@ -466,29 +468,31 @@ module.exports = grammar({
 
     // ========== Fields ==========
 
-    field_decl: $ => seq(
+    field_decl: $ => prec.right(seq(
       'var', repeat($.attribute),
       commaSep1(seq(field('name', choice($.identifier, $.integer_literal)), ':', $._type)),
       optional(';'),
-    ),
+    )),
 
-    constant_field_decl: $ => seq(
+    // prec.right: a `;` after `const x` belongs to this decl, not a
+    // stray top-level separator.
+    constant_field_decl: $ => prec.right(seq(
       'const', repeat($.attribute), field('name', $.identifier),
       optional(seq(':', $._type)), optional(seq(':=', $._stmt_expression)),
       optional(';'),
-    ),
+    )),
 
     // ========== Specifications ==========
 
-    requires_clause: $ => seq('requires', repeat($.attribute),
-      optional(seq(choice($.identifier, $.integer_literal), ':')), $._expression, optional(';')),
-    ensures_clause: $ => seq('ensures', repeat($.attribute),
-      optional(seq(choice($.identifier, $.integer_literal), ':')), $._expression, optional(';')),
-    modifies_clause: $ => seq('modifies', repeat($.attribute), commaSep1($.frame_expression), optional(';')),
-    reads_clause: $ => seq('reads', repeat($.attribute), commaSep1($.possible_wild_frame_expression), optional(';')),
-    decreases_clause: $ => seq('decreases', repeat($.attribute), choice('*', commaSep1($._expression)), optional(';')),
-    invariant_clause: $ => seq('invariant', repeat($.attribute),
-      optional(seq(choice($.identifier, $.integer_literal), ':')), $._expression, optional(';')),
+    requires_clause: $ => prec.right(seq('requires', repeat($.attribute),
+      optional(seq(choice($.identifier, $.integer_literal), ':')), $._expression, optional(';'))),
+    ensures_clause: $ => prec.right(seq('ensures', repeat($.attribute),
+      optional(seq(choice($.identifier, $.integer_literal), ':')), $._expression, optional(';'))),
+    modifies_clause: $ => prec.right(seq('modifies', repeat($.attribute), commaSep1($.frame_expression), optional(';'))),
+    reads_clause: $ => prec.right(seq('reads', repeat($.attribute), commaSep1($.possible_wild_frame_expression), optional(';'))),
+    decreases_clause: $ => prec.right(seq('decreases', repeat($.attribute), choice('*', commaSep1($._expression)), optional(';'))),
+    invariant_clause: $ => prec.right(seq('invariant', repeat($.attribute),
+      optional(seq(choice($.identifier, $.integer_literal), ':')), $._expression, optional(';'))),
 
     frame_expression: $ => choice(
       seq($._expression, optional(seq('`', $.identifier))),
