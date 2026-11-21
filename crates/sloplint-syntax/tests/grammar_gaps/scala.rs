@@ -218,6 +218,110 @@ fn star_repeat_and_vararg_still_parse() {
 }
 
 #[test]
+fn slash_tail_operator_names_parse() {
+    // breeze / twitter-algebird define mul-level operators that end in `/`
+    // after a slash-led head, e.g. `def /:/`. The external scanner never
+    // claims a `/`-led token, so the regex partition must accept it.
+    let source = concat!(
+        "trait Foldable[F[_]] {\n",
+        "  def /:/[B](b: B)(f: (B, B) => B): B\n",
+        "  def |/[B](b: B): B\n",
+        "  def +/[B](b: B): B\n",
+        "}\n",
+    );
+    // Operator names land as `operator_identifier` heads, not `identifier`
+    // function names; the contract is that the definitions parse cleanly.
+    run_clean(source);
+}
+
+#[test]
+fn unparenthesized_typed_lambda_parses() {
+    // scalding writes `case c => a: Array[Long] => new W(a)`: a typed
+    // parameter is a lambda in expression position, not an ascription —
+    // the `=> new` tail cannot parse as a type.
+    let source = concat!(
+        "class W[A](a: A)\n",
+        "object W {\n",
+        "  def m(xs: Any) = xs match {\n",
+        "    case c if classOf[Array[Long]].equals(c) =>\n",
+        "      a: Array[Long] => new W(a)\n",
+        "    case w => w\n",
+        "  }\n",
+        "  val f = (a: Long) => a\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["m"]);
+}
+
+#[test]
+fn wildcard_typed_lambda_parses() {
+    // algebird Aggregator: `{ _: Any => () }` — a wildcard may carry a type
+    // ascription inside a braced lambda.
+    let source = concat!(
+        "object O {\n",
+        "  def const[T](t: T) = prepareMonoid { _: Any => () }.andThenPresent(_ => t)\n",
+        "  def prepareMonoid[A, B](f: A => B) = f\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["const", "prepareMonoid"]);
+}
+
+#[test]
+fn keyword_and_operator_symbol_literals_parse() {
+    // scalding writes `'row, 'col, 'val` column literals and `x == '*)`:
+    // a quote head can name `val` or an operator.
+    let source = concat!(
+        "object M {\n",
+        "  implicit def symbolToFields(x: Symbol) =\n",
+        "    if (x == '*) x else x\n",
+        "  val m = new Matrix('row, 'col, 'val, p)\n",
+        "}\n",
+        "class Matrix(a: Any, b: Any, c: Any, d: Any)\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(function_names(&analysis), ["symbolToFields"]);
+}
+
+#[test]
+fn stray_semicolons_after_package_parse() {
+    // breeze ships `package breeze.plot;;;` — scalac skips the extra `;`.
+    let source = concat!("package breeze.plot;;;\n", "\n", "trait Dataset\n");
+    run_clean(source);
+}
+
+#[test]
+fn wildcard_self_type_in_new_template_parses() {
+    // `new T { _: (A, B) => }` declares a wildcard self-type, not a lambda:
+    // the template body's self_type must win over the block-argument read.
+    let source = concat!(
+        "trait T\n",
+        "class K {\n",
+        "  val m = new T { _: (Any, Any) => }\n",
+        "  val n = new T { _: (Any, Any) => go() }\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert!(
+        analysis.facts.calls.iter().any(|c| c.callee == "go"),
+        "the self-type body keeps its statement calls: {:?}",
+        analysis.facts.calls
+    );
+}
+
+#[test]
+fn spaced_quote_operator_still_errors() {
+    // `' +` is not a symbol literal — the quote's operator name must be
+    // adjacent to the `'`.
+    let source = "object O {\n  val s = ' +\n}\n";
+    assert!(
+        run(source).parse_error.is_some(),
+        "a spaced quote operator must not parse as a symbol literal"
+    );
+}
+
+#[test]
 fn multi_pattern_val_and_var_definitions_parse() {
     // scalameta's Issue1872 semanticdb fixture binds a name and a pattern in a
     // single definition: `val a2_1, List(a2_2) = …`.
@@ -485,4 +589,62 @@ fn enum_stays_a_soft_identifier() {
     );
     let analysis = run_clean(source);
     assert_eq!(function_names(&analysis), ["f", "e", "enum"]);
+}
+
+#[test]
+fn braced_lambda_wildcard_and_eol_colon_call() {
+    // `{ name: T => body }` and `{ (_: T) => body }` are typed lambdas, while
+    // `{ f:` at end of line is the fewer-braces colon call whose callback
+    // indents below; `{ _: Int => go() }` reads `_` ascribed to `Int => go()`.
+    let language: tree_sitter::Language = tree_sitter_scala::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("scala language loads");
+    let source = concat!(
+        "val e = { (_: Int) => go() }\n",
+        "val f = accept { f:\n  cb => y }\n",
+        "val g = forAll { int: Int => int.asJson }\n",
+    );
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(!tree.root_node().has_error(), "sexp: {sexp}");
+    assert!(
+        sexp.matches("lambda_expression").count() == 3,
+        "three lambdas expected, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("colon_argument") && sexp.contains("indented_block"),
+        "the EOL colon call must nest an indented block, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn char_literal_and_comment_colon_and_unicode_symbol() {
+    // `'/'` is a character literal, `x:/*note*/ T` still opens a typed
+    // lambda colon, and `'op` quote names accept Unicode operator chars.
+    let language: tree_sitter::Language = tree_sitter_scala::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&language)
+        .expect("scala language loads");
+    let source = concat!(
+        "val a = path.split('/')\n",
+        "val b = { x:/*note*/ Int => produce() }\n",
+        "val c = '+/\u{d7}\n",
+        "val d = '\u{d7}/\n",
+        "val e = x :/= y\n",
+        "val f = x :/ y\n",
+    );
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(!tree.root_node().has_error(), "sexp: {sexp}");
+    assert!(
+        sexp.contains("character_literal"),
+        "`'/'` must stay a character literal, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("lambda_expression"),
+        "the comment-cut colon must keep the typed lambda, sexp: {sexp}"
+    );
 }

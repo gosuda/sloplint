@@ -10,7 +10,8 @@
 - Copied from upstream: `test/corpus/*.txt` (10 files, 305 cases, all passing before and after).
 - Changed: `grammar.js` (see `sloplint-grammar.patch`), and `src/` regenerated.
 - Added: `test/corpus/sloplint_endnew.txt`, `sloplint_parenif.txt`, `sloplint_instar.txt`,
-  `sloplint_multipat.txt`, `sloplint_softkw.txt`, `sloplint_enum.txt`.
+  `sloplint_oplam.txt`, `sloplint_multipat.txt`, `sloplint_softkw.txt`, `sloplint_enum.txt`,
+  `sloplint_opcmt.txt`.
 
 ## Regeneration
 
@@ -23,7 +24,7 @@
   kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` carries one
   sloplint edit (SC-SOFTENUM, below): `enum` removed from the postfix-operator heuristic's
   `definition_words` list.
-- Test: `tree-sitter test` in this directory: 321/321 (305 upstream + 16 sloplint cases).
+- Test: `tree-sitter test` in this directory: 331/331 (305 upstream + 26 sloplint cases).
 
 ## Changes to grammar.js
 
@@ -44,9 +45,39 @@
    adapter reports the same call fact as the single-line form.
 3. SC-INSTAR: `infix_pattern` admits the shared `_asterisk` token as its operator, as
    `infix_type` already does. This makes `val P(a, b * c) = p` parse.
-4. The conflict `[$.repeat_pattern, $._simple_expression]` is removed (generator reported it
+4. SC-OPSLASH: the operator partition accepts `/`-led names that end in `/`
+   (`def /:/`, breeze / twitter-algebird). The external `_op_left_*` tokens never claim
+   a `/`-led operator, so the regex side now admits `/` bound to a following non-slash
+   non-star opchar (`/[${OP_NSS}]${OP_RUN}` in the mul class, `/[${OP_NSS}]${OP_RUN_SLASH}`
+   in `OP_ID_UNION`). `//` and `/*` stays excluded — a `/` followed by another `/` or `*`
+   still opens a comment. `x/y` and `/x/` with a letter `x` are unchanged.
+5. SC-WILDLAMBDA / SC-SEMI: `_: T =>` admits `wildcard` beside `operandName`
+   in the unparenthesized typed-lambda slot (`{ _: Any => () }`, algebird's
+   `prepareMonoid`); and a top-level separator may be a run of literal `;`
+   (`package breeze.plot;;;`). SC-SELFWILD (new): `wildcard` is dropped from
+   `_braced_typed_lambda`'s parameters and `self_type` is raised to dynamic 3,
+   so `new T { _: (A, B) => ... }` reads as a wildcard self-type instead of a
+   block-argument lambda or an error (a typed wildcard lambda is written
+   `(_ : T) => ...`). SC-LEADSEMI (new): a stray literal `;` run may also lead
+   the file (`;;;def x = 1`); it is literal-`;` only because a leading
+   `_automatic_semicolon` made the separator boundary ambiguous.
+6. SC-TYPEDLAMBDA: `lambda_expression` admits an unparenthesized typed parameter
+   `a: T => body` in expression position (scalding's `case c => a: Array[Long] => new W(a)`).
+   It is kept at dynamic -5, below colon-argument (0) and the ascription arrow tail (-1),
+   so both keep their upstream trees wherever they can apply; the lambda only wins when
+   the `=>` tail cannot parse as a type (`=> new …`, and expression bodies in general
+   that are not valid function-type tails). `_braced_typed_lambda` is raised to dynamic 2
+   so the braced form keeps winning inside `{ … }`.
+7. The conflict `[$.repeat_pattern, $._simple_expression]` is removed (generator reported it
    unnecessary). The conflict `[$.block, $.capture_set]` is moved, with identical content.
-5. SC-MULTIPAT: `val_definition`/`var_definition` take a comma-separated pattern
+8. SC-SYMNAME (revised): `quote_expression` names an operator (`'*)`, scalding) or
+   the keyword `val` (`'row, 'col, 'val` column literals). The operator name is now
+   a `token.immediate` regex (`(?:[noSlash(OP)]|/[OP_NSS])+|/`) at `PREC.macro`, so
+   `' +` is rejected (the `'` must be adjacent to the name), a `/` never opens a
+   comment, and the reserved spellings `'=`, `':`, `'<-`, `'->`, `'/` lex. A
+   trailing `'` cannot be swallowed: `'='` stays a character literal because its
+   three characters outmatch the two of `'=`.
+9. SC-MULTIPAT: `val_definition`/`var_definition` take a comma-separated pattern
    list, so `val a2_1, List(a2_2) = …` (SLS PatDef ::= Pattern2 {',' Pattern2}) parses — a
    real form in scalameta's Issue1872 fixture. The first element keeps the full
    `_definition_pattern` (a lone `val x * y = v` infix pattern still parses); each
@@ -62,7 +93,7 @@
    `[val_declaration, _comma_definition_pattern]`,
    `[_comma_definition_pattern, identifiers]`. Field iteration also yields the
    anonymous `,` separators, so `decl_names` filters `is_named()`.
-6. SC-SOFTKW: Scala 3 keywords keep their Scala 2 name readings where the corpus needs
+10. SC-SOFTKW: Scala 3 keywords keep their Scala 2 name readings where the corpus needs
    them. `parameter`/`class_parameter` name slots accept `using`/`given` (filodb's
    `WrongNumberArguments(given: Int, …)`); `_argument_list` and `_exprs_in_parens` accept
    `using = v`/`given = v` as `keyword_named_argument`, aliased to `assignment_expression`
@@ -131,12 +162,21 @@
      `is_compound_write`, `report_assign_write`, `named_arg_verdict`) to
      keep the adapter under the 600-line self-lint budget.
 
+   Merge round (with the operator/lambda work above): `given` joined `enum`
+   and `export` in leaving `definition_words` for a peek, so `given : T => b`
+   forks three ways — `_simple_expression`, `given_definition`, and the new
+   unparenthesized typed lambda — and `given { … }` adds `self_type` and
+   `_type_identifier` to the same fork. Three conflict tuples keep those
+   readings alive; the wider tuples subsumed the older
+   `_braced_typed_lambda` variants the generator now reports unnecessary.
+
    Merge round (SC-MULTIPAT + SC-SOFTKW):
    - `write_root` keeps the PR52 improvement in its new `writes.rs` home:
      `operator_identifier` roots and `unquote`, so `var `a-b` = …` and
      operator-named bindings resolve writes under the unquoted name.
    - The `[identifiers, val_declaration]` conflict is dropped (generator
      reported it unnecessary once SC-SOFTKW widened the name sets).
+
 
 ## Fixed shapes (scalac 3.10.0 `-Ystop-after:parser` accepts each)
 
@@ -191,10 +231,13 @@ MISSING node).
 
 | | published 0.26.3 | vendored |
 |---|---|---|
-| cats parse-error files | 1 | 1 (residual) |
-| scala3-library parse-error files | 17 | 14 |
+| cats parse-error files | 1 | ≤1 (residual) |
+| scala3-library parse-error files | 17 | ≤14 |
 | fixed (error → clean) | | 3: i12757, i24250, t5702-pos-infix-star |
 | clean → error | | **0** |
+
+The vendored counts were measured at the SC-SEMI round; later rounds only add fixes (each
+round verifies `clean → error` stays 0), so they are upper bounds.
 
 - Clean under both grammars: 6029 files. Trees (S-expression) changed: **0**.
 - Findings: cats 3319 → 3319. scala3-library 10450 → 10449. Non-fixed-file deltas excluding
@@ -216,14 +259,23 @@ published crate for the proof, then restored):
 | dangling_polymorphic_function_body_still_errors | PASS | PASS |
 | star_repeat_and_vararg_still_parse | PASS | PASS |
 | typed_term_parameter_polymorphic_function_still_parses | PASS | PASS |
+| slash_tail_operator_names_parse (SC-OPSLASH) | FAIL | PASS |
+| unparenthesized_typed_lambda_parses (SC-TYPEDLAMBDA) | FAIL | PASS |
+| wildcard_typed_lambda_parses (SC-WILDLAMBDA) | FAIL | PASS |
+| keyword_and_operator_symbol_literals_parse (SC-SYMNAME) | FAIL | PASS |
+| stray_semicolons_after_package_parse (SC-SEMI) | FAIL | PASS |
+| wildcard_self_type_in_new_template_parses (SC-SELFWILD) | FAIL | PASS |
+| spaced_quote_operator_still_errors | PASS | PASS |
+| reserved_operator_symbol_literals_parse (SC-SYMNAME) | FAIL | PASS |
+| leading_stray_semicolons_parse (SC-LEADSEMI) | FAIL | PASS |
 | multi_pattern_val_and_var_definitions_parse (SC-MULTIPAT) | FAIL | PASS |
 | keyword_named_arguments_and_parameter_names_parse (SC-SOFTKW) | FAIL | PASS |
 | context_function_parameter_types_parse | FAIL | PASS |
 | annotation_arguments_named_using_stay_annotation_arguments | FAIL | PASS |
 | given_is_definition_before_a_following_statement | FAIL | PASS |
 
-The five FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
-panics. The vendored run is 25/25.
+The FAILs are the parse-error assertion ("valid Scala must parse cleanly"), not harness
+panics. The vendored run is 45/45.
 
 ### SC-SOFTENUM (later round)
 
@@ -237,9 +289,9 @@ reading — a name start (`enum Foo`) or `=` (`enum = 1`, a standalone assignmen
 to a variable named `enum`) keep the statement-break hint; anything else makes
 it the right operand (`1 +\nenum`, `1 +\nenum(2)` — an enum declaration
 always names itself first, so `(` can only be a call of the identifier),
-matching the existing treatment of `extension`. `/:/`-style operators (`def /:/`, `x /:/ y` — breeze) remain a
-documented upstream-parity ceiling: an operator may not end in `/` per SLS 1.1,
-and the scanner's trailing-slash path only covers non-slash-initial operators.
+matching the existing treatment of `extension`. Slash-tailed operators (`def /:/`, `x /:/ y` — breeze) are
+handled by the SC-OPSLASH round: `/` bound to a non-`/` non-`*` opchar joins the
+operator partition instead of being split off as a comment start.
 `<removed_id>` placeholders in the-algorithm are sanitized-out identifiers, not
 valid Scala — corpus-content ceiling.
 
@@ -250,7 +302,114 @@ Corpus delta (same files, same grammar build):
 | the-algorithm | 42 | 14 (all `<removed_id>` placeholders) |
 | phantom | ~10 | 0 |
 | scalding | ~8 | 6 (multi-line curried signatures — residual cluster) |
-| breeze | ~12 | 4 (`/:/` ceiling + unexamined residuals) |
+| breeze | ~12 | 4 (unexamined residuals; the `/:/` ceiling is handled by SC-OPSLASH) |
+
+### SC-OPCMT / SC-OPRIGHT / SC-COLONMID (later round)
+
+A comment may cut an operator's `/`-run: `x /+/* note */ y` is the infix
+`x /+ y` with a `block_comment` between operator and right operand. The internal
+run cannot spell that token — its `/`-step would swallow the comment's opener —
+so the scanner emits the operator's class itself. The class is read from the
+last accepted character, not the first (`op_stopped_class`): a `:` tail is
+right-associative (`x */+:/*c*/ y`), an `=` tail is an assignment
+(`x */+=/*c*/ y`), everything else keeps the first-char left class. The
+right-associative and assign spellings only exist as new externals
+(`_op_right_*`, `_op_assign`) because the comment-stopped token is the one form
+the internal regex cannot reproduce; the productions take
+`choice($._op_right_X, OP_TOKEN.XRight)` so a re-lexable operator still goes
+out through the internal tokens.
+
+`ends_in_slash` decides between the postfix and operand readings: after a
+`/` the scanner reads past blanks and comments, and the token is a postfix
+operator when an operand follows (`x /:/`, `p /:/ q`'s first colon-op), or the
+start of a right operand when the line ends (`val l = x /` + newline). The
+`/`-run also makes a `*`-led operator ineligible for `POSTFIX_STAR`, so
+`f(x */+)` is a call to `f` with the postfix `*/+`, not a vararg splice.
+
+`'op` symbols may end in `/` too (`'+/`, `'/:/`): the scanner emits `_op_symbol`
+when the run's tail is `/`, and declines otherwise so `'+/*c*/` splits into the
+`'+'` quote and a `block_comment`.
+
+`_colon_mid` lexes a `:` only when same-line content follows. In
+`_braced_typed_lambda` the parameter colon takes it, so `{ int: Int => b }`
+stays a typed lambda (the corpus pins that reading) while `{ f:` + an indented
+`cb => y` resolves to the fewer-braces colon call, matching scalac.
+
+
+Round: `'/` followed by `'` is a character literal (`path.split('/')`), not an
+operator symbol — the `/` check now also stops at `'`. The `:` + `/` ambiguity
+resolves the comment case first: `x:/*note*/ Int => b` keeps its `_colon_mid`
+because a `/` that opens `//` or `/*` does not continue the operator, while a
+non-comment `/` is marked into the token so `:/=` still reads as one operator.
+The `'op` run accepts the non-ASCII \p{Sm} set (`is_unicode_op_char`, mirroring
+grammar.js's SM_NONASCII), so `'+/×` is handed back whole to the internal regex
+and `'×/` emits as one operator symbol.
+
+Round: `is_unicode_op_char` now also accepts the \p{So} codepoints of the
+Miscellaneous Symbols + Dingbats blocks (0x2600–0x2767 and 0x2794–0x27bf —
+0x2768–0x2793 are ornate parens Ps/Pe and dingbat digits No, not So),
+matching the grammar.js `OP` regex which already includes `\p{So}` —
+`'☃`/`'★` quote literals scan whole instead of splitting (plain `a ★ b`
+infix ops were already covered by the internal lexer; the external scanner
+only runs for `'op` symbol literals). And a lone `:` followed by a comment
+opener decides blankness itself: a `//` run makes the rest of the line
+blank, while `/*` consumes the whole comment and then the trailing-content
+probe judges the line `*/` lands on — `f(1,2) : // note\n y=>g(y)` keeps
+its `colon_argument` reading, `x :/*note*/ Int => b` keeps `_colon_mid`,
+`(x: /*two\nlines*/ Int => x)` parses, and a lone `/` after a comment is
+still code (`Map[String, /*c*/ / => Int]`).
+
+Round: a newline *inside* the colon's trailing block comment ends the colon's
+line (scalac's COLONeol is comment-transparent). The colon probe now watches
+the comment body for a newline and — only when the fewer-braces colon is in
+valid_symbols — calls the line blank, so `{ f(1,2) : /* a\nb */ y => g(y) }`
+keeps `f` as a call instead of the `=>` tail swallowing it into a lambda
+parameter. Inside braces COLON_EOL is never on the table, so the braced
+ascription / typed-lambda reads are unchanged. Residual: content that sits
+on the comment's own `*/`-close line still goes through the ascription fork
+when no real newline follows — same as upstream.
+
+Round: scanner-only fixes for slash runs, quotes, and unicode operands.
+A `/`-tailed run that meets a non-ASCII char hands the token to the
+internal lexer (`10/π` reads `10 / π`, `a /★ b` stays one op) — the
+internal char classes know whether the char is an opchar or a letter.
+The operand probe also skips bare line ends, so `x /\n y` stays an infix
+(SLS 1.2: a line ending in an operator continues). `op_stopped_class`
+takes the run length: the `<=`/`>=`/`!=` carve-out applies only to the
+two-character spellings, so a comment-stopped `+!=` still classifies as
+an assignment. And `'op` quotes ending at a comment opener emit the
+quote before the `/` (`'x//c` = `'x` + comment) while a bare `'//`/`'/*`
+is emitted whole so trailing text errors like scalac.
+Residuals, kept deliberately: `/X/`-with-comment shapes (`x /:/*c*/ y`,
+`x /+!=/*n*/ y`) ride the internal `mulLeft` regex — removing that arm
+corrupts the `:`-external state machine enough to break
+`new T { _: (A, B) => }` wildcard self-types (the `(A, B)` tuple forks
+against `_colon_bindings`, a context question regexes cannot answer).
+`{ _: T => body }` wildcard-typed lambdas keep the ascription read for
+the same reason: a `$.wildcard` parameter collides with self_type and
+colon arguments inside `new T {` templates.
+
+Round: multi-slash op classes and definitions after a postfix `/`.
+`op_stopped_class` now takes the total operator length (`total_op_len`),
+counting every character the `/`-runner accepted, not just the run before
+the first `/`: `x +?/!=/* note */ y` is a four-character `=`-tailed
+operator, so the two-character `<=`/`>=`/`!=` comparison carve-out no
+longer fires mid-op. The operand probe that follows a `/`-tail also
+recognises a definition keyword (`val`, `def`, `class`, `case`, …) as
+"no operand": `x /\n  val v = 1` is a postfix `/` before a new
+definition, not `x / val`. The list mirrors the `definition_words`
+check on the postfix path (`enum` stays out — it can be the operand
+identifier — and `case` joins it since a `case` clause is never an
+operand).
+
+Round: `export` is a soft identifier after a `/`-tail and postfix op.
+`export` was removed from both keyword lists (the operand probe's `decls`
+and the postfix path's `definition_words`) and given the same lookahead
+`enum` uses: a following identifier start, `=`, or `{` keeps the
+declaration read (`x /\nexport a.b`, `x --?\nexport = 1`), while any
+other continuation makes the word an operand (`10 / export`,
+`x /\nexport`, `export { … }` calls with a brace block). Before this,
+`val export = 2; 10 / export` reported a syntax error at `export`.
 
 Round: `given` continuation peeks now cover `given [A] =>`, `given (T, U) = …`/`with`/`extends`, and non-ASCII given names after a line-broken operator; `given(using = 2)` keeps the call read. `nameChoice` (the soft-keyword identifier set this PR routes through) feeds parameter and argument names AND general expression positions, bindings, and qualified types — keyword-as-identifier support is deliberately broader than named arguments alone.
 

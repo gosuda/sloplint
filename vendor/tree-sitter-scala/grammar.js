@@ -138,6 +138,10 @@ const OP_TOKEN = {
       opRegex(`[*%]${OP_RUN}${OP_TAIL_LEFT}`),
       opRegex(`/[${OP_NSS_END_LEFT}]`),
       opRegex(`/[${OP_NSS}]${OP_RUN}${OP_TAIL_LEFT}`),
+      // `x/y` stays two tokens, but `/x/` is one operator: a `/` bound to a
+      // following opchar cannot open a comment, and scalac accepts `/:/`
+      // (breeze, twitter-algebird) as a left-associative mul-level name.
+      opRegex(`/[${OP_NSS}]${OP_RUN}/`),
     ),
   ),
   mulRight: token(
@@ -173,6 +177,13 @@ const OP_LEFT = [
 ];
 const opLeft = ($, key) => $[`_op_left_${key}`];
 
+// The right-associative (`:`-tail) classes are external too, but only for
+// one spelling: an operator a comment cut short, which the internal run
+// cannot reproduce (`x */+:/*c*/` — the internal `/`-step would swallow the
+// comment's slash). `_op_assign` covers the `=`-tail the same way.
+const OP_RIGHT = OP_LEFT;
+const opRight = ($, key) => $[`_op_right_${key}`];
+
 // The pre-split operator identifier as one token, for pure name contexts
 // (definitions, imports, types, patterns). A state that also allows an infix
 // continuation needs the per-class tokens instead, because one lexer state
@@ -181,7 +192,7 @@ const OP_ID_UNION = token(
   choice(
     opRegex(`[${OP_SINGLE_UNICODE}\\-!#%&*+/\\\\<>?\\u005e\\u007c~]`),
     opRegex(`[${noSlash(OP)}]${OP_STEP}+`),
-    opRegex(`/[${OP_NSS}]${OP_RUN}`),
+    opRegex(`/[${OP_NSS}]${OP_RUN_SLASH}`),
   ),
 );
 
@@ -392,6 +403,11 @@ module.exports = grammar({
     // one so the lexer falls back to the grammar definition.
     ...OP_LEFT.map(key => opLeft($, key)),
     $._op_name,
+    // A `:`- or `=` -tailed operator a comment cut short has no internal
+    // spelling, so the right-associative classes and the assignment class
+    // go out through these tokens (see OP_RIGHT).
+    ...OP_RIGHT.map(key => opRight($, key)),
+    $._op_assign,
     // The `>` of `//>`. A regex would have to swallow the `using` after it to
     // see it, and highlighting needs that keyword as a token of its own, so
     // the scanner looks ahead instead and declines the `>` of a plain comment.
@@ -409,6 +425,13 @@ module.exports = grammar({
     // The `?` of a bounded wildcard. Only the bound tells it from the plain
     // one, and the parser cannot see that far.
     $._wildcard_bound_start,
+    // A symbolic quote literal `'op` ending in `/` — the internal regex
+    // cannot bound a trailing `/` against a following comment opener.
+    $._op_symbol,
+    // A `:` that does not end its line. In a braced typed lambda the colon
+    // at end of line belongs to the fewer-braces colon argument, so the
+    // parameter's colon takes this token instead.
+    $._colon_mid,
   ],
 
   inline: $ => [
@@ -489,18 +512,20 @@ module.exports = grammar({
     // only after the token's continuation is known.
     [$.enum_definition, $._soft_identifier],
     [$._type_identifier, $.given_pattern],
-    [$.given_definition, $._simple_expression, $._braced_typed_lambda],
+    // Same fork with the unparenthesized typed lambda: `given : T => b` can
+    // start a given definition, an identifier ascription, or a lambda whose
+    // parameter is named `given`.
+    [$.given_definition, $._simple_expression, $.lambda_expression],
+    [$.self_type, $.given_definition, $._simple_expression, $.lambda_expression],
     [$.given_pattern, $._simple_expression],
     [$._type_identifier, $.given_pattern, $._simple_expression],
     [$.given_definition, $._simple_expression],
-    [$.self_type, $.given_definition, $._simple_expression],
     [$._using_parameters_clause, $._type_identifier],
     [$._simple_expression, $.keyword_named_argument],
     [$._simple_expression, $.arguments],
-    [$.self_type, $.given_definition, $._type_identifier, $._simple_expression],
+    [$.self_type, $.given_definition, $._type_identifier, $._simple_expression, $.lambda_expression],
     [$.given_definition, $._type_identifier, $._simple_expression],
     [$.given_definition, $._type_identifier],
-    [$.self_type, $.given_definition, $._simple_expression, $._braced_typed_lambda],
     [$.binding, $._simple_expression],
     [$.binding, $._type_identifier],
     // A parenthesized type before `=>` can extend into a function type or stop
@@ -583,16 +608,30 @@ module.exports = grammar({
     [$._constructor_annotation, $.applied_constructor_type],
     // '{'  identifier  •  ':' starts the braced typed lambda, the block
     // lambda param, and a statement alike.
-    [$._simple_expression, $._braced_typed_lambda],
-    [$.self_type, $._simple_expression, $._braced_typed_lambda],
-    [$._self_type_ascription, $._braced_typed_lambda],
+    // `{ export: T => … }` — a soft keyword as a typed lambda parameter vs
+    // a statement taking a colon argument. The typed branches' dynamic
+    // precedence resolves it to the lambda.
+    // `(export: T => …)` — parenthesized typed lambda parameter vs a
+    // `name: type` binding vs a colon argument on the identifier.
+    [$._simple_expression, $.lambda_expression, $.binding],
+    // `given { export: T => … }` — typed lambda parameter vs a self-type
+    // ascription (`{ self: T => }`).
+    [$.self_type, $._simple_expression, $.lambda_expression],
+    [$._self_type_ascription, $.lambda_expression],
+    // `ident :` inside type-parameter lists — same fork between the typed
+    // lambda parameter and a colon argument / self-type.
+    [$.self_type, $._type_identifier, $._simple_expression, $.lambda_expression],
+    [$._type_identifier, $.lambda_expression],
+    // '['  name  '{'  wildcard  ':'  … — a typed wildcard can now open a
+    // lambda (`_: T =>`), a self-type, an annotated wildcard type, or a
+    // plain expression.
+    [$.self_type, $._annotated_type, $._simple_expression, $.lambda_expression],
+    [$.lambda_expression, $._annotated_type, $._simple_expression, $.binding],
     [$.binding, $._simple_expression, $._type_identifier],
     [$.class_parameter, $._type_identifier],
     // '{'  _single_lambda_param  '=>'  expression  •  '}'  …
     [$._block_statements, $._indentable_expression],
     [$.match_expression, $._simple_expression],
-    // _  :  Type  •  '=>'  …
-    [$.self_type, $._simple_expression],
     // _simple_expression  ':'  '('  name_and_type  ')'  •  '=>'
     // The parenthesized list is either the lambda parameters of a colon
     // argument or a named tuple type on the ascription reading. What follows
@@ -602,9 +641,6 @@ module.exports = grammar({
     [$._annotated_type, $.binding],
     // '['  identifier  ':'  '{'  identifier  •  ':'  — a braced context
     // bound reuses the self-type head shapes.
-    [$.self_type, $._type_identifier, $._simple_expression],
-    // '['  identifier  ':'  '{'  wildcard  •  ':'  …
-    [$.self_type, $._annotated_type, $._simple_expression],
     // '['  identifier  ':'  '{'  '('  wildcard  •  ':'  …
     [$.binding, $._annotated_type, $._simple_expression],
     // '['  identifier  ':'  '{'  wildcard  •  '{'  …
@@ -683,7 +719,22 @@ module.exports = grammar({
     compilation_unit: $ =>
       seq(
         optional($._shebang),
-        optional(trailingSep1($._semicolon, $._top_level_definition)),
+        // scalac skips stray `;` (breeze's `package breeze.plot;;;`), so a
+        // top-level separator may be a run of literal semicolons — and a
+        // stray run may lead the file too (`;;;def x = 1`). The leading
+        // run is literal-`;` only: a stray `_automatic_semicolon` there
+        // makes the boundary with the item separators ambiguous.
+        optional(
+          seq(
+            repeat(";"),
+            optional(
+              trailingSep1(
+                seq(choice(";", $._automatic_semicolon), repeat(";")),
+                $._top_level_definition,
+              ),
+            ),
+          ),
+        ),
       ),
 
     _top_level_definition: $ => choice($._definition, statementExpression($)),
@@ -1123,10 +1174,14 @@ module.exports = grammar({
 
     // Dynamic precedences added here to win over $.call_expression
     self_type: $ =>
-      // 2 beats the block lambda reading of `{ this: I => ... }`, which
-      // carries dynamic 1.
+      // 3 beats the block lambda reading of `{ this: I => ... }`
+      // (dynamic 1) and the `_braced_typed_lambda` reading of
+      // `new T { _: (A, B) => ... }` (dynamic 2), which otherwise turns
+      // the anonymous class into `new T { wildcard-lambda }` call args.
+      // The extra weight is free: self_type is reachable only inside a
+      // template body, never in expression position.
       prec.dynamic(
-        2,
+        3,
         prec(
           "self_type",
           seq(
@@ -2281,10 +2336,17 @@ module.exports = grammar({
               ),
               field(
                 "parameters",
-                // No unparenthesized typed parameter here. It is only legal
-                // inside braces, and `OWrites: c => body` must stay a colon
-                // argument.
-                choice($.wildcard, $._single_lambda_param),
+                choice(
+                  $.wildcard,
+                  $._single_lambda_param,
+                  // `a: T => body` — a typed parameter is also legal outside
+                  // braces (scalding's `case c => a: Array[Long] => new W(a)`).
+                  // Kept below the colon-argument (0) and ascription-arrow
+                  // (-1) readings, which keep their upstream trees where both
+                  // can apply; this only wins where the tail cannot parse as
+                  // a type (`=> new …`, `=> { … }` as expression bodies).
+                  prec.right(prec.dynamic(-5, seq(optional("implicit"), choice(operandName($), $.wildcard), ":", $._type))),
+                ),
               ),
               anyArrow(),
               $._indentable_expression,
@@ -2341,18 +2403,30 @@ module.exports = grammar({
         ),
       ),
 
-    // `{ x: T => body }` is legal only as a block result. The weight beats
-    // the reading of `x: T` as a statement taking a colon argument.
+    // `{ x: T => body }` is legal only as a block result. The weight sits
+    // below the colon-argument reading (0): when the `:` ends its line, `x:`
+    // is a fewer-braces call taking an indented callback, never a typed
+    // parameter (`{ f: ` + `cb => ... }` calls `f`, it does not bind it).
+    // A mid-line `:` has no colon-argument alternative, so the lambda
+    // reading still applies there. The `wildcard` parameter needs no
+    // self-type weight: `self_type` (dynamic 3) is only reachable inside a
+    // template body, while this rule lives in expression blocks, where
+    // `{ _: T => go() }` is the lambda scalac reads.
     _braced_typed_lambda: $ =>
       prec.dynamic(
-        1,
+        2,
         prec.right(
           "lambda",
           seq(
             field(
               "parameters",
               prec.right(
-                seq(optional("implicit"), operandName($), ":", $._type),
+                seq(
+                  optional("implicit"),
+                  operandName($),
+                  $._colon_mid,
+                  $._type,
+                ),
               ),
             ),
             anyArrow(),
@@ -2951,11 +3025,17 @@ module.exports = grammar({
     quote_expression: $ =>
       prec.left(
         PREC.macro,
-        seq(
-          "'",
-          choice(
-            // `'{}` is a quoted empty block, common in macro code.
-            seq("{", optional($._block), "}"),
+        choice(
+          // `'op` ending in `/` (`'/:/`). The external scanner decides
+          // the slash bound, so a following `/*` or `//` always opens a
+          // comment and is never part of the name (`'+/*c*/` is `'+` +
+          // comment).
+          alias($._op_symbol, $.operator_identifier),
+          seq(
+            "'",
+            choice(
+              // `'{}` is a quoted empty block, common in macro code.
+              seq("{", optional($._block), "}"),
             // TypeBlock ::= {TypeBlockStat semi} Type. The bindings let a
             // quote name the type variables it matches on.
             seq(
@@ -2965,8 +3045,29 @@ module.exports = grammar({
               "]",
             ),
             $.identifier,
-            $.null_literal,
-            $.boolean_literal,
+              // `'op` reads an operator name (Scala 2 symbol literal `'*`,
+              // scalding's `x == '*)`). Immediate, so `' +` is not silently
+              // accepted, and its charset is the operator union without a
+              // `/` that would open a comment — so reserved spellings
+              // `'=`, `':`, `'<-`, `'->` lex too. A trailing `'` cannot be
+              // swallowed: `'='` stays a character literal because its
+              // three characters outmatch the two of `'=`. Names ending in
+              // `/` are the external `_op_symbol`'s job (see above).
+              alias(
+                token.immediate(
+                  prec(
+                    PREC.macro,
+                    opRegex(`(?:[${noSlash(OP)}]|/[${OP_NSS}])+|/`),
+                  ),
+                ),
+                $.operator_identifier,
+              ),
+              // `'val` — a keyword can still name a Scala 2 symbol literal
+              // (scalding's `'row, 'col, 'val` column literals).
+              alias("val", $.identifier),
+              $.null_literal,
+              $.boolean_literal,
+            ),
           ),
         ),
       ),
@@ -3070,6 +3171,13 @@ module.exports = grammar({
       OP_LEFT.map(key => [`_op_left_${key}`, () => OP_TOKEN[`${key}Left`]]),
     ),
     _op_name: $ => OP_ID_UNION,
+    ...Object.fromEntries(
+      OP_RIGHT.map(key => [
+        `_op_right_${key}`,
+        () => OP_TOKEN[`${key}Right`],
+      ]),
+    ),
+    _op_assign: $ => OP_TOKEN.assign,
 
     // XML literals (SLS §10). The external token $._xml_tag_start decides
     // where markup starts. Comment, CDATA and processing instruction
