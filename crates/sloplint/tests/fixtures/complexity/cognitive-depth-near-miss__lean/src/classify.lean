@@ -1,5 +1,5 @@
-def classify (xs : Array Nat) : Nat := do
-  let mut x := 0
+def classify (xs ys zs : Array Nat) : IO Unit := do
   for i in xs do
-    x := x + i
-  pure x
+    for j in ys do
+      for k in zs do
+        IO.println (i + j + k)
