@@ -22,7 +22,7 @@ env:
 
 jobs:
   verify-tag:
-    runs-on: ubuntu-24.04
+    runs-on: depot-ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -42,7 +42,10 @@ jobs:
 
   build:
     needs: verify-tag
-    runs-on: ${{ matrix.os }}
+    runs-on: >-
+      ${{ matrix.os == 'ubuntu-24.04' && 'depot-ubuntu-24.04'
+      || matrix.os == 'ubuntu-24.04-arm' && 'depot-ubuntu-24.04-arm'
+      || matrix.os }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -55,7 +58,6 @@ jobs:
           - { os: windows-2025, target: x86_64-pc-windows-msvc }
           - { os: windows-11-arm, target: aarch64-pc-windows-msvc }
     env:
-      # Match CI's dependency cache; the release profile stays unchanged.
       CARGO_INCREMENTAL: "0"
       CARGO_PROFILE_DEV_DEBUG: line-tables-only
       CARGO_PROFILE_TEST_DEBUG: line-tables-only
@@ -66,17 +68,7 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
       - run: rustup target add ${{ matrix.target }}
-      - name: Cache Rust and native dependencies
-        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          # Use the same dependency set and restore prefix as ordinary CI.
-          workspaces: crates -> ../target
-          shared-key: native-v1-${{ matrix.os }}-${{ matrix.target }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/config.toml', 'vendor/**') }}
-          env-vars: MACOSX_DEPLOYMENT_TARGET ImageOS ImageVersion
-          cache-bin: false
-          save-if: false
       - name: Preserve vendor dependency fingerprints
-        # The vendor content hash in the restore prefix makes this safe.
         run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
       - run: cargo build --release --locked --target ${{ matrix.target }}
       - name: Smoke-test binary
@@ -115,7 +107,7 @@ jobs:
 
   sbom:
     needs: verify-tag
-    runs-on: ubuntu-24.04
+    runs-on: depot-ubuntu-24.04
     timeout-minutes: 30
     env:
       CARGO_CYCLONEDX_VERSION: 0.5.9
