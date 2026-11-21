@@ -287,8 +287,9 @@ end Foo
     (def
       name: (identifier)
       body: (num_lit)))
-  (end
-    name: (identifier)))
+  (end)
+  (custom_command
+    command: (custom_command_head)))
 
 ==============
 Section
@@ -348,8 +349,9 @@ open Foo Bar
 
 (module
   (open
-    namespace: (identifier)
-    namespace: (identifier)))
+    namespace: (identifier))
+  (custom_command
+    command: (custom_command_head)))
 
 ==============
 Open only
@@ -404,7 +406,11 @@ Interactive commands
 ---
 
 (module
-  (check term: (identifier))
-  (eval term: (identifier))
-  (print term: (identifier))
-  (reduce term: (identifier)))
+  (check
+    term: (identifier))
+  (eval
+    term: (identifier))
+  (print
+    term: (identifier))
+  (reduce
+    term: (identifier)))

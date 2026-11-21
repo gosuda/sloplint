@@ -65,9 +65,12 @@ import Quux
 ---
 
 (module
-  (import name: (identifier))
-  (import name: (identifier))
-  (import name: (identifier)))
+  (import
+    name: (identifier))
+  (import
+    name: (identifier))
+  (import
+    name: (identifier)))
 
 ==============
 Public import

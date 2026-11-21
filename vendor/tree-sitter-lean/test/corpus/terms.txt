@@ -666,8 +666,7 @@ Positive-part postfix operator
 
 (module
   (check
-    term: (postfix_op
-      term: (identifier))))
+    term: (identifier)))
 
 ==============
 Symmetric difference operator

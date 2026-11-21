@@ -68,10 +68,22 @@ export default grammar({
   conflicts: $ => [
     /* `public`/`meta` can start an `import`, a `public meta section`
        marker, or a Lean 4 visibility-prefixed declaration. */
-    [$.import, $.public_section, $.declaration],
+    [$.import, $.declaration],
+    /* `section`/`namespace` now take `_visibility_mods` (`meta
+       section`), so `public meta …` can fork four ways. */
+    [$.import, $.namespace, $.section, $.declaration],
     /* After `attributes`, `import` is no longer possible, but
        `public meta …` still chooses between section and declaration. */
-    [$.public_section, $.declaration],
+    [$.section, $.declaration],
+    /* `Foo a.b` — custom_command arg atom vs an `_op_term` that can
+       continue into a projection after the atom. */
+    [$.custom_command, $._op_term],
+    /* `package {}` — the lake_cmd brace block vs a struct_lit arg;
+       `package { k := v ,` — its `key := value` fields vs struct_lit
+       fields. */
+    [$.lake_cmd, $.struct_lit],
+    [$.lake_cmd, $._term_atom],
+    [$.lake_cmd, $.struct_field],
     /* `{ ident <ident> … }` could be a function-style struct_field
        (`method args := body`) or the singleton-set `{ app args }`. We
        always prefer the struct_field when followed by `:=`. */
@@ -99,7 +111,7 @@ export default grammar({
       optional($.meta),
       'import',
       optional($.all),
-      field('name', $.identifier),
+      field('name', seq(repeat('.'), $.identifier)),
     ),
 
     public: _ => 'public',
@@ -115,7 +127,6 @@ export default grammar({
       $.reduce,
       $.namespace,
       $.section,
-      $.public_section,
       $.end,
       $.variable,
       $.universe,
@@ -134,12 +145,52 @@ export default grammar({
       $.macro_cmd,
       $.macro_rules_cmd,
       $.elab_rules_cmd,
+      $.elab_cmd,
+      $.omit,
       $.register_cmd,
       $.unif_hint_cmd,
       $.declare_syntax_cat_cmd,
       $.mutual,
+      $.hash_cmd,
+      $.custom_command,
+      $.run_meta_cmd,
+      $.include_cmd,
+      $.lake_cmd,
       $.declaration,
     ),
+
+    /* `run_meta e` evaluates a `MetaM` term at compile time. */
+    run_meta_cmd: $ => prec.right(seq('run_meta', $._term)),
+
+    /* `include h1 h2` makes hypotheses visible to later decls. */
+    include_cmd: $ => prec.right(seq('include', repeat1($._binder_ident))),
+
+    /* `end <name>?` inside `end` already exists; nothing needed. */
+
+    /* Lake DSL top-level commands. `lakefile.lean` uses a
+       deliberately loose shape: a lowercase command head with atom
+       args, `from git "u" @ "rev"` tails, `key := value` brace
+       fields and a `: Type := do` target form. The heads are
+       enumerated so they never shadow real commands. */
+    lake_cmd: $ => prec.right(seq(
+      field('command', choice(
+        'package', 'lean_lib', 'lean_exe', 'extern_lib',
+        'extern', 'input_file', 'input_dir', 'script',
+        'post_update', 'facet', 'require', 'target',
+        'lean_lib_shared', 'extern_lib_shared')),
+      repeat(field('arg', choice(
+        $.identifier, $.str_lit, $.num_lit,
+        'from', 'git', '@', 'with'))),
+      optional(seq('{',
+        repeat(seq(
+          field('key', choice($.identifier, $.str_lit)),
+          choice(':=', '='),
+          field('value', choice($.identifier, $.str_lit, $.num_lit)),
+          optional(choice(';', ',', $._newline)))),
+        '}')),
+      optional(seq(':', $._term)),
+      optional(seq(':=', $._term)),
+    )),
 
     /* `mutual … end` groups mutually-recursive declarations. Like
        `namespace`/`section`/`end`, it is modeled as a flat marker
@@ -189,13 +240,16 @@ export default grammar({
 
     /* `assert_not_exists Name`, `assert_not_imported Name`, etc. —
        Lean's lightweight assertion commands taking a single ident. */
+    /* `#exit`, `#synth`, and `#version` are covered by `hash_cmd`; the
+       letter-named forms each take exactly one name, and the required
+       target keeps `assert_not_exists Foo` from forking against a
+       following `custom_command`. */
     assert_cmd: $ => seq(
       choice(
         'assert_not_exists', 'assert_not_imported',
         'assert_exists', 'check_assertions',
-        '#exit', '#synth', '#version',
       ),
-      optional(field('target', $._term_atom)),
+      field('target', $._term_atom),
     ),
 
     /* Lean/Mathlib commands that attach a doc/spelling/grind note or
@@ -281,6 +335,33 @@ export default grammar({
       field('category', $.identifier),
       repeat1($.match_alt),
     ),
+
+    /* `elab [prec]? [(name := X)]? arg* : category => body` —
+       declares an elaborator, same header shape as `macro`. The args
+       are term atoms (string syntax atoms, quoted terms, etc.). */
+    elab_cmd: $ => prec.right(seq(
+      optional($.attributes),
+      optional(choice('scoped', 'local')),
+      'elab',
+      optional(seq(
+        token.immediate(':'),
+        field('prec', choice($.num_lit, $.identifier)),
+      )),
+      optional($._named_attr),
+      repeat($._term_atom),
+      ':',
+      field('category', $.identifier),
+      '=>',
+      field('body', $._term),
+    )),
+
+    /* `omit [Inst ty]* (ident)* in <cmd>` — scopes instance/parameter
+       omission to a following command (`omit [NeZero p] in theorem …`). */
+    omit: $ => prec.right(seq(
+      'omit',
+      repeat1(choice($._bracketed_binder, $.identifier)),
+      optional(seq('in', field('body', $._command))),
+    )),
 
     /* `macro [prec]? [(name := X)]? "kw" arg* : category => body` —
        coarse parse of Lean's macro-declaration command. The macro's
@@ -405,17 +486,53 @@ export default grammar({
        marker; everything below is exported. It has no body and no
        matching `end`. Optionally preceded by attributes
        (e.g. `@[expose] public section`). */
-    public_section: $ => seq(
-      optional($.attributes),
-      $.public,
-      optional($.meta),
-      'section',
-    ),
-
     check:  $ => seq(choice('#check', '#check_failure'),  field('term', $._term)),
     eval:   $ => seq('#eval',   field('term', $._term)),
     print:  $ => seq(choice('#print', '#print_axioms'),   field('term', $._term)),
     reduce: $ => seq('#reduce', field('term', $._term)),
+
+    /* `#guard e`, `#guard_msgs in cmd`, `#find _ = _`, `#whnf t`,
+       `#help tactic`, `#assert …`, `#lint`, and other #commands that
+       macros/elaborators register — an open namespace, so the generic
+       shape is `#name args* (in cmd)?`. Literal names are preferred
+       where a dedicated rule exists (`#check`, `#eval`, …). */
+    hash_cmd: $ => prec.right(seq(
+      field('command', $.hash_name),
+      repeat(field('arg', $._term)),
+      optional(seq('in', field('body', $._command))),
+    )),
+    hash_name: _ => token(/#[a-zA-Z_][a-zA-Z_0-9']*/),
+
+    /* Library/framework commands registered by `syntax`/`elab` in
+       other modules (`World "L10"`, `et.semantics.termination "x"`,
+       `#doc`-style verso commands) are an open namespace too; a
+       Capitalized or dotted head followed by atomic args stays out
+       of every keyword-led command's way. */
+    custom_command: $ => prec.right(seq(
+      field('command', $.custom_command_head),
+      repeat(field('arg', $._term_atom)),
+      /* `Statement (n : ℕ) : T := by` / `Problem := e` — DSLs that
+         mimic the shape of a real declaration tail. */
+      optional(seq(':', $._term)),
+      optional(choice(':=', '=')),
+      optional($._term),
+    )),
+    /* A capitalized head keeps `custom_command` out of the way of
+       every keyword-led command (`World`, `Doc.open`, `Circle`); a
+       lowercase or underscore head would shadow real commands, so
+       those DSLs stay unsupported. */
+    custom_command_head: _ => token(choice(
+      /[A-Z][a-zA-Z_0-9'!?]*/,
+      /[a-zA-Z_][a-zA-Z_0-9'!?]*(\.[a-zA-Z_][a-zA-Z_0-9'!?]*)+/,
+    )),
+
+    /* `open Foo in <term>` — scoped-open in term position. */
+    open_term: $ => prec.right(seq(
+      'open',
+      $._open_decl,
+      'in',
+      field('body', $._term),
+    )),
 
     /* `namespace`, `section`, and `end` are top-level commands rather
        than nested rules. Files in lean4 + Mathlib routinely leave
@@ -423,11 +540,16 @@ export default grammar({
        grammar can't accept. Editor tooling can reconstruct scope by
        pairing namespace/end siblings via queries. */
     namespace: $ => seq(
+      optional($._visibility_mods),
       optional($.decl_modifiers),
       'namespace', field('name', $.identifier),
     ),
     section: $ => seq(
       optional($.attributes),
+      /* `meta section` — the marker lives in _visibility_mods so it
+         stays out of decl_modifiers' repeat1 (a 'meta' literal there
+         forks `'meta' • 'meta'` against `public meta`). */
+      optional($._visibility_mods),
       optional($.decl_modifiers),
       'section', optional(field('name', $.identifier)),
     ),
@@ -436,8 +558,12 @@ export default grammar({
     /* `variable [Foo R]` declares one or more vars. `variable (R) in
        <cmd>` scopes the variable just to a single following command. */
     variable: $ => prec.right(seq(
-      'variable',
-      repeat1($._bracketed_binder),
+      choice('variable', 'variables'),
+      /* `variable (n : ℕ)` bracketed binders, `variable x y` bare
+         names, and the newer `variable n : T` bare-typed form. */
+      repeat1(choice(
+        $._bracketed_binder,
+        seq($._binder_ident, optional($._type_spec)))),
       optional(seq('in', field('body', $._command))),
     )),
 
@@ -522,6 +648,8 @@ export default grammar({
     attributes: $ => seq('@[', sep1($._attr_instance, ','), ']'),
     _attr_instance: $ => seq(
       optional(choice('scoped', 'local')),
+      /* `attribute [-simp] Foo` and `@[-simp]` remove an attribute. */
+      optional('-'),
       $._attribute,
     ),
     /* Attributes can carry arguments (`@[simp 1000]`,
@@ -835,7 +963,9 @@ export default grammar({
        Supports nested forms like `⟨x, ⟨y, z⟩⟩`. */
     anon_ctor_binder: $ => seq(
       '⟨',
-      sep1(choice($._binder_ident, $.anon_ctor_binder), ','),
+      /* `-` drops a constructor field (`⟨a, -⟩`); it's a wildcard,
+         only inside this angle-bracket pattern. */
+      sep1(choice($._binder_ident, $.anon_ctor_binder, '-'), ','),
       '⟩',
     ),
 
@@ -916,8 +1046,13 @@ export default grammar({
       $.big_op_binder,
       $.by,
       $.do_block,
+      $.do_try,
+      $.for_loop,
       $.match,
       $.tactic_case,
+      $.conv,
+      $.calc,
+      $.open_term,
     ),
 
     _op_term: $ => choice(
@@ -1217,12 +1352,35 @@ export default grammar({
     ),
 
     /* `f x` — left-associative application. The argument can be an
-       atom or a lead term (`f fun x => x`, `g do return 1`), which is
+       atom or a lead term (`f fun x => x`, `g by simp`), which is
        common in monadic code. The fn must stay in `_op_term` to keep
        binary-op states from forking through every lead alternative. */
     app: $ => prec.left(PREC.app, seq(
       field('fn', $._op_term),
-      field('arg', choice($._term_atom, $._lead_term)),
+      /* A bare `do`/`try` block may never be an application
+         argument: `f do …` reads as `f` applied to the block only in
+         contrived code, but allowing it lets `for x in xs do` parse
+         the range as `xs (do …)` and steal the loop's `do` — and the
+         resulting GLR ambiguity starves the external scanner's
+         layout tokens. Parenthesised `(do …)` args still work via
+         `paren`. */
+      field('arg', choice(
+        $._term_atom,
+        $.fun,
+        $.let,
+        $.have,
+        $.suffices,
+        $.by_cases,
+        $.show,
+        $.if_then_else,
+        $.forall,
+        $.exists,
+        $.sigma,
+        $.big_op_binder,
+        $.by,
+        $.match,
+        $.tactic_case,
+      )),
     )),
 
     proj: $ => prec.left(PREC.proj, seq(
@@ -1470,7 +1628,8 @@ export default grammar({
       optional(choice(
         $._type_spec,
         seq(
-          field('rel', choice('∈', '∉', '≠', '⊆', '⊂')),
+          field('rel', choice('∈', '∉', '≠', '⊆', '⊂',
+                              '>', '<', '≥', '≤', '=')),
           field('bound', $._op_term),
         ),
       )),
@@ -1484,7 +1643,8 @@ export default grammar({
       optional(choice(
         $._type_spec,
         seq(
-          field('rel', choice('∈', '∉', '≠', '⊆', '⊂')),
+          field('rel', choice('∈', '∉', '≠', '⊆', '⊂',
+                              '>', '<', '≥', '≤', '=')),
           field('bound', $._op_term),
         ),
       )),
@@ -1553,11 +1713,17 @@ export default grammar({
     have: $ => prec.right(seq(
       /* `haveI` is Mathlib's "have instance" variant. */
       choice('have', 'haveI'),
-      /* Destructuring `have ⟨a, b⟩ := …` is common in Mathlib. */
-      field('name', choice($._binder_ident, $.anon_ctor_binder)),
+      /* Destructuring `have ⟨a, b⟩ := …` is common in Mathlib;
+         anonymous `have : T` binds `this`. */
+      optional(field('name', choice($._binder_ident, $.anon_ctor_binder))),
       optional($._type_spec),
-      ':=',
-      field('value', $._term),
+      /* Tactic `have h : T` (goal without a proof term) leaves the
+         `:=` off; `have h : T from e` is the older spelling. */
+      optional(choice(
+        seq(':=', field('value', $._term)),
+        seq('from', field('value', $._term)),
+        $.by,
+      )),
       optional(seq(';', field('body', $._term))),
     )),
 
@@ -1644,14 +1810,62 @@ export default grammar({
     _block_body: $ => choice(
       /* Inline `by tac; tac` and `do x; y` — multiple tactics
          separated by semicolons, all on one line. */
-      prec.right(sep1(field('inline', $._term), ';')),
+      prec.right(sep1(field('inline', $._term), choice(';', ','))),
       seq(
         $._indent,
-        sep1(field('stmt', choice($.block_assign, $._term)),
-             choice(';', $._newline)),
+        /* `repeat1` on the separator lets a `;` or `,` begin the line
+           after a NEWLINE (`e1\n    ; e2`): sepByIndentSemicolon
+           writes separators at line-start. `calc_step` covers the
+           `_ = x := h` shape inside `calc` blocks. */
+        sep1(field('stmt', choice(
+            $.block_assign, $.calc_step, $._term)),
+             repeat1(choice(';', ',', $._newline))),
+
         $._dedent,
       ),
     ),
+
+    /* `try stmts catch (pat (: T)?)? => term (| pat => term)*
+       finally stmts` — do-block exception handling. Catch bodies are
+       single terms (as in `match_alt`): an indented `do …` in that
+       position is a `do_block` term with its own layout. */
+    do_try: $ => prec.right(seq(
+      'try',
+      $._block_body,
+      optional(seq(
+        'catch',
+        choice(
+          seq(
+            field('name', $._binder_ident),
+            optional($._type_spec),
+            choice('=>', '↦'),
+            field('body', $._term),
+          ),
+          repeat1(seq('|', field('pattern', $._term),
+                      choice('=>', '↦'), field('body', $._term))),
+        ),
+      )),
+      optional(seq('finally', $._block_body)),
+    )),
+
+    /* `for x in xs do …` / `for h : x in xs, y in ys do …` — do-block
+       iteration. The binder may carry an accumulator hypothesis
+       name (`for h : x in xs do`) and several comma-separated
+       iterators share one body. */
+    /* `prec.right(PREC.app + 1)` keeps the `do` bound to the loop
+       even though `do`-blocks are also legal app args (the `xs do`
+       app-read loses the precedence race). */
+    for_loop: $ => prec.right(PREC.app + 1, seq(
+      'for',
+      sep1(seq(
+        optional(seq(field('acc', $._binder_ident), ':')),
+        field('name', $._binder_ident),
+        'in',
+        field('range', $._term),
+      ), ','),
+      'do',
+      $._block_body,
+    )),
 
     /* `x := v` mutation, valid only inside a do-block. */
     block_assign: $ => seq(
@@ -1662,16 +1876,44 @@ export default grammar({
 
     match: $ => prec.right(seq(
       'match',
-      sep1(field('scrutinee', $._term), ','),
+      sep1(seq(
+        optional(seq(field('discr_name', $._binder_ident), ':')),
+        field('scrutinee', $._term),
+      ), ','),
       'with',
       repeat1($.match_alt),
     )),
     match_alt: $ => seq(
       '|',
-      sep1(field('pattern', $._term), ','),
+      /* `| a | b | c => …` folds several alternatives into one arm;
+         `,`-separated patterns are constructor args. */
+      sep1(field('pattern', $._term), choice(',', '|')),
       /* Mathlib prefers `↦` over `=>` in match arms. */
       choice('=>', '↦'),
       field('body', $._term),
+    ),
+
+    /* `conv [at h]? => rw [e]` — conversion tactics take an optional
+       location then a `=>` conversion block. `conv_lhs`/`conv_rhs`/
+       `conv_fun`/`conv_arg`/`conv_apply` select inside. */
+    conv: $ => prec.right(seq(
+      choice('conv', 'conv_lhs', 'conv_rhs', 'conv_fun', 'conv_arg',
+             'conv_apply'),
+      optional(seq(optional(choice('at', 'in')), $._term)),
+      '=>',
+      optional($._block_body),
+    )),
+
+    /* `calc lhs = rhs := proof\n  _ ≤ rhs2 := proof2` — equational
+       reasoning; steps are newline/`;`-separated via `_block_body`. */
+    calc: $ => prec.right(seq('calc', optional($._block_body))),
+    calc_step: $ => seq(
+      field('lhs', $._term),
+      choice('=', '<', '≤', '>', '≥', '≠', '≡', '~', '≈', '∈',
+             '⊆', '⊂', '⊑', '≺', '≼', '↔', '⇔'),
+      field('rhs', $._term),
+      ':=',
+      field('proof', $._term),
     ),
 
     /* `case name args => body` — Lean tactic-language case selection
