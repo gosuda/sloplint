@@ -26,11 +26,13 @@ fn main() {
         out
     };
     c_config.file(&parser_path);
-    // Watch the sources, not the resolved path: when src/parser.c is
-    // absent the resolved path lives in OUT_DIR (this script's own
-    // output), which Cargo always reports as changed and would recompile
-    // the ~80MB parser every build.
-    println!("cargo:rerun-if-changed=src/parser.c");
+    // Watch src/parser.c only when a local regen produced it: a
+    // rerun-if-changed path that does not exist is always stale to Cargo,
+    // and in normal checkouts (where it is gitignored away) that would
+    // rerun this script — and the ~80MB compile — on every build.
+    if src_dir.join("parser.c").exists() {
+        println!("cargo:rerun-if-changed=src/parser.c");
+    }
     println!("cargo:rerun-if-changed={}", parser_gz.to_str().unwrap());
     println!("cargo:rerun-if-changed=grammar.js");
 
