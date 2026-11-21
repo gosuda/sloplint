@@ -1,6 +1,6 @@
 # tree-sitter-lean, vendored for sloplint
 
-Date: 2026-11-19.
+Date: 2026-11-21.
 
 ## Origin
 
@@ -26,12 +26,31 @@ Date: 2026-11-19.
     which upstream deliberately avoids).
   - `run_meta`/`include` commands, `variable n : T` (typed bare binder),
     `meta section`, `open … in` at term level, `#hash` commands and
-    `World "…"`/`et.semantics.termination "…"` custom command heads,
-    comma tactic separators, `;`-leading block lines.
-  - `calc` / `conv` / `match` with multi-`|` alternatives.
+    `World "…"`/`et.semantics.termination "…"` custom command heads
+    (arg-less, upstream shape — the `custom_command_head` lexical-tie
+    steal at completable NAME positions is fixed instead by
+    `_name_or_head` on `end`/`section`/`universe`/`open`), `;`-leading
+    block lines. Commas are not statement separators
+    (`{ f := by t, g := 1 }`).
+  - `calc` / `conv` / `match` with multi-`|` alternatives; `calc` steps
+    win a dynamic-preference fight vs `binary_op` when `:=` follows
+    (`by calc 0 = 0 := rfl`).
+  - `for (a, b) in xs` and `for ⟨a, b⟩ in xs` destructuring binders.
   - Lake DSL heads (`package`, `lean_lib`, `lean_exe`, `require`, …) as
     `lake_cmd` instead of erroring on `where`/brace fields — the top
-    corpus-error family.
+    corpus-error family; `@[default_target]` attributes and `#[…]`
+    array-literal values are accepted.
+  - `bindings/rust/build.rs` emits `cargo:rerun-if-changed=` for
+    `src/parser.c`, `src/parser.c.gz` and `grammar.js` (the resolved
+    `OUT_DIR` path it watched before changed every build, recompiling
+    the ~97 MB parser unconditionally).
+  - Known gap (no error, no facts): `custom_command_head` wins the
+    lexical tie at TERM-TAIL positions (`#check 𝟙 X`, `def M :=
+    StateT Nat IO`) and produces a harmless phantom `custom_command`
+    node — the adapter emits no facts for it. Both lexical-precedence
+    fixes are non-viable (`token(prec(-1))` explodes past the 65,535
+    state ceiling; `token(prec(1))` on the `word` token steals
+    keywords).
   - Identifier scanning: `is_id_rest` accepts `≥ ≤ > < ∞` so `ℝ≥0∞`
     and `x≥0` lex as single identifiers, and superscript/subscript
     alphanumeric chars join the token (`Aᵒᵖ`, `x⁻¹`, `a⁺` are now
@@ -39,11 +58,13 @@ Date: 2026-11-19.
     away, not error-freed).
   - Known upstream-parity gaps (identical ERROR on the pinned upstream,
     unfixed by convention): `simpa using h`, `rcases h with ⟨…⟩`,
-    `calc` chains inside `by` blocks, `first | …` alternation, `∀ᶠ`,
-    a multiline `finally` block followed by another `def`, and
-    `open … hiding`/`open only`/`export` modifier words landing in
-    `namespace`/`custom_command` nodes.
-  - Generated-artifact note: `src/parser.c` (~80MB) is not committed;
+    `first | …` alternation, `∀ᶠ`, a multiline `finally` block followed
+    by another `def`, a comma after a tactic in `by` blocks
+    (`by t, u` parses as `app(t, ERROR, u)` identically upstream), and
+    `open … hiding`/`export` modifier words landing in
+    `namespace`/`custom_command` nodes. (`open only Nat` now parses
+    `only` as a real first namespace — identical to upstream.)
+  - Generated-artifact note: `src/parser.c` (~97MB) is not committed;
     `src/parser.c.gz` is, and `bindings/rust/build.rs` inflates it into
     `OUT_DIR` when the plain file is absent.
 - `Cargo.toml` has one addition: an empty `[workspace]` table after the
@@ -52,7 +73,7 @@ Date: 2026-11-19.
   manifest change.
 - Files kept from the revision: `Cargo.toml`, `LICENSE`, `README.md`,
   `grammar.js`, `queries/` (`folds`, `highlights`, `indents`, `injections`,
-  `locals`), `src/` (`grammar.json`, `node-types.json`, `parser.c`,
+  `locals`), `src/` (`grammar.json`, `node-types.json`, `parser.c.gz`,
   `scanner.c`, `tree_sitter/`), `bindings/rust/` (`build.rs`, `lib.rs`),
   `test/corpus/` (7 files), `tree-sitter.json`.
 - Files dropped: `binding.gyp`, `bindings/c/`, `bindings/node/`,
@@ -75,17 +96,20 @@ Date: 2026-11-19.
   peeks, a non-serialized `pending_newline`, and widened identifier
   characters (see the grammar patch).
 - Verification: `tree-sitter test` in this directory, 313/313 corpus
-  cases pass (see "Corpus results"). Purge `$XDG_CACHE_HOME/tree-sitter`
-  before rerunning after any future edit, per `vendor/README.md`.
+  cases pass (see "Corpus results"). `tree-sitter test` builds the
+  plain `src/parser.c`, so after a fresh clone first inflate the
+  committed copy: `gzip -dc src/parser.c.gz > src/parser.c`. Purge
+  `$XDG_CACHE_HOME/tree-sitter` before rerunning after any future edit,
+  per `vendor/README.md`.
 
 ## Size
 
-`src/parser.c`: 80,493,506 bytes, 2,121,883 lines. States: 15313
-(`STATE_COUNT`), 9755 large. Symbols: 646. Token count: 434. External
+`src/parser.c`: 97,113,146 bytes, 2,571,806 lines. States: 18895
+(`STATE_COUNT`), 12150 large. Symbols: 647. Token count: 434. External
 tokens: 11 (`EXTERNAL_TOKEN_COUNT`). Fields: 57. ABI 15
 (`LANGUAGE_VERSION`). Over GitHub's 100 MB blob limit when combined with
 the rest of the diff, so `src/parser.c` is gitignored and `src/parser.c.gz`
-(~4.9 MB) is committed; `bindings/rust/build.rs` inflates it into
+(~5.5 MB) is committed; `bindings/rust/build.rs` inflates it into
 `OUT_DIR` when the plain file is absent.
 
 ## Corpus results
