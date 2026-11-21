@@ -4749,6 +4749,22 @@
     }
   },
   {
+    "type": "preproc_colon",
+    "named": true,
+    "extra": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "preproc_arg",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "preproc_define",
     "named": true,
     "extra": true,
@@ -6891,6 +6907,10 @@
   },
   {
     "type": "\"",
+    "named": false
+  },
+  {
+    "type": "#:",
     "named": false
   },
   {

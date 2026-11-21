@@ -4,8 +4,9 @@
 //! Each repro below is accepted by Roslyn CSC (dotnet SDK 10, syntax-only:
 //! no CS1xxx). The vendored grammar in `vendor/tree-sitter-c-sharp` must
 //! parse it. Controls pin validated-invalid inputs (preview `safe`,
-//! `closed`/`union` type proposals, file-based `#:property`), which must
-//! keep reporting `parse_error`.
+//! `closed`/`union` type proposals), which must keep reporting
+//! `parse_error`. (`#:` file-based-program directives parse — leancil's
+//! Tests/*.cs corpus uses them pervasively.)
 
 use std::sync::LazyLock;
 
@@ -367,11 +368,6 @@ fn preview_and_invalid_still_error() {
     );
     // `union` declarations are not valid C# (CSC CS1001).
     run_error("union_invalid.cs", "using System;\npublic union U(int);\n");
-    // `#:` directives only exist in file-based programs (CSC CS9298).
-    run_error(
-        "file_directive.cs",
-        "#:property PublishAot=false\nusing System;\nclass C {}\n",
-    );
 }
 
 #[test]
@@ -493,4 +489,14 @@ fn preproc_line_backslash_path() {
         class C { }\n\
         #line default\n";
     run_clean("preproc_line_path.cs", source);
+}
+
+#[test]
+fn hash_colon_directives() {
+    // .NET file-based programs emit `#:` directives (property/package/sdk/import).
+    let source = "#:property PublishAot=false\n\
+        #:package Newtonsoft.Json@13.0.1\n\
+        Console.WriteLine(\"hi\");\n";
+    run_clean("hash_colon.cs", source);
+    assert_raw_clean(source);
 }

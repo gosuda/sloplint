@@ -172,6 +172,7 @@ export default grammar({
     $.preproc_warning,
     $.preproc_define,
     $.preproc_undef,
+    $.preproc_colon,
   ],
 
   inline: $ => [
@@ -2311,6 +2312,12 @@ export default grammar({
             ))),
         seq('checksum', $.string_literal, $.string_literal, $.string_literal),
       ),
+      /\n/,
+    ),
+
+    preproc_colon: $ => seq(
+      alias(/#[ 	]*:/, '#:'),
+      optional($.preproc_arg),
       /\n/,
     ),
 
