@@ -75,9 +75,16 @@ export default grammar({
     /* After `attributes`, `import` is no longer possible, but
        `public meta …` still chooses between section and declaration. */
     [$.section, $.declaration],
+    /* `calc 0 = 0 := rfl` — after a `;`/line-start a `x = y` prefix
+       can be a binary `=` term or the head of a `calc_step`; the `:=`
+       after the rhs decides, which LR(1) cannot see. */
+    [$._block_body, $.calc_step],
     /* `Foo a.b` — custom_command arg atom vs an `_op_term` that can
-       continue into a projection after the atom. */
+       continue into a projection after the atom. decl_doc_cmd's
+       atom-repeat shares the generated repeat node with
+       custom_command's required arg list. */
     [$.custom_command, $._op_term],
+    [$.custom_command, $.decl_doc_cmd, $._op_term],
     /* `package {}` — the lake_cmd brace block vs a struct_lit arg;
        `package { k := v ,` — its `key := value` fields vs struct_lit
        fields. */
@@ -173,6 +180,7 @@ export default grammar({
        fields and a `: Type := do` target form. The heads are
        enumerated so they never shadow real commands. */
     lake_cmd: $ => prec.right(seq(
+      optional($.attributes),
       field('command', choice(
         'package', 'lean_lib', 'lean_exe', 'extern_lib',
         'extern', 'input_file', 'input_dir', 'script',
@@ -185,7 +193,8 @@ export default grammar({
         repeat(seq(
           field('key', choice($.identifier, $.str_lit)),
           choice(':=', '='),
-          field('value', choice($.identifier, $.str_lit, $.num_lit)),
+          field('value', choice($.identifier, $.str_lit, $.num_lit,
+                                $.array_lit)),
           optional(choice(';', ',', $._newline)))),
         '}')),
       optional(seq(':', $._term)),
@@ -512,7 +521,11 @@ export default grammar({
       field('command', $.custom_command_head),
       repeat(field('arg', $._term_atom)),
       /* `Statement (n : ℕ) : T := by` / `Problem := e` — DSLs that
-         mimic the shape of a real declaration tail. */
+         mimic the shape of a real declaration tail. The `end Foo` /
+         `open Foo Bar` / `section Foo` splits are prevented at the
+         named-rule side via `$. _name_or_head`, not here — a required
+         tail only manufactured MISSING-arg errors when the head token
+         stole a Capitalized word inside a completable command. */
       optional(seq(':', $._term)),
       optional(choice(':=', '=')),
       optional($._term),
@@ -544,16 +557,22 @@ export default grammar({
       optional($.decl_modifiers),
       'namespace', field('name', $.identifier),
     ),
-    section: $ => seq(
+    /* `prec.right` keeps an optional name inside `section`: without it
+       a following Capitalized word could instead be re-read as a new
+       `custom_command`, splitting `section Foo` into two commands. */
+    section: $ => prec.right(seq(
       optional($.attributes),
       /* `meta section` — the marker lives in _visibility_mods so it
          stays out of decl_modifiers' repeat1 (a 'meta' literal there
          forks `'meta' • 'meta'` against `public meta`). */
       optional($._visibility_mods),
       optional($.decl_modifiers),
-      'section', optional(field('name', $.identifier)),
-    ),
-    end: $ => seq('end', optional(field('name', $.identifier))),
+      'section', optional(field('name', $._name_or_head)),
+    )),
+    /* `prec.right` keeps an optional name inside `end` — see
+       `section`. */
+    end: $ => prec.right(seq(
+      'end', optional(field('name', $._name_or_head)))),
 
     /* `variable [Foo R]` declares one or more vars. `variable (R) in
        <cmd>` scopes the variable just to a single following command. */
@@ -567,32 +586,33 @@ export default grammar({
       optional(seq('in', field('body', $._command))),
     )),
 
-    universe: $ => seq(
+    universe: $ => prec.right(seq(
       choice('universe', 'universes'),
-      repeat1(field('name', $.identifier)),
-    ),
+      repeat1(field('name', $._name_or_head)),
+    )),
 
     open: $ => prec.right(seq(
       'open',
       $._open_decl,
       optional(seq('in', field('body', $._command))),
     )),
-    _open_decl: $ => choice(
+    /* `prec.right` keeps `open Foo Bar` one decl — see `section`. */
+    _open_decl: $ => prec.right(choice(
       seq(
-        field('namespace', $.identifier),
+        field('namespace', $._name_or_head),
         '(',
         repeat1(field('only', $.identifier)),
         ')',
       ),
-      seq('scoped', repeat1(field('scoped', $.identifier))),
+      seq('scoped', repeat1(field('scoped', $._name_or_head))),
       seq(
-        repeat1(field('namespace', $.identifier)),
+        repeat1(field('namespace', $._name_or_head)),
         optional(seq(
           'renaming',
           sep1(field('renaming', $.renaming_pair), ','),
         )),
       ),
-    ),
+    )),
 
     renaming_pair: $ => seq(
       $.identifier,
@@ -1809,17 +1829,23 @@ export default grammar({
 
     _block_body: $ => choice(
       /* Inline `by tac; tac` and `do x; y` — multiple tactics
-         separated by semicolons, all on one line. */
-      prec.right(sep1(field('inline', $._term), choice(';', ','))),
+         separated by semicolons, all on one line. No `,`: inside
+         `{ f := by t, g := 1 }` the comma ends the field, not the
+         tactic. */
+      /* `calc_step` inline too — `calc 0 = 0 := rfl` outside `by`.
+         The `x = y` prefix also matches a binary `=` term, so GLR
+         must prefer the step when `:=` follows. */
+      prec.right(sep1(field('inline', choice(
+        prec.dynamic(1, $.calc_step), $._term)), ';')),
       seq(
         $._indent,
-        /* `repeat1` on the separator lets a `;` or `,` begin the line
+        /* `repeat1` on the separator lets a `;` begin the line
            after a NEWLINE (`e1\n    ; e2`): sepByIndentSemicolon
            writes separators at line-start. `calc_step` covers the
            `_ = x := h` shape inside `calc` blocks. */
         sep1(field('stmt', choice(
-            $.block_assign, $.calc_step, $._term)),
-             repeat1(choice(';', ',', $._newline))),
+            $.block_assign, prec.dynamic(1, $.calc_step), $._term)),
+             repeat1(choice(';', $._newline))),
 
         $._dedent,
       ),
@@ -1859,7 +1885,10 @@ export default grammar({
       'for',
       sep1(seq(
         optional(seq(field('acc', $._binder_ident), ':')),
-        field('name', $._binder_ident),
+        /* `for (a, b) in xs` / `for ⟨a, b⟩ in xs` — tuple and
+           anonymous-constructor destructuring binders. */
+        field('name', choice(
+          $._binder_ident, $.tuple_binder, $.anon_ctor_binder)),
         'in',
         field('range', $._term),
       ), ','),
@@ -2009,6 +2038,16 @@ export default grammar({
      * The scanner returns false (rewind to start) for the plain case,
      * letting internal lexing handle word/keyword arbitration. */
     identifier: $ => choice($._plain_ident, $._scanned_ident),
+
+    /* A Capitalized word where a command could also start lexes as
+       `custom_command_head`, not `identifier` — `end Foo`, `section Foo`,
+       `open Foo Bar`, `universe U` would otherwise split into a bare
+       marker plus a phantom command. Positions that take such a name
+       accept `$. _name_or_head` so the enclosing rule can consume it. */
+    _name_or_head: $ => choice(
+      $.identifier,
+      alias($.custom_command_head, $.identifier),
+    ),
     _plain_ident: _ => /[a-zA-Z_][a-zA-Z_0-9'!?]*/,
   },
 });

@@ -5921,6 +5921,10 @@
             "named": true
           },
           {
+            "type": "calc_step",
+            "named": true
+          },
+          {
             "type": "cdot",
             "named": true
           },
@@ -6826,6 +6830,10 @@
           },
           {
             "type": "calc",
+            "named": true
+          },
+          {
+            "type": "calc_step",
             "named": true
           },
           {
@@ -9542,6 +9550,10 @@
           },
           {
             "type": "calc",
+            "named": true
+          },
+          {
+            "type": "calc_step",
             "named": true
           },
           {
@@ -12832,6 +12844,10 @@
             "named": true
           },
           {
+            "type": "calc_step",
+            "named": true
+          },
+          {
             "type": "cdot",
             "named": true
           },
@@ -13713,6 +13729,10 @@
           },
           {
             "type": "calc",
+            "named": true
+          },
+          {
+            "type": "calc_step",
             "named": true
           },
           {
@@ -19462,6 +19482,10 @@
             "named": true
           },
           {
+            "type": "calc_step",
+            "named": true
+          },
+          {
             "type": "cdot",
             "named": true
           },
@@ -19708,11 +19732,19 @@
         "required": true,
         "types": [
           {
+            "type": "anon_ctor_binder",
+            "named": true
+          },
+          {
             "type": "hole",
             "named": true
           },
           {
             "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "tuple_binder",
             "named": true
           }
         ]
@@ -27846,6 +27878,10 @@
         "required": false,
         "types": [
           {
+            "type": "array_lit",
+            "named": true
+          },
+          {
             "type": "identifier",
             "named": true
           },
@@ -27882,6 +27918,10 @@
         },
         {
           "type": "array_lit",
+          "named": true
+        },
+        {
+          "type": "attributes",
           "named": true
         },
         {

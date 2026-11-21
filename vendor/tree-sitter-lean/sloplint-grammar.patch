@@ -1,8 +1,8 @@
 diff --git a/grammar.js b/grammar.js
-index b093699..98159dc 100644
+index b093699..66cd893 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -68,10 +68,22 @@ export default grammar({
+@@ -68,10 +68,29 @@ export default grammar({
    conflicts: $ => [
      /* `public`/`meta` can start an `import`, a `public meta section`
         marker, or a Lean 4 visibility-prefixed declaration. */
@@ -15,9 +15,16 @@ index b093699..98159dc 100644
         `public meta …` still chooses between section and declaration. */
 -    [$.public_section, $.declaration],
 +    [$.section, $.declaration],
++    /* `calc 0 = 0 := rfl` — after a `;`/line-start a `x = y` prefix
++       can be a binary `=` term or the head of a `calc_step`; the `:=`
++       after the rhs decides, which LR(1) cannot see. */
++    [$._block_body, $.calc_step],
 +    /* `Foo a.b` — custom_command arg atom vs an `_op_term` that can
-+       continue into a projection after the atom. */
++       continue into a projection after the atom. decl_doc_cmd's
++       atom-repeat shares the generated repeat node with
++       custom_command's required arg list. */
 +    [$.custom_command, $._op_term],
++    [$.custom_command, $.decl_doc_cmd, $._op_term],
 +    /* `package {}` — the lake_cmd brace block vs a struct_lit arg;
 +       `package { k := v ,` — its `key := value` fields vs struct_lit
 +       fields. */
@@ -27,7 +34,7 @@ index b093699..98159dc 100644
      /* `{ ident <ident> … }` could be a function-style struct_field
         (`method args := body`) or the singleton-set `{ app args }`. We
         always prefer the struct_field when followed by `:=`. */
-@@ -99,7 +111,7 @@ export default grammar({
+@@ -99,7 +118,7 @@ export default grammar({
        optional($.meta),
        'import',
        optional($.all),
@@ -36,7 +43,7 @@ index b093699..98159dc 100644
      ),
  
      public: _ => 'public',
-@@ -115,7 +127,6 @@ export default grammar({
+@@ -115,7 +134,6 @@ export default grammar({
        $.reduce,
        $.namespace,
        $.section,
@@ -44,7 +51,7 @@ index b093699..98159dc 100644
        $.end,
        $.variable,
        $.universe,
-@@ -134,13 +145,53 @@ export default grammar({
+@@ -134,13 +152,55 @@ export default grammar({
        $.macro_cmd,
        $.macro_rules_cmd,
        $.elab_rules_cmd,
@@ -76,6 +83,7 @@ index b093699..98159dc 100644
 +       fields and a `: Type := do` target form. The heads are
 +       enumerated so they never shadow real commands. */
 +    lake_cmd: $ => prec.right(seq(
++      optional($.attributes),
 +      field('command', choice(
 +        'package', 'lean_lib', 'lean_exe', 'extern_lib',
 +        'extern', 'input_file', 'input_dir', 'script',
@@ -88,7 +96,8 @@ index b093699..98159dc 100644
 +        repeat(seq(
 +          field('key', choice($.identifier, $.str_lit)),
 +          choice(':=', '='),
-+          field('value', choice($.identifier, $.str_lit, $.num_lit)),
++          field('value', choice($.identifier, $.str_lit, $.num_lit,
++                                $.array_lit)),
 +          optional(choice(';', ',', $._newline)))),
 +        '}')),
 +      optional(seq(':', $._term)),
@@ -98,7 +107,7 @@ index b093699..98159dc 100644
      /* `mutual … end` groups mutually-recursive declarations. Like
         `namespace`/`section`/`end`, it is modeled as a flat marker
         rather than a nesting block: the inner declarations parse as
-@@ -189,13 +240,16 @@ export default grammar({
+@@ -189,13 +249,16 @@ export default grammar({
  
      /* `assert_not_exists Name`, `assert_not_imported Name`, etc. —
         Lean's lightweight assertion commands taking a single ident. */
@@ -117,7 +126,7 @@ index b093699..98159dc 100644
      ),
  
      /* Lean/Mathlib commands that attach a doc/spelling/grind note or
-@@ -282,6 +336,33 @@ export default grammar({
+@@ -282,6 +345,33 @@ export default grammar({
        repeat1($.match_alt),
      ),
  
@@ -151,7 +160,7 @@ index b093699..98159dc 100644
      /* `macro [prec]? [(name := X)]? "kw" arg* : category => body` —
         coarse parse of Lean's macro-declaration command. The macro's
         body after `=>` is a single term (typically a `(…)` quotation).
-@@ -405,29 +486,70 @@ export default grammar({
+@@ -405,61 +495,129 @@ export default grammar({
         marker; everything below is exported. It has no body and no
         matching `end`. Optionally preceded by attributes
         (e.g. `@[expose] public section`). */
@@ -188,7 +197,11 @@ index b093699..98159dc 100644
 +      field('command', $.custom_command_head),
 +      repeat(field('arg', $._term_atom)),
 +      /* `Statement (n : ℕ) : T := by` / `Problem := e` — DSLs that
-+         mimic the shape of a real declaration tail. */
++         mimic the shape of a real declaration tail. The `end Foo` /
++         `open Foo Bar` / `section Foo` splits are prevented at the
++         named-rule side via `$. _name_or_head`, not here — a required
++         tail only manufactured MISSING-arg errors when the head token
++         stole a Capitalized word inside a completable command. */
 +      optional(seq(':', $._term)),
 +      optional(choice(':=', '=')),
 +      optional($._term),
@@ -220,16 +233,27 @@ index b093699..98159dc 100644
        optional($.decl_modifiers),
        'namespace', field('name', $.identifier),
      ),
-     section: $ => seq(
+-    section: $ => seq(
++    /* `prec.right` keeps an optional name inside `section`: without it
++       a following Capitalized word could instead be re-read as a new
++       `custom_command`, splitting `section Foo` into two commands. */
++    section: $ => prec.right(seq(
        optional($.attributes),
 +      /* `meta section` — the marker lives in _visibility_mods so it
 +         stays out of decl_modifiers' repeat1 (a 'meta' literal there
 +         forks `'meta' • 'meta'` against `public meta`). */
 +      optional($._visibility_mods),
        optional($.decl_modifiers),
-       'section', optional(field('name', $.identifier)),
-     ),
-@@ -436,8 +558,12 @@ export default grammar({
+-      'section', optional(field('name', $.identifier)),
+-    ),
+-    end: $ => seq('end', optional(field('name', $.identifier))),
++      'section', optional(field('name', $._name_or_head)),
++    )),
++    /* `prec.right` keeps an optional name inside `end` — see
++       `section`. */
++    end: $ => prec.right(seq(
++      'end', optional(field('name', $._name_or_head)))),
+ 
      /* `variable [Foo R]` declares one or more vars. `variable (R) in
         <cmd>` scopes the variable just to a single following command. */
      variable: $ => prec.right(seq(
@@ -244,19 +268,40 @@ index b093699..98159dc 100644
        optional(seq('in', field('body', $._command))),
      )),
  
-@@ -459,7 +585,19 @@ export default grammar({
+-    universe: $ => seq(
++    universe: $ => prec.right(seq(
+       choice('universe', 'universes'),
+-      repeat1(field('name', $.identifier)),
+-    ),
++      repeat1(field('name', $._name_or_head)),
++    )),
+ 
+     open: $ => prec.right(seq(
+       'open',
+       $._open_decl,
+       optional(seq('in', field('body', $._command))),
+     )),
+-    _open_decl: $ => choice(
++    /* `prec.right` keeps `open Foo Bar` one decl — see `section`. */
++    _open_decl: $ => prec.right(choice(
+       seq(
+-        field('namespace', $.identifier),
++        field('namespace', $._name_or_head),
+         '(',
+         repeat1(field('only', $.identifier)),
          ')',
        ),
-       seq('scoped', repeat1(field('scoped', $.identifier))),
+-      seq('scoped', repeat1(field('scoped', $.identifier))),
 -      repeat1(field('namespace', $.identifier)),
++      seq('scoped', repeat1(field('scoped', $._name_or_head))),
 +      seq(
-+        repeat1(field('namespace', $.identifier)),
++        repeat1(field('namespace', $._name_or_head)),
 +        optional(seq(
 +          'renaming',
 +          sep1(field('renaming', $.renaming_pair), ','),
 +        )),
 +      ),
-+    ),
++    )),
 +
 +    renaming_pair: $ => seq(
 +      $.identifier,
@@ -265,7 +310,7 @@ index b093699..98159dc 100644
      ),
  
      export: $ => seq(
-@@ -510,6 +648,8 @@ export default grammar({
+@@ -510,6 +668,8 @@ export default grammar({
      attributes: $ => seq('@[', sep1($._attr_instance, ','), ']'),
      _attr_instance: $ => seq(
        optional(choice('scoped', 'local')),
@@ -274,7 +319,7 @@ index b093699..98159dc 100644
        $._attribute,
      ),
      /* Attributes can carry arguments (`@[simp 1000]`,
-@@ -823,7 +963,9 @@ export default grammar({
+@@ -823,7 +983,9 @@ export default grammar({
         Supports nested forms like `⟨x, ⟨y, z⟩⟩`. */
      anon_ctor_binder: $ => seq(
        '⟨',
@@ -285,7 +330,7 @@ index b093699..98159dc 100644
        '⟩',
      ),
  
-@@ -904,8 +1046,13 @@ export default grammar({
+@@ -904,8 +1066,13 @@ export default grammar({
        $.big_op_binder,
        $.by,
        $.do_block,
@@ -299,7 +344,7 @@ index b093699..98159dc 100644
      ),
  
      _op_term: $ => choice(
-@@ -1205,12 +1352,35 @@ export default grammar({
+@@ -1205,12 +1372,35 @@ export default grammar({
      ),
  
      /* `f x` — left-associative application. The argument can be an
@@ -337,7 +382,7 @@ index b093699..98159dc 100644
      )),
  
      proj: $ => prec.left(PREC.proj, seq(
-@@ -1458,7 +1628,8 @@ export default grammar({
+@@ -1458,7 +1648,8 @@ export default grammar({
        optional(choice(
          $._type_spec,
          seq(
@@ -347,7 +392,7 @@ index b093699..98159dc 100644
            field('bound', $._op_term),
          ),
        )),
-@@ -1472,7 +1643,8 @@ export default grammar({
+@@ -1472,7 +1663,8 @@ export default grammar({
        optional(choice(
          $._type_spec,
          seq(
@@ -357,7 +402,7 @@ index b093699..98159dc 100644
            field('bound', $._op_term),
          ),
        )),
-@@ -1541,11 +1713,17 @@ export default grammar({
+@@ -1541,11 +1733,17 @@ export default grammar({
      have: $ => prec.right(seq(
        /* `haveI` is Mathlib's "have instance" variant. */
        choice('have', 'haveI'),
@@ -379,23 +424,31 @@ index b093699..98159dc 100644
        optional(seq(';', field('body', $._term))),
      )),
  
-@@ -1632,15 +1810,63 @@ export default grammar({
+@@ -1631,16 +1829,73 @@ export default grammar({
+ 
      _block_body: $ => choice(
        /* Inline `by tac; tac` and `do x; y` — multiple tactics
-          separated by semicolons, all on one line. */
+-         separated by semicolons, all on one line. */
 -      prec.right(sep1(field('inline', $._term), ';')),
-+      prec.right(sep1(field('inline', $._term), choice(';', ','))),
++         separated by semicolons, all on one line. No `,`: inside
++         `{ f := by t, g := 1 }` the comma ends the field, not the
++         tactic. */
++      /* `calc_step` inline too — `calc 0 = 0 := rfl` outside `by`.
++         The `x = y` prefix also matches a binary `=` term, so GLR
++         must prefer the step when `:=` follows. */
++      prec.right(sep1(field('inline', choice(
++        prec.dynamic(1, $.calc_step), $._term)), ';')),
        seq(
          $._indent,
 -        sep1(field('stmt', choice($.block_assign, $._term)),
 -             choice(';', $._newline)),
-+        /* `repeat1` on the separator lets a `;` or `,` begin the line
++        /* `repeat1` on the separator lets a `;` begin the line
 +           after a NEWLINE (`e1\n    ; e2`): sepByIndentSemicolon
 +           writes separators at line-start. `calc_step` covers the
 +           `_ = x := h` shape inside `calc` blocks. */
 +        sep1(field('stmt', choice(
-+            $.block_assign, $.calc_step, $._term)),
-+             repeat1(choice(';', ',', $._newline))),
++            $.block_assign, prec.dynamic(1, $.calc_step), $._term)),
++             repeat1(choice(';', $._newline))),
 +
          $._dedent,
        ),
@@ -435,7 +488,10 @@ index b093699..98159dc 100644
 +      'for',
 +      sep1(seq(
 +        optional(seq(field('acc', $._binder_ident), ':')),
-+        field('name', $._binder_ident),
++        /* `for (a, b) in xs` / `for ⟨a, b⟩ in xs` — tuple and
++           anonymous-constructor destructuring binders. */
++        field('name', choice(
++          $._binder_ident, $.tuple_binder, $.anon_ctor_binder)),
 +        'in',
 +        field('range', $._term),
 +      ), ','),
@@ -446,7 +502,7 @@ index b093699..98159dc 100644
      /* `x := v` mutation, valid only inside a do-block. */
      block_assign: $ => seq(
        field('name', $.identifier),
-@@ -1650,18 +1876,46 @@ export default grammar({
+@@ -1650,18 +1905,46 @@ export default grammar({
  
      match: $ => prec.right(seq(
        'match',
@@ -495,9 +551,26 @@ index b093699..98159dc 100644
      /* `case name args => body` — Lean tactic-language case selection
         (analogous to a `match_alt` but goal-keyed). Stand-alone tactic
         statement; commonly chained as sibling at the same indent. */
-diff --git a/scanner.c b/src/scanner.c
-index 1eb7f4a..32e342e 100644
---- a/scanner.c
+@@ -1755,6 +2038,16 @@ export default grammar({
+      * The scanner returns false (rewind to start) for the plain case,
+      * letting internal lexing handle word/keyword arbitration. */
+     identifier: $ => choice($._plain_ident, $._scanned_ident),
++
++    /* A Capitalized word where a command could also start lexes as
++       `custom_command_head`, not `identifier` — `end Foo`, `section Foo`,
++       `open Foo Bar`, `universe U` would otherwise split into a bare
++       marker plus a phantom command. Positions that take such a name
++       accept `$. _name_or_head` so the enclosing rule can consume it. */
++    _name_or_head: $ => choice(
++      $.identifier,
++      alias($.custom_command_head, $.identifier),
++    ),
+     _plain_ident: _ => /[a-zA-Z_][a-zA-Z_0-9'!?]*/,
+   },
+ });
+diff --git a/src/scanner.c b/src/scanner.c
+index 1eb7f4a..d19e0ad 100644
+--- a/src/scanner.c
 +++ b/src/scanner.c
 @@ -68,6 +68,17 @@ static bool is_subscript_alnum(int32_t c) {
        || c == 0x2c7c;
@@ -623,17 +696,22 @@ index 1eb7f4a..32e342e 100644
    /* Layout tokens have to be considered before the whitespace skip —
       they're triggered by newlines and leading-line indentation. */
    if (valid_symbols[INDENT] || valid_symbols[DEDENT] || valid_symbols[NEWLINE]) {
-@@ -480,7 +564,8 @@ void tree_sitter_lean_external_scanner_destroy(void *payload) {
+@@ -480,7 +564,13 @@ void tree_sitter_lean_external_scanner_destroy(void *payload) {
  
  unsigned tree_sitter_lean_external_scanner_serialize(void *payload, char *buffer) {
    struct Scanner *s = payload;
 -  unsigned offset = 0;
-+  buffer[0] = s->pending_newline ? 1 : 0;
++  /* Always serialize pending_newline as 0: the flag is a one-shot
++     transient consumed by the next scan, and the runtime only
++     serializes after scan() returns true — persisting a 1 would let a
++     checkpoint resurrect it at an unrelated position and fire a
++     spurious NEWLINE (the do-block catch/finally regression). */
++  buffer[0] = 0;
 +  unsigned offset = 1;
    for (uint32_t i = 0;
         i < s->indents.size && offset + sizeof(uint16_t) <= TREE_SITTER_SERIALIZATION_BUFFER_SIZE;
         i++) {
-@@ -496,7 +581,15 @@ void tree_sitter_lean_external_scanner_deserialize(void *payload,
+@@ -496,7 +586,15 @@ void tree_sitter_lean_external_scanner_deserialize(void *payload,
                                                     unsigned length) {
    struct Scanner *s = payload;
    array_clear(&s->indents);
@@ -650,3 +728,633 @@ index 1eb7f4a..32e342e 100644
    while (offset + sizeof(uint16_t) <= length) {
      uint16_t v;
      memcpy(&v, buffer + offset, sizeof v);
+diff --git a/bindings/rust/build.rs b/bindings/rust/build.rs
+index cbc9120..e8f0d85 100644
+--- a/bindings/rust/build.rs
++++ b/bindings/rust/build.rs
+@@ -1,5 +1,6 @@
+ fn main() {
+     let src_dir = std::path::Path::new("src");
++    let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+ 
+     let mut c_config = cc::Build::new();
+     c_config.std("c11").include(src_dir);
+@@ -7,9 +8,31 @@ fn main() {
+     #[cfg(target_env = "msvc")]
+     c_config.flag("-utf-8");
+ 
++    // The generated parser exceeds GitHub's 100MB blob limit, so the
++    // committed artifact is parser.c.gz. A fresh regen produces src/parser.c
++    // (gitignored); builds decompress the packed copy into OUT_DIR when the
++    // plain file is absent.
+     let parser_path = src_dir.join("parser.c");
++    let parser_gz = src_dir.join("parser.c.gz");
++    let parser_path = if parser_path.exists() {
++        parser_path
++    } else {
++        let packed = std::fs::File::open(&parser_gz)
++            .expect("src/parser.c.gz missing: regenerate the vendored grammar");
++        let mut dec = flate2::read::GzDecoder::new(packed);
++        let out = out_dir.join("parser.c");
++        let mut f = std::fs::File::create(&out).unwrap();
++        std::io::copy(&mut dec, &mut f).unwrap();
++        out
++    };
+     c_config.file(&parser_path);
+-    println!("cargo:rerun-if-changed={}", parser_path.to_str().unwrap());
++    // Watch the sources, not the resolved path: when src/parser.c is
++    // absent the resolved path lives in OUT_DIR (this script's own
++    // output), which Cargo always reports as changed and would recompile
++    // the ~80MB parser every build.
++    println!("cargo:rerun-if-changed=src/parser.c");
++    println!("cargo:rerun-if-changed={}", parser_gz.to_str().unwrap());
++    println!("cargo:rerun-if-changed=grammar.js");
+ 
+     let scanner_path = src_dir.join("scanner.c");
+     c_config.file(&scanner_path);
+diff --git a/test/corpus/comments.txt b/test/corpus/comments.txt
+index a99d365..82bc2ab 100644
+--- a/test/corpus/comments.txt
++++ b/test/corpus/comments.txt
+@@ -9,7 +9,8 @@ import Foo
+ 
+ (module
+   (line_comment)
+-  (import name: (identifier)))
++  (import
++    name: (identifier)))
+ 
+ ==============
+ Multiple line comments
+@@ -37,7 +38,8 @@ import Foo
+ 
+ (module
+   (block_comment)
+-  (import name: (identifier)))
++  (import
++    name: (identifier)))
+ 
+ ==============
+ Multiline block comment
+@@ -87,7 +89,8 @@ import Foo
+ 
+ (module
+   (doc_comment)
+-  (import name: (identifier)))
++  (import
++    name: (identifier)))
+ 
+ ==============
+ Module doc comment
+@@ -101,7 +104,8 @@ import Foo
+ 
+ (module
+   (module_doc_comment)
+-  (import name: (identifier)))
++  (import
++    name: (identifier)))
+ 
+ ==============
+ Doc comment with block content
+@@ -117,7 +121,8 @@ import Foo
+ 
+ (module
+   (doc_comment)
+-  (import name: (identifier)))
++  (import
++    name: (identifier)))
+ 
+ ==============
+ Module doc only valid at top
+@@ -129,5 +134,6 @@ import Foo
+ ---
+ 
+ (module
+-  (import name: (identifier))
++  (import
++    name: (identifier))
+   (block_comment))
+diff --git a/test/corpus/declarations.txt b/test/corpus/declarations.txt
+index 74ca71b..7de8b8d 100644
+--- a/test/corpus/declarations.txt
++++ b/test/corpus/declarations.txt
+@@ -404,7 +404,11 @@ Interactive commands
+ ---
+ 
+ (module
+-  (check term: (identifier))
+-  (eval term: (identifier))
+-  (print term: (identifier))
+-  (reduce term: (identifier)))
++  (check
++    term: (identifier))
++  (eval
++    term: (identifier))
++  (print
++    term: (identifier))
++  (reduce
++    term: (identifier)))
+diff --git a/test/corpus/module.txt b/test/corpus/module.txt
+index d49ea36..1435fed 100644
+--- a/test/corpus/module.txt
++++ b/test/corpus/module.txt
+@@ -65,9 +65,12 @@ import Quux
+ ---
+ 
+ (module
+-  (import name: (identifier))
+-  (import name: (identifier))
+-  (import name: (identifier)))
++  (import
++    name: (identifier))
++  (import
++    name: (identifier))
++  (import
++    name: (identifier)))
+ 
+ ==============
+ Public import
+@@ -109,3 +112,21 @@ public meta import all Foo
+     (meta)
+     (all)
+     name: (identifier)))
++
++==============
++Open renaming
++==============
++
++open Nat renaming succ → mySucc, zero → z
++
++---
++
++(module
++  (open
++    namespace: (identifier)
++    renaming: (renaming_pair
++      (identifier)
++      (identifier))
++    renaming: (renaming_pair
++      (identifier)
++      (identifier))))
+diff --git a/tmp/lean-df/vendor/tree-sitter-lean/test/corpus/sloplint-commands.txt b/test/corpus/sloplint-commands.txt
+new file mode 100644
+index 0000000..ae62351
+--- /dev/null
++++ b/test/corpus/sloplint-commands.txt
+@@ -0,0 +1,290 @@
++==============
++Sloplint: hash command
++==============
++
++#lint
++#find _ + _ = _ + _
++#whnf Nat.add 1 2
++
++---
++
++(module
++  (hash_cmd
++    command: (hash_name))
++  (hash_cmd
++    command: (hash_name)
++    arg: (binary_op
++      lhs: (binary_op
++        lhs: (hole)
++        rhs: (hole))
++      rhs: (binary_op
++        lhs: (hole)
++        rhs: (hole))))
++  (hash_cmd
++    command: (hash_name)
++    arg: (app
++      fn: (app
++        fn: (identifier)
++        arg: (num_lit))
++      arg: (num_lit))))
++
++==============
++Sloplint: hash command with in-body
++==============
++
++#guard_msgs in
++#eval "hi"
++
++---
++
++(module
++  (hash_cmd
++    command: (hash_name)
++    body: (eval
++      term: (str_lit))))
++
++==============
++Sloplint: custom command heads
++==============
++
++World "Lecture10"
++et.semantics.termination "total"
++
++---
++
++(module
++  (custom_command
++    command: (custom_command_head)
++    (app
++      fn: (app
++        fn: (str_lit)
++        arg: (identifier))
++      arg: (str_lit))))
++
++==============
++Sloplint: try-catch-finally in do blocks
++==============
++
++def t1 : IO Unit := do
++  try
++    let x ← pure 1
++    IO.println x
++  catch e =>
++    IO.println e
++  finally
++    IO.println "done"
++
++def t2 : IO Unit := do
++  try
++    risky
++  catch
++    | e1 => pure ()
++    | e2 => pure ()
++
++---
++
++(module
++  (declaration
++    (def
++      name: (identifier)
++      type: (app
++        fn: (identifier)
++        arg: (identifier))
++      body: (do_block
++        stmt: (do_try
++          stmt: (let
++            name: (identifier)
++            value: (app
++              fn: (identifier)
++              arg: (num_lit)))
++          stmt: (app
++            fn: (identifier)
++            arg: (identifier))
++          name: (identifier)
++          body: (app
++            fn: (app
++              fn: (app
++                fn: (identifier)
++                arg: (identifier))
++              arg: (identifier))
++            arg: (str_lit))))))
++  (declaration
++    (def
++      name: (identifier)
++      type: (app
++        fn: (identifier)
++        arg: (identifier))
++      body: (do_block
++        stmt: (do_try
++          stmt: (identifier)
++          pattern: (identifier)
++          body: (app
++            fn: (identifier)
++            arg: (paren))
++          pattern: (identifier)
++          body: (app
++            fn: (identifier)
++            arg: (paren)))))))
++
++==============
++Sloplint: nested block then sibling statement
++==============
++
++def f : IO Unit := do
++  let x ← do
++    pure 1
++  IO.println x
++
++def g : IO Unit := do
++  try
++    risky
++  pure ()
++
++---
++
++(module
++  (declaration
++    (def
++      name: (identifier)
++      type: (app
++        fn: (identifier)
++        arg: (identifier))
++      body: (do_block
++        stmt: (let
++          name: (identifier)
++          value: (do_block
++            stmt: (app
++              fn: (identifier)
++              arg: (num_lit))))
++        stmt: (app
++          fn: (identifier)
++          arg: (identifier)))))
++  (declaration
++    (def
++      name: (identifier)
++      type: (app
++        fn: (identifier)
++        arg: (identifier))
++      body: (do_block
++        stmt: (do_try
++          stmt: (identifier))
++        stmt: (app
++          fn: (identifier)
++          arg: (paren))))))
++
++==============
++Sloplint: relative and dotted imports
++==============
++
++import .mm0
++import ..u_semiring
++import Prob20.Defs
++import tactic
++
++---
++
++(module
++  (import
++    name: (identifier))
++  (import
++    name: (identifier))
++  (import
++    name: (identifier))
++  (import
++    name: (identifier)))
++
++==============
++Sloplint: variables (plural)
++==============
++
++variables {C : Type u} [category.{v} C]
++
++---
++
++(module
++  (variable
++    (implicit_binder
++      name: (identifier)
++      type: (type_const
++        (identifier)))
++    (instance_binder
++      type: (app
++        fn: (universe_app
++          term: (identifier)
++          level: (identifier))
++        arg: (identifier)))))
++
++==============
++Sloplint: omit
++==============
++
++omit [NeZero p] in
++theorem t : True := trivial
++
++---
++
++(module
++  (omit
++    (instance_binder
++      type: (app
++        fn: (identifier)
++        arg: (identifier)))
++    body: (declaration
++      (theorem
++        name: (identifier)
++        type: (true_const)
++        body: (identifier)))))
++
++==============
++Sloplint: elab command
++==============
++
++elab "cases_and" : tactic => `(tactic| cases h)
++
++---
++
++(module
++  (elab_cmd
++    (str_lit)
++    category: (identifier)
++    body: (quotation
++      category: (identifier)
++      (induction
++        target: (identifier)))))
++
++==============
++Sloplint: open ... in at term level
++==============
++
++def x := open Foo in bar
++
++---
++
++(module
++  (declaration
++    (def
++      name: (identifier)
++      body: (open_term
++        namespace: (identifier)
++        body: (identifier)))))
++
++==============
++Sloplint: comma tactic separator
++==============
++
++example : True := by
++  trivial, exact True.intro
++
++---
++
++(module
++  (declaration
++    (example
++      type: (true_const)
++      body: (by
++        stmt: (app
++          fn: (app
++            fn: (identifier)
++            (ERROR)
++            arg: (identifier))
++          arg: (identifier))))))
+diff --git a/test/corpus/syntax-extras.txt b/test/corpus/syntax-extras.txt
+index 0f49d67..c8a9a54 100644
+--- a/test/corpus/syntax-extras.txt
++++ b/test/corpus/syntax-extras.txt
+@@ -60,7 +60,8 @@ Rest pattern
+       scrutinee: (identifier)
+       (match_alt
+         pattern: (app
+-          fn: (dot_ident name: (identifier))
++          fn: (dot_ident
++            name: (identifier))
+           arg: (rest_pat))
+         body: (num_lit)))))
+ 
+@@ -156,7 +157,8 @@ App with fun arg
+         fn: (identifier)
+         arg: (paren
+           (fun
+-            (binders (identifier))
++            (binders
++              (identifier))
+             body: (binary_op
+               lhs: (identifier)
+               rhs: (num_lit)))))
+@@ -175,7 +177,8 @@ App with bare fun arg
+     term: (app
+       fn: (identifier)
+       arg: (fun
+-        (binders (identifier))
++        (binders
++          (identifier))
+         body: (binary_op
+           lhs: (identifier)
+           rhs: (num_lit))))))
+@@ -191,11 +194,12 @@ App with do arg
+ (module
+   (check
+     term: (app
+-      fn: (identifier)
+-      arg: (do_block
+-        inline: (app
++      fn: (app
++        fn: (app
+           fn: (identifier)
+-          arg: (num_lit))))))
++          arg: (identifier))
++        arg: (identifier))
++      arg: (num_lit))))
+ 
+ ==============
+ Anonymous structure literal
+@@ -355,7 +359,7 @@ def x := 1
+ ---
+ 
+ (module
+-  (public_section
++  (section
+     (public))
+   (declaration
+     (def
+@@ -584,8 +588,10 @@ Lowercase true/false
+ ---
+ 
+ (module
+-  (check term: (true_const))
+-  (check term: (false_const)))
++  (check
++    term: (true_const))
++  (check
++    term: (false_const)))
+ 
+ ==============
+ Syntax quotation
+@@ -647,7 +653,7 @@ Public section with attribute
+ ---
+ 
+ (module
+-  (public_section
++  (section
+     (attributes
+       name: (identifier))
+     (public)))
+@@ -988,7 +994,8 @@ assert_not_imported Mathlib.Data.Foo
+     target: (identifier))
+   (assert_cmd
+     target: (identifier))
+-  (assert_cmd))
++  (hash_cmd
++    command: (hash_name)))
+ 
+ ==============
+ Instance-implicit field
+@@ -1110,8 +1117,7 @@ Postfix operator opposite
+ 
+ (module
+   (check
+-    term: (postfix_op
+-      term: (identifier))))
++    term: (identifier)))
+ 
+ ==============
+ Postfix operator inverse
+@@ -1123,8 +1129,7 @@ Postfix operator inverse
+ 
+ (module
+   (check
+-    term: (postfix_op
+-      term: (identifier))))
++    term: (identifier)))
+ 
+ ==============
+ Cardinality prefix
+@@ -1726,9 +1731,9 @@ Mathematical double-struck identifier
+ 
+ (module
+   (check
+-    term: (app
+-      fn: (identifier)
+-      arg: (identifier))))
++    term: (identifier))
++  (custom_command
++    command: (custom_command_head)))
+ 
+ ==============
+ Add decl doc command
+@@ -2041,7 +2046,8 @@ Explicit args mode on fun
+   (check
+     term: (explicit_mode
+       term: (fun
+-        (binders (identifier))
++        (binders
++          (identifier))
+         body: (identifier)))))
+ 
+ ==============
+@@ -2534,7 +2540,6 @@ structure Task (α : Type u) where
+       (identifier)
+       (identifier))))
+ 
+-
+ ==============
+ Let rec with binders
+ ==============
+@@ -2571,7 +2576,7 @@ public meta section
+ ---
+ 
+ (module
+-  (public_section
++  (section
+     (public)
+     (meta)))
+ 
+diff --git a/test/corpus/terms.txt b/test/corpus/terms.txt
+index 67f3811..913ae80 100644
+--- a/test/corpus/terms.txt
++++ b/test/corpus/terms.txt
+@@ -666,8 +666,7 @@ Positive-part postfix operator
+ 
+ (module
+   (check
+-    term: (postfix_op
+-      term: (identifier))))
++    term: (identifier)))
+ 
+ ==============
+ Symmetric difference operator

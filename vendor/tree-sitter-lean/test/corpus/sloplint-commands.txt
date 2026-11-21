@@ -282,7 +282,9 @@ example : True := by
     (example
       type: (true_const)
       body: (by
-        stmt: (identifier)
         stmt: (app
-          fn: (identifier)
+          fn: (app
+            fn: (identifier)
+            (ERROR)
+            arg: (identifier))
           arg: (identifier))))))
