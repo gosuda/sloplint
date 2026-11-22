@@ -1,1 +1,4 @@
 a.tla:2 info complexity/nesting-depth
+# b.tla: a `sloplint-allow` inside the PlusCal algorithm covers only the
+# procedure it sits above; the second procedure's finding must survive.
+b.tla:19 info complexity/nesting-depth

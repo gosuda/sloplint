@@ -3,6 +3,7 @@ use sloplint_core::facts::{
     TypeDef, Visibility, WildcardArm,
 };
 use sloplint_core::role::{CodeRole, RoleRegion};
+use sloplint_core::suppress::CommentText;
 use tree_sitter::Node;
 
 pub(crate) use crate::cx::{ChainRoots, Cx, FileNameSets, FileSetKind, Link, MemberStates};
@@ -240,6 +241,20 @@ pub(crate) trait LangHooks: Sync {
     fn barrel(&self, root: Node<'_>, cx: &Cx<'_, '_>) -> Option<Barrel> {
         let _ = (root, cx);
         None
+    }
+
+    /// Directive-bearing texts of a comment node with their line ranges.
+    /// The default scans the whole node. A language whose comment node
+    /// embeds parsed code (TLA+ `(* ... *)` holding a PlusCal algorithm)
+    /// returns only the segments outside the embedded code, so a directive
+    /// inside the code does not mark the whole comment; the code's own
+    /// comment nodes still register theirs.
+    fn comment_texts<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Vec<CommentText<'s>> {
+        vec![CommentText {
+            start_line: pos_of(n).line,
+            end_line: narrow(n.end_position().row) + 1,
+            text: text(cx, n),
+        }]
     }
 }
 

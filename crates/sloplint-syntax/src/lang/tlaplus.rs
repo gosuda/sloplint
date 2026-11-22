@@ -12,12 +12,13 @@ use std::borrow::Cow;
 
 use crate::hooks::{
     CallHead, Cx, FunctionHead, LangHooks, child_by_field, first_named_child_matching,
-    named_children, narrow, pos_of, preceding_comments, trimmed,
+    named_children, narrow, pos_of, preceding_comments, slice, text, trimmed,
 };
 use crate::spec::Role;
 use sloplint_core::facts::{
     Arg, ArgShape, CallKind, Import, ImportKind, ImportScope, Param, Pos, PrimitiveKind, Visibility,
 };
+use sloplint_core::suppress::CommentText;
 use tree_sitter::Node;
 
 pub(crate) static TABLE: crate::lang::Table = &[
@@ -105,6 +106,24 @@ fn tlaplus_visibility(cx: &Cx<'_, '_>) -> Visibility {
     } else {
         Visibility::Exported
     }
+}
+
+fn whole_comment<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Vec<CommentText<'s>> {
+    vec![CommentText {
+        start_line: pos_of(n).line,
+        end_line: narrow(n.end_position().row) + 1,
+        text: text(cx, n),
+    }]
+}
+
+/// 1-based line holding the byte at `byte`, counted over `src`.
+fn line_of(src: &str, byte: usize) -> u32 {
+    narrow(
+        src.as_bytes()[..byte]
+            .iter()
+            .filter(|&&b| b == b'\n')
+            .count(),
+    ) + 1
 }
 
 fn name_of<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<(&'s str, Pos)> {
@@ -416,6 +435,43 @@ impl LangHooks for TlaplusHooks {
             }
             _ => {}
         }
+    }
+
+    /// A `(* ... *)` comment embeds a parsed PlusCal algorithm. A directive
+    /// inside the algorithm belongs to the algorithm's own `\*` comment
+    /// nodes, so only the text outside the algorithm ranges marks this
+    /// comment; otherwise one directive would suppress the whole algorithm.
+    fn comment_texts<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Vec<CommentText<'s>> {
+        if n.kind() != "block_comment" {
+            return whole_comment(n, cx);
+        }
+        let mut cursor = n.walk();
+        let algorithms: Vec<Node> = n
+            .named_children(&mut cursor)
+            .filter(|child| child.kind() == "pcal_algorithm")
+            .collect();
+        if algorithms.is_empty() {
+            return whole_comment(n, cx);
+        }
+        let mut segments = Vec::with_capacity(algorithms.len() + 1);
+        let mut start = n.start_byte();
+        for algorithm in &algorithms {
+            if algorithm.start_byte() > start {
+                segments.push((start, algorithm.start_byte()));
+            }
+            start = algorithm.end_byte();
+        }
+        if n.end_byte() > start {
+            segments.push((start, n.end_byte()));
+        }
+        segments
+            .into_iter()
+            .map(|(seg_start, seg_end)| CommentText {
+                start_line: line_of(cx.src, seg_start),
+                end_line: line_of(cx.src, seg_end.saturating_sub(1).max(seg_start)),
+                text: slice(cx.src, seg_start, seg_end),
+            })
+            .collect()
     }
 }
 
