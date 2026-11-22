@@ -2278,10 +2278,14 @@ static bool scan_impl(void *payload, TSLexer *lexer,
           }
           advance(lexer);
           if (lexer->lookahead == '/') {
+            // A line comment is transparent: the operand can arrive on the
+            // next line (`x +/ // note\n  y` is one infix expression), so the
+            // probe continues past the comment instead of declaring the
+            // operator postfix.
             while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
               advance(lexer);
             }
-            break;  // a line comment ends the line
+            continue;
           }
           if (lexer->lookahead != '*') {
             operand_follows = true;  // a lone '/' is operand text

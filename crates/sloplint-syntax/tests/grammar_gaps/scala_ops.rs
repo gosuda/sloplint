@@ -303,3 +303,30 @@ fn multi_slash_operator_keeps_assign_class() {
         "the comment-cut `+?/!=` must keep assignment precedence so `y + z` stays its right operand, sexp: {sexp}"
     );
 }
+
+#[test]
+fn line_comment_does_not_end_an_infix_operand() {
+    // `x +/ // note` on one line and `y` on the next: the line comment is
+    // transparent to scalac, so `y` is still the right operand and the
+    // expression stays infix. Reading the comment as the line's end turned
+    // the operator postfix and left `y` a stray statement.
+    let source = concat!(
+        "object T {\n",
+        "  val a = x +/ // note\n",
+        "    y\n",
+        "  val b = x /+// note\n",
+        "    y\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        !sexp.contains("postfix_expression"),
+        "both operators keep an infix right operand across the line comment, sexp: {sexp}"
+    );
+    assert_eq!(
+        sexp.matches("(infix_expression").count(),
+        2,
+        "each val is one infix expression, sexp: {sexp}"
+    );
+}
