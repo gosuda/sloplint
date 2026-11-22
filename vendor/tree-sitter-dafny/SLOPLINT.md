@@ -17,9 +17,17 @@ Date: 2026-11-19.
   (`parser.c`, `grammar.json`, `node-types.json`, `scanner.c`,
   `src/tree_sitter/`), `bindings/rust/`, `queries/`, `tree-sitter.json`,
   `README.md`. Dropped from the crate: `Cargo.toml.orig`, `Cargo.lock`,
-  `.cargo_vcs_info.json`. `Cargo.toml` is the crate's original manifest.
-- `sloplint-grammar.patch`: none. No local grammar change was needed; there
-  is no patch file in this directory.
+  `.cargo_vcs_info.json`. `Cargo.toml` is the crate's manifest with one
+  change: the `tree-sitter` dev-dependency is bumped to `0.25` so the
+  standalone `test_can_load_grammar` can load the ABI-15 `parser.c` (the
+  workspace itself uses tree-sitter 0.27).
+- `sloplint-grammar.patch` holds the local grammar diff versus the pinned
+  upstream revision: stray `;` is tolerated after a top-level declaration
+  (`source_file` and `module_body` repeat `seq($._top_decl, repeat(prec(-1, ';')))`,
+  so a leading `;` before any declaration still errors), and decl/spec
+  rules ending in `optional(';')` are wrapped in `prec.right` so the `;`
+  binds to the declaration rather than reading as a stray. Apply the patch
+  to upstream `grammar.js` and regenerate to reproduce `src/`.
 
 ## Why
 
@@ -31,15 +39,13 @@ the sloplint adapter deliberately leaves unmapped.
 
 ## Regenerating src/
 
-- No regeneration was run. The committed `src/parser.c` carries
-  `#define LANGUAGE_VERSION 14` and `EXTERNAL_TOKEN_COUNT 15`; the
-  tree-sitter 0.27 runtime used by sloplint loads ABI 14 (as the C and C++
-  grammars in this tree prove), and the grammar's own dev-dependency pins
-  tree-sitter 0.24.7, whose CLI emits ABI 14. Regenerating with the
-  installed 0.24.7 CLI (`/home/alpha/repos-devtool/tasks/tools-ts/bin`)
-  would only reproduce the same ABI.
-- `src/parser.c` is 55,653,939 bytes, below GitHub's 100 MB blob limit, so
-  it is committed plain (no `parser.c.gz` packing, no `.gitignore`).
+- Regenerate with `tree-sitter generate --abi 15` from this directory
+  (tree-sitter CLI 0.27.1). The committed `src/parser.c` carries
+  `#define LANGUAGE_VERSION 15` and `EXTERNAL_TOKEN_COUNT 15`; the
+  tree-sitter 0.27 runtime used by sloplint loads ABI 15.
+- `src/parser.c` is 48,006,461 bytes (`STATE_COUNT 21367`), below GitHub's
+  100 MB blob limit, so it is committed plain (no `parser.c.gz` packing,
+  no `.gitignore`).
 - `src/scanner.c` is upstream's external scanner for context-sensitive
   tokens (generic brackets, `|` cardinality/comprehension families, `>>`
   split-close); it is kept verbatim.
@@ -69,5 +75,5 @@ named-child access throughout.
 
 ## Size
 
-- `src/parser.c`: 55,653,939 bytes (`STATE_COUNT 24699`).
+- `src/parser.c`: 48,006,461 bytes (`STATE_COUNT 21367`).
 - `src/scanner.c`: 15,013 bytes.
