@@ -2,6 +2,11 @@
 
 Date: 2026-10-20.
 
+#: file-based-program directives (#:property/#:package/#:sdk/...) parse via
+a new `preproc_colon` extra (`alias(/#[ \t]*:/, '#:')` + `preproc_arg` +
+newline) — leancil's Tests/*.cs corpus uses them pervasively; upstream
+v0.23.5 errors on every `#:` line.
+
 ## Origin
 
 - Upstream repo: https://github.com/tree-sitter/tree-sitter-c-sharp

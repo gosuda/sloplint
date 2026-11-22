@@ -986,3 +986,29 @@ class C { }
     (identifier)
     (declaration_list))
   (preproc_line))
+
+================================================================================
+hash-colon directives (.NET file-based programs)
+================================================================================
+
+#:property PublishAot=false
+#:package Newtonsoft.Json@13.0.1
+Console.WriteLine("hi");
+
+---
+
+(compilation_unit
+  (preproc_colon
+    (preproc_arg))
+  (preproc_colon
+    (preproc_arg))
+  (global_statement
+    (expression_statement
+      (invocation_expression
+        function: (member_access_expression
+          expression: (identifier)
+          name: (identifier))
+        arguments: (argument_list
+          (argument
+            (string_literal
+              (string_literal_content))))))))

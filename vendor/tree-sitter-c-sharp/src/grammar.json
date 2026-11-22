@@ -15209,6 +15209,36 @@
         }
       ]
     },
+    "preproc_colon": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "PATTERN",
+            "value": "#[ \t]*:"
+          },
+          "named": false,
+          "value": "#:"
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "preproc_arg"
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "PATTERN",
+          "value": "\\n"
+        }
+      ]
+    },
     "preproc_nullable": {
       "type": "SEQ",
       "members": [
@@ -15452,6 +15482,10 @@
     {
       "type": "SYMBOL",
       "name": "preproc_undef"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "preproc_colon"
     }
   ],
   "conflicts": [
