@@ -234,14 +234,22 @@ fn multi_argument_given_extractor_binds_its_arguments() {
         let xs = named_all(found, "x");
         assert_eq!(xs.len(), 1, "outer var keeps its binding: {found:?}");
         assert_eq!(
-            (xs[0].write_lines, xs[0].first_write_line, xs[0].last_write_line),
+            (
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
             (1, 8, 8),
             "the extractor arm's write is shadowed; only the post-match write lands: {found:?}"
         );
         let ys = named_all(found, "y");
         assert_eq!(ys.len(), 1, "outer var keeps its binding: {found:?}");
         assert_eq!(
-            (ys[0].write_lines, ys[0].first_write_line, ys[0].last_write_line),
+            (
+                ys[0].write_lines,
+                ys[0].first_write_line,
+                ys[0].last_write_line
+            ),
             (1, 9, 9),
             "the extractor arm binds y too; only the post-match write lands: {found:?}"
         );
@@ -258,7 +266,11 @@ fn given_tuple_type_arm_binds_nothing() {
         let ss = named_all(found, "status");
         assert_eq!(ss.len(), 1, "outer var keeps its binding: {found:?}");
         assert_eq!(
-            (ss[0].write_lines, ss[0].first_write_line, ss[0].last_write_line),
+            (
+                ss[0].write_lines,
+                ss[0].first_write_line,
+                ss[0].last_write_line
+            ),
             (1, 4, 4),
             "the tuple-given arm binds nothing; the write reaches the outer var: {found:?}"
         );
