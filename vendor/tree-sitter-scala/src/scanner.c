@@ -871,19 +871,21 @@ static int32_t skip_char_or_quote_tail(TSLexer *lexer) {
 }
 
 // Skips a triple-quoted string's body after its opening `"""`, stopping
-// just past the closing `"""` or at EOF.
+// just past the closing quote run or at EOF. scan_string_content accepts a
+// run of any length, so only a non-quote after at least three quotes ends
+// the string; a fourth quote must not reopen a string and hide the `)`
+// that closes the group.
 static void skip_multiline_string_body(TSLexer *lexer) {
+  unsigned quote_count = 0;
   while (!lexer->eof(lexer)) {
     if (lexer->lookahead == '"') {
       advance(lexer);
-      if (lexer->lookahead == '"') {
-        advance(lexer);
-        if (lexer->lookahead == '"') {
-          advance(lexer);
-          return;
-        }
+      quote_count++;
+      if (quote_count >= 3 && lexer->lookahead != '"') {
+        return;
       }
     } else {
+      quote_count = 0;
       advance(lexer);
     }
   }
