@@ -473,6 +473,15 @@ impl LangHooks for TlaplusHooks {
             })
             .collect()
     }
+
+    fn skip_subtree(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+        // Proof bodies are proof annotations, not code: quantifiers and
+        // conditionals inside them must not count toward the theorem's
+        // complexity. The theorem statement stays outside the proof
+        // node, so it keeps its own measurement.
+        let _ = cx;
+        matches!(n.kind(), "terminal_proof" | "non_terminal_proof")
+    }
 }
 
 #[cfg(test)]
