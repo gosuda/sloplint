@@ -330,3 +330,35 @@ fn line_comment_does_not_end_an_infix_operand() {
         "each val is one infix expression, sexp: {sexp}"
     );
 }
+
+#[test]
+fn blank_line_ends_the_expression_before_a_soft_keyword_operand() {
+    // `export` is a plain Scala 2 identifier, so `x --?` followed by one
+    // newline and `export()` is the postfix operator's right operand. A
+    // blank line is a statement separator: the initializer ends at `--?` and
+    // `export()` is its own statement. The scanner must not let the operand
+    // probe cross the blank line.
+    let operand = concat!("object T {\n", "  val a = x --?\n", "  export()\n", "}\n");
+    run_clean(operand);
+    let operand_sexp = sexp_of(operand);
+    assert!(
+        operand_sexp.contains("right: (call_expression"),
+        "a single newline keeps `export()` as the operand, sexp: {operand_sexp}"
+    );
+
+    let separated = concat!("object T {\n", "  val b = x --?\n", "\n", "  export()\n", "}\n");
+    run_clean(separated);
+    let separated_sexp = sexp_of(separated);
+    assert!(
+        separated_sexp.contains("(postfix_expression"),
+        "a blank line makes `x --?` postfix, sexp: {separated_sexp}"
+    );
+    assert!(
+        separated_sexp.contains("(call_expression"),
+        "`export()` stays its own statement, sexp: {separated_sexp}"
+    );
+    assert!(
+        !separated_sexp.contains("(infix_expression"),
+        "the call does not become the operator's operand, sexp: {separated_sexp}"
+    );
+}

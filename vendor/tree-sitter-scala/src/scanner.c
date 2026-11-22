@@ -968,27 +968,48 @@ static bool rest_of_line_is_blank_or_comments(TSLexer *lexer) {
   }
 }
 
-// Whether a real operand follows the operator. Comments and line breaks are
-// transparent, so scalac reads the next real token across them. A comment-only
-// tail to EOF, a closing delimiter and a list separator are all no operand.
+// Whether a real operand follows the operator. Comments and a single line
+// break are transparent, so scalac reads the next real token across them;
+// a blank line (two line breaks) is a statement separator, so it ends the
+// expression. A comment-only tail to EOF, a closing delimiter and a list
+// separator are all no operand. A CRLF pair counts as one line break.
 static bool has_operand(TSLexer *lexer) {
+  int line_breaks = 0;
   for (;;) {
     if (lexer->eof(lexer)) {
       return false;
     }
-    if (is_space(lexer->lookahead)) {
+    int32_t c = lexer->lookahead;
+    if (c == '\n') {
+      if (++line_breaks >= 2) {
+        return false;
+      }
       advance(lexer);
       continue;
     }
-    if (lexer->lookahead != '/') {
-      return !is_close_or_separator(lexer->lookahead);
+    if (c == '\r') {
+      advance(lexer);
+      if (lexer->lookahead == '\n') {
+        advance(lexer);
+      }
+      if (++line_breaks >= 2) {
+        return false;
+      }
+      continue;
+    }
+    if (is_space(c)) {
+      advance(lexer);
+      continue;
+    }
+    if (c != '/') {
+      return !is_close_or_separator(c);
     }
     advance(lexer);
     if (lexer->lookahead == '/') {
       while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
         advance(lexer);
       }
-      continue;
+      continue;  // the closing newline counts on the next pass
     }
     if (lexer->lookahead != '*') {
       return true;  // a lone '/' is code
@@ -2220,16 +2241,28 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       }
       if (ends_in_slash && lexer->lookahead < 0x80) {
         bool operand_follows = false;
+        // Line breaks seen so far. A single line break continues the
+        // expression (SLS 1.2: `x /\n y` is the `/` infix); a blank line
+        // (two breaks) separates statements, so a word like `export` after it
+        // is a new declaration, not this operator's operand. A CRLF pair
+        // counts once.
+        int line_breaks = 0;
         for (;;) {
           advance_past_blanks(lexer);
           int32_t c = lexer->lookahead;
           // A line ending in an operator continues on the next line (SLS
-          // 1.2): `x /\n y` is still the `/` infix, so the operand probe
-          // skips line ends rather than breaking.
-          while (c == '\n' || c == '\r') {
+          // 1.2): `x /\n y` is still the `/` infix. A blank line (two
+          // breaks) separates statements instead, so the failsafe `export`
+          // operand read below does not cross it.
+          if (c == '\n' || c == '\r') {
             advance(lexer);
-            advance_past_blanks(lexer);
-            c = lexer->lookahead;
+            if (c == '\r' && lexer->lookahead == '\n') {
+              advance(lexer);
+            }
+            if (++line_breaks >= 2) {
+              break;
+            }
+            continue;
           }
           if (lexer->eof(lexer) || is_close_or_separator(c)) {
             break;
