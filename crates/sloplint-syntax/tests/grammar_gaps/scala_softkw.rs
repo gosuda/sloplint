@@ -206,3 +206,104 @@ fn enum_stays_a_soft_identifier() {
     let analysis = run_clean(source);
     assert_eq!(function_names(&analysis), ["f", "e", "enum"]);
 }
+
+#[test]
+fn given_after_postfix_handles_literal_givens_and_conditional_arrow() {
+    // `given 42 = 42` is an anonymous given of singleton literal type, and
+    // `given (config: Config) => Factory = …` is a conditional given: both
+    // must start a declaration after a line-broken operator, not continue
+    // the expression.
+    let source = concat!(
+        "object O {\n",
+        "  val a = flags !\n",
+        "  given 42 = 42\n",
+        "  val b = flags !\n",
+        "  given (config: Config) => Factory = ConcreteFactory()\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(
+        sexp_of(source).matches("given_definition").count(),
+        2,
+        "both givens must be declarations"
+    );
+    let _ = analysis;
+}
+
+#[test]
+fn given_name_with_unicode_suffix_is_not_keyword_tail() {
+    // `matché` is one identifier, not keyword `match` plus `é`: after a
+    // line-broken operator `given matché: Int = 1` is a declaration whose
+    // name happens to start with a keyword.
+    let source = concat!(
+        "object O {\n",
+        "  val cached = flags !\n",
+        "  given matché: Int = 1\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert!(
+        sexp_of(source).contains("given_definition"),
+        "the unicode-suffixed name must still open a given definition"
+    );
+    let _ = analysis;
+}
+
+#[test]
+fn given_call_with_using_value_stays_a_call() {
+    // Scala 2: `using` is an ordinary val here, so `given(using)` is a call
+    // with one argument — not a using clause.
+    let source = concat!(
+        "object O {\n",
+        "  val using = 2\n",
+        "  def given(x: Int) = x\n",
+        "  val n = 1 +\n",
+        "    given(using)\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(callees(&analysis), ["given"]);
+    let sexp = sexp_of(source);
+    assert!(
+        !sexp.contains("given_definition"),
+        "the call must not become a given definition, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn given_group_balances_multiline_string_with_extra_quote() {
+    // A `\"\"\"` run of four quotes still closes the multiline string; the
+    // leftover quote must not open a new string that hides the `)`.
+    let source = concat!(
+        "object O {\n",
+        "  val cached = flags !\n",
+        "  given (\"\"\"a\"\"\"\", Int) = (\"a\\\"\", 1)\n",
+        "}\n",
+    );
+    run_clean(source);
+    assert!(
+        sexp_of(source).contains("given_definition"),
+        "the tuple given must stay a declaration"
+    );
+}
+
+#[test]
+fn given_call_with_nested_interpolation_keeps_operand() {
+    // An interpolated string inside the call's argument list may itself
+    // contain a string with `) =`; the group balancer must not split the
+    // call off the `+` initializer.
+    let source = concat!(
+        "object O {\n",
+        "  def given(x: String) = x\n",
+        "  val text = \"prefix\" +\n",
+        "    given(s\"${identity(\") =\")} suffix\")\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(callees(&analysis), ["given"]);
+    let sexp = sexp_of(source);
+    assert!(
+        sexp.contains("right: (call_expression"),
+        "the call must stay the infix's right operand, sexp: {sexp}"
+    );
+}
