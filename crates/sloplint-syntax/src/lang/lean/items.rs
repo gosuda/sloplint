@@ -41,7 +41,16 @@ pub(crate) fn imports_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<Impor
     let pos = pos_of(n);
     match n.kind() {
         "import" => {
-            let Some(name) = child_by_field(n, "name") else {
+            // The `name` field covers leading `.` tokens plus the identifier;
+            // take the last fielded child so `import .mm0` records `mm0`.
+            let mut name = child_by_field(n, "name");
+            let mut cursor = n.walk();
+            for child in n.children(&mut cursor) {
+                if n.field_name_for_child(child.id() as u32) == Some("name") {
+                    name = Some(child);
+                }
+            }
+            let Some(name) = name else {
                 return;
             };
             let raw = trimmed(cx, name);

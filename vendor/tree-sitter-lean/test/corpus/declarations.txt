@@ -404,7 +404,11 @@ Interactive commands
 ---
 
 (module
-  (check term: (identifier))
-  (eval term: (identifier))
-  (print term: (identifier))
-  (reduce term: (identifier)))
+  (check
+    term: (identifier))
+  (eval
+    term: (identifier))
+  (print
+    term: (identifier))
+  (reduce
+    term: (identifier)))

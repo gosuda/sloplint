@@ -8,9 +8,9 @@
 //! closure form. `match` and tactic `induction` are matches with
 //! `match_alt` arms; `if_then_else` is the branch. Application is generic
 //! (`app`, including nested chains and tactic-head applications the
-//! grammar leaves as plain terms), which is the call. There is no
-//! dedicated loop node: `for`/`in` and `while` inside `do` blocks parse as
-//! generic `app` chains, so loops stay unmapped.
+//! grammar leaves as plain terms), which is the call. `for x in xs do`
+//! maps via the dedicated `for_loop` node; `while` inside `do` blocks
+//! still parses as generic `app` chains.
 
 use sloplint_core::facts::{Import, Pos, Visibility, WildcardArm};
 use tree_sitter::Node;
@@ -36,6 +36,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("if_then_else", Role::If),
     ("match", Role::Match),
     ("induction", Role::Match),
+    ("for_loop", Role::Loop),
     ("app", Role::Call),
     ("let", Role::Decl),
     ("have", Role::Decl),

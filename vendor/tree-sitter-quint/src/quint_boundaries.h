@@ -128,10 +128,18 @@ typedef struct {
   QMemo *memo, *inner;
   size_t transition, inner_index;
 } QFrame;
+/* MSVC's C mode has no max_align_t even under /std:c11; a union of the
+   widest scalar types yields the same alignment guarantee. */
+typedef union {
+  long long q_ll;
+  long double q_ld;
+  void *q_ptr;
+  void (*q_fn)(void);
+} QAlign;
 typedef struct QArena {
   struct QArena *next;
   size_t used, capacity;
-  max_align_t data[];
+  QAlign data[];
 } QArena;
 typedef struct {
   QDocument *doc;
@@ -146,7 +154,7 @@ typedef struct {
 // Recognition owns all memo/trace/result lifetimes. Bump allocation keeps
 // their addresses stable and releases them together after collecting boundaries.
 static void *q_allocate(QRecognizer *r, size_t size) {
-  size_t alignment = _Alignof(max_align_t);
+  size_t alignment = sizeof(QAlign);
   if (size > SIZE_MAX - (alignment - 1)) { r->failed = true; return NULL; }
   size = (size + alignment - 1) / alignment * alignment;
   QArena *arena = r->arena;

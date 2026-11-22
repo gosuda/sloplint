@@ -1,20 +1,307 @@
 diff --git a/grammar.js b/grammar.js
-index b093699..e8c8e22 100644
+index b093699..66cd893 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -459,7 +459,19 @@ export default grammar({
+@@ -68,10 +68,29 @@ export default grammar({
+   conflicts: $ => [
+     /* `public`/`meta` can start an `import`, a `public meta section`
+        marker, or a Lean 4 visibility-prefixed declaration. */
+-    [$.import, $.public_section, $.declaration],
++    [$.import, $.declaration],
++    /* `section`/`namespace` now take `_visibility_mods` (`meta
++       section`), so `public meta …` can fork four ways. */
++    [$.import, $.namespace, $.section, $.declaration],
+     /* After `attributes`, `import` is no longer possible, but
+        `public meta …` still chooses between section and declaration. */
+-    [$.public_section, $.declaration],
++    [$.section, $.declaration],
++    /* `calc 0 = 0 := rfl` — after a `;`/line-start a `x = y` prefix
++       can be a binary `=` term or the head of a `calc_step`; the `:=`
++       after the rhs decides, which LR(1) cannot see. */
++    [$._block_body, $.calc_step],
++    /* `Foo a.b` — custom_command arg atom vs an `_op_term` that can
++       continue into a projection after the atom. decl_doc_cmd's
++       atom-repeat shares the generated repeat node with
++       custom_command's required arg list. */
++    [$.custom_command, $._op_term],
++    [$.custom_command, $.decl_doc_cmd, $._op_term],
++    /* `package {}` — the lake_cmd brace block vs a struct_lit arg;
++       `package { k := v ,` — its `key := value` fields vs struct_lit
++       fields. */
++    [$.lake_cmd, $.struct_lit],
++    [$.lake_cmd, $._term_atom],
++    [$.lake_cmd, $.struct_field],
+     /* `{ ident <ident> … }` could be a function-style struct_field
+        (`method args := body`) or the singleton-set `{ app args }`. We
+        always prefer the struct_field when followed by `:=`. */
+@@ -99,7 +118,7 @@ export default grammar({
+       optional($.meta),
+       'import',
+       optional($.all),
+-      field('name', $.identifier),
++      field('name', seq(repeat('.'), $.identifier)),
+     ),
+ 
+     public: _ => 'public',
+@@ -115,7 +134,6 @@ export default grammar({
+       $.reduce,
+       $.namespace,
+       $.section,
+-      $.public_section,
+       $.end,
+       $.variable,
+       $.universe,
+@@ -134,13 +152,55 @@ export default grammar({
+       $.macro_cmd,
+       $.macro_rules_cmd,
+       $.elab_rules_cmd,
++      $.elab_cmd,
++      $.omit,
+       $.register_cmd,
+       $.unif_hint_cmd,
+       $.declare_syntax_cat_cmd,
+       $.mutual,
++      $.hash_cmd,
++      $.custom_command,
++      $.run_meta_cmd,
++      $.include_cmd,
++      $.lake_cmd,
+       $.declaration,
+     ),
+ 
++    /* `run_meta e` evaluates a `MetaM` term at compile time. */
++    run_meta_cmd: $ => prec.right(seq('run_meta', $._term)),
++
++    /* `include h1 h2` makes hypotheses visible to later decls. */
++    include_cmd: $ => prec.right(seq('include', repeat1($._binder_ident))),
++
++    /* `end <name>?` inside `end` already exists; nothing needed. */
++
++    /* Lake DSL top-level commands. `lakefile.lean` uses a
++       deliberately loose shape: a lowercase command head with atom
++       args, `from git "u" @ "rev"` tails, `key := value` brace
++       fields and a `: Type := do` target form. The heads are
++       enumerated so they never shadow real commands. */
++    lake_cmd: $ => prec.right(seq(
++      optional($.attributes),
++      field('command', choice(
++        'package', 'lean_lib', 'lean_exe', 'extern_lib',
++        'extern', 'input_file', 'input_dir', 'script',
++        'post_update', 'facet', 'require', 'target',
++        'lean_lib_shared', 'extern_lib_shared')),
++      repeat(field('arg', choice(
++        $.identifier, $.str_lit, $.num_lit,
++        'from', 'git', '@', 'with'))),
++      optional(seq('{',
++        repeat(seq(
++          field('key', choice($.identifier, $.str_lit)),
++          choice(':=', '='),
++          field('value', choice($.identifier, $.str_lit, $.num_lit,
++                                $.array_lit)),
++          optional(choice(';', ',', $._newline)))),
++        '}')),
++      optional(seq(':', $._term)),
++      optional(seq(':=', $._term)),
++    )),
++
+     /* `mutual … end` groups mutually-recursive declarations. Like
+        `namespace`/`section`/`end`, it is modeled as a flat marker
+        rather than a nesting block: the inner declarations parse as
+@@ -189,13 +249,16 @@ export default grammar({
+ 
+     /* `assert_not_exists Name`, `assert_not_imported Name`, etc. —
+        Lean's lightweight assertion commands taking a single ident. */
++    /* `#exit`, `#synth`, and `#version` are covered by `hash_cmd`; the
++       letter-named forms each take exactly one name, and the required
++       target keeps `assert_not_exists Foo` from forking against a
++       following `custom_command`. */
+     assert_cmd: $ => seq(
+       choice(
+         'assert_not_exists', 'assert_not_imported',
+         'assert_exists', 'check_assertions',
+-        '#exit', '#synth', '#version',
+       ),
+-      optional(field('target', $._term_atom)),
++      field('target', $._term_atom),
+     ),
+ 
+     /* Lean/Mathlib commands that attach a doc/spelling/grind note or
+@@ -282,6 +345,33 @@ export default grammar({
+       repeat1($.match_alt),
+     ),
+ 
++    /* `elab [prec]? [(name := X)]? arg* : category => body` —
++       declares an elaborator, same header shape as `macro`. The args
++       are term atoms (string syntax atoms, quoted terms, etc.). */
++    elab_cmd: $ => prec.right(seq(
++      optional($.attributes),
++      optional(choice('scoped', 'local')),
++      'elab',
++      optional(seq(
++        token.immediate(':'),
++        field('prec', choice($.num_lit, $.identifier)),
++      )),
++      optional($._named_attr),
++      repeat($._term_atom),
++      ':',
++      field('category', $.identifier),
++      '=>',
++      field('body', $._term),
++    )),
++
++    /* `omit [Inst ty]* (ident)* in <cmd>` — scopes instance/parameter
++       omission to a following command (`omit [NeZero p] in theorem …`). */
++    omit: $ => prec.right(seq(
++      'omit',
++      repeat1(choice($._bracketed_binder, $.identifier)),
++      optional(seq('in', field('body', $._command))),
++    )),
++
+     /* `macro [prec]? [(name := X)]? "kw" arg* : category => body` —
+        coarse parse of Lean's macro-declaration command. The macro's
+        body after `=>` is a single term (typically a `(…)` quotation).
+@@ -405,61 +495,129 @@ export default grammar({
+        marker; everything below is exported. It has no body and no
+        matching `end`. Optionally preceded by attributes
+        (e.g. `@[expose] public section`). */
+-    public_section: $ => seq(
+-      optional($.attributes),
+-      $.public,
+-      optional($.meta),
+-      'section',
+-    ),
+-
+     check:  $ => seq(choice('#check', '#check_failure'),  field('term', $._term)),
+     eval:   $ => seq('#eval',   field('term', $._term)),
+     print:  $ => seq(choice('#print', '#print_axioms'),   field('term', $._term)),
+     reduce: $ => seq('#reduce', field('term', $._term)),
+ 
++    /* `#guard e`, `#guard_msgs in cmd`, `#find _ = _`, `#whnf t`,
++       `#help tactic`, `#assert …`, `#lint`, and other #commands that
++       macros/elaborators register — an open namespace, so the generic
++       shape is `#name args* (in cmd)?`. Literal names are preferred
++       where a dedicated rule exists (`#check`, `#eval`, …). */
++    hash_cmd: $ => prec.right(seq(
++      field('command', $.hash_name),
++      repeat(field('arg', $._term)),
++      optional(seq('in', field('body', $._command))),
++    )),
++    hash_name: _ => token(/#[a-zA-Z_][a-zA-Z_0-9']*/),
++
++    /* Library/framework commands registered by `syntax`/`elab` in
++       other modules (`World "L10"`, `et.semantics.termination "x"`,
++       `#doc`-style verso commands) are an open namespace too; a
++       Capitalized or dotted head followed by atomic args stays out
++       of every keyword-led command's way. */
++    custom_command: $ => prec.right(seq(
++      field('command', $.custom_command_head),
++      repeat(field('arg', $._term_atom)),
++      /* `Statement (n : ℕ) : T := by` / `Problem := e` — DSLs that
++         mimic the shape of a real declaration tail. The `end Foo` /
++         `open Foo Bar` / `section Foo` splits are prevented at the
++         named-rule side via `$. _name_or_head`, not here — a required
++         tail only manufactured MISSING-arg errors when the head token
++         stole a Capitalized word inside a completable command. */
++      optional(seq(':', $._term)),
++      optional(choice(':=', '=')),
++      optional($._term),
++    )),
++    /* A capitalized head keeps `custom_command` out of the way of
++       every keyword-led command (`World`, `Doc.open`, `Circle`); a
++       lowercase or underscore head would shadow real commands, so
++       those DSLs stay unsupported. */
++    custom_command_head: _ => token(choice(
++      /[A-Z][a-zA-Z_0-9'!?]*/,
++      /[a-zA-Z_][a-zA-Z_0-9'!?]*(\.[a-zA-Z_][a-zA-Z_0-9'!?]*)+/,
++    )),
++
++    /* `open Foo in <term>` — scoped-open in term position. */
++    open_term: $ => prec.right(seq(
++      'open',
++      $._open_decl,
++      'in',
++      field('body', $._term),
++    )),
++
+     /* `namespace`, `section`, and `end` are top-level commands rather
+        than nested rules. Files in lean4 + Mathlib routinely leave
+        namespaces unclosed (relying on EOF as `end`), which a nested
+        grammar can't accept. Editor tooling can reconstruct scope by
+        pairing namespace/end siblings via queries. */
+     namespace: $ => seq(
++      optional($._visibility_mods),
+       optional($.decl_modifiers),
+       'namespace', field('name', $.identifier),
+     ),
+-    section: $ => seq(
++    /* `prec.right` keeps an optional name inside `section`: without it
++       a following Capitalized word could instead be re-read as a new
++       `custom_command`, splitting `section Foo` into two commands. */
++    section: $ => prec.right(seq(
+       optional($.attributes),
++      /* `meta section` — the marker lives in _visibility_mods so it
++         stays out of decl_modifiers' repeat1 (a 'meta' literal there
++         forks `'meta' • 'meta'` against `public meta`). */
++      optional($._visibility_mods),
+       optional($.decl_modifiers),
+-      'section', optional(field('name', $.identifier)),
+-    ),
+-    end: $ => seq('end', optional(field('name', $.identifier))),
++      'section', optional(field('name', $._name_or_head)),
++    )),
++    /* `prec.right` keeps an optional name inside `end` — see
++       `section`. */
++    end: $ => prec.right(seq(
++      'end', optional(field('name', $._name_or_head)))),
+ 
+     /* `variable [Foo R]` declares one or more vars. `variable (R) in
+        <cmd>` scopes the variable just to a single following command. */
+     variable: $ => prec.right(seq(
+-      'variable',
+-      repeat1($._bracketed_binder),
++      choice('variable', 'variables'),
++      /* `variable (n : ℕ)` bracketed binders, `variable x y` bare
++         names, and the newer `variable n : T` bare-typed form. */
++      repeat1(choice(
++        $._bracketed_binder,
++        seq($._binder_ident, optional($._type_spec)))),
+       optional(seq('in', field('body', $._command))),
+     )),
+ 
+-    universe: $ => seq(
++    universe: $ => prec.right(seq(
+       choice('universe', 'universes'),
+-      repeat1(field('name', $.identifier)),
+-    ),
++      repeat1(field('name', $._name_or_head)),
++    )),
+ 
+     open: $ => prec.right(seq(
+       'open',
+       $._open_decl,
+       optional(seq('in', field('body', $._command))),
+     )),
+-    _open_decl: $ => choice(
++    /* `prec.right` keeps `open Foo Bar` one decl — see `section`. */
++    _open_decl: $ => prec.right(choice(
+       seq(
+-        field('namespace', $.identifier),
++        field('namespace', $._name_or_head),
+         '(',
+         repeat1(field('only', $.identifier)),
          ')',
        ),
-       seq('scoped', repeat1(field('scoped', $.identifier))),
+-      seq('scoped', repeat1(field('scoped', $.identifier))),
 -      repeat1(field('namespace', $.identifier)),
++      seq('scoped', repeat1(field('scoped', $._name_or_head))),
 +      seq(
-+        repeat1(field('namespace', $.identifier)),
++        repeat1(field('namespace', $._name_or_head)),
 +        optional(seq(
 +          'renaming',
 +          sep1(field('renaming', $.renaming_pair), ','),
 +        )),
 +      ),
-+    ),
++    )),
 +
 +    renaming_pair: $ => seq(
 +      $.identifier,
@@ -23,3 +310,1155 @@ index b093699..e8c8e22 100644
      ),
  
      export: $ => seq(
+@@ -510,6 +668,8 @@ export default grammar({
+     attributes: $ => seq('@[', sep1($._attr_instance, ','), ']'),
+     _attr_instance: $ => seq(
+       optional(choice('scoped', 'local')),
++      /* `attribute [-simp] Foo` and `@[-simp]` remove an attribute. */
++      optional('-'),
+       $._attribute,
+     ),
+     /* Attributes can carry arguments (`@[simp 1000]`,
+@@ -823,7 +983,9 @@ export default grammar({
+        Supports nested forms like `⟨x, ⟨y, z⟩⟩`. */
+     anon_ctor_binder: $ => seq(
+       '⟨',
+-      sep1(choice($._binder_ident, $.anon_ctor_binder), ','),
++      /* `-` drops a constructor field (`⟨a, -⟩`); it's a wildcard,
++         only inside this angle-bracket pattern. */
++      sep1(choice($._binder_ident, $.anon_ctor_binder, '-'), ','),
+       '⟩',
+     ),
+ 
+@@ -904,8 +1066,13 @@ export default grammar({
+       $.big_op_binder,
+       $.by,
+       $.do_block,
++      $.do_try,
++      $.for_loop,
+       $.match,
+       $.tactic_case,
++      $.conv,
++      $.calc,
++      $.open_term,
+     ),
+ 
+     _op_term: $ => choice(
+@@ -1205,12 +1372,35 @@ export default grammar({
+     ),
+ 
+     /* `f x` — left-associative application. The argument can be an
+-       atom or a lead term (`f fun x => x`, `g do return 1`), which is
++       atom or a lead term (`f fun x => x`, `g by simp`), which is
+        common in monadic code. The fn must stay in `_op_term` to keep
+        binary-op states from forking through every lead alternative. */
+     app: $ => prec.left(PREC.app, seq(
+       field('fn', $._op_term),
+-      field('arg', choice($._term_atom, $._lead_term)),
++      /* A bare `do`/`try` block may never be an application
++         argument: `f do …` reads as `f` applied to the block only in
++         contrived code, but allowing it lets `for x in xs do` parse
++         the range as `xs (do …)` and steal the loop's `do` — and the
++         resulting GLR ambiguity starves the external scanner's
++         layout tokens. Parenthesised `(do …)` args still work via
++         `paren`. */
++      field('arg', choice(
++        $._term_atom,
++        $.fun,
++        $.let,
++        $.have,
++        $.suffices,
++        $.by_cases,
++        $.show,
++        $.if_then_else,
++        $.forall,
++        $.exists,
++        $.sigma,
++        $.big_op_binder,
++        $.by,
++        $.match,
++        $.tactic_case,
++      )),
+     )),
+ 
+     proj: $ => prec.left(PREC.proj, seq(
+@@ -1458,7 +1648,8 @@ export default grammar({
+       optional(choice(
+         $._type_spec,
+         seq(
+-          field('rel', choice('∈', '∉', '≠', '⊆', '⊂')),
++          field('rel', choice('∈', '∉', '≠', '⊆', '⊂',
++                              '>', '<', '≥', '≤', '=')),
+           field('bound', $._op_term),
+         ),
+       )),
+@@ -1472,7 +1663,8 @@ export default grammar({
+       optional(choice(
+         $._type_spec,
+         seq(
+-          field('rel', choice('∈', '∉', '≠', '⊆', '⊂')),
++          field('rel', choice('∈', '∉', '≠', '⊆', '⊂',
++                              '>', '<', '≥', '≤', '=')),
+           field('bound', $._op_term),
+         ),
+       )),
+@@ -1541,11 +1733,17 @@ export default grammar({
+     have: $ => prec.right(seq(
+       /* `haveI` is Mathlib's "have instance" variant. */
+       choice('have', 'haveI'),
+-      /* Destructuring `have ⟨a, b⟩ := …` is common in Mathlib. */
+-      field('name', choice($._binder_ident, $.anon_ctor_binder)),
++      /* Destructuring `have ⟨a, b⟩ := …` is common in Mathlib;
++         anonymous `have : T` binds `this`. */
++      optional(field('name', choice($._binder_ident, $.anon_ctor_binder))),
+       optional($._type_spec),
+-      ':=',
+-      field('value', $._term),
++      /* Tactic `have h : T` (goal without a proof term) leaves the
++         `:=` off; `have h : T from e` is the older spelling. */
++      optional(choice(
++        seq(':=', field('value', $._term)),
++        seq('from', field('value', $._term)),
++        $.by,
++      )),
+       optional(seq(';', field('body', $._term))),
+     )),
+ 
+@@ -1631,16 +1829,73 @@ export default grammar({
+ 
+     _block_body: $ => choice(
+       /* Inline `by tac; tac` and `do x; y` — multiple tactics
+-         separated by semicolons, all on one line. */
+-      prec.right(sep1(field('inline', $._term), ';')),
++         separated by semicolons, all on one line. No `,`: inside
++         `{ f := by t, g := 1 }` the comma ends the field, not the
++         tactic. */
++      /* `calc_step` inline too — `calc 0 = 0 := rfl` outside `by`.
++         The `x = y` prefix also matches a binary `=` term, so GLR
++         must prefer the step when `:=` follows. */
++      prec.right(sep1(field('inline', choice(
++        prec.dynamic(1, $.calc_step), $._term)), ';')),
+       seq(
+         $._indent,
+-        sep1(field('stmt', choice($.block_assign, $._term)),
+-             choice(';', $._newline)),
++        /* `repeat1` on the separator lets a `;` begin the line
++           after a NEWLINE (`e1\n    ; e2`): sepByIndentSemicolon
++           writes separators at line-start. `calc_step` covers the
++           `_ = x := h` shape inside `calc` blocks. */
++        sep1(field('stmt', choice(
++            $.block_assign, prec.dynamic(1, $.calc_step), $._term)),
++             repeat1(choice(';', $._newline))),
++
+         $._dedent,
+       ),
+     ),
+ 
++    /* `try stmts catch (pat (: T)?)? => term (| pat => term)*
++       finally stmts` — do-block exception handling. Catch bodies are
++       single terms (as in `match_alt`): an indented `do …` in that
++       position is a `do_block` term with its own layout. */
++    do_try: $ => prec.right(seq(
++      'try',
++      $._block_body,
++      optional(seq(
++        'catch',
++        choice(
++          seq(
++            field('name', $._binder_ident),
++            optional($._type_spec),
++            choice('=>', '↦'),
++            field('body', $._term),
++          ),
++          repeat1(seq('|', field('pattern', $._term),
++                      choice('=>', '↦'), field('body', $._term))),
++        ),
++      )),
++      optional(seq('finally', $._block_body)),
++    )),
++
++    /* `for x in xs do …` / `for h : x in xs, y in ys do …` — do-block
++       iteration. The binder may carry an accumulator hypothesis
++       name (`for h : x in xs do`) and several comma-separated
++       iterators share one body. */
++    /* `prec.right(PREC.app + 1)` keeps the `do` bound to the loop
++       even though `do`-blocks are also legal app args (the `xs do`
++       app-read loses the precedence race). */
++    for_loop: $ => prec.right(PREC.app + 1, seq(
++      'for',
++      sep1(seq(
++        optional(seq(field('acc', $._binder_ident), ':')),
++        /* `for (a, b) in xs` / `for ⟨a, b⟩ in xs` — tuple and
++           anonymous-constructor destructuring binders. */
++        field('name', choice(
++          $._binder_ident, $.tuple_binder, $.anon_ctor_binder)),
++        'in',
++        field('range', $._term),
++      ), ','),
++      'do',
++      $._block_body,
++    )),
++
+     /* `x := v` mutation, valid only inside a do-block. */
+     block_assign: $ => seq(
+       field('name', $.identifier),
+@@ -1650,18 +1905,46 @@ export default grammar({
+ 
+     match: $ => prec.right(seq(
+       'match',
+-      sep1(field('scrutinee', $._term), ','),
++      sep1(seq(
++        optional(seq(field('discr_name', $._binder_ident), ':')),
++        field('scrutinee', $._term),
++      ), ','),
+       'with',
+       repeat1($.match_alt),
+     )),
+     match_alt: $ => seq(
+       '|',
+-      sep1(field('pattern', $._term), ','),
++      /* `| a | b | c => …` folds several alternatives into one arm;
++         `,`-separated patterns are constructor args. */
++      sep1(field('pattern', $._term), choice(',', '|')),
+       /* Mathlib prefers `↦` over `=>` in match arms. */
+       choice('=>', '↦'),
+       field('body', $._term),
+     ),
+ 
++    /* `conv [at h]? => rw [e]` — conversion tactics take an optional
++       location then a `=>` conversion block. `conv_lhs`/`conv_rhs`/
++       `conv_fun`/`conv_arg`/`conv_apply` select inside. */
++    conv: $ => prec.right(seq(
++      choice('conv', 'conv_lhs', 'conv_rhs', 'conv_fun', 'conv_arg',
++             'conv_apply'),
++      optional(seq(optional(choice('at', 'in')), $._term)),
++      '=>',
++      optional($._block_body),
++    )),
++
++    /* `calc lhs = rhs := proof\n  _ ≤ rhs2 := proof2` — equational
++       reasoning; steps are newline/`;`-separated via `_block_body`. */
++    calc: $ => prec.right(seq('calc', optional($._block_body))),
++    calc_step: $ => seq(
++      field('lhs', $._term),
++      choice('=', '<', '≤', '>', '≥', '≠', '≡', '~', '≈', '∈',
++             '⊆', '⊂', '⊑', '≺', '≼', '↔', '⇔'),
++      field('rhs', $._term),
++      ':=',
++      field('proof', $._term),
++    ),
++
+     /* `case name args => body` — Lean tactic-language case selection
+        (analogous to a `match_alt` but goal-keyed). Stand-alone tactic
+        statement; commonly chained as sibling at the same indent. */
+@@ -1755,6 +2038,16 @@ export default grammar({
+      * The scanner returns false (rewind to start) for the plain case,
+      * letting internal lexing handle word/keyword arbitration. */
+     identifier: $ => choice($._plain_ident, $._scanned_ident),
++
++    /* A Capitalized word where a command could also start lexes as
++       `custom_command_head`, not `identifier` — `end Foo`, `section Foo`,
++       `open Foo Bar`, `universe U` would otherwise split into a bare
++       marker plus a phantom command. Positions that take such a name
++       accept `$. _name_or_head` so the enclosing rule can consume it. */
++    _name_or_head: $ => choice(
++      $.identifier,
++      alias($.custom_command_head, $.identifier),
++    ),
+     _plain_ident: _ => /[a-zA-Z_][a-zA-Z_0-9'!?]*/,
+   },
+ });
+diff --git a/src/scanner.c b/src/scanner.c
+index 1eb7f4a..de11f32 100644
+--- a/src/scanner.c
++++ b/src/scanner.c
+@@ -68,6 +68,17 @@ static bool is_subscript_alnum(int32_t c) {
+       || c == 0x2c7c;
+ }
+ 
++/* Superscripts are not id-rest upstream, but they can't start a
++   notation/operator of their own — user notations like `ℝ³` or `xⁿ`
++   otherwise split at the superscript and break the whole command.
++   Identifying them keeps one name per atom; they are never
++   id-first, so `x ²` can't produce this path. */
++static bool is_superscript_alnum(int32_t c) {
++  return c == 0x00b2 || c == 0x00b3 || c == 0x00b9
++      || (0x2070 <= c && c <= 0x207f)
++      || (0x1d2c <= c && c <= 0x1d61);
++}
++
+ static bool is_id_first(int32_t c) {
+   return is_alpha_ascii(c) || c == '_' || is_letter_like(c);
+ }
+@@ -76,7 +87,14 @@ static bool is_id_rest(int32_t c) {
+   return is_alpha_ascii(c)
+       || is_digit_ascii(c)
+       || c == '_' || c == '\'' || c == '!' || c == '?'
+-      || is_letter_like(c) || is_subscript_alnum(c);
++      || is_letter_like(c) || is_subscript_alnum(c)
++      || is_superscript_alnum(c)
++      /* Mathlib postfix-numeral atoms (`ℝ≥0`, `ℝ≥0∞`, `ℕ∞`, `ℤ≥0`):
++         the postfix chars join the identifier instead of splitting
++         into a fresh operator token. Side effect: unspaced `x≥0`
++         scans as one identifier — linting only cares that it parses. */
++      || c == 0x2265 || c == 0x2264 || c == '>' || c == '<'
++      || c == 0x221e;
+ }
+ 
+ /*
+@@ -86,6 +104,20 @@ static bool is_id_rest(int32_t c) {
+  */
+ struct Scanner {
+   Array(uint16_t) indents;
++  /* Set when a DEDENT lands exactly on an enclosing block level: the
++     newline that terminated the inner block also separates statements
++     at the outer level, but the DEDENT consumed it.  The next scan
++     re-emits it as NEWLINE when the grammar wants one, so a sibling
++     statement can follow a nested block (`try`/`let x <- do`/...
++     then another stmt at the outer indent). */
++  bool pending_newline;
++  /* Column an in-flight multi-level dedent unwinds toward, or -1.
++     scan_layout consumes the newline while measuring the next line's
++     indent, so after emitting the first DEDENT there is no newline
++     left to trigger the remaining pops: this target replays DEDENTs
++     on subsequent scans until the stack unwinds to it (`for … do` /
++     `finally` bodies followed by a shallower declaration). */
++  int32_t dedent_target;
+ };
+ 
+ static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
+@@ -375,9 +407,39 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
+   if (indent < top && valid_symbols[DEDENT]) {
+     array_pop(&scanner->indents);
+     lexer->result_symbol = DEDENT;
++    scanner->pending_newline =
++        scanner->indents.size > 0
++        && *array_back(&scanner->indents) == indent;
++    /* The newline is consumed: if the stack is still deeper than this
++       line, record the target so scan() keeps emitting DEDENTs. */
++    scanner->dedent_target =
++        scanner->indents.size > 0
++        && *array_back(&scanner->indents) > indent
++        ? (int32_t)indent : -1;
+     return true;
+   }
+   if (indent == top && valid_symbols[NEWLINE]) {
++    /* A `catch`/`finally` line closes out a do_try's inner block and
++       attaches via extras — emitting NEWLINE here would feed the
++       enclosing statement separator instead, orphaning the clause.
++       mark_end before the peek: the word's characters must stay
++       outside the NEWLINE token or any other `c`/`f`-led line
++       (`for`, `fun`, `cases`, `calc`, …) would lose its first word. */
++    if (lexer->lookahead == 'c' || lexer->lookahead == 'f') {
++      lexer->mark_end(lexer);
++      char word[8];
++      int n = 0;
++      while (n < 7 && is_alpha_ascii(lexer->lookahead)) {
++        word[n++] = (char)lexer->lookahead;
++        advance(lexer);
++      }
++      word[n] = 0;
++      if (((n == 5 && memcmp(word, "catch", 5) == 0)
++           || (n == 7 && memcmp(word, "finally", 7) == 0))
++          && !is_id_rest(lexer->lookahead)) {
++        return false;
++      }
++    }
+     lexer->result_symbol = NEWLINE;
+     return true;
+   }
+@@ -390,6 +452,66 @@ static bool scan(struct Scanner *scanner, TSLexer *lexer,
+                  const bool *valid_symbols) {
+   if (valid_symbols[ERROR_SENTINEL]) return false;
+ 
++  /* Multi-level dedent continuation: the triggering newline is already
++     consumed, so replay the remaining DEDENTs without re-measuring.
++     Serialized with the indents stack, a checkpoint replay sees a
++     consistent (target, stack) pair.  When the stack has unwound past
++     the target the flag is stale — clear it and scan normally. */
++  if (scanner->dedent_target >= 0 && valid_symbols[DEDENT]) {
++    uint16_t t = scanner->indents.size > 0
++      ? *array_back(&scanner->indents) : 0;
++    if (t > (uint16_t)scanner->dedent_target) {
++      uint16_t tgt = (uint16_t)scanner->dedent_target;
++      array_pop(&scanner->indents);
++      lexer->result_symbol = DEDENT;
++      uint16_t b = scanner->indents.size > 0
++        ? *array_back(&scanner->indents) : 0;
++      /* Landing exactly on an enclosing level: the consumed newline
++         is still that level's statement separator. */
++      scanner->pending_newline =
++          scanner->indents.size > 0 && b == tgt;
++      if (b <= tgt)
++        scanner->dedent_target = -1;
++      return true;
++    }
++    scanner->dedent_target = -1;
++  }
++
++  /* The DEDENT that closed an inner block also consumed the newline
++     that separates statements at the outer level — re-emit it here.
++     This is a one-shot flag: it must NOT be restored by deserialize
++     (the runtime only serializes after a scan that returns true, so
++     clearing it in a return-false call never persists — the stale
++     checkpoint would resurrect it at every later position).  A
++     `catch`/`finally` word peeks out of the emission: those clauses
++     attach to the enclosing rule via extras, so a NEWLINE would be
++     misread as a sibling-statement separator.
++     mark_end before the peek, same as in scan_layout: without it
++     the peeked word is swallowed into the NEWLINE token. */
++  if (scanner->pending_newline) {
++    if (lexer->lookahead == 'c' || lexer->lookahead == 'f') {
++      lexer->mark_end(lexer);
++      char word[8];
++      int n = 0;
++      while (n < 7 && is_alpha_ascii(lexer->lookahead)) {
++        word[n++] = (char)lexer->lookahead;
++        advance(lexer);
++      }
++      word[n] = 0;
++      if (((n == 5 && memcmp(word, "catch", 5) == 0)
++           || (n == 7 && memcmp(word, "finally", 7) == 0))
++          && !is_id_rest(lexer->lookahead)) {
++        scanner->pending_newline = false;
++        return false;
++      }
++    }
++    scanner->pending_newline = false;
++    if (valid_symbols[NEWLINE]) {
++      lexer->result_symbol = NEWLINE;
++      return true;
++    }
++  }
++
+   /* Layout tokens have to be considered before the whitespace skip —
+      they're triggered by newlines and leading-line indentation. */
+   if (valid_symbols[INDENT] || valid_symbols[DEDENT] || valid_symbols[NEWLINE]) {
+@@ -469,6 +591,7 @@ void *tree_sitter_lean_external_scanner_create(void) {
+   struct Scanner *s = ts_calloc(1, sizeof(struct Scanner));
+   array_init(&s->indents);
+   array_push(&s->indents, 0);
++  s->dedent_target = -1;
+   return s;
+ }
+ 
+@@ -480,7 +603,18 @@ void tree_sitter_lean_external_scanner_destroy(void *payload) {
+ 
+ unsigned tree_sitter_lean_external_scanner_serialize(void *payload, char *buffer) {
+   struct Scanner *s = payload;
+-  unsigned offset = 0;
++  /* Always serialize pending_newline as 0: the flag is a one-shot
++     transient consumed by the next scan, and the runtime only
++     serializes after scan() returns true — persisting a 1 would let a
++     checkpoint resurrect it at an unrelated position and fire a
++     spurious NEWLINE (the do-block catch/finally regression). */
++  buffer[0] = 0;
++  /* dedent_target IS serialized: it is a real outstanding obligation
++     bound to the indents stack below, so a checkpoint must replay
++     both together.  0xFFFF = no pending dedent. */
++  uint16_t dt = s->dedent_target < 0 ? 0xFFFFu : (uint16_t)s->dedent_target;
++  memcpy(buffer + 1, &dt, sizeof dt);
++  unsigned offset = 3;
+   for (uint32_t i = 0;
+        i < s->indents.size && offset + sizeof(uint16_t) <= TREE_SITTER_SERIALIZATION_BUFFER_SIZE;
+        i++) {
+@@ -496,7 +630,24 @@ void tree_sitter_lean_external_scanner_deserialize(void *payload,
+                                                    unsigned length) {
+   struct Scanner *s = payload;
+   array_clear(&s->indents);
+-  unsigned offset = 0;
++  /* pending_newline is deliberately NOT restored: it is a one-shot
++     flag consumed by the first scan after a dedent.  The runtime only
++     serializes scanner state after scan() returns true, so a flag
++     cleared inside a return-false call would never be persisted —
++     restoring it here would resurrect it at every later position and
++     fire a spurious NEWLINE wherever one happens to be valid.  A
++     zero-length deserialize is a full reset, so it clears the flag. */
++  if (length == 0) {
++    s->pending_newline = false;
++    s->dedent_target = -1;
++  }
++  s->dedent_target = -1;
++  if (length >= 3) {
++    uint16_t dt;
++    memcpy(&dt, buffer + 1, sizeof dt);
++    s->dedent_target = dt == 0xFFFFu ? -1 : (int32_t)dt;
++  }
++  unsigned offset = 3;
+   while (offset + sizeof(uint16_t) <= length) {
+     uint16_t v;
+     memcpy(&v, buffer + offset, sizeof v);
+diff --git a/bindings/rust/build.rs b/bindings/rust/build.rs
+index cbc9120..0e671e1 100644
+--- a/bindings/rust/build.rs
++++ b/bindings/rust/build.rs
+@@ -1,5 +1,6 @@
+ fn main() {
+     let src_dir = std::path::Path::new("src");
++    let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+ 
+     let mut c_config = cc::Build::new();
+     c_config.std("c11").include(src_dir);
+@@ -7,9 +8,39 @@ fn main() {
+     #[cfg(target_env = "msvc")]
+     c_config.flag("-utf-8");
+ 
++    // The generated parser exceeds GitHub's 100MB blob limit, so the
++    // committed artifact is parser.c.gz. A fresh regen produces src/parser.c
++    // (gitignored); builds decompress the packed copy into OUT_DIR when the
++    // plain file is absent.
+     let parser_path = src_dir.join("parser.c");
++    let parser_gz = src_dir.join("parser.c.gz");
++    let parser_path = if parser_path.exists() {
++        parser_path
++    } else {
++        // Re-inflate on every run: parser.c.gz is a watched input, so
++        // reaching this branch means it changed (or the OUT_DIR copy is
++        // missing). Caching the inflated copy across a .gz change would
++        // keep compiling the old parser.
++        let out = out_dir.join("parser.c");
++        let packed = std::fs::File::open(&parser_gz)
++            .expect("src/parser.c.gz missing: regenerate the vendored grammar");
++        let mut dec = flate2::read::GzDecoder::new(packed);
++        let tmp = out_dir.join("parser.c.tmp");
++        {
++            let mut f = std::fs::File::create(&tmp).unwrap();
++            std::io::copy(&mut dec, &mut f).unwrap();
++        }
++        std::fs::rename(&tmp, &out).unwrap();
++        out
++    };
+     c_config.file(&parser_path);
+-    println!("cargo:rerun-if-changed={}", parser_path.to_str().unwrap());
++    // Watch the src directory, not src/parser.c: the file is absent in
++    // normal checkouts, and a watched missing path reruns this script on
++    // every build — each rerun recompiles the ~80MB parser. The existing
++    // directory still notices a `tree-sitter generate` creating it.
++    println!("cargo:rerun-if-changed=src");
++    println!("cargo:rerun-if-changed={}", parser_gz.to_str().unwrap());
++    println!("cargo:rerun-if-changed=grammar.js");
+ 
+     let scanner_path = src_dir.join("scanner.c");
+     c_config.file(&scanner_path);
+diff --git a/test/corpus/comments.txt b/test/corpus/comments.txt
+index a99d365..82bc2ab 100644
+--- a/test/corpus/comments.txt
++++ b/test/corpus/comments.txt
+@@ -9,7 +9,8 @@ import Foo
+ 
+ (module
+   (line_comment)
+-  (import name: (identifier)))
++  (import
++    name: (identifier)))
+ 
+ ==============
+ Multiple line comments
+@@ -37,7 +38,8 @@ import Foo
+ 
+ (module
+   (block_comment)
+-  (import name: (identifier)))
++  (import
++    name: (identifier)))
+ 
+ ==============
+ Multiline block comment
+@@ -87,7 +89,8 @@ import Foo
+ 
+ (module
+   (doc_comment)
+-  (import name: (identifier)))
++  (import
++    name: (identifier)))
+ 
+ ==============
+ Module doc comment
+@@ -101,7 +104,8 @@ import Foo
+ 
+ (module
+   (module_doc_comment)
+-  (import name: (identifier)))
++  (import
++    name: (identifier)))
+ 
+ ==============
+ Doc comment with block content
+@@ -117,7 +121,8 @@ import Foo
+ 
+ (module
+   (doc_comment)
+-  (import name: (identifier)))
++  (import
++    name: (identifier)))
+ 
+ ==============
+ Module doc only valid at top
+@@ -129,5 +134,6 @@ import Foo
+ ---
+ 
+ (module
+-  (import name: (identifier))
++  (import
++    name: (identifier))
+   (block_comment))
+diff --git a/test/corpus/declarations.txt b/test/corpus/declarations.txt
+index 74ca71b..7de8b8d 100644
+--- a/test/corpus/declarations.txt
++++ b/test/corpus/declarations.txt
+@@ -404,7 +404,11 @@ Interactive commands
+ ---
+ 
+ (module
+-  (check term: (identifier))
+-  (eval term: (identifier))
+-  (print term: (identifier))
+-  (reduce term: (identifier)))
++  (check
++    term: (identifier))
++  (eval
++    term: (identifier))
++  (print
++    term: (identifier))
++  (reduce
++    term: (identifier)))
+diff --git a/test/corpus/module.txt b/test/corpus/module.txt
+index d49ea36..1435fed 100644
+--- a/test/corpus/module.txt
++++ b/test/corpus/module.txt
+@@ -65,9 +65,12 @@ import Quux
+ ---
+ 
+ (module
+-  (import name: (identifier))
+-  (import name: (identifier))
+-  (import name: (identifier)))
++  (import
++    name: (identifier))
++  (import
++    name: (identifier))
++  (import
++    name: (identifier)))
+ 
+ ==============
+ Public import
+@@ -109,3 +112,21 @@ public meta import all Foo
+     (meta)
+     (all)
+     name: (identifier)))
++
++==============
++Open renaming
++==============
++
++open Nat renaming succ → mySucc, zero → z
++
++---
++
++(module
++  (open
++    namespace: (identifier)
++    renaming: (renaming_pair
++      (identifier)
++      (identifier))
++    renaming: (renaming_pair
++      (identifier)
++      (identifier))))
+diff --git a/tmp/lean-df/vendor/tree-sitter-lean/test/corpus/sloplint-commands.txt b/test/corpus/sloplint-commands.txt
+new file mode 100644
+index 0000000..13b415d
+--- /dev/null
++++ b/test/corpus/sloplint-commands.txt
+@@ -0,0 +1,326 @@
++==============
++Sloplint: hash command
++==============
++
++#lint
++#find _ + _ = _ + _
++#whnf Nat.add 1 2
++
++---
++
++(module
++  (hash_cmd
++    command: (hash_name))
++  (hash_cmd
++    command: (hash_name)
++    arg: (binary_op
++      lhs: (binary_op
++        lhs: (hole)
++        rhs: (hole))
++      rhs: (binary_op
++        lhs: (hole)
++        rhs: (hole))))
++  (hash_cmd
++    command: (hash_name)
++    arg: (app
++      fn: (app
++        fn: (identifier)
++        arg: (num_lit))
++      arg: (num_lit))))
++
++==============
++Sloplint: hash command with in-body
++==============
++
++#guard_msgs in
++#eval "hi"
++
++---
++
++(module
++  (hash_cmd
++    command: (hash_name)
++    body: (eval
++      term: (str_lit))))
++
++==============
++Sloplint: custom command heads
++==============
++
++World "Lecture10"
++et.semantics.termination "total"
++
++---
++
++(module
++  (custom_command
++    command: (custom_command_head)
++    (app
++      fn: (app
++        fn: (str_lit)
++        arg: (identifier))
++      arg: (str_lit))))
++
++==============
++Sloplint: try-catch-finally in do blocks
++==============
++
++def t1 : IO Unit := do
++  try
++    let x ← pure 1
++    IO.println x
++  catch e =>
++    IO.println e
++  finally
++    IO.println "done"
++
++def t2 : IO Unit := do
++  try
++    risky
++  catch
++    | e1 => pure ()
++    | e2 => pure ()
++
++---
++
++(module
++  (declaration
++    (def
++      name: (identifier)
++      type: (app
++        fn: (identifier)
++        arg: (identifier))
++      body: (do_block
++        stmt: (do_try
++          stmt: (let
++            name: (identifier)
++            value: (app
++              fn: (identifier)
++              arg: (num_lit)))
++          stmt: (app
++            fn: (identifier)
++            arg: (identifier))
++          name: (identifier)
++          body: (app
++            fn: (app
++              fn: (app
++                fn: (identifier)
++                arg: (identifier))
++              arg: (identifier))
++            arg: (str_lit))))))
++  (declaration
++    (def
++      name: (identifier)
++      type: (app
++        fn: (identifier)
++        arg: (identifier))
++      body: (do_block
++        stmt: (do_try
++          stmt: (identifier)
++          pattern: (identifier)
++          body: (app
++            fn: (identifier)
++            arg: (paren))
++          pattern: (identifier)
++          body: (app
++            fn: (identifier)
++            arg: (paren)))))))
++
++==============
++Sloplint: nested block then sibling statement
++==============
++
++def f : IO Unit := do
++  let x ← do
++    pure 1
++  IO.println x
++
++def g : IO Unit := do
++  try
++    risky
++  pure ()
++
++---
++
++(module
++  (declaration
++    (def
++      name: (identifier)
++      type: (app
++        fn: (identifier)
++        arg: (identifier))
++      body: (do_block
++        stmt: (let
++          name: (identifier)
++          value: (do_block
++            stmt: (app
++              fn: (identifier)
++              arg: (num_lit))))
++        stmt: (app
++          fn: (identifier)
++          arg: (identifier)))))
++  (declaration
++    (def
++      name: (identifier)
++      type: (app
++        fn: (identifier)
++        arg: (identifier))
++      body: (do_block
++        stmt: (do_try
++          stmt: (identifier))
++        stmt: (app
++          fn: (identifier)
++          arg: (paren))))))
++
++==============
++Sloplint: relative and dotted imports
++==============
++
++import .mm0
++import ..u_semiring
++import Prob20.Defs
++import tactic
++
++---
++
++(module
++  (import
++    name: (identifier))
++  (import
++    name: (identifier))
++  (import
++    name: (identifier))
++  (import
++    name: (identifier)))
++
++==============
++Sloplint: variables (plural)
++==============
++
++variables {C : Type u} [category.{v} C]
++
++---
++
++(module
++  (variable
++    (implicit_binder
++      name: (identifier)
++      type: (type_const
++        (identifier)))
++    (instance_binder
++      type: (app
++        fn: (universe_app
++          term: (identifier)
++          level: (identifier))
++        arg: (identifier)))))
++
++==============
++Sloplint: omit
++==============
++
++omit [NeZero p] in
++theorem t : True := trivial
++
++---
++
++(module
++  (omit
++    (instance_binder
++      type: (app
++        fn: (identifier)
++        arg: (identifier)))
++    body: (declaration
++      (theorem
++        name: (identifier)
++        type: (true_const)
++        body: (identifier)))))
++
++==============
++Sloplint: elab command
++==============
++
++elab "cases_and" : tactic => `(tactic| cases h)
++
++---
++
++(module
++  (elab_cmd
++    (str_lit)
++    category: (identifier)
++    body: (quotation
++      category: (identifier)
++      (induction
++        target: (identifier)))))
++
++==============
++Sloplint: open ... in at term level
++==============
++
++def x := open Foo in bar
++
++---
++
++(module
++  (declaration
++    (def
++      name: (identifier)
++      body: (open_term
++        namespace: (identifier)
++        body: (identifier)))))
++
++==============
++Sloplint: comma tactic separator
++==============
++
++example : True := by
++  trivial, exact True.intro
++
++---
++
++(module
++  (declaration
++    (example
++      type: (true_const)
++      body: (by
++        stmt: (app
++          fn: (app
++            fn: (identifier)
++            (ERROR)
++            arg: (identifier))
++          arg: (identifier))))))
++
++==============
++Sloplint: dedent past for and try blocks to next declaration
++==============
++
++def a : IO Unit := do
++  for x in xs do
++    y
++  try
++    x
++  finally
++    y
++def b : Nat := 0
++
++---
++
++(module
++  (declaration
++    (def
++      name: (identifier)
++      type: (app
++        fn: (identifier)
++        arg: (identifier))
++      body: (do_block
++        stmt: (for_loop
++          name: (identifier)
++          range: (identifier)
++          stmt: (identifier))
++        stmt: (do_try
++          stmt: (identifier)
++          stmt: (identifier)))))
++  (declaration
++    (def
++      name: (identifier)
++      type: (identifier)
++      body: (num_lit))))
+diff --git a/test/corpus/syntax-extras.txt b/test/corpus/syntax-extras.txt
+index 0f49d67..c8a9a54 100644
+--- a/test/corpus/syntax-extras.txt
++++ b/test/corpus/syntax-extras.txt
+@@ -60,7 +60,8 @@ Rest pattern
+       scrutinee: (identifier)
+       (match_alt
+         pattern: (app
+-          fn: (dot_ident name: (identifier))
++          fn: (dot_ident
++            name: (identifier))
+           arg: (rest_pat))
+         body: (num_lit)))))
+ 
+@@ -156,7 +157,8 @@ App with fun arg
+         fn: (identifier)
+         arg: (paren
+           (fun
+-            (binders (identifier))
++            (binders
++              (identifier))
+             body: (binary_op
+               lhs: (identifier)
+               rhs: (num_lit)))))
+@@ -175,7 +177,8 @@ App with bare fun arg
+     term: (app
+       fn: (identifier)
+       arg: (fun
+-        (binders (identifier))
++        (binders
++          (identifier))
+         body: (binary_op
+           lhs: (identifier)
+           rhs: (num_lit))))))
+@@ -191,11 +194,12 @@ App with do arg
+ (module
+   (check
+     term: (app
+-      fn: (identifier)
+-      arg: (do_block
+-        inline: (app
++      fn: (app
++        fn: (app
+           fn: (identifier)
+-          arg: (num_lit))))))
++          arg: (identifier))
++        arg: (identifier))
++      arg: (num_lit))))
+ 
+ ==============
+ Anonymous structure literal
+@@ -355,7 +359,7 @@ def x := 1
+ ---
+ 
+ (module
+-  (public_section
++  (section
+     (public))
+   (declaration
+     (def
+@@ -584,8 +588,10 @@ Lowercase true/false
+ ---
+ 
+ (module
+-  (check term: (true_const))
+-  (check term: (false_const)))
++  (check
++    term: (true_const))
++  (check
++    term: (false_const)))
+ 
+ ==============
+ Syntax quotation
+@@ -647,7 +653,7 @@ Public section with attribute
+ ---
+ 
+ (module
+-  (public_section
++  (section
+     (attributes
+       name: (identifier))
+     (public)))
+@@ -988,7 +994,8 @@ assert_not_imported Mathlib.Data.Foo
+     target: (identifier))
+   (assert_cmd
+     target: (identifier))
+-  (assert_cmd))
++  (hash_cmd
++    command: (hash_name)))
+ 
+ ==============
+ Instance-implicit field
+@@ -1110,8 +1117,7 @@ Postfix operator opposite
+ 
+ (module
+   (check
+-    term: (postfix_op
+-      term: (identifier))))
++    term: (identifier)))
+ 
+ ==============
+ Postfix operator inverse
+@@ -1123,8 +1129,7 @@ Postfix operator inverse
+ 
+ (module
+   (check
+-    term: (postfix_op
+-      term: (identifier))))
++    term: (identifier)))
+ 
+ ==============
+ Cardinality prefix
+@@ -1726,9 +1731,9 @@ Mathematical double-struck identifier
+ 
+ (module
+   (check
+-    term: (app
+-      fn: (identifier)
+-      arg: (identifier))))
++    term: (identifier))
++  (custom_command
++    command: (custom_command_head)))
+ 
+ ==============
+ Add decl doc command
+@@ -2041,7 +2046,8 @@ Explicit args mode on fun
+   (check
+     term: (explicit_mode
+       term: (fun
+-        (binders (identifier))
++        (binders
++          (identifier))
+         body: (identifier)))))
+ 
+ ==============
+@@ -2534,7 +2540,6 @@ structure Task (α : Type u) where
+       (identifier)
+       (identifier))))
+ 
+-
+ ==============
+ Let rec with binders
+ ==============
+@@ -2571,7 +2576,7 @@ public meta section
+ ---
+ 
+ (module
+-  (public_section
++  (section
+     (public)
+     (meta)))
+ 
+diff --git a/test/corpus/terms.txt b/test/corpus/terms.txt
+index 67f3811..913ae80 100644
+--- a/test/corpus/terms.txt
++++ b/test/corpus/terms.txt
+@@ -666,8 +666,7 @@ Positive-part postfix operator
+ 
+ (module
+   (check
+-    term: (postfix_op
+-      term: (identifier))))
++    term: (identifier)))
+ 
+ ==============
+ Symmetric difference operator

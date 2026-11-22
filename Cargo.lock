@@ -1329,6 +1329,7 @@ name = "tree-sitter-lean"
 version = "0.2.0"
 dependencies = [
  "cc",
+ "flate2",
  "tree-sitter-language",
 ]
 

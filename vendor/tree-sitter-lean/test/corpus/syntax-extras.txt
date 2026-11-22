@@ -60,7 +60,8 @@ Rest pattern
       scrutinee: (identifier)
       (match_alt
         pattern: (app
-          fn: (dot_ident name: (identifier))
+          fn: (dot_ident
+            name: (identifier))
           arg: (rest_pat))
         body: (num_lit)))))
 
@@ -156,7 +157,8 @@ App with fun arg
         fn: (identifier)
         arg: (paren
           (fun
-            (binders (identifier))
+            (binders
+              (identifier))
             body: (binary_op
               lhs: (identifier)
               rhs: (num_lit)))))
@@ -175,7 +177,8 @@ App with bare fun arg
     term: (app
       fn: (identifier)
       arg: (fun
-        (binders (identifier))
+        (binders
+          (identifier))
         body: (binary_op
           lhs: (identifier)
           rhs: (num_lit))))))
@@ -191,11 +194,12 @@ App with do arg
 (module
   (check
     term: (app
-      fn: (identifier)
-      arg: (do_block
-        inline: (app
+      fn: (app
+        fn: (app
           fn: (identifier)
-          arg: (num_lit))))))
+          arg: (identifier))
+        arg: (identifier))
+      arg: (num_lit))))
 
 ==============
 Anonymous structure literal
@@ -355,7 +359,7 @@ def x := 1
 ---
 
 (module
-  (public_section
+  (section
     (public))
   (declaration
     (def
@@ -584,8 +588,10 @@ Lowercase true/false
 ---
 
 (module
-  (check term: (true_const))
-  (check term: (false_const)))
+  (check
+    term: (true_const))
+  (check
+    term: (false_const)))
 
 ==============
 Syntax quotation
@@ -647,7 +653,7 @@ Public section with attribute
 ---
 
 (module
-  (public_section
+  (section
     (attributes
       name: (identifier))
     (public)))
@@ -988,7 +994,8 @@ assert_not_imported Mathlib.Data.Foo
     target: (identifier))
   (assert_cmd
     target: (identifier))
-  (assert_cmd))
+  (hash_cmd
+    command: (hash_name)))
 
 ==============
 Instance-implicit field
@@ -1110,8 +1117,7 @@ Postfix operator opposite
 
 (module
   (check
-    term: (postfix_op
-      term: (identifier))))
+    term: (identifier)))
 
 ==============
 Postfix operator inverse
@@ -1123,8 +1129,7 @@ Postfix operator inverse
 
 (module
   (check
-    term: (postfix_op
-      term: (identifier))))
+    term: (identifier)))
 
 ==============
 Cardinality prefix
@@ -1726,9 +1731,9 @@ Mathematical double-struck identifier
 
 (module
   (check
-    term: (app
-      fn: (identifier)
-      arg: (identifier))))
+    term: (identifier))
+  (custom_command
+    command: (custom_command_head)))
 
 ==============
 Add decl doc command
@@ -2041,7 +2046,8 @@ Explicit args mode on fun
   (check
     term: (explicit_mode
       term: (fun
-        (binders (identifier))
+        (binders
+          (identifier))
         body: (identifier)))))
 
 ==============
@@ -2534,7 +2540,6 @@ structure Task (α : Type u) where
       (identifier)
       (identifier))))
 
-
 ==============
 Let rec with binders
 ==============
@@ -2571,7 +2576,7 @@ public meta section
 ---
 
 (module
-  (public_section
+  (section
     (public)
     (meta)))
 

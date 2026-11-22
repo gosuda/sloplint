@@ -1,0 +1,2 @@
+# Positive: two nested for-loops plus six depth-2 ifs exceed strict major_at.
+src/tangled.lean:1 info complexity/cognitive-depth
