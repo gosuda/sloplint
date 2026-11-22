@@ -56,7 +56,7 @@ languages! {
     Tlaplus => "tlaplus", &[".tla"];
     Alloy => "alloy", &[".als"];
     Dafny => "dafny", &[".dfy"];
-    Racket => "racket", &[".rkt", ".rktd", ".rktl", ".scrbl"];
+    Racket => "racket", &[".rkt", ".rktd", ".rktl"];
 }
 
 const HEADER_EXTENSION: &str = ".h";
@@ -284,6 +284,11 @@ mod tests {
                 "{extension} must route to the language that declares it"
             );
         }
+    }
+
+    #[test]
+    fn scrbl_does_not_route_to_racket() {
+        assert_eq!(Lang::from_path("docs/guide.scrbl"), None);
     }
 
     #[test]
