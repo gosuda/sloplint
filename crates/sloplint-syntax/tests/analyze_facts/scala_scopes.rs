@@ -210,6 +210,62 @@ fn given_extractor_binds_its_argument() {
 }
 
 #[test]
+fn named_argument_on_value_shadowing_method_is_not_a_write() {
+    // `val f` shadows the outer `def f(other: Int)`: `f(counter = 1)` calls
+    // the value's `apply`, so the named argument is not an assignment and
+    // no write lands on the outer `counter`.
+    let source = "def outer(): Unit = {\n  var counter = 0\n  {\n    val f = (x: Int) => x\n    f(counter = 1)\n  }\n}\n";
+    with_scala_bindings(source, |found| {
+        let counters = named_all(found, "counter");
+        assert_eq!(counters.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            counters[0].write_lines, 0,
+            "the shadowed callee's named argument records no write: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn multi_argument_given_extractor_binds_its_arguments() {
+    // `case given(x, y)` is a two-argument extractor in Scala 2: both names
+    // bind locals that shadow outer variables inside the arm.
+    let source = "def f(v: Any): Int = {\n  var x = 0\n  var y = 0\n  v match {\n    case given(x, y) => x += 1\n    case _ => 0\n  }\n  x += 10\n  y += 10\n  x + y\n}\n";
+    with_scala_bindings(source, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(xs.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (xs[0].write_lines, xs[0].first_write_line, xs[0].last_write_line),
+            (1, 8, 8),
+            "the extractor arm's write is shadowed; only the post-match write lands: {found:?}"
+        );
+        let ys = named_all(found, "y");
+        assert_eq!(ys.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (ys[0].write_lines, ys[0].first_write_line, ys[0].last_write_line),
+            (1, 9, 9),
+            "the extractor arm binds y too; only the post-match write lands: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn given_tuple_type_arm_binds_nothing() {
+    // `case given (Int, String)` matches a tuple-typed given instance: the
+    // type names bind no locals, so a write inside the arm still reaches
+    // the outer variable.
+    let source = "def f(v: Any): Int = {\n  var status = 0\n  v match {\n    case given (Int, String) => status += 1\n    case _ => 0\n  }\n  status\n}\n";
+    with_scala_bindings(source, |found| {
+        let ss = named_all(found, "status");
+        assert_eq!(ss.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (ss[0].write_lines, ss[0].first_write_line, ss[0].last_write_line),
+            (1, 4, 4),
+            "the tuple-given arm binds nothing; the write reaches the outer var: {found:?}"
+        );
+    });
+}
+
+#[test]
 fn symbolic_named_argument_is_not_a_write() {
     // Scala allows symbolic names. `sink(++ = 2)` names the `++` parameter,
     // not the enclosing `var ++`. The left side parses as an

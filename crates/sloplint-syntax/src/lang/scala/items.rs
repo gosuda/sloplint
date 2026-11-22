@@ -129,20 +129,46 @@ pub(crate) fn shadow_decl_kind(kind: &str) -> bool {
     matches!(kind, "for_expression" | "case_clause")
 }
 
+// `case given (Int, String)` is a given of tuple type, not a `given(...)`
+// extractor: every pattern child is a type name, so nothing binds and the
+// arm is not a variant constructor. `case given(x, y)` and
+// `case given[Int](box, _)` are extractor applications whose lowercase
+// arguments bind locals.
+fn is_given_tuple_type<'s>(cx: &Cx<'_, 's>, node: Node<'_>) -> bool {
+    if node.kind() != "case_class_pattern"
+        || !child_by_field(node, "type").is_some_and(|t| text(cx, t) == "given")
+    {
+        return false;
+    }
+    let mut cursor = node.walk();
+    let patterns: Vec<_> = node
+        .children_by_field_name("pattern", &mut cursor)
+        .filter(|p| p.is_named())
+        .collect();
+    if patterns.is_empty() {
+        return true;
+    }
+    if patterns.len() == 1 && patterns[0].kind() == "tuple_type" {
+        return true;
+    }
+    patterns.iter().all(|p| {
+        p.kind() == "type_identifier"
+            || (p.kind() == "identifier"
+                && text(cx, *p)
+                    .chars()
+                    .next()
+                    .is_some_and(|f| f.is_uppercase()))
+    })
+}
+
 fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str>) {
     let mut pending = vec![root];
     while let Some(node) = pending.pop() {
-        if node.kind() == "case_class_pattern"
-            && child_by_field(node, "type").is_some_and(|t| text(cx, t) == "given")
-            && node
-                .children_by_field_name("pattern", &mut node.walk())
-                .count()
-                > 1
-        {
-            // `case given (status, String)` is a given of tuple type, not a
-            // `given(...)` extractor; its members bind no locals. A single
-            // pattern argument is the extractor's binding — `case
-            // given(status)` binds `status`.
+        if is_given_tuple_type(cx, node) {
+            // `case given (Int, String)` is a given of tuple type, not a
+            // `given(...)` extractor; its members bind no locals. A real
+            // extractor — `case given(x, y)` or `case given[Int](box, _)` —
+            // keeps its lowercase arguments as binders.
             continue;
         }
         // `case given T` is a given-pattern matching an implicit instance —
@@ -402,7 +428,10 @@ pub(crate) fn match_arm<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<WildcardArm>
                 .map(|(head, _)| head)
                 .unwrap_or("");
             bump_prefix(&mut stable_groups, prefix);
-        } else if p.kind() == "case_class_pattern" {
+        } else if p.kind() == "case_class_pattern" && !is_given_tuple_type(cx, p) {
+            // A `given (Int, String)` arm matches a tuple-typed instance;
+            // it is not a variant constructor and must not inflate the
+            // enum-like variant count.
             variants += 1;
             case_class_count += 1;
         }
