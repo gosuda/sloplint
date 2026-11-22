@@ -68,6 +68,35 @@ fn sexp_of(source: &str) -> String {
         .to_sexp()
 }
 
+/// `sloplint-grammar.patch` must carry every file the vendor tree diverges on,
+/// not only `grammar.js`: the scanner edits (SC-SOFTENUM and the operand
+/// probes) live in `src/scanner.c`, and a patch that omits them cannot be
+/// replayed onto the published crate. This pins the file list so a scanner
+/// change without a patch hunk fails here.
+#[test]
+fn grammar_patch_covers_the_scanner() {
+    let dir =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vendor/tree-sitter-scala");
+    let patch = std::fs::read_to_string(dir.join("sloplint-grammar.patch"))
+        .expect("sloplint-grammar.patch must be readable");
+    for file in ["a/grammar.js", "a/src/scanner.c"] {
+        assert!(
+            patch.contains(&format!("diff --git {file} b/")),
+            "sloplint-grammar.patch must carry a diff --git section for {file}"
+        );
+    }
+    // The scanner section must be a real unified diff against the published
+    // crate: it needs at least one hunk header.
+    let scanner = patch
+        .split("diff --git a/src/scanner.c")
+        .nth(1)
+        .expect("scanner.c section exists");
+    assert!(
+        scanner.contains("@@ -"),
+        "the scanner.c section must hold unified-diff hunks"
+    );
+}
+
 #[test]
 fn reserved_operator_symbol_literals_parse() {
     // `'=`, `':`, `'<-`, `'->` name operators; `'='` stays a char literal.
