@@ -512,3 +512,4 @@ fn char_literal_and_comment_colon_and_unicode_symbol() {
         "the comment-cut colon must keep the typed lambda, sexp: {sexp}"
     );
 }
+

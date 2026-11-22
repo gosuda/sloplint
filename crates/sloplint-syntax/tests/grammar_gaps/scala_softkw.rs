@@ -300,7 +300,9 @@ fn given_call_with_nested_interpolation_keeps_operand() {
         "}\n",
     );
     let analysis = run_clean(source);
-    assert_eq!(callees(&analysis), ["given"]);
+    // `identity` inside the `${}` splice is a real call; `given` must be the
+    // `+` initializer's right operand, not a statement of its own.
+    assert_eq!(callees(&analysis), ["given", "identity"]);
     let sexp = sexp_of(source);
     assert!(
         sexp.contains("right: (call_expression"),
