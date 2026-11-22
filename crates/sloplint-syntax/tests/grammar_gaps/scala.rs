@@ -528,4 +528,3 @@ fn parenthesized_using_argument_records_no_phantom_call() {
     let analysis = run_clean(source);
     assert_eq!(callees(&analysis), ["f"]);
 }
-

@@ -720,10 +720,10 @@ index 6fcbe2c8..8e478b3d 100644
      // XML literals (SLS §10). The external token $._xml_tag_start decides
      // where markup starts. Comment, CDATA and processing instruction
 diff --git a/src/scanner.c b/src/scanner.c
-index b4856af8..a8ca280e 100644
+index b4856af..bd85f9d 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -69,10 +69,32 @@
+@@ -69,10 +69,32 @@ enum TokenType {
    OP_LEFT_MUL,
    OP_LEFT_OTHER,
    OP_NAME,
@@ -757,7 +757,7 @@ index b4856af8..a8ca280e 100644
  };
  
  // Mirrors enum TokenType above.
-@@ -128,10 +150,22 @@
+@@ -128,10 +150,22 @@ const char* token_name[] = {
    "OP_LEFT_MUL",
    "OP_LEFT_OTHER",
    "OP_NAME",
@@ -781,7 +781,7 @@ index b4856af8..a8ca280e 100644
  };
  
  typedef struct {
-@@ -240,6 +274,42 @@
+@@ -240,6 +274,42 @@ static inline bool is_word_start(int32_t c) {
    return is_alpha(c) || c == '_' || c == '$';
  }
  
@@ -824,7 +824,7 @@ index b4856af8..a8ca280e 100644
  static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
  
  static inline void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
-@@ -285,6 +355,46 @@
+@@ -285,6 +355,46 @@ static bool is_op_char(int32_t c) {
    }
  }
  
@@ -871,7 +871,7 @@ index b4856af8..a8ca280e 100644
  // SLS 6.12.3 gives an operator its precedence by its first character. An
  // operator ending in `/` is never right-associative and never an assignment,
  // so the left-associative class is the whole answer. The partition matches
-@@ -299,11 +409,64 @@
+@@ -299,11 +409,64 @@ static enum TokenType op_left_class(int32_t first) {
      case '<': case '>': return OP_LEFT_REL;
      case ':': return OP_LEFT_COLON;
      case '+': case '-': return OP_LEFT_ADD;
@@ -937,7 +937,7 @@ index b4856af8..a8ca280e 100644
  // Mirrors the start class of XML_NAME in grammar.js. Every non-ASCII
  // character is accepted, since the letter test is ASCII-only and the internal
  // lexer rejects the name if it is not a letter after all.
-@@ -393,13 +556,20 @@
+@@ -393,13 +556,20 @@ static bool scan_string_content(TSLexer *lexer, bool is_multiline, StringMode st
  
  // Consumes a block comment body, nesting per SLS 1.4. The caller has consumed
  // the leading "/*". With stop_at_newline it stops at the first newline.
@@ -960,7 +960,7 @@ index b4856af8..a8ca280e 100644
      if (lexer->lookahead == '/') {
        advance(lexer);
        if (lexer->lookahead == '*') {
-@@ -421,13 +591,13 @@
+@@ -421,13 +591,13 @@ static bool consume_block_comment_body_ex(TSLexer *lexer, bool stop_at_newline)
  
  // Stops just past the matching "*/" (or at EOF).
  static void consume_block_comment_body(TSLexer *lexer) {
@@ -976,35 +976,167 @@ index b4856af8..a8ca280e 100644
  }
  
  static bool finish_block_comment(TSLexer *lexer) {
-@@ -700,6 +870,76 @@
+@@ -467,7 +637,7 @@ static int read_word(TSLexer *lexer, char *buf, int cap,
+   bool not_keyword = false;
+   int32_t last = 0;
+   while (is_alnum(lexer->lookahead) || lexer->lookahead == '_' ||
+-         lexer->lookahead == '$') {
++         lexer->lookahead == '$' || nonascii_id_start(lexer->lookahead)) {
+     if (lexer->lookahead > 127 || len >= cap - 1) {
+       not_keyword = true;
+     } else {
+@@ -529,9 +699,12 @@ static bool word_is_expression_tail(TSLexer *lexer) {
+       "do",    "yield", "while",   "with", "extends"};
+   char word[sizeof "finally"];
+   int len = read_word(lexer, word, (int)sizeof word, NULL);
+-  return len > 0 && word_in(word, expression_tails,
+-                            sizeof(expression_tails) /
+-                                sizeof(expression_tails[0]));
++  // read_word returns -1 for a non-ASCII identifier, so `matché` never
++  // reaches word_in as `match`. Math-symbol code points are not
++  // identifier characters, so `match ≤ x` still reads as the keyword.
++  return len > 0 &&
++         word_in(word, expression_tails,
++                 sizeof(expression_tails) / sizeof(expression_tails[0]));
+ }
+ 
+ // No modifier precedes such a word, so `update match` stays a plain name. A
+@@ -540,7 +713,6 @@ static bool word_is_expression_tail(TSLexer *lexer) {
+ static bool modifier_word_allowed(TSLexer *lexer) {
+   return !word_is_expression_tail(lexer);
+ }
+-
+ // The right operand of an operator has to start an expression, so `??? match`
+ // on its own line is a statement rather than the tail of the line above.
+ static bool operand_word_allowed(TSLexer *lexer) {
+@@ -700,6 +872,193 @@ static int32_t skip_char_or_quote_tail(TSLexer *lexer) {
    return quoted;
  }
  
 +// Skips a triple-quoted string's body after its opening `"""`, stopping
-+// just past the closing `"""` or at EOF.
++// just past the closing quote run or at EOF. scan_string_content accepts a
++// run of any length, so only a non-quote after at least three quotes ends
++// the string; a fourth quote must not reopen a string and hide the `)`
++// that closes the group.
 +static void skip_multiline_string_body(TSLexer *lexer) {
++  unsigned quote_count = 0;
 +  while (!lexer->eof(lexer)) {
 +    if (lexer->lookahead == '"') {
 +      advance(lexer);
-+      if (lexer->lookahead == '"') {
-+        advance(lexer);
-+        if (lexer->lookahead == '"') {
-+          advance(lexer);
-+          return;
-+        }
++      quote_count++;
++      if (quote_count >= 3 && lexer->lookahead != '"') {
++        return;
 +      }
 +    } else {
++      quote_count = 0;
 +      advance(lexer);
 +    }
 +  }
 +}
 +
++// Identifier-continue characters: an interpolator is any identifier
++// immediately followed by a quote (`s"..."`, `raw"..."`, custom names).
++static bool is_id_continue(int32_t c) {
++  return is_alnum(c) || c == '_' || c == '$' || nonascii_id_start(c);
++}
++
++// A `"` right after an identifier character opens an interpolated string;
++// the identifier itself was already consumed as ordinary group text.
++static bool is_interpolated_string_start(int32_t prev) {
++  return is_id_continue(prev) && !(prev >= '0' && prev <= '9');
++}
++
++static void skip_group_char(TSLexer *lexer, int32_t *prev);
++
++// Skips an interpolated string body after its opening quote(s). `$ident`
++// and `$` before a non-`{` character cannot hold delimiters; `${` opens a
++// brace-balanced block scanned as ordinary group text, so a `)` or `"`
++// inside an interpolation never ends the string early.
++static void skip_interpolated_string(TSLexer *lexer, bool escapes,
++                                     int32_t *prev_out) {
++  while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
++    if (lexer->lookahead == '"') {
++      advance(lexer);
++      *prev_out = '"';
++      return;
++    }
++    if (lexer->lookahead == '\\' && escapes) {
++      advance(lexer);
++      if (!lexer->eof(lexer)) {
++        advance(lexer);
++      }
++      continue;
++    }
++    if (lexer->lookahead == '$') {
++      advance(lexer);
++      if (lexer->lookahead == '{') {
++        advance(lexer);
++        int brace_depth = 1;
++        while (!lexer->eof(lexer) && brace_depth > 0) {
++          if (lexer->lookahead == '{') {
++            brace_depth++;
++            advance(lexer);
++          } else if (lexer->lookahead == '}') {
++            brace_depth--;
++            advance(lexer);
++          } else {
++            skip_group_char(lexer, prev_out);
++          }
++        }
++      }
++      continue;
++    }
++    advance(lexer);
++  }
++}
++
++// The triple-quoted variant: the body may span lines and ends at a run of
++// three or more quotes, matching skip_multiline_string_body.
++static void skip_interpolated_multiline(TSLexer *lexer, int32_t *prev_out) {
++  unsigned quote_count = 0;
++  while (!lexer->eof(lexer)) {
++    if (lexer->lookahead == '"') {
++      advance(lexer);
++      quote_count++;
++      if (quote_count >= 3 && lexer->lookahead != '"') {
++        *prev_out = '"';
++        return;
++      }
++      continue;
++    }
++    quote_count = 0;
++    if (lexer->lookahead == '$') {
++      advance(lexer);
++      if (lexer->lookahead == '{') {
++        advance(lexer);
++        int brace_depth = 1;
++        while (!lexer->eof(lexer) && brace_depth > 0) {
++          if (lexer->lookahead == '{') {
++            brace_depth++;
++            advance(lexer);
++          } else if (lexer->lookahead == '}') {
++            brace_depth--;
++            advance(lexer);
++          } else {
++            skip_group_char(lexer, prev_out);
++          }
++        }
++      }
++      continue;
++    }
++    advance(lexer);
++  }
++  *prev_out = '"';
++}
++
 +// Skips the non-delimiter character under the lookahead inside a balanced
-+// group, honoring strings (including triple-quoted ones), character and
-+// symbol literals, backquoted identifiers, and both comment forms, so a
-+// `(`, `)`, `[` or `]` inside them never changes the depth. Other
-+// characters are consumed by one.
-+static void skip_group_char(TSLexer *lexer) {
++// group, honoring strings (including triple-quoted and interpolated ones),
++// character and symbol literals, backquoted identifiers, and both comment
++// forms, so a `(`, `)`, `[` or `]` inside them never changes the depth.
++// `prev` tracks the last consumed character so a quote right after an
++// identifier is read as an interpolated string. Other characters are
++// consumed by one.
++static void skip_group_char(TSLexer *lexer, int32_t *prev) {
 +  int32_t c = lexer->lookahead;
 +  if (c == '"') {
 +    advance(lexer);
@@ -1012,12 +1144,24 @@ index b4856af8..a8ca280e 100644
 +      advance(lexer);
 +      if (lexer->lookahead == '"') {
 +        advance(lexer);
-+        skip_multiline_string_body(lexer);
++        if (is_interpolated_string_start(*prev)) {
++          skip_interpolated_multiline(lexer, prev);
++        } else {
++          skip_multiline_string_body(lexer);
++          *prev = '"';
++        }
++      } else {
++        // `""` is the empty string; the second quote was the closer.
++        *prev = '"';
 +      }
-+      // `""` is the empty string; the second quote was the closer.
 +      return;
 +    }
-+    skip_delimited(lexer, '"', true);
++    if (is_interpolated_string_start(*prev)) {
++      skip_interpolated_string(lexer, true, prev);
++    } else {
++      skip_delimited(lexer, '"', true);
++      *prev = '"';
++    }
 +    return;
 +  }
 +  if (c == '\'') {
@@ -1025,11 +1169,13 @@ index b4856af8..a8ca280e 100644
 +    // A character literal is consumed; a symbol literal's head is word
 +    // characters only, so the caller's loop finishes it harmlessly.
 +    skip_char_or_quote_tail(lexer);
++    *prev = c;
 +    return;
 +  }
 +  if (c == '`') {
 +    advance(lexer);
 +    skip_delimited(lexer, '`', false);
++    *prev = '`';
 +    return;
 +  }
 +  if (c == '/') {
@@ -1038,22 +1184,26 @@ index b4856af8..a8ca280e 100644
 +      while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
 +        advance(lexer);
 +      }
++      *prev = '/';
 +      return;
 +    }
 +    if (lexer->lookahead == '*') {
 +      advance(lexer);
 +      consume_block_comment_body(lexer);
++      *prev = '/';
 +      return;
 +    }
++    *prev = '/';
 +    return;
 +  }
 +  advance(lexer);
++  *prev = c;
 +}
 +
  // Whether the rest of the line holds only blanks and comments. A comment
  // running past the line end still counts as blank because comments are
  // transparent to scalac, but code after a closed block comment does not.
-@@ -724,40 +964,132 @@
+@@ -724,33 +1083,52 @@ static bool rest_of_line_is_blank_or_comments(TSLexer *lexer) {
        return false;  // a lone '/' is code
      }
      advance(lexer);
@@ -1087,6 +1237,8 @@ index b4856af8..a8ca280e 100644
        advance(lexer);
        continue;
      }
+-    if (lexer->lookahead != '/') {
+-      return !is_close_or_separator(lexer->lookahead);
 +    if (c == '\r') {
 +      advance(lexer);
 +      if (lexer->lookahead == '\n') {
@@ -1103,22 +1255,21 @@ index b4856af8..a8ca280e 100644
 +    }
 +    if (c != '/') {
 +      return !is_close_or_separator(c);
-+    }
-+    advance(lexer);
-+    if (lexer->lookahead == '/') {
-+      while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
-+        advance(lexer);
-+      }
+     }
+     advance(lexer);
+     if (lexer->lookahead == '/') {
+       while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
+         advance(lexer);
+       }
+-      continue;
 +      continue;  // the closing newline counts on the next pass
-+    }
-+    if (lexer->lookahead != '*') {
-+      return true;  // a lone '/' is code
-+    }
-+    advance(lexer);
-+    consume_block_comment_body(lexer);
-+  }
-+}
-+
+     }
+     if (lexer->lookahead != '*') {
+       return true;  // a lone '/' is code
+@@ -760,6 +1138,91 @@ static bool has_operand(TSLexer *lexer) {
+   }
+ }
+ 
 +// Skips blanks and comments for the `enum`/`given` definition peeks. Returns
 +// the character the peek should inspect — the real lookahead, or '/' when a
 +// lone slash (an operator, not a comment) was consumed. The caller may only
@@ -1130,24 +1281,23 @@ index b4856af8..a8ca280e 100644
 +    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
 +      advance(lexer);
 +    }
-     if (lexer->lookahead != '/') {
--      return !is_close_or_separator(lexer->lookahead);
++    if (lexer->lookahead != '/') {
 +      return lexer->lookahead;
-     }
-     advance(lexer);
-     if (lexer->lookahead == '/') {
++    }
++    advance(lexer);
++    if (lexer->lookahead == '/') {
 +      // A line comment runs to the newline; the declaration prefix never
 +      // crosses it, so the peek stops there too.
-       while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
-         advance(lexer);
-       }
++      while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
++        advance(lexer);
++      }
 +      return lexer->lookahead;
 +    }
 +    if (lexer->lookahead == '*') {
 +      advance(lexer);
 +      consume_block_comment_body(lexer);
-       continue;
-     }
++      continue;
++    }
 +    return '/';
 +  }
 +}
@@ -1175,13 +1325,12 @@ index b4856af8..a8ca280e 100644
 +      }
 +      return false;
 +    }
-     if (lexer->lookahead != '*') {
--      return true;  // a lone '/' is code
++    if (lexer->lookahead != '*') {
 +      return false;  // a lone '/' is an operator, not a comment
-     }
-     advance(lexer);
-     consume_block_comment_body(lexer);
-   }
++    }
++    advance(lexer);
++    consume_block_comment_body(lexer);
++  }
 +  int32_t c = lexer->lookahead;
 +  if (is_alpha(c) || c == '_' || c == '$' || c == '`' ||
 +      nonascii_id_start(c)) {
@@ -1192,10 +1341,24 @@ index b4856af8..a8ca280e 100644
 +    return !is_op_char(lexer->lookahead);
 +  }
 +  return false;
- }
- 
++}
++
++// True when the identifier under the lookahead is an interpolator: a name
++// immediately followed by a quote (`s"..."`). `given s"..."` calls `given`
++// with an interpolated string, so the name is an operand, not the given's
++// declared name.
++static bool name_is_interpolator(TSLexer *lexer) {
++  char word[sizeof "finally"];
++  if (read_word(lexer, word, (int)sizeof word, NULL) <= 0) {
++    return false;
++  }
++  return peek_past_blanks_comments(lexer) == '"';
++}
++
  // Reads the run of opchars at the lookahead into `op`. Only the first 3 are
-@@ -1114,6 +1446,7 @@
+ // kept, since a longer run is never a symbolic keyword. Returns the full
+ // length and advances the lexer past the run.
+@@ -1114,6 +1577,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
      skip(lexer);
    }
  
@@ -1203,7 +1366,7 @@ index b4856af8..a8ca280e 100644
    // COMMA_OUTDENT is a distinct token so tree-sitter only makes it valid
    // where comma termination is expected (colon_argument,
    // _indentable_expression).
-@@ -1736,39 +2069,152 @@
+@@ -1736,39 +2200,152 @@ static bool scan_impl(void *payload, TSLexer *lexer,
      return scan_float_with_separator(lexer);
    }
  
@@ -1368,7 +1531,7 @@ index b4856af8..a8ca280e 100644
          lexer->result_symbol = COLON_EOL;
          return true;
        }
-@@ -1779,14 +2225,29 @@
+@@ -1779,14 +2356,29 @@ static bool scan_impl(void *payload, TSLexer *lexer,
      // and the first character alone fixes the SLS 6.12.3 precedence class.
      // `#!` opens a script header, whose path is not part of an operator.
      bool shebang = op_len >= 2 && op[0] == '#' && op[1] == '!';
@@ -1403,7 +1566,7 @@ index b4856af8..a8ca280e 100644
        while (!at_comment) {
          int32_t c = lexer->lookahead;
          if (c == '/') {
-@@ -1797,22 +2258,169 @@
+@@ -1797,22 +2389,169 @@ static bool scan_impl(void *payload, TSLexer *lexer,
          } else {
            break;
          }
@@ -1420,6 +1583,10 @@ index b4856af8..a8ca280e 100644
        }
        // A Unicode opchar would carry the operator past what this reads, so
 -      // hand the whole token back to the internal lexer.
+-      if (ends_in_slash && lexer->lookahead < 0x80) {
+-        lexer->mark_end(lexer);
+-        lexer->result_symbol = valid_symbols[op_class] ? op_class : OP_NAME;
+-        return true;
 +      // hand the whole token back to the internal lexer. A `/`-tail ends the
 +      // infix reading when nothing but a close, a separator, a comment or
 +      // the line end follows — the postfix checks below decide that case
@@ -1430,11 +1597,9 @@ index b4856af8..a8ca280e 100644
 +      // lexer's real char classes decide which.
 +      if (ends_in_slash && lexer->lookahead >= 0x80) {
 +        return false;
-+      }
-       if (ends_in_slash && lexer->lookahead < 0x80) {
--        lexer->mark_end(lexer);
--        lexer->result_symbol = valid_symbols[op_class] ? op_class : OP_NAME;
--        return true;
+       }
+-      return false;
++      if (ends_in_slash && lexer->lookahead < 0x80) {
 +        bool operand_follows = false;
 +        // Line breaks seen so far. A single line break continues the
 +        // expression (SLS 1.2: `x /\n y` is the `/` infix); a blank line
@@ -1521,8 +1686,7 @@ index b4856af8..a8ca280e 100644
 +        }
 +        // The mark still ends the operator at its `/`; the reads above are
 +        // re-lexed for the comment or close that follows.
-       }
--      return false;
++      }
 +      if (!at_comment && !ends_in_slash) {
 +        return false;
 +      }
@@ -1580,7 +1744,7 @@ index b4856af8..a8ca280e 100644
        return false;
      }
      // These sequences are not infix operators, so the line does not
-@@ -1851,6 +2459,20 @@
+@@ -1851,6 +2590,20 @@ static bool scan_impl(void *payload, TSLexer *lexer,
            return true;
          }
        }
@@ -1601,7 +1765,7 @@ index b4856af8..a8ca280e 100644
        return false;
      }
      // The right operand must be able to start an expression. Comments and line
-@@ -1879,8 +2501,8 @@
+@@ -1879,8 +2632,8 @@ static bool scan_impl(void *payload, TSLexer *lexer,
        // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
        // are ordinary identifiers, so such a line can be the right operand.
        static const char *const definition_words[] = {
@@ -1612,7 +1776,7 @@ index b4856af8..a8ca280e 100644
            "package",  "private", "protected", "sealed", "trait", "type",
            "val",      "var",
        };
-@@ -1894,9 +2516,174 @@
+@@ -1894,9 +2647,206 @@ static bool scan_impl(void *payload, TSLexer *lexer,
          lexer->result_symbol = postfix_sym;
          return true;
        }
@@ -1655,11 +1819,19 @@ index b4856af8..a8ca280e 100644
 +        if (is_alpha(c) || c == '_' || c == '$' || c == '`' ||
 +            nonascii_id_start(c)) {
 +          // A keyword that continues the expression (`x +` + `given match
-+          // {…}` matches on the call result) cannot also name the given.
-+          if (!(is_alpha(c) && word_is_expression_tail(lexer))) {
++          // {…}` matches on the call result) cannot also name the given,
++          // and neither can an interpolator (`given s"..."` passes the
++          // string to `given`).
++          if (!(is_alpha(c) &&
++                (word_is_expression_tail(lexer) || name_is_interpolator(lexer)))) {
 +            lexer->result_symbol = postfix_sym;
 +            return true;
 +          }
++        } else if (c >= '0' && c <= '9') {
++          // `given 42 = …` is an anonymous given of singleton literal
++          // type; a digit can never continue the operand expression.
++          lexer->result_symbol = postfix_sym;
++          return true;
 +        } else if (c == '=') {
 +          // A lone `=` assigns the variable (`given = 1`); `=` continuing
 +          // into an operator is infix (`given == y` compares).
@@ -1677,16 +1849,19 @@ index b4856af8..a8ca280e 100644
 +        // expression read.
 +        if (c == '[') {
 +          int depth = 1;
++          int32_t prev = '[';
 +          advance(lexer);
 +          while (!lexer->eof(lexer) && depth > 0) {
 +            if (lexer->lookahead == '[') {
 +              depth++;
 +              advance(lexer);
++              prev = '[';
 +            } else if (lexer->lookahead == ']') {
 +              depth--;
 +              advance(lexer);
++              prev = ']';
 +            } else {
-+              skip_group_char(lexer);
++              skip_group_char(lexer, &prev);
 +            }
 +          }
 +          if (depth == 0) {
@@ -1720,26 +1895,44 @@ index b4856af8..a8ca280e 100644
 +        if (c == '(') {
 +          advance(lexer);
 +          c = peek_past_blanks_comments(lexer);
++          int32_t inner_last = c;
 +          if (c >= 'a' && c <= 'z') {
 +            char inner[sizeof "using"];
 +            int inner_len =
 +                read_word(lexer, inner, (int)sizeof inner, NULL);
++            if (inner_len > 0) {
++              inner_last = inner[inner_len - 1];
++            }
++            // `using` opens a clause only when a type name follows it:
++            // `given(using)` passes the Scala 2 value `using` as an
++            // ordinary argument, and `given(using = 2)` is a named
++            // argument. Both keep the call's operand read.
++            int32_t after_using = peek_past_blanks_comments(lexer);
 +            if (inner_len == 5 && strcmp(inner, "using") == 0 &&
-+                peek_past_blanks_comments(lexer) != '=') {
++                (is_alpha(after_using) || after_using == '_' ||
++                 after_using == '$' || after_using == '`' ||
++                 nonascii_id_start(after_using))) {
 +              lexer->result_symbol = postfix_sym;
 +              return true;
 +            }
 +          }
++          // `prev` is the last consumed character: the using-check above
++          // may already have read a word, so the interpolator detection in
++          // skip_group_char needs the real predecessor of the first
++          // unscanned character, not the group's opening paren.
++          int32_t prev = inner_last;
 +          int pdepth = 1;
 +          while (!lexer->eof(lexer) && pdepth > 0) {
 +            if (lexer->lookahead == '(') {
 +              pdepth++;
 +              advance(lexer);
++              prev = '(';
 +            } else if (lexer->lookahead == ')') {
 +              pdepth--;
 +              advance(lexer);
++              prev = ')';
 +            } else {
-+              skip_group_char(lexer);
++              skip_group_char(lexer, &prev);
 +            }
 +          }
 +          if (pdepth == 0) {
@@ -1751,7 +1944,10 @@ index b4856af8..a8ca280e 100644
 +            // marker, so it keeps the operand read.
 +            if (f == '=') {
 +              advance(lexer);
-+              if (!is_op_char(lexer->lookahead)) {
++              // `=>` opens a conditional given's result (`given (x: T) =>
++              // body`); a bare `=` opens an anonymous given of tuple or
++              // function type. `==` and other operator runs stay infix.
++              if (lexer->lookahead == '>' || !is_op_char(lexer->lookahead)) {
 +                lexer->result_symbol = postfix_sym;
 +                return true;
 +              }
