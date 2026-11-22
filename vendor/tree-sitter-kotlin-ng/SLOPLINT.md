@@ -10,8 +10,9 @@ an identifier — the braced form `if (m) for (c in ys) { D() }` silently
 mis-parsed as a `for(c in ys)` call with a trailing lambda (no ERROR), and
 the bare-expression form errored at the call site. `for_statement`,
 `while_statement` and `do_while_statement` join all three branch choices,
-with two new conflict declarations (`statement`/`assignment`,
-`_property_declaration_head`) for the merged if-then state.
+with three new conflict declarations (`statement`/`assignment`,
+`_property_declaration_head`, `delegation_specifiers`) for the merged
+if-then state.
 
 Round 13 closes a word-scan hole: `scan_words` uses `iswalnum`, which in the C locale stops at non-ASCII bytes — `isÉ` scanned as `is`, so `var c = 1; get\nisÉ()` lost its bare getter to the `as`/`is`/`in` infix branch. That branch now also requires the lookahead to not continue the word (`iswalnum || '_' || > 127` is rejected), so `isÉ()` reads as a call on the next line and `get` keeps its accessor slot. Note the flag that prompted the investigation, `x\nis Int` at file level, stays an error — `is` also opens `when` entry conditions, so the newline scanner cannot unconditionally continue on it (upstream parity: it fails identically without the `;`). A `;`-followed `get`/`set`/`field` word then reads as an identifier exactly the way a plain `x` does there.
 
@@ -194,7 +195,7 @@ word — `var x = 1; get\nget` (or `set\nset`) can never be a second
 accessor of the same kind, so the second word now reads as a script
 statement instead of a duplicate getter the parser would reject.
 
-## Round 11 (loop statements as if/else branch bodies)
+## Round 14 (loop statements as if/else branch bodies)
 
 Adds `for_statement`/`while_statement`/`do_while_statement` to the
 `if`/`else` branch choices (upstream only allowed block/expression/

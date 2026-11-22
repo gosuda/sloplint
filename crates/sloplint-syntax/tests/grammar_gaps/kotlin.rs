@@ -543,3 +543,45 @@ fn loops_as_if_branch_bodies_parse() {
         "the if branch must be a real for-statement, not a `for` call:\n{sexp}"
     );
 }
+
+/// `SLOPLINT.md` names each grammar round twice: once in the header summary
+/// and once as a `## Round N` section. The two must agree, and the conflicts
+/// the summary counts for that round must be the ones `grammar.js` declares.
+#[test]
+fn sloplint_md_round_notes_match_the_grammar() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../vendor/tree-sitter-kotlin-ng");
+    let notes = std::fs::read_to_string(dir.join("SLOPLINT.md"))
+        .expect("vendor/tree-sitter-kotlin-ng/SLOPLINT.md must be readable");
+    let grammar = std::fs::read_to_string(dir.join("grammar.js"))
+        .expect("vendor/tree-sitter-kotlin-ng/grammar.js must be readable");
+
+    let round = notes
+        .lines()
+        .find_map(|line| {
+            line.strip_prefix("Round ")
+                .and_then(|rest| rest.split(' ').next())
+                .and_then(|n| n.parse::<u32>().ok())
+                .filter(|_| line.contains("if`/`else` branch bodies"))
+        })
+        .expect("SLOPLINT.md must open with a 'Round N ... if/else branch bodies' summary");
+    assert!(
+        notes.contains(&format!("## Round {round} (loop statements as if/else branch bodies)")),
+        "the summary calls the branch-body change Round {round}, so the dedicated section must carry the same number"
+    );
+
+    let conflicts_at = grammar
+        .find("conflicts:")
+        .expect("grammar.js must declare a conflicts list");
+    let conflicts = &grammar[conflicts_at..];
+    for declared in [
+        "[$.statement, $.assignment]",
+        "[$._property_declaration_head]",
+        "[$.delegation_specifiers]",
+    ] {
+        assert!(
+            conflicts.contains(declared),
+            "grammar.js conflicts must declare {declared} for the merged if-then state"
+        );
+    }
+}
