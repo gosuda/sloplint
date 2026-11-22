@@ -248,6 +248,18 @@ pub(crate) fn call_identity<'s>(
     if func.kind() == "call_expression" {
         return Some(("", None, false));
     }
+    // `f(using (ctx))` parses `using (ctx)` as a call to the soft keyword,
+    // but it is a context argument, not a call. Skip the phantom callee.
+    if func.kind() == "identifier"
+        && text(cx, func) == "using"
+        && n.parent().is_some_and(|p| {
+            p.kind() == "arguments"
+                && child_by_field(p.parent().unwrap_or(p), "function")
+                    .is_some_and(|f| f.id() != n.id())
+        })
+    {
+        return None;
+    }
     let node = func_node(func).unwrap_or(func);
     Some((callee_text(cx, node), func_root(cx, func), is_simple(node)))
 }

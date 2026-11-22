@@ -513,3 +513,19 @@ fn char_literal_and_comment_colon_and_unicode_symbol() {
     );
 }
 
+#[test]
+fn parenthesized_using_argument_records_no_phantom_call() {
+    // `f(using (ctx))` passes a context argument; the grammar reads
+    // `using (ctx)` as a call to the soft keyword, but no callee named
+    // `using` may be recorded.
+    let source = concat!(
+        "object O {\n",
+        "  val ctx = 1\n",
+        "  def f(x: Int) = x\n",
+        "  val n = f(using (ctx))\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(callees(&analysis), ["f"]);
+}
+
