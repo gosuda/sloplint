@@ -38,15 +38,17 @@ pub(crate) fn write_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s s
     if (n.kind() == "assignment_expression" || is_compound_write(cx, n))
         && let Some(l) = child_by_field(n, "left")
     {
+        // `f(name = v)` is a named argument, not a write — same rule as
+        // report_assign_write. Scala names may be symbolic, so the left side
+        // is an `identifier` or an `operator_identifier`; both must be
+        // screened. A field path stays a real write.
         if n.kind() == "assignment_expression"
-            && l.kind() == "identifier"
+            && matches!(l.kind(), "identifier" | "operator_identifier")
             && cx
                 .parent()
                 .is_some_and(|parent| parent.kind() == "arguments")
             && named_arg_verdict(cx, n, text(cx, l)) != Some(false)
         {
-            // `f(name = v)` is a named argument, not a write — same rule as
-            // report_assign_write. A field path stays a real write.
             return;
         }
         out.extend(write_root(cx, l));
@@ -146,12 +148,13 @@ pub(crate) fn report_assign_write<'s>(
         return;
     };
     if n.kind() == "assignment_expression"
-        && left.kind() == "identifier"
+        && matches!(left.kind(), "identifier" | "operator_identifier")
         && n.parent().is_some_and(|p| p.kind() == "arguments")
         && named_arg_verdict(cx, n, text(cx, left)) != Some(false)
     {
         // `f(name = v)` is a named argument, not a write — unless a same-file
         // `def f` has no such parameter, which is a Scala 2.12 assignment.
+        // Scala names may be symbolic, so both identifier kinds are screened.
         // A field path (`f(obj.x = v)`) can't name a parameter, so it stays
         // a real write.
         return;

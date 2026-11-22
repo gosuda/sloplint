@@ -208,3 +208,21 @@ fn given_extractor_binds_its_argument() {
         );
     });
 }
+
+#[test]
+fn symbolic_named_argument_is_not_a_write() {
+    // Scala allows symbolic names. `sink(++ = 2)` names the `++` parameter,
+    // not the enclosing `var ++`. The left side parses as an
+    // `operator_identifier`, which the named-argument guard must screen the
+    // same way it screens a plain `identifier`.
+    let source = "object T {\n  def sink(++ : Int): Int = 0\n  def m(): Int = {\n    var ++ = 0\n    ++ = ++ + 1\n    sink(++ = 2)\n    ++\n  }\n}\n";
+    with_scala_bindings(source, |found| {
+        let names = named_all(found, "++");
+        assert_eq!(names.len(), 1, "one binding for the var: {found:?}");
+        assert_eq!(
+            (names[0].write_lines, names[0].first_write_line),
+            (1, 5),
+            "the symbolic named argument records no write, was 2 with the left side miscounted: {found:?}"
+        );
+    });
+}
