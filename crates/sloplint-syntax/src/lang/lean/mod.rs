@@ -77,7 +77,7 @@ pub(crate) const FUNCTION_KINDS: &[&str] = &[
 ];
 
 /// Compiler-shipped roots; anything else names an external package.
-pub(crate) const LEAN_STDLIB: &[&str] = &["Init", "Lean", "Std"];
+pub(crate) const LEAN_STDLIB: &[&str] = &["Init", "Lean", "Std", "Lake"];
 
 /// The `declaration` wrapper holding definition commands also holds the
 /// `decl_modifiers` (`private`) and `attributes` (`@[simp]`) siblings.
