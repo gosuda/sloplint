@@ -29,6 +29,16 @@ Date: 2026-11-19.
   `grammar/definition-boundaries.js` are vendored verbatim, so the diff
   versus the upstream revision is zero. If a future fix touches the grammar,
   the patch must hold exactly that diff.
+- `src/quint_boundaries.h` carries one local deviation: `max_align_t
+  data[]` in `QArena` is replaced by a `QAlign` union (`long long`,
+  `long double`, `void *`, `void (*)(void)`) and `q_allocate` uses
+  `sizeof(QAlign)` for the stride. MSVC's C mode has no `max_align_t` even
+  under `/std:c11` (`error C2061`), which broke every Windows lane. The
+  union still covers the widest alignment the memo/trace/result payload
+  types need; on i386 it gives a weaker guarantee than `max_align_t`
+  (no 16-byte SIMD alignment), which none of the current payload types
+  require. A refresh from the pinned upstream revision must re-apply
+  this change.
 - The npm tarball `@legacycodehq/tree-sitter-quint@0.33.0` (`dist-tags`:
   `latest 0.33.0`) carries the same `parser.c` byte for byte, but its
   `quint_scanner_boundary_state.h` still uses `qsort` where the pinned git
