@@ -637,7 +637,7 @@ static int read_word(TSLexer *lexer, char *buf, int cap,
   bool not_keyword = false;
   int32_t last = 0;
   while (is_alnum(lexer->lookahead) || lexer->lookahead == '_' ||
-         lexer->lookahead == '$') {
+         lexer->lookahead == '$' || nonascii_id_start(lexer->lookahead)) {
     if (lexer->lookahead > 127 || len >= cap - 1) {
       not_keyword = true;
     } else {
