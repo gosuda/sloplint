@@ -1,3 +1,7 @@
+# id-label.scala: `case Doc(_id = id)` — the `_id` label is a field selector,
+# not a binder, so writes to the outer `var _id` inside the case still track
+# onto its binding (writes at 6 and 39).
+src/id-label.scala:5 info complexity/mutable-span
 # outer-from-closure.scala: binding line 3, writes lines 4 and 34 (span 30 >= strict major_at 30); the last write sits inside a foreach closure with no shadowing.
 src/outer-from-closure.scala:3 info complexity/mutable-span
 # pattern-vars.scala: `var whole, Some(count)` binds both names (writes to
@@ -11,9 +15,5 @@ src/pattern-vars.scala:4 info complexity/mutable-span
 src/pattern-vars.scala:44 info complexity/mutable-span
 src/pattern-vars.scala:45 info complexity/mutable-span
 src/pattern-vars.scala:46 info complexity/mutable-span
-# id-label.scala: `case Doc(_id = id)` — the `_id` label is a field selector,
-# not a binder, so writes to the outer `var _id` inside the case still track
-# onto its binding (writes at 6 and 39).
-src/id-label.scala:5 info complexity/mutable-span
 # Positive: var declared line 3, last write line 36, span 33 >= strict major_at 30.
 src/spread.scala:3 info complexity/mutable-span
