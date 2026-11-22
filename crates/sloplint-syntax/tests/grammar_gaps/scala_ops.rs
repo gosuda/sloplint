@@ -265,6 +265,33 @@ fn export_stays_an_operand_after_slash() {
         "}\n",
     );
     run_clean(source);
+    // Grouping is part of the contract, not just parse success: the division
+    // keeps `export` as its right operand, while an assignment or a
+    // declaration after the postfix `/` stays a separate statement.
+    let sexp = sexp_of(source);
+    assert_eq!(
+        sexp.matches("(infix_expression").count(),
+        2,
+        "`10 / export` and `x / export` stay one infix expression each, sexp: {sexp}"
+    );
+    assert_eq!(
+        sexp.matches("right: (identifier)").count(),
+        2,
+        "division keeps `export` as its right operand in both line shapes, sexp: {sexp}"
+    );
+    assert_eq!(
+        sexp.matches("(postfix_expression").count(),
+        2,
+        "the `export = 1` and `export a.b` lines keep the postfix reading, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("(assignment_expression left: (identifier)"),
+        "`export = 1` stays a separate assignment, not part of the initializer, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("(export_declaration"),
+        "`export a.b` stays a separate declaration, sexp: {sexp}"
+    );
 }
 
 #[test]
@@ -346,7 +373,13 @@ fn blank_line_ends_the_expression_before_a_soft_keyword_operand() {
         "a single newline keeps `export()` as the operand, sexp: {operand_sexp}"
     );
 
-    let separated = concat!("object T {\n", "  val b = x --?\n", "\n", "  export()\n", "}\n");
+    let separated = concat!(
+        "object T {\n",
+        "  val b = x --?\n",
+        "\n",
+        "  export()\n",
+        "}\n"
+    );
     run_clean(separated);
     let separated_sexp = sexp_of(separated);
     assert!(
@@ -360,5 +393,42 @@ fn blank_line_ends_the_expression_before_a_soft_keyword_operand() {
     assert!(
         !separated_sexp.contains("(infix_expression"),
         "the call does not become the operator's operand, sexp: {separated_sexp}"
+    );
+}
+
+#[test]
+fn export_declaration_lookahead_is_comment_and_name_aware() {
+    // `export` is a plain Scala 2 identifier, so only its continuation makes
+    // the operator postfix. The continuation check skips comments and reads
+    // every path spelling the export declaration accepts, so a commented,
+    // back-quoted or non-ASCII path still opens a declaration and a
+    // commented assignment stays a separate statement.
+    let source = concat!(
+        "object T {\n",
+        "  val a = x /\n",
+        "  export /* facade */ delegate.value\n",
+        "  val b = x /\n",
+        "  export `weird`.value\n",
+        "  val c = x /\n",
+        "  export \u{c9}mile.value\n",
+        "  val d = x /\n",
+        "  export /* note */ = 1\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert_eq!(
+        sexp.matches("(export_declaration").count(),
+        3,
+        "the commented, back-quoted and non-ASCII paths stay export declarations, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("(assignment_expression left: (identifier)"),
+        "the commented assignment stays an assignment statement, sexp: {sexp}"
+    );
+    assert_eq!(
+        sexp.matches("(postfix_expression").count(),
+        4,
+        "each `/` before a declaration reads as postfix, sexp: {sexp}"
     );
 }

@@ -1051,6 +1051,47 @@ static int32_t peek_past_blanks_comments(TSLexer *lexer) {
   }
 }
 
+// Whether the soft keyword just read (`export`) opens a declaration rather
+// than serving as an operand. Scala 2 reads `export` as an ordinary
+// identifier (`10 / export` is division), so the continuation decides: an
+// identifier start — ASCII, `_`, `$`, a back-quoted name, or a non-ASCII
+// letter — opens a path, and a standalone `=` assigns the variable. Both
+// block and line comments are transparent to the parser, so they are skipped
+// here too; a line comment ends the declaration prefix, so it reads as "no
+// continuation" (an operand). Anything else — call parentheses, a member's
+// `.`, an operator, the line end — leaves the word an operand. This mirrors
+// the parser's export declaration, which accepts comments before its path.
+static bool soft_keyword_starts_declaration(TSLexer *lexer) {
+  for (;;) {
+    advance_past_blanks(lexer);
+    if (lexer->lookahead != '/') {
+      break;
+    }
+    advance(lexer);
+    if (lexer->lookahead == '/') {
+      while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
+        advance(lexer);
+      }
+      return false;
+    }
+    if (lexer->lookahead != '*') {
+      return false;  // a lone '/' is an operator, not a comment
+    }
+    advance(lexer);
+    consume_block_comment_body(lexer);
+  }
+  int32_t c = lexer->lookahead;
+  if (is_alpha(c) || c == '_' || c == '$' || c == '`' ||
+      nonascii_id_start(c)) {
+    return true;
+  }
+  if (c == '=') {
+    advance(lexer);
+    return !is_op_char(lexer->lookahead);
+  }
+  return false;
+}
+
 // Reads the run of opchars at the lookahead into `op`. Only the first 3 are
 // kept, since a longer run is never a symbolic keyword. Returns the full
 // length and advances the lexer past the run.
@@ -2287,20 +2328,13 @@ static bool scan_impl(void *payload, TSLexer *lexer,
               break;
             }
             // `export` is also a plain Scala 2 identifier (`10 / export`
-            // is division), so the word alone cannot decide: only a
-            // following member selector (`export a.b`) or an assignment
-            // (`export = 1`) makes it a declaration — the same lookahead
-            // `enum` uses on the postfix path. `export {…}` stays an
-            // operand (call with a brace block).
-            if (kw_len == 6 && memcmp(kw, "export", 6) == 0) {
-              while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-                advance(lexer);
-              }
-              int32_t n = lexer->lookahead;
-              if ((n >= 'a' && n <= 'z') || (n >= 'A' && n <= 'Z') ||
-                  n == '_' || n == '$' || n == '=') {
-                break;
-              }
+            // is division), so the word alone cannot decide: a following
+            // path or a standalone `=` makes it a declaration. The shared
+            // probe skips comments the same way the parser does, so
+            // `export /* facade */ delegate.value` is a declaration too.
+            if (kw_len == 6 && memcmp(kw, "export", 6) == 0 &&
+                soft_keyword_starts_declaration(lexer)) {
+              break;
             }
             operand_follows = true;
             break;
@@ -2502,18 +2536,13 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       // `export` shares `enum`'s ambiguity: it is a hard keyword in Scala 3
       // but a plain identifier in Scala 2, so `1 +` + `export` is division
       // while `x --?` + `export a.b` / `export = 1` is a new statement.
-      // Same lookahead as `enum`; `export {…}` stays an operand (call with
-      // a brace block).
-      if (len == 6 && strcmp(word, "export") == 0) {
-        while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
-          advance(lexer);
-        }
-        int32_t c = lexer->lookahead;
-        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' ||
-            c == '$' || c == '=') {
-          lexer->result_symbol = postfix_sym;
-          return true;
-        }
+      // The shared probe skips comments the same way the parser does, so a
+      // commented, back-quoted or non-ASCII path counts too. `export {…}`
+      // stays an operand (call with a brace block).
+      if (len == 6 && strcmp(word, "export") == 0 &&
+          soft_keyword_starts_declaration(lexer)) {
+        lexer->result_symbol = postfix_sym;
+        return true;
       }
       // `given` gets the same split as `enum`: a definition follows a type or
       // parameter name (`given Foo`), a type-parameter list (`given [T] =>`),
