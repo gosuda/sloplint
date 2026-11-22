@@ -106,6 +106,25 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
     let mut scope = n.parent();
     while let Some(s) = scope {
         scope = s.parent();
+        // A local binding of the callee name — `val f`, a `for` binder or a
+        // `case` pattern — shadows every outer `def f`, so the named
+        // argument belongs to the value's `apply`, not to the method's
+        // parameter list. Stop the walk unresolved rather than consult an
+        // unrelated signature.
+        let mut bound = Vec::new();
+        let mut bound_names = Vec::new();
+        for d in named_children(s) {
+            if d.kind() == "val_definition" || d.kind() == "var_definition" {
+                super::items::decl_names(cx, d, &mut bound);
+            } else if d.kind() == "for_expression" || d.kind() == "case_clause" {
+                super::items::shadow_names(cx, d, &mut bound_names);
+            }
+        }
+        if bound.iter().any(|(name, _)| unquote(name) == fname)
+            || bound_names.iter().any(|name| unquote(name) == fname)
+        {
+            return None;
+        }
         let mut saw_def = false;
         for def in named_children(s) {
             if def.kind() != "function_definition" && def.kind() != "function_declaration" {
