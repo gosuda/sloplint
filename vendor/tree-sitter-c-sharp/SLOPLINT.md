@@ -10,8 +10,10 @@ consts, accessors, ctor initializers, base/argument lists, class/method
 heads) plus the `#line` filename fix cherry-picked from upstream master
 (`77145f6`). Node renames versus the old tree: `extension_block` is now
 upstream's `extension_declaration`/`extension_body`/`receiver_parameter`,
-and `preproc_colon` is now upstream's `ignored_directive` (an extra, so
-`#:` lines stay invisible in trees).
+and `preproc_colon` is now upstream's `ignored_directive` (a named extra,
+so `#:` lines appear in trees as `ignored_directive` nodes, which custom
+queries must match by that name). The old `dangling_else` helper is gone;
+its position is covered by upstream's scanner-gated `preproc_if_in_else`.
 
 ## Origin
 
@@ -58,10 +60,12 @@ and `preproc_colon` is now upstream's `ignored_directive` (an extra, so
 
 ## Grammar.js changes
 
-`sloplint-grammar.patch` (451 lines, 29 hunks) is the unified diff against
-the 0.24.0 crate `grammar.js`. Every fix below was validated with dotnet
-SDK 10 Roslyn CSC (syntax-only: only CS1xxx counts as invalid);
-constructs with any CS1xxx were left failing on purpose (see controls).
+`sloplint-grammar.patch` (484 lines, 30 hunks) is the unified diff of
+`grammar.js` against the 0.24.0 crate plus the cherry-picked `#line`
+corpus case (`test/corpus/preprocessor.txt`, upstream master `77145f6`).
+Every fix below was validated with dotnet SDK 10 Roslyn CSC (syntax-only:
+only CS1xxx counts as invalid); constructs with any CS1xxx were left
+failing on purpose (see controls).
 
 Dropped from the old patch because upstream v0.24.0 carries an equivalent:
 CS-REFPARTIAL (`ref`/`partial` order; upstream spells it
@@ -150,8 +154,9 @@ as the old `extension_block` was),
 `type_parameter_constraint` (the `allows` form; hooks do not read
 constraints), `receiver_parameter`/`extension_body` (walked through
 generically), and `preproc_if` in body/initializer/accessor positions,
-which is skipped by the fact hooks. `ignored_directive` is an extra and
-never appears in trees. One consequence is unchanged: a method whose
+which is skipped by the fact hooks. `ignored_directive` is a named extra
+and stays visible in trees (the directive corpus shows it); the fact
+hooks read no facts from it. One consequence is unchanged: a method whose
 whole body is a `#if` split is not recorded as a function (only
 block/arrow bodies count). Those files previously contributed no facts
 at all, so partial facts strictly dominate.
