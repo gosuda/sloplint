@@ -1,1 +1,1 @@
-# State that is never assigned stays silent.
+# Assigned `var` state and never-assigned state both stay silent: module state is the language core.

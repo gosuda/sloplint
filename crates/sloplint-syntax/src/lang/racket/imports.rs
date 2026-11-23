@@ -13,47 +13,59 @@ use super::head::{Head, lookup_head};
 use super::{code_children, define_name, first_symbol};
 
 pub(super) fn push_require_spec<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<Import<'s>>) {
-    push_spec_in(cx, None, spec, out);
+    let mut pending = vec![(spec, String::new())];
+    while let Some((spec, anchor)) = pending.pop() {
+        match spec.kind() {
+            "string" => {
+                let raw = strip_quotes(text(cx, spec));
+                if raw.is_empty() || matches!(raw, "." | "..") {
+                    continue;
+                }
+                if anchor.is_empty() {
+                    push_string_require(cx, spec, raw, out);
+                } else {
+                    push_rebased_require(cx, spec, &anchor, raw, out);
+                }
+            }
+            "list" => push_list_specs(cx, &anchor, spec, &mut pending),
+            _ => {}
+        }
+    }
 }
 
-fn push_spec_in<'s>(
-    cx: &Cx<'_, 's>,
-    anchor: Option<&str>,
-    spec: Node<'_>,
-    out: &mut Vec<Import<'s>>,
+/// Each queued node occupies a documented require-spec position. Transformer
+/// expressions and unrecognized forms never contribute guessed dependencies.
+fn push_list_specs<'t>(
+    cx: &Cx<'_, '_>,
+    anchor: &str,
+    spec: Node<'t>,
+    pending: &mut Vec<(Node<'t>, String)>,
 ) {
-    match spec.kind() {
-        "string" => {
-            let raw = strip_quotes(text(cx, spec));
-            if raw.is_empty() {
-                return;
-            }
-            match anchor {
-                Some(dir) => push_rebased_require(cx, spec, dir, raw, out),
-                None => push_string_require(cx, spec, raw, out),
-            }
+    let kids = code_children(spec);
+    let Some((head, operands)) = kids.split_first() else {
+        return;
+    };
+    if head.kind() != "symbol" {
+        return;
+    }
+    let selected = match text(cx, *head) {
+        "relative-in" => {
+            push_relative_in(cx, anchor, operands, pending);
+            return;
         }
-        "list" => {
-            let mut kids = code_children(spec).into_iter();
-            let Some(head) = kids.next() else {
-                return;
-            };
-            if head.kind() != "symbol" {
-                return;
-            }
-            let head = text(cx, head);
-            if matches!(head, "lib" | "planet") {
-                return;
-            }
-            if head == "relative-in" {
-                push_relative_in(cx, kids.collect(), out);
-                return;
-            }
-            for child in kids {
-                push_spec_in(cx, anchor, child, out);
-            }
-        }
-        _ => {}
+        "only-in" | "except-in" | "rename-in" | "subtract-in" | "submod" => operands.get(..1),
+        "prefix-in" | "matching-identifiers-in" | "filtered-in" => operands.get(1..2),
+        "for-meta" | "for-space" | "only-meta-in" | "only-space-in" => operands.get(1..),
+        "combine-in" | "for-syntax" | "for-template" | "for-label" => Some(operands),
+        "file" => operands.first().and_then(|path| {
+            let raw = strip_quotes(text(cx, *path));
+            (path.kind() == "string" && !raw.starts_with(['/', '~']) && !raw.contains(['\\', ':']))
+                .then(|| &operands[..1])
+        }),
+        _ => None,
+    };
+    if let Some(selected) = selected {
+        pending.extend(selected.iter().rev().map(|&node| (node, anchor.to_owned())));
     }
 }
 
@@ -62,35 +74,36 @@ fn push_spec_in<'s>(
 /// resolution anchor, never an import. A base that is not a relative
 /// string cannot be rebased, so the wrapped specs stay out instead of
 /// resolving against the importing file.
-fn push_relative_in<'s>(cx: &Cx<'_, 's>, kids: Vec<Node<'_>>, out: &mut Vec<Import<'s>>) {
-    let mut kids = kids.into_iter();
-    let Some(base) = kids.next() else {
+fn push_relative_in<'t>(
+    cx: &Cx<'_, '_>,
+    outer: &str,
+    kids: &[Node<'t>],
+    pending: &mut Vec<(Node<'t>, String)>,
+) {
+    let Some((base, specs)) = kids.split_first() else {
         return;
     };
     if base.kind() != "string" {
         return;
     }
-    let anchor = strip_quotes(text(cx, base));
-    if !anchor.starts_with('.') {
+    let base = strip_quotes(text(cx, *base));
+    if base.is_empty() || base.starts_with('/') || base.ends_with('/') {
         return;
     }
-    let dir = match anchor.rfind('/') {
-        Some(i) => &anchor[..i],
-        None => "",
-    };
-    for child in kids {
-        push_spec_in(cx, Some(dir), child, out);
-    }
+    let anchor = rebase_relative(outer, base);
+    let dir = anchor.rsplit_once('/').map_or("", |(dir, _)| dir);
+    pending.extend(specs.iter().rev().map(|&node| (node, dir.to_owned())));
 }
 
 /// Joins a `relative-in` anchor directory with a wrapped spec lexically:
-/// `..` pops the anchor, `.` and empty parts stay put.
+/// `..` cancels only a preceding normal segment. Unresolved parents survive
+/// until module-key resolution supplies the importing file's directory.
 fn rebase_relative(dir: &str, spec: &str) -> String {
-    let mut parts: Vec<&str> = dir.split('/').filter(|part| !part.is_empty()).collect();
-    for seg in spec.split('/') {
+    let mut parts = Vec::new();
+    for seg in dir.split('/').chain(spec.split('/')) {
         match seg {
             "" | "." => {}
-            ".." => {
+            ".." if parts.last().is_some_and(|part| *part != "..") => {
                 parts.pop();
             }
             _ => parts.push(seg),
@@ -148,7 +161,9 @@ fn push_string_require<'s>(
 fn is_test_path(path: &str) -> bool {
     let mut segments = path.split('/');
     let file = segments.next_back().unwrap_or(path);
-    if file == "test.rkt" || file == "tests.rkt" {
+    if file.rsplit_once('.').is_some_and(|(stem, extension)| {
+        matches!(stem, "test" | "tests") && matches!(extension, "rkt" | "rktl" | "rktd")
+    }) {
         return true;
     }
     segments.any(|segment| segment == "test" || segment == "tests")

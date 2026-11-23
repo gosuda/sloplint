@@ -4,6 +4,7 @@ pub(crate) mod colocated_tests;
 pub(crate) mod explicit_boundary_types;
 pub(crate) mod file_token_budget;
 pub(crate) mod informative_assertions;
+pub(crate) mod no_sleep_in_tests;
 pub(crate) mod stringly_api;
 pub(crate) mod typed_error_boundary;
 pub(crate) mod unique_patch_anchors;

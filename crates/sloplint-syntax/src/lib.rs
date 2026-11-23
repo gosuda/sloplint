@@ -6,7 +6,7 @@ mod generated;
 mod header_comments;
 mod hooks;
 mod lang;
-mod lean_rescue;
+mod lean_recovery;
 mod shadow;
 mod shapes;
 mod spec;
@@ -223,13 +223,14 @@ fn retry_analysis<'s>(
             return clean_analysis(parsers, input, fallback, &retried, custom);
         }
     }
-    if let Some(rescued) = rescue_analysis(parsers, input, input.lang, tree, custom, deadline) {
-        return rescued;
-    }
-    if input.lang == Lang::Lean
-        && let Some(rescued) =
-            lean_rescue::lean_command_rescue(parsers, input, tree, custom, deadline)
-    {
+    // Lean's error nodes can split strings into apparent commands. Excising
+    // their bytes independently would turn quoted text into recovered code.
+    let rescued = if input.lang == Lang::Lean {
+        lean_recovery::rescue(parsers, input, tree, custom, deadline)
+    } else {
+        rescue_analysis(parsers, input, input.lang, tree, custom, deadline)
+    };
+    if let Some(rescued) = rescued {
         return rescued;
     }
     let root = tree.root_node();

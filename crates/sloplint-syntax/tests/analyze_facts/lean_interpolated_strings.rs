@@ -1,8 +1,8 @@
 //! Lean interpolated-string argument shapes, observed through `analyze` only.
 //!
 //! The grammar surfaces no literal-chunk children inside `interpolated_str`
-//! (only the opener, the `interpolation` holes, and the closer), so the
-//! adapter measures the longest static run from the node's own text. A
+//! (only the opener, escape sequences, interpolation holes, and the closer),
+//! so the adapter measures literal gaps in the node's own text. A
 //! string whose longest literal run clears the 8-char floor must report it,
 //! and calls nested in `{...}` holes must still appear as call facts.
 
@@ -102,4 +102,25 @@ fn unicode_escape_spelling_does_not_inflate_the_run() {
         1,
         "`\\u{{1F600}}` is one output char, so only `!` survives the break"
     );
+}
+
+#[test]
+fn fixed_width_escapes_break_interpolated_runs() {
+    for prefix in ["s!", "m!"] {
+        for (literal, expected) in [
+            (r"\x41!", 1),
+            (r"\u0041!", 1),
+            (r"head\x41tail", 4),
+            (r"head\u0041tail", 4),
+            (r"\x41\u0041", 0),
+            (r"λ\x41π", 1),
+        ] {
+            let source = format!("def main : IO Unit := do\n  IO.println {prefix}\"{literal}\"\n");
+            assert_eq!(
+                arg_run(&source, "IO.println"),
+                expected,
+                "{prefix}{literal}"
+            );
+        }
+    }
 }

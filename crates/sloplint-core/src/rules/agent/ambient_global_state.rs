@@ -153,6 +153,12 @@ impl FileRule for AmbientGlobalState {
         if facts.lang == Lang::Logos {
             return;
         }
+        // Quint state is module-level `var` declarations: the language's
+        // core construct, not shareable ambient state. The Quint adapter
+        // emits no EnvRead facts, so every firing is a `var` declaration.
+        if matches!(facts.lang, Lang::Quint) {
+            return;
+        }
         if self.allow_files.is_match(facts.path) {
             return;
         }
@@ -274,6 +280,8 @@ mod tests {
             impls: Vec::new(),
             wildcard_arms: Vec::new(),
             handlers: Vec::new(),
+            redundant_elses: Vec::new(),
+            blocking_sleeps: Vec::new(),
             assertions: Vec::new(),
             field_copies: Vec::new(),
             dynamic_symbols: Vec::new(),

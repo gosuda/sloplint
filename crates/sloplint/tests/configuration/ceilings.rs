@@ -52,7 +52,10 @@ fn oversized_config_refused() {
     let RunError::Io { path, source } = error else {
         panic!("expected RunError::Io, got: {error:?}");
     };
-    assert_eq!(path, config_path);
+    assert_eq!(
+        path,
+        config_path.canonicalize().expect("canonical config path")
+    );
     assert_eq!(source.kind(), std::io::ErrorKind::FileTooLarge);
     assert!(
         source
@@ -80,7 +83,10 @@ fn oversized_custom_rule_file_refused() {
     let RunError::Io { path, source } = error else {
         panic!("expected RunError::Io, got: {error:?}");
     };
-    assert_eq!(path, custom_path);
+    assert_eq!(
+        path,
+        custom_path.canonicalize().expect("canonical custom path")
+    );
     assert_eq!(source.kind(), std::io::ErrorKind::FileTooLarge);
     assert!(
         source
@@ -110,6 +116,7 @@ fn total_custom_ceiling_refused() {
     let RunError::Io { path, source } = error else {
         panic!("expected RunError::Io, got: {error:?}");
     };
+    let rules_dir = rules_dir.canonicalize().expect("canonical rules directory");
     assert!(path.starts_with(&rules_dir), "path must be in rules dir");
     assert_eq!(source.kind(), std::io::ErrorKind::FileTooLarge);
     assert!(

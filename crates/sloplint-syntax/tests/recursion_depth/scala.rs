@@ -4,6 +4,7 @@ use sloplint_core::lang::Lang;
 
 use super::support::{
     DEPTH, binding, binding_names, nested_tuple, on_default_stack, tuple_leaves, with_facts,
+    within_linear_budget,
 };
 
 /// A field chain roots at its leftmost identifier, for writes and calls alike.
@@ -31,16 +32,18 @@ fn member_chains_keep_their_roots() {
     });
 }
 
-/// A tuple pattern nested at every level declares each leaf, in source order.
+/// Nested tuple patterns declare each leaf in source order with linear work.
 #[test]
 fn nested_tuple_patterns_declare_every_leaf_in_order() {
     on_default_stack(|| {
-        let source = format!(
-            "object O {{\n  def g(): Unit = {{\n    var {} = x\n  }}\n}}\n",
-            nested_tuple(DEPTH)
-        );
-        with_facts(Lang::Scala, "case.scala", &source, |facts| {
-            assert_eq!(binding_names(facts), tuple_leaves(DEPTH));
+        within_linear_budget(|depth| {
+            let source = format!(
+                "object O {{\n  def g(): Unit = {{\n    var {} = x\n  }}\n}}\n",
+                nested_tuple(depth)
+            );
+            with_facts(Lang::Scala, "case.scala", &source, |facts| {
+                assert_eq!(binding_names(facts), tuple_leaves(depth));
+            });
         });
     });
 }

@@ -88,7 +88,9 @@ walker still descends into it.
 | `;`, `#\| … \|#`, `#;` | comment | `Comment` role on `comment`, `block_comment`, `sexp_comment` |
 | `string`, `byte_string`, `here_string`, `regex`, `character`, numbers, `boolean`, `keyword`, `symbol` | string | leaves; no role (the walker has no string role) |
 | `(f args ...)` calls | call | unmapped (the `list` role serves `Function`; `call()` returns `None`) |
-| `require`, `provide`, `module`, `module+` | import | classified, unmapped (no `Import` role is available for `list`) |
+| `require` | import | the declined `Function` hook records relative file targets from supported require-spec positions; `relative-in` preserves nested anchors and parent traversal |
+| `provide` | visibility | explicit names, `all-defined-out`, `contract-out`, and `rename-out` identify exported functions |
+| `module`, `module+` | module | classified, unmapped |
 
 Non-code positions: a definition-shaped list is ignored when any
 ancestor is `quote`, `quasiquote`, `syntax`, `quasisyntax`,
@@ -122,8 +124,13 @@ themselves parse as `extension`/`lang_name` and stay transparent.
   function nesting. A deeply nested `cond` scores like a flat one.
 - No call facts: call-driven rules (log literals, dynamic lookups,
   assertions, sole-call wrappers) stay silent on Racket.
-- No import facts: `require`/`provide` targets are not recorded, so
-  import-driven rules stay silent.
+- Relative-string `require` specs and relative `file` paths provide local
+  import evidence. Supported wrappers follow the operand positions in the
+  [Racket require reference](https://docs.racket-lang.org/reference/require.html).
+  Collection paths, absolute or home-relative file paths, and unknown require
+  transformers do not produce guessed local dependencies. A `relative-in`
+  base is an anchor, never an imported module. Coverage is direct; it does not
+  follow dependencies transitively.
 - No type facts: `struct` shapes are not lowered to `TypeDef`.
 - `#lang` dialects and reader extensions parse as generic
   `list`/`symbol` soup or `ERROR`, which bounds what the linter can

@@ -34,43 +34,10 @@ fn lean_callee_root(callee: &str) -> Option<&str> {
     (!root.is_empty()).then_some(root)
 }
 
-/// String argument shapes: plain and raw literals are one static run.
-/// Interpolated `s!"..."/m!"..."` strings measure the longest literal
-/// run in the gaps between the parsed `interpolation` hole spans: the
-/// grammar marks every hole, so primed identifiers and nested calls never
-/// leak into the measurement. Escapes break runs but `%` stays literal;
-/// the linter only compares against an 8-char floor. A `\u{...}` escape
-/// skips to its closing brace, so the multi-char spelling never inflates
-/// the neighboring run.
-fn lean_literal_run(segment: &str) -> u32 {
-    let mut best = 0u32;
-    let mut run = 0u32;
-    let mut chars = segment.chars();
-    while let Some(c) = chars.next() {
-        if c == '\\' {
-            best = best.max(run);
-            run = 0;
-            if chars.as_str().starts_with("u{") {
-                chars.next();
-                chars.next();
-                for c in chars.by_ref() {
-                    if c == '}' {
-                        break;
-                    }
-                }
-            } else {
-                chars.next();
-            }
-        } else {
-            run += 1;
-        }
-    }
-    best.max(run)
-}
-
-/// Gaps between the parsed hole spans are literal text. A string whose
-/// opener or closer the parser did not produce falls back to the shared
-/// hole scanner so error-recovery trees still measure something.
+/// Interpolation holes and complete escape sequences break literal runs.
+/// Count the Unicode characters between their parsed spans, leaving `%`
+/// literal and excluding every digit of fixed-width escape spellings.
+/// Incomplete string boundaries use the shared recovery-tree scanner.
 fn lean_interpolated_static(cx: &Cx<'_, '_>, arg: Node<'_>) -> u32 {
     let raw = text(cx, arg);
     let Some(rest) = raw
@@ -83,32 +50,24 @@ fn lean_interpolated_static(cx: &Cx<'_, '_>, arg: Node<'_>) -> u32 {
         return longest_static_chunk_interp(raw);
     };
     let base = arg.start_byte() + (raw.len() - rest.len());
-    let mut holes: Vec<(usize, usize)> = Vec::new();
-    for index in 0..arg.child_count() {
-        let Some(child) = arg.child(index) else {
-            continue;
-        };
-        if child.kind() == "interpolation" {
-            holes.push((
-                child.start_byte().saturating_sub(base),
-                child.end_byte().saturating_sub(base),
-            ));
-        }
-    }
     let mut best = 0u32;
     let mut pos = 0usize;
-    for (start, end) in holes {
-        let start = start.min(inner.len());
-        let end = end.min(inner.len());
+    let mut cursor = arg.walk();
+    for child in arg.named_children(&mut cursor) {
+        if !matches!(child.kind(), "interpolation" | "escape_sequence") {
+            continue;
+        }
+        let start = child.start_byte().saturating_sub(base).min(inner.len());
+        let end = child.end_byte().saturating_sub(base).min(inner.len());
         if start > pos
             && let Some(gap) = inner.get(pos..start)
         {
-            best = best.max(lean_literal_run(gap));
+            best = best.max(narrow(gap.chars().count()));
         }
         pos = pos.max(end);
     }
     if let Some(gap) = inner.get(pos..) {
-        best = best.max(lean_literal_run(gap));
+        best = best.max(narrow(gap.chars().count()));
     }
     best
 }

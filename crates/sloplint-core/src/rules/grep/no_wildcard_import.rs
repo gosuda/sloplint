@@ -42,10 +42,9 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for NoWildcardImport {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
-        // Lean `open` is the namespace mechanism, not a shortcut: every file
-        // opens namespaces, often several at once, and the named form
-        // `open NS (name)` already maps to silent named imports.
-        if matches!(facts.lang, Lang::Lean) {
+        // Quint wildcard imports and Lean namespace opens are their
+        // standard module mechanisms, without a general named equivalent.
+        if matches!(facts.lang, Lang::Quint | Lang::Lean) {
             return;
         }
         for import in &facts.imports {
@@ -111,6 +110,8 @@ mod tests {
             impls: Vec::new(),
             wildcard_arms: Vec::new(),
             handlers: Vec::new(),
+            redundant_elses: Vec::new(),
+            blocking_sleeps: Vec::new(),
             assertions: Vec::new(),
             field_copies: Vec::new(),
             dynamic_symbols: Vec::new(),

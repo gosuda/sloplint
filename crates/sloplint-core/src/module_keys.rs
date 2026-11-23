@@ -6,15 +6,30 @@ const JS_EXTENSIONS: [&str; 8] = ["ts", "tsx", "mts", "cts", "js", "jsx", "mjs",
 
 pub fn library_keys(lang: Lang, path: &str) -> Vec<String> {
     let (dir, base) = split_dir(path);
-    keys_for(lang, dir, stem_of(base))
+    let name = if lang == Lang::Racket {
+        base
+    } else {
+        stem_of(base)
+    };
+    keys_for(lang, dir, name)
 }
 
 pub fn test_keys(lang: Lang, path: &str) -> Vec<String> {
     let (dir, base) = split_dir(path);
+    let stem = strip_test_affix(stem_of(base));
     if lang == Lang::CSharp {
-        return csharp_test_keys(dir, strip_test_affix(stem_of(base)));
+        return csharp_test_keys(dir, stem);
     }
-    keys_for(lang, dir, strip_test_affix(stem_of(base)))
+    let keys = keys_for(lang, dir, stem);
+    if lang == Lang::Racket {
+        // Filename evidence matches across module extensions; direct imports
+        // retain the one filename they require.
+        return keys
+            .into_iter()
+            .flat_map(|key| ["rkt", "rktl", "rktd"].map(|ext| format!("{key}.{ext}")))
+            .collect();
+    }
+    keys
 }
 
 fn csharp_test_keys(dir: &str, stem: &str) -> Vec<String> {
@@ -122,24 +137,25 @@ pub fn import_keys(lang: Lang, importer: &str, spec: &str) -> Vec<String> {
     }
 }
 
+/// `importer` is scan-relative. Every parent traversal must consume a path
+/// segment inside that root; an escaped target contributes no coverage keys.
 fn racket_segments(importer: &str, spec: &str, segs: &mut Vec<String>) {
-    let spec = spec
-        .strip_suffix(".rkt")
-        .or_else(|| spec.strip_suffix(".rktl"))
-        .or_else(|| spec.strip_suffix(".rktd"))
-        .unwrap_or(spec);
-    if spec.starts_with('.') {
-        resolve_relative(importer, spec, segs);
-        return;
+    let mut parts = dir_segments(split_dir(importer).0);
+    for seg in spec.split('/') {
+        match seg {
+            "." | "" => {}
+            ".." => {
+                if parts.pop().is_none() {
+                    return;
+                }
+            }
+            _ => parts.push(seg),
+        }
     }
-    let mut owned = String::from("./");
-    owned.push_str(spec);
-    resolve_relative(importer, &owned, segs);
+    let start = parts.len().saturating_sub(MAX_KEY_SEGMENTS);
+    push_all(segs, &parts[start..]);
 }
 
-/// Relative path normalization shared by the TypeScript and Racket arms.
-/// The caller strips language extensions: TypeScript drops JavaScript
-/// suffixes afterwards, Racket keeps the dotted stem its libraries use.
 fn resolve_relative(importer: &str, spec: &str, segs: &mut Vec<String>) {
     let mut parts: Vec<&str> = dir_segments(split_dir(importer).0);
     for seg in spec.split('/') {

@@ -64,7 +64,9 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for NestingDepth {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
-        if matches!(facts.lang, Lang::Alloy) {
+        // Keep specification branches consistent with cognitive-depth:
+        // their nesting describes modeled behavior, not procedural flow.
+        if matches!(facts.lang, Lang::Quint | Lang::Alloy) {
             return;
         }
         for function in &facts.functions {
@@ -128,6 +130,8 @@ mod tests {
             impls: Vec::new(),
             wildcard_arms: Vec::new(),
             handlers: Vec::new(),
+            redundant_elses: Vec::new(),
+            blocking_sleeps: Vec::new(),
             assertions: Vec::new(),
             field_copies: Vec::new(),
             dynamic_symbols: Vec::new(),
@@ -223,6 +227,8 @@ mod tests {
             impls: Vec::new(),
             wildcard_arms: Vec::new(),
             handlers: Vec::new(),
+            redundant_elses: Vec::new(),
+            blocking_sleeps: Vec::new(),
             assertions: Vec::new(),
             field_copies: Vec::new(),
             dynamic_symbols: Vec::new(),

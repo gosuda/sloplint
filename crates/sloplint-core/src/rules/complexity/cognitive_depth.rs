@@ -64,14 +64,10 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for CognitiveDepth {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
-        if matches!(facts.lang, Lang::Alloy) {
-            return;
-        }
-        // TLA+ packs nested quantifiers, IFs and PlusCal branches into one
-        // operator by design; the idiomatic action style scores like deeply
-        // nested procedural code, and the outliers are generated PlusCal
-        // translations. Thresholds assume procedural code.
-        if matches!(facts.lang, Lang::Tlaplus) {
+        // Quantifiers and transition branches describe the modeled
+        // behavior in TLA+, Quint, and Alloy. Procedural extraction
+        // thresholds do not apply to those specification constructs.
+        if matches!(facts.lang, Lang::Tlaplus | Lang::Quint | Lang::Alloy) {
             return;
         }
         for function in &facts.functions {
@@ -137,6 +133,8 @@ mod tests {
             impls: Vec::new(),
             wildcard_arms: Vec::new(),
             handlers: Vec::new(),
+            redundant_elses: Vec::new(),
+            blocking_sleeps: Vec::new(),
             assertions: Vec::new(),
             field_copies: Vec::new(),
             dynamic_symbols: Vec::new(),
@@ -232,6 +230,8 @@ mod tests {
             impls: Vec::new(),
             wildcard_arms: Vec::new(),
             handlers: Vec::new(),
+            redundant_elses: Vec::new(),
+            blocking_sleeps: Vec::new(),
             assertions: Vec::new(),
             field_copies: Vec::new(),
             dynamic_symbols: Vec::new(),

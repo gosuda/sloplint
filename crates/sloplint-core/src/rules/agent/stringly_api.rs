@@ -66,14 +66,9 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for StringlyApi {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
-        if matches!(facts.lang, Lang::Dafny) {
-            return;
-        }
-        // Consecutive same-type binders `(x y z : Nat)` are the canonical
-        // Lean statement shape, and bundling them would break `rw`
-        // ergonomics: there is no per-binder narrowing that keeps a true
-        // positive, so the rule stays off Lean.
-        if matches!(facts.lang, Lang::Lean) {
+        // Consecutive same-type binders are conventional proof statements
+        // in Dafny and Lean; bundling them would change how lemmas apply.
+        if matches!(facts.lang, Lang::Dafny | Lang::Lean) {
             return;
         }
         for function in &facts.functions {
@@ -260,6 +255,8 @@ mod tests {
             impls: Vec::new(),
             wildcard_arms: Vec::new(),
             handlers: Vec::new(),
+            redundant_elses: Vec::new(),
+            blocking_sleeps: Vec::new(),
             assertions: Vec::new(),
             field_copies: Vec::new(),
             dynamic_symbols: Vec::new(),

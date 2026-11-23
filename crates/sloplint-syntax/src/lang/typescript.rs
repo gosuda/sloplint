@@ -102,6 +102,10 @@ fn case_enum_object<'s>(cx: &Cx<'_, 's>, case: Node<'_>, enums: &[&'s str]) -> b
 }
 
 impl LangHooks for TypeScriptHooks {
+    fn redundant_else(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        crate::lang::javascript::flow::redundant_else(n, cx)
+    }
+
     fn shadow_filter(&self) -> ShadowKind {
         ShadowKind::DeclsAndBinds
     }

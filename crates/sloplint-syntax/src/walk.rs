@@ -96,6 +96,8 @@ pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>, lang: Lang) -> FileF
         impls: Vec::new(),
         wildcard_arms: Vec::new(),
         handlers: Vec::new(),
+        redundant_elses: Vec::new(),
+        blocking_sleeps: Vec::new(),
         assertions: Vec::new(),
         field_copies: Vec::new(),
         dynamic_symbols: Vec::new(),
@@ -270,6 +272,8 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     fn enter_if(&mut self, node: Node<'_>) {
+        let redundant_else = self.hooks.redundant_else(node, &self.make_cx());
+        self.facts.redundant_elses.extend(redundant_else);
         if !self.fn_stack.is_empty() {
             let hooks = self.hooks;
             if !hooks.is_else_if(node, self.visited_parent()) {
@@ -310,21 +314,17 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     fn enter_call_site(&mut self, node: Node<'_>) {
-        let controls = {
-            let cx = self.make_cx();
-            self.hooks.control_call(node, &cx)
-        };
+        let controls = self.hooks.control_call(node, &self.make_cx());
         if controls {
             self.enter_depth_only(node);
         }
-        let marker = {
-            let cx = self.make_cx();
-            self.hooks.call_marker(node, &cx)
-        };
+        let marker = self.hooks.call_marker(node, &self.make_cx());
         if let Some(role) = marker {
             self.push_region(crate::hooks::region_of(node, role));
         }
         self.push_call(node);
+        let blocking_sleep = self.hooks.blocking_sleep(node, &self.make_cx());
+        self.facts.blocking_sleeps.extend(blocking_sleep);
         self.push_imports(node);
         self.push_assertion(node);
         self.push_dynamic(node);

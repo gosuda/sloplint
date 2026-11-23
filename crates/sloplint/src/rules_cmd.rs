@@ -18,14 +18,28 @@ const PROFILES: [Strictness; 4] = [
     Strictness::Strict,
 ];
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct RulesRequest {
+    /// Working directory used to resolve relative root and config paths; defaults to `.`.
     pub cwd: PathBuf,
     pub root: Option<PathBuf>,
     pub config: Option<PathBuf>,
     pub strictness: Option<Strictness>,
     pub id: Option<String>,
     pub format: Format,
+}
+
+impl Default for RulesRequest {
+    fn default() -> Self {
+        Self {
+            cwd: PathBuf::from("."),
+            root: None,
+            config: None,
+            strictness: None,
+            id: None,
+            format: Format::default(),
+        }
+    }
 }
 
 struct Listed {
@@ -79,7 +93,7 @@ pub fn render(request: &RulesRequest) -> Result<String, RunError> {
         &request.cwd,
         request.root.as_deref(),
         request.config.as_deref(),
-    );
+    )?;
     let loaded = project::load(
         &location,
         Overrides {
