@@ -206,7 +206,10 @@ fn given_extractor_binders<'s>(cx: &Cx<'_, 's>, node: Node<'_>) -> Option<Vec<&'
     }
     // An adjacent paren applies the extractor (`given(`); a spaced paren
     // ascribes a tuple type (`given (`).
-    let kw_end = node.child(0).filter(|k| k.kind() == "given").map(|k| k.end_byte())?;
+    let kw_end = node
+        .child(0)
+        .filter(|k| k.kind() == "given")
+        .map(|k| k.end_byte())?;
     if t.start_byte() != kw_end {
         return None;
     }
