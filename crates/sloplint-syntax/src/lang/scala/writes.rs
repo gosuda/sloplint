@@ -128,6 +128,16 @@ fn def_param_named<'s>(cx: &Cx<'_, 's>, def: Node<'_>, name: &str) -> bool {
             })
     })
 }
+// Whether `node` is a `class_parameter` declaring `name`: a constructor
+// parameter is a value in scope throughout the class body, so a call
+// through it targets the parameter's `apply`, not an outer method of the
+// same name. The grammar holds it as `class_parameter` under a
+// `class_parameters` clause list, not as a definition, so the binding scan
+// in the verdict walk misses it without this check.
+fn class_param_named<'s>(cx: &Cx<'_, 's>, node: Node<'_>, name: &str) -> bool {
+    node.kind() == "class_parameter"
+        && child_by_field(node, "name").is_some_and(|nm| unquote(text(cx, nm)) == name)
+}
 
 fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option<bool> {
     let args = n.parent().filter(|p| p.kind() == "arguments")?;
@@ -184,6 +194,25 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
         }
         if bound.iter().any(|(name, _)| unquote(name) == fname)
             || bound_names.iter().any(|name| unquote(name) == fname)
+        {
+            return None;
+        }
+        // A constructor parameter of an enclosing class shadows an outer
+        // method of the same name everywhere in the class body. Like a
+        // method's own formals, a parameter is out of scope in its own
+        // clause, so only clauses ending before the call count: never the
+        // clause list the walk stands on when the call sits inside a
+        // constructor default, and never a later clause.
+        let mut holders = Vec::new();
+        for d in named_children(s) {
+            if d.kind() == "class_parameters" && d.end_byte() <= n.start_byte() {
+                holders.push(d);
+            }
+        }
+        if holders
+            .iter()
+            .flat_map(|h| named_children(*h))
+            .any(|p| class_param_named(cx, p, fname))
         {
             return None;
         }

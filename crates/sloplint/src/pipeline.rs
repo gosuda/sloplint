@@ -213,9 +213,18 @@ fn analyze_file(
         role: pipe.roles.role(entry.rel.as_str()),
     };
     let analysis = analyze(parsers, &input, pipe.custom);
-    let world = world::facts(&analysis);
+    file_output(pipe, entry.rel.as_str(), probe, &analysis)
+}
+
+fn file_output(
+    pipe: &Pipeline<'_>,
+    rel: &str,
+    probe: &Probe<'_>,
+    analysis: &Analysis<'_>,
+) -> FileOutput {
+    let world = world::facts(analysis);
     let text = SourceText {
-        path: entry.rel.as_str(),
+        path: rel,
         source: probe.text,
         line_starts: &analysis.facts.line_starts,
     };
@@ -227,9 +236,14 @@ fn analyze_file(
     // alongside the findings the salvaged parse produced rather than either
     // or.
     let mut findings: Vec<Finding> = match analysis.parse_error {
+        // Past the parse budget there is no tree to judge: the file keeps
+        // one timeout finding, the same shape as an unparseable file.
+        Some(pos) if analysis.timed_out => {
+            pipe.rules.parse_timeout(&text, pos).into_iter().collect()
+        }
         Some(pos) if !analysis.partial => pipe.rules.parse_error(&text, pos).into_iter().collect(),
         _ => {
-            let mut found = rule_findings(pipe, &analysis);
+            let mut found = rule_findings(pipe, analysis);
             if analysis.partial {
                 // On a rescued parse, file-wide aggregates miscount and
                 // findings inside excised constructs judge truncated code.
@@ -253,6 +267,7 @@ fn analyze_file(
     FileOutput {
         hash: probe.hash,
         parsed: analysis.parse_error.is_none(),
+        timed_out: analysis.timed_out,
         findings,
         suppressions,
         world,
@@ -292,12 +307,15 @@ pub(crate) fn count_in_scope(analyzed: &[Analyzed], scopes: &Scopes) -> u32 {
     )
 }
 
+/// A timed-out analysis reflects host load as much as the source: stored,
+/// it would replay the timeout on every later run of the unchanged file,
+/// so it stays in this run's report only and the next run parses again.
 pub(crate) fn store_if_touched(cache: &Cache, analyzed: &[Analyzed], loaded: &Loaded) {
+    let persisted = || analyzed.iter().filter(|file| !file.output.timed_out);
     let touched =
-        analyzed.len() != loaded.entry_count() || analyzed.iter().any(|file| !file.from_cache);
+        persisted().count() != loaded.entry_count() || persisted().any(|file| !file.from_cache);
     if touched {
-        let view: Vec<(&str, &FileOutput)> = analyzed
-            .iter()
+        let view: Vec<(&str, &FileOutput)> = persisted()
             .map(|file| (file.rel.as_str(), &file.output))
             .collect();
         cache.store(&view, loaded);
@@ -574,3 +592,6 @@ mod tests {
         assert_eq!(group[0].context.as_ref(), "");
     }
 }
+
+#[cfg(test)]
+mod timeout_tests;

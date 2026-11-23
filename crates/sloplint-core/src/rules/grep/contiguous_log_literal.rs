@@ -80,6 +80,12 @@ impl FileRule for ContiguousLogLiteral {
         if matches!(facts.lang, Lang::Lean) {
             return;
         }
+        // Print and PrintT with dynamic arguments are the only
+        // observability in TLA+; in test models Print("Test 3", TRUE) IS
+        // the test oracle, so every firing is noise.
+        if matches!(facts.lang, Lang::Tlaplus) {
+            return;
+        }
         let Some(patterns) = self.log_callees.get(facts.lang.config_key()) else {
             return;
         };

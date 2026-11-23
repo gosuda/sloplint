@@ -8,9 +8,11 @@ use super::unique_patch_lines::{is_comment_line, is_strong_line, is_substantive,
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Function, Pos};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift, role_at};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, parse_options};
 
+const LOGOS_MIN_REPEATS: usize = 5;
 const MIN_STRONG_LINES: usize = 3;
 const FIX: &str =
     "fold the repeated block into a loop over a table or one helper so each edit site is unique";
@@ -77,9 +79,26 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for UniquePatchAnchors {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // TLA+ repeats blocks by design: generated PlusCal translations,
+        // TLC trace and model records, and proof-step BY references repeat
+        // identical blocks, so every firing is noise.
+        if matches!(facts.lang, Lang::Tlaplus) {
+            return;
+        }
+        let min_repeats = self.effective_min_repeats(facts.lang);
         let segments = kept_segments(facts.source);
-        for run in self.repeated_runs(&segments) {
-            self.report(facts, &segments, &run, out);
+        for run in self.repeated_runs(&segments, min_repeats) {
+            self.report(facts, &segments, &run, min_repeats, out);
+        }
+    }
+}
+
+impl UniquePatchAnchors {
+    fn effective_min_repeats(&self, lang: Lang) -> usize {
+        if lang == Lang::Logos {
+            self.min_repeats.max(LOGOS_MIN_REPEATS)
+        } else {
+            self.min_repeats
         }
     }
 }
@@ -161,12 +180,12 @@ impl UniquePatchAnchors {
         groups
     }
 
-    fn repeated_runs(&self, segments: &[Vec<Entry<'_>>]) -> Vec<Run> {
+    fn repeated_runs(&self, segments: &[Vec<Entry<'_>>], min_repeats: usize) -> Vec<Run> {
         let mut repeated: Vec<Vec<Occ>> = self
             .repeated_windows(segments)
             .into_values()
             .filter_map(|starts| match starts {
-                Starts::Many(starts) if starts.len() >= self.min_repeats => Some(starts),
+                Starts::Many(starts) if starts.len() >= min_repeats => Some(starts),
                 _ => None,
             })
             .collect();
@@ -191,7 +210,7 @@ impl UniquePatchAnchors {
             if let Some(run) = (1..=lengths.len()).rev().find_map(|windows| {
                 let span = self.window + windows - 1;
                 let survivors = &first[..lengths[windows - 1]];
-                (non_overlapping(survivors, span).len() >= self.min_repeats).then(|| Run {
+                (non_overlapping(survivors, span).len() >= min_repeats).then(|| Run {
                     starts: survivors.to_vec(),
                     span,
                 })
@@ -207,6 +226,7 @@ impl UniquePatchAnchors {
         facts: &FileFacts<'_>,
         segments: &[Vec<Entry<'_>>],
         run: &Run,
+        min_repeats: usize,
         out: &mut Vec<Finding>,
     ) {
         let starts: Vec<u32> = non_overlapping(&run.starts, run.span)
@@ -218,7 +238,7 @@ impl UniquePatchAnchors {
             })
             .map(|occ| segments[occ.seg][occ.at].line)
             .collect();
-        if starts.len() < self.min_repeats {
+        if starts.len() < min_repeats {
             return;
         }
         let Some(least_lowered) = starts
