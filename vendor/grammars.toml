@@ -151,7 +151,7 @@ abi = 15
 patch = "vendor/tree-sitter-go/sloplint-grammar.patch"
 patch_status = "upstream-pending"
 patch_upstream = "https://github.com/tree-sitter/tree-sitter-go/pull/202"
-notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. Master is 2 CI-only commits past the tag with src/parser.c untouched. PRs #202 (G1), #198 (G2), #190 (shadowed make/new) overlap; G3/G4/G5 stay self-authored."
+notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. Master is 2 CI-only commits past the tag with src/parser.c untouched. G1 cherry-picked from PR #202 commit e9739428 (open, unmerged; PR head e9739428) and G2 from PR #198 commit 9c4b082 (open, unmerged; PR head 2a37d91d), both with upstream authorship; G3/G4/G5 stay self-authored. PR #190 (shadowed make/new) overlaps #202 with an alternative rework and stays watched."
 
 [[grammar]]
 name = "tree-sitter-java"

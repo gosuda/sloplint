@@ -7,6 +7,15 @@ Date: 2026-10-20.
 - Upstream repo: https://github.com/tree-sitter/tree-sitter-go
 - Upstream tag: v0.25.0 (commit 1547678a9da59885853f5f5cc8a99cc203fa2e2c)
 - Published crate: tree-sitter-go 0.25.0. Name and version are unchanged.
+- Upstream fixes, both open and unmerged, cherry-picked onto the tag in a
+  scratch clone (upstream authorship preserved, both apply cleanly):
+  PR #202 commit e97394289ad02c28ca4c60ad1ed2673b9cb90661 (Jake Howard,
+  2026-11-11, "Accept an expression as the first argument of new (Go 1.26)",
+  PR head e9739428) for G1, and PR #198 commit
+  9c4b08267126b75137ae868c59f40230bb18dfb0 (YodaLee, 2026-08-18, "Add
+  support type parameter to method_declaration", PR head 2a37d91d) for G2.
+  PR #190 (shadowed make/new) overlaps #202's hunk with an alternative
+  rework and is not taken; it stays watched (see Behaviour changes).
 - Files copied unchanged from the published crate: Cargo.toml, LICENSE, README.md,
   tree-sitter.json, bindings/rust/lib.rs, bindings/rust/build.rs, queries/*.
 - Changed: grammar.js, src/ (regenerated), test/corpus/literals.txt (one expectation).
@@ -24,18 +33,26 @@ Date: 2026-10-20.
   drops the `_type` supertype entry (`_type` is both a supertype and inlined, and 0.27.1
   warns and ignores the supertype). These differences exist without any sloplint patch.
 - parser.c is 1703326 bytes (published: 1572685 bytes). STATE_COUNT is 1553 (was 1442).
+- Regenerating after the PR #202/#198 cherry-picks reproduces parser.c and
+  node-types.json byte for byte (the picked rules are identical in substance
+  to the retired self-patch); only src/grammar.json changes, in the order of
+  the `conflicts` list, because the upstream conflict entry now sits where
+  upstream put it instead of at the end.
 
 ## grammar.js changes
 
 `sloplint-grammar.patch` is the unified diff against the v0.25.0 grammar.js.
 Apply it from this directory with `patch -p1 < sloplint-grammar.patch` on the upstream file.
-
-- G1, `new` with a value: `special_argument_list` takes `choice(prec.dynamic(2, _type),
-  _expression)` as its first element. `new(42)` and `new(int64(-64))` parse. A type still
-  wins when both readings fit, so `new(int)`, `new(a.B)` and `make([]int, n)` keep their
+- G1, `new` with a value (upstream PR #202, commit e9739428, kept verbatim
+  including its comment): `special_argument_list` takes
+  `choice(prec.dynamic(2, _type), _expression)` as its first element.
+  `new(42)` and `new(int64(-64))` parse. A type still wins when both
+  readings fit, so `new(int)`, `new(a.B)` and `make([]int, n)` keep their
   shape. A shadowed `new` called like a function parses the same way.
-- G2, generic method declaration: `method_declaration` gets an optional `type_parameters`
-  field after the name. One new conflict: `[type_parameter_declaration, _simple_type]`.
+- G2, generic method declaration (upstream PR #198, commit 9c4b082, kept
+  verbatim): `method_declaration` gets an optional `type_parameters` field
+  after the name, plus the conflict
+  `[type_parameter_declaration, _simple_type]`.
 - G3, type literal as method-expression base: `selector_expression.operand` also accepts
   `struct_type`, `interface_type`, and a parenthesized type made only of struct types,
   interface types, pointers to them, and parentheses. The parenthesized form is aliased to
@@ -54,13 +71,15 @@ Apply it from this directory with `patch -p1 < sloplint-grammar.patch` on the up
 - G5, single-line const group: `const_declaration` uses `optionalTrailingSep(const_spec,
   terminator)`, so the last spec may be followed directly by `)`.
 
-Node kinds and fields read by crates/sloplint-syntax/src/lang/go.rs are unchanged:
-`function_declaration`, `method_declaration` (fields name, parameters, result, body),
-`statement_list`, `call_expression`, `selector_expression` (fields operand, field),
+Node kinds read by crates/sloplint-syntax/src/lang/go.rs are unchanged:
+`function_declaration`, `method_declaration`, `statement_list`,
+`call_expression`, `selector_expression` (fields operand, field),
 `if_statement` (fields condition, consequence, alternative), `var_declaration`,
-`type_spec`, `composite_literal`, `default_case`. node-types.json gains the
-`method_declaration.type_parameters` field and lists the statement kinds under
-`statement_list` one by one instead of through `_statement`.
+`type_spec`, `composite_literal`, `default_case`. The adapter reads
+`method_declaration` by field name, so the new `type_parameters` field is
+ignored by it. node-types.json gains the `method_declaration.type_parameters`
+field and lists the statement kinds under `statement_list` one by one instead
+of through `_statement`.
 
 ## Constructs verified fixed
 
@@ -99,6 +118,11 @@ Each repro is accepted by `gofmt` and by the Go 1.27.2 compiler.
   or `iota` node. They used to yield a `type_identifier`. The Go adapter reads neither.
 - `;;;` runs yield one `empty_statement` per extra `;`. A trailing comment after a final
   empty statement now sits after the `statement_list`, not inside it.
+- Upstream PR #190 (open, "Fixed call parsing for shadowed make/new") reworks
+  the same `special_argument_list` area with a `builtin_argument_list`
+  alternative instead of the in-place `choice` taken here from PR #202. The
+  two do not compose, so #190 is not taken; it stays watched for the case
+  of a shadowed `make`/`new`.
 - Real sloplint binaries, built from the unpatched and the patched grammar, run with
   `--no-cache --format json --fail-on never --rule meta/parse-error`. Go files that report
   `meta/parse-error`: 164 to 121 under ~/go/pkg/mod (75625 files), 148 to 118 under
