@@ -54,19 +54,6 @@ fn run_clean(source: &str) -> Analysis<'_> {
     analysis
 }
 
-fn sexp_of(source: &str) -> String {
-    let language: tree_sitter::Language = tree_sitter_scala::LANGUAGE.into();
-    let mut parser = tree_sitter::Parser::new();
-    parser
-        .set_language(&language)
-        .expect("scala language loads");
-    parser
-        .parse(source, None)
-        .expect("parser returns a tree")
-        .root_node()
-        .to_sexp()
-}
-
 fn callees<'a>(analysis: &Analysis<'a>) -> Vec<&'a str> {
     analysis.facts.calls.iter().map(|c| c.callee).collect()
 }
