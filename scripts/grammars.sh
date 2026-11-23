@@ -299,6 +299,9 @@ cmd_verify() {
   done < <(cd "$work/upstream" && find . -path "*/src/grammar.json" -o -path "*/src/node-types.json" -o -path "*/src/parser.c" | sort)
   # Compare external scanner sources too: scanner drift changes parsing
   # behavior without changing any generated artifact (e.g. powershell).
+  # Headers compiled into the scanner ride along (e.g. quint); the
+  # CLI-owned src/tree_sitter/ support headers stay out because the
+  # pinned generator rewrites them, not the upstream checkout.
   while IFS= read -r sf; do
     rel="${sf#./}"
     if [ -f "$ROOT/vendor/$name/$rel" ]; then
@@ -310,7 +313,7 @@ cmd_verify() {
       printf 'grammars.sh verify: %s: missing vendor artifact: %s\n' "$name" "$rel" >&2
       diffs=1
     fi
-  done < <(cd "$work/upstream" && find . -path "*/src/scanner.c" -o -path "*/src/scanner.cc" -o -path "*/common/scanner.h" | sort)
+  done < <(cd "$work/upstream" && find . \( -path "*/src/scanner.c" -o -path "*/src/scanner.cc" -o -path "*/common/scanner.h" -o -path "*/src/*.h" \) -not -path "*/src/tree_sitter/*" | sort)
   if [ "$diffs" -ne 0 ]; then
     die "$name: regenerated tree differs from vendor/$name"
   fi
