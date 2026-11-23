@@ -1,0 +1,506 @@
+# Pinned upstream commits for the vendored tree-sitter grammars.
+#
+# One [[grammar]] table per directory under vendor/tree-sitter-*/ (29),
+# plus the crates.io dependency tree-sitter-r (kind "crate").
+# This file describes what is vendored TODAY. It never changes grammar
+# content; bumps are separate commits that re-vendor and regenerate.
+#
+# kind: "vendored-patched" (upstream plus a patch series),
+#   "vendored-pristine" (upstream tree vendored without grammar changes),
+#   "own" (no upstream; only tree-sitter-logos),
+#   "crate" (used directly from crates.io; only tree-sitter-r).
+# commit: full 40-hex upstream commit the vendored base corresponds to.
+#   For crates.io bases this is the .cargo_vcs_info.json sha1 of the
+#   published crate version. UNRESOLVED is allowed only for
+#   tree-sitter-logos (own dialect, no upstream commit exists).
+# generator: tree-sitter CLI that produced the vendored src/ (SLOPLINT.md
+#   claim corrected against src/parser.c LANGUAGE_VERSION; see notes).
+# abi: LANGUAGE_VERSION carried by the vendored src/parser.c
+#   (14 for c, odin, tlaplus; 15 for everything else vendored).
+# patch: path to sloplint-grammar.patch, or "" when there is no patch.
+# patch_status: "none" | "local" | "upstream-pending".
+# patch_upstream: upstream PR, issue, commit, or release the patch follows,
+#   or "" when there is none.
+#
+# Tooling: scripts/grammars.sh check (offline) enforces the manifest
+# invariants. See vendor/README.md for the pinning policy.
+
+[[grammar]]
+name = "tree-sitter-alloy"
+language = "alloy"
+kind = "vendored-patched"
+upstream = "https://github.com/vincentlu/tree-sitter-alloy"
+commit = "7bcc865b0d12ff4f20876efd072fd1bc11faff48"
+tag = ""
+crate = ""
+crate_version = ""
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-alloy/sloplint-grammar.patch"
+patch_status = "local"
+patch_upstream = ""
+notes = "Unpublished (no crates.io or npm package). Pin is HEAD main 2026-03-14, which equals head: nothing newer upstream. Cargo.toml is local (corrects upstream repository URL, modern LANGUAGE binding). src/ regenerated with CLI 0.27.1, ABI 15, STATE_COUNT 1439."
+
+[[grammar]]
+name = "tree-sitter-bash"
+language = "bash"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-bash"
+commit = "a06c2e4415e9bc0346c6b86d401879ffb44058f7"
+tag = "v0.25.1"
+crate = "tree-sitter-bash"
+crate_version = "0.25.1"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-bash/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-bash/pull/368"
+notes = "Tag v0.25.1 is lightweight (no ^{} dereference) and matches the crate vcs_info. Latest release equals vendored. Open PR #368 covers 2 of 11 hunks; issues #232 and #260 cover the herestring shape; the rest is self-authored."
+
+[[grammar]]
+name = "tree-sitter-c"
+language = "c"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-c"
+commit = "b780e47fc780ddc8da13afa35a3f4ed5c157823d"
+tag = "v0.24.2"
+crate = "tree-sitter-c"
+crate_version = "0.24.2"
+generator = "0.24.7"
+abi = 14
+patch = "vendor/tree-sitter-c/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-c/pull/331"
+notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. Master head is the tag commit. Latest release equals vendored. Proof pending per audit lane G2; PR #331 plus #329 overlap the C23 shapes, macro machinery has no upstream source."
+
+[[grammar]]
+name = "tree-sitter-c-sharp"
+language = "c-sharp"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-c-sharp"
+commit = "cac6d5fb595f5811a076336682d5d595ac1c9e85"
+tag = "v0.23.5"
+crate = "tree-sitter-c-sharp"
+crate_version = "0.23.5"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-c-sharp/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-c-sharp/pull/429"
+notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. Newer upstream release 0.24.0 (2026-11-18) absorbs the allows-struct, file-based #: directives, ref-partial, and pointer-deref hunks; master holds further candidates. Proof running per audit lane G2."
+
+[[grammar]]
+name = "tree-sitter-cpp"
+language = "cpp"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-cpp"
+commit = "f41e1a044c8a84ea9fa8577fdd2eab92ec96de02"
+tag = "v0.23.4"
+crate = "tree-sitter-cpp"
+crate_version = "0.23.4"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-cpp/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-cpp/pull/375"
+notes = "SLOPLINT.md names CLI 0.24.7, but the vendored src/parser.c.gz unpacks to LANGUAGE_VERSION 15, so the tree was regenerated with 0.27.x; manifest records the real generator. Tag commit matches the crate vcs_info. Upstream head has 17 grammar.js commits past the tag (ABI 15 at head); PR #375 covers standard-syntax gaps only, not the Qt/macro/Win32 machinery. Proof pending per audit lane G2."
+
+[[grammar]]
+name = "tree-sitter-dafny"
+language = "dafny"
+kind = "vendored-patched"
+upstream = "https://github.com/hath995/tree-sitter-dafny"
+commit = "8085572ab23ba703a1f5c1cf753136a3508c68a6"
+tag = ""
+crate = "tree-sitter-dafny"
+crate_version = "0.1.0"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-dafny/sloplint-grammar.patch"
+patch_status = "local"
+patch_upstream = ""
+notes = "No tags or releases; pin is HEAD main 2026-06-30 and matches the crate vcs_info. Latest crate equals vendored. Patch tolerates stray semicolons; no upstream PR or issue overlaps."
+
+[[grammar]]
+name = "tree-sitter-dart"
+language = "dart"
+kind = "vendored-patched"
+upstream = "https://github.com/nielsenko/tree-sitter-dart"
+commit = "b57d734c84f510bbd524097902cab671e4dbfca9"
+tag = "v0.2.0"
+crate = "tree-sitter-dart"
+crate_version = "0.2.0"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-dart/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/nielsenko/tree-sitter-dart/tree/v0.3.0"
+notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. SLOPLINT.md said the tag was not verified; resolved here via ls-remote plus vcs_info. Newer upstream tag v0.3.0 (2026-10-25) is a rewrite under test per audit lane G4."
+
+[[grammar]]
+name = "tree-sitter-go"
+language = "go"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-go"
+commit = "1547678a9da59885853f5f5cc8a99cc203fa2e2c"
+tag = "v0.25.0"
+crate = "tree-sitter-go"
+crate_version = "0.25.0"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-go/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-go/pull/202"
+notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. Master is 2 CI-only commits past the tag with src/parser.c untouched. PRs #202 (G1), #198 (G2), #190 (shadowed make/new) overlap; G3/G4/G5 stay self-authored."
+
+[[grammar]]
+name = "tree-sitter-java"
+language = "java"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-java"
+commit = "94703d5a6bed02b98e438d7cad1136c01a60ba2c"
+tag = "v0.23.5"
+crate = "tree-sitter-java"
+crate_version = "0.23.5"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-java/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-java/pull/206"
+notes = "Tag commit matches the crate vcs_info. Master has zero grammar.js commits past the tag. One-hunk patch; PR #206 carries the equivalent fix unmerged."
+
+[[grammar]]
+name = "tree-sitter-javascript"
+language = "javascript"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-javascript"
+commit = "44c892e0be055ac465d5eeddae6d3e194424e7de"
+tag = "v0.25.0"
+crate = "tree-sitter-javascript"
+crate_version = "0.25.0"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-javascript/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-javascript/issues/337"
+notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. SLOPLINT.md names the tag without a commit; resolved here. Master is 2 CI-only commits past the tag. Issues #337 (tagged-template escapes) and #391 (for-using initializer) track two hunks with no PR; the rest is self-authored."
+
+[[grammar]]
+name = "tree-sitter-kotlin-ng"
+language = "kotlin"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter-grammars/tree-sitter-kotlin"
+commit = "77dd60ea0a9003ce062c9728a513ffe1aaff8c82"
+tag = "v1.1.0"
+crate = "tree-sitter-kotlin-ng"
+crate_version = "1.1.0"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-kotlin-ng/sloplint-grammar.patch"
+patch_status = "local"
+patch_upstream = ""
+notes = "Tag commit matches the crate vcs_info. SLOPLINT.md names no CLI version; manifest records 0.27.1 from the ABI 15 src/parser.c. fwcd/tree-sitter-kotlin alternative under test per audit lane G4; no upstream PR cited for the patch."
+
+[[grammar]]
+name = "tree-sitter-lean"
+language = "lean"
+kind = "vendored-patched"
+upstream = "https://github.com/Julian/tree-sitter-lean"
+commit = "0d28e5d6e8c4755f5df7ef9bde3b6ec6f59fae94"
+tag = ""
+crate = ""
+crate_version = ""
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-lean/sloplint-grammar.patch"
+patch_status = "local"
+patch_upstream = ""
+notes = "Unpublished on crates.io and npm. No tags; pin is the PR #30 merge on main dated 2026-11-01. Manifest records the short-prefix-resolvable commit; the SLOPLINT.md full-sha spelling differs by two hex characters per the grounding record and should be fixed there (grammar content unchanged in this lane). Reference clone sits 3 commits ahead at fefc2eff. src/parser.c.gz is ABI 15."
+
+[[grammar]]
+name = "tree-sitter-logos"
+language = "logos"
+kind = "own"
+upstream = ""
+commit = "UNRESOLVED"
+tag = ""
+crate = ""
+crate_version = ""
+generator = "0.27.2"
+abi = 15
+patch = "vendor/tree-sitter-logos/sloplint-grammar.patch"
+patch_status = "local"
+patch_upstream = ""
+notes = "Only grammar with no upstream. Base is vendor/tree-sitter-go (upstream v0.25.0 plus sloplint patches G1-G5); the patch is the diff from that base to the logos grammar.js. UNRESOLVED is by design here, not a missing pin."
+
+[[grammar]]
+name = "tree-sitter-objc"
+language = "objc"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter-grammars/tree-sitter-objc"
+commit = "18802acf31d0b5c1c1d50bdbc9eb0e1636cab9ed"
+tag = "v3.0.2"
+crate = "tree-sitter-objc"
+crate_version = "3.0.2"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-objc/sloplint-grammar.patch"
+patch_status = "local"
+patch_upstream = ""
+notes = "Tag commit matches the crate vcs_info. Master is byte-identical to the tag in grammar.js. Regen rides the vendored patched C base via NODE_PATH. No upstream PR source; master is static since 2025-01-31."
+
+[[grammar]]
+name = "tree-sitter-ocaml"
+language = "ocaml"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-ocaml"
+commit = "e3c9cf368f68bffd2f81188229aefa7b434eda65"
+tag = "v0.26.0"
+crate = "tree-sitter-ocaml"
+crate_version = "0.26.0"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-ocaml/sloplint-grammar.patch"
+patch_status = "local"
+patch_upstream = ""
+notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. SLOPLINT.md names no tag; resolved here via vcs_info plus ls-remote plus the grounding record (latest release v0.26.0). Three grammars (ocaml, interface, type) regenerated together; all three src/parser.c files are ABI 15. No upstream PR cited; audit proof pending."
+
+[[grammar]]
+name = "tree-sitter-odin"
+language = "odin"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter-grammars/tree-sitter-odin"
+commit = "e8adc739b78409a99f8c31313f0bb54cc538cf73"
+tag = "v1.3.0"
+crate = "tree-sitter-odin"
+crate_version = "1.3.0"
+generator = "0.24.7"
+abi = 14
+patch = "vendor/tree-sitter-odin/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter-grammars/tree-sitter-odin/pull/24"
+notes = "Repository transferred from amaanq to tree-sitter-grammars; both URLs resolve to the same head. Tag commit matches the crate vcs_info. Closed PR #24 is the unreleased named_type multi-identifier commit d2ca8ef past the release; open PRs #34, #37, #38 overlap the for-init, unary **, and tag-statement hunks."
+
+[[grammar]]
+name = "tree-sitter-php"
+language = "php"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-php"
+commit = "58d5643086ae60e93a3746cca648363ee97c8761"
+tag = "v0.25.1"
+crate = "tree-sitter-php"
+crate_version = "0.25.1"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-php/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-php/releases/tag/v0.25.2"
+notes = "Tag commit matches the crate vcs_info. Nested layout: common/define-grammar.js plus common/scanner.h feed both php/ and php_only/ dialects (both ABI 15). Newer upstream v0.25.2 absorbs the cast-word, clone-operand hunks; the trailing-comma, NUL, interpolation, and heredoc hunks stay self-authored."
+
+[[grammar]]
+name = "tree-sitter-powershell"
+language = "powershell"
+kind = "vendored-patched"
+upstream = "https://github.com/airbus-cert/tree-sitter-powershell"
+commit = "d398441825243b00e317e87e1829b9d6a3e54ce0"
+tag = "v0.26.4"
+crate = "tree-sitter-powershell"
+crate_version = "0.26.4"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-powershell/sloplint-grammar.patch"
+patch_status = "local"
+patch_upstream = ""
+notes = "Vendored base is the published crate, whose vcs_info equals tag v0.26.5, not the recorded tag v0.26.4 (4ffe56d6); grammar.js and scanner.c are byte-identical between those tags per SLOPLINT.md. Newer upstream v0.26.6 absorbs about 4 of 31 hunks (native-argument parsing); the rest, including all scanner work and the ternary node, is self-authored."
+
+[[grammar]]
+name = "tree-sitter-python"
+language = "python"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-python"
+commit = "293fdc02038ee2bf0e2e206711b69c90ac0d413f"
+tag = "v0.25.0"
+crate = "tree-sitter-python"
+crate_version = "0.25.0"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-python/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-python/issues/346"
+notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. Master has one non-grammar commit past the tag. PEP 696 defaults (#346), starred lists (#355), lazy import (#336), and PEP 798 (#353) have open issues or PRs; the rest is self-authored."
+
+[[grammar]]
+name = "tree-sitter-quint"
+language = "quint"
+kind = "vendored-pristine"
+upstream = "https://github.com/LegacyCodeHQ/tree-sitter-quint"
+commit = "f3b26e68c4f9a9b1153f7198c23c628c57b6dece"
+tag = "v0.33.0"
+crate = ""
+crate_version = ""
+generator = "0.27.0"
+abi = 15
+patch = ""
+patch_status = "none"
+patch_upstream = ""
+notes = "Not on crates.io; consumed from the GitHub tree (release channel is npm dist-tags, latest 0.33.0). grammar.js and grammar/definition-boundaries.js are verbatim, so the patch file is empty. src/ is the upstream 0.27.0 artifact (ABI 15). Local deviation only in src/quint_boundaries.h (max_align_t replaced for MSVC); re-apply on refresh. Main is 54 commits ahead of the pin."
+
+[[grammar]]
+name = "tree-sitter-racket"
+language = "racket"
+kind = "vendored-pristine"
+upstream = "https://github.com/6cdh/tree-sitter-racket"
+commit = "b3cbbde75ce2de3079e33c7fe90bd41b1d45be48"
+tag = "v0.25.0"
+crate = "tree-sitter-racket"
+crate_version = "0.25.0"
+generator = "0.26.12"
+abi = 15
+patch = ""
+patch_status = "none"
+patch_upstream = ""
+notes = "No patch file: grammar.js and src/parser.c are byte-identical to the tag. Tag is also HEAD; latest crate equals vendored. No regeneration performed; manifest records the package.json devDependency CLI floor with the kept ABI 15 tree. TAKE-UNPATCHED per the audit lane."
+
+[[grammar]]
+name = "tree-sitter-ruby"
+language = "ruby"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-ruby"
+commit = "71bd32fb7607035768799732addba884a37a6210"
+tag = "v0.23.1"
+crate = "tree-sitter-ruby"
+crate_version = "0.23.1"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-ruby/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-ruby/issues/203"
+notes = "Tag commit matches the crate vcs_info. SLOPLINT.md names the tag without a commit; resolved here. Vendored src/parser.c is ABI 15 (the audit lane summary claim of vendored ABI 14 is rejected by direct read; the grounding record agrees on 15). Issue #203 tracks the block-comment shape; closed-unmerged PR #299 is not landable."
+
+[[grammar]]
+name = "tree-sitter-rust"
+language = "rust"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-rust"
+commit = "e2bee853694a1d3e0f6ef308fe3674542fec95d7"
+tag = "v0.24.2"
+crate = "tree-sitter-rust"
+crate_version = "0.24.2"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-rust/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-rust/pulls"
+notes = "Vendored base is the published crate, whose vcs_info is recorded here. It differs from the tag: ls-remote resolves v0.24.2 to 77a37472, while SLOPLINT.md quotes 77a37477 (transcription error, one hex character). Overlapping open PRs and issues (#250, #256, #271, #301, #312, #317, #319, #322) cover under half the rows; the rest is self-authored."
+
+[[grammar]]
+name = "tree-sitter-scala"
+language = "scala"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-scala"
+commit = "851032fc97297bbe299dabe5bd826f778794d03c"
+tag = "v0.26.3"
+crate = "tree-sitter-scala"
+crate_version = "0.26.3"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-scala/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-scala/releases/tag/v0.26.13"
+notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. Newer upstream 0.26.13 plus 30 unreleased commits; per-hunk verdicts pending per audit lane G4."
+
+[[grammar]]
+name = "tree-sitter-starlark"
+language = "starlark"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter-grammars/tree-sitter-starlark"
+commit = "a453dbf3ba433db0e5ec621a38a7e59d72e4dc69"
+tag = "v1.3.0"
+crate = "tree-sitter-starlark"
+crate_version = "1.3.0"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-starlark/sloplint-grammar.patch"
+patch_status = "local"
+patch_upstream = ""
+notes = "Tag is also HEAD; latest release equals vendored. Published src/ was ABI 14 (CLI 0.24.4); vendored regen with 0.27.1 is ABI 15 with identical states and trees on the 377-file sweep. Assert-statement rework has no upstream PR or issue."
+
+[[grammar]]
+name = "tree-sitter-swift"
+language = "swift"
+kind = "vendored-patched"
+upstream = "https://github.com/alex-pinkus/tree-sitter-swift"
+commit = "171fa3bc343233fe07f5e17205aaada33d778825"
+tag = "0.7.4"
+crate = "tree-sitter-swift"
+crate_version = "0.7.4"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-swift/sloplint-grammar.patch"
+patch_status = "local"
+patch_upstream = ""
+notes = "Tag (no v prefix) matches the crate vcs_info, which carries a dirty flag. Latest tag equals vendored; master is 27 commits ahead, none released. Upstream master commit 5ecda5d covers only the empty-tuple hunk with a conflicting encoding; the rest is self-authored."
+
+[[grammar]]
+name = "tree-sitter-tlaplus"
+language = "tlaplus"
+kind = "vendored-patched"
+upstream = "https://github.com/tlaplus-community/tree-sitter-tlaplus"
+commit = "add40814fda369f6efd989977b2c498aaddde984"
+tag = ""
+crate = ""
+crate_version = ""
+generator = "0.24.7"
+abi = 14
+patch = "vendor/tree-sitter-tlaplus/sloplint-grammar.patch"
+patch_status = "local"
+patch_upstream = ""
+notes = "No crates.io record for version 0.0.0; it is a local stand-in (registry max is 1.5.0, no v prefix; SLOPLINT.md misspells it v1.5.0). Pin is HEAD main, 9 commits past release 1.5.0 for two scanner correctness fixes. One local change (empty files parse clean)."
+
+[[grammar]]
+name = "tree-sitter-typescript"
+language = "typescript"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter/tree-sitter-typescript"
+commit = "f975a621f4e7f532fe322e13c4f79495e0a7b2e7"
+tag = "v0.23.2"
+crate = "tree-sitter-typescript"
+crate_version = "0.23.2"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-typescript/sloplint-grammar.patch"
+patch_status = "upstream-pending"
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-typescript/pull/357"
+notes = "Tag commit matches the crate vcs_info. Builds typescript and tsx parsers (both ABI 15). Extends the sibling vendored javascript grammar, not the npm 0.23.1 base. Open draft PR #357 overlaps the using-hack removal and decorator hunks with a conflicting dependency approach."
+
+[[grammar]]
+name = "tree-sitter-zig"
+language = "zig"
+kind = "vendored-patched"
+upstream = "https://github.com/tree-sitter-grammars/tree-sitter-zig"
+commit = "b670c8df85a1568f498aa5c8cae42f51a90473c0"
+tag = "v1.1.2"
+crate = "tree-sitter-zig"
+crate_version = "1.1.2"
+generator = "0.27.1"
+abi = 15
+patch = "vendor/tree-sitter-zig/sloplint-grammar.patch"
+patch_status = "local"
+patch_upstream = ""
+notes = "Tag commit matches the crate vcs_info. Latest release equals vendored. Upstream test/corpus is absent at the tag, so only the sloplint corpus runs. No upstream PR cited; per-hunk verdicts pending per audit lane G4."
+
+[[grammar]]
+name = "tree-sitter-r"
+language = "r"
+kind = "crate"
+upstream = "https://github.com/r-lib/tree-sitter-r"
+commit = "f2289db204dda2bf7c7ea720de5c2a2c3eff2530"
+tag = "v1.3.0"
+crate = "tree-sitter-r"
+crate_version = "1.3.0"
+generator = ""
+abi = 0
+patch = ""
+patch_status = "none"
+patch_upstream = ""
+notes = "Used directly from crates.io (workspace dependency, no vendor directory). Commit is the published crate vcs_info; it differs from tag v1.3.0 (346d3707). No vendored src, so generator and ABI are not checked locally; the wiki row claims ABI 14 (unverified gap per the grounding record)."
