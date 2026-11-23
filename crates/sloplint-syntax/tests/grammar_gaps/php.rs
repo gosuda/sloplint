@@ -142,3 +142,30 @@ fn heredoc_with_block_comment_body_parses() {
     let unterminated = format!("<?php\n$x = <<<EOF\n<?php\n/*\n{body}*/\ntrailing\n;\n");
     run_error("heredoc_unterminated.php", &unterminated);
 }
+
+// P8: cast words used as a plain function name and as a constant subscript
+// base. The keyword tokens never reach `_name`, which only covers the
+// class-name subset, so each spelling needs its own callable alternative.
+#[test]
+fn cast_word_call_and_subscript_parse() {
+    run_clean(
+        "cast_word_call.php",
+        "<?php\nfunction int($x) { return $x; }\necho int(1);\n",
+    );
+    run_clean(
+        "cast_word_subscript.php",
+        "<?php\nconst OBJECT = [1];\necho OBJECT[0];\n",
+    );
+
+    // Control: a parenthesized cast keeps its `cast_expression` shape.
+    let language: tree_sitter::Language = tree_sitter_php::LANGUAGE_PHP.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).expect("php language loads");
+    let source = "<?php\n$y = (int)$x;\n";
+    let tree = parser.parse(source, None).expect("parser returns a tree");
+    let sexp = tree.root_node().to_sexp();
+    assert!(
+        !tree.root_node().has_error() && sexp.contains("cast_expression"),
+        "a parenthesized cast must stay a cast_expression, sexp: {sexp}"
+    );
+}
