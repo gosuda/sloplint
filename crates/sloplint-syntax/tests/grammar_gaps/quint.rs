@@ -299,3 +299,20 @@ fn call_initializes_only_named_local_values() {
         "only a call that is the whole value of a named local initializes a binding"
     );
 }
+
+#[test]
+fn parenthesized_call_still_initializes_its_local() {
+    let source = "module M {\n  pure def f = {\n    val count = (length([1, 2, 3]))\n    count\n  }\n  pure def g = {\n    val total = ((double([1, 2, 3])))\n    total\n  }\n}\n";
+    let analysis = run_clean(source);
+    let calls: Vec<(&str, bool)> = analysis
+        .facts
+        .calls
+        .iter()
+        .map(|call| (call.callee, call.initializes_binding))
+        .collect();
+    assert_eq!(
+        calls,
+        [("length", true), ("double", true)],
+        "parentheses around the whole value keep the call as the binding initializer"
+    );
+}

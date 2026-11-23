@@ -252,19 +252,25 @@ fn copy_source<'s>(cx: &Cx<'_, 's>, field: Node<'_>) -> Option<&'s str> {
 }
 
 /// True when the call is the whole initializer of a `val` definition or a
-/// `nondet` binding, the two named locals a call can initialize.
+/// `nondet` binding, the two named locals a call can initialize. A grouped
+/// call still initializes its local: parentheses around the whole value do
+/// not move the call out of the binding.
 fn initializes_named_local(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
-    let Some(parent) = cx.parent_of(n) else {
-        return false;
-    };
-    match parent.kind() {
-        "value_definition" => {
-            child_by_field(parent, "value").is_some_and(|value| value.id() == n.id())
+    let mut inner = n;
+    loop {
+        let Some(parent) = cx.parent_of(inner) else {
+            return false;
+        };
+        match parent.kind() {
+            "parenthesized_expression" => {
+                inner = parent;
+            }
+            "value_definition" | "nondet_binding" => {
+                return child_by_field(parent, "value")
+                    .is_some_and(|value| value.id() == inner.id());
+            }
+            _ => return false,
         }
-        "nondet_binding" => {
-            child_by_field(parent, "value").is_some_and(|value| value.id() == n.id())
-        }
-        _ => false,
     }
 }
 
