@@ -12,7 +12,7 @@
 [package]
 edition = "2021"
 name = "tree-sitter-php"
-version = "0.25.1"
+version = "0.25.2"
 authors = [
     "Max Brunsfeld <maxbrunsfeld@gmail.com>",
     "Amaan Qureshi <amaanq12@gmail.com>",

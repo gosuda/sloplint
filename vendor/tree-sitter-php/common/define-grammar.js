@@ -12,7 +12,6 @@
 
 const PREC = {
   COMMA: -1,
-  CAST: -1,
   LOGICAL_OR_2: 1,
   LOGICAL_XOR: 2,
   LOGICAL_AND_2: 3,
@@ -31,15 +30,17 @@ const PREC = {
   SHIFT: 16,
   PLUS: 17,
   TIMES: 18,
-  EXPONENTIAL: 19,
-  NEG: 20,
-  INSTANCEOF: 21,
-  INC: 22,
-  SCOPE: 23,
-  NEW: 24,
-  CALL: 25,
-  MEMBER: 26,
-  DEREF: 27,
+  NEG: 19,
+  INSTANCEOF: 20,
+  CAST: 21,
+  EXPONENTIAL: 22,
+  CLONE: 23,
+  INC: 24,
+  SCOPE: 25,
+  NEW: 26,
+  CALL: 27,
+  MEMBER: 28,
+  DEREF: 29,
 };
 
 /**
@@ -79,6 +80,12 @@ const CAST_TYPES = [
   'array', 'binary', 'bool', 'boolean', 'double', 'float',
   'int', 'integer', 'object', 'real', 'string', 'unset',
 ];
+
+const CAST_TYPE_CONSTANT_NAMES = CAST_TYPES.filter(type => !['array', 'unset'].includes(type));
+
+const CAST_TYPE_CLASS_NAMES = CAST_TYPE_CONSTANT_NAMES.filter(type => ![
+  'bool', 'float', 'int', 'object', 'string',
+].includes(type));
 
 module.exports = function defineGrammar(dialect) {
   if (dialect !== 'php' && dialect !== 'php_only') {
@@ -294,6 +301,7 @@ module.exports = function defineGrammar(dialect) {
 
       _name: $ => choice(
         alias(keyword('static', false), $.name),
+        alias(choice(...CAST_TYPE_CLASS_NAMES.map(type => keyword(type, false))), $.name),
         reserved('classes', $.name),
         $.qualified_name,
         $.relative_name,
@@ -661,8 +669,25 @@ module.exports = function defineGrammar(dialect) {
 
       _return_type: $ => seq(':', field('return_type', choice($.type, $.bottom_type))),
 
-      _const_element: $ => seq($.name, '=', $.expression),
-      _class_const_element: $ => seq(reserved('nothing', $.name), '=', $.expression),
+      _const_element: $ => seq(
+        choice(
+          $.name,
+          alias(choice(...[
+            'bool', 'float', 'int', 'iterable', 'mixed', 'object', 'string', 'void',
+          ].map(type => keyword(type, false))), $.name),
+        ),
+        '=',
+        $.expression,
+      ),
+      _class_const_element: $ => seq(
+        choice(
+          reserved('nothing', $.name),
+          alias($.primitive_type, $.name),
+          alias(keyword('namespace', false), $.name),
+        ),
+        '=',
+        $.expression,
+      ),
 
       echo_statement: $ => seq(keyword('echo'), $._expressions, $._semicolon),
 
@@ -992,25 +1017,22 @@ module.exports = function defineGrammar(dialect) {
         $.cast_expression,
       ),
 
-      unary_op_expression: $ => prec.left(PREC.NEG, seq(
-        field('operator', choice('+', '-', '~', '!')),
-        field('argument', $.expression),
-      )),
+      unary_op_expression: $ => choice(
+        ...['+', '-', '~', '!'].map(operator => prec.left(
+          operator === '!' ? PREC.NEG : PREC.CAST,
+          seq(field('operator', operator), field('argument', $.expression)),
+        )),
+      ),
 
-      error_suppression_expression: $ => prec(PREC.INC, seq('@', $.expression)),
+      error_suppression_expression: $ => prec.right(PREC.CAST, seq('@', $.expression)),
 
-      clone_expression: $ => seq(
+      clone_expression: $ => prec.right(PREC.CLONE, seq(
         keyword('clone'),
         choice(
-          $.primary_expression,
+          $.expression,
           field('arguments', $.arguments),
-          // `clone` takes a full expression in PHP, so `clone $a = $b` and
-          // `clone $a ??= $b` (and chains through further `clone`s) parse with
-          // the assignment as the clone operand.
-          $.assignment_expression,
-          $.augmented_assignment_expression,
         ),
-      ),
+      )),
 
       primary_expression: $ => choice(
         $._variable,
@@ -1019,6 +1041,10 @@ module.exports = function defineGrammar(dialect) {
         $.qualified_name,
         $.relative_name,
         $.name,
+        prec(-1, alias(
+          choice(...CAST_TYPE_CONSTANT_NAMES.map(type => keyword(type, false))),
+          $.name,
+        )),
         $.array_creation_expression,
         $.print_intrinsic,
         $.anonymous_function,
@@ -1088,21 +1114,11 @@ module.exports = function defineGrammar(dialect) {
         ));
       },
 
-      cast_expression: $ => prec(PREC.CAST, seq(
+      cast_expression: $ => prec.right(PREC.CAST, seq(
         '(',
         field('type', $.cast_type),
         ')',
-        field('value', choice(
-          $._unary_expression,
-          $.include_expression,
-          $.include_once_expression,
-          $.error_suppression_expression,
-        )),
-      )),
-
-      cast_variable: $ => prec(PREC.CAST, seq(
-        '(', field('type', $.cast_type), ')',
-        field('value', $._variable),
+        field('value', $.expression),
       )),
 
       assignment_expression: $ => prec.right(PREC.ASSIGNMENT, seq(
@@ -1153,7 +1169,6 @@ module.exports = function defineGrammar(dialect) {
       )),
 
       _variable: $ => choice(
-        alias($.cast_variable, $.cast_expression),
         $._new_variable,
         $._callable_variable,
         $.scoped_property_access_expression,
@@ -1245,7 +1260,15 @@ module.exports = function defineGrammar(dialect) {
       ),
 
       function_call_expression: $ => prec(PREC.CALL, seq(
-        field('function', choice($._name, $._callable_expression)),
+        field('function', choice(
+          $._name,
+          // Cast words double as plain function names (`int($x)`), so the
+          // constant spellings are callable even though `_name` only covers
+          // the class-name subset. Real casts keep their parentheses, so
+          // this cannot match a `cast_expression`.
+          alias(choice(...CAST_TYPE_CONSTANT_NAMES.map(type => keyword(type, false))), $.name),
+          $._callable_expression,
+        )),
         field('arguments', $.arguments),
       )),
 
@@ -1267,17 +1290,6 @@ module.exports = function defineGrammar(dialect) {
         $.relative_scope,
         $._name,
         $._dereferencable_expression,
-        // Class names that coincide with cast keywords (e.g. `Binary::class`).
-        // `binary`, `boolean`, `double`, `integer` and `real` are valid class
-        // names in PHP; the remaining cast keywords are reserved words and
-        // stay rejected here.
-        alias(choice(
-          keyword('binary', false),
-          keyword('boolean', false),
-          keyword('double', false),
-          keyword('integer', false),
-          keyword('real', false),
-        ), $.name),
       ),
 
       relative_scope: _ => prec(PREC.SCOPE, choice(
@@ -1304,10 +1316,6 @@ module.exports = function defineGrammar(dialect) {
           $.variadic_unpacking,
           $.expression,
           $.argument_placeholder,
-          prec(-1, alias(
-            choice(...CAST_TYPES.map(type => keyword(type, false))),
-            $.name,
-          )),
         ),
       ),
 
@@ -1370,6 +1378,10 @@ module.exports = function defineGrammar(dialect) {
         $.parenthesized_expression,
         $._dereferencable_scalar,
         $._name,
+        // A constant spelling (`OBJECT[0]`) dereferences the constant, not a
+        // class: the keyword token cannot reach `_name`, which only covers
+        // the class-name subset.
+        alias(choice(...CAST_TYPE_CONSTANT_NAMES.map(type => keyword(type, false))), $.name),
       )),
 
       _dereferencable_scalar: $ => prec(PREC.DEREF, choice(
@@ -1597,7 +1609,7 @@ module.exports = function defineGrammar(dialect) {
 
       binary_expression: $ => choice(
         prec(PREC.INSTANCEOF, seq(
-          field('left', $._unary_expression),
+          field('left', $.expression),
           field('operator', keyword('instanceof')),
           field('right', $._class_name_reference),
         )),
