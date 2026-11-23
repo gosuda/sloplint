@@ -1,3 +1,12 @@
+# Provenance for the cherry-picked hunks below (base: upstream master
+# 6479aa13f32f701c383083d8b28360ebd682fb7d).
+# Upstream PR #43 commit a940925bbc91089ea8857e37d37657c1f07807ac, carried
+# verbatim (the four `bitpack` declaration lines: struct, opaque, enum,
+# union). The queries commit 5ce23f05 rides directly in
+# queries/highlights.scm, not in this grammar.js-only patch. All other
+# hunks are self-authored (Z-A struct asm clobbers, Z-B async/await
+# identifiers, Z-C bare error-set field, bare-`bitpack` identifier);
+# see vendor/tree-sitter-zig/SLOPLINT.md.
 --- a/grammar.js
 +++ b/grammar.js
 @@ -63,6 +63,8 @@
