@@ -19,10 +19,11 @@ fn names_visible_type_alias(node: Node<'_>, cx: &Cx<'_, '_>, name: &str) -> bool
                 if unquote(text(cx, alias)) == name && c.start_byte() < node.start_byte() {
                     return true;
                 }
-            } else if c.kind() == "import_declaration" && c.start_byte() < node.start_byte() {
-                if import_brings_type_alias(c, cx, name) {
-                    return true;
-                }
+            } else if c.kind() == "import_declaration"
+                && c.start_byte() < node.start_byte()
+                && import_brings_type_alias(c, cx, name)
+            {
+                return true;
             }
         }
     }
