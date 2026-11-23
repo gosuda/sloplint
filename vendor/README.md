@@ -95,9 +95,10 @@ that base.
 directory coverage both ways, 40-hex commits (or `UNRESOLVED` only for
 `tree-sitter-logos`), patch files present when `patch_status` is not
 `none`, and Cargo name and version matches. It uses the host `python3`
-(`tomllib` from the standard library); that is why the check is shell
-rather than a Rust test, which would need a workspace build for the same
-answer. CI runs this check in the `grammar-manifest` job. There is no
+(the standard-library `tomllib`, which needs Python 3.11 or newer; see
+https://docs.python.org/3/library/tomllib.html). That is why the check is
+shell rather than a Rust test, which would need a workspace build for the
+same answer. CI runs this check in the `grammar-manifest` job. There is no
 `justfile` in this repo; run the script directly.
 
 `bash scripts/grammars.sh verify <name>` reproduces one tree from its
