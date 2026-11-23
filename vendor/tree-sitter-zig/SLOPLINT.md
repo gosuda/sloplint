@@ -107,6 +107,17 @@ Zig master accepts the forms that Zig 0.14.1 rejects, and sloplint parses master
 - Z-B: `async` and `await` as identifiers, which 0.14.1 rejects because they are keywords there.
 - `await expr`: accepted by both the published and the patched grammar, and rejected by 0.14.1.
 
+## Custom queries
+
+The base move wraps call arguments in an `arguments` node:
+`(call_expression function: (identifier) arguments: (arguments ...))`.
+A custom rule written against the old shape,
+`(call_expression function: (identifier) @callee (string) @match)`,
+still compiles but matches nothing; write the argument under
+`arguments:` instead:
+`(call_expression function: (identifier) @callee arguments: (arguments (string) @match))`.
+`custom_call_query_uses_the_arguments_wrapper` pins both shapes.
+
 ## Residuals (not fixed)
 
 - Error set as a typed field, `struct { x: error{bar} }`. Zig 0.14.1 accepts it; the grammar rejects it. This is a different production from the bare field fixed by Z-C, so it was not in scope.
