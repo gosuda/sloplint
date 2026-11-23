@@ -29,6 +29,14 @@ struct ParamCell<'n> {
 }
 
 fn param_from<'s>(cx: &Cx<'_, 's>, cell: ParamCell<'_>, out: &mut Vec<Param<'s>>) {
+    // A nested formal parameter list makes this a function-typed (callback)
+    // parameter. Its direct `type` child is only the return type, so
+    // classifying by it would report e.g. `bool first()` as a boolean flag.
+    // The base grammar gave these formals no `name` field and skipped them;
+    // keep them skipped to preserve findings.
+    if any_named_child(cell.node, |c| c.kind() == "formal_parameter_list") {
+        return;
+    }
     let Some(nm) = child_by_field(cell.node, "name") else {
         return;
     };
@@ -228,7 +236,12 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
     let (doc, doc_pos) = preceding_comments(
         cx,
         n,
-        &["comment", "block_comment", "documentation_block_comment", "documentation_comment"],
+        &[
+            "comment",
+            "block_comment",
+            "documentation_block_comment",
+            "documentation_comment",
+        ],
         &[],
     );
     Some(FunctionHead {

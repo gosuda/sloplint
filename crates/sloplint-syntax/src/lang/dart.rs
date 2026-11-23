@@ -25,6 +25,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("catch_clause", Role::Catch),
     ("conditional_expression", Role::Ternary),
     ("call_expression", Role::Call),
+    ("constructor_invocation", Role::Call),
     ("new_expression", Role::NewCall),
     ("const_object_expression", Role::NewCall),
     ("local_variable_declaration", Role::Decl),

@@ -4,7 +4,7 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Cx, any_named_child, binary_concat, child_by_field, first_named_child,
-    first_named_child_matching, last_named_child, named_children, narrow, pos_of, text,
+    first_named_child_matching, last_named_child, named_children, narrow, pos_of, slice, text,
 };
 
 use super::syntax::{COMMENTS, cut_generics, label_text};
@@ -68,7 +68,7 @@ fn concat_static(cx: &Cx<'_, '_>, e: Node<'_>) -> u32 {
 
 fn collection_shape(n: Node<'_>) -> ArgShape<'static> {
     for c in named_children(n) {
-        if c.kind() == "map_element" {
+        if c.kind() == "map_element" || c.kind() == "null_aware_map_element" {
             return ArgShape::Other;
         }
         if c.kind() == "function_expression" {
@@ -177,6 +177,44 @@ pub(crate) fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>
             kind: CallKind::Plain,
             callee_root: callee_root(cx, func),
             is_simple_path: dart_is_simple_path(func),
+            initializes_binding: dart_initializes_binding(cx, n),
+            args: call_args(cx, n),
+        });
+    }
+    if n.kind() == "constructor_invocation" {
+        // Upstream 0.3.0 prefers this node for explicit `.new()` and generic
+        // named constructor calls, where the base emitted `call_expression`
+        // with a member-expression callee. Rebuild the dotted callee from
+        // the source range so call facts keep their names and arguments.
+        let mut start = usize::MAX;
+        let mut end = 0;
+        let mut root = None;
+        for c in named_children(n) {
+            if c.kind() == "type_identifier" {
+                if root.is_none() {
+                    root = Some(text(cx, c));
+                }
+                start = start.min(c.start_byte());
+                end = end.max(c.end_byte());
+            }
+        }
+        if let Some(k) = child_by_field(n, "constructor") {
+            start = start.min(k.start_byte());
+            end = end.max(k.end_byte());
+        }
+        let Some(name) = root else {
+            return None;
+        };
+        let callee = if start <= end {
+            cut_generics(slice(cx.src, start, end))
+        } else {
+            name
+        };
+        return Some(CallHead {
+            callee,
+            kind: CallKind::Plain,
+            callee_root: Some(name),
+            is_simple_path: true,
             initializes_binding: dart_initializes_binding(cx, n),
             args: call_args(cx, n),
         });
