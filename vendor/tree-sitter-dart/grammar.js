@@ -8,6 +8,10 @@
 // @ts-check
 
 // Operator precedence levels (from Dart spec, ascending)
+// Variance keywords that are not reserved words, so they can also be a
+// type parameter's NAME (see type_parameter).
+const NON_RESERVED_VARIANCE_KEYWORDS = ["out", "inout"];
+
 const PREC = {
   CASCADE: 2,
   ASSIGNMENT: 3,
@@ -45,9 +49,105 @@ function commaSepTrailingComma(rule) {
   return optional(commaSep1TrailingComma(rule));
 }
 
+// Spec `expression` and `expressionWithoutCascade` share assignment/throw
+// bodies that differ only in the recursion target. The factories keep the
+// visible rule and its hidden without-cascade twin in lockstep.
+function assignmentExpression($, right) {
+  return prec.right(
+    PREC.ASSIGNMENT,
+    seq(
+      field("left", $.assignable_expression),
+      field("operator", $._assignment_operator),
+      field("right", right),
+    ),
+  );
+}
+
+function throwExpression($, value) {
+  return seq("throw", field("value", value));
+}
+
+// An escape sequence's catch-all alternative excludes `x` and `u` (their
+// hex forms follow it) and, in single-line strings, the line terminators:
+// Dart has no line continuation there, so `\` before a newline leaves the
+// string unterminated. Multi-line strings DO continue across it, and
+// `'''\` + newline is the idiomatic way to avoid a leading blank line.
+function escapeSequence(anyChar) {
+  return token.immediate(
+    seq(
+      "\\",
+      choice(
+        // Dart has no octal escapes: '\012' is the escape \0 followed by
+        // the literal characters '12'.
+        anyChar,
+        /x[0-9a-fA-F]{2}/,
+        /u[0-9a-fA-F]{4}/,
+        /u\{[0-9a-fA-F]+\}/,
+      ),
+    ),
+  );
+}
+
+// A record type's '(' - either the ordinary token or, when a block comment
+// separated it from an annotation name, the external variant the scanner
+// emits in place of annotation arguments. Both are '(' in the tree. This is
+// a factory, not a rule, so it inlines at each use: as a hidden rule it
+// would force a reduce decision on every '(' and conflict with
+// parenthesized_expression, formal_parameter_list, record_pattern et al.
+function recordOpenParen($) {
+  return choice("(", alias($._comment_separated_open_paren, "("));
+}
+
 // Wraps a type expression with the optional `?` nullable marker.
 function nullable(rule) {
   return seq(rule, optional("?"));
+}
+
+// Spec patterns: a declaration context reads a bare identifier as a new
+// variable, a matching context as a constant. The factories keep each
+// matching-context pattern and its hidden declaration twin in lockstep.
+function listPattern($, pattern, rest) {
+  return seq(
+    optional($.type_arguments),
+    "[",
+    commaSepTrailingComma(choice(pattern, rest)),
+    "]",
+  );
+}
+
+function restPattern(pattern) {
+  return seq("...", optional(pattern));
+}
+
+function mapPattern($, pattern, rest) {
+  return seq(
+    optional($.type_arguments),
+    "{",
+    commaSepTrailingComma(choice(seq($._expression, ":", pattern), rest)),
+    "}",
+  );
+}
+
+function recordPattern(patternField) {
+  return seq("(", commaSepTrailingComma(patternField), ")");
+}
+
+function patternField($, pattern) {
+  return seq(optional(choice($.label, ":")), pattern);
+}
+
+function objectPattern($, patternField) {
+  return seq(
+    $._type_name,
+    optional($.type_arguments),
+    "(",
+    commaSepTrailingComma(patternField),
+    ")",
+  );
+}
+
+function castPattern($, primary) {
+  return seq(primary, "as", field("type", $.type));
 }
 
 // Produces the 5 wrapper rules shared between non-cascade and cascade postfix
@@ -91,48 +191,79 @@ module.exports = grammar({
     $.block_comment,
     $.documentation_block_comment,
     $.annotation_open_paren,
+    // The '(' a block comment separated from an annotation name. Emitting
+    // it, rather than declining and letting the internal lexer take the
+    // ordinary token, is what CONSUMES the veto. Scanner state serializes
+    // only with an emitted token, and the column the decision read is
+    // recorded as that token's dependency for incremental reparse.
+    $._comment_separated_open_paren,
+    // The `>` that closes an instantiation's type arguments. The scanner
+    // emits it only before a token the spec lets follow type arguments.
+    $._instantiation_close,
+    // Never emitted. It is only valid during error recovery, which lets
+    // the scanner detect recovery exactly. Must stay last.
+    $._error_sentinel,
   ],
 
-  extras: ($) => [/\s/, $.comment],
+  // ASCII-only, like the scanner's own is_whitespace (src/scanner.c) and
+  // like Dart's WHITESPACE production: tree-sitter's /\s/ is ASCII too, so
+  // non-ASCII whitespace is an ERROR rather than skipped trivia.
+  extras: ($) => [/\s/, $.comment, $.documentation_comment],
 
   word: ($) => $._name,
 
-  supertypes: ($) => [$._statement, $._literal, $._declaration, $._instantiation],
+  // Spec: RESERVED_WORD. These can never be identifiers, unlike built-in
+  // identifiers. The ABI-15 reserved set makes the lexer reject them where
+  // an identifier is expected instead of falling back to the word token.
+  reserved: {
+    global: ($) => [
+      "assert", "break", "case", "catch", "class", "const", "continue",
+      "default", "do", "else", "enum", "extends", "false", "final",
+      "finally", "for", "if", "in", "is", "new", "null", "rethrow",
+      "return", "super", "switch", "this", "throw", "true", "try",
+      "var", "void", "while", "with",
+    ],
+  },
+
+  supertypes: ($) => [
+    $._statement,
+    $._literal,
+    $._declaration,
+    $._instantiation,
+    $._expression,
+    $._binary_expression,
+  ],
 
   precedences: ($) => [
     ["call", "instantiation"],
   ],
 
   conflicts: ($) => [
-    // Type vs expression ambiguity: `x<y>` could be type args or relational
-    // [$.type_arguments, $.relational_expression], -- unnecessary
     // Identifier could be type_identifier or expression
     [$._type_name, $._primary],
     [$._type_name, $._primary, $._function_name],
-    // [$._type_name, $._primary, $.function_signature], -- covered by _function_name conflicts
     [$._primary, $._simple_formal_parameter],
     [$._primary, $._simple_formal_parameter, $.constant_pattern],
-    // Constructor signature shares prefix with function_signature
-    // [$.constructor_signature, $._formal_parameter_part], -- covered by _function_name conflicts
     // Declaration ambiguity with external/static
     [$.declaration, $._external_and_static],
     // Type ambiguities
-    [$._type_not_function, $._type_not_void],
     [$._type_not_void_not_function],
-    [$._type_not_void],
     [$._function_type_tail],
     [$._type_not_void_not_function, $._function_type_tail],
-    [$.type, $._type_not_function],
-    [$.type, $._function_type_tail, $._built_in_identifier],
-    [$.type, $._type_not_function, $._function_type_tail, $._built_in_identifier],
-    [$.type, $._function_type_tail],
-    [$.type, $._type_not_function, $._function_type_tail],
-    [$._type_not_function, $._function_type_tail, $._built_in_identifier],
-    [$._type_not_void, $._function_type_tail, $._built_in_identifier],
-    [$._type_not_function, $._type_not_void, $._function_type_tail, $._built_in_identifier],
-    [$._type_not_function, $._function_type_tail],
-    [$.type, $._type_not_function, $._type_not_void, $._function_type_tail, $._built_in_identifier],
-    [$._type_not_void, $._function_type_tail],
+    [$.type, $._built_in_identifier],
+    [$.type, $._type_not_function_inner, $._built_in_identifier],
+    [$._type_not_function_inner, $._built_in_identifier],
+    [$._type_not_void_inner, $._built_in_identifier],
+    [$._type_not_void_not_function_inner, $._built_in_identifier],
+    [$._type_not_function_inner, $._type_not_void_inner, $._built_in_identifier],
+    [$._type_not_function_inner, $._type_not_void_not_function_inner, $._built_in_identifier],
+    [$._type_not_void_inner, $._type_not_void_not_function_inner, $._built_in_identifier],
+    [$._type_not_function_inner, $._type_not_void_inner, $._type_not_void_not_function_inner, $._built_in_identifier],
+    [$.type, $._type_not_void_not_function_inner, $._built_in_identifier],
+    [$.type, $._type_not_function_inner, $._type_not_void_inner, $._built_in_identifier],
+    [$.type, $._type_not_function_inner, $._type_not_void_not_function_inner, $._built_in_identifier],
+    [$.type, $._type_not_void_inner, $._type_not_void_not_function_inner, $._built_in_identifier],
+    [$.type, $._type_not_function_inner, $._type_not_void_inner, $._type_not_void_not_function_inner, $._built_in_identifier],
     [$.function_type],
     // Var or type ambiguities
     [$._var_or_type],
@@ -141,32 +272,39 @@ module.exports = grammar({
     [$._final_const_var_or_type],
     [$._final_const_var_or_type, $.const_object_expression],
     // Expression ambiguities
-    [$._expression],
     [$._primary, $.assignable_expression],
     [$._primary, $.labeled_statement],
-    // Assignable-vs-wrapper: same chain reduces under either name; lookahead picks
-    [$.assignable_expression, $.member_expression, $._unary_expression],
-    [$.assignable_expression, $.index_expression, $._unary_expression],
-    [$.assignable_expression, $.null_aware_member_expression, $._unary_expression],
+    // Assignable-vs-wrapper: the same chain reduces under either name, and
+    // lookahead picks.
     [$.assignable_expression, $.null_aware_index_expression, $._unary_expression],
     // Type name ambiguities
     [$._type_name],
     [$._type_name, $.normal_parameter_type],
-    [$._type_name, $.await_expression],
-    [$._primary_default_named_parameter, $._built_in_identifier],
-    // [$._type_name, $._simple_formal_parameter], -- subsumed
-    // [$._type_name, $._function_formal_parameter], -- subsumed
-    // [$._type_name, $.function_signature], -- covered by _function_name conflicts
-    // [$._type_name, $._primary, $.assignable_expression], -- subsumed
     // Parameter ambiguities
     [$._normal_formal_parameters],
     [$._normal_formal_parameter],
     [$.typed_identifier, $._var_or_type, $._function_formal_parameter],
     [$.record_type_field, $._function_formal_parameter, $._var_or_type],
     [$.record_type_field, $._var_or_type, $._final_var_or_type, $._function_formal_parameter],
-    [$._var_or_type, $._final_var_or_type],
     [$._var_or_type, $._final_var_or_type, $._function_formal_parameter],
-    [$._final_const_var_or_type, $._final_var_or_type],
+    [$._function_formal_parameter, $._final_const_var_or_type],
+    [$.type, $._type_not_function_inner],
+    [$.identifier, $.await_expression],
+    [$.identifier, $.yield_statement],
+    [$.identifier, $.yield_each_statement],
+    [$._type_not_void_inner, $._function_type_tail, $._built_in_identifier],
+    [$._type_not_void_not_function_inner, $._function_type_tail, $._built_in_identifier],
+    [$.type, $._type_not_void_not_function_inner],
+    [$.type, $._type_not_void_not_function_inner, $._function_type_tail],
+    [$.type, $._type_not_void_not_function_inner, $._function_type_tail, $._built_in_identifier],
+    [$._type_not_function_inner, $._type_not_void_inner],
+    [$._type_not_function_inner, $._type_not_void_not_function_inner, $._function_type_tail, $._built_in_identifier],
+    [$._type_not_void_inner, $._type_not_void_not_function_inner, $._function_type_tail, $._built_in_identifier],
+    [$._type_not_function_inner, $._type_not_void_inner, $._type_not_void_not_function_inner, $._function_type_tail, $._built_in_identifier],
+    [$._type_not_void_not_function_inner, $._function_type_tail],
+    [$._type_not_void_inner],
+    [$._type_not_void_not_function_inner],
+    [$._function_formal_parameter, $._final_const_var_or_type, $._final_var_or_type],
     [$.record_type_field, $._final_var_or_type],
     [$._final_var_or_type],
     // Type parameter vs type name
@@ -179,31 +317,26 @@ module.exports = grammar({
     // Pattern ambiguities
     [$.set_or_map_literal, $.map_pattern],
     [$.list_literal, $.list_pattern],
-    [$.static_member_shorthand, $.constant_pattern],
-    // [$.constant_pattern, $._type_name], -- subsumed
     [$._primary, $.constant_pattern],
     [$._instantiation, $.constant_pattern],
-    // [$._primary, $.constant_pattern, $._type_name], -- subsumed
-    // [$._primary, $.constant_pattern, $._simple_formal_parameter], -- subsumed
-    // [$._primary, $.constant_pattern, $._type_name, $._simple_formal_parameter], -- subsumed
     [$._literal, $.constant_pattern],
     [$.prefix_operator, $.constant_pattern],
     [$._parenthesized_pattern, $._pattern_field],
+    [$._declaration_parenthesized_pattern, $._declaration_pattern_field],
+    [$._type_name, $._declared_name],
+    [$.record_type, $._declaration_record_pattern],
     [$.set_or_map_literal, $.constant_pattern],
     [$.list_literal, $.constant_pattern],
     [$.record_literal, $.constant_pattern],
     // Constructor tearoff vs primary
     [$.constructor_tearoff, $._identifier_or_new],
-    // [$._simple_formal_parameter, $.assignable_expression], -- unnecessary
     // Declaration external
     [$.declaration, $.external],
     // Type arguments vs type parameters vs relational
     [$.type_arguments, $.relational_operator],
-    // [$.relational_operator, $.type_parameters], -- unnecessary
     [$.type_arguments, $.relational_operator, $.type_parameters],
     // Generic call/instantiation vs comparisons (TS-style GLR fork on `<`)
     [$._unary_expression, $.instantiation_expression],
-    [$._unary_expression, $.call_expression],
     // Record literal vs record field / record type
     [$._record_literal_no_const, $.record_field],
     [$.record_type, $._record_literal_no_const],
@@ -215,17 +348,14 @@ module.exports = grammar({
     [$.block, $.set_or_map_literal],
     // Empty switch block vs empty switch expression
     [$.switch_block, $.switch_expression],
-    // Primary + constructor_param
-    [$._primary, $.constructor_param],
+    // Primary + field_formal_parameter
+    [$._primary, $.field_formal_parameter],
     // Switch statement case
     [$.switch_statement_case],
     // Primary + function_formal_parameter + type_name
     [$._type_name, $._function_formal_parameter],
     [$._type_name, $.constant_pattern],
     [$._type_name, $._simple_formal_parameter],
-    // [$._type_name, $._function_name], -- subsumed
-    // [$._type_name, $._function_name, $._primary], -- subsumed
-    // [$._function_name, $.constructor_signature], -- subsumed
     // Built-in identifier conflicts
     // Top-level wrapper rules competing with `_built_in_identifier` for the
     // `augment` lookahead. Each top-level form needs to keep itself alive when
@@ -243,7 +373,7 @@ module.exports = grammar({
      $.external_function_declaration, $.external_getter_declaration, $.external_setter_declaration,
      $.top_level_variable_declaration, $._built_in_identifier],
     [$.top_level_variable_declaration, $._built_in_identifier],
-    [$.class_member, $.method_declaration, $._built_in_identifier],
+    [$.member_declaration, $.method_declaration, $._built_in_identifier],
     [$.type_alias, $._built_in_identifier],
     [$.function_signature, $.getter_signature, $._var_or_type],
     [$.function_signature, $.setter_signature, $._var_or_type],
@@ -273,6 +403,7 @@ module.exports = grammar({
     [$.declaration, $.external, $._built_in_identifier],
     [$.declaration, $._external_and_static, $._built_in_identifier],
     [$.factory_constructor_signature, $.redirecting_factory_constructor_signature, $._built_in_identifier],
+    [$.redirecting_factory_constructor_signature, $._built_in_identifier],
     [$._function_name, $.constructor_signature],
     [$._type_name, $._primary, $.constant_pattern],
     [$._type_name, $._primary, $._function_formal_parameter],
@@ -316,10 +447,14 @@ module.exports = grammar({
       ),
 
     // ========================================================================
-    // Library structure (Phase 9)
+    // Library structure
     // ========================================================================
 
-    script_tag: (_) => seq("#!", /[^\n]*/, "\n"),
+    // No trailing-newline requirement: a shebang-only file without a
+    // final newline is accepted by the analyzer. The tag ends at ANY line
+    // terminator (the analyzer's tokenizeTag stops at LF, CR or EOF), so a
+    // lone CR does not let the tag swallow the rest of the file.
+    script_tag: (_) => seq("#!", /[^\n\r]*/),
 
     library_name: ($) =>
       choice(
@@ -403,7 +538,7 @@ module.exports = grammar({
     dotted_identifier_list: ($) => seq($.identifier, repeat(seq(".", $.identifier))),
 
     // ========================================================================
-    // Metadata / Annotations (Phase 9)
+    // Metadata / Annotations
     // ========================================================================
 
     _metadata: ($) => repeat1($._annotation),
@@ -417,7 +552,7 @@ module.exports = grammar({
     _annotation_with_args: ($) =>
       seq(
         "@",
-        field("name", choice($.identifier, $.qualified)),
+        field("name", choice($.identifier, $.qualified_name)),
         optional(seq($.type_arguments, optional(seq(".", $._identifier_or_new)))),
         $.annotation_arguments,
       ),
@@ -426,16 +561,16 @@ module.exports = grammar({
       seq($.annotation_open_paren, optional($._argument_list), ")"),
 
     _annotation_no_args: ($) =>
-      seq("@", field("name", choice($.identifier, $.qualified))),
+      seq("@", field("name", choice($.identifier, $.qualified_name))),
 
-    qualified: ($) =>
+    qualified_name: ($) =>
       choice(
         seq($._type_name, ".", $._identifier_or_new),
         seq($._type_name, ".", $._type_name, ".", $._identifier_or_new),
       ),
 
     // ========================================================================
-    // Types (Phase 2)
+    // Types
     // ========================================================================
 
     // Public wrapper: every type-labeled position emits exactly one `type`
@@ -450,43 +585,42 @@ module.exports = grammar({
         nullable("Function"),
       ),
 
-    _type_not_function: ($) =>
-      alias(
-        choice(
-          nullable(seq($._type_name, optional($.type_arguments))),
-          nullable("Function"),
-          nullable($.record_type),
-          $.void_type,
-        ),
-        $.type,
+    // NOTE: these alias *hidden rule symbols* (not inline choices) to `type`.
+    // Aliasing an inline choice renames lone-symbol alternatives (void_type,
+    // record_type) instead of wrapping them, breaking the uniform-(type ...)
+    // contract.
+    _type_not_function: ($) => alias($._type_not_function_inner, $.type),
+
+    _type_not_function_inner: ($) =>
+      choice(
+        nullable(seq($._type_name, optional($.type_arguments))),
+        nullable("Function"),
+        nullable($.record_type),
+        $.void_type,
       ),
 
-    _type_not_void: ($) =>
-      alias(
-        choice(
-          nullable($.function_type),
-          nullable($.record_type),
-          nullable(seq($._type_name, optional($.type_arguments))),
-          nullable("Function"),
-        ),
-        $.type,
+    _type_not_void: ($) => alias($._type_not_void_inner, $.type),
+
+    _type_not_void_inner: ($) =>
+      choice(
+        nullable($.function_type),
+        nullable($.record_type),
+        nullable(seq($._type_name, optional($.type_arguments))),
+        nullable("Function"),
       ),
 
     _type_not_void_not_function: ($) =>
-      alias(
-        choice(
-          nullable(seq($._type_name, optional($.type_arguments))),
-          nullable("Function"),
-        ),
-        $.type,
+      alias($._type_not_void_not_function_inner, $.type),
+
+    _type_not_void_not_function_inner: ($) =>
+      choice(
+        nullable(seq($._type_name, optional($.type_arguments))),
+        nullable("Function"),
       ),
 
     _type_name: ($) =>
       seq(
-        choice(
-          alias($.identifier, $.type_identifier),
-          alias(prec.dynamic(-1, "await"), $.type_identifier),
-        ),
+        alias($.identifier, $.type_identifier),
         optional(
           prec.right(PREC.TYPE_IDENTIFIER, seq(".", alias($.identifier, $.type_identifier))),
         ),
@@ -502,13 +636,21 @@ module.exports = grammar({
 
     _function_type_tails: ($) => repeat1($._function_type_tail),
 
+    // A tail's parameterTypeList is mandatory: bare `Function` / `Function?`
+    // are typeNamedFunction, not functionType, so they take the plain-type
+    // route and don't grow a function_type wrapper. The trailing `?` stays
+    // IN the tail even though the spec places it between tails (outer `?`
+    // on `type`). Consuming it here keeps `x?['k'] as T Function()?`
+    // parseable. Otherwise the `?[` receiver's live GLR fork kills the
+    // branch that must shift the trailing `?` at the nullable() level.
+    // Pinned in ambiguities.txt. Moving it regressed 4 pub.dev files.
     _function_type_tail: ($) =>
-      seq(
+      prec.dynamic(3, seq(
         "Function",
         optional($.type_parameters),
-        optional($.parameter_type_list),
+        $.parameter_type_list,
         optional("?"),
-      ),
+      )),
 
     parameter_type_list: ($) =>
       seq(
@@ -557,21 +699,36 @@ module.exports = grammar({
     type_parameters: ($) =>
       seq("<", commaSep1($.type_parameter), ">"),
 
+    // The name admits the non-reserved variance keywords too: variance
+    // never shipped in Dart, so `class C<out>` / `mixin M<inout>` are
+    // valid code whose type parameter happens to be NAMED out/inout.
+    // One-token lookahead resolves the ambiguity. `<out T>` keeps out as
+    // variance, and anything else after out/inout makes it the name ("in"
+    // is reserved and can only be variance).
     type_parameter: ($) =>
       seq(
         optional($._metadata),
         optional(field("variance", $.variance_modifier)),
-        field("name", alias($.identifier, $.type_identifier)),
+        field(
+          "name",
+          choice(
+            alias($.identifier, $.type_identifier),
+            ...NON_RESERVED_VARIANCE_KEYWORDS.map((keyword) =>
+              alias(keyword, $.type_identifier),
+            ),
+          ),
+        ),
         optional(seq("extends", field("bound", $._type_not_void))),
       ),
 
-    variance_modifier: (_) => choice("in", "out", "inout"),
+    variance_modifier: (_) =>
+      choice("in", ...NON_RESERVED_VARIANCE_KEYWORDS),
 
     record_type: ($) =>
       choice(
-        seq("(", ")"),
+        seq(recordOpenParen($), ")"),
         seq(
-          "(",
+          recordOpenParen($),
           commaSep1($.record_type_field),
           ",",
           "{",
@@ -579,9 +736,9 @@ module.exports = grammar({
           "}",
           ")",
         ),
-        seq("(", commaSep1TrailingComma($.record_type_field), ")"),
+        seq(recordOpenParen($), commaSep1TrailingComma($.record_type_field), ")"),
         seq(
-          "(",
+          recordOpenParen($),
           "{",
           commaSep1TrailingComma($.record_type_named_field),
           "}",
@@ -596,7 +753,7 @@ module.exports = grammar({
       seq(optional($._metadata), $.typed_identifier),
 
     // ========================================================================
-    // Literals (Phase 3)
+    // Literals
     // ========================================================================
 
     _literal: ($) =>
@@ -667,7 +824,7 @@ module.exports = grammar({
           choice(
             $.template_chars_double_single,
             "'",
-            $.escape_sequence,
+            alias($._escape_sequence_single_line, $.escape_sequence),
             $._sub_string_test,
             $.template_substitution,
           ),
@@ -682,7 +839,7 @@ module.exports = grammar({
           choice(
             $.template_chars_single_single,
             '"',
-            $.escape_sequence,
+            alias($._escape_sequence_single_line, $.escape_sequence),
             $._sub_string_test,
             $.template_substitution,
           ),
@@ -735,7 +892,6 @@ module.exports = grammar({
             "'",
             $.template_chars_raw_slash,
             $._unused_escape_sequence,
-            $._sub_string_test,
             "$",
           ),
         ),
@@ -751,7 +907,6 @@ module.exports = grammar({
             '"',
             $.template_chars_raw_slash,
             $._unused_escape_sequence,
-            $._sub_string_test,
             "$",
           ),
         ),
@@ -769,7 +924,6 @@ module.exports = grammar({
               $.template_chars_raw_slash,
               '"',
               $._unused_escape_sequence,
-              $._sub_string_test,
               "$",
             ),
           ),
@@ -788,7 +942,6 @@ module.exports = grammar({
               "'",
               $.template_chars_raw_slash,
               $._unused_escape_sequence,
-              $._sub_string_test,
               "$",
             ),
           ),
@@ -805,25 +958,32 @@ module.exports = grammar({
         ),
       ),
 
-    _sub_string_test: (_) => seq("$", /[^a-zA-Z_{]/),
+    // The follow-char class excludes the string delimiters, backslash,
+    // line terminators and '$' so a stray '$' can never swallow the
+    // closing quote (raw strings consume a truly bare '$' via their own
+    // "$" alternative instead). It mirrors scan_templates' stop
+    // characters in src/scanner.c. A single token(): with a split "$" +
+    // regex, error recovery would complete the hidden rule via a zero-width
+    // MISSING anonymous regex token and silently accept `'a$'`.
+    _sub_string_test: (_) => token(seq("$", /[^a-zA-Z_{'"$\\\n\r]/)),
 
-    identifier_dollar_escaped: (_) => /([a-zA-Z_]|(\\\$))([\w]|(\\\$))*/,
+    // Spec IDENTIFIER_NO_DOLLAR: a simple interpolation's identifier admits
+    // neither `$` ('$a$b' splits into two substitutions, \w excludes $)
+    // nor `\$` ('$a\$x' is substitution(a) + escape + chars). A `\$` branch
+    // would let maximal munch swallow the escape and its tail.
+    // token.immediate: the identifier must touch its `$`. Without it the
+    // extras rule skips the line break after a trailing `$`, so the next
+    // line's first word is lexed as interpolated string content.
+    identifier_dollar_escaped: (_) => token.immediate(/[a-zA-Z_]\w*/),
 
-    _unused_escape_sequence: (_) =>
-      token.immediate(
-        seq(
-          "\\",
-          choice(
-            /[^xu0-7]/,
-            /[0-7]{1,3}/,
-            /x[0-9a-fA-F]{2}/,
-            /u[0-9a-fA-F]{4}/,
-            /u\{[0-9a-fA-F]+\}/,
-          ),
-        ),
-      ),
+    _unused_escape_sequence: (_) => escapeSequence(/[^xu]/),
 
     escape_sequence: ($) => $._unused_escape_sequence,
+
+    // Single-line strings only (aliased back to `escape_sequence`): a
+    // backslash before a line terminator leaves them unterminated, where
+    // multi-line strings continue across it.
+    _escape_sequence_single_line: (_) => escapeSequence(/[^xu\n\r]/),
 
     // --- Symbol literals ---
 
@@ -833,6 +993,9 @@ module.exports = grammar({
           "#",
           choice(
             seq($.identifier, repeat(seq(".", $.identifier))),
+            // Not the string "void": a second use of the token makes
+            // void_type wrap it. Pinned by keyword_nodes_are_leaves.
+            alias($.void_type, $.identifier),
             "~",
             $.binary_operator,
             "[]",
@@ -864,24 +1027,30 @@ module.exports = grammar({
     _element: ($) =>
       choice(
         $._expression,
-        $.pair,
+        $.map_element,
         $.spread_element,
-        $.null_aware_element,
-        $.null_aware_pair,
+        $.null_aware_expression_element,
+        $.null_aware_map_element,
         $.if_element,
         $.for_element,
       ),
 
-    null_aware_element: ($) => seq("?", $._expression),
+    null_aware_expression_element: ($) => seq("?", $._expression),
 
-    null_aware_pair: ($) =>
-      seq("?", field("key", $._expression), ":", field("value", choice($._expression, $.null_aware_element))),
+    // Spec: '?' expression ':' '?'? expression | expression ':' '?' expression
+    // - the value-only form is this production too, and the double form is
+    // flat (no nested null_aware_expression_element).
+    null_aware_map_element: ($) =>
+      choice(
+        seq("?", field("key", $._expression), ":", optional("?"), field("value", $._expression)),
+        seq(field("key", $._expression), ":", "?", field("value", $._expression)),
+      ),
 
-    pair: ($) =>
+    map_element: ($) =>
       seq(
         field("key", $._expression),
         ":",
-        field("value", choice($._expression, $.null_aware_element)),
+        field("value", $._expression),
       ),
 
     spread_element: ($) => seq(choice("...", "...?"), field("value", $._expression)),
@@ -929,7 +1098,7 @@ module.exports = grammar({
     record_field: ($) => seq(optional($.label), $._expression),
 
     // ========================================================================
-    // Expressions (Phase 4)
+    // Expressions
     // ========================================================================
 
     _expression: ($) =>
@@ -937,19 +1106,52 @@ module.exports = grammar({
         $.pattern_assignment,
         $.assignment_expression,
         $.throw_expression,
-        seq($._real_expression, repeat($.cascade_section)),
+        $.cascade,
+        $._real_expression,
       ),
 
+    // Spec: cascade. A receiver expression followed by one or more
+    // cascade sections (`..` / `?..`).
+    cascade: ($) =>
+      prec.right(1, seq($._real_expression, $._cascade_sections)),
+
+    // Not repeat1: with it, a cascade in an arrow function body ends after
+    // its first section.
+    _cascade_sections: ($) =>
+      prec.right(1, seq($.cascade_section, optional($._cascade_sections))),
+
+    // Spec: expressionWithoutCascade. Its assignment RHS and throw value
+    // recurse into expressionWithoutCascade (NOT expression), so a
+    // trailing cascade belongs to the enclosing expression: in
+    // `x..y = b = a..z()` the cascade receiver is `x`, not `a`. The
+    // restricted variants are hidden and aliased to the ordinary node
+    // names so the tree shape is unchanged.
     _expression_without_cascade: ($) =>
       choice(
-        $.assignment_expression,
+        alias($._assignment_expression_without_cascade, $.assignment_expression),
         $._real_expression,
-        $.throw_expression,
+        alias($._throw_expression_without_cascade, $.throw_expression),
       ),
+
+    _assignment_expression_without_cascade: ($) =>
+      assignmentExpression($, $._expression_without_cascade),
+
+    _throw_expression_without_cascade: ($) =>
+      throwExpression($, $._expression_without_cascade),
 
     _real_expression: ($) =>
       choice(
         $.conditional_expression,
+        $._binary_expression,
+        $.type_cast_expression,
+        $.type_test_expression,
+        $._unary_expression,
+      ),
+
+    // Supertype grouping the spec's binary precedence productions, so
+    // queries can match any binary expression with one pattern.
+    _binary_expression: ($) =>
+      choice(
         $.logical_or_expression,
         $.if_null_expression,
         $.logical_and_expression,
@@ -961,26 +1163,15 @@ module.exports = grammar({
         $.shift_expression,
         $.additive_expression,
         $.multiplicative_expression,
-        $.type_cast_expression,
-        $.type_test_expression,
-        $._unary_expression,
       ),
 
     // --- Throw ---
 
-    throw_expression: ($) => seq("throw", field("value", $._expression)),
+    throw_expression: ($) => throwExpression($, $._expression),
 
     // --- Assignment ---
 
-    assignment_expression: ($) =>
-      prec.right(
-        PREC.ASSIGNMENT,
-        seq(
-          field("left", $.assignable_expression),
-          field("operator", $._assignment_operator),
-          field("right", $._expression),
-        ),
-      ),
+    assignment_expression: ($) => assignmentExpression($, $._expression),
 
     _assignment_operator: (_) =>
       choice(
@@ -1033,9 +1224,12 @@ module.exports = grammar({
     // --- If-null ---
 
     if_null_expression: ($) =>
+      // Plain left-associative binary, like the rest of the ladder. The
+      // former repeat1 form hid the reduce behind a hidden repeat node, so
+      // `a ?? b ? c : d` shifted `?` instead of reducing `a ?? b`.
       prec.left(
         PREC.IF_NULL,
-        seq($._real_expression, repeat1(seq("??", $._real_expression))),
+        seq($._real_expression, "??", $._real_expression),
       ),
 
     // --- Logical ---
@@ -1052,10 +1246,12 @@ module.exports = grammar({
       prec.left(
         PREC.EQUALITY,
         choice(
-          seq($._real_expression, choice("==", "!="), $._real_expression),
-          seq("super", choice("==", "!="), $._real_expression),
+          seq($._real_expression, field("operator", $.equality_operator), $._real_expression),
+          seq("super", field("operator", $.equality_operator), $._real_expression),
         ),
       ),
+
+    equality_operator: (_) => choice("==", "!="),
 
     // --- Relational ---
 
@@ -1063,8 +1259,8 @@ module.exports = grammar({
       prec.left(
         PREC.RELATIONAL,
         choice(
-          seq($._real_expression, $.relational_operator, $._real_expression),
-          seq("super", $.relational_operator, $._real_expression),
+          seq($._real_expression, field("operator", $.relational_operator), $._real_expression),
+          seq("super", field("operator", $.relational_operator), $._real_expression),
         ),
       ),
 
@@ -1090,8 +1286,8 @@ module.exports = grammar({
       prec.left(
         PREC.BITWISE_OR,
         choice(
-          seq($._real_expression, "|", $._real_expression),
-          seq("super", repeat1(seq("|", $._real_expression))),
+          seq($._real_expression, field("operator", alias("|", $.bitwise_operator)), $._real_expression),
+          seq("super", repeat1(seq(field("operator", alias("|", $.bitwise_operator)), $._real_expression))),
         ),
       ),
 
@@ -1099,8 +1295,8 @@ module.exports = grammar({
       prec.left(
         PREC.BITWISE_XOR,
         choice(
-          seq($._real_expression, "^", $._real_expression),
-          seq("super", repeat1(seq("^", $._real_expression))),
+          seq($._real_expression, field("operator", alias("^", $.bitwise_operator)), $._real_expression),
+          seq("super", repeat1(seq(field("operator", alias("^", $.bitwise_operator)), $._real_expression))),
         ),
       ),
 
@@ -1108,8 +1304,8 @@ module.exports = grammar({
       prec.left(
         PREC.BITWISE_AND,
         choice(
-          seq($._real_expression, "&", $._real_expression),
-          seq("super", repeat1(seq("&", $._real_expression))),
+          seq($._real_expression, field("operator", alias("&", $.bitwise_operator)), $._real_expression),
+          seq("super", repeat1(seq(field("operator", alias("&", $.bitwise_operator)), $._real_expression))),
         ),
       ),
 
@@ -1119,12 +1315,12 @@ module.exports = grammar({
       prec.left(
         PREC.SHIFT,
         choice(
-          seq($._real_expression, $._shift_operator, $._real_expression),
-          seq("super", repeat1(seq($._shift_operator, $._real_expression))),
+          seq($._real_expression, field("operator", $.shift_operator), $._real_expression),
+          seq("super", repeat1(seq(field("operator", $.shift_operator), $._real_expression))),
         ),
       ),
 
-    _shift_operator: (_) => choice("<<", ">>>", ">>"),
+    shift_operator: (_) => choice("<<", ">>>", ">>"),
 
     // --- Additive ---
 
@@ -1132,53 +1328,57 @@ module.exports = grammar({
       prec.left(
         PREC.ADDITIVE,
         choice(
-          seq($._real_expression, $._additive_operator, $._real_expression),
+          seq($._real_expression, field("operator", $.additive_operator), $._real_expression),
           seq($._real_expression, "~", $._real_expression),
-          seq("super", repeat1(seq($._additive_operator, $._real_expression))),
+          seq("super", repeat1(seq(field("operator", $.additive_operator), $._real_expression))),
         ),
       ),
 
-    _additive_operator: (_) => choice("+", "-"),
+    additive_operator: (_) => choice("+", "-"),
 
     // --- Multiplicative ---
 
     multiplicative_expression: ($) =>
       prec.left(
         PREC.MULTIPLICATIVE,
-        choice(
-          seq(
-            $._unary_expression,
-            repeat1(seq(choice("*", "/", "%", "~/"), $._unary_expression)),
-          ),
-          seq("super", repeat1(seq(choice("*", "/", "%", "~/"), $._unary_expression))),
+        seq(
+          choice($._unary_expression, $.multiplicative_expression, "super"),
+          field("operator", $.multiplicative_operator),
+          $._unary_expression,
         ),
       ),
+
+    multiplicative_operator: (_) => choice("*", "/", "%", "~/"),
 
     // --- Unary ---
 
     _unary_expression: ($) =>
       prec(
         PREC.UNARY_PREFIX,
-        choice($._postfix_expression, $.unary_expression),
+        choice($._postfix_expression, $.unary_expression, $.function_expression),
       ),
 
     unary_expression: ($) =>
       prec(
         PREC.UNARY_PREFIX,
         choice(
-          seq($.prefix_operator, $._unary_expression),
-          seq($.negate_operator, $._unary_expression),
+          seq(field("operator", $.prefix_operator), $._unary_expression),
+          seq(field("operator", $.negation_operator), $._unary_expression),
           $.await_expression,
-          seq(choice("-", "~"), "super"),
-          seq(choice("++", "--"), $.assignable_expression),
+          seq(field("operator", $.prefix_operator), "super"),
+          seq(field("operator", alias(choice("++", "--"), $.increment_operator)), $.assignable_expression),
         ),
       ),
 
     prefix_operator: (_) => choice("-", "~"),
 
-    negate_operator: (_) => "!",
+    negation_operator: (_) => "!",
 
-    await_expression: ($) => seq("await", $._unary_expression),
+    // Dynamic precedence: when `await x` is viable both as an await
+    // expression and as uses of an identifier named `await`, prefer the
+    // await expression. That matches the analyzer in async contexts, and the
+    // identifier reading only survives where the keyword form cannot parse.
+    await_expression: ($) => prec.dynamic(3, seq("await", $._unary_expression)),
 
     // --- Postfix ---
 
@@ -1197,11 +1397,14 @@ module.exports = grammar({
 
     postfix_expression: ($) =>
       prec.right(
-        seq(field("argument", $.assignable_expression), choice("++", "--")),
+        seq(
+          field("argument", $.assignable_expression),
+          field("operator", alias(choice("++", "--"), $.increment_operator)),
+        ),
       ),
 
     call_expression: ($) =>
-      prec.dynamic(1, prec("call",
+      prec.dynamic(2, prec("call",
         seq(
           field("function", $._postfix_expression),
           field("arguments", $.arguments),
@@ -1214,9 +1417,15 @@ module.exports = grammar({
       prec("instantiation",
         seq(
           field("function", $._postfix_expression),
-          field("type_arguments", $.type_arguments),
+          field(
+            "type_arguments",
+            alias($._instantiation_type_arguments, $.type_arguments),
+          ),
         ),
       ),
+
+    _instantiation_type_arguments: ($) =>
+      seq("<", commaSep1($.type), alias($._instantiation_close, ">")),
 
     ...postfixChainWrappers("_postfix_expression", ""),
 
@@ -1284,7 +1493,7 @@ module.exports = grammar({
       choice(
         $._literal,
         $.identifier,
-        $.function_expression,
+        alias($._function_primary, $.function_expression),
         $._instantiation,
         $.parenthesized_expression,
         "this",
@@ -1296,17 +1505,25 @@ module.exports = grammar({
 
     parenthesized_expression: ($) => seq("(", $._expression, ")"),
 
+    // An operand, not a primary, so a selector after the body belongs to the
+    // body. Pinned by the "Arrow function" tests in expressions.txt.
     function_expression: ($) =>
       seq(
         field("parameters", $._formal_parameter_part),
         field("body", $.function_expression_body),
       ),
 
-    function_expression_body: ($) =>
-      choice(
-        seq(optional("async"), "=>", $._expression),
-        seq(optional(choice("async", "async*", "sync*")), $.block),
+    function_expression_body: ($) => seq(optional(choice("async", "async*", "sync*")), "=>", $._expression),
+
+    // Spec: functionPrimary.
+    _function_primary: ($) =>
+      seq(
+        field("parameters", $._formal_parameter_part),
+        field("body", alias($._function_primary_body, $.function_expression_body)),
       ),
+
+    _function_primary_body: ($) =>
+      seq(optional(choice("async", "async*", "sync*")), $.block),
 
     // Hidden supertype: any expression that constructs an instance. Lets
     // queries address the three forms (new/const/implicit) uniformly via
@@ -1315,26 +1532,35 @@ module.exports = grammar({
       choice($.new_expression, $.const_object_expression, $.constructor_invocation),
 
     new_expression: ($) =>
-      seq("new", field("type", $._type_not_void), optional(seq(".", field("constructor", $.identifier))), field("arguments", $.arguments)),
+      seq("new", field("type", $._type_not_void), optional(seq(".", field("constructor", $._identifier_or_new))), field("arguments", $.arguments)),
 
     const_object_expression: ($) =>
-      seq("const", field("type", $._type_not_void), optional(seq(".", field("constructor", $.identifier))), field("arguments", $.arguments)),
+      seq("const", field("type", $._type_not_void), optional(seq(".", field("constructor", $._identifier_or_new))), field("arguments", $.arguments)),
 
     constructor_invocation: ($) =>
-      prec.right(
+      // Dynamic precedence: a *called* `.new` (`Foo.new(1)`, `Foo<int>.new(1)`)
+      // is a constructor invocation (part of _instantiation), outranking
+      // call_expression over a constructor_tearoff.
+      prec.dynamic(4, prec.right(
         choice(
-          seq(field("type", $._type_name), $.type_arguments, ".", field("constructor", $.identifier), field("arguments", $.arguments)),
+          seq(field("type", $._type_name), $.type_arguments, ".", field("constructor", $._identifier_or_new), field("arguments", $.arguments)),
           seq(field("type", $._type_name), ".", "new", field("arguments", $.arguments)),
         ),
-      ),
+      )),
 
     constructor_tearoff: ($) =>
-      prec.right(
+      // Dynamic precedence: `List<int>.new` is a tearoff, not a member
+      // access on an instantiation_expression.
+      prec.dynamic(1, prec.right(
         seq($._type_name, optional($.type_arguments), ".", "new"),
-      ),
+      )),
 
     // Dot shorthand syntax (Dart 3.10+)
     static_member_shorthand: ($) =>
+      // `.` may follow type arguments, so `List<int>.filled` also reads as
+      // `List < int > .filled`. The negative precedence keeps it a member
+      // of the instantiation. Genuine shorthands have no competing parse,
+      // so they are unaffected.
       prec.dynamic(-1,
         choice(
           seq(".", $.identifier),
@@ -1353,7 +1579,7 @@ module.exports = grammar({
     named_argument: ($) => seq($.label, $._expression),
 
     // ========================================================================
-    // Formal Parameters (Phase 5)
+    // Formal Parameters
     // ========================================================================
 
     _formal_parameter_part: ($) =>
@@ -1384,14 +1610,26 @@ module.exports = grammar({
       ),
 
     _default_formal_parameter: ($) =>
-      seq($.formal_parameter, optional(seq("=", $._expression))),
+      seq($.formal_parameter, optional(seq("=", field("default_value", $._expression)))),
 
     _default_named_parameter: ($) =>
-      seq(
-        optional($._metadata),
-        optional("required"),
-        $.formal_parameter,
-        optional(seq(choice("=", ":"), $._expression)),
+      choice(
+        // Dynamic precedence: in `{required this.x}`, `required` is the
+        // keyword, not the type of the parameter.
+        prec.dynamic(
+          1,
+          seq(
+            optional($._metadata),
+            "required",
+            $.formal_parameter,
+            optional(seq(choice("=", ":"), field("default_value", $._expression))),
+          ),
+        ),
+        seq(
+          optional($._metadata),
+          $.formal_parameter,
+          optional(seq(choice("=", ":"), field("default_value", $._expression))),
+        ),
       ),
 
     _normal_formal_parameter: ($) =>
@@ -1400,7 +1638,7 @@ module.exports = grammar({
         choice(
           $._function_formal_parameter,
           $._simple_formal_parameter,
-          $.constructor_param,
+          $.field_formal_parameter,
           $.super_formal_parameter,
         ),
       ),
@@ -1408,8 +1646,9 @@ module.exports = grammar({
     _function_formal_parameter: ($) =>
       seq(
         optional("covariant"),
+        optional(choice("var", "final")),
         optional($.type),
-        $.identifier,
+        field("name", $.identifier),
         $._formal_parameter_part,
         optional("?"),
       ),
@@ -1427,12 +1666,12 @@ module.exports = grammar({
         field("name", $.identifier),
       ),
 
-    constructor_param: ($) =>
+    field_formal_parameter: ($) =>
       seq(
-        optional($._final_const_var_or_type),
+        optional($.type),
         "this",
         ".",
-        $.identifier,
+        field("name", $.identifier),
         optional(seq($._formal_parameter_part, optional("?"))),
       ),
 
@@ -1441,12 +1680,12 @@ module.exports = grammar({
         optional($._final_const_var_or_type),
         "super",
         ".",
-        $.identifier,
+        field("name", $.identifier),
         optional(seq($._formal_parameter_part, optional("?"))),
       ),
 
     // ========================================================================
-    // Statements (Phase 6)
+    // Statements
     // ========================================================================
 
     _statement: ($) =>
@@ -1482,7 +1721,7 @@ module.exports = grammar({
       choice(
         seq(
           optional($._metadata),
-          $.initialized_variable_definition,
+          $.initialized_variable_declaration,
           ";",
         ),
         seq(
@@ -1492,7 +1731,7 @@ module.exports = grammar({
         ),
       ),
 
-    initialized_variable_definition: ($) =>
+    initialized_variable_declaration: ($) =>
       seq(
         $._declared_identifier,
         optional(seq("=", field("value", $._expression))),
@@ -1506,7 +1745,7 @@ module.exports = grammar({
         $.function_body,
       ),
 
-    labeled_statement: ($) => seq(choice($.identifier, prec.dynamic(-1, "yield")), ":", $._statement),
+    labeled_statement: ($) => seq($.identifier, ":", $._statement),
 
     // --- Control flow ---
 
@@ -1515,7 +1754,7 @@ module.exports = grammar({
         seq(
           "if",
           "(",
-          $._expression,
+          field("condition", $._expression),
           optional(seq("case", $._guarded_pattern)),
           ")",
           field("consequence", $._statement),
@@ -1550,13 +1789,13 @@ module.exports = grammar({
           ),
           field("condition", optional($._expression)),
           ";",
-          commaSep(field("update", $._expression)),
+          commaSepTrailingComma(field("update", $._expression)),
         ),
         // Pattern for-in loop (Dart 3.0)
         seq(
           optional($._metadata),
           choice("final", "var"),
-          $._outer_pattern,
+          $._declaration_outer_pattern,
           "in",
           field("value", $._expression),
         ),
@@ -1634,7 +1873,7 @@ module.exports = grammar({
     _on_part: ($) =>
       choice(
         seq($.catch_clause, $.block),
-        seq("on", $._type_not_void, optional($.catch_clause), $.block),
+        seq("on", field("type", $._type_not_void), optional($.catch_clause), $.block),
       ),
 
     catch_clause: ($) =>
@@ -1652,9 +1891,9 @@ module.exports = grammar({
 
     return_statement: ($) => seq("return", optional($._expression), ";"),
 
-    yield_statement: ($) => seq("yield", $._expression, ";"),
+    yield_statement: ($) => prec.dynamic(3, seq("yield", $._expression, ";")),
 
-    yield_each_statement: ($) => seq("yield", "*", $._expression, ";"),
+    yield_each_statement: ($) => prec.dynamic(3, seq("yield", "*", $._expression, ";")),
 
     // --- Assert ---
 
@@ -1664,7 +1903,7 @@ module.exports = grammar({
       seq("assert", "(", $._expression, optional(seq(",", $._expression)), optional(","), ")"),
 
     // ========================================================================
-    // Function signatures and bodies (Phase 7)
+    // Function signatures and bodies
     // ========================================================================
 
     function_signature: ($) =>
@@ -1681,7 +1920,9 @@ module.exports = grammar({
       seq(optional(field("return_type", $.type)), "get", field("name", $.identifier)),
 
     setter_signature: ($) =>
-      seq(optional(field("return_type", $.type)), "set", field("name", $.identifier), field("parameters", $._formal_parameter_part)),
+      // Dynamic precedence: `set x(v) {}` is a setter, not a function whose
+      // return type is the built-in identifier `set`.
+      prec.dynamic(1, seq(optional(field("return_type", $.type)), "set", field("name", $.identifier), field("parameters", $._formal_parameter_part))),
 
     function_body: ($) =>
       choice(
@@ -1693,7 +1934,7 @@ module.exports = grammar({
     native: ($) => seq("native", optional($.string_literal), ";"),
 
     // ========================================================================
-    // Declarations and class members (Phase 7)
+    // Declarations and class members
     // ========================================================================
 
     _declaration: ($) =>
@@ -1734,13 +1975,20 @@ module.exports = grammar({
       choice(
         seq($.constructor_signature, optional($.initializers)),
         seq($.constant_constructor_signature, optional($.initializers)),
-        seq(optional("const"), $.factory_constructor_signature),
+        $.factory_constructor_signature,
         seq(optional("static"), choice($.function_signature, $.getter_signature, $.setter_signature)),
         $.operator_signature,
+        $.primary_constructor_body_signature,
       ),
+
+    // Dart 3.13: initializer list and/or body of a header primary constructor,
+    // declared as a class member: `this : assert(x >= 0) { ... }`
+    primary_constructor_body_signature: ($) =>
+      seq("this", optional($.initializers)),
 
     declaration: ($) =>
       choice(
+        $.primary_constructor_body_signature,
         seq(
           $.constant_constructor_signature,
           optional(choice($.redirection, $.initializers)),
@@ -1797,9 +2045,9 @@ module.exports = grammar({
         seq("const", optional($.type), $.static_final_declaration_list),
         // Abstract field declarations
         seq("abstract", "final", optional($.type), $.identifier_list),
-        seq("abstract", optional($.type), $.identifier_list),
+        seq("abstract", optional(choice("var", $.type)), $.identifier_list),
         seq("abstract", "covariant", "final", optional($.type), $.identifier_list),
-        seq("abstract", "covariant", optional($.type), $.identifier_list),
+        seq("abstract", "covariant", optional(choice("var", $.type)), $.identifier_list),
         // External field declarations
         seq($.external, optional("static"), optional("covariant"), optional(choice("final", "var")), optional($.type), $.identifier_list),
       ),
@@ -1811,69 +2059,55 @@ module.exports = grammar({
     // --- Constructors ---
 
     constructor_signature: ($) =>
-      choice(
-        seq(
+      seq(
+        choice(
           field("name", seq($.identifier, optional(seq(".", $._identifier_or_new)))),
-          field("parameters", $.formal_parameter_list),
+          // Dart 3.13 abbreviated form: `new();`, `new withName(this.name);`
+          seq("new", optional(field("name", $.identifier))),
         ),
-        seq(
-          field("name", seq("new", optional(choice(
-            seq(".", $._identifier_or_new),
-            $.identifier,
-          )))),
-          field("parameters", $.formal_parameter_list),
-        ),
+        field("parameters", $.formal_parameter_list),
       ),
 
     constant_constructor_signature: ($) =>
       seq(
         "const",
-        field("name", choice(
-          seq($.identifier, optional(seq(".", $._identifier_or_new))),
-          seq("new", optional(choice(
-            seq(".", $._identifier_or_new),
-            $.identifier,
-          ))),
-        )),
+        choice(
+          field("name", seq($.identifier, optional(seq(".", $._identifier_or_new)))),
+          seq("new", optional(field("name", $.identifier))),
+        ),
         field("parameters", $.formal_parameter_list),
       ),
 
     factory_constructor_signature: ($) =>
-      seq(
-        "factory",
-        choice(
-          prec.dynamic(
-            1,
-            seq(
-              field("name", seq($.identifier, optional(seq(".", $._identifier_or_new)))),
-              field("parameters", $.formal_parameter_list),
-            ),
-          ),
-          seq(field("parameters", $.formal_parameter_list)),
+      choice(
+        seq(
+          "factory",
+          field("name", seq($.identifier, optional(seq(".", $._identifier_or_new)))),
+          field("parameters", $.formal_parameter_list),
         ),
+        // Name optional since Dart 3.13: `factory() => ...` is the unnamed factory.
+        // Dynamic precedence: the bare head otherwise loses its GLR forks - `factory();`
+        // to a generative constructor named `factory` and `external factory();` to a
+        // method whose return type is `external`. Both readings are impossible
+        // (built-in identifiers cannot name classes/types), so the factory wins.
+        prec.dynamic(1, seq("factory", field("parameters", $.formal_parameter_list))),
       ),
 
     redirecting_factory_constructor_signature: ($) =>
       seq(
         optional("const"),
         "factory",
-        choice(
-          prec.dynamic(
-            1,
-            seq(
-              field("name", seq($.identifier, optional(seq(".", $._identifier_or_new)))),
-              field("parameters", $.formal_parameter_list),
-            ),
-          ),
-          seq(field("parameters", $.formal_parameter_list)),
-        ),
+        optional(field("name", seq($.identifier, optional(seq(".", $._identifier_or_new))))),
+        field("parameters", $.formal_parameter_list),
         "=",
         field("target", $._type_not_void),
-        optional(seq(".", field("target_constructor", $.identifier))),
+        optional(seq(".", field("target_constructor", $._identifier_or_new))),
       ),
 
     redirection: ($) =>
-      seq(":", "this", optional(seq(".", $._identifier_or_new)), $.arguments),
+      // Dynamic precedence: `: this.named(1)` is a redirection, not an
+      // initializer list with a this.named(...) entry.
+      prec.dynamic(1, seq(":", "this", optional(seq(".", $._identifier_or_new)), $.arguments)),
 
     initializers: ($) => seq(":", commaSep1($.initializer_list_entry)),
 
@@ -1904,12 +2138,14 @@ module.exports = grammar({
         field("parameters", $.formal_parameter_list),
       ),
 
+    // Spec: binaryOperator. Kept flat (no nested operator nodes) because in
+    // an operator_signature the token is the declared *name*, not an operation.
     binary_operator: ($) =>
       choice(
         choice("*", "/", "%", "~/"),
-        $._additive_operator,
-        $._shift_operator,
-        $.relational_operator,
+        choice("+", "-"),
+        choice("<<", ">>>", ">>"),
+        choice("<", ">", "<=", ">="),
         "==",
         "|",
         "^",
@@ -1933,7 +2169,7 @@ module.exports = grammar({
     identifier_list: ($) => commaSep1($.identifier),
 
     // ========================================================================
-    // Top-level declarations (Phase 8)
+    // Top-level declarations
     // ========================================================================
 
     // --- Classes ---
@@ -1944,7 +2180,20 @@ module.exports = grammar({
           optional($._metadata),
           optional("augment"),
           choice($._class_modifiers, $._mixin_class_modifiers),
-          $._type_header,
+          // Header `const` is only valid together with a primary constructor.
+          choice(
+            seq(
+              "const",
+              field("name", $.identifier),
+              optional(field("type_parameters", $.type_parameters)),
+              $.primary_constructor,
+            ),
+            seq(
+              field("name", $.identifier),
+              optional(field("type_parameters", $.type_parameters)),
+              optional($.primary_constructor),
+            ),
+          ),
           optional(field("superclass", $.superclass)),
           optional(field("interfaces", $.interfaces)),
           choice(field("body", $.class_body), ";"),
@@ -1971,29 +2220,25 @@ module.exports = grammar({
     _mixin_class_modifiers: ($) =>
       seq(optional("abstract"), optional("base"), "mixin", "class"),
 
+    // Dart 3.13 primary constructors: `class User(final String name);`,
+    // `class const D<T>.named(final T x) extends A;`
+    primary_constructor: ($) =>
+      seq(
+        optional(seq(".", field("name", $._identifier_or_new))),
+        field("parameters", $.formal_parameter_list),
+      ),
+
     class_body: ($) =>
       seq(
         "{",
-        repeat($.class_member),
+        repeat($.member_declaration),
         "}",
       ),
 
-    class_member: ($) =>
+    member_declaration: ($) =>
       choice(
         seq(optional($._metadata), optional("augment"), $.declaration, ";"),
         $.method_declaration,
-        $.primary_body_declaration,
-      ),
-
-    primary_body_declaration: ($) =>
-      seq(
-        optional($._metadata),
-        optional("augment"),
-        "this",
-        choice(
-          seq(optional($.initializers), ";"),
-          seq(optional($.initializers), $.block),
-        ),
       ),
 
     method_declaration: ($) =>
@@ -2038,7 +2283,7 @@ module.exports = grammar({
         optional(field("type_parameters", $.type_parameters)),
         optional(seq("on", commaSep1($._type_not_void))),
         optional(field("interfaces", $.interfaces)),
-        field("body", $.class_body),
+        choice(field("body", $.class_body), ";"),
       ),
 
     // --- Extensions ---
@@ -2067,7 +2312,7 @@ module.exports = grammar({
     extension_body: ($) =>
       seq(
         "{",
-        repeat($.class_member),
+        repeat($.member_declaration),
         "}",
       ),
 
@@ -2081,8 +2326,8 @@ module.exports = grammar({
           "type",
           optional("const"),
           field("name", $.extension_type_name),
-          field("representation", $.formal_parameter_list),
-          optional(seq("implements", commaSep1($.type))),
+          field("representation", $.extension_type_representation),
+          optional(field("interfaces", $.interfaces)),
           choice(field("body", $.class_body), ";"),
         ),
         seq(
@@ -2101,104 +2346,68 @@ module.exports = grammar({
       seq(
         $.identifier,
         optional($.type_parameters),
-        optional(seq(".", $.identifier)),
+        optional(seq(".", $._identifier_or_new)),
       ),
 
-    primary_parameter_list: ($) =>
-      choice(
-        seq("(", ")"),
-        seq("(", commaSep1($._primary_parameter), optional(","), ")"),
-        seq("(", commaSep1($._primary_parameter), ",", $._primary_optional_parameters, ")"),
-        seq("(", $._primary_optional_parameters, ")"),
-      ),
-
-    _primary_parameter: ($) =>
-      seq(optional($._metadata), $._primary_parameter_core),
-
-    _primary_parameter_core: ($) =>
-      choice(
-        $._function_formal_parameter,
-        $._simple_formal_parameter,
-        $._primary_initializing_parameter,
-        $.super_formal_parameter,
-      ),
-
-    _primary_initializing_parameter: ($) =>
+    // Spec: primary constructors (Dart 3.13). The representation is a
+    // declaring parameter, so its type is optional and it may be optional or
+    // named.
+    extension_type_representation: ($) =>
       seq(
-        optional($.type),
-        "this",
-        ".",
-        $.identifier,
-        optional(seq($._formal_parameter_part, optional("?"))),
-      ),
-
-    _primary_optional_parameters: ($) =>
-      choice(
-        seq("[", commaSep1TrailingComma($._primary_default_parameter), "]"),
-        seq("{", commaSep1TrailingComma($._primary_default_named_parameter), "}"),
-      ),
-
-    _primary_default_parameter: ($) =>
-      seq($._primary_parameter, optional(seq("=", $._expression))),
-
-    _primary_default_named_parameter: ($) =>
-      seq(
-        optional($._metadata),
-        optional("required"),
-        $._primary_parameter_core,
-        optional(seq(choice("=", ":"), $._expression)),
+        "(",
+        choice(
+          seq(
+            optional($._metadata),
+            optional("final"),
+            optional(field("type", $.type)),
+            field("name", $.identifier),
+            optional(","),
+          ),
+          $.optional_formal_parameters,
+        ),
+        ")",
       ),
 
     // --- Enums (enhanced, Dart 2.17) ---
-
-    _type_header: ($) =>
-      choice(
-        seq(
-          "const",
-          field("name", $.identifier),
-          optional(field("type_parameters", $.type_parameters)),
-          optional(seq(".", field("primary_name", $.identifier))),
-          field("primary_parameters", $.primary_parameter_list),
-        ),
-        seq(
-          field("name", $.identifier),
-          optional(field("type_parameters", $.type_parameters)),
-          optional(choice(
-            seq(
-              ".",
-              field("primary_name", $.identifier),
-              field("primary_parameters", $.primary_parameter_list),
-            ),
-            field("primary_parameters", $.primary_parameter_list),
-          )),
-        ),
-      ),
 
     enum_declaration: ($) =>
       seq(
         optional($._metadata),
         optional("augment"),
         "enum",
-        $._type_header,
+        // Header `const` is only valid together with a primary constructor.
+        choice(
+          seq(
+            "const",
+            field("name", $.identifier),
+            optional($.type_parameters),
+            $.primary_constructor,
+          ),
+          seq(
+            field("name", $.identifier),
+            optional($.type_parameters),
+            optional($.primary_constructor),
+          ),
+        ),
         optional($.mixins),
         optional($.interfaces),
-        field("body", $.enum_body),
+        choice(field("body", $.enum_body), ";"),
       ),
 
     enum_body: ($) =>
       seq(
         "{",
-        commaSepTrailingComma($.enum_constant),
+        optional(commaSep1TrailingComma($.enum_entry)),
         optional(
           seq(
             ";",
-            repeat($.class_member),
+            repeat($.member_declaration),
           ),
         ),
         "}",
       ),
 
-    enum_constant: ($) =>
+    enum_entry: ($) =>
       choice(
         seq(
           optional($._metadata),
@@ -2262,9 +2471,9 @@ module.exports = grammar({
         field("body", $.function_body),
       ),
 
-    // `external` is optional to accept the (technically-invalid-at-top-level)
-    // bodyless `void f();` form the previous grammar permitted; in practice
-    // top-level bodyless functions are external.
+    // `external` is optional, so a bodyless `void f();` parses although Dart
+    // requires the modifier at the top level. Bodyless top-level functions
+    // are external in practice.
     external_function_declaration: ($) =>
       seq(
         optional($._metadata),
@@ -2297,7 +2506,7 @@ module.exports = grammar({
         optional($._metadata),
         optional("augment"),
         field("modifier", $.external),
-        optional("final"),
+        optional(choice("final", "var")),
         optional(field("type", $.type)),
         $.identifier_list,
         ";",
@@ -2329,11 +2538,11 @@ module.exports = grammar({
       ),
 
     // ========================================================================
-    // Patterns (Phase 10 - Dart 3.0)
+    // Patterns
     // ========================================================================
 
     _guarded_pattern: ($) =>
-      seq($._pattern, optional(seq("when", $._expression))),
+      seq($._pattern, optional(seq("when", field("guard", $._expression)))),
 
     _pattern: ($) => $._logical_or_pattern,
 
@@ -2347,7 +2556,7 @@ module.exports = grammar({
       prec(
         PREC.RELATIONAL,
         choice(
-          seq(choice($.relational_operator, choice("==", "!=")), $._real_expression),
+          seq(choice($.relational_operator, $.equality_operator), $._real_expression),
           $._unary_pattern,
         ),
       ),
@@ -2371,7 +2580,7 @@ module.exports = grammar({
         $.object_pattern,
       ),
 
-    cast_pattern: ($) => seq($._primary_pattern, "as", field("type", $.type)),
+    cast_pattern: ($) => castPattern($, $._primary_pattern),
 
     null_check_pattern: ($) => seq($._primary_pattern, "?"),
 
@@ -2386,60 +2595,107 @@ module.exports = grammar({
         seq($.string_literal, optional(seq(".", $.identifier))),
         $.symbol_literal,
         seq($.identifier, optional(seq(".", $.identifier))),
-        $.qualified,
+        $.qualified_name,
         $.const_object_expression,
-        seq("const", optional($.type_arguments), "[", commaSep1TrailingComma($._element), "]"),
-        seq("const", optional($.type_arguments), "{", commaSep1TrailingComma($._element), "}"),
+        seq("const", optional($.type_arguments), "[", commaSepTrailingComma($._element), "]"),
+        seq("const", optional($.type_arguments), "{", commaSepTrailingComma($._element), "}"),
         seq("const", "(", $._expression, ")"),
         seq("const", $._record_literal_no_const),
-        // Dot shorthand (Dart 3.6+): .enumValue in patterns
-        seq(".", $.identifier),
+        // Dot shorthand (Dart 3.10+): .enumValue, .new, const .named(args)
+        $.static_member_shorthand,
       ),
 
     variable_pattern: ($) => seq($._final_var_or_type, field("name", $.identifier)),
 
     _parenthesized_pattern: ($) => seq("(", $._pattern, ")"),
 
-    list_pattern: ($) =>
-      seq(
-        optional($.type_arguments),
-        "[",
-        commaSepTrailingComma(choice($._pattern, $.rest_pattern)),
-        "]",
-      ),
+    list_pattern: ($) => listPattern($, $._pattern, $.rest_pattern),
 
-    rest_pattern: ($) => seq("...", optional($._pattern)),
+    rest_pattern: ($) => restPattern($._pattern),
 
-    map_pattern: ($) =>
-      seq(
-        optional($.type_arguments),
-        "{",
-        commaSepTrailingComma(choice(seq($._expression, ":", $._pattern), $.rest_pattern)),
-        "}",
-      ),
+    map_pattern: ($) => mapPattern($, $._pattern, $.rest_pattern),
 
-    record_pattern: ($) =>
-      seq("(", commaSepTrailingComma($._pattern_field), ")"),
+    record_pattern: ($) => recordPattern($._pattern_field),
 
-    _pattern_field: ($) =>
-      seq(optional(choice($.label, ":")), $._pattern),
+    _pattern_field: ($) => patternField($, $._pattern),
 
-    object_pattern: ($) =>
-      seq(
-        $._type_name,
-        optional($.type_arguments),
-        "(",
-        commaSepTrailingComma($._pattern_field),
-        ")",
-      ),
+    object_pattern: ($) => objectPattern($, $._pattern_field),
 
     pattern_variable_declaration: ($) =>
       seq(
         choice("final", "var"),
-        $._outer_pattern,
+        $._declaration_outer_pattern,
         "=",
         $._expression,
       ),
+
+    // Spec: declaration context, the pattern of a pattern variable
+    // declaration or a pattern for-in loop. It allows only irrefutable
+    // patterns, and a bare identifier declares a variable.
+    _declaration_outer_pattern: ($) =>
+      choice(
+        $._declaration_parenthesized_pattern,
+        alias($._declaration_list_pattern, $.list_pattern),
+        alias($._declaration_map_pattern, $.map_pattern),
+        alias($._declaration_record_pattern, $.record_pattern),
+        alias($._declaration_object_pattern, $.object_pattern),
+      ),
+
+    _declaration_pattern: ($) =>
+      seq(
+        $._declaration_unary_pattern,
+        repeat(seq("&&", $._declaration_unary_pattern)),
+      ),
+
+    _declaration_unary_pattern: ($) =>
+      choice(
+        alias($._declaration_cast_pattern, $.cast_pattern),
+        alias($._declaration_null_assert_pattern, $.null_assert_pattern),
+        $._declaration_primary_pattern,
+      ),
+
+    _declaration_primary_pattern: ($) =>
+      choice(
+        alias($._declared_name, $.variable_pattern),
+        $.variable_pattern,
+        $._declaration_outer_pattern,
+      ),
+
+    _declared_name: ($) => field("name", $.identifier),
+
+    _declaration_cast_pattern: ($) =>
+      castPattern($, $._declaration_primary_pattern),
+
+    _declaration_null_assert_pattern: ($) =>
+      seq($._declaration_primary_pattern, "!"),
+
+    _declaration_parenthesized_pattern: ($) =>
+      seq("(", $._declaration_pattern, ")"),
+
+    _declaration_list_pattern: ($) =>
+      listPattern(
+        $,
+        $._declaration_pattern,
+        alias($._declaration_rest_pattern, $.rest_pattern),
+      ),
+
+    _declaration_rest_pattern: ($) => restPattern($._declaration_pattern),
+
+    _declaration_map_pattern: ($) =>
+      mapPattern(
+        $,
+        $._declaration_pattern,
+        alias($._declaration_rest_pattern, $.rest_pattern),
+      ),
+
+    _declaration_record_pattern: ($) =>
+      recordPattern($._declaration_pattern_field),
+
+    _declaration_pattern_field: ($) =>
+      patternField($, $._declaration_pattern),
+
+    _declaration_object_pattern: ($) =>
+      objectPattern($, $._declaration_pattern_field),
 
     _outer_pattern: ($) =>
       choice(
@@ -2477,7 +2733,19 @@ module.exports = grammar({
       ),
 
     // The "super-identifier" - accepts both regular names and contextual keywords
-    identifier: ($) => choice($._name, $._built_in_identifier),
+    identifier: ($) =>
+      choice(
+        $._name,
+        // Spec: built-in identifiers are not type names. Losing ties to the
+        // keyword reading keeps `static Function()? f;` and
+        // `external set x(v);` from taking the keyword as a type.
+        prec.dynamic(-1, $._built_in_identifier),
+        // Contextual keywords: legal identifiers outside async/generator
+        // bodies. The analyzer accepts them, and await_expression/yield win
+        // via dynamic precedence when both parses are viable.
+        "await",
+        "yield",
+      ),
 
     // ========================================================================
     // Comments
@@ -2487,9 +2755,16 @@ module.exports = grammar({
       choice(
         // Block comments (via external scanner)
         $.block_comment,
-        $.documentation_block_comment,
-        // Single-line comments
+        // Single-line comments (`//` but not `///`)
         seq("//", /([^/\n].*)?/),
+      ),
+
+    // Dartdoc comments: `///` lines and `/** ... */` blocks. Not a spec
+    // production (the spec only has SINGLE_LINE_COMMENT) - a deliberate
+    // exception so editors can style dartdoc differently.
+    documentation_comment: ($) =>
+      choice(
+        $.documentation_block_comment,
         seq("///", /.*/),
       ),
   },
