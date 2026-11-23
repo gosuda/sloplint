@@ -94,6 +94,9 @@ impl WorldRule for HomonymDefinitions {
         }
         let mut flat: Vec<(Lang, &str, SiteRef<'_>)> = Vec::new();
         for file in files {
+            if file.facts.lang == Lang::Alloy {
+                continue;
+            }
             add_definitions(file, &reported, &mut flat);
         }
         flat.sort_by(|a, b| {
@@ -151,6 +154,9 @@ impl HomonymDefinitions {
             .map(|(chunk_index, chunk_files)| {
                 let mut buckets: [Bucket<'a>; NAME_SHARDS] = std::array::from_fn(|_| Vec::new());
                 for (offset, file) in chunk_files.iter().enumerate() {
+                    if file.facts.lang == Lang::Alloy {
+                        continue;
+                    }
                     let facts = file.facts;
                     let package = facts.package.as_str();
                     for site in &facts.definitions {

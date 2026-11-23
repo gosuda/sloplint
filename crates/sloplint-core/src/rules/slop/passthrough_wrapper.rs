@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::config::Strictness;
 use crate::facts::{ArgShape, Call, FileFacts, Function};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::EmptyOptions;
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, parse_options};
@@ -45,6 +46,9 @@ struct PassthroughWrapper;
 
 impl FileRule for PassthroughWrapper {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        if matches!(facts.lang, Lang::Alloy) {
+            return;
+        }
         let index = forward_index(facts);
         for function in &facts.functions {
             let Some(callee) = forwarded_callee(facts, &index, function) else {
