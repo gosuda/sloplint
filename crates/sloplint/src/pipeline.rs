@@ -227,6 +227,11 @@ fn analyze_file(
     // alongside the findings the salvaged parse produced rather than either
     // or.
     let mut findings: Vec<Finding> = match analysis.parse_error {
+        // Past the parse budget there is no tree to judge: the file keeps
+        // one timeout finding, the same shape as an unparseable file.
+        Some(pos) if analysis.timed_out => {
+            pipe.rules.parse_timeout(&text, pos).into_iter().collect()
+        }
         Some(pos) if !analysis.partial => pipe.rules.parse_error(&text, pos).into_iter().collect(),
         _ => {
             let mut found = rule_findings(pipe, &analysis);

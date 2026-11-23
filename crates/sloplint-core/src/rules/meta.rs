@@ -87,6 +87,21 @@ pub(crate) fn parse_error_finding(text: &SourceText, pos: Pos) -> Finding {
     )
 }
 
+/// A file the parser could not finish inside its time budget keeps one
+/// `meta/parse-error` finding like any unanalyzable file, but says so:
+/// there may be no syntax error at all, only a construct the grammar
+/// cannot get through in reasonable time.
+pub(crate) fn parse_timeout_finding(text: &SourceText, pos: Pos) -> Finding {
+    Finding::at_source(
+        text,
+        pos,
+        PARSE_ERROR.id,
+        Severity::Minor,
+        "parse timed out; other rules skipped for this file".to_string(),
+        "split the file or simplify the construct the parser stalls on".to_string(),
+    )
+}
+
 pub(crate) fn invalid_suppression_finding(text: &SourceText, line: u32, problem: &str) -> Finding {
     Finding::at_source(
         text,
