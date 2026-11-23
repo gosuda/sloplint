@@ -344,7 +344,7 @@ fn strip_comments(callee: &str) -> Option<String> {
                     continue;
                 }
                 Some((_, '/')) => {
-                    while let Some((_, q)) = chars.next() {
+                    for (_, q) in chars.by_ref() {
                         if q == '\n' {
                             out.push('\n');
                             break;
