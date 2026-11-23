@@ -66,7 +66,7 @@
  
      if_expression: $ => prec.right(seq(
        $._if_prefix,
-@@ -851,7 +856,10 @@
+@@ -849,7 +854,10 @@
  
      builtin_identifier: _ => /@[A-Za-z_][A-Za-z0-9_]*/,
  
