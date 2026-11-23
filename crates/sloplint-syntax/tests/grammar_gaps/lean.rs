@@ -74,9 +74,9 @@ fn malformed_nested_tactic_keeps_progress_and_later_declarations() {
     let root = tree.root_node();
     assert!(root.has_error(), "a dangling named-hole marker is invalid");
     assert_eq!(root.end_byte(), source.len());
-    let last = root
-        .named_child(root.named_child_count() - 1)
-        .expect("following declaration");
+    let last_index =
+        u32::try_from(root.named_child_count() - 1).expect("test child count fits u32");
+    let last = root.named_child(last_index).expect("following declaration");
     assert_eq!(last.kind(), "declaration");
     let definition = last.named_child(0).expect("definition after the error");
     assert_eq!(definition.kind(), "def");
@@ -92,7 +92,11 @@ fn nested_tactic_siblings_preserve_function_and_call_facts() {
     let analysis = run_clean("src/nested.lean", source);
     assert_eq!(function_names(&analysis), ["nested", "after"]);
     assert!(
-        analysis.facts.calls.iter().any(|call| call.callee == "exact"),
+        analysis
+            .facts
+            .calls
+            .iter()
+            .any(|call| call.callee == "exact"),
         "nested tactic applications remain visible to the adapter"
     );
 }
