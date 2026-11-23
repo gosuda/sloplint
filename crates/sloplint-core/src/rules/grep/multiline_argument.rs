@@ -74,13 +74,13 @@ impl FileRule for MultilineArgument {
             if call.initializes_binding {
                 continue;
             }
-            if inside_ranges(&bound, call.pos.line) {
-                continue;
-            }
-            let Some((index, span)) = widest_collection(call) else {
+            let Some((index, span, start, end)) = widest_collection(call) else {
                 continue;
             };
             if span < self.min_span {
+                continue;
+            }
+            if contained_in(&bound, start, end) {
                 continue;
             }
             out.push(Finding::at(
@@ -120,20 +120,24 @@ fn binding_arg_ranges(calls: &[Call<'_>]) -> Vec<(u32, u32)> {
     merged
 }
 
-fn inside_ranges(ranges: &[(u32, u32)], line: u32) -> bool {
-    let index = ranges.partition_point(|range| range.0 <= line);
-    index > 0 && line <= ranges[index - 1].1
+/// True when the candidate's own widest collection sits inside a binding
+/// initializer argument, so the call is nested in the initializer rather
+/// than a neighbor starting on one of its lines.
+fn contained_in(ranges: &[(u32, u32)], start: u32, end: u32) -> bool {
+    ranges
+        .iter()
+        .any(|&(lo, hi)| lo <= start && end <= hi)
 }
 
-fn widest_collection(call: &Call<'_>) -> Option<(usize, u32)> {
-    let mut best: Option<(usize, u32)> = None;
+fn widest_collection(call: &Call<'_>) -> Option<(usize, u32, u32, u32)> {
+    let mut best: Option<(usize, u32, u32, u32)> = None;
     for (index, arg) in call.args.iter().enumerate() {
         if !matches!(arg.shape, ArgShape::Collection) {
             continue;
         }
         let span = arg.end_line.saturating_sub(arg.start_line) + 1;
-        if best.is_none_or(|(_, widest)| span > widest) {
-            best = Some((index + 1, span));
+        if best.is_none_or(|(_, widest, _, _)| span > widest) {
+            best = Some((index + 1, span, arg.start_line, arg.end_line));
         }
     }
     best
@@ -357,6 +361,18 @@ mod tests {
             out.len(),
             1,
             "calls after the binding range still flag: {out:?}"
+        );
+    }
+
+    #[test]
+    fn sibling_call_starting_on_a_binding_line_still_flags() {
+        let outer = at_line(binding_initializer(vec![collection(3, 3)]), 3);
+        let sibling = at_line(call(vec![collection(3, 20)]), 3);
+        let out = check(&rule(), vec![outer, sibling]);
+        assert_eq!(
+            out.len(),
+            1,
+            "a neighbor starting on an initializer line is not nested in it: {out:?}"
         );
     }
 }
