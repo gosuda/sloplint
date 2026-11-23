@@ -103,7 +103,7 @@ fn sole_call_of(body: Node<'_>) -> Option<usize> {
     let only = only_named_child_matching(body, |c| {
         c.kind() != "comment" && c.kind() != "block_comment" && c.kind() != "documentation_comment"
     })?;
-    if only.kind() == "call_expression" {
+    if only.kind() == "call_expression" || only.kind() == "constructor_invocation" {
         return Some(only.id());
     }
     if only.kind() != "block" {
@@ -115,7 +115,7 @@ fn sole_call_of(body: Node<'_>) -> Option<usize> {
     if stmt.kind() != "return_statement" && stmt.kind() != "expression_statement" {
         return None;
     }
-    first_named_child_matching(stmt, &["call_expression"]).map(|c| c.id())
+    first_named_child_matching(stmt, &["call_expression", "constructor_invocation"]).map(|c| c.id())
 }
 
 fn is_fn_kind(kind: &str) -> bool {
