@@ -6,6 +6,7 @@ mod generated;
 mod header_comments;
 mod hooks;
 mod lang;
+mod lean_rescue;
 mod shadow;
 mod shapes;
 mod spec;
@@ -223,6 +224,12 @@ fn retry_analysis<'s>(
         }
     }
     if let Some(rescued) = rescue_analysis(parsers, input, input.lang, tree, custom, deadline) {
+        return rescued;
+    }
+    if input.lang == Lang::Lean
+        && let Some(rescued) =
+            lean_rescue::lean_command_rescue(parsers, input, tree, custom, deadline)
+    {
         return rescued;
     }
     let root = tree.root_node();

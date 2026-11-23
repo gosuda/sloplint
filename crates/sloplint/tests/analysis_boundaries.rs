@@ -8,6 +8,8 @@ mod eof_newline;
 mod foreign_xml;
 #[path = "analysis_boundaries/parse_rescue.rs"]
 mod parse_rescue;
+#[path = "analysis_boundaries/parse_rescue_lean.rs"]
+mod parse_rescue_lean;
 #[path = "analysis_boundaries/parse_rescue_world.rs"]
 mod parse_rescue_world;
 
