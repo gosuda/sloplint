@@ -278,8 +278,8 @@ generator = "0.27.1"
 abi = 15
 patch = "vendor/tree-sitter-odin/sloplint-grammar.patch"
 patch_status = "upstream-pending"
-patch_upstream = "https://github.com/tree-sitter-grammars/tree-sitter-odin/pull/24"
-notes = "Repository transferred from amaanq to tree-sitter-grammars; both URLs resolve to the same head. Tag commit matches the crate vcs_info. Closed PR #24 is the unreleased named_type multi-identifier commit d2ca8ef past the release; open PRs #34, #37, #38 overlap the for-init, unary **, and tag-statement hunks."
+patch_upstream = "https://github.com/tree-sitter-grammars/tree-sitter-odin/pull/37"
+notes = "Repository transferred from amaanq to tree-sitter-grammars; both URLs resolve to the same head. Tag commit matches the crate vcs_info. Master d2ca8ef (PR #24, merged, unreleased; multi-identifier named_type) is not taken: type and named_type are both prec.right at 0, so the generator statically shifts `identifier ,` into the name list and bare-identifier tuple and return types fail (`f :: proc() -> (int, bool)`, struct field `cb: proc(x: int) -> int,`). Over 2076 corpus .odin files, 159 clean on v1.3.0 fail on plain master and 244 clean on the vendored grammar fail on master plus this patch; none is fixed. Open PR #37 is byte-identical to the unary ** hunk; open PRs #34 and #38 overlap the for-init and tag-after-do hunks."
 
 [[grammar]]
 name = "tree-sitter-php"
