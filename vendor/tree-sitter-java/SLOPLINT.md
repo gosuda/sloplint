@@ -92,6 +92,10 @@ crate. `crates/sloplint-syntax/tests/grammar_gaps/java.rs` and
 - Real sloplint binaries, built from the unpatched and the patched grammar,
   run with `--no-cache --format json --fail-on never --rule
   meta/parse-error`. Files that report `meta/parse-error`: guava 13 to 0,
+  spring-framework 61 to 3, jdk21-src 0 to 0 (3275 + 9291 + 15619 .java
+  files). Compared as sorted path sets, no file reports a parse error with
+  the patched grammar that did not report one before, and 71 Java files
+  stop reporting (13 guava, 58 spring).
 - Annotations after `...` (`void m(String ... @B xs) {}`) were already
   accepted before this patch and still are, even though javac rejects them.
   That leniency predates this lane and is out of scope: removing it would
