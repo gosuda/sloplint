@@ -192,10 +192,12 @@ fn is_given_tuple_type<'s>(cx: &Cx<'_, 's>, node: Node<'_>) -> bool {
 
 // `case given(x, y)` is an extractor application in Scala 2: the parser
 // reads every `given(...)` as a `given_pattern` (upstream prefers that
-// reading), but an adjacent paren holding only lowercase, non-alias names
-// is the old extractor call, whose arguments bind locals. A spaced paren,
-// a plain type, or any uppercase/alias member is a tuple or plain type
-// and binds nothing — the same rule as `is_given_tuple_type`.
+// reading), but an adjacent paren holding only lowercase or
+// underscore-prefixed, non-alias names is the old extractor call, whose
+// arguments bind locals. A wildcard member binds nothing and is skipped, so
+// `case given(x, _)` still binds `x`. A spaced paren, a plain type, or any
+// other member is a tuple or plain type and binds nothing — the same rule
+// as `is_given_tuple_type`.
 fn given_extractor_binders<'s>(cx: &Cx<'_, 's>, node: Node<'_>) -> Option<Vec<&'s str>> {
     if node.kind() != "given_pattern" {
         return None;
@@ -215,6 +217,9 @@ fn given_extractor_binders<'s>(cx: &Cx<'_, 's>, node: Node<'_>) -> Option<Vec<&'
     }
     let mut out = Vec::new();
     for p in named_children(t) {
+        if p.kind() == "wildcard" {
+            continue;
+        }
         if p.kind() != "type_identifier" {
             return None;
         }
@@ -224,7 +229,7 @@ fn given_extractor_binders<'s>(cx: &Cx<'_, 's>, node: Node<'_>) -> Option<Vec<&'
         }
         let name = unquote(raw);
         let first = name.chars().next()?;
-        if !first.is_lowercase() || names_visible_type_alias(p, cx, name) {
+        if !(first.is_lowercase() || first == '_') || names_visible_type_alias(p, cx, name) {
             return None;
         }
         out.push(name);
@@ -510,6 +515,14 @@ pub(crate) fn match_arm<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<WildcardArm>
             // A `given (Int, String)` arm matches a tuple-typed instance;
             // it is not a variant constructor and must not inflate the
             // enum-like variant count.
+            variants += 1;
+            case_class_count += 1;
+        } else if p.kind() == "given_pattern" && given_extractor_binders(cx, p).is_some() {
+            // `case given(value)` is a Scala 2 extractor application, not a
+            // given of tuple type: it is a variant constructor like a case
+            // class pattern. Genuine Scala 3 given types (`case given T`,
+            // `case given (Int, String)`) bind nothing and stay out of the
+            // count.
             variants += 1;
             case_class_count += 1;
         }

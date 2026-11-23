@@ -250,6 +250,61 @@ fn empty_given_extractor_counts_as_variant() {
 }
 
 #[test]
+fn given_extractor_with_argument_counts_as_variant() {
+    // `case given(value)` is a Scala 2 extractor application, so the arm
+    // is a variant constructor: with one more constructor arm the wildcard
+    // stays enum-like. Before the fix the given arm was not counted and the
+    // wildcard lost its catch-all finding.
+    const GIVEN_EXTRACTOR: &str = r#"def handle(x: Any): Int = x match {
+  case given(value) => 1
+  case Other() => 2
+  case _ => 0
+}
+"#;
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let analysis = analyze_src(&mut Parsers::new(), &custom, GIVEN_EXTRACTOR, "src/M.scala");
+    assert!(analysis.parse_error.is_none(), "parses");
+    let arm = analysis
+        .facts
+        .wildcard_arms
+        .iter()
+        .find(|a| a.variant_count == 2)
+        .expect("given extractor arm counts as a variant");
+    assert_eq!(arm.scrutinee, ScrutineeKind::Ident, "identifier scrutinee");
+    assert!(
+        arm.enum_like,
+        "extractor plus constructor make it enum-like"
+    );
+    assert!(!arm.has_nullable_ctor, "no Some/None/Ok/Err siblings");
+}
+
+#[test]
+fn given_tuple_type_arm_does_not_count_as_variant() {
+    // `case given (Int, String)` matches a tuple-typed given instance, not
+    // an extractor application: it binds nothing and stays out of the
+    // variant count, so one constructor arm plus the wildcard is not
+    // enum-like.
+    const GIVEN_TUPLE: &str = r#"def handle(x: Any): Int = x match {
+  case given (Int, String) => 1
+  case Other() => 2
+  case _ => 0
+}
+"#;
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let analysis = analyze_src(&mut Parsers::new(), &custom, GIVEN_TUPLE, "src/M.scala");
+    assert!(analysis.parse_error.is_none(), "parses");
+    assert_eq!(
+        analysis.facts.wildcard_arms.len(),
+        1,
+        "one wildcard arm: {arms:?}",
+        arms = analysis.facts.wildcard_arms
+    );
+    let arm = &analysis.facts.wildcard_arms[0];
+    assert_eq!(arm.variant_count, 1, "only the constructor arm counts");
+    assert!(!arm.enum_like, "one constructor is not enum-like");
+}
+
+#[test]
 fn call_binding_and_assertion_shapes() {
     let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
     let analysis = analyze_src(&mut Parsers::new(), &custom, CALLS, "src/M.scala");

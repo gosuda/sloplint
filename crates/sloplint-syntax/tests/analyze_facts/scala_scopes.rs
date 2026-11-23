@@ -364,3 +364,61 @@ fn symbolic_call_with_unlisted_name_records_the_write() {
         );
     });
 }
+
+#[test]
+fn given_extractor_binds_underscore_prefixed_argument() {
+    // `case given(_status, other)` is an extractor: an underscore-prefixed
+    // name binds a local like any lowercase name, shadowing the outer
+    // variable for writes inside the arm. Before the fix the underscore
+    // rejected the whole arm and both writes leaked out.
+    let source = "def f(v: Any): Int = {\n  var _status = 0\n  var other = 0\n  v match {\n    case given(_status, other) => _status += 1\n    case _ => 0\n  }\n  _status += 10\n  other += 10\n  _status + other\n}\n";
+    with_scala_bindings(source, |found| {
+        let ss = named_all(found, "_status");
+        assert_eq!(
+            ss.len(),
+            1,
+            "the extractor arg shadows the outer var, not a second binding: {found:?}"
+        );
+        assert_eq!(
+            (
+                ss[0].write_lines,
+                ss[0].first_write_line,
+                ss[0].last_write_line
+            ),
+            (1, 8, 8),
+            "the extractor arm's write is shadowed; only the post-match write lands: {found:?}"
+        );
+        let os = named_all(found, "other");
+        assert_eq!(os.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (
+                os[0].write_lines,
+                os[0].first_write_line,
+                os[0].last_write_line
+            ),
+            (1, 9, 9),
+            "only the post-match write reaches the outer binding: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn given_extractor_with_wildcard_binds_named_argument() {
+    // `case given(x, _)` is an extractor with a wildcard member: the
+    // wildcard binds nothing but must not discard `x`. Before the fix the
+    // arm bound nothing and the write leaked to the outer `x`.
+    let source = "def f(v: Any): Int = {\n  var x = 0\n  v match {\n    case given(x, _) => x += 1\n    case _ => 0\n  }\n  x += 10\n  x\n}\n";
+    with_scala_bindings(source, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(xs.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (1, 7, 7),
+            "the extractor arm's write is shadowed; only the post-match write lands: {found:?}"
+        );
+    });
+}
