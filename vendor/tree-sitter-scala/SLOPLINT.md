@@ -77,6 +77,11 @@ on pristine HEAD):
   the hunk is load-bearing for the exercised shapes).
 - SC-SELFWILD: `new T { _: (A, B) => … }` reads as a wildcard self-type
   (`self_type` dynamic 3 beats the braced-lambda reading).
+- Braced-lambda colon: the `_braced_typed_lambda` parameter takes the
+  `_colon_mid` external (a colon with same-line content after it)
+  instead of `colonEol`, so an end-of-line colon after a braced
+  parameter keeps the fewer-braces colon-argument reading and both
+  spellings produce the flat upstream tree.
 
 Dropped hunks (upstream now covers them, each verified clean on HEAD):
 
@@ -92,6 +97,13 @@ Dropped hunks (upstream now covers them, each verified clean on HEAD):
 - The moved `[block, capture_set]` duplicate and given-definition
   conflicts upstream subsumed.
 
+Conflict declarations: the fork set the wider identifier reads need
+(`using`/`given` as names, `enum` as a name, polymorphic `[T] =>`
+bodies, unparenthesized typed lambdas, self-types, ascriptions). Each
+names the two readings and the token that decides; five proposed forks
+proved unnecessary under `tree-sitter generate` and were pruned, and
+the upstream pin already carries the enum-narrowed braced-lambda forks.
+
 Guard hunk (the one intentional difference from upstream HEAD):
 
 - Upstream dc2b699 lets an end-of-line colon alone stand as an empty
@@ -102,11 +114,6 @@ Guard hunk (the one intentional difference from upstream HEAD):
   the scanner emits it only when the next significant line starts with
   an `end` marker — every other flow is byte-identical to upstream.
 
-Conflict declarations: the fork sets the wider upstream identifier
-reads need (`using`/`given` as names, `enum` as a name, polymorphic
-`[T] =>` bodies, braced and unparenthesized typed lambdas, self-types,
-ascriptions). Each names the two readings and the token that decides.
-
 ## Changes to src/scanner.c
 
 - The operand, postfix, slash-tail, quote-tail, and soft-keyword probes
@@ -114,11 +121,23 @@ ascriptions). Each names the two readings and the token that decides.
 - The empty-body guard: `empty_body_end_follows` (blank rest-of-line,
   then the next significant line must start with `end` plus a name)
   and the `after_colon_eol` bookkeeping for the new token.
+- The mid-line colon probe: `COLON_MID` is emitted only when the rest
+  of the line holds same-line content, so the braced typed lambda's
+  parameter colon cannot be the fewer-braces colon argument's
+  end-of-line colon.
 - Upstream scanner work (perf lexing, trivial-end semicolon, continuing
   paren lines, NAME_GATE, word-operator EOL, case-body indent) is taken
   verbatim.
-- Removed as dead: the `_colon_mid` token and its branch (nothing
-  references it; mid-line colons go through the grammar).
+
+## Intentional divergence (documented, not a regression)
+
+None: the rebased tree reproduces every upstream corpus shape exactly,
+including the varied-indentation braced lambda (both statements inside
+the lambda, as upstream pins it). The `_colon_mid` token keeps it that
+way: with the patch's extra typed-lambda forks, the braced parameter's
+end-of-line colon would otherwise take the narrower fewer-braces
+reading, so the braced reading takes a mid-line colon only. The
+invalid-control guard only narrows the empty-body alternative.
 
 ## Fixed shapes (scalac 3.10.0 `-Ystop-after:parser` accepts each)
 
@@ -133,18 +152,6 @@ ascriptions). Each names the two readings and the token that decides.
 - SC-POLYARG (`[X] => (_: List[X]).headOption`, cats
   FunctionKLiftSuite; `[t] => _ match`, tests/pos/i23774typeclass):
   fixed upstream by #753, now clean.
-
-## Intentional divergence (documented, not a regression)
-
-- Braced typed lambda with a dedented trailing statement:
-  `_.next { x: M.N =>\n    val a = 1\n  val b = 2\n}` parses with
-  `val b` outside the lambda body (an `indented_block` holds `val a`
-  only). Upstream's corpus pins the flat tree (both statements inside
-  the lambda). Significant indentation puts the body region at `val a`
-  and the dedent ends it, so the narrower tree matches the reference
-  reading; the vendored 0.26.3 grammar errored here, so nothing that
-  parsed before changed shape. The corpus expectation records the
-  narrower tree with this note.
 
 ## Still failing (residual)
 
