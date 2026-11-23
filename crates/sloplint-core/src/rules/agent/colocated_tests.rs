@@ -99,6 +99,11 @@ impl WorldRule for ColocatedTests {
 impl ColocatedTests {
     fn skipped(&self, file: &WorldFile<'_>) -> bool {
         let facts: &WorldFacts = file.facts;
+        // TLA+ has no colocated-test convention: TLC and SANY check specs,
+        // and the flagged files include the test models themselves.
+        if matches!(facts.lang, Lang::Tlaplus) {
+            return true;
+        }
         if facts.role != CodeRole::Library
             || facts.public_functions == 0
             || self.exclude.is_match(file.path)

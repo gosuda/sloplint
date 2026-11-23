@@ -67,6 +67,13 @@ impl FileRule for CognitiveDepth {
         if matches!(facts.lang, Lang::Alloy) {
             return;
         }
+        // TLA+ packs nested quantifiers, IFs and PlusCal branches into one
+        // operator by design; the idiomatic action style scores like deeply
+        // nested procedural code, and the outliers are generated PlusCal
+        // translations. Thresholds assume procedural code.
+        if matches!(facts.lang, Lang::Tlaplus) {
+            return;
+        }
         for function in &facts.functions {
             if function.max_depth < 2 {
                 continue;

@@ -28,6 +28,11 @@ const MAX_SHARD_BYTES: u64 = 64 * 1024 * 1024;
 pub struct FileOutput {
     pub hash: [u8; 32],
     pub parsed: bool,
+    /// The parse ran past its budget, so this output reflects host load as
+    /// much as the source. Never written to disk: the store leaves such
+    /// outputs out, and a loaded entry reads `false`.
+    #[serde(skip)]
+    pub timed_out: bool,
     /// Stored before suppression and fingerprinting; both re-run after a cache hit.
     pub findings: Vec<Finding>,
     pub suppressions: Vec<Suppression>,

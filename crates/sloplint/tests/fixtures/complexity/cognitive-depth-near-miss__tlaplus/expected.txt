@@ -1,0 +1,1 @@
+# Ten flat IFs under one quantifier score 11, but the rule stays silent on TLA+.

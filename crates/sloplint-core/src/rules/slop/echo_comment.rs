@@ -56,6 +56,12 @@ impl FileRule for EchoComment {
         if matches!(facts.lang, Lang::Racket) {
             return;
         }
+        // TLA+ documents operators with banner titles and spec sentences
+        // that share every word with the operator name; no signal separates
+        // a title from an echo, so every firing is noise.
+        if matches!(facts.lang, Lang::Tlaplus) {
+            return;
+        }
         for function in &facts.functions {
             if function.doc.is_empty() || function.in_test {
                 continue;

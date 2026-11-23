@@ -161,6 +161,12 @@ impl HomonymDefinitions {
                         continue;
                     }
                     let facts = file.facts;
+                    // Init, Next, vars, Inv and friends are defined per
+                    // module by design in TLA+: renaming them across
+                    // hundreds of files is unthinkable.
+                    if matches!(facts.lang, Lang::Tlaplus) {
+                        continue;
+                    }
                     let package = facts.package.as_str();
                     for site in &facts.definitions {
                         if facts.lang == Lang::Logos {

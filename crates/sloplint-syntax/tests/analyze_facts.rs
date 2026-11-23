@@ -50,6 +50,8 @@ mod objc_scopes;
 mod ocaml_r_scopes;
 #[path = "analyze_facts/odin_scopes.rs"]
 mod odin_scopes;
+#[path = "analyze_facts/parse_budget.rs"]
+mod parse_budget;
 #[path = "analyze_facts/parse_error_position.rs"]
 mod parse_error_position;
 #[path = "analyze_facts/php_scopes.rs"]
