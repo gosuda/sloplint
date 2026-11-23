@@ -82,6 +82,9 @@ fn formerly_divergent_lean_retains_facts_and_parser_reuse() {
         summary.healthy_clean,
         "the next file on the shared parser parses cleanly"
     );
-    assert_eq!(summary.healthy_fns, 1, "healthy def contributes one function");
+    assert_eq!(
+        summary.healthy_fns, 1,
+        "healthy def contributes one function"
+    );
     assert_eq!(summary.healthy_first, "answer");
 }
