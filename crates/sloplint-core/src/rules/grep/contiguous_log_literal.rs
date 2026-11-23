@@ -6,6 +6,7 @@ use crate::callee::CalleePattern;
 use crate::config::Strictness;
 use crate::facts::{ArgShape, Call, FileFacts};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::parse_options;
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
@@ -71,6 +72,14 @@ fn build(options: toml::Table, settings: &Settings) -> Result<Box<dyn FileRule>,
 
 impl FileRule for ContiguousLogLiteral {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // Lean logging is elaborator diagnostics and `#do` test scaffolding
+        // (`IO.println x` next to `/-- info: ... -/` asserts the dynamic
+        // output): the adapter now measures interpolated runs truthfully,
+        // but no syntactic signal separates a true positive from that
+        // scaffolding, so the rule stays off Lean.
+        if matches!(facts.lang, Lang::Lean) {
+            return;
+        }
         let Some(patterns) = self.log_callees.get(facts.lang.config_key()) else {
             return;
         };

@@ -2,6 +2,7 @@ use super::{EmptyOptions, parse_options};
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Import, ImportKind, ImportScope};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 
@@ -41,6 +42,12 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for NoWildcardImport {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // Lean `open` is the namespace mechanism, not a shortcut: every file
+        // opens namespaces, often several at once, and the named form
+        // `open NS (name)` already maps to silent named imports.
+        if matches!(facts.lang, Lang::Lean) {
+            return;
+        }
         for import in &facts.imports {
             if import.kind != ImportKind::Wildcard
                 || import.scope != ImportScope::Module
