@@ -186,6 +186,26 @@ pub(crate) fn callee_text<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
     cut_generics(text(cx, func))
 }
 
+/// End byte of the `.new` suffix immediately before `args`, skipping
+/// comments: `Logger.new(msg)`, `Foo<int>.new(x)` and
+/// `Logger.new /* why */ (msg)` all end at the `new` token. None when the
+/// suffix is absent (`Foo<int>(3)`) or named (`Foo<int>.named(1)`).
+fn dot_new_end(n: Node<'_>, args: Node<'_>) -> Option<usize> {
+    let mut cursor = n.walk();
+    let kept: Vec<Node> = n
+        .children(&mut cursor)
+        .filter(|c| !COMMENTS.contains(&c.kind()))
+        .collect();
+    let pos = kept.iter().position(|c| c.id() == args.id())?;
+    if pos < 2 {
+        return None;
+    }
+    if kept[pos - 2].kind() != "." || kept[pos - 1].kind() != "new" {
+        return None;
+    }
+    Some(kept[pos - 1].end_byte())
+}
+
 pub(crate) fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     if n.kind() == "call_expression" {
         let func = child_by_field(n, "function")?;
@@ -234,8 +254,12 @@ pub(crate) fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>
                     args: call_args(cx, n),
                 });
             }
+            // `Foo<int>.new(x)` reports `new`: the constructor field never
+            // holds the anonymous `new` token, and a text slice from the
+            // type end always spans `<int>`, so read the suffix tokens
+            // instead. Comments may sit anywhere around them.
             if let Some(a) = args
-                && slice(cx.src, end, a.start_byte()).trim() == ".new"
+                && dot_new_end(n, a).is_some()
             {
                 return Some(CallHead {
                     callee: "new",
@@ -247,10 +271,12 @@ pub(crate) fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>
                 });
             }
         } else if ctor.is_none() {
+            // `Logger.new(msg)` keeps the dotted callee; a comment between
+            // `.new` and the arguments must not drop the suffix.
             if let Some(a) = args
-                && slice(cx.src, end, a.start_byte()).trim() == ".new"
+                && let Some(stop) = dot_new_end(n, a)
             {
-                end = a.start_byte();
+                end = stop;
             }
         } else if let Some(k) = ctor {
             end = end.max(k.end_byte());

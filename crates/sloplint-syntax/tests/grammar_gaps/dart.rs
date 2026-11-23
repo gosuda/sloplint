@@ -218,12 +218,20 @@ fn a_const_factory_with_a_body_parses() {
 #[test]
 fn constructor_invocation_callees_keep_their_names() {
     let analysis = run_clean(
-        "void main() {\n  Logger.new(msg);\n  Foo<int>.named(1);\n  p.Foo.named(2);\n  Foo<int>(3);\n}\n",
+        "void main() {\n  Logger.new(msg);\n  Foo<int>.named(1);\n  p.Foo.named(2);\n  Foo<int>(3);\n  Foo<int>.new(x);\n  Foo<int>.new /* g */ (y);\n  Logger.new /* reason */ (message);\n}\n",
     );
     let callees: Vec<&str> = analysis.facts.calls.iter().map(|c| c.callee).collect();
     assert_eq!(
         callees,
-        vec!["Logger.new", "named", "p.Foo.named", "Foo"],
+        vec![
+            "Logger.new",
+            "named",
+            "p.Foo.named",
+            "Foo",
+            "new",
+            "new",
+            "Logger.new"
+        ],
         "constructor callees: {callees:?}"
     );
 }
