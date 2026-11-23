@@ -167,7 +167,7 @@ abi = 15
 patch = "vendor/tree-sitter-java/sloplint-grammar.patch"
 patch_status = "upstream-pending"
 patch_upstream = "https://github.com/tree-sitter/tree-sitter-java/pull/206"
-notes = "Tag commit matches the crate vcs_info. Master has zero grammar.js commits past the tag. One-hunk patch; PR #206 carries the equivalent fix unmerged."
+notes = "Tag commit matches the crate vcs_info. Master has zero grammar.js commits past the tag. Pre-ellipsis annotation repeat is upstream PR #206 commit ef003b2 (open, unmerged; PR head 6018d68), cherry-picked with upstream authorship in a scratch clone; post-ellipsis repeat intentionally retained (upstream dropped it; removal would newly error files that parse today)."
 
 [[grammar]]
 name = "tree-sitter-javascript"
