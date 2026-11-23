@@ -8,7 +8,7 @@ use tree_sitter::Node;
 
 pub(crate) use crate::cx::{ChainRoots, Cx, FileNameSets, FileSetKind, Link, MemberStates};
 pub(crate) use crate::emit::{attributed_region, region_of};
-pub(crate) use crate::header_comments::{is_directive_comment, preceding_comments};
+pub(crate) use crate::header_comments::{is_directive_segment, preceding_comments};
 pub(crate) use crate::shapes::{binary_concat, string_arg_shape};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -254,6 +254,7 @@ pub(crate) trait LangHooks: Sync {
             start_line: pos_of(n).line,
             end_line: narrow(n.end_position().row) + 1,
             text: text(cx, n),
+            enclosing: None,
         }]
     }
 }

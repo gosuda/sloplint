@@ -4,10 +4,20 @@ use tree_sitter::Node;
 use crate::hooks::{Cx, pos_of, text};
 
 pub(crate) fn is_directive_comment(text: &str) -> bool {
+    is_directive_segment(text, None)
+}
+
+/// Whether `text` may carry a suppression directive. A split segment names
+/// its enclosing block opener explicitly because the segment itself no
+/// longer starts with it; documentation openers stay excluded either way.
+pub(crate) fn is_directive_segment(text: &str, enclosing: Option<&str>) -> bool {
     if !text.contains("sloplint-allow") {
         return false;
     }
-    let head = text.trim_start();
+    let head = match enclosing {
+        Some(opener) => opener,
+        None => text.trim_start(),
+    };
     !["///", "//!", "/**", "/*!", "(**", "(*!"]
         .iter()
         .any(|prefix| head.starts_with(prefix))

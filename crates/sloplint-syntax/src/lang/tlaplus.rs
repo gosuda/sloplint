@@ -113,7 +113,21 @@ fn whole_comment<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Vec<CommentText<'s>> {
         start_line: pos_of(n).line,
         end_line: narrow(n.end_position().row) + 1,
         text: text(cx, n),
+        enclosing: None,
     }]
+}
+
+/// Opening delimiter of a TLA+ block comment: the plain `(*` opener, or
+/// the documentation `(*!` / `(**` one so a split documentation tail stays
+/// excluded from directive comments.
+fn block_opener(whole: &str) -> &'static str {
+    if whole.starts_with("(*!") {
+        "(*!"
+    } else if whole.starts_with("(**") {
+        "(**"
+    } else {
+        "(*"
+    }
 }
 
 /// 1-based line holding the byte at `byte`, counted over `src`.
@@ -441,6 +455,10 @@ impl LangHooks for TlaplusHooks {
     /// inside the algorithm belongs to the algorithm's own `\*` comment
     /// nodes, so only the text outside the algorithm ranges marks this
     /// comment; otherwise one directive would suppress the whole algorithm.
+    /// Split segments keep the enclosing block opener, so a trailing
+    /// directive still validates its reason against `*)` instead of reading
+    /// `*)` as the reason, and a documentation tail stays a documentation
+    /// comment.
     fn comment_texts<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Vec<CommentText<'s>> {
         if n.kind() != "block_comment" {
             return whole_comment(n, cx);
@@ -453,6 +471,7 @@ impl LangHooks for TlaplusHooks {
         if algorithms.is_empty() {
             return whole_comment(n, cx);
         }
+        let opener = block_opener(text(cx, n));
         let mut segments = Vec::with_capacity(algorithms.len() + 1);
         let mut start = n.start_byte();
         for algorithm in &algorithms {
@@ -464,12 +483,14 @@ impl LangHooks for TlaplusHooks {
         if n.end_byte() > start {
             segments.push((start, n.end_byte()));
         }
+        let head_start = n.start_byte();
         segments
             .into_iter()
             .map(|(seg_start, seg_end)| CommentText {
                 start_line: line_of(cx.src, seg_start),
                 end_line: line_of(cx.src, seg_end.saturating_sub(1).max(seg_start)),
                 text: slice(cx.src, seg_start, seg_end),
+                enclosing: (seg_start != head_start).then_some(opener),
             })
             .collect()
     }

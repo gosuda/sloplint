@@ -4,7 +4,7 @@ use sloplint_core::facts::{Ambient, AmbientKind, Call, DynamicSymbol, Function, 
 use sloplint_core::lang::Lang;
 use sloplint_core::role::{CodeRole, RoleRegion};
 
-use crate::hooks::{Container, FunctionHead, ShadowKind, is_directive_comment, narrow, pos_of};
+use crate::hooks::{Container, FunctionHead, ShadowKind, is_directive_segment, narrow, pos_of};
 use crate::shadow::{FnFrame, Mark, ScopedShadow};
 use crate::spec::Role;
 use crate::walk::WalkState;
@@ -332,7 +332,7 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
             self.hooks.comment_texts(node, &cx)
         };
         for comment in comments {
-            if is_directive_comment(comment.text) {
+            if is_directive_segment(comment.text, comment.enclosing) {
                 self.comments.push(comment);
             }
         }
