@@ -188,8 +188,6 @@ val val = ???
 
 --------------------------------------------------------------------------------
 
-
-
 ================================================================================
 Constructor annotation before the class parameters
 ================================================================================
@@ -1540,6 +1538,54 @@ trait B:
         (function_declaration
           (identifier)
           (type_identifier))))))
+
+================================================================================
+Extension parameter clause on the next line (Scala 3 syntax)
+================================================================================
+
+extension (x: A)
+  (using b: B)
+  def f = x
+
+extension (x: A)
+    (using b: B = new B {})
+
+  def f = x
+  def g = x
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (extension_definition
+    (parameters
+      (parameter
+        (identifier)
+        (type_identifier)))
+    (parameters
+      (parameter
+        (identifier)
+        (type_identifier)))
+    (function_definition
+      (identifier)
+      (identifier)))
+  (extension_definition
+    (parameters
+      (parameter
+        (identifier)
+        (type_identifier)))
+    (parameters
+      (parameter
+        (identifier)
+        (type_identifier)
+        (instance_expression
+          (type_identifier)
+          (template_body))))
+    (function_definition
+      (identifier)
+      (identifier))
+    (function_definition
+      (identifier)
+      (identifier))))
 
 ================================================================================
 Given instance definitions (Scala 3 syntax)
@@ -2915,6 +2961,95 @@ package export.foo
       (identifier))))
 
 ================================================================================
+enum as an identifier (Scala 2)
+================================================================================
+
+def test(enum: Int): Int = enum
+val viaCall = enum()
+
+object A {
+  val enum = 1
+  val viaField = y.enum
+  def enum(): Unit = ()
+  enum.foo
+  enum = 2
+  enum + 1
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (parameters
+      (parameter
+        (identifier)
+        (type_identifier)))
+    (type_identifier)
+    (identifier))
+  (val_definition
+    (identifier)
+    (call_expression
+      (identifier)
+      (arguments)))
+  (object_definition
+    (identifier)
+    (template_body
+      (val_definition
+        (identifier)
+        (integer_literal))
+      (val_definition
+        (identifier)
+        (field_expression
+          (identifier)
+          (identifier)))
+      (function_definition
+        (identifier)
+        (parameters)
+        (type_identifier)
+        (unit))
+      (field_expression
+        (identifier)
+        (identifier))
+      (assignment_expression
+        (identifier)
+        (integer_literal))
+      (infix_expression
+        (identifier)
+        (operator_identifier)
+        (integer_literal)))))
+
+================================================================================
+Enum with a symbolic name (Scala 3 syntax)
+================================================================================
+
+enum =:=[A, B] {
+  case Refl[C]() extends (C =:= C)
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (enum_definition
+    (operator_identifier)
+    (type_parameters
+      (identifier)
+      (identifier))
+    (enum_body
+      (enum_case_definitions
+        (full_enum_case
+          (identifier)
+          (type_parameters
+            (identifier))
+          (class_parameters)
+          (extends_clause
+            (tuple_type
+              (infix_type
+                (type_identifier)
+                (operator_identifier)
+                (type_identifier)))))))))
+
+================================================================================
 export as an identifier (Scala 2)
 ================================================================================
 
@@ -2983,6 +3118,131 @@ object A {
       (val_definition
         (identifier)
         (integer_literal)))))
+
+================================================================================
+given as an identifier (Scala 2)
+================================================================================
+
+def test(given: Int): Int = given
+val viaCall = given()
+
+object A {
+  val given = 1
+  val viaField = y.given
+  val viaMember = given.f(1)
+  val viaInfix = given + 1
+  def given(): Unit = ()
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (parameters
+      (parameter
+        (identifier)
+        (type_identifier)))
+    (type_identifier)
+    (identifier))
+  (val_definition
+    (identifier)
+    (call_expression
+      (identifier)
+      (arguments)))
+  (object_definition
+    (identifier)
+    (template_body
+      (val_definition
+        (identifier)
+        (integer_literal))
+      (val_definition
+        (identifier)
+        (field_expression
+          (identifier)
+          (identifier)))
+      (val_definition
+        (identifier)
+        (call_expression
+          (field_expression
+            (identifier)
+            (identifier))
+          (arguments
+            (integer_literal))))
+      (val_definition
+        (identifier)
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (integer_literal)))
+      (function_definition
+        (identifier)
+        (parameters)
+        (type_identifier)
+        (unit)))))
+
+================================================================================
+given definition and given identifier in one body
+================================================================================
+
+object A {
+  given intOrd: Ord[Int] = IntOrd
+  val given = 1
+  given.foo
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (given_definition
+        (identifier)
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (type_identifier)))
+        (identifier))
+      (val_definition
+        (identifier)
+        (integer_literal))
+      (field_expression
+        (identifier)
+        (identifier)))))
+
+================================================================================
+Given with an extension whose method body is an if expression
+================================================================================
+
+given S: AnyRef with
+  extension (s: S)
+    def f: Int = if a then b else c
+    def g: Int = 1
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (given_definition
+    (identifier)
+    (type_identifier)
+    (with_template_body
+      (extension_definition
+        (parameters
+          (parameter
+            (identifier)
+            (type_identifier)))
+        (function_definition
+          (identifier)
+          (type_identifier)
+          (if_expression
+            (identifier)
+            (identifier)
+            (identifier)))
+        (function_definition
+          (identifier)
+          (type_identifier)
+          (integer_literal))))))
 
 ================================================================================
 Parenthesized typed lambda parameter wrapped across the newline
@@ -3077,6 +3337,70 @@ end Wide
       (class_parameter
         (identifier)
         (type_identifier)))
+    (end_marker)))
+
+================================================================================
+End marker after an empty colon body (Scala 3 syntax)
+================================================================================
+
+class D:
+end D
+
+val foo =
+  new Foo:
+    // comment
+  end new
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (template_body)
+    (end_marker))
+  (val_definition
+    (identifier)
+    (indented_block
+      (instance_expression
+        (type_identifier)
+        (template_body)
+        (comment)
+        (end_marker)))))
+
+================================================================================
+End marker after lines of semicolons (Scala 3 syntax)
+================================================================================
+
+class A:
+  def a = {
+    1
+  }
+  ;  ;
+  end a
+;
+end A
+
+class B {
+}
+;
+;
+end B
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_definition
+    (identifier)
+    (template_body
+      (function_definition
+        (identifier)
+        (block
+          (integer_literal))
+        (end_marker)))
+    (end_marker))
+  (class_definition
+    (identifier)
+    (template_body)
     (end_marker)))
 
 ================================================================================
@@ -3442,3 +3766,46 @@ def f(update: U, consume: C) =
           (case_clause
             (wildcard)
             (identifier)))))))
+
+================================================================================
+Parents on lines of their own, each line but the last ending in a comma (Scala 3 syntax)
+================================================================================
+
+object O:
+  class C
+      extends A,
+      B,
+      C:
+    def f = 1
+  case class D(x: Int)
+      extends A,
+      B
+      derives Eq
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (class_definition
+        (identifier)
+        (extends_clause
+          (type_identifier)
+          (type_identifier)
+          (type_identifier))
+        (template_body
+          (function_definition
+            (identifier)
+            (integer_literal))))
+      (class_definition
+        (identifier)
+        (class_parameters
+          (class_parameter
+            (identifier)
+            (type_identifier)))
+        (extends_clause
+          (type_identifier)
+          (type_identifier))
+        (derives_clause
+          (type_identifier))))))

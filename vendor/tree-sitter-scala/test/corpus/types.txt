@@ -1195,7 +1195,6 @@ type A = Foo | Bar & Buz
 type B = "foo" | "bar" & "buz"
 
 --------------------------------------------------------------------------------
-
 (compilation_unit
   (type_definition
     (type_identifier)
@@ -1226,7 +1225,6 @@ Applied Constructor Types (Scala 3)
 val c: C(42)
 
 --------------------------------------------------------------------------------
-
 (compilation_unit
   (val_declaration
     (identifier)
@@ -1487,10 +1485,8 @@ end Merge
           (class_parameter
             (identifier)
             (type_identifier)))
-        (template_body
-          (postfix_expression
-            (identifier)
-            (identifier)))))
+        (template_body)
+        (end_marker)))
     (end_marker)))
 
 ================================================================================
