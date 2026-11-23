@@ -19,6 +19,13 @@ enum PatchImport {
     Function,
     MockModule,
     UnittestModule,
+    BuiltinsModule,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum MutationTarget {
+    Object,
+    DottedOrObject,
 }
 
 pub(crate) fn blocking_sleep(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
@@ -60,18 +67,27 @@ fn imported_names<'s>(cx: &Cx<'_, 's>, wanted: ImportForm) -> Vec<&'s str> {
     let mut imports = Vec::new();
     for child in named_children(root) {
         if matches!(child.kind(), "import_statement" | "import_from_statement") {
-            import_bindings(child, cx, |name, kind, _| imports.push((name, kind)));
+            import_bindings(child, cx, |name, kind, patch| {
+                imports.push((name, kind, patch))
+            });
         }
     }
-    if !imports.iter().any(|(_, kind)| *kind == Some(wanted)) {
+    if !imports.iter().any(|(_, kind, _)| *kind == Some(wanted)) {
         return Vec::new();
     }
     let modules: HashSet<_> = imports
         .iter()
-        .filter_map(|(name, kind)| (*kind == Some(ImportForm::Module)).then_some(*name))
+        .filter_map(|(name, kind, _)| (*kind == Some(ImportForm::Module)).then_some(*name))
+        .collect();
+    let mut builtins: HashSet<_> = imports
+        .iter()
+        .filter_map(|(name, _, patch)| {
+            (*patch == Some(PatchImport::BuiltinsModule)).then_some(*name)
+        })
         .collect();
     let mut candidates = HashSet::new();
     let mut rebound = HashSet::new();
+    let mut bindings = HashSet::new();
     let mut patches = Vec::new();
     let mut calls = Vec::new();
     let mut stack = vec![(root, false)];
@@ -85,6 +101,9 @@ fn imported_names<'s>(cx: &Cx<'_, 's>, wanted: ImportForm) -> Vec<&'s str> {
         if matches!(n.kind(), "import_statement" | "import_from_statement") {
             let mut wildcard = false;
             import_bindings(n, cx, |name, kind, patch| {
+                if !module_scope || patch != Some(PatchImport::BuiltinsModule) {
+                    builtins.remove(name);
+                }
                 if let Some(patch) = patch {
                     patches.push((name, patch));
                 }
@@ -101,7 +120,7 @@ fn imported_names<'s>(cx: &Cx<'_, 's>, wanted: ImportForm) -> Vec<&'s str> {
             }
             continue;
         }
-        bound_names(n, cx, &mut rebound);
+        bound_names(n, cx, &mut bindings);
         if matches!(n.kind(), "case_pattern" | "type_parameter") {
             continue;
         }
@@ -111,9 +130,11 @@ fn imported_names<'s>(cx: &Cx<'_, 's>, wanted: ImportForm) -> Vec<&'s str> {
                 .map(|child| (child, n.id() == root.id())),
         );
     }
+    builtins.retain(|name| !bindings.contains(name));
+    rebound.extend(bindings);
     if calls
         .into_iter()
-        .any(|call| patches_sleep(call, cx, &modules, &patches))
+        .any(|call| patches_sleep(call, cx, &modules, &patches, &builtins))
     {
         return Vec::new();
     }
@@ -156,17 +177,18 @@ fn patches_sleep(
     cx: &Cx<'_, '_>,
     modules: &HashSet<&str>,
     patches: &[(&str, PatchImport)],
+    builtins: &HashSet<&str>,
 ) -> bool {
     let Some(function) = child_by_field(n, "function") else {
         return false;
     };
-    let mutator = mutation_helper(function, cx);
+    let mutator = mutation_helper(function, cx, builtins);
     let patch = patch_function(function, cx, patches);
     let object_patch = child_by_field(function, "attribute")
         .is_some_and(|member| text(cx, member) == "object")
         && child_by_field(function, "object")
             .is_some_and(|object| patch_function(object, cx, patches));
-    if !mutator && !patch && !object_patch {
+    if mutator.is_none() && !patch && !object_patch {
         return false;
     }
     let Some(arguments) = child_by_field(n, "arguments") else {
@@ -178,11 +200,11 @@ fn patches_sleep(
     };
     // Only monkeypatch accepts a dotted string here; built-in setattr/delattr
     // treat their first argument as the object itself.
-    let dotted_target = patch || (mutator && function.kind() == "attribute");
+    let dotted_target = patch || mutator == Some(MutationTarget::DottedOrObject);
     if dotted_target && plain_string(target, cx) == Some("time.sleep") {
         return true;
     }
-    (mutator || object_patch)
+    (mutator.is_some() || object_patch)
         && target.kind() == "identifier"
         && modules.contains(text(cx, target))
         && argument(
@@ -235,15 +257,28 @@ fn patch_function(function: Node<'_>, cx: &Cx<'_, '_>, patches: &[(&str, PatchIm
         })
 }
 
-fn mutation_helper(function: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+fn mutation_helper(
+    function: Node<'_>,
+    cx: &Cx<'_, '_>,
+    builtins: &HashSet<&str>,
+) -> Option<MutationTarget> {
     if function.kind() == "identifier" {
-        return matches!(text(cx, function), "setattr" | "delattr");
+        return matches!(text(cx, function), "setattr" | "delattr")
+            .then_some(MutationTarget::Object);
     }
-    child_by_field(function, "attribute")
-        .is_some_and(|member| matches!(text(cx, member), "setattr" | "delattr"))
-        && child_by_field(function, "object").is_some_and(|object| {
-            object.kind() == "identifier" && text(cx, object) == "monkeypatch"
-        })
+    let member = child_by_field(function, "attribute")?;
+    if !matches!(text(cx, member), "setattr" | "delattr") {
+        return None;
+    }
+    let object = child_by_field(function, "object")?;
+    if object.kind() != "identifier" {
+        return None;
+    }
+    if builtins.contains(text(cx, object)) {
+        Some(MutationTarget::Object)
+    } else {
+        (text(cx, object) == "monkeypatch").then_some(MutationTarget::DottedOrObject)
+    }
 }
 
 fn plain_string<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<&'s str> {
@@ -301,6 +336,7 @@ fn import_bindings<'s>(
                 Some(PatchImport::MockModule)
             }
             (None, "unittest" | "unittest.mock", _) => Some(PatchImport::UnittestModule),
+            (None, "builtins", _) => Some(PatchImport::BuiltinsModule),
             _ => None,
         };
         emit(name, kind, patch);

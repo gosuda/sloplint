@@ -43,3 +43,23 @@ function automaticTrailingIndexBoundary(stop: boolean, result: number): void {
   }
   [1].forEach(record);
 }
+
+function loopHeaderDoesNotEndBody(stop: boolean): void {
+  if (stop) {
+    return;
+  } else {
+    for (let i = 0; i < 1; i++)
+      work(i)
+  }
+  (record)();
+}
+
+function loopHeaderDoesNotEndAssignment(stop: boolean): void {
+  if (stop) {
+    return;
+  } else {
+    for (let i = 0; i < 1; i++)
+      result = {}
+  }
+  [1].forEach(record);
+}

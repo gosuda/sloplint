@@ -145,6 +145,20 @@ fn java_import_and_inheritance_ambiguity_is_not_guessed() {
 }
 
 #[test]
+fn java_static_imports_do_not_resolve_unknown_overloads() {
+    // A wildcard's sleep(int) can beat the explicitly imported Thread.sleep(long).
+    for imports in [
+        "import static java.lang.Thread.sleep; import static application.Other.*;",
+        "import static application.Other.*; import static java.lang.Thread.sleep;",
+        "import static java.lang.Thread.*; import static application.Other.*;",
+        "import static java.lang.Thread.sleep; import static application.Other.sleep;",
+    ] {
+        let source = format!("{imports} class Clock {{ void waitForIndex() {{ sleep(10); }} }}");
+        assert!(sleep_lines(Lang::Java, &source).is_empty(), "{source}");
+    }
+}
+
+#[test]
 fn csharp_thread_imports_aliases_and_static_calls_are_classified() {
     let source = r#"using System.Threading;
 using Worker = global::System.Threading.Thread;

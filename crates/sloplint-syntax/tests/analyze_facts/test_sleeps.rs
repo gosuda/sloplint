@@ -291,6 +291,54 @@ fn python_logged_or_asserted_sleep_names_do_not_hide_real_calls() {
 }
 
 #[test]
+fn python_explicit_builtins_imports_prove_object_mutation_helpers() {
+    for (import, module) in [
+        ("import builtins", "builtins"),
+        ("import builtins as runtime", "runtime"),
+    ] {
+        for mutation in [
+            format!("{module}.setattr(time, 'sleep', fake_sleep)"),
+            format!("{module}.delattr(time, 'sleep')"),
+        ] {
+            let source = format!("import time\n{import}\n{mutation}\ntime.sleep(1)\n");
+            assert!(sleep_lines(Lang::Python, &source).is_empty(), "{source}");
+        }
+    }
+}
+
+#[test]
+fn python_builtin_mutator_identity_requires_an_unshadowed_import() {
+    for body in [
+        "builtins.setattr(time, 'sleep', fake_sleep)\ntime.sleep(1)",
+        "import recording as builtins\nbuiltins.setattr(time, 'sleep', fake_sleep)\ntime.sleep(1)",
+        "from recording import builtins\nbuiltins.setattr(time, 'sleep', fake_sleep)\ntime.sleep(1)",
+        "import builtins\ndef test_clock(builtins):\n    builtins.setattr(time, 'sleep', fake_sleep)\n    time.sleep(1)",
+        "import builtins as runtime\nruntime = recorder\nruntime.setattr(time, 'sleep', fake_sleep)\ntime.sleep(1)",
+        "import builtins as runtime\nimport recording as runtime\nruntime.setattr(time, 'sleep', fake_sleep)\ntime.sleep(1)",
+    ] {
+        let source = format!("import time\n{body}\n");
+        assert_eq!(sleep_lines(Lang::Python, &source).len(), 1, "{source}");
+    }
+}
+
+#[test]
+fn python_qualified_builtin_mutators_keep_string_object_semantics() {
+    for (import, module) in [
+        ("import builtins", "builtins"),
+        ("import builtins as runtime", "runtime"),
+        ("import builtins as monkeypatch", "monkeypatch"),
+    ] {
+        for mutation in [
+            format!("{module}.setattr('time.sleep', 'attribute', value)"),
+            format!("{module}.delattr('time.sleep', 'attribute')"),
+        ] {
+            let source = format!("import time\n{import}\n{mutation}\ntime.sleep(1)\n");
+            assert_eq!(sleep_lines(Lang::Python, &source), [4], "{source}");
+        }
+    }
+}
+
+#[test]
 fn python_assignment_target_reads_do_not_rebind_the_time_import() {
     for target in [
         "events[time.monotonic()] = 1",

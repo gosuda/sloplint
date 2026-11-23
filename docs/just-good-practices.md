@@ -58,6 +58,8 @@ recordSuccess()
 return nil
 ```
 
+Java constructor guards use the same scope checks as method guards.
+
 The adapter requires a direct terminal statement at the end of the preceding
 branch: `return`, `break`, or `continue`, plus `throw` in C++, Java, C#,
 JavaScript/TypeScript and `raise` in Python. It does not guess that calls named `panic`, `fatal`, or
@@ -120,6 +122,17 @@ the check for the file. The adapter
 does not follow calls into separate helper functions to discover their clock
 context. Python assignments to `time.sleep`, simple literal patch targets, and
 common `setattr` or `patch.object` shapes also disable recognition for the file.
+Qualified `builtins.setattr` and `delattr` require an explicit, unshadowed
+module import or alias. These built-ins take object targets; only recognized
+patch helpers accept a dotted string such as `"time.sleep"` as a module target.
+
+Java static wildcard imports remain a source of ambiguity even beside an
+explicit `Thread.sleep` import. An imported `sleep(int)` can be selected over
+`Thread.sleep(long)`: single static imports shadow on-demand methods only for
+matching signatures, as specified in
+[JLS 6.4.1](https://docs.oracle.com/javase/specs/jls/se26/html/jls-6.html#jls-6.4.1).
+The adapter keeps that veto instead of assuming the members of an external
+class. A fully qualified `java.lang.Thread.sleep` remains recognizable.
 
 Delay exemptions follow the runtime. Go and Python omit literal nonpositive
 delays. Rust omits identity-proven standard `Duration::ZERO` and zero-valued
@@ -136,7 +149,12 @@ Production code, benchmarks, examples, timeout APIs, and asynchronous sleep APIs
 are outside this rule. Local-only imports, ambiguous wildcard imports, indirect
 aliases, cross-file type resolution, and arbitrary runtime monkey-patching are
 not resolved. Rust root aliases are not assumed to be visible in nested
-modules. C# namespace aliases and nested using directives remain unclassified.
+modules. Canonical `::std` calls and zero durations survive nested module globs,
+which cannot redirect the absolute root. File-scope globs and explicit `std`
+shadowing remain ambiguous. Leading `::` on a local import alias does not prove
+standard-library identity because absolute path resolution differs by
+[Rust edition](https://doc.rust-lang.org/reference/paths.html#path-qualifiers).
+C# namespace aliases and nested using directives remain unclassified.
 The rule does not prove
 that a particular sleep is used for synchronization: tests of real clocks or
 scheduling may need a suppression with a reason.
@@ -181,7 +199,9 @@ remain review guidance rather than new syntax rules.
 ## Maintain the boundary
 
 Language adapters identify syntax and call identity. Core rules consume the
-resulting facts and apply code roles. Each supported language has a positive
+resulting facts and apply code roles. Facts remain independent of the selected
+profile; import and binding resolution is cached per file so repeated calls
+reuse it. Each supported language has a positive
 fixture and a near-miss fixture; fact tests exercise scope, terminal statements,
 aliases, and runtime exceptions. This preserves the distinction between a
 useful engineering principle and a predicate that syntax can support.

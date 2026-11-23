@@ -2,3 +2,5 @@ a.js:4 info slop/redundant-else
 a.js:12 info slop/redundant-else
 a.js:21 info slop/redundant-else
 a.js:26 info slop/redundant-else
+a.js:35 info slop/redundant-else
+a.js:46 info slop/redundant-else

@@ -13,7 +13,9 @@ pub(crate) fn redundant_else(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
         _ => return None,
     };
     if n.kind() != "if_statement"
-        || !cx.parent().is_some_and(|parent| parent.kind() == block)
+        || !cx.parent().is_some_and(|parent| {
+            parent.kind() == block || (cx.lang == Lang::Java && parent.kind() == "constructor_body")
+        })
         || !ordinary_condition(n, cx.lang)
     {
         return None;

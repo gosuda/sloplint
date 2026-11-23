@@ -47,12 +47,44 @@ pub(crate) fn redundant_else(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
 // Removing `else` or its braces must not remove an ASI boundary. A retained
 // block or an explicit semicolon keeps adjacent `(`, `[`, and template tokens
 // from joining the previous expression after the suggested rewrite.
-fn separated(n: Node<'_>) -> bool {
-    if n.kind() == "statement_block" {
-        return true;
+// Follow terminal statement slots, never loop headers or expression braces.
+fn separated(mut n: Node<'_>) -> bool {
+    loop {
+        let next = match n.kind() {
+            "statement_block" | "switch_body" | "empty_statement" => return true,
+            "expression_statement"
+            | "return_statement"
+            | "throw_statement"
+            | "break_statement"
+            | "continue_statement"
+            | "debugger_statement"
+            | "do_statement" => return explicit_semicolon(n),
+            "if_statement" => {
+                child_by_field(n, "alternative").or_else(|| child_by_field(n, "consequence"))
+            }
+            "else_clause" => find_named_child(n, |child| child.kind() != "comment"),
+            "for_statement" | "for_in_statement" | "while_statement" | "with_statement"
+            | "labeled_statement" | "switch_statement" | "catch_clause" | "finally_clause" => {
+                child_by_field(n, "body")
+            }
+            "try_statement" => {
+                child_by_field(n, "finalizer").or_else(|| child_by_field(n, "handler"))
+            }
+            _ => return false,
+        };
+        let Some(next) = next else {
+            return false;
+        };
+        n = next;
     }
-    let mut cursor = n.walk();
-    n.children(&mut cursor).any(|child| child.kind() == ";")
+}
+
+fn explicit_semicolon(n: Node<'_>) -> bool {
+    (0..n.child_count())
+        .rev()
+        .filter_map(|index| n.child(index))
+        .find(|child| child.kind() != "comment")
+        .is_some_and(|child| child.kind() == ";")
 }
 
 fn executable(n: Node<'_>) -> bool {

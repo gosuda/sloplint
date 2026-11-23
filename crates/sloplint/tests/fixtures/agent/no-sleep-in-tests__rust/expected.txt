@@ -1,4 +1,5 @@
 checks/clock.rs:2 info agent/no-sleep-in-tests
+src/absolute.rs:6 info agent/no-sleep-in-tests
 src/lib.rs:7 info agent/no-sleep-in-tests
 src/lib.rs:14 info agent/no-sleep-in-tests
 tests/clock.rs:5 info agent/no-sleep-in-tests

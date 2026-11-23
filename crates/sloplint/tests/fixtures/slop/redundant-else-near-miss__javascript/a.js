@@ -83,3 +83,23 @@ function automaticTrailingIndexBoundary(stop, result) {
   }
   [1].forEach(record);
 }
+
+function loopHeaderDoesNotEndBody(stop) {
+  if (stop) {
+    return;
+  } else {
+    for (let i = 0; i < 1; i++)
+      work(i)
+  }
+  (record)();
+}
+
+function loopHeaderDoesNotEndAssignment(stop) {
+  if (stop) {
+    return;
+  } else {
+    for (let i = 0; i < 1; i++)
+      result = {}
+  }
+  [1].forEach(record);
+}

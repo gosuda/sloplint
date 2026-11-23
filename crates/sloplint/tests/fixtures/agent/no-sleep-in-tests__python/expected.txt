@@ -1,5 +1,6 @@
 checks/clock.py:4 info agent/no-sleep-in-tests
 conftest.py:4 info agent/no-sleep-in-tests
+test_builtin_string.py:9 info agent/no-sleep-in-tests
 test_clock.py:5 info agent/no-sleep-in-tests
 test_clock.py:6 info agent/no-sleep-in-tests
 test_observations.py:10 info agent/no-sleep-in-tests

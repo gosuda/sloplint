@@ -243,6 +243,59 @@ fn web_accepts_preserved_statement_separators() {
 }
 
 #[test]
+fn web_keeps_retained_control_statement_boundaries() {
+    let statements = [
+        "while (ready) { work() }",
+        "for (let i = 0; i < 1; i++) { work(i) }",
+        "for (const value of values) { work(value) }",
+        "for (let i = 0; i < 1; i++) work(i);",
+        "try { work() } finally { finish() }",
+        "try { work() } catch (error) { recover(error) }",
+        "switch (value) { case 1: work(); break; default: finish() }",
+        "if (ready) { work() } else { finish() }",
+        "while (ready) for (let i = 0; i < 1; i++) work(i);",
+        "do { work() } while (ready);",
+    ];
+    for (lang, path) in WEB_LANGUAGES {
+        for statement in statements {
+            for following in ["(record)();", "[1].forEach(record);"] {
+                let source = format!(
+                    "function stop(ready, value, values) {{ if (ready) {{ return; }} else {{ {statement} }}\n{following}\n}}"
+                );
+                assert_eq!(else_lines(lang, path, &source), [1], "{path}: {source}");
+            }
+        }
+    }
+}
+
+#[test]
+fn web_does_not_count_loop_headers_or_expression_braces_as_separators() {
+    let statements = [
+        "for (let i = 0; i < 1; i++) work(i)",
+        "for (i = 0; i < 1; i++) work(i)",
+        "for (const value of values) work(value)",
+        "while (ready) work()",
+        "while (ready) for (let i = 0; i < 1; i++) work(i)",
+        "if (ready) work(); else finish()",
+        "for (let i = 0; i < 1; i++) result = {}",
+        "result = {}",
+    ];
+    for (lang, path) in WEB_LANGUAGES {
+        for statement in statements {
+            for following in ["(record)();", "[1].forEach(record);"] {
+                let source = format!(
+                    "function stop(ready, value, values) {{ if (ready) {{ return; }} else {{ {statement} }}\n{following}\n}}"
+                );
+                assert!(
+                    else_lines(lang, path, &source).is_empty(),
+                    "{path} must preserve the final body boundary: {source}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn typescript_keeps_branch_local_type_declarations() {
     let cases = [
         "type Value = number; consume(1);",

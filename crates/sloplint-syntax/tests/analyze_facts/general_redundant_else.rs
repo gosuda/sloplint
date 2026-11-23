@@ -139,6 +139,43 @@ fn preprocessor_regions_neither_hide_scopes_nor_prove_exits() {
 }
 
 #[test]
+fn java_constructor_bodies_record_direct_guard_exits() {
+    for body in [
+        "if (stop) return; else proceed();",
+        "super(); if (stop) { return; } else { proceed(); }",
+        "if (stop) throw new IllegalArgumentException(); else proceed();",
+        "if (stop) return; else { { int value = 1; consume(value); } }",
+    ] {
+        let source = format!("class Sample {{ Sample(boolean stop) {{ {body} }} }}");
+        assert_eq!(
+            else_lines(Lang::Java, "Sample.java", &source),
+            [1],
+            "{body}"
+        );
+    }
+}
+
+#[test]
+fn java_constructor_guards_preserve_scopes_and_control_ownership() {
+    for body in [
+        "if (stop) return; else { int local = 1; consume(local); }",
+        "if (!(value instanceof String text)) return; else consume(text);",
+        "if (stop) return; else { if (!(value instanceof String text)) return; consume(text); }",
+        "if (stop) return; else { class Local {} proceed(); }",
+        "while (stop) if (stop) return; else proceed();",
+        "if (stop) { if (stop) return; } else proceed();",
+        "if (stop) return; else if (stop) return; else proceed();",
+        "if (stop) return; else { label: proceed(); }",
+    ] {
+        let source = format!("class Sample {{ Sample(boolean stop, Object value) {{ {body} }} }}");
+        assert!(
+            else_lines(Lang::Java, "Sample.java", &source).is_empty(),
+            "must preserve the constructor branch: {body}"
+        );
+    }
+}
+
+#[test]
 fn java_keeps_pattern_bindings_but_accepts_unbound_type_checks() {
     let cases = [
         "if (!(value instanceof String text)) return; else consume(text);",

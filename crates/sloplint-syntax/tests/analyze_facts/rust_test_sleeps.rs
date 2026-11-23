@@ -159,6 +159,59 @@ fn the_standard_extern_crate_declaration_preserves_identity() {
 }
 
 #[test]
+fn absolute_standard_paths_survive_nested_globs() {
+    let source = r#"#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn waits() {
+        ::std::thread::sleep(::std::time::Duration::from_millis(1));
+        ::std::thread::sleep(::std::time::Duration::ZERO);
+        ::std::thread::sleep(::std::time::Duration::from_millis(0));
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+}
+"#;
+    let facts = run_clean(Lang::Rust, "src/lib.rs", source).facts;
+    assert_eq!(
+        facts
+            .blocking_sleeps
+            .iter()
+            .map(|pos| pos.line)
+            .collect::<Vec<_>>(),
+        [6]
+    );
+    assert_eq!(facts.role_at(6), CodeRole::Test);
+}
+
+#[test]
+fn absolute_paths_do_not_resolve_through_local_import_aliases() {
+    let source = r#"use std::thread as worker;
+use std::thread::sleep as pause;
+use std::time::Duration as Delay;
+fn wait(delay: std::time::Duration) {
+    ::worker::sleep(delay);
+    (::pause)(delay);
+    ::std::thread::sleep(::Delay::ZERO);
+}
+"#;
+    assert_eq!(sleep_lines(source), [7]);
+}
+
+#[test]
+fn absolute_standard_paths_keep_visible_root_ambiguity() {
+    for prefix in [
+        "use simulated::*;",
+        "extern crate simulated as std;",
+        "use simulated as std;",
+        "mod std { pub mod thread { pub fn sleep(_: u64) {} } }",
+    ] {
+        let source = format!("{prefix} fn wait() {{ ::std::thread::sleep(1); }}");
+        assert!(sleep_lines(&source).is_empty(), "{source}");
+    }
+}
+
+#[test]
 fn imported_function_shadowing_is_vetoed_throughout_the_file() {
     for shadow in [
         "fn shadow(sleep: fn(std::time::Duration)) {}",

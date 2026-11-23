@@ -6,9 +6,10 @@ use super::imports::{UseFacts, push_use};
 use super::params::push_ident_tree;
 use crate::hooks::{Cx, FileSetKind, child_by_field, has_child_kind, pos_of, text};
 
-// This qualified marker cannot collide with an imported identifier. Its presence
-// also proves that the `std` root of a canonical thread::sleep is unambiguous.
+// Qualified markers cannot collide with imported identifiers. Keep the global
+// root distinct because nested module globs cannot redirect an absolute path.
 const STD_DURATION: &str = "std::time::Duration";
+const ABS_STD_DURATION: &str = "::std::time::Duration";
 
 pub(crate) fn blocking_sleep(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
     if cx.lang != Lang::Rust {
@@ -16,15 +17,22 @@ pub(crate) fn blocking_sleep(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
     }
     let function = child_by_field(n, "function")?;
     let mut parts = [""; 4];
-    let length = path_parts(function, cx, &mut parts)?;
+    let (length, absolute) = path_parts(function, cx, &mut parts)?;
+    let standard = if absolute {
+        ABS_STD_DURATION
+    } else {
+        STD_DURATION
+    };
     let known = match &parts[..length] {
         ["std", "thread", "sleep"] => {
-            names(cx, FileSetKind::SleepDurationTypes).contains(&STD_DURATION)
+            names(cx, FileSetKind::SleepDurationTypes).contains(&standard)
         }
-        [module, "sleep"] if root_scope(cx) => {
+        [module, "sleep"] if !absolute && root_scope(cx) => {
             names(cx, FileSetKind::SleepModules).contains(module)
         }
-        [function] if root_scope(cx) => names(cx, FileSetKind::SleepFunctions).contains(function),
+        [function] if !absolute && root_scope(cx) => {
+            names(cx, FileSetKind::SleepFunctions).contains(function)
+        }
         _ => false,
     };
     if !known || zero_duration(single_argument(n)?, cx) {
@@ -62,7 +70,7 @@ fn unparenthesized(mut n: Node<'_>) -> Option<Node<'_>> {
 
 // Only the four-segment paths used here fit. Traversal never allocates, and
 // methods, generic paths, macros, and longer user paths stay unclassified.
-fn path_parts<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut [&'s str; 4]) -> Option<usize> {
+fn path_parts<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut [&'s str; 4]) -> Option<(usize, bool)> {
     let mut current = unparenthesized(n)?;
     let mut length = 0;
     loop {
@@ -82,7 +90,7 @@ fn path_parts<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut [&'s str; 4]) -> Optio
         current = parent;
     }
     out[..length].reverse();
-    Some(length)
+    Some((length, has_child_kind(current, "::")))
 }
 
 fn single_argument(call: Node<'_>) -> Option<Node<'_>> {
@@ -105,7 +113,7 @@ fn zero_duration(n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
         value
     };
     let mut parts = [""; 4];
-    let Some(length) = path_parts(path, cx, &mut parts) else {
+    let Some((length, absolute)) = path_parts(path, cx, &mut parts) else {
         return false;
     };
     let member = parts[length - 1];
@@ -134,9 +142,16 @@ fn zero_duration(n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
     }
     match &parts[..length - 1] {
         ["std", "time", "Duration"] => {
-            names(cx, FileSetKind::SleepDurationTypes).contains(&STD_DURATION)
+            let standard = if absolute {
+                ABS_STD_DURATION
+            } else {
+                STD_DURATION
+            };
+            names(cx, FileSetKind::SleepDurationTypes).contains(&standard)
         }
-        [alias] if root_scope(cx) => names(cx, FileSetKind::SleepDurationTypes).contains(alias),
+        [alias] if !absolute && root_scope(cx) => {
+            names(cx, FileSetKind::SleepDurationTypes).contains(alias)
+        }
         _ => false,
     }
 }
@@ -242,7 +257,7 @@ fn imported_names<'s>(cx: &Cx<'_, 's>, kind: FileSetKind) -> Vec<&'s str> {
         );
     }
     if kind == FileSetKind::SleepDurationTypes {
-        found.push(STD_DURATION);
+        found.extend([STD_DURATION, ABS_STD_DURATION]);
     }
     // Ordinary files without a relevant import need no whole-tree binding scan.
     if found.is_empty() {
@@ -255,8 +270,18 @@ fn imported_names<'s>(cx: &Cx<'_, 's>, kind: FileSetKind) -> Vec<&'s str> {
             uses(n, cx, &mut imports);
             for import in &imports {
                 let name = identifier(import.alias.unwrap_or(import.name));
-                if import.name == "*" || name == "std" {
+                if name == "std" {
                     return Vec::new();
+                }
+                if import.name == "*" {
+                    // File-scope globs may alter the crate root in Rust 2015.
+                    // Nested globs cannot alter either that root or the extern
+                    // prelude used by absolute paths in later editions.
+                    if n.parent() == Some(root) {
+                        return Vec::new();
+                    }
+                    found.retain(|candidate| *candidate == ABS_STD_DURATION);
+                    continue;
                 }
                 if n.parent() != Some(root) || !standard_import(import, kind) {
                     found.retain(|candidate| *candidate != name);
