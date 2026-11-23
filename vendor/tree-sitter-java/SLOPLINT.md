@@ -59,8 +59,10 @@ grammar.js. Apply it from this directory with
   (`LastFormalParameter: {VariableModifier} UnannType {Annotation} ...`).
   The pre-ellipsis repeat is upstream's fix, kept verbatim. The existing
   `repeat($._annotation)` after `'...'` is intentionally retained although
-  upstream dropped it (see Origin): no corpus case covers it, and removing
-  it would newly error files that parse today.
+  upstream dropped it (see Origin): the vendored corpus case `Annotations
+  before a spread parameter's ellipsis` (`int... @Foo x` in
+  `test/corpus/expressions.txt`) covers it, and removing it would newly
+  error files that parse today.
   `String @N ... xs`, `@N Object @N ... a`, and `String @lib.Valid ... v`
   now parse; the leading `@N` in the second shape still parses as
   `modifiers`, and the pre-ellipsis annotation lands inside
