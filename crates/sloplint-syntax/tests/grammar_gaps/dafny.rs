@@ -466,15 +466,20 @@ fn tuple_var_decls_bind_their_names() {
 
 #[test]
 fn tuple_var_decls_shadow_an_outer_binding() {
-    // `var (a2, b2)` after `var a2` shadows it: the later write hits the
-    // destructured binding, and the outer local keeps only its own writes.
+    // `var (a2, b2)` in a nested block shadows the outer `var a2`: the
+    // later write hits the destructured binding, and the outer local keeps
+    // only its own writes. The shadowing block is required: Dafny rejects
+    // a duplicate local in one block (`dafny resolve` reports `Duplicate
+    // local_variable name: a2`), while the nested block resolves cleanly.
     let analysis = run_clean(concat!(
         "method M()\n",
         "{\n",
         "  var a2 := 0;\n",
         "  a2 := 1;\n",
-        "  var (a2, b2) := (1, 2);\n",
-        "  a2 := 5;\n",
+        "  {\n",
+        "    var (a2, b2) := (1, 2);\n",
+        "    a2 := 5;\n",
+        "  }\n",
         "}\n",
     ));
     let shadowed: Vec<_> = analysis
@@ -489,7 +494,7 @@ fn tuple_var_decls_shadow_an_outer_binding() {
         "expected outer and destructured `a2` bindings"
     );
     assert_eq!(shadowed[0].last_write_line, 4);
-    assert_eq!(shadowed[1].last_write_line, 6);
+    assert_eq!(shadowed[1].last_write_line, 7);
 }
 
 #[test]
