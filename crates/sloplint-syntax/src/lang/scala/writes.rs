@@ -147,7 +147,7 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
                 // sibling comprehension or later arm already ended, so its
                 // binders are out of scope at the call.
                 if d.start_byte() <= n.start_byte() && n.end_byte() <= d.end_byte() {
-                    super::items::shadow_names(cx, d, &mut bound_names);
+                    super::patterns::shadow_names(cx, d, &mut bound_names);
                 }
             }
         }
