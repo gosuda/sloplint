@@ -21,3 +21,10 @@ src/pattern-vars.scala:45 info complexity/mutable-span
 src/pattern-vars.scala:46 info complexity/mutable-span
 # Positive: var declared line 3, last write line 36, span 33 >= strict major_at 30.
 src/spread.scala:3 info complexity/mutable-span
+# ctor-clause-scope.scala: the constructor parameter is in scope only in
+# later clauses. Early (clause 1) shadows the outer method, so its default
+# records no write. Same (own clause) and Late (later clause) do not
+# shadow, so `sink(count = 1)` calls the outer method, which lacks `count`,
+# and the assignment writes `count` (bindings 42 and 77).
+src/ctor-clause-scope.scala:42 info complexity/mutable-span
+src/ctor-clause-scope.scala:77 info complexity/mutable-span
