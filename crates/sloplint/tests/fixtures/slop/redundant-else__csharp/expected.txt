@@ -1,0 +1,3 @@
+Checks.cs:5 info slop/redundant-else
+Checks.cs:13 info slop/redundant-else
+Checks.cs:21 info slop/redundant-else

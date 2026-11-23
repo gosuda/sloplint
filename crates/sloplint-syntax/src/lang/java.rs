@@ -11,6 +11,7 @@ mod ambient;
 mod calls;
 mod funcs;
 mod items;
+mod sleeps;
 
 pub(crate) static TABLE: &[(&str, Role)] = &[
     ("method_declaration", Role::Function),
@@ -105,6 +106,14 @@ pub(crate) fn container_exports(cx: &Cx<'_, '_>) -> bool {
 }
 
 impl LangHooks for JavaHooks {
+    fn redundant_else(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        crate::lang::c_family::flow::redundant_else(n, cx)
+    }
+
+    fn blocking_sleep(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        sleeps::blocking_sleep(n, cx)
+    }
+
     fn shadow_filter(&self) -> ShadowKind {
         ShadowKind::DeclsAndBinds
     }

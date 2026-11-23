@@ -15,8 +15,8 @@ sloplint finds code patterns that make changes harder to review and apply: deep 
 It is written for developers and for coding agents. The default `agent` output format is stable, machine-parseable text, so an agent can consume findings directly and apply the `fix:` line attached to each one.
 
 - **30 languages**: Rust, TypeScript/TSX, JavaScript/JSX, Python, Go, LoGOs, Java, Kotlin, C#, C, C++, Objective-C, PHP, Ruby, Bash, PowerShell, Swift, R, Scala, Dart, Zig, OCaml, Odin, Starlark, Lean 4, Quint, TLA+, Alloy, Dafny, Racket.
-- **27 builtin rules** in four families (`complexity/`, `grep/`, `slop/`, `agent/`), plus custom tree-sitter queries from `[[custom_rules]]` configuration.
- - **4 strictness profiles** (`minimal`, `basic`, `standard`, `strict`), each monotone in coverage and thresholds. Every rule was measured against real open-source code; a rule stays on at `standard` only when at least 80 percent of sampled findings were judged true after tightening (see [Precision](#precision)).
+- **29 builtin rules** in four families (`complexity/`, `grep/`, `slop/`, `agent/`), plus custom tree-sitter queries from `[[custom_rules]]` configuration.
+- **4 strictness profiles** (`minimal`, `basic`, `standard`, `strict`), each monotone in coverage and thresholds. A rule stays on at `standard` only when at least 80 percent of sampled findings were judged true after tightening; new rules without measured precision start as strict-only advisories (see [Precision](#precision)).
 - **Ratchet mode** freezes today's findings into a baseline, so only new debt fails the build.
 
 sloplint works from syntax alone: tree-sitter parses each file and per-language heuristics lower the tree into facts, so results are approximate by design. It is not a typechecker or a security analyzer, and it applies no patches itself; every finding carries a `fix:` line describing the change a human or agent should make. In C#, property accessors, operators, conversion operators, and destructors count as functions.
@@ -75,8 +75,8 @@ Every run analyzes the project root. With no `PATHS`, only findings under the cu
 
 - **complexity/**: nesting-weighted cognitive depth, nesting depth, mutable-statement spans, boolean params, import fan-out.
 - **grep/**: generic names, homonym definitions across files, renamed and wildcard imports, runtime-built symbols, non-literal log messages, multiline arguments.
-- **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors, single-implementation abstractions, barrel files, field-copy literals.
-- **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
+- **slop/**: pass-through wrappers, redundant else blocks, echo comments, swallowed or double-reported errors, single-implementation abstractions, barrel files, field-copy literals.
+- **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests, wall-clock sleeps in tests.
 - **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs. Each rule is bounded per file at 16,384 in-progress matches and 1,024 reported hits: a query that exceeds either cap reports `meta/custom-cap` for rules that are enabled and whose globs match the file, instead of returning partial results silently.
 
 `meta/parse-error` is Minor in every profile, so a default `major` gate does not fail on it. Set the rule to a higher rung or pass `--fail-on minor`. `meta/custom-cap` is Major in every profile: a capped query's results are partial, so a default `major` gate fails until the query is anchored; the cap uses the same eligibility as the rule's own findings, so turning a rule off or excluding the file silences its cap too. An empty `project.languages` list analyzes nothing.
@@ -94,6 +94,8 @@ handles complete commands and parser fragments without discarding neighboring
 healthy commands.
 
 The full rule table, with per-profile levels, role shifts, and predicates, is under [Rule reference](#rule-reference) below; `sloplint rules` prints the effective settings and short summaries for the active profile.
+
+`slop/redundant-else` and `agent/no-sleep-in-tests` adopt selected practices from JustGoodPractices. They are strict-only advisories with explicit language and runtime limits. See [Adopted practices](docs/just-good-practices.md) for examples, exclusions, and the rationale for leaving semantic judgments to review.
 
 ### Severity and confidence
 
@@ -206,7 +208,9 @@ A file belongs to the nearest ancestor directory holding a manifest of its own e
 
 ## Precision
 
-A finding is true when a senior reviewer would ask for a change. Each rule was measured on the same 15 corpora of real open-source code: a sample of its findings was counted as true, noise, or wrong. A rule stays on at `standard` only when at least 80 percent of its sampled findings are true after tightening. A rule below that bar is `Off` at minimal, basic, and standard and runs only at strict, at `info` with `low` confidence. `--min-confidence` and `--fail-on` decide what gates. Counts below are the pre-tightening samples from the per-rule reports.
+A finding is true when a senior reviewer would ask for a change. The original 27 rules were measured on the same 15 corpora of real open-source code: a sample of their findings was counted as true, noise, or wrong. A rule stays on at `standard` only when at least 80 percent of its sampled findings are true after tightening. A rule below that bar is `Off` at minimal, basic, and standard and runs only at strict, at `info` with `low` confidence. `--min-confidence` and `--fail-on` decide what gates. Counts below are the pre-tightening samples from the per-rule reports.
+
+The new `slop/redundant-else` and `agent/no-sleep-in-tests` rules have not yet been sampled on those corpora. Both stay off through standard and report only `info` with `low` confidence at strict. Their regression fixtures establish behavior, not corpus precision.
 
 | Rule | Sampled | True | Noise | Wrong |
 |---|---|---|---|---|
@@ -286,6 +290,7 @@ Role shifts lower findings by role (K = keep, L1 = lower one rung, L2 = lower tw
 | slop/echo-comment | Off | Off | minor | minor | medium | K | L1 | K | L1 | K | Flags comments whose stemmed word set exactly equals the function name set |
 | slop/field-copy | Off | Off | minor | minor | low | K | O | L1 | O | L1 | Flags constructions copying >= 6 fields (4 strict) from one source; method callees, kwargs bags, same-type rebuilds, and copies from the own receiver are excluded |
 | slop/passthrough-wrapper | Off | Off | Off | info | low | K | O | K | O | L1 | Flags sole-call wrappers to simple-path callees outside the receiver, params, deprecated, trait, test, and referenced uses. The receiver includes `self`, `this`, `cls`, `super`, `base`, `parent`, `static`, and the Go named receiver |
+| slop/redundant-else | Off | Off | Off | info | low | K | K | K | K | K | C, C++, C#, Go, Java, JS/JSX, Python, Rust, TS/TSX: flags a nonempty else after a direct terminal statement; skips decision chains, binding scopes, and control contexts that prevent safe dedenting. Rust requires discarded statements with a plain identifier condition and explicitly terminated alternative expressions; see [language limits](docs/just-good-practices.md) |
 | slop/single-impl-abstraction | Off | Off | minor | minor | medium | K | O | K | O | O | Flags private traits or interfaces with exactly one concrete same-package implementation |
 | slop/zombie-catch | Off | Off | Off | info | low | K | L1 | K | L1 | K | Strict-only: flags empty handlers at Info; log-and-rethrow arms reported, bare rethrows dropped |
 | agent/ambient-global-state | Off | Off | Off | info | low | O | O | L1 | O | O | Flags package mutables assigned in functions and env reads stored or written through the env object; a write to a shadowing local or parameter is not reported. In R, `<<-` and `->>` in a function count as global writes, and `options()` does not count as an environment write |
@@ -294,6 +299,7 @@ Role shifts lower findings by role (K = keep, L1 = lower one rung, L2 = lower tw
 | agent/explicit-boundary-types | Off | minor | minor | minor | medium | L1 | O | L1 | O | O | Flags exported fns in TS, Python, Kotlin, Scala, and Dart with missing annotations |
 | agent/file-token-budget | Off | Off | Off | info | low | K | O | O | L1 | L1 | Strict-only: flags files with >= 600 lines outside inline test regions; generated files skipped |
 | agent/informative-assertions | Off | Off | Off | info | low | K | K | K | O | L1 | Flags bare-name or top ==/!= asserts (Rust), Name or Attr (Python), and bool-literal True/False (Go) |
+| agent/no-sleep-in-tests | Off | Off | Off | info | low | O | K | K | O | O | C#, Go, Java, Python, Rust: flags identified standard-library sleep calls only in test or support roles; excludes known zero delays, ambiguous bindings, and recognized Go synctest callbacks. Duration and alias handling follow each runtime; see [language limits](docs/just-good-practices.md) |
 | agent/stringly-api | Off | Off | Off | info | low | L1 | O | L1 | O | O | Flags runs of >= 3 same-kind stringly params (4 to deny); runs break on kind change or defaulted params |
 | agent/typed-error-boundary | Off | Off | Off | info | low | O | O | O | O | O | Flags exported fns whose error slot is anyhow, eyre, Box dyn Error, or an untyped throw |
 | agent/unique-patch-anchors | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags 8-line (6 strict) blocks repeated >= 3 times inside function bodies. In Logos the minimum rises to 5 repeats |

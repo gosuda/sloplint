@@ -8,11 +8,13 @@ use crate::hooks::{
 use crate::spec::Role;
 
 mod dynamic;
+mod flow;
 mod imports;
 mod items;
 mod params;
 mod scope;
 mod shapes;
+mod sleeps;
 
 use dynamic::{py_call_dynamic, py_subscript_dynamic};
 use imports::push_imports;
@@ -370,6 +372,14 @@ pub(crate) fn py_targets(cx: &Cx<'_, '_>, dir: &str, n: Node<'_>) -> Vec<String>
 }
 
 impl LangHooks for PythonHooks {
+    fn redundant_else(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        flow::redundant_else(n, cx)
+    }
+
+    fn blocking_sleep(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        sleeps::blocking_sleep(n, cx)
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let name_node = child_by_field(n, "name")?;
         let name = text(cx, name_node);
