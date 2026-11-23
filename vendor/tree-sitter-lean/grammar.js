@@ -1694,7 +1694,8 @@ export default grammar({
       /* Destructuring `have ⟨a, b⟩ := …` is common in Mathlib;
          anonymous `have : T` binds `this`. */
       optional(choice(
-        seq(field('name', $._binder_ident), optional($._binders)),
+        seq(field('name', $._binder_ident),
+            optional(alias(prec.right(repeat1($._binder)), $.binders))),
         field('name', $.anon_ctor_binder),
       )),
       optional($._type_spec),
