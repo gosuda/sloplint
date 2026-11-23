@@ -1,4 +1,8 @@
 # near-miss: `for i` scopes to the loop body, so its writes do not extend the
-# outer `i` (declared line 3, written line 4); misattribution would span 31+
-# and fire. `var (a2, b2)` binds both names, so the line-36 write hits the
-# destructured binding, not the outer `a2`.
+# outer `i` (declared line 3, written line 4); `var (a2, b2)` binds both
+# names, so the line-36 write hits the destructured binding, not the outer
+# `a2`. The Dafny gate keeps these shapes silent; shadowing direction is
+# pinned at the facts level by `tuple_var_decls_shadow_an_outer_binding`.
+# `loop-counter.dfy` rewrites `i` over lines 15-33 (span 18, at the
+# 15-line minor threshold): an ordinary imperative counter the rule would
+# flag on languages without Dafny's verification model.
