@@ -25,10 +25,10 @@ Date: 2026-11-19.
   `docs/`, `editors/`, `scripts/`, `test/{audit,benchmark,fixtures,highlight,query,reference-quint033,scanner}`,
   and the non-Rust bindings (`bindings/{c,go,java,node,python,swift,zig}`).
   None of these is read by the Rust build, the corpus runner, or regeneration.
-- `sloplint-grammar.patch` is empty: `grammar.js` and
-  `grammar/definition-boundaries.js` are vendored verbatim, so the diff
-  versus the upstream revision is zero. If a future fix touches the grammar,
-  the patch must hold exactly that diff.
+- `sloplint-grammar.patch` holds one hunk, the `src/quint_boundaries.h`
+  deviation below. `grammar.js` and `grammar/definition-boundaries.js`
+  are vendored verbatim, so the grammar diff versus the upstream
+  revision is zero; a future grammar fix extends the same patch.
 - `src/quint_boundaries.h` carries one local deviation: `max_align_t
   data[]` in `QArena` is replaced by a `QAlign` union (`long long`,
   `long double`, `void *`, `void (*)(void)`) and `q_allocate` uses
