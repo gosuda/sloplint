@@ -1,3 +1,11 @@
+# Provenance for the cherry-picked hunks below (base: upstream v0.25.0
+# 1547678a9da59885853f5f5cc8a99cc203fa2e2c).
+# G1: upstream PR #202 commit e97394289ad02c28ca4c60ad1ed2673b9cb90661,
+# carried verbatim (special_argument_list choice).
+# G2: upstream PR #198 commit 9c4b08267126b75137ae868c59f40230bb18dfb0,
+# carried verbatim (method type_parameters plus the conflict entry).
+# G3/G4/G5 (method-expression bases, statement lists, const groups) stay
+# self-authored; see vendor/tree-sitter-go/SLOPLINT.md.
 --- a/grammar.js
 +++ b/grammar.js
 @@ -90,6 +90,10 @@
