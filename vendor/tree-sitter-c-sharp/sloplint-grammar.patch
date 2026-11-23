@@ -1,3 +1,7 @@
+# Upstream cherry-pick: commit 77145f6 on upstream master (no PR or
+# issue) covers the #line filename grammar hunk (_preproc_file_name)
+# and the #line corpus hunk below. All other hunks are local; see
+# the tree-sitter-c-sharp notes in vendor/grammars.toml.
 --- a/grammar.js
 +++ b/grammar.js
 @@ -62,6 +62,11 @@
