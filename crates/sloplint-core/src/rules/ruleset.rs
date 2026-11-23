@@ -217,6 +217,19 @@ impl RuleSet {
         Some(finding)
     }
 
+    /// The timeout twin of [`Self::parse_error`]: same rule id, level, and
+    /// stamping, but the message says the parse ran out of budget instead of
+    /// blaming a syntax error that may not exist.
+    pub fn parse_timeout(&self, text: &SourceText, pos: Pos) -> Option<Finding> {
+        if !self.is_active(meta::PARSE_ERROR.id) {
+            return None;
+        }
+        let mut findings = [meta::parse_timeout_finding(text, pos)];
+        self.stamp_meta(&mut findings);
+        let [finding] = findings;
+        Some(finding)
+    }
+
     pub fn custom_caps(&self, facts: &FileFacts<'_>, capped: &[&str]) -> Vec<Finding> {
         if !self.is_active(meta::CUSTOM_CAP.id) {
             return Vec::new();

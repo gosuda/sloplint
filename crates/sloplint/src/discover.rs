@@ -80,6 +80,13 @@ struct Found {
     errors: Vec<String>,
 }
 
+fn manifest_boundary(decision: &NameDecision, relative: &Path) -> Option<(ManifestKind, String)> {
+    if matches!(decision, NameDecision::Skipped("data")) {
+        return None;
+    }
+    manifest_dir(relative)
+}
+
 impl Found {
     fn absorb(&mut self, other: &mut Found) {
         self.entries.append(&mut other.entries);
@@ -104,11 +111,11 @@ impl Found {
             decide_non_file_name(relative, config, data)
         };
         if kind.is_file()
-            && !matches!(decision, NameDecision::Skipped("data"))
-            && let Some((mkind, dir)) = manifest_dir(relative)
+            && let Some((mkind, dir)) = manifest_boundary(&decision, relative)
         {
             self.manifests.insert((mkind, dir));
         }
+
         match decision {
             NameDecision::Analyze { rel, lang } => self.entries.push(Entry {
                 rel,
@@ -170,16 +177,12 @@ pub(crate) fn decide_non_file_name(
 // Decides from the name text alone, never the filesystem: callers hold names of entries that may not exist.
 fn decide_name(relative: &Path, is_file: bool, config: &Config, data: &GlobSet) -> NameDecision {
     match normalize_rel_path(relative) {
-        Some(rel) => {
-            if is_data_path(&rel, data) {
-                return NameDecision::Skipped("data");
-            }
-            match enabled_lang(&rel, config) {
-                Some(lang) if is_file => NameDecision::Analyze { rel, lang },
-                Some(_) => NameDecision::Skipped("non-regular"),
-                None => NameDecision::Ignored,
-            }
-        }
+        Some(rel) => match enabled_lang(&rel, config) {
+            Some(_) if is_data_path(&rel, data) => NameDecision::Skipped("data"),
+            Some(lang) if is_file => NameDecision::Analyze { rel, lang },
+            Some(_) => NameDecision::Skipped("non-regular"),
+            None => NameDecision::Ignored,
+        },
         None => {
             if enabled_lang(&lossy_rel(relative), config).is_some() {
                 NameDecision::Skipped("non-utf8-name")
@@ -303,7 +306,7 @@ mod tests {
     use sloplint_core::config::Config;
     use sloplint_core::lang::Lang;
 
-    use super::{NameDecision, decide_file_name, decide_non_file_name};
+    use super::{NameDecision, decide_file_name, decide_non_file_name, manifest_boundary};
     use crate::globs::{Separators, glob_set};
 
     fn data_set() -> globset::GlobSet {
@@ -521,6 +524,76 @@ mod tests {
                 NameDecision::Analyze { .. }
             ),
             "the sibling module still analyzes"
+        );
+    }
+
+    #[test]
+    fn non_source_files_under_data_globs_are_ignored() {
+        let config = Config::default();
+        let data = data_set();
+        for path in [
+            "sub/testdata/expected.txt",
+            "sub/testdata/input.json",
+            "sub/__snapshots__/output.snap",
+        ] {
+            assert!(
+                matches!(
+                    decide_file_name(Path::new(path), &config, &data),
+                    NameDecision::Ignored
+                ),
+                "{path} is not source, so it is ignored rather than a counted data skip"
+            );
+        }
+    }
+
+    #[test]
+    fn disabled_language_files_under_data_globs_are_ignored() {
+        let mut scoped = Config::default();
+        scoped
+            .project
+            .languages
+            .retain(|key| key != Lang::Python.config_key());
+        let data = data_set();
+        assert!(
+            matches!(
+                decide_file_name(Path::new("sub/testdata/x.py"), &scoped, &data),
+                NameDecision::Ignored
+            ),
+            "a disabled language is ignored even under a data glob"
+        );
+        let config = Config::default();
+        assert!(
+            matches!(
+                decide_file_name(Path::new("sub/testdata/x.py"), &config, &data),
+                NameDecision::Skipped("data")
+            ),
+            "an enabled language under a data glob stays a counted skip"
+        );
+    }
+
+    #[test]
+    fn data_skipped_manifests_define_no_package() {
+        let config = Config::default();
+        let data = glob_set(
+            &["**/setup.py".to_string()],
+            "project.data_globs",
+            Separators::Any,
+        )
+        .expect("manifest data glob builds");
+        let rel = Path::new("src/plugin/setup.py");
+        let decision = decide_file_name(rel, &config, &data);
+        assert!(
+            matches!(decision, NameDecision::Skipped("data")),
+            "a data manifest is a counted skip even though .py is supported"
+        );
+        assert!(
+            manifest_boundary(&decision, rel).is_none(),
+            "a data-skipped manifest registers no package boundary"
+        );
+        let plain = decide_file_name(rel, &Config::default(), &data_set());
+        assert!(
+            manifest_boundary(&plain, rel).is_some(),
+            "the same manifest outside a data glob still defines its package"
         );
     }
 }
