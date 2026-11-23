@@ -178,8 +178,10 @@ cmd_verify() {
   local tsver=""
   if [ -n "$generator" ]; then
     tsver="$("$tsbin" --version 2>&1)"
+    # Release builds may append a parenthesized build SHA; match the release
+    # number literally and allow only that suffix form.
     case "$tsver" in
-      "tree-sitter $generator") ;;
+      "tree-sitter $generator"|"tree-sitter $generator ("*")") ;;
       *) die "CLI version mismatch: entry wants tree-sitter $generator, got $tsver" ;;
     esac
   fi
