@@ -163,6 +163,10 @@ fn data_glob_file_is_not_analyzed() {
             .any(|f| f.path.as_ref() == "testdata/e.rs"),
         "data file must not be analyzed"
     );
+    assert_eq!(
+        report.summary.skipped, 1,
+        "the testdata file must be counted as skipped"
+    );
 }
 
 fn sloplint_bin(cwd: &Path, args: &[&str]) -> std::process::Output {

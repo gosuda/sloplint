@@ -1,0 +1,37 @@
+package probe
+func parseA(spec Raw, errs *Errs) bool {
+	v, err := parseValue(spec.Raw)
+	if err != nil {
+		noteFormat(spec, errs, err)
+		return true
+	}
+	commit(v)
+	return check(v)
+}
+func parseB(spec Raw, errs *Errs) bool {
+	v, err := parseValue(spec.Raw)
+	if err != nil {
+		noteFormat(spec, errs, err)
+		return true
+	}
+	commit(v)
+	return check(v)
+}
+func parseC(spec Raw, errs *Errs) bool {
+	v, err := parseValue(spec.Raw)
+	if err != nil {
+		noteFormat(spec, errs, err)
+		return true
+	}
+	commit(v)
+	return check(v)
+}
+func parseD(spec Raw, errs *Errs) bool {
+	v, err := parseValue(spec.Raw)
+	if err != nil {
+		noteFormat(spec, errs, err)
+		return true
+	}
+	commit(v)
+	return check(v)
+}

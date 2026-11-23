@@ -198,16 +198,14 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
             return None;
         }
         // A constructor parameter of an enclosing class shadows an outer
-        // method of the same name everywhere in the class body, including
-        // inside a method's own parameter defaults. The clauses hang under
-        // the definition holding them; when the walk stands on the clause
-        // list itself, its entries are the scope.
+        // method of the same name everywhere in the class body. Like a
+        // method's own formals, a parameter is out of scope in its own
+        // clause, so only clauses ending before the call count: never the
+        // clause list the walk stands on when the call sits inside a
+        // constructor default, and never a later clause.
         let mut holders = Vec::new();
-        if s.kind() == "class_parameters" {
-            holders.push(s);
-        }
         for d in named_children(s) {
-            if d.kind() == "class_parameters" {
+            if d.kind() == "class_parameters" && d.end_byte() <= n.start_byte() {
                 holders.push(d);
             }
         }
