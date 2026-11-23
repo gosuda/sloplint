@@ -1,23 +1,18 @@
 --- a/grammar.js
 +++ b/grammar.js
-@@ -48,7 +48,6 @@
-     [$._simple_name, $.type_parameter],
-     [$._simple_name, $.subpattern],
- 
--    [$.tuple_element, $.type_pattern],
-     [$.tuple_element, $.using_variable_declarator],
-     [$.tuple_element, $.declaration_expression],
- 
-@@ -59,6 +58,8 @@
-     [$.parameter, $.lvalue_expression],
+@@ -62,6 +62,11 @@
+     [$.lvalue_expression, $.non_lvalue_expression],
  
      [$.type, $.attribute],
-+    [$.attribute_target_specifier, $._reserved_identifier],
-+    [$.extension_block, $._reserved_identifier],
++    [$.extension_declaration, $._reserved_identifier],
++    [$.type_parameter_constraints_clause, $._reserved_identifier],
++    [$.preproc_if_in_top_level, $.preproc_if_in_initializer, $.preproc_if_in_class_head],
++    [$.preproc_else_in_top_level, $.preproc_else_in_expression, $.preproc_else_in_initializer, $.preproc_else_in_attribute_list, $.preproc_else_in_class_head],
++    [$.preproc_elif_in_top_level, $.preproc_elif_in_expression, $.preproc_elif_in_initializer, $.preproc_elif_in_attribute_list, $.preproc_elif_in_class_head],
      [$.type, $.nullable_type],
      [$.type, $.nullable_type, $.array_creation_expression],
      [$.type, $._array_base_type],
-@@ -67,6 +68,29 @@
+@@ -70,6 +75,28 @@
      [$.type, $._pointer_base_type],
  
      [$.qualified_name, $.member_access_expression],
@@ -30,7 +25,6 @@
 +    [$.preproc_elif, $.preproc_elif_in_attribute_list, $.preproc_elif_in_class_head, $.preproc_elif_in_method_head],
 +    [$.record_base, $.type],
 +    [$.primary_constructor_base_type, $.type],
-+    [$.preproc_if_in_top_level, $.preproc_if_in_expression, $.preproc_if_in_class_head],
 +    [$.preproc_else_in_top_level, $.preproc_else_in_expression, $.preproc_else_in_attribute_list, $.preproc_else_in_class_head],
 +    [$.preproc_elif_in_top_level, $.preproc_elif_in_expression, $.preproc_elif_in_attribute_list, $.preproc_elif_in_class_head],
 +    [$.preproc_else, $.preproc_else_in_enum_member_declaration, $.preproc_else_in_attribute_list, $.preproc_else_in_class_head, $.preproc_else_in_method_head],
@@ -47,7 +41,7 @@
      [$.qualified_name, $.explicit_interface_specifier],
  
      [$._array_base_type, $.stackalloc_expression],
-@@ -94,8 +118,22 @@
+@@ -99,8 +126,18 @@
      [$._reserved_identifier, $.type_parameter_constraint],
      [$._reserved_identifier, $.parameter, $.scoped_type],
      [$._reserved_identifier, $.parameter],
@@ -59,10 +53,6 @@
 +    [$.modifier, $._local_function_declaration, $._lambda_expression_init],
 +    [$._class_declaration_initializer, $._struct_declaration_initializer, $._enum_declaration_initializer, $._interface_declaration_initializer, $._delegate_declaration_initializer, $._record_declaration_initializer, $._local_function_declaration],
 +    [$._constructor_declaration_initializer],
-+    [$.preproc_if_in_top_level, $.preproc_if_in_expression, $.preproc_if_in_initializer_expression],
-+    [$.preproc_else_in_top_level, $.preproc_else_in_expression, $.preproc_else_in_attribute_list, $.preproc_else_in_initializer_expression],
-+    [$.preproc_elif_in_top_level, $.preproc_elif_in_expression, $.preproc_elif_in_attribute_list, $.preproc_elif_in_initializer_expression],
-+    [$.preproc_if_in_top_level, $.preproc_if_in_expression, $.preproc_if_in_attribute_list, $.preproc_if_in_initializer_expression],
      [$._simple_name, $.parameter],
      [$.tuple_element, $.parameter, $.declaration_expression],
 +    // `(out float x) => ...` — `out float x` reads as an argument
@@ -70,7 +60,7 @@
      [$.parameter, $.tuple_element],
  
      [$.event_declaration, $.variable_declarator],
-@@ -123,7 +161,7 @@
+@@ -140,7 +177,7 @@
    ],
  
    extras: $ => [
@@ -79,15 +69,7 @@
      $.comment,
      $.preproc_region,
      $.preproc_endregion,
-@@ -134,6 +172,7 @@
-     $.preproc_warning,
-     $.preproc_define,
-     $.preproc_undef,
-+    $.preproc_colon,
-   ],
- 
-   inline: $ => [
-@@ -273,7 +312,10 @@
+@@ -296,7 +333,10 @@
      ),
  
      class_declaration: $ => seq(
@@ -99,7 +81,7 @@
        $._declaration_list_body,
      ),
  
-@@ -287,14 +329,17 @@
+@@ -310,7 +350,10 @@
      ),
  
      struct_declaration: $ => seq(
@@ -111,27 +93,20 @@
        $._declaration_list_body,
      ),
  
-     _struct_declaration_initializer: $ => seq(
-       repeat($._attribute_list),
-       repeat($.modifier),
--      optional('ref'),
-+      optional(seq('ref', repeat(alias('partial', $.modifier)))),
-       'struct',
-       field('name', $.identifier),
-       repeat(choice($.type_parameter_list, $.parameter_list, $.base_list)),
-@@ -302,7 +347,10 @@
+@@ -328,8 +371,11 @@
      ),
  
      enum_declaration: $ => seq(
 -      $._enum_declaration_initializer,
-+      choice(
+       choice(
 +        $._enum_declaration_initializer,
 +        alias($.preproc_if_in_class_head, $.preproc_if),
 +      ),
-       choice(
++      choice(
          seq(field('body', $.enum_member_declaration_list), $._optional_semi),
          ';',
-@@ -334,7 +382,10 @@
+       ),
+@@ -360,7 +406,10 @@
      ),
  
      interface_declaration: $ => seq(
@@ -143,7 +118,7 @@
        $._declaration_list_body,
      ),
  
-@@ -365,7 +416,10 @@
+@@ -391,7 +440,10 @@
      ),
  
      record_declaration: $ => seq(
@@ -155,7 +130,7 @@
        $._declaration_list_body,
      ),
  
-@@ -429,7 +483,22 @@
+@@ -455,7 +507,22 @@
        field('name', $.identifier),
      ),
  
@@ -179,7 +154,7 @@
  
      type_parameter_constraints_clause: $ => seq(
        'where',
-@@ -443,6 +512,7 @@
+@@ -469,6 +536,7 @@
        'struct',
        'notnull',
        'unmanaged',
@@ -187,16 +162,8 @@
        $.constructor_constraint,
        field('type', $.type),
      ),
-@@ -511,6 +581,7 @@
-       $.record_declaration,
-       $.constructor_declaration,
-       $.destructor_declaration,
-+      $.extension_block,
-       $.indexer_declaration,
-       $.interface_declaration,
-       $.namespace_declaration,
-@@ -521,11 +592,21 @@
-       $.preproc_if,
+@@ -601,11 +669,21 @@
+       $.operator_declaration,
      ),
  
 -    field_declaration: $ => seq(
@@ -222,7 +189,7 @@
      ),
  
      constructor_declaration: $ => seq(
-@@ -538,11 +619,26 @@
+@@ -618,11 +696,15 @@
        repeat($.modifier),
        field('name', $.identifier),
        field('parameters', $.parameter_list),
@@ -231,17 +198,6 @@
 +        $.constructor_initializer,
 +        alias($.preproc_if_in_constructor_initializer, $.preproc_if),
 +      )),
-+    ),
-+
-+    extension_block: $ => seq(
-+      'extension',
-+      optional($.type_parameter_list),
-+      '(',
-+      field('type', $.type),
-+      optional(field('name', $.identifier)),
-+      ')',
-+      repeat($.type_parameter_constraints_clause),
-+      field('body', $.declaration_list),
      ),
  
      destructor_declaration: $ => seq(
@@ -250,7 +206,7 @@
        optional('extern'),
        '~',
        field('name', $.identifier),
-@@ -551,6 +647,14 @@
+@@ -631,6 +713,14 @@
      ),
  
      method_declaration: $ => seq(
@@ -265,7 +221,7 @@
        repeat($._attribute_list),
        repeat($.modifier),
        field('returns', $.type),
-@@ -559,7 +663,6 @@
+@@ -639,7 +729,6 @@
        field('type_parameters', optional($.type_parameter_list)),
        field('parameters', $.parameter_list),
        repeat($.type_parameter_constraints_clause),
@@ -273,7 +229,7 @@
      ),
  
      event_declaration: $ => seq(
-@@ -585,7 +688,10 @@
+@@ -665,7 +754,10 @@
  
      accessor_list: $ => seq(
        '{',
@@ -285,7 +241,7 @@
        '}',
      ),
  
-@@ -630,6 +736,7 @@
+@@ -710,6 +802,7 @@
            field('value', $.arrow_expression_clause),
            ';',
          ),
@@ -293,7 +249,7 @@
        ),
      ),
  
-@@ -672,7 +779,24 @@
+@@ -754,7 +847,24 @@
        $.argument_list,
      ),
  
@@ -319,28 +275,15 @@
  
      tuple_pattern: $ => seq(
        '(',
-@@ -701,6 +825,8 @@
-       field('body', $.block),
-       seq(field('body', $.arrow_expression_clause), ';'),
-       ';',
-+      alias($.preproc_if_in_function_body, $.preproc_if),
+@@ -783,6 +893,7 @@
+       $._plain_function_body,
+       // `void M() #if A { } #else => x; #endif`: the body differs per branch.
+       alias($.preproc_if_in_function_body, $.preproc_if),
 +      seq('=>', alias($.preproc_if_in_function_body, $.preproc_if)),
      ),
  
-     variable_declaration: $ => seq(
-@@ -1112,6 +1238,11 @@
-       )),
-     )),
- 
-+    dangling_else: $ => prec.right(seq(
-+      'else',
-+      field('alternative', $.statement),
-+    )),
-+
-     while_statement: $ => seq(
-       'while',
-       '(',
-@@ -1136,7 +1267,7 @@
+     _plain_function_body: $ => choice(
+@@ -1250,7 +1361,7 @@
  
      _local_function_declaration: $ => seq(
        repeat($._attribute_list),
@@ -349,16 +292,7 @@
        field('type', $.type),
        field('name', $.identifier),
        field('type_parameters', optional($.type_parameter_list)),
-@@ -1211,7 +1342,7 @@
- 
-     var_pattern: $ => seq('var', $._variable_designation),
- 
--    type_pattern: $ => prec.right(field('type', $.type)),
-+    type_pattern: $ => prec.right(1, field('type', $.type)),
- 
-     list_pattern: $ => prec.right(seq(
-       '[',
-@@ -1395,8 +1526,13 @@
+@@ -1535,8 +1646,13 @@
        $.parenthesized_expression,
      ),
  
@@ -374,7 +308,7 @@
        field('operator',
          choice(
            '=',
-@@ -1415,7 +1551,7 @@
+@@ -1555,7 +1671,7 @@
          ),
        ),
        field('right', $.expression),
@@ -383,22 +317,7 @@
  
      binary_expression: $ => choice(
        ...[
-@@ -1465,7 +1601,13 @@
- 
-     _pointer_indirection_expression: $ => prec.right(PREC.UNARY, seq(
-       '*',
--      $.lvalue_expression,
-+      choice(
-+        $.lvalue_expression,
-+        $.cast_expression,
-+        $.postfix_unary_expression,
-+        $.parenthesized_expression,
-+        $.invocation_expression,
-+      ),
-     )),
- 
-     query_expression: $ => seq($.from_clause, $._query_body),
-@@ -1713,7 +1855,7 @@
+@@ -1897,7 +2013,7 @@
  
      _lambda_expression_init: $ => prec(-1, seq(
        repeat($._attribute_list),
@@ -407,7 +326,7 @@
        optional(field('type', $.type)),
        field('parameters', $._lambda_parameters),
      ),
-@@ -1731,7 +1873,7 @@
+@@ -1939,7 +2055,7 @@
      )),
  
      anonymous_method_expression: $ => seq(
@@ -416,41 +335,7 @@
        'delegate',
        optional(field('parameters', $.parameter_list)),
        $.block,
-@@ -1773,16 +1915,14 @@
- 
-     collection_expression: $ => seq(
-       '[',
--      optional(seq(
--        commaSep1($.collection_element),
--        optional(','),
--      )),
-+      optional(repeat(seq($.collection_element, optional(',')))),
-       ']',
-     ),
- 
-     collection_element: $ => choice(
-       $.expression_element,
-       $.spread_element,
-+      alias($.preproc_if_in_collection_element, $.preproc_if),
-     ),
- 
-     expression_element: $ => prec(1, $.expression),
-@@ -1791,8 +1931,12 @@
- 
-     initializer_expression: $ => seq(
-       '{',
--      commaSep($.expression),
--      optional(','),
-+      // Commas are optional between elements so an element following a
-+      // preproc_if (whose branch carried the comma) still parses.
-+      repeat(seq(choice(
-+        $.expression,
-+        alias($.preproc_if_in_initializer_expression, $.preproc_if),
-+      ), optional(','))),
-       '}',
-     ),
- 
-@@ -1988,10 +2132,14 @@
+@@ -2218,10 +2334,13 @@
  
      _reserved_identifier: _ => choice(
        'alias',
@@ -461,48 +346,29 @@
        'descending',
        'equals',
 +      'extension',
-+      'field',
-       'file',
-       'from',
-       'global',
-@@ -1999,11 +2147,16 @@
-       'into',
-       'join',
-       'let',
-+      'method',
-       'notnull',
-       'on',
-       'orderby',
-+      'param',
-+      'property',
-       'scoped',
-       'select',
-+      'type',
-+      'typevar',
-       'unmanaged',
-       'var',
-       'when',
-@@ -2014,10 +2167,67 @@
-     // Preprocessor
- 
-     ...preprocIf('', $ => $.declaration),
--    ...preprocIf('_in_top_level', $ => choice($._top_level_item_no_statement, $.statement)),
-+    ...preprocIf('_in_top_level', $ => choice($._top_level_item_no_statement, $.statement, $.dangling_else)),
+       // attribute_target_specifier keywords — contextual only when followed
+       // by `:` in `[target: Attr]` position. Anywhere else they're
+       // identifiers. Without listing them here the LR table preferred the
+@@ -2260,7 +2379,10 @@
+     ...preprocIf('_in_top_level', $ => choice($._top_level_item_no_statement, $.statement)),
      ...preprocIf('_in_expression', $ => $.expression, -2, false),
+     ...preprocIf('_in_statement_tail', $ => seq($.expression, ';'), 0, false),
+-    ...preprocIf('_in_function_body', $ => seq(repeat($.type_parameter_constraints_clause), $._plain_function_body), 0, false),
++    ...preprocIf('_in_function_body', $ => choice(
++      seq(repeat($.type_parameter_constraints_clause), $._plain_function_body),
++      seq($.expression, ';'),
++    ), 0, false),
+     // The block opens with an external `#if` that the scanner only emits when the
+     // first thing inside is `else`, so a plain `#if` after an if-statement is
+     // still a statement-level block.
+@@ -2269,7 +2391,51 @@
+     ...preprocIf('_in_initializer', $ => $._initializer_items, -2, false),
      ...preprocIf('_in_enum_member_declaration', $ => $.enum_member_declaration, 0, false),
      ...preprocIf('_in_attribute_list', $ => $.attribute_list, -1, false),
-+    ...preprocIf('_in_function_body', $ => choice(
-+      field('body', $.block),
-+      seq(field('body', $.arrow_expression_clause), ';'),
-+      ';',
-+      seq($.expression, ';'),
-+    )),
 +    ...preprocIf('_in_field_value', $ => seq($.expression, ';')),
 +    ...preprocIf('_in_constructor_initializer', $ => $.constructor_initializer, 0, false),
-+    ...preprocIf('_in_initializer_expression', $ => seq($.expression, optional(','))),
-+    ...preprocIf('_in_collection_element', $ => seq($.collection_element, optional(','))),
 +    // else-clause position: only binds when an arm actually carries an
-+    // `else stmt` — `repeat1`, not `repeat`, so a bare `#if X C(); #endif`
++    // `else stmt` — `repeat`, not `optional`, so a bare `#if X C(); #endif`
 +    // after `if(){..}else{..}` falls back to a plain statement-level
 +    // preproc_if instead of matching empty and orphaning `#endif`.
 +    ...preprocIf('_in_accessor', $ => seq(
@@ -530,7 +396,7 @@
 +      repeat(choice($.type_parameter_list, $.parameter_list, $.base_list)),
 +      repeat($.type_parameter_constraints_clause),
 +    )),
-+
+ 
 +    // Same split at method-signature position:
 +    // `#if A public int F() #else public string F() #endif { ... }`.
 +    ...preprocIf('_in_method_head', $ => seq(
@@ -544,84 +410,42 @@
 +      prec.left(repeat($.type_parameter_constraints_clause)),
 +    )),
 +
-+    // `#line` filenames are arbitrary path strings — Razor `.cshtml.cs`
-+    // files carry Windows paths like "..\..\Pages\X.cshtml" whose `\.`
-+    // is not a valid escape_sequence, so string_literal can't serve.
-+    _preproc_line_path: $ => token(seq('"', repeat(choice(/[^"\\\n]/, /\\./)), '"')),
- 
      preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
      preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,
-@@ -2078,13 +2288,13 @@
+ 
+@@ -2324,18 +2490,25 @@
+       /\n/,
+     ),
+ 
++    // A file name has no escape sequences: `"C:\dir\"` is complete.
++    _preproc_file_name: $ => seq(
++      '"',
++      optional(alias(token.immediate(prec(1, /[^"\r\n]+/)), $.string_literal_content)),
++      token.immediate('"'),
++    ),
++
+     preproc_line: $ => seq(
+       preprocessor('line'),
        choice(
          'default',
          'hidden',
 -        seq($.integer_literal, optional($.string_literal)),
-+        seq($.integer_literal, optional($._preproc_line_path)),
++        seq($.integer_literal, optional(alias($._preproc_file_name, $.string_literal))),
          seq(
            '(', $.integer_literal, ',', $.integer_literal, ')',
            '-',
            '(', $.integer_literal, ',', $.integer_literal, ')',
            optional($.integer_literal),
 -          $.string_literal,
-+          $._preproc_line_path,
++          alias($._preproc_file_name, $.string_literal),
          ),
        ),
        /\n/,
-@@ -2105,6 +2315,12 @@
+@@ -2355,7 +2528,6 @@
+       ),
        /\n/,
      ),
- 
-+    preproc_colon: $ => seq(
-+      alias(/#[ 	]*:/, '#:'),
-+      optional($.preproc_arg),
-+      /\n/,
-+    ),
-+
+-
      preproc_nullable: _ => seq(
        preprocessor('nullable'),
        choice('enable', 'disable', 'restore'),
-@@ -2173,6 +2389,10 @@
-  * @returns {RuleBuilders<string, string>}
-  */
- function preprocIf(suffix, content, precedence = 0, rep = true) {
-+  return preprocIfImpl(suffix, content, precedence, rep ? 'repeat' : 'optional');
-+}
-+
-+function preprocIfImpl(suffix, content, precedence, mode) {
-   /**
-    *
-    * @param {GrammarSymbols<string>} $
-@@ -2186,26 +2406,30 @@
-     );
-   }
- 
-+  const items = $ => mode === 'repeat1' ? repeat1(content($))
-+    : mode === 'repeat' ? repeat(content($))
-+    : optional(content($));
-+
-   return {
-     ['preproc_if' + suffix]: $ => prec(precedence, seq(
-       preprocessor('if'),
-       field('condition', $._preproc_expression),
-       /\n/,
--      rep ? repeat(content($)) : optional(content($)),
-+      items($),
-       field('alternative', optional(alternativeBlock($))),
-       preprocessor('endif'),
-     )),
- 
-     ['preproc_else' + suffix]: $ => prec(precedence, seq(
-       preprocessor('else'),
--      rep ? repeat(content($)) : optional(content($)),
-+      items($),
-     )),
- 
-     ['preproc_elif' + suffix]: $ => prec(precedence, seq(
-       preprocessor('elif'),
-       field('condition', $._preproc_expression),
-       /\n/,
--      rep ? repeat(content($)) : optional(content($)),
-+      items($),
-       field('alternative', optional(alternativeBlock($))),
-     )),
-   };

@@ -1,4 +1,5 @@
 {
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
   "grammars": [
     {
       "name": "c-sharp",
@@ -18,7 +19,7 @@
     }
   ],
   "metadata": {
-    "version": "0.23.5",
+    "version": "0.24.0",
     "license": "MIT",
     "description": "C# grammar for tree-sitter",
     "authors": [
