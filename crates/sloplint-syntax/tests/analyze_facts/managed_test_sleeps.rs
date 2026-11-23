@@ -61,7 +61,7 @@ fn java_zero_integer_forms_are_nonblocking() {
         "0L",
         "0x0L",
         "0b0",
-        "0_0",
+        "00_0",
         "/* a */ (/* b */ 0)",
     ] {
         let source = format!("class Clock {{ void waitForIndex() {{ Thread.sleep({value}); }} }}");
