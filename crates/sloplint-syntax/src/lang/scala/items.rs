@@ -190,6 +190,48 @@ fn is_given_tuple_type<'s>(cx: &Cx<'_, 's>, node: Node<'_>) -> bool {
     })
 }
 
+// `case given(x, y)` is an extractor application in Scala 2: the parser
+// reads every `given(...)` as a `given_pattern` (upstream prefers that
+// reading), but an adjacent paren holding only lowercase, non-alias names
+// is the old extractor call, whose arguments bind locals. A spaced paren,
+// a plain type, or any uppercase/alias member is a tuple or plain type
+// and binds nothing — the same rule as `is_given_tuple_type`.
+fn given_extractor_binders<'s>(cx: &Cx<'_, 's>, node: Node<'_>) -> Option<Vec<&'s str>> {
+    if node.kind() != "given_pattern" {
+        return None;
+    }
+    let t = child_by_field(node, "type")?;
+    if t.kind() != "tuple_type" {
+        return None;
+    }
+    // An adjacent paren applies the extractor (`given(`); a spaced paren
+    // ascribes a tuple type (`given (`).
+    let kw_end = node.child(0).filter(|k| k.kind() == "given").map(|k| k.end_byte())?;
+    if t.start_byte() != kw_end {
+        return None;
+    }
+    let mut out = Vec::new();
+    for p in named_children(t) {
+        if p.kind() != "type_identifier" {
+            return None;
+        }
+        let raw = text(cx, p);
+        if raw.starts_with('`') {
+            return None;
+        }
+        let name = unquote(raw);
+        let first = name.chars().next()?;
+        if !first.is_lowercase() || names_visible_type_alias(p, cx, name) {
+            return None;
+        }
+        out.push(name);
+    }
+    if out.is_empty() {
+        return None;
+    }
+    Some(out)
+}
+
 fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str>) {
     let mut pending = vec![root];
     while let Some(node) = pending.pop() {
@@ -201,8 +243,12 @@ fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str
             continue;
         }
         // `case given T` is a given-pattern matching an implicit instance —
-        // nothing inside the type binds a local.
+        // nothing inside the type binds a local. `case given(x, y)` is the
+        // Scala 2 extractor application and binds its lowercase arguments.
         if node.kind() == "given_pattern" {
+            if let Some(names) = given_extractor_binders(cx, node) {
+                out.extend(names);
+            }
             continue;
         }
         if node.kind() == "identifier" {
