@@ -184,27 +184,49 @@ cmd_verify() {
   mkdir -p "$work"
   git init -q "$work/upstream"
   git -C "$work/upstream" remote add origin "$upstream"
-  git -C "$work/upstream" fetch --depth 1 origin "$commit"
+  git -C "$work/upstream" fetch --depth 1 origin "$commit" 2>"$work/fetch.err" || {
+    cat "$work/fetch.err" >&2
+    die "$name: cannot fetch commit $commit from $upstream"
+  }
   git -C "$work/upstream" checkout -q FETCH_HEAD
   if [ -n "$patch" ]; then
-    # Patches are relative to the vendor directory; try vendor-root strip
-    # levels against the upstream checkout without touching the vendor tree.
-    if ! git -C "$work/upstream" apply --check -p1 < "$ROOT/$patch" 2>"$work/apply.err"; then
-      cat "$work/apply.err" >&2
+    # Patches are relative to the vendor directory root, which matches the
+    # upstream checkout root. Most patches use git a/b prefixes (-p1); the
+    # ocaml patch is p0-style with timestamps. Try -p1, then -p0.
+    local patch_level=""
+    if git -C "$work/upstream" apply --check -p1 < "$ROOT/$patch" 2>"$work/apply-err1"; then
+      patch_level="-p1"
+    elif git -C "$work/upstream" apply --check -p0 < "$ROOT/$patch" 2>"$work/apply-err0"; then
+      patch_level="-p0"
+      printf 'grammars.sh verify: %s: patch uses -p0 strip level\n' "$name" >&2
+    else
+      cat "$work/apply-err1" >&2
       die "$name: patch $patch does not apply to $commit"
     fi
-    git -C "$work/upstream" apply -p1 < "$ROOT/$patch"
+    git -C "$work/upstream" apply "$patch_level" < "$ROOT/$patch"
   fi
+  # A patched grammar may extend a sibling vendored grammar (typescript
+  # extends ../../tree-sitter-javascript/grammar.js). Link each referenced
+  # sibling from vendor/ read-only so generate resolves it exactly as the
+  # vendored tree did.
+  while IFS= read -r sib; do
+    if [ -d "$ROOT/vendor/$sib" ] && [ ! -e "$work/$sib" ]; then
+      ln -s "$ROOT/vendor/$sib" "$work/$sib"
+      printf 'grammars.sh verify: %s: linked sibling %s from vendor/\n' "$name" "$sib" >&2
+    fi
+  done < <(cd "$work/upstream" && grep -rhoE '\.\./\.\./tree-sitter-[a-z0-9-]+/grammar\.js' --include='*.js' . 2>/dev/null | sed -E 's|^\.\./\.\./||; s|/grammar\.js$||' | sort -u)
   # Isolated caches: one grammar's compiled parser must never shadow another.
   export XDG_CACHE_HOME="$work/xdg"
   export TREE_SITTER_LIBDIR="$work/lib"
   mkdir -p "$XDG_CACHE_HOME" "$TREE_SITTER_LIBDIR"
   # Regenerate every grammar.js in the checkout (covers nested php/,
-  # typescript/tsx, and ocaml grammars/*/ layouts), then compare.
+  # typescript/tsx, and ocaml grammars/*/ layouts): each nested grammar
+  # generates from its own subdirectory, where its relative requires and
+  # imports resolve.
   local failed=0
   while IFS= read -r gj; do
     gdir="$(dirname "$gj")"
-    (cd "$gdir" && "$tsbin" generate) || { printf 'grammars.sh verify: %s: generate failed in %s\n' "$name" "$gdir" >&2; failed=1; continue; }
+    (cd "$work/upstream/$gdir" && "$tsbin" generate) || { printf 'grammars.sh verify: %s: generate failed in %s\n' "$name" "$gdir" >&2; failed=1; continue; }
   done < <(cd "$work/upstream" && find . -name grammar.js -not -path "./node_modules/*" | sort)
   [ "$failed" -eq 0 ] || exit 1
   local diffs=0
