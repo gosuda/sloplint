@@ -306,19 +306,22 @@ pub(crate) fn decl_info<'s>(
     wrap: &[&str],
 ) -> (Vec<(&'s str, Pos)>, bool) {
     let mut cursor = n.walk();
-    let ds: Vec<Node<'_>> = n
-        .children_by_field_name("declarator", &mut cursor)
-        .collect();
     let mut out = Vec::new();
     let mut func = false;
-    for d in ds {
+    for d in n.children_by_field_name("declarator", &mut cursor) {
         let found = leaf(d, wrap);
         if found.kind() == "function_declarator" {
             func = true;
-        } else if found.kind() == "identifier" && !const_pointer(cx, d, wrap) {
-            out.push((text(cx, found), pos_of(found)));
         } else if found.kind() == "structured_binding_declarator" {
             push_structured_binding(cx, found, &mut out);
+        } else {
+            let ordinary_field = found.kind() == "field_identifier"
+                && !std::iter::successors(d.next_sibling(), Node::next_sibling)
+                    .find(|n| !n.is_extra())
+                    .is_some_and(|n| n.kind() == "bitfield_clause");
+            if (found.kind() == "identifier" || ordinary_field) && !const_pointer(cx, d, wrap) {
+                out.push((text(cx, found), pos_of(found)));
+            }
         }
     }
     (out, func)

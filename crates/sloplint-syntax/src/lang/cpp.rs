@@ -41,6 +41,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("call_expression", Role::Call),
     ("new_expression", Role::NewCall),
     ("declaration", Role::Decl),
+    ("field_declaration", Role::Decl),
     ("assignment_expression", Role::Write),
     ("update_expression", Role::Write),
     ("preproc_include", Role::Import),
@@ -211,18 +212,7 @@ impl LangHooks for CppHooks {
         })
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        // A guarded `MACRO() { int fd = open(); };` parses on the loose
-        // member read, which tags block locals as `field_declaration`.
-        // Inside a macro-braced body they are locals, so bind them there
-        // — real struct fields keep a `struct_specifier` grandparent.
-        let decl_like = n.kind() == "declaration"
-            || (n.kind() == "field_declaration"
-                && n.parent().is_some_and(|p| {
-                    p.kind() == "field_declaration_list"
-                        && p.parent()
-                            .is_some_and(|g| g.kind() == "macro_braced_declaration")
-                }));
-        if !decl_like {
+        if n.kind() != "declaration" && !is_macro_local_field(n, cx) {
             return;
         }
         if word(
@@ -467,6 +457,30 @@ impl LangHooks for CppHooks {
         )
         .then(|| calls::catch2_assert(cx, n))
     }
+}
+
+fn is_macro_local_field(node: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+    let Some(body) = node
+        .parent()
+        .filter(|n| n.kind() == "field_declaration_list")
+    else {
+        return false;
+    };
+    if !body
+        .parent()
+        .is_some_and(|n| n.kind() == "macro_braced_declaration")
+    {
+        return false;
+    }
+    !cx.ancestors()
+        .skip(2)
+        .take_while(|n| n.kind() != "compound_statement")
+        .any(|n| {
+            n.kind() == "field_declaration_list"
+                && !n
+                    .parent()
+                    .is_some_and(|parent| parent.kind() == "macro_braced_declaration")
+        })
 }
 
 fn statement_scope(depth: usize, node: Node<'_>) -> usize {

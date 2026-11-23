@@ -200,26 +200,55 @@ fn braced_block_under_case_ends_with_its_block() {
     });
 }
 
-// `MACRO() { int fd = 0; };` inside a function body takes the
-// statement-scope member read, which nests the block local under
-// `field_declaration_list` — the extractor must still bind it or its
-// writes go unscoped. The `int bits : 3;` member makes the input
-// distinguishable: the base grammar can only read the block as a
-// nested function body, where a bitfield is not a statement.
 #[test]
-fn guarded_macro_braced_locals_bind() {
-    let source = "void g() {\n    ON_SCOPE_EXIT() {\n        int bits : 3;\n        int fd = 0;\n        fd = 1;\n        fd = 2;\n    };\n}\n";
-    with_cpp_bindings(source, |found| {
-        let fds = named_all(found, "fd");
-        assert_eq!(fds.len(), 1, "the macro-braced local binds once: {found:?}");
-        assert_eq!(
-            (
-                fds[0].write_lines,
-                fds[0].first_write_line,
-                fds[0].last_write_line
+fn macro_braced_member_read_locals_bind() {
+    let body = "        int retries = 0;\n        ++retries;\n        retries = 2;\n";
+    let cases = [
+        (
+            format!("void g() {{\n#ifdef DEBUG\n    ON_SCOPE_EXIT {{\n{body}    }};\n#endif\n}}\n"),
+            (5, 6),
+        ),
+        (
+            format!(
+                "void g() {{\n#ifdef DEBUG\n    ON_SCOPE_EXIT() {{\n{body}    }};\n#endif\n}}\n"
             ),
-            (2, 5, 6),
-            "both writes land on the local: {found:?}"
-        );
+            (5, 6),
+        ),
+        (
+            format!("void g() {{\n    ON_SCOPE_EXIT() {{\n{body}    }};\n}}\n"),
+            (4, 5),
+        ),
+        (format!("TEST(Suite, Name) {{\n{body}}}\n"), (3, 4)),
+        (
+            format!("void g() {{\n    WIDGET() {{\n        int bits : 3;\n{body}    }};\n}}\n"),
+            (5, 6),
+        ),
+    ];
+    for (source, (first, last)) in &cases {
+        with_cpp_bindings(source, |found| {
+            let retries = named_all(found, "retries");
+            assert_eq!(
+                retries.len(),
+                1,
+                "the macro-braced local binds once: {found:?}\n{source}"
+            );
+            assert_eq!(
+                (
+                    retries[0].write_lines,
+                    retries[0].first_write_line,
+                    retries[0].last_write_line
+                ),
+                (2, *first, *last),
+                "both writes land on the local: {found:?}\n{source}"
+            );
+        });
+    }
+}
+
+#[test]
+fn braced_member_macros_in_local_classes_do_not_bind_fields() {
+    let source = "void g() {\n    struct Local {\n#ifdef DEBUG\n        MEMBERS(int tag) { private: int field = 1; };\n#endif\n    };\n}\n";
+    with_cpp_bindings(source, |found| {
+        assert!(found.is_empty(), "class fields are not locals: {found:?}");
     });
 }
