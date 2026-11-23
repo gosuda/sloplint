@@ -497,7 +497,9 @@ fn lean_top_errors(root: Node<'_>) -> Vec<(usize, usize)> {
 /// between the root's direct children (or before the first / after the
 /// last): tokens error recovery skipped without leaving a reachable `ERROR`
 /// or a `MISSING` in the s-expression. The group holding the gap is where
-/// the unparseable command sits.
+/// the unparseable command sits. A span covers the dropped text it names:
+/// it ends at the text's own last row, never at the next child's first row,
+/// so a healthy column-0 command following a gap keeps its own group.
 fn lean_gap_spans(root: Node<'_>, text: &[u8], line_starts: &[usize]) -> Vec<(usize, usize)> {
     let mut cursor = root.walk();
     let kids: Vec<Node<'_>> = root.children(&mut cursor).collect();
@@ -506,14 +508,29 @@ fn lean_gap_spans(root: Node<'_>, text: &[u8], line_starts: &[usize]) -> Vec<(us
     for child in &kids {
         let start = child.start_byte();
         if has_text(&text[edge..start.min(text.len())]) {
-            spans.push((row_of(line_starts, edge), row_of(line_starts, start)));
+            spans.push((
+                row_of(line_starts, edge),
+                last_text_row(text, line_starts, edge, start.min(text.len())),
+            ));
         }
         edge = child.end_byte().max(edge);
     }
     if has_text(&text[edge.min(text.len())..]) {
-        spans.push((row_of(line_starts, edge), row_of(line_starts, text.len())));
+        spans.push((
+            row_of(line_starts, edge),
+            last_text_row(text, line_starts, edge.min(text.len()), text.len()),
+        ));
     }
     spans
+}
+
+/// 0-based row of the last non-whitespace byte in `text[from..to)`.
+fn last_text_row(text: &[u8], line_starts: &[usize], from: usize, to: usize) -> usize {
+    let last = text[from..to]
+        .iter()
+        .rposition(|&byte| !byte.is_ascii_whitespace())
+        .map_or(from, |at| from + at);
+    row_of(line_starts, last)
 }
 
 /// Whether a gap holds anything but ASCII whitespace (comments are child
@@ -661,5 +678,52 @@ fn root_end_pos(root: Node<'_>) -> Pos {
     Pos {
         line: hooks::narrow(root.end_position().row) + 1,
         byte: hooks::narrow(root.end_byte()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sloplint_core::lang::Lang;
+    use tree_sitter::{Parser, Tree};
+
+    use super::{lean_gap_spans, row_of};
+    use crate::spec::spec;
+
+    /// Parse Lean source with the bundled grammar, the same parser the
+    /// rescue runs on.
+    fn lean_tree(source: &str) -> Tree {
+        let language = spec(Lang::Lean).language.clone();
+        let mut parser = Parser::new();
+        parser.set_language(&language).expect("lean language loads");
+        parser.parse(source, None).expect("tree")
+    }
+
+    /// A gap span covers the dropped text, not the next command's first
+    /// row. The tree below parses clean, so its whitespace-only line holds
+    /// no span; staging dropped-token bytes on that line (as error recovery
+    /// leaves them) must end the span on the text's own row, leaving the
+    /// following column-0 command outside it.
+    #[test]
+    fn lean_gap_span_ends_on_the_dropped_text_row() {
+        let source = "import Lean\n  \nopen Lean Meta\n\nopen Foo.Bar\n";
+        let tree = lean_tree(source);
+        assert!(!tree.root_node().has_error());
+        let mut text = source.as_bytes().to_vec();
+        let starts: Vec<usize> = {
+            let mut line_starts = vec![0usize];
+            for (at, &byte) in text.iter().enumerate() {
+                if byte == b'\n' {
+                    line_starts.push(at + 1);
+                }
+            }
+            line_starts
+        };
+        let line = starts[1];
+        assert_eq!(&text[line..line + 2], b"  ");
+        text[line] = b'x';
+        text[line + 1] = b'x';
+        assert_eq!(row_of(&starts, line), 1);
+        let spans = lean_gap_spans(tree.root_node(), &text, &starts);
+        assert_eq!(spans, vec![(0, 1)]);
     }
 }
