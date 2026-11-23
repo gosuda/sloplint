@@ -1,0 +1,2 @@
+[languages.dart]
+log_callees = ["print", "Logger.new"]
