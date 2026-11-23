@@ -91,6 +91,7 @@ jobs:
             vendor/tree-sitter-lean/src/parser.c \
             vendor/tree-sitter-lean/src/scanner.c \
             -o "$RUNNER_TEMP/lean-parse-probe"
+          cp "$RUNNER_TEMP/lean-parse-probe" vendor/tree-sitter-lean/lean-parse-probe
       - name: Concrete Lean layout fixtures
         if: ${{ !cancelled() && steps.probe.outcome == 'success' }}
         run: |
@@ -123,6 +124,7 @@ jobs:
             vendor/tree-sitter-lean/generated-sha256.txt
             vendor/tree-sitter-lean/*.log
             vendor/tree-sitter-lean/*-syntax.jsonl
+            vendor/tree-sitter-lean/lean-parse-probe
 
   preserve-blobs:
     needs: generate
@@ -148,3 +150,4 @@ jobs:
             sha="$(gh api --method POST "repos/$GITHUB_REPOSITORY/git/blobs" --input "$payload" --jq .sha)"
             printf '%s %s\n' "$sha" "vendor/tree-sitter-lean/$path"
           done
+

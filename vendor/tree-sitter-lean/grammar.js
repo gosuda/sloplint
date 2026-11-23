@@ -1719,11 +1719,7 @@ export default grammar({
       $._type_spec,
     )),
 
-    _have_value: $ => choice(
-      seq(':=', field('value', $._term)),
-      seq('from', field('value', $._term)),
-      $.by,
-    ),
+    _have_value: $ => seq(':=', field('value', $._term)),
 
     /* `suffices g : T from proof` / `suffices g : T by tac` — a
        tactic-language reframing. The `from`/`by` proves the new
