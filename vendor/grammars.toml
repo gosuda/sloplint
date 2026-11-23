@@ -87,7 +87,7 @@ abi = 15
 patch = "vendor/tree-sitter-c-sharp/sloplint-grammar.patch"
 patch_status = "local"
 patch_upstream = ""
-notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. v0.24.0 absorbs the ref-partial, pointer-deref, methodelem, extension, #:-directive and dangling-else hunks (upstream carries extension_declaration and ignored_directive rules); the reduced patch (451 lines, 29 hunks) keeps the allows-struct, ref-conditional assignment, trivia, unsafe-dtor, async-identifier and #-split hunks plus the #line filename fix from upstream master commit 77145f6, all with no upstream PR or issue."
+notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. v0.24.0 absorbs the ref-partial, pointer-deref, methodelem, extension, #:-directive and dangling-else hunks (upstream carries extension_declaration and ignored_directive rules); the reduced patch (484 lines, 30 hunks) keeps the allows-struct, ref-conditional assignment, trivia, unsafe-dtor, async-identifier and #-split hunks plus the #line filename fix from upstream master commit 77145f6 (grammar and corpus hunks), all with no upstream PR or issue."
 
 [[grammar]]
 name = "tree-sitter-cpp"
