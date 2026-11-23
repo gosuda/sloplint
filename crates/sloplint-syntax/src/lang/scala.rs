@@ -11,6 +11,7 @@ mod calls;
 mod funcs;
 mod imports;
 mod items;
+mod patterns;
 mod writes;
 
 pub(crate) static TABLE: crate::lang::Table = &[
@@ -142,7 +143,7 @@ impl LangHooks for ScalaHooks {
     }
 
     fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
-        items::shadow_names(cx, n, out);
+        patterns::shadow_names(cx, n, out);
     }
 }
 
