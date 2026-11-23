@@ -441,3 +441,18 @@ fn a_truncated_null_aware_cascade_still_reports_a_parse_error() {
         "truncated null-aware cascade must not parse"
     );
 }
+
+#[test]
+fn comment_between_base_and_new_stays_in_the_callee() {
+    // A comment between the base and the `.new` suffix rides along in the
+    // dotted callee text; `CalleePattern` matching skips comments, so a
+    // configured `Logger.new` pattern still matches this call.
+    let analysis =
+        run_clean("void main() {\n  Logger /* reason */ .new(message);\n  Logger.new(other);\n}\n");
+    let callees: Vec<&str> = analysis.facts.calls.iter().map(|c| c.callee).collect();
+    assert_eq!(
+        callees,
+        vec!["Logger /* reason */ .new", "Logger.new"],
+        "constructor callees: {callees:?}"
+    );
+}
