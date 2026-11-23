@@ -78,6 +78,16 @@ Each fix was checked against `php -l` 8.5.8. Corpus cases are in
   `optional(seq(value, _heredoc_final_newline))`, and the `[$.heredoc_body]`
   conflict is no longer needed.
 
+- P8 cast words as a plain function name and as a constant subscript base
+  (`int(1)`, `OBJECT[0]`): upstream `cabf8bf` aliases the
+  `CAST_TYPE_CONSTANT_NAMES` spellings to `name` in `primary_expression`,
+  but the function-name and subscript-base positions only accept `_name`,
+  which covers just the class-name subset. The same alias is added to the
+  `function_call_expression` function field and to
+  `_dereferencable_expression`. Class declarations are untouched (no change
+  to `_name` itself), and real casts keep their parentheses, so a
+  `cast_expression` still parses as one (see the `cast_still_cast` gap test).
+
 ## Behavior changes on previously clean files
 
 Four published-clean files change tree shape. Every other clean file has the same
@@ -104,26 +114,36 @@ Comment facts are therefore reduced by 15 across these four files, and two varia
 read facts are added. No other clean file changes tree shape.
 
 ## Verification
-
-- Upstream corpus plus the six sloplint files, pinned CLI regen: 170/170
+- Upstream corpus plus the seven sloplint files, pinned CLI regen: 172/172
   (`tree-sitter test`, no update flag). The upstream corpus grew by 15 cases
   since v0.25.1 (cast, clone, and match coverage); all pass.
-- The 7 extracted sloplint inputs parse clean on both dialects (`php` and
-  `php_only`), and all 7 parse trees are byte-identical to the ones the
-  v0.25.1-based vendored tree produced, so no corpus rewrite was needed.
-- Rust tests (`grammar_gaps/php.rs`, 7 tests): green on the vendored grammar.
-  P1-P3 now pass through upstream rules (kept as regression guards); P4-P7
+- The 9 extracted sloplint inputs parse clean on both dialects (`php` and
+  `php_only`), and the 7 carried-over parse trees are byte-identical to the
+  ones the v0.25.1-based vendored tree produced, so no corpus rewrite was
+  needed. The 2 new P8 inputs fail on the unpatched v0.25.2 tree.
+- Rust tests (`grammar_gaps/php.rs`, 8 tests): green on the vendored grammar.
+  P1-P3 now pass through upstream rules (kept as regression guards); P4-P8
   still fail on the unpatched v0.25.2 tree and pass with the reduced patch.
   The controls (invalid inputs that must keep reporting `parse_error`) run
   after each fix assertion, so they are only exercised on the vendored grammar.
-- Full `sloplint-syntax` test suite: all targets pass.
+- Full `grammar_gaps` suite (716 tests) and the whole fixture suite pass on
+  the vendored grammar.
+- Custom query migration: no node kind was added or removed, so existing
+  custom queries still compile, but two tree shapes moved. A cast over an
+  assignment was `(assignment_expression left: (cast_expression))` through
+  the old `cast_variable` alias in `_variable`; it is now
+  `(cast_expression value: (assignment_expression))`, because the cast value
+  takes a general expression. And `(primary_expression (name))` now also
+  matches the cast-word constant spellings (`int`, `string`, ...). Queries
+  pinning either shape need the new nesting.
 - The v0.25.1-base differential sweep over `.outline/corpora/laravel-framework`
   and `.outline/corpora/symfony` (14316 `.php` files: 14 error files published,
   3 vendored, 0 regressions, 11 fixed, `meta/parse-error` 11 to 0) is not
   re-run here — those corpora are not in this checkout. It is superseded by
-  the three checks above: the patch hunks kept here are byte-identical in
-  behavior to the v0.25.1 re-vendor (same 7 trees), and upstream's
-  v0.25.1-to-v0.25.2 grammar diff touches none of the P4-P7 rules.
+  the checks above: the patch hunks kept here are byte-identical in
+  behavior to the v0.25.1 re-vendor (same 7 trees, plus 2 new P8 inputs),
+  and upstream's v0.25.1-to-v0.25.2 grammar diff touches none of the P4-P7
+  rules; P8 is a new local hunk.
 
 ## Still failing
 
