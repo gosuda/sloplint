@@ -9,8 +9,10 @@ use crate::hooks::{
 use crate::spec::Role;
 
 mod calls;
+mod flow;
 mod funcs;
 mod imports;
+mod sleeps;
 mod stmts;
 
 pub(crate) use funcs::{go_is_deprecated, go_is_test_file};
@@ -43,6 +45,14 @@ pub(crate) struct GoHooks;
 pub(crate) static HOOKS: GoHooks = GoHooks;
 
 impl LangHooks for GoHooks {
+    fn redundant_else(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        flow::redundant_else(n, cx)
+    }
+
+    fn blocking_sleep(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        sleeps::blocking_sleep(n, cx)
+    }
+
     fn shadow_filter(&self) -> ShadowKind {
         ShadowKind::DeclsAndBinds
     }

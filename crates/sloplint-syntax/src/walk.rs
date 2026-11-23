@@ -96,6 +96,8 @@ pub(crate) fn empty_facts<'s>(input: &crate::FileInput<'s>, lang: Lang) -> FileF
         impls: Vec::new(),
         wildcard_arms: Vec::new(),
         handlers: Vec::new(),
+        redundant_elses: Vec::new(),
+        blocking_sleeps: Vec::new(),
         assertions: Vec::new(),
         field_copies: Vec::new(),
         dynamic_symbols: Vec::new(),
@@ -270,6 +272,9 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
     }
 
     fn enter_if(&mut self, node: Node<'_>) {
+        if let Some(pos) = self.hooks.redundant_else(node, &self.make_cx()) {
+            self.facts.redundant_elses.push(pos);
+        }
         if !self.fn_stack.is_empty() {
             let hooks = self.hooks;
             if !hooks.is_else_if(node, self.visited_parent()) {
@@ -325,6 +330,9 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
             self.push_region(crate::hooks::region_of(node, role));
         }
         self.push_call(node);
+        if let Some(pos) = self.hooks.blocking_sleep(node, &self.make_cx()) {
+            self.facts.blocking_sleeps.push(pos);
+        }
         self.push_imports(node);
         self.push_assertion(node);
         self.push_dynamic(node);

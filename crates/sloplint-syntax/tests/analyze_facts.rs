@@ -62,6 +62,8 @@ mod powershell_scopes;
 mod python_scopes;
 #[path = "analyze_facts/qt_access.rs"]
 mod qt_access;
+#[path = "analyze_facts/redundant_else.rs"]
+mod redundant_else;
 #[path = "analyze_facts/ruby_scopes.rs"]
 mod ruby_scopes;
 #[path = "analyze_facts/rust_scopes.rs"]
@@ -78,6 +80,8 @@ mod support;
 mod swift_scopes;
 #[path = "analyze_facts/swift_throws.rs"]
 mod swift_throws;
+#[path = "analyze_facts/test_sleeps.rs"]
+mod test_sleeps;
 #[path = "analyze_facts/walk_scaling.rs"]
 mod walk_scaling;
 #[path = "analyze_facts/web_scopes.rs"]

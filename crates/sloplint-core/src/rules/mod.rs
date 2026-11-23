@@ -219,6 +219,7 @@ pub static CATALOG: &[RuleInfo] = &[
     agent::explicit_boundary_types::INFO,
     agent::file_token_budget::INFO,
     agent::informative_assertions::INFO,
+    agent::no_sleep_in_tests::INFO,
     agent::stringly_api::INFO,
     agent::typed_error_boundary::INFO,
     agent::unique_patch_anchors::INFO,
@@ -242,6 +243,7 @@ pub static CATALOG: &[RuleInfo] = &[
     slop::echo_comment::INFO,
     slop::field_copy::INFO,
     slop::passthrough_wrapper::INFO,
+    slop::redundant_else::INFO,
     slop::single_impl_abstraction::INFO,
     slop::zombie_catch::INFO,
 ];

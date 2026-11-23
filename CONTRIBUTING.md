@@ -73,6 +73,14 @@ Every file in `crates/` must pass `sloplint` under the default `standard` profil
 6. Predicates read structural facts only. Rule files carry no per-language name lists.
 7. Each tightening ships a positive and a near-miss fixture per language touched. A test exemption is a role shift.
 
+When adopting an engineering practice, separate its rationale from what syntax can
+establish. Test valid counterexamples, including scope, shadowed names, resource
+lifetimes, and runtime-specific exceptions. A new rule without measured corpus
+precision starts off through `standard` and at `info` with `low` confidence in
+`strict`. Preserve existing rule coverage instead of adding overlapping checks.
+See [Practices adopted from JustGoodPractices](docs/just-good-practices.md) for the
+selection rationale and current limits.
+
 ## Adding fixtures
 
 Every rule has a fixture directory at `crates/sloplint/tests/fixtures/<family>/<rule>/`:

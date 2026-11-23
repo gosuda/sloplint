@@ -1,0 +1,2 @@
+a.ts:4 info slop/redundant-else
+a.ts:11 info slop/redundant-else
