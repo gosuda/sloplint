@@ -16,6 +16,24 @@ func Tally(items []int, p int) int {
 	k := j + 1
 	l := k + 1
 	m := l + p
+	n := m + 1
+	o := n + 1
+	q := o + 1
+	r := q + 1
+	s := r + 1
+	t := s + 1
+	u := t + 1
+	v := u + 1
+	w := v + 1
+	x := w + 1
+	y := x + 1
+	z := y + 1
+	aa := z + 1
+	ab := aa + 1
+	ac := ab + 1
+	ad := ac + 1
+	ae := ad + 1
+	af := ae + 1
 	for _, total := range items {
 		total += m
 	}

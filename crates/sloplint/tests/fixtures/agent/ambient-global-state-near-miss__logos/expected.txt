@@ -1,1 +1,2 @@
 # main.lgo matches allow_files: globals and env reads exempt.
+# b.lgo holds a mutable global written in a function, but the rule stays silent for Lang::Logos.
