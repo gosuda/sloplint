@@ -16,9 +16,10 @@ Prefer, in this order:
    `.cargo_vcs_info.json` commit). None of the vendored directories
    currently qualifies; `tree-sitter-r` is the only grammar consumed this
    way (workspace dependency, no vendor directory).
-2. A vendored pristine upstream tree at a pinned commit. Today:
-   `tree-sitter-quint` (grammar files verbatim) and `tree-sitter-racket`
-   (no patch file; files byte-identical to the tag).
+2. A vendored pristine upstream tree at a pinned commit. No vendored
+   directory currently qualifies: `tree-sitter-quint` carries one MSVC
+   portability hunk in its scanner header and `tree-sitter-racket` one
+   scanner hunk, both recorded in their patches.
 3. A vendored upstream tree plus a small, documented patch series that
    follows upstream. Every patch states its upstream PR or issue, or why
    there is none. `patch_status` in the manifest is `upstream-pending` with
