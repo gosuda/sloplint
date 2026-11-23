@@ -1,1 +1,1 @@
-# Two repeated pairs never reach the strict repeat rung.
+# Scenario `.then` chains, frame-condition holds, and short repeats stay silent: repetition is spec structure, not copy-paste debt.

@@ -1,1 +1,1 @@
-# Importing under the module's own name renames nothing.
+# Self-named and `import M as N` module reuse stay silent: aliasing is the documented namespacing idiom.
