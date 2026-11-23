@@ -44,8 +44,8 @@ tree-sitter-tlaplus = { path = "vendor/tree-sitter-tlaplus" }
 tree-sitter-dafny = { path = "vendor/tree-sitter-dafny" }
 tree-sitter-racket = { path = "vendor/tree-sitter-racket" }
 rayon = "1.12.0"
-ignore = "0.4.34"
-globset = "0.4.21"
+ignore = "0.4.35"
+globset = "0.4.22"
 serde = { version = "1.0.229", features = ["derive"] }
 sonic-rs = "0.5.12"
 itoa = "1.0.19"
