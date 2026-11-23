@@ -104,6 +104,20 @@ fn strip_block_comments(text: &str) -> String {
     let mut chars = text.chars().peekable();
     let mut in_comment = false;
     while let Some(c) = chars.next() {
+        if !in_comment && c == '/' && chars.peek() == Some(&'/') {
+            // A `//` comment runs to the end of the line, so a `/*` inside
+            // it never opens a block comment. Copy it through; the caller
+            // strips `//` comments afterwards.
+            out.push_str("//");
+            chars.next();
+            while let Some(c) = chars.next() {
+                out.push(c);
+                if c == '\n' {
+                    break;
+                }
+            }
+            continue;
+        }
         if !in_comment && c == '/' && chars.peek() == Some(&'*') {
             chars.next();
             in_comment = true;
@@ -151,4 +165,21 @@ fn block_commented_conflicts_are_not_live() {
             "a commented-out entry is not live: {live:?}"
         );
     }
+}
+
+#[test]
+fn line_commented_block_opener_hides_nothing() {
+    // A `/*` inside a `//` comment never opens a block comment, so the
+    // live entry after it still counts.
+    let conflicts =
+        "conflicts: $ => [\n    [$.a, $.b],\n    // /* [$.c, $.d],\n    [$.i, $.j],\n  ],";
+    let live = live_conflict_lines(conflicts);
+    assert!(
+        live.iter().any(|line| line == "[$.i, $.j],"),
+        "the entry after a line-commented opener stays live: {live:?}"
+    );
+    assert!(
+        !live.iter().any(|line| line.contains("$.c")),
+        "the line-commented entry is not live: {live:?}"
+    );
 }
