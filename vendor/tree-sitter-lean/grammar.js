@@ -1693,8 +1693,10 @@ export default grammar({
       choice('have', 'haveI'),
       /* Destructuring `have ⟨a, b⟩ := …` is common in Mathlib;
          anonymous `have : T` binds `this`. */
-      optional(field('name', choice($._binder_ident, $.anon_ctor_binder))),
-      optional($._binders),
+      optional(choice(
+        seq(field('name', $._binder_ident), optional($._binders)),
+        field('name', $.anon_ctor_binder),
+      )),
       optional($._type_spec),
       /* Tactic `have h : T` (goal without a proof term) leaves the
          `:=` off; `have h : T from e` is the older spelling. */
