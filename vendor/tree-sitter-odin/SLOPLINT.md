@@ -5,7 +5,7 @@
 - Published crate: `tree-sitter-odin` 1.3.0 (crates.io). Name and version are unchanged.
 - Upstream: https://github.com/amaanq/tree-sitter-odin, tag `v1.3.0` (commit `e8adc739`).
 - License: MIT (`LICENSE` is the upstream v1.3.0 file, fetched verbatim).
-- Not shipped in the crate: the upstream `test/corpus`. The only corpus that runs here is `test/corpus/sloplint_*.txt`.
+- Not shipped in the crate: the upstream `test/corpus`. `test/corpus/declarations.txt` is copied verbatim from the tag, so `tree-sitter test` runs its two upstream cases next to `test/corpus/sloplint_*.txt`.
 - Files kept from the crate: `Cargo.toml` (normalized by cargo), `README.md`, `bindings/`, `grammar.js` (patched), `queries/`, `src/` (regenerated), `tree-sitter.json`, `LICENSE`.
 - `Cargo.toml` has one addition: an empty `[workspace]` table after `[lib]`. Without it `cargo fmt --all` reports the vendored package as belonging to the parent workspace and fails. No other manifest change.
 - Files dropped: `Cargo.toml.orig`, `.cargo_vcs_info.json`, `.cargo-ok`.
