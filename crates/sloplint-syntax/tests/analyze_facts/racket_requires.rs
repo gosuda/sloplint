@@ -68,3 +68,57 @@ fn provide_and_quoted_require_record_nothing() {
             .collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn relative_in_rebases_wrapped_specs_against_its_base() {
+    let analysis = run_clean(
+        Lang::Racket,
+        "pkg/test/check.rkt",
+        "#lang racket\n(require (relative-in \"../lib/base.rkt\" \"util.rkt\"))\n",
+    );
+    let modules: Vec<String> = analysis
+        .facts
+        .imports
+        .iter()
+        .map(|import| import.module.to_string())
+        .collect();
+    assert_eq!(
+        modules,
+        vec!["../lib/util.rkt".to_string()],
+        "the base is only the resolution anchor; the wrapped spec resolves against it"
+    );
+}
+
+#[test]
+fn vector_contents_are_datum_not_imports() {
+    let analysis = run_clean(
+        Lang::Racket,
+        "pkg/test/reader.rkt",
+        "#lang racket\n(define expected #((require \"../lib/ghost.rkt\")))\n",
+    );
+    assert!(
+        analysis.facts.imports.is_empty(),
+        "a require shape inside a vector literal is data, found {:?}",
+        analysis
+            .facts
+            .imports
+            .iter()
+            .map(|import| import.module.to_string())
+            .collect::<Vec<_>>()
+    );
+    let analysis = run_clean(
+        Lang::Racket,
+        "pkg/test/reader.rkt",
+        "#lang racket\n(define expected `#(a ,(require \"../lib/ghost.rkt\")))\n",
+    );
+    assert_eq!(
+        analysis
+            .facts
+            .imports
+            .iter()
+            .map(|import| import.module.to_string())
+            .collect::<Vec<_>>(),
+        vec!["../lib/ghost.rkt".to_string()],
+        "an unquoted require inside a quasiquoted vector is still code"
+    );
+}

@@ -108,7 +108,10 @@ fn in_non_code(cx: &Cx<'_, '_>) -> bool {
     for ancestor in cx.ancestors() {
         let head = match ancestor.kind() {
             "sexp_comment" | "hash" => return true,
-            "quote" | "syntax" | "box" | "graph" => {
+            // A vector literal is data like a quotation: its contents are
+            // datum unless an unquote escape pairs them with an enclosing
+            // quasiquote, in which case the vector stays transparent.
+            "vector" | "quote" | "syntax" | "box" | "graph" => {
                 if escapes.is_empty() {
                     return true;
                 }
@@ -397,8 +400,26 @@ fn visibility_of(cx: &Cx<'_, '_>, name: &str) -> Visibility {
 }
 
 fn push_require_spec<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<Import<'s>>) {
+    push_spec_in(cx, None, spec, out);
+}
+
+fn push_spec_in<'s>(
+    cx: &Cx<'_, 's>,
+    anchor: Option<&str>,
+    spec: Node<'_>,
+    out: &mut Vec<Import<'s>>,
+) {
     match spec.kind() {
-        "string" => push_string_require(cx, spec, out),
+        "string" => {
+            let raw = strip_quotes(text(cx, spec));
+            if raw.is_empty() {
+                return;
+            }
+            match anchor {
+                Some(dir) => push_rebased_require(cx, spec, dir, raw, out),
+                None => push_string_require(cx, spec, raw, out),
+            }
+        }
         "list" => {
             let mut kids = code_children(spec).into_iter();
             let Some(head) = kids.next() else {
@@ -407,19 +428,94 @@ fn push_require_spec<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<Import<'
             if head.kind() != "symbol" {
                 return;
             }
-            if matches!(text(cx, head), "lib" | "planet") {
+            let head = text(cx, head);
+            if matches!(head, "lib" | "planet") {
+                return;
+            }
+            if head == "relative-in" {
+                push_relative_in(cx, kids.collect(), out);
                 return;
             }
             for child in kids {
-                push_require_spec(cx, child, out);
+                push_spec_in(cx, anchor, child, out);
             }
         }
         _ => {}
     }
 }
 
-fn push_string_require<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<Import<'s>>) {
-    let module = strip_quotes(text(cx, spec));
+/// `(relative-in base spec ...)` resolves each wrapped spec against the
+/// base's directory instead of the importing file. The base is only the
+/// resolution anchor, never an import. A base that is not a relative
+/// string cannot be rebased, so the wrapped specs stay out instead of
+/// resolving against the importing file.
+fn push_relative_in<'s>(cx: &Cx<'_, 's>, kids: Vec<Node<'_>>, out: &mut Vec<Import<'s>>) {
+    let mut kids = kids.into_iter();
+    let Some(base) = kids.next() else {
+        return;
+    };
+    if base.kind() != "string" {
+        return;
+    }
+    let anchor = strip_quotes(text(cx, base));
+    if !anchor.starts_with('.') {
+        return;
+    }
+    let dir = match anchor.rfind('/') {
+        Some(i) => &anchor[..i],
+        None => "",
+    };
+    for child in kids {
+        push_spec_in(cx, Some(dir), child, out);
+    }
+}
+
+/// Joins a `relative-in` anchor directory with a wrapped spec lexically:
+/// `..` pops the anchor, `.` and empty parts stay put.
+fn rebase_relative(dir: &str, spec: &str) -> String {
+    let mut parts: Vec<&str> = dir.split('/').filter(|part| !part.is_empty()).collect();
+    for seg in spec.split('/') {
+        match seg {
+            "" | "." => {}
+            ".." => {
+                parts.pop();
+            }
+            _ => parts.push(seg),
+        }
+    }
+    parts.join("/")
+}
+
+fn push_rebased_require<'s>(
+    cx: &Cx<'_, 's>,
+    spec: Node<'_>,
+    dir: &str,
+    raw: &'s str,
+    out: &mut Vec<Import<'s>>,
+) {
+    let rebased = rebase_relative(dir, raw);
+    if rebased.is_empty() {
+        return;
+    }
+    out.push(Import {
+        pos: pos_of(spec),
+        module: Cow::Owned(rebased),
+        name: last_segment(raw, &["/"]),
+        alias: None,
+        kind: ImportKind::Namespace,
+        scope: ImportScope::Module,
+        in_test: is_test_path(cx.path),
+        is_reexport: false,
+        external_root: None,
+    });
+}
+
+fn push_string_require<'s>(
+    cx: &Cx<'_, 's>,
+    spec: Node<'_>,
+    module: &'s str,
+    out: &mut Vec<Import<'s>>,
+) {
     if module.is_empty() {
         return;
     }
