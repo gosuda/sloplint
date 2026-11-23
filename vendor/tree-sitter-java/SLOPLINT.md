@@ -7,6 +7,16 @@ Date: 2026-10-20.
 - Upstream repo: https://github.com/tree-sitter/tree-sitter-java
 - Upstream tag: v0.23.5 (commit 94703d5a6bed02b98e438d7cad1136c01a60ba2c).
 - Published crate: tree-sitter-java 0.23.5. Name and version are unchanged.
+- Upstream fix: PR #206 ("Various fixes for parsing type use annotations",
+  open since 2025-06-05, head 6018d681d319aada6d9fe1b8a8d17f9f4d6c758e).
+  The pre-ellipsis `repeat($._annotation)` below is upstream commit
+  ef003b25b850eb8c8fb9a00c07b2bc4a1ba764a8 (Abhinav Singh, 2025-06-05,
+  "fix: annotations parsing order for spread parameters"), cherry-picked
+  from that PR in a scratch clone (applies cleanly onto v0.23.5 with
+  upstream authorship). The post-ellipsis repeat is intentionally retained:
+  upstream moved the repeat instead of adding it, so upstream rejects
+  `void m(String ... @B xs)` while this tree still accepts it; removing it
+  would newly error files that parse today, so it stays.
 - Files copied unchanged from the published crate: Cargo.toml, Cargo.toml.orig,
   README.md, tree-sitter.json, bindings/rust/lib.rs, bindings/rust/build.rs,
   queries/highlights.scm, queries/tags.scm, src/tree_sitter/alloc.h.
@@ -43,10 +53,14 @@ grammar.js. Apply it from this directory with
 `patch -p1 < sloplint-grammar.patch` on the upstream file (verified with
 `patch --dry-run`).
 
-- J-ANNVARARGS: `spread_parameter` accepts `repeat($._annotation)` between
-  `$._unannotated_type` and `'...'`, per JLS 8.4.1
+- J-ANNVARARGS (upstream PR #206, commit ef003b2): `spread_parameter`
+  accepts `repeat($._annotation)` between `$._unannotated_type` and
+  `'...'`, per JLS 8.4.1
   (`LastFormalParameter: {VariableModifier} UnannType {Annotation} ...`).
-  The existing `repeat($._annotation)` after `'...'` is kept as is.
+  The pre-ellipsis repeat is upstream's fix, kept verbatim. The existing
+  `repeat($._annotation)` after `'...'` is intentionally retained although
+  upstream dropped it (see Origin): no corpus case covers it, and removing
+  it would newly error files that parse today.
   `String @N ... xs`, `@N Object @N ... a`, and `String @lib.Valid ... v`
   now parse; the leading `@N` in the second shape still parses as
   `modifiers`, and the pre-ellipsis annotation lands inside
