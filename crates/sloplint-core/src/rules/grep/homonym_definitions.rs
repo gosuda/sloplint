@@ -122,7 +122,7 @@ fn add_definitions<'a>(
     flat: &mut Vec<(Lang, &'a str, SiteRef<'a>)>,
 ) {
     let facts = file.facts;
-    if facts.lang == Lang::Logos {
+    if matches!(facts.lang, Lang::Dafny | Lang::Logos) {
         return;
     }
     let package = facts.package.as_str();
@@ -164,14 +164,11 @@ impl HomonymDefinitions {
                     // Init, Next, vars, Inv and friends are defined per
                     // module by design in TLA+: renaming them across
                     // hundreds of files is unthinkable.
-                    if matches!(facts.lang, Lang::Tlaplus) {
+                    if matches!(facts.lang, Lang::Dafny | Lang::Logos | Lang::Tlaplus) {
                         continue;
                     }
                     let package = facts.package.as_str();
                     for site in &facts.definitions {
-                        if facts.lang == Lang::Logos {
-                            continue;
-                        }
                         if self.allow.contains(site.name.as_ref())
                             || !INFO.roles.eligible(facts.role, &facts.regions, site.line)
                         {

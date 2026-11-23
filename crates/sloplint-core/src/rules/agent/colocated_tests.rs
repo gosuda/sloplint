@@ -73,12 +73,18 @@ impl WorldRule for ColocatedTests {
         let imported = import_covered(files);
         let mut evidenced: HashSet<(&str, &str)> = HashSet::new();
         for file in files {
+            if file.facts.lang == Lang::Dafny {
+                continue;
+            }
             if is_evidence(file) {
                 evidenced.insert((coverage_scope(file.facts.lang), file.facts.package.as_str()));
             }
         }
         for file in files {
             if file.facts.lang == Lang::Alloy {
+                continue;
+            }
+            if file.facts.lang == Lang::Dafny {
                 continue;
             }
             if self.skipped(file) {

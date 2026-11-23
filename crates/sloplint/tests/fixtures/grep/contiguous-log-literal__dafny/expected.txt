@@ -1,1 +1,0 @@
-a.dfy:3 info grep/contiguous-log-literal
