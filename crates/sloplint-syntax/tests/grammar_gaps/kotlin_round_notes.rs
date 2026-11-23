@@ -86,15 +86,69 @@ fn sloplint_md_round_notes_match_the_grammar() {
         .expect("grammar.js conflicts list must close")
         + conflicts_at;
     let conflicts = &grammar[conflicts_at..conflicts_end];
-    let live: Vec<&str> = conflicts
-        .lines()
-        .map(|line| line.split("//").next().unwrap_or("").trim())
-        .collect();
+    let live = live_conflict_lines(conflicts);
     for declared in &groups {
         assert!(
             live.iter()
                 .any(|line| line.trim_end_matches(',') == declared),
             "grammar.js conflicts must declare {declared} as a live entry for the merged if-then state"
+        );
+    }
+}
+
+/// Block-comment contents become blanks (newlines kept, so line structure
+/// survives): `/*` opens one and the next `*/` closes it. The generated
+/// grammar never nests block comments.
+fn strip_block_comments(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    let mut in_comment = false;
+    while let Some(c) = chars.next() {
+        if !in_comment && c == '/' && chars.peek() == Some(&'*') {
+            chars.next();
+            in_comment = true;
+            out.push_str("  ");
+            continue;
+        }
+        if in_comment && c == '*' && chars.peek() == Some(&'/') {
+            chars.next();
+            in_comment = false;
+            out.push_str("  ");
+            continue;
+        }
+        out.push(if in_comment && c != '\n' { ' ' } else { c });
+    }
+    out
+}
+
+/// The `conflicts` entries that still count as declarations: every line of
+/// the block-comment-free text with its `//` comment stripped.
+fn live_conflict_lines(conflicts: &str) -> Vec<String> {
+    let code = strip_block_comments(conflicts);
+    code.lines()
+        .map(|line| line.split("//").next().unwrap_or("").trim().to_string())
+        .collect()
+}
+
+#[test]
+fn block_commented_conflicts_are_not_live() {
+    // An entry disabled with a block comment — on its own line or spanning
+    // lines — must not count as a live declaration, just like a
+    // `//`-commented one.
+    let conflicts = "conflicts: $ => [\n    [$.a, $.b],\n    /* [$.c, $.d], */\n    // [$.e, $.f],\n    /*\n    [$.g, $.h],\n    */\n    [$.i, $.j],\n  ],";
+    let live = live_conflict_lines(conflicts);
+    assert!(
+        live.iter().any(|line| line == "[$.a, $.b],"),
+        "a live entry stays live: {live:?}"
+    );
+    assert!(
+        live.iter().any(|line| line == "[$.i, $.j],"),
+        "entries after a multi-line block comment stay live: {live:?}"
+    );
+    for dead in ["$.c", "$.e", "$.g"] {
+        assert!(
+            !live.iter().any(|line| line.contains(dead)),
+            "a commented-out entry is not live: {live:?}"
         );
     }
 }
