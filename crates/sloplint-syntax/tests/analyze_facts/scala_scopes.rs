@@ -226,6 +226,39 @@ fn named_argument_on_value_shadowing_method_is_not_a_write() {
 }
 
 #[test]
+fn sibling_for_binder_does_not_shadow_later_call() {
+    // A loop binder that already ended is out of scope: after
+    // `for (f <- xs) ...`, the call `f(counter = 1)` targets the outer
+    // `def f`, whose parameter list has no `counter`, so the assignment
+    // writes `counter` (a Scala 2.12 `Unit`-valued assignment).
+    let source = "def f(other: Unit) = ()\ndef m(xs: List[Int]): Unit = {\n  var counter = 0\n  for (f <- xs) println(f)\n  f(counter = 1)\n}\n";
+    with_scala_bindings(source, |found| {
+        let counters = named_all(found, "counter");
+        assert_eq!(counters.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            counters[0].write_lines, 1,
+            "the ended loop binder must not hide the write: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn sibling_case_binder_does_not_shadow_later_arm_call() {
+    // An earlier arm's binder is out of scope in a later arm: after
+    // `case f: String => ...`, the call `f(counter = 1)` targets the outer
+    // `def f`, so the assignment writes `counter`.
+    let source = "def f(other: Unit) = ()\ndef m(v: Any): Unit = {\n  var counter = 0\n  v match {\n    case f: String => println(f)\n    case _ => f(counter = 1)\n  }\n}\n";
+    with_scala_bindings(source, |found| {
+        let counters = named_all(found, "counter");
+        assert_eq!(counters.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            counters[0].write_lines, 1,
+            "the earlier arm binder must not hide the write: {found:?}"
+        );
+    });
+}
+
+#[test]
 fn multi_argument_given_extractor_binds_its_arguments() {
     // `case given(x, y)` is a two-argument extractor in Scala 2: both names
     // bind locals that shadow outer variables inside the arm.

@@ -117,7 +117,12 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
             if d.kind() == "val_definition" || d.kind() == "var_definition" {
                 super::items::decl_names(cx, d, &mut bound);
             } else if d.kind() == "for_expression" || d.kind() == "case_clause" {
-                super::items::shadow_names(cx, d, &mut bound_names);
+                // Only a loop or arm that encloses the call binds here: a
+                // sibling comprehension or later arm already ended, so its
+                // binders are out of scope at the call.
+                if d.start_byte() <= n.start_byte() && n.end_byte() <= d.end_byte() {
+                    super::items::shadow_names(cx, d, &mut bound_names);
+                }
             }
         }
         if bound.iter().any(|(name, _)| unquote(name) == fname)
